@@ -199,7 +199,15 @@ class settings_delete_account extends LetcBox {
     if (this._deleteOtpSending) return;
     this._deleteOtpSending = true;
     try {
-      const otp = await sendOtp(this);
+      const otp = await sendOtp(this, SERVICE.drumate.delete_account);
+      if (otp && otp.locked) {
+        return this.ensurePart("error-box").then((p) => {
+          p && p.feed(Skeletons.Note({
+            className: `${this.fig.family}__warning-text`,
+            content: otp.message,
+          }));
+        });
+      }
       if (!otp) {
         return this.ensurePart("error-box").then((p) => {
           p && p.feed(Skeletons.Note({

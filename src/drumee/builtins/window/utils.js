@@ -5,10 +5,25 @@ const WS_EVENT = "ws:event";
 const Rectangle = require("rectangle-node");
 const { TimelineMax, Expo, TweenMax } = require("@drumee/ui-core/vendor");
 const EDITABLES = require('../player/document/editable');
+const {
+  GROUP_ORDER,
+  GROUP_LABEL,
+  groupOf,
+  bucketByGroup,
+  isGrouped,
+} = require("./skeleton/toolkit/file-group");
 
 const ViewMode = new Map();
 const DEFAULT = "default";
 ViewMode.set(DEFAULT, _a.icon);
+const SECTION_CLASSES = [
+  "workspace-section",
+  "folder-section",
+  "file-section",
+  "group-section",
+];
+const isSectionElement = (el) =>
+  SECTION_CLASSES.some((className) => el.classList.contains(className));
 
 let editorPrewarmed = false;
 
@@ -439,13 +454,9 @@ class __window_mfs extends DrumeeMFS {
       scrollEl.style.visibility = "hidden";
     }
     if (scrollEl) {
-      // 3-tier partition: workspace (hubs) → folder → file
-      const ww = scrollEl.querySelector(".workspace-section");
-      const fw = scrollEl.querySelector(".folder-section");
-      const flw = scrollEl.querySelector(".file-section");
-      if (ww) ww.remove();
-      if (fw) fw.remove();
-      if (flw) flw.remove();
+      for (const child of [...scrollEl.children]) {
+        if (isSectionElement(child)) child.remove();
+      }
     }
     this._setupPartitionObserver(listPart);
     this._partitionFoldersAndFiles(listPart);
@@ -587,15 +598,118 @@ class __window_mfs extends DrumeeMFS {
     return [...scrollEl.children].some(
       (el) =>
         el.dataset && el.dataset.filetype &&
-        !el.classList.contains("workspace-section") &&
-        !el.classList.contains("folder-section") &&
-        !el.classList.contains("file-section"),
+        !isSectionElement(el),
     );
+  }
+
+  _doGroupPartition(listPart, scrollEl) {
+    const collection = listPart.collection;
+    const rankOf = new Map();
+    const groupOfEl = new Map();
+    const items = new Set();
+
+    if (collection && listPart.children && _.isFunction(listPart.children.each)) {
+      listPart.children.each((view) => {
+        if (!view || !view.el || !view.model) return;
+        const index = collection.indexOf(view.model);
+        if (index >= 0) rankOf.set(view.el, index);
+        groupOfEl.set(view.el, groupOf(view.model.toJSON()));
+        if (view.el.dataset?.filetype && scrollEl.contains(view.el)) {
+          items.add(view.el);
+        }
+      });
+    }
+
+    const directItems = [...scrollEl.children].filter(
+      (el) => !isSectionElement(el) && el.dataset?.filetype,
+    );
+    if (directItems.some((el) => !groupOfEl.has(el))) return false;
+    directItems.forEach((el) => items.add(el));
+
+    if (!items.size) {
+      if (collection?.length) return false;
+      for (const child of [...scrollEl.children]) {
+        if (isSectionElement(child)) child.remove();
+      }
+      scrollEl.style.visibility = "visible";
+      scrollEl.dataset.partitioning = 0;
+      listPart.el.style.visibility = "visible";
+      return true;
+    }
+
+    const rank = (el) => {
+      const value = rankOf.get(el);
+      return value == null ? Number.MAX_SAFE_INTEGER : value;
+    };
+    const byGroup = bucketByGroup(items, (item) => groupOfEl.get(item));
+
+    const existing = new Map();
+    for (const child of [...scrollEl.children]) {
+      if (!child.classList.contains("group-section")) continue;
+      existing.set(child.dataset.group, child);
+    }
+
+    for (const key of GROUP_ORDER) {
+      const groupedItems = byGroup.get(key).sort((a, b) => rank(a) - rank(b));
+      let wrap = existing.get(key);
+      if (!groupedItems.length) {
+        if (wrap) wrap.remove();
+        continue;
+      }
+      if (!wrap) {
+        wrap = document.createElement("div");
+        wrap.className = "group-section";
+        wrap.dataset.group = key;
+      }
+      let title = wrap.querySelector(":scope > .group-section-title");
+      if (!title) {
+        title = document.createElement("div");
+        title.className = "group-section-title";
+        wrap.prepend(title);
+      }
+      title.textContent = LOCALE[GROUP_LABEL[key]];
+      groupedItems.forEach((item) => wrap.appendChild(item));
+      scrollEl.appendChild(wrap);
+    }
+
+    // Moving every media view above empties any legacy three-tier wrappers.
+    // Remove them only after the move so a mode transition cannot discard a view.
+    for (const child of [...scrollEl.children]) {
+      if (isSectionElement(child) && !child.classList.contains("group-section")) {
+        child.remove();
+      }
+    }
+
+    scrollEl.style.display = "flex";
+    scrollEl.style.flexDirection = "column";
+    scrollEl.style.alignItems = "stretch";
+    scrollEl.style.justifyContent = "flex-start";
+    scrollEl.style.visibility = "visible";
+    scrollEl.dataset.partitioning = 0;
+    this._partitionListPart = null;
+    listPart.el.style.visibility = "visible";
+    return true;
   }
 
   _doPartition(listPart) {
     const scrollEl = listPart.el.querySelector(".smart-container");
     if (!scrollEl) return false;
+
+    if (isGrouped(this)) {
+      return this._doGroupPartition(listPart, scrollEl);
+    }
+
+    // A mode transition normally rebuilds the list. If an observer from the
+    // previous grouped list wins the race, restore its media views before the
+    // unchanged three-tier path runs.
+    for (const groupWrap of [
+      ...scrollEl.querySelectorAll(":scope > .group-section"),
+    ]) {
+      for (const child of [...groupWrap.children]) {
+        if (child.dataset?.filetype) scrollEl.appendChild(child);
+      }
+      groupWrap.remove();
+    }
 
     // 3-tier order top → bottom: workspaces (hubs) → folders → files
     let workspaceWrap = scrollEl.querySelector(".workspace-section");
@@ -604,9 +718,7 @@ class __window_mfs extends DrumeeMFS {
 
     const items = [...scrollEl.children].filter(
       (el) =>
-        el !== workspaceWrap &&
-        el !== folderWrap &&
-        el !== fileWrap &&
+        !isSectionElement(el) &&
         el.dataset?.filetype,
     );
 
@@ -937,6 +1049,10 @@ class __window_mfs extends DrumeeMFS {
   moveContent(src, dest) {
     let { nid, echoId } = src;
     this.updateInnerHubsPreview(src, dest);
+    // Follow the node BEFORE the echo check: a mover's own window is exactly
+    // the one showing the file, and skipping it there is what leaves a player
+    // requesting a node id that no longer exists.
+    this.followMovedNode(src, dest);
     if (echoId == this.mget("echoId")) {
       return;
     }
@@ -944,12 +1060,55 @@ class __window_mfs extends DrumeeMFS {
     if (![src.pid, dest.pid].includes(pid)) return;
     this.getItemsByAttr(_a.nid, nid).filter((c) => {
       if (!c) return false;
-      if (c.logicalParent.cid !== this.cid) return;
+      // A row can outlive its parent view: a cross-workspace move deletes the
+      // source node, and the item is still in the collection while its parent
+      // has already gone. Reading .cid off that threw and killed the rest of
+      // the handler, so the destination row was never drawn.
+      const parent = c.logicalParent || c.mget("logicalParent");
+      if (!parent || parent.cid !== this.cid) return;
       if (pid != src.pid) return;
       c.goodbye();
       return true;
     });
     this.newContent({ data: dest });
+  }
+
+  /**
+   * Re-point a window that IS the moved node — a player, a viewer — at where
+   * the node landed.
+   *
+   * A cross-workspace move gives the file a new node id in the destination
+   * database; the old row is deleted. Windows built their URLs from the id they
+   * were opened with, so without this the next preview/slide request asks for a
+   * node that no longer exists anywhere and 404s until a full reload.
+   *
+   * Folder windows are unaffected: they show a LIST of nodes, and moveContent
+   * already swaps the row. This is only for a window whose own model is the
+   * node that moved.
+   */
+  followMovedNode(src, dest) {
+    if (!src || !dest) return;
+    const from = `${src.nid || src.id || ""}`;
+    const to = `${dest.nid || dest.id || ""}`;
+    if (!from || !to || from === to) return;
+    if (`${this.mget(_a.nid) || ""}` !== from) return;
+
+    const patch = { [_a.nid]: to };
+    // hub_id is half of every media URL, and a cross-workspace move changes it
+    // too. Carried over only when the event actually states it, so an in-place
+    // move cannot blank it.
+    const hub = dest.actual_hub_id || dest.hub_id;
+    if (hub) {
+      patch[_a.hub_id] = hub;
+      patch[_a.actual_hub_id] = hub;
+    }
+    if (dest.pid) patch[_a.pid] = dest.pid;
+    this.model.set(patch);
+    // Cached slide/preview URLs are keyed on the old id; anything that
+    // rebuilds them reads the model, so it is enough to let the view know.
+    if (_.isFunction(this.onMovedNodeFollowed)) {
+      this.onMovedNodeFollowed(to, dest);
+    }
   }
 
   /**
@@ -1643,9 +1802,9 @@ class __window_mfs extends DrumeeMFS {
   /**
    *
    */
-  setViewMode(mode = _a.icon) {
+  setViewMode(mode = _a.icon, updateDefault = true) {
     ViewMode.set(this.cid, mode);
-    ViewMode.set(DEFAULT, mode);
+    if (updateDefault) ViewMode.set(DEFAULT, mode);
     this.viewMode = mode;
   }
 }

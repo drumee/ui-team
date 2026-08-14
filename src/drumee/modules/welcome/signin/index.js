@@ -43,6 +43,21 @@ class __welcome_signin extends __welcome_interact {
    *
    */
   onDomRefresh() {
+    // OAuth 2FA hand-off. This MUST be tested before the connection switch
+    // below, and the ordering is not cosmetic: session_check_cookie derives
+    // `connection` from the otp TABLE, not from cookie.status, so the pending
+    // cookie plus the code loby just minted make this load report
+    // connection == 'otp'. Left to the switch, an OAuth return would be
+    // hijacked by the password-2FA branch and posted to yp.authenticate with a
+    // client-side secret — which this path deliberately does not have.
+    const mfa = this._oauthMfaParams();
+    if (mfa) {
+      return this._promptOtpOauth(mfa.email);
+    }
+    // Provider callback gave up (user cancelled on the consent screen, expired
+    // state, unlinked address, token exchange failed). loby has already bounced
+    // us back here with the reason; surface it once the form is rendered.
+    const oauthError = this._oauthErrorParam();
     let opt = {};
     switch (bootstrap().connection) {
       case "otp":
@@ -86,6 +101,64 @@ class __welcome_signin extends __welcome_interact {
       //     this.feed(this._skeleton(this, opt));
       // }
     }
+    if (oauthError) {
+      this._renderOauthError(oauthError);
+    }
+  }
+
+  /**
+   * Read the query the provider hand-off appends to the sign-in route. It rides
+   * INSIDE the hash fragment (#/welcome/signin?oauth_mfa=1&email=…), which is
+   * what parseModuleArgs already parses — it splits on [#/&?] and does NOT
+   * percent-decode, so any value read here needs decoding.
+   * @returns {object}
+   */
+  _oauthArgs() {
+    return Visitor.parseModuleArgs() || {};
+  }
+
+  /**
+   * Decode one value out of the hash query, tolerating a malformed escape
+   * sequence (decodeURIComponent throws on a bare '%').
+   * @param {string} raw
+   * @returns {string}
+   */
+  _decodeArg(raw) {
+    const s = String(raw == null ? "" : raw);
+    try {
+      return decodeURIComponent(s);
+    } catch (e) {
+      return s;
+    }
+  }
+
+  /**
+   * An OAuth sign-in that stopped at the 2FA gate. loby's provider callback
+   * leaves the session pending and bounces the browser to
+   * #/welcome/signin?oauth_mfa=1&email=…
+   * @returns {{email:string}|null} null when this is not an OAuth 2FA return.
+   */
+  _oauthMfaParams() {
+    const args = this._oauthArgs();
+    if (args.oauth_mfa !== "1") {
+      return null;
+    }
+    // Guard the whole feature on the finalize service being reachable: without
+    // oauth.verify_otp the OTP screen could take a code and never submit it,
+    // which is a worse dead end than the sign-in form.
+    if (!(SERVICE.oauth && SERVICE.oauth.verify_otp)) {
+      this.warn("oauth_mfa hand-off but oauth.verify_otp is not registered");
+      return null;
+    }
+    return { email: this._decodeArg(args.email) };
+  }
+
+  /**
+   * Reason a provider callback aborted, as set by loby's sendOauthError.
+   * @returns {string} '' when the return was not an error.
+   */
+  _oauthErrorParam() {
+    return this._decodeArg(this._oauthArgs().oauth_error);
   }
 
   /**
@@ -244,6 +317,13 @@ class __welcome_signin extends __welcome_interact {
       case "back-to-signin":
         clearInterval(this._tick);
         this._counting = false;
+        // Abandoning the OAuth 2FA screen needs server-side cleanup first: the
+        // otp_pending cookie outlives a plain reload and would land us straight
+        // back on this screen. Checked before the reconnect branch because the
+        // OAuth screen can also be reached from the reconnect popup.
+        if (this._inOauthMfa) {
+          return this._cancelOauthMfa();
+        }
         if (this.mget(RECONNECT)) {
           // Reconnect popup: re-rendering in place leaves the modal over the
           // desk. Navigate to the real sign-in page so the screen matches the
@@ -270,10 +350,22 @@ class __welcome_signin extends __welcome_interact {
         location.hash = "#/welcome/terms";
         return;
 
-      // ---- Social sign-in (no initiate service on this server yet) ----
+      // ---- Social sign-in (Google / Apple, served by the loby plugin) ----
       case "use-google":
+        return this.startOauth("google");
+
       case "use-apple":
-        return this.renderMessage(LOCALE.COMING_SOON || "Coming soon");
+        return this.startOauth("apple");
+
+      case "resend-oauth-otp":
+        return this._resendOauthOtp();
+
+      case "oauth-otp-verified":
+        // oauth.verify_otp promoted the pending cookie to 'ok'. It returns only
+        // a status — no user/hub/organization payload — so there is nothing to
+        // feed gotSignedIn with; re-boot instead and let bootstrap resolve the
+        // now-authenticated session.
+        return this._reloadClean();
 
       default:
         return super.onUiEvent(cmd, args);
@@ -428,6 +520,246 @@ class __welcome_signin extends __welcome_interact {
       return this.feed(this._skeleton(this, { content: skel }));
     }
     this.__content.feed(skel);
+  }
+
+  /**
+   * Start a provider sign-in: ask loby for the authorization URL, then hand the
+   * browser to the provider.
+   *
+   * `initiate` does more than build a URL — it persists a single-use `state` row
+   * carrying THIS visitor's session id, because the provider's callback comes
+   * back as a cross-site request (Apple's is a cross-site POST) whose cookies
+   * are not reliably sent. So the redirect must be driven by what initiate
+   * returns; a hand-built provider URL would come back with no session to
+   * resume.
+   *
+   * @param {'google'|'apple'} provider
+   */
+  startOauth(provider) {
+    const api = SERVICE[provider] && SERVICE[provider].initiate;
+    if (!api) {
+      // The buttons are gated on this same condition (skeleton/content.js), so
+      // reaching here means the services map changed under a rendered form.
+      return this.renderMessage(LOCALE.COMING_SOON || "Coming soon");
+    }
+    this.setButtonLoading(true);
+    this.postService(api, {}).then((data) => {
+      data = data || {};
+      if (data.status === "prompt" && data.authUrl) {
+        // Leaving the app entirely — keep the spinner up so the button cannot be
+        // clicked twice while the navigation is being scheduled. A second click
+        // would mint a second state row and orphan the first.
+        location.href = data.authUrl;
+        return;
+      }
+      this.setButtonLoading(false);
+      this.warn(`${provider}.initiate refused`, data);
+      this.renderMessage(this._oauthErrorMessage(data.error));
+    }).catch((e) => {
+      this.setButtonLoading(false);
+      this.warn(`${provider}.initiate failed`, e);
+      this.renderMessage(LOCALE.TRY_AGAIN_LATER || "Please try again later");
+    });
+  }
+
+  /**
+   * Human-readable copy for a provider failure. The reasons come from loby
+   * (sendOauthError / initiate) and are stable strings, so they are mapped to
+   * lexicon keys where we have them and collapsed to one generic line where we
+   * do not — an untranslated internal token must never reach the screen.
+   * @param {string} error
+   * @returns {string}
+   */
+  _oauthErrorMessage(error) {
+    switch (error) {
+      case "access_denied":
+        // The user backed out on the provider's consent screen. Not a fault.
+        return LOCALE.SIGNIN_CANCELLED || "Sign-in was cancelled";
+      case "oauth_not_linked":
+        return LOCALE.OAUTH_NOT_LINKED ||
+          "This email already has a Drumee account. Sign in with your password, then link the provider from your account settings.";
+      case "credentials_missing":
+      case "oauth_init_failed":
+      case "invalid_state":
+      case "oauth_failed":
+      case "invalid_code":
+      case "account_creation_failed":
+      case "session_fetch_failed":
+      case "unexpected_error":
+      default:
+        return LOCALE.TRY_AGAIN_LATER || "Please try again later";
+    }
+  }
+
+  /**
+   * Show the provider failure on the sign-in form, then scrub the reason from
+   * the URL so a reload does not replay a message about an attempt that is over.
+   * @param {string} error
+   */
+  _renderOauthError(error) {
+    this.renderMessage(this._oauthErrorMessage(error));
+    try {
+      history.replaceState(null, "", "#/welcome/signin");
+    } catch (e) { }
+  }
+
+  /**
+   * 2FA screen for an OAuth sign-in (see skeleton/otp-oauth.js). Self-registers
+   * dtk_otp on demand, exactly as _promptOtpReconnect does — this bundle does
+   * not run the widget's loadSeeds().
+   * @param {string} email  address the code was sent to
+   */
+  async _promptOtpOauth(email) {
+    this._inOauthMfa = true;
+    if (!Kind.exists("dtk_otp")) {
+      Kind.registerAddons({ dtk_otp: import("@drumee/ui-toolkit/widgets/otp") });
+    }
+    await Kind.waitFor("dtk_otp");
+    const skel = require("./skeleton/otp-oauth")(this, email);
+    if (!this.__content) {
+      this.feed(this._skeleton(this, { content: skel }));
+    } else {
+      this.__content.feed(skel);
+    }
+    this.ensurePart("oauth-otp").then((otp) => this._armOauthOtp(otp));
+  }
+
+  /**
+   * Teach the dtk_otp instance to recognise a rejected code on this path.
+   *
+   * The widget self-POSTs and classifies the answer with its own list of failure
+   * shapes ('wrong-code', 'INVALID_CODE', …). oauth.verify_otp answers
+   * {status:'error'}, which is on none of those lists and carries no `error`
+   * key — so a mistyped code would be read as SUCCESS, fire the host service and
+   * reload the page, leaving the user back on a blank OTP screen with no idea
+   * why. Normalizing the response before the widget inspects it turns that into
+   * the inline "invalid code" it already knows how to show.
+   *
+   * Wrapping (rather than patching the widget) keeps the change scoped to this
+   * flow: dtk_otp is shared with the reconnect and password-reset screens, whose
+   * APIs answer with the shapes it already understands.
+   *
+   * @param {LetcBox} otp  the dtk_otp instance
+   */
+  _armOauthOtp(otp) {
+    if (!otp || otp._oauthWrapped || !_.isFunction(otp.postService)) {
+      return;
+    }
+    const api = otp.mget(_a.api);
+    if (!api) {
+      return;
+    }
+    otp._oauthWrapped = true;
+    const post = otp.postService.bind(otp);
+    otp.postService = function (service, ...rest) {
+      const p = post(service, ...rest);
+      // Resend goes through the host (resendService), so `api` is the only POST
+      // this instance makes — but stay narrow anyway.
+      if (service !== api) {
+        return p;
+      }
+      return Promise.resolve(p).then((data) => {
+        if (data && data.status && data.status !== "success" && data.status !== _a.ok) {
+          return { ...data, error: 1 };
+        }
+        return data;
+      });
+    };
+  }
+
+  /**
+   * Re-mint and re-email the code for the pending OAuth sign-in.
+   *
+   * Host-driven (the skeleton sets `resendService`) rather than letting dtk_otp
+   * POST for itself: the widget assigns the resend RESPONSE over its `payload`,
+   * and oauth.resend_otp answers {status:'ok'} — which would wipe the email the
+   * message line was built from. No secret has to be swapped back in either
+   * (unlike the otp-gate resend): the new code is minted against the same
+   * pending session and resolved server-side at verify time.
+   *
+   * Follows the otp-gate resend contract otherwise — [data-resending] on the
+   * widget for the spinner, displayMessage for the outcome, and the digit boxes
+   * cleared so a half-typed old code cannot be auto-submitted with a digit of
+   * the new one.
+   */
+  async _resendOauthOtp() {
+    const api = SERVICE.oauth && SERVICE.oauth.resend_otp;
+    if (!api || this._resendingOauth) {
+      return;
+    }
+    const otp = this.getPart("oauth-otp");
+    const say = (msg, isError) => {
+      if (otp && _.isFunction(otp.displayMessage)) {
+        otp.displayMessage(msg, isError);
+      }
+    };
+    this._resendingOauth = true;
+    if (otp && otp.el) {
+      otp.el.dataset.resending = "1";
+    }
+    try {
+      const data = await this.postService(api, {});
+      if (!data || data.status !== _a.ok) {
+        this.warn("oauth.resend_otp refused", data);
+        return say(LOCALE.UNKNOWN_ERROR || "Something went wrong", 1);
+      }
+      if (otp && _.isFunction(otp.ensurePart)) {
+        const p = await otp.ensurePart("digits");
+        const boxes = (p && p.children && p.children.toArray()) || [];
+        for (const c of boxes) {
+          if (_.isFunction(c.setValue)) c.setValue("");
+        }
+        if (boxes[0] && _.isFunction(boxes[0].focus)) boxes[0].focus();
+      }
+      say(LOCALE.NEW_CODE_RESENT || "We have sent a new code");
+    } catch (e) {
+      this.warn("oauth.resend_otp failed", e);
+      say(LOCALE.UNKNOWN_ERROR || "Something went wrong", 1);
+    } finally {
+      this._resendingOauth = false;
+      if (otp && otp.el) {
+        otp.el.dataset.resending = "0";
+      }
+    }
+  }
+
+  /**
+   * "Back to sign in" from the OAuth 2FA screen.
+   *
+   * The pending cookie has to be dropped SERVER-side or this screen comes
+   * straight back: session_check_cookie reports connection 'otp' while the code
+   * is live, and the hand-off params survive a reload. Logging out cannot do it
+   * either — session_logout matches the cookie by uid, which a session that was
+   * never authenticated does not have. oauth.cancel_otp deletes it by session
+   * id. Best-effort: we return to the form whether or not it succeeds.
+   */
+  _cancelOauthMfa() {
+    const done = () => {
+      this._inOauthMfa = false;
+      this._reloadClean();
+    };
+    const api = SERVICE.oauth && SERVICE.oauth.cancel_otp;
+    if (!api) {
+      return done();
+    }
+    this.postService(api, {}).then(done).catch((e) => {
+      this.warn("oauth.cancel_otp failed", e);
+      done();
+    });
+  }
+
+  /**
+   * Re-boot on a bare sign-in URL, dropping the oauth_mfa / email / oauth_error
+   * params. Reloading with them still in place would re-enter the OTP screen —
+   * on the success path against a session that has already been finalized.
+   */
+  _reloadClean() {
+    try {
+      history.replaceState(null, "", "#/welcome/signin");
+    } catch (e) {
+      location.hash = "#/welcome/signin";
+    }
+    location.reload();
   }
 
   /**

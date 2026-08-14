@@ -8,6 +8,9 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+const {
+  blocksGroupedArrange,
+} = require("window/skeleton/toolkit/file-group");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
@@ -492,17 +495,22 @@ class __window_manager extends push {
         wm_unique_id: `window_folder-${hub_id}`,
       });
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      let cur = this.headlessLayer.children.last();
-      cur.once(_a.destroy, () => {
-        // On a workspace switch the OLD pane's destroy fires after the new
-        // context is already applied — only clear when this pane still owns it,
-        // else rapid switching leaves _curWorkspace null for the live pane.
-        // hub_id-only match is enough here: headlessLayer is a singleton pool
-        // and a hub's workspace root nid never changes.
-        if (this._curWorkspace && this._curWorkspace.hub_id == hub_id) {
-          this._curWorkspace = null;
-        }
-      });
+      // By KIND, not by position: headlessLayer also receives every explicitly
+      // launched window (a player, the Drive popup...), so children.last() is
+      // whatever the user opened most recently — see Wm.folderWindowIn.
+      let cur = this.folderWindowIn(this.headlessLayer);
+      if (cur) {
+        cur.once(_a.destroy, () => {
+          // On a workspace switch the OLD pane's destroy fires after the new
+          // context is already applied — only clear when this pane still owns it,
+          // else rapid switching leaves _curWorkspace null for the live pane.
+          // hub_id-only match is enough here: headlessLayer is a singleton pool
+          // and a hub's workspace root nid never changes.
+          if (this._curWorkspace && this._curWorkspace.hub_id == hub_id) {
+            this._curWorkspace = null;
+          }
+        });
+      }
       // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
       // workspace switch. The get_path → refreshBreadcrumbsUI call below also
       // mirrors into the topbar, but only once it resolves AND only while the
@@ -517,12 +525,18 @@ class __window_manager extends push {
       // path of "undefined" — the same defect as the fetch above, and it left the
       // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
       // it this way (attrs.nid || nid).
-      getPath(this, { nid: data.nid || nid, hub_id }).then(
-        (path) => {
+      getPath(this, { nid: data.nid || nid, hub_id })
+        .then((path) => {
           if (_.isEmpty(path)) return;
-          cur.refreshBreadcrumbsUI(path);
-        },
-      );
+          // Resolved again HERE, not reused from above: feed() may not have
+          // mounted the new pane yet when this callback was set up, and a
+          // second switch may have replaced it while the path was in flight.
+          const w = this.folderWindowIn(this.headlessLayer);
+          if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
+        })
+        // Without this the throw above escaped as an unhandledrejection —
+        // which is exactly how it reached production unnoticed.
+        .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -734,8 +748,11 @@ class __window_manager extends push {
           });
           return;
         }
-        let currentFolder = this.getWindowsPool().children.last();
-        if (!currentFolder) return;
+        // Same trap as loadWorkspace above: the pool's last child is whatever
+        // was launched most recently, not necessarily the folder window, and
+        // refreshContent below is a folder-only method (Wm.folderWindowIn).
+        let currentFolder = this.folderWindowIn();
+        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) return;
         currentFolder.refreshContent(attrs);
         // refreshContent can't infer the ancestor chain for a deep jump, so the
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
@@ -1302,6 +1319,15 @@ class __window_manager extends push {
     const rearranging =
       _.isFunction(moving.getLogicalParent) &&
       moving.getLogicalParent() === this._target;
+    // Group view is a classified presentation, not a hand-arranged order.
+    // Consume same-window slot drops before any insert branch can mutate rank;
+    // folder drop-in already returned through c.over above, while cross-window
+    // moves keep rearranging=false and continue through the normal path.
+    if (blocksGroupedArrange(this._target, c, rearranging)) {
+      if (this._target._releaseShifted) this._target._releaseShifted();
+      this._target.el.dataset.over = _a.off;
+      return true;
+    }
     if (c.left) {
       this.verbose("insert:after", c.left);
       if (this._target.mget(_a.privilege) & _K.permission.modify) {

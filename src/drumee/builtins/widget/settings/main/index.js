@@ -296,7 +296,10 @@ class settings_main extends LetcBox {
     // visible gap before the modal appears.
     this._setMfaToggleLoading(1);
 
-    const otp = await sendOtp(this);
+    const otp = await sendOtp(this, SERVICE.desk.set_mfa);
+    if (otp && otp.locked) {
+      return this._cancelMfa(otp.message);
+    }
     if (!otp) {
       return this._cancelMfa(LOCALE.UNKNOWN_ERROR);
     }
@@ -609,7 +612,8 @@ class settings_main extends LetcBox {
         return;
       }
 
-      const otp = await sendOtp(this);
+      const otp = await sendOtp(this, SERVICE.drumate.unlink_oauth);
+      if (otp && otp.locked) return this.alert(otp.message);
       if (!otp) return this.alert(LOCALE.UNKNOWN_ERROR);
       return openOtpModal(this, {
         ...otp,

@@ -1,4 +1,5 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
+const { isGrouped } = require("./file-group");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.
@@ -62,20 +63,55 @@ export function breadcrumbs(ui, opt) {
   });
 }
 
-function fileViewToggle(ui) {
+function fileViewToggle(ui, opt = {}) {
   const cnTopbar = `${ui.fig.family}-topbar`;
+  const modes = opt.modes || [
+    { mode: "list", ico: "view-list" },
+    { mode: "grid", ico: "view-grid" },
+  ];
+  const listMode = ui.getViewMode && ui.getViewMode() === _a.row;
+  const state = opt.namedState
+    ? isGrouped(ui)
+      ? "group"
+      : listMode
+        ? "list"
+        : "grid"
+    : listMode ? 1 : 0;
+  // With three modes the control has to behave as a radio group: pressing a
+  // segment must select THAT mode. Each segment therefore carries the service
+  // and its own `value`, so the handler is told which one was pressed instead of
+  // inferring it. Only the box was clickable before, which is why the two-mode
+  // control could get away with cycling — it had a single alternative.
+  //
+  // `bubble: false` keeps the press on the segment (the box below also declares
+  // the service for the two-mode DMZ control, which still cycles). Pattern
+  // follows the checkout pill bar in widget/settings/account/billing.
   const viewSegment = (mode, ico) =>
     Skeletons.Box.X({
       className: `${cnTopbar}__view-toggle-seg ${cnTopbar}__view-toggle-seg--${mode}`,
+      // The glyphs must stay handler-less either way, so the click reaches
+      // whichever ancestor owns the service (the segment here, the box for DMZ).
       kidsOpt: { active: 0 },
+      ...(opt.namedState
+        ? {
+          service: "toggle-files-layout",
+          value: mode,
+          radio: `file-view-${ui._id}`,
+          state: state === mode ? 1 : 0,
+          bubble: false,
+          uiHandler: [ui],
+        }
+        : {}),
       kids: [
         Skeletons.Image.Svg({
           ico: "account_check",
           className: `${cnTopbar}__view-toggle-check`,
+          active: 0,
         }),
         Skeletons.Image.Svg({
           ico,
           className: `${cnTopbar}__view-toggle-glyph`,
+          active: 0,
         }),
       ],
     });
@@ -85,15 +121,16 @@ function fileViewToggle(ui) {
     service: "toggle-files-layout",
     sys_pn: "view-ctrl",
     dataset: {
-      state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+      state,
       visible: 1,
     },
     uiHandler: [ui],
-    kidsOpt: { active: 0 },
-    kids: [
-      viewSegment("list", "view-list"),
-      viewSegment("grid", "view-grid"),
-    ],
+    // NO kidsOpt when the segments own the service: `active: 0` propagates down
+    // and would leave them handler-less, so every press would bubble to the box
+    // and cycle again — the exact bug this replaced. The two-mode DMZ control
+    // still wants it, because there the box is the only handler.
+    ...(opt.namedState ? {} : { kidsOpt: { active: 0 } }),
+    kids: modes.map(({ mode, ico }) => viewSegment(mode, ico)),
   });
 }
 
@@ -114,7 +151,17 @@ function fileFilterControls(ui) {
   const cnTopbar = `${ui.fig.family}-topbar`;
   return Skeletons.Box.X({
     className: `${cnTopbar}__file-controls`,
-    kids: [fileNewControl(ui), fileViewToggle(ui)],
+    kids: [
+      fileNewControl(ui),
+      fileViewToggle(ui, {
+        namedState: true,
+        modes: [
+          { mode: "group", ico: "view-group" },
+          { mode: "list", ico: "view-list" },
+          { mode: "grid", ico: "view-grid" },
+        ],
+      }),
+    ],
   });
 }
 
@@ -1086,6 +1133,10 @@ export function fileThreadInfoCard(ui, opt = {}) {
               Skeletons.Note({ className: `${grp}__ft-info-time`, content: "" }),
             ],
           }),
+          // Says where the file went once it has left this workspace. Stays
+          // empty — and so renders nothing — for a file that is still here,
+          // which is every ordinary thread.
+          Skeletons.Note({ className: `${grp}__ft-info-status`, content: "" }),
         ],
       }),
     ],
@@ -1492,86 +1543,81 @@ export function visioMenu(ui, opt = {}) {
 }
 
 /**
- * The macOS green traffic-light button, as Chrome renders it on a Mac.
- * Clicking the dot zooms — macOS has no "Zoom" row, the button IS zoom —
- * and hovering it drops the Sonoma tiling menu mirrored below.
+ * "Move & Resize" — the window's snap control.
+ *
+ * Deliberately the same control the players already show in their topbar
+ * (player/widget/topbar/skeleton/move-resize): hovering the expand icon
+ * reveals a panel of window presets, each emitting one of the four snap
+ * services every window answers through builtins/window/snap. A workspace
+ * window and a document viewer therefore offer window management with the
+ * same glyph, the same panel and the same vocabulary.
+ *
+ * This replaced a macOS green-traffic-light imitation, which looked native
+ * to macOS and foreign to everything else in the app.
+ *
+ * The four preset glyphs are drawn in CSS (outline box + inner block), as
+ * in the Figma, which builds them from plain shapes rather than an icon.
+ * `data-preset` selects the glyph; `data-active` marks the layout the
+ * window is currently in and is stamped live by the window itself — the
+ * active preset is inert (see the skin), so it has to follow reality.
  *
  * @param {*} ui
  */
 export function zoomMenu(ui) {
   const cnRoot = `${ui.fig.family}-topbar__zoom`;
 
-  // `separator` rows carry no service and render as a hairline (see skin).
-  const items = [
-    {
-      service: "fullscreen",
-      ico: "mac-enter-fullscreen",
-      content: LOCALE.ENTER_FULL_SCREEN,
-      modifier: "fullscreen",
-      // Named so the window can retitle it on fullscreenchange.
-      pn: "zoom-item-fullscreen",
-    },
-    { separator: 1 },
-    {
-      service: "window-tile-left",
-      ico: "mac-tile-left",
-      content: LOCALE.TILE_WINDOW_LEFT_OF_SCREEN,
-      modifier: "tile-left",
-    },
-    {
-      service: "window-tile-right",
-      ico: "mac-tile-right",
-      content: LOCALE.TILE_WINDOW_RIGHT_OF_SCREEN,
-      modifier: "tile-right",
-    },
-    { separator: 1 },
-    {
-      service: "window-reframe",
-      ico: "mac-previous-size",
-      content: LOCALE.RETURN_TO_PREVIOUS_SIZE,
-      modifier: "previous-size",
-    },
+  const presets = [
+    { preset: "full", service: "window-zoom" },
+    { preset: "left", service: "window-tile-left" },
+    { preset: "right", service: "window-tile-right" },
+    { preset: "center", service: "window-reframe" },
   ];
 
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper`,
     kids: [
+      // No service: the trigger only reveals the panel. Maximising is the
+      // "full" preset inside it, so there is exactly one way to do it.
       Skeletons.Button.Svg({
-        ico: "mac-zoom",
+        ico: "desktop_fullview",
         className: `${cnRoot}-trigger`,
-        sys_pn: "ctrl-fullscreen",
-        service: "window-zoom",
-        uiHandler: [ui],
+        sys_pn: "zoom-trigger",
         partHandler: ui,
       }),
       Skeletons.Box.Y({
         className: `${cnRoot}-menu`,
-        kids: items.map(({ service, ico, content, modifier, separator, pn }) =>
-          separator
-            ? Skeletons.Box.X({
-                className: `${cnRoot}-separator`,
-                active: 0,
-              })
-            : Skeletons.Box.X({
-                className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
-                uiHandler: [ui],
+        kids: [
+          Skeletons.Note({
+            content: LOCALE.MOVE_RESIZE,
+            active: 0,
+            className: `${cnRoot}-label`,
+          }),
+          Skeletons.Box.X({
+            className: `${cnRoot}-presets`,
+            sys_pn: "zoom-presets",
+            partHandler: ui,
+            kids: presets.map(({ preset, service }) =>
+              Skeletons.Box.X({
+                className: `${cnRoot}-preset`,
                 service,
+                uiHandler: [ui],
+                dataset: { preset, active: 0 },
                 kidsOpt: { active: 0 },
+                // The glyph is pure CSS: this Box is the outline, its kid
+                // the inner block whose width/position the skin varies by
+                // `data-preset`.
                 kids: [
-                  Skeletons.Button.Svg({
-                    ico,
-                    active: 0,
-                    className: `${cnRoot}-item-icon`,
-                  }),
-                  Skeletons.Note({
-                    content,
-                    active: 0,
-                    className: `${cnRoot}-item-label`,
-                    ...(pn ? { sys_pn: pn, partHandler: ui } : {}),
+                  Skeletons.Box.X({
+                    className: `${cnRoot}-glyph`,
+                    kids: [
+                      Skeletons.Element({ className: `${cnRoot}-glyph-fill` }),
+                    ],
                   }),
                 ],
               }),
-        ),
+            ),
+          }),
+        ],
       }),
     ],
   });

@@ -23,10 +23,6 @@ function _vignetteRemember(url, entry) {
 }
 require("./skin");
 const media_core = require("./core");
-const {
-  isMoveResultSuccessful,
-  selectCrossWorkspaceMoveService,
-} = require("./file-thread-move-route");
 const { copyToClipboard } = require("@drumee/ui-essentials")
 class __media_interact extends media_core {
   constructor(...args) {
@@ -1365,13 +1361,13 @@ class __media_interact extends media_core {
           let service = crossHub ? SERVICE.media.copy : SERVICE.media.move;
 
           if (movingAcrossWorkspaces) {
-            const infoService = (SERVICE.channel && SERVICE.channel.file_thread_info) ||
-              "channel.file_thread_info";
-            const threadInfo = await this.fetchService(infoService, {
-              hub_id: itemHubId,
-              file_nid: nid,
-            });
-            service = selectCrossWorkspaceMoveService(threadInfo, SERVICE);
+            // One service for every cross-workspace move. The client used to
+            // ask whether the file had a chat thread and route those through a
+            // separate saga endpoint that carried the messages across; threads
+            // now stay in the workspace that owns them, so there is nothing to
+            // branch on and nothing to wait for.
+            service = (SERVICE.media && SERVICE.media.workspace_move) ||
+              "media.workspace_move";
           }
 
           const payload = crossHub ? {
@@ -1394,11 +1390,7 @@ class __media_interact extends media_core {
             notify: 1,
             moved_in: 1,
           };
-          const data = await this.postService(payload);
-          if (!isMoveResultSuccessful(service, data, SERVICE)) {
-            return Promise.reject(data);
-          }
-          return data;
+          return await this.postService(payload);
         };
 
         return Promise.all(targetDestinations.map(moveToDestination)).then(() => {

@@ -11,7 +11,15 @@
   }
 
   // Reveal the "Drop files to attach" overlay while a file is dragged over.
+  // data-file-drag is never set while a comment is being edited — that state
+  // hands the drop surface to the comment (data-comment-file-drag below), so
+  // the two overlays can't appear at once.
   &[data-file-drag="1"] &__drop-overlay {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  &[data-comment-file-drag="1"] &__comment-drop-overlay {
     opacity: 1;
     visibility: visible;
   }
@@ -213,14 +221,6 @@
   &__member-row[data-active="1"] &__filter-check-mark {
     opacity: 1;
   }
-  // The category-head flag drives its own checkbox off data-active on the box.
-  &__filter-check[data-active="1"] {
-    background: var(--col-primary-50, #433cc5);
-    border-color: var(--col-primary-50, #433cc5);
-  }
-  &__filter-check[data-active="1"] &__filter-check-mark {
-    opacity: 1;
-  }
 
   // ── Multi-dimension filter popup, shared by every view (Figma 2099-50501) ──
   &__filter-picker--list {
@@ -283,11 +283,24 @@
   &__filter-cat-chev {
     flex: 0 0 auto;
     color: var(--normal-fg-40, #84848c);
-    transition: transform 0.15s;
+    transition: transform 0.15s, color 0.12s;
     transform: rotate(0deg);
   }
   &__filter-cat[data-open="1"] &__filter-cat-chev {
     transform: rotate(90deg);
+  }
+
+  // A category holding an active value tints brand — the parent rows have no
+  // checkbox, so this is what tells you which dimensions are filtering while
+  // every category is collapsed. `data-active` comes from isFilterDimActive().
+  // font-weight is set explicitly: drumee.typo()'s $weight is a no-op.
+  &__filter-cat-head[data-active="1"] &__filter-cat-label {
+    font-weight: 600;
+    color: var(--col-primary-40, #5950ff);
+  }
+  &__filter-cat-head[data-active="1"] &__filter-cat-ico,
+  &__filter-cat-head[data-active="1"] &__filter-cat-chev {
+    color: var(--col-primary-40, #5950ff);
   }
 
   // Collapsed by default; max-height (not display) so it works regardless of
@@ -474,11 +487,13 @@
     }
   }
 
+  // Pinned column title bar. It is a direct child of __column (a sibling of the
+  // __column-body scroller), so it stays put while the cards scroll.
   &__column-header {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    flex-shrink: 0;
+    flex: 0 0 auto;
     margin-bottom: 4px;
 
     // Custom columns are drag-reorderable by their header.
@@ -961,6 +976,8 @@
   }
 
   &__col-menu {
+    // Sits between the pinned header and the scroller — keep its natural height.
+    flex: 0 0 auto;
     gap: 12px;
     padding: 12px;
     box-sizing: border-box;
@@ -2587,8 +2604,9 @@
 
   // ── Hyperlinks (comment / description bodies and their editors) ───
   // Bare URLs are auto-linked on read-only surfaces; Ctrl+K and pasted rich
-  // links also land here. In an editor the node is contenteditable=false, so
-  // it needs the text cursor back — it sits in a line of editable text.
+  // links also land here. The pointer holds inside an editor too: the node is
+  // contenteditable=false so it is never typed into, and one click on it opens
+  // the link (_makeLinkNode) — a text caret would hide that affordance.
   &__link {
     color: var(--col-primary-40, #5950ff);
     text-decoration: underline;
@@ -2599,10 +2617,6 @@
     &:hover {
       color: var(--col-primary-50, #433cc5);
     }
-  }
-
-  [contenteditable="true"] &__link {
-    cursor: text;
   }
 
   // ── Ctrl+K link prompt ────────────────────────────────────────────
@@ -2819,6 +2833,51 @@
     gap: 12px;
   }
 
+  &__history-list {
+    gap: 12px;
+  }
+
+  &__activity-section {
+    gap: 8px;
+  }
+
+  // Section caption, right-aligned above its list ("Comments" / "History").
+  // Only the "All" tab stacks the two runs and needs them told apart — on the
+  // single-type tabs the active tab is already the label.
+  &__section-label {
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__comments:not([data-tab="all"]) &__section-label {
+    display: none;
+  }
+
+  // Activity tabs are a pure visibility switch over two independently-fed
+  // parts: "all" shows both (comments first, change log below), the other two
+  // hide the section they exclude — caption included. Nothing is re-rendered
+  // on a tab click.
+  &__comments[data-tab="comments"] &__activity-section[data-kind="history"],
+  &__comments[data-tab="history"] &__activity-section[data-kind="comments"] {
+    display: none;
+  }
+
+  // On "all" the two empty states would stack ("No comments yet" + "No
+  // history") under two captions; the comment one already says the task has
+  // nothing on it, so an empty change log drops out entirely there — caption
+  // included, rather than leaving "HISTORY" hanging over a placeholder. On the
+  // History tab it stays: that tab has nothing else to show.
+  &__comments[data-tab="all"] &__activity-section[data-kind="history"][data-empty="1"] {
+    display: none;
+  }
+
   // ── Change-log line (History / All tabs) ──────────────────────────
   // Lighter than a comment row — no card, small avatar, one line — so a run of
   // them reads as a log beside the comment cards.
@@ -2873,13 +2932,231 @@
     );
   }
 
-  &__comments-empty {
+  &__comments-empty,
+  &__history-empty {
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
       $line: 16px,
       $color: var(--normal-fg-40, #84848c)
     );
+  }
+
+  // Drop affordance covering one comment (edited row / reply composer) instead
+  // of the whole panel. Same colours as __drop-overlay, one size down: no icon,
+  // thinner dash, smaller type — it sits inside a card, not over a modal.
+  &__comment-drop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    align-items: center;
+    justify-content: center;
+    background: rgba(250, 133, 64, 0.08);
+    border: 1px dashed var(--primary, #fa8540);
+    border-radius: 12px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease;
+  }
+
+  &__comment-drop-overlay-text {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--primary, #fa8540)
+    );
+  }
+
+  // Queued files inside an open editor, before Save attaches them.
+  &__comment-pending-list {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+
+    &[data-empty="1"] {
+      display: none;
+    }
+  }
+
+  // ── In-flight controls ────────────────────────────────────────────
+  // Same data-loading contract the task submit buttons use, applied to the
+  // three comment controls that make a request of their own.
+
+  // Save is a text button: its label becomes "Loading…" and the spinner sits
+  // where a leading icon would, matching __detail-submit.
+  &__comment-action[data-loading="1"] {
+    pointer-events: none;
+    opacity: 0.75;
+    position: relative;
+    padding-left: 26px;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      margin-top: -6px;
+      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: tasks-panel-spin 0.7s linear infinite;
+    }
+  }
+
+  // The two icon buttons have no label to swap, so the glyph itself steps
+  // aside and the spinner takes its place — the button keeps its box, so
+  // neither the comment footer nor the attachment card reflows mid-request.
+  &__comment-attachment-unlink[data-loading="1"],
+  &__comment-action-ico[data-loading="1"] {
+    pointer-events: none;
+    position: relative;
+
+    svg {
+      visibility: hidden;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+      border-top-color: var(--accent, #433cc5);
+      border-radius: 50%;
+      animation: tasks-panel-spin 0.7s linear infinite;
+    }
+  }
+
+  // ── Pending-file states ───────────────────────────────────────────
+  // One attribute (data-status, written per entry by _setPendingStatus) drives
+  // all of it, so a transition costs no re-render. "queued" is the resting
+  // state and deliberately looks like today's card — a file waiting for Save
+  // is the norm, not a condition to flag.
+  &__attachment-row[data-status="downloading"],
+  &__attachment-row[data-status="uploading"] {
+    .tasks-panel__attachment-thumb-box {
+      opacity: 0.45;
+    }
+    // No way to un-upload, so the ✕ reads as unavailable rather than lying.
+    .tasks-panel__attachment-unlink {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+  }
+
+  &__attachment-row[data-status="error"] {
+    border: 1px solid var(--signal-error, #d74e49);
+    border-radius: 8px;
+
+    .tasks-panel__attachment-name {
+      color: var(--signal-error, #d74e49);
+    }
+  }
+
+  // Indeterminate: the upload xhr's progress events are not plumbed through, so
+  // this says "working", not "how far".
+  &__file-pending-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+    border-top-color: var(--accent, #433cc5);
+    border-radius: 50%;
+    animation: tasks-panel-spin 0.7s linear infinite;
+  }
+
+  &__file-pending-retry {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    cursor: pointer;
+    color: var(--signal-error, #d74e49);
+    fill: var(--signal-error, #d74e49);
+  }
+
+  // The spinner and the retry button are positioned against the thumb box.
+  &__attachment-thumb-box {
+    position: relative;
+  }
+
+  // Files already attached to a saved comment.
+  &__comment-attachments {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  &__comment-attachment {
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__comment-attachment-ico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+
+    // Office documents come from the raw sprite, where every detail path
+    // carries its own colour EXCEPT the page body, which has no fill and would
+    // otherwise take the SVG default of black behind the blue/green/orange
+    // detail. This paints that one path white; the rest of the icon is
+    // untouched. `fill` as well as `color`, since fill is the property those
+    // paths actually read.
+    &[data-ext="doc"],
+    &[data-ext="docx"],
+    &[data-ext="xls"],
+    &[data-ext="xlsx"],
+    &[data-ext="ppt"],
+    &[data-ext="pptx"] {
+      color: var(--white, #ffffff);
+      fill: var(--white, #ffffff);
+    }
+  }
+
+  &__comment-attachment-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__comment-attachment-unlink {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    opacity: 0.5;
+
+    &:hover {
+      opacity: 1;
+    }
   }
 
   // Bordered comment card (Figma Activity: 1px border, radius 12, padding 16).
@@ -2890,6 +3167,8 @@
     padding: 16px;
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
     border-radius: 12px;
+    // Anchors __comment-drop-overlay to this row while it is being edited.
+    position: relative;
   }
 
   &__comment-avatar {
@@ -3202,6 +3481,9 @@
 
   &__comment-replybox {
     gap: 6px;
+    // Same anchoring as __comment-row: the composer is its own drop target.
+    // (The nested-reply variant above already sets this for its spine elbow.)
+    position: relative;
   }
 
   // Reply composer pill (Figma 2037-14883): a grey rounded field with the

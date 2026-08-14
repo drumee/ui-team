@@ -1,4 +1,12 @@
 const mfsInteract = require("../interact");
+const {
+  VIEW_STATES,
+  isGrouped,
+  setGrouped,
+  clearGrouped,
+  groupViewState,
+  nextGroupViewState,
+} = require("../skeleton/toolkit/file-group");
 
 const {
 
@@ -102,6 +110,9 @@ class __window_folder extends mfsInteract {
     }
     // CSS hook: zoomed window shows the 6-per-row grid (folder skin).
     this.el.dataset.zoomed = this._zoomed ? 1 : 0;
+    // Un-zooming restores arbitrary pre-zoom bounds, which match no preset.
+    this._snapMode = this._zoomed ? "full" : null;
+    this._syncSnapPresets();
     // Must run BEFORE measuring: hiding the desk header grows the
     // wm-container, and _workspaceRect() has to see the post-toggle height.
     this._syncDeskChrome();
@@ -211,18 +222,36 @@ class __window_folder extends mfsInteract {
     if (window.Wm && Wm.$el) Wm.$el.trigger(_e.wake, this);
   }
 
-  // macOS swaps the first menu row between "Enter"/"Exit Full Screen". The
-  // menu is built once with the topbar, so retitle the label in place.
-  _syncFullscreenLabel() {
-    const label = this.__zoomFsLabel;
-    if (!label || !_.isFunction(label.set)) return;
-    if (label.isDestroyed && label.isDestroyed()) return;
-    label.set({
-      content:
-        document.fullscreenElement === this.el
-          ? LOCALE.EXIT_FULLSCREEN
-          : LOCALE.ENTER_FULL_SCREEN,
-    });
+  // One inline button drives both directions of fullscreen, so its glyph has
+  // to follow the real state — ESC and the browser's own exit both arrive as
+  // fullscreenchange, not as a click.
+  _syncFullscreenBtn() {
+    const btn = this.__ctrlFullscreen;
+    if (!btn || !btn.el) return;
+    if (btn.isDestroyed && btn.isDestroyed()) return;
+    const isFs = document.fullscreenElement === this.el;
+    if (_.isFunction(btn.setState)) btn.setState(isFs ? 1 : 0);
+    if (_.isFunction(btn.setIcon)) {
+      btn.setIcon(isFs ? "desktop_reduce" : "player-fullscreen");
+    }
+  }
+
+  /**
+   * Mark the Move & Resize preset the window is currently in.
+   *
+   * The active preset is inert (skin: `pointer-events: none`) — re-picking
+   * "full" would run `toggleZoom` and RESTORE the window rather than leave it
+   * maximised — so the stamp must track the real layout instead of being
+   * frozen at whatever the topbar was built with. Cleared to `null` by any
+   * move that lands the window on arbitrary bounds (un-zoom, manual drag is
+   * not tracked), which simply leaves every preset clickable.
+   */
+  _syncSnapPresets() {
+    const host = this.__zoomPresets;
+    if (!host || !host.el) return;
+    for (const el of host.el.querySelectorAll("[data-preset]")) {
+      el.dataset.active = el.dataset.preset === this._snapMode ? 1 : 0;
+    }
   }
 
   toggleFullscreen() {
@@ -231,9 +260,9 @@ class __window_folder extends mfsInteract {
       return;
     }
     this._preFsBounds = this._snapshotBounds();
-    // One-shot listener handles both menu "Exit Full Screen" and ESC.
+    // One-shot listener handles both a second click on the button and ESC.
     const onChange = () => {
-      this._syncFullscreenLabel();
+      this._syncFullscreenBtn();
       if (document.fullscreenElement === this.el) return;
       document.removeEventListener("fullscreenchange", onChange);
       const restore = this._preFsBounds;
@@ -252,6 +281,8 @@ class __window_folder extends mfsInteract {
     this._zoomed = false;
     this._preZoomBounds = null;
     this.el.dataset.zoomed = 0;
+    this._snapMode = side === "right" ? "right" : "left";
+    this._syncSnapPresets();
     this._syncDeskChrome();
     const ws = this._workspaceRect();
     const halfW = Math.floor(ws.width / 2);
@@ -275,6 +306,8 @@ class __window_folder extends mfsInteract {
     this._zoomed = false;
     this._preZoomBounds = null;
     this.el.dataset.zoomed = 0;
+    this._snapMode = "center";
+    this._syncSnapPresets();
     this._syncDeskChrome();
     const b = this._defaultBounds();
     this._applyBoundsAfterFs({ left: b.left, top: b.top, width: b.width, height: b.height });
@@ -381,6 +414,8 @@ class __window_folder extends mfsInteract {
   initialize(opt) {
     this.isFolder = 1;
     super.initialize(opt);
+    setGrouped(this, true);
+    this.setViewMode(_a.icon, false);
     // `data-visible` is derived from privilege. Keep it in sync even when a
     // caller updates the model outside the explicit navigation/live-role paths.
     this.listenTo(
@@ -470,6 +505,7 @@ class __window_folder extends mfsInteract {
   }
 
   onBeforeDestroy(opt) {
+    clearGrouped(this);
     if (this._folderGridSortTimer) {
       clearTimeout(this._folderGridSortTimer);
       this._folderGridSortTimer = null;
@@ -536,6 +572,15 @@ class __window_folder extends mfsInteract {
   }
 
   onMediaRenamed() {
+    // A rename can change the file's group (.txt → .md), so Group view must
+    // re-bucket even when the scheduled sort bails out. It does bail for a
+    // hand-arranged folder (_hasArrangedSort), which would otherwise leave the
+    // renamed tile in its old group until the next mode switch. Partitioning
+    // alone re-reads the models and never installs a comparator, so the saved
+    // ranks stay intact.
+    if (isGrouped(this) && this._partitionFoldersAndFiles && this.iconsList) {
+      this._partitionFoldersAndFiles(this.iconsList);
+    }
     this._scheduleAlphabeticalGridSort();
   }
 
@@ -960,10 +1005,18 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
-    if (pn === "zoom-item-fullscreen") {
-      this.__zoomFsLabel = child;
-      this._syncFullscreenLabel();
-      return;
+    // Neither of these returns: window/core's onPartReady tail wires
+    // `child.onChildBubble` on every part it sees, and the control these two
+    // replace (the old zoom trigger) went through it. Fall through so the
+    // topbar keeps behaving the same on bubble.
+    if (pn === "ctrl-fullscreen") {
+      this.__ctrlFullscreen = child;
+      // The topbar can be rebuilt while the window is already fullscreen.
+      this._syncFullscreenBtn();
+    }
+    if (pn === "zoom-presets") {
+      this.__zoomPresets = child;
+      this._syncSnapPresets();
     }
     if (pn === "folder-view") {
       this.__folderView = child;
@@ -1299,15 +1352,36 @@ class __window_folder extends mfsInteract {
   }
 
   toggleFilesLayout(cmd) {
-    const mode =
-      this.getViewMode && this.getViewMode() === _a.row ? _a.icon : _a.row;
-    this.setViewMode(mode);
+    if (window.pointerDragged) return;
+
+    // Each segment reports its own mode, so pressing one selects it directly.
+    // The cycle is kept only as the fallback for a press that carries no mode —
+    // the toggle box itself is still clickable in the gaps between segments.
+    const viewMode = this.getViewMode && this.getViewMode();
+    const picked = cmd && cmd.mget && cmd.mget(_a.value);
+    const state = VIEW_STATES.includes(picked)
+      ? picked
+      : nextGroupViewState(this, viewMode);
+    // Re-pressing the active segment would rebuild the list for nothing, and a
+    // rebuild mid-drag is exactly what the pointerDragged guard above avoids.
+    if (state === groupViewState(this, viewMode)) return;
+    setGrouped(this, state === "group");
+    // Window-local, like the mode chosen in initialize: the folder toggle must
+    // not leak "row" into the process-wide ViewMode default, or the next
+    // Share/Search/Transferbox to open would inherit list view from it.
+    this.setViewMode(state === "list" ? _a.row : _a.icon, false);
+    // The active-segment CSS keys off `data-state` on the toggle BOX, and cmd.el
+    // is now the pressed segment — so resolve the box rather than stamping the
+    // segment. The toolbar is rebuilt below and fileViewToggle recomputes this
+    // from the real state anyway; the write only avoids a flash until then.
+    const toggleBox = cmd?.el?.closest?.(
+      `.${this.fig.family}-topbar__view-toggle`,
+    ) || cmd?.el;
+    if (toggleBox) toggleBox.dataset.state = state;
+
     this.ensurePart(_a.content).then((content) => {
       if (!content || (content.isDestroyed && content.isDestroyed())) return;
-      // setState (Backbone.View) flips data-state on the toggle box; the CSS
-      // swaps the visible glyph. (The old splitBtn used changeState, which only
-      // exists on the svg widget — the box needs setState.)
-      if (mode === _a.row) {
+      if (state === "list") {
         // Keep the file-type filter bar (All/Docs/PDF/Images/Other) in list
         // view too — mirrors the grid branch below and the initial-render
         // folderFilesRowContainer. content/row adds the column header + list.
@@ -1315,11 +1389,9 @@ class __window_folder extends mfsInteract {
           fileTypeFilterBar(this),
           require("../skeleton/content/row")(this),
         ]);
-        cmd?.setState?.(1);
         return;
       }
       content.feed([fileTypeFilterBar(this), gridFilesBrowser(this)]);
-      cmd?.setState?.(0);
     });
   }
 
@@ -3477,6 +3549,42 @@ class __window_folder extends mfsInteract {
     const dotEl = q("ft-info-dot");
     if (dotEl) dotEl.textContent = when ? "•" : "";
 
+    // A file that left this workspace takes its media row with it, so name and
+    // type come from the lineage snapshot instead. The conversation is still
+    // here and still readable — the card says where the file went rather than
+    // pretending the thread is broken.
+    const lineage = `${info.lineage_state || ""}`;
+    const away = lineage === "unavailable";
+    const gone = lineage === "orphaned";
+    if ((away || gone) && !name && info.away_file_name && nameEl) {
+      nameEl.textContent = `${info.away_file_name}`;
+    }
+    const statusEl = q("ft-info-status");
+    if (statusEl) {
+      let status = "";
+      if (gone) {
+        status = LOCALE.FILE_THREAD_FILE_DELETED;
+      } else if (away) {
+        const holder = `${info.holder_hub_name || ""}`.trim();
+        status = holder
+          ? LOCALE.FILE_THREAD_MOVED_TO.format(holder)
+          : LOCALE.FILE_THREAD_MOVED_AWAY;
+      }
+      statusEl.textContent = status;
+    }
+    // Stamp the card itself, not rootEl: rootEl is the slot/panel that HOSTS
+    // the card, and the styling selector is `.window__ft-info-card[...]`.
+    // Hiding "Open file →" is not cosmetic — the node id it carries belongs to
+    // another workspace, so the click would resolve nothing.
+    const cardEl = q("ft-info-card");
+    if (cardEl) {
+      if (away || gone) {
+        cardEl.dataset.ft_lineage = lineage;
+      } else {
+        delete cardEl.dataset.ft_lineage;
+      }
+    }
+
     const type = info.filetype || info.category;
     if (type === _a.image || type === _a.vector) {
       this._applyVignette(
@@ -4301,10 +4409,24 @@ class __window_folder extends mfsInteract {
 
     // The option fires its pick straight at this window via uiHandler, so the
     // click never bubbles back to the menu_topic for it to auto-close. Close
-    // it explicitly (animated, widget kept alive) so the dropdown dismisses on
-    // every pick and stays reusable for the next change.
+    // it explicitly, so the dropdown dismisses on every pick and stays
+    // reusable for the next change.
+    //
+    // Instantly, though — NOT changeState(0). That routes into ui-core's
+    // _closeItems, which tweens the items by (items_width + trigger_width)
+    // before _onClosed hides them; for a `down` menu the tween is negative y,
+    // so the box visibly flies UP the screen and only then vanishes. Reported
+    // as "box permission bị bay lên trên hơi khó hiểu" — and it is, because
+    // the motion points away from the row the choice belongs to.
+    //
+    // _onClosed IS the end state that tween is animating towards: it flips the
+    // dataset/state flags and gsap.set()s the transform back to 0. Calling it
+    // directly lands there in one frame, and the menu stays reusable — same
+    // final state, no journey. changeState remains the fallback in case a
+    // future ui-core drops the hook.
     const menu = cmd.getParentByKind?.(KIND.menu.topic);
-    if (menu?.changeState) menu.changeState(0);
+    if (_.isFunction(menu?._onClosed)) menu._onClosed();
+    else if (_.isFunction(menu?.changeState)) menu.changeState(0);
   }
 
   // Menu pick from a member-row role dropdown — confirm and persist the
