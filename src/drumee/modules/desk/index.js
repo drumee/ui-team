@@ -2,7 +2,9 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
-const { captureUtm, campaignArrival, REWARD_CAMPAIGN } = require("libs/campaign");
+const {
+  captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
+} = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
@@ -2184,6 +2186,17 @@ class desk_module extends LetcBox {
    * own persistent "claim pill" for an already-seen, still-unclaimed offer
    * (tester feedback 2026-07-31 #3) — one fetch, two callers.
    *
+   * A click on the campaign mail's CTA (utm_campaign=launch30, put there by
+   * analytics-server _promoCtaLink) outranks both of the gates the passive
+   * path applies. It skips the five-minute hold, because someone who followed
+   * a link asking them to claim has already done the waiting the hold exists
+   * to protect; and it shows for `eligible_seen` too, because the list this
+   * mail goes to is mostly people who were shown Modal A once and did nothing
+   * — leaving the show-once flag in charge would make the CTA dead for exactly
+   * the audience it was sent to. A deliberate click beats a passive
+   * impression, the same reasoning billing's claim pill already uses
+   * (settings/account/billing _reopenPromoOffer).
+   *
    * @param {string} surface  'home' | 'billing'
    * @returns {Promise<object|undefined>} the fetched promo state, or
    *   undefined if a concurrent call was already in flight or the fetch
@@ -2191,6 +2204,11 @@ class desk_module extends LetcBox {
    */
   async _maybeShowPromoLaunch30(surface, opt = {}) {
     const defer = !!opt.defer;
+    // Read, not consumed: the marker is spent below, and only once we know
+    // whether it produced anything. Spending it here would lose the click to
+    // any early return — an unreachable server, a widget bundle that will not
+    // load — with nothing shown for it.
+    const arrived = campaignArrival() === PROMO_CAMPAIGN;
     if (this._promoLaunch30InFlight) return;
     this._promoLaunch30InFlight = true;
     try {
@@ -2201,7 +2219,12 @@ class desk_module extends LetcBox {
         return;
       }
       if (!state) return;
-      if (state.state === "eligible_unseen") {
+      // Nothing to offer this account — already claimed, in someone else's
+      // org, or the campaign is over. Spend the marker anyway: there is no
+      // second thing for it to trigger, and leaving it would re-run all of
+      // this on every hashchange for the life of the tab.
+      if (arrived && !/^eligible_/.test(state.state || "")) campaignArrival(true);
+      if (state.state === "eligible_unseen" || (arrived && state.state === "eligible_seen")) {
         // The OFFER waits until the account has actually used Drumee for a
         // while. It used to fire the moment the home screen settled — for a
         // brand-new account that is the instant the tutorial ends, so the
@@ -2212,13 +2235,18 @@ class desk_module extends LetcBox {
         // Deferred, never awaited: _afterHomeSettled chains the
         // invited-workspace prompt behind this call, and awaiting a
         // five-minute timer would hold that prompt for five minutes too.
-        if (defer) {
+        //
+        // A CTA click skips the hold entirely — see the note on this method.
+        if (defer && !arrived) {
           this._schedulePromoOffer(surface, state);
           return state;
         }
         try {
           await Kind.waitFor("promo_launch30");
         } catch (e) {
+          // Marker deliberately NOT spent: the bundle failed to load, nothing
+          // was shown, and a later route in this tab can still honour the
+          // click.
           return state;
         }
         Wm.launch({
@@ -2230,6 +2258,8 @@ class desk_module extends LetcBox {
           hub_id: Visitor.id,
           wm_unique_id: "promo_launch30",
         }, { explicit: 1, singleton: 1 });
+        // Spent only now, with the modal actually on screen.
+        if (arrived) campaignArrival(true);
         return state;
       }
       if (surface === "home" && state.state === "claimed_active" && !state.welcome_seen) {
