@@ -17,6 +17,23 @@ Four files, **two** repos (see Correction 2):
 No `server-team` changes. No schema changes. `promo.claim`, `promo.dismiss`,
 `promo.get_state` and `acl/promo.json` are untouched.
 
+**Amended after Open Question 1 was resolved.** Answering it added a third
+repo, analytics-ui, which is what sets `claimed`:
+
+| File | Repo |
+|---|---|
+| `app/utils.js` | analytics-ui |
+| `app/index.js` | analytics-ui |
+| `app/skeleton/users-list.js` | analytics-ui |
+| `app/skin/legacy.scss` | analytics-ui |
+
+Four files there, not the larger set an explicit toggle needed: deriving the
+flag from the template adds no state, no handler and no event case — it reuses
+the picker's own render pass and the page's existing `data-disabled` styling.
+The toggle built against option (a) touched the same four files but added a
+control, its state, its handler and its event binding; all of that came back
+out when the answer settled on (b).
+
 ---
 
 ## Corrections to the brief
@@ -495,12 +512,29 @@ Neither is touched by this plan, and neither blocks it.
 
 ## Open questions
 
-1. **Who sets `claimed`?** Per Correction 5 it can only be per-send, not
-   per-recipient. Options: (a) an explicit dashboard toggle in analytics-ui's
-   send form, plumbed as an input param; (b) derive it from the chosen
-   `subject`/template variant; (c) drop the conditional and let the campaign
-   mail be offer-only. Needs a decision before B1/A4 can be written. **This is
-   the one open item blocking a file.**
+1. ~~**Who sets `claimed`?**~~ **RESOLVED — option (b), derived from the
+   template.** Per Correction 5 it can only ever be per-send, never
+   per-recipient, because `_deliver` renders once per batch. Of the three
+   options — (a) an explicit dashboard toggle, (b) derive it from the chosen
+   template, (c) drop the conditional entirely — **(b)** is what shipped.
+
+   `EMAIL_TEMPLATES` states which face each campaign renders (`claimed: 0` on
+   free-month) and the picker reports it as a derived fact behind
+   `data-disabled`; nothing on screen can flip it. The reasoning: the
+   offer/welcome split is not a decision the sender makes. This campaign exists
+   to make the offer — it is what the CTA in the mail opens, and what the trial
+   list has not yet taken — while the welcome face belongs to a post-claim mail
+   nothing here sends.
+
+   Consequence, accepted deliberately: **`claimed: 1` is unreachable from the
+   sender.** The template's claimed branch and `_mailData`'s passthrough both
+   stay, so a welcome send is a config change rather than a rewrite, and D2's
+   `claimed: 1` case keeps proving the branch works. `mail-templates.test.js`
+   pins the derived value and says in a comment that the path is not live, so
+   the case cannot later be mistaken for coverage of something reachable.
+
+   An explicit toggle (option (a)) was built first and then removed — see the
+   note on the analytics-ui file count in Scope.
 2. **Does the subject line change for the offer variant?**
    `MAIL_TEMPLATES["free-month"].subject` is "Your free month of Drumee Team
    starts now" — welcome-shaped. If the mail now leads with an offer, the
