@@ -2376,9 +2376,15 @@ function attachmentIcon(f) {
 function commentAttachments(ui, c, isOwn) {
   const pfx = ui.fig.family;
   const files = (c && c.attachments) || [];
-  if (!files.length) return null;
+  // Files dropped straight onto this row, still uploading or failed. They
+  // render in the SAME strip as the committed ones — the row has no submit, so
+  // there is nowhere else for them to live. data-scope is what _setPendingStatus
+  // addresses, and it carries the comment id so two rows never collide.
+  const inFlight = (ui.getRowUploads && ui.getRowUploads(c && c.id)) || [];
+  if (!files.length && !inFlight.length) return null;
   return Skeletons.Box.X({
     className: `${pfx}__comment-attachments`,
+    attrOpt: { "data-scope": `comment-row:${c && c.id}` },
     kids: files.map((f) => {
       const nid = f.file_nid || f.nid;
       const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
@@ -2415,7 +2421,11 @@ function commentAttachments(ui, c, isOwn) {
             : null,
         ].filter(Boolean),
       });
-    }),
+    }).concat(
+      inFlight.map((f) =>
+        fileCard(ui, f, { committed: false, commentId: c && c.id }),
+      ),
+    ),
   });
 }
 
@@ -2997,6 +3007,9 @@ function fileCard(ui, f, opt = {}) {
               service: "retry-pending-file",
               uiHandler: [ui],
               pendingKey,
+              // Row uploads are keyed per comment; the staged strips pass
+              // nothing here and keep the old single-retry path.
+              commentId: opt.commentId,
               tooltips: LOCALE.RETRY || "Retry",
             }),
           ]

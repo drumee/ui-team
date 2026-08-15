@@ -200,6 +200,10 @@ class __tasks_panel extends LetcBox {
     this._activityTab = "comments"; // detail popup: comments | history
     this._taskActivity = []; // change-log rows for the open task
     this._emojiPickerFor = null; // comment id whose full emoji grid is open
+    // In-flight files per comment row (immediate uploads). Entries live
+    // until they settle; the map is cleared only on destroy — see
+    // _dropOnCommentRow.
+    this._rowUploads = new Map();
     this.bindEvent(_a.live);
   }
 
@@ -237,6 +241,9 @@ class __tasks_panel extends LetcBox {
       this._commentDraft,
       this._commentEditDraft,
       this._replyDraft,
+      ...Array.from((this._rowUploads || new Map()).values()).map((l) => ({
+        pending_files: l,
+      })),
     ]) {
       for (const f of (draft && draft.pending_files) || []) {
         if (f.previewUrl) {
@@ -1700,7 +1707,10 @@ class __tasks_panel extends LetcBox {
         return this._removePendingFile(trigger);
 
       case "retry-pending-file":
-        return this._retryPendingFile(trigger);
+        // Row uploads carry a commentId; the staged strips do not.
+        return trigger.mget("commentId")
+          ? this._retryRowUpload(trigger)
+          : this._retryPendingFile(trigger);
 
       case _e.upload:
       case "pick-attachment":
@@ -3959,6 +3969,221 @@ class __tasks_panel extends LetcBox {
     return inRoot(one) ? one : null;
   }
 
+  /**
+   * Did a link call actually land? postService NEVER rejects — a server
+   * refusal resolves with {error, reason} and a transport failure resolves
+   * undefined (ui-essentials/socket/utils.js: both rethrow branches are
+   * guarded by `isFunction(onServerComplain)`, which is always true on a
+   * Backbone view). So success has to be read from the resolved VALUE; a
+   * try/catch alone would mark every refusal as a successful attach.
+   *
+   * comment_link_file answers with output.list(...), which always emits an
+   * array, holding the comment's full attachment list — verified against the
+   * SP: a fresh link and a duplicate INSERT IGNORE both return a non-empty
+   * set, so "non-empty array" separates success from both failure shapes.
+   */
+  _linkSucceeded(res) {
+    return Array.isArray(res) && res.length > 0;
+  }
+
+  // In-flight files for a comment row, keyed by comment id. A row has no
+  // submit button, so these upload immediately rather than staging.
+  getRowUploads(commentId) {
+    return (this._rowUploads && this._rowUploads.get(commentId)) || [];
+  }
+
+  /**
+   * Queue dropped items onto a comment's in-flight list. Mirrors
+   * _stashPendingFiles + attachExistingNodes, but the target is _rowUploads
+   * rather than a draft. Returns only the entries actually added.
+   */
+  async _stageRowItems(commentId, items) {
+    const list = this._rowUploads.get(commentId) || [];
+    this._rowUploads.set(commentId, list);
+    const seen = new Set(list.map((f) => f.nid || f.localKey));
+    // A drop fires through both the droppable and the folder insertMedia, so
+    // this runs twice — same dedupes as attachExistingNodes.
+    this._attachingNids = this._attachingNids || new Map();
+    const nowTs = Date.now();
+    const added = [];
+    const crossHub = [];
+    await this._ensureFolderFilenames();
+    for (const item of items) {
+      if (typeof File !== "undefined" && item instanceof File) {
+        const { filename, extension } = this._resolveAvailableName(item.name);
+        const entry = {
+          localKey: `row:${commentId}:${nowTs}:${added.length}:${item.name}`,
+          file: item,
+          filename,
+          extension,
+          status: "queued",
+        };
+        if (this._isImageExt(extension)) {
+          try {
+            entry.previewUrl = URL.createObjectURL(item);
+          } catch (_) {}
+        }
+        list.push(entry);
+        added.push(entry);
+        continue;
+      }
+      const isWidget = item && typeof item.mget === "function";
+      const attr = isWidget ? item.model.toJSON() : item || {};
+      const nid = attr.nid || attr.file_nid || attr.id;
+      if (!nid || seen.has(nid)) continue;
+      if (nowTs - (this._attachingNids.get(nid) || 0) < 4000) continue;
+      this._attachingNids.set(nid, nowTs);
+      if (attr.filetype === _a.hub || attr.filetype === _a.folder) continue;
+      seen.add(nid);
+      const { previewUrl, chartId } = this._attachmentPreview(attr);
+      if (attr.hub_id && attr.hub_id !== this._hubId) {
+        // Foreign hub: this hub 403s on the nid, so the bytes are copied in.
+        // Placeholder stands in immediately — the fetch is the only genuinely
+        // slow step on any attach path.
+        const ph = {
+          localKey: `xhub:${commentId}:${nid}`,
+          crossHubNid: nid,
+          filename: attr.filename || attr.user_filename || "",
+          extension: attr.extension || attr.ext || "",
+          previewUrl,
+          iconChartId: chartId,
+          status: "downloading",
+        };
+        list.push(ph);
+        added.push(ph);
+        crossHub.push(attr);
+        continue;
+      }
+      // Same hub: no upload, link by nid.
+      list.push({
+        nid,
+        hub_id: attr.hub_id || this._hubId,
+        filename: attr.filename || attr.user_filename || "",
+        extension: attr.extension || attr.ext || "",
+        previewUrl,
+        iconChartId: chartId,
+        status: "queued",
+      });
+      added.push(list[list.length - 1]);
+    }
+    if (crossHub.length) {
+      await this._queueCrossHubFiles(crossHub, {
+        list,
+        key: `comment-row:${commentId}`,
+      });
+    }
+    return added;
+  }
+
+  /**
+   * Attach dropped items to a comment straight away. A row outside edit mode
+   * has no submit, so there is no natural commit trigger — the drop IS the
+   * commit, and status renders inside that row's attachments strip.
+   */
+  async _dropOnCommentRow(commentId, items) {
+    const taskId = this._detailId;
+    const staged = await this._stageRowItems(commentId, items);
+    if (!staged.length) return;
+    this._refreshCommentList();
+    const key = `comment-row:${commentId}`;
+    let consecutiveFailures = 0;
+    for (const pf of staged) {
+      // Cross-hub download failed — _queueCrossHubFiles already marked it.
+      if (pf.crossHubNid && !pf.nid && !pf.file) continue;
+      this._setPendingStatus(key, pf, "uploading");
+      let ok = false;
+      try {
+        let nid = pf.nid;
+        if (!nid && pf.file) nid = (await this._uploadPendingFile(pf)).nid;
+        if (nid) {
+          const res = await this.postService({
+            service: SERVICE.task.comment_link_file,
+            hub_id: this._hubId,
+            comment_id: commentId,
+            task_id: taskId,
+            file_nid: nid,
+          });
+          ok = this._linkSucceeded(res);
+          // Uploaded fine; only the link needs redoing on retry.
+          if (!ok) pf.nid = nid;
+        }
+      } catch (err) {
+        // Only _uploadPendingFile can land here — it is a hand-rolled Promise
+        // that genuinely rejects. postService never does.
+        console.error("[tasks_panel] comment row attach failed:", err);
+      }
+      if (ok) {
+        this._dropRowUpload(commentId, pf);
+        consecutiveFailures = 0;
+        continue;
+      }
+      this._setPendingStatus(key, pf, "error");
+      // Two in a row is a wall, not bad luck — stop rather than firing the
+      // rest at it. No error taxonomy: the count is the whole rule.
+      if (++consecutiveFailures >= 2) break;
+    }
+    await this._loadComments(taskId);
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  // Drop a landed entry and release its preview.
+  _dropRowUpload(commentId, pf) {
+    const list = this._rowUploads.get(commentId) || [];
+    const at = list.indexOf(pf);
+    if (at >= 0) list.splice(at, 1);
+    if (!list.length) this._rowUploads.delete(commentId);
+    if (pf.previewUrl) {
+      try {
+        URL.revokeObjectURL(pf.previewUrl);
+      } catch (_) {}
+      pf.previewUrl = null;
+    }
+  }
+
+  // Retry one failed row entry. The upload may already have succeeded, in
+  // which case pf.nid is set and only the link is redone.
+  async _retryRowUpload(trigger) {
+    const commentId = trigger.mget("commentId");
+    const pendingKey = String(trigger.mget("pendingKey") || "");
+    if (!commentId || !pendingKey) return;
+    const entry = this.getRowUploads(commentId).find(
+      (f) => this._pendingKey(f) === pendingKey,
+    );
+    if (!entry) return;
+    return this._retryOne(commentId, entry);
+  }
+
+  async _retryOne(commentId, entry) {
+    const taskId = this._detailId;
+    const key = `comment-row:${commentId}`;
+    this._setPendingStatus(key, entry, "uploading");
+    let ok = false;
+    try {
+      let nid = entry.nid;
+      if (!nid && entry.file) nid = (await this._uploadPendingFile(entry)).nid;
+      if (nid) {
+        const res = await this.postService({
+          service: SERVICE.task.comment_link_file,
+          hub_id: this._hubId,
+          comment_id: commentId,
+          task_id: taskId,
+          file_nid: nid,
+        });
+        ok = this._linkSucceeded(res);
+        if (!ok) entry.nid = nid;
+      }
+    } catch (err) {
+      console.error("[tasks_panel] comment row retry failed:", err);
+    }
+    if (ok) {
+      this._dropRowUpload(commentId, entry);
+      await this._loadComments(taskId);
+    } else {
+      this._setPendingStatus(key, entry, "error");
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
   _commentById(id) {
     return (this._comments || []).find((c) => String(c.id) === String(id));
   }
@@ -3984,10 +4209,6 @@ class __tasks_panel extends LetcBox {
       },
     });
     if (!zone) return null;
-    // Task 4 lifts this: the per-row handler does not exist yet. Refusing is
-    // the correct interim behaviour — the zones do not nest, so there is no
-    // enclosing task zone for a row drop to fall through to anyway.
-    if (zone.scope === "comment-row") return null;
     // A zone only accepts while the surface that owns it is actually open.
     if (zone.scope === "detail" && !this._detailDraft) return null;
     if (zone.scope === "create" && !this._createDefaults) return null;
@@ -4157,6 +4378,10 @@ class __tasks_panel extends LetcBox {
     }
     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
     if (!files.length) return;
+    // A comment row has no submit, so the drop IS the commit.
+    if (scope.scope === "comment-row") {
+      return this._dropOnCommentRow(scope.commentId, files);
+    }
     const draft = this._draftForScope(scope);
     if (!draft) return;
     await this._stashPendingFiles(draft, files);
@@ -4709,11 +4934,18 @@ class __tasks_panel extends LetcBox {
     entry.status = status;
     if (!this.el) return;
     const pfx = this.fig.family;
-    const card = this.el.querySelector(
-      `[data-scope="${scopeKey}"] ` +
-        `.${pfx}__attachment-row[data-key="${this._pendingKey(entry)}"]`,
-    );
-    if (card) card.dataset.status = status;
+    // _pendingKey is filename-derived, so a quote or bracket in a name would
+    // break or escape a selector. Iterate instead — strips are short, and
+    // scopeKey is a controlled value so it needs no escaping.
+    const strip = this.el.querySelector(`[data-scope="${scopeKey}"]`);
+    if (!strip) return;
+    const want = this._pendingKey(entry);
+    for (const card of strip.querySelectorAll(`.${pfx}__attachment-row`)) {
+      if (card.dataset.key === want) {
+        card.dataset.status = status;
+        return;
+      }
+    }
   }
 
   _refreshFileSearchDropdown(scope, { preserveScroll = false } = {}) {
@@ -4814,6 +5046,15 @@ class __tasks_panel extends LetcBox {
       this._pointerScope() ||
       this._positionlessScope();
     if (!scope) return false;
+    // A comment row has no submit, so the drop IS the commit — _stageRowItems
+    // applies the same dedupes and the same cross-hub placeholder path this
+    // function does for the staged scopes.
+    if (scope.scope === "comment-row") {
+      const items = Array.isArray(files) ? files : [files];
+      if (!items.length) return false;
+      this._dropOnCommentRow(scope.commentId, items);
+      return true;
+    }
     const draft = this._draftForScope(scope);
     if (!draft) return false;
 
@@ -4893,10 +5134,24 @@ class __tasks_panel extends LetcBox {
   // entry as each one lands — so a run of files resolves one by one instead of
   // all appearing at the end, and a failure stays on screen as an error rather
   // than disappearing into a console warning.
-  async _queueCrossHubFiles(attrs, scope) {
-    const draft = this._draftForScope(scope);
-    if (!draft) return;
-    const key = this._scopeKey(scope);
+  async _queueCrossHubFiles(attrs, target) {
+    // `target` is either a resolved zone (staged scopes, which own a draft) or
+    // {list, key} for the row path, which has no draft because a row has no
+    // submit. Resolved once here so the splice-by-identity below is identical
+    // for both — the staged behaviour must not drift now that it is shared.
+    let list;
+    if (target && target.list) {
+      list = target.list;
+    } else {
+      const d = this._draftForScope(target);
+      if (!d) return;
+      d.pending_files = d.pending_files || [];
+      list = d.pending_files;
+    }
+    const key = target && target.key ? target.key : this._scopeKey(target);
+    // Shim: _stashPendingFiles and the splice below touch only .pending_files,
+    // and this holds the SAME array, so both paths mutate the real list.
+    const draft = { pending_files: list };
     const b = (typeof bootstrap === "function" && bootstrap()) || {};
     const endpoint = b.endpoint || "";
     for (const attr of attrs) {

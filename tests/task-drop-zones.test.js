@@ -169,3 +169,126 @@ test("every ZONES entry is reachable and uniquely scoped", () => {
     "create",
   ]);
 });
+
+// ── Per-row immediate uploads ────────────────────────────────────────────
+// A comment row has no submit, so the drop IS the commit. These exercise the
+// real _linkSucceeded / _dropOnCommentRow / _stageRowItems lifted from source.
+const { readFileSync } = require("node:fs");
+const { join } = require("node:path");
+const PANEL = join(__dirname, "../src/drumee/builtins/window/tasks/index.js");
+const panelSrc = readFileSync(PANEL, "utf8");
+
+function extractClassMethod(source, name) {
+  const m = new RegExp(`\\n  (async )?${name}\\(`).exec(source);
+  assert.ok(m, `${name} not found in production source`);
+  const start = m.index + 1;
+  const end = source.indexOf("\n  }\n", start);
+  assert.notEqual(end, -1, `${name} has no closing brace`);
+  const body = source.slice(start, end + 4).trim().replace(/^async\s+/, "");
+  return `${m[1] ? "async " : ""}function ${body}`;
+}
+
+const linkSucceeded = new Function(
+  `${extractClassMethod(panelSrc, "_linkSucceeded")}; return _linkSucceeded;`,
+)();
+
+test("_linkSucceeded separates success from BOTH failure shapes", () => {
+  // Verified against the SP: a fresh link and a duplicate INSERT IGNORE both
+  // return the comment's full attachment list, non-empty in each case.
+  assert.equal(linkSucceeded([{ comment_id: "cA", file_nid: "fA" }]), true);
+  // postService resolves — it never rejects — so these are what failure looks like.
+  assert.equal(linkSucceeded(undefined), false, "transport failure / non-200");
+  assert.equal(
+    linkSucceeded({ error: "COMMENT_NOT_FOUND", reason: "not the author" }),
+    false,
+    "server refusal resolves with an error payload, not a throw",
+  );
+  assert.equal(linkSucceeded([]), false, "empty list is not a successful link");
+});
+
+// A panel stand-in carrying the real row-upload methods.
+function rowPanel(linkResults) {
+  const calls = [];
+  const methods = new Function(
+    "SERVICE",
+    `
+    ${extractClassMethod(panelSrc, "_linkSucceeded")}
+    ${extractClassMethod(panelSrc, "_dropOnCommentRow")}
+    ${extractClassMethod(panelSrc, "_dropRowUpload")}
+    return { _linkSucceeded, _dropOnCommentRow, _dropRowUpload };
+    `,
+  )({ task: { comment_link_file: "task.comment_link_file" } });
+  return {
+    ...methods,
+    calls,
+    _detailId: "t1",
+    _hubId: "h1",
+    _rowUploads: new Map(),
+    _staged: [],
+    async _stageRowItems(id, items) {
+      const list = this._rowUploads.get(id) || [];
+      this._rowUploads.set(id, list);
+      const added = items.map((f, i) => ({
+        localKey: `row:${id}:${i}:${f.name}`,
+        file: f,
+        filename: f.name,
+        status: "queued",
+      }));
+      list.push(...added);
+      return added;
+    },
+    async _uploadPendingFile(pf) {
+      return { nid: `nid-${pf.filename}` };
+    },
+    async postService(args) {
+      calls.push(args.file_nid);
+      const r = linkResults.shift();
+      return r;
+    },
+    _setPendingStatus(key, entry, status) {
+      entry.status = status;
+    },
+    _refreshCommentList() {},
+    async _loadComments() {},
+    _pendingKey: (f) => String(f.localKey || f.nid || ""),
+  };
+}
+
+test("a successful row drop links every file and empties the in-flight list", async () => {
+  const OK = [{ file_nid: "x" }];
+  const p = rowPanel([OK, OK]);
+  await p._dropOnCommentRow("cA", [{ name: "a.pdf" }, { name: "b.pdf" }]);
+  assert.deepEqual(p.calls, ["nid-a.pdf", "nid-b.pdf"]);
+  assert.equal(p._rowUploads.has("cA"), false, "list cleared once all landed");
+});
+
+test("a server refusal is marked error, not silently swallowed", async () => {
+  // The whole point of reading the resolved value: this used to look like success.
+  const p = rowPanel([{ error: "COMMENT_NOT_FOUND" }]);
+  await p._dropOnCommentRow("cA", [{ name: "a.pdf" }]);
+  const left = p._rowUploads.get("cA");
+  assert.equal(left.length, 1, "entry retained for retry");
+  assert.equal(left[0].status, "error");
+  assert.equal(left[0].nid, "nid-a.pdf", "upload kept; only the link needs retry");
+});
+
+test("two consecutive failures abort the rest of the queue", async () => {
+  const p = rowPanel([undefined, undefined, [{ file_nid: "x" }]]);
+  await p._dropOnCommentRow("cA", [
+    { name: "a.pdf" }, { name: "b.pdf" }, { name: "c.pdf" },
+  ]);
+  assert.deepEqual(p.calls, ["nid-a.pdf", "nid-b.pdf"], "third never attempted");
+  assert.equal(p._rowUploads.get("cA").length, 3, "all three still held");
+});
+
+test("an isolated failure between successes does NOT abort", async () => {
+  const OK = [{ file_nid: "x" }];
+  const p = rowPanel([OK, undefined, OK]);
+  await p._dropOnCommentRow("cA", [
+    { name: "a.pdf" }, { name: "b.pdf" }, { name: "c.pdf" },
+  ]);
+  assert.equal(p.calls.length, 3, "counter resets on success");
+  const left = p._rowUploads.get("cA");
+  assert.equal(left.length, 1);
+  assert.equal(left[0].filename, "b.pdf");
+});
