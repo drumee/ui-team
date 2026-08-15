@@ -2,7 +2,9 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
-const { captureUtm, campaignArrival } = require("libs/campaign");
+const {
+  captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
+} = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
@@ -1992,7 +1994,16 @@ class desk_module extends LetcBox {
         // rides through the login reload to here, where there is finally a uid
         // to attribute it to. Awaited before get_state so the row is already
         // 'clicked' when we ask; only consumed once the server has it.
-        if (campaignArrival()) {
+        //
+        // MATCHED BY NAME, not by truthiness. There is one arrival slot and now
+        // more than one campaign using it, and this runs BEFORE the LAUNCH30
+        // check in the same chain (_afterHomeSettled). A bare `if
+        // (campaignArrival())` therefore did two wrong things to a promo click:
+        // filed it in the reward funnel as a 'clicked' row for an offer the
+        // user was never sent, and consumed the marker, so the promo found
+        // nothing left to read. Anything that is not ours is left untouched for
+        // whoever it belongs to.
+        if (campaignArrival() === REWARD_CAMPAIGN) {
           await this.postService(SERVICE.reward.track, {
             hub_id: Visitor.id,
             status: "clicked",
@@ -2175,6 +2186,17 @@ class desk_module extends LetcBox {
    * own persistent "claim pill" for an already-seen, still-unclaimed offer
    * (tester feedback 2026-07-31 #3) — one fetch, two callers.
    *
+   * A click on the campaign mail's CTA (utm_campaign=launch30, put there by
+   * analytics-server _promoCtaLink) outranks both of the gates the passive
+   * path applies. It skips the five-minute hold, because someone who followed
+   * a link asking them to claim has already done the waiting the hold exists
+   * to protect; and it shows for `eligible_seen` too, because the list this
+   * mail goes to is mostly people who were shown Modal A once and did nothing
+   * — leaving the show-once flag in charge would make the CTA dead for exactly
+   * the audience it was sent to. A deliberate click beats a passive
+   * impression, the same reasoning billing's claim pill already uses
+   * (settings/account/billing _reopenPromoOffer).
+   *
    * @param {string} surface  'home' | 'billing'
    * @returns {Promise<object|undefined>} the fetched promo state, or
    *   undefined if a concurrent call was already in flight or the fetch
@@ -2182,6 +2204,11 @@ class desk_module extends LetcBox {
    */
   async _maybeShowPromoLaunch30(surface, opt = {}) {
     const defer = !!opt.defer;
+    // Read, not consumed: the marker is spent below, and only once we know
+    // whether it produced anything. Spending it here would lose the click to
+    // any early return — an unreachable server, a widget bundle that will not
+    // load — with nothing shown for it.
+    const arrived = campaignArrival() === PROMO_CAMPAIGN;
     if (this._promoLaunch30InFlight) return;
     this._promoLaunch30InFlight = true;
     try {
@@ -2192,7 +2219,12 @@ class desk_module extends LetcBox {
         return;
       }
       if (!state) return;
-      if (state.state === "eligible_unseen") {
+      // Nothing to offer this account — already claimed, in someone else's
+      // org, or the campaign is over. Spend the marker anyway: there is no
+      // second thing for it to trigger, and leaving it would re-run all of
+      // this on every hashchange for the life of the tab.
+      if (arrived && !/^eligible_/.test(state.state || "")) campaignArrival(true);
+      if (state.state === "eligible_unseen" || (arrived && state.state === "eligible_seen")) {
         // The OFFER waits until the account has actually used Drumee for a
         // while. It used to fire the moment the home screen settled — for a
         // brand-new account that is the instant the tutorial ends, so the
@@ -2203,13 +2235,18 @@ class desk_module extends LetcBox {
         // Deferred, never awaited: _afterHomeSettled chains the
         // invited-workspace prompt behind this call, and awaiting a
         // five-minute timer would hold that prompt for five minutes too.
-        if (defer) {
+        //
+        // A CTA click skips the hold entirely — see the note on this method.
+        if (defer && !arrived) {
           this._schedulePromoOffer(surface, state);
           return state;
         }
         try {
           await Kind.waitFor("promo_launch30");
         } catch (e) {
+          // Marker deliberately NOT spent: the bundle failed to load, nothing
+          // was shown, and a later route in this tab can still honour the
+          // click.
           return state;
         }
         Wm.launch({
@@ -2221,6 +2258,8 @@ class desk_module extends LetcBox {
           hub_id: Visitor.id,
           wm_unique_id: "promo_launch30",
         }, { explicit: 1, singleton: 1 });
+        // Spent only now, with the modal actually on screen.
+        if (arrived) campaignArrival(true);
         return state;
       }
       if (surface === "home" && state.state === "claimed_active" && !state.welcome_seen) {
@@ -2299,13 +2338,27 @@ class desk_module extends LetcBox {
    * self-gating; the prompt is a small dialog and goes last so it never stacks
    * on top of them.
    *
+   * `immediate` says the screen is KNOWN to be clear because a tutorial just
+   * finished on it, which is the one moment the LAUNCH30 offer does not have to
+   * wait out its five-minute hold. Exactly one of the four callers passes it —
+   * see _chainRewardFlowAfterTutorial. The other three cannot: two of them fire
+   * precisely because the tutorial's state could not be established, and the
+   * third is a returning user the hold was written for.
+   *
+   * @param {Object}  [opt]
+   * @param {Boolean} [opt.immediate] show the LAUNCH30 offer without the hold
    * @returns {Promise}
    */
-  _afterHomeSettled() {
+  _afterHomeSettled(opt = {}) {
     // Once per session. There are now four ways in — no-tutorial, after the
     // tutorial, the tutorial-never-mounted fallback, and a re-fed module — and
     // running the chain twice would ask the reward flow to mount twice and
     // could show the invite dialog again.
+    //
+    // Set BEFORE the chain below starts, with no await in between, so a second
+    // caller cannot interleave: a "Product Tour" replayed from Get help runs
+    // the same tutorial-destroy path as a first run and would otherwise reach
+    // the immediate branch long after home settled.
     if (this._homeSettledDone) return Promise.resolve();
     this._homeSettledDone = true;
     clearTimeout(this._homeSettledFallback);
@@ -2322,7 +2375,7 @@ class desk_module extends LetcBox {
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
       .then(() => this._maybeStartRewardFlow())
-      .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
+      .then(() => this._maybeShowPromoLaunch30("home", { defer: !opt.immediate }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
         clear
@@ -2408,10 +2461,27 @@ class desk_module extends LetcBox {
     });
   }
 
+  /**
+   * Hand off to the post-home chain once the tutorial is done with the screen.
+   *
+   * The two branches are NOT interchangeable, and only the first may settle
+   * immediately:
+   *
+   *   once(destroy)  the tutorial ran and has torn itself down. The screen is
+   *                  known clear, and the user has just been walked through
+   *                  the product — the one moment the LAUNCH30 offer is worth
+   *                  showing without its five-minute hold.
+   *   fall-through   we never got a usable handle on the tutorial. That is the
+   *                  p.feed()/children.last() race written up on _showTutorial,
+   *                  and it means the tutorial is very likely ON SCREEN right
+   *                  now. Firing the offer immediately here is the regression a
+   *                  tester reported as Modal A stacked over step 1/5; it stays
+   *                  on the hold, which is what makes that harmless.
+   */
   _chainRewardFlowAfterTutorial(tutorial) {
     if (tutorial && _.isFunction(tutorial.once)) {
       tutorial.once(_e.destroy, () => {
-        this._afterHomeSettled();
+        this._afterHomeSettled({ immediate: 1 });
       });
       return;
     }
