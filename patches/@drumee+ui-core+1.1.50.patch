@@ -1,8 +1,18 @@
 diff --git a/node_modules/@drumee/ui-core/letc/addons/letc.js b/node_modules/@drumee/ui-core/letc/addons/letc.js
-index be31634..74857a8 100644
+index be31634..450aeb0 100644
 --- a/node_modules/@drumee/ui-core/letc/addons/letc.js
 +++ b/node_modules/@drumee/ui-core/letc/addons/letc.js
-@@ -91,7 +91,7 @@ function deviceChanged() {
+@@ -12,6 +12,9 @@ const { View } = Backbone;
+ // ========================
+ 
+ const { isNumeric, timestamp, log } = require("@drumee/ui-essentials");
++// Resolved through the app's global `libs` webpack alias (webpack/resolve.js),
++// which applies to requires from node_modules too. See __handleContextmenu.
++const { isTextEntry } = require("libs/is-text-entry");
+ const ORIENTATION = {
+   'landscape-primary': 'x',
+   'landscape': 'x',
+@@ -91,7 +94,7 @@ function deviceChanged() {
  
  const Timer = new Map();
  
@@ -11,7 +21,7 @@ index be31634..74857a8 100644
  
  
  /** Common addons */
-@@ -317,10 +317,19 @@ View.prototype.__handleClick = function (e) {
+@@ -317,10 +320,19 @@ View.prototype.__handleClick = function (e) {
      }
    }
  
@@ -33,6 +43,30 @@ index be31634..74857a8 100644
    e.stopPropagation();
    this.triggerHandlers(e);
    e.stopImmediatePropagation();
+@@ -371,6 +383,23 @@ View.prototype.__handleContextmenu = function (e) {
+     }
+   }
+ 
++  // Text entry keeps the browser's own cut/copy/paste/spellcheck menu. The
++  // event is answered here rather than by the input, which owns no view: the
++  // Entry widget injects a raw <input> as innerHTML, so the contextmenu bubbles
++  // one level to the Entry root. Without this the walk below reaches the owning
++  // window and preventDefault()s the native menu — the reason a Drive link
++  // could not be pasted (migrate-gdrive-popup) among others.
++  //
++  // A view that wants its app menu on an input anyway sets forceContextmenu,
++  // read exactly like escapeContextmenu below.
++  //
++  // The bare `return` matters: this is a property-style `oncontextmenu`
++  // handler, so returning `false` cancels the default — which is precisely the
++  // suppression being removed. Returning undefined lets the browser proceed.
++  if (!(this.forceContextmenu || this.mget('forceContextmenu')) && isTextEntry(e.target)) {
++    return
++  }
++
+   if (this.escapeContextmenu || this.mget('escapeContextmenu')) {
+     return
+   }
 diff --git a/node_modules/@drumee/ui-core/letc/user.js b/node_modules/@drumee/ui-core/letc/user.js
 index a288e64..4b85937 100644
 --- a/node_modules/@drumee/ui-core/letc/user.js
