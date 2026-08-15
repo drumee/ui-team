@@ -24,6 +24,13 @@
     visibility: visible;
   }
 
+  // Breathing room around the "Drop files to attach" overlay while it is up, so
+  // the dashed frame does not sit flush against the content it covers.
+  &__attachments[data-drop-active="1"],
+  &__comment-composer[data-drop-active="1"] {
+    padding: 20px;
+  }
+
   // Each zone anchors its own overlay.
   &__attachments,
   &__create-files,
