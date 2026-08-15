@@ -2958,6 +2958,21 @@ class __tasks_panel extends LetcBox {
         }
       : null;
     // Reset comment state for the newly-opened task.
+    // Row uploads deliberately SURVIVE a task switch — a terminal error must
+    // still be there, with its retry, if the user comes back. But their image
+    // previews are live blob URLs and nothing on screen is using them once the
+    // task is gone, so release those while keeping the entry and its File;
+    // retry only needs the File, and the card reappears with a dead thumbnail
+    // rather than holding a blob for the rest of the session.
+    for (const list of (this._rowUploads || new Map()).values()) {
+      for (const f of list) {
+        if (!f.previewUrl) continue;
+        try {
+          URL.revokeObjectURL(f.previewUrl);
+        } catch (_) {}
+        f.previewUrl = null;
+      }
+    }
     this._comments = [];
     this._discardCommentPending(this._commentDraft);
     this._commentDraft = null;
