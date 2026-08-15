@@ -3369,16 +3369,26 @@ class __tasks_panel extends LetcBox {
           this._setPendingStatus(scopeKey, pf, "error");
           return { pf, ok: false };
         }
+        let linked = false;
         try {
-          await this.postService({
+          const res = await this.postService({
             service: SERVICE.task.comment_link_file,
             hub_id: this._hubId,
             comment_id: commentId,
             task_id: taskId || this._detailId,
             file_nid: nid,
           });
+          // Read the RESOLVED VALUE. postService never rejects — a server
+          // refusal resolves with {error, reason} and a transport failure
+          // resolves undefined — so the catch below is unreachable for it, and
+          // this used to return ok:true for every refusal: the entry was
+          // dropped from the strip and its blob revoked while the file sat in
+          // the folder unattached, with no signal to the user at all.
+          linked = this._linkSucceeded(res);
         } catch (err) {
           console.error("[tasks_panel] comment.link_file failed:", err);
+        }
+        if (!linked) {
           // The upload succeeded, so a retry only has to redo the link.
           pf.nid = nid;
           this._setPendingStatus(scopeKey, pf, "error");

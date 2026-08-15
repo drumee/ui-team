@@ -282,3 +282,80 @@ test("unknown scopes still attach to the task", async () => {
     assert.equal(panel._commentDraft, null);
   }
 });
+
+// ── _linkCommentFiles: a server refusal must not read as success ─────────
+// postService NEVER rejects — a refusal resolves with {error, reason}. The link
+// leg used to sit in a bare try/catch, so every refusal returned ok:true: the
+// entry was dropped from the strip, its blob revoked, and failed:0 reported,
+// while the file sat in the folder unattached. Silent data loss.
+function linkPanel(results) {
+  const posted = [];
+  const methods = new Function(
+    "SERVICE",
+    `${extractClassMethod(panelSrc, "_linkCommentFiles")}
+     ${extractClassMethod(panelSrc, "_linkSucceeded")}
+     return { _linkCommentFiles, _linkSucceeded };`,
+  )({ task: { comment_link_file: "task.comment_link_file" } });
+  return {
+    ...methods,
+    posted,
+    _hubId: "h1",
+    _detailId: "t1",
+    _commentSaving: false,
+    async _uploadPendingFile(pf) {
+      return { nid: `nid-${pf.filename}` };
+    },
+    async postService(a) {
+      posted.push(a.file_nid);
+      return results.shift();
+    },
+    _setPendingStatus(_k, entry, status) {
+      entry.status = status;
+    },
+  };
+}
+
+test("a refused comment link keeps the file, marks it error, and reports failed", async () => {
+  const revoked = [];
+  const realURL = global.URL;
+  global.URL = { revokeObjectURL: (u) => revoked.push(u) };
+
+  const entry = {
+    localKey: "k1",
+    filename: "spec",
+    file: { name: "spec.pdf" },
+    previewUrl: "blob:keep-me",
+    status: "queued",
+  };
+  const draft = { pending_files: [entry] };
+  const p = linkPanel([{ error: "COMMENT_NOT_FOUND", reason: "not the author" }]);
+
+  const res = await p._linkCommentFiles("cA", draft, "t1", "comment-edit");
+
+  assert.deepEqual(res, { failed: 1, linked: 0 }, "reported as a failure");
+  assert.deepEqual(draft.pending_files, [entry], "entry survives for retry");
+  assert.equal(entry.status, "error", "routed into the error surface");
+  assert.equal(entry.previewUrl, "blob:keep-me");
+  assert.deepEqual(revoked, [], "blob URL NOT revoked on failure");
+  assert.equal(p._commentSaving, false, "save guard released");
+
+  global.URL = realURL;
+});
+
+test("a successful comment link still clears the entry and revokes its blob", async () => {
+  const revoked = [];
+  const realURL = global.URL;
+  global.URL = { revokeObjectURL: (u) => revoked.push(u) };
+
+  const entry = { localKey: "k1", filename: "spec", file: { name: "spec.pdf" }, previewUrl: "blob:gone" };
+  const draft = { pending_files: [entry] };
+  const p = linkPanel([[{ comment_id: "cA", file_nid: "nid-spec" }]]);
+
+  const res = await p._linkCommentFiles("cA", draft, "t1", "comment-edit");
+
+  assert.deepEqual(res, { failed: 0, linked: 1 });
+  assert.deepEqual(draft.pending_files, [], "entry cleared once attached");
+  assert.deepEqual(revoked, ["blob:gone"]);
+
+  global.URL = realURL;
+});
