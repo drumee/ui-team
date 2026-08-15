@@ -2381,50 +2381,88 @@ function commentAttachments(ui, c, isOwn) {
   // addresses, and it carries the comment id so two rows never collide.
   const inFlight = (ui.getRowUploads && ui.getRowUploads(c && c.id)) || [];
   if (!files.length && !inFlight.length) return null;
+
+  /**
+   * One chip, whatever state it is in. Committed and in-flight entries share
+   * the SAME shape deliberately: rendering in-flight ones as the taller
+   * fileCard made the whole thread jump 36px the moment an upload committed,
+   * which with a second drop in flight moved the list under the cursor.
+   *
+   * The trailing 12px slot is always present and holds exactly one thing —
+   * unlink, spinner, retry, or nothing — so width never varies by state or by
+   * ownership either.
+   */
+  const chip = (f, opt = {}) => {
+    const nid = f.file_nid || f.nid;
+    const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
+    const status = opt.pending ? f.status || "queued" : null;
+    const busy = status === "uploading" || status === "downloading";
+    let trailing = null;
+    if (status === "error") {
+      // Suppressed when there is nothing a retry could do: a cross-hub
+      // placeholder whose download failed carries neither file nor nid, so the
+      // link has no input and the fetch is never re-run. A stuck card with only
+      // a remove action is honest; a button that does nothing is not.
+      trailing = (f.file || f.nid)
+        ? Skeletons.Button.Svg({
+            className: `${pfx}__comment-attachment-retry`,
+            ico: "refresh-view",
+            bubble: 0,
+            service: "retry-pending-file",
+            uiHandler: [ui],
+            pendingKey: String(f.localKey || f.nid || ""),
+            commentId: c && c.id,
+            tooltips: LOCALE.RETRY || "Retry",
+          })
+        : null;
+    } else if (!status && isOwn) {
+      trailing = Skeletons.Button.Svg({
+        className: `${pfx}__comment-attachment-unlink`,
+        ico: "cross",
+        bubble: 0,
+        service: "comment-unlink-attachment",
+        uiHandler: [ui],
+        commentId: c && c.id,
+        fileNid: nid,
+      });
+    }
+    return Skeletons.Box.X({
+      className: `${pfx}__comment-attachment`,
+      // A chip mid-upload is not a click target for opening the file.
+      service: nid && !busy && !status ? "open-attachment" : null,
+      uiHandler: nid && !busy && !status ? [ui] : null,
+      fileNid: nid,
+      attrOpt: {
+        ...(status ? { "data-status": status, "data-key": String(f.localKey || f.nid || "") } : {}),
+      },
+      kids: [
+        Skeletons.Image.Svg({
+          ico: attachmentIcon(f),
+          className: `${pfx}__comment-attachment-ico`,
+          // Lets the skin treat a type differently without the renderer
+          // knowing about colour — see the office rule in the skin.
+          attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
+        }),
+        Skeletons.Note({
+          className: `${pfx}__comment-attachment-name`,
+          content: name,
+        }),
+        // Always rendered, even when empty: reserving the slot keeps every
+        // chip the same width regardless of state or authorship.
+        Skeletons.Box.X({
+          className: `${pfx}__comment-attachment-slot`,
+          kids: [trailing].filter(Boolean),
+        }),
+      ],
+    });
+  };
+
   return Skeletons.Box.X({
     className: `${pfx}__comment-attachments`,
     attrOpt: { "data-scope": `comment-row:${c && c.id}` },
-    kids: files.map((f) => {
-      const nid = f.file_nid || f.nid;
-      const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
-      const ico = attachmentIcon(f);
-      return Skeletons.Box.X({
-        className: `${pfx}__comment-attachment`,
-        service: nid ? "open-attachment" : null,
-        uiHandler: nid ? [ui] : null,
-        fileNid: nid,
-        kids: [
-          Skeletons.Image.Svg({
-            ico,
-            className: `${pfx}__comment-attachment-ico`,
-            // Lets the skin treat a type differently without the renderer
-            // knowing about colour — see the office rule in the skin.
-            attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
-          }),
-          Skeletons.Note({
-            className: `${pfx}__comment-attachment-name`,
-            content: name,
-          }),
-          // Author-only, like editing or deleting the comment itself — the
-          // server enforces the same rule.
-          isOwn
-            ? Skeletons.Button.Svg({
-                className: `${pfx}__comment-attachment-unlink`,
-                ico: "cross",
-                bubble: 0,
-                service: "comment-unlink-attachment",
-                uiHandler: [ui],
-                commentId: c.id,
-                fileNid: nid,
-              })
-            : null,
-        ].filter(Boolean),
-      });
-    }).concat(
-      inFlight.map((f) =>
-        fileCard(ui, f, { committed: false, commentId: c && c.id }),
-      ),
-    ),
+    kids: files
+      .map((f) => chip(f))
+      .concat(inFlight.map((f) => chip(f, { pending: true }))),
   });
 }
 

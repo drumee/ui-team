@@ -3154,6 +3154,64 @@
     }
   }
 
+  // The trailing slot is ALWAYS rendered, holding exactly one 12px control or
+  // nothing: unlink when committed and owned, a spinner while uploading, retry
+  // on error, empty on someone else's committed file. Reserving it is what
+  // keeps every chip the same size, so the in-flight → committed swap costs
+  // zero layout — the whole point of rendering both as chips rather than
+  // letting an in-flight fileCard stand 36px taller.
+  &__comment-attachment-slot {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Same 12px spinner the unlink button already uses for its own in-flight
+  // state, so the two read as one family.
+  &__comment-attachment[data-status="uploading"] &__comment-attachment-slot,
+  &__comment-attachment[data-status="downloading"] &__comment-attachment-slot {
+    &::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+      border-top-color: var(--accent, #433cc5);
+      border-radius: 50%;
+      animation: tasks-panel-spin 0.7s linear infinite;
+    }
+  }
+
+  &__comment-attachment[data-status="uploading"],
+  &__comment-attachment[data-status="downloading"] {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  &__comment-attachment[data-status="error"] {
+    border-color: var(--signal-error, #d74e49);
+  }
+
+  &__comment-attachment-retry {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    position: relative; // anchors the hit expansion below
+    color: var(--signal-error, #d74e49);
+
+    // A 12px glyph is a small target. Expand the hit area without changing
+    // layout — same trick __comment-action-ico uses, so it is consistent
+    // rather than novel.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border-radius: 6px;
+    }
+  }
+
   // Bordered comment card (Figma Activity: 1px border, radius 12, padding 16).
   &__comment-row {
     gap: 12px;

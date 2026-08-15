@@ -213,3 +213,22 @@ const childrenWithClass = (n, cls) =>
   [].concat((n && n.kids) || []).filter((k) => k && hasClass(k, cls));
 
 module.exports = { render, walk, find, findAll, hasClass, childrenWithClass, DEFAULT_COMMENT };
+
+// Descriptor tree → HTML, so a browser can lay out what the skeleton really
+// emits. Only the attributes layout and hit-testing depend on.
+function toHtml(n) {
+  if (n == null || typeof n !== "object") return "";
+  const cls = n.className ? ` class="${n.className}"` : "";
+  const attrs = Object.entries(n.attrOpt || {})
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => ` ${k}="${String(v)}"`)
+    .join("");
+  const ds = Object.entries(n.dataset || {})
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => ` data-${k}="${String(v)}"`)
+    .join("");
+  const kids = [].concat(n.kids || []).map(toHtml).join("");
+  const text = n.content != null && !kids ? String(n.content) : "";
+  return `<div${cls}${attrs}${ds}>${text}${kids}</div>`;
+}
+module.exports.toHtml = toHtml;
