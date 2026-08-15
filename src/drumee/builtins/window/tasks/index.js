@@ -21,6 +21,16 @@ const COMMENT_SUBMIT_BY_SCOPE = {
   "comment-reply": "_submitReply",
 };
 
+// Scopes the file picker accepts, i.e. the drafts _draftForKey can queue a file
+// on. Anything else falls back to "detail" and attaches to the task.
+const PICK_ATTACHMENT_SCOPES = [
+  "create",
+  "detail",
+  "comment",
+  "comment-edit",
+  "comment-reply",
+];
+
 // 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
 // the skin derives the column tint from the accent (--col-accent) and pill
 // tints from data-theme.
@@ -186,7 +196,7 @@ class __tasks_panel extends LetcBox {
     this._replyingTo = null; // id of the comment (root or child) being replied to
     this._replyDraft = null; // reply buffer { body, mention_uids }
     this._reactPickerFor = null; // comment id whose reaction palette is open
-    this._activityTab = "all"; // detail popup: all | comments | history
+    this._activityTab = "comments"; // detail popup: comments | history
     this._taskActivity = []; // change-log rows for the open task
     this._emojiPickerFor = null; // comment id whose full emoji grid is open
     this.bindEvent(_a.live);
@@ -219,10 +229,11 @@ class __tasks_panel extends LetcBox {
       this._pointerRelease = null;
     }
     // Release pending-file image-preview blob URLs — the two task forms and
-    // the two comment drafts, which carry their own queued files.
+    // the three comment drafts, which carry their own queued files.
     for (const draft of [
       this._createDefaults,
       this._detailDraft,
+      this._commentDraft,
       this._commentEditDraft,
       this._replyDraft,
     ]) {
@@ -2076,6 +2087,7 @@ class __tasks_panel extends LetcBox {
     this._detailDraft = null;
     this._pickerOpen = null;
     this._comments = [];
+    this._discardCommentPending(this._commentDraft);
     this._commentDraft = null;
     this._discardCommentPending(this._commentEditDraft);
     this._editingCommentId = null;
@@ -2928,6 +2940,7 @@ class __tasks_panel extends LetcBox {
       : null;
     // Reset comment state for the newly-opened task.
     this._comments = [];
+    this._discardCommentPending(this._commentDraft);
     this._commentDraft = null;
     this._editingCommentId = null;
     this._commentEditDraft = null;
@@ -2935,7 +2948,7 @@ class __tasks_panel extends LetcBox {
     this._replyDraft = null;
     this._reactPickerFor = null;
     this._emojiPickerFor = null;
-    this._activityTab = "all";
+    this._activityTab = "comments";
     this._taskActivity = [];
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
@@ -3205,17 +3218,41 @@ class __tasks_panel extends LetcBox {
     if (!this._detailId) return;
     const draft = this._commentDraft;
     const body = String((draft && draft.body) || "").trim();
-    if (!body) return;
+    // Files queued on the composer count as content, exactly as in a reply — a
+    // comment that is only an attachment is still worth posting.
+    if (!body && !((draft && draft.pending_files) || []).length) return;
     const taskId = this._detailId;
     try {
-      await this.postService({
+      const created = await this.postService({
         service: SERVICE.task.comment_create,
         hub_id: this._hubId,
         task_id: taskId,
         body,
         mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
       });
+      // The row doesn't exist until now — its id comes back on the create, and
+      // only then can the queued files be attached to it.
+      const row = Array.isArray(created) ? created[0] : created;
+      const newId = row && (row.id || row.comment_id);
+      let res = null;
+      if (newId) {
+        res = await this._linkCommentFiles(newId, draft, taskId, "comment");
+      } else {
+        this._discardCommentPending(draft);
+      }
+      const stillFailing = ((draft && draft.pending_files) || []).slice();
       this._commentDraft = null;
+      // The composer is cleared on post, so a file that failed to attach has
+      // nowhere left to be retried — open the new comment in edit mode holding
+      // exactly those files, the same surface a failed edit uses.
+      if (newId && res && res.failed) {
+        this._editingCommentId = newId;
+        this._commentEditDraft = {
+          body,
+          mention_uids: [],
+          pending_files: stillFailing,
+        };
+      }
       await this._loadComments(taskId);
     } catch (err) {
       console.error("[tasks_panel] comment.create failed:", err);
@@ -3224,6 +3261,7 @@ class __tasks_panel extends LetcBox {
     // _render() (which rebuilds the whole panel and feels like a reload).
     if (this._detailId === taskId) {
       this._refreshCommentList();
+      this._refreshPendingList("comment");
       const ed = this._descEditorEl("comment");
       if (ed) this._renderEditorContent(ed, "");
     }
@@ -3756,8 +3794,7 @@ class __tasks_panel extends LetcBox {
 
   // The section captions ("Comments" / "History") live outside the fed parts,
   // so an emptied list would leave its caption hanging over nothing. Mirror the
-  // count onto the section — the skin drops an empty change log, caption
-  // included, on the All tab.
+  // count onto the section as data-empty, which is what the skin keys on.
   _stampSectionEmpty(kind, isEmpty) {
     if (!this.el) return;
     const s = this.el.querySelector(
@@ -3791,11 +3828,18 @@ class __tasks_panel extends LetcBox {
   }
 
   _pickAttachment(trigger) {
-    // Scope decides where the uploaded file lands after onUploadResponse:
-    //   "create" → stashed onto _createDefaults.pending_files (linked on commit)
-    //   "detail" (default) → linked to the open task via SERVICE.task.link_file
-    const scope = trigger?.mget?.("searchScope");
-    this._pendingUploadScope = scope === "create" ? "create" : "detail";
+    // Scope decides which draft the file is queued on, and therefore what it
+    // ends up attached to:
+    //   "create"        → _createDefaults    → task.link_file on Create
+    //   "detail"        → _detailDraft       → task.link_file on Update
+    //   "comment-edit"  → _commentEditDraft  → task.comment_link_file on Save
+    //   "comment-reply" → _replyDraft        → task.comment_link_file on Send
+    // Same resolution the drop path uses, so picking and dropping a file in the
+    // same composer can no longer disagree about where it belongs.
+    const raw = trigger?.mget?.("searchScope");
+    this._pendingUploadScope = PICK_ATTACHMENT_SCOPES.includes(raw)
+      ? raw
+      : "detail";
     // FileSelector hardcodes sys_pn to "fileselector".
     return this.ensurePart("fileselector").then((sel) => {
       // sel.open() rebinds onchange every call (overrides the one set in
@@ -3812,10 +3856,15 @@ class __tasks_panel extends LetcBox {
     const scope = this._pendingUploadScope || "detail";
     this._pendingUploadScope = null;
 
-    // Both create and detail use the same deferred-pending flow: stash the
-    // File on the active draft and let _commitTask / _commitDetail do the
-    // upload + link_file on submit.
-    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    // Every scope uses the same deferred-pending flow: stash the File on the
+    // active draft and let that draft's own submit do the upload + link
+    // (_commitTask / _commitDetail → task.link_file; _saveCommentEdit /
+    // _submitReply → _linkCommentFiles → task.comment_link_file).
+    //
+    // `create: true` because a comment can be answered — or its editor opened —
+    // before a single character is typed, so the draft may not exist yet. Same
+    // allocation the drop path relies on.
+    const draft = this._draftForKey(scope, { create: true });
     if (!draft) return;
 
     await this._stashPendingFiles(draft, files);
@@ -4068,6 +4117,12 @@ class __tasks_panel extends LetcBox {
   _draftForKey(key, { create = false } = {}) {
     if (key === "create") return this._createDefaults;
     if (key === "detail") return this._detailDraft;
+    if (key === "comment") {
+      if (create && !this._commentDraft) {
+        this._commentDraft = { body: "", mention_uids: [] };
+      }
+      return this._commentDraft;
+    }
     if (key === "comment-edit") {
       if (create && !this._commentEditDraft) {
         this._commentEditDraft = { body: "", mention_uids: [] };
@@ -4893,7 +4948,7 @@ class __tasks_panel extends LetcBox {
     };
     // Same row template renders in every scope; filter all four drafts and let
     // the surgical refresh skip whichever isn't mounted.
-    for (const key of ["create", "detail", "comment-edit", "comment-reply"]) {
+    for (const key of PICK_ATTACHMENT_SCOPES) {
       const draft = this._draftForKey(key);
       if (draft?.pending_files) {
         draft.pending_files = draft.pending_files.filter(keep);
@@ -5055,8 +5110,15 @@ class __tasks_panel extends LetcBox {
           editorSelector: `.${pfx}__detail-panel .${pfx}__comment-input`,
           placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
           get: () => (this._commentDraft && this._commentDraft.body) || "",
+          // Spread, not replace: files queued on the composer live on this same
+          // draft, and a keystroke must not throw them away (same reason as
+          // comment-edit / comment-reply below).
           set: (text, uids) => {
-            this._commentDraft = { body: text, mention_uids: uids };
+            this._commentDraft = {
+              ...(this._commentDraft || {}),
+              body: text,
+              mention_uids: uids,
+            };
           },
         };
       case "comment-edit":
@@ -6384,7 +6446,7 @@ class __tasks_panel extends LetcBox {
   }
 
   getActivityTab() {
-    return this._activityTab || "all";
+    return this._activityTab || "comments";
   }
 
   getTaskHistory() {
@@ -6396,7 +6458,7 @@ class __tasks_panel extends LetcBox {
   // already hold their full content — so switching costs no rebuild and can't
   // drop the caret mid-comment.
   _switchActivityTab(tab) {
-    const next = ["all", "comments", "history"].includes(tab) ? tab : "all";
+    const next = ["comments", "history"].includes(tab) ? tab : "comments";
     if (next === this._activityTab) return;
     this._activityTab = next;
     if (this.el) {
@@ -6410,7 +6472,7 @@ class __tasks_panel extends LetcBox {
     // Nothing fetched yet (the open-time load failed or is still in flight) —
     // try again so History isn't permanently empty. Only a genuinely missing
     // change log costs a request; an already-loaded one is a pure toggle.
-    if (next !== "comments" && !this.getTaskHistory().length) {
+    if (next === "history" && !this.getTaskHistory().length) {
       const id = this._detailId;
       this._loadTaskHistory(id).then(() => {
         if (this._detailId === id && this.getTaskHistory().length) {
@@ -6499,8 +6561,11 @@ class __tasks_panel extends LetcBox {
   getReplyingTo() {
     return this._replyingTo;
   }
-  // Read-only for the skeleton: the two comment drafts carry the files dropped
+  // Read-only for the skeleton: the three comment drafts carry the files queued
   // on them, which the pending strip renders before they are attached.
+  getCommentDraft() {
+    return this._commentDraft;
+  }
   getCommentEditDraft() {
     return this._commentEditDraft;
   }

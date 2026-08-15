@@ -2774,7 +2774,7 @@
     background: #fff;
   }
 
-  // Activity header (title + All / Comments / History tabs).
+  // Activity header (title + Comments / History tabs).
   &__activity-head {
     align-items: center;
     justify-content: space-between;
@@ -2841,9 +2841,10 @@
     gap: 8px;
   }
 
-  // Section caption, right-aligned above its list ("Comments" / "History").
-  // Only the "All" tab stacks the two runs and needs them told apart — on the
-  // single-type tabs the active tab is already the label.
+  // Section caption above its list ("Comments" / "History"). Every tab now
+  // shows exactly one run, so the active tab is already the label — the caption
+  // is kept in the markup (both sections stay structurally identical) but never
+  // drawn.
   &__section-label {
     align-self: flex-start;
     text-transform: uppercase;
@@ -2854,31 +2855,18 @@
       $line: 16px,
       $color: var(--normal-fg-40, #84848c)
     );
-  }
-
-  &__comments:not([data-tab="all"]) &__section-label {
     display: none;
   }
 
-  // Activity tabs are a pure visibility switch over two independently-fed
-  // parts: "all" shows both (comments first, change log below), the other two
-  // hide the section they exclude — caption included. Nothing is re-rendered
-  // on a tab click.
+  // The tabs are a pure visibility switch over two independently-fed parts:
+  // each tab hides the section it excludes. Nothing is re-rendered on a click,
+  // so switching can't drop the caret out of an open composer.
   &__comments[data-tab="comments"] &__activity-section[data-kind="history"],
   &__comments[data-tab="history"] &__activity-section[data-kind="comments"] {
     display: none;
   }
 
-  // On "all" the two empty states would stack ("No comments yet" + "No
-  // history") under two captions; the comment one already says the task has
-  // nothing on it, so an empty change log drops out entirely there — caption
-  // included, rather than leaving "HISTORY" hanging over a placeholder. On the
-  // History tab it stays: that tab has nothing else to show.
-  &__comments[data-tab="all"] &__activity-section[data-kind="history"][data-empty="1"] {
-    display: none;
-  }
-
-  // ── Change-log line (History / All tabs) ──────────────────────────
+  // ── Change-log line (History tab) ─────────────────────────────────
   // Lighter than a comment row — no card, small avatar, one line — so a run of
   // them reads as a log beside the comment cards.
   &__history-row {
@@ -3316,11 +3304,19 @@
       }
     }
 
-    // Flyover tooltip: the framework appends it as a child and shows it on
-    // hover. A small dark pill centred below the icon.
+    // Flyover tooltip: the framework appends it as a CHILD of the icon
+    // (ui-core __addTooltips → this.$el.append), so it is clipped by any
+    // scrolling ancestor — here __modal-main, whose `overflow-y: auto` also
+    // makes overflow-x compute to auto.
+    //
+    // It therefore opens ABOVE the icon, not below. The action row is the LAST
+    // row of a comment card, so on the last comment of the feed a tooltip
+    // hanging below fell past the bottom of the scrollport and was cut in half;
+    // on any other comment it landed on top of the next card's border. There is
+    // always the comment's own body above the icons, so upwards always fits.
     .tooltips {
       position: absolute;
-      top: calc(100% + 8px);
+      bottom: calc(100% + 8px);
       left: 50%;
       transform: translateX(-50%);
       padding: 4px 8px;
@@ -3337,15 +3333,15 @@
         $color: var(--tooltip-fg, #ffffff)
       );
 
-      // Small caret pointing up at the icon.
+      // Small caret pointing down at the icon.
       &::before {
         content: "";
         position: absolute;
-        bottom: 100%;
+        top: 100%;
         left: 50%;
         transform: translateX(-50%);
         border: 4px solid transparent;
-        border-bottom-color: var(--tooltip-bg, #1f1f28);
+        border-top-color: var(--tooltip-bg, #1f1f28);
       }
     }
   }

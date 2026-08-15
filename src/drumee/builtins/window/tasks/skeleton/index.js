@@ -1014,9 +1014,9 @@ const make = function (ui) {
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
-    // Activity header: title + All / Comments / History tabs, which re-feed the
-    // list part below.
-    const currentTab = ui.getActivityTab ? ui.getActivityTab() : "all";
+    // Activity header: title + Comments / History tabs, which flip which of the
+    // two independently-fed lists below is visible. Comments is the default.
+    const currentTab = ui.getActivityTab ? ui.getActivityTab() : "comments";
     const activityTab = (tab, label, icon) =>
       Skeletons.Box.X({
         className: `${pfx}__activity-tab`,
@@ -1058,7 +1058,6 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__activity-tabs`,
               kids: [
-                activityTab("all", LOCALE.ALL),
                 activityTab("comments", LOCALE.COMMENTS, "message"),
                 activityTab("history", LOCALE.HISTORY, "apps-clock"),
               ],
@@ -1098,10 +1097,14 @@ const make = function (ui) {
             }),
           ],
         }),
+        // Files queued on the composer (paperclip or drop), attached to the
+        // comment once it is sent. Its own part, so queueing a file never
+        // re-feeds the composer and drops the caret mid-sentence.
+        pendingStrip(ui, "comment"),
         // Each list sits in its own section so the caption can live OUTSIDE the
         // fed part — a comment or history reload replaces only the rows, never
-        // the label. Captions only earn their place on "All", where the two
-        // runs are stacked; the other tabs are already named by the active tab.
+        // the label. The active tab already names its run, so the captions are
+        // kept for structure but never drawn.
         Skeletons.Box.Y({
           className: `${pfx}__activity-section`,
           attrOpt: {
@@ -2112,9 +2115,15 @@ function mentionDropdown(ui, scope) {
 }
 
 // Attachment (paperclip) + @-mention buttons shared by the main comment
-// composer and the inline edit / reply composers. The paperclip attaches a file
-// to the open task (the existing task-attachment flow); "@" focuses the scope's
+// composer and the inline edit / reply composers. "@" focuses the scope's
 // editor, inserts an "@" and opens the mention popup.
+//
+// The paperclip carries its scope so the picked file lands on the SAME draft a
+// dropped file would: inside a comment row it attaches to that comment, and
+// only the task-level composer attaches to the task. Without it every paperclip
+// fell through to "detail" — a file picked while editing a comment was queued
+// on the task's own attachment strip, far up the panel, and committed by Update
+// instead of Save.
 function composerTools(ui, scope) {
   const pfx = ui.fig.family;
   return [
@@ -2124,6 +2133,7 @@ function composerTools(ui, scope) {
       bubble: 0,
       service: "pick-attachment",
       uiHandler: [ui],
+      searchScope: scope,
     }),
     Skeletons.Note({
       className: `${pfx}__composer-at`,
@@ -2294,7 +2304,11 @@ function commentDropOverlay(ui) {
 function pendingStrip(ui, scope) {
   const pfx = ui.fig.family;
   const draft =
-    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentEditDraft();
+    scope === "comment"
+      ? ui.getCommentDraft()
+      : scope === "comment-reply"
+        ? ui.getReplyDraft()
+        : ui.getCommentEditDraft();
   const pending = (draft && draft.pending_files) || [];
   return Skeletons.Box.X({
     className: `${pfx}__comment-pending-list`,
