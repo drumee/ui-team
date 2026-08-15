@@ -490,6 +490,11 @@ class __tasks_panel extends LetcBox {
       "task.unlink_label", "task.comment_create", "task.comment_update",
       "task.comment_delete", "task.comment_react", "task.column_create",
       "task.column_update", "task.column_delete", "task.column_reorder",
+      // Both comment-file services were missing from this list while being
+      // `src: write` server-side. _zoneFor already refuses a viewer without
+      // task rights, but that is UX — this is the boundary, and nothing stops
+      // a crafted call bypassing the zone entirely.
+      "task.comment_link_file", "task.comment_unlink_file",
     ];
   }
 
