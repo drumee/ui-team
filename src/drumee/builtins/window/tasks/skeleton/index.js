@@ -2313,11 +2313,7 @@ function commentDropOverlay(ui) {
 function pendingStrip(ui, scope) {
   const pfx = ui.fig.family;
   const draft =
-    scope === "comment"
-      ? ui.getCommentDraft()
-      : scope === "comment-reply"
-        ? ui.getReplyDraft()
-        : ui.getCommentEditDraft();
+    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentDraft();
   const pending = (draft && draft.pending_files) || [];
   return Skeletons.Box.X({
     className: `${pfx}__comment-pending-list`,
@@ -2627,10 +2623,9 @@ function buildCommentListContent(ui) {
     if (editingId && String(editingId) === String(c.id)) {
       return Skeletons.Box.X({
         className: `${pfx}__comment-row`,
-        // data-comment-id is what a file drag resolves against: while this row
-        // is being edited it owns the panel's drop surface (see
-        // _commentDropTarget), so a file dropped on it attaches to the comment
-        // rather than to the task.
+        // data-comment-id is what a file drag resolves against (ZONES:
+        // __comment-row[data-comment-id]). Every row carries it, edited or
+        // not — see the normal-row render below.
         attrOpt: {
           "data-reply": isReply ? "1" : "0",
           "data-comment-id": c.id,
@@ -2650,13 +2645,10 @@ function buildCommentListContent(ui) {
               // after a partly-failed save the ones that landed are here, and
               // only the ones still to retry are in the strip below.
               commentAttachments(ui, c, isOwn),
-              // Files dropped on the row while editing, before they are
-              // uploaded and attached on Save.
-              pendingStrip(ui, "comment-edit"),
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
-                  ...composerTools(ui, "comment-edit"),
+                  ...composerTools(ui, `comment-row:${c.id}`),
                   Skeletons.Note({
                     className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
                     content: LOCALE.SAVE,
@@ -2676,8 +2668,8 @@ function buildCommentListContent(ui) {
               // commentAttachments returns null when there are none.
             ].filter(Boolean),
           }),
-          // Covers this row alone, in place of the panel-wide overlay, which is
-          // suppressed for as long as a comment is being edited.
+          // Covers this row alone. Every row has one; there is no longer a
+          // panel-wide overlay to stand in for.
           commentDropOverlay(ui),
         ],
       });
@@ -3046,8 +3038,12 @@ function fileCard(ui, f, opt = {}) {
             attrOpt: { title: LOCALE.LOADING || "…" },
           }),
         ]
-      : status === "error"
+      : status === "error" && (f.file || f.nid)
         ? [
+            // Suppressed when neither file nor nid is present: that is a
+            // cross-hub placeholder whose download failed, so the link has no
+            // input and the fetch is never re-run. Same rule as the comment
+            // chip — a button that cannot work must not be offered.
             Skeletons.Button.Svg({
               className: `${pfx}__file-pending-retry`,
               ico: "refresh-view",

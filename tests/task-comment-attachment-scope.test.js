@@ -45,15 +45,22 @@ const SCOPES = (() => {
   return JSON.parse(m[1].replace(/,(\s*\])/, "$1"));
 })();
 
+const ROW_SCOPE = (() => {
+  const m = /const ROW_SCOPE = (\/.+\/);/.exec(panelSrc);
+  assert.ok(m, "ROW_SCOPE not found in production source");
+  return eval(m[1]);
+})();
+
 const panelMethods = new Function(
   "PICK_ATTACHMENT_SCOPES",
+  "ROW_SCOPE",
   `
   ${extractClassMethod(panelSrc, "_pickAttachment")}
   ${extractClassMethod(panelSrc, "_onAttachmentPicked")}
   ${extractClassMethod(panelSrc, "_draftForKey")}
   return { _pickAttachment, _onAttachmentPicked, _draftForKey };
 `,
-)(SCOPES);
+)(SCOPES, ROW_SCOPE);
 
 // Minimal stand-in for the panel: real routing methods, stubbed I/O.
 function makePanel() {
@@ -100,7 +107,7 @@ test("composerTools tags every paperclip with its own scope", () => {
   )();
   const ui = { fig: { family: "tasks-panel" } };
 
-  for (const scope of ["comment", "comment-edit", "comment-reply"]) {
+  for (const scope of ["comment", "comment-row:c9", "comment-reply"]) {
     const [clip] = composerTools(ui, scope);
     assert.equal(clip.className, "tasks-panel__composer-ico");
     assert.equal(clip.service, "pick-attachment");
@@ -110,17 +117,20 @@ test("composerTools tags every paperclip with its own scope", () => {
   delete global.Skeletons;
 });
 
-test("a file picked while editing a comment lands on that comment", async () => {
+test("a file picked while editing a comment attaches to THAT comment", async () => {
+  // The edit composer sits inside a row, and a row has no submit — so its
+  // paperclip commits immediately to that comment, exactly as a drop there
+  // does. Routing it to the plain "comment" scope would have attached the file
+  // to a NEW comment instead of the one being edited.
   const panel = makePanel();
-  panel._commentEditDraft = { body: "hi", mention_uids: [] };
+  const dropped = [];
+  panel._dropOnCommentRow = async (id, files) => dropped.push([id, files.length]);
 
-  await pick(panel, "comment-edit");
+  await pick(panel, "comment-row:c9");
 
-  assert.equal(panel._commentEditDraft.pending_files.length, 1);
-  assert.equal(panel._commentEditDraft.pending_files[0].name, "spec.pdf");
-  // The bug: this used to be where the file went.
-  assert.deepEqual(panel._detailDraft.pending_files, []);
-  assert.deepEqual(panel.refreshed, ["comment-edit"]);
+  assert.deepEqual(dropped, [["c9", 1]], "went straight to that row");
+  assert.deepEqual(panel._detailDraft.pending_files, [], "not the task");
+  assert.equal(panel._commentDraft, null, "not a new comment");
 });
 
 test("a file picked while replying lands on the reply", async () => {
@@ -134,15 +144,15 @@ test("a file picked while replying lands on the reply", async () => {
   assert.deepEqual(panel.refreshed, ["comment-reply"]);
 });
 
-test("the paperclip works before a single character is typed", async () => {
+test("the reply paperclip works before a single character is typed", async () => {
   const panel = makePanel();
-  assert.equal(panel._commentEditDraft, null);
+  assert.equal(panel._replyDraft, null);
 
-  await pick(panel, "comment-edit");
+  await pick(panel, "comment-reply");
 
   // _draftForKey({create:true}) allocates it, as the drop path relies on.
-  assert.ok(panel._commentEditDraft, "edit draft allocated on demand");
-  assert.equal(panel._commentEditDraft.pending_files.length, 1);
+  assert.ok(panel._replyDraft, "reply draft allocated on demand");
+  assert.equal(panel._replyDraft.pending_files.length, 1);
   assert.deepEqual(panel._detailDraft.pending_files, []);
 });
 

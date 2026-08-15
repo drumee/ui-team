@@ -28,9 +28,13 @@ const PICK_ATTACHMENT_SCOPES = [
   "create",
   "detail",
   "comment",
-  "comment-edit",
   "comment-reply",
 ];
+
+// A paperclip inside a comment row carries "comment-row:<id>" — the same key
+// resolveZone produces for a drop there, so picking and dropping in that row
+// land identically and both attach to THAT comment rather than a new one.
+const ROW_SCOPE = /^comment-row:(.+)$/;
 
 // 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
 // the skin derives the column tint from the accent (--col-accent) and pill
@@ -1707,10 +1711,11 @@ class __tasks_panel extends LetcBox {
         return this._removePendingFile(trigger);
 
       case "retry-pending-file":
-        // Row uploads carry a commentId; the staged strips do not.
-        return trigger.mget("commentId")
-          ? this._retryRowUpload(trigger)
-          : this._retryPendingFile(trigger);
+        // Every retry that can still be rendered belongs to a comment row:
+        // the staged strips never retain an error entry (failures are handed
+        // to the row), and a cross-hub placeholder with no file and no nid has
+        // its button suppressed because a retry could not do anything.
+        return this._retryRowUpload(trigger);
 
       case _e.upload:
       case "pick-attachment":
@@ -3254,19 +3259,8 @@ class __tasks_panel extends LetcBox {
       } else {
         this._discardCommentPending(draft);
       }
-      const stillFailing = ((draft && draft.pending_files) || []).slice();
+      if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
       this._commentDraft = null;
-      // The composer is cleared on post, so a file that failed to attach has
-      // nowhere left to be retried — open the new comment in edit mode holding
-      // exactly those files, the same surface a failed edit uses.
-      if (newId && res && res.failed) {
-        this._editingCommentId = newId;
-        this._commentEditDraft = {
-          body,
-          mention_uids: [],
-          pending_files: stillFailing,
-        };
-      }
       await this._loadComments(taskId);
     } catch (err) {
       console.error("[tasks_panel] comment.create failed:", err);
@@ -3308,19 +3302,11 @@ class __tasks_panel extends LetcBox {
       });
       // Files after the body: a rejected edit (not the author any more, comment
       // deleted under us) must not leave attachments behind on it.
-      const res = await this._linkCommentFiles(id, draft, taskId, "comment-edit");
-      // A file that failed to upload or link keeps the editor open, holding
-      // just that file with a retry beside it. Closing would either lose the
-      // file silently or need a second place to report the failure; the body is
-      // already saved either way, so re-saving is harmless.
-      if (res && res.failed) {
-        await this._loadComments(taskId);
-        if (this._detailId === taskId) {
-          this._refreshCommentList();
-          this._refreshPendingList("comment-edit");
-        }
-        return;
-      }
+      const res = await this._linkCommentFiles(id, draft, taskId, "comment");
+      // Failures go to the comment's own row rather than holding the editor
+      // open — the body is saved either way, and the row is where every other
+      // failed attachment already appears.
+      if (res && res.failed) this._handoffFailedLinks(id, draft);
       this._editingCommentId = null;
       this._commentEditDraft = null;
       await this._loadComments(taskId);
@@ -3421,30 +3407,7 @@ class __tasks_panel extends LetcBox {
   // belongs to is whichever one is open in the editor — a reply that failed
   // part-way is switched into edit mode on the comment it created, so this one
   // path covers both.
-  async _retryPendingFile(trigger) {
-    if (this._commentSaving) return;
-    const key = String(trigger.mget("pendingKey") || "");
-    const commentId = this._editingCommentId;
-    const draft = this._commentEditDraft;
-    if (!key || !commentId || !draft) return;
-    const entry = (draft.pending_files || []).find(
-      (f) => this._pendingKey(f) === key,
-    );
-    if (!entry) return;
-    const taskId = this._detailId;
-    // A one-entry draft view so _linkCommentFiles can run unchanged, then fold
-    // the outcome back: dropped from the strip on success, still failed on not.
-    const single = { pending_files: [entry] };
-    const res = await this._linkCommentFiles(commentId, single, taskId, "comment-edit");
-    if (res && res.linked) {
-      draft.pending_files = (draft.pending_files || []).filter(
-        (f) => f !== entry,
-      );
-      await this._loadComments(taskId);
-      if (this._detailId === taskId) this._refreshCommentList();
-    }
-    this._refreshPendingList("comment-edit");
-  }
+
 
   // Detach a file from a saved comment (the ✕ on its attachment card). The
   // media node stays in the folder — this only drops the link row, exactly as
@@ -3591,21 +3554,9 @@ class __tasks_panel extends LetcBox {
       } else {
         this._discardCommentPending(draft);
       }
-      const stillFailing = ((draft && draft.pending_files) || []).slice();
+      if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
       this._replyingTo = null;
       this._replyDraft = null;
-      // The reply itself posted, so its composer is gone — but a file that
-      // failed still needs somewhere to be retried. Open the new comment in
-      // edit mode holding exactly those files: same error+retry surface as a
-      // failed edit, rather than a second one built for replies.
-      if (newId && res && res.failed) {
-        this._editingCommentId = newId;
-        this._commentEditDraft = {
-          body: body,
-          mention_uids: [],
-          pending_files: stillFailing,
-        };
-      }
       await this._loadComments(taskId);
     } catch (err) {
       console.error("[tasks_panel] comment reply failed:", err);
@@ -3861,9 +3812,10 @@ class __tasks_panel extends LetcBox {
     // Same resolution the drop path uses, so picking and dropping a file in the
     // same composer can no longer disagree about where it belongs.
     const raw = trigger?.mget?.("searchScope");
-    this._pendingUploadScope = PICK_ATTACHMENT_SCOPES.includes(raw)
-      ? raw
-      : "detail";
+    this._pendingUploadScope =
+      PICK_ATTACHMENT_SCOPES.includes(raw) || ROW_SCOPE.test(raw || "")
+        ? raw
+        : "detail";
     // FileSelector hardcodes sys_pn to "fileselector".
     return this.ensurePart("fileselector").then((sel) => {
       // sel.open() rebinds onchange every call (overrides the one set in
@@ -3880,7 +3832,12 @@ class __tasks_panel extends LetcBox {
     const scope = this._pendingUploadScope || "detail";
     this._pendingUploadScope = null;
 
-    // Every scope uses the same deferred-pending flow: stash the File on the
+    // A comment row has no submit, so its paperclip commits immediately —
+    // exactly as a drop on that row does.
+    const row = ROW_SCOPE.exec(scope);
+    if (row) return this._dropOnCommentRow(row[1], files);
+
+    // Every other scope uses the deferred-pending flow: stash the File on the
     // active draft and let that draft's own submit do the upload + link
     // (_commitTask / _commitDetail → task.link_file; _saveCommentEdit /
     // _submitReply → _linkCommentFiles → task.comment_link_file).
@@ -3940,12 +3897,6 @@ class __tasks_panel extends LetcBox {
       zone && zone.scope !== "detail" && zone.scope !== "create"
         ? { scope: zone.scope, key: zone.key, commentId: zone.commentId }
         : null;
-  }
-
-  // True while a comment is being edited or answered — either state takes the
-  // drop surface over from the task, so a file can only land on that comment.
-  _commentEditActive() {
-    return !!(this.getEditingCommentId() || this.getReplyingTo());
   }
 
   /**
@@ -4136,6 +4087,34 @@ class __tasks_panel extends LetcBox {
     if (this._detailId === taskId) this._refreshCommentList();
   }
 
+  /**
+   * Move failed links onto the comment they belong to.
+   *
+   * The composer is gone once posted, so the row is the only durable surface —
+   * and it is the same one a row drop already uses, rather than a second error
+   * surface competing with it. Called BEFORE _loadComments, so the reload
+   * brings the new comment in and the first render after submit already has a
+   * row to draw these into; after the reload they would not surface until some
+   * later refresh, which from the user's side is not appearing at all.
+   *
+   * Normalises `status` here rather than trusting three callers to.
+   */
+  _handoffFailedLinks(commentId, draft) {
+    const failed = (draft && draft.pending_files) || [];
+    if (!commentId || !failed.length) return 0;
+    failed.forEach((f) => {
+      f.status = "error";
+    });
+    const list = this._rowUploads.get(commentId) || [];
+    this._rowUploads.set(commentId, list.concat(failed));
+    draft.pending_files = []; // ownership moved, not dropped
+    // The card may be scrolled out of view, so say where to look.
+    if (typeof Butler !== "undefined" && Butler.say) {
+      Butler.say(LOCALE.TASK_FILES_NOT_ATTACHED);
+    }
+    return failed.length;
+  }
+
   // Drop a landed entry and release its preview.
   _dropRowUpload(commentId, pf) {
     const list = this._rowUploads.get(commentId) || [];
@@ -4235,8 +4214,9 @@ class __tasks_panel extends LetcBox {
     return this._zoneFor(e);
   }
 
-  // Whichever task form is open. NOT a drop decision on its own — see
-  // _positionlessScope, which is what callers without a position must use.
+  // Whichever task form is open. NOT a drop decision: it answers "is a task
+  // surface open at all", never "where does this land". Its only real consumer
+  // is canAttachExisting's claim breadth.
   _formUploadScope() {
     if (this._creating && this._createDefaults) return { scope: "create" };
     if (this._detailId && this._detailDraft) return { scope: "detail" };
@@ -4333,7 +4313,7 @@ class __tasks_panel extends LetcBox {
   // it — so nothing attaches, rather than the file quietly becoming a task
   // attachment behind the open editor.
   _positionlessScope() {
-    return this._commentEditActive() ? null : this._formUploadScope();
+    return this._formUploadScope();
   }
 
   // Part/scope key for a resolved zone. resolveZone already computes it —
@@ -4362,12 +4342,6 @@ class __tasks_panel extends LetcBox {
         this._commentDraft = { body: "", mention_uids: [] };
       }
       return this._commentDraft;
-    }
-    if (key === "comment-edit") {
-      if (create && !this._commentEditDraft) {
-        this._commentEditDraft = { body: "", mention_uids: [] };
-      }
-      return this._commentEditDraft;
     }
     if (key === "comment-reply") {
       if (create && !this._replyDraft) {
@@ -5038,7 +5012,10 @@ class __tasks_panel extends LetcBox {
   // floor, so the drop is a genuine no-op instead of a surprise file in the
   // folder.
   canAttachExisting() {
-    return !!(this._formUploadScope() || this._commentEditActive());
+    // Deliberately broader than "where does it land": claiming is what stops
+    // the folder inserting the file into its own body. A claim that then
+    // resolves nowhere is a clean no-op plus a Butler message.
+    return !!(this._formUploadScope() || this._detailId);
   }
 
   // Attach dragged workspace node(s) to the open draft. Same-hub files link by
