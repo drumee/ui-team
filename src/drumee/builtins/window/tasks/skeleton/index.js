@@ -1098,6 +1098,10 @@ const make = function (ui) {
                 }),
               ],
             }),
+            // The composer is its own drop zone: a file dropped here rides the
+            // comment draft and commits on Send, exactly as the paperclip
+            // beside it already does.
+            commentDropOverlay(ui),
           ],
         }),
         // Files queued on the composer (paperclip or drop), attached to the

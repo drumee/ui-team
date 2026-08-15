@@ -212,6 +212,63 @@ test("typing after queueing a file keeps the file", () => {
   delete global.LOCALE;
 });
 
+// Closing the picker/drop disagreement was one of the original motivations, and
+// the two were fixed in separate changes — the paperclip predates the zone
+// table. Assert they converge rather than assuming it.
+test("the composer's paperclip and a composer drop land in the same place", async () => {
+  const { resolveZone } = require("../src/drumee/builtins/window/tasks/drop-zones");
+  const scopeKey = new Function(
+    `${extractClassMethod(panelSrc, "_scopeKey")}; return _scopeKey;`,
+  )();
+
+  // Drop path: a hit inside the composer, resolved by the shipped zone table.
+  const closest = (sel, chain) =>
+    chain.find((c) => c.cls.includes(sel.replace(/^\./, "").replace(/\[.*$/, "")));
+  const chain = [
+    { cls: ["tasks-panel__comment-input"] },
+    { cls: ["tasks-panel__comment-field"] },
+    { cls: ["tasks-panel__comment-composer"] },
+  ];
+  const hit = {
+    closest(sel) {
+      const n = closest(sel, chain);
+      return n ? { ...n, getAttribute: () => null } : null;
+    },
+  };
+  const zone = resolveZone("tasks-panel", hit, {
+    contains: () => true,
+    isOwnComment: () => true,
+  });
+
+  // Picker path: the scope composerTools stamps on the paperclip.
+  const Svg = [];
+  global.Skeletons = {
+    Button: { Svg: (p) => (Svg.push(p), { ...p }) },
+    Note: (p) => ({ ...p }),
+  };
+  const composerTools = new Function(
+    `${extractFunction(skeletonSrc, "composerTools")}; return composerTools;`,
+  )();
+  const [clip] = composerTools({ fig: { family: "tasks-panel" } }, "comment");
+  delete global.Skeletons;
+
+  // They must name the SAME pending-list part…
+  assert.equal(zone.scope, "comment");
+  assert.equal(scopeKey(zone), "comment");
+  assert.equal(clip.searchScope, "comment");
+  assert.equal(scopeKey(zone), clip.searchScope, "picker and drop agree");
+
+  // …and resolve to the SAME draft object, which is what makes both commit on
+  // Send via _submitComment rather than on the task's Update.
+  const dropPanel = makePanel();
+  await pick(dropPanel, clip.searchScope, { name: "from-picker.pdf" });
+  const viaPicker = dropPanel._commentDraft;
+  const viaDrop = dropPanel._draftForKey(scopeKey(zone), { create: true });
+  assert.equal(viaDrop, viaPicker, "same draft object, not merely same shape");
+  assert.deepEqual(dropPanel.refreshed, ["comment"]);
+  assert.deepEqual(dropPanel._detailDraft.pending_files, []);
+});
+
 test("unknown scopes still attach to the task", async () => {
   for (const scope of [undefined, "nonsense"]) {
     const panel = makePanel();
