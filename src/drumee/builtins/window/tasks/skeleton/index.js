@@ -1010,6 +1010,9 @@ const make = function (ui) {
           // Detail pending list — files queued for upload/link on Update.
           pendingFiles: dDraft.pending_files || [],
         }),
+        // Region overlay: this block IS the task drop zone now, so the
+        // affordance belongs to it rather than to the whole panel.
+        dropOverlay(ui),
       ],
     });
 
@@ -1453,8 +1456,9 @@ const make = function (ui) {
           content: LOCALE.NO_LABELS,
         });
 
-    // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour.
-    const field = (labelText, control, extraCn = "") =>
+    // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour;
+    // `zone` adds the region drop overlay for a field that is a drop zone.
+    const field = (labelText, control, extraCn = "", zone = false) =>
       Skeletons.Box.Y({
         className: `${pfx}__create-field${extraCn ? " " + extraCn : ""}`,
         kids: [
@@ -1463,7 +1467,8 @@ const make = function (ui) {
             content: labelText,
           }),
           control,
-        ],
+          zone ? dropOverlay(ui) : null,
+        ].filter(Boolean),
       });
 
     // Textarea (not Entry) so a long title wraps and stays fully visible
@@ -1569,6 +1574,7 @@ const make = function (ui) {
                     pendingFiles: draft?.pending_files || [],
                   }),
                   `${pfx}__create-files`,
+                  true, // this field is the create modal's drop zone
                 ),
               ],
             }),
@@ -2279,10 +2285,10 @@ const fullName = (m) => {
 // functions now, and both attribute rows.
 const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
-// Drop affordance for a single comment (edit row / reply composer). Same copy
-// and treatment as the panel-wide __drop-overlay, sized to the row it covers;
-// lit by data-comment-file-drag on the panel root, which _setDragAffordance
-// keeps mutually exclusive with the task-level flag.
+// Drop affordance for one comment surface (composer / row / reply composer).
+// Same copy and treatment as __drop-overlay, sized to the region it covers;
+// lit by data-drop-active on its OWN zone element, which _setDragAffordance
+// keeps to exactly one element at a time.
 function commentDropOverlay(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -2877,7 +2883,8 @@ function buildMentionItemsContent(ui, members) {
   });
 }
 
-// "Drop to attach" overlay, shown while data-file-drag="1" is set on the root.
+// "Drop to attach" overlay for a task region (__attachments / __create-files),
+// shown while data-drop-active="1" is set on that region's own element.
 function dropOverlay(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({

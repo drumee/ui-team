@@ -1,5 +1,6 @@
 const { uploadFile } = require("@drumee/ui-essentials");
 const { keepListThroughClick } = require("libs/pick-guard");
+const { resolveZone } = require("./drop-zones");
 const {
   markerRe,
   contentTokenRe,
@@ -418,11 +419,14 @@ class __tasks_panel extends LetcBox {
     $(this.el).droppable({
       tolerance: "pointer",
       greedy: true,
-      // The jQuery-UI drag carries no DOM target, so the scope is resolved from
-      // the pointer (see _commentDropTarget) — same three outcomes as the
-      // native file drag: the edited comment, the task form, or nothing.
+      // The jQuery-UI drag carries no DOM target, so the zone is resolved from
+      // the pointer (see _dropPointEl) against the same ZONES table the native
+      // drag uses. `over` fires only once, on the boundary crossing — inner
+      // zones are lit by _syncDragAffordance off the tracked pointer.
       over: (e) => {
-        this._setDragAffordance(this._activeUploadScope(e));
+        const s = this._activeUploadScope(e);
+        this._setDragAffordance(s);
+        this._rememberDropScope(s);
       },
       out: () => {
         this._setDragAffordance(null);
@@ -645,15 +649,15 @@ class __tasks_panel extends LetcBox {
       // fires on us. Takes priority over the card-reorder path.
       if (this._isFileDrag(e)) {
         e.preventDefault();
-        // Three outcomes: onto the comment being edited (its own small
-        // overlay), onto the open task form (the panel-wide overlay), or —
-        // while a comment is being edited and the pointer is elsewhere —
-        // nothing at all, so the two affordances never appear together.
+        // Region-addressed: the pointer resolves to exactly one zone, or to
+        // nothing at all. `none` on no zone is what makes a drop on the
+        // description or the panel chrome read as a refusal before it happens.
         const s = this._activeUploadScope(e);
         try {
           e.dataTransfer.dropEffect = s ? "copy" : "none";
         } catch (_) {}
         this._setDragAffordance(s);
+        this._rememberDropScope(s);
         return;
       }
       const col = findColumn(e.target);
@@ -696,20 +700,15 @@ class __tasks_panel extends LetcBox {
 
     root.addEventListener("dragleave", (e) => {
       if (isOurDrag()) e.stopPropagation();
-      // The panel overlay clears on leaving the panel; the comment overlay on
-      // leaving the comment row it belongs to (a move from the row out onto
-      // the rest of the panel never leaves root, so one test can't cover both).
+      // One rule now the affordance lives on the zone element: clear when the
+      // pointer leaves the zone that lit it. relatedTarget, not target — on
+      // dragleave `target` is the element being LEFT, which is still inside the
+      // zone, so testing it would keep the overlay lit for a pointer that has
+      // already moved off. Covers leaving the panel entirely too, since the
+      // zone cannot contain a node outside root.
       if (
-        (root.dataset.fileDrag || root.dataset.commentFileDrag) &&
-        !root.contains(e.relatedTarget)
-      ) {
-        this._setDragAffordance(null);
-      } else if (
-        root.dataset.commentFileDrag &&
-        // relatedTarget, not target: on dragleave `target` is the element being
-        // left, which is still inside the row — it would keep the overlay lit
-        // for a pointer that has already moved off the comment.
-        !this._commentDropTarget({ target: e.relatedTarget })
+        this._activeZoneEl &&
+        !this._activeZoneEl.contains(e.relatedTarget)
       ) {
         this._setDragAffordance(null);
       }
@@ -3878,26 +3877,44 @@ class __tasks_panel extends LetcBox {
     return Array.from(types).includes("Files");
   }
 
-  // Single owner of the two drop-overlay flags, so they can never both be lit.
-  // Also remembers the last resolved scope for the positionless callers below
-  // (the folder window's insertMedia arrives after the pointer is gone).
-  _setDragAffordance(s) {
-    const root = this.el;
-    if (!root) return;
-    this._lastDropScope = s && s.scope === "comment" ? s : null;
-    // Keep the pointer-driven sync's change-detection honest: a caller that
-    // sets the affordance directly (dragover, drop, edit-cancel) must not leave
-    // a key behind that makes the next pointer tick a no-op.
-    this._affordanceKey =
-      s && s.scope === "comment" ? `comment:${s.commentId}` : s ? s.scope : "";
-    if (s && s.scope === "comment") {
-      delete root.dataset.fileDrag;
-      root.dataset.commentFileDrag = "1";
-      return;
+  /**
+   * Single owner of the drop affordance. Exactly one element carries
+   * data-drop-active at a time, so two overlays can never light — the same
+   * invariant the old pair of root flags held, generalised to N zones.
+   *
+   * Takes the descriptor's OWN element: no second lookup, so the lit overlay
+   * and the resolved scope cannot disagree.
+   */
+  _setDragAffordance(zone) {
+    if (!this.el) return;
+    const next = (zone && zone.el) || null;
+    if (this._activeZoneEl === next) return;
+    if (this._activeZoneEl && this._activeZoneEl.dataset) {
+      delete this._activeZoneEl.dataset.dropActive;
     }
-    delete root.dataset.commentFileDrag;
-    if (s) root.dataset.fileDrag = "1";
-    else delete root.dataset.fileDrag;
+    if (next) next.dataset.dropActive = "1";
+    this._activeZoneEl = next;
+    // Keep the pointer-driven sync's change-detection honest: a caller that
+    // sets the affordance directly (dragover, drop, cancel) must not leave a
+    // key behind that makes the next pointer tick a no-op.
+    this._affordanceKey = zone ? zone.key : "";
+  }
+
+  /**
+   * Remember the last COMMENT-family resolution for the positionless WM route.
+   *
+   * Deliberately NOT the task zones: those are recoverable from the pointer,
+   * and remembering them would let a stale hover attach to the task with no
+   * overlay ever shown — which "no overlay, no write" forbids.
+   *
+   * Stores no element. The descriptor outlives the render that produced it, so
+   * a retained node would either leak or silently miss after a re-feed.
+   */
+  _rememberDropScope(zone) {
+    this._lastDropScope =
+      zone && zone.scope !== "detail" && zone.scope !== "create"
+        ? { scope: zone.scope, key: zone.key, commentId: zone.commentId }
+        : null;
   }
 
   // True while a comment is being edited or answered — either state takes the
@@ -3937,62 +3954,49 @@ class __tasks_panel extends LetcBox {
     return inRoot(one) ? one : null;
   }
 
-  // Resolve a drag's position to the comment being edited / answered, or null.
-  _commentDropTarget(e) {
-    if (!this._commentEditActive()) return null;
-    const pfx = this.fig.family;
-    const el = this._dropPointEl(e);
-    if (!el || !el.closest) return null;
-
-    const replyingTo = this.getReplyingTo();
-    if (replyingTo && el.closest(`.${pfx}__comment-replybox`)) {
-      const c = this._commentById(replyingTo) || {};
-      return {
-        scope: "comment",
-        kind: "reply",
-        commentId: replyingTo,
-        isReply: !!c.parent_id,
-        parentId: c.parent_id || null,
-      };
-    }
-
-    const editingId = this.getEditingCommentId();
-    if (!editingId) return null;
-    // The edited row is the only one carrying its id while in edit mode; a
-    // reply is the same row nested in __comment-thread-replies.
-    const row = el.closest(`.${pfx}__comment-row[data-comment-id]`);
-    if (!row || String(row.dataset.commentId) !== String(editingId)) return null;
-    const c = this._commentById(editingId) || {};
-    return {
-      scope: "comment",
-      kind: "edit",
-      commentId: editingId,
-      isReply: !!c.parent_id,
-      parentId: c.parent_id || null,
-    };
-  }
-
   _commentById(id) {
     return (this._comments || []).find((c) => String(c.id) === String(id));
   }
 
   /**
-   * Which draft a dropped file attaches to, given where it was dropped:
-   *   {scope:'comment', kind, commentId, isReply, parentId} — on the comment
-   *     currently being edited or answered
-   *   {scope:'detail'} / {scope:'create'} — the open task form
-   *   null — nothing here accepts it
-   *
-   * While a comment is being edited the comment branch is the ONLY one that
-   * can match: the rest of the panel stops accepting files, so the task-wide
-   * overlay can't compete with the comment's own and a misdrop can't quietly
-   * attach a file to the task instead.
+   * Which zone a drag is over, as {scope, key, el, commentId?} — or null to
+   * refuse. Region-addressed: the pointer is matched against the ZONES table
+   * rather than inferred from which form happens to be open, so all three
+   * entry points resolve identically and a drop outside every zone refuses
+   * instead of silently attaching to the task.
    */
+  _zoneFor(e) {
+    // No task write rights → no zone at all, so a view/chat member never sees
+    // an overlay that would be refused server-side (acl/task.json `src: write`).
+    if (!this._mayWriteTasks()) return null;
+    const hit = this._dropPointEl(e);
+    if (!hit) return null;
+    const zone = resolveZone(this.fig.family, hit, {
+      contains: (n) => !!(this.el && this.el.contains(n)),
+      isOwnComment: (id) => {
+        const c = this._commentById(id);
+        return !!(c && String(c.author_uid) === String(Visitor.id));
+      },
+    });
+    if (!zone) return null;
+    // Task 4 lifts this: the per-row handler does not exist yet. Refusing is
+    // the correct interim behaviour — the zones do not nest, so there is no
+    // enclosing task zone for a row drop to fall through to anyway.
+    if (zone.scope === "comment-row") return null;
+    // A zone only accepts while the surface that owns it is actually open.
+    if (zone.scope === "detail" && !this._detailDraft) return null;
+    if (zone.scope === "create" && !this._createDefaults) return null;
+    if (
+      (zone.scope === "comment" || zone.scope === "comment-reply") &&
+      !this._detailId
+    ) {
+      return null;
+    }
+    return zone;
+  }
+
   _activeUploadScope(e) {
-    const onComment = this._commentDropTarget(e);
-    if (onComment) return onComment;
-    if (this._commentEditActive()) return null;
-    return this._formUploadScope();
+    return this._zoneFor(e);
   }
 
   // Whichever task form is open. NOT a drop decision on its own — see
@@ -4050,12 +4054,13 @@ class __tasks_panel extends LetcBox {
     this._affordanceRaf = requestAnimationFrame(() => {
       this._affordanceRaf = 0;
       const s = this._jqDragActive() ? this._pointerScope() : null;
-      // One DOM write per change, not per frame.
-      const key =
-        s && s.scope === "comment" ? `comment:${s.commentId}` : s ? s.scope : "";
+      // One DOM write per change, not per frame. The zone key already
+      // distinguishes per-row targets (comment-row:<id>), so adjacent rows
+      // register as distinct without any extra bookkeeping.
+      const key = s ? s.key : "";
       if (key === this._affordanceKey) return;
-      this._affordanceKey = key;
       this._setDragAffordance(s);
+      this._rememberDropScope(s);
     });
   }
 
@@ -4095,12 +4100,11 @@ class __tasks_panel extends LetcBox {
     return this._commentEditActive() ? null : this._formUploadScope();
   }
 
-  // Part/scope key for a resolved scope: "create" | "detail" |
-  // "comment-edit" | "comment-reply". Names the pending-list part it feeds.
+  // Part/scope key for a resolved zone. resolveZone already computes it —
+  // "create" | "detail" | "comment" | "comment-reply" | "comment-row:<id>" —
+  // so this is just the null-safe reader that names the pending-list part.
   _scopeKey(s) {
-    if (!s) return null;
-    if (s.scope !== "comment") return s.scope;
-    return s.kind === "reply" ? "comment-reply" : "comment-edit";
+    return s ? s.key : null;
   }
 
   // The draft object behind a resolved scope, created on demand: a comment can

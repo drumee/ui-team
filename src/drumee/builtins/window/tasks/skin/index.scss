@@ -10,18 +10,25 @@
     min-width: 0;
   }
 
-  // Reveal the "Drop files to attach" overlay while a file is dragged over.
-  // data-file-drag is never set while a comment is being edited — that state
-  // hands the drop surface to the comment (data-comment-file-drag below), so
-  // the two overlays can't appear at once.
-  &[data-file-drag="1"] &__drop-overlay {
+  // Reveal the "Drop files to attach" overlay while a file is dragged over its
+  // region. The flag lives on the ZONE ELEMENT, not the panel root, and
+  // _setDragAffordance clears the previous element before setting the next —
+  // so exactly one overlay is ever visible, the invariant the old pair of root
+  // flags held, generalised to N zones.
+  &__attachments[data-drop-active="1"] > &__drop-overlay,
+  &__create-files[data-drop-active="1"] > &__drop-overlay,
+  &__comment-composer[data-drop-active="1"] > &__comment-drop-overlay,
+  &__comment-row[data-drop-active="1"] > &__comment-drop-overlay,
+  &__comment-replybox[data-drop-active="1"] > &__comment-drop-overlay {
     opacity: 1;
     visibility: visible;
   }
 
-  &[data-comment-file-drag="1"] &__comment-drop-overlay {
-    opacity: 1;
-    visibility: visible;
+  // Each zone anchors its own overlay.
+  &__attachments,
+  &__create-files,
+  &__comment-composer {
+    position: relative;
   }
 
   // Instant feedback for heavy view switches (Project Health links, viewbar
