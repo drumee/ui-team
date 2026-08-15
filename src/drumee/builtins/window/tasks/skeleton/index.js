@@ -2648,7 +2648,15 @@ function buildCommentListContent(ui) {
 
     return Skeletons.Box.X({
       className: `${pfx}__comment-row`,
-      attrOpt: { "data-reply": isReply ? "1" : "0" },
+      // data-comment-id is what a file drag resolves against (ZONES:
+      // __comment-row[data-comment-id]). It used to be set ONLY on the
+      // edit-mode row above, which made the attribute itself the edit-mode
+      // gate — every other row was invisible to the resolver. Rows are
+      // unconditional drop targets now, so every row carries it.
+      attrOpt: {
+        "data-reply": isReply ? "1" : "0",
+        "data-comment-id": c.id,
+      },
       kids: [
         avatar,
         Skeletons.Box.Y({

@@ -292,3 +292,32 @@ test("an isolated failure between successes does NOT abort", async () => {
   assert.equal(left.length, 1);
   assert.equal(left[0].filename, "b.pdf");
 });
+
+// ── The selector's real-DOM dependency ───────────────────────────────────
+// ZONES matches __comment-row[data-comment-id]. Every unit fixture above builds
+// that attribute by hand, so none of them can tell whether the SKELETON emits
+// it. It did not: only the edit-mode row carried it, which made the attribute
+// itself the edit-mode gate and left per-row drop dead for every other row.
+test("every rendered comment row carries data-comment-id", () => {
+  const SKEL = join(
+    __dirname,
+    "../src/drumee/builtins/window/tasks/skeleton/index.js",
+  );
+  const src = readFileSync(SKEL, "utf8");
+
+  // Each place the skeleton opens a __comment-row descriptor.
+  const opens = [...src.matchAll(/className: `\$\{pfx\}__comment-row`/g)];
+  assert.ok(opens.length >= 2, "expected the edit-mode and normal row renders");
+
+  for (const m of opens) {
+    // attrOpt follows the className within the same descriptor literal; look
+    // ahead only as far as the next `kids:` so we cannot borrow a child's.
+    const after = src.slice(m.index, src.indexOf("kids:", m.index));
+    assert.match(
+      after,
+      /"data-comment-id": c\.id/,
+      `a __comment-row render at offset ${m.index} omits data-comment-id — ` +
+        "the zone resolver cannot see that row",
+    );
+  }
+});
