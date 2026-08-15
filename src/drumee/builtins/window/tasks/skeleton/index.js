@@ -1259,7 +1259,6 @@ const make = function (ui) {
               ],
             }),
             actions,
-            dropOverlay(ui),
             // Floating full emoji picker for the comment "…" more button, fed
             // on demand (assets/emojis) and positioned below the react bar —
             // modeled on the meeting reactions picker. Anchored to the
@@ -1639,7 +1638,7 @@ const make = function (ui) {
           // JS-stamped phone flag — see `isMobile` at the top of make().
           attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
-          kids: [form, dropOverlay(ui)],
+          kids: [form],
         }),
       ],
     });
@@ -2684,6 +2683,9 @@ function buildCommentListContent(ui) {
             pickerRow(c),
           ].filter(Boolean),
         }),
+        // Every row is a drop target now, not just the one being edited, so
+        // every row needs the overlay its data-drop-active reveals.
+        commentDropOverlay(ui),
       ],
     });
   };
