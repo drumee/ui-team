@@ -1010,13 +1010,16 @@ const make = function (ui) {
           // Detail pending list — files queued for upload/link on Update.
           pendingFiles: dDraft.pending_files || [],
         }),
+        // Region overlay: this block IS the task drop zone now, so the
+        // affordance belongs to it rather than to the whole panel.
+        dropOverlay(ui),
       ],
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
-    // Activity header: title + All / Comments / History tabs, which re-feed the
-    // list part below.
-    const currentTab = ui.getActivityTab ? ui.getActivityTab() : "all";
+    // Activity header: title + Comments / History tabs, which flip which of the
+    // two independently-fed lists below is visible. Comments is the default.
+    const currentTab = ui.getActivityTab ? ui.getActivityTab() : "comments";
     const activityTab = (tab, label, icon) =>
       Skeletons.Box.X({
         className: `${pfx}__activity-tab`,
@@ -1058,7 +1061,6 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__activity-tabs`,
               kids: [
-                activityTab("all", LOCALE.ALL),
                 activityTab("comments", LOCALE.COMMENTS, "message"),
                 activityTab("history", LOCALE.HISTORY, "apps-clock"),
               ],
@@ -1096,12 +1098,20 @@ const make = function (ui) {
                 }),
               ],
             }),
+            // The composer is its own drop zone: a file dropped here rides the
+            // comment draft and commits on Send, exactly as the paperclip
+            // beside it already does.
+            commentDropOverlay(ui),
           ],
         }),
+        // Files queued on the composer (paperclip or drop), attached to the
+        // comment once it is sent. Its own part, so queueing a file never
+        // re-feeds the composer and drops the caret mid-sentence.
+        pendingStrip(ui, "comment"),
         // Each list sits in its own section so the caption can live OUTSIDE the
         // fed part — a comment or history reload replaces only the rows, never
-        // the label. Captions only earn their place on "All", where the two
-        // runs are stacked; the other tabs are already named by the active tab.
+        // the label. The active tab already names its run, so the captions are
+        // kept for structure but never drawn.
         Skeletons.Box.Y({
           className: `${pfx}__activity-section`,
           attrOpt: {
@@ -1249,7 +1259,6 @@ const make = function (ui) {
               ],
             }),
             actions,
-            dropOverlay(ui),
             // Floating full emoji picker for the comment "…" more button, fed
             // on demand (assets/emojis) and positioned below the react bar —
             // modeled on the meeting reactions picker. Anchored to the
@@ -1450,8 +1459,9 @@ const make = function (ui) {
           content: LOCALE.NO_LABELS,
         });
 
-    // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour.
-    const field = (labelText, control, extraCn = "") =>
+    // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour;
+    // `zone` adds the region drop overlay for a field that is a drop zone.
+    const field = (labelText, control, extraCn = "", zone = false) =>
       Skeletons.Box.Y({
         className: `${pfx}__create-field${extraCn ? " " + extraCn : ""}`,
         kids: [
@@ -1460,7 +1470,8 @@ const make = function (ui) {
             content: labelText,
           }),
           control,
-        ],
+          zone ? dropOverlay(ui) : null,
+        ].filter(Boolean),
       });
 
     // Textarea (not Entry) so a long title wraps and stays fully visible
@@ -1566,6 +1577,7 @@ const make = function (ui) {
                     pendingFiles: draft?.pending_files || [],
                   }),
                   `${pfx}__create-files`,
+                  true, // this field is the create modal's drop zone
                 ),
               ],
             }),
@@ -1626,7 +1638,7 @@ const make = function (ui) {
           // JS-stamped phone flag — see `isMobile` at the top of make().
           attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
-          kids: [form, dropOverlay(ui)],
+          kids: [form],
         }),
       ],
     });
@@ -2112,9 +2124,15 @@ function mentionDropdown(ui, scope) {
 }
 
 // Attachment (paperclip) + @-mention buttons shared by the main comment
-// composer and the inline edit / reply composers. The paperclip attaches a file
-// to the open task (the existing task-attachment flow); "@" focuses the scope's
+// composer and the inline edit / reply composers. "@" focuses the scope's
 // editor, inserts an "@" and opens the mention popup.
+//
+// The paperclip carries its scope so the picked file lands on the SAME draft a
+// dropped file would: inside a comment row it attaches to that comment, and
+// only the task-level composer attaches to the task. Without it every paperclip
+// fell through to "detail" — a file picked while editing a comment was queued
+// on the task's own attachment strip, far up the panel, and committed by Update
+// instead of Save.
 function composerTools(ui, scope) {
   const pfx = ui.fig.family;
   return [
@@ -2124,6 +2142,7 @@ function composerTools(ui, scope) {
       bubble: 0,
       service: "pick-attachment",
       uiHandler: [ui],
+      searchScope: scope,
     }),
     Skeletons.Note({
       className: `${pfx}__composer-at`,
@@ -2269,10 +2288,10 @@ const fullName = (m) => {
 // functions now, and both attribute rows.
 const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
-// Drop affordance for a single comment (edit row / reply composer). Same copy
-// and treatment as the panel-wide __drop-overlay, sized to the row it covers;
-// lit by data-comment-file-drag on the panel root, which _setDragAffordance
-// keeps mutually exclusive with the task-level flag.
+// Drop affordance for one comment surface (composer / row / reply composer).
+// Same copy and treatment as __drop-overlay, sized to the region it covers;
+// lit by data-drop-active on its OWN zone element, which _setDragAffordance
+// keeps to exactly one element at a time.
 function commentDropOverlay(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -2294,7 +2313,7 @@ function commentDropOverlay(ui) {
 function pendingStrip(ui, scope) {
   const pfx = ui.fig.family;
   const draft =
-    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentEditDraft();
+    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentDraft();
   const pending = (draft && draft.pending_files) || [];
   return Skeletons.Box.X({
     className: `${pfx}__comment-pending-list`,
@@ -2352,46 +2371,94 @@ function attachmentIcon(f) {
 function commentAttachments(ui, c, isOwn) {
   const pfx = ui.fig.family;
   const files = (c && c.attachments) || [];
-  if (!files.length) return null;
+  // Files dropped straight onto this row, still uploading or failed. They
+  // render in the SAME strip as the committed ones — the row has no submit, so
+  // there is nowhere else for them to live. data-scope is what _setPendingStatus
+  // addresses, and it carries the comment id so two rows never collide.
+  const inFlight = (ui.getRowUploads && ui.getRowUploads(c && c.id)) || [];
+  if (!files.length && !inFlight.length) return null;
+
+  /**
+   * One chip, whatever state it is in. Committed and in-flight entries share
+   * the SAME shape deliberately: rendering in-flight ones as the taller
+   * fileCard made the whole thread jump 36px the moment an upload committed,
+   * which with a second drop in flight moved the list under the cursor.
+   *
+   * The trailing 12px slot is always present and holds exactly one thing —
+   * unlink, spinner, retry, or nothing — so width never varies by state or by
+   * ownership either.
+   */
+  const chip = (f, opt = {}) => {
+    const nid = f.file_nid || f.nid;
+    const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
+    const status = opt.pending ? f.status || "queued" : null;
+    const busy = status === "uploading" || status === "downloading";
+    let trailing = null;
+    if (status === "error") {
+      // Suppressed when there is nothing a retry could do: a cross-hub
+      // placeholder whose download failed carries neither file nor nid, so the
+      // link has no input and the fetch is never re-run. A stuck card with only
+      // a remove action is honest; a button that does nothing is not.
+      trailing = (f.file || f.nid)
+        ? Skeletons.Button.Svg({
+            className: `${pfx}__comment-attachment-retry`,
+            ico: "refresh-view",
+            bubble: 0,
+            service: "retry-pending-file",
+            uiHandler: [ui],
+            pendingKey: String(f.localKey || f.nid || ""),
+            commentId: c && c.id,
+            tooltips: LOCALE.RETRY || "Retry",
+          })
+        : null;
+    } else if (!status && isOwn) {
+      trailing = Skeletons.Button.Svg({
+        className: `${pfx}__comment-attachment-unlink`,
+        ico: "cross",
+        bubble: 0,
+        service: "comment-unlink-attachment",
+        uiHandler: [ui],
+        commentId: c && c.id,
+        fileNid: nid,
+      });
+    }
+    return Skeletons.Box.X({
+      className: `${pfx}__comment-attachment`,
+      // A chip mid-upload is not a click target for opening the file.
+      service: nid && !busy && !status ? "open-attachment" : null,
+      uiHandler: nid && !busy && !status ? [ui] : null,
+      fileNid: nid,
+      attrOpt: {
+        ...(status ? { "data-status": status, "data-key": String(f.localKey || f.nid || "") } : {}),
+      },
+      kids: [
+        Skeletons.Image.Svg({
+          ico: attachmentIcon(f),
+          className: `${pfx}__comment-attachment-ico`,
+          // Lets the skin treat a type differently without the renderer
+          // knowing about colour — see the office rule in the skin.
+          attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
+        }),
+        Skeletons.Note({
+          className: `${pfx}__comment-attachment-name`,
+          content: name,
+        }),
+        // Always rendered, even when empty: reserving the slot keeps every
+        // chip the same width regardless of state or authorship.
+        Skeletons.Box.X({
+          className: `${pfx}__comment-attachment-slot`,
+          kids: [trailing].filter(Boolean),
+        }),
+      ],
+    });
+  };
+
   return Skeletons.Box.X({
     className: `${pfx}__comment-attachments`,
-    kids: files.map((f) => {
-      const nid = f.file_nid || f.nid;
-      const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
-      const ico = attachmentIcon(f);
-      return Skeletons.Box.X({
-        className: `${pfx}__comment-attachment`,
-        service: nid ? "open-attachment" : null,
-        uiHandler: nid ? [ui] : null,
-        fileNid: nid,
-        kids: [
-          Skeletons.Image.Svg({
-            ico,
-            className: `${pfx}__comment-attachment-ico`,
-            // Lets the skin treat a type differently without the renderer
-            // knowing about colour — see the office rule in the skin.
-            attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
-          }),
-          Skeletons.Note({
-            className: `${pfx}__comment-attachment-name`,
-            content: name,
-          }),
-          // Author-only, like editing or deleting the comment itself — the
-          // server enforces the same rule.
-          isOwn
-            ? Skeletons.Button.Svg({
-                className: `${pfx}__comment-attachment-unlink`,
-                ico: "cross",
-                bubble: 0,
-                service: "comment-unlink-attachment",
-                uiHandler: [ui],
-                commentId: c.id,
-                fileNid: nid,
-              })
-            : null,
-        ].filter(Boolean),
-      });
-    }),
+    attrOpt: { "data-scope": `comment-row:${c && c.id}` },
+    kids: files
+      .map((f) => chip(f))
+      .concat(inFlight.map((f) => chip(f, { pending: true }))),
   });
 }
 
@@ -2556,10 +2623,9 @@ function buildCommentListContent(ui) {
     if (editingId && String(editingId) === String(c.id)) {
       return Skeletons.Box.X({
         className: `${pfx}__comment-row`,
-        // data-comment-id is what a file drag resolves against: while this row
-        // is being edited it owns the panel's drop surface (see
-        // _commentDropTarget), so a file dropped on it attaches to the comment
-        // rather than to the task.
+        // data-comment-id is what a file drag resolves against (ZONES:
+        // __comment-row[data-comment-id]). Every row carries it, edited or
+        // not — see the normal-row render below.
         attrOpt: {
           "data-reply": isReply ? "1" : "0",
           "data-comment-id": c.id,
@@ -2579,13 +2645,10 @@ function buildCommentListContent(ui) {
               // after a partly-failed save the ones that landed are here, and
               // only the ones still to retry are in the strip below.
               commentAttachments(ui, c, isOwn),
-              // Files dropped on the row while editing, before they are
-              // uploaded and attached on Save.
-              pendingStrip(ui, "comment-edit"),
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
-                  ...composerTools(ui, "comment-edit"),
+                  ...composerTools(ui, `comment-row:${c.id}`),
                   Skeletons.Note({
                     className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
                     content: LOCALE.SAVE,
@@ -2605,8 +2668,8 @@ function buildCommentListContent(ui) {
               // commentAttachments returns null when there are none.
             ].filter(Boolean),
           }),
-          // Covers this row alone, in place of the panel-wide overlay, which is
-          // suppressed for as long as a comment is being edited.
+          // Covers this row alone. Every row has one; there is no longer a
+          // panel-wide overlay to stand in for.
           commentDropOverlay(ui),
         ],
       });
@@ -2614,7 +2677,15 @@ function buildCommentListContent(ui) {
 
     return Skeletons.Box.X({
       className: `${pfx}__comment-row`,
-      attrOpt: { "data-reply": isReply ? "1" : "0" },
+      // data-comment-id is what a file drag resolves against (ZONES:
+      // __comment-row[data-comment-id]). It used to be set ONLY on the
+      // edit-mode row above, which made the attribute itself the edit-mode
+      // gate — every other row was invisible to the resolver. Rows are
+      // unconditional drop targets now, so every row carries it.
+      attrOpt: {
+        "data-reply": isReply ? "1" : "0",
+        "data-comment-id": c.id,
+      },
       kids: [
         avatar,
         Skeletons.Box.Y({
@@ -2642,6 +2713,9 @@ function buildCommentListContent(ui) {
             pickerRow(c),
           ].filter(Boolean),
         }),
+        // Every row is a drop target now, not just the one being edited, so
+        // every row needs the overlay its data-drop-active reveals.
+        commentDropOverlay(ui),
       ],
     });
   };
@@ -2863,7 +2937,8 @@ function buildMentionItemsContent(ui, members) {
   });
 }
 
-// "Drop to attach" overlay, shown while data-file-drag="1" is set on the root.
+// "Drop to attach" overlay for a task region (__attachments / __create-files),
+// shown while data-drop-active="1" is set on that region's own element.
 function dropOverlay(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -2963,8 +3038,12 @@ function fileCard(ui, f, opt = {}) {
             attrOpt: { title: LOCALE.LOADING || "…" },
           }),
         ]
-      : status === "error"
+      : status === "error" && (f.file || f.nid)
         ? [
+            // Suppressed when neither file nor nid is present: that is a
+            // cross-hub placeholder whose download failed, so the link has no
+            // input and the fetch is never re-run. Same rule as the comment
+            // chip — a button that cannot work must not be offered.
             Skeletons.Button.Svg({
               className: `${pfx}__file-pending-retry`,
               ico: "refresh-view",
@@ -2972,6 +3051,9 @@ function fileCard(ui, f, opt = {}) {
               service: "retry-pending-file",
               uiHandler: [ui],
               pendingKey,
+              // Row uploads are keyed per comment; the staged strips pass
+              // nothing here and keep the old single-retry path.
+              commentId: opt.commentId,
               tooltips: LOCALE.RETRY || "Retry",
             }),
           ]
