@@ -497,4 +497,30 @@
       background-color: var(--normal-bg);
     }
   }
+
+  // ── Responsive: fill the panel container on tablet (≤ 1024px) ──────
+  // Mirrors the chat-p2p treatment (builtins/widget/chat-p2p skin): this
+  // block sets position and size ONLY, never transform. That is the whole
+  // point — the [data-anim] pair on &__ui above keeps driving the slide,
+  // so the panel still closes. (Re-declaring transform at this level is
+  // exactly what made the phone card unclosable before it was nested.)
+  //
+  // Phones keep the centred card instead — see &__ui[data-device="mobile"]
+  // above. The :not() keeps the two regimes disjoint by construction
+  // rather than leaning on specificity to arbitrate between them, since a
+  // phone (≤ 800px + mobile UA, see Visitor.device()) also matches this
+  // media query.
+  //
+  // Depends on the desk skin giving .panel-container.left a real box at
+  // this breakpoint — by default it is width:0, and so is the
+  // __panel-inner wrapper this panel sits in.
+  @media (max-width: 1024px) {
+    &__ui:not([data-device="mobile"]) {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+    }
+  }
 }

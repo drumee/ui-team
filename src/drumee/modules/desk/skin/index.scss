@@ -421,6 +421,101 @@ html {
     &__panel-container.right[data-device="mobile"] {
       left: 0;
     }
+
+    // Same treatment for the left container, which hosts the trash
+    // slide-out. Two things need it. On tablet the panel fills this box
+    // (panel/trash skin, @media ≤1024px). On phones the panel is a centred
+    // 360px card positioned with left:50% — and a percentage offset needs
+    // a containing block with a real width, which it never had: the
+    // container and the __panel-inner wrapper are both width:0 by default,
+    // so left:50% resolved against 0 and the card sat half off the left
+    // edge. The notifications panel is unaffected either way (position:
+    // fixed, so it ignores this box) and the settings-panel slot is inert
+    // — nothing is ever fed into it.
+    &__panel-container.left {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 64px;
+      right: 0;
+      width: auto;
+      max-width: none;
+      height: 100%;
+      // Transparent to input so the container cannot swallow clicks meant
+      // for the window manager; the open panel re-enables them. Mirrors
+      // the .right block above.
+      pointer-events: none;
+
+      > * {
+        pointer-events: auto;
+      }
+    }
+
+    &__panel-container.left[data-device="mobile"] {
+      left: 0;
+    }
+
+    // 64px above assumes the mini rail. The rail reserves the full 231px
+    // column in two cases: the user pinned it open, and coarse-pointer
+    // tablets in the 768–1024px band where collapse is suppressed outright
+    // (sidebar.scss $rail-collapse-allowed). Start after it in both.
+    //
+    // The right-hand container can afford to ignore this — the sidebar
+    // overlays its far edge, away from the content. A LEFT-anchored panel
+    // cannot: the overlap lands squarely on the edge its content starts at,
+    // so the panel would open with its first 167px hidden.
+    //
+    // The rail element only exists on desktop (skeleton/sidebar.js returns
+    // the drawer instead when isMobile), so this cannot match — and cannot
+    // override left:0 — on phones.
+    .desk-module-sidebar__rail[data-collapsed="0"] ~ &__panel-container.left {
+      left: 231px;
+    }
+
+    // Negation of sidebar.scss $rail-collapse-allowed
+    // ("(pointer: fine), (max-width: 767px), (min-width: 1025px)") within
+    // this block's 768–1024px band: the two width clauses are false here,
+    // so collapse is allowed exactly when the pointer is fine, and the rail
+    // stays expanded otherwise. Deliberately `not (pointer: fine)` rather
+    // than `(pointer: coarse)` — that would miss `pointer: none`, which
+    // also fails the sidebar's test and expands the rail.
+    //
+    // Lower specificity than the [data-device="mobile"] rule above, so a
+    // coarse phone that reaches 768px still overlays from the edge.
+    @media (min-width: 768px) and (not (pointer: fine)) {
+      &__panel-container.left {
+        left: 231px;
+      }
+    }
+
+    // The rail-hover nudge keeps the panel flush against the expanding
+    // sidebar on desktop. Once the container spans the workspace instead
+    // of hugging the sidebar edge, shifting it 167px only pushes it off
+    // the right. Same selector as the desktop rule so this wins on order.
+    .desk-module-sidebar__rail[data-collapsed="1"]:hover ~ &__panel-container.left {
+      transform: none;
+    }
+
+    // Unlike chat-p2p — a direct child of its container — the trash panel
+    // sits inside a __panel-inner wrapper, which is width:0 by default.
+    // Give it the container's box so it can act as the panel's containing
+    // block. Scoped to this slot: the sibling inner holding the
+    // notifications panel must keep its own (fixed-child) behaviour.
+    &__panel-container.left [data-partname="trash-panel"] {
+      inset: 0;
+      width: 100%;
+      // This wrapper now spans the workspace, and unlike the panel it never
+      // moves — the container's `> *` rule above would leave it clickable
+      // and it would swallow every click meant for the window manager, open
+      // or closed. Stay transparent and re-enable on the panel itself,
+      // which is parked off-screen whenever it is closed. The sibling inner
+      // holding the notifications panel keeps the `> *` default.
+      pointer-events: none;
+
+      > * {
+        pointer-events: auto;
+      }
+    }
   }
 }
 
