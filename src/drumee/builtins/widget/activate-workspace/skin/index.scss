@@ -503,9 +503,10 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
 
     &--ghost {
-      color: var(--normal-fg-20);
-      background-color: var(--normal-bg-90);
-      &:hover { background-color: var(--normal-bg-80); }
+      color: var(--normal-fg-20) !important;
+    background-color: var(--normal-bg-90) !important;
+    border: none !important;
+      &:hover { background-color: var(--normal-bg-80) !important; }
     }
   }
 
