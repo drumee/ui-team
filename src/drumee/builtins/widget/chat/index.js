@@ -1929,8 +1929,14 @@ class __widget_chat extends LetcBox {
         return true;
       }
       // Until thread info resolves, accept the file's own first-post echo (the
-      // child carries file_nid) so the sender sees their message immediately.
-      if (!this.fileThreadId && `${data.file_nid}` === `${this.scopedFileNid}`) {
+      // child carries file_nid inside file_thread on the WS contract) so the
+      // sender sees their message immediately. Never infer identity from the
+      // thread id alone: every file-thread child in the workspace is broadcast
+      // to this widget, including siblings that are open in another client.
+      const fileNid = `${data.file_nid ||
+        (data.file_thread && data.file_thread.file_nid) ||
+        ""}`;
+      if (!this.fileThreadId && fileNid === `${this.scopedFileNid}`) {
         return true;
       }
       return false;
@@ -2947,9 +2953,11 @@ class __widget_chat extends LetcBox {
         const ftid = `${(data.file_thread && data.file_thread.file_thread_id) ||
           data.file_thread_id ||
           ""}`;
-        // Adopt the thread id on first post / echo before info resolved.
-        if (ftid) this.fileThreadId = ftid;
+        // Validate against the mounted file before adopting an asynchronously
+        // discovered thread id. Adopting first turns any sibling thread event
+        // into a self-match and renders that message in the wrong conversation.
         if (!this.matchesScopedChannel(data)) return;
+        if (!this.fileThreadId && ftid) this.fileThreadId = ftid;
         this.handleReceivedMsg(data);
         if (data && data.author_id) this._removeTyper(data.author_id);
         // Acknowledge scoped to this thread only when the chat is visible and
