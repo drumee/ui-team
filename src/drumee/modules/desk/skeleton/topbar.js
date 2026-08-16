@@ -218,8 +218,17 @@ module.exports = function (ui) {
           // the moment the org is within limits again.
           ...(require("libs/over-limit").isLocked() ? [] : [deskNewMenu(pfx, ui, mayWrite)]),
 
-          // Search bar + suggestions
-          Skeletons.Box.Y({
+          // Search bar + suggestions.
+          //
+          // Mobile drops the whole cluster: this topbar is display:none at
+          // mobile widths (skin/index.scss, __topbar[data-device="mobile"]),
+          // and search there lives in the centered card built by
+          // skeleton/index.js. That card reuses these EXACT sys_pn names
+          // ("search-box", "search-suggestions", "suggestions-list") so the
+          // desk's existing wiring drives it unchanged — which only works if
+          // exactly one of the two is ever mounted. "" is dropped by ui-core's
+          // validChild, the same idiom the New menu rows use above.
+          Visitor.isMobile() ? "" : Skeletons.Box.Y({
             className: `${pfx}__search-container`,
             sys_pn: "search-container",
             partHandler: ui,

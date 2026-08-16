@@ -1651,6 +1651,13 @@ class desk_module extends LetcBox {
         this._searchSuggestions = child;
         return;
 
+      // Mobile only — the card that hosts search-box / search-suggestions when
+      // the desktop topbar is display:none. Its absence is how
+      // _closeMobileSearch knows there is no card to close.
+      case "mobile-search-card":
+        this._mobileSearchCard = child;
+        return;
+
       case "suggestions-list":
         // Topbar search must not surface the user's hidden personal hub
         // (area='personal') or the auto-created wicket/dmz. Filter hub
@@ -2780,13 +2787,71 @@ class desk_module extends LetcBox {
     });
   }
 
-  _closeMobileDrawer() {
+  /**
+   * `keepBackdrop` is for the drawer → search-card handoff. _setMobileBackdrop
+   * writes inside ensurePart().then(), so two callers racing false-then-true
+   * would be ordered only by promise resolution, not by program order — correct
+   * today merely because "overlay" is already mounted and resolves eagerly, and
+   * silently wrong the day ensurePart goes cold. The handoff therefore suppresses
+   * this closer's write entirely and lets _openMobileSearch issue the single
+   * one, so the backdrop's final state does not depend on ordering at all.
+   */
+  _closeMobileDrawer(keepBackdrop) {
     this.ensurePart("sidebar-main").then((p) => {
       if (!p || !p.el) return;
       p.el.dataset.state = "closed";
     });
-    this._setMobileBackdrop(false);
+    if (!keepBackdrop) this._setMobileBackdrop(false);
     this._setMobileTopbarActive(null);
+  }
+
+  /**
+   * Open the mobile search card (skeleton/index.js). The caller closes the
+   * drawer first; the card then re-lights the SAME backdrop, so the two never
+   * show together and one tap outside dismisses whichever is up.
+   *
+   * The card reuses the topbar's part names, so `_searchBoxInner` and
+   * `_searchSuggestions` already point at its input and list by the time this
+   * runs — nothing here is mobile-specific beyond the card's own visibility.
+   *
+   * Focus stays inside the click's microtask (no rAF / setTimeout) so the tap's
+   * user activation still counts and the soft keyboard opens. focus() fires
+   * focusin, whose handler (onPartReady, "search-box") already fetches — the
+   * explicit fetch below is the fallback for when it didn't, so the card is
+   * never left blank. An empty query is not a no-op: desk.search short-circuits
+   * it to mfs_show_node_by, i.e. the user's workspaces.
+   */
+  _openMobileSearch() {
+    return this.ensurePart("mobile-search-card").then((p) => {
+      if (!p || !p.el) return;
+      p.setState(1);
+      this._setMobileBackdrop(true);
+      if (this._searchBoxInner && _.isFunction(this._searchBoxInner.focus)) {
+        this._searchBoxInner.focus();
+      }
+      const shown =
+        this._searchSuggestions &&
+        this._searchSuggestions.el.dataset.state === "1";
+      if (shown) return;
+      return this._updateSearchSuggestions();
+    });
+  }
+
+  /**
+   * Close the mobile search card and drop its query. A no-op wherever the card
+   * was never built (desktop / tablet), which is what lets the shared backdrop,
+   * Escape and open-search-hit all call it unconditionally.
+   */
+  _closeMobileSearch() {
+    if (!this._mobileSearchCard) return false;
+    if (this._mobileSearchCard.el.dataset.state !== "1") return false;
+    this._mobileSearchCard.setState(0);
+    this._hideSearchSuggestions();
+    if (this._searchBoxInner && _.isFunction(this._searchBoxInner.setValue)) {
+      this._searchBoxInner.setValue("");
+    }
+    this._setMobileBackdrop(false);
+    return true;
   }
 
   /**
@@ -3265,8 +3330,21 @@ class desk_module extends LetcBox {
       case "mobile-show-menu":
         return this.openMobileDrawer("nav");
 
+      // The backdrop is shared between the drawer and the search card, so one
+      // tap has to dismiss whichever layer is actually up. Both closers are
+      // no-ops when their layer is already closed.
       case "mobile-close-drawer":
+        this._closeMobileSearch();
         return this._closeMobileDrawer();
+
+      // Hand off to the card without touching the backdrop — it stays lit
+      // across the swap, and _openMobileSearch performs the only write.
+      case "open-mobile-search":
+        this._closeMobileDrawer(1);
+        return this._openMobileSearch();
+
+      case "close-mobile-search":
+        return this._closeMobileSearch();
 
       case "toggle-sidebar-pin":
         return this._toggleSidebarPin();
@@ -3418,6 +3496,7 @@ class desk_module extends LetcBox {
         //   message      → open the hosting chat scope (see _openMessageHit)
         // Files/folders reuse the notification-reveal path (openFileLocation).
         this._hideSearchSuggestions();
+        this._closeMobileSearch();
         const hit = cmd && cmd.model ? cmd.model.toJSON() : {};
         if (hit.result_type === "message") {
           return this._openMessageHit(hit);
@@ -3717,6 +3796,10 @@ class desk_module extends LetcBox {
       this._dismissTransientUi();
       return false;
     }
+    // Ahead of _closeEscapeModal: the search card is the topmost layer on
+    // mobile, so it must consume the press before anything under it. Returns
+    // false (no card / already closed) everywhere else, so desktop is unchanged.
+    if (this._closeMobileSearch()) return false;
     if (this._closeEscapeModal()) return false;
     this._closeEscapeWindow();
     return false;
@@ -3928,6 +4011,12 @@ class desk_module extends LetcBox {
     if (this._searchSuggestions.el.dataset.state !== "1") {
       this._searchSuggestions.setState(1);
     }
+    // Mobile: no outside-click dismisser. The list is the body of the search
+    // card, not a dropdown hanging off a topbar — `_searchContainer` is the
+    // topbar cluster, which does not exist on mobile, so the check below would
+    // read every tap as "outside" and collapse the card's own results on first
+    // touch. Dismissal there is the backdrop, the ✕ and Escape.
+    if (this._mobileSearchCard) return;
     if (this._suggestionsDismiss) return;
     this._suggestionsDismiss = (e) => {
       const inside =

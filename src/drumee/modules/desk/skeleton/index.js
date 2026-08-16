@@ -37,6 +37,82 @@ const _build_mobile_topbar = (ui) => {
   });
 };
 
+// Mobile search card. The desktop topbar — and with it the search cluster —
+// is display:none at mobile widths, so search gets its own centered card here.
+//
+// It deliberately reuses the topbar's part names ("search-box",
+// "search-suggestions", "suggestions-list") rather than declaring its own:
+// every handler in desk/index.js (the 300ms debounce, _updateSearchSuggestions,
+// the personal-hub filter on the list, open-search-hit) then drives this card
+// with no branching. skeleton/topbar.js drops its own cluster on mobile so
+// only one node ever claims each name.
+//
+// Mounted at state 0 on every mobile desk rather than lazily, so ensurePart()
+// resolves immediately on the first tap instead of racing a mount.
+const _build_mobile_search_card = (ui) => {
+  const fig = ui.fig.family;
+
+  return Skeletons.Box.Y({
+    className: `${fig}__mobile-search`,
+    sys_pn: "mobile-search-card",
+    partHandler: ui,
+    state: 0,
+    kids: [
+      Skeletons.Box.X({
+        className: `${fig}__mobile-search-bar`,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "magnifying-glass",
+            className: `${fig}__mobile-search-icon`,
+          }),
+          Skeletons.Entry({
+            className: `${fig}__mobile-search-input`,
+            sys_pn: "search-box",
+            uiHandler: [ui],
+            partHandler: ui,
+            placeholder: LOCALE.SEARCH || "Search...",
+            service: "search-files",
+            type: _a.text,
+            autocomplete: _a.off,
+            interactive: 1,
+          }),
+          Skeletons.Button.Svg({
+            ico: "cross",
+            className: `${fig}__mobile-search-close`,
+            service: "close-mobile-search",
+            uiHandler: [ui],
+          }),
+        ],
+      }),
+
+      Skeletons.Box.Y({
+        className: `${fig}__mobile-search-suggestions`,
+        sys_pn: "search-suggestions",
+        partHandler: ui,
+        state: 0,
+        kids: [
+          Skeletons.List.Smart({
+            className: `${fig}__mobile-search-list`,
+            sys_pn: "suggestions-list",
+            partHandler: ui,
+            flow: _a.none,
+            spinner: true,
+            spinnerWait: 300,
+            vendorOpt: Preset.List.Orange_e,
+            itemsOpt: {
+              kind: "workspace_item",
+              uiHandler: [ui],
+              // Same reveal-in-context path as the desktop suggestions —
+              // desk/index.js onUiEvent → "open-search-hit".
+              service: "open-search-hit",
+            },
+          }),
+        ],
+      }),
+    ],
+  });
+};
+
 const _desk_main = function (ui) {
   const isMobile = Visitor.isMobile();
 
@@ -105,6 +181,12 @@ const _desk_main = function (ui) {
       ...(isMobile ? { uiHandler: [ui], service: "mobile-close-drawer" } : {}),
     }),
   ];
+
+  // After the overlay, so the card sits later in DOM order as well as above it
+  // by z-index (skin/mobile-search.scss).
+  if (isMobile) {
+    bodyKids.push(_build_mobile_search_card(ui));
+  }
 
   const mainKids = [
     Skeletons.Box.X({

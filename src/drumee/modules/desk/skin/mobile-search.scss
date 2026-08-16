@@ -1,0 +1,241 @@
+@use "mixins/drumee";
+
+// Centered search card, mobile only. The desktop topbar — and with it the
+// search cluster — is display:none at mobile widths (index.scss,
+// __topbar[data-device="mobile"]), so skeleton/index.js builds this card
+// instead and skeleton/topbar.js drops its own. Every rule below assumes
+// mobile; the element is not rendered anywhere else.
+//
+// Hidden state is visibility/opacity rather than display:none on purpose:
+// _openMobileSearch focuses the input in the same task as the tap that opened
+// the card (so the soft keyboard counts it as user-initiated), and focus() on
+// a display:none subtree is refused.
+.desk-module {
+  &__mobile-search {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(90vw, 420px);
+    max-height: 70vh;
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 10px;
+    border-radius: 12px;
+    background-color: var(--normal-bg);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+    // Above the 10010 backdrop and in the drawer's layer, so the mobile
+    // topbar (99999) cannot sit over the card.
+    z-index: 100000;
+    // Hidden is the DEFAULT, revealed only by data-state="1" — the same
+    // polarity as the topbar's __search-suggestions. Do not invert this to
+    // `[data-state="0"] { hidden }`: the skeleton's `state: 0` is not
+    // guaranteed to have written the attribute by first paint, and an
+    // absent attribute would then render the card open over a fresh desk.
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s;
+
+    &[data-state="1"] {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+  }
+
+  &__mobile-search-bar {
+    position: relative;
+    align-items: center;
+    width: 100%;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 8px 0 38px;
+    border-radius: 8px;
+    background-color: var(--normal-bg-90);
+    flex-shrink: 0;
+  }
+
+  &__mobile-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    pointer-events: none;
+    color: var(--primary-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__mobile-search-input {
+    flex: 1;
+    min-width: 0;
+
+    input {
+      background-color: transparent;
+      // 16px keeps iOS Safari from zooming the viewport on focus.
+      font-size: 16px;
+      color: var(--normal-fg-10);
+      width: 100%;
+
+      &::placeholder {
+        color: #c7c7cc;
+      }
+    }
+  }
+
+  &__mobile-search-close {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // The results body. Unlike the desktop dropdown this is in flow inside the
+  // card, so the card's max-height is what bounds it and the scroll happens
+  // here.
+  &__mobile-search-suggestions {
+    visibility: hidden;
+    pointer-events: none;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &[data-state="1"] {
+      visibility: visible;
+      pointer-events: auto;
+    }
+  }
+
+  &__mobile-search-list {
+    width: 100%;
+    gap: 4px;
+
+    .workspace-item {
+      padding: 8px 6px;
+      cursor: pointer;
+      border-radius: 6px;
+
+      &__row {
+        min-height: auto;
+        padding: 0;
+        gap: 8px;
+        font-size: 14px;
+        line-height: 1.4;
+        color: #65656c;
+
+        &[data-level="0"],
+        &[data-radio="on"][data-level="0"] {
+          padding-left: 0;
+        }
+      }
+
+      &__icon {
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        flex-shrink: 0;
+
+        svg {
+          width: 22px;
+          height: 22px;
+        }
+
+        &.file {
+          color: #65656c;
+        }
+      }
+
+      &__name {
+        font-size: 14px;
+        color: #65656c;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      &:hover,
+      &[data-state="1"],
+      &[data-radio="on"] {
+        background-color: rgba(89, 80, 255, 0.1);
+        border-left: none;
+
+        .workspace-item__row {
+          padding-left: 0;
+        }
+      }
+    }
+  }
+}
+
+// ── Dark mode overrides ─────────────────────────────────────────
+// Mirrors the topbar search block in topbar.scss: elevated surfaces in place
+// of stark whites, softened foregrounds.
+html[data-theme="dark"] {
+  .desk-module {
+    &__mobile-search {
+      background-color: var(--normal-bg-elevated);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+    }
+
+    &__mobile-search-bar {
+      background-color: var(--normal-bg-80);
+    }
+
+    &__mobile-search-icon {
+      color: var(--normal-fg-20);
+    }
+
+    &__mobile-search-input input {
+      color: var(--normal-fg);
+
+      &::placeholder {
+        color: var(--placeholder-fg);
+      }
+    }
+
+    &__mobile-search-close {
+      color: var(--normal-fg-20);
+    }
+
+    &__mobile-search-list {
+      .workspace-item {
+        &__name {
+          color: var(--normal-fg);
+        }
+
+        &__row {
+          color: var(--normal-fg);
+        }
+
+        &:hover,
+        &[data-state="1"],
+        &[data-radio="on"] {
+          background-color: var(--hover-bg-40);
+        }
+      }
+    }
+  }
+}

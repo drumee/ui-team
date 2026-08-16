@@ -361,11 +361,15 @@ const createActionsNav = (ui) => {
             "mobile-upload",
           ),
         ]),
+    // "open-mobile-search", not "search-files": the latter is the search
+    // INPUT's per-keystroke service, so a row sharing it landed in the
+    // debounce branch and did nothing. This row opens the card; the input
+    // inside the card keeps "search-files".
     createNavItem(
       ui,
       "app-search",
       LOCALE.SEARCH || "Search",
-      "search-files",
+      "open-mobile-search",
       "",
       null,
       "mobile-search",
