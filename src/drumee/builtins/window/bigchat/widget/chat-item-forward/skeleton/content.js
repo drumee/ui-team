@@ -97,7 +97,14 @@ const __skl_chat_item_forward_content = function(_ui_, type) {
       type
     },
     sys_pn      : 'forward-room-list',
-    api         : _api
+    partHandler : _ui_,
+    api         : _api,
+    // hub_get_members_by_type returns EVERY member in one shot — its LIMIT is
+    // commented out in the SQL — so the list must not ask for a second page:
+    // page 2 would repeat the same rows and duplicate every member. Only the
+    // workspace-member source has that shape; the paged room lists keep
+    // scrolling as before.
+    ...(_ui_._usesWorkspaceMembers(type) ? { max_page: 1 } : {})
   });
 
   const a = Skeletons.Box.Y({
