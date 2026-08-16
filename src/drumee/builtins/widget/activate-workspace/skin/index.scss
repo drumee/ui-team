@@ -196,25 +196,37 @@ $success-soft: rgba(46, 179, 122, 0.14);
     margin-left: auto;
   }
 
-  // Back styled as window-confirm's secondary button.
+  // Back as a quiet link, the same treatment __skip gets on the step card — and
+  // for the same reason. It is a way out, not an equal choice: on most beats it
+  // stands alone (the chrome sub-steps carry no Next), and a bordered secondary
+  // button sitting by itself in the footer reads as the beat's ACTION, which is
+  // exactly what it is not — the action is the real thing the walkthrough is
+  // pointing at, out on the desk behind the coach.
+  //
+  // Underlined on hover only, so it reads as secondary at rest without being
+  // mistaken for disabled text — see __skip, and the ghost lockup below that
+  // made that mistake.
+  //
+  // inline-flex + align-items is what __skip does not need and this does: __skip
+  // is a child of the column card, while this sits in __coach-footer, a flex ROW
+  // whose height is set by the 34px __coach-next beside it. Without it the label
+  // stretches and rides the top of that row instead of centring against Next.
   &__coach-back {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 84px;
-    height: 34px;
-    padding: 0 14px;
-    border-radius: var(--corner-radius-2, 8px);
+    padding: 4px 8px;
+    border-radius: 4px;
     font-size: 13px;
-    font-weight: 600;
-    color: var(--normal-fg);
-    background-color: var(--normal-bg);
-    border: 1px solid var(--border-default);
+    font-weight: 500;
+    color: var(--normal-fg-20);
     cursor: pointer;
     user-select: none;
-    transition: background-color 120ms ease;
+    transition: color 120ms ease;
 
-    &:hover { background-color: var(--normal-bg-80); }
+    &:hover {
+      color: var(--normal-fg);
+      text-decoration: underline;
+    }
   }
 
   // Primary twin of __coach-back. Same metrics so the pair reads as one row.
