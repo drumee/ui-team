@@ -151,12 +151,13 @@ html {
   // Left panel-container hosts trash / activity (notifications) /
   // settings slide-outs that anchor to the desktop sidebar column. On
   // mobile that column doesn't exist (sidebar is a drawer overlay), so
-  // Trash & Settings — not yet laid out for mobile — stay hidden. The
+  // Settings — which still has no mobile layout — stays hidden. The
   // notifications panel renders as a centered card (position:fixed, see
-  // panel-activity skin); the container itself must stay displayed so
-  // that fixed child can paint, so we hide only the two unported panels.
+  // panel-activity skin) and Trash renders as its own centered card (see
+  // panel/trash skin, [data-device="mobile"]); the container itself must
+  // stay displayed so those children can paint, so we hide only the one
+  // unported panel.
   &__panel-container.left[data-device="mobile"] {
-    [data-partname="trash-panel"],
     [data-partname="settings-panel"] {
       display: none;
     }

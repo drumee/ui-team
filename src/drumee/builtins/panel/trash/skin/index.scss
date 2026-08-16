@@ -22,11 +22,27 @@
       transform: translateX(-100%);
     }
 
+    // Mobile: a centered card instead of the full-height left drawer.
+    // The in/out states MUST be nested here. A single unconditional
+    // transform at this level carries the same specificity as the
+    // [data-anim] rules above (0,2,0) and, being declared later, wins —
+    // which left data-anim decorative on mobile and the card impossible to
+    // close, since every close path (_onOutsideClick, _hidePanel, the
+    // header cross) only flips that attribute. Nesting takes these to
+    // (0,3,0) so they beat the desktop pair regardless of order.
     &[data-device="mobile"] {
       width: 360px !important;
       height: 500px !important;
       left: 50% !important;
-      transform: translateX(-50%) translateY(15%);
+      transform: translateX(-50%) translateY(100vh);
+
+      &[data-anim="in"] {
+        transform: translateX(-50%) translateY(15%);
+      }
+
+      &[data-anim="out"] {
+        transform: translateX(-50%) translateY(100vh);
+      }
     }
   }
 
