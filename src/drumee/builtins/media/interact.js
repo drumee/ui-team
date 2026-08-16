@@ -648,6 +648,35 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Create a copy beside this media item. The live update owns grid insertion so the
+   * HTTP response and WebSocket broadcast cannot add the same copy twice.
+   */
+  duplicateInPlace() {
+    const echoId = Visitor.get(_a.echoId);
+    return this.postService(
+      SERVICE.media.copy,
+      {
+        service: SERVICE.media.copy,
+        nid: this.mget(_a.nodeId),
+        pid: this.mget(_a.pid),
+        action: _a.copy,
+        recipient_id: this.mget(_a.hub_id),
+        hub_id: this.mget(_a.hub_id),
+        echoId,
+      },
+      { async: 1 },
+    )
+      .then((data) => {
+        if (data && data.error) {
+          const message = data.reason || data.error.message || data.error;
+          return Wm.alert(message || LOCALE.TRY_AGAIN);
+        }
+        Wm.unselect && Wm.unselect();
+      })
+      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+  }
+
+  /**
    * @param {Letc} cmd
    * @param {Object} args
    */
@@ -702,19 +731,7 @@ class __media_interact extends media_core {
         return this.linkToTaskTracker();
 
       case _a.duplicate:
-        let opt = {
-          service: SERVICE.media.copy,
-          nid: this.mget(_a.nodeId),
-          pid: this.mget(_a.pid),
-          action: _a.copy,
-          recipient_id: this.mget(_a.hub_id),
-          hub_id: this.mget(_a.hub_id),
-        };
-        this.postService(SERVICE.media.copy, opt, { async: 1 }).then((data) => {
-          data.kind = this._getKind();
-          this.getLogicalParent().append(data)
-        })
-        return
+        return this.duplicateInPlace();
 
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));

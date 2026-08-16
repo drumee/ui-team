@@ -284,8 +284,11 @@ class __media_core extends DrumeeMFS {
     // separator-delimited section; trash always closes the menu.
     const sections = [];
 
-    /** 1 — clipboard copy + download ("duplicate" removed from files) */
-    sections.push([_a.copy, _a.download]);
+    /** 1 — clipboard copy + same-folder duplicate + download */
+    const fileActions = [_a.copy];
+    if (editable) fileActions.push(_a.duplicate);
+    fileActions.push(_a.download);
+    sections.push(fileActions);
 
     /** 2 — organize (Move submenu). Invite (_a.share) hidden on files per Lexis
      * 2026-06-14 (parent-folder/hub only); item def + handler + hub menu keep it. */
