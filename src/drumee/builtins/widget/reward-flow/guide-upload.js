@@ -28,7 +28,7 @@
  * which the card cannot offer them without replaying the whole walkthrough. See
  * back(), which the orchestrator consults first for exactly that case.
  */
-const { GuideCore, firstVisible } = require("./guide-core");
+const { GuideCore, firstVisible } = require("../../../libs/guided-flow/guide-core");
 
 // Live workspace-window selectors. Single source of truth for what this guide
 // reaches into — see window/skeleton/toolkit/index.js, which builds them.

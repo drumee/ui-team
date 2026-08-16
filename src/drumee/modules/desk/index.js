@@ -5,6 +5,11 @@ const billingDeepLink = require("libs/billing-deep-link");
 const { captureUtm, campaignArrival } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 
+// Widgets that own a modal or panel Escape should close BEFORE the window that
+// hosts it. Opt-in: each implements onEscape() and returns true when it consumed
+// the press. See _closeEscapeModal for why this is an explicit list.
+const ESCAPE_MODAL_KINDS = ["tasks_panel"];
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -57,6 +62,31 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     Visitor.on(_e.change, this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
+    // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
+    // capture listener only exists while a desk is alive — both of its targets
+    // (the topbar file search and a chat window's message search) are desk-only,
+    // and a DMZ/share session gets no global key handler at all. Released in
+    // onDestroy.
+    const hotkeys = require("libs/hotkeys");
+    this._searchHotkey = hotkeys.register({
+      name: "desk-search",
+      match: (e) => hotkeys.isCmdShift(e, "f"),
+      run: (e) => this._focusSearch(e),
+    });
+    // Escape dismisses transient UI. BUBBLE phase, so it yields to every widget
+    // that already answers Escape nearer the user — the share popup, file
+    // rename, and the mention dropdowns all preventDefault on keydown, and
+    // `defaultPrevented` tells us they claimed it. `inTextEntry` yields to the
+    // other family, which answers on KEYUP where defaultPrevented cannot reach:
+    // ui-core's Entry (`_e.cancel` / `removeOnEscape`, e.g. the inline rename),
+    // menu-input, and the chat/task mention popups.
+    this._escHotkey = hotkeys.register({
+      name: "desk-escape",
+      phase: "bubble",
+      match: (e) =>
+        e.key === "Escape" && !e.defaultPrevented && !hotkeys.inTextEntry(e.target),
+      run: () => this._onEscape(),
+    });
     // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
     // open the full-page billing screen without a direct module reference.
     this._openBillingPage = () => this.openBillingPage();
@@ -358,6 +388,13 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
+    if (this._searchHotkey || this._escHotkey) {
+      const hk = require("libs/hotkeys");
+      if (this._searchHotkey) hk.unregister(this._searchHotkey);
+      if (this._escHotkey) hk.unregister(this._escHotkey);
+      this._searchHotkey = null;
+      this._escHotkey = null;
+    }
     if (this._searchInputEl && this._searchInputHandler) {
       this._searchInputEl.removeEventListener(
         "input",
@@ -685,8 +722,15 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * After promo-launch30 explore → location.reload(), open Admin Console.
-   * Invite panel is opened by apps-main from drumee_promo_open_invite.
+   * Legacy path for promo-launch30's "Start exploring now".
+   *
+   * That button no longer reloads — it broadcasts desk:open-admin-console and
+   * the console opens in place, which is ~1.7s cheaper (see the note on
+   * _exploreAfterClaim). Nothing sets drumee_promo_open_admin any more.
+   *
+   * Kept for one case only: a tab that clicked the button on the previous
+   * build, set the flag, and reloaded into this one. sessionStorage dies with
+   * that tab, so this can be deleted after a deploy cycle.
    */
   _maybeOpenPromoAdminAfterClaim() {
     let open = false;
@@ -1703,7 +1747,16 @@ class desk_module extends LetcBox {
         // The tutorial exists and owns the hand-off from here.
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
+        // Was this the onboarding tour, or a user rewatching it from Get help?
+        // Recorded HERE because the flag that answers it is consumed by
+        // _chainHelpReturnAfterTutorial below, and the activation flow that
+        // needs the answer does not run until the tour is destroyed. See
+        // _maybeStartActivateWorkspace.
+        this._tutorialWasAutomatic = !this._tourReturnsToHelp;
         this._chainRewardFlowAfterTutorial(child);
+        // Only fires for a tour launched from Get help; the automatic
+        // post-signup run leaves the user on the desk as before.
+        this._chainHelpReturnAfterTutorial(child);
         return;
     }
   }
@@ -1810,6 +1863,91 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * User-initiated run of the 6-step tour, from the "Product Tour" button on
+   * the Get help screen (help_main raises `start-product-tour`). Until this
+   * existed the tour only ran automatically — post-signup, or forced with
+   * `?tutorial=1` — so anyone who skipped it had no way back in.
+   *
+   * Get help has to go first: the tour renders its OWN mock workspace, so a
+   * still-mounted help screen would show through it. settings-main-slot is not a
+   * keep-alive slot, so togglePanel without `openOnly` animates the child out
+   * and destroys it.
+   *
+   * Goes through _showTutorial() rather than feeding desk_tutorial here, so
+   * both entry points share one launch path. The reward flow it chains on exit
+   * is a no-op for this path: _afterHomeSettled() runs once per session and the
+   * desk has long since settled by the time anyone opens Get help.
+   *
+   * Because the screen is closed on the way in, finishing the tour has to put
+   * it back — the user asked for a tour FROM Get help, so that is where they
+   * are returned. `_tourReturnsToHelp` carries that intent across to
+   * onPartReady("desk-tutorial"), which is the only reliable handle on the
+   * mounted tutorial (see _showTutorial on why feed()'s return value is not).
+   */
+  _startProductTour() {
+    // Re-feeding the overlay while a tour is live would throw the user back to
+    // step 1, and the help screen can be re-opened over a running tour. The
+    // overlay hosts other things too (reward flow, promo modals), so match on
+    // the kind rather than on "is anything mounted" — and read the dataset as
+    // well as the model, because a kind still being fetched mounts as the
+    // lazy-loader placeholder first (same defensive pair as
+    // _currentScreenService).
+    const overlay = this.getPart && this.getPart("overlay");
+    const running = overlay && overlay.children && overlay.children.last();
+    const kind =
+      (running && running.mget && running.mget(_a.kind)) ||
+      (running && running.el && running.el.dataset && running.el.dataset.kind);
+    if (running && !running.isDestroyed() && kind === "desk_tutorial") {
+      return;
+    }
+    this._tourReturnsToHelp = true;
+    this.togglePanel("help_main", "settings-main-slot");
+    this._showTutorial();
+  }
+
+  /**
+   * Put Get help back when a tour that was started from it finishes.
+   *
+   * The flag is CONSUMED here rather than in the destroy handler: if the
+   * tutorial mounts at all, this is the run it belongs to, and clearing it now
+   * means a later automatic run can never inherit a stale intent. A tour that
+   * fails to mount leaves the flag set, which is why _startProductTour is also
+   * the only thing that sets it — the next click overwrites it truthfully.
+   *
+   * `once` matches _chainRewardFlowAfterTutorial: the tutorial ends by calling
+   * softDestroy() from _enterWorkspace(), so destroy is the completion signal.
+   *
+   * softDestroy fades for 0.5s and only then destroys, so destroy arrives after
+   * the tour is already off screen and the desk shows for the moment it takes
+   * the panel to mount. Left as is: there is no "tour is exiting" signal to
+   * open the panel earlier on, and the alternative — pre-opening Get help at
+   * launch and letting the tour cover it — is what the close-on-entry exists to
+   * avoid, since the tour draws its own mock workspace.
+   */
+  _chainHelpReturnAfterTutorial(tutorial) {
+    const returns = this._tourReturnsToHelp;
+    this._tourReturnsToHelp = false;
+    if (!returns || !tutorial || !_.isFunction(tutorial.once)) return;
+    tutorial.once(_e.destroy, () => this._openGetHelp());
+  }
+
+  /**
+   * Get help — full-page screen in the same slot as Settings/Billing.
+   * Open-only, matching its sidebar neighbours.
+   *
+   * Shared by the sidebar entry (`toggle-help`) and by the return trip after a
+   * product tour, so both land on the same screen with the same breadcrumb.
+   * The panel is destroyed on close, so it always re-opens on help_main's
+   * default page — Product tour, which is the page the button was on.
+   */
+  _openGetHelp() {
+    RADIO_BROADCAST.trigger("breadcrumb:context", {
+      filename: LOCALE.GET_HELP,
+    });
+    return this.togglePanel("help_main", "settings-main-slot", true);
+  }
+
+  /**
    * Reward onboarding flow (Figma 3275:236091). Runs AFTER the 5-step
    * tutorial, and only for users the SERVER says are owed a run —
    * `reward.get_state` reads yp.reward_claim, which analytics-server seeds when
@@ -1823,7 +1961,14 @@ class desk_module extends LetcBox {
    * walking anyone through a reward that no longer exists.
    */
   async _maybeStartRewardFlow() {
-    const forced = !!Visitor.parseModuleArgs().reward;
+    const args = Visitor.parseModuleArgs();
+    const forced = !!args.reward;
+    // `?activate=1` asked for the OTHER walkthrough. Both open by having the
+    // user create a workspace, so this one stands down rather than winning the
+    // race it normally wins and swallowing the flag — a tester on an account
+    // that happens to hold a reward_claim row would otherwise see the reward
+    // flow and conclude activation was broken.
+    if (args.activate) return;
     if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
     // Synchronous in-flight latch: onPartReady("overlay") can fire more than
     // once (e.g. re-navigation re-feeding the same module), and the guard
@@ -1900,6 +2045,135 @@ class desk_module extends LetcBox {
       });
       this._rewardFlowInFlight = false;
     });
+  }
+
+  /**
+   * Anything the create-workspace form should do differently because a guided
+   * flow is on screen.
+   *
+   * Today one thing, for one flow. activate-workspace's Step 2 invites a
+   * teammate, and it needs Step 1 to end on a surface that can do that. For a
+   * team workspace it already does — the members panel opens in the same
+   * wrapper-modal. For an EXTERNAL one the form launches the secure-share dock
+   * instead, which manages links rather than membership, so the walkthrough had
+   * no invite surface to hand over to and the user fell through to the plain
+   * Step 2 card and its popup — the route a brand-new free-solo account cannot
+   * use at all. Overriding the follow-up gives external workspaces the same
+   * panel route team workspaces get.
+   *
+   * Gated on the flow being ON SCREEN rather than on it being in Step 1
+   * specifically. It owns the screen for its whole run, so a workspace created
+   * while it is up belongs to it either way, and tracking the step here would
+   * put a second copy of that state outside the widget that owns it.
+   *
+   * Returns a spreadable object so the call site reads as "plus whatever a flow
+   * asks for", and stays empty — changing nothing — in every ordinary session.
+   */
+  _createFormOverrides() {
+    if (!this._activateFlow || this._activateFlow.isDestroyed()) return {};
+    return { post_override: "permission_restricted" };
+  }
+
+  /**
+   * Workspace activation flow (builtins/widget/activate-workspace) — the
+   * practical half of onboarding: the product tour SHOWS the app on a mock
+   * desk, this walks the user through building the real thing, a workspace
+   * with a file in it.
+   *
+   * WHEN IT RUNS. Only after an AUTOMATIC product tour — the post-signup one,
+   * or `?tutorial=1`. That is the whole gate, and it is what makes the flow
+   * one-shot without a latch to store anywhere: the automatic tour happens once
+   * per signup and nothing else re-triggers this. A user who leaves the flow
+   * half-done does not get it again, which is the accepted cost of not keeping
+   * per-user state for it (see the design doc).
+   *
+   * A tour REPLAYED from Get help is deliberately excluded: handing a
+   * months-old account a "create your first workspace" walkthrough because they
+   * rewatched the tour would be nonsense. `_tutorialWasAutomatic` is what tells
+   * the two apart, and it is recorded when the tour MOUNTS — the flag it reads,
+   * `_tourReturnsToHelp`, is consumed by _chainHelpReturnAfterTutorial in that
+   * same onPartReady, so by the time the tour is destroyed and this runs there
+   * is nothing left to read.
+   *
+   * It stays unset when no tour ran at all — a plain login, or the fallback
+   * that settles home when the tour never mounted — which turns this off for
+   * exactly the sessions that were not onboarding anybody.
+   *
+   * NOT ALONGSIDE THE REWARD FLOW. That flow opens with the same
+   * create-workspace walkthrough, and running both back to back would ask the
+   * user to build two workspaces. Reward-flow is the one that wins: it is
+   * campaign-gated, time-limited and has a prize attached, while this one is
+   * evergreen.
+   *
+   * `?activate=1` forces it for testing, the way `?reward=1` forces the reward
+   * flow — see startActivateWorkspace for why a forced run needs no special
+   * behaviour of its own, unlike a forced reward run.
+   */
+  _maybeStartActivateWorkspace() {
+    // Forced for a test run: skip the onboarding gate, but keep every guard
+    // below that stops two flows fighting over the screen.
+    if (!Visitor.parseModuleArgs().activate) {
+      // No automatic product tour this session — nobody is being onboarded.
+      if (!this._tutorialWasAutomatic) return;
+    }
+    // Reward-flow is on screen or on its way there — see the docblock. It
+    // cannot be both, because a `?activate=1` load makes that flow stand down
+    // (see _maybeStartRewardFlow), but a test run started by hand can land
+    // while it is up.
+    if (this._rewardFlowInFlight) return;
+    if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
+    return this._mountActivateWorkspace();
+  }
+
+  /**
+   * Run the activation walkthrough NOW, whatever the gate would have said.
+   *
+   * The hand-operated entry point, and the counterpart to the reward flow's
+   * `?reward=1`: `window.Desk = this`, so this is callable straight from the
+   * console —
+   *
+   *   Desk.startActivateWorkspace()
+   *
+   * — which is the only way to see the flow without a fresh signup, since its
+   * automatic trigger is the end of a tour that runs once per account. It is
+   * re-callable: the flow keeps no state and latches nothing off, so each call
+   * starts a clean run (and each run creates its own workspace).
+   *
+   * A FORCED RUN IS AN ORDINARY RUN, which is the whole difference from
+   * `?reward=1`. That flag has to be threaded into the reward widget so a test
+   * cannot write to the campaign funnel or burn one of its limited slots. There
+   * is no funnel here, no prize and no latch, so a forced run behaves exactly
+   * like a real one and the widget is never told which it is.
+   *
+   * Bypasses the gate, not the mount latch below: two of these on screen at
+   * once would be a mess whoever asked for it.
+   */
+  startActivateWorkspace() {
+    return this._mountActivateWorkspace();
+  }
+
+  /** Feed the widget into the desk `overlay` part. Shared by the automatic gate
+   *  and the hand-operated entry point above, so both mount it identically. */
+  _mountActivateWorkspace() {
+    if (this._activateFlow && !this._activateFlow.isDestroyed()) return;
+    // Same synchronous latch as the reward flow's: onPartReady("overlay") can
+    // fire more than once, and the guard above cannot see a mount still pending
+    // past the await below.
+    if (this._activateFlowInFlight) return;
+    this._activateFlowInFlight = true;
+    return Kind.waitFor("activate_workspace")
+      .then(() => this.ensurePart("overlay"))
+      .then((p) => {
+        p.feed({ kind: "activate_workspace", uiHandler: [this] });
+        this._activateFlow = p.children.last();
+        this._activateFlow.once(_e.destroy, () => {
+          this._activateFlow = null;
+        });
+        this._activateFlowInFlight = false;
+      })
+      .catch(() => {
+        this._activateFlowInFlight = false;
+      });
   }
 
   /**
@@ -2124,10 +2398,11 @@ class desk_module extends LetcBox {
    * plain login where neither happens — it was written out three times, which
    * is why the guest-join prompt is appended HERE rather than at each site.
    *
-   * Order matters and is the existing one: reward flow, then LAUNCH30, then the
-   * invited-workspace prompt. Both of the first two are full-screen and
-   * self-gating; the prompt is a small dialog and goes last so it never stacks
-   * on top of them.
+   * Order matters: reward flow, then workspace activation, then LAUNCH30, then
+   * the invited-workspace prompt. The first three are full-screen and
+   * self-gating (activation additionally stands down when the reward flow took
+   * the screen — they open with the same walkthrough); the prompt is a small
+   * dialog and goes last so it never stacks on top of them.
    *
    * @returns {Promise}
    */
@@ -2152,6 +2427,10 @@ class desk_module extends LetcBox {
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
       .then(() => this._maybeStartRewardFlow())
+      // After the reward flow, and skipped entirely when that one mounted: both
+      // open with the same create-workspace walkthrough (see
+      // _maybeStartActivateWorkspace).
+      .then(() => this._maybeStartActivateWorkspace())
       .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
@@ -2186,7 +2465,8 @@ class desk_module extends LetcBox {
    *   offered on the next login rather than being stacked on a live overlay.
    */
   /**
-   * Is a full-screen home flow (reward, LAUNCH30) on screen right now?
+   * Is a full-screen home flow (reward, workspace activation, LAUNCH30) on
+   * screen right now?
    *
    * Extracted from _waitForHomePopups' local busy() so the invited-workspace
    * loader can gate itself on the same answer — one definition, so the loader can
@@ -2199,7 +2479,13 @@ class desk_module extends LetcBox {
    */
   _homePopupsBusy() {
     if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
+    if (this._activateFlowInFlight) return true;
     if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
+      return true;
+    }
+    // The activation walkthrough owns the whole screen for as long as it runs,
+    // exactly like the reward flow above it.
+    if (this._activateFlow && !this._activateFlow.isDestroyed?.()) {
       return true;
     }
     try {
@@ -3072,12 +3358,11 @@ class desk_module extends LetcBox {
         return this.togglePanel("settings_main", "settings-main-slot", true);
 
       case "toggle-help":
-        // Get help — full-page screen in the same slot as Settings/Billing.
-        // Open-only, matching its sidebar neighbours.
-        RADIO_BROADCAST.trigger("breadcrumb:context", {
-          filename: LOCALE.GET_HELP,
-        });
-        return this.togglePanel("help_main", "settings-main-slot", true);
+        return this._openGetHelp();
+
+      // "Product Tour" button on the Get help screen.
+      case "start-product-tour":
+        return this._startProductTour();
 
       case "toggle-apps": {
         // Personal plans (free / pro / legacy advanced — yp.plan entity_type=user)
@@ -3209,7 +3494,11 @@ class desk_module extends LetcBox {
         // desk.create_hub ever runs (context menu, sidebar, topbar all land
         // here or on Wm's twin case).
         if (require("libs/over-limit").guardWrite("write")) return;
-        return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+        return Wm.onUiEvent(cmd, {
+          ...args,
+          service: "new-workspace",
+          ...this._createFormOverrides(),
+        });
       }
 
       case "new-note": {
@@ -3255,10 +3544,17 @@ class desk_module extends LetcBox {
         return this._openInvitePopup(cmd);
       }
 
-      // Reward-flow Step 1 walkthrough: open/close the topbar Add-new dropdown
-      // on its behalf (the desk owns the `addmenu` part). Used by the guide's
-      // Back to step from the create-modal back to the dropdown, and from the
-      // dropdown back to the Add-new button.
+      // A guided walkthrough (reward-flow's Step 1, activate-workspace's) is
+      // asking the desk to open/close the topbar Add-new dropdown on its behalf
+      // — the desk owns the `addmenu` part. Used by their Back to step from the
+      // create-modal back to the dropdown, and from the dropdown back to the
+      // Add-new button.
+      //
+      // Two names for one case: `reward-*` is the original, kept because
+      // reward-flow still fires it, and `guided-*` is what every flow written
+      // since asks for. Renaming the original would have meant editing a live
+      // campaign widget for cosmetics.
+      case "guided-set-add-menu":
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
           if (!p || !_.isFunction(p.changeState)) return;
@@ -3296,6 +3592,8 @@ class desk_module extends LetcBox {
           setCreateMenuState(_a.open);
         });
 
+      // Same pair of names, same reason as the case above.
+      case "guided-set-new-create-menu":
       case "reward-set-new-create-menu":
         return this.ensurePart("desk-new-create-group").then((p) => {
           if (p && p.el) {
@@ -3303,12 +3601,17 @@ class desk_module extends LetcBox {
           }
         });
 
-      // Relayed to the reward flow: it opened this popup through the
-      // "invite-member" service above, so the popup's uiHandler is the desk,
-      // not the flow.
+      // Relayed to whichever guided flow is running: it opened this popup
+      // through the "invite-member" service above, so the popup's uiHandler is
+      // the desk, not the flow. Both are told — they cannot be on screen
+      // together (activation stands down when the reward flow mounts), so at
+      // most one of these does anything.
       case "invitation-sent":
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitationSent();
+        }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitationSent();
         }
         return;
 
@@ -3442,11 +3745,230 @@ class desk_module extends LetcBox {
       this._invitePopup = Wm.__wrapperModal.children.last();
       this._invitePopup.once(_e.destroy, () => {
         this._invitePopup = null;
+        // Same pair as the "invitation-sent" relay above: whichever guided flow
+        // asked for this popup needs to know it has gone, and only one of them
+        // can be running.
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitePopupClosed();
         }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitePopupClosed();
+        }
       });
     });
+  }
+
+  // Escape → dismiss transient UI. Fires the framework's OWN dismiss signal
+  // rather than inventing one: RADIO_CLICK.trigger(_e.click) with NO event makes
+  // every volatility:1/2 view goodbye() (letc.js onBeforeRender short-circuits on
+  // `e == null`) and closes any open menu (menu/index.js _onOutsideClick guards
+  // on `origin != null`, so a null event is safe). media/interact.js already
+  // calls it exactly this way when opening an inline rename, so this is an
+  // established idiom, not a new mechanism.
+  //
+  // Reports NOT handled on purpose, so Escape keeps its browser defaults —
+  // leaving fullscreen, cancelling an IME composition, stopping a load. There is
+  // also no way to know whether anything was actually dismissed (the signal is
+  // fire-and-forget), and claiming a key we may not have used would swallow it.
+  _dismissTransientUi() {
+    if (typeof RADIO_CLICK === "undefined" || !RADIO_CLICK) return false;
+    RADIO_CLICK.trigger(_e.click);
+    return false;
+  }
+
+  // One Escape peels ONE layer: a live transient layer takes the press, and only
+  // when there is none does a window close. Always reports not-handled so Escape
+  // keeps its browser defaults.
+  _onEscape() {
+    // In fullscreen Escape belongs to the browser — it exits, and we do nothing
+    // else, so one press never has two effects.
+    if (this._inFullscreen()) return false;
+    if (this._hasTransientLayer()) {
+      this._dismissTransientUi();
+      return false;
+    }
+    if (this._closeEscapeModal()) return false;
+    this._closeEscapeWindow();
+    return false;
+  }
+
+  // A modal/panel closes before the window that hosts it. Opt-in by kind: each
+  // listed widget implements onEscape() and returns true when it consumed the
+  // press. Deliberately an explicit list and NOT a DOM sweep — Skeletons.Wrapper
+  // is used 145 times for ordinary containers (attachment wrappers, overlay
+  // slots), so there is no generic "this is a modal" marker to match on.
+  // The search is bounded to the target window's own subtree, because
+  // getItemsByAttr walks every descendant and the desk tree can be large.
+  _closeEscapeModal() {
+    const w = this._escapeWindowTarget();
+    if (!w || !_.isFunction(w.getItemsByKind)) return false;
+    for (const kind of ESCAPE_MODAL_KINDS) {
+      let items;
+      try {
+        items = w.getItemsByKind(kind) || [];
+      } catch (e) {
+        continue;
+      }
+      for (const it of items) {
+        try {
+          if (it && _.isFunction(it.onEscape) && it.onEscape() === true) return true;
+        } catch (e) {
+          // a broken panel must not block Escape from reaching the window
+        }
+      }
+    }
+    return false;
+  }
+
+  // Is a transient layer live? Deliberately CONSERVATIVE — anything uncertain
+  // answers true, which costs at most one extra Escape press, whereas a false
+  // negative closes a window the user did not mean to close.
+  //
+  //  - RADIO_CLICK's subscriber list is the framework's own bookkeeping: the only
+  //    subscribers are volatility:1/2 views (letc.js onBeforeRender) and open
+  //    `menu` widgets.
+  //  - volatility arms that subscriber on a 500 ms delay, so a just-opened info
+  //    popover is invisible above. Its container is not: `__info-container` is
+  //    used by exactly the four info / file-info popovers and nothing else.
+  //  - a right-click context menu is volatility:4, armed on RADIO_POINTER rather
+  //    than RADIO_CLICK, so it is neither seen nor dismissed by the signal above.
+  //    It is matched by class instead. We do NOT fire RADIO_POINTER to dismiss it:
+  //    window/selection subscribes to the same pointerdown for rubber-band
+  //    select, and a synthetic event would reach that too.
+  _hasTransientLayer() {
+    try {
+      const ev =
+        typeof RADIO_CLICK !== "undefined" && RADIO_CLICK && RADIO_CLICK._events;
+      const subs = ev && ev[_e.click];
+      if (subs && subs.length) return true;
+    } catch (e) {
+      return true;
+    }
+    try {
+      if (document.querySelector('[class*="__info-container"], .drumee-contextmenu')) {
+        return true;
+      }
+    } catch (e) {
+      return true;
+    }
+    return false;
+  }
+
+  // Escape must not double as exit-fullscreen. The browser already owns Escape
+  // there, and both the document player and the webrtc room watch
+  // fullscreenchange — one press must not also destroy the window.
+  _inFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement
+    );
+  }
+
+  // Close the window Escape should act on: the one containing focus, else the
+  // topmost by z-index (the same max-zIndex scan the window manager itself uses
+  // in selectWindow). Minimized windows are skipped, and so is any window whose
+  // destruction would drop a live call — `leaveRoom` is defined only on
+  // builtins/webrtc/room/jitsi (meeting, connect, screenshare, litechat) and
+  // room.onBeforeDestroy calls it, so its presence is exactly the signal that
+  // closing would hang up.
+  //
+  // Closing goes through the SAME path as the titlebar X: window/core's
+  // onUiEvent reads `args.service || …`, so passing args never touches `cmd`.
+  _closeEscapeWindow() {
+    // Redundant with the check in _onEscape, on purpose: this destroys a window,
+    // so it re-asserts the guard rather than trusting its only caller.
+    if (this._inFullscreen()) return false;
+    const target = this._escapeWindowTarget();
+    if (!target || !_.isFunction(target.onUiEvent)) return false;
+    target.onUiEvent(null, { service: _e.close });
+    return true;
+  }
+
+  // The window Escape acts on: the one containing focus, else the topmost by
+  // z-index (the same max-zIndex scan the window manager uses in selectWindow).
+  // Minimized and destroyed windows are skipped, and so is any window whose
+  // destruction would drop a live call.
+  _escapeWindowTarget() {
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.getWindowsPool)) return null;
+    let list;
+    try {
+      const pool = wm.getWindowsPool();
+      if (!pool || !pool.children || !_.isFunction(pool.children.toArray)) return null;
+      list = pool.children.toArray();
+    } catch (e) {
+      return null;
+    }
+    const node = document.activeElement;
+    let top = null;
+    let max = -Infinity;
+    let focused = null;
+    for (const w of list) {
+      if (!w || !w.el) continue;
+      if (_.isFunction(w.isDestroyed) && w.isDestroyed()) continue;
+      if (w.mget(_a.minimize)) continue;
+      if (_.isFunction(w.leaveRoom)) continue;
+      if (node && _.isFunction(w.el.contains) && w.el.contains(node)) focused = w;
+      const z = parseInt(w.getActualStyle(_a.zIndex), 10);
+      if (isFinite(z) && z > max) {
+        max = z;
+        top = w;
+      }
+    }
+    return focused || top;
+  }
+
+  // Ctrl/Cmd+Shift+F. Context-sensitive: inside a chat window it opens that
+  // chat's message search, anywhere else it focuses the topbar file search.
+  // Returns false when there is nothing to focus, so the key keeps whatever it
+  // does today rather than being swallowed (libs/hotkeys rule 3).
+  _focusSearch(e) {
+    const chat = this._bigchatFor(e && e.target);
+    if (chat) return this._openChatSearch(chat);
+    if (!this._searchBoxInner || !_.isFunction(this._searchBoxInner.focus)) {
+      return false;
+    }
+    // focusin on the box already opens the suggestions list (see onPartReady).
+    this._searchBoxInner.focus();
+    return true;
+  }
+
+  // The chat window containing `target`, or null. Keyed on focus rather than on
+  // z-order because "search where I am typing" is the predictable rule, and Wm
+  // exposes no notion of a current window. Wm itself is guarded: in a DMZ /
+  // secure-share session window.Wm is the constrained share panel and has no
+  // getItemsByKind (see window/utils.js).
+  _bigchatFor(target) {
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.getItemsByKind)) return null;
+    const node = target && target.nodeType ? target : document.activeElement;
+    if (!node) return null;
+    const open = wm.getItemsByKind("window_bigchat") || [];
+    for (const w of open) {
+      if (w && w.el && _.isFunction(w.el.contains) && w.el.contains(node)) return w;
+    }
+    return null;
+  }
+
+  // Reuses bigchat's own toggle for the OPEN path (it opens and focuses in one
+  // step). When the bar is already open we only focus it — calling the toggle
+  // again would CLOSE it and wipe the query, which is not what a search
+  // shortcut should do. Note the method name is `_toogleSearchBar` in bigchat.
+  _openChatSearch(chat) {
+    if (!_.isFunction(chat.getPart)) return false;
+    const bar = chat.getPart(_a.search);
+    if (bar && bar.el && bar.el.dataset.mode === _a.open) {
+      const input = chat.getPart("search-bar-input");
+      if (input && _.isFunction(input.focus)) {
+        input.focus();
+        return true;
+      }
+      return false;
+    }
+    if (!_.isFunction(chat._toogleSearchBar)) return false;
+    chat._toogleSearchBar();
+    return true;
   }
 
   _getSearchValue(cmd) {

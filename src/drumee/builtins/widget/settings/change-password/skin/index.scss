@@ -161,6 +161,71 @@
     color: $danger;
   }
 
+  // ── OTP-gate overlay (OAuth-only verification) ──────────────
+  // The wrapper is a SIBLING of the modal box in the skeleton root, so
+  // without this it stacks below the form in normal flow. Fix it over
+  // the viewport and dim what's underneath so the OTP card reads as a
+  // layer on top of the paused form.
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 10, 33, 0.45);
+
+    // Wrapper is fed empty on every rerender — don't leave a dead dim
+    // layer eating clicks when no OTP card is mounted.
+    &:empty {
+      display: none;
+    }
+  }
+
+  // ── "Log out of other devices" checkbox ─────────────────────
+  &__logout-row {
+    margin: 16px 32px 0;
+    gap: 10px;
+    align-items: flex-start;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  &__logout-check {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+    border: 1.5px solid rgba(0, 0, 0, 0.25);
+    border-radius: 5px;
+    background: #fff;
+    position: relative;
+    cursor: pointer;
+
+    &[data-checked="1"] {
+      background: $primary;
+      border-color: $primary;
+
+      // CSS-drawn tick — two borders rotated 45°.
+      &::after {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 2.5px;
+        width: 5px;
+        height: 10px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+    }
+  }
+
+  &__logout-label {
+    font-size: 13px;
+    line-height: 1.45;
+    color: $body-color;
+  }
+
   // ── Footer / buttons ────────────────────────────────────────
   &__footer {
     padding: 32px;

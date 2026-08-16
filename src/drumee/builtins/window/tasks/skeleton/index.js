@@ -118,20 +118,6 @@ const make = function (ui) {
     }
   };
 
-  // Never falls back to the uid: a member the workspace can no longer resolve
-  // has no name, and a bare 16-char id in a name slot reads as a corrupted name.
-  const fullName = (m) => {
-    if (!m) return "";
-    const first = m.firstname || "";
-    const last = m.lastname || "";
-    return (first + " " + last).trim() || m.email || "";
-  };
-
-  // Name for a slot that must stay attributed even when the person has left:
-  // task reporter, comment author, history actor. Their rows are history and
-  // can't be blanked, so an unresolvable uid is labelled for what it is.
-  const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
-
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
 
@@ -443,6 +429,89 @@ const make = function (ui) {
       // sync with the single source of truth instead of duplicating hex values.
       styleOpt: { "--col-accent": col.color },
       kids: [
+        // Header + column menu sit OUTSIDE __column-body (the scroller), so the
+        // title / count / actions stay pinned while the cards scroll under them.
+        Skeletons.Box.X({
+          className: `${pfx}__column-header`,
+          // Custom columns are drag-reorderable by their header (built-ins
+          // stay pinned). data-coldrag marks the drag source for _installDnd.
+          attrOpt: col.custom
+            ? { draggable: "true", "data-coldrag": col.key }
+            : undefined,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__column-title-group`,
+              kids: [
+                Skeletons.Box.X({
+                  className: `${pfx}__column-title-dot-group`,
+                  kids: [
+                    Skeletons.Element({
+                      tagName: "span",
+                      className: `${pfx}__column-dot`,
+                      styleOpt: { background: col.color },
+                    }),
+                    Skeletons.Note({
+                      className: `${pfx}__column-title`,
+                      content: col.name || LOCALE[col.label] || col.key,
+                    }),
+                  ],
+                }),
+                Skeletons.Box.X({
+                  className: `${pfx}__column-count`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}__column-count-text`,
+                      content: String((state[col.key] || []).length),
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            // Right-side actions: notification bell (all columns) + the
+            // custom-column "⋯" editor popover (custom columns only).
+            Skeletons.Box.X({
+              className: `${pfx}__col-actions`,
+              kids: [
+                // Bell toggle — off by default; on = notify me of any task
+                // change in this column (Figma 2041-20161).
+                Skeletons.Button.Svg({
+                  className: `${pfx}__col-bell`,
+                  ico: "bell",
+                  bubble: 0,
+                  service: "col-watch-toggle",
+                  uiHandler: [ui],
+                  taskColumn: col.key,
+                  tooltips: { content: LOCALE.NOTIFY_COLUMN, className: `${pfx}__tip` },
+                  attrOpt: {
+                    "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
+                  },
+                }),
+                // The "⋮" popover renames and deletes the column
+                // (task.column_update / column_delete, both `src: write`),
+                // so a view or chat member could open it and type a new name
+                // that silently never persisted. Same right as creating a
+                // task; hiding the trigger closes the popover too, since it
+                // only renders while getColMenuFor() matches.
+                col.custom && mayCreateTask(ui)
+                  ? Skeletons.Note({
+                      className: `${pfx}__col-menu-btn`,
+                      content: "⋮",
+                      bubble: 0,
+                      service: "col-menu",
+                      uiHandler: [ui],
+                      taskColumn: col.key,
+                    })
+                  : null,
+              ].filter(Boolean),
+            }),
+          ].filter(Boolean),
+        }),
+        // Belt: the trigger above is already hidden, but a stale
+        // getColMenuFor() (set before a live role change) must not leave the
+        // rename popover mounted.
+        col.custom && mayCreateTask(ui) && ui.getColMenuFor() === col.key
+          ? columnMenu(col)
+          : null,
         Skeletons.Box.Y({
           className: `${pfx}__column-body`,
           // single-word lowercase key — `dataset.dropcol` works on the DOM
@@ -451,87 +520,6 @@ const make = function (ui) {
           // hyphen-aware mapping which a single token can't satisfy.)
           dataset: { dropcol: col.key },
           kids: [
-            Skeletons.Box.X({
-              className: `${pfx}__column-header`,
-              // Custom columns are drag-reorderable by their header (built-ins
-              // stay pinned). data-coldrag marks the drag source for _installDnd.
-              attrOpt: col.custom
-                ? { draggable: "true", "data-coldrag": col.key }
-                : undefined,
-              kids: [
-                Skeletons.Box.X({
-                  className: `${pfx}__column-title-group`,
-                  kids: [
-                    Skeletons.Box.X({
-                      className: `${pfx}__column-title-dot-group`,
-                      kids: [
-                        Skeletons.Element({
-                          tagName: "span",
-                          className: `${pfx}__column-dot`,
-                          styleOpt: { background: col.color },
-                        }),
-                        Skeletons.Note({
-                          className: `${pfx}__column-title`,
-                          content: col.name || LOCALE[col.label] || col.key,
-                        }),
-                      ],
-                    }),
-                    Skeletons.Box.X({
-                      className: `${pfx}__column-count`,
-                      kids: [
-                        Skeletons.Note({
-                          className: `${pfx}__column-count-text`,
-                          content: String((state[col.key] || []).length),
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                // Right-side actions: notification bell (all columns) + the
-                // custom-column "⋯" editor popover (custom columns only).
-                Skeletons.Box.X({
-                  className: `${pfx}__col-actions`,
-                  kids: [
-                    // Bell toggle — off by default; on = notify me of any task
-                    // change in this column (Figma 2041-20161).
-                    Skeletons.Button.Svg({
-                      className: `${pfx}__col-bell`,
-                      ico: "bell",
-                      bubble: 0,
-                      service: "col-watch-toggle",
-                      uiHandler: [ui],
-                      taskColumn: col.key,
-                      tooltips: { content: LOCALE.NOTIFY_COLUMN, className: `${pfx}__tip` },
-                      attrOpt: {
-                        "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
-                      },
-                    }),
-                    // The "⋮" popover renames and deletes the column
-                    // (task.column_update / column_delete, both `src: write`),
-                    // so a view or chat member could open it and type a new name
-                    // that silently never persisted. Same right as creating a
-                    // task; hiding the trigger closes the popover too, since it
-                    // only renders while getColMenuFor() matches.
-                    col.custom && mayCreateTask(ui)
-                      ? Skeletons.Note({
-                          className: `${pfx}__col-menu-btn`,
-                          content: "⋮",
-                          bubble: 0,
-                          service: "col-menu",
-                          uiHandler: [ui],
-                          taskColumn: col.key,
-                        })
-                      : null,
-                  ].filter(Boolean),
-                }),
-              ].filter(Boolean),
-            }),
-            // Belt: the trigger above is already hidden, but a stale
-            // getColMenuFor() (set before a live role change) must not leave the
-            // rename popover mounted.
-            col.custom && mayCreateTask(ui) && ui.getColMenuFor() === col.key
-              ? columnMenu(col)
-              : null,
             ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
             // Empty-state drop hint. Keeps an empty column an obvious, valid
             // drop target. The surgical drag handler (_syncColumn) adds/removes
@@ -545,7 +533,7 @@ const make = function (ui) {
           ].filter(Boolean),
         }),
         addButton(col.key),
-      ],
+      ].filter(Boolean),
     });
 
   // Columns are added via the "New board" modal (add-board), launched from the
@@ -1054,6 +1042,11 @@ const make = function (ui) {
 
     const commentsSection = Skeletons.Box.Y({
       className: `${pfx}__comments`,
+      // Comments and the change log are two independent parts, each fed only
+      // with its own rows. The active tab hides one or the other in CSS (see
+      // skin) — no content filtering, so switching tabs never rebuilds either
+      // list. dataset alone is dropped at render, hence attrOpt.
+      attrOpt: { "data-tab": currentTab },
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__activity-head`,
@@ -1105,11 +1098,49 @@ const make = function (ui) {
             }),
           ],
         }),
+        // Each list sits in its own section so the caption can live OUTSIDE the
+        // fed part — a comment or history reload replaces only the rows, never
+        // the label. Captions only earn their place on "All", where the two
+        // runs are stacked; the other tabs are already named by the active tab.
         Skeletons.Box.Y({
-          className: `${pfx}__comment-list`,
-          sys_pn: "comment-list",
-          partHandler: ui,
-          kids: buildCommentListContent(ui),
+          className: `${pfx}__activity-section`,
+          attrOpt: {
+            "data-kind": "comments",
+            "data-empty": (ui.getComments() || []).length ? "0" : "1",
+          },
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__section-label`,
+              content: LOCALE.COMMENTS,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__comment-list`,
+              sys_pn: "comment-list",
+              partHandler: ui,
+              kids: buildCommentListContent(ui),
+            }),
+          ],
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__activity-section`,
+          attrOpt: {
+            "data-kind": "history",
+            "data-empty": (ui.getTaskHistory ? ui.getTaskHistory() : []).length
+              ? "0"
+              : "1",
+          },
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__section-label`,
+              content: LOCALE.HISTORY,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__history-list`,
+              sys_pn: "history-list",
+              partHandler: ui,
+              kids: buildHistoryListContent(ui),
+            }),
+          ],
         }),
       ],
     });
@@ -1770,13 +1801,8 @@ const make = function (ui) {
           kids: [
             Skeletons.Image.Svg({ ico: c.ico, className: `${pfx}__filter-cat-ico` }),
             Skeletons.Note({ className: `${pfx}__filter-cat-label`, content: c.label }),
-            Skeletons.Box.X({
-              className: `${pfx}__filter-check`,
-              attrOpt: { "data-active": ui.isFilterDimActive(c.dim) ? "1" : "0" },
-              kids: [
-                Skeletons.Note({ className: `${pfx}__filter-check-mark`, content: "✓" }),
-              ],
-            }),
+            // No checkbox on the parent row — a category isn't itself selectable;
+            // only its value rows are. The head keeps data-active for styling.
             Skeletons.Note({ className: `${pfx}__filter-cat-chev`, content: "›" }),
           ],
         }),
@@ -2227,30 +2253,165 @@ function groupReactions(reactions) {
   return Object.keys(g).map((k) => g[k]);
 }
 
+// Never falls back to the uid: a member the workspace can no longer resolve
+// has no name, and a bare 16-char id in a name slot reads as a corrupted name.
+const fullName = (m) => {
+  if (!m) return "";
+  const first = m.firstname || "";
+  const last = m.lastname || "";
+  return (first + " " + last).trim() || m.email || "";
+};
+
+// Name for a slot that must stay attributed even when the person has left:
+// task reporter, comment author, history actor. Their rows are history and
+// can't be blanked, so an unresolvable uid is labelled for what it is. Module
+// scope because the comment list and the change log are built by separate
+// functions now, and both attribute rows.
+const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
+
+// Drop affordance for a single comment (edit row / reply composer). Same copy
+// and treatment as the panel-wide __drop-overlay, sized to the row it covers;
+// lit by data-comment-file-drag on the panel root, which _setDragAffordance
+// keeps mutually exclusive with the task-level flag.
+function commentDropOverlay(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__comment-drop-overlay`,
+    bubble: 0,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__comment-drop-overlay-text`,
+        content: LOCALE.DROP_FILES_TO_ATTACH,
+      }),
+    ],
+  });
+}
+
+// Queued-but-not-yet-attached files for a comment being edited or answered.
+// Its own part (file-pending-list-comment-edit / -comment-reply) so a drop can
+// be shown without re-feeding the comment list, which would tear down the
+// editor and the caret with it.
+function pendingStrip(ui, scope) {
+  const pfx = ui.fig.family;
+  const draft =
+    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentEditDraft();
+  const pending = (draft && draft.pending_files) || [];
+  return Skeletons.Box.X({
+    className: `${pfx}__comment-pending-list`,
+    sys_pn: `file-pending-list-${scope}`,
+    partHandler: ui,
+    // data-scope is what _setPendingStatus addresses; it must be here as well
+    // as on the fed part, or a strip built by a full render would be invisible
+    // to the surgical status writes.
+    attrOpt: { "data-empty": pending.length ? "0" : "1", "data-scope": scope },
+    kids: buildPendingListContent(ui, pending),
+  });
+}
+
+// Icon per file type for a comment's attachment card. media/template/map only
+// knows office/code types and returns the RAW EXTENSION for anything else
+// ("png" → "png"), which is not a sprite id — so the common media types drew a
+// missing icon. These four are named explicitly; everything else still goes
+// through the shared map, now with a real fallback id instead of a made-up one.
+const ATTACHMENT_ICONS = {
+  txt: "app-txt-file",
+  png: "bg-image",
+  jpg: "bg-image",
+  jpeg: "bg-image",
+  mp4: "app-video-file",
+  mp3: "app-audio-file",
+  // Office types use the RAW sprite (raw-*), which keeps each icon's own
+  // colours — Word blue, Excel green, PowerPoint orange — rather than the
+  // normalized single-colour glyphs used above. Both sprites are loaded
+  // (src/sprite.js), and the same names come out of media/template/map, so a
+  // comment's attachment matches the file icon shown everywhere else.
+  // Legacy extensions map to the same icon as their x-suffixed twin.
+  doc: "raw-documents_word",
+  docx: "raw-documents_word",
+  xls: "raw-documents_excel",
+  xlsx: "raw-documents_excel",
+  ppt: "raw-documents_powerpoint",
+  pptx: "raw-documents_powerpoint",
+};
+
+function attachmentIcon(f) {
+  if (f && f.iconChartId) return f.iconChartId;
+  const ext = String((f && f.extension) || "").toLowerCase();
+  if (ATTACHMENT_ICONS[ext]) return ATTACHMENT_ICONS[ext];
+  let mapped;
+  try {
+    mapped = require("media/template/map")(ext, "app-file");
+  } catch (_) {
+    /* alias unavailable (tests) — fall through to the generic icon */
+  }
+  return mapped || "app-file";
+}
+
+// Files already attached to a saved comment (task_comment_file, delivered by
+// task_comment_list). The ✕ detaches the file; the media node stays put.
+function commentAttachments(ui, c, isOwn) {
+  const pfx = ui.fig.family;
+  const files = (c && c.attachments) || [];
+  if (!files.length) return null;
+  return Skeletons.Box.X({
+    className: `${pfx}__comment-attachments`,
+    kids: files.map((f) => {
+      const nid = f.file_nid || f.nid;
+      const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
+      const ico = attachmentIcon(f);
+      return Skeletons.Box.X({
+        className: `${pfx}__comment-attachment`,
+        service: nid ? "open-attachment" : null,
+        uiHandler: nid ? [ui] : null,
+        fileNid: nid,
+        kids: [
+          Skeletons.Image.Svg({
+            ico,
+            className: `${pfx}__comment-attachment-ico`,
+            // Lets the skin treat a type differently without the renderer
+            // knowing about colour — see the office rule in the skin.
+            attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
+          }),
+          Skeletons.Note({
+            className: `${pfx}__comment-attachment-name`,
+            content: name,
+          }),
+          // Author-only, like editing or deleting the comment itself — the
+          // server enforces the same rule.
+          isOwn
+            ? Skeletons.Button.Svg({
+                className: `${pfx}__comment-attachment-unlink`,
+                ico: "cross",
+                bubble: 0,
+                service: "comment-unlink-attachment",
+                uiHandler: [ui],
+                commentId: c.id,
+                fileNid: nid,
+              })
+            : null,
+        ].filter(Boolean),
+      });
+    }),
+  });
+}
+
+// Comment threads only. The change log is a separate part
+// (buildHistoryListContent) so a history reload never re-feeds this one, and
+// vice versa; the active tab hides whichever list it excludes in CSS.
 function buildCommentListContent(ui) {
   const pfx = ui.fig.family;
-  // Activity tab: "comments" hides the change log, "history" hides the comment
-  // threads, "all" interleaves both by time.
-  const tab = ui.getActivityTab ? ui.getActivityTab() : "all";
-  const comments = tab === "history" ? [] : ui.getComments() || [];
-  const history = tab === "comments" ? [] : ui.getTaskHistory() || [];
-  if (!comments.length && !history.length) {
+  const comments = ui.getComments() || [];
+  if (!comments.length) {
     return [
       Skeletons.Note({
         className: `${pfx}__comments-empty`,
-        content: tab === "history" ? LOCALE.TASK_NO_HISTORY : LOCALE.NO_COMMENTS,
+        content: LOCALE.NO_COMMENTS,
       }),
     ];
   }
   const editingId = ui.getEditingCommentId();
   const replyingTo = ui.getReplyingTo();
   const pickerFor = ui.getReactPickerFor();
-  const fullName = (m) =>
-    [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
-  // Comments and history rows must stay attributed even once their author has
-  // left the workspace, and an unresolvable uid has no name to show — label it
-  // rather than leaving the slot blank (or printing the raw uid).
-  const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
   // Existing reactions shown as emoji+count chips (null when a comment has none).
   const reactBar = (c) => {
@@ -2395,7 +2556,14 @@ function buildCommentListContent(ui) {
     if (editingId && String(editingId) === String(c.id)) {
       return Skeletons.Box.X({
         className: `${pfx}__comment-row`,
-        attrOpt: { "data-reply": isReply ? "1" : "0" },
+        // data-comment-id is what a file drag resolves against: while this row
+        // is being edited it owns the panel's drop surface (see
+        // _commentDropTarget), so a file dropped on it attaches to the comment
+        // rather than to the task.
+        attrOpt: {
+          "data-reply": isReply ? "1" : "0",
+          "data-comment-id": c.id,
+        },
         kids: [
           avatar,
           Skeletons.Box.Y({
@@ -2407,6 +2575,13 @@ function buildCommentListContent(ui) {
                 editorClass: `${pfx}__comment-edit-input`,
                 placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
               }),
+              // Files already attached to the comment, shown while editing too:
+              // after a partly-failed save the ones that landed are here, and
+              // only the ones still to retry are in the strip below.
+              commentAttachments(ui, c, isOwn),
+              // Files dropped on the row while editing, before they are
+              // uploaded and attached on Save.
+              pendingStrip(ui, "comment-edit"),
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
@@ -2427,8 +2602,12 @@ function buildCommentListContent(ui) {
                   }),
                 ],
               }),
-            ],
+              // commentAttachments returns null when there are none.
+            ].filter(Boolean),
           }),
+          // Covers this row alone, in place of the panel-wide overlay, which is
+          // suppressed for as long as a comment is being edited.
+          commentDropOverlay(ui),
         ],
       });
     }
@@ -2452,6 +2631,8 @@ function buildCommentListContent(ui) {
               escapeContextmenu: 1,
               attrOpt: { "data-comment-id": c.id },
             }),
+            // Files attached to this comment, between the body and the footer.
+            commentAttachments(ui, c, isOwn),
             // Reaction chips + action icons share one horizontal footer row.
             Skeletons.Box.X({
               className: `${pfx}__comment-footer`,
@@ -2536,60 +2717,19 @@ function buildCommentListContent(ui) {
             }),
           ],
         }),
+        // Files dropped on the composer, attached to the reply once it is sent.
+        pendingStrip(ui, "comment-reply"),
+        // The composer is a drop target in its own right, on the same terms as
+        // an edited row.
+        commentDropOverlay(ui),
       ].filter(Boolean),
     });
-
-  // One change-log line: who, what, when. Project Health names the task after
-  // the verb; here that is redundant, so the two verbs that read as a fragment
-  // without it use their standalone form.
-  const verbs = {
-    create: LOCALE.TASK_ACT_CREATE,
-    update: LOCALE.TASK_ACT_UPDATE,
-    status: LOCALE.TASK_ACT_STATUS,
-    complete: LOCALE.TASK_ACT_COMPLETE,
-    assignee: LOCALE.TASK_ACT_ASSIGNEE,
-    link_file: LOCALE.TASK_ACT_LINKED_FILES,
-    comment: LOCALE.TASK_ACT_COMMENTED,
-  };
-  const historyBlock = (r) => {
-    const m = ui.getMember(r.actor_uid) || {};
-    return Skeletons.Box.X({
-      className: `${pfx}__history-row`,
-      kids: [
-        Skeletons.UserProfile({
-          className: `${pfx}__history-avatar`,
-          id: r.actor_uid,
-          firstname: m.firstname,
-          lastname: m.lastname,
-          auto_color: 1,
-          live_status: 0,
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__history-text`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__history-actor`,
-              content: authorName(m),
-            }),
-            Skeletons.Note({
-              className: `${pfx}__history-verb`,
-              content: verbs[r.action] || verbs.update,
-            }),
-          ],
-        }),
-        Skeletons.Note({
-          className: `${pfx}__history-time`,
-          content: commentTimeAgo(r.ctime),
-        }),
-      ],
-    });
-  };
 
   // Each root + its replies (+ the open composer) form one thread group. The
   // replies live in their own container so a continuous vertical spine (the
   // container's left border, styled in the skin) can connect them to the root,
-  // with a curved elbow branching into each reply. Timestamped so threads and
-  // change-log lines can be merged in order.
+  // with a curved elbow branching into each reply. Timestamped so threads keep
+  // a stable oldest-first order regardless of the order rows arrive in.
   const out = [];
   roots.forEach((root) => {
     const showComposer = replyingToRootId === String(root.id);
@@ -2624,11 +2764,77 @@ function buildCommentListContent(ui) {
       }),
     });
   });
-  history.forEach((r) =>
-    out.push({ ts: Number(r.ctime) || 0, node: historyBlock(r) }),
-  );
-  // Oldest first: comments arrive ASC, the activity proc newest-first.
+  // Oldest first (comments arrive ASC, but don't depend on it).
   return out.sort((a, b) => a.ts - b.ts).map((e) => e.node);
+}
+
+// One change-log line: who, what, when. Project Health names the task after
+// the verb; here that is redundant, so the two verbs that read as a fragment
+// without it use their standalone form.
+const HISTORY_VERBS = {
+  create: "TASK_ACT_CREATE",
+  update: "TASK_ACT_UPDATE",
+  status: "TASK_ACT_STATUS",
+  complete: "TASK_ACT_COMPLETE",
+  assignee: "TASK_ACT_ASSIGNEE",
+  link_file: "TASK_ACT_LINKED_FILES",
+  comment: "TASK_ACT_COMMENTED",
+};
+
+// Change-log rows only — the sibling part of buildCommentListContent above.
+// Fed by _refreshHistoryList when task.activity lands, independently of the
+// comment feed.
+function buildHistoryListContent(ui) {
+  const pfx = ui.fig.family;
+  const history = ui.getTaskHistory ? ui.getTaskHistory() || [] : [];
+  if (!history.length) {
+    return [
+      Skeletons.Note({
+        className: `${pfx}__history-empty`,
+        content: LOCALE.TASK_NO_HISTORY,
+      }),
+    ];
+  }
+  const historyBlock = (r) => {
+    const m = ui.getMember(r.actor_uid) || {};
+    return Skeletons.Box.X({
+      className: `${pfx}__history-row`,
+      kids: [
+        Skeletons.UserProfile({
+          className: `${pfx}__history-avatar`,
+          id: r.actor_uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__history-text`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__history-actor`,
+              content: authorName(m),
+            }),
+            Skeletons.Note({
+              className: `${pfx}__history-verb`,
+              content:
+                LOCALE[HISTORY_VERBS[r.action] || "TASK_ACT_UPDATE"] ||
+                LOCALE.TASK_ACT_UPDATE,
+            }),
+          ],
+        }),
+        Skeletons.Note({
+          className: `${pfx}__history-time`,
+          content: commentTimeAgo(r.ctime),
+        }),
+      ],
+    });
+  };
+  // Oldest first — the activity proc returns newest-first.
+  return history
+    .slice()
+    .sort((a, b) => (Number(a.ctime) || 0) - (Number(b.ctime) || 0))
+    .map(historyBlock);
 }
 
 function buildMentionItemsContent(ui, members) {
@@ -2742,20 +2948,54 @@ function fileCard(ui, f, opt = {}) {
         localKey: f.localKey,
       });
 
+  // Status belongs to a file that has not landed yet, so only the pending
+  // strip carries it — a committed attachment is, by definition, done. The
+  // states are CSS-driven off data-status (see skin) so a transition is one
+  // attribute write, not a rebuilt card: "downloading" a cross-hub copy still
+  // arriving, "uploading" a save in flight, "error" one that needs retrying.
+  const status = opt.committed ? null : f.status || "queued";
+  const pendingKey = String(f.localKey || f.nid || "");
+  const stateKids =
+    status === "uploading" || status === "downloading"
+      ? [
+          Skeletons.Box.Y({
+            className: `${pfx}__file-pending-spinner`,
+            attrOpt: { title: LOCALE.LOADING || "…" },
+          }),
+        ]
+      : status === "error"
+        ? [
+            Skeletons.Button.Svg({
+              className: `${pfx}__file-pending-retry`,
+              ico: "refresh-view",
+              bubble: 0,
+              service: "retry-pending-file",
+              uiHandler: [ui],
+              pendingKey,
+              tooltips: LOCALE.RETRY || "Retry",
+            }),
+          ]
+        : [];
+
   return Skeletons.Box.Y({
     className: `${pfx}__attachment-row has-preview`,
-    service: openable ? "open-attachment" : null,
-    uiHandler: openable ? [ui] : null,
+    // A row mid-upload must not also be a click target for opening the file.
+    service: openable && status !== "uploading" ? "open-attachment" : null,
+    uiHandler: openable && status !== "uploading" ? [ui] : null,
     fileNid: nid,
+    ...(status ? { attrOpt: { "data-status": status, "data-key": pendingKey } } : {}),
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__attachment-thumb-box`,
-        kids: [preview],
+        kids: [preview, ...stateKids],
       }),
       Skeletons.Note({
         className: `${pfx}__attachment-name`,
         content: filename,
       }),
+      // Remove stays rendered while uploading so the card does not reflow; the
+      // skin disables it and the handler refuses, since there is no way to
+      // un-upload a file that is already on its way.
       removeBtn,
     ],
   });
@@ -2997,6 +3237,7 @@ make.buildAssigneeSuggestions = buildAssigneeSuggestions;
 make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildLinkPromptContent = buildLinkPromptContent;
 make.buildCommentListContent = buildCommentListContent;
+make.buildHistoryListContent = buildHistoryListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 make.buildDueSectionContent = buildDueSectionContent;

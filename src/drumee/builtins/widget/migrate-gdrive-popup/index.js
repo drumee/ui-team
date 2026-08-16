@@ -611,6 +611,11 @@ class __migrate_gdrive_popup extends LetcBox {
           this._stopPolling();
           this._state = r.status;
           this._cancelRequested = 0;
+          // The files exist now, so show them where the user already is —
+          // without waiting for a click on "Open in Drumee". A cancelled or
+          // failed run can still have imported part of the set, so those
+          // refresh too; there is nothing to gain from leaving a stale grid.
+          this._refreshDestination();
         }
         // Re-feeding identical content every 2s replaced the Cancel button
         // element for nothing, eating clicks. Only paint real changes.
@@ -774,6 +779,77 @@ class __migrate_gdrive_popup extends LetcBox {
       this.warn('[migrate-gdrive] dismiss_post_onboarding failed', e);
     }
     this._close();
+  }
+
+  /**
+   * Where the import landed, as a nid.
+   *
+   * With direct_into=1 the worker reports the destination folder ITSELF
+   * (importer.js: `_destNidOut = (rootFolder && rootFolder.nid) || nid`), so
+   * this is the folder the user was standing in when they hit "+ New →
+   * Migrate from Google Drive". Without it, it is the GoogleDriveMigration
+   * wrapper the worker created underneath.
+   */
+  _destNid() {
+    const snap = this._jobSnap || {};
+    return snap.dest_nid || this._nid;
+  }
+
+  /**
+   * The open folder window already showing that folder, or null.
+   *
+   * Same predicate as window/utils `_findFolderWindow`, rewritten here because
+   * that one lives on the window base class and this popup is a LetcBox.
+   * getItemsByKind walks the whole Wm tree, so it finds the workspace folder in
+   * headlessLayer as well as a floating one in windowsLayer.
+   */
+  _openFolderWindow(nid) {
+    if (typeof Wm === 'undefined' || !_.isFunction(Wm.getItemsByKind)) return null;
+    try {
+      return (Wm.getItemsByKind('window_folder') || []).find(
+        (w) => w
+          && !(w.isDestroyed && w.isDestroyed())
+          && `${w.mget(_a.hub_id)}` === `${this._hub_id}`
+          && `${w.mget(_a.nid)}` === `${nid}`,
+      ) || null;
+    } catch (e) {
+      this.warn('[migrate-gdrive] folder window lookup failed', e);
+      return null;
+    }
+  }
+
+  /**
+   * Show the imported files where the user already is.
+   *
+   * The direct_into flow exists so nobody has to move files out of a
+   * GoogleDriveMigration folder afterwards — but the folder they were standing
+   * in was rendered BEFORE the import, so it kept showing the old contents and
+   * the migration read as having done nothing. The only way to see the files
+   * was "Open in Drumee", which opened a SECOND window on the very folder
+   * already on screen: the destination nid is that folder's own nid, and
+   * openFileLocation's reuse path only matches a rendered media node, not the
+   * window. Two windows on one folder, to see something that should simply
+   * have appeared.
+   *
+   * refreshContent re-runs loadContent in place, which is what an upload into
+   * an open folder already does.
+   *
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.raise] bring the window forward as well
+   * @returns {Boolean} true when a window was found and refreshed
+   */
+  _refreshDestination(opt = {}) {
+    const win = this._openFolderWindow(this._destNid());
+    if (!win) return false;
+    if (opt.raise && _.isFunction(win.raise)) win.raise();
+    if (!_.isFunction(win.refreshContent)) return false;
+    try {
+      win.refreshContent({});
+    } catch (e) {
+      this.warn('[migrate-gdrive] destination refresh failed', e);
+      return false;
+    }
+    return true;
   }
 
   _close() {
@@ -956,18 +1032,24 @@ class __migrate_gdrive_popup extends LetcBox {
       // destination is usually the HOME the user is already looking at, so
       // opening it reads as "nothing happened".
       case 'gdrive-open-dest': {
-        const snap = this._jobSnap || {};
-        const nid = snap.dest_nid || this._nid;
-        // The popup is launched FROM Settings — its overlay sits above the
-        // desk, so the revealed folder would open BEHIND it. Close the main
-        // panels first (same guard pattern as desk/wm).
+        // Already open — which is the NORMAL case for the direct_into launch,
+        // where the destination is the folder the user started from. Raise and
+        // refresh it instead of opening a second window on the same folder:
+        // openFileLocation would launch one, because its reuse path matches a
+        // rendered media node rather than the folder's own window.
+        if (this._refreshDestination({ raise: true })) return this._close();
+
+        // Not open: the popup was launched from Settings / Home / onboarding,
+        // where the destination is somewhere the user is not. Its overlay sits
+        // above the desk, so the revealed folder would open BEHIND it — close
+        // the main panels first (same guard pattern as desk/wm).
         try {
           if (window.Desk && typeof window.Desk.closeMainPanels === 'function') {
             window.Desk.closeMainPanels();
           }
         } catch (e) { /* non-fatal */ }
         try {
-          Wm.openFileLocation({ nid, hub_id: this._hub_id, filetype: _a.folder });
+          Wm.openFileLocation({ nid: this._destNid(), hub_id: this._hub_id, filetype: _a.folder });
         } catch (e) { /* non-fatal — still close */ }
         return this._close();
       }

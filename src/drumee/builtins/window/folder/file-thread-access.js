@@ -81,9 +81,24 @@ module.exports = {
 
     const st = this._ftAccessState(key);
     if (payload.state === "revoked") {
-      st.state = "revoked";
+      // A file that left is locked, not merely frozen: the thread closes back
+      // to General and refuses to reopen until the file returns. Recorded as
+      // "revoked" so _ftIsFileRevoked — which gates every path that opens a
+      // thread — refuses a stale card, rail row, or cross-window launch too.
+      //
+      // move_back clears it through _onFileThreadRestored, which is the only
+      // thing that can: nothing local may unlock a thread the server still
+      // considers away.
+      //
+      // orphaned is different and keeps the frozen-but-readable presentation.
+      // The file was deleted outright, so there is no return, and locking the
+      // thread would put the team's own messages permanently out of reach.
+      st.state = this._ftIsOrphanReason(payload.reason) ? "away" : "revoked";
       st.fileNid = `${payload.file_nid || ""}`;
       st.fileThreadId = `${payload.file_thread_id || ""}`;
+      if (this._ftIsOrphanReason(payload.reason)) {
+        return this._onFileThreadMovedAway(payload, key);
+      }
       return this._onFileThreadRevoked(payload, key);
     }
     if (payload.state === "restored") {
@@ -92,6 +107,20 @@ module.exports = {
       st.fileThreadId = `${payload.file_thread_id || ""}`;
       return this._onFileThreadRestored(payload, key);
     }
+    if (payload.state === "orphaned") {
+      st.state = "away";
+      st.fileNid = `${payload.file_nid || ""}`;
+      st.fileThreadId = `${payload.file_thread_id || ""}`;
+      return this._onFileThreadMovedAway(payload, key);
+    }
+  },
+
+  // The one reason a thread stays open after losing its file: the file was
+  // deleted, so it is never coming back, and locking the thread would put the
+  // team's own messages permanently out of reach. Everything else — a move
+  // included — locks and returns to General.
+  _ftIsOrphanReason(reason) {
+    return `${reason || ""}` === "orphaned";
   },
 
   // Is this revoked file the one currently mounted, in either presentation?
@@ -149,6 +178,89 @@ module.exports = {
     return this._ftShowRevokedNotice(captured);
   },
 
+  // ── file deleted outright (orphaned) ────────────────────────────────────
+  // The conversation stays where it was written and stays readable. The file is
+  // gone for good, so nothing is torn down: no card invalidation, no warning
+  // dialog, no return to General. The thread is frozen against new messages and
+  // its info card is repainted to say the file was deleted.
+  //
+  // A move takes the locked path instead (_onFileThreadRevoked): that file can
+  // come back, and until it does the thread must not be reopened.
+  _onFileThreadMovedAway(payload = {}, key) {
+    // The rail and the dropdown still list this thread, but its row now needs
+    // the frozen presentation, so both are stale.
+    this._ftBumpThreadRequests();
+
+    const fileNid = `${payload.file_nid || ""}`;
+    // Writes refused, nothing blurred: the point is that these messages stay
+    // readable. The card is marked so a click resolves nothing — the node id it
+    // carries belongs to another workspace now.
+    this._ftFreeze(fileNid, false);
+    this._ftSetCardAway(fileNid, payload);
+
+    if (this._ftIsMountedFile(fileNid)) {
+      // Repaint the open thread's own info card from the server, which is what
+      // knows the holding workspace's name.
+      this._refreshFileThreadInfoCard(fileNid, payload.file_thread_id);
+    }
+    return this._ftRefreshThreadNavigation();
+  },
+
+  // Mounted cards for a file that has left: not clickable (the file is not in
+  // this workspace), but NOT struck through — the row is not deleted, and the
+  // thread behind it still opens.
+  _ftSetCardAway(fileNid, payload = {}) {
+    const state = `${payload.state || ""}` === "orphaned" ? "orphaned" : "away";
+    this._ftEachCard(fileNid, (card) => {
+      card.dataset.ft_available = "0";
+      card.dataset.ft_away = state;
+      const row = card.closest(".widget-chatItem__ui");
+      if (!row) return;
+      row.classList.remove("ftc-unavailable");
+      row.classList.add("ftc-away");
+    });
+  },
+
+  _ftClearCardAway(fileNid) {
+    this._ftEachCard(fileNid, (card) => {
+      delete card.dataset.ft_away;
+      const row = card.closest(".widget-chatItem__ui");
+      if (row) row.classList.remove("ftc-away");
+    });
+  },
+
+  // Re-fetch file_thread_info and re-run the card hydration, which is where the
+  // lineage state turns into the visible "moved to X" line.
+  _refreshFileThreadInfoCard(fileNid, fileThreadId) {
+    if (!_.isFunction(this._fillFileInfoCard)) return;
+    const nid = `${fileNid || ""}`;
+    const ftId = `${fileThreadId || ""}`;
+    if (!nid && !ftId) return;
+    const generation = this._ftThreadRequestGeneration();
+    const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const svc =
+      (SERVICE.channel && SERVICE.channel.file_thread_info) ||
+      "channel.file_thread_info";
+    return this.fetchService(
+      { service: svc, hub_id, file_nid: nid, file_thread_id: ftId },
+      { async: 1 },
+    )
+      .then((info) => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (generation !== this._ftThreadRequestGeneration()) return;
+        if (!info) return;
+        const grp = this.fig.group;
+        // Both presentations carry the same card markup, so whichever is
+        // mounted gets repainted.
+        const roots = [this._fileThreadPanelPart && this._fileThreadPanelPart.el, this.el];
+        for (const root of roots) {
+          if (!root || !root.querySelector(`.${grp}__ft-info-card`)) continue;
+          this._fillFileInfoCard(root, nid, hub_id, info);
+        }
+      })
+      .catch(() => { });
+  },
+
   // Filename for the notice: prefer the server snapshot (authoritative at the
   // moment of deletion), fall back to what the UI currently shows.
   _ftCapturedFilename(payload = {}) {
@@ -180,22 +292,13 @@ module.exports = {
     return name || LOCALE.SOMEONE;
   },
 
-  // Freeze every write path into the revoked scope, in both presentations. The
-  // data attribute drives the visual blur and pointer blocking, but it is NOT
-  // the guard: the widget-level freeze below is, because CSS cannot stop a
-  // keyboard send or a programmatic service call.
-  _ftFreeze(fileNid) {
-    const nid = `${fileNid || ""}`;
-    if (!nid) return;
-    // `dataset.ftRevoked` renders as data-ft-revoked (camelCase → hyphen); the
-    // panel flag keeps a literal underscore to match the sibling gating
-    // attributes (data-chat_gated, data-open). Both selectors are spelled
-    // accordingly in skin/index.scss.
-    if (this.el) this.el.dataset.ftRevoked = nid;
+  // Refuse every write into this scope, in both presentations. This is the real
+  // guard — CSS cannot stop a keyboard send, a queued retry, or a programmatic
+  // service call.
+  _ftFreezeWrites(nid) {
     // Wide panel: its own chat widget instance.
     const panel = this._fileThreadPanelPart;
     if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
-      panel.el.dataset.ft_revoked = "1";
       this._ftWalkChats(panel, (chat) => chat.freezeFileScope(nid));
     }
     // In-place: the single folder chat.
@@ -207,6 +310,28 @@ module.exports = {
           }
         })
         .catch(() => { });
+    }
+  },
+
+  // Freeze the revoked scope: writes refused, plus the blur/pointer-block that
+  // makes a dead thread read as inert while the notice is up.
+  //
+  // `blur` false is the moved-away case: writes are refused just the same, but
+  // the messages stay sharp and scrollable, because the conversation is still
+  // this team's to read — only the file left.
+  _ftFreeze(fileNid, blur = true) {
+    const nid = `${fileNid || ""}`;
+    if (!nid) return;
+    this._ftFreezeWrites(nid);
+    if (!blur) return;
+    // `dataset.ftRevoked` renders as data-ft-revoked (camelCase → hyphen); the
+    // panel flag keeps a literal underscore to match the sibling gating
+    // attributes (data-chat_gated, data-open). Both selectors are spelled
+    // accordingly in skin/index.scss.
+    if (this.el) this.el.dataset.ftRevoked = nid;
+    const panel = this._fileThreadPanelPart;
+    if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
+      panel.el.dataset.ft_revoked = "1";
     }
   },
 
@@ -398,6 +523,12 @@ module.exports = {
     const prev = `${payload.previous_file_nid || ""}`;
     const next = `${payload.file_nid || ""}`;
     if (prev && next && prev !== next) this._ftRebindCards(prev, next);
+
+    // Drop the "file is elsewhere" presentation for both ids: the card may have
+    // been marked under the old nid and rebound to the new one just above.
+    this._ftClearCardAway(prev);
+    this._ftClearCardAway(next);
+    this._refreshFileThreadInfoCard(next, payload.file_thread_id);
 
     // Release the widget-level freeze for both the old and the new nid. A chat
     // widget that is still mounted (recovery arriving before the teardown ran,

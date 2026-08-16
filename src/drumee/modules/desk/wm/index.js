@@ -8,6 +8,9 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+const {
+  blocksGroupedArrange,
+} = require("window/skeleton/toolkit/file-group");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
@@ -492,17 +495,22 @@ class __window_manager extends push {
         wm_unique_id: `window_folder-${hub_id}`,
       });
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      let cur = this.headlessLayer.children.last();
-      cur.once(_a.destroy, () => {
-        // On a workspace switch the OLD pane's destroy fires after the new
-        // context is already applied — only clear when this pane still owns it,
-        // else rapid switching leaves _curWorkspace null for the live pane.
-        // hub_id-only match is enough here: headlessLayer is a singleton pool
-        // and a hub's workspace root nid never changes.
-        if (this._curWorkspace && this._curWorkspace.hub_id == hub_id) {
-          this._curWorkspace = null;
-        }
-      });
+      // By KIND, not by position: headlessLayer also receives every explicitly
+      // launched window (a player, the Drive popup...), so children.last() is
+      // whatever the user opened most recently — see Wm.folderWindowIn.
+      let cur = this.folderWindowIn(this.headlessLayer);
+      if (cur) {
+        cur.once(_a.destroy, () => {
+          // On a workspace switch the OLD pane's destroy fires after the new
+          // context is already applied — only clear when this pane still owns it,
+          // else rapid switching leaves _curWorkspace null for the live pane.
+          // hub_id-only match is enough here: headlessLayer is a singleton pool
+          // and a hub's workspace root nid never changes.
+          if (this._curWorkspace && this._curWorkspace.hub_id == hub_id) {
+            this._curWorkspace = null;
+          }
+        });
+      }
       // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
       // workspace switch. The get_path → refreshBreadcrumbsUI call below also
       // mirrors into the topbar, but only once it resolves AND only while the
@@ -517,12 +525,18 @@ class __window_manager extends push {
       // path of "undefined" — the same defect as the fetch above, and it left the
       // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
       // it this way (attrs.nid || nid).
-      getPath(this, { nid: data.nid || nid, hub_id }).then(
-        (path) => {
+      getPath(this, { nid: data.nid || nid, hub_id })
+        .then((path) => {
           if (_.isEmpty(path)) return;
-          cur.refreshBreadcrumbsUI(path);
-        },
-      );
+          // Resolved again HERE, not reused from above: feed() may not have
+          // mounted the new pane yet when this callback was set up, and a
+          // second switch may have replaced it while the path was in flight.
+          const w = this.folderWindowIn(this.headlessLayer);
+          if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
+        })
+        // Without this the throw above escaped as an unhandledrejection —
+        // which is exactly how it reached production unnoticed.
+        .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -734,8 +748,11 @@ class __window_manager extends push {
           });
           return;
         }
-        let currentFolder = this.getWindowsPool().children.last();
-        if (!currentFolder) return;
+        // Same trap as loadWorkspace above: the pool's last child is whatever
+        // was launched most recently, not necessarily the folder window, and
+        // refreshContent below is a folder-only method (Wm.folderWindowIn).
+        let currentFolder = this.folderWindowIn();
+        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) return;
         currentFolder.refreshContent(attrs);
         // refreshContent can't infer the ancestor chain for a deep jump, so the
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
@@ -1302,6 +1319,15 @@ class __window_manager extends push {
     const rearranging =
       _.isFunction(moving.getLogicalParent) &&
       moving.getLogicalParent() === this._target;
+    // Group view is a classified presentation, not a hand-arranged order.
+    // Consume same-window slot drops before any insert branch can mutate rank;
+    // folder drop-in already returned through c.over above, while cross-window
+    // moves keep rearranging=false and continue through the normal path.
+    if (blocksGroupedArrange(this._target, c, rearranging)) {
+      if (this._target._releaseShifted) this._target._releaseShifted();
+      this._target.el.dataset.over = _a.off;
+      return true;
+    }
     if (c.left) {
       this.verbose("insert:after", c.left);
       if (this._target.mget(_a.privilege) & _K.permission.modify) {
@@ -1495,8 +1521,31 @@ class __window_manager extends push {
    *
    * @param {*} cmd
    */
+  /**
+   * NO media.select() HERE, and it must not come back.
+   *
+   * It used to select the workspace before raising the dialog, as a visual cue
+   * for "this is the one being asked about" — and nothing unselected it when the
+   * user declined. Selection is `_a.state` on a list child, and "Move to trash"
+   * acts on the whole selection (getMediaSelection → getGlobalSelection), so
+   * every cancelled delete left an item armed for the NEXT trash. Cancel twice,
+   * trash a third item, and three workspaces go — plus any file caught in the
+   * same selection, silently, since files never had a confirmation of their own.
+   *
+   * Removed rather than paired with an unselect on the cancel path: the cancel
+   * `.catch` is only one of the ways out (ESC, navigating away, any other
+   * rejection), and `...media.getAttr()` below spreads the attributes into the
+   * broadcast echo, so a selected item was shipping `state: 1` into it too.
+   * confirmLeaveHub and confirmRemoveHubsInside never called select() and have
+   * always been fine without it, which is what makes this safe: nothing in the
+   * success branch reads selection state — it works from the `media` argument's
+   * own attributes and methods throughout.
+   *
+   * Note for anyone reaching for the smaller patch: `media.select(false)` does
+   * NOT unselect. select() is `setState(1)` followed by `mset(opt)`, so it sets
+   * state to 1 whatever it is passed. The scoped undo is `media.unselect()`.
+   */
   confirmRemoveHub(media) {
-    media.select();
     return new Promise((resolve, reject) => {
       this.ensurePart("wrapper-modal").then(async (p) => {
         await Kind.waitFor("window_confirm");
@@ -1693,6 +1742,71 @@ class __window_manager extends push {
   }
 
   /**
+   * Ask once, for the whole trash action.
+   *
+   * Same `window_confirm` shape the per-item dialogs use, so it reads as part of
+   * the same family. It names the COUNT rather than the items: the selection that
+   * produced it may be larger than what the user has in mind, and a number is
+   * what tells them that — "Move 6 items to trash?" when they meant one is the
+   * signal that something is selected they had forgotten about.
+   *
+   * Resolves false on every way out that is not an explicit confirm — cancel,
+   * ESC, a modal host that never appears — because the safe answer to "should I
+   * trash six things" is no.
+   *
+   * @param {Number} count actionable items
+   * @returns {Promise<Boolean>}
+   */
+  confirmBulkTrash(count) {
+    return new Promise((resolve) => {
+      this.ensurePart("wrapper-modal")
+        .then(async (p) => {
+          await Kind.waitFor("window_confirm");
+          p.feed({
+            kind: "window_confirm",
+            maxsize: 2,
+            title: LOCALE.MOVE_TO_TRASH,
+            message: (LOCALE.MSG_TRASH_SELECTION
+              || "Move {0} selected items to trash?").format(count),
+            confirm: LOCALE.MOVE_TO_TRASH,
+          })
+            .ask()
+            .then(() => {
+              p.clear();
+              resolve(true);
+            })
+            .catch(() => {
+              resolve(false);
+            });
+        })
+        .catch(() => resolve(false));
+    });
+  }
+
+  /**
+   * Read one live media item into the plain row libs/media-selection classifies.
+   *
+   * Every impure part of the old inline split is concentrated here: the model
+   * lookup, the privilege check, and the two predicates that are methods rather
+   * than attributes. `canRemove` is called for every item even though a hub's is
+   * never consulted — one shape, evaluated the same way each time, is worth more
+   * than skipping a cheap call.
+   *
+   * @param {Object} m a media view
+   * @returns {Object} the row shape bucketFor expects
+   */
+  _describeMedia(m) {
+    return {
+      locked: m.mget(_a.status) === _a.locked,
+      isHub: !!m.isHub,
+      isOwner: !!m.isGranted(_K.permission.owner),
+      isFolder: !!m.isFolder,
+      containsHub: !!m.containsHub,
+      canRemove: !!m.canRemove(),
+    };
+  }
+
+  /**
    *
    * @param {*} media
    */
@@ -1710,37 +1824,16 @@ class __window_manager extends push {
         selection.push(media);
       }
     }
-    let own_hubs = [];
-    let other_hubs = [];
-    let hubs_inside = [];
-    let allowed = [];
-    let rejected = [];
-    let locked = [];
+    // The classification itself is pure and lives in libs/media-selection, where
+    // it can be tested — this file cannot be required outside webpack. Here we
+    // only read each live item into a plain row and file it where that says.
+    const { bucketFor, emptyBuckets } = require("libs/media-selection");
+    const buckets = emptyBuckets();
     for (let m of selection) {
-      if (m.mget(_a.status) === _a.locked) {
-        locked.push(m);
-        continue;
-      }
-      if (m.isHub) {
-        if (m.isGranted(_K.permission.owner)) {
-          own_hubs.push(m);
-        } else {
-          other_hubs.push(m);
-        }
-      } else if (m.isFolder) {
-        if (m.containsHub) {
-          hubs_inside.push(m);
-        } else if (m.canRemove()) {
-          allowed.push(m);
-        } else {
-          rejected.push(m);
-        }
-      } else if (m.canRemove()) {
-        allowed.push(m);
-      } else {
-        rejected.push(m);
-      }
+      buckets[bucketFor(this._describeMedia(m))].push(m);
     }
+    const { own_hubs, other_hubs, hubs_inside, allowed, rejected, locked } =
+      buckets;
     return {
       own_hubs,
       other_hubs,
@@ -1755,8 +1848,28 @@ class __window_manager extends push {
    *
    */
   async removeMediaSelection(media) {
+    const buckets = this.getMediaSelection(media);
     let { own_hubs, other_hubs, hubs_inside, allowed, rejected, locked } =
-      this.getMediaSelection(media);
+      buckets;
+
+    // ONE QUESTION BEFORE ANYTHING HAPPENS, when the action would trash more
+    // than one thing and at least one of them has no dialog of its own.
+    //
+    // The `allowed` bucket below is carried out immediately and silently, and
+    // the selection that fills it is not necessarily anything the user chose:
+    // it is whatever was left with `_a.state` set. A stale selection was enough
+    // to take a file with no question asked, and confirmRemoveHub used to leak
+    // exactly that (see its docblock). Fixing the leak closes the case we found;
+    // this closes the class.
+    //
+    // Deliberately not a per-item dialog: the point is to gate the action, not
+    // to make deleting five files five questions. A single deliberate trash is
+    // untouched — see needsBulkConfirm for why both halves of its test matter.
+    const { needsBulkConfirm, actionableCount } = require("libs/media-selection");
+    if (needsBulkConfirm(buckets)) {
+      const ok = await this.confirmBulkTrash(actionableCount(buckets));
+      if (!ok) return;
+    }
 
     for (let r of rejected) {
       r.actionDenied();
@@ -1949,7 +2062,18 @@ class __window_manager extends push {
                 hub_id: this._curWorkspace.hub_id,
                 nid: this._curWorkspace.nid,
               }
-              : { kind: "media_form" };
+              : {
+                kind: "media_form",
+                // Forwarded, not decided here: the desk sets this when a guided
+                // onboarding flow needs the create form's follow-up surface to
+                // be the members panel rather than the type's default (see
+                // media/form's `post_override`). Omitted entirely when absent,
+                // so the form's own defaults are untouched for every other
+                // caller.
+                ...(args.post_override
+                  ? { post_override: args.post_override }
+                  : {}),
+              };
           p.feed(skel);
           // Reset the wrapper only when the whole dialog chain is gone.
           // media_form chains to permission_* via parent.feed(); collection

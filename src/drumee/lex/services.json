@@ -91,7 +91,9 @@
     "comment_create": "task.comment_create",
     "comment_update": "task.comment_update",
     "comment_delete": "task.comment_delete",
-    "comment_react": "task.comment_react"
+    "comment_react": "task.comment_react",
+    "comment_link_file": "task.comment_link_file",
+    "comment_unlink_file": "task.comment_unlink_file"
   },
   "channel": {
     "export_scope": "channel.export_scope",

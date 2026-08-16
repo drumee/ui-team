@@ -102,17 +102,34 @@ const __skl_folder_topbar = function (ui) {
       })
       : "";
 
+  // Headless = the full-area workspace pane (sidebar-driven), not a popup, so
+  // it drops the minimize/zoom chrome but still keeps a close (×) button so the
+  // window can be dismissed.
+  const headless = ui.mget(_a.headless);
+
+  // Browser fullscreen — fills the monitor, distinct from the Move & Resize
+  // presets which only ever fill the workspace. It used to be the first row of
+  // the zoom dropdown; the dropdown is now the players' preset panel, which has
+  // no room for it, so it sits inline next to the gear exactly as it does in
+  // the document player's header. The glyph flips with the real state
+  // (folder/index.js `_syncFullscreenBtn`), so ESC can't leave it inverted.
+  const fullscreenBtn = headless
+    ? ""
+    : Skeletons.Button.Svg({
+        className: `${cnFolder}__control-icon fullscreen`,
+        ico: "player-fullscreen",
+        service: "fullscreen",
+        sys_pn: "ctrl-fullscreen",
+        uiHandler: [ui],
+        partHandler: ui,
+      });
+
   const settingsBtn = inShare ? "" : Skeletons.Button.Svg({
     className: `${cnFolder}__control-icon settings`,
     ico: "gear-header",
     service: _e.settings,
     uiHandler: ui,
   });
-
-  // Headless = the full-area workspace pane (sidebar-driven), not a popup, so
-  // it drops the minimize/zoom chrome but still keeps a close (×) button so the
-  // window can be dismissed.
-  const headless = ui.mget(_a.headless);
 
   let controls = require("window/skeleton/topbar/control")(ui, "c");
 
@@ -136,7 +153,15 @@ const __skl_folder_topbar = function (ui) {
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [shareBtn, settingsBtn, moreMenu, zoomBtn, minimizeBtn, controls],
+    kids: [
+      shareBtn,
+      fullscreenBtn,
+      settingsBtn,
+      moreMenu,
+      zoomBtn,
+      minimizeBtn,
+      controls,
+    ],
   });
 
   // ── Root row ─────────────────────────────────────────────────

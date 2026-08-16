@@ -8,6 +8,52 @@
     width: 100%;
   }
 
+  &__main[data-disabled="1"] {
+    // Anchors the absolutely-positioned tooltip below to this row.
+    position: relative;
+
+    .chat-forward-list-item__list {
+      cursor: not-allowed;
+      opacity: 0.55;
+
+      &:hover {
+        background-color: var(--grid-card-bg, rgba(0, 0, 0, 0.05));
+      }
+    }
+
+    .chat-forward-list-item__icon {
+      cursor: not-allowed;
+    }
+  }
+
+  // Reason card for a row the caller may not forward to, injected by the
+  // framework `tooltips` prop (letc.js __addTooltips only creates the node —
+  // every rule here is what makes it visible at all).
+  //
+  // Kept INSIDE the row bounds on purpose. The picker's list scrolls through
+  // `.smart-container { overflow-y: auto }`, so a card hanging below the row
+  // would be clipped on the last row and would grow the scrollable area.
+  // Vertically centred, stopping short of the trailing checkbox.
+  // pointer-events:none preserves the row's own not-allowed cursor.
+  &__tooltip {
+    position: absolute;
+    left: 12px;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100000;
+    box-sizing: border-box;
+    width: auto;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background-color: var(--normal-fg, #2f2f36);
+    color: var(--white, #fff);
+    white-space: normal;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--white, #fff));
+  }
+
   // Row (Figma 2307-52459): avatar + name/presence column + trailing checkbox,
   // vertically centred, rounded so the selected-state highlight reads as a card.
   &__list {

@@ -84,9 +84,15 @@ const __skl_chat_item_forward_content = function(_ui_, type) {
     formItem    : _formItem,
     dataType    : _a.array,
     timer       : 50,
-    itemsOpt    : { 
+    itemsOpt    : {
       kind         : 'widget_chat_forward_list_item',
       selectedList : _selectedList,
+      // Passing the map is what makes a row gated at all. A workspace message
+      // gates both tabs; a P2P one gates only share rooms.
+      ...(_ui_._needsEligibility(type) ? {
+        shareEligibility: _ui_._shareEligibility,
+        eligibilityOwner: _ui_
+      } : {}),
       uiHandler    : [_ui_],
       type
     },

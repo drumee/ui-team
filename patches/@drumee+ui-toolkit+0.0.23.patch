@@ -1,8 +1,174 @@
 diff --git a/node_modules/@drumee/ui-toolkit/widgets/otp/index.js b/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
-index f6e7810..c71e16c 100644
+index f6e7810..1930bd0 100644
 --- a/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
 +++ b/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
-@@ -68,6 +68,14 @@ export default class dtk_otp extends dtk_common {
+@@ -19,6 +19,165 @@ export default class dtk_otp extends dtk_common {
+     // happen only via checkForm() once every box is filled. Child views
+     // (digits, resend link, close button) keep their own click handlers.
+     this.mset({ flow: _a.y, onlyKeyboard: 1 })
++    // Client-side brute-force guard: after the 3rd wrong code, freeze
++    // typing/resend for 10 minutes. Purely a UX guard — the server is the
++    // actual authority on whether a code is valid and is free to reject
++    // codes on its own terms; this only stops someone sitting at the
++    // keyboard from hammering guesses through the UI.
++    //
++    // Persisted in localStorage (NOT instance state): the modal is
++    // destroyed and rebuilt from scratch on every close/reopen, which
++    // would silently reset an in-memory counter and hand out a fresh 3
++    // tries each time. Storage survives that, and survives a full page
++    // reload too.
++    this._lockTimer = null;
++    this._countdownTimer = null;
++    this._lockedUntil = 0;
++    this._loadLockState();
++  }
++
++  /**
++   * Called by @drumee/ui-core when the widget is torn down (modal closed).
++   * Clears both timers so neither fires against a destroyed widget — the
++   * persisted state itself lives on past destruction.
++   */
++  onBeforeDestroy() {
++    if (this._lockTimer) clearTimeout(this._lockTimer);
++    if (this._countdownTimer) clearInterval(this._countdownTimer);
++    if (super.onBeforeDestroy) super.onBeforeDestroy();
++  }
++
++  /**
++   * Storage key for this challenge's lock state. Scoped by WHO (account,
++   * when known) and WHAT (the server action being verified), so a locked
++   * "change password" attempt doesn't also block an unrelated "delete
++   * account" OTP for the same user, and one account's lock never touches
++   * another's.
++   *
++   * Visitor.id is unset for the sign-in reconnect flow (no session yet);
++   * 'anon' there means the guard falls back to "this browser, pre-login"
++   * scope instead of per-account — coarser, but this is a best-effort
++   * client guard already, not a security boundary.
++   * @returns {string}
++   */
++  _lockKey() {
++    const api = this.mget(_a.api) || 'otp';
++    const uid = (typeof Visitor !== 'undefined' && Visitor.id) || 'anon';
++    return `drumee:otp-lock:${uid}:${api}`;
++  }
++
++  /**
++   * Read persisted {count, lockedUntil} for this challenge. Storage
++   * access is wrapped: private-browsing/quota errors degrade to "no
++   * lock" rather than breaking the OTP flow.
++   * @returns {{count:number, lockedUntil:number}}
++   */
++  _readLockState() {
++    try {
++      const raw = window.localStorage.getItem(this._lockKey());
++      const parsed = raw ? JSON.parse(raw) : null;
++      if (parsed && typeof parsed.count === 'number') return parsed;
++    } catch (e) { /* storage unavailable — treat as unlocked */ }
++    return { count: 0, lockedUntil: 0 };
++  }
++
++  /**
++   * @param {{count:number, lockedUntil:number}} state
++   */
++  _writeLockState(state) {
++    try {
++      window.localStorage.setItem(this._lockKey(), JSON.stringify(state));
++    } catch (e) { /* storage unavailable — lock stays in-memory only */ }
++  }
++
++  _clearLockState() {
++    try {
++      window.localStorage.removeItem(this._lockKey());
++    } catch (e) { /* nothing to clean up */ }
++  }
++
++  /**
++   * Restore lock state on mount. Three cases:
++   *   - still inside an active lock window -> stay locked, resume the count
++   *   - a PAST lock (window already elapsed while this widget was gone —
++   *     closed the whole 10 minutes, so _armLockTimer's setTimeout never
++   *     got to fire) -> unlocked, and the count resets to 0. Without this,
++   *     the stale count survives into the branch below and the very next
++   *     wrong digit re-locks immediately instead of granting 3 fresh tries.
++   *   - never locked (a sub-3, in-progress count with no lockedUntil) ->
++   *     unlocked, count carries over — this is what makes a close/reopen
++   *     unable to dodge the guard (see _onInvalidCode).
++   */
++  _loadLockState() {
++    const state = this._readLockState();
++    if (state.lockedUntil && state.lockedUntil > Date.now()) {
++      this._wrongAttempts = state.count || 0;
++      this._locked = true;
++      this._lockedUntil = state.lockedUntil;
++      this._armLockTimer(state.lockedUntil - Date.now());
++      return;
++    }
++    this._locked = false;
++    if (state.lockedUntil) {
++      this._wrongAttempts = 0;
++      this._clearLockState();
++    } else {
++      this._wrongAttempts = state.count || 0;
++    }
++  }
++
++  /**
++   * Schedule the auto-unlock for `ms` from now (the REMAINING time, not a
++   * fresh 10 minutes — matters when a locked modal is closed and reopened
++   * partway through the window).
++   * @param {number} ms
++   */
++  _armLockTimer(ms) {
++    if (this._lockTimer) clearTimeout(this._lockTimer);
++    this._lockTimer = setTimeout(() => {
++      this._locked = false;
++      this._wrongAttempts = 0;
++      this._lockedUntil = 0;
++      if (this._countdownTimer) { clearInterval(this._countdownTimer); this._countdownTimer = null; }
++      this._clearLockState();
++      this._setResendDisabled(false);
++      this.clearMessage();
++    }, Math.max(ms, 0));
++  }
++
++  /**
++   * "9:47" style — minutes unpadded, seconds zero-padded. Never shows a
++   * negative value (clamped to 0).
++   * @param {number} ms
++   * @returns {string}
++   */
++  _formatCountdown(ms) {
++    const totalSec = Math.max(0, Math.ceil(ms / 1000));
++    const m = Math.floor(totalSec / 60);
++    const s = totalSec % 60;
++    return `${m}:${String(s).padStart(2, '0')}`;
++  }
++
++  /**
++   * Show the "too many attempts" message with a live mm:ss countdown,
++   * refreshing once a second. Self-stops at zero — the actual unlock
++   * (state reset, re-enabling the form) is _armLockTimer's job, which
++   * runs on the same expiry independent of whether this interval is
++   * still alive to see it.
++   */
++  _startCountdown() {
++    if (this._countdownTimer) clearInterval(this._countdownTimer);
++    const tick = () => {
++      const remaining = this._lockedUntil - Date.now();
++      if (remaining <= 0) {
++        clearInterval(this._countdownTimer);
++        this._countdownTimer = null;
++        return;
++      }
++      this.displayMessage(LOCALE.TOO_MANY_ATTEMPTS.format(this._formatCountdown(remaining)), 1, 1);
++    };
++    tick();
++    this._countdownTimer = setInterval(tick, 1000);
+   }
+ 
+   /**
+@@ -68,6 +227,14 @@ export default class dtk_otp extends dtk_common {
        const attach = (c) => {
          const el = this._inputEl(c);
          if (!el) return;
@@ -17,3 +183,128 @@ index f6e7810..c71e16c 100644
          el.addEventListener('keydown', (e) => this._onDigitKeydown(e, c, p));
          el.addEventListener('paste', (e) => {
            e.preventDefault();
+@@ -104,6 +271,13 @@ export default class dtk_otp extends dtk_common {
+     const boxes = p.children.toArray();
+     const i = c.getIndex();
+ 
++    // Locked out (brute-force guard) — swallow everything except tabbing
++    // away.
++    if (this._locked) {
++      if (key !== 'Tab') e.preventDefault();
++      return;
++    }
++
+     // Let the browser handle normal tab order.
+     if (key === 'Tab') return;
+ 
+@@ -171,6 +345,20 @@ export default class dtk_otp extends dtk_common {
+     }, 3000)
+   }
+ 
++  /**
++   * Grey out and disable the "Resend code" link while locked out.
++   * The link has no sys_pn (plain Element in the skeleton), so it's
++   * reached by its stable `resend` class rather than a part reference.
++   */
++  _setResendDisabled(disabled) {
++    if (!this.el) return;
++    const link = this.el.querySelector('.resend');
++    if (!link) return;
++    link.dataset.disabled = disabled ? '1' : '0';
++    link.style.pointerEvents = disabled ? 'none' : '';
++    link.style.opacity = disabled ? '0.5' : '';
++  }
++
+   /**
+    * Clear any message currently shown below the inputs.
+    */
+@@ -197,10 +385,31 @@ export default class dtk_otp extends dtk_common {
+   }
+ 
+   /**
+-   * Handle a rejected code: show the error BELOW the inputs, clear the boxes
+-   * for re-entry, and focus the first one. Crucially we do NOT trigger the
+-   * host success service (which would navigate) and do NOT rethrow (which
+-   * could bubble to a global handler and reload the page).
++   * Freeze the form for 10 minutes: no more typing, no resend. Persisted
++   * (see _lockKey/_writeLockState) so closing and reopening the modal —
++   * or reloading the page — does not hand back fresh tries. Auto-lifts
++   * itself once the window elapses, whether or not the modal is still
++   * open to see it happen.
++   */
++  _startLock() {
++    this._locked = true;
++    this._lockedUntil = Date.now() + 10 * 60 * 1000;
++    this._writeLockState({ count: this._wrongAttempts, lockedUntil: this._lockedUntil });
++    this._setResendDisabled(true);
++    this._startCountdown();
++    this._armLockTimer(this._lockedUntil - Date.now());
++  }
++
++  /**
++   * Handle a rejected code: show the error BELOW the inputs and clear the
++   * boxes. Crucially we do NOT trigger the host success service (which
++   * would navigate) and do NOT rethrow (which could bubble to a global
++   * handler and reload the page).
++   *
++   * The 3rd wrong code freezes the form instead of inviting a retry (see
++   * _startLock) — re-entry is disabled rather than re-focused. Below 3,
++   * the running count is still persisted so a close/reopen in between
++   * keeps counting instead of resetting.
+    * @param {Array} boxes
+    * @param {*} data
+    */
+@@ -208,8 +417,13 @@ export default class dtk_otp extends dtk_common {
+     let msg = LOCALE.INVALID_CODE;
+     const err = data && data.error;
+     if (_.isString(err) && LOCALE[err]) msg = LOCALE[err];
+-    this.displayMessage(msg, 1, 1);
+     for (let c of boxes) c.setValue('');
++    this._wrongAttempts += 1;
++    if (this._wrongAttempts >= 3) {
++      return this._startLock();
++    }
++    this._writeLockState({ count: this._wrongAttempts, lockedUntil: 0 });
++    this.displayMessage(msg, 1, 1);
+     this._focusBox(boxes, 0);
+   }
+ 
+@@ -235,6 +449,9 @@ export default class dtk_otp extends dtk_common {
+         if (this._isErrorResponse(data)) {
+           return this._onInvalidCode(boxes, data);
+         }
++        // Verified — this challenge is done, forget its attempt count so
++        // the next unrelated OTP for the same action starts fresh.
++        this._clearLockState();
+         let service = this.mget(_a.service) || 'otp-verified';
+         this.triggerHandlers({ data, service })
+       }).catch((e) => {
+@@ -250,6 +467,15 @@ export default class dtk_otp extends dtk_common {
+   onDomRefresh() {
+     this.feed(require("./skeleton").default(this));
+     this.bindBoxEvents();
++    // Reflect a lock carried over from BEFORE this mount (modal reopened,
++    // or the page reloaded, while still inside the 10-minute window) —
++    // don't wait for a fresh wrong attempt to show it. (Not started
++    // earlier, in initialize/_loadLockState: __tipsText doesn't exist
++    // until after this feed() call, so displayMessage would be a no-op.)
++    if (this._locked) {
++      this._setResendDisabled(true);
++      this._startCountdown();
++    }
+   }
+ 
+ 
+@@ -266,6 +492,12 @@ export default class dtk_otp extends dtk_common {
+         this.checkForm();
+         break;
+       case "resend-code":
++        // Locked out already (this modal already saw the 3rd wrong code) —
++        // don't even round-trip; resending doesn't reset the client-side
++        // guard, only the 10-minute timer does. The countdown is already
++        // ticking on screen (started in onDomRefresh/_startLock), so
++        // there's nothing to (re)display here.
++        if (this._locked) return;
+         // Host-driven resend: when `resendService` is configured the widget
+         // delegates resending to the host (e.g. the reconnect flow re-runs
+         // yp.login) instead of POSTing otp.send itself.

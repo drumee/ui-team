@@ -33,7 +33,7 @@
  * no panel; the orchestrator completes that case directly and never enters the
  * perm phase.)
  */
-const { GuideCore, hasDom, visible, firstVisible } = require("./guide-core");
+const { GuideCore, hasDom, visible, firstVisible } = require("../../../libs/guided-flow/guide-core");
 
 // Live-desk selectors. Kept here as the single source of truth for what the
 // guide reaches into — if the topbar/form markup moves, this is the one place

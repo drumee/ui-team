@@ -157,7 +157,12 @@ class settings_change_email extends LetcBox {
   }
 
   async _submitWithOtp(email) {
-    const otp = await sendOtp(this);
+    const otp = await sendOtp(this, SERVICE.drumate.change_email);
+    if (otp && otp.locked) {
+      this._submitting = false;
+      this._error = otp.message;
+      return this.rerender();
+    }
     if (!otp) {
       this._submitting = false;
       this._error = LOCALE.UNKNOWN_ERROR;

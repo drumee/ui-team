@@ -42,14 +42,17 @@ $drumee-link-purple: #b1adff;
     height: 100%;
   }
 
-  // Reconnect OTP embeds the dtk_otp widget (data-fit="parent"). The widget's
-  // shared skin is the full-page layout (52×72 cells, 180px top offset); here
-  // we reshape it to the shared otp-gate modal — the "Unlock Activity Insights"
-  // Figma popup (file g5V3PjhNMf5bHlsHMvV17w, node 100:53094): a 450 white card,
-  // padding 32, gap 16, radius 12, two-layer shadow, Geist 20/14 typography,
-  // 44×44 square digit cells. Mirrors builtins/widget/otp-gate so the reconnect
-  // popup matches dtk-otp__main everywhere else it is used.
-  &__items.reconnect {
+  // Both embedded-dtk_otp screens: the reconnect popup and the OAuth 2FA
+  // hand-off (skeleton/otp-oauth.js). The widget's shared skin is the full-page
+  // layout (52×72 cells, 180px top offset), which would sit badly inside our
+  // content slot; here we reshape it to the shared otp-gate modal — the "Unlock
+  // Activity Insights" Figma popup (file g5V3PjhNMf5bHlsHMvV17w, node
+  // 100:53094): a 450 white card, padding 32, gap 16, radius 12, two-layer
+  // shadow, Geist 20/14 typography, 44×44 square digit cells. Mirrors
+  // builtins/widget/otp-gate so both match dtk-otp__main everywhere else it is
+  // used.
+  &__items.reconnect,
+  &__items.oauth {
     $otp-font: "Geist", system-ui, sans-serif;
 
     // Transparent centering wrapper — the popup container provides the
@@ -244,6 +247,47 @@ $drumee-link-purple: #b1adff;
           font-size: 18px;
         }
       }
+    }
+  }
+
+  // OAuth 2FA only: the "Back to sign in" escape hatch, which lives beside the
+  // dtk_otp widget rather than inside it (abandoning the screen needs a server
+  // round-trip the widget knows nothing about — see index.js -> _cancelOauthMfa).
+  // Stacked under the card and centered on it.
+  &__items.oauth {
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &__backlink-row {
+    flex: 0 0 auto;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    padding-top: 8px;
+  }
+
+  &__backlink {
+    @include drumee.typo(
+      $size: 14px,
+      $line: 1.4,
+      $weight: 600,
+      $color: $drumee-grey-80
+    );
+    width: auto;
+    // typo() maps $weight to a font-family and only knows 300/400/500/700, so
+    // 600 emits nothing — same as __social-label above, the semibold face has
+    // to be named explicitly.
+    font-family: var(--font-bold);
+    text-align: center;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: $drumee-primary;
     }
   }
 

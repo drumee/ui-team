@@ -230,12 +230,13 @@
       position: relative;
       width: 100%;
       aspect-ratio: 900 / 506;
-      border-radius: 24px;
+      border-radius: 12px;
       background: $surface;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       overflow: hidden;
+      border: 1px solid var(--border-default);
 
       &:hover .help-main__video-play {
         transform: scale(1.06);
@@ -292,6 +293,16 @@
         $surface;
       transform: scale(1.15);
       transition: filter $base $ease;
+
+      // A real thumbnail (background-image set inline by the skeleton) must
+      // sit in the frame exactly: the blow-up above only exists so blur()
+      // does not fade out at the frame's edges, and there is no blur here.
+      &[data-poster="1"] {
+        transform: none;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
     }
 
     // Badge + label stack, above the backdrop.
@@ -333,6 +344,43 @@
       line-height: 1.25rem;
       color: $ink-900;
       white-space: nowrap;
+    }
+  }
+
+  // ── Product tour CTA ──────────────────────────────────────
+  // Sits between the video and the article grid on the Product tour page.
+  // The row exists only to pin the button to the right edge of the capped
+  // content column — the page's own `gap` supplies the spacing above and
+  // below, so nothing is declared here for it.
+  &__tour {
+    &-row {
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    &-btn {
+      @include focus-ring;
+      padding: var(--spacer-4) var(--spacer-6);
+      border-radius: 6px;
+      background: var(--primary-50);
+      font-size: 0.9375rem; // 15px
+      font-weight: 600;
+      line-height: 1.25rem;
+      color: var(--white);
+      white-space: nowrap;
+      cursor: pointer;
+      transition:
+        background $fast $ease,
+        transform $fast $ease;
+
+      &:hover {
+        background: var(--primary-60);
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: none;
+      }
     }
   }
 
@@ -768,6 +816,17 @@
       }
     }
 
+    // Full width rather than a small pill floated right — same call as the
+    // one-card-per-row rule below.
+    &__tour-row {
+      justify-content: stretch;
+    }
+
+    &__tour-btn {
+      flex: 1 1 100%;
+      text-align: center;
+    }
+
     // One card per row — two columns below this are too cramped to read.
     &__article-card {
       flex: 1 1 100%;
@@ -847,6 +906,7 @@
 
     &__article-card,
     &__video-play,
+    &__tour-btn,
     &__feedback-thumb,
     &__feedback-support-btn,
     &__faq-caret {

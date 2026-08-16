@@ -1,0 +1,603 @@
+@use "mixins/drumee";
+
+// The greyed-sibling rule (`.guided-flow-disabled`) that both walkthroughs
+// apply to desk chrome ships with the reconcile engine — see
+// libs/guided-flow/skin, required alongside this file by skin/index.js.
+//
+// So do the wrapper-modal rules keyed on [data-guided-overlay], which take the
+// app's frosted glass off a modal host this flow has taken over.
+
+// Brand accent — same design-system tokens the reward flow and
+// migrate-gdrive-popup use. --primary-purple-40 is the brand button colour; it
+// is identical in light and dark themes, so the rgba tints below are theme-safe.
+$accent: var(--primary-purple-40);
+$accent-strong: var(--primary-purple-50);
+$accent-soft: rgba(89, 80, 255, 0.12);
+$success-soft: rgba(46, 179, 122, 0.14);
+
+.activate-workspace {
+  // Every text element in the flow uses the app font. Set on the root so the
+  // card and coach inherit it; the modals are fed into Wm.__wrapperModal
+  // (outside this root) so they declare their own below.
+  font-family: var(--font-main);
+
+  // Icons nested inside clickable Notes must not swallow the click.
+  &__btn > * { pointer-events: none !important; }
+
+  // ───────── shell ─────────
+  // The root is portaled to document.body (see index.js _portalToBody), so
+  // these z-indexes compete at the true document root.
+  &__root {
+    position: fixed;
+    inset: 0;
+    // Above the desk chrome but BELOW the window-manager wrapper-modal
+    // (--z-index-modal, 100000) so the modals fed into it stay on top.
+    z-index: 10020;
+    pointer-events: none;   // only the vignette / card / coach opt back in
+  }
+
+  // States that coexist with an OPEN workspace window — the Step 3 card, and
+  // the closing screen. 10020 is above the bare desk, but nowhere near a
+  // window: `.window__ui[data-state=1]` is 10000 and the layer hosting the
+  // focused window goes to 50001 (see desk/wm/skin and skin/vars/z-index.scss),
+  // so at 10020 the workspace and its "+ New" dropdown paint straight over the
+  // dim. Sit just under --z-index-modal instead: above every desk layer
+  // including preview (80000), still below the wrapper-modal.
+  &__root[data-over-window="1"] {
+    z-index: calc(var(--z-index-modal, 100000) - 1);
+  }
+
+  // A waiting Step 2 — the user is working a surface in the shared
+  // wrapper-modal, either the permission panel or the invite popup. That modal
+  // sits at --z-index-modal (100000), and the flow supplies the dim itself here:
+  // a cutout over the surface, so everything around it is shadowed and the
+  // surface reads clear. Both jobs need the root ABOVE the modal:
+  //   - the dim must cover the modal's layer, and reach the topbar and sidebar
+  //     the modal's own backdrop never did (it is absolutely positioned inside
+  //     the desk's wm-container; our root is fixed and portaled to body);
+  //   - at 10020 the card would paint behind the modal and every click on it
+  //     would land on the backdrop instead of the card.
+  // The surface stays fully operable through the hole: in a waiting state the
+  // vignette and the cutout are both pointer-events:none.
+  &__root[data-over-modal="1"] {
+    z-index: 1000000;
+  }
+
+  // While guiding, the Step 1 walkthrough targets the create form, which lives
+  // in that wrapper-modal at --z-index-modal (100000). Lift the whole flow
+  // above it so the coach is clickable and the cutout dims that layer too.
+  // Guiding only, so the modals stay above the card states. Declared last so it
+  // outranks the over-window lift above at equal specificity.
+  &__root[data-guiding="1"] {
+    z-index: 1000000;
+  }
+
+  &__vignette {
+    position: absolute;
+    inset: 0;
+    background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
+  }
+
+  // Waiting: the user has been handed off to the real invite popup or members
+  // panel. The scrim fades out and stops intercepting clicks; the card stays
+  // live.
+  &__root[data-waiting="1"] &__vignette {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  // Guiding: a rectangular cutout — a transparent box sized to the target whose
+  // huge box-shadow dims everything around it, so the target (topbar button /
+  // dropdown item / form / permission panel / workspace control) reads fully
+  // clear with no highlight ring. Click-through, so the user operates the real
+  // chrome underneath. The guide positions it with the --cut-* vars.
+  &__cutout {
+    position: fixed;
+    left: var(--cut-x, 0);
+    top: var(--cut-y, 0);
+    width: var(--cut-w, 0);
+    height: var(--cut-h, 0);
+    // Mirrors the spotlighted target's own rounding (set with the --cut-* vars)
+    // so the cutout hugs it exactly.
+    border-radius: var(--cut-radius, 4px);
+    pointer-events: none;
+    box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    transition: left 200ms ease, top 200ms ease, width 200ms ease,
+      height 200ms ease;
+  }
+
+  // Clickable frame around the spotlight hole. Transparent — the cutout above
+  // provides the dim — but hit-testable everywhere EXCEPT the hole, which is
+  // punched out with the same --cut-* vars the cutout uses (a self-intersecting
+  // polygon = evenodd hole). Clicking the frame is ABSORBED — the flow offers no
+  // way out, so it answers with a pulse on the card and nothing else — while the
+  // spotlighted target stays clickable through the hole. Sits below the coach so
+  // the coach's own controls win.
+  &__guide-scrim {
+    position: fixed;
+    inset: 0;
+    pointer-events: auto;
+    background: transparent;
+    z-index: 10018;
+    clip-path: polygon(
+      0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+      var(--cut-x, 0) var(--cut-y, 0),
+      var(--cut-x, 0) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) var(--cut-y, 0),
+      var(--cut-x, 0) var(--cut-y, 0)
+    );
+  }
+
+  // Callout host for the coach tooltip — spans the viewport but never blocks
+  // (the coach itself opts pointer events back in).
+  &__guide-callout {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  // ───────── coach tooltip — styled after window_confirm ─────────
+  &__coach {
+    font-family: var(--font-main);
+    position: fixed;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: 300px;
+    max-width: calc(100vw - 24px);
+    padding: 16px 20px 18px;
+    gap: 12px;
+    border-radius: var(--corner-radius-2);
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
+    pointer-events: auto;
+    z-index: 10021;
+  }
+
+  // Branded header: drumee cloud + wordmark, mirroring window-confirm's topbar.
+  &__coach-brand {
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  &__coach-logo {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-50);
+  }
+
+  &__coach-name {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--normal-fg);
+  }
+
+  &__coach-text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--normal-fg);
+  }
+
+  &__coach-footer {
+    width: 100%;
+    // Back left, Next right when both are present. A lone button keeps the
+    // right-aligned look (see the :only-child rule below).
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 2px;
+  }
+
+  &__coach-footer > *:only-child {
+    margin-left: auto;
+  }
+
+  // Back as a quiet link, the same treatment __skip gets on the step card — and
+  // for the same reason. It is a way out, not an equal choice: on most beats it
+  // stands alone (the chrome sub-steps carry no Next), and a bordered secondary
+  // button sitting by itself in the footer reads as the beat's ACTION, which is
+  // exactly what it is not — the action is the real thing the walkthrough is
+  // pointing at, out on the desk behind the coach.
+  //
+  // Underlined on hover only, so it reads as secondary at rest without being
+  // mistaken for disabled text — see __skip, and the ghost lockup below that
+  // made that mistake.
+  //
+  // inline-flex + align-items is what __skip does not need and this does: __skip
+  // is a child of the column card, while this sits in __coach-footer, a flex ROW
+  // whose height is set by the 34px __coach-next beside it. Without it the label
+  // stretches and rides the top of that row instead of centring against Next.
+  &__coach-back {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-20);
+    cursor: pointer;
+    user-select: none;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: var(--normal-fg);
+      text-decoration: underline;
+    }
+  }
+
+  // Primary twin of __coach-back. Same metrics so the pair reads as one row.
+  &__coach-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background-color: $accent;
+    border: 1px solid $accent;
+    cursor: pointer;
+    user-select: none;
+    transition: filter 120ms ease;
+
+    &:hover { filter: brightness(1.08); }
+
+    // Not ready to be left yet — the last upload beat holds this until the
+    // batch has finished. Kept in place and legible rather than hidden, so the
+    // way out does not move once it enables; inert to the pointer so the hover
+    // lift cannot suggest otherwise.
+    &[data-disabled="1"] {
+      opacity: 0.45;
+      cursor: default;
+      pointer-events: none;
+    }
+  }
+
+  &__anchor {
+    position: absolute;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    // Eases the move between steps when the anchor element survives the
+    // re-render (Step 2 is placed inline under the topbar Invite button, Steps 1
+    // and 3 are centred by the rules below).
+    transition: left 260ms ease, top 260ms ease;
+
+    // Step 1 is centred — it has no target control to point at.
+    &[data-step="step1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    // Step 2 is anchored under the topbar Invite button by _positionStepTarget
+    // (inline left/top). This is only the fallback used until that measurement
+    // lands, or if the control isn't on screen.
+    &[data-step="step2"] {
+      top: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    // Any step with no control to point at — a Step 2 served by the permission
+    // panel, and Step 3, which guides inside the workspace. _applyStepTarget
+    // leaves their inline placement cleared, so centre them like Step 1. Keyed
+    // on data-notarget alone, NOT on the step: scoping it to step2 left the
+    // Step 3 card falling through to the 96px topbar fallback above, pinned
+    // under a control it does not point at. Declared last so it wins over both
+    // rules above at equal specificity.
+    &[data-notarget="1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  &__root[data-waiting="1"] &__anchor { opacity: 0.92; }
+
+  // The invite-sent confirmation has taken the surface's place: it is a card of
+  // its own, centred on the same screen, carrying the same news and its own
+  // Close. Ours behind it repeats the step just completed and leaves a stray
+  // Back sticking out from under it. The dim and the cutout stay — the hole is
+  // on the confirmation by then — so the flow still owns the screen around it.
+  &__root[data-toast="1"] &__anchor { display: none; }
+
+  // …except on a waiting Step 2, where the card is one of only two things meant
+  // to sit clear of the dim (the surface in the modal is the other). Fading it
+  // there reads as "disabled" against a surface the user is actively working,
+  // and the dimmed desk showing through it is exactly what the cutout avoids.
+  // Declared after, so it wins at equal specificity.
+  &__root[data-over-modal="1"] &__anchor { opacity: 1; }
+
+  // Step 2 dims via the cutout over its topbar control, so the flat scrim must
+  // go transparent — it stays in place (and clickable) purely to catch the
+  // "Leave setup?" click.
+  &__root[data-cutout="1"] &__vignette {
+    background-color: transparent;
+  }
+
+  // On Step 2 the cutout doubles as the spotlighted control's click target (see
+  // skeleton), so it opts pointer events back in. Only the hole itself is
+  // hit-testable — the box-shadow doing the dimming is not — so clicks outside
+  // still fall through to the scrim and its "Leave setup?". The guiding cutout
+  // (data-cutout="0") stays click-through: there the user operates the real
+  // desk chrome underneath.
+  &__root[data-cutout="1"] &__cutout {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  // Waiting: the cutout stays (so the overlay and the highlighted control don't
+  // vanish mid-invite) but stops intercepting — the user is operating the real
+  // popup or panel underneath.
+  &__root[data-waiting="1"] &__cutout {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  // ───────── card ─────────
+  // Each step change re-feeds the skeleton, so the card is a NEW element and
+  // cannot transition from the old one's position — it would otherwise pop into
+  // place. Fade + settle it in instead.
+  @keyframes activate-workspace-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  // "I saw that, and the answer is no." The flow cannot be left, so a click on
+  // the dim, a Back press and a refresh keystroke all end in nothing happening —
+  // and nothing happening is indistinguishable from a broken page. A short,
+  // small shake is the whole reply: enough to attribute the silence to the flow
+  // rather than to a dead click, without a dialog between the user and the step.
+  //
+  // Deliberately not a colour change or a border flash: this is not an error, and
+  // the user has done nothing wrong.
+  @keyframes activate-workspace-nudge {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-6px); }
+    30% { transform: translateX(5px); }
+    45% { transform: translateX(-3px); }
+    60% { transform: translateX(2px); }
+    75% { transform: translateX(-1px); }
+  }
+
+  &__card {
+    font-family: var(--font-main);
+    animation: activate-workspace-card-in 220ms ease both;
+    width: 340px;
+    box-sizing: border-box;
+    padding: 24px;
+    gap: 16px;
+    align-items: center;
+    text-align: center;
+    border-radius: 6px;
+    background-color: var(--normal-bg);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+
+    // Set imperatively by nudge() and cleared shortly after, so a second
+    // swallowed gesture pulses again. Overrides the entry animation rather than
+    // composing with it: a card that has just appeared has no swallowed gesture
+    // to acknowledge, so the two never want to run together.
+    &[data-nudge="1"] {
+      animation: activate-workspace-nudge 400ms ease both;
+    }
+  }
+
+  &__progress {
+    width: 100%;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  &__progress-seg {
+    height: 4px;
+    flex: 1 1 0;
+    border-radius: 2px;
+    background-color: $accent-soft;
+    transition: background-color 0.2s ease;
+
+    &[data-on="1"] { background-color: $accent; }
+  }
+
+  &__chip {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    background-color: $accent-soft;
+  }
+
+  &__chip-ico {
+    width: 26px;
+    height: 26px;
+    color: $accent;
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__desc {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--normal-fg-20);
+  }
+
+  &__footer {
+    width: 100%;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  // Step 2's way past. A quiet link under the footer rather than a third button:
+  // it is an escape, not an equal choice, and the step it skips is the only one
+  // a user can be unable to perform (free solo plan, or nobody to invite yet).
+  // Underlined on hover only, so it reads as secondary at rest without being
+  // mistaken for disabled text — the mistake the ghost lockup made on the
+  // panel-route Back below.
+  &__skip {
+    margin-top: -4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-20);
+    cursor: pointer;
+    user-select: none;
+    border-radius: 4px;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: var(--normal-fg);
+      text-decoration: underline;
+    }
+  }
+
+  // ───────── buttons ─────────
+  &__btn {
+    flex: 1 1 0;
+    // Flex-center the label so it sits dead-center regardless of the button's
+    // width (solo full-width primary or half-width paired) — text-align alone
+    // does not center the Note's inline-block content box.
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+
+    // Solo — full-width and a size up. Both step cards and the closing card
+    // have exactly one button.
+    &[data-solo="1"] {
+      flex: 1 1 100%;
+      font-size: 16px;
+      padding: 12px 24px;
+    }
+
+    &--primary {
+      color: #fff;
+      // Primary/50 (#433cc5); brighten to Primary/40 on hover.
+      background-color: $accent-strong;
+      &:hover { background-color: $accent; }
+    }
+
+    &--ghost {
+      color: var(--normal-fg-20) !important;
+    background-color: var(--normal-bg-90) !important;
+    border: none !important;
+      &:hover { background-color: var(--normal-bg-80) !important; }
+    }
+  }
+
+  // Back on the permission-panel Step 2, where the card has no primary button
+  // beside it: the surface the user is working IS the step, so the card's only
+  // controls are Back and Skip. The ghost lockup — muted text on a near-white
+  // fill, no border — reads as a disabled label next to a live panel, which is
+  // how it got tried once and written off as inert in the reward flow. Promote
+  // it to the brand fill instead.
+  //
+  // --primary-40 is the brand purple, so the label goes white — --normal-fg on
+  // that fill is unreadable in light theme and invisible in dark. Hover/active
+  // deepen to --primary-50 rather than lightening, matching how the flow's own
+  // primary buttons move under the pointer. Scoped through __anchor, which wraps
+  // the STEP CARD and nothing else: the "Leave setup?" guard is a step card too
+  // (skeleton/modal reuses these very classes) and renders in this same root, so
+  // a rule on __btn--ghost alone would turn its "Leave setup" brand-purple as
+  // well — two primary-looking buttons side by side, on the one screen that
+  // needs its two answers to look different.
+  &__root[data-on-panel="1"] &__anchor &__btn--ghost {
+    color: #fff;
+    background-color: var(--primary-40);
+    border: 1px solid var(--primary-40);
+    box-shadow: 0 1px 2px rgba(11, 10, 33, 0.06);
+
+    &:hover {
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
+    }
+    &:active {
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
+      box-shadow: none;
+    }
+  }
+
+  // ───────── modals (fed into Wm.__wrapperModal) ─────────
+  // The modals ARE step cards — skeleton/modal.js gives them the __card class
+  // and the card's __title / __desc / __footer / __chip inside, so the shell,
+  // type scale and buttons come from one place instead of a parallel set of
+  // rules kept in sync by hand. Only what being fed OUTSIDE the flow root
+  // requires is declared here.
+  &__modal {
+    // Fed into Wm.__wrapperModal, so it cannot inherit the root's font.
+    font-family: var(--font-main);
+    // Opt pointer events back in on the modal ITSELF (the root is pe:none, like
+    // the coach does). When shown during the walkthrough it lives inside the
+    // pe:none guide layer, so without this its buttons never receive clicks.
+    pointer-events: auto;
+  }
+
+  // The closing card's success tick sits on the step card's own chip, tinted
+  // green instead of the flow's accent.
+  &__chip--success {
+    background-color: $success-soft;
+  }
+
+  // checked-circle.svg carries its own green fill, but set currentColor too in
+  // case the pipeline inlines it.
+  &__chip--success &__chip-ico {
+    color: var(--green-400, #10b667);
+  }
+
+  // Respect a reduced-motion preference: keep the step change instant. The nudge
+  // goes too, which costs the only acknowledgement a swallowed gesture gets —
+  // accepted, because a shake is exactly the kind of motion this preference is
+  // set to avoid, and the alternative would be inventing a second, static
+  // acknowledgement for one media query.
+  @media (prefers-reduced-motion: reduce) {
+    &__card,
+    &__card[data-nudge="1"] { animation: none; }
+    &__cutout { transition: none; }
+  }
+
+  // ───────── mobile ─────────
+  @media (max-width: 767px) {
+    // Centred whatever the step, and whatever _positionStepTarget measured:
+    // there is no room to hang a 340px card under a topbar control on a phone.
+    // !important because that placement is written inline.
+    &__anchor {
+      top: 50% !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translate(-50%, -50%);
+      width: calc(100vw - 32px);
+    }
+
+    &__card { width: 100%; }
+    // A modal carries BOTH classes, so this must stay AFTER __card to win at
+    // equal specificity: it is centred in the wrapper-modal rather than in an
+    // anchor, so it needs its own gutter instead of filling the parent.
+    &__modal { width: calc(100vw - 32px); }
+  }
+}

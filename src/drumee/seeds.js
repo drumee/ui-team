@@ -257,6 +257,9 @@ module.exports = {
   reward_flow: function () {
     return import("./builtins/widget/reward-flow");
   },
+  activate_workspace: function () {
+    return import("./builtins/widget/activate-workspace");
+  },
   module_desk: function () {
     return import("./modules/desk");
   },

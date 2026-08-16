@@ -1,8 +1,9 @@
 /**
- * Shared reconcile engine for the reward-flow walkthroughs.
+ * Shared reconcile engine for live-desk walkthroughs.
  *
- * Both Step 1 (create a workspace) and Step 3 (upload into it) guide the user
- * through the REAL desk chrome. Neither intercepts clicks: a single
+ * Used by every guided flow in the app — reward-flow's create-workspace and
+ * upload walkthroughs, and activate-workspace's — all of which guide the user
+ * through the REAL desk chrome. None of them intercepts clicks: a single
  * MutationObserver calls _reconcile(), which reads what is actually on screen
  * and re-points the spotlight at the correct sub-step. That makes every
  * off-path case self-healing — close a dropdown and it re-guides to its
@@ -23,7 +24,11 @@
  * (and unit-testable) under Node.
  */
 
-const DISABLED_CLASS = "reward-guide-disabled";
+// Foreign-DOM annotation: a guide adds this to the desk chrome it wants greyed
+// out while it holds a surface open (see _disableOthers). Not namespaced to any
+// one widget — the rule that styles it ships with this engine, in
+// libs/guided-flow/skin, so every consumer gets it by requiring that partial.
+const DISABLED_CLASS = "guided-flow-disabled";
 const RECONCILE_DEBOUNCE_MS = 30;
 // How long Back may hold the guide on a sub-step while its surface animates in.
 const PIN_TIMEOUT_MS = 1200;
