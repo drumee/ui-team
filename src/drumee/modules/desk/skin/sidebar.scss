@@ -295,7 +295,31 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     gap: 32px;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
+    // Scrolls instead of clipping. The column above the footer is mostly
+    // non-shrinkable (logo + the 6 nav rows + the footer itself ≈ 620px at
+    // the default metrics), so every pixel a short viewport is missing used
+    // to come out of __workspace alone: under ~620px of viewport height the
+    // workspace list collapsed to zero and the section title was sliced in
+    // half, with the footer's top shadow reading as if it covered them.
+    // A 14" 1200p laptop at 200% OS scaling plus a browser zoom step lands
+    // there. overflow-x stays hidden: the mini rail keeps this column pinned
+    // at its expanded 231px width and relies on __main clipping it.
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--primary-40);
+      border-radius: 4px;
+    }
   }
 
   &__nav-main {
@@ -475,7 +499,10 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     padding: 0;
     width: 100%;
     flex: 1 1 auto;
-    min-height: 0;
+    // Floor of title + ~2 rows. This is the only shrinkable block in the
+    // column, so without a floor it absorbs the whole deficit on a short
+    // viewport and disappears. Past this point __nav scrolls instead.
+    min-height: 132px;
     overflow: hidden;
   }
 
@@ -485,6 +512,8 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     font-weight: 700;
     line-height: 1.4;
     padding: 7.25px 24px 8px;
+    // Never let the squeeze slice the title itself in half.
+    flex-shrink: 0;
   }
 
   &__workspace-main {
