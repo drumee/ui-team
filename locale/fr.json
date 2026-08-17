@@ -420,6 +420,7 @@
   "MESSAGE_ACTIVATION": "Si vous ne le recevez pas, vérifiez vos Spams et votre adresse ci-dessus.",
   "CHECK_YOUR_MAIL": "Oups... Vérifiez votre mail et votre mot de passe",
   "ALREADY_EXISTS": "Oups, {0} existe déjà...",
+  "ALREADY_IN_LIST": "Cet e-mail est déjà dans la liste",
   "PERMISSION_READ": "Voir",
   "PERMISSION_UPLOAD_DOWNLOAD": "Importer/Télécharger",
   "PERMISSION_DELETE_ORGANIZE": "Supprimer / Organiser",

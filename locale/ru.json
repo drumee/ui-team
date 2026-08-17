@@ -420,6 +420,7 @@
   "MESSAGE_ACTIVATION": "Если вы не получили его, проверьте ваш Спам и адрес выше.",
   "CHECK_YOUR_MAIL": "Упс ... Проверьте свою электронную почту и пароль",
   "ALREADY_EXISTS": "Ой, {0} уже существует ...",
+  "ALREADY_IN_LIST": "Этот адрес уже в списке",
   "PERMISSION_READ": "См",
   "PERMISSION_UPLOAD_DOWNLOAD": "Загрузить/Скачать",
   "PERMISSION_DELETE_ORGANIZE": "Удалить / Oрганизовать",

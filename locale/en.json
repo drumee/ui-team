@@ -405,6 +405,7 @@
   "MESSAGE_ACTIVATION": "If you don't receive it, check your Spam and address above.",
   "CHECK_YOUR_MAIL": "Oops ... Wrong credentials",
   "ALREADY_EXISTS": "Oooops, {0} already exists ...",
+  "ALREADY_IN_LIST": "That email is already in the list",
   "PERMISSION_READ": "View",
   "PERMISSION_UPLOAD_DOWNLOAD": "Upload/Download",
   "PERMISSION_DELETE_ORGANIZE": "Delete/Organize",

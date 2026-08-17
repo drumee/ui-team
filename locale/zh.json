@@ -420,6 +420,7 @@
   "MESSAGE_ACTIVATION": "如果您没有收到，请检查上面的垃圾邮件和地址。",
   "CHECK_YOUR_MAIL": "糟糕...请检查您的电子邮件和密码",
   "ALREADY_EXISTS": "糟糕，{0}已经存在...",
+  "ALREADY_IN_LIST": "该邮箱已在列表中",
   "PERMISSION_READ": "查看",
   "PERMISSION_UPLOAD_DOWNLOAD": "上传/下载",
   "PERMISSION_DELETE_ORGANIZE": "删除/整理",

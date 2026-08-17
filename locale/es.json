@@ -180,6 +180,7 @@
   "OOPS_EMAIL_NOT_FOUND": "¡Ups! No encontramos este correo. Por favor, revise.",
   "EMAIL_REQUIRED": "Email is required",
   "INVALID_EMAIL_FORMAT": "Invalid email format",
+  "ALREADY_IN_LIST": "Ese correo ya está en la lista",
   "CANNOT_ADD_SELF_AS_CONTACT": "You cannot add yourself as a contact",
   "FIRST_NAME_REQUIRED": "First name is required",
   "LASTNAME_REQUIRED": "Last name is required",

@@ -418,6 +418,7 @@
   "MESSAGE_ACTIVATION": "ប្រសិនបើអ្នកមិនទទួលបានទេ សូមពិនិត្យមើល Spam និងអាសយដ្ឋានខាងលើ។",
   "CHECK_YOUR_MAIL": "អូ៎... លិខិតសម្គាល់ខុស",
   "ALREADY_EXISTS": "អូ! {0} មានរួចហើយ...",
+  "ALREADY_IN_LIST": "អ៊ីមែលនេះមានក្នុងបញ្ជីរួចហើយ",
   "PERMISSION_READ": "មើល",
   "PERMISSION_UPLOAD_DOWNLOAD": "បង្ហោះ/ទាញយក",
   "PERMISSION_DELETE_ORGANIZE": "លុប/រៀបចំ",
