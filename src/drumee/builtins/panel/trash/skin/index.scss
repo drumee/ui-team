@@ -2,14 +2,21 @@
 
 .panel-trash {
   &__ui {
-    position: absolute;
+    // Opens from the RIGHT, same as inbox/contacts (chat-p2p skin) — the
+    // sidebar used to send this one out from the left while the other
+    // slide-outs came from the right. position:fixed mirrors chat-p2p for
+    // the same reason documented there: an absolutely positioned panel
+    // still counts towards its ancestors' scrollWidth, so the parked panel
+    // leaves __body horizontally scrollable. Fixed is viewport-relative and
+    // never does.
+    position: fixed;
     width: 500px;
     height: 100vh;
     top: 0;
-    left: 0;
+    right: 0;
     background-color: var(--normal-bg-90);
     border: 1px solid var(--border-muted);
-    transform: translateX(-100%);
+    transform: translateX(100%);
     transition: transform 0.25s ease-out;
     will-change: transform;
     box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
@@ -19,7 +26,7 @@
     }
 
     &[data-anim="out"] {
-      transform: translateX(-100%);
+      transform: translateX(100%);
     }
 
     // Mobile: a centered card instead of the full-height left drawer.
@@ -34,6 +41,14 @@
       width: 360px !important;
       height: 500px !important;
       left: 50% !important;
+      // Release the desktop right-edge anchor, otherwise left+width+right
+      // are all set at once and the centring depends on the browser
+      // silently dropping one of them. Now that the panel is fixed, this
+      // 50% resolves against the viewport, so the card no longer needs the
+      // container to supply a width (that prop was the reason for the
+      // `.left [data-partname="trash-panel"]` containing-block rule in
+      // desk/skin/index.scss).
+      right: auto !important;
       transform: translateX(-50%) translateY(100vh);
 
       &[data-anim="in"] {

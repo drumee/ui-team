@@ -118,25 +118,16 @@ const _desk_main = function (ui) {
 
   const bodyKids = [
     require("./sidebar")(ui),
+    // Left container. Trash and notifications used to live here and slid
+    // out from the sidebar edge while inbox/contacts came in from the
+    // right — the two halves of the sidebar disagreed, and switching
+    // quickly between them sent panels flying past each other. All four
+    // now share the right container below. Only the (inert) settings-panel
+    // slot is left here.
     Skeletons.Box.Y({
       sys_pn: "panel",
       className: `${ui.fig.family}__panel-container left`,
       kids: [
-        Skeletons.Box.Y({
-          sys_pn: "trash-panel",
-          className: `${ui.fig.family}__panel-inner`,
-        }),
-        Skeletons.Box.Y({
-          className: `${ui.fig.family}__panel-inner`,
-          kids: [
-            {
-              kind: "panel_activity",
-              sys_pn: "activity-panel",
-              state: 0,
-              uiHandler: [ui],
-            },
-          ],
-        }),
         Skeletons.Box.Y({
           sys_pn: "settings-panel",
           className: `${ui.fig.family}__panel-inner`,
@@ -168,9 +159,33 @@ const _desk_main = function (ui) {
         }),
       ],
     }),
+    // Right container — every sidebar slide-out. The container is no longer
+    // the chat slot itself: togglePanel clears the slot it feeds, so static
+    // siblings could not live inside it. Each panel gets its own zero-width
+    // __panel-inner anchor instead, and all three park off the right edge.
     Skeletons.Box.Y({
-      sys_pn: "chat-panel",
       className: `${ui.fig.family}__panel-container right`,
+      kids: [
+        Skeletons.Box.Y({
+          sys_pn: "chat-panel",
+          className: `${ui.fig.family}__panel-inner`,
+        }),
+        Skeletons.Box.Y({
+          sys_pn: "trash-panel",
+          className: `${ui.fig.family}__panel-inner`,
+        }),
+        Skeletons.Box.Y({
+          className: `${ui.fig.family}__panel-inner`,
+          kids: [
+            {
+              kind: "panel_activity",
+              sys_pn: "activity-panel",
+              state: 0,
+              uiHandler: [ui],
+            },
+          ],
+        }),
+      ],
     }),
     Skeletons.Wrapper.Y({
       sys_pn: "overlay",
