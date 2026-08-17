@@ -95,6 +95,35 @@ index a288e64..4b85937 100644
      const { endpoint } = bootstrap();
      let base = `${endpoint}avatar/${id}?type=${type}&ts=${ts}`;
      return base
+diff --git a/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js b/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js
+index e035048..43c1c6a 100644
+--- a/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js
++++ b/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js
+@@ -56,12 +56,22 @@ const __compliances = {
+     regexp: /^.+$/,
+     explain: LOCALE.REQUIRE_THIS_FIELD
+   },
++  // `any` and `text` mean "printable text", but the old class spelled that as
++  // [\x20-\x7E\x80-\xFF] — ASCII plus Latin-1 only. Vietnamese diacritics
++  // outside Latin-1 (ă ơ ư đ and every hook/dot-below tone, U+0102–U+1EF9)
++  // therefore failed, and because `any` is anchored a single one failed the
++  // whole value: checkSanity() returned false, commit() bailed before
++  // triggerHandlers, and Enter silently did nothing. That is why a file or
++  // workspace could not be renamed to "Tài liệu" while "Tai lieu" was fine.
++  // Both classes below are strict supersets of the old ones, so nothing that
++  // validated before stops validating. Neither is the filename gate — that is
++  // media/core.js checkSanity() plus the server's own check, both unchanged.
+   any: {
+-    regexp: /^([\x20-\x7E\x80-\xFF])+$/,
++    regexp: /^([^\x00-\x1F\x7F])+$/,
+     explain: LOCALE.REQUIRE_STRING
+   },
+   text: {
+-    regexp: /([\x20-\x7E\x80-\xFF])+/,
++    regexp: /([^\x00-\x1F\x7F])+/,
+     explain: LOCALE.REQUIRE_TEXT
+   },
+   gender: {
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 index 13edb44..eda76e5 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
