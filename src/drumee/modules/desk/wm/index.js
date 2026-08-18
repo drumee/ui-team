@@ -8,6 +8,12 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+// Reader for the compact "#/desk/wm/o/<nid>/<hub_id>/<filetype>" deep link. The
+// long "open" form is unchanged and still resolved by the same openers.
+const {
+  COMPACT_SEGMENT,
+  parseCompactPath,
+} = require("libs/compact-deep-link");
 const {
   blocksGroupedArrange,
 } = require("window/skeleton/toolkit/file-group");
@@ -201,6 +207,22 @@ class __window_manager extends push {
       case _a.open:
         this.openFileLocation(args);
         return;
+
+      // Compact twin of `open`: same payload, values carried as path segments
+      // instead of a query string (libs/compact-deep-link). Purely additive —
+      // the `open` case above is untouched, so every long link already sitting
+      // in an inbox, a chat or a notification resolves exactly as before.
+      // A malformed compact path `break`s instead of returning, so it lands on
+      // the same fallback resolution an unrecognised path has always used
+      // rather than dead-ending here.
+      case COMPACT_SEGMENT: {
+        const compact = parseCompactPath(path);
+        if (compact) {
+          this.openFileLocation(compact);
+          return;
+        }
+        break;
+      }
     }
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
     if (loc) {
@@ -208,7 +230,17 @@ class __window_manager extends push {
       if (hash) {
         const savedPath = Visitor.parseModule(hash);
         const savedArgs = Visitor.parseModuleArgs(hash);
-        this.openSharedLink(savedArgs);
+        // A link sent to somebody else is usually opened by a visitor who is not
+        // signed in yet: the sign-in flow replaces the hash, and this is where
+        // the original one comes back. A COMPACT link carries its values as PATH
+        // segments, so parseModuleArgs finds no nid/hub_id/filetype at all and
+        // openSharedLink would silently do nothing — the recipient's link would
+        // look dead. Rebuild the identical payload the long form hands it (the
+        // recomputed `kind` included, which openSharedLink needs for note /
+        // markdown / text / script / vector / schedule) and reuse the very same
+        // resolution. Non-compact hashes are untouched: parseCompactPath returns
+        // null unless savedPath is a well-formed compact link.
+        this.openSharedLink(parseCompactPath(savedPath) || savedArgs);
       }
     }
     // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]

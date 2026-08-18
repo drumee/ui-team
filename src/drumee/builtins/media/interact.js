@@ -24,6 +24,9 @@ function _vignetteRemember(url, entry) {
 require("./skin");
 const media_core = require("./core");
 const { copyToClipboard } = require("@drumee/ui-essentials")
+// Shortens the "Designation link" URL only. Falls back to the long form for
+// anything it cannot round-trip — see the module header.
+const { toCompactUrl } = require("libs/compact-deep-link");
 class __media_interact extends media_core {
   constructor(...args) {
     super(...args);
@@ -872,7 +875,15 @@ class __media_interact extends media_core {
       case "designation-link":
         this.viewerLink().then((url) => {
           setTimeout(async () => {
-            url = `${bootstrap().protocol}://${bootstrap().main_domain}${url}`
+            // Shortened for the human who pastes it (Lexis, 2026-08-18): ~103
+            // chars down to ~62. Applied HERE and not inside viewerLink(),
+            // which lives in @drumee/ui-core and is shared by the folder
+            // window's "Share link" (window/core.js), send-by-email and
+            // share-qrcode (widget/settings/hub) — none of which asked for a
+            // different format. toCompactUrl() returns its input untouched for
+            // anything it cannot round-trip losslessly, so this can never
+            // produce a link that resolves to less than it does today.
+            url = `${bootstrap().protocol}://${bootstrap().main_domain}${toCompactUrl(url)}`
             await copyToClipboard(url);
             Wm.acknowledge();
           }, 0);
