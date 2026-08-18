@@ -1,4 +1,5 @@
 const { menuScreen, dialogScreen, verifyScreen } = require('./skeleton');
+const { stepBadge, isLastScreen } = require('../tours');
 
 /**
  * Step 6 — importing from Google Drive. Three internal screens behind ONE
@@ -19,7 +20,6 @@ const SCREENS = [
     target: 'menu',
     direction: 'north',
     badge: {
-      badge_text: 'STEP 6/6',
       title: 'Google Migrate',
       desc: 'Import folders or files from Google Drive',
     },
@@ -31,7 +31,6 @@ const SCREENS = [
     // The address row is a thin strip; light the dialog around it.
     radius: 420,
     badge: {
-      badge_text: 'STEP 6/6',
       title: 'Google Migrate',
       desc: 'Copy this email and share the folder in google drive that you want to migrate',
     },
@@ -41,11 +40,7 @@ const SCREENS = [
     target: 'verify',
     direction: 'west',
     radius: 420,
-    // Last screen of the last step: this button ends the tour, so it reads
-    // "Done" rather than "Next". (The design still shows "Next →" here.)
-    done: true,
     badge: {
-      badge_text: 'STEP 6/6',
       title: 'Google Migrate',
       desc: 'Migrate now',
     },
@@ -124,8 +119,21 @@ class __tutorial_migrate extends LetcBox {
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
-      // Back is live on every screen: from the first it walks out to Step 5.
-      tooltip: { ...s.badge, variant: 'figma', done: !!s.done },
+      // badge_text, hide_back and done all come from the tour, not from this widget: the
+      // same three screens read "STEP 1/3 … 3/3" as their own tour and
+      // "STEP 6/6" throughout as the last step of the full one, and only end
+      // the tour ("Done") when this step is the tour's last.
+      tooltip: {
+        ...s.badge,
+        badge_text: stepBadge(this, this._screenIndex),
+        // Back walks out to the previous step when there is one. As the first
+        // step of its own tour there is nothing behind screen 1, so the button
+        // is hidden rather than left to raise back-step at a host with nowhere
+        // to go.
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+        variant: 'figma',
+        done: isLastScreen(this, this._screenIndex, SCREENS.length),
+      },
       direction: s.direction,
       radius: s.radius,
       owner: this,

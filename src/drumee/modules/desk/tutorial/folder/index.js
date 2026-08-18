@@ -1,5 +1,6 @@
 const { folder } = require('../skeleton/toolkit');
 const { chatScreen, threadsScreen, menuScreen } = require('./skeleton');
+const { stepBadge, isLastScreen } = require('../tours');
 
 /**
  * Step 2 runs three internal screens behind ONE parent step, the same way
@@ -22,7 +23,6 @@ const SCREENS = [
     radius: 336,
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/6',
       title: 'Chat lives in folder',
       desc: 'Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.',
     },
@@ -36,7 +36,6 @@ const SCREENS = [
     anchor: 'thread-card',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/6',
       title: 'Chat in threads',
       desc: 'Drop a file, chat in the threads without context loss',
     },
@@ -50,7 +49,6 @@ const SCREENS = [
     anchor: 'ctx-focus',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/6',
       title: 'View and download chat threads',
       desc: 'View and download whenever you want in one click',
     },
@@ -105,9 +103,19 @@ class __tutorial_folder extends LetcBox {
       service: 'spotlight:focus',
       target: target.el,
       anchor: anchor && anchor.el,
-      // Back is live on all three screens: from the first one it walks out to
-      // Step 1, so there is never a dead end to hide it for.
-      tooltip: { ...screen.badge, variant: 'figma' },
+      // Numbering, the Back button and the Done wording all come from the tour: these three screens
+      // read "STEP 1/3 … 3/3" and end with Done when this is the `folder`
+      // tour, and "STEP 2/6" with Next throughout as step two of the full one.
+      tooltip: {
+        ...screen.badge,
+        badge_text: stepBadge(this, this._screenIndex),
+        // Live whenever a previous step exists (step two of the full tour);
+        // hidden on screen 1 of its own tour, where back-step would reach the
+        // host with nowhere to go.
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+        variant: 'figma',
+        done: isLastScreen(this, this._screenIndex, SCREENS.length),
+      },
       direction: screen.direction,
       radius: screen.radius,
       owner: this,
