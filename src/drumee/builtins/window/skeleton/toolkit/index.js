@@ -362,7 +362,13 @@ export function gridFilesBrowser(ui) {
     dataset: {
       role: _a.container,
     },
-    spinnerWait: 1500,
+    // The listing this drives (media.show_node_by) takes ~800ms of server time
+    // on a real workspace, so a 1500ms arming delay meant the grid sat blank
+    // with no feedback at all for the entire wait and the spinner only ever
+    // appeared on the slowest folders — measured: first paint at 1747ms, first
+    // spinner at 1272ms. Arm it early enough to actually cover the wait; it is
+    // still late enough that a cached/instant listing never flashes one.
+    spinnerWait: 250,
     spinner: true,
     itemsOpt: opt,
     skip,

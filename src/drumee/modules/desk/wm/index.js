@@ -602,18 +602,29 @@ class __window_manager extends push {
       // path of "undefined" — the same defect as the fetch above, and it left the
       // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
       // it this way (attrs.nid || nid).
-      getPath(this, { nid: data.nid || nid, hub_id })
-        .then((path) => {
-          if (_.isEmpty(path)) return;
-          // Resolved again HERE, not reused from above: feed() may not have
-          // mounted the new pane yet when this callback was set up, and a
-          // second switch may have replaced it while the path was in flight.
-          const w = this.folderWindowIn(this.headlessLayer);
-          if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
-        })
-        // Without this the throw above escaped as an unhandledrejection —
-        // which is exactly how it reached production unnoticed.
-        .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
+      // Deferred so it cannot outrun the window's OWN content request. feed()
+      // above mounts window_folder, whose list issues media.show_node_by a
+      // microtask later; this call used to run synchronously right here and so
+      // reached the endpoint first. That ordering is expensive: libs/path-request
+      // documents that mfs_get_path builds a temporary table per call (173ms, and
+      // 404ms-3013ms for a concurrent twin) and delays whatever is queued behind
+      // it — which was the file grid, the one thing the user is waiting for.
+      // The breadcrumb is cosmetic and already got its immediate local update
+      // from updateBreadcrumb() above, so it can afford to go last.
+      _.defer(() => {
+        getPath(this, { nid: data.nid || nid, hub_id })
+          .then((path) => {
+            if (_.isEmpty(path)) return;
+            // Resolved again HERE, not reused from above: feed() may not have
+            // mounted the new pane yet when this callback was set up, and a
+            // second switch may have replaced it while the path was in flight.
+            const w = this.folderWindowIn(this.headlessLayer);
+            if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
+          })
+          // Without this the throw above escaped as an unhandledrejection —
+          // which is exactly how it reached production unnoticed.
+          .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
+      });
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -835,19 +846,25 @@ class __window_manager extends push {
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
         // get_path, as loadWorkspace does.
         const deepNid = attrs.nid || nid;
-        getPath(this, { nid: deepNid, hub_id })
-          .then((path) => {
-            if (_.isEmpty(path)) return;
-            if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
-              currentFolder.refreshBreadcrumbsUI(path);
-            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
-            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
-            // topbar, but only when `currentFolder` is the focused headless
-            // workspace window; this explicit broadcast covers the case where it
-            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
-            this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
-          })
-          .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+        // Deferred for the same reason as in loadWorkspace: refreshContent()
+        // above kicks off this folder's media.show_node_by, and get_path issued
+        // in the same tick would reach the endpoint first and hold the listing
+        // behind its temporary-table build (see libs/path-request).
+        _.defer(() => {
+          getPath(this, { nid: deepNid, hub_id })
+            .then((path) => {
+              if (_.isEmpty(path)) return;
+              if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
+                currentFolder.refreshBreadcrumbsUI(path);
+              // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+              // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+              // topbar, but only when `currentFolder` is the focused headless
+              // workspace window; this explicit broadcast covers the case where it
+              // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
+              this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
+            })
+            .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+        });
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 

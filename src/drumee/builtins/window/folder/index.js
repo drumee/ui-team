@@ -414,6 +414,15 @@ class __window_folder extends mfsInteract {
   initialize(opt) {
     this.isFolder = 1;
     super.initialize(opt);
+    // Warm the tile widget's chunk while the listing is still in flight. "media"
+    // is a lazily imported kind, so without this the first response builds ~30
+    // placeholder roots, and the real tiles only appear a second hop later when
+    // the chunk resolves — measured as a visible 1668ms → 1747ms gap on a cold
+    // workspace, and worse on a cold cache. Fire-and-forget: if it fails the
+    // placeholders still resolve exactly as before.
+    if (Kind && _.isFunction(Kind.waitFor)) {
+      Kind.waitFor("media").catch(() => { });
+    }
     setGrouped(this, true);
     this.setViewMode(_a.icon, false);
     // `data-visible` is derived from privilege. Keep it in sync even when a
@@ -3152,7 +3161,12 @@ class __window_folder extends mfsInteract {
     if (this._meetingPresenceInit) return;
     this._meetingPresenceInit = 1;
     this.bindEvent(_a.live);
-    this._refreshMeetingActiveState();
+    // Deferred: this runs while the window is still building, and its
+    // channel.messages scan competed with the file listing for the same
+    // endpoint. All it decides is whether the schedule button reads "Start"
+    // or "Join meeting" — realtime sentinels keep it correct either way, so
+    // it can wait a tick and let the grid request go first.
+    _.defer(() => this._refreshMeetingActiveState());
   }
 
   // Best-effort initial scan: fetch this room's recent messages (newest first)
