@@ -106,27 +106,41 @@ class __window_manager extends push {
   }
 
   /**
-   * Open whatever a stored desk hash names — "#/desk/wm/o/<nid>/<hub_id>/<type>"
-   * or its long "…/open/nid=…&hub_id=…" twin.
+   * Turn a stored desk hash — "#/desk/wm/o/<nid>/<hub_id>/<type>" or its long
+   * "…/open/nid=…&hub_id=…" twin — into the payload the openers take.
    *
-   * One function because two callers need identical behaviour: route()'s legacy
-   * `locationOnStart` restore, and desk's _afterHomeSettled, which replays the
-   * link a signed-out visitor arrived on (libs/file-deep-link).
+   * Shared by the two callers below so the parsing lives in one place; they
+   * deliberately do NOT share an opener (see openDeepLinkHash).
    *
-   * `openSharedLink` rather than `openFileLocation` on purpose — this is a link
-   * from somebody else, and it is the one that runs checkPrivilegeForHub for a
-   * folder/hub target and _onShareAccessDenied on a 403. `parseCompactPath`
-   * supplies the recomputed `kind` the compact form omits, which openSharedLink
-   * needs for note / markdown / text / script / vector / schedule; it returns
-   * null for any non-compact hash, leaving the long form on its own args.
+   * @param {String} hash a full location.hash
+   */
+  _deepLinkPayload(hash) {
+    const savedPath = Visitor.parseModule(hash);
+    const savedArgs = Visitor.parseModuleArgs(hash);
+    // parseCompactPath supplies the recomputed `kind` the compact form omits and
+    // returns null for any non-compact hash, leaving the long form on its args.
+    return parseCompactPath(savedPath) || savedArgs;
+  }
+
+  /**
+   * Open the file a signed-out visitor arrived on (libs/file-deep-link, replayed
+   * from desk's _afterHomeSettled).
+   *
+   * `openFileLocation`, the SAME opener the warm path uses, so a link behaves
+   * identically whether or not the visitor had a session. It is also the only
+   * one that loads a note / markdown / text body: openSharedLink resolves those
+   * through `if (opt.kind) launch(opt)` with no attributes fetch and no media, so
+   * they would open blank. Files only, by construction — file-deep-link's
+   * urlWantsFile matches nothing else.
+   *
+   * The legacy `locationOnStart` restore in route() deliberately stays on
+   * openSharedLink: that path predates this one and is left exactly as it was.
    *
    * @param {String} hash a full location.hash
    */
   openDeepLinkHash(hash) {
     if (!hash) return;
-    const savedPath = Visitor.parseModule(hash);
-    const savedArgs = Visitor.parseModuleArgs(hash);
-    return this.openSharedLink(parseCompactPath(savedPath) || savedArgs);
+    return this.openFileLocation(this._deepLinkPayload(hash));
   }
 
   /**
@@ -268,7 +282,10 @@ class __window_manager extends push {
     if (loc) {
       let { hash } = loc;
       if (hash) {
-        this.openDeepLinkHash(hash);
+        // Stays on openSharedLink — this path predates the relay and keeps the
+        // opener (and the checkPrivilegeForHub / _onShareAccessDenied handling)
+        // it has always had. Only the parsing is now shared.
+        this.openSharedLink(this._deepLinkPayload(hash));
       }
     }
     // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]
