@@ -1688,6 +1688,16 @@ class __window_folder extends mfsInteract {
       }
 
       case "tab-task":
+        // Contextual tour: the Tasks tab is exactly what tutorial_task mocks —
+        // folder chrome, a tab bar with Tasks active, and the five-view
+        // switcher. Unlike opening a workspace, clicking this tab is a
+        // considered, low-frequency action, which is why the tracker tour hangs
+        // off it rather than off navigation.
+        //
+        // Raised before showFolderTab only because that call is synchronous and
+        // returns the render; the tab still opens either way, and fire() itself
+        // never blocks — it broadcasts and returns.
+        require("libs/tutorial-tours").fire("task", this);
         return this.showFolderTab(_a.task);
 
       case "toggle-task-filter":

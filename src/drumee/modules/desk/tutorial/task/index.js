@@ -1,7 +1,7 @@
 const { screen } = require('./skeleton');
+const { stepBadge, isLastScreen } = require('../tours');
 
 const BADGE = {
-  badge_text: 'STEP 4/6',
   title: 'Project tracker in folder',
   desc: `Track tasks, deadlines, and progress without leaving your folder. Every folder has its own project tracker so your team stays aligned on what's happening inside.`,
 };
@@ -112,9 +112,19 @@ class __tutorial_task extends LetcBox {
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
-      // Back is live on every screen: from the first it walks out to Step 3,
-      // so there is never a dead end to hide it for.
-      tooltip: { ...BADGE, variant: 'figma' },
+      // Numbering, Back and Done all come from the tour. These five views read
+      // "STEP 1/5 … 5/5" as their own tour and "STEP 4/6" throughout as step
+      // four of the full one — five screens, one step number, which is what the
+      // six-step tour has always shown.
+      tooltip: {
+        ...BADGE,
+        badge_text: stepBadge(this, this._screenIndex),
+        // Live whenever a previous step exists; hidden on view 1 of its own
+        // tour, where back-step would reach the host with nowhere to go.
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+        variant: 'figma',
+        done: isLastScreen(this, this._screenIndex, SCREENS.length),
+      },
       direction: s.direction,
       // Measured so the whole view switcher stays lit; s.radius is the fallback.
       radius: this._holeRadius(target.el) || s.radius,
