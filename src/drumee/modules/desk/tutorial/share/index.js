@@ -1,4 +1,5 @@
 const { modeScreen, secureScreen, linkScreen } = require('./skeleton');
+const { stepBadge, isLastScreen } = require('../tours');
 
 /**
  * Step 5 — secure share. Three internal screens behind ONE parent step, the
@@ -19,7 +20,6 @@ const SCREENS = [
     target: 'recipient',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 5/6',
       title: 'Secure share',
       desc: 'Click share and choose recipient mode.',
     },
@@ -30,7 +30,6 @@ const SCREENS = [
     target: 'secure',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 5/6',
       title: 'Secure share',
       desc: 'Choose secure share then set up restricted email and password',
     },
@@ -41,7 +40,6 @@ const SCREENS = [
     target: 'link',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 5/6',
       title: 'Secure share',
       desc: 'Share to external guest and control the access list',
     },
@@ -148,8 +146,15 @@ class __tutorial_share extends LetcBox {
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
-      // Back is live on every screen: from the first it walks out to Step 4.
-      tooltip: { ...s.badge, variant: 'figma' },
+      // Numbering, Back and Done all come from the tour: "STEP 1/3 … 3/3"
+      // standing alone, "STEP 5/6" throughout as step five of the full one.
+      tooltip: {
+        ...s.badge,
+        badge_text: stepBadge(this, this._screenIndex),
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+        variant: 'figma',
+        done: isLastScreen(this, this._screenIndex, SCREENS.length),
+      },
       direction: s.direction,
       // Sized so the whole panel stays lit; s.radius is the fallback.
       radius: this._holeRadius(target.el) || s.radius,
