@@ -141,10 +141,25 @@ test("the tour host marks seen and disarms the fetch guard in onDomRefresh", () 
 });
 
 test("markSeen is never called from a trigger site", () => {
-  for (const [name, src] of [["desk", DESK], ["wm", WM], ["sidebar", SIDEBAR]]) {
+  // A TRIGGER site must only fire: marking there burns a tour whose chunk fails
+  // to load. wm and the sidebar are pure trigger sites and must stay clean.
+  for (const [name, src] of [["wm", WM], ["sidebar", SIDEBAR]]) {
+    assert.ok(!/markSeen\(/.test(src), `${name} must not mark a tour seen`);
+  }
+
+  // The desk gained ONE legitimate call in phase 3: closing the onboarding
+  // wizard records `workspace` without mounting anything, because that path has
+  // no tour to mark on mount and the wizard can reappear. It is not a trigger
+  // site — it never calls fire(). Pin it to that case so a future marker added
+  // beside a real trigger still fails here.
+  const calls = [...DESK.matchAll(/markSeen\(/g)].map((m) => m.index);
+  const from = DESK.indexOf('case "onboarding-completed":');
+  const to = DESK.indexOf("\n      case ", from + 1);
+  assert.notEqual(from, -1, "the onboarding-skip case moved");
+  for (const at of calls) {
     assert.ok(
-      !/markSeen\(/.test(src),
-      `${name} must not mark a tour seen — that burns a tour whose chunk fails to load`,
+      at > from && at < to,
+      "the desk may only mark a tour seen from the onboarding-skip path",
     );
   }
 });

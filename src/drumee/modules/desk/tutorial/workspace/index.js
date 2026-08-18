@@ -1,16 +1,15 @@
+const { stepBadge, isLastScreen } = require('../tours');
+
 const BADGES = [
   {
-    badge_text: 'STEP 1/6',
     title: 'This is your Personal Workspace',
     desc: 'Only you can access this workspace. If you want to share, make a copy into the desired workspace.',
   },
   {
-    badge_text: 'STEP 1/6',
     title: 'This is an Internal Workspace',
     desc: 'Restricted to only your internal team.',
   },
   {
-    badge_text: 'STEP 1/6',
     title: 'This is an External Workspace',
     desc: 'Open to share externally with your clients — anyone with the link can view the folder structure and chat without logging in.',
   },
@@ -51,8 +50,18 @@ class __tutorial_workspace extends LetcBox {
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: card.el,
-      // Hide the Back button on the very first badge — nothing precedes it.
-      tooltip: { ...step, hide_back: this._stepIndex === 0 },
+      tooltip: {
+        ...step,
+        // The last of the six steps to lose its hardcoded badge. These three
+        // sub-badges read "STEP 1/3 … 3/3" as the post-signup `workspace` tour
+        // and "STEP 1/6" throughout as step one of the full tour.
+        badge_text: stepBadge(this, this._stepIndex),
+        // Was unconditional: badge 0 had nothing before it because this step
+        // was always first. It still is in both tours, but the rule now comes
+        // from the tour rather than from that assumption.
+        hide_back: !!this.mget('is_first') && this._stepIndex === 0,
+        done: isLastScreen(this, this._stepIndex, BADGES.length),
+      },
       direction: 'north',
       owner: this,
     });
