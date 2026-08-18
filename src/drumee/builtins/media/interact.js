@@ -835,6 +835,13 @@ class __media_interact extends media_core {
         return this.triggerHandlers({ trigger: this, service });
 
       case 'secure-share': {
+        // Contextual tour, first statement in the case. Everything below races
+        // three outcomes through a once() latch — wrapper resolved, wrapper
+        // rejected, 600ms timeout — and the share panel appears either as a
+        // drawer or as a floating window. The tour is about sharing, not about
+        // which of those won, so it is raised before the race starts rather
+        // than inside any branch of it.
+        require("libs/tutorial-tours").fire("share", this);
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
