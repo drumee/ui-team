@@ -325,6 +325,80 @@ triggerable again. No tour mounts from this URL.
 
 ---
 
+### Block D — Phase 3, the signup path
+
+> **Only if the Phase 3 branch is in the build.** Phases 1 and 2 can merge
+> without it; these items gate `feat/contextual-sub-tours-phase3`.
+>
+> Every item needs a **brand-new account** — you cannot re-run a signup. Budget
+> one throwaway account per item, or reset `workspace` and re-enter onboarding
+> with `localStorage.setItem("force-onboarding", 1)` plus clearing
+> `profile.onboarded` server-side.
+
+---
+
+**D1 · a real signup, all the way through**
+Sign up, complete onboarding to the end.
+**Expect:** the desk paints, then ~2s later the **workspace** tour appears —
+badge **STEP 1/3 → 3/3**, Back hidden on badge 1, **Done** on badge 3. Press
+Done.
+**Then, in order:** the reward flow appears; LAUNCH30 follows **without** its
+five-minute hold; the invited-workspace prompt comes last if one is armed.
+**If the tour appears but nothing follows it:** the chain gate is rejecting
+`workspace`. → commit `5e233f6c`, `case "desk-tutorial"`.
+**If the tour never appears but the chain runs at 2s:** `fire()` declined —
+check the seen-map (§2); a previous run on this account burned it.
+
+---
+
+**D2 · the chunk blocked**
+New account. Before finishing onboarding, block the tutorial chunk in devtools
+(Network → block request URL for the `desk_tutorial` chunk).
+**Expect:** no tour, and home settles after the **20s** net — reward flow and
+the rest still run, ~20s late, with `[home] tutorial never mounted` in console.
+**If home never settles:** the net was disarmed for a launched tour. → commit
+`61f3cbd9`.
+
+---
+
+**D3 · onboarding closed rather than completed**
+New account. Start onboarding, then **close/reset** it rather than finishing.
+**Expect:** no tour at all; home settles at **2s**; and the seen-map now
+contains **`workspace`** (§2 read).
+**Then reload.** If the wizard reappears — it can, because that path writes
+`onboarded` locally only — **still no tour**.
+**If `workspace` is absent from the map:** the skip path is not marking. →
+commit `dadfb123`.
+
+---
+
+**D4 · the onboarding plugin fails to load**
+New account, block the onboarding plugin's request.
+**Expect:** no wizard, no tour, home settles. Nothing is written.
+
+---
+
+**D5 · a mobile signup — the reason this phase has a fix at all**
+New account, on a **real mobile viewport** (a phone, or devtools device
+emulation — `Visitor.isMobile()` must actually be true; a narrow desktop window
+is not enough).
+Complete onboarding.
+**Expect:** **no tour** (D9 gates mobile) **and home settles at ~2 seconds** —
+reward flow and the rest run promptly.
+**Time it.** If they appear ~20 seconds after onboarding instead, this is the
+exact defect Phase 3 exists to fix and the branch is not in the build. → commit
+`61f3cbd9`.
+**Also check:** the seen-map has **no** `workspace` entry — mobile must not burn
+the flag, so the same account gets the tour on its first desktop session.
+
+---
+
+**D6 · `?tutorial=1` after Phase 3**
+Five of six steps are now derived (only `meeting` is hardcoded).
+**Expect:** identical to B5 — **1/6 → 6/6**, meeting at 3/6.
+
+---
+
 ## 4. Triage
 
 | Symptom | Most likely cause | Commit / file |
@@ -344,12 +418,16 @@ triggerable again. No tour mounts from this URL.
 | Timestamps are quoted strings in the DB | `DECLARE`d variable through `JSON_OBJECT` | `d3caad8` |
 | Other `settings` keys disappear on write | Write going through `update_settings` | `c54740a` |
 | Requests fire with the switch off | `markSeen` missing its early return | `5e233f6c` |
+| Reward flow / LAUNCH30 arrive ~20s after signup | A gated post-signup tour left the 20s net as the only route home | `61f3cbd9` |
+| The workspace tour never runs for a new signup | Its flag was burned by an earlier run or by `?tutorial=workspace` | §2 read, then reset `workspace` |
+| The wizard reappears AND the tour with it | The skip path is not marking `workspace` | `dadfb123` |
 
 ---
 
 ## 5. Sign-off
 
-Both blocks must pass before Phases 1 and 2 merge.
+Blocks A–C must pass before Phases 1 and 2 merge. Block D gates Phase 3 and
+can be run separately, on its own branch.
 
 ```
 Runbook:      2026-08-18-tutorial-sub-tours-runbook.md
@@ -362,6 +440,8 @@ Block A  A1 [ ]  A2 [ ]  A3 [ ]  A4 [ ]  A5 [ ]  A6 [ ]
          A7 [ ]  A8 [ ]  A9 [ ]  A10 [ ] A11 [ ]
 Block B  B1 [ ]  B2 [ ]  B3 [ ]  B4 [ ]  B5 [ ]
 Block C  C1 [ ]  C2 [ ]
+Block D  (phase 3 only)
+         D1 [ ]  D2 [ ]  D3 [ ]  D4 [ ]  D5 [ ]  D6 [ ]
 
 Failures / notes:
 ________________________________________________________
