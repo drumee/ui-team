@@ -318,6 +318,16 @@ function inFlight() {
  */
 function markSeen(tourId, host) {
   if (!TOUR_IDS.includes(tourId)) return;
+  // Kill switch off means the feature does not exist, so it writes nothing at
+  // all — not even from the full tour's exit, which records every flagged tour
+  // and would otherwise be the one path that posts while the switch is off.
+  // "Off is byte-for-byte today's behaviour" has to include the network.
+  //
+  // The cost is a rollout corner: someone who completes the full tour while it
+  // is off, and is then switched on, sees the contextual tours anyway. Showing
+  // a three-screen tour twice is a far smaller error than writing suppression
+  // state for a disabled feature.
+  if (!enabled()) return;
   const state = serverState();
   // A degraded payload suppresses WRITES as well as tours: never record a tour
   // against a user whose settings we could not read.

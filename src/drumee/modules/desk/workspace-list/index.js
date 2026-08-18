@@ -171,12 +171,21 @@ class __desk_workspace extends LetcBox {
               }
             : trigger;
         const result = Wm.loadWorkspace(target);
+        // Same tour the icons-list tile raises: it is about folders, not about
+        // how the user reached one, and a sidebar-first user would otherwise
+        // never see it. Single-flight plus the seen-set make the overlap
+        // harmless. Raised after the navigation is under way so the tour can
+        // never swallow it.
+        require("libs/tutorial-tours").fire("folder", this);
         if (result && result.then)
           return result.then(() => this.openWorkspace(trigger));
         return this.openWorkspace(trigger);
       }
 
       case "load-folder":
+        // The sidebar's sub-folder rows open a folder WINDOW rather than a
+        // workspace, so loadWorkspace above does not cover them.
+        require("libs/tutorial-tours").fire("folder", this);
         return Wm.openWorkspaceFolder(trigger);
 
       case "new-workspace":

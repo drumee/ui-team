@@ -66,6 +66,13 @@ class desk_module extends LetcBox {
 
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     Visitor.on(_e.change, this._updateAvatar);
+    // Contextual tutorial tours. The trigger surfaces are spread across the
+    // desk, the window manager, the sidebar workspace list and (later) the
+    // folder window, none of which share a part tree with the overlay the tour
+    // mounts into — so they raise one broadcast and the desk is the only
+    // listener. Same shape as the over-limit channel above.
+    this._onTourTrigger = this._onTourTrigger.bind(this);
+    RADIO_BROADCAST.on(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
     // capture listener only exists while a desk is alive — both of its targets
@@ -392,6 +399,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
+    RADIO_BROADCAST.off(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchHotkey || this._escHotkey) {
       const hk = require("libs/hotkeys");
@@ -1756,14 +1764,53 @@ class desk_module extends LetcBox {
         this._userMenuItems = child;
         return;
 
+      // "+ New" dropdown. The button that opens it
+      // (desk-module-topbar__new-workspace-btn) is the Menu's `trigger` and
+      // carries no service, so desk onUiEvent never sees it — the menu's own
+      // open event is the signal. _e.open fires only on open, never on close,
+      // so re-opening the menu cannot re-trigger.
+      //
+      // Re-bound automatically: _updateAddmenu and _onOverLimitChanged re-feed
+      // the whole topbar fragment, which lands here again with a new menu
+      // widget. Nothing is remembered on the node or the widget — every gate
+      // lives in libs/tutorial-tours — so a rebuild can neither lose nor
+      // duplicate the trigger.
+      case "addmenu": {
+        const Tours = require("libs/tutorial-tours");
+        if (_.isFunction(child.on)) {
+          child.on(_e.open, () => Tours.fire("migrate", this));
+        }
+        // Warm the chunk while the surface that triggers it is on screen, so
+        // pressing the button renders from memory rather than from the network.
+        if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+          Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
+        }
+        return;
+      }
+
       case "overlay":
+        // `?tutorial=reset` is a QA affordance, not a tour: it clears the
+        // seen-set so every contextual tour becomes triggerable again on this
+        // account. The server re-checks profile.devel, so this is only the
+        // client half. It deliberately does NOT mount anything.
+        if (Visitor.parseModuleArgs().tutorial === "reset") {
+          require("libs/tutorial-tours").reset(this);
+          setTimeout(() => {
+            this._afterHomeSettled();
+          }, 2000);
+          return;
+        }
         if (
           Visitor.parseModuleArgs().tutorial ||
           this._postOnboardingTutorial
         ) {
           this._postOnboardingTutorial = false;
+          // The post-signup run stays on the six-step tour this phase; wiring
+          // it to the `workspace` tour is phase 3. `?tutorial=<id>` is the QA
+          // form and is never gated on the seen-set — an explicit request.
+          const forced = this._forcedTourId();
           setTimeout(() => {
-            this._showTutorial();
+            this._showTutorial(forced);
           }, 2000);
           // Safety net. In this branch the ONLY route to _afterHomeSettled is
           // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
@@ -1791,7 +1838,22 @@ class desk_module extends LetcBox {
         }
         return;
 
-      case "desk-tutorial":
+      case "desk-tutorial": {
+        const tour = (child && child.mget && child.mget("tour")) || "full";
+        // Release single-flight for EVERY tour, deliberately outside the chain
+        // gate below: a contextual tour that is never released would block the
+        // next trigger for the rest of the session. Hangs off the same destroy
+        // event _chainRewardFlowAfterTutorial uses.
+        if (_.isFunction(child.once)) {
+          child.once(_e.destroy, () =>
+            require("libs/tutorial-tours").release(tour),
+          );
+        }
+        // Only the post-onboarding run and the full tour own the hand-off to
+        // the post-home chain. A contextual tour firing an hour later reaches
+        // this line with _homeSettledDone already true and must not re-enter
+        // it — and must not be able to block it either.
+        if (tour !== "workspace" && tour !== "full") return;
         // The tutorial exists and owns the hand-off from here.
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
@@ -1800,6 +1862,7 @@ class desk_module extends LetcBox {
         // post-signup run leaves the user on the desk as before.
         this._chainHelpReturnAfterTutorial(child);
         return;
+      }
     }
   }
 
@@ -1898,10 +1961,43 @@ class desk_module extends LetcBox {
    * framework's own reliable hand-off for a just-rendered child; use it
    * instead of leaning on the feed() return value.
    */
-  _showTutorial() {
+  /**
+   * Which tour `?tutorial=` asked for.
+   *
+   * `?tutorial=1` (and anything unrecognised) keeps meaning the whole
+   * six-step tour, which is what it has always meant. A recognised tour id
+   * runs that tour on its own, which is the only way to reach one without
+   * performing its trigger — QA cannot otherwise test a tour twice.
+   *
+   * @returns {String} a tour id
+   */
+  _forcedTourId() {
+    const arg = Visitor.parseModuleArgs().tutorial;
+    const { TOURS } = require("desk/tutorial/tours");
+    if (typeof arg === "string" && TOURS[arg]) return arg;
+    return "full";
+  }
+
+  _showTutorial(tourId) {
+    const tour = tourId || "full";
     this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "desk_tutorial", sys_pn: "desk-tutorial", partHandler: this });
+      p.feed({
+        kind: "desk_tutorial",
+        tour,
+        sys_pn: "desk-tutorial",
+        partHandler: this,
+      });
     });
+  }
+
+  /**
+   * A trigger surface asked for a tour. libs/tutorial-tours has already
+   * decided that it should run — kill switch, mobile, seen-set and
+   * single-flight are all settled there — so this only mounts it.
+   */
+  _onTourTrigger(args = {}) {
+    if (!args.tour) return;
+    this._showTutorial(args.tour);
   }
 
   /**

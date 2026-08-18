@@ -172,6 +172,16 @@ test("kill switch off: nothing fires and nothing is posted", () => {
   assert.equal(posts.length, 0);
 });
 
+test("29 kill switch off: markSeen writes nothing either, not even from full", () => {
+  // The full tour's exit records every flagged tour. That is the one path that
+  // would post while the switch is off, and "off is today's behaviour" has to
+  // include the network.
+  const { Tours, host } = fresh({ settings: {}, enabled: 0 });
+  for (const id of Tours.TOUR_IDS) Tours.markSeen(id, host);
+  assert.equal(posts.length, 0);
+  assert.equal(store["drumee.tutorials_seen"], undefined);
+});
+
 test("D9 mobile: no tour fires AND no flag is written", () => {
   const { Tours, host } = fresh({ settings: {}, mobile: true });
   assert.equal(Tours.fire("migrate", host), false);
