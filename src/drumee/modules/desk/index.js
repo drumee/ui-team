@@ -3467,6 +3467,20 @@ class desk_module extends LetcBox {
           let p = Visitor.profile && Visitor.profile();
           if (p) p.onboarded = 1;
         }
+        // Closing the wizard is a decision, not an accident: someone who
+        // dismissed the guided intro has declined it, and injecting the
+        // workspace tour into a branch built to skip the wizard would override
+        // that. Marked seen rather than merely skipped, for a second reason —
+        // this branch writes `onboarded` into the LOCAL profile only (the
+        // plugin returns before onboarding.reset), so the wizard can legitimately
+        // reappear next session, and without the record the tour would reappear
+        // with it. Marked directly rather than through fire(): nothing mounts.
+        //
+        // `workspace` is the one tour with no contextual trigger, so "later"
+        // does not exist for it — the accepted cost is that a skipper never
+        // sees it. markSeen no-ops while the kill switch is off, which is
+        // correct: with the feature off there is nothing to suppress.
+        require("libs/tutorial-tours").markSeen("workspace", this);
         return this.loadDefault();
 
       case _e.upload: {
