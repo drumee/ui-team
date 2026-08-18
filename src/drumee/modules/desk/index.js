@@ -1805,12 +1805,20 @@ class desk_module extends LetcBox {
           this._postOnboardingTutorial
         ) {
           this._postOnboardingTutorial = false;
-          // The post-signup run stays on the six-step tour this phase; wiring
-          // it to the `workspace` tour is phase 3. `?tutorial=<id>` is the QA
-          // form and is never gated on the seen-set — an explicit request.
+          const explicit = !!Visitor.parseModuleArgs().tutorial;
           const forced = this._forcedTourId();
           setTimeout(() => {
-            this._showTutorial(forced);
+            if (this._launchHomeTutorial(explicit, forced)) return;
+            // Nothing mounted, and nothing is going to: the post-onboarding
+            // tour was gated (already seen, mobile, or the switch is off in a
+            // way that produced no tour). The 20s net below exists for a
+            // tutorial that was LAUNCHED and failed to report in; waiting it
+            // out here would delay the reward flow, LAUNCH30 and the
+            // invited-workspace prompt by 18 seconds for — among others —
+            // every mobile signup. Settle now, exactly as the else-branch does.
+            clearTimeout(this._homeSettledFallback);
+            this._homeSettledFallback = null;
+            this._afterHomeSettled();
           }, 2000);
           // Safety net. In this branch the ONLY route to _afterHomeSettled is
           // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
@@ -1822,6 +1830,9 @@ class desk_module extends LetcBox {
           //
           // Cleared as soon as the tutorial does report in, so the normal path
           // is untouched and the chain still waits for the tutorial to finish.
+          // Also cleared by the launcher above when it turns out no tutorial is
+          // coming at all — armed here rather than after the 2s decision so a
+          // throw inside that timeout still leaves the net in place.
           clearTimeout(this._homeSettledFallback);
           this._homeSettledFallback = setTimeout(() => {
             this.warn && this.warn("[home] tutorial never mounted; settling anyway");
@@ -1988,6 +1999,42 @@ class desk_module extends LetcBox {
         partHandler: this,
       });
     });
+  }
+
+  /**
+   * Start whatever tutorial this boot owes the user, and say whether one is
+   * actually on its way.
+   *
+   * Three routes, and only the first two are unconditional:
+   *
+   *   explicit    `?tutorial=<id>` / `?tutorial=1`. A person typed this; it is
+   *               never gated on the seen-set, the mobile check or the kill
+   *               switch, because otherwise QA cannot reach a tour twice.
+   *   switch off  the six-step tour, exactly as before this feature existed.
+   *   otherwise   the post-onboarding `workspace` tour, gated like any other
+   *               trigger — the whole point of a server-side flag is that a
+   *               wizard shown twice does not produce a tour shown twice, and
+   *               the wizard genuinely can reappear (the skip path writes
+   *               `onboarded` locally only).
+   *
+   * @returns {Boolean} true when something was launched. False means no
+   *   tutorial is coming and the caller must settle home itself.
+   */
+  _launchHomeTutorial(explicit, forced) {
+    if (explicit) {
+      this._showTutorial(forced);
+      return true;
+    }
+    const Tours = require("libs/tutorial-tours");
+    if (!Tours.enabled()) {
+      this._showTutorial("full");
+      return true;
+    }
+    // fire() broadcasts synchronously, so by the time it returns true the
+    // desk's own channel listener has already called _showTutorial. A true
+    // here means "launched", not "mounted" — the chunk can still fail, which
+    // is what the 20s net is for.
+    return Tours.fire("workspace", this);
   }
 
   /**
