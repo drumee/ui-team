@@ -230,16 +230,31 @@ class __window_manager extends push {
       if (hash) {
         const savedPath = Visitor.parseModule(hash);
         const savedArgs = Visitor.parseModuleArgs(hash);
-        // A link sent to somebody else is usually opened by a visitor who is not
-        // signed in yet: the sign-in flow replaces the hash, and this is where
-        // the original one comes back. A COMPACT link carries its values as PATH
-        // segments, so parseModuleArgs finds no nid/hub_id/filetype at all and
-        // openSharedLink would silently do nothing — the recipient's link would
-        // look dead. Rebuild the identical payload the long form hands it (the
-        // recomputed `kind` included, which openSharedLink needs for note /
-        // markdown / text / script / vector / schedule) and reuse the very same
-        // resolution. Non-compact hashes are untouched: parseCompactPath returns
-        // null unless savedPath is a well-formed compact link.
+        // ⚠️ CURRENTLY UNREACHABLE — measured on the test env 2026-08-18. An
+        // earlier version of this comment claimed the signed-out arrival was
+        // covered here. It is not, and the reason is worth writing down because
+        // it defeats the LONG form identically:
+        //
+        //   butler/index.js:46 writes `locationOnStart` on EVERY boot, unguarded.
+        //   Signed out, the router replaces the hash with #/welcome/signin, and
+        //   sign-in success ends in location.reload() (welcome/signin/index.js).
+        //   Boot 2's butler therefore OVERWRITES the stored link before anything
+        //   here runs. Measured: boot 1 stored an 83-char hash carrying `nid=`,
+        //   boot 2 stored 16 chars of "/welcome/signin" — so nid / hub_id /
+        //   filetype / kind all come back undefined and path[2] is undefined.
+        //
+        // So a signed-out recipient lands on the desk for ANY file deep link,
+        // compact or long. That is pre-existing, NOT introduced by the compact
+        // form. Fixing it means capturing the intent into sessionStorage at
+        // module scope in index.web.js — the pattern libs/billing-deep-link.js
+        // and libs/hub-deep-link.js already use for exactly this hazard — plus a
+        // precedence order against those two and secure-share's `_ssReturn`.
+        //
+        // Kept rather than deleted: it is a strict no-op today (parseCompactPath
+        // returns null, so `|| savedArgs` is the untouched previous behaviour),
+        // and it becomes correct the moment the capture above is fixed. It also
+        // supplies the recomputed `kind` that openSharedLink needs for note /
+        // markdown / text / script / vector / schedule.
         this.openSharedLink(parseCompactPath(savedPath) || savedArgs);
       }
     }

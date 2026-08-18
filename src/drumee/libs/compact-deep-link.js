@@ -38,20 +38,22 @@
  * workspace root. A link that quietly opens the wrong thing is worse than a long
  * one, so `filetype` is carried in full.
  *
- * ── Both arrival paths ─────────────────────────────────────────────────────
+ * ── Arrival paths: one works, one is a known pre-existing gap ──────────────
  *
- * `modules/desk/wm/index.js` route() resolves this form twice, because a link
- * sent to somebody else is usually opened by a visitor who is not signed in yet:
+ * `modules/desk/wm/index.js` route() has two call sites:
  *
- *   warm  the app is already running   → path[2] === COMPACT_SEGMENT
- *   cold  arrived signed out, hash was replaced by the sign-in flow, restored
- *         from localStorage.locationOnStart after authentication
+ *   warm  ✅ the app is already running → path[2] === COMPACT_SEGMENT. This is the
+ *            live path and the one the Designation link actually uses.
+ *   cold  ⚠️ arrived signed out. UNREACHABLE today — `locationOnStart` is
+ *            overwritten on every boot and sign-in reloads the document, so the
+ *            original link is gone before route() reads it. Measured 2026-08-18;
+ *            the LONG form is lost identically, so this is not a compact-form
+ *            defect. Full reasoning at that call site.
  *
- * The cold path is why `parseCompactPath` returns `kind` as well: it feeds
- * `openSharedLink`, which branches on `opt.kind` for every filetype that is not
- * media and not a folder/hub (note, markdown, text, script, vector, schedule).
- * Handing it the recomputed kind makes the payload identical to the one the long
- * form produces, so that path keeps behaving exactly as it does today.
+ * `parseCompactPath` still returns `kind` for the cold site: `openSharedLink`
+ * branches on `opt.kind` for every filetype that is not media and not a
+ * folder/hub (note, markdown, text, script, vector, schedule), so the payload is
+ * identical to the long form's — ready for when the capture is fixed.
  */
 
 /** Path segment of the long form — unchanged, still the only form we emit for
