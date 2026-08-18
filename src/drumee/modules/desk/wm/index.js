@@ -14,6 +14,9 @@ const {
   COMPACT_SEGMENT,
   parseCompactPath,
 } = require("libs/compact-deep-link");
+// "Open this file once I am signed in" — armed at module scope in index.web.js
+// from the original URL, consumed below once the desk has mounted after sign-in.
+const fileDeepLink = require("libs/file-deep-link");
 const {
   blocksGroupedArrange,
 } = require("window/skeleton/toolkit/file-group");
@@ -100,6 +103,30 @@ class __window_manager extends push {
     if (opt.kind) {
       this.launch(opt, { explicit: 1 });
     }
+  }
+
+  /**
+   * Open whatever a stored desk hash names — "#/desk/wm/o/<nid>/<hub_id>/<type>"
+   * or its long "…/open/nid=…&hub_id=…" twin.
+   *
+   * One function because two callers need identical behaviour: route()'s legacy
+   * `locationOnStart` restore, and desk's _afterHomeSettled, which replays the
+   * link a signed-out visitor arrived on (libs/file-deep-link).
+   *
+   * `openSharedLink` rather than `openFileLocation` on purpose — this is a link
+   * from somebody else, and it is the one that runs checkPrivilegeForHub for a
+   * folder/hub target and _onShareAccessDenied on a 403. `parseCompactPath`
+   * supplies the recomputed `kind` the compact form omits, which openSharedLink
+   * needs for note / markdown / text / script / vector / schedule; it returns
+   * null for any non-compact hash, leaving the long form on its own args.
+   *
+   * @param {String} hash a full location.hash
+   */
+  openDeepLinkHash(hash) {
+    if (!hash) return;
+    const savedPath = Visitor.parseModule(hash);
+    const savedArgs = Visitor.parseModuleArgs(hash);
+    return this.openSharedLink(parseCompactPath(savedPath) || savedArgs);
   }
 
   /**
@@ -205,6 +232,10 @@ class __window_manager extends push {
       case _a.edit:
       case _a.play:
       case _a.open:
+        // Opening it now settles any intent armed for the same visit, so the
+        // relay below cannot reopen this file later in the tab — the same reason
+        // hubDeepLink.clear() is called where that intent is handled directly.
+        fileDeepLink.clear();
         this.openFileLocation(args);
         return;
 
@@ -218,44 +249,26 @@ class __window_manager extends push {
       case COMPACT_SEGMENT: {
         const compact = parseCompactPath(path);
         if (compact) {
+          fileDeepLink.clear();       // settled here — see the `open` case above
           this.openFileLocation(compact);
           return;
         }
         break;
       }
     }
+    // Legacy resting-hash restore, unchanged. It cannot carry a link across a
+    // sign-in: butler/index.js rewrites `locationOnStart` on every boot and
+    // signing in reloads the document, so by then it holds "#/welcome/signin"
+    // (measured — boot 1 stored an 83-char hash carrying `nid=`, boot 2 stored
+    // 16 chars). That journey is served by libs/file-deep-link instead, armed at
+    // module scope in index.web.js and consumed in desk's _afterHomeSettled
+    // alongside the billing and workspace-invite intents — the only place proven
+    // to run after a sign-in. Left exactly as it behaved before.
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
     if (loc) {
       let { hash } = loc;
       if (hash) {
-        const savedPath = Visitor.parseModule(hash);
-        const savedArgs = Visitor.parseModuleArgs(hash);
-        // ⚠️ CURRENTLY UNREACHABLE — measured on the test env 2026-08-18. An
-        // earlier version of this comment claimed the signed-out arrival was
-        // covered here. It is not, and the reason is worth writing down because
-        // it defeats the LONG form identically:
-        //
-        //   butler/index.js:46 writes `locationOnStart` on EVERY boot, unguarded.
-        //   Signed out, the router replaces the hash with #/welcome/signin, and
-        //   sign-in success ends in location.reload() (welcome/signin/index.js).
-        //   Boot 2's butler therefore OVERWRITES the stored link before anything
-        //   here runs. Measured: boot 1 stored an 83-char hash carrying `nid=`,
-        //   boot 2 stored 16 chars of "/welcome/signin" — so nid / hub_id /
-        //   filetype / kind all come back undefined and path[2] is undefined.
-        //
-        // So a signed-out recipient lands on the desk for ANY file deep link,
-        // compact or long. That is pre-existing, NOT introduced by the compact
-        // form. Fixing it means capturing the intent into sessionStorage at
-        // module scope in index.web.js — the pattern libs/billing-deep-link.js
-        // and libs/hub-deep-link.js already use for exactly this hazard — plus a
-        // precedence order against those two and secure-share's `_ssReturn`.
-        //
-        // Kept rather than deleted: it is a strict no-op today (parseCompactPath
-        // returns null, so `|| savedArgs` is the untouched previous behaviour),
-        // and it becomes correct the moment the capture above is fixed. It also
-        // supplies the recomputed `kind` that openSharedLink needs for note /
-        // markdown / text / script / vector / schedule.
-        this.openSharedLink(parseCompactPath(savedPath) || savedArgs);
+        this.openDeepLinkHash(hash);
       }
     }
     // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]

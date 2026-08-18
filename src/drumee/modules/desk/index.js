@@ -6,6 +6,9 @@ const {
   captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
 } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
+// "Open this file once I am signed in" — a Designation link opened by a visitor
+// with no session. Armed at module scope in index.web.js, consumed below.
+const fileDeepLink = require("libs/file-deep-link");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
 // hosts it. Opt-in: each implements onEscape() and returns true when it consumed
@@ -490,6 +493,38 @@ class desk_module extends LetcBox {
     // Don't let desk-state restore pull the screen back to the remembered one.
     this._restoreInFlight = false;
     this.openBillingPage(preselect);
+    return true;
+  }
+
+  /**
+   * Open the file a signed-out visitor arrived on, now that they are in.
+   *
+   * A Designation link is sent TO somebody, so it is usually opened without a
+   * session. The hash does not survive that: the router replaces it with
+   * "#/welcome/signin" and sign-in reloads the document, so wm.route()'s
+   * `locationOnStart` holds the sign-in screen by the time it looks. The link is
+   * captured at module scope in index.web.js instead and replayed here — the
+   * same shape, and the same reason, as _maybeOpenBillingDeepLink above.
+   *
+   * Consumed exactly once, here: reading clears the intent, so it can never
+   * reopen the file over whatever the visitor does next. The warm path (already
+   * signed in, wm.route() opens it directly) clears it there instead.
+   *
+   * @returns {Boolean} whether this boot carried such a link
+   */
+  _maybeOpenFileDeepLink() {
+    const hash = fileDeepLink.consume();
+    if (!hash) return false;
+    // Same as billing: the remembered screen must not pull focus off the file.
+    this._restoreInFlight = false;
+    try {
+      Wm.openDeepLinkHash(hash);
+    } catch (e) {
+      // A malformed or unresolvable link must never break the desk boot; the
+      // visitor simply lands on home, which is what happened before this existed.
+      this.warn && this.warn("[file-deep-link] could not open", e);
+      return false;
+    }
     return true;
   }
 
@@ -1018,6 +1053,10 @@ class desk_module extends LetcBox {
       // localStorage copy (libs/hub-deep-link), and desk-state restore must stand
       // down for that one too or it races the workspace about to open.
       if (hubDeepLink.has()) return true;
+      // Same reasoning for a file link a signed-out visitor arrived on: the
+      // remembered screen must not race the file about to open. peek(), not
+      // consume() — _maybeOpenFileDeepLink is the single consumer.
+      if (fileDeepLink.peek()) return true;
       if (sessionStorage.getItem("drumee_secure_share_return")) {
         return true;
       }
@@ -2378,6 +2417,12 @@ class desk_module extends LetcBox {
     // destination the visitor asked for, and letting the reward flow or the
     // LAUNCH30 offer land on top of it would bury it.
     this._maybeOpenBillingDeepLink();
+    // Same tier, same reasoning: a file link is an explicit destination the
+    // visitor asked for, so it opens before the reward / LAUNCH30 flows rather
+    // than underneath them. After billing only because billing was here first;
+    // the two are mutually exclusive in practice (a URL is either #/desk/billing
+    // or a file link, never both).
+    this._maybeOpenFileDeepLink();
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
