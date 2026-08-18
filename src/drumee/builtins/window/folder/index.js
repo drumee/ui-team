@@ -1537,6 +1537,22 @@ class __window_folder extends mfsInteract {
           if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
           return;
         }
+        // Contextual tour, raised BEFORE openManageAccess because that call
+        // TOGGLES: with a drawer already open it clears it and returns, so the
+        // flag read after the call means the opposite of what it means here.
+        // `!isShowSettings` is precisely "this click is going to OPEN the
+        // panel" — a closing click, and a click that dismisses the folder
+        // settings drawer (which shares the flag), are both correctly not
+        // treated as reaching Manage access for the first time.
+        //
+        // Placed in the handler rather than at either call site on purpose:
+        // the topbar icon and the overflow menu both raise this service with
+        // uiHandler: [ui] (folder/skeleton/topbar.js:96, window/skeleton/
+        // toolkit/index.js:1666), so one line covers both without going near
+        // their duplicated visibility gate.
+        if (!this.isShowSettings) {
+          require("libs/tutorial-tours").fire("share", this);
+        }
         return this.openManageAccess();
 
       case "folder-rename":
