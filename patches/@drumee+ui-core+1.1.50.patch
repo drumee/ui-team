@@ -33,6 +33,47 @@ index be31634..74857a8 100644
    e.stopPropagation();
    this.triggerHandlers(e);
    e.stopImmediatePropagation();
+@@ -1101,13 +1110,21 @@ View.prototype.actualNode = function (format = _a.orig) {
+ View.prototype.ensureElement = function (el) {
+   return new Promise((resolve, reject) => {
+     if (!el) el = this.el;
+-    if (el.isAttached && el.isAttached()) {
++    // isAttached() is a Marionette VIEW method. Every caller passes a DOM
++    // Element, an id string, or a jQuery object, so `el.isAttached` was
++    // always undefined and this guard never once fired — an element already
++    // in the document still fell through to the poll below. isConnected is
++    // the Element property that actually answers it. The View form is kept
++    // for any caller that does hand over a view.
++    if (el && (el.isConnected || (el.isAttached && el.isAttached()))) {
+       return resolve(el);
+     }
+     const timerId = _.uniqueId();
+     const max = 5;
+     let i = 0;
++    let settled = false;
+     const clearTimer = function () {
++      settled = true;
+       const timer = Timer.get(timerId)
+       if (timer) {
+         clearInterval(timer)
+@@ -1131,7 +1148,16 @@ View.prototype.ensureElement = function (el) {
+         reject()
+       }
+     };
+-    Timer.set(timerId, setInterval(f, 200));
++    // setInterval has no leading edge, so arming it first cost every caller a
++    // whole tick before the very first check — 200ms, and ~1s once Chrome
++    // clamps timers in a background tab. The resolve condition here is only
++    // "el is non-null", which is already true for the overwhelming majority
++    // of calls, so run it once synchronously and arm the poll only if that
++    // did not settle it.
++    f();
++    if (!settled) {
++      Timer.set(timerId, setInterval(f, 200));
++    }
+   })
+ }
+ 
 diff --git a/node_modules/@drumee/ui-core/letc/user.js b/node_modules/@drumee/ui-core/letc/user.js
 index a288e64..4b85937 100644
 --- a/node_modules/@drumee/ui-core/letc/user.js
