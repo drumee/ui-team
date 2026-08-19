@@ -1073,6 +1073,30 @@ class __window_folder extends mfsInteract {
       this.syncNewCtrlVisibility();
       return;
     }
+    // Second entry point for the migrate tour, alongside the desk topbar's
+    // + New (desk/index.js, case "addmenu"). Both are the same gesture — "I
+    // want to bring something in" — so they share the `migrate` flag: whichever
+    // is pressed first runs the tour, and the other then finds it seen. This is
+    // the shape the share tour already uses across its own two entry points.
+    //
+    // `open` is the signal rather than a click on the wrapper: it fires only on
+    // opening, never on closing, so re-opening the menu cannot re-trigger, and
+    // a click that lands on the control's padding is not mistaken for the
+    // gesture. Nothing is remembered here — every gate lives in
+    // libs/tutorial-tours — so a topbar rebuild can neither lose nor duplicate
+    // the trigger.
+    if (pn === "new-menu") {
+      const Tours = require("libs/tutorial-tours");
+      if (_.isFunction(child.on)) {
+        child.on(_e.open, () => Tours.fire("migrate", this));
+      }
+      // Warm the chunk while the surface that triggers it is on screen, so
+      // pressing the button renders from memory rather than from the network.
+      if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+        Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
+      }
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {

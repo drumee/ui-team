@@ -221,6 +221,26 @@ trigger kept state on the DOM node. → commit `5e233f6c`, `case "addmenu"`.
 
 ---
 
+**A1b · "+ New" inside a folder window fires `migrate` too, and only once**
+**RESET:** `migrate`
+Open a folder window, then click **+ New** in its topbar
+(`window-folder-topbar__new-ctrl`) — *without* touching the desk topbar first.
+**Expect:** the dropdown opens normally **and** the migrate tour appears.
+Badge **STEP 1/3**.
+Now dismiss it and click the **desk topbar's** + New.
+**Expect:** menu opens, **no tour** — the two entry points share the `migrate`
+flag, so the first one pressed burns it for both.
+Repeat the whole item in the other order (desk first, then the folder window)
+and expect the same: exactly one tour across the two surfaces.
+**If both fire:** the flag is not shared — one of the two call sites is passing
+a tour id other than `migrate`, or `Tours.fire` is being bypassed.
+**If the folder one never fires:** the `new-menu` part is not registered —
+check `sys_pn: "new-menu"` in `builtins/window/skeleton/toolkit/index.js`
+`fileNewControl`. Note the control is hidden for viewers who cannot write, so
+test as a user with write privilege.
+
+---
+
 **A2 · `P1-10` + `P2-10` · the record actually reached the server**
 *(these two items were identical in kind and are merged)*
 Run the read from §2.

@@ -37,6 +37,8 @@ const DESK = read("src/drumee/modules/desk/index.js");
 const WM = read("src/drumee/modules/desk/wm/index.js");
 const SIDEBAR = read("src/drumee/modules/desk/workspace-list/index.js");
 const TUTORIAL = read("src/drumee/modules/desk/tutorial/index.js");
+const WIN_FOLDER = read("src/drumee/builtins/window/folder/index.js");
+const WIN_TOOLKIT = read("src/drumee/builtins/window/skeleton/toolkit/index.js");
 
 /** The body of one `case "x": { ... }` block. */
 function caseBlock(src, label) {
@@ -126,6 +128,36 @@ test("the + New menu triggers on _e.open, which never fires on close", () => {
   // No state on the node or the widget: _updateAddmenu and _onOverLimitChanged
   // re-feed the whole fragment, and anything remembered here would be lost.
   assert.ok(!/dataset\./.test(block), "no trigger state on the DOM node");
+});
+
+test("the folder window's + New is the migrate tour's second entry point", () => {
+  // Same gesture, same flag: whichever of the two is pressed first runs the
+  // tour and the other then finds it seen. Nothing here dedupes them — that is
+  // Tours.fire's job, and doing it at either call site would break the moment
+  // a third entry point appeared.
+  const start = WIN_FOLDER.indexOf('if (pn === "new-menu")');
+  assert.notEqual(start, -1, "the folder window must listen for its + New menu");
+  const block = WIN_FOLDER.slice(start, WIN_FOLDER.indexOf("\n    }", start));
+  assert.match(block, /child\.on\(_e\.open,/, "open, not a click on the wrapper");
+  assert.match(block, /fire\("migrate", this\)/);
+  assert.ok(!/dataset\./.test(block), "no trigger state on the DOM node");
+});
+
+test("the + New menu is a part, or the folder window cannot reach its open", () => {
+  // The wrapper (`new-ctrl`) is a plain box and has no open state, so listening
+  // there would mean falling back to a DOM click — which also fires on the
+  // control's padding, and on closing.
+  assert.match(WIN_TOOLKIT, /sys_pn: "new-menu"[\s\S]{0,40}partHandler: ui/);
+  // And the wrapper keeps its own part: syncNewCtrlVisibility still needs it.
+  assert.match(WIN_TOOLKIT, /sys_pn: "new-ctrl"/);
+});
+
+test("both migrate entry points warm the chunk before it is needed", () => {
+  // Whichever surface the user meets first should render the tour from memory.
+  for (const [src, label] of [[caseBlock(DESK, "addmenu"), "desk topbar"],
+    [WIN_FOLDER.slice(WIN_FOLDER.indexOf('if (pn === "new-menu")')), "folder topbar"]]) {
+    assert.ok(/Kind\.waitFor\("tutorial_migrate"\)/.test(src), `${label} must prefetch`);
+  }
 });
 
 // ── the host marks on mount, and only on mount ───────────────────────────────

@@ -143,7 +143,12 @@ function fileNewControl(ui) {
     // Resolve write permission after mount; starting hidden prevents a flash
     // for viewers who cannot upload or create files.
     dataset: { visible: 0 },
-    kids: [newMenu(ui)],
+    // The menu is registered as a part in its own right, not just wrapped: the
+    // folder window listens for its `open` to trigger the migrate tour, and the
+    // wrapper above cannot report that — it is a plain box, and the open state
+    // lives on the menu widget. Named here rather than inside newMenu() so the
+    // part belongs to the control that owns it.
+    kids: [{ ...newMenu(ui), sys_pn: "new-menu", partHandler: ui }],
   });
 }
 
