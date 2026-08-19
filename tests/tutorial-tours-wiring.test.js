@@ -136,8 +136,9 @@ test("the tour host marks seen and disarms the fetch guard in onDomRefresh", () 
   const block = TUTORIAL.slice(start, TUTORIAL.indexOf("\n  }\n", start));
   assert.match(block, /Tours\.armed\(\)/);
   assert.match(block, /Tours\.markSeen\(this\._tour\.flag, this\)/);
-  // Guarded on the flag: `full` and `meeting` are never recorded.
-  assert.match(block, /if \(this\._tour\.flag\)/);
+  // Guarded on the flag (`full` and `meeting` are never recorded) AND on
+  // preview, so a ?tutorial= look does not burn the real trigger.
+  assert.match(block, /if \(this\._tour\.flag && !this\.mget\('preview'\)\)/);
 });
 
 test("markSeen is never called from a trigger site", () => {

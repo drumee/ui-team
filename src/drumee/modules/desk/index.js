@@ -1989,7 +1989,7 @@ class desk_module extends LetcBox {
     return "full";
   }
 
-  _showTutorial(tourId) {
+  _showTutorial(tourId, opt = {}) {
     const tour = tourId || "full";
     this.ensurePart("overlay").then((p) => {
       p.feed({
@@ -1997,8 +1997,38 @@ class desk_module extends LetcBox {
         tour,
         sys_pn: "desk-tutorial",
         partHandler: this,
+        ...opt,
       });
     });
+  }
+
+  /**
+   * Force a tour onto the screen from the URL, for checking the UI.
+   *
+   *   #/desk?tutorial=share                 the share tour, from screen 1
+   *   #/desk?tutorial=share&screen=3        straight to its third screen
+   *   #/desk?tutorial=folder_task&step=2    straight to the tracker step
+   *   #/desk?tutorial=folder_task&step=2&screen=4   ...and its fourth view
+   *   #/desk?tutorial=1                     the whole six-step tour
+   *   #/desk?tutorial=reset                 clear the seen-set (devel only)
+   *
+   * `step` and `screen` are 1-based, matching what the badge shows, and are
+   * clamped — a nonsense value lands on a real screen rather than rendering
+   * nothing.
+   *
+   * These runs are PREVIEWS: they do not record the tour as seen, so the same
+   * URL works twice and the real contextual trigger stays armed. Without that,
+   * one look at `?tutorial=migrate` would kill the + New trigger for the
+   * account permanently, since a tour records itself on mount.
+   *
+   * @returns {Object} extra attributes for the tutorial widget
+   */
+  _forcedTourOpt() {
+    const args = Visitor.parseModuleArgs();
+    const opt = { preview: 1 };
+    if (args.step) opt.enter_at_step = args.step;
+    if (args.screen) opt.enter_at_screen = args.screen;
+    return opt;
   }
 
   /**
@@ -2022,7 +2052,7 @@ class desk_module extends LetcBox {
    */
   _launchHomeTutorial(explicit, forced) {
     if (explicit) {
-      this._showTutorial(forced);
+      this._showTutorial(forced, this._forcedTourOpt());
       return true;
     }
     const Tours = require("libs/tutorial-tours");

@@ -1,5 +1,5 @@
 const { menuScreen, dialogScreen, verifyScreen } = require('./skeleton');
-const { stepBadge, isLastScreen } = require('../tours');
+const { stepBadge, isLastScreen, entryScreen } = require('../tours');
 
 /**
  * Step 6 — importing from Google Drive. Three internal screens behind ONE
@@ -60,7 +60,7 @@ class __tutorial_migrate extends LetcBox {
     // Re-entered via Back from a later step: resume where we left off. Step 6
     // is last today, so nothing exercises this — it is here so appending a step
     // cannot regress the behaviour.
-    if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
+    this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 

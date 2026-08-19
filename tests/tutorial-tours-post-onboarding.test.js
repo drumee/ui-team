@@ -90,7 +90,8 @@ function makeDesk({ hash = {}, toursEnabled = true, fireResult = true } = {}) {
     _homeSettledFallback: null,
     warn: () => {},
     _forcedTourId: () => (typeof hash.tutorial === "string" && TOURS[hash.tutorial] ? hash.tutorial : "full"),
-    _showTutorial: (t) => log.push(`show:${t || "full"}`),
+    _forcedTourOpt: () => ({ preview: 1 }),
+    _showTutorial: (t, o) => log.push(`show:${t || "full"}${o && o.preview ? ":preview" : ""}`),
     _afterHomeSettled: () => log.push("settled"),
   };
   global.Visitor = { parseModuleArgs: () => hash };
@@ -123,7 +124,9 @@ function makeDesk({ hash = {}, toursEnabled = true, fireResult = true } = {}) {
 test("explicit ?tutorial=<id> launches unconditionally, past every gate", () => {
   const { desk, log } = makeDesk({ hash: { tutorial: "migrate" }, toursEnabled: false });
   assert.equal(desk._launchHomeTutorial(true, "migrate"), true);
-  assert.deepEqual(log, ["show:migrate"]);
+  // Explicit runs are previews: they must not record the tour as seen, or one
+  // look at ?tutorial=migrate kills the real + New trigger for the account.
+  assert.deepEqual(log, ["show:migrate:preview"]);
 });
 
 test("kill switch off launches the six-step tour, never fire()", () => {

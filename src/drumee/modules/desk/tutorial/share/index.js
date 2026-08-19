@@ -1,5 +1,5 @@
 const { modeScreen, secureScreen, linkScreen } = require('./skeleton');
-const { stepBadge, isLastScreen } = require('../tours');
+const { stepBadge, isLastScreen, entryScreen } = require('../tours');
 
 /**
  * Step 5 — secure share. Three internal screens behind ONE parent step, the
@@ -57,7 +57,7 @@ class __tutorial_share extends LetcBox {
 
   async onDomRefresh() {
     // Re-entered via Back from Step 6: resume on the screen we left off on.
-    if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
+    this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 

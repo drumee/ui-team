@@ -1,6 +1,6 @@
 const { folder } = require('../skeleton/toolkit');
 const { chatScreen, threadsScreen, menuScreen } = require('./skeleton');
-const { stepBadge, isLastScreen } = require('../tours');
+const { stepBadge, isLastScreen, entryScreen } = require('../tours');
 
 /**
  * Step 2 runs three internal screens behind ONE parent step, the same way
@@ -71,7 +71,7 @@ class __tutorial_folder extends LetcBox {
       return;
     }
     // Re-entered via Back from Step 3: resume on the screen we left off on.
-    if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
+    this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 

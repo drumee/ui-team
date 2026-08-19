@@ -291,15 +291,17 @@ test("the shell's step slot is EMPTY — it must not hardcode a step", () => {
   assert.ok(!/kids/.test(slot), "slot must have no kids");
 });
 
-test("the host feeds step one from the registry on mount", () => {
+test("the host feeds the entry step from the registry on mount", () => {
   const host = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/index.js"), "utf8",
   );
   const dom = host.slice(host.indexOf("  onDomRefresh() {"));
   const body = dom.slice(0, dom.indexOf("\n  }\n"));
-  assert.match(body, /ensurePart\(_a\.content\)[\s\S]*?_widgetAt\(0\)/);
+  // _stepIndex is 0 for every normal run; only ?tutorial=…&step=n moves it.
+  assert.match(body, /ensurePart\(_a\.content\)[\s\S]*?_widgetAt\(this\._stepIndex/);
   // And it must come after the shell exists, or there is no part to feed.
-  assert.ok(body.indexOf("require('./skeleton')") < body.indexOf("_widgetAt(0)"));
+  assert.ok(body.indexOf("require('./skeleton')") < body.indexOf("_widgetAt("));
+  assert.match(host, /this\._stepIndex = this\._entryStep\(\)/);
 });
 
 test("every tour's step one is its OWN first step, not the workspace step", () => {
@@ -313,4 +315,53 @@ test("every tour's step one is its OWN first step, not the workspace step", () =
     meeting: "tutorial_meeting",
     full: "tutorial_workspace",
   });
+});
+
+// ── ?tutorial= as a UI-testing tool ──────────────────────────────────────────
+
+test("entryScreen: default 0, enter_at_last, and a 1-based screen target", () => {
+  const { entryScreen } = require(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/tours.js"));
+  const ui = (a) => ({ mget: (k) => a[k] });
+
+  assert.equal(entryScreen(ui({}), 5), 0, "normal run opens on screen 1");
+  assert.equal(entryScreen(ui({ enter_at_last: true }), 5), 4, "Back resumes on the last");
+
+  // 1-based in the URL, because that is what the badge shows.
+  assert.equal(entryScreen(ui({ enter_at_screen: "1" }), 5), 0);
+  assert.equal(entryScreen(ui({ enter_at_screen: "3" }), 5), 2);
+  assert.equal(entryScreen(ui({ enter_at_screen: 5 }), 5), 4);
+
+  // Clamped: a nonsense value must land somewhere real, never render nothing.
+  assert.equal(entryScreen(ui({ enter_at_screen: "0" }), 5), 0);
+  assert.equal(entryScreen(ui({ enter_at_screen: "99" }), 5), 4);
+  assert.equal(entryScreen(ui({ enter_at_screen: "junk" }), 5), 0);
+
+  // An explicit screen wins over enter_at_last — the URL is the later intent.
+  assert.equal(entryScreen(ui({ enter_at_last: true, enter_at_screen: "2" }), 5), 1);
+});
+
+test("every step widget resolves its entry screen through the shared helper", () => {
+  // Five widgets used to each carry `if (mget('enter_at_last')) …`. Screen
+  // targeting has to work in all of them or it works in none.
+  const dir = join(REPO_ROOT, "src/drumee/modules/desk/tutorial");
+  for (const step of ["workspace", "folder", "task", "share", "migrate"]) {
+    const src = readFileSync(join(dir, step, "index.js"), "utf8");
+    assert.match(src, /entryScreen\(this, \w+\.length\)/, `${step} must use entryScreen`);
+    assert.ok(
+      !/mget\(['"]enter_at_last['"]\)/.test(src),
+      `${step} must not hand-roll the entry rule any more`,
+    );
+  }
+});
+
+test("a forced tour is a PREVIEW — it must not burn the flag", () => {
+  const host = readFileSync(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/index.js"), "utf8");
+  // markSeen is skipped when the widget was launched with preview set.
+  assert.match(host, /if \(this\._tour\.flag && !this\.mget\('preview'\)\)/);
+
+  const desk = readFileSync(join(REPO_ROOT, "src/drumee/modules/desk/index.js"), "utf8");
+  assert.match(desk, /_forcedTourOpt\(\)[\s\S]*?preview: 1/);
+  // …and only the explicit branch passes it; a contextual tour still records.
+  assert.match(desk, /if \(explicit\) \{\s*this\._showTutorial\(forced, this\._forcedTourOpt\(\)\)/);
+  assert.match(desk, /return Tours\.fire\("workspace", this\)/);
 });

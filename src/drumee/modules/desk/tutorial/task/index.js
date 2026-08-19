@@ -1,5 +1,5 @@
 const { screen } = require('./skeleton');
-const { stepBadge, isLastScreen } = require('../tours');
+const { stepBadge, isLastScreen, entryScreen } = require('../tours');
 
 const BADGE = {
   title: 'Project tracker in folder',
@@ -47,7 +47,7 @@ class __tutorial_task extends LetcBox {
 
   async onDomRefresh() {
     // Re-entered via Back from Step 5: resume on the view we left off on.
-    if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
+    this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 

@@ -29,6 +29,19 @@ class tutorial_main extends LetcBox {
     this._stepIndex = 0;
     this._tour = tour(this.mget('tour'));
     this._widgets = this._buildWidgets(this._tour);
+    // ?tutorial=<id>&step=<n> — 1-based, clamped. Only useful for a multi-step
+    // tour; for the rest it is always 0 and costs nothing.
+    this._stepIndex = this._entryStep();
+  }
+
+  /**
+   * Which step `?tutorial=<id>&step=<n>` asked to open on. 0 for every normal
+   * run — nothing but the URL ever sets it.
+   */
+  _entryStep() {
+    const raw = this.mget('enter_at_step');
+    if (raw == null || raw === '') return 0;
+    return Math.max(0, Math.min(this._widgets.length - 1, ~~raw - 1));
   }
 
   /**
@@ -95,7 +108,14 @@ class tutorial_main extends LetcBox {
     //              mid-tour would replay it on the next qualifying click,
     //              indefinitely.
     Tours.armed();
-    if (this._tour.flag) Tours.markSeen(this._tour.flag, this);
+    // `preview` is set by the ?tutorial= launcher. An explicitly requested tour
+    // is exempt from the seen-set on the way IN (D3), so burning the flag on
+    // the way OUT is the wrong half of the same rule: previewing `migrate` once
+    // would kill the real + New trigger for that account forever, and a UI
+    // check would be a one-shot. Contextual runs still record normally.
+    if (this._tour.flag && !this.mget('preview')) {
+      Tours.markSeen(this._tour.flag, this);
+    }
     this._bindEscape();
     this.feed(require('./skeleton')(this));
     // Feed the FIRST step from the registry, exactly as _nextStep feeds every
@@ -103,7 +123,10 @@ class tutorial_main extends LetcBox {
     // slot, which meant every tour opened on the workspace step no matter which
     // tour had been asked for — the registry decided steps 2..n and the
     // skeleton silently decided step 1.
-    this.ensurePart(_a.content).then((p) => p.feed(this._widgetAt(0)));
+    const entry = this.mget('enter_at_screen');
+    this.ensurePart(_a.content).then((p) =>
+      p.feed(this._widgetAt(this._stepIndex, entry ? { enter_at_screen: entry } : {})),
+    );
     this._preloadSteps();
   }
 

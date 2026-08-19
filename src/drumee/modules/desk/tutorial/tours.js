@@ -156,7 +156,34 @@ function isLastScreen(ui, screenIndex, screenCount) {
   return !!ui.mget("is_last") && ~~screenIndex >= ~~screenCount - 1;
 }
 
+/**
+ * Which screen a step should open on.
+ *
+ * Two callers, one rule:
+ *   enter_at_last    Back from a later step — resume where the user left off.
+ *   enter_at_screen  `?tutorial=<id>&screen=<n>` — land straight on a screen so
+ *                    a callout's geometry can be checked without clicking
+ *                    through the ones before it. 1-based in the URL because
+ *                    that is what the badge shows; clamped, so a nonsense value
+ *                    lands somewhere real instead of rendering nothing.
+ *
+ * @param {Object} ui    the step widget
+ * @param {Number} count how many screens it has
+ * @returns {Number} 0-based screen index
+ */
+function entryScreen(ui, count) {
+  const n = ~~count || 1;
+  const forced = ui.mget("enter_at_screen");
+  if (forced != null && forced !== "") {
+    const i = ~~forced - 1;
+    return Math.max(0, Math.min(n - 1, i));
+  }
+  if (ui.mget("enter_at_last")) return n - 1;
+  return 0;
+}
+
 module.exports = {
+  entryScreen,
   TOURS,
   DEFAULT_TOUR,
   BADGE_BY_SCREENS,
