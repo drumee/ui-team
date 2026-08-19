@@ -130,7 +130,41 @@ class __tutorial_spotlight extends LetcBox {
       ...tooltip,
       direction,
       style: anchorFor(anchorRect, direction),
+      // Back/Next belong to the step that owns the screen; ending the tour
+      // belongs to the tour. The spotlight is the only object holding both
+      // references — `owner` is the step, and its own partHandler is
+      // tutorial_main — so it is where the two are separated.
+      host: this._tourHost(),
     }));
+  }
+
+  /** tutorial_main, from the partHandler the shell fed us. */
+  _tourHost() {
+    const h = this.mget(_a.partHandler);
+    if (!h) return null;
+    return _.isArray(h) ? h[0] : h;
+  }
+
+  /**
+   * Put the callout's Done button into its pending state.
+   *
+   * The tour host calls this while the tour's closing write is in flight: on a
+   * slow link that write is a visible pause during which the callout just sits
+   * there, and the button the user pressed is where the wait belongs.
+   *
+   * Nothing clears it — the host destroys the tour once the write settles,
+   * whether it succeeded or not. The node is queried rather than held as a
+   * part because the callout is rebuilt on every screen, so the one that
+   * matters is whichever is on screen now; `is-done` marks it, and only the
+   * last screen carries it (see toolkit/tooltip.js).
+   *
+   * @returns {Boolean} whether a button was actually found and marked
+   */
+  async busy() {
+    const callout = await this.ensurePart('callout');
+    const btn = callout && callout.el && callout.el.querySelector('.is-done');
+    if (btn) btn.classList.add('loading');
+    return !!btn;
   }
 
   clear() {

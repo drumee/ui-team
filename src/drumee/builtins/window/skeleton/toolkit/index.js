@@ -143,7 +143,12 @@ function fileNewControl(ui) {
     // Resolve write permission after mount; starting hidden prevents a flash
     // for viewers who cannot upload or create files.
     dataset: { visible: 0 },
-    kids: [newMenu(ui)],
+    // The menu is registered as a part in its own right, not just wrapped: the
+    // folder window listens for its `open` to trigger the migrate tour, and the
+    // wrapper above cannot report that — it is a plain box, and the open state
+    // lives on the menu widget. Named here rather than inside newMenu() so the
+    // part belongs to the control that owns it.
+    kids: [{ ...newMenu(ui), sys_pn: "new-menu", partHandler: ui }],
   });
 }
 
@@ -362,7 +367,13 @@ export function gridFilesBrowser(ui) {
     dataset: {
       role: _a.container,
     },
-    spinnerWait: 1500,
+    // The listing this drives (media.show_node_by) takes ~800ms of server time
+    // on a real workspace, so a 1500ms arming delay meant the grid sat blank
+    // with no feedback at all for the entire wait and the spinner only ever
+    // appeared on the slowest folders — measured: first paint at 1747ms, first
+    // spinner at 1272ms. Arm it early enough to actually cover the wait; it is
+    // still late enough that a cached/instant listing never flashes one.
+    spinnerWait: 250,
     spinner: true,
     itemsOpt: opt,
     skip,

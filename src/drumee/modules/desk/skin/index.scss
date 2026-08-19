@@ -149,25 +149,24 @@ html {
     }
   }
 
-  // Left panel-container hosts trash / activity (notifications) /
-  // settings slide-outs that anchor to the desktop sidebar column. On
-  // mobile that column doesn't exist (sidebar is a drawer overlay), so
-  // Settings — which still has no mobile layout — stays hidden. The
-  // notifications panel renders as a centered card (position:fixed, see
-  // panel-activity skin) and Trash renders as its own centered card (see
-  // panel/trash skin, [data-device="mobile"]); the container itself must
-  // stay displayed so those children can paint, so we hide only the one
-  // unported panel.
+  // Left panel-container. Trash and notifications moved to the right
+  // container (see skeleton/index.js) so all four sidebar slide-outs enter
+  // from the same edge; the only slot left here is settings-panel, which
+  // nothing has ever fed. The container and the `.left` rules below are
+  // therefore inert — kept because removing them is a separate cleanup, not
+  // because anything still renders here. Settings has no mobile layout, so
+  // the slot stays hidden there.
   &__panel-container.left[data-device="mobile"] {
     [data-partname="settings-panel"] {
       display: none;
     }
   }
 
-  // Keep the left slide-outs flush against the sidebar's current edge: on
-  // hover the collapsed rail overlays out from 64px to 231px, so shift the
-  // container right by that 167px expansion. Pinned mode (data-collapsed="0")
-  // reserves the full width in-flow, so it's excluded.
+  // Hover nudge that used to keep the left slide-outs flush against the
+  // expanding rail. Nothing visible lives in this container now, but the
+  // transform is left in place deliberately: it would create a containing
+  // block for any position:fixed descendant, so a panel must not be moved
+  // back in here without removing it.
   &__panel-container.left {
     transition: transform 0.18s ease;
   }
@@ -497,26 +496,12 @@ html {
       transform: none;
     }
 
-    // Unlike chat-p2p — a direct child of its container — the trash panel
-    // sits inside a __panel-inner wrapper, which is width:0 by default.
-    // Give it the container's box so it can act as the panel's containing
-    // block. Scoped to this slot: the sibling inner holding the
-    // notifications panel must keep its own (fixed-child) behaviour.
-    &__panel-container.left [data-partname="trash-panel"] {
-      inset: 0;
-      width: 100%;
-      // This wrapper now spans the workspace, and unlike the panel it never
-      // moves — the container's `> *` rule above would leave it clickable
-      // and it would swallow every click meant for the window manager, open
-      // or closed. Stay transparent and re-enable on the panel itself,
-      // which is parked off-screen whenever it is closed. The sibling inner
-      // holding the notifications panel keeps the `> *` default.
-      pointer-events: none;
-
-      > * {
-        pointer-events: auto;
-      }
-    }
+    // The trash panel used to need this container to supply a width: it was
+    // position:absolute inside a width:0 __panel-inner, so its mobile
+    // `left: 50%` centring resolved against nothing. It is position:fixed
+    // now (panel/trash skin), so 50% resolves against the viewport and the
+    // wrapper can stay zero-width like every other inner — which also means
+    // it no longer swallows clicks meant for the window manager.
   }
 }
 

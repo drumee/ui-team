@@ -8,6 +8,15 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+// Reader for the compact "#/desk/wm/o/<nid>/<hub_id>/<filetype>" deep link. The
+// long "open" form is unchanged and still resolved by the same openers.
+const {
+  COMPACT_SEGMENT,
+  parseCompactPath,
+} = require("libs/compact-deep-link");
+// "Open this file once I am signed in" — armed at module scope in index.web.js
+// from the original URL, consumed below once the desk has mounted after sign-in.
+const fileDeepLink = require("libs/file-deep-link");
 const {
   blocksGroupedArrange,
 } = require("window/skeleton/toolkit/file-group");
@@ -94,6 +103,44 @@ class __window_manager extends push {
     if (opt.kind) {
       this.launch(opt, { explicit: 1 });
     }
+  }
+
+  /**
+   * Turn a stored desk hash — "#/desk/wm/o/<nid>/<hub_id>/<type>" or its long
+   * "…/open/nid=…&hub_id=…" twin — into the payload the openers take.
+   *
+   * Shared by the two callers below so the parsing lives in one place; they
+   * deliberately do NOT share an opener (see openDeepLinkHash).
+   *
+   * @param {String} hash a full location.hash
+   */
+  _deepLinkPayload(hash) {
+    const savedPath = Visitor.parseModule(hash);
+    const savedArgs = Visitor.parseModuleArgs(hash);
+    // parseCompactPath supplies the recomputed `kind` the compact form omits and
+    // returns null for any non-compact hash, leaving the long form on its args.
+    return parseCompactPath(savedPath) || savedArgs;
+  }
+
+  /**
+   * Open the file a signed-out visitor arrived on (libs/file-deep-link, replayed
+   * from desk's _afterHomeSettled).
+   *
+   * `openFileLocation`, the SAME opener the warm path uses, so a link behaves
+   * identically whether or not the visitor had a session. It is also the only
+   * one that loads a note / markdown / text body: openSharedLink resolves those
+   * through `if (opt.kind) launch(opt)` with no attributes fetch and no media, so
+   * they would open blank. Files only, by construction — file-deep-link's
+   * urlWantsFile matches nothing else.
+   *
+   * The legacy `locationOnStart` restore in route() deliberately stays on
+   * openSharedLink: that path predates this one and is left exactly as it was.
+   *
+   * @param {String} hash a full location.hash
+   */
+  openDeepLinkHash(hash) {
+    if (!hash) return;
+    return this.openFileLocation(this._deepLinkPayload(hash));
   }
 
   /**
@@ -199,16 +246,46 @@ class __window_manager extends push {
       case _a.edit:
       case _a.play:
       case _a.open:
+        // Opening it now settles any intent armed for the same visit, so the
+        // relay below cannot reopen this file later in the tab — the same reason
+        // hubDeepLink.clear() is called where that intent is handled directly.
+        fileDeepLink.clear();
         this.openFileLocation(args);
         return;
+
+      // Compact twin of `open`: same payload, values carried as path segments
+      // instead of a query string (libs/compact-deep-link). Purely additive —
+      // the `open` case above is untouched, so every long link already sitting
+      // in an inbox, a chat or a notification resolves exactly as before.
+      // A malformed compact path `break`s instead of returning, so it lands on
+      // the same fallback resolution an unrecognised path has always used
+      // rather than dead-ending here.
+      case COMPACT_SEGMENT: {
+        const compact = parseCompactPath(path);
+        if (compact) {
+          fileDeepLink.clear();       // settled here — see the `open` case above
+          this.openFileLocation(compact);
+          return;
+        }
+        break;
+      }
     }
+    // Legacy resting-hash restore, unchanged. It cannot carry a link across a
+    // sign-in: butler/index.js rewrites `locationOnStart` on every boot and
+    // signing in reloads the document, so by then it holds "#/welcome/signin"
+    // (measured — boot 1 stored an 83-char hash carrying `nid=`, boot 2 stored
+    // 16 chars). That journey is served by libs/file-deep-link instead, armed at
+    // module scope in index.web.js and consumed in desk's _afterHomeSettled
+    // alongside the billing and workspace-invite intents — the only place proven
+    // to run after a sign-in. Left exactly as it behaved before.
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
     if (loc) {
       let { hash } = loc;
       if (hash) {
-        const savedPath = Visitor.parseModule(hash);
-        const savedArgs = Visitor.parseModuleArgs(hash);
-        this.openSharedLink(savedArgs);
+        // Stays on openSharedLink — this path predates the relay and keeps the
+        // opener (and the checkPrivilegeForHub / _onShareAccessDenied handling)
+        // it has always had. Only the parsing is now shared.
+        this.openSharedLink(this._deepLinkPayload(hash));
       }
     }
     // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]
@@ -525,18 +602,29 @@ class __window_manager extends push {
       // path of "undefined" — the same defect as the fetch above, and it left the
       // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
       // it this way (attrs.nid || nid).
-      getPath(this, { nid: data.nid || nid, hub_id })
-        .then((path) => {
-          if (_.isEmpty(path)) return;
-          // Resolved again HERE, not reused from above: feed() may not have
-          // mounted the new pane yet when this callback was set up, and a
-          // second switch may have replaced it while the path was in flight.
-          const w = this.folderWindowIn(this.headlessLayer);
-          if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
-        })
-        // Without this the throw above escaped as an unhandledrejection —
-        // which is exactly how it reached production unnoticed.
-        .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
+      // Deferred so it cannot outrun the window's OWN content request. feed()
+      // above mounts window_folder, whose list issues media.show_node_by a
+      // microtask later; this call used to run synchronously right here and so
+      // reached the endpoint first. That ordering is expensive: libs/path-request
+      // documents that mfs_get_path builds a temporary table per call (173ms, and
+      // 404ms-3013ms for a concurrent twin) and delays whatever is queued behind
+      // it — which was the file grid, the one thing the user is waiting for.
+      // The breadcrumb is cosmetic and already got its immediate local update
+      // from updateBreadcrumb() above, so it can afford to go last.
+      _.defer(() => {
+        getPath(this, { nid: data.nid || nid, hub_id })
+          .then((path) => {
+            if (_.isEmpty(path)) return;
+            // Resolved again HERE, not reused from above: feed() may not have
+            // mounted the new pane yet when this callback was set up, and a
+            // second switch may have replaced it while the path was in flight.
+            const w = this.folderWindowIn(this.headlessLayer);
+            if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
+          })
+          // Without this the throw above escaped as an unhandledrejection —
+          // which is exactly how it reached production unnoticed.
+          .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
+      });
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -758,19 +846,25 @@ class __window_manager extends push {
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
         // get_path, as loadWorkspace does.
         const deepNid = attrs.nid || nid;
-        getPath(this, { nid: deepNid, hub_id })
-          .then((path) => {
-            if (_.isEmpty(path)) return;
-            if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
-              currentFolder.refreshBreadcrumbsUI(path);
-            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
-            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
-            // topbar, but only when `currentFolder` is the focused headless
-            // workspace window; this explicit broadcast covers the case where it
-            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
-            this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
-          })
-          .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+        // Deferred for the same reason as in loadWorkspace: refreshContent()
+        // above kicks off this folder's media.show_node_by, and get_path issued
+        // in the same tick would reach the endpoint first and hold the listing
+        // behind its temporary-table build (see libs/path-request).
+        _.defer(() => {
+          getPath(this, { nid: deepNid, hub_id })
+            .then((path) => {
+              if (_.isEmpty(path)) return;
+              if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
+                currentFolder.refreshBreadcrumbsUI(path);
+              // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+              // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+              // topbar, but only when `currentFolder` is the focused headless
+              // workspace window; this explicit broadcast covers the case where it
+              // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
+              this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
+            })
+            .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+        });
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 
@@ -1090,6 +1184,15 @@ class __window_manager extends push {
    * No-op once the user has navigated into a sub-workspace.
    */
   onPartReady(child, pn) {
+    if (pn === _a.list) {
+      // Warm BOTH of folder_task's steps while the grid that triggers it
+      // renders, so neither the first tile click nor the step boundary inside
+      // the tour pays a round trip.
+      if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+        Promise.resolve(Kind.waitFor("tutorial_folder")).catch(() => {});
+        Promise.resolve(Kind.waitFor("tutorial_task")).catch(() => {});
+      }
+    }
     if (pn === _a.list && child && !child._homeGridFilterInstalled) {
       child._homeGridFilterInstalled = 1;
       const original = child.prepareData.bind(child);
@@ -1938,6 +2041,18 @@ class __window_manager extends push {
         }
         this._lastOpenNode = { key: nodeKey, at: now };
         this.openContent(cmd, args);
+        // Contextual tour: the first workspace or folder a user opens explains
+        // what a folder is. Raised AFTER openContent so the navigation the user
+        // asked for always happens — the tour never swallows the action — and
+        // after the per-node debounce above, so a swallowed double click cannot
+        // fire it. The model's filetype is the discriminator, never the section
+        // <div> the tile sits in: _doPartition re-appends tiles into those under
+        // a live MutationObserver, so the DOM says nothing reliable about what a
+        // tile IS.
+        const _ft = cmd.mget && cmd.mget(_a.filetype);
+        if (_ft === _a.hub || _ft === _a.folder) {
+          require("libs/tutorial-tours").fire("folder_task", this);
+        }
         return this.unselect();
       }
 

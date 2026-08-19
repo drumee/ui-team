@@ -2,15 +2,19 @@
 
 .panel-activity {
   &__ui {
-    position: absolute;
+    // Opens from the RIGHT, same as inbox/contacts (chat-p2p skin) and
+    // trash. position:fixed for the reason documented in chat-p2p: a
+    // parked absolute panel still adds to its ancestors' scrollWidth and
+    // leaves the desk body scrollable sideways onto it.
+    position: fixed;
     width: 450px;
     height: 100vh;
     top: 0;
-    left: 0;
+    right: 0;
     background-color: #f2f2f7;
     border: 1px solid var(--border-muted);
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    transform: translateX(-100%);
+    transform: translateX(100%);
     transition: transform 0.25s ease-out;
     will-change: transform;
 
@@ -20,7 +24,7 @@
     }
 
     &[data-state="0"] {
-      transform: translateX(-100%);
+      transform: translateX(100%);
       pointer-events: none;
     }
 

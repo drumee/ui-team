@@ -420,6 +420,7 @@
   "MESSAGE_ACTIVATION": "Si vous ne le recevez pas, vérifiez vos Spams et votre adresse ci-dessus.",
   "CHECK_YOUR_MAIL": "Oups... Vérifiez votre mail et votre mot de passe",
   "ALREADY_EXISTS": "Oups, {0} existe déjà...",
+  "ALREADY_IN_LIST": "Cet e-mail est déjà dans la liste",
   "PERMISSION_READ": "Voir",
   "PERMISSION_UPLOAD_DOWNLOAD": "Importer/Télécharger",
   "PERMISSION_DELETE_ORGANIZE": "Supprimer / Organiser",
@@ -2606,5 +2607,6 @@
   "FILE_THREAD_MOVED_TO": "Ce fichier a été déplacé vers {0}. La conversation reste ici, en lecture seule.",
   "FILE_THREAD_MOVED_AWAY": "Ce fichier a été déplacé vers un autre espace de travail. La conversation reste ici, en lecture seule.",
   "FILE_THREAD_FILE_DELETED": "Ce fichier a été supprimé. La conversation est conservée pour référence.",
-  "FILE_THREAD_READ_ONLY": "Lecture seule"
+  "FILE_THREAD_READ_ONLY": "Lecture seule",
+  "TUTORIAL_STEP": "ÉTAPE {0}/{1}"
 }

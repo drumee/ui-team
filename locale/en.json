@@ -405,6 +405,7 @@
   "MESSAGE_ACTIVATION": "If you don't receive it, check your Spam and address above.",
   "CHECK_YOUR_MAIL": "Oops ... Wrong credentials",
   "ALREADY_EXISTS": "Oooops, {0} already exists ...",
+  "ALREADY_IN_LIST": "That email is already in the list",
   "PERMISSION_READ": "View",
   "PERMISSION_UPLOAD_DOWNLOAD": "Upload/Download",
   "PERMISSION_DELETE_ORGANIZE": "Delete/Organize",
@@ -2773,5 +2774,6 @@
   "FILE_THREAD_MOVED_AWAY": "This file was moved to another workspace. The conversation stays here and is read-only.",
   "FILE_THREAD_FILE_DELETED": "This file was deleted. The conversation is kept for reference.",
   "FILE_THREAD_READ_ONLY": "Read-only",
-  "TASK_FILES_NOT_ATTACHED": "Some files didn't attach. Retry them on the comment to carry on."
+  "TASK_FILES_NOT_ATTACHED": "Some files didn't attach. Retry them on the comment to carry on.",
+  "TUTORIAL_STEP": "STEP {0}/{1}"
 }
