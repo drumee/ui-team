@@ -452,21 +452,25 @@ test("the cursor icon exists in the sprite", () => {
   );
 });
 
-test("the callout focuses on the thread panel", () => {
-  // The hole lights the hover hint; the callout points at the panel, so the two
-  // together say "start a thread here, and it appears there".
+test("the hole is measured from the panel, the callout from the card", () => {
+  // These are deliberately different elements. The panel decides how much is
+  // lit; the Drumee_Strategy_Q2 card decides where the callout sits, which is
+  // ~220px higher than the panel's mid-height and is where the design puts it.
   const folder = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/index.js"), "utf8",
   );
   const screen = folder.slice(folder.indexOf("skeleton: threadHintScreen"));
-  assert.match(screen.slice(0, screen.indexOf("},")), /anchor: 'thread-panel'/);
+  const block = screen.slice(0, screen.indexOf("},"));
+  assert.match(block, /target: 'thread-panel'/);
+  assert.match(block, /anchor: 'thread-card'/);
 
-  // thread-panel is the part on .tutorial-folder__th-panel — the class the
-  // callout is meant to focus on.
   const threads = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
   );
+  // Both parts have to exist on THIS screen, or the spotlight silently falls
+  // back to measuring one element for both jobs.
   assert.match(threads, /__th-panel`[\s\S]{0,200}sys_pn: "thread-panel"/);
+  assert.match(threads, /__th-card`[\s\S]{0,300}sys_pn: "thread-card"/);
 });
 
 test("the hole is wide enough to hold the panel AND the hover hint", () => {

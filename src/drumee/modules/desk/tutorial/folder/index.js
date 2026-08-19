@@ -44,7 +44,12 @@ const SCREENS = [
     // hint group instead, as this did before, lit a ~230x50 strip at the bottom
     // of the screen and left the panel in the fade.
     target: 'thread-panel',
-    anchor: 'thread-panel',
+    // The hole is sized from the panel; the callout is placed against the
+    // Drumee_Strategy_Q2 card at the top of it, which is where the design puts
+    // it (card top 182 of 1024, level with the thread card — not the panel's
+    // mid-height, ~220px lower). target and anchor exist precisely so the lit
+    // area and the callout can be measured from different elements.
+    anchor: 'thread-card',
     radius: 730,
     direction: 'east',
     badge: {
