@@ -59,6 +59,14 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
       log.push(`post:${svc}:${JSON.stringify(payload.settings || payload)}`);
       return Promise.resolve({});
     },
+    // Done marks its button pending for the length of the write, which it
+    // reaches through the spotlight. Recorded rather than ignored so the
+    // ordering below can be asserted: the button has to go busy BEFORE the
+    // post, or the spinner only appears once there is nothing left to wait for.
+    ensurePart: (pn) => {
+      log.push(`ensurePart:${pn}`);
+      return Promise.resolve({ busy: () => log.push("busy") });
+    },
   };
   const deps = {
     Tours: { markSeen: (id) => log.push(`markSeen:${id}`) },
@@ -257,4 +265,94 @@ test("the desk's own Escape still guards on defaultPrevented", () => {
   // binding would stop suppressing the desk's handler.
   const desk = read("src/drumee/modules/desk/index.js");
   assert.match(desk, /name: "desk-escape"[\s\S]{0,300}!e\.defaultPrevented/);
+});
+
+// ── Done's pending state ─────────────────────────────────────────────────────
+//
+// Done is the only control in the tour that waits on the network: it writes
+// tutorial_done (and, for `full`, the seen-set) and only then destroys the
+// tour. Until this existed the callout simply sat there for the length of that
+// round trip, which on a slow link reads as a dead button — and invited the
+// second press these tests guard against.
+
+test("Done marks its button pending before it starts writing", async () => {
+  const { log, done } = makeHost({ tourId: "migrate" });
+  done();
+  // The part lookup is what has to come first. Ordering is the whole point:
+  // asking for the spotlight after the post would only raise a spinner once
+  // the thing it is waiting for had already finished.
+  const ask = log.indexOf("ensurePart:spotlight");
+  const post = log.findIndex((l) => l.startsWith("post:"));
+  assert.notEqual(ask, -1, "the spinner must be reached for");
+  assert.notEqual(post, -1);
+  assert.ok(ask < post, "the button is claimed before the write it covers");
+  // ensurePart resolves a promise, so the class lands one microtask after the
+  // press rather than in the same tick — invisible to a person, but it means
+  // the assertion has to wait for it.
+  await Promise.resolve();
+  assert.ok(log.includes("busy"), "the spinner must actually be turned on");
+});
+
+test("a second Done press writes nothing — one exit per tour", async () => {
+  const { log, done } = makeHost({ tourId: "migrate" });
+  done();
+  done();
+  done();
+  assert.equal(log.filter((l) => l.startsWith("post:")).length, 1);
+  await Promise.resolve();
+  assert.equal(log.filter((l) => l === "busy").length, 1, "and one spinner");
+});
+
+test("the double-press guard also covers full's markSeen round", () => {
+  // `full` posts one markSeen per flagged tour on top of the settings write, so
+  // an unguarded second press is five duplicate writes, not one.
+  const { log, done } = makeHost({ tourId: "full" });
+  done();
+  done();
+  assert.deepEqual(
+    log.filter((l) => l.startsWith("markSeen")),
+    ["markSeen:workspace", "markSeen:folder_task", "markSeen:share", "markSeen:migrate"],
+  );
+});
+
+test("skip stays instant — it writes nothing, so it has nothing to wait for", () => {
+  const { log, skip } = makeHost({ tourId: "migrate" });
+  skip();
+  assert.ok(!log.includes("busy"), "no spinner on a control that does not write");
+  assert.deepEqual(log, ["softDestroy"]);
+});
+
+test("only the last screen's button can enter the pending state", () => {
+  // `is-done` is what spotlight.busy() looks for. If it were on every screen,
+  // Back/Next on an ordinary screen could be left spinning by a stray call.
+  const last = buildBadge({ title: "t", desc: "d", badge_text: "STEP 3/3", done: true });
+  const mid = buildBadge({ title: "t", desc: "d", badge_text: "STEP 2/3" });
+  const nextOf = (r) => r.nodes.find((n) => n.service === "next-step");
+  assert.match(nextOf(last).className, /\bis-done\b/);
+  assert.ok(!/\bis-done\b/.test(nextOf(mid).className));
+  // The service is unchanged — only the wording and the marker differ.
+  assert.equal(nextOf(last).service, "next-step");
+});
+
+test("the spinner is defined once, on the shared badge rule", () => {
+  // Both card looks (default and variant:'figma') share .tutorial__s1-next, and
+  // the figma block deliberately does not restyle the buttons — so one rule
+  // covers every tour. A second definition would mean one of them drifting.
+  const tip = read("src/drumee/modules/desk/tutorial/skin/tooltip.scss");
+  assert.match(tip, /&__s1-next\s*\{[\s\S]*?&\.loading\s*\{/);
+  assert.match(tip, /@keyframes tutorial-spin/);
+  // Taken out of the event stream, not merely dimmed.
+  assert.match(tip, /&\.loading\s*\{[\s\S]*?pointer-events: none/);
+  assert.equal((tip.match(/&\.loading\s*\{/g) || []).length, 1, "one definition only");
+});
+
+test("busy() finds the button by marker and leaves everything else alone", () => {
+  const src = read("src/drumee/modules/desk/tutorial/spotlight/index.js");
+  const body = methodBody(src, "async busy()");
+  assert.match(body, /ensurePart\('callout'\)/);
+  assert.match(body, /querySelector\('\.is-done'\)/);
+  assert.match(body, /classList\.add\('loading'\)/);
+  // Nothing clears it: the host destroys the tour once the write settles, so a
+  // reset would only ever run on a node about to be removed.
+  assert.ok(!/classList\.remove/.test(body));
 });

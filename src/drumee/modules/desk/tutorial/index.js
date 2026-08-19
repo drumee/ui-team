@@ -214,6 +214,17 @@ class tutorial_main extends LetcBox {
    * auto-show again on subsequent sessions via a forced URL param.
    */
   _enterWorkspace() {
+    // Done is the one control in the tour that waits on the network, so it is
+    // the one that can be pressed twice. Without this the second press runs
+    // the whole exit again — a second update_settings write, and for `full` a
+    // second round of markSeen posts.
+    if (this._exiting) return;
+    this._exiting = true;
+    // The write below is the only thing between the press and the tour
+    // vanishing; on a slow link that is a silent pause. Mark the button
+    // pending for its duration. Nothing clears it: either branch below
+    // destroys the tour, which takes the button with it.
+    this.ensurePart('spotlight').then((s) => s.busy && s.busy());
     localStorage.onboarding_step = "0";
     // Finishing the six-step tour means the user has seen everything, so it
     // records every flagged tour rather than only the legacy boolean. Without

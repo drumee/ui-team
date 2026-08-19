@@ -145,6 +145,28 @@ class __tutorial_spotlight extends LetcBox {
     return _.isArray(h) ? h[0] : h;
   }
 
+  /**
+   * Put the callout's Done button into its pending state.
+   *
+   * The tour host calls this while the tour's closing write is in flight: on a
+   * slow link that write is a visible pause during which the callout just sits
+   * there, and the button the user pressed is where the wait belongs.
+   *
+   * Nothing clears it — the host destroys the tour once the write settles,
+   * whether it succeeded or not. The node is queried rather than held as a
+   * part because the callout is rebuilt on every screen, so the one that
+   * matters is whichever is on screen now; `is-done` marks it, and only the
+   * last screen carries it (see toolkit/tooltip.js).
+   *
+   * @returns {Boolean} whether a button was actually found and marked
+   */
+  async busy() {
+    const callout = await this.ensurePart('callout');
+    const btn = callout && callout.el && callout.el.querySelector('.is-done');
+    if (btn) btn.classList.add('loading');
+    return !!btn;
+  }
+
   clear() {
     this.setState(0);
     this.ensurePart('callout').then((p) => p.feed(null));

@@ -108,8 +108,12 @@ export function tooltipBadge(ui, { title, desc, badge_text, style, direction = '
               service: 'back-step',
               uiHandler: [ui],
             }),
+          // `is-done` is not decoration: it is how the spotlight finds this
+          // button to mark it pending while the tour's closing write is in
+          // flight (see spotlight/index.js busy()). Only the last screen's
+          // button ends the tour, so only that one can ever wait on anything.
           Skeletons.Note({
-            className: `${p}-next`,
+            className: `${p}-next${done ? ' is-done' : ''}`,
             content: done ? (LOCALE.DONE || 'Done') : `${LOCALE.NEXT || 'Next'} →`,
             service: 'next-step',
             uiHandler: [ui],

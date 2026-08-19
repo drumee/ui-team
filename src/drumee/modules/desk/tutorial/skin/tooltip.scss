@@ -155,12 +155,47 @@
     padding: 8px 18px;
     cursor: pointer;
     transition: background 0.15s ease;
+    // The spinner below is centred on this box.
+    position: relative;
 
     &:hover {
       background: #6558d6;
     }
+
+    // Set by spotlight.busy() while the tour's closing write is in flight.
+    // Only the last screen's button can reach this state — it is the only one
+    // that waits on anything.
+    &.loading {
+      // Not just cosmetic: the host also guards re-entry, but taking the
+      // button out of the event stream is what stops the press registering at
+      // all rather than being swallowed one frame later.
+      pointer-events: none;
+      // The label is hidden rather than replaced so the button keeps its width
+      // and the footer does not reflow under the user's cursor.
+      color: transparent;
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 14px;
+        height: 14px;
+        box-sizing: border-box;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: tutorial-spin 0.6s linear infinite;
+      }
+
+      // A spinner that cannot spin still has to read as "working", so it stays
+      // as a static ring rather than disappearing.
+      @media (prefers-reduced-motion: reduce) {
+        &::after { animation: none; }
+      }
+    }
   }
-  
+
   &__tooltip-anchor {
     position: absolute;
     inset: 0;
@@ -264,4 +299,9 @@
     }
   }
 
+}
+// Outside .tutorial: @keyframes is not scoped by the selector it sits under,
+// so nesting it there would only make the name harder to find.
+@keyframes tutorial-spin {
+  to { transform: rotate(360deg); }
 }
