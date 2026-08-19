@@ -36,7 +36,7 @@ const {
   TOURS,
   stepBadge,
   isLastScreen,
-  BADGE_BY_SCREENS,
+  BADGE_BY_FLOW,
 } = require(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/tours.js"));
 
 // ── stubs ────────────────────────────────────────────────────────────────────
@@ -184,19 +184,20 @@ test("a fire raised from builtins reaches the desk's channel listener", () => {
 
 // ── badges (§8 48) ───────────────────────────────────────────────────────────
 
-test("folder_task badges by STEP: 1/2 for folder, 2/2 for the tracker", () => {
+test("folder_task badges as one flow: 1/8 through 8/8", () => {
   const t = TOURS.folder_task;
   assert.deepEqual(t.steps.map((s) => s.screens), [3, 5]);
-  // All three folder screens carry the step's number, and all five tracker
-  // views carry theirs — the same rule every step of `full` follows.
-  const folder = widget({ badge_mode: "steps", badge_text: "STEP 1/2" });
-  assert.deepEqual([0, 1, 2].map((i) => stepBadge(folder, i)), Array(3).fill("STEP 1/2"));
-  const task = widget({ badge_mode: "steps", badge_text: "STEP 2/2" });
-  assert.deepEqual([0, 1, 2, 3, 4].map((i) => stepBadge(task, i)), Array(5).fill("STEP 2/2"));
+  const folder = widget({ badge_mode: "flow", screen_offset: 0, tour_screens: 8 });
+  assert.deepEqual([0, 1, 2].map((i) => stepBadge(folder, i)),
+    ["STEP 1/8", "STEP 2/8", "STEP 3/8"]);
+  // The tracker continues the count rather than restarting it.
+  const task = widget({ badge_mode: "flow", screen_offset: 3, tour_screens: 8 });
+  assert.deepEqual([0, 1, 2, 3, 4].map((i) => stepBadge(task, i)),
+    ["STEP 4/8", "STEP 5/8", "STEP 6/8", "STEP 7/8", "STEP 8/8"]);
 });
 
 test("share badges 1/3 .. 3/3 standing alone, never 1/1", () => {
-  const ui = widget({ badge_mode: BADGE_BY_SCREENS, screen_count: 3 });
+  const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_offset: 0, tour_screens: 3 });
   assert.deepEqual(
     [0, 1, 2].map((i) => stepBadge(ui, i)),
     ["STEP 1/3", "STEP 2/3", "STEP 3/3"],

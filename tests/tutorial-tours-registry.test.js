@@ -35,27 +35,65 @@ if (!String.prototype.format) {
 }
 
 const Tours = require(TOURS_PATH);
-const { TOURS, tour, flaggedIds, stepBadge, isLastScreen, BADGE_BY_SCREENS, BADGE_BY_STEPS } = Tours;
+const { TOURS, tour, flaggedIds, stepBadge, isLastScreen, BADGE_BY_FLOW, BADGE_BY_STEPS } = Tours;
 
 /** Minimal stand-in for a step widget: only mget is read. */
 const widget = (attrs) => ({ mget: (k) => attrs[k] });
 
 // ── registry invariants ──────────────────────────────────────────────────────
 
-test("badge mode matches step count for every flagged tour", () => {
-  // Single-step tours count screens (migrate 1/3 -> 3/3); a multi-step tour
-  // must count steps, because screen numbering inside one step would claim to
-  // be counting the whole tour. folder_task is the only multi-step flagged one.
+test("every flagged tour badges as one continuous flow", () => {
+  // A contextual tour is one thing to the person being shown it, however many
+  // step widgets it is built from — so the counter runs straight through.
+  // `full` and `meeting` keep step numbering, which is what they have always
+  // shown.
   for (const id of flaggedIds()) {
-    const t = TOURS[id];
-    if (t.steps.length === 1) {
-      assert.equal(t.badge, BADGE_BY_SCREENS, `${id} is single-step, should count screens`);
-    } else {
-      assert.equal(t.badge, BADGE_BY_STEPS, `${id} is multi-step, must count steps`);
-    }
+    assert.equal(TOURS[id].badge, BADGE_BY_FLOW, `${id} should badge by flow`);
   }
-  assert.equal(TOURS.folder_task.steps.length, 2);
-  assert.equal(TOURS.folder_task.badge, BADGE_BY_STEPS);
+  assert.equal(TOURS.full.badge, BADGE_BY_STEPS);
+  assert.equal(TOURS.meeting.badge, BADGE_BY_STEPS);
+});
+
+test("flow badging counts screens cumulatively across steps", () => {
+  const t = TOURS.folder_task;
+  const total = t.steps.reduce((n, s) => n + s.screens, 0);
+  assert.equal(total, 8, "3 folder screens + 5 tracker views");
+
+  const seen = [];
+  let offset = 0;
+  for (const step of t.steps) {
+    for (let k = 0; k < step.screens; k++) {
+      seen.push(stepBadge(
+        { mget: (x) => ({ badge_mode: "flow", screen_offset: offset, tour_screens: total }[x]) },
+        k,
+      ));
+    }
+    offset += step.screens;
+  }
+  // The counter must NOT restart at the step boundary — that is the whole point.
+  assert.deepEqual(seen, [
+    "STEP 1/8", "STEP 2/8", "STEP 3/8",
+    "STEP 4/8", "STEP 5/8", "STEP 6/8", "STEP 7/8", "STEP 8/8",
+  ]);
+});
+
+test("a single-step tour's flow numbering is just its own screens", () => {
+  for (const id of ["workspace", "share", "migrate"]) {
+    const n = TOURS[id].steps[0].screens;
+    const ui = { mget: (x) => ({ badge_mode: "flow", screen_offset: 0, tour_screens: n }[x]) };
+    assert.deepEqual(
+      Array.from({ length: n }, (_, i) => stepBadge(ui, i)),
+      Array.from({ length: n }, (_, i) => `STEP ${i + 1}/${n}`),
+      id,
+    );
+  }
+});
+
+test("the host stamps screen_offset and tour_screens per step", () => {
+  const out = build(TOURS.folder_task).map((e) => (Array.isArray(e) ? e[e.length - 1] : e));
+  assert.deepEqual(out.map((w) => w.screen_offset), [0, 3]);
+  assert.deepEqual(out.map((w) => w.tour_screens), [8, 8]);
+  assert.deepEqual(out.map((w) => w.badge_mode), ["flow", "flow"]);
 });
 
 test("full keeps the original six steps, in order, and is never suppressed", () => {
@@ -95,7 +133,7 @@ test("48 a single-step tour numbers SCREENS, never 1/1", () => {
   for (const id of flaggedIds()) {
     const t = TOURS[id];
     const n = t.steps[0].screens;
-    const ui = widget({ badge_mode: BADGE_BY_SCREENS, screen_count: n });
+    const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_count: n });
     const seen = [];
     for (let i = 0; i < n; i++) seen.push(stepBadge(ui, i));
     assert.deepEqual(
@@ -108,7 +146,7 @@ test("48 a single-step tour numbers SCREENS, never 1/1", () => {
 });
 
 test("48 migrate and folder read 1/3 -> 3/3 standing alone", () => {
-  const ui = widget({ badge_mode: BADGE_BY_SCREENS, screen_count: 3 });
+  const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_count: 3 });
   assert.deepEqual(
     [0, 1, 2].map((i) => stepBadge(ui, i)),
     ["STEP 1/3", "STEP 2/3", "STEP 3/3"],
@@ -163,7 +201,7 @@ function buildWidgetsFn() {
   const end = src.indexOf("\n  }\n", start);
   assert.notEqual(end, -1, "_buildWidgets has no closing brace");
   const body = src.slice(start + "  _buildWidgets(t) {".length, end);
-  return new Function("BACKDROPS", "BADGE_BY_SCREENS", `return function (t) {${body}};`);
+  return new Function("BACKDROPS", "BADGE_BY_FLOW", `return function (t) {${body}};`);
 }
 
 const BACKDROP_STUB = {
@@ -172,7 +210,7 @@ const BACKDROP_STUB = {
 };
 
 function build(tourDef) {
-  const fn = buildWidgetsFn()(BACKDROP_STUB, BADGE_BY_SCREENS);
+  const fn = buildWidgetsFn()(BACKDROP_STUB, BADGE_BY_FLOW);
   return fn.call({ warn: () => {} }, tourDef);
 }
 
@@ -215,23 +253,22 @@ test("a single-step tour is stamped first AND last, and badges by screens", () =
   const w = build(TOURS.migrate)[0].slice(-1)[0];
   assert.equal(w.is_first, true);
   assert.equal(w.is_last, true);
-  assert.equal(w.badge_mode, BADGE_BY_SCREENS);
+  assert.equal(w.badge_mode, BADGE_BY_FLOW);
   assert.equal(w.screen_count, 3);
   assert.equal(w.service, "next-step");
 });
 
-test("a multi-step tour asking for 'screens' is refused, not silently mis-numbered", () => {
+test("an unknown badge mode warns and falls back to step numbering", () => {
   const warnings = [];
-  const fn = buildWidgetsFn()(BACKDROP_STUB, BADGE_BY_SCREENS);
+  const fn = buildWidgetsFn()(BACKDROP_STUB, BADGE_BY_FLOW);
   const bad = {
     id: "bogus",
-    badge: BADGE_BY_SCREENS,
+    badge: "screens",
     steps: [{ kind: "a", screens: 2 }, { kind: "b", screens: 3 }],
   };
   const out = fn.call({ warn: (m) => warnings.push(m) }, bad);
   assert.equal(warnings.length, 1);
-  assert.match(warnings[0], /cannot use the "screens" badge mode/);
-  // Falls back to step numbering rather than labelling screen 4 of step 2 "4/5".
+  assert.match(warnings[0], /unknown badge mode/);
   assert.deepEqual(out.map((w) => w.badge_mode), ["steps", "steps"]);
   assert.deepEqual(out.map((w) => w.badge_text), ["STEP 1/2", "STEP 2/2"]);
 });

@@ -30,7 +30,7 @@ const DESK_RAW = readFileSync(join(REPO_ROOT, "src/drumee/modules/desk/index.js"
 const DESK = stripComments(DESK_RAW);
 
 const Tours = require(join(REPO_ROOT, "src/drumee/libs/tutorial-tours.js"));
-const { TOURS, stepBadge, isLastScreen, BADGE_BY_SCREENS } =
+const { TOURS, stepBadge, isLastScreen, BADGE_BY_FLOW } =
   require(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/tours.js"));
 
 if (!String.prototype.format) {
@@ -307,8 +307,8 @@ const widget = (attrs) => ({ mget: (k) => attrs[k] });
 
 test("workspace badges 1/3 .. 3/3 as its own tour, never 1/1", () => {
   assert.equal(TOURS.workspace.steps[0].screens, 3);
-  assert.equal(TOURS.workspace.badge, BADGE_BY_SCREENS);
-  const ui = widget({ badge_mode: BADGE_BY_SCREENS, screen_count: 3 });
+  assert.equal(TOURS.workspace.badge, BADGE_BY_FLOW);
+  const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_count: 3 });
   assert.deepEqual(
     [0, 1, 2].map((i) => stepBadge(ui, i)),
     ["STEP 1/3", "STEP 2/3", "STEP 3/3"],

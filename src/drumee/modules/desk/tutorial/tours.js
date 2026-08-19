@@ -31,14 +31,22 @@
 //
 // A multi-step tour must use 'steps'. 'screens' on one would number screen 4 of
 // step 2 as "4/5" with no error, so the host refuses it out loud instead.
-const BADGE_BY_SCREENS = "screens";
+// 'flow'  — count every SCREEN in the tour, cumulatively across its steps.
+//           folder_task runs 3 folder screens then 5 tracker views and reads
+//           "STEP 1/8 … 8/8" straight through, because to the person being
+//           shown it that is one continuous thing. For a single-step tour this
+//           is just its own screen count (migrate 1/3 … 3/3).
+// 'steps' — count STEPS, so every screen of a step carries that step's number.
+//           `full` reads 1/6 … 6/6 with all three folder screens on 2/6, which
+//           is what the six-step tour has always shown.
+const BADGE_BY_FLOW = "flow";
 const BADGE_BY_STEPS = "steps";
 
 const TOURS = {
   workspace: {
     id: "workspace",
     flag: "workspace",
-    badge: BADGE_BY_SCREENS,
+    badge: BADGE_BY_FLOW,
     steps: [{ kind: "tutorial_workspace", screens: 3 }],
   },
 
@@ -49,15 +57,15 @@ const TOURS = {
   // open a folder. Merged back on request: the two steps teach one thing, and
   // the Tasks tab is not where a first-time user goes looking for it.
   //
-  // The only multi-step FLAGGED tour, so it badges by step: all three folder
-  // screens read "STEP 1/2" and all five tracker screens "STEP 2/2", the same
-  // way every step of `full` carries its own number. Screen-level numbering is
-  // refused for a multi-step tour (see _buildWidgets) because it would label
-  // tracker view 4 as "4/5" while claiming to count the whole tour.
+  // Badged as one continuous flow: 3 folder screens then 5 tracker views read
+  // "STEP 1/8 … 8/8" straight through. Step numbering ("1/2", "2/2") is what
+  // `full` does, and it is wrong here — to someone opening a folder this is one
+  // thing, not two, and a counter that sits on "1/2" for three screens tells
+  // them nothing about how much is left.
   folder_task: {
     id: "folder_task",
     flag: "folder_task",
-    badge: BADGE_BY_STEPS,
+    badge: BADGE_BY_FLOW,
     steps: [
       { kind: "tutorial_folder", screens: 3, backdrop: ["workspaceFaded"] },
       { kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] },
@@ -67,7 +75,7 @@ const TOURS = {
   share: {
     id: "share",
     flag: "share",
-    badge: BADGE_BY_SCREENS,
+    badge: BADGE_BY_FLOW,
     steps: [
       { kind: "tutorial_share", screens: 3, backdrop: ["workspaceFaded"] },
     ],
@@ -76,7 +84,7 @@ const TOURS = {
   migrate: {
     id: "migrate",
     flag: "migrate",
-    badge: BADGE_BY_SCREENS,
+    badge: BADGE_BY_FLOW,
     // The step's own menu and dialog sit OVER the desk, so the workspace grid
     // behind them is this step's subject matter and is not faded.
     steps: [
@@ -139,11 +147,15 @@ function flaggedIds() {
  */
 function stepBadge(ui, screenIndex) {
   const fmt = LOCALE.TUTORIAL_STEP || "STEP {0}/{1}";
-  if (ui.mget("badge_mode") === BADGE_BY_SCREENS) {
-    return fmt.format(~~screenIndex + 1, ~~ui.mget("screen_count") || 1);
+  if (ui.mget("badge_mode") === BADGE_BY_FLOW) {
+    // screen_offset is how many screens the earlier steps of this tour ran, so
+    // the counter continues across a step boundary instead of restarting. Both
+    // are stamped by the host, which is the only object that can see the whole
+    // tour — a step widget knows its own screens and nothing else.
+    const offset = ~~ui.mget("screen_offset");
+    const total = ~~ui.mget("tour_screens") || ~~ui.mget("screen_count") || 1;
+    return fmt.format(offset + ~~screenIndex + 1, total);
   }
-  // 'steps' mode: every screen of a step carries that step's number, which is
-  // what the six-step tour has always shown.
   return ui.mget("badge_text");
 }
 
@@ -186,7 +198,7 @@ module.exports = {
   entryScreen,
   TOURS,
   DEFAULT_TOUR,
-  BADGE_BY_SCREENS,
+  BADGE_BY_FLOW,
   BADGE_BY_STEPS,
   tour,
   flaggedIds,

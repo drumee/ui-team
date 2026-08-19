@@ -1,6 +1,6 @@
 require('./skin');
 const Tours = require('libs/tutorial-tours');
-const { tour, flaggedIds, BADGE_BY_SCREENS } = require('./tours');
+const { tour, flaggedIds, BADGE_BY_FLOW } = require('./tours');
 const BACKDROPS = require('./skeleton/toolkit/backdrops');
 
 const SVC_OPT = { async: 1 };
@@ -62,28 +62,33 @@ class tutorial_main extends LetcBox {
    */
   _buildWidgets(t) {
     const steps = t.steps || [];
-    // 'screens' badge mode counts within one step, so it can only be right for
-    // a single-step tour. Say so rather than silently numbering screen 4 of
-    // step 2 as "4/5" — this is the trap the mode field exists to remove.
-    if (t.badge === BADGE_BY_SCREENS && steps.length > 1) {
+    // 'flow' counts every screen in the tour, so the host has to know the total
+    // and where each step starts — a step widget can see its own screens and
+    // nothing else. Computed once here rather than derived per screen.
+    const total = steps.reduce((n, s) => n + (~~s.screens || 1), 0);
+    const offsets = [];
+    steps.reduce((n, s) => (offsets.push(n), n + (~~s.screens || 1)), 0);
+
+    const mode = t.badge === BADGE_BY_FLOW ? BADGE_BY_FLOW : 'steps';
+    if (t.badge && t.badge !== BADGE_BY_FLOW && t.badge !== 'steps') {
       this.warn && this.warn(
-        `[tutorial] tour "${t.id}" has ${steps.length} steps and cannot use the ` +
-        `"screens" badge mode; falling back to step numbering`
+        `[tutorial] tour "${t.id}" has an unknown badge mode "${t.badge}"; ` +
+        `falling back to step numbering`
       );
     }
-    const byScreens = t.badge === BADGE_BY_SCREENS && steps.length === 1;
 
     return steps.map((step, i) => {
       const widget = {
         kind: step.kind,
         service: 'next-step',
         uiHandler: [this],
-        badge_mode: byScreens ? BADGE_BY_SCREENS : 'steps',
+        badge_mode: mode,
+        // Used by 'steps' mode, and as the fallback if a step somehow renders
+        // before its flow numbers land.
         badge_text: (LOCALE.TUTORIAL_STEP || 'STEP {0}/{1}').format(i + 1, steps.length),
         screen_count: step.screens || 1,
-        // Back on the first screen of the first step has nowhere to go, and
-        // the last screen of the last step ends the tour rather than advancing
-        // it. Both are properties of the TOUR, not of the step.
+        screen_offset: offsets[i],
+        tour_screens: total,
         is_first: i === 0,
         is_last: i === steps.length - 1,
       };
