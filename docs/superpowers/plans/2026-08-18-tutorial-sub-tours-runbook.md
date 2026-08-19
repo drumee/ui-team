@@ -399,6 +399,75 @@ Five of six steps are now derived (only `meeting` is hardcoded).
 
 ---
 
+### Block E — Phase 4, the skip control
+
+> Only if the Phase 4 branch is in the build. Every item needs an unburned flag
+> or a `?tutorial=<id>` render; the renders are fine here because Block B has
+> already run.
+
+---
+
+**E1 · the control is visible and legible on every tour**
+Run `#/desk?tutorial=migrate`, `=folder`, `=task`, `=share`, and `=1`.
+**Expect:** on **every** screen of every tour, an **✕** at the top-right of the
+callout card, level with the STEP pill. Hovering it shows "Skip tour" (localised).
+It is present on screen 1, where **Back is hidden** — the two are independent.
+Repeat at **tablet width (768–1024px)**: the ✕ must not collide with the pill or
+overflow the card.
+**If it is missing on screen 1 only:** it was wired to the `hide_back` branch. →
+commit `542497b8`, `tooltip.js`.
+
+---
+
+**E2 · Escape does the same thing**
+With any tour on screen, press **Escape**.
+**Expect:** the tour fades out, identically to clicking ✕.
+Now press Escape with **no** tour on screen.
+**Expect:** whatever the desk normally does — the tour's binding must not have
+survived its own teardown.
+**If Escape stops working elsewhere in the app after a tour:** the hotkey was not
+unregistered. → `onBeforeDestroy` in `tutorial/index.js`.
+
+---
+
+**E3 · skipping a contextual tour records nothing extra**
+**RESET:** `migrate`. Reload.
+Click **+ New** so the `migrate` tour appears, then **skip it on screen 1**.
+**Expect:** it closes. Read the map (§2): `migrate` **is** present — it was
+recorded when it mounted, not when it ended. Click **+ New** again: **no tour**.
+**Also:** `settings` must **not** have gained `tutorial_done` (§2 read, look at
+the whole blob). Skipping a three-screen tour must never write that.
+
+---
+
+**E4 · skipping `full` leaves the contextual tours armed** — the one that matters
+**RESET: everything** (§2), reload, and confirm the map reads `NULL` or `{}`.
+Run `#/desk?tutorial=1` and **skip on step 1**.
+**Expect, from the §2 read and NOT from the UI:** `tutorials_seen` is still
+empty, and `tutorial_done` is **absent**.
+Then click **+ New**.
+**Expect:** the `migrate` tour runs — the user skipped the full tour, so they
+have not seen it.
+**If the map came back with all five ids, or the + New click does nothing:**
+skip was routed through `_enterWorkspace()`. → commit `542497b8`.
+
+---
+
+**E5 · Done still behaves as before**
+Run `#/desk?tutorial=1` and **finish it**, pressing Done on the last screen.
+**Expect:** the map now holds **all five** ids, and `tutorial_done` is `true`.
+This is the contrast to E4 and the regression cover for S7.
+
+---
+
+**E6 · the reward chain still follows a skipped tour**
+On a fresh signup (as in D1), let the `workspace` tour appear and **skip** it.
+**Expect:** the reward flow, LAUNCH30 and the invited-workspace prompt still
+follow, exactly as they do after Done — they chain on `destroy`, which skip
+reaches by the same `softDestroy()`.
+
+---
+
 ## 4. Triage
 
 | Symptom | Most likely cause | Commit / file |
@@ -421,6 +490,9 @@ Five of six steps are now derived (only `meeting` is hardcoded).
 | Reward flow / LAUNCH30 arrive ~20s after signup | A gated post-signup tour left the 20s net as the only route home | `61f3cbd9` |
 | The workspace tour never runs for a new signup | Its flag was burned by an earlier run or by `?tutorial=workspace` | §2 read, then reset `workspace` |
 | The wizard reappears AND the tour with it | The skip path is not marking `workspace` | `dadfb123` |
+| Skipping any tour writes `tutorial_done`, or skipping `full` marks all five | `end-tour` routed through the Done path | `542497b8` |
+| The ✕ is missing on screen 1 only | It was wired to the `hide_back` branch | `542497b8`, `tooltip.js` |
+| Escape stops working elsewhere after a tour | The capture hotkey was not unregistered | `onBeforeDestroy` |
 
 ---
 
@@ -442,6 +514,8 @@ Block B  B1 [ ]  B2 [ ]  B3 [ ]  B4 [ ]  B5 [ ]
 Block C  C1 [ ]  C2 [ ]
 Block D  (phase 3 only)
          D1 [ ]  D2 [ ]  D3 [ ]  D4 [ ]  D5 [ ]  D6 [ ]
+Block E  (phase 4 only)
+         E1 [ ]  E2 [ ]  E3 [ ]  E4 [ ]  E5 [ ]  E6 [ ]
 
 Failures / notes:
 ________________________________________________________
