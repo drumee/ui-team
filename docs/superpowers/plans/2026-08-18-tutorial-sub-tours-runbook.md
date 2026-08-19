@@ -289,9 +289,11 @@ and P1's extra sub-checks are folded in)*
 everything — finishing the full tour marks **all five** tours seen.
 **Expect:** the six-step tour, unchanged. **STEP 1/6 → 6/6**, meeting at **3/6**,
 Back live from step 2 onward, Done only on migrate's final screen.
-Four of six badges are now derived rather than hardcoded (folder 2/6, task 4/6,
-share 5/6, migrate 6/6) — this item is the check that they still read exactly
-what they read before.
+**All six badges are now derived** — nothing in any step file hardcodes a step
+number any more. This item is therefore the only thing standing behind six
+separate edits made across four phases, and it is the check that every one of
+them still reads exactly what it read before. Read all six, out loud if it
+helps: 1/6 workspace, 2/6 folder, 3/6 meeting, 4/6 task, 5/6 share, 6/6 migrate.
 Also confirm here: backdrop composition per step, and the layout at tablet width
 (768–1024px).
 **If any step's number changed:** → commit `57bbdba1` / `f776f650`, the C5 edits.
@@ -394,8 +396,8 @@ the flag, so the same account gets the tour on its first desktop session.
 ---
 
 **D6 · `?tutorial=1` after Phase 3**
-Five of six steps are now derived (only `meeting` is hardcoded).
-**Expect:** identical to B5 — **1/6 → 6/6**, meeting at 3/6.
+**Expect:** identical to B5 — **1/6 → 6/6**, meeting at 3/6. (After Phase 5a
+every badge is derived; B5 is the fuller version of this check.)
 
 ---
 

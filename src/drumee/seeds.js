@@ -140,9 +140,6 @@ module.exports = {
   tutorial_migrate: function () {
     return import("./modules/desk/tutorial/migrate");
   },
-  tutorial_settings: function () {
-    return import("./modules/desk/tutorial/settings");
-  },
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");
   },

@@ -322,14 +322,67 @@ test("workspace ends its own tour but not the full one", () => {
   assert.equal(isLastScreen(widget({ is_last: false }), 2, 3), false);
 });
 
-test("five of six full-tour steps are now derived; only meeting is hardcoded", () => {
+test("NO step file carries a hardcoded badge — every one is derived", () => {
+  // Inverted in phase 5a, when meeting — the last holdout — was derived. It was
+  // written in phase 3 as a positive assertion naming the remaining step, so
+  // that this phase could not finish C5 without noticing. Kept permanently in
+  // this form: a new step widget that hardcodes "STEP n/m" fails here rather
+  // than quietly disagreeing with its tour's registry entry.
   const dir = join(REPO_ROOT, "src/drumee/modules/desk/tutorial");
   const hardcoded = [];
   for (const step of ["workspace", "folder", "meeting", "task", "share", "migrate"]) {
     const src = readFileSync(join(dir, step, "index.js"), "utf8");
-    if (/badge_text: 'STEP \d/.test(src)) hardcoded.push(step);
+    if (/badge_text:\s*['"`]STEP/.test(src)) hardcoded.push(step);
   }
-  assert.deepEqual(hardcoded, ["meeting"], "C5 for meeting is deliberately out of scope");
+  assert.deepEqual(hardcoded, []);
+});
+
+test("the retired settings step is gone, by string and not just by import", () => {
+  const roots = ["src/drumee", "tests"];
+  const hits = [];
+  const walk = (dir) => {
+    for (const e of require("node:fs").readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!/\.(js|scss|json)$/.test(e.name)) continue;
+      // Skip this file: it carries the search term in its own regex, and a
+      // sweep that matches itself can never go green.
+      if (full === __filename) continue;
+      const src = readFileSync(full, "utf8");
+      if (/tutorial_settings|tutorial-settings/.test(src)) hits.push(full);
+    }
+  };
+  for (const r of roots) walk(join(REPO_ROOT, r));
+  assert.deepEqual(hits, [], "a stale reference would only fail at runtime");
+  assert.equal(
+    require("node:fs").existsSync(
+      join(REPO_ROOT, "src/drumee/modules/desk/tutorial/settings"),
+    ),
+    false,
+  );
+});
+
+test("Escape does nothing when no tour is mounted", () => {
+  // The binding is registered in onDomRefresh and unregistered in
+  // onBeforeDestroy, so its lifetime is exactly the tour's. A capture-phase
+  // global Escape outranks the app's other handlers, so it must not outlive the
+  // thing it belongs to.
+  const host = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/index.js"), "utf8",
+  );
+  const dom = host.slice(host.indexOf("  onDomRefresh() {"));
+  assert.match(dom.slice(0, dom.indexOf("\n  }\n")), /this\._bindEscape\(\)/);
+
+  const destroyAt = host.indexOf("  onBeforeDestroy() {");
+  assert.notEqual(destroyAt, -1, "no teardown hook");
+  const destroy = host.slice(destroyAt, host.indexOf("\n  }\n", destroyAt));
+  assert.match(destroy, /unregister\(this\._escapeHotkey\)/);
+  assert.match(destroy, /this\._escapeHotkey = null/);
+
+  // Registered nowhere else — not at module load, not from the desk.
+  assert.equal((host.match(/hotkeys\.register\(/g) || []).length, 1);
+  const desk = readFileSync(join(REPO_ROOT, "src/drumee/modules/desk/index.js"), "utf8");
+  assert.ok(!/tutorial-escape/.test(desk), "the desk must not own the tour's Escape");
 });
 
 test("the full tour's step numbering is unchanged by any of this", () => {
