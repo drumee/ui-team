@@ -125,13 +125,13 @@ test("share: kebab first, then Manage access — identical outcome", () => {
   assert.equal(posts.length, 1);
 });
 
-test("share and task are independent flags", () => {
+test("share and folder_task are independent flags", () => {
   const host = fresh();
   triggerAndMount("share", host);
   Tours.release("share");
-  assert.equal(Tours.fire("task", host), true, "task is a different tour");
-  assert.deepEqual(broadcasts.map((b) => b.payload.tour), ["share", "task"]);
-  Tours.release("task");
+  assert.equal(Tours.fire("folder_task", host), true, "a different tour");
+  assert.deepEqual(broadcasts.map((b) => b.payload.tour), ["share", "folder_task"]);
+  Tours.release("folder_task");
 });
 
 test("a share recorded on a previous device suppresses both entries", () => {
@@ -146,8 +146,8 @@ test("a share recorded on a previous device suppresses both entries", () => {
 test("a share click during a running folder tour mounts nothing AND records nothing", () => {
   const host = fresh();
   // A desk tile mounted the folder tour; it is on screen.
-  assert.equal(triggerAndMount("folder", host), true);
-  assert.equal(Tours.inFlight(), "folder");
+  assert.equal(triggerAndMount("folder_task", host), true);
+  assert.equal(Tours.inFlight(), "folder_task");
 
   // The user reaches a share control while it is up.
   assert.equal(Tours.fire("share", host), false, "single-flight holds");
@@ -156,10 +156,10 @@ test("a share click during a running folder tour mounts nothing AND records noth
   // The half that is easy to miss: `share` must NOT be marked seen, or the
   // user loses it permanently to a tour they were not shown.
   assert.equal(Tours.isSeen("share", host), false);
-  assert.deepEqual(posts.map((p) => p.payload.tour_id), ["folder"]);
+  assert.deepEqual(posts.map((p) => p.payload.tour_id), ["folder_task"]);
 
   // Once the folder tour is dismissed, the next share click works.
-  Tours.release("folder");
+  Tours.release("folder_task");
   assert.equal(Tours.fire("share", host), true);
   Tours.release("share");
 });
@@ -184,14 +184,15 @@ test("a fire raised from builtins reaches the desk's channel listener", () => {
 
 // ── badges (§8 48) ───────────────────────────────────────────────────────────
 
-test("task badges 1/5 .. 5/5 standing alone, never 1/1", () => {
-  const t = TOURS.task;
-  assert.equal(t.steps[0].screens, 5);
-  const ui = widget({ badge_mode: BADGE_BY_SCREENS, screen_count: 5 });
-  assert.deepEqual(
-    [0, 1, 2, 3, 4].map((i) => stepBadge(ui, i)),
-    ["STEP 1/5", "STEP 2/5", "STEP 3/5", "STEP 4/5", "STEP 5/5"],
-  );
+test("folder_task badges by STEP: 1/2 for folder, 2/2 for the tracker", () => {
+  const t = TOURS.folder_task;
+  assert.deepEqual(t.steps.map((s) => s.screens), [3, 5]);
+  // All three folder screens carry the step's number, and all five tracker
+  // views carry theirs — the same rule every step of `full` follows.
+  const folder = widget({ badge_mode: "steps", badge_text: "STEP 1/2" });
+  assert.deepEqual([0, 1, 2].map((i) => stepBadge(folder, i)), Array(3).fill("STEP 1/2"));
+  const task = widget({ badge_mode: "steps", badge_text: "STEP 2/2" });
+  assert.deepEqual([0, 1, 2, 3, 4].map((i) => stepBadge(task, i)), Array(5).fill("STEP 2/2"));
 });
 
 test("share badges 1/3 .. 3/3 standing alone, never 1/1", () => {
@@ -202,14 +203,14 @@ test("share badges 1/3 .. 3/3 standing alone, never 1/1", () => {
   );
 });
 
-test("inside full, task's five views all read 4/6 and share's three read 5/6", () => {
+test("inside full, the tracker's five views all read 4/6 and share's three read 5/6", () => {
   const task = widget({ badge_mode: "steps", badge_text: "STEP 4/6" });
   assert.deepEqual([0, 1, 2, 3, 4].map((i) => stepBadge(task, i)), Array(5).fill("STEP 4/6"));
   const share = widget({ badge_mode: "steps", badge_text: "STEP 5/6" });
   assert.deepEqual([0, 1, 2].map((i) => stepBadge(share, i)), Array(3).fill("STEP 5/6"));
 });
 
-test("Done lands on the last view of task and the last screen of share", () => {
+test("Done lands on the last view of the tracker and the last screen of share", () => {
   const last = widget({ is_last: true });
   assert.deepEqual([0, 1, 2, 3, 4].map((i) => isLastScreen(last, i, 5)), [false, false, false, false, true]);
   assert.deepEqual([0, 1, 2].map((i) => isLastScreen(last, i, 3)), [false, false, true]);
@@ -329,15 +330,20 @@ test("share B fires at the top of the case, before the latch race starts", () =>
   }
 });
 
-test("tab-task fires and the tab still opens", () => {
+test("tab-task raises NO tour — the tracker belongs to folder_task", () => {
+  // It had its own trigger for one revision. Merged back on request: the
+  // tracker is step two of the tour the desk raises when a folder is opened,
+  // and the Tasks tab is not where a first-time user looks for it.
   const block = caseSlice(FOLDER, "tab-task");
-  assert.match(block, /fire\("task"/);
-  assert.match(block, /return this\.showFolderTab\(_a\.task\)/);
+  assert.ok(!/fire\(/.test(block), "the Tasks tab must not fire a tour");
+  assert.match(block, /return this\.showFolderTab\(_a\.task\)/, "the tab still opens");
+  assert.ok(!/fire\("task"/.test(FOLDER), "no `task` tour id survives anywhere");
 });
 
-test("the folder window warms both of the tours it can trigger", () => {
+test("the folder window warms only the tour it can still trigger", () => {
   assert.match(FOLDER, /Kind\.waitFor\("tutorial_share"\)/);
-  assert.match(FOLDER, /Kind\.waitFor\("tutorial_task"\)/);
+  assert.ok(!/Kind\.waitFor\("tutorial_task"\)/.test(FOLDER),
+    "the tracker moved back to folder_task, which the desk warms");
 });
 
 test("no builtins site marks a tour seen", () => {

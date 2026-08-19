@@ -42,12 +42,20 @@ const widget = (attrs) => ({ mget: (k) => attrs[k] });
 
 // ── registry invariants ──────────────────────────────────────────────────────
 
-test("every flagged tour is single-step, which is what 'screens' badging requires", () => {
+test("badge mode matches step count for every flagged tour", () => {
+  // Single-step tours count screens (migrate 1/3 -> 3/3); a multi-step tour
+  // must count steps, because screen numbering inside one step would claim to
+  // be counting the whole tour. folder_task is the only multi-step flagged one.
   for (const id of flaggedIds()) {
     const t = TOURS[id];
-    assert.equal(t.badge, BADGE_BY_SCREENS, `${id} should count screens`);
-    assert.equal(t.steps.length, 1, `${id} must be single-step to badge by screens`);
+    if (t.steps.length === 1) {
+      assert.equal(t.badge, BADGE_BY_SCREENS, `${id} is single-step, should count screens`);
+    } else {
+      assert.equal(t.badge, BADGE_BY_STEPS, `${id} is multi-step, must count steps`);
+    }
   }
+  assert.equal(TOURS.folder_task.steps.length, 2);
+  assert.equal(TOURS.folder_task.badge, BADGE_BY_STEPS);
 });
 
 test("full keeps the original six steps, in order, and is never suppressed", () => {
@@ -169,8 +177,8 @@ function build(tourDef) {
 }
 
 test("a step with a backdrop feeds [backdrop, widget], interactive LAST", () => {
-  const out = build(TOURS.folder);
-  assert.equal(out.length, 1);
+  const out = build(TOURS.folder_task);
+  assert.equal(out.length, 2);
   assert.ok(Array.isArray(out[0]));
   assert.deepEqual(out[0][0], { backdrop: "faded" });
   // _widgetAt merges enter_at_last onto the LAST entry, so the interactive
@@ -299,8 +307,7 @@ test("every tour's step one is its OWN first step, not the workspace step", () =
   for (const id of Object.keys(TOURS)) first[id] = TOURS[id].steps[0].kind;
   assert.deepEqual(first, {
     workspace: "tutorial_workspace",
-    folder: "tutorial_folder",
-    task: "tutorial_task",
+    folder_task: "tutorial_folder",
     share: "tutorial_share",
     migrate: "tutorial_migrate",
     meeting: "tutorial_meeting",

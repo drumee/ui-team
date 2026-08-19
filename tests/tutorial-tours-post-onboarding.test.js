@@ -182,7 +182,7 @@ const GATES = [
   ["already seen", { settings: { tutorials_seen: { workspace: 1787000000 } } }],
   ["a legacy tutorial_done user", { settings: { tutorial_done: true } }],
   ["mobile", { mobile: true }],
-  ["another tour already in flight", { inFlight: "folder" }],
+  ["another tour already in flight", { inFlight: "folder_task" }],
 ];
 
 for (const [reason, opts] of GATES) {

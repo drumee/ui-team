@@ -61,7 +61,7 @@ function caseBlock(src, label) {
 test("wm fires the folder tour AFTER openContent, never before", () => {
   const block = caseBlock(WM, "open-node");
   const open = block.indexOf("this.openContent(cmd, args)");
-  const fire = block.indexOf('fire("folder"');
+  const fire = block.indexOf('fire("folder_task"');
   assert.notEqual(open, -1, "openContent call not found");
   assert.notEqual(fire, -1, "folder trigger not found");
   assert.ok(open < fire, "the tour must not pre-empt the navigation");
@@ -80,14 +80,14 @@ test("wm discriminates on the MODEL's filetype, not on a section element", () =>
 
 test("the sidebar fires on both of its open routes", () => {
   // loadWorkspace alone is not enough: a sub-folder row opens a folder WINDOW.
-  assert.match(SIDEBAR, /case "load-workspace":[\s\S]*?fire\("folder"/);
-  assert.match(SIDEBAR, /case "load-folder":[\s\S]*?fire\("folder"/);
+  assert.match(SIDEBAR, /case "load-workspace":[\s\S]*?fire\("folder_task"/);
+  assert.match(SIDEBAR, /case "load-folder":[\s\S]*?fire\("folder_task"/);
 });
 
 test("the sidebar fires after handing off to Wm, not instead of it", () => {
   const block = caseBlock(SIDEBAR, "load-workspace");
   assert.ok(
-    block.indexOf("Wm.loadWorkspace(target)") < block.indexOf('fire("folder"'),
+    block.indexOf("Wm.loadWorkspace(target)") < block.indexOf('fire("folder_task"'),
   );
 });
 

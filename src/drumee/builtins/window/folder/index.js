@@ -422,14 +422,14 @@ class __window_folder extends mfsInteract {
     // placeholders still resolve exactly as before.
     if (Kind && _.isFunction(Kind.waitFor)) {
       Kind.waitFor("media").catch(() => { });
-      // Warm the two tours this window can trigger — Manage access / the kebab
-      // Share item, and the Tasks tab — so the first click paints from memory.
-      // Safe to repeat per window: waitFor returns the registered class on its
-      // first line once the chunk has landed (ui-core letc/kind/index.js:244),
-      // and before that webpack has already memoized the import() promise, so
-      // several open folders cost one fetch and then a map lookup each.
+      // Warm the one tour this window can still trigger — Manage access and
+      // the kebab Share item. The tracker moved back into `folder_task`, which
+      // the desk raises and warms. Safe to repeat per window: waitFor returns
+      // the registered class on its first line once the chunk has landed
+      // (ui-core letc/kind/index.js:244), and before that webpack has already
+      // memoized the import() promise, so several open folders cost one fetch
+      // and then a map lookup each.
       Kind.waitFor("tutorial_share").catch(() => { });
-      Kind.waitFor("tutorial_task").catch(() => { });
     }
     setGrouped(this, true);
     this.setViewMode(_a.icon, false);
@@ -1712,16 +1712,9 @@ class __window_folder extends mfsInteract {
       }
 
       case "tab-task":
-        // Contextual tour: the Tasks tab is exactly what tutorial_task mocks —
-        // folder chrome, a tab bar with Tasks active, and the five-view
-        // switcher. Unlike opening a workspace, clicking this tab is a
-        // considered, low-frequency action, which is why the tracker tour hangs
-        // off it rather than off navigation.
-        //
-        // Raised before showFolderTab only because that call is synchronous and
-        // returns the render; the tab still opens either way, and fire() itself
-        // never blocks — it broadcasts and returns.
-        require("libs/tutorial-tours").fire("task", this);
+        // No tour here. The tracker is step two of `folder_task`, which the
+        // desk raises when a workspace or folder is opened — the Tasks tab is
+        // not where a first-time user goes looking for it.
         return this.showFolderTab(_a.task);
 
       case "toggle-task-filter":

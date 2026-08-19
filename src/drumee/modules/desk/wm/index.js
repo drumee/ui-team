@@ -1185,10 +1185,12 @@ class __window_manager extends push {
    */
   onPartReady(child, pn) {
     if (pn === _a.list) {
-      // Warm the folder tour's chunk while the grid that triggers it renders,
-      // so the first tile click paints from memory rather than the network.
+      // Warm BOTH of folder_task's steps while the grid that triggers it
+      // renders, so neither the first tile click nor the step boundary inside
+      // the tour pays a round trip.
       if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
         Promise.resolve(Kind.waitFor("tutorial_folder")).catch(() => {});
+        Promise.resolve(Kind.waitFor("tutorial_task")).catch(() => {});
       }
     }
     if (pn === _a.list && child && !child._homeGridFilterInstalled) {
@@ -2049,7 +2051,7 @@ class __window_manager extends push {
         // tile IS.
         const _ft = cmd.mget && cmd.mget(_a.filetype);
         if (_ft === _a.hub || _ft === _a.folder) {
-          require("libs/tutorial-tours").fire("folder", this);
+          require("libs/tutorial-tours").fire("folder_task", this);
         }
         return this.unselect();
       }

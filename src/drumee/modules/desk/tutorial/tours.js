@@ -42,20 +42,26 @@ const TOURS = {
     steps: [{ kind: "tutorial_workspace", screens: 3 }],
   },
 
-  folder: {
-    id: "folder",
-    flag: "folder",
-    badge: BADGE_BY_SCREENS,
+  // Folders and the tracker inside them are one tour, reached by opening a
+  // workspace or a folder. They were split for one revision — the tracker
+  // hung off the Tasks tab — because eight screens behind the desk's primary
+  // navigation gesture is a lot to put in front of someone who just wanted to
+  // open a folder. Merged back on request: the two steps teach one thing, and
+  // the Tasks tab is not where a first-time user goes looking for it.
+  //
+  // The only multi-step FLAGGED tour, so it badges by step: all three folder
+  // screens read "STEP 1/2" and all five tracker screens "STEP 2/2", the same
+  // way every step of `full` carries its own number. Screen-level numbering is
+  // refused for a multi-step tour (see _buildWidgets) because it would label
+  // tracker view 4 as "4/5" while claiming to count the whole tour.
+  folder_task: {
+    id: "folder_task",
+    flag: "folder_task",
+    badge: BADGE_BY_STEPS,
     steps: [
       { kind: "tutorial_folder", screens: 3, backdrop: ["workspaceFaded"] },
+      { kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] },
     ],
-  },
-
-  task: {
-    id: "task",
-    flag: "task",
-    badge: BADGE_BY_SCREENS,
-    steps: [{ kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] }],
   },
 
   share: {

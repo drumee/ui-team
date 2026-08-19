@@ -119,7 +119,7 @@ test("47 a brand-new account has an ABSENT map and every tour is armed", () => {
 
 test("47 an empty settings object is still a new user, not a failure", () => {
   const { Tours, host } = fresh({ settings: { email_notifications: 1 } });
-  assert.equal(Tours.isSeen("folder", host), false);
+  assert.equal(Tours.isSeen("folder_task", host), false);
 });
 
 test("47 a missing settings payload fails closed and writes nothing", () => {
@@ -139,7 +139,7 @@ test("47 a missing settings payload fails closed and writes nothing", () => {
 test("47 a non-object tutorials_seen is corrupt and fails closed", () => {
   const { Tours, host } = fresh({ settings: { tutorials_seen: "nope" } });
   assert.equal(Tours.serverState().degraded, true);
-  assert.equal(Tours.isSeen("folder", host), true);
+  assert.equal(Tours.isSeen("folder_task", host), true);
 
   const arr = fresh({ settings: { tutorials_seen: ["folder"] } });
   assert.equal(arr.Tours.serverState().degraded, true);
@@ -148,10 +148,10 @@ test("47 a non-object tutorials_seen is corrupt and fails closed", () => {
 test("a recorded tour is seen; its siblings are not", () => {
   const { Tours, host } = fresh({ settings: { tutorials_seen: { migrate: 1787000000 } } });
   assert.equal(Tours.isSeen("migrate", host), true);
-  assert.equal(Tours.isSeen("folder", host), false);
+  assert.equal(Tours.isSeen("folder_task", host), false);
   assert.equal(Tours.fire("migrate", host), false);
-  assert.equal(Tours.fire("folder", host), true);
-  Tours.release("folder");
+  assert.equal(Tours.fire("folder_task", host), true);
+  Tours.release("folder_task");
 });
 
 test("a legacy tutorial_done user has seen everything (S7 inference)", () => {
@@ -194,9 +194,12 @@ test("D9 mobile: no tour fires AND no flag is written", () => {
 
 test("an unknown tour id never fires or records", () => {
   const { Tours, host } = fresh({ settings: {} });
-  assert.equal(Tours.fire("folder_task", host), false);
-  Tours.markSeen("folder_task", host);
+  // A plausible-looking id that is NOT in the registry — the shape a typo or a
+  // half-finished rename takes.
+  assert.equal(Tours.fire("folder", host), false);
+  Tours.markSeen("folder", host);
   assert.equal(posts.length, 0);
+  assert.equal(Tours.fire("tasks", host), false);
 });
 
 // ── single-flight and the guard timer ────────────────────────────────────────
@@ -204,7 +207,7 @@ test("an unknown tour id never fires or records", () => {
 test("single-flight: a second trigger is refused while one is in flight", () => {
   const { Tours, host } = fresh({ settings: {} });
   assert.equal(Tours.fire("migrate", host), true);
-  assert.equal(Tours.fire("folder", host), false);
+  assert.equal(Tours.fire("folder_task", host), false);
   assert.equal(broadcasts.length, 1);
   assert.equal(Tours.inFlight(), "migrate");
   Tours.release("migrate");
@@ -221,11 +224,11 @@ test("43a a tour whose chunk never arrives releases the guard on timeout", (t) =
   // The tour never mounts, so armed() is never called and destroy never fires.
   t.mock.timers.tick(Tours.GUARD_TIMEOUT_MS + 20);
   assert.equal(Tours.inFlight(), null, "guard must not wedge the session");
-  assert.equal(Tours.fire("folder", host), true, "a different tour can still run");
+  assert.equal(Tours.fire("folder_task", host), true, "a different tour can still run");
   // Release before the mock clock is torn down: a timer armed under mock
   // timers and left pending is re-armed for real when they are restored, and
   // holds the runner's event loop open for its full 30s.
-  Tours.release("folder");
+  Tours.release("folder_task");
 });
 
 test("43b a mounted tour holds the guard past GUARD_TIMEOUT_MS", (t) => {
@@ -242,7 +245,7 @@ test("43b a mounted tour holds the guard past GUARD_TIMEOUT_MS", (t) => {
   // could mount on top of the one being read.
   t.mock.timers.tick(Tours.GUARD_TIMEOUT_MS + 20);
   assert.equal(Tours.inFlight(), "migrate");
-  assert.equal(Tours.fire("folder", host), false);
+  assert.equal(Tours.fire("folder_task", host), false);
   Tours.release("migrate");
   assert.equal(Tours.inFlight(), null);
 });
@@ -251,7 +254,7 @@ test("release is id-checked so a stale destroy cannot clear a newer guard", () =
   const { Tours, host } = fresh({ settings: {} });
   Tours.fire("migrate", host);
   Tours.armed();
-  Tours.release("folder"); // late destroy from an earlier, different tour
+  Tours.release("folder_task"); // late destroy from an earlier, different tour
   assert.equal(Tours.inFlight(), "migrate");
   Tours.release("migrate");
   assert.equal(Tours.inFlight(), null);
@@ -293,7 +296,7 @@ test("markSeen writes the mirror synchronously, then posts", () => {
   // And the lazy reconcile, running afterwards, must not re-post it: the boot
   // payload predates our own write, so the id is legitimately absent from the
   // server map it read.
-  Tours.isSeen("folder", host);
+  Tours.isSeen("folder_task", host);
   assert.equal(posts.length, 1, "reconcile must skip ids posted this session");
 });
 
@@ -314,7 +317,7 @@ test("46 next boot, still missing server-side: reconcile re-posts once", () => {
   store["drumee.tutorials_seen"] = JSON.stringify(["migrate"]);
   load();
 
-  Tours.isSeen("folder", host); // any entry point triggers the lazy reconcile
+  Tours.isSeen("folder_task", host); // any entry point triggers the lazy reconcile
   assert.equal(posts.length, 1);
   assert.equal(posts[0].payload.tour_id, "migrate");
   assert.deepEqual(JSON.parse(store["drumee.tutorials_seen"]), ["migrate"]);
@@ -329,7 +332,7 @@ test("46 once the server map carries it, reconcile prunes and posts nothing", ()
   store["drumee.tutorials_seen"] = JSON.stringify(["migrate"]);
   load();
 
-  Tours.isSeen("folder", host);
+  Tours.isSeen("folder_task", host);
   assert.equal(posts.length, 0, "no re-POST once the write has landed");
   assert.deepEqual(JSON.parse(store["drumee.tutorials_seen"]), []);
 });
@@ -338,7 +341,7 @@ test("46 a degraded payload never re-posts from the mirror", () => {
   const host = stubGlobals({ noSettings: true });
   store["drumee.tutorials_seen"] = JSON.stringify(["migrate"]);
   load();
-  Tours.isSeen("folder", host);
+  Tours.isSeen("folder_task", host);
   assert.equal(posts.length, 0);
 });
 

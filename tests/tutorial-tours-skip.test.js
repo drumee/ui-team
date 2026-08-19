@@ -49,7 +49,7 @@ function methodBody(src, signature) {
  * both, and a shadowed global would let the extracted code read a stub the
  * assertions never see.
  */
-function makeHost({ tourId = "migrate", flagged = ["workspace", "folder", "task", "share", "migrate"] } = {}) {
+function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "share", "migrate"] } = {}) {
   const log = [];
   const store = {};
   const host = {
@@ -116,7 +116,7 @@ test("Done on `full` still marks every flagged tour — S7 regression cover", ()
   done();
   assert.deepEqual(
     log.filter((l) => l.startsWith("markSeen")),
-    ["markSeen:workspace", "markSeen:folder", "markSeen:task", "markSeen:share", "markSeen:migrate"],
+    ["markSeen:workspace", "markSeen:folder_task", "markSeen:share", "markSeen:migrate"],
   );
   assert.ok(log.some((l) => l.includes("tutorial_done")));
 });

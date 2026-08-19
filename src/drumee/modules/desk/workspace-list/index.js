@@ -176,7 +176,7 @@ class __desk_workspace extends LetcBox {
         // never see it. Single-flight plus the seen-set make the overlap
         // harmless. Raised after the navigation is under way so the tour can
         // never swallow it.
-        require("libs/tutorial-tours").fire("folder", this);
+        require("libs/tutorial-tours").fire("folder_task", this);
         if (result && result.then)
           return result.then(() => this.openWorkspace(trigger));
         return this.openWorkspace(trigger);
@@ -185,7 +185,7 @@ class __desk_workspace extends LetcBox {
       case "load-folder":
         // The sidebar's sub-folder rows open a folder WINDOW rather than a
         // workspace, so loadWorkspace above does not cover them.
-        require("libs/tutorial-tours").fire("folder", this);
+        require("libs/tutorial-tours").fire("folder_task", this);
         return Wm.openWorkspaceFolder(trigger);
 
       case "new-workspace":
