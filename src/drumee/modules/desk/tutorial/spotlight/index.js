@@ -130,7 +130,19 @@ class __tutorial_spotlight extends LetcBox {
       ...tooltip,
       direction,
       style: anchorFor(anchorRect, direction),
+      // Back/Next belong to the step that owns the screen; ending the tour
+      // belongs to the tour. The spotlight is the only object holding both
+      // references — `owner` is the step, and its own partHandler is
+      // tutorial_main — so it is where the two are separated.
+      host: this._tourHost(),
     }));
+  }
+
+  /** tutorial_main, from the partHandler the shell fed us. */
+  _tourHost() {
+    const h = this.mget(_a.partHandler);
+    if (!h) return null;
+    return _.isArray(h) ? h[0] : h;
   }
 
   clear() {

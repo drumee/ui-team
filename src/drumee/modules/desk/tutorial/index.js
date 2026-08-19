@@ -96,6 +96,7 @@ class tutorial_main extends LetcBox {
     //              indefinitely.
     Tours.armed();
     if (this._tour.flag) Tours.markSeen(this._tour.flag, this);
+    this._bindEscape();
     this.feed(require('./skeleton')(this));
     this._preloadSteps();
   }
@@ -199,6 +200,76 @@ class tutorial_main extends LetcBox {
     ).then(exit).catch(exit);
   }
 
+  /**
+   * Leave the tour without finishing it.
+   *
+   * Deliberately NOT _enterWorkspace(), which is the DONE path and does two
+   * things skip must not:
+   *
+   *   tutorial_done   Writing it because someone dismissed a three-screen tour
+   *                   is wrong on its face, and it is load-bearing: S7 reads
+   *                   `tutorial_done` truthy + `tutorials_seen` ABSENT as "has
+   *                   seen everything". The map is never absent once a tour has
+   *                   mounted, so the inference does not fire today — but a QA
+   *                   reset clears the map, and then a single skip would
+   *                   permanently suppress every tour.
+   *   write-all       For `full`, Done marks all five flagged tours seen. Skipping
+   *                   `full` on screen 1 would record the user as having seen
+   *                   every tour they just declined to watch.
+   *
+   * So skip writes NOTHING. It does not have to: the tour was recorded when it
+   * mounted (D4), which is what stops it re-triggering. Skipping `full` records
+   * nothing at all, which is correct — `full` is unflagged, and a user who left
+   * it early has not seen the contextual tours, so those stay armed.
+   *
+   * softDestroy() is the same teardown Done uses, so everything chained on
+   * `destroy` — the reward flow, LAUNCH30, the invited-workspace prompt, the
+   * Get-help return, the single-flight release — behaves identically.
+   */
+  /**
+   * Escape leaves the tour, exactly as the skip control does.
+   *
+   * CAPTURE phase, deliberately. The desk already owns a bubble-phase Escape
+   * (`desk-escape`, modules/desk/index.js), and its match guards on
+   * `!e.defaultPrevented` — so a capture binding that reports it acted gets
+   * preventDefault() from the hotkeys lib and the desk's handler then declines
+   * the same keypress on its own terms. The two interlock through the existing
+   * contract rather than racing.
+   *
+   * `inTextEntry` is not checked: the tour renders its own mock desk and has no
+   * focusable inputs, so there is nothing to type into.
+   *
+   * A full-screen thing you cannot dismiss with Escape is a UX smell, and the
+   * permanence argument does not apply here — the tour is already recorded from
+   * mount, so an accidental Escape costs exactly what an accidental reload
+   * already costs.
+   */
+  _bindEscape() {
+    const hotkeys = require('libs/hotkeys');
+    this._escapeHotkey = hotkeys.register({
+      name: `tutorial-escape-${this._id}`,
+      phase: 'capture',
+      match: (e) => e.key === 'Escape' && !e.defaultPrevented,
+      run: () => {
+        if (this.isDestroyed && this.isDestroyed()) return false;
+        this._skipTour();
+        return true;
+      },
+    });
+  }
+
+  onBeforeDestroy() {
+    if (this._escapeHotkey) {
+      require('libs/hotkeys').unregister(this._escapeHotkey);
+      this._escapeHotkey = null;
+    }
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  _skipTour() {
+    this.softDestroy();
+  }
+
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
@@ -207,6 +278,12 @@ class tutorial_main extends LetcBox {
         break;
       case 'back-step':
         this._prevStep();
+        break;
+      // Raised by the callout's skip control, which the spotlight wires at this
+      // widget rather than at the step — see tooltip.js. One case here instead
+      // of a forwarding case in each of the six step files.
+      case 'end-tour':
+        this._skipTour();
         break;
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));

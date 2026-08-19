@@ -57,6 +57,35 @@
     border: 1px solid var(--border-muted);
   }
 
+  // Header: step pill left, skip right. The pill keeps align-self:flex-start so
+  // it stays pill-shaped; the row is what spans the card.
+  &__s1-header {
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__s1-skip {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s ease;
+
+    &:hover,
+    &:focus-visible {
+      opacity: 1;
+    }
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg);
+    }
+  }
+
   &__s1-badge {
     align-items: center;
     gap: 6px;
