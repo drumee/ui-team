@@ -5,7 +5,7 @@
 This closes the manual gate on Phases 1 and 2, which have never run in a
 browser. Budget ~90 minutes. Work top to bottom: the order is load-bearing.
 
-Source checklists: `…-phase1-notes.md` and `…-phase2-notes.md`. Item labels
+Source checklists are folded into `…-phases.md`. Item labels
 (`P1-4`, `P2-7`) are kept so a failure maps back to its phase and commit.
 
 ---

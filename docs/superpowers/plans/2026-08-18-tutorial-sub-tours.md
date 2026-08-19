@@ -124,7 +124,7 @@ in situ (item A11a).
 | Section | Change | Driver |
 |---|---|---|
 | §1 | **Citation convention** stated, and applied across the document: 64 distinct citation forms for modified files converted from `path:line` to `path` + symbol | Closing pass |
-| — | No behavioural claim changed. Statements found to have drifted are listed for decision in `…-phase5a-notes.md`, not edited in place | Closing pass |
+| — | No behavioural claim changed. Statements found to have drifted are listed for decision in `…-phases.md`, not edited in place | Closing pass |
 
 ---
 

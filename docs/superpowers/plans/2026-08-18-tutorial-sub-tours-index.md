@@ -62,7 +62,7 @@ actually a product decision with engineering work behind one of its answers.
 
 ## 4. Documents
 
-**Durable** — outlive the branches, keep them:
+Five documents. The first three are durable; the fourth is operational; the fifth is history.
 
 | Document | What it is | Read it when |
 |---|---|---|
@@ -70,16 +70,10 @@ actually a product decision with engineering work behind one of its answers.
 | `…-runbook.md` | The manual verification gate. Setup, state SQL, 18 items in an order that does not burn state, triage table, sign-off block. | Before any merge. It is the gate. |
 | `…-rollout.md` | Phase 5b. Preconditions, staging, watch signals, rollback, the §2b interruption decision and its backfill, and the flag-removal work. | Before enabling anything for a real user. |
 
-**Phase-scoped scaffolding** — accurate for their phase, superseded by the plan
-where they disagree; archive once merged:
+| `…-phases.md` | The build log: one section per phase — what shipped, what the plan got wrong, what was deferred. Opens with **every correction to the plan**, all phases in one table. | Writing a PR description for §2, or wondering why something was built the way it was. |
 
-`…-phase1-notes.md` / `-pr.md`, `…-phase2-notes.md` / `-pr.md`,
-`…-phase3-notes.md` / `-pr.md`, `…-phase4-notes.md` / `-pr.md`,
-`…-phase5a-notes.md` / `-pr.md`.
-
-Each notes file carries that phase's **drift table** (what the plan said vs what
-the code actually did) and its deferrals. The PR files are the descriptions for
-the merges in §2.
+`…-phases.md` is history; where it disagrees with the plan, the plan wins. It
+replaces ten earlier per-phase notes/PR files, whose content is folded into it.
 
 ---
 
