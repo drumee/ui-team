@@ -469,16 +469,33 @@ test("the callout focuses on the thread panel", () => {
   assert.match(threads, /__th-panel`[\s\S]{0,200}sys_pn: "thread-panel"/);
 });
 
-test("the hint group is what the spotlight lights", () => {
+test("the hole is wide enough to hold the panel AND the hover hint", () => {
   const folder = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/index.js"), "utf8",
   );
   const screen = folder.slice(folder.indexOf("skeleton: threadHintScreen"));
-  assert.match(screen.slice(0, screen.indexOf("},")), /target: 'chat-hint'/);
+  const block = screen.slice(0, screen.indexOf("},"));
+  assert.match(block, /target: 'thread-panel'/);
+  const radius = Number((block.match(/radius: (\d+)/) || [])[1]);
+
+  // Geometry, measured off the 1:1 design render. The hole is centred on the
+  // panel and is clear to 55% of its radius (spotlight/skin), so the hover
+  // hint 368px away has to fall inside that core — otherwise this screen
+  // lights the panel and leaves its actual subject in the fade.
+  const PANEL = { x: 1255, y: 547 };
+  const HINT = { x: 920, y: 700 };
+  const dist = Math.hypot(HINT.x - PANEL.x, HINT.y - PANEL.y);
+  assert.ok(dist < radius * 0.55,
+    `hover hint is ${dist.toFixed(0)}px out but the clear core is only ${(radius * 0.55).toFixed(0)}px`);
+
+  // And it should not wildly exceed the design's own vignette (729 across).
+  assert.ok(radius <= 900, "wider than the design lights, which dims nothing");
+
   const threads = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
   );
-  // chat-hint wraps the tooltip AND the bar, so both are inside the hole.
+  // chat-hint still groups the tooltip with the bar for layout, even though the
+  // hole is no longer measured from it.
   assert.match(threads, /sys_pn: "chat-hint"[\s\S]{0,200}replyInThreadTip\(pfx\), chatActionBar/);
 });
 

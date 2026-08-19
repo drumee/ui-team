@@ -32,19 +32,20 @@ const SCREENS = [
     // same copy as the screen after it: the pair reads as one idea, shown then
     // explained, which is how the design frames it.
     skeleton: threadHintScreen,
-    // The hole lights the hint itself — the "Reply in thread" tooltip and the
-    // bar under it — because that is what this screen is about. The callout
-    // still points at the thread card, as the design places it: the card says
-    // what a thread IS, the lit toolbar says how you start one.
-    target: 'chat-hint',
-    // The callout points at the whole thread panel (tutorial-folder__th-panel),
-    // not the card inside it: with screen 3 gone this screen carries the idea on
-    // its own, so the card is no longer the thing being singled out.
+    // Lit area taken from the design's own vignette (Figma 3202:3811): a
+    // radialGradient at (1297.5, 374) of the 1440x1024 frame whose gradient
+    // transform works out to radii of 729 x 1279 — so horizontally it reaches
+    // about 730px, and vertically it exceeds the frame, i.e. full height.
+    //
+    // Ours is a circle, so it is centred on the panel and given that 730. That
+    // one hole covers BOTH things this screen is about: the panel is at its
+    // centre, and the hover tooltip + action bar sit 368px away, inside the
+    // 402px clear core (55% of the radius — see spotlight/skin). Targeting the
+    // hint group instead, as this did before, lit a ~230x50 strip at the bottom
+    // of the screen and left the panel in the fade.
+    target: 'thread-panel',
     anchor: 'thread-panel',
-    // The group is a ~230x50 strip, so its own half-diagonal would give a hole
-    // barely bigger than itself. Widened so the message it belongs to reads as
-    // part of the same subject.
-    radius: 260,
+    radius: 730,
     direction: 'east',
     badge: {
       title: 'Chat in threads',
