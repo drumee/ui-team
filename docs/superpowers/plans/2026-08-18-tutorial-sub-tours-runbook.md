@@ -38,11 +38,91 @@ Set `$UID` once (§2) and keep it in a terminal beside the browser.
 | 1.2 | `mysql -e "SHOW PROCEDURE STATUS WHERE Db='yp' AND Name='drumate_tutorial_seen'\G"` — expect one row | — |
 | 1.3 | Add `"contextual_tours": 1` to `/etc/drumee/conf.d/myDrumee.json`, restart the server | **Silently.** With it absent every trigger no-ops and the desk behaves exactly as it does today — which is indistinguishable from "the feature is broken". Verify with 1.4. |
 | 1.4 | In the browser console: `Platform.get("contextual_tours")` → `1` | — |
-| 1.5 | Deploy the client build containing the branch | Loudly (stale bundle → `Tours is not defined` in console, or no new behaviour at all). Confirm with `typeof require` is not available in prod builds — instead check 1.6. |
-| 1.6 | Console: `location.hash = "#/desk?tutorial=migrate"` then reload → the tour appears | If nothing appears, the bundle is stale. Stop here. |
+| 1.5 | Deploy the client build containing the branch | **Silently.** A stale bundle produces no error — the desk simply behaves as it always has, and then *every* item below fails identically for one reason that has nothing to do with them. There is no console check worth trusting here; the bundle is verified by 1.6 and only by 1.6. |
+| 1.6 | **Bundle check.** Set `location.hash = "#/desk?tutorial=migrate"` and **reload**. A tour must appear within ~2s. | **This is the gate.** If no tour appears, the build does not contain the branch (or 1.3 was missed — but `?tutorial=` is not gated by the switch, so a missing tour here means a stale bundle). **Stop and fix the deploy before going further.** Everything below assumes this passed. |
+| 1.6b | **While that tour is still on screen**, run the diagnostic in §1.6b below and paste the output into the sign-off box. | Answers OQ6 in the same ten seconds. Do not skip it — this is the only moment anyone has a running tour and the question in front of them at once. |
 | 1.7 | Sign in as a **normal, non-devel** account first. You will switch to a devel account only for P1-9. | — |
 | 1.8 | Make sure the account has: a **share-area workspace** (External), containing a **doc file** (`.docx`/`.pdf`), and at least one **sub-folder** | Silently: the share icon (P2-4) only renders for a share-area workspace **root**, and the kebab Share item (P2-6) only for a regular file in a share area. Missing either makes the item unreachable, not failing. |
 | 1.9 | Open that workspace once so a **folder window** exists with a **Tasks** tab | — |
+
+### 1.6b — the OQ6 diagnostic
+
+Static analysis reached a contradiction and stopped: five separate checks say a
+desktop tutorial mounted into `.desk-module__overlay` should be **invisible**
+(`opacity: 0` with no conditional wrapper and no code writing `data-state="open"`
+outside the mobile drawer), and it plainly is not. Something about where the
+tutorial actually lands in the DOM differs from every static reading. Nobody can
+close that question without a running tour — and you have one on screen right now.
+
+**With the tour from 1.6 still up, paste this into the console and copy what it
+prints.** One paste, no navigation.
+
+```js
+(() => {
+  const root = document.querySelector('.tutorial-main__ui');
+  if (!root) return 'NO TUTORIAL ROOT — is a tour actually on screen?';
+  const L = [];
+  const desc = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') +
+    (e.classList.length ? '.' + [...e.classList].join('.') : '') +
+    (Object.keys(e.dataset).length ? ' ' + JSON.stringify({ ...e.dataset }) : '');
+
+  L.push('== ancestor chain, tutorial root -> body ==');
+  for (let el = root, i = 0; el && el !== document.documentElement; el = el.parentElement, i++) {
+    const c = getComputedStyle(el);
+    L.push(`[${i}] ${desc(el)}`);
+    L.push(`     opacity=${c.opacity} pointer-events=${c.pointerEvents} display=${c.display} visibility=${c.visibility} position=${c.position} z=${c.zIndex}`);
+  }
+
+  L.push('== which overlay rules match ==');
+  const ov = root.closest('.desk-module__overlay');
+  if (!ov) L.push('  tutorial root is NOT inside .desk-module__overlay  <-- this alone would explain everything');
+  else ['[data-state="open"]', '[data-device="mobile"]', ':not([data-device="mobile"])']
+    .forEach((sel) => L.push(`  .desk-module__overlay${sel} : ${ov.matches('.desk-module__overlay' + sel)}`));
+
+  L.push('== hit test ==');
+  const at = (x, y) => { const e = document.elementFromPoint(x, y); return e ? desc(e) : 'null'; };
+  const spot = document.querySelector('.tutorial-spotlight__ui');
+  const cs = spot && getComputedStyle(spot);
+  const hx = cs && parseFloat(cs.getPropertyValue('--spot-x'));
+  const hy = cs && parseFloat(cs.getPropertyValue('--spot-y'));
+  L.push(`  inside the spotlight hole (${hx}, ${hy}): ${Number.isFinite(hx) ? at(hx, hy) : 'no spotlight'}`);
+  L.push(`  outside it (8, ${innerHeight - 8}): ${at(8, innerHeight - 8)}`);
+  L.push(`  viewport ${innerWidth}x${innerHeight}, device=${document.body.dataset.device || '?'}`);
+  return L.join('\n');
+})()
+```
+
+*(Browsers do not expose matched CSS rules to page script, so the middle block
+tests the selectors directly instead — same answer, no devtools protocol.)*
+
+**Expected shape** — the interesting part is where `opacity` stops being `1`:
+
+```
+== ancestor chain, tutorial root -> body ==
+[0] div.tutorial.tutorial-main.tutorial__ui.tutorial-main__ui {"device":"desktop"}
+     opacity=1 pointer-events=none display=flex visibility=visible position=static z=auto
+[1] div.desk-module__overlay.dialog__wrapper {"device":"desktop"}
+     opacity=0 pointer-events=none display=flex visibility=visible position=absolute z=10010
+...
+```
+
+**How to read it, and where it goes:**
+
+| What you see | What it means |
+|---|---|
+| An ancestor with `opacity=0` | The static reading was right and something else explains visibility — capture the whole chain, it is the answer. |
+| **No** ancestor with `opacity=0` | The tour does not live where the plan thinks. Look at `[1]` and at the "which overlay rules match" block: either the root is not inside `.desk-module__overlay`, or `[data-state="open"]` is true and something writes it. |
+| `pointer-events` is `none` all the way up | Clicks pass through to the real desk → **A11b-passthrough**. |
+| Any ancestor with `pointer-events: auto` | The overlay swallows clicks → **A11b-swallowed**, and the cross-tree collision cannot occur in the product. |
+| "inside the spotlight hole" returns a real desk element | Same conclusion as passthrough, measured directly. |
+
+**Record it:** paste the full output into the sign-off box at the end of this
+runbook, under "1.6b diagnostic". That is where OQ6 gets closed from — a paste in
+a chat window is not a place the plan can be updated from.
+
+**This supersedes A11a.** If 1.6b's hit test answers the pointer-events question —
+and it should — A11a is redundant; go straight to whichever A11b branch it
+indicates.
 
 **URL form.** The hash is split on `#`, `/`, `&`, `?` and read as `k=v` pairs, so
 all of these are equivalent: `#/desk?tutorial=migrate`, `#/desk/tutorial=migrate`.
@@ -69,6 +149,21 @@ mysql -t -e "SELECT JSON_EXTRACT(settings,'\$.tutorials_seen') AS seen
 Expected before you start: `NULL` (the key does not exist yet). A real row will
 already have other keys such as `wallpaper` — that is normal and is exactly the
 case the write has to preserve.
+
+**Check the SHAPE, not just the presence.** Once a tour has run, the value must
+be an **unquoted number**:
+
+```
+{"migrate": 1787093945}      ✅
+{"migrate": "1787093945"}    ❌  regression
+```
+
+A quoted value means the procedure has gone back to reading `UNIX_TIMESTAMP()`
+from a `DECLARE`d variable, which MariaDB stringifies on the way through
+`JSON_OBJECT` (plan §4 S1). Nothing in the UI will show it: every presence check
+here passes on a string, and so does the client's `isSeen()`. It only surfaces
+later, when something compares or sorts the values. Check it every time you read
+the map.
 
 **Reset ONE tour** — the workhorse of this runbook:
 
@@ -234,12 +329,42 @@ latch instead of ahead of it. → commit `d62ddbde`.
 
 **A11 · `P2-9` · single-flight across trees**
 **RESET:** `folder` **and** `share`
-Click a workspace tile so the `folder` tour is on screen. **While it is up**,
-click a share control.
+
+> **A11a decides whether A11b is performable at all.** A tour renders a full
+> mock desk over the real one. Whether a click reaches the real desk underneath
+> could not be settled from the source: the spotlight's own layers are all
+> `pointer-events: none` and pass clicks through, but the layer they sit in
+> (`.desk-module__overlay`) computes `opacity: 0; pointer-events: none` in
+> isolation — which would make the tour invisible, so something in the running
+> app differs from that reading. **Ten seconds with the app answers it.**
+> Please record the answer in the notes box at sign-off; it feeds back into the
+> plan.
+
+**A11a — which world are we in?** (do this first, it costs nothing)
+Click a workspace tile so the `folder` tour is on screen. Now click somewhere
+the **real** desk has a control but the **mock** desk does not — e.g. the real
+sidebar's Trash entry, or a real workspace tile at a position the mock grid
+leaves empty.
+- **Nothing happens** → the overlay swallows clicks. Go to **A11b-swallowed**.
+- **The real desk reacts** (panel opens behind the tour, breadcrumb changes) →
+  clicks pass through. Go to **A11b-passthrough**.
+
+**A11b-swallowed.** The cross-tree collision cannot be produced by clicking:
+while any tour is up, no share control is reachable. **Skip the rest of A11 and
+mark it N/A**, noting "swallowed" at sign-off. The automated test
+(`tests/tutorial-tours-share.test.js`, "a share click during a running folder
+tour…") is then the entire coverage for this behaviour, which is fine — it
+exercises the same two assertions directly against the module.
+
+**A11b-passthrough.** Perform it, and note the exact route you used:
+the lit element during the `folder` tour is a mock file panel, **not** a share
+control, so you must click through to a real one — the share icon on a folder
+window that was already open behind the tour is the usual route.
 **Expect:** still exactly **one** tour (the folder one). Dismiss it, then click
 the share control again.
 **Expect:** the share tour now runs — it must **not** have been silently marked
-seen while it was blocked.
+seen while it was blocked. Confirm with the §2 read: `share` must be **absent**
+from the map until the tour actually appears.
 **If the share tour never comes back:** it was marked seen while suppressed —
 the most costly failure in the set, because the user loses a tour they never
 saw. → `libs/tutorial-tours.js`, `fire()` must not call `markSeen`.
@@ -518,6 +643,15 @@ Block D  (phase 3 only)
          D1 [ ]  D2 [ ]  D3 [ ]  D4 [ ]  D5 [ ]  D6 [ ]
 Block E  (phase 4 only)
          E1 [ ]  E2 [ ]  E3 [ ]  E4 [ ]  E5 [ ]  E6 [ ]
+
+1.6b diagnostic output (REQUIRED — this is what closes OQ6):
+________________________________________________________
+________________________________________________________
+________________________________________________________
+
+A11a result (skip if 1.6b already answered it):
+  [ ] overlay SWALLOWS clicks (A11 marked N/A)
+  [ ] clicks PASS THROUGH (A11b performed; route used: __________)
 
 Failures / notes:
 ________________________________________________________
