@@ -18,7 +18,7 @@ Five branches. **`phase1` carries commits in three repos**; every later branch i
 | `feat/contextual-sub-tours-phase1` | **ui-team** (9), **schemas** (1), **server-team** (1) | Phases 1 **and** 2: the proc + endpoint + kill switch, `libs/tutorial-tours`, the tour registry, derived badges, and all five triggers (+ New, icons list, sidebar ×2, Manage access ×2, kebab Share, Tasks tab). Plus the runbook. | — | Runbook **A–C** |
 | `feat/contextual-sub-tours-phase3` | ui-team (12) | Post-onboarding rewiring: `fire()`'s return contract, home settles at 2s when a tour is gated, `markSeen` on onboarding-close, derived `workspace` badge. | phase1 | Runbook **D** |
 | `feat/contextual-sub-tours-phase4` | ui-team (15) | The skip control: `✕` on every callout, Escape, `end-tour` routed at the host. | phase3 | Runbook **E** |
-| `feat/contextual-sub-tours-phase5a` | ui-team (18) | Cleanup: delete the retired `tutorial_settings`, derive the last badge (`meeting`). | phase4 | Runbook **B5** |
+| `feat/contextual-sub-tours-phase5a` | ui-team (19) | Cleanup: delete the retired `tutorial_settings`, derive the last badge (`meeting`). | phase4 | Runbook **B5** |
 | *(5b — rollout)* | none | **No code.** Procedure only, in `…-rollout.md`. | all of the above | OQ4, OQ7 |
 
 Commit counts are cumulative from `test`. `phase5a` contains everything.
