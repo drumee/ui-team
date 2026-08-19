@@ -16,6 +16,7 @@ moment any of this reaches a real user.
 |---|---|---|
 | P1 | **Runbook signed off** — Blocks A, B, C, D, E | A completed sign-off block in `…-runbook.md` with a **name**, a **date**, and the **build SHA**. Blocks A–C gate Phases 1–2, D gates 3, E gates 4. All five are in the build by 5b, so all five must be worked. Nothing has been worked yet. |
 | P2 | **OQ4 — the ops key** | Whoever owns `/etc/drumee/conf.d/myDrumee.json` confirms `contextual_tours` as the key name and agrees the staged plan below. |
+| P4 | **The interruption decision (§2b)** | Product answers "every existing user, or new accounts only". If the answer is "new accounts only", the backfill in §2b.2 must have **completed** on that deployment before its flag flips. |
 | P3 | **OQ4 — the privacy decision** | The ACL entry ships `"log": false` with a `TODO(OQ4)`. Either privacy review signs off on `true` (five timestamped behavioural rows per user in `yp.services_log`, exported by `offline/drumate/backup.js:248`) **or** the TODO is closed as "stays false". Suppression works either way; only trigger-rate analytics depend on it. **Do not flip it in the same change as the rollout** — one variable at a time. |
 
 Also worth closing first, though it does not block: **OQ6** (§9) — whether a
@@ -42,7 +43,113 @@ What you *can* stage:
 | S0 | One dev/stage box | The runbook itself runs here. Nothing about S0 is a rollout decision. |
 | S1 | Internal / staff deployment | First real users. Small, reachable, and they will tell you. |
 | S2 | One small production pod | First outside users. Pick the smallest, and one whose operator can be told in advance. |
-| S3 | Everything else | Only after S2 has been quiet for a full week — every trigger is once-per-user-ever, so the interesting events are concentrated in the first days after enablement, when the whole population is unburned. |
+| S3 | Everything else | Only after S2 has been quiet for a full week — every trigger is once-per-user-ever, so the interesting events are concentrated in the first days after enablement, when the whole population is unburned (which is the monitoring face of §2b). **S3 needs a named owner.** It is the largest stage by definition, there is no staging left after it, and "everything else" may itself deserve splitting by pod size or region. Whoever signs P2 decides whether S3 is one step or several, and records that here before it starts. |
+
+---
+
+## 2b. The decision nobody has made yet: who gets interrupted
+
+**This is not a monitoring question and the staging table above does not answer
+it.** Read this before signing P2.
+
+Every trigger is *"first interaction with this surface"* — **not** *"new user"*.
+For an account that has used Drumee for two years, the first interaction after
+enablement is their next click on **+ New**, or their next workspace tile. So
+flipping the flag on a deployment does not gently onboard new signups. It
+interrupts **the entire active population of that deployment**, once each,
+concentrated into the days right after the flip, when every flag is unburned.
+
+The seen-set has no notion of account age. There is no flag-level way to limit
+tours to new accounts.
+
+### 2b.1 The decision — product, before P2
+
+> **Is interrupting every existing active user, once each, the intent?**
+> Or should the tours reach **new accounts only**?
+
+This document deliberately does not answer it. It needs whoever owns onboarding
+/ activation for the product — the same person or group who signs P2 — and it
+must be answered **before** the flag is enabled anywhere beyond S1, because the
+"new accounts only" answer requires work (2b.2) that has to land *first*.
+
+### 2b.2 If the answer is "new accounts only": the backfill
+
+Populate `tutorials_seen` for every account that existed before the cutover, on
+that deployment, so their first click finds the tour already suppressed.
+
+**Ordering is not negotiable: backfill completes, and only then the flag flips.**
+The reverse order leaves a window in which the entire population is eligible, and
+a tour shown in that window is recorded as genuinely seen — there is no undo for
+a real trigger.
+
+```sql
+-- Dry run first. CUTOFF = the moment you intend to enable, unix seconds.
+SET @cutoff := UNIX_TIMESTAMP('2026-09-01 00:00:00');
+
+SELECT COUNT(*) FROM yp.entity
+ WHERE type = 'drumate' AND ctime < @cutoff
+   AND JSON_EXTRACT(IF(JSON_VALID(settings), settings, '{}'), '$.tutorials_seen') IS NULL;
+
+-- Backfill. Sentinel 0, see 2b.3.
+UPDATE yp.entity
+   SET settings = JSON_MERGE_PATCH(
+         IF(JSON_VALID(settings), settings, '{}'),
+         JSON_OBJECT('tutorials_seen',
+           JSON_OBJECT('workspace',0,'folder',0,'task',0,'share',0,'migrate',0))
+       )
+ WHERE type = 'drumate' AND ctime < @cutoff
+   AND JSON_EXTRACT(IF(JSON_VALID(settings), settings, '{}'), '$.tutorials_seen') IS NULL;
+```
+
+The `IS NULL` clause matters: it means the backfill **never overwrites a map that
+already exists**, so an account that genuinely saw a tour during S1 keeps its
+real timestamp. Verified against a scratch schema, including that sibling keys
+(`wallpaper`, `tutorial_done`) survive.
+
+### 2b.3 The sentinel — because a backfill otherwise has no undo
+
+Once written, a backfilled entry is **indistinguishable from a genuine one**.
+Reversing the product decision would then mean guessing which rows to clear.
+
+So backfilled entries are written with a timestamp of **`0`**, which no real
+write can ever produce (`UNIX_TIMESTAMP()` is always > 0). A backfilled account
+is exactly one whose `workspace` entry is `0`.
+
+```sql
+-- Reverse: remove ONLY backfilled maps, leaving genuine ones untouched.
+UPDATE yp.entity
+   SET settings = JSON_REMOVE(settings, '$.tutorials_seen')
+ WHERE JSON_EXTRACT(settings, '$.tutorials_seen.workspace') = 0;
+```
+
+Removing the whole `tutorials_seen` object is safe here precisely because the
+backfill only ever wrote to rows that had none. Also verified on a scratch
+schema. **Take a backup before either statement anyway** — this is a bulk write
+to a `mediumtext` column with a FULLTEXT index.
+
+### 2b.4 Where the cutoff comes from
+
+**`yp.entity.ctime`** — unix seconds, and `type = 'drumate'` selects user
+accounts. Verified, not assumed: `yp.drumate` has **no** creation-time column at
+all (its only time-ish columns are on `entity`), so a query written against
+`drumate` would silently have nothing to filter on.
+
+### 2b.5 How this interacts with §4 S7's migration
+
+S7 already infers *all tours seen* for a pre-existing user whose settings carry
+`tutorial_done: true` **and** no `tutorials_seen` map. The backfill population
+overlaps that one.
+
+- **For those users the backfill is redundant** — they were already suppressed
+  by the inference — but it is harmless: the inference stops applying (the map
+  now exists) and the map itself says the same thing. The two agree.
+- **The one way they can disagree** is a *partial* backfill. If a tour is added
+  to the registry later and the backfill list is not updated, a `tutorial_done`
+  user ends up with a present-but-incomplete map: the inference no longer fires,
+  and they get the new tour. If a sixth flagged tour is ever added, either extend
+  the backfill or accept that outcome deliberately.
+- Reversing the backfill (2b.3) restores the inference for them automatically,
+  since it removes the whole map.
 
 ---
 

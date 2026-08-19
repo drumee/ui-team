@@ -110,6 +110,15 @@ in situ (item A11a).
 
 ---
 
+## Changelog — revision 8 (2026-08-18)
+
+| Section | Change | Driver |
+|---|---|---|
+| §9 OQ6 | Fifth hypothesis (media query / viewport-conditional rule) **ruled out**, in source and in compiled output, and re-measured at two viewports | Follow-up A |
+| §9 OQ7 | **NEW** — who gets interrupted when the flag flips. A product decision, not a rollout detail | Rollout review |
+
+---
+
 ## 1. Findings
 
 Everything below was re-read in this repo. **Corrections to the brief are marked ⚠.**
@@ -857,6 +866,16 @@ same layer and portals itself to `document.body` to escape it.
    stylesheet: `opacity: 0` stands unless `[data-state=open]`, and the only
    writer of that literal is `_setMobileBackdrop` (mobile drawer). `setState()`
    writes `data-state="1"`, which does not match the rule.
+5. *The rule is inside a media query or another conditional parent, so it never
+   applies on desktop — and the measurement ran at headless Chromium's 800×600
+   default.* No, on both halves. **Source:** the only blocks enclosing the
+   declaration are `.desk-module {` and `&__overlay {` (`skin/index.scss:20,47`)
+   — no `@media`, no `[data-device]` parent, no `:not()` wrapper. **Compiled:**
+   brace depth immediately before the rule is **0**, i.e. top level, so nothing
+   conditional wraps it in the output either. **Measured:** identical computed
+   values at 1440×900 and at 375×812 (`opacity: 0`, `pointer-events: none` on
+   the overlay in both) — and the original measurement had already passed
+   `--window-size=1440,900`, so viewport was never the flaw.
 
 So the static evidence is now **conclusive that a desktop tutorial fed into
 `overlay` would be invisible** — which it is not. One premise about the running
@@ -870,6 +889,20 @@ tour render on desktop at all" as a live question, not a settled one.
 
 The four from revision 1 are resolved into D4 (onboarding-skip), X3 (copy
 localisation), D6/C8b (sidebar triggers) and S9 (analytics).
+
+**OQ7 — who gets interrupted when the flag flips?** Raised by the rollout review.
+Every trigger is "first interaction with this surface", **not** "new user", so
+enabling the flag on a deployment interrupts its entire active population once
+each, concentrated in the days after the flip. The seen-set has no notion of
+account age and the flag is boolean per deployment, so there is no configuration
+that limits tours to new accounts.
+
+**Decision needed from product, before the flag is enabled beyond an internal
+stage:** every existing user once, or new accounts only? If new accounts only, a
+backfill of `tutorials_seen` must complete on that deployment *before* its flag
+flips. Shape, sentinel and reversal are in `…-rollout.md` §2b; the sentinel
+matters because a backfilled entry is otherwise indistinguishable from a genuine
+one and the backfill would have no undo.
 
 **OQ4 — sign-off on the rollout flag and on `"log": true`.** Two ops/privacy decisions, one owner, needed before Phase 1 ships:
 
