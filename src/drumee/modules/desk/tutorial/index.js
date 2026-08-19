@@ -98,6 +98,12 @@ class tutorial_main extends LetcBox {
     if (this._tour.flag) Tours.markSeen(this._tour.flag, this);
     this._bindEscape();
     this.feed(require('./skeleton')(this));
+    // Feed the FIRST step from the registry, exactly as _nextStep feeds every
+    // later one. The shell used to hardcode `tutorial_workspace` into its step
+    // slot, which meant every tour opened on the workspace step no matter which
+    // tour had been asked for — the registry decided steps 2..n and the
+    // skeleton silently decided step 1.
+    this.ensurePart(_a.content).then((p) => p.feed(this._widgetAt(0)));
     this._preloadSteps();
   }
 

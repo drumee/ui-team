@@ -259,3 +259,51 @@ test("the two server-team sites match too, when that repo is checked out", (t) =
     assert.ok(doc.includes(id), `acl doc string does not mention "${id}"`);
   }
 });
+
+// ── the shell must not decide step one (regression) ──────────────────────────
+
+test("the shell's step slot is EMPTY — it must not hardcode a step", () => {
+  // It used to plant `tutorial_workspace` here. That was correct while there
+  // was one tour that always began with the workspace step, and became a bug
+  // the moment the registry decided which tour runs: every contextual tour
+  // opened on the workspace step regardless of what was asked for, because the
+  // registry chose steps 2..n while the skeleton silently chose step 1.
+  const shell = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/index.js"), "utf8",
+  );
+  // Bound the slice to the content Box itself — reading to EOF would catch the
+  // spotlight entry below it, which legitimately names a kind.
+  const at = shell.indexOf("sys_pn: _a.content");
+  assert.notEqual(at, -1, "the content slot moved");
+  const slot = shell.slice(at, shell.indexOf("})", at));
+  assert.ok(
+    !/kind:\s*['"`]tutorial_/.test(slot),
+    "the step slot must not name a step widget — the registry decides",
+  );
+  assert.ok(!/kids/.test(slot), "slot must have no kids");
+});
+
+test("the host feeds step one from the registry on mount", () => {
+  const host = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/index.js"), "utf8",
+  );
+  const dom = host.slice(host.indexOf("  onDomRefresh() {"));
+  const body = dom.slice(0, dom.indexOf("\n  }\n"));
+  assert.match(body, /ensurePart\(_a\.content\)[\s\S]*?_widgetAt\(0\)/);
+  // And it must come after the shell exists, or there is no part to feed.
+  assert.ok(body.indexOf("require('./skeleton')") < body.indexOf("_widgetAt(0)"));
+});
+
+test("every tour's step one is its OWN first step, not the workspace step", () => {
+  const first = {};
+  for (const id of Object.keys(TOURS)) first[id] = TOURS[id].steps[0].kind;
+  assert.deepEqual(first, {
+    workspace: "tutorial_workspace",
+    folder: "tutorial_folder",
+    task: "tutorial_task",
+    share: "tutorial_share",
+    migrate: "tutorial_migrate",
+    meeting: "tutorial_meeting",
+    full: "tutorial_workspace",
+  });
+});

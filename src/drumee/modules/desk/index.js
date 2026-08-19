@@ -2712,10 +2712,10 @@ class desk_module extends LetcBox {
     // and also drop any stale "force-onboarding" marker so it can't re-trigger the
     // wizard after completion. Onboarding loads purely from this flag — new
     // accounts are created with onboarded=0 and the plugin is installed.
-    if (Visitor.profile().onboarded) {
-      try { localStorage.removeItem("force-onboarding"); } catch (e) {}
-      return this.loadDefault();
-    }
+    // if (Visitor.profile().onboarded) {
+    //   try { localStorage.removeItem("force-onboarding"); } catch (e) {}
+    //   return this.loadDefault();
+    // }
     if (localStorage.getItem("force-onboarding")) {
       return this._loadOnboarding();
     }
