@@ -57,8 +57,8 @@ const TOURS = {
   // open a folder. Merged back on request: the two steps teach one thing, and
   // the Tasks tab is not where a first-time user goes looking for it.
   //
-  // Badged as one continuous flow: 3 folder screens then 5 tracker views read
-  // "STEP 1/8 … 8/8" straight through. Step numbering ("1/2", "2/2") is what
+  // Badged as one continuous flow: 4 folder screens then 5 tracker views read
+  // "STEP 1/9 … 9/9" straight through. Step numbering ("1/2", "2/2") is what
   // `full` does, and it is wrong here — to someone opening a folder this is one
   // thing, not two, and a counter that sits on "1/2" for three screens tells
   // them nothing about how much is left.
@@ -67,7 +67,7 @@ const TOURS = {
     flag: "folder_task",
     badge: BADGE_BY_FLOW,
     steps: [
-      { kind: "tutorial_folder", screens: 3, backdrop: ["workspaceFaded"] },
+      { kind: "tutorial_folder", screens: 4, backdrop: ["workspaceFaded"] },
       { kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] },
     ],
   },
@@ -113,7 +113,7 @@ const TOURS = {
     badge: BADGE_BY_STEPS,
     steps: [
       { kind: "tutorial_workspace", screens: 3 },
-      { kind: "tutorial_folder", screens: 3, backdrop: ["workspaceFaded"] },
+      { kind: "tutorial_folder", screens: 4, backdrop: ["workspaceFaded"] },
       { kind: "tutorial_meeting", screens: 1, backdrop: ["workspaceFaded"] },
       { kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] },
       { kind: "tutorial_share", screens: 3, backdrop: ["workspaceFaded"] },

@@ -135,7 +135,7 @@ function streamMessage(pfx, msg) {
   });
 }
 
-function threadStream(ui, pfx) {
+function threadStream(ui, pfx, opt = {}) {
   return Skeletons.Box.Y({
     className: `${pfx}__th-stream`,
     kids: [
@@ -150,7 +150,11 @@ function threadStream(ui, pfx) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__th-stream-body`,
-        kids: STREAM.map((m) => streamMessage(pfx, m)),
+        kids: [
+          ...STREAM.map((m) => streamMessage(pfx, m)),
+          // Screen 2 only: the file message the hover bar sits on.
+          opt.hint ? hintMessage(ui, pfx) : "",
+        ],
       }),
       Skeletons.Box.X({
         className: `${pfx}__th-stream-input`,
@@ -294,6 +298,74 @@ function threadBubble(ui, pfx) {
   });
 }
 
+// ── Screen 2: the hover toolbar that starts a thread ──────────────────────────
+//
+// Figma 3202:3732 ("DRUMEE: Tutorial (Chat Feature)"). This is the REAL chat
+// message hover bar with its "Reply in thread" tooltip showing — the same
+// component, icon for icon, that builtins/widget/chat-item/skeleton/menu.js
+// builds on a live message: reply, a divider, reply-in-thread, copy, forward,
+// trash, check, smiley. Mirrored here as static markup the way ctxmenu.js
+// mirrors the real context menu, so the tour teaches the bar the user will
+// actually meet.
+//
+// The design also draws a mouse cursor over the thread icon. Not rendered: in a
+// live UI that is the user's own pointer, and the tour has no business drawing
+// a second one.
+const CHAT_ACTIONS = [
+  { ico: "chat-action-reply" },
+  { divider: true },
+  // The subject of this screen — same icon the file kebab's "Chat Threads"
+  // entry uses, which is the point: one glyph means one thing.
+  { ico: "ctxmenu-chat-thread", mark: "thread" },
+  { ico: "chat-action-copy" },
+  { ico: "chat-action-forward" },
+  { ico: "chat-action-trash" },
+  { ico: "chat-action-check" },
+  { ico: "chat-action-smiley" },
+];
+
+function chatActionBar(ui, pfx) {
+  return Skeletons.Box.X({
+    className: `${pfx}__th-actions`,
+    sys_pn: "chat-actions",
+    partHandler: ui,
+    kids: CHAT_ACTIONS.map((a) =>
+      a.divider
+        ? Skeletons.Box.Y({ className: `${pfx}__th-actions-divider` })
+        : Skeletons.Image.Svg({
+            ico: a.ico,
+            className: `${pfx}__th-actions-icon${a.mark ? ` ${a.mark}` : ""}`,
+          }),
+    ),
+  });
+}
+
+/** The dark bubble above the bar, with its downward caret. */
+function replyInThreadTip(pfx) {
+  return Skeletons.Box.X({
+    className: `${pfx}__th-tip`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__th-tip-label`,
+        content: LOCALE.REPLY_IN_THREAD || "Reply in thread",
+      }),
+      Skeletons.Box.Y({ className: `${pfx}__th-tip-caret` }),
+    ],
+  });
+}
+
+/**
+ * The file message with the hover bar on it — the last thing in the stream on
+ * screen 2. Reuses threadBubble, which is already the exact pink bubble the
+ * design shows (link + text + PDF card + time); only the overlay is new.
+ */
+function hintMessage(ui, pfx) {
+  return Skeletons.Box.Y({
+    className: `${pfx}__th-hint`,
+    kids: [replyInThreadTip(pfx), chatActionBar(ui, pfx), threadBubble(ui, pfx)],
+  });
+}
+
 function threadComposer(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__th-composer`,
@@ -393,7 +465,12 @@ export function threadPanel(ui, pfx) {
 }
 
 // ── Screen root ───────────────────────────────────────────────────────────────
-export function threadsView(ui) {
+/**
+ * @param {Object} [opt]
+ * @param {Boolean} [opt.hint] show the hover toolbar on the file message —
+ *   screen 2's subject. Screen 3 renders the same view without it.
+ */
+export function threadsView(ui, opt = {}) {
   const pfx = ui.fig.family;
   const aspect = ui.mget("aspect") || "normal";
   return Skeletons.Box.Y({
@@ -407,7 +484,7 @@ export function threadsView(ui) {
       tabBar(ui, pfx, { active: "chat", meeting: true }),
       Skeletons.Box.X({
         className: `${pfx}__content`,
-        kids: [threadRail(ui, pfx), threadStream(ui, pfx), threadPanel(ui, pfx)],
+        kids: [threadRail(ui, pfx), threadStream(ui, pfx, opt), threadPanel(ui, pfx)],
       }),
     ],
   });

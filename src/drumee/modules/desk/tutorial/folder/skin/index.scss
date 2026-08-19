@@ -889,6 +889,87 @@
     white-space: nowrap;
   }
 
+  // ── Screen 2: the hover toolbar on the file message (Figma 3202:3732) ──
+  // Stacked above the bubble rather than absolutely positioned over it: the
+  // stream is a flex column that scrolls, and an absolute overlay would drift
+  // off the message the moment anything above it changed height.
+  &__th-hint {
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__th-tip {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: #282538;      // Primary/90
+    align-self: flex-end;
+    margin-right: 44px;       // sits over the thread icon, as in the design
+  }
+
+  &__th-tip-label {
+    font-family: var(--font-main);
+    font-size: 10px;          // Body/Tiny Body
+    line-height: 1.4;
+    color: #e4e3ff;           // Primary/10
+    white-space: nowrap;
+  }
+
+  // Downward caret. A rotated square rather than a drawn triangle — no path
+  // data to get wrong, and it inherits the bubble colour.
+  &__th-tip-caret {
+    position: absolute;
+    bottom: -3px;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    transform: translateX(-50%) rotate(45deg);
+    background: #282538;
+    border-radius: 1px;
+  }
+
+  &__th-actions {
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    padding: 4px 8px;
+    border-radius: 48px;
+    background: var(--normal-bg-0, #fff);
+    align-self: flex-end;
+    // Blur + Shadow Small
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(50px);
+  }
+
+  &__th-actions-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--normal-fg);
+    }
+
+    // The screen's subject — the one the tooltip points at.
+    &.thread svg {
+      fill: #5950ff;          // brand overlay
+    }
+  }
+
+  &__th-actions-divider {
+    width: 1px;
+    height: 16px;
+    flex: 0 0 auto;
+    background: var(--grey-30, #e5e5ea);
+  }
+
   &__th-bubble-wrap {
     align-items: flex-end;
     gap: 4px;

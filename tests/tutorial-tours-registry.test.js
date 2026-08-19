@@ -57,7 +57,7 @@ test("every flagged tour badges as one continuous flow", () => {
 test("flow badging counts screens cumulatively across steps", () => {
   const t = TOURS.folder_task;
   const total = t.steps.reduce((n, s) => n + s.screens, 0);
-  assert.equal(total, 8, "3 folder screens + 5 tracker views");
+  assert.equal(total, 9, "4 folder screens + 5 tracker views");
 
   const seen = [];
   let offset = 0;
@@ -72,8 +72,8 @@ test("flow badging counts screens cumulatively across steps", () => {
   }
   // The counter must NOT restart at the step boundary — that is the whole point.
   assert.deepEqual(seen, [
-    "STEP 1/8", "STEP 2/8", "STEP 3/8",
-    "STEP 4/8", "STEP 5/8", "STEP 6/8", "STEP 7/8", "STEP 8/8",
+    "STEP 1/9", "STEP 2/9", "STEP 3/9", "STEP 4/9",
+    "STEP 5/9", "STEP 6/9", "STEP 7/9", "STEP 8/9", "STEP 9/9",
   ]);
 });
 
@@ -91,8 +91,8 @@ test("a single-step tour's flow numbering is just its own screens", () => {
 
 test("the host stamps screen_offset and tour_screens per step", () => {
   const out = build(TOURS.folder_task).map((e) => (Array.isArray(e) ? e[e.length - 1] : e));
-  assert.deepEqual(out.map((w) => w.screen_offset), [0, 3]);
-  assert.deepEqual(out.map((w) => w.tour_screens), [8, 8]);
+  assert.deepEqual(out.map((w) => w.screen_offset), [0, 4]);
+  assert.deepEqual(out.map((w) => w.tour_screens), [9, 9]);
   assert.deepEqual(out.map((w) => w.badge_mode), ["flow", "flow"]);
 });
 
@@ -242,7 +242,7 @@ test("is_first / is_last / screen_count are stamped per step", () => {
   assert.equal(out[0].is_last, false);
   assert.equal(out[5].is_first, false);
   assert.equal(out[5].is_last, true);
-  assert.deepEqual(out.map((w) => w.screen_count), [3, 3, 1, 5, 3, 3]);
+  assert.deepEqual(out.map((w) => w.screen_count), [3, 4, 1, 5, 3, 3]);
   assert.deepEqual(out.map((w) => w.badge_mode), Array(6).fill("steps"));
   assert.deepEqual(out.map((w) => w.badge_text), [
     "STEP 1/6", "STEP 2/6", "STEP 3/6", "STEP 4/6", "STEP 5/6", "STEP 6/6",
@@ -401,4 +401,56 @@ test("a forced tour is a PREVIEW — it must not burn the flag", () => {
   // …and only the explicit branch passes it; a contextual tour still records.
   assert.match(desk, /if \(explicit\) \{\s*this\._showTutorial\(forced, this\._forcedTourOpt\(\)\)/);
   assert.match(desk, /return Tours\.fire\("workspace", this\)/);
+});
+
+// ── the chat-feature screen (Figma 3202:3732) ────────────────────────────────
+
+test("the folder step runs four screens, and the flow totals nine", () => {
+  assert.equal(TOURS.folder_task.steps[0].screens, 4);
+  assert.equal(TOURS.folder_task.steps.reduce((n, s) => n + s.screens, 0), 9);
+  // The same step inside `full` gained the screen too — they render the same
+  // widget, so a mismatch would mis-number one of the two tours.
+  assert.equal(TOURS.full.steps[1].kind, "tutorial_folder");
+  assert.equal(TOURS.full.steps[1].screens, 4);
+});
+
+test("the folder step's SCREENS table matches the registry count", () => {
+  // The registry says how many screens a step has; the widget owns the table.
+  // They are declared in different files and nothing links them at runtime, so
+  // a screen added to one and not the other mis-numbers every badge after it.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/index.js"), "utf8",
+  );
+  assert.equal(
+    (src.match(/^\s{4}skeleton: \w+,/gm) || []).length,
+    TOURS.folder_task.steps[0].screens,
+  );
+});
+
+test("the chat action bar mirrors the real one, icon for icon", () => {
+  const threads = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
+  );
+  const real = readFileSync(
+    join(REPO_ROOT, "src/drumee/builtins/widget/chat-item/skeleton/menu.js"), "utf8",
+  );
+  // Every glyph the tour draws must be one the live toolbar actually uses,
+  // otherwise the tour teaches a bar the user will never meet.
+  for (const ico of [
+    "chat-action-reply", "ctxmenu-chat-thread", "chat-action-copy",
+    "chat-action-forward", "chat-action-trash", "chat-action-check",
+    "chat-action-smiley",
+  ]) {
+    assert.ok(threads.includes(ico), `tour is missing ${ico}`);
+    assert.ok(real.includes(ico), `${ico} is not in the real toolbar any more`);
+  }
+});
+
+test("the hover bar shows on screen 2 only", () => {
+  const skel = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/skeleton/index.js"), "utf8",
+  );
+  assert.match(skel, /threadHintScreen[\s\S]*?threadsView\(ui, \{ hint: true \}\)/);
+  // Screen 3 is the same view without it.
+  assert.match(skel, /function threadsScreen\(ui\) \{\s*return threadsView\(ui\);/);
 });

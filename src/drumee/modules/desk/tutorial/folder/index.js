@@ -1,5 +1,5 @@
 const { folder } = require('../skeleton/toolkit');
-const { chatScreen, threadsScreen, menuScreen } = require('./skeleton');
+const { chatScreen, threadHintScreen, threadsScreen, menuScreen } = require('./skeleton');
 const { stepBadge, isLastScreen, entryScreen } = require('../tours');
 
 /**
@@ -25,6 +25,19 @@ const SCREENS = [
     badge: {
       title: 'Chat lives in folder',
       desc: 'Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.',
+    },
+  },
+  {
+    // Figma 3202:3732 — the hover toolbar that starts a thread. Same view and
+    // same copy as the screen after it: the pair reads as one idea, shown then
+    // explained, which is how the design frames it.
+    skeleton: threadHintScreen,
+    target: 'thread-panel',
+    anchor: 'thread-card',
+    direction: 'east',
+    badge: {
+      title: 'Chat in threads',
+      desc: 'Drop a file, chat in the threads without context loss',
     },
   },
   {
