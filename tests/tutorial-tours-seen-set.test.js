@@ -29,10 +29,14 @@ let posts = [];
 let broadcasts = [];
 let store = {};
 
-function stubGlobals({ settings = {}, noSettings = false, enabled = 1, mobile = false, postFails = false } = {}) {
+function stubGlobals({ settings = {}, noSettings = false, enabled = 1, mobile = false, postFails = false,
+  visitorId = "u_test", keepStore = false } = {}) {
   posts = [];
   broadcasts = [];
-  store = {};
+  // keepStore models ONE browser across a logout/login: localStorage survives,
+  // Visitor.id does not. Without it there is no way to test what the mirror
+  // does to the next account signed in on the same machine.
+  if (!keepStore) store = {};
 
   global.localStorage = {
     getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
@@ -47,7 +51,7 @@ function stubGlobals({ settings = {}, noSettings = false, enabled = 1, mobile = 
   global.Platform = { get: (k) => (k === "contextual_tours" ? enabled : undefined) };
 
   global.Visitor = {
-    id: "u_test",
+    id: visitorId,
     isMobile: () => mobile,
     settings: () => (noSettings ? undefined : settings),
   };
@@ -92,6 +96,10 @@ function fresh(opts) {
   return { Tours: load(), host };
 }
 
+/** The mirror is per-account, so every assertion on it needs the account. */
+const mirrorKeyFor = (id) => `drumee.tutorials_seen:${id}`;
+const MIRROR = mirrorKeyFor("u_test");
+
 // ── test 47 — the defect that would have shipped a feature that never fires ──
 
 test("47 a brand-new account has an ABSENT map and every tour is armed", () => {
@@ -133,7 +141,7 @@ test("47 a missing settings payload fails closed and writes nothing", () => {
   // against a user whose settings could not be read.
   Tours.markSeen("migrate", host);
   assert.equal(posts.length, 0);
-  assert.equal(store["drumee.tutorials_seen"], undefined);
+  assert.equal(store[MIRROR], undefined);
 });
 
 test("47 a non-object tutorials_seen is corrupt and fails closed", () => {
@@ -179,7 +187,7 @@ test("29 kill switch off: markSeen writes nothing either, not even from full", (
   const { Tours, host } = fresh({ settings: {}, enabled: 0 });
   for (const id of Tours.TOUR_IDS) Tours.markSeen(id, host);
   assert.equal(posts.length, 0);
-  assert.equal(store["drumee.tutorials_seen"], undefined);
+  assert.equal(store[MIRROR], undefined);
 });
 
 test("D9 mobile: no tour fires AND no flag is written", () => {
@@ -272,7 +280,7 @@ test("44 a tour that fires but never mounts is NOT marked seen", (t) => {
   assert.equal(Tours.fire("migrate", host), true);
   // fire() broadcasts and nothing else: no POST, no mirror entry.
   assert.equal(posts.length, 0);
-  assert.equal(store["drumee.tutorials_seen"], undefined);
+  assert.equal(store[MIRROR], undefined);
 
   t.mock.timers.tick(Tours.GUARD_TIMEOUT_MS + 20);
   assert.equal(Tours.isSeen("migrate", host), false, "must fire again next click");
@@ -283,7 +291,7 @@ test("44 a tour that fires but never mounts is NOT marked seen", (t) => {
 test("markSeen writes the mirror synchronously, then posts", () => {
   const { Tours, host } = fresh({ settings: {} });
   Tours.markSeen("migrate", host);
-  assert.deepEqual(JSON.parse(store["drumee.tutorials_seen"]), ["migrate"]);
+  assert.deepEqual(JSON.parse(store[MIRROR]), ["migrate"]);
   assert.equal(posts.length, 1);
   assert.equal(posts[0].svc, "drumate.tutorial_seen");
   assert.equal(posts[0].payload.tour_id, "migrate");
@@ -306,7 +314,7 @@ test("46 offline: the mirror suppresses the tour on this device", async () => {
   const { Tours, host } = fresh({ settings: {}, postFails: true });
   Tours.markSeen("migrate", host);
   await new Promise((r) => setTimeout(r, 10));
-  assert.deepEqual(JSON.parse(store["drumee.tutorials_seen"]), ["migrate"]);
+  assert.deepEqual(JSON.parse(store[MIRROR]), ["migrate"]);
   assert.equal(Tours.isSeen("migrate", host), true);
   assert.equal(Tours.fire("migrate", host), false);
 });
@@ -314,13 +322,13 @@ test("46 offline: the mirror suppresses the tour on this device", async () => {
 test("46 next boot, still missing server-side: reconcile re-posts once", () => {
   // Same device, new session: the mirror survived, the server map did not.
   const host = stubGlobals({ settings: {} });
-  store["drumee.tutorials_seen"] = JSON.stringify(["migrate"]);
+  store[MIRROR] = JSON.stringify(["migrate"]);
   load();
 
   Tours.isSeen("folder_task", host); // any entry point triggers the lazy reconcile
   assert.equal(posts.length, 1);
   assert.equal(posts[0].payload.tour_id, "migrate");
-  assert.deepEqual(JSON.parse(store["drumee.tutorials_seen"]), ["migrate"]);
+  assert.deepEqual(JSON.parse(store[MIRROR]), ["migrate"]);
 
   // Once per session only.
   Tours.isSeen("share", host);
@@ -329,17 +337,17 @@ test("46 next boot, still missing server-side: reconcile re-posts once", () => {
 
 test("46 once the server map carries it, reconcile prunes and posts nothing", () => {
   const host = stubGlobals({ settings: { tutorials_seen: { migrate: 1787000000 } } });
-  store["drumee.tutorials_seen"] = JSON.stringify(["migrate"]);
+  store[MIRROR] = JSON.stringify(["migrate"]);
   load();
 
   Tours.isSeen("folder_task", host);
   assert.equal(posts.length, 0, "no re-POST once the write has landed");
-  assert.deepEqual(JSON.parse(store["drumee.tutorials_seen"]), []);
+  assert.deepEqual(JSON.parse(store[MIRROR]), []);
 });
 
 test("46 a degraded payload never re-posts from the mirror", () => {
   const host = stubGlobals({ noSettings: true });
-  store["drumee.tutorials_seen"] = JSON.stringify(["migrate"]);
+  store[MIRROR] = JSON.stringify(["migrate"]);
   load();
   Tours.isSeen("folder_task", host);
   assert.equal(posts.length, 0);
@@ -352,8 +360,75 @@ test("reset clears the mirror and posts the reset flag", async () => {
   Tours.markSeen("migrate", host);
   posts.length = 0;
   await Tours.reset(host);
-  assert.deepEqual(JSON.parse(store["drumee.tutorials_seen"]), []);
+  assert.deepEqual(JSON.parse(store[MIRROR]), []);
   assert.equal(posts.length, 1);
   assert.deepEqual(posts[0].payload, { reset: 1 });
 });
 
+
+// ── the mirror belongs to an account, not to a browser ───────────────────────
+//
+// Stage, 2026-08-19: three accounts signed up in one browser. The first ran its
+// tours genuinely (timestamps 12-20s apart). The next two were stamped with all
+// four tours in a single instant ~50s after signup, and one of them had no
+// `tutorial_done` at all — it had never completed a tour. The mirror was a
+// single browser-wide key, so it leaked the first account's seen-set into the
+// two that followed.
+
+test("a previous account's mirror does not suppress the next account's tour", () => {
+  const a = fresh({ settings: {}, visitorId: "u_first" });
+  a.Tours.markSeen("workspace", a.host);
+  assert.deepEqual(JSON.parse(store[mirrorKeyFor("u_first")]), ["workspace"]);
+
+  // Same browser — localStorage survives — but a different account signs in.
+  const b = fresh({ settings: {}, visitorId: "u_second", keepStore: true });
+  assert.equal(
+    b.Tours.isSeen("workspace", b.host), false,
+    "the tour must still be armed for an account that has never seen it",
+  );
+  assert.equal(b.Tours.fire("workspace", b.host), true, "and it must actually fire");
+  b.Tours.release("workspace");
+});
+
+test("reconcile never attributes another account's tours to this one", () => {
+  // The second half of the defect: having read the leaked ids as "missing from
+  // this user's server map", reconcile posted every one of them — writing four
+  // tours the user was never shown into their record.
+  const a = fresh({ settings: {}, visitorId: "u_first" });
+  for (const id of a.Tours.TOUR_IDS) a.Tours.markSeen(id, a.host);
+
+  const b = fresh({ settings: {}, visitorId: "u_second", keepStore: true });
+  b.Tours.reconcile(b.host);
+  assert.deepEqual(posts, [], "no write may be attributed to the new account");
+});
+
+test("the same account keeps its mirror across a reload", () => {
+  // The scoping must not break what the mirror is FOR: one device remembering
+  // a tour whose server write failed.
+  const a = fresh({ settings: {}, visitorId: "u_same", postFails: true });
+  a.Tours.markSeen("share", a.host);
+
+  const b = fresh({ settings: {}, visitorId: "u_same", keepStore: true });
+  assert.equal(b.Tours.isSeen("share", b.host), true, "still suppressed on this device");
+});
+
+test("two accounts' mirrors coexist rather than overwrite each other", () => {
+  const a = fresh({ settings: {}, visitorId: "u_a" });
+  a.Tours.markSeen("workspace", a.host);
+  const b = fresh({ settings: {}, visitorId: "u_b", keepStore: true });
+  b.Tours.markSeen("migrate", b.host);
+
+  assert.deepEqual(JSON.parse(store[mirrorKeyFor("u_a")]), ["workspace"]);
+  assert.deepEqual(JSON.parse(store[mirrorKeyFor("u_b")]), ["migrate"]);
+});
+
+test("with no account identified the mirror is inert, never a shared bucket", () => {
+  // Pre-auth there is nobody to attribute a record to. Falling back to one
+  // fixed key would reintroduce exactly the leak this fixes, in miniature.
+  const a = fresh({ settings: {}, visitorId: null });
+  a.Tours.markSeen("workspace", a.host);
+  assert.deepEqual(
+    Object.keys(store).filter((k) => k.startsWith("drumee.tutorials_seen")), [],
+    "nothing may be written without an account to write it against",
+  );
+});

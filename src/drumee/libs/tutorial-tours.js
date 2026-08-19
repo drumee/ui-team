@@ -46,7 +46,37 @@ const CHANNEL = "tutorial:trigger";
 // it, and it returns on the user's next device.
 const TOUR_IDS = ["workspace", "folder_task", "share", "migrate"];
 
-const MIRROR_KEY = "drumee.tutorials_seen";
+// The mirror belongs to an ACCOUNT, not to a browser.
+//
+// It was one bare key, which leaked across logins on a shared device: isSeen()
+// falls back to the mirror, so the next account signed in found every tour
+// already "seen" and none of them fired — and reconcile(), reading those ids as
+// missing from the new user's server map, then posted all four into their
+// record. Stage showed both halves on 2026-08-19: three signups in one browser,
+// the first with genuine timestamps 12-20s apart, the next two stamped with all
+// four tours in a single instant ~50s after signup, one of them without ever
+// having completed a tour.
+//
+// Suffixing the account id keeps what the mirror is FOR — one device
+// remembering a tour whose server write failed — while making that claim only
+// about the user it was actually true of. The old bare key is deliberately not
+// migrated: its contents cannot be attributed to anyone, which is the defect.
+const MIRROR_PREFIX = "drumee.tutorials_seen";
+
+/**
+ * @returns {String|null} this account's mirror key, or null when there is no
+ *   account to attribute a record to (pre-auth boot). Null makes the mirror
+ *   inert rather than falling back to a fixed key, which would reintroduce the
+ *   same leak in miniature.
+ */
+function mirrorKey() {
+  try {
+    const id = typeof Visitor !== "undefined" && Visitor.id;
+    return id ? `${MIRROR_PREFIX}:${id}` : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 // Bounds the CHUNK FETCH and nothing else. Cancelled by armed() the moment the
 // tour mounts, after which only the tour's own destroy releases the guard —
@@ -155,7 +185,9 @@ function serverState() {
 
 function readMirror() {
   try {
-    const raw = localStorage.getItem(MIRROR_KEY);
+    const key = mirrorKey();
+    if (!key) return [];
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const list = JSON.parse(raw);
     return Array.isArray(list) ? list.filter((t) => TOUR_IDS.includes(t)) : [];
@@ -166,7 +198,9 @@ function readMirror() {
 
 function writeMirror(list) {
   try {
-    localStorage.setItem(MIRROR_KEY, JSON.stringify(list));
+    const key = mirrorKey();
+    if (!key) return;
+    localStorage.setItem(key, JSON.stringify(list));
   } catch (e) { /* private mode / quota — the server record still stands */ }
 }
 
@@ -362,7 +396,8 @@ module.exports = {
   CHANNEL,
   TOUR_IDS,
   GUARD_TIMEOUT_MS,
-  MIRROR_KEY,
+  MIRROR_PREFIX,
+  mirrorKey,
   enabled,
   serverState,
   isSeen,
