@@ -184,16 +184,16 @@ test("a fire raised from builtins reaches the desk's channel listener", () => {
 
 // ── badges (§8 48) ───────────────────────────────────────────────────────────
 
-test("folder_task badges as one flow: 1/9 through 9/9", () => {
+test("folder_task badges as one flow: 1/8 through 8/8", () => {
   const t = TOURS.folder_task;
-  assert.deepEqual(t.steps.map((s) => s.screens), [4, 5]);
-  const folder = widget({ badge_mode: "flow", screen_offset: 0, tour_screens: 9 });
-  assert.deepEqual([0, 1, 2, 3].map((i) => stepBadge(folder, i)),
-    ["STEP 1/9", "STEP 2/9", "STEP 3/9", "STEP 4/9"]);
+  assert.deepEqual(t.steps.map((s) => s.screens), [3, 5]);
+  const folder = widget({ badge_mode: "flow", screen_offset: 0, tour_screens: 8 });
+  assert.deepEqual([0, 1, 2].map((i) => stepBadge(folder, i)),
+    ["STEP 1/8", "STEP 2/8", "STEP 3/8"]);
   // The tracker continues the count rather than restarting it.
-  const task = widget({ badge_mode: "flow", screen_offset: 4, tour_screens: 9 });
+  const task = widget({ badge_mode: "flow", screen_offset: 3, tour_screens: 8 });
   assert.deepEqual([0, 1, 2, 3, 4].map((i) => stepBadge(task, i)),
-    ["STEP 5/9", "STEP 6/9", "STEP 7/9", "STEP 8/9", "STEP 9/9"]);
+    ["STEP 4/8", "STEP 5/8", "STEP 6/8", "STEP 7/8", "STEP 8/8"]);
 });
 
 test("share badges 1/3 .. 3/3 standing alone, never 1/1", () => {

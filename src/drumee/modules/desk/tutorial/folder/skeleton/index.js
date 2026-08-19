@@ -15,17 +15,13 @@ function chatScreen(ui) {
 /**
  * Screen 2 — the Chat tab with the hover toolbar on the file message.
  *
- * Figma 3202:3732. Same view as screen 3, plus the real chat action bar and its
- * "Reply in thread" tooltip: this screen shows HOW a thread is started, the
- * next one shows the thread itself.
+ * Figma 3202:3732. The thread panel is open on the right and the hover bar sits
+ * on the message, so one screen shows both how a thread is started and what one
+ * looks like. It replaced a second screen that showed the same view without the
+ * bar and carried word-for-word the same copy.
  */
 function threadHintScreen(ui) {
   return threadsView(ui, { hint: true });
-}
-
-/** Screen 3 — the Chat tab, file thread open on the right. */
-function threadsScreen(ui) {
-  return threadsView(ui);
 }
 
 /**
@@ -39,4 +35,4 @@ function menuScreen(ui) {
   return folder(ui, chatPanel, { menu: contextMenu, folders: false });
 }
 
-module.exports = { chatScreen, threadHintScreen, threadsScreen, menuScreen };
+module.exports = { chatScreen, threadHintScreen, menuScreen };

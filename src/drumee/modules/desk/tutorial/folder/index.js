@@ -1,5 +1,5 @@
 const { folder } = require('../skeleton/toolkit');
-const { chatScreen, threadHintScreen, threadsScreen, menuScreen } = require('./skeleton');
+const { chatScreen, threadHintScreen, menuScreen } = require('./skeleton');
 const { stepBadge, isLastScreen, entryScreen } = require('../tours');
 
 /**
@@ -37,24 +37,14 @@ const SCREENS = [
     // still points at the thread card, as the design places it: the card says
     // what a thread IS, the lit toolbar says how you start one.
     target: 'chat-hint',
-    anchor: 'thread-card',
+    // The callout points at the whole thread panel (tutorial-folder__th-panel),
+    // not the card inside it: with screen 3 gone this screen carries the idea on
+    // its own, so the card is no longer the thing being singled out.
+    anchor: 'thread-panel',
     // The group is a ~230x50 strip, so its own half-diagonal would give a hole
     // barely bigger than itself. Widened so the message it belongs to reads as
     // part of the same subject.
     radius: 260,
-    direction: 'east',
-    badge: {
-      title: 'Chat in threads',
-      desc: 'Drop a file, chat in the threads without context loss',
-    },
-  },
-  {
-    skeleton: threadsScreen,
-    // The whole thread panel is lit — its own rect sizes the hole, so no
-    // radius here — but the callout points at the Drumee_Strategy_Q2 card
-    // inside it, as the design does.
-    target: 'thread-panel',
-    anchor: 'thread-card',
     direction: 'east',
     badge: {
       title: 'Chat in threads',
