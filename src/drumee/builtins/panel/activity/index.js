@@ -5,6 +5,9 @@ const CATEGORIES = {
   media: "mediaCount",
 }
 const WS_EVENT = "ws:event";
+// The tab set is declared once, in the tab bar skeleton, and imported here so
+// the panel and the bar can never disagree about which buckets exist.
+const { BUCKETS: TAB_BUCKETS, DEFAULT_BUCKET } = require('./skeleton/tabbar');
 require('./skin');
 
 class __panel_activity extends LetcBox {
@@ -36,6 +39,10 @@ class __panel_activity extends LetcBox {
     this._currentCount = 0;
     this._currentPayload = {};
     this._unreadsOnly = 1;
+    // Selected Notification Center tab. 'all' = no bucket scope, so the very
+    // first render requests the same unscoped feed the panel always has.
+    this._filter = DEFAULT_BUCKET;
+    this._mergedRows = [];
     this._dismissedKeys = new Set();
     this._meetingItems = [];
     this.details = {};
@@ -126,28 +133,56 @@ class __panel_activity extends LetcBox {
    * @returns 
    */
   getCurrentApi() {
-    if (this._filter === 'mentions') {
-      return {
-        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
-        hub_id: Visitor.id,
-        type: 'mention',
-        unread_only: this._unreadsOnly,
-      };
-    }
-    if (this._filter === 'shares') {
-      return {
-        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
-        hub_id: Visitor.id,
-        type: 'share',
-        unread_only: this._unreadsOnly,
-      };
-    }
-    return {
+    const api = {
       service: SERVICE.activity.get_feed,
       hub_id: Visitor.id,
-      filter: this._filter,
       unread_only: this._unreadsOnly,
     };
+    // 'All' is the ABSENCE of a tab scope, not a scope named "all": the server
+    // returns the whole feed when no bucket is sent, which is byte-for-byte the
+    // pre-existing behaviour. Every other tab narrows to its bucket, assigned
+    // server-side (see bucketOf in service/private/activity.js).
+    //
+    // `filter` is deliberately no longer sent. It only ever selected the retired
+    // Mentions / Shares tabs; the server defaults it to 'all', which is what the
+    // old All tab sent anyway — so dropping it changes nothing.
+    if (this._filter && this._filter !== DEFAULT_BUCKET) api.bucket = this._filter;
+    return api;
+  }
+
+  /**
+   * Fetch the per-tab unread counts and write them into the tab badges.
+   *
+   * One call for all six numbers (activity.unread_counts). The counts cannot be
+   * derived on the client: get_feed is paginated, so the panel only ever holds
+   * one page and can never know a tab's total.
+   *
+   * Updates each badge through its own part, so a refresh never re-renders the
+   * tab bar — re-rendering would drop the user's selected tab mid-session.
+   * Best-effort: on failure the badges keep their last values rather than
+   * flashing to zero, which would read as "nothing unread".
+   */
+  async _renderTabCounts() {
+    let counts;
+    try {
+      counts = await this.postService({
+        service: (SERVICE.activity && SERVICE.activity.unread_counts) || 'activity.unread_counts',
+        hub_id: Visitor.id,
+      });
+    } catch (e) {
+      this.warn('[panel_activity] unread_counts failed', e);
+      return;
+    }
+    if (!counts || typeof counts !== 'object') return;
+    for (const bucket of TAB_BUCKETS) {
+      const total = parseInt(counts[bucket], 10) || 0;
+      this.ensurePart(`tab-count-${bucket}`).then((p) => {
+        if (!p || !p.el) return;
+        p.el.innerText = total > 99 ? '99+' : String(total);
+        // Hidden rather than showing a 0 — the design has no zero state.
+        p.el.dataset.empty = total ? '0' : '1';
+      });
+    }
   }
 
   /**
@@ -156,6 +191,15 @@ class __panel_activity extends LetcBox {
   */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    // Tab clicks (`tab-all` … `tab-other`) are matched by prefix against the one
+    // canonical bucket list instead of a case per tab, so the tab set stays
+    // defined in exactly one place — the tab bar skeleton. An unknown `tab-*`
+    // falls through to the switch untouched rather than silently selecting
+    // something.
+    if (typeof service === 'string' && service.indexOf('tab-') === 0) {
+      const bucket = service.slice(4);
+      if (TAB_BUCKETS.indexOf(bucket) !== -1) return this._setTab(bucket);
+    }
     switch (service) {
       case 'open-activity-panel':
         this.activityState = 1;
@@ -225,15 +269,6 @@ class __panel_activity extends LetcBox {
           if (p && p.el) p.el.dataset.state = this._unreadsOnly ? '1' : '0';
         });
         return this.ensurePart(_a.list).then((list) => list.restart());
-
-      case 'tab-all':
-        return this._setTab('all');
-
-      case 'tab-mentions':
-        return this._setTab('mentions');
-
-      case 'tab-shares':
-        return this._setTab('shares');
 
       case 'clear-all':
         return this._clearAll();
@@ -398,6 +433,10 @@ class __panel_activity extends LetcBox {
   }
 
   async _clearAll() {
+    // "Mark as all read" acts on the tab in view. null = the All tab = clear
+    // everything, which is the pre-existing behaviour, byte for byte.
+    const bucket = (this._filter && this._filter !== DEFAULT_BUCKET) ? this._filter : null;
+    if (bucket) return this._clearBucket(bucket);
     this._dismissedKeys = this._dismissedKeys || new Set();
     try {
       const [invitations, messages, hubInvites] = await Promise.all([
@@ -423,6 +462,32 @@ class __panel_activity extends LetcBox {
     });
     if (this.__list && !this.__list.isDestroyed()) this.__list.restart();
     RADIO_BROADCAST.trigger('activity-update', { unread_count: 0 });
+    this._renderTabCounts();
+  }
+
+  /**
+   * Mark one tab's notifications as read (the scoped half of _clearAll).
+   *
+   * Deliberately does NOT hand-maintain the local dismissed-key bookkeeping the
+   * unscoped path uses: the server has already persisted the read state for this
+   * bucket, so re-reading the truth via refreshActivity is both simpler and
+   * safer than duplicating the per-category key formats here — and it repairs
+   * the bell badge and every tab count in the same pass, instead of asserting a
+   * zero that is only true for one tab.
+   */
+  async _clearBucket(bucket) {
+    try {
+      await this.postService(SERVICE.activity.mark_all_read, {
+        hub_id: Visitor.id,
+        bucket,
+      });
+    } catch (e) {
+      this.warn('mark_all_read failed', e);
+      return;
+    }
+    // Live meeting rows are client-side only, so no server call can clear them.
+    if (bucket === 'meeting') this._meetingItems = [];
+    return this.refreshActivity(0);
   }
 
   _findActivityItem(cmd) {
@@ -621,15 +686,22 @@ class __panel_activity extends LetcBox {
 
 
   /**
+   * Select a Notification Center tab. `bucket` is one of TAB_BUCKETS; 'all'
+   * means no scope.
    *
-   * @param {*} filter 
+   * The panel shows TWO lists at once — the pinned `priority` section (rollups
+   * from activity.list and friends) and the paginated smart list (get_feed) —
+   * so a tab has to narrow both or the same event shows on the wrong tab.
+   *
+   * The old code hid the priority section outright on any tab but All, which
+   * would now mean every pinned row (chat rollups, invites, meetings, access
+   * requests) disappeared from the very tabs meant to show them. It is filtered
+   * instead, re-rendered from the last fetched rows so switching tabs costs no
+   * request.
    */
-  _setTab(filter) {
-    this._filter = filter || 'all';
-    this.ensurePart('priority').then((p) => {
-      if (!p || !p.el) return;
-      p.el.style.display = (this._filter === 'all') ? '' : 'none';
-    });
+  _setTab(bucket) {
+    this._filter = bucket || DEFAULT_BUCKET;
+    this.updatePriorityListUnified(this._mergedRows || []);
     this.ensurePart(_a.list).then((list) => list.restart());
   }
 
@@ -837,6 +909,11 @@ class __panel_activity extends LetcBox {
           category: 'access_request',
           key_id: r.request_id,
           last_id: r.ctime,
+          // These rows come from secure_share.*, not from activity.*, so the
+          // server never stamped a bucket on them. An access request is always
+          // Other — fixed by construction, exactly like the `category` above,
+          // and it matches what bucketOf returns for category 'access_request'.
+          bucket: 'other',
         }));
     } catch (e) {
       this.warn('[panel_activity] secure_share.list_requests failed', e);
@@ -870,6 +947,12 @@ class __panel_activity extends LetcBox {
           category: 'contact_invite',
           key_id: String(r.id),
           last_id: r.id,
+          // channel.list_notifications does not stamp buckets. These rows are
+          // filtered to event === 'task_mention' just above, so they are always
+          // Task — the same answer bucketOf gives for that event. Set explicitly
+          // because the synthetic 'contact_invite' category assigned here (needed
+          // for dismiss routing) would otherwise read as Other.
+          bucket: 'task',
         }));
     } catch (e) {
       this.warn('[panel_activity] task mention fetch failed', e);
@@ -893,14 +976,23 @@ class __panel_activity extends LetcBox {
           category: 'contact_invite',
           key_id: String(r.id),
           last_id: r.id,
+          // The server stamps this bucket; the fallback covers the rollout window
+          // where this UI is live against a server that predates it. Rows here are
+          // already filtered to task events, so 'task' is the right default.
+          bucket: r.bucket || 'task',
         }));
     } catch (e) {
       this.warn('[panel_activity] task assignment fetch failed', e);
     }
     const merged = accessReqs.concat(taskMentions, taskNotifications, live);
 
+    // Kept so switching tabs can re-filter the pinned section without refetching.
+    this._mergedRows = merged;
+    // The bell badge stays the total across every tab, unchanged — the per-tab
+    // numbers come from activity.unread_counts instead.
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
+    this._renderTabCounts();
     this.updatePriorityListUnified(merged);
     if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
@@ -1030,7 +1122,18 @@ class __panel_activity extends LetcBox {
     }
     const dismissed = this._dismissedKeys || new Set();
     const meetingItems = (this._meetingItems || []).filter(m => !dismissed.has(m.item_key));
-    const combined = [...meetingItems, ...list];
+    let combined = [...meetingItems, ...list];
+    // Narrow the pinned section to the selected tab. Today that means access
+    // requests appear under Other and live meeting rows under Meeting; on 'All'
+    // nothing is filtered, which is the pre-existing behaviour.
+    //
+    // A row with no bucket is KEPT rather than dropped: every producer stamps one
+    // (server-side for activity.*, by construction for the client-built rows), so
+    // a missing bucket means an unforeseen source — and showing it on the wrong
+    // tab is a far smaller failure than making a notification unreachable.
+    if (this._filter && this._filter !== DEFAULT_BUCKET) {
+      combined = combined.filter((row) => !row || !row.bucket || row.bucket === this._filter);
+    }
     this.ensurePart('priority').then((p) => {
       if (!p) return;
       p.feed(combined);
@@ -1254,6 +1357,10 @@ class __panel_activity extends LetcBox {
       event_type: 'meeting',
       item_type: 'meeting',
       item_key: key,
+      // Client-built row (WS conference.start), so nothing stamped a bucket on
+      // it. Always Meeting — the same answer bucketOf gives for category
+      // 'meeting'. Without it the row would be filtered out of the Meeting tab.
+      bucket: 'meeting',
       // NOTE: do NOT set a model-level `service` here. The item's onUiEvent
       // resolves `args.service || this.get('service') || cmd.get('service')`, so
       // a model `service` would SHADOW the per-element service and every click

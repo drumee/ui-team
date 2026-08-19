@@ -152,15 +152,31 @@
         height: 24px;
       }
 
+      // Six segmented pills instead of three underline tabs. `justify-content:
+      // center` is dropped on purpose: once the pills overflow the phone width
+      // the bar scrolls, and centring hides the leading tabs off the left edge
+      // with no way to reach them.
       .panel-activity__tabbar {
-        gap: 20px;
-        padding: 14px 16px;
-        justify-content: center;
+        gap: 6px;
+        padding: 8px 16px 10px;
       }
 
       .panel-activity__tab {
-        font-size: 15px;
-        line-height: 15px;
+        padding: 10px 12px;
+      }
+
+      // Font size moved from __tab to __tab-label — the label is its own node in
+      // the new markup, so sizing __tab would silently do nothing.
+      .panel-activity__tab-label {
+        font-size: 14px;
+        line-height: 14px;
+      }
+
+      .panel-activity__tab-count {
+        min-width: 16px;
+        height: 16px;
+        font-size: 10px;
+        line-height: 10px;
       }
 
       .panel-activity__empty {
@@ -418,35 +434,72 @@
     }
   }
 
+  /* ── Tab bar (Figma `filter-bar`) ─────────────────────────
+     Six segmented pills: All + one per notification bucket. Replaces the old
+     three underline tabs. Hex literals rather than tokens to match the rest of
+     this file, which is written that way throughout. */
   &__tabbar {
-    gap: 16px;
-    padding: 12px 20px;
+    gap: 4px;
+    padding: 4px 16px 8px;
     flex-shrink: 0;
-    background-color: rgba(0, 0, 0, 0.05);
+    /* Sits on the panel background, not a tinted strip — the design keeps the
+       bar flush with the header. */
+    background-color: transparent;
+    /* Six pills do not fit 512px on every locale; scroll rather than wrap, so
+       the bar stays one row and the feed keeps its position. */
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__tab {
-    @include drumee.typo(
-      $color: #0b0a21,
-      $size: 12px,
-      $weight: 600,
-      $line: 12px
-    );
-    padding: 0 0 4px;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    flex-shrink: 0;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
+    border-radius: 1111px;
     transition:
-      color 0.15s,
-      border-color 0.15s;
+      background-color 0.15s,
+      color 0.15s;
 
-    &:hover {
-      color: #5950ff;
+    &:hover:not([data-state="1"]) {
+      background-color: rgba(89, 80, 255, 0.1);
     }
 
     &[data-state="1"] {
-      color: #5950ff;
-      border-bottom-color: #5950ff;
-      padding-bottom: 6px;
+      background-color: #5950ff;
+      border-radius: 8px;
+    }
+  }
+
+  &__tab-label {
+    @include drumee.typo($color: #65656c, $size: 12px, $weight: 600, $line: 12px);
+    white-space: nowrap;
+
+    .panel-activity__tab[data-state="1"] & {
+      color: #ffffff;
+    }
+  }
+
+  /* Unread count per tab (Figma `number-noti`). Hidden at zero — the design has
+     no zero state, and a row of 0s reads as noise. */
+  &__tab-count {
+    @include drumee.typo($color: #ffffff, $size: 8px, $weight: 400, $line: 8px);
+    min-width: 12px;
+    height: 12px;
+    padding: 2px 4px;
+    box-sizing: border-box;
+    border-radius: 100px;
+    background-color: #d74e49;
+    text-align: center;
+    flex-shrink: 0;
+
+    &[data-empty="1"] {
+      display: none;
     }
   }
 
@@ -515,11 +568,15 @@ html[data-theme="dark"] {
       background-color: var(--normal-bg-40);
     }
 
+    // The bar is flush with the header now, in both themes.
     &__tabbar {
-      background-color: var(--overlay-bg-05);
+      background-color: transparent;
     }
 
-    &__tab {
+    // Targets the label, not the pill: colour lives on __tab-label in the new
+    // markup. The active pill keeps its white text — that rule is more specific
+    // than this one, so it still wins here.
+    &__tab-label {
       color: var(--normal-fg-10);
     }
 
