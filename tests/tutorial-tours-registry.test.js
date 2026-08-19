@@ -57,7 +57,7 @@ test("every flagged tour badges as one continuous flow", () => {
 test("flow badging counts screens cumulatively across steps", () => {
   const t = TOURS.folder_task;
   const total = t.steps.reduce((n, s) => n + s.screens, 0);
-  assert.equal(total, 8, "3 folder screens + 5 tracker views");
+  assert.equal(total, 9, "3 folder screens + 5 tracker views + the scheduler");
 
   const seen = [];
   let offset = 0;
@@ -72,8 +72,11 @@ test("flow badging counts screens cumulatively across steps", () => {
   }
   // The counter must NOT restart at the step boundary — that is the whole point.
   assert.deepEqual(seen, [
-    "STEP 1/8", "STEP 2/8", "STEP 3/8",
-    "STEP 4/8", "STEP 5/8", "STEP 6/8", "STEP 7/8", "STEP 8/8",
+    "STEP 1/9", "STEP 2/9", "STEP 3/9",
+    "STEP 4/9", "STEP 5/9", "STEP 6/9", "STEP 7/9", "STEP 8/9",
+    // The scheduler, which Figma 5:75093 badges "STEP 9/9" — the design and
+    // the registry have to agree on this number.
+    "STEP 9/9",
   ]);
 });
 
@@ -91,9 +94,9 @@ test("a single-step tour's flow numbering is just its own screens", () => {
 
 test("the host stamps screen_offset and tour_screens per step", () => {
   const out = build(TOURS.folder_task).map((e) => (Array.isArray(e) ? e[e.length - 1] : e));
-  assert.deepEqual(out.map((w) => w.screen_offset), [0, 3]);
-  assert.deepEqual(out.map((w) => w.tour_screens), [8, 8]);
-  assert.deepEqual(out.map((w) => w.badge_mode), ["flow", "flow"]);
+  assert.deepEqual(out.map((w) => w.screen_offset), [0, 3, 8]);
+  assert.deepEqual(out.map((w) => w.tour_screens), [9, 9, 9]);
+  assert.deepEqual(out.map((w) => w.badge_mode), ["flow", "flow", "flow"]);
 });
 
 test("full keeps the original six steps, in order, and is never suppressed", () => {
@@ -216,7 +219,7 @@ function build(tourDef) {
 
 test("a step with a backdrop feeds [backdrop, widget], interactive LAST", () => {
   const out = build(TOURS.folder_task);
-  assert.equal(out.length, 2);
+  assert.equal(out.length, 3);
   assert.ok(Array.isArray(out[0]));
   assert.deepEqual(out[0][0], { backdrop: "faded" });
   // _widgetAt merges enter_at_last onto the LAST entry, so the interactive
@@ -407,7 +410,7 @@ test("a forced tour is a PREVIEW — it must not burn the flag", () => {
 
 test("the folder step runs three screens, and the flow totals eight", () => {
   assert.equal(TOURS.folder_task.steps[0].screens, 3);
-  assert.equal(TOURS.folder_task.steps.reduce((n, s) => n + s.screens, 0), 8);
+  assert.equal(TOURS.folder_task.steps.reduce((n, s) => n + s.screens, 0), 9);
   // The same step inside `full` gained the screen too — they render the same
   // widget, so a mismatch would mis-number one of the two tours.
   assert.equal(TOURS.full.steps[1].kind, "tutorial_folder");
@@ -530,4 +533,54 @@ test("the hover bar shows on screen 2 only", () => {
   // The bar-less variant is gone: it duplicated this screen's copy word for
   // word, so the screen that shows the bar is the only one left.
   assert.ok(!/threadsScreen/.test(skel));
+});
+
+// ── the scheduler, folder_task's closing screen ──────────────────────────────
+
+test("folder_task ends on the scheduler, and it is the only new step", () => {
+  const kinds = TOURS.folder_task.steps.map((s) => s.kind);
+  assert.deepEqual(kinds, ["tutorial_folder", "tutorial_task", "tutorial_schedule"]);
+  // One screen: the design is a single frame, and the flow badge on it
+  // ("STEP 9/9") only comes out right if this stays 1.
+  assert.equal(TOURS.folder_task.steps[2].screens, 1);
+  // Faded like its neighbours — the workspace grid behind is not this step's
+  // subject, unlike migrate's.
+  assert.deepEqual(TOURS.folder_task.steps[2].backdrop, ["workspaceFaded"]);
+});
+
+test("full is untouched by the scheduler — still the original six steps", () => {
+  // tutorial_meeting is the call itself and stays full's third step; the
+  // scheduler is where a call is started from and belongs to folder_task. If
+  // these ever merge, `full` is where the regression will show first.
+  assert.equal(TOURS.full.steps.length, 6);
+  assert.ok(!TOURS.full.steps.some((s) => s.kind === "tutorial_schedule"));
+  assert.ok(TOURS.full.steps.some((s) => s.kind === "tutorial_meeting"));
+});
+
+test("every kind a tour names is registered in seeds.js", () => {
+  // A kind with no seeds entry does not throw — Kind.waitFor simply never
+  // resolves, so the tour stalls on a blank screen with nothing in the console.
+  // Cheaper to catch here.
+  const seeds = readFileSync(join(REPO_ROOT, "src/drumee/seeds.js"), "utf8");
+  const kinds = new Set();
+  for (const t of Object.values(TOURS)) t.steps.forEach((s) => kinds.add(s.kind));
+  for (const kind of kinds) {
+    assert.ok(
+      new RegExp(`\\b${kind}:\\s*function`).test(seeds),
+      `${kind} is named by a tour but has no seeds.js entry`,
+    );
+  }
+});
+
+test("the scheduler's slot unit matches the rules its blocks sit on", () => {
+  // Meeting blocks are positioned in multiples of SLOT while the grid rules are
+  // drawn from $slot. If the two drift, every block lands off its hour line —
+  // which looks like a data bug and is not one.
+  const dir = "src/drumee/modules/desk/tutorial/schedule";
+  const skel = readFileSync(join(REPO_ROOT, `${dir}/skeleton/index.js`), "utf8");
+  const skin = readFileSync(join(REPO_ROOT, `${dir}/skin/index.scss`), "utf8");
+  const js = /const SLOT = (\d+);/.exec(skel);
+  const scss = /\$slot: (\d+)px;/.exec(skin);
+  assert.ok(js && scss, "both slot constants must be findable");
+  assert.equal(js[1], scss[1], "SLOT and $slot must agree");
 });

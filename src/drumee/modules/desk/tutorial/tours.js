@@ -57,11 +57,11 @@ const TOURS = {
   // open a folder. Merged back on request: the two steps teach one thing, and
   // the Tasks tab is not where a first-time user goes looking for it.
   //
-  // Badged as one continuous flow: 3 folder screens then 5 tracker views read
-  // "STEP 1/8 … 8/8" straight through. Step numbering ("1/2", "2/2") is what
-  // `full` does, and it is wrong here — to someone opening a folder this is one
-  // thing, not two, and a counter that sits on "1/2" for three screens tells
-  // them nothing about how much is left.
+  // Badged as one continuous flow: 3 folder screens, then 5 tracker views, then
+  // the scheduler, reading "STEP 1/9 … 9/9" straight through. Step numbering
+  // ("1/3", "2/3", "3/3") is what `full` does, and it is wrong here — to someone
+  // opening a folder this is one thing, not three, and a counter that sits on
+  // "1/3" for three screens tells them nothing about how much is left.
   folder_task: {
     id: "folder_task",
     flag: "folder_task",
@@ -69,6 +69,12 @@ const TOURS = {
     steps: [
       { kind: "tutorial_folder", screens: 3, backdrop: ["workspaceFaded"] },
       { kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] },
+      // Closes the tour where a folder's work ends up: the Meeting tab, with
+      // the week ahead on it. Figma 5:75093 badges this screen "STEP 9/9",
+      // which is what 3 folder screens + 5 tracker views + this one comes to —
+      // the design and the registry agree on the count, so a change to either
+      // shows up as a mismatch here.
+      { kind: "tutorial_schedule", screens: 1, backdrop: ["workspaceFaded"] },
     ],
   },
 
