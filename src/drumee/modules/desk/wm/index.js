@@ -1184,6 +1184,15 @@ class __window_manager extends push {
    * No-op once the user has navigated into a sub-workspace.
    */
   onPartReady(child, pn) {
+    if (pn === _a.list) {
+      // Warm BOTH of folder_task's steps while the grid that triggers it
+      // renders, so neither the first tile click nor the step boundary inside
+      // the tour pays a round trip.
+      if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+        Promise.resolve(Kind.waitFor("tutorial_folder")).catch(() => {});
+        Promise.resolve(Kind.waitFor("tutorial_task")).catch(() => {});
+      }
+    }
     if (pn === _a.list && child && !child._homeGridFilterInstalled) {
       child._homeGridFilterInstalled = 1;
       const original = child.prepareData.bind(child);
@@ -2032,6 +2041,18 @@ class __window_manager extends push {
         }
         this._lastOpenNode = { key: nodeKey, at: now };
         this.openContent(cmd, args);
+        // Contextual tour: the first workspace or folder a user opens explains
+        // what a folder is. Raised AFTER openContent so the navigation the user
+        // asked for always happens — the tour never swallows the action — and
+        // after the per-node debounce above, so a swallowed double click cannot
+        // fire it. The model's filetype is the discriminator, never the section
+        // <div> the tile sits in: _doPartition re-appends tiles into those under
+        // a live MutationObserver, so the DOM says nothing reliable about what a
+        // tile IS.
+        const _ft = cmd.mget && cmd.mget(_a.filetype);
+        if (_ft === _a.hub || _ft === _a.folder) {
+          require("libs/tutorial-tours").fire("folder_task", this);
+        }
         return this.unselect();
       }
 

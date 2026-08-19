@@ -134,14 +134,14 @@ module.exports = {
   tutorial_meeting: function () {
     return import("./modules/desk/tutorial/meeting");
   },
+  tutorial_schedule: function () {
+    return import("./modules/desk/tutorial/schedule");
+  },
   tutorial_share: function () {
     return import("./modules/desk/tutorial/share");
   },
   tutorial_migrate: function () {
     return import("./modules/desk/tutorial/migrate");
-  },
-  tutorial_settings: function () {
-    return import("./modules/desk/tutorial/settings");
   },
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");

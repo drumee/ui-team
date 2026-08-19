@@ -1,0 +1,468 @@
+@use 'mixins/drumee';
+
+// BEM root: .tutorial-schedule
+// The folder's Meeting tab (Figma 5:75093). The app behind the callout is a
+// flat bitmap in that frame, so geometry is measured off the 1:1 render and
+// the colours are sampled from it.
+//
+//   __bar / __nav / __range / __btn  → Today, week range, Start a Meeting
+//   __cal-head / __day-*             → Sun-Sat header strip
+//   __gutter-*                       → the hour column on the left
+//   __col / __hour / __half          → the grid the meetings sit on
+//   __ev-*                           → a meeting block
+//
+// Folder header + tab strip come from toolkit/folder.js with pfx =
+// tutorial-schedule, so the header rules below mirror the tracker step's — the
+// tour stays in one window and only changes tabs.
+
+// One half-hour. Meeting blocks are positioned in multiples of this by
+// skeleton/index.js, which keeps its own SLOT in step with it.
+$slot: 35px;
+
+.tutorial-schedule {
+
+  // ── Root ────────────────────────────────────────────────────────────────────
+  // Same frame as the tracker step that runs immediately before it, so the
+  // window does not jump between screens 8 and 9.
+  &__ui {
+    position: absolute;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 1242px;
+    max-height: 700px;
+    transform: translate(-50%, -50%);
+    top: 50%;
+    left: 50%;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--corner-radius-2);
+    overflow: hidden;
+
+    &[data-aspect="faded"] {
+      opacity: .45;
+    }
+  }
+
+  // The window is the bottom layer of the step: it must stay under the tutorial
+  // callout (.tutorial__s1-tooltip, z-index 10010), which is what is being read.
+  &__main {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--normal-bg);
+  }
+
+  // ── Folder header (toolkit) ─────────────────────────────────────────────────
+  &__header {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacer-4) var(--spacer-6);
+    background: var(--normal-bg-90);
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+  }
+
+  &__header-left { align-items: center; gap: 8px; }
+
+  &__header-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--area-share, #ffa8dc);
+    flex-shrink: 0;
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__header-name {
+    font-family: var(--font-main);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__header-restricted {
+    font-family: var(--font-main);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #d6479c;
+    background: rgba(255, 168, 220, 0.18);
+    border: 1px solid rgba(255, 168, 220, 0.45);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  &__header-actions { align-items: center; gap: 8px; }
+
+  &__header-upload,
+  &__header-add {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    height: 28px;
+    padding: 0 12px;
+    gap: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg { width: 13px; height: 13px; }
+
+    span.label,
+    section.label {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
+
+  &__header-upload {
+    background: var(--normal-bg);
+    border: 1px solid var(--border-muted);
+
+    svg { fill: var(--normal-fg); }
+    span.label, section.label { color: var(--normal-fg); }
+  }
+
+  &__header-add {
+    background: #b1adff;
+
+    svg { fill: #0b0a21; }
+    span.label, section.label { color: #0b0a21; }
+  }
+
+  &__header-settings,
+  &__header-close {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 4px;
+    color: var(--normal-fg-50);
+    flex-shrink: 0;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  // ── Tab strip (toolkit) ─────────────────────────────────────────────────────
+  &__tabs {
+    width: 100%;
+    height: 44px;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+    background: var(--normal-bg);
+  }
+
+  &__tab {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    height: 30px;
+    padding: 0 12px;
+    gap: 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-50);
+    background: var(--normal-bg-90);
+    cursor: pointer;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+
+    svg { width: 14px; height: 14px; fill: currentColor; }
+
+    span.label, section.label { font-size: 13px; font-weight: 500; color: inherit; }
+
+    // Meeting is the live tab here, marked with the shared folder's pink
+    // outline exactly as the tracker step marks Tasks.
+    &.active {
+      color: var(--normal-fg);
+      background: var(--normal-bg-90);
+      border-color: var(--area-share, #ffa8dc);
+      font-weight: 600;
+
+      span.label, section.label { font-weight: 600; color: var(--normal-fg); }
+    }
+  }
+
+  // ── Toolbar ─────────────────────────────────────────────────────────────────
+  &__bar {
+    width: 100%;
+    height: 56px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--normal-bg);
+  }
+
+  &__bar-left { align-items: center; gap: 14px; }
+  &__bar-right { align-items: center; gap: 14px; }
+
+  &__nav {
+    height: 34px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border-radius: 99px;
+    background: #f2f2f2;
+    cursor: pointer;
+  }
+
+  &__nav-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--normal-fg);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__nav-label {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__range { align-items: center; gap: 6px; }
+
+  &__range-label {
+    font-family: var(--font-main);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__range-caret {
+    width: 12px;
+    height: 12px;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__toggle { align-items: center; gap: 8px; }
+
+  &__toggle-label {
+    font-family: var(--font-main);
+    font-size: 13px;
+    color: var(--normal-fg-50);
+  }
+
+  // Weekly is the live side in the design, so the track is filled and the knob
+  // sits right.
+  &__toggle-switch {
+    width: 34px;
+    height: 20px;
+    border-radius: 99px;
+    background: #847eff;
+    padding: 2px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    align-items: flex-end;
+  }
+
+  &__toggle-knob {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--normal-bg);
+  }
+
+  &__bar-divider {
+    width: 1px;
+    height: 24px;
+    flex-shrink: 0;
+    background: var(--border-muted);
+  }
+
+  &__btn {
+    height: 40px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    border-radius: 6px;
+    background: #f2f2f7;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &.primary { background: #433cc5; }
+  }
+
+  &__btn-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+
+    .tutorial-schedule__btn.primary & { color: #fff; }
+  }
+
+  &__btn-label {
+    font-family: var(--font-main);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+
+    .tutorial-schedule__btn.primary & { color: #fff; }
+  }
+
+  // ── Calendar ────────────────────────────────────────────────────────────────
+  &__cal {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    // The design's window clips the 2 PM row at its bottom edge; keeping the
+    // overflow hidden reproduces that rather than squeezing the rows.
+    overflow: hidden;
+    border-top: 1px solid #f2f2f2;
+    background: var(--normal-bg);
+  }
+
+  &__cal-head {
+    width: 100%;
+    height: 52px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f2f2f2;
+  }
+
+  &__cal-body {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  // The hour column. Its width is shared by the header spacer above it, which
+  // is what keeps the day columns aligned with their contents.
+  &__gutter-head,
+  &__gutter {
+    width: 72px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-right: 1px solid #f2f2f2;
+  }
+
+  &__gutter-hour {
+    height: $slot * 2;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    align-items: flex-end;
+    padding-right: 12px;
+  }
+
+  // The label marks the hour line and is centred in the first half-hour of the
+  // row, which is where the design sets it — not in the middle of the row.
+  &__gutter-label {
+    font-family: var(--font-main);
+    font-size: 13px;
+    line-height: $slot;
+    color: var(--normal-fg-50);
+    white-space: nowrap;
+  }
+
+  &__day-head {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    justify-content: center;
+    gap: 2px;
+    padding: 0 16px;
+    border-right: 1px solid #f2f2f2;
+
+    &:last-child { border-right: 0; }
+  }
+
+  &__day-num {
+    font-family: var(--font-main);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    line-height: 1.1;
+  }
+
+  &__day-name {
+    font-family: var(--font-main);
+    font-size: 13px;
+    color: var(--normal-fg-50);
+    line-height: 1.2;
+  }
+
+  &__col {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    border-right: 1px solid #f2f2f2;
+
+    &:last-child { border-right: 0; }
+  }
+
+  &__hour {
+    height: $slot * 2;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-bottom: 1px solid #f2f2f2;
+  }
+
+  // Half-hour rule: dashed, and lighter than the hour rules so the hour still
+  // reads as the stronger division.
+  &__half {
+    height: $slot;
+    box-sizing: border-box;
+    border-bottom: 1px dashed #e0e0e5;
+  }
+
+  // ── Meeting block ───────────────────────────────────────────────────────────
+  // Placed over the rules by skeleton/index.js, which sets top and height in
+  // multiples of $slot.
+  &__ev {
+    position: absolute;
+    left: 6px;
+    right: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 6px 10px;
+    gap: 2px;
+    background: #efeeff;
+    border-left: 4px solid #5950ff;
+  }
+
+  &__ev-title {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  // Clipped rather than wrapped: the design cuts every description at the
+  // column edge, which is what tells the reader the column is a real week view
+  // and not a list.
+  &__ev-desc {
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--normal-fg-70, #65656c);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+}

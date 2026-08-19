@@ -12,9 +12,16 @@ function chatScreen(ui) {
   return folder(ui, chatPanel);
 }
 
-/** Screen 2 — the Chat tab, file thread open on the right. */
-function threadsScreen(ui) {
-  return threadsView(ui);
+/**
+ * Screen 2 — the Chat tab with the hover toolbar on the file message.
+ *
+ * Figma 3202:3732. The thread panel is open on the right and the hover bar sits
+ * on the message, so one screen shows both how a thread is started and what one
+ * looks like. It replaced a second screen that showed the same view without the
+ * bar and carried word-for-word the same copy.
+ */
+function threadHintScreen(ui) {
+  return threadsView(ui, { hint: true });
 }
 
 /**
@@ -28,4 +35,4 @@ function menuScreen(ui) {
   return folder(ui, chatPanel, { menu: contextMenu, folders: false });
 }
 
-module.exports = { chatScreen, threadsScreen, menuScreen };
+module.exports = { chatScreen, threadHintScreen, menuScreen };

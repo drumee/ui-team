@@ -66,6 +66,13 @@ class desk_module extends LetcBox {
 
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     Visitor.on(_e.change, this._updateAvatar);
+    // Contextual tutorial tours. The trigger surfaces are spread across the
+    // desk, the window manager, the sidebar workspace list and (later) the
+    // folder window, none of which share a part tree with the overlay the tour
+    // mounts into — so they raise one broadcast and the desk is the only
+    // listener. Same shape as the over-limit channel above.
+    this._onTourTrigger = this._onTourTrigger.bind(this);
+    RADIO_BROADCAST.on(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
     // capture listener only exists while a desk is alive — both of its targets
@@ -392,6 +399,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
+    RADIO_BROADCAST.off(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchHotkey || this._escHotkey) {
       const hk = require("libs/hotkeys");
@@ -1756,14 +1764,61 @@ class desk_module extends LetcBox {
         this._userMenuItems = child;
         return;
 
+      // "+ New" dropdown. The button that opens it
+      // (desk-module-topbar__new-workspace-btn) is the Menu's `trigger` and
+      // carries no service, so desk onUiEvent never sees it — the menu's own
+      // open event is the signal. _e.open fires only on open, never on close,
+      // so re-opening the menu cannot re-trigger.
+      //
+      // Re-bound automatically: _updateAddmenu and _onOverLimitChanged re-feed
+      // the whole topbar fragment, which lands here again with a new menu
+      // widget. Nothing is remembered on the node or the widget — every gate
+      // lives in libs/tutorial-tours — so a rebuild can neither lose nor
+      // duplicate the trigger.
+      case "addmenu": {
+        const Tours = require("libs/tutorial-tours");
+        if (_.isFunction(child.on)) {
+          child.on(_e.open, () => Tours.fire("migrate", this));
+        }
+        // Warm the chunk while the surface that triggers it is on screen, so
+        // pressing the button renders from memory rather than from the network.
+        if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+          Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
+        }
+        return;
+      }
+
       case "overlay":
+        // `?tutorial=reset` is a QA affordance, not a tour: it clears the
+        // seen-set so every contextual tour becomes triggerable again on this
+        // account. The server re-checks profile.devel, so this is only the
+        // client half. It deliberately does NOT mount anything.
+        if (Visitor.parseModuleArgs().tutorial === "reset") {
+          require("libs/tutorial-tours").reset(this);
+          setTimeout(() => {
+            this._afterHomeSettled();
+          }, 2000);
+          return;
+        }
         if (
           Visitor.parseModuleArgs().tutorial ||
           this._postOnboardingTutorial
         ) {
           this._postOnboardingTutorial = false;
+          const explicit = !!Visitor.parseModuleArgs().tutorial;
+          const forced = this._forcedTourId();
           setTimeout(() => {
-            this._showTutorial();
+            if (this._launchHomeTutorial(explicit, forced)) return;
+            // Nothing mounted, and nothing is going to: the post-onboarding
+            // tour was gated (already seen, mobile, or the switch is off in a
+            // way that produced no tour). The 20s net below exists for a
+            // tutorial that was LAUNCHED and failed to report in; waiting it
+            // out here would delay the reward flow, LAUNCH30 and the
+            // invited-workspace prompt by 18 seconds for — among others —
+            // every mobile signup. Settle now, exactly as the else-branch does.
+            clearTimeout(this._homeSettledFallback);
+            this._homeSettledFallback = null;
+            this._afterHomeSettled();
           }, 2000);
           // Safety net. In this branch the ONLY route to _afterHomeSettled is
           // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
@@ -1775,6 +1830,9 @@ class desk_module extends LetcBox {
           //
           // Cleared as soon as the tutorial does report in, so the normal path
           // is untouched and the chain still waits for the tutorial to finish.
+          // Also cleared by the launcher above when it turns out no tutorial is
+          // coming at all — armed here rather than after the 2s decision so a
+          // throw inside that timeout still leaves the net in place.
           clearTimeout(this._homeSettledFallback);
           this._homeSettledFallback = setTimeout(() => {
             this.warn && this.warn("[home] tutorial never mounted; settling anyway");
@@ -1791,7 +1849,22 @@ class desk_module extends LetcBox {
         }
         return;
 
-      case "desk-tutorial":
+      case "desk-tutorial": {
+        const tour = (child && child.mget && child.mget("tour")) || "full";
+        // Release single-flight for EVERY tour, deliberately outside the chain
+        // gate below: a contextual tour that is never released would block the
+        // next trigger for the rest of the session. Hangs off the same destroy
+        // event _chainRewardFlowAfterTutorial uses.
+        if (_.isFunction(child.once)) {
+          child.once(_e.destroy, () =>
+            require("libs/tutorial-tours").release(tour),
+          );
+        }
+        // Only the post-onboarding run and the full tour own the hand-off to
+        // the post-home chain. A contextual tour firing an hour later reaches
+        // this line with _homeSettledDone already true and must not re-enter
+        // it — and must not be able to block it either.
+        if (tour !== "workspace" && tour !== "full") return;
         // The tutorial exists and owns the hand-off from here.
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
@@ -1800,6 +1873,7 @@ class desk_module extends LetcBox {
         // post-signup run leaves the user on the desk as before.
         this._chainHelpReturnAfterTutorial(child);
         return;
+      }
     }
   }
 
@@ -1898,10 +1972,109 @@ class desk_module extends LetcBox {
    * framework's own reliable hand-off for a just-rendered child; use it
    * instead of leaning on the feed() return value.
    */
-  _showTutorial() {
+  /**
+   * Which tour `?tutorial=` asked for.
+   *
+   * `?tutorial=1` (and anything unrecognised) keeps meaning the whole
+   * six-step tour, which is what it has always meant. A recognised tour id
+   * runs that tour on its own, which is the only way to reach one without
+   * performing its trigger — QA cannot otherwise test a tour twice.
+   *
+   * @returns {String} a tour id
+   */
+  _forcedTourId() {
+    const arg = Visitor.parseModuleArgs().tutorial;
+    const { TOURS } = require("desk/tutorial/tours");
+    if (typeof arg === "string" && TOURS[arg]) return arg;
+    return "full";
+  }
+
+  _showTutorial(tourId, opt = {}) {
+    const tour = tourId || "full";
     this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "desk_tutorial", sys_pn: "desk-tutorial", partHandler: this });
+      p.feed({
+        kind: "desk_tutorial",
+        tour,
+        sys_pn: "desk-tutorial",
+        partHandler: this,
+        ...opt,
+      });
     });
+  }
+
+  /**
+   * Force a tour onto the screen from the URL, for checking the UI.
+   *
+   *   #/desk?tutorial=share                 the share tour, from screen 1
+   *   #/desk?tutorial=share&screen=3        straight to its third screen
+   *   #/desk?tutorial=folder_task&step=2    straight to the tracker step
+   *   #/desk?tutorial=folder_task&step=2&screen=4   ...and its fourth view
+   *   #/desk?tutorial=1                     the whole six-step tour
+   *   #/desk?tutorial=reset                 clear the seen-set (devel only)
+   *
+   * `step` and `screen` are 1-based, matching what the badge shows, and are
+   * clamped — a nonsense value lands on a real screen rather than rendering
+   * nothing.
+   *
+   * These runs are PREVIEWS: they do not record the tour as seen, so the same
+   * URL works twice and the real contextual trigger stays armed. Without that,
+   * one look at `?tutorial=migrate` would kill the + New trigger for the
+   * account permanently, since a tour records itself on mount.
+   *
+   * @returns {Object} extra attributes for the tutorial widget
+   */
+  _forcedTourOpt() {
+    const args = Visitor.parseModuleArgs();
+    const opt = { preview: 1 };
+    if (args.step) opt.enter_at_step = args.step;
+    if (args.screen) opt.enter_at_screen = args.screen;
+    return opt;
+  }
+
+  /**
+   * Start whatever tutorial this boot owes the user, and say whether one is
+   * actually on its way.
+   *
+   * Three routes, and only the first two are unconditional:
+   *
+   *   explicit    `?tutorial=<id>` / `?tutorial=1`. A person typed this; it is
+   *               never gated on the seen-set, the mobile check or the kill
+   *               switch, because otherwise QA cannot reach a tour twice.
+   *   switch off  the six-step tour, exactly as before this feature existed.
+   *   otherwise   the post-onboarding `workspace` tour, gated like any other
+   *               trigger — the whole point of a server-side flag is that a
+   *               wizard shown twice does not produce a tour shown twice, and
+   *               the wizard genuinely can reappear (the skip path writes
+   *               `onboarded` locally only).
+   *
+   * @returns {Boolean} true when something was launched. False means no
+   *   tutorial is coming and the caller must settle home itself.
+   */
+  _launchHomeTutorial(explicit, forced) {
+    if (explicit) {
+      this._showTutorial(forced, this._forcedTourOpt());
+      return true;
+    }
+    const Tours = require("libs/tutorial-tours");
+    if (!Tours.enabled()) {
+      this._showTutorial("full");
+      return true;
+    }
+    // fire() broadcasts synchronously, so by the time it returns true the
+    // desk's own channel listener has already called _showTutorial. A true
+    // here means "launched", not "mounted" — the chunk can still fail, which
+    // is what the 20s net is for.
+    return Tours.fire("workspace", this);
+  }
+
+  /**
+   * A trigger surface asked for a tour. libs/tutorial-tours has already
+   * decided that it should run — kill switch, mobile, seen-set and
+   * single-flight are all settled there — so this only mounts it.
+   */
+  _onTourTrigger(args = {}) {
+    if (!args.tour) return;
+    this._showTutorial(args.tour);
   }
 
   /**
@@ -3324,6 +3497,20 @@ class desk_module extends LetcBox {
           let p = Visitor.profile && Visitor.profile();
           if (p) p.onboarded = 1;
         }
+        // Closing the wizard is a decision, not an accident: someone who
+        // dismissed the guided intro has declined it, and injecting the
+        // workspace tour into a branch built to skip the wizard would override
+        // that. Marked seen rather than merely skipped, for a second reason —
+        // this branch writes `onboarded` into the LOCAL profile only (the
+        // plugin returns before onboarding.reset), so the wizard can legitimately
+        // reappear next session, and without the record the tour would reappear
+        // with it. Marked directly rather than through fire(): nothing mounts.
+        //
+        // `workspace` is the one tour with no contextual trigger, so "later"
+        // does not exist for it — the accepted cost is that a skipper never
+        // sees it. markSeen no-ops while the kill switch is off, which is
+        // correct: with the feature off there is nothing to suppress.
+        require("libs/tutorial-tours").markSeen("workspace", this);
         return this.loadDefault();
 
       case _e.upload: {

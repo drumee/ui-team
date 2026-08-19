@@ -1,5 +1,6 @@
+const { stepBadge, isLastScreen } = require('../tours');
+
 const BADGE = {
-  badge_text: 'STEP 3/6',
   title: 'Meeting in folder',
   desc: `Every folder has its own meeting space. Start a call directly from the folder you're working in, your files and conversations stay in the same place.`,
 };
@@ -21,7 +22,17 @@ class __tutorial_meeting extends LetcBox {
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: tile.el,
-      tooltip: { ...BADGE, variant: 'figma' },
+      // The last hardcoded badge to go. meeting is a single-screen step, so
+      // both modes give the same shape: "STEP 3/6" as step three of the full
+      // tour (its only route — D7), and "STEP 1/1" if it were ever run alone,
+      // which is honest for one screen.
+      tooltip: {
+        ...BADGE,
+        badge_text: stepBadge(this, 0),
+        hide_back: !!this.mget('is_first'),
+        variant: 'figma',
+        done: isLastScreen(this, 0, 1),
+      },
       direction: 'east',
       // The design lights the whole room, not just the tile: its vignette is
       // an ellipse whose clear zone (610x836) is taller than the room itself.

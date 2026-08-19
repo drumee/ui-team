@@ -422,6 +422,14 @@ class __window_folder extends mfsInteract {
     // placeholders still resolve exactly as before.
     if (Kind && _.isFunction(Kind.waitFor)) {
       Kind.waitFor("media").catch(() => { });
+      // Warm the one tour this window can still trigger — Manage access and
+      // the kebab Share item. The tracker moved back into `folder_task`, which
+      // the desk raises and warms. Safe to repeat per window: waitFor returns
+      // the registered class on its first line once the chunk has landed
+      // (ui-core letc/kind/index.js:244), and before that webpack has already
+      // memoized the import() promise, so several open folders cost one fetch
+      // and then a map lookup each.
+      Kind.waitFor("tutorial_share").catch(() => { });
     }
     setGrouped(this, true);
     this.setViewMode(_a.icon, false);
@@ -1065,6 +1073,30 @@ class __window_folder extends mfsInteract {
       this.syncNewCtrlVisibility();
       return;
     }
+    // Second entry point for the migrate tour, alongside the desk topbar's
+    // + New (desk/index.js, case "addmenu"). Both are the same gesture — "I
+    // want to bring something in" — so they share the `migrate` flag: whichever
+    // is pressed first runs the tour, and the other then finds it seen. This is
+    // the shape the share tour already uses across its own two entry points.
+    //
+    // `open` is the signal rather than a click on the wrapper: it fires only on
+    // opening, never on closing, so re-opening the menu cannot re-trigger, and
+    // a click that lands on the control's padding is not mistaken for the
+    // gesture. Nothing is remembered here — every gate lives in
+    // libs/tutorial-tours — so a topbar rebuild can neither lose nor duplicate
+    // the trigger.
+    if (pn === "new-menu") {
+      const Tours = require("libs/tutorial-tours");
+      if (_.isFunction(child.on)) {
+        child.on(_e.open, () => Tours.fire("migrate", this));
+      }
+      // Warm the chunk while the surface that triggers it is on screen, so
+      // pressing the button renders from memory rather than from the network.
+      if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+        Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
+      }
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -1537,6 +1569,22 @@ class __window_folder extends mfsInteract {
           if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
           return;
         }
+        // Contextual tour, raised BEFORE openManageAccess because that call
+        // TOGGLES: with a drawer already open it clears it and returns, so the
+        // flag read after the call means the opposite of what it means here.
+        // `!isShowSettings` is precisely "this click is going to OPEN the
+        // panel" — a closing click, and a click that dismisses the folder
+        // settings drawer (which shares the flag), are both correctly not
+        // treated as reaching Manage access for the first time.
+        //
+        // Placed in the handler rather than at either call site on purpose:
+        // the topbar icon and the overflow menu both raise this service with
+        // uiHandler: [ui] (folder/skeleton/topbar.js:96, window/skeleton/
+        // toolkit/index.js:1666), so one line covers both without going near
+        // their duplicated visibility gate.
+        if (!this.isShowSettings) {
+          require("libs/tutorial-tours").fire("share", this);
+        }
         return this.openManageAccess();
 
       case "folder-rename":
@@ -1688,6 +1736,9 @@ class __window_folder extends mfsInteract {
       }
 
       case "tab-task":
+        // No tour here. The tracker is step two of `folder_task`, which the
+        // desk raises when a workspace or folder is opened — the Tasks tab is
+        // not where a first-time user goes looking for it.
         return this.showFolderTab(_a.task);
 
       case "toggle-task-filter":
