@@ -183,7 +183,7 @@ tidying. Nothing downstream depends on any of them.
 - **OQ6** — five hypotheses ruled out; runbook 1.6b answers it in situ.
 - **X1** (duplicated share gate), **X2** (duplicated repartition preamble),
   **X3** (callout copy localisation, ~240 entries) — untouched, unscheduled.
-- **`phase3` / `phase4` carry a stale runbook copy.** Harmless under the index's
-  merge order (`phase1` lands first and they inherit it), but a tester who builds
-  `phase3` specifically to work Block D gets a runbook without the bundle gate or
-  1.6b. Two cherry-picks if anyone wants it fixed before merge.
+- ~~`phase3` / `phase4` carry a stale runbook copy~~ — **resolved.** The four
+  ui-team phase branches were consolidated into one `feat/contextual-sub-tours`,
+  which carries the complete runbook (every block plus every correction). There
+  is no stale copy left to build from.

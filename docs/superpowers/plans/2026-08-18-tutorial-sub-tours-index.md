@@ -10,38 +10,42 @@ One page to open cold. Start at **§2 Merge order**.
 
 ## 1. Branches
 
-Five branches. **`phase1` carries commits in three repos**; every later branch is
-`ui-team` only and stacks on its predecessor.
+**One branch per repo, same name in all three: `feat/contextual-sub-tours`.**
+It contains every phase — there are no per-phase branches any more.
 
-| Branch | Repos | What is on it | Depends on | Gated by |
-|---|---|---|---|---|
-| `feat/contextual-sub-tours-phase1` | **ui-team** (9), **schemas** (1), **server-team** (1) | Phases 1 **and** 2: the proc + endpoint + kill switch, `libs/tutorial-tours`, the tour registry, derived badges, and all five triggers (+ New, icons list, sidebar ×2, Manage access ×2, kebab Share, Tasks tab). Plus the runbook. | — | Runbook **A–C** |
-| `feat/contextual-sub-tours-phase3` | ui-team (12) | Post-onboarding rewiring: `fire()`'s return contract, home settles at 2s when a tour is gated, `markSeen` on onboarding-close, derived `workspace` badge. | phase1 | Runbook **D** |
-| `feat/contextual-sub-tours-phase4` | ui-team (15) | The skip control: `✕` on every callout, Escape, `end-tour` routed at the host. | phase3 | Runbook **E** |
-| `feat/contextual-sub-tours-phase5a` | ui-team (19) | Cleanup: delete the retired `tutorial_settings`, derive the last badge (`meeting`). | phase4 | Runbook **B5** |
-| *(5b — rollout)* | none | **No code.** Procedure only, in `…-rollout.md`. | all of the above | OQ4, OQ7 |
+| Repo | Commits | What is on it |
+|---|---|---|
+| **schemas** | 1 | `drumate_tutorial_seen.sql` + the manifest entry |
+| **server-team** | 1 | `drumate.tutorial_seen` ACL entry + service method, `contextual_tours` platform flag |
+| **ui-team** | 20 | Everything client-side: `libs/tutorial-tours.js`, the `tours.js` registry, all five triggers, derived badges, the skip control, the cleanup — plus 6 test files and these 5 documents |
 
-Commit counts are cumulative from `test`. `phase5a` contains everything.
+Phases 1–5a were built on four stacked ui-team branches
+(`…-phase1/3/4/5a`) and consolidated once the work was complete. The phase
+boundaries survive as commits, not branches; `…-phases.md` is the per-phase
+record. Nothing was lost in the consolidation — the two runbook commits that
+existed only on `phase1` had already been cherry-picked forward, and their
+content was verified line by line against the surviving copy.
+
+> Pre-consolidation tips, if anyone ever needs them: `phase1 ad3cf050`,
+> `phase3 72545c35`, `phase4 98f63d5c`, `phase5a 2fba0fd4`.
 
 ---
 
 ## 2. Merge order
 
-Each step is independently shippable, and every one of them is dark:
-`contextual_tours` is absent from `myDrumee.json`, so no trigger fires and
-nothing is written.
+Everything is dark: `contextual_tours` is absent from `myDrumee.json`, so no
+trigger fires and nothing is written.
 
 | # | Merge | Unblocked by | Notes |
 |---|---|---|---|
-| 1 | **schemas** + **server-team** `phase1` | nothing | Additive: a new proc and a new endpoint. Safe to merge and deploy ahead of the client — an old client ignores the `tutorials_seen` key. **Apply the proc** (`bin/patch-from-file`) or the client's writes 500 the moment the flag is ever turned on. |
-| 2 | **ui-team** `phase1` (Phases 1+2) | Runbook **Blocks A, B, C** signed off | The bulk of the feature. |
-| 3 | **ui-team** `phase3` | Block **D** | Touches the path every new signup takes — merge separately from 2 so a regression there is bisectable. |
-| 4 | **ui-team** `phase4` | Block **E** | |
-| 5 | **ui-team** `phase5a` | Block **B5** re-checked (all six badges derived) | Rides on 4; no user-visible change. |
-| 6 | **5b — enable** | OQ4 (both halves) **and** OQ7, plus a completed runbook sign-off | Not a merge. Follow `…-rollout.md`. |
+| 1 | **schemas** | nothing | Additive. **Apply the proc** (`bin/patch-from-file …drumate_tutorial_seen.sql yellow_page`) or the client's writes 500 the moment the flag is ever turned on. *Already applied to **stage** manually.* |
+| 2 | **server-team** | nothing | Additive; an old client ignores the `tutorials_seen` key. Safe to deploy ahead of the client — and it must be, or the client's calls 404. |
+| 3 | **ui-team** | Runbook **Blocks A–E** signed off | One branch, all phases. Blocks A–C cover Phases 1–2, D covers Phase 3, E covers Phase 4, and B5 re-checked covers 5a. |
+| 4 | **enable** | OQ4 (both halves) **and** OQ7, plus the completed runbook sign-off | Not a merge. Follow `…-rollout.md`. |
 
-Steps 2–5 can also be merged as one if the whole runbook is signed in a single
-pass; the split exists so a failing block does not hold up the blocks that passed.
+The ui-team branch is one merge now rather than four. If a runbook block fails,
+the fix is a commit on the same branch — there is no partial-merge path any more,
+which is the one thing the old four-branch split bought.
 
 ---
 
