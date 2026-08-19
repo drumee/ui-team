@@ -32,8 +32,16 @@ const SCREENS = [
     // same copy as the screen after it: the pair reads as one idea, shown then
     // explained, which is how the design frames it.
     skeleton: threadHintScreen,
-    target: 'thread-panel',
+    // The hole lights the hint itself — the "Reply in thread" tooltip and the
+    // bar under it — because that is what this screen is about. The callout
+    // still points at the thread card, as the design places it: the card says
+    // what a thread IS, the lit toolbar says how you start one.
+    target: 'chat-hint',
     anchor: 'thread-card',
+    // The group is a ~230x50 strip, so its own half-diagonal would give a hole
+    // barely bigger than itself. Widened so the message it belongs to reads as
+    // part of the same subject.
+    radius: 260,
     direction: 'east',
     badge: {
       title: 'Chat in threads',

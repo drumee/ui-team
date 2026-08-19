@@ -899,6 +899,15 @@
     flex-shrink: 0;
   }
 
+  // Tooltip + bar as one group, so the spotlight can light them together and
+  // the tip can align to the bar's first slot instead of guessing an offset.
+  &__th-hint-bar {
+    position: relative;
+    align-items: flex-start;
+    gap: 4px;
+    align-self: flex-end;
+  }
+
   &__th-tip {
     position: relative;
     align-items: center;
@@ -907,8 +916,10 @@
     padding: 4px 8px;
     border-radius: 8px;
     background: #282538;      // Primary/90
-    align-self: flex-end;
-    margin-right: 44px;       // sits over the thread icon, as in the design
+    // Centred over the FIRST icon (8px bar padding + half of a 16px icon),
+    // which is the one it labels. translateX pulls its own width back.
+    margin-left: 16px;
+    transform: translateX(-50%);
   }
 
   &__th-tip-label {
@@ -946,20 +957,47 @@
     -webkit-backdrop-filter: blur(50px);
   }
 
-  &__th-actions-icon {
+  // One slot per action, so the cursor can be positioned against the icon it
+  // points at rather than against the bar.
+  &__th-actions-slot {
+    position: relative;
     width: 16px;
     height: 16px;
     flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+
+    // The screen's subject — the one the tooltip and the cursor point at.
+    &.thread .tutorial-folder__th-actions-icon svg {
+      fill: #5950ff;          // brand overlay
+    }
+  }
+
+  &__th-actions-icon {
+    width: 16px;
+    height: 16px;
 
     svg {
       width: 16px;
       height: 16px;
       fill: var(--normal-fg);
     }
+  }
 
-    // The screen's subject — the one the tooltip points at.
-    &.thread svg {
-      fill: #5950ff;          // brand overlay
+  // The pointer, from the design's own vector. Sits below-right of the icon
+  // with its tip on it, and is inert — it illustrates the click, it is not one.
+  &__th-actions-cursor {
+    position: absolute;
+    top: 9px;
+    left: 7px;
+    width: 13px;
+    height: 18px;
+    pointer-events: none;
+    transform: rotate(-7.54deg);   // the angle the design draws it at
+
+    svg {
+      width: 13px;
+      height: 18px;
     }
   }
 

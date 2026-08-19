@@ -312,11 +312,13 @@ function threadBubble(ui, pfx) {
 // live UI that is the user's own pointer, and the tour has no business drawing
 // a second one.
 const CHAT_ACTIONS = [
-  { ico: "chat-action-reply" },
-  { divider: true },
-  // The subject of this screen — same icon the file kebab's "Chat Threads"
-  // entry uses, which is the point: one glyph means one thing.
+  // Reply-in-thread leads, which is the order the design puts it in and the
+  // reason this screen exists — the tooltip and the cursor both point here.
+  // Same glyph the file kebab's "Chat Threads" entry uses: one mark, one
+  // meaning, wherever the user meets it.
   { ico: "ctxmenu-chat-thread", mark: "thread" },
+  { divider: true },
+  { ico: "chat-action-reply" },
   { ico: "chat-action-copy" },
   { ico: "chat-action-forward" },
   { ico: "chat-action-trash" },
@@ -332,15 +334,35 @@ function chatActionBar(ui, pfx) {
     kids: CHAT_ACTIONS.map((a) =>
       a.divider
         ? Skeletons.Box.Y({ className: `${pfx}__th-actions-divider` })
-        : Skeletons.Image.Svg({
-            ico: a.ico,
-            className: `${pfx}__th-actions-icon${a.mark ? ` ${a.mark}` : ""}`,
+        : Skeletons.Box.Y({
+            className: `${pfx}__th-actions-slot${a.mark ? ` ${a.mark}` : ""}`,
+            kids: [
+              Skeletons.Image.Svg({
+                ico: a.ico,
+                className: `${pfx}__th-actions-icon`,
+              }),
+              // The pointer rides the icon it points at rather than being
+              // placed by coordinates, so it cannot drift when the bar's
+              // contents or the locale's text metrics change.
+              a.mark === "thread"
+                ? Skeletons.Image.Svg({
+                    ico: "tutorial-cursor",
+                    className: `${pfx}__th-actions-cursor`,
+                  })
+                : "",
+            ],
           }),
     ),
   });
 }
 
-/** The dark bubble above the bar, with its downward caret. */
+/**
+ * The dark bubble above the bar, with its downward caret.
+ *
+ * Anchored to the FIRST slot (reply-in-thread) rather than centred on the bar,
+ * because it labels that one icon — the same way the live toolbar's tooltip
+ * sits over whichever action is hovered.
+ */
 function replyInThreadTip(pfx) {
   return Skeletons.Box.X({
     className: `${pfx}__th-tip`,
@@ -362,7 +384,15 @@ function replyInThreadTip(pfx) {
 function hintMessage(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__th-hint`,
-    kids: [replyInThreadTip(pfx), chatActionBar(ui, pfx), threadBubble(ui, pfx)],
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}__th-hint-bar`,
+        sys_pn: "chat-hint",
+        partHandler: ui,
+        kids: [replyInThreadTip(pfx), chatActionBar(ui, pfx)],
+      }),
+      threadBubble(ui, pfx),
+    ],
   });
 }
 

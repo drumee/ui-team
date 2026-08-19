@@ -427,6 +427,44 @@ test("the folder step's SCREENS table matches the registry count", () => {
   );
 });
 
+test("reply-in-thread leads the bar, and carries the tooltip and cursor", () => {
+  const threads = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
+  );
+  const list = threads.slice(threads.indexOf("const CHAT_ACTIONS = ["));
+  const order = [...list.slice(0, list.indexOf("];")).matchAll(/ico: "([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(order[0], "ctxmenu-chat-thread", "the thread icon must lead");
+  assert.equal(order[1], "chat-action-reply", "the divider sits between them");
+  // The cursor and the brand tint hang off the same `mark`, so they cannot
+  // drift onto different icons.
+  assert.match(threads, /ico: "ctxmenu-chat-thread", mark: "thread"/);
+  assert.match(threads, /a\.mark === "thread"[\s\S]{0,200}ico: "tutorial-cursor"/);
+});
+
+test("the cursor icon exists in the sprite", () => {
+  // It is not a hand-drawn path: it is the design's own vector, added to the
+  // icon pipeline. Without the sprite entry the glyph renders empty.
+  const sprite = readFileSync(join(REPO_ROOT, "icons/sprites/normalized.sprite.svg"), "utf8");
+  assert.ok(sprite.includes('id="--icon-tutorial-cursor"'), "run npm run build:icons");
+  assert.ok(
+    require("node:fs").existsSync(join(REPO_ROOT, "icons/src/normalized/tutorial-cursor.svg")),
+    "the source svg must be committed, not just the built sprite",
+  );
+});
+
+test("the hint group is what the spotlight lights", () => {
+  const folder = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/index.js"), "utf8",
+  );
+  const screen = folder.slice(folder.indexOf("skeleton: threadHintScreen"));
+  assert.match(screen.slice(0, screen.indexOf("},")), /target: 'chat-hint'/);
+  const threads = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
+  );
+  // chat-hint wraps the tooltip AND the bar, so both are inside the hole.
+  assert.match(threads, /sys_pn: "chat-hint"[\s\S]{0,200}replyInThreadTip\(pfx\), chatActionBar/);
+});
+
 test("the chat action bar mirrors the real one, icon for icon", () => {
   const threads = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
