@@ -1243,6 +1243,14 @@
       padding: 0 4px;
       border-radius: 6px;
       background: #f2f2f7;
+
+      // The design paints the fill as a pill that stops short of the rows
+      // above and below (47px of a 56px pitch on the 1:1 render), not as a
+      // full-height block. Transparent borders inset the paint without
+      // touching the 32px row pitch, which the menu height depends on.
+      border-top: 3px solid transparent;
+      border-bottom: 3px solid transparent;
+      background-clip: padding-box;
     }
   }
 
