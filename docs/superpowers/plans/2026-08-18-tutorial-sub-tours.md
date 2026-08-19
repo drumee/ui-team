@@ -98,6 +98,18 @@ in situ (item A11a).
 
 ---
 
+## Changelog — revision 7 (2026-08-18) — Phase 5a
+
+| Section | Change | Driver |
+|---|---|---|
+| §5 C11/C12 | `tutorial_settings` deleted; string sweep recorded | Phase 5a |
+| §5 C5 | Complete — every step badge is derived; the guard is inverted and permanent | Phase 5a |
+| §6 Phase 5 | **Split into 5a (cleanup, built) and 5b (rollout, procedure only)** | Phase 5a |
+| §9 OQ6 | Narrowed — four hypotheses ruled out statically; the finding is now stronger than "undetermined" | Phase 5 follow-up A-1 |
+| §2 D4 | Escape's binding lifetime confirmed and the shadowing survey recorded | Phase 5 follow-up A-2 |
+
+---
+
 ## 1. Findings
 
 Everything below was re-read in this repo. **Corrections to the brief are marked ⚠.**
@@ -283,6 +295,22 @@ Escape (`desk-escape`) whose `match` guards on `!e.defaultPrevented`, so a
 capture binding that reports it acted gets `preventDefault()` from
 `libs/hotkeys` and the desk's handler then declines that keypress on its own
 terms. The two interlock through the existing contract rather than racing.
+**Binding lifetime** (Phase 5 follow-up A-2): registered in
+`tutorial_main.onDomRefresh` and unregistered in `onBeforeDestroy` — the tour's
+own mount and destroy, never module load and never the desk. A capture-phase
+global Escape outranks everything else in the app, so it must not outlive the
+thing it belongs to; a test pins both halves.
+
+**Shadowing survey.** `libs/hotkeys` never calls `stopPropagation` (its own rule
+4), so nothing is *prevented from running* — coordination is only
+`preventDefault` + `defaultPrevented`. Of the app's other Escape handlers:
+`desk-escape` checks `defaultPrevented` and correctly declines while a tour is
+up; `window/confirm/index.js:104` answers Escape on **keyup**, a different event,
+which `libs/hotkeys.js:45-46` already documents as a known and accepted split;
+the rest (`meeting-desc-editor`, the player's rename and share popups, tasks,
+chat) are element-level handlers on inputs inside windows that cannot be focused
+while the tour's mock desk is up. Nothing is newly shadowed by this binding.
+
 Rejected: leaving Escape out on the grounds that an accidental press is
 permanent. It is no more permanent than an accidental reload — the tour is
 recorded from mount either way — and a full-screen thing that cannot be
@@ -716,8 +744,21 @@ C7 (remainder): the overlay branch routes through `Tours.fire('workspace')` when
 **Phase 4 — skip control**
 C6, C14, C13 (`SKIP_TOUR`). What ships without it is tours that **suppress correctly on mount** but that the user cannot dismiss early: once a tour starts, the only ways out are pressing through every screen, reloading, or something else feeding the overlay. That is a real UX gap, not a correctness one — which is why it is separable from Phase 1 and why it must not be dropped.
 
-**Phase 5 — cleanup and flag removal**
-C11, C12 (delete `tutorial_settings`), flip the `contextual_tours` default to on, then delete the flag and the `full`-vs-`workspace` branch. `full` itself stays forever (D7). X1/X2/X3 remain open, unscheduled.
+**Phase 5a — cleanup** *(built)*
+C11, C12 (delete `tutorial_settings`), C5 for `meeting`. Dark, reversible, no
+user impact. After it, every step badge is derived and `?tutorial=1` is the one
+check standing behind six edits.
+
+**Phase 5b — rollout** *(procedure only; no code)*
+Flip `contextual_tours` on, then delete the flag, the `full`-vs-`workspace`
+branch and the `_showTutorial('full')` fallback. This is the first moment the
+feature reaches a real user, and it is blocked on the runbook sign-off (Blocks
+A–E, never worked) and on OQ4. Written up in `…-rollout.md`, including the point
+that the flag is boolean per deployment — there is no percentage ramp — and that
+`full` must remain reachable by `?tutorial=1` and Get help → Product Tour after
+the branch is gone, since `tutorial_meeting` has no other route (D7).
+
+X1/X2/X3 remain open, unscheduled.
 
 ---
 
@@ -801,9 +842,31 @@ not. So the running app differs from the static reading in a way that was not
 found; `builtins/widget/reward-flow/index.js:245-259` documents having hit the
 same layer and portals itself to `document.body` to escape it.
 
-**Resolution path:** runbook item **A11a** is a ten-second in-app observation
-that answers it, and its result is captured at sign-off. Feed the answer back
-into §7 and into A11.
+**Ruled out since (all static, Phase 5 follow-up A-1):**
+
+1. *The class and the part are on different nodes.* No — `Skeletons.Wrapper.Y`
+   (`ui-core letc/toolkit/skeleton/wrapper-y.js`) merges `className` and keeps
+   the caller's `sys_pn`, so `.desk-module__overlay` and `sys_pn: "overlay"` are
+   the same element. Its `wrapper: 1` flag is inert — nothing in ui-core reads it.
+2. *The tutorial portals out, like reward-flow.* No — the only `closest()` in the
+   whole tutorial module is `migrate/index.js:90`, scoping a `querySelector`.
+   Neither `tutorial_main` nor the spotlight re-parents anything.
+3. *A `.dialog__wrapper` rule overrides it.* The Wrapper does add that class, but
+   no base rule for it sets `opacity` or `pointer-events`.
+4. *Something later in the cascade wins.* No — compiled the **entire** desk
+   stylesheet: `opacity: 0` stands unless `[data-state=open]`, and the only
+   writer of that literal is `_setMobileBackdrop` (mobile drawer). `setState()`
+   writes `data-state="1"`, which does not match the rule.
+
+So the static evidence is now **conclusive that a desktop tutorial fed into
+`overlay` would be invisible** — which it is not. One premise about the running
+app is therefore wrong in a way four static checks could not find.
+
+**Resolution path:** runbook item **1.6** (the bundle check) already answers this
+as a side effect — it is the first thing anyone does, and a tour appearing there
+disproves the static reading outright. **A11a** then settles the pointer-events
+half. Feed both answers back into §7 and into A11. Until then, treat "does the
+tour render on desktop at all" as a live question, not a settled one.
 
 The four from revision 1 are resolved into D4 (onboarding-skip), X3 (copy
 localisation), D6/C8b (sidebar triggers) and S9 (analytics).
