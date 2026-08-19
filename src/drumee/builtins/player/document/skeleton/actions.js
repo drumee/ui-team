@@ -159,17 +159,10 @@ module.exports = function (ui) {
   // one. `toggleZoom()` and `case "doc-zoom"` are left in place; nothing in
   // the header reaches them any more.
 
-  // True full screen → browser Fullscreen API on the whole viewer (fills the
-  // monitor). Distinct from the Move & Resize presets, which only ever fill
-  // the workspace.
-  actions.push(
-    action(ui, {
-      service: "doc-fullscreen",
-      ico: ui._fullscreen ? "desktop_reduce" : "player-fullscreen",
-      tip: ui._fullscreen ? LOCALE.EXIT_FULLSCREEN : LOCALE.FULLSCREEN,
-      sys_pn: "doc-fullscreen-btn",
-    }),
-  );
+  // The inline browser-fullscreen button was removed. `toggleFullscreen()`,
+  // `case "doc-fullscreen"` and the fullscreenchange listeners are left in
+  // place — they still unwind a fullscreen entered by any other means (F11,
+  // the close path) — but nothing in the header reaches them any more.
 
   return actions;
 };
