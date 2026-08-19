@@ -115,3 +115,25 @@ pre-existing `entry-compliance-unicode.test.js` pair.
 - **5b** — procedure written, no code. Blocked on the runbook sign-off and OQ4.
 - **OQ6** — open, four hypotheses ruled out.
 - **X1 / X2 / X3** — untouched.
+
+---
+
+## Statements in the plan that have become untrue
+
+Found during the revision-9 citation pass. **Listed for a decision, not fixed in
+place** — each is a claim the plan makes in a section whose argument may or may
+not still want it. None affects the code.
+
+| # | Section | The plan says | What is now true | Why it drifted |
+|---|---|---|---|---|
+| 1 | §1 Findings | "`_widgets` step table, array-with-backdrop shape" and "`_preloadSteps()` warms 5 kinds" — described as *current* behaviour | `_widgets` is built by `_buildWidgets` from the registry; `PRELOAD_KINDS` no longer exists and `_preloadSteps` warms only the active tour's kinds | Phase 1 replaced both. §1 is a snapshot of the **pre-work** codebase, which is arguably what a Findings section should be — but it now reads as present tense. |
+| 2 | §1 Findings | "**15 hardcoded `badge_text` sites** across 7 files" | **Zero.** All derived; the retired 7th file is deleted. | C5, completed in 5a. |
+| 3 | §1 Findings | "`tutorial_settings` is retired … still registered in `seeds.js`" | Deleted entirely in 5a. | C11/C12. |
+| 4 | §5 C11/C12/C13/C14, §6 Phases 1–5a | Written as future work ("delete", "add") | All done. | The change list was never converted to past tense as phases landed. |
+| 5 | §3 `_showTutorial` | "the **overlay branch** … calls `Tours.fire('workspace')` when the flag is on, `_showTutorial('full')` when it is off" | Correct, but it now routes through `_launchHomeTutorial`, which §3 documents separately. The two descriptions are consistent but redundant. | Phase 3 added the launcher after §3's first description was written. |
+
+**Recommendation, for whoever owns the plan:** items 1–3 are §1 doing its job —
+recording what the code looked like *before* this work — and the cleanest fix is
+one sentence at the top of §1 saying so, rather than rewriting the findings into
+the present tense and losing the baseline. Items 4 and 5 are genuine tidying.
+Neither is urgent; nothing downstream depends on them.

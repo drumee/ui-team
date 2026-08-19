@@ -119,7 +119,26 @@ in situ (item A11a).
 
 ---
 
+## Changelog — revision 9 (2026-08-18)
+
+| Section | Change | Driver |
+|---|---|---|
+| §1 | **Citation convention** stated, and applied across the document: 64 distinct citation forms for modified files converted from `path:line` to `path` + symbol | Closing pass |
+| — | No behavioural claim changed. Statements found to have drifted are listed for decision in `…-phase5a-notes.md`, not edited in place | Closing pass |
+
+---
+
 ## 1. Findings
+
+> **Citation convention** (applied once, revision 9, against the `phase5a` head).
+> A file **this work modified** is cited by `path` plus a **symbol or case name**
+> — `modules/desk/index.js` `_launchHomeTutorial`, `case "overlay"` — never by
+> line, because those lines have already moved ~100 times across five phases and
+> will keep moving. A file **this work did not touch** keeps its `path:line`,
+> which is still accurate and more precise. Where a bare `index.js` was
+> ambiguous it has been expanded to a full path; `builtins/window/folder/index.js`
+> (the folder window) and `…/tutorial/folder/index.js` (the tour step) are
+> different files and are now always distinguishable.
 
 Everything below was re-read in this repo. **Corrections to the brief are marked ⚠.**
 
@@ -127,22 +146,22 @@ Everything below was re-read in this repo. **Corrections to the brief are marked
 
 | Claim | Verified at |
 |---|---|
-| All entry points converge on `_showTutorial()` | `modules/desk/index.js:1901` |
-| `desk_tutorial` → lazy chunk | `src/drumee/seeds.js:119` |
-| Post-signup arming | `modules/desk/index.js:1880` inside `_loadOnboarding()` at `:1868` |
-| `?tutorial=1` + flag branch | `modules/desk/index.js:1759-1792` |
-| Get help raises `start-product-tour` | `builtins/widget/help/main/index.js:343` → desk `onUiEvent` `modules/desk/index.js:3441` → `_startProductTour()` `:1929` |
-| `onPartReady("desk-tutorial")` chains | `modules/desk/index.js:1794-1801`, `_chainRewardFlowAfterTutorial` `:2533`, `_chainHelpReturnAfterTutorial` `:1969` |
+| All entry points converge on `_showTutorial()` | `modules/desk/index.js` `_showTutorial` |
+| `desk_tutorial` → lazy chunk | `src/drumee/seeds.js` (the `desk_tutorial` entry) |
+| Post-signup arming | `modules/desk/index.js` `_loadOnboarding` inside `_loadOnboarding()` at `:1868` |
+| `?tutorial=1` + flag branch | `modules/desk/index.js` `onPartReady` / `case "overlay"` |
+| Get help raises `start-product-tour` | `builtins/widget/help/main/index.js:343` → desk `onUiEvent` `modules/desk/index.js` `case "start-product-tour"` → `_startProductTour()` `:1929` |
+| `onPartReady("desk-tutorial")` chains | `modules/desk/index.js` `onPartReady` / `case "desk-tutorial"`, `_chainRewardFlowAfterTutorial` `:2533`, `_chainHelpReturnAfterTutorial` `:1969` |
 | Fake-desk skeleton, `sys_pn: _a.content` step slot | `modules/desk/tutorial/skeleton/index.js:1-23` |
-| `_preloadSteps()` warms 5 kinds | `modules/desk/tutorial/index.js:79` |
-| `_widgets` step table, array-with-backdrop shape | `modules/desk/tutorial/index.js:33-66` |
-| `enter_at_last` merged onto the **last** array entry | `modules/desk/tutorial/index.js:102-111` (`_widgetAt`), consumed `_prevStep` `:131` |
-| `tutorial_folder` doubles as inert backdrop | `modules/desk/tutorial/folder/index.js:70-75` |
-| Spotlight forwarding + `waitForStableRect` | `modules/desk/tutorial/spotlight/index.js:30-40`, `focus()` `:96` |
-| Measured radii / menu placement | `task/index.js:79` `_holeRadius`, `share/index.js:110` `_holeRadius` + `_scrollPanelTo` `:96`, `migrate/index.js:88` `_placeMenu` |
-| `_enterWorkspace()` exit | `modules/desk/tutorial/index.js:149-158` |
-| `tutorial_done` is write-only | Only occurrence in `ui-team`, `server-team`, `signup`, `onboarding-ui`, `schemas` is the write at `modules/desk/tutorial/index.js:154` |
-| Trigger sites (topbar, icons-list, sections, share A, share B) | as documented; `builtins/window/utils.js:30` `SECTION_CLASSES`, `:725-761` `_doPartition`, `folder/index.js:1531` + `:5072`, `media/interact.js:837` |
+| `_preloadSteps()` warms 5 kinds | `modules/desk/tutorial/index.js` `_preloadSteps` |
+| `_widgets` step table, array-with-backdrop shape | `modules/desk/tutorial/index.js` `_buildWidgets` |
+| `enter_at_last` merged onto the **last** array entry | `modules/desk/tutorial/index.js` `_widgetAt` (`_widgetAt`), consumed `_prevStep` `:131` |
+| `tutorial_folder` doubles as inert backdrop | `…/tutorial/folder/index.js` `onDomRefresh` (inert-backdrop check) |
+| Spotlight forwarding + `waitForStableRect` | `modules/desk/tutorial/spotlight/index.js` `waitForStableRect`, `focus()` `:96` |
+| Measured radii / menu placement | `…/tutorial/task/index.js` `_holeRadius` `_holeRadius`, `…/tutorial/share/index.js` `_holeRadius` `_holeRadius` + `_scrollPanelTo` `:96`, `…/tutorial/migrate/index.js` `_placeMenu` `_placeMenu` |
+| `_enterWorkspace()` exit | `modules/desk/tutorial/index.js` `_enterWorkspace` |
+| `tutorial_done` is write-only | Only occurrence in `ui-team`, `server-team`, `signup`, `onboarding-ui`, `schemas` is the write at `modules/desk/tutorial/index.js` `_enterWorkspace` |
+| Trigger sites (topbar, icons-list, sections, share A, share B) | as documented; `builtins/window/utils.js:30` `SECTION_CLASSES`, `:725-761` `_doPartition`, `builtins/window/folder/index.js` `case "folder-manage-access"` + `:5072`, `builtins/media/interact.js` `case 'secure-share'` |
 | Duplicated share gate | `folder/skeleton/topbar.js:71-95` vs `window/skeleton/toolkit/index.js:1659-1672` |
 
 ### ⚠ Correction 1 — `desk-module-topbar__new-workspace-btn` exists, but it is **not** a workspace button
@@ -159,13 +178,13 @@ trigger: Skeletons.Button.Label({
 
 It is the **`trigger` of the `Skeletons.Menu`** declared at `topbar.js:134-141` (`sys_pn: "addmenu"`, `partHandler: [ui]`). It carries **no `service`**, so `desk_module.onUiEvent` never sees it — D6's "hook it by service name" is not available. Its label is `LOCALE.NEW` ("New"), not "New workspace"; the class name is historical.
 
-The actual `new-workspace` service lives on a submenu row two levels down (`topbar.js:70-75`, inside `createGroup` at `:107`) and is *also* raised by the sidebar (`modules/desk/skeleton/sidebar.js:349`) and the desk-background context menu (`modules/desk/wm/index.js:2057` → `modules/desk/index.js:3569`).
+The actual `new-workspace` service lives on a submenu row two levels down (`topbar.js:70-75`, inside `createGroup` at `:107`) and is *also* raised by the sidebar (`modules/desk/skeleton/sidebar.js:349`) and the desk-background context menu (`modules/desk/wm/index.js` `case "new-workspace"` → `modules/desk/index.js` `case "new-workspace"`).
 
 Resolved in **D6**.
 
 ### ⚠ Correction 2 — `SERVICE.drumate.update_settings` merges, but unsafely
 
-`server-team/service/private/drumate.js:514-520`:
+`server-team/service/private/drumate.js` `update_settings`:
 
 ```js
 const settings = this.input.need(Attr.settings);
@@ -192,8 +211,8 @@ OQ3 cites `modules/desk/skeleton/sidebar.js:349` as the sidebar's workspace-open
 
 The real sidebar sites are in the workspace-list widget:
 
-- `modules/desk/workspace-list/index.js:159` case `"load-workspace"` → `Wm.loadWorkspace(target)` at `:173`
-- `modules/desk/workspace-list/index.js:179` case `"load-folder"` → `Wm.openWorkspaceFolder(trigger)` at `:180`
+- `modules/desk/workspace-list/index.js` `case "load-workspace"` case `"load-workspace"` → `Wm.loadWorkspace(target)` at `:173`
+- `modules/desk/workspace-list/index.js` `case "load-folder"` case `"load-folder"` → `Wm.openWorkspaceFolder(trigger)` at `:180`
 
 Both are consumed in **OQ3 / C8** in place of the cited line.
 
@@ -201,11 +220,11 @@ Both are consumed in **OQ3 / C8** in place of the cited line.
 
 - **`entity.settings` is `mediumtext NOT NULL`**, with a FULLTEXT key (`schemas/yellow_page/tables/entity.sql:27`, `:41`) — not a native JSON column, so any merge SQL must guard with `JSON_VALID`.
 - `JSON_MERGE_PATCH` is already used in this schema set (`hub/procedures/admin/folder_save_permissions.sql`, `yellow_page/procedures/conference/conference_update.sql`, …) — available, no version risk.
-- **No settings key whitelist.** `acl/drumate.json:488-505` declares `settings` as `{type: "object", required: true}`; unknown keys pass through untouched.
+- **No settings key whitelist.** `acl/drumate.json` (the `update_settings` entry) declares `settings` as `{type: "object", required: true}`; unknown keys pass through untouched.
 - **No existing per-user "first seen / first used" service** anywhere in `acl/*.json`. Nothing to join.
 - `SERVICE` is `_.merge({}, require('lex/services'), Platform.get('services'))` (`.claude/rules/api-services.md`), so a new ACL entry surfaces automatically as `SERVICE.drumate.<name>`; `lex/services.json` needs no edit. The defensive-literal idiom is `(SERVICE.drumate && SERVICE.drumate.tutorial_seen) || 'drumate.tutorial_seen'` (precedent `builtins/player/document/index.js:38`).
 - `Skeletons.Menu` fires `this.trigger(_e.open)` **only** on open (`node_modules/@drumee/ui-core/letc/widgets/menu/index.js:361`, inside `_openItems()`); `_closeItems()` does not. A clean "user opened + New" signal.
-- `RADIO_BROADCAST` is the established cross-tree transport: desk already binds a dozen channels (`modules/desk/index.js:67-129`), and `libs/over-limit.js:106` is the precedent for a lib module owning a channel constant plus cached state.
+- `RADIO_BROADCAST` is the established cross-tree transport: desk already binds a dozen channels (`modules/desk/index.js` `initialize`), and `libs/over-limit.js:106` is the precedent for a lib module owning a channel constant plus cached state.
 - **15 hardcoded `badge_text:` sites** across 7 files (workspace 3, folder 3, share 3, migrate 3, meeting 1, task 1, settings 1 — retired).
 - Badge `title`/`desc` strings are **raw English literals**, not `LOCALE.*` — a standing violation of `.claude/rules/framework-invariants.md` §5. Scoped out as follow-up **X3**.
 - `LOCALE.BACK` / `NEXT` / `DONE` exist (`locale/en.json:29, 815, 97`); there is **no** `TUTORIAL_STEP` key.
@@ -213,28 +232,28 @@ Both are consumed in **OQ3 / C8** in place of the cited line.
 
 ### Verified for this revision
 
-- **Destroying the overlay does bypass `_enterWorkspace()`.** `_enterWorkspace()` is called from exactly one place — `_nextStep()` at `modules/desk/tutorial/index.js:123`, when the step index runs off the end of `_widgets`. The desk's `overlay` part is `Skeletons.Wrapper.Y` (`modules/desk/skeleton/index.js:190-197`) and is fed by three separate paths: `_showTutorial` (`index.js:1902`), the reward flow (`:2077`) and the generic `loadOverlay(kind, opt)` (`:2661`). Each calls `p.feed(...)`, which replaces the wrapper's children and destroys a running tutorial **with no flag written**. Confirms R2's premise.
-- **There is no close affordance on the callout.** `tooltipBadge`'s card has exactly four children — badge, title, desc, footer{Back, Next} (`modules/desk/tutorial/skeleton/toolkit/tooltip.js:57-93`). No `×`, no Esc handler, no outside-click dismiss.
-- **The `_reset()` branch writes `onboarded` locally only.** `onboarding-ui/app/main.js:930-934` returns immediately after `triggerHandlers()` when `type == 'app'`, *before* `SERVICE.onboarding.reset` is called; desk case `"onboarding-completed"` (`modules/desk/index.js:3316-3327`) mutates `Visitor.profile().onboarded = 1` in memory and calls `loadDefault()` — no server write. So the wizard can legitimately reappear on the next session. Confirms R4's premise.
-- **An honest task-shaped trigger exists.** `builtins/window/folder/index.js:1690` case `"tab-task"` → `showFolderTab(_a.task)`, raised by the two Tasks tab-bar entries at `builtins/window/skeleton/toolkit/index.js:234` and `:242`. It is the exact surface `tutorial_task` mocks — `task/skeleton/index.js:99-120` builds folder chrome + a tab bar with `active: 'tasks'` + the five-view switcher. Used by **D11**.
-- **Platform rollout-flag precedent.** `server-team/service/lib/env.js:148` — `platform.over_limit_enforcement = global.myDrumee.over_limit_enforcement ? 1 : 0;` — is the coerced on/off shape D10 copies, keyed from `/etc/drumee/conf.d/myDrumee.json`.
+- **Destroying the overlay does bypass `_enterWorkspace()`.** `_enterWorkspace()` is called from exactly one place — `_nextStep()` at `modules/desk/tutorial/index.js` `_nextStep`, when the step index runs off the end of `_widgets`. The desk's `overlay` part is `Skeletons.Wrapper.Y` (`modules/desk/skeleton/index.js:190-197`) and is fed by three separate paths: `_showTutorial` (`modules/desk/index.js` `_showTutorial`), the reward flow (`:2077`) and the generic `loadOverlay(kind, opt)` (`:2661`). Each calls `p.feed(...)`, which replaces the wrapper's children and destroys a running tutorial **with no flag written**. Confirms R2's premise.
+- **There is no close affordance on the callout.** `tooltipBadge`'s card has exactly four children — badge, title, desc, footer{Back, Next} (`modules/desk/tutorial/skeleton/toolkit/tooltip.js` `tooltipBadge` (the card)). No `×`, no Esc handler, no outside-click dismiss.
+- **The `_reset()` branch writes `onboarded` locally only.** `onboarding-ui/app/main.js:930-934` returns immediately after `triggerHandlers()` when `type == 'app'`, *before* `SERVICE.onboarding.reset` is called; desk case `"onboarding-completed"` (`modules/desk/index.js` `case "onboarding-completed"`) mutates `Visitor.profile().onboarded = 1` in memory and calls `loadDefault()` — no server write. So the wizard can legitimately reappear on the next session. Confirms R4's premise.
+- **An honest task-shaped trigger exists.** `builtins/window/folder/index.js` `case "tab-task"` case `"tab-task"` → `showFolderTab(_a.task)`, raised by the two Tasks tab-bar entries at `builtins/window/skeleton/toolkit/index.js:234` and `:242`. It is the exact surface `tutorial_task` mocks — `task/skeleton/index.js:99-120` builds folder chrome + a tab bar with `active: 'tasks'` + the five-view switcher. Used by **D11**.
+- **Platform rollout-flag precedent.** `server-team/service/lib/env.js` (the `over_limit_enforcement` line) — `platform.over_limit_enforcement = global.myDrumee.over_limit_enforcement ? 1 : 0;` — is the coerced on/off shape D10 copies, keyed from `/etc/drumee/conf.d/myDrumee.json`.
 
 ### Verified for revision 3
 
 - **The tutorial module has no responsive rules at all.** `grep -c '@media'` across `modules/desk/tutorial/skin/*.scss` and `modules/desk/tutorial/*/skin/*.scss` returns **0**, and there is no `data-device` branch anywhere under `modules/desk/tutorial/`. The layout is fixed desktop geometry: `tutorial/skin/index.scss:50-53` sets `__sb-main { width: 231px; height: 100vh }`, `meeting/skin/index.scss:23` caps the room at `max-width: 1242px` with a `min-width: 415px` chat rail at `:335`, and `folder/skin/index.scss:21` sets `max-width: 850px`. On a phone viewport the tour renders a 231px fixed sidebar plus desktop-width panels with no reflow. Used by **D9**.
-- **⚠ Revision 2's D9 rationale was wrong on one point.** It claimed `migrate/index.js:88 _placeMenu()` "measures `.tutorial-main__tb-new-workspace-btn`, which is not rendered on mobile". It is: the selector at `migrate/index.js:96` targets the **tutorial's own fake topbar** (`tutorial/skeleton/topbar.js:39`, prefix `${fig}__tb` where `fig` is `tutorial-main`), which is always rendered regardless of device — not the desk topbar that mobile hides. The claim is struck; D9's conclusion stands on the responsive-rules evidence above.
-- **No mechanism exists for sharing a constant between `ui-team` and `server-team`.** `getServices()` (`server-team/router/rest/index.js:474-488`) flattens each ACL module to `{ns: {method: "ns.method"}}` — **names only**. Params, enums and doc strings are dropped before `platform.services` is built (`service/lib/env.js:162`), so the ACL cannot carry the tour allow-list to the client. Used by **M2**.
+- **⚠ Revision 2's D9 rationale was wrong on one point.** It claimed `migrate/index.js:88 _placeMenu()` "measures `.tutorial-main__tb-new-workspace-btn`, which is not rendered on mobile". It is: the selector at `…/tutorial/migrate/index.js` `_placeMenu` targets the **tutorial's own fake topbar** (`tutorial/skeleton/topbar.js:39`, prefix `${fig}__tb` where `fig` is `tutorial-main`), which is always rendered regardless of device — not the desk topbar that mobile hides. The claim is struck; D9's conclusion stands on the responsive-rules evidence above.
+- **No mechanism exists for sharing a constant between `ui-team` and `server-team`.** `getServices()` (`server-team/router/rest/index.js:474-488`) flattens each ACL module to `{ns: {method: "ns.method"}}` — **names only**. Params, enums and doc strings are dropped before `platform.services` is built (`service/lib/env.js` (`platform.services`)), so the ACL cannot carry the tour allow-list to the client. Used by **M2**.
 
 ---
 
 ## 2. Design decisions
 
 **D1 — Keep the fake skeleton (option a).**
-Rejected: real DOM. It would require rewriting every `target`/`anchor` `sys_pn` into live selectors, plus `task/index.js:79` `_holeRadius`, `share/index.js:110` `_holeRadius`, `share/index.js:96` `_scrollPanelTo` and `migrate/index.js:88` `_placeMenu` against scrollable, async, partition-mutated layout (`utils.js:496` re-appends tiles under an active `MutationObserver`) — with `waitForStableRect` becoming load-bearing on every screen instead of a safety net. That is a rewrite of the whole tutorial, not a split.
+Rejected: real DOM. It would require rewriting every `target`/`anchor` `sys_pn` into live selectors, plus `…/tutorial/task/index.js` `_holeRadius` `_holeRadius`, `…/tutorial/share/index.js` `_holeRadius` `_holeRadius`, `…/tutorial/share/index.js` `_scrollPanelTo` `_scrollPanelTo` and `…/tutorial/migrate/index.js` `_placeMenu` `_placeMenu` against scrollable, async, partition-mutated layout (`utils.js:496` re-appends tiles under an active `MutationObserver`) — with `waitForStableRect` becoming load-bearing on every screen instead of a safety net. That is a rewrite of the whole tutorial, not a split.
 **Consequence to state plainly:** the user sees a *mock* desk with mock workspaces and mock files, over their real one. Their real action has already run underneath (see Hard requirement 1), so when the overlay clears the workspace/drawer/menu they opened is there. Each sub-tour's first screen is chosen to match what they just did, so the mock reads as an illustration of the thing in front of them.
 
 **D2 — One kind, declarative registry.**
-`modules/desk/tutorial/tours.js` exports `TOURS`, keyed by tour id. `desk_tutorial` stays a single kind (`seeds.js:119`); the tour is a **model attribute**: `p.feed({kind:"desk_tutorial", tour: tourId, sys_pn:"desk-tutorial", partHandler:this})`. `tutorial_main.initialize` reads `this.mget('tour')` and builds `_widgets` from the registry instead of literals.
+`modules/desk/tutorial/tours.js` exports `TOURS`, keyed by tour id. `desk_tutorial` stays a single kind (`seeds.js` (the `desk_tutorial` entry)); the tour is a **model attribute**: `p.feed({kind:"desk_tutorial", tour: tourId, sys_pn:"desk-tutorial", partHandler:this})`. `tutorial_main.initialize` reads `this.mget('tour')` and builds `_widgets` from the registry instead of literals.
 
 ```js
 // tours.js — shape (illustrative)
@@ -262,13 +281,13 @@ Rejected: inferring the mode (`steps.length === 1 ? 'screens' : 'steps'`). It pr
 **D3 — Persistence, and who consults it.**
 Server-side seen-set in `entity.settings.tutorials_seen`, a dedicated atomic write endpoint, read for free at bootstrap, `localStorage` mirror as a same-device latency cover only (§4).
 
-**The post-onboarding `workspace` tour consults the seen-set like any other trigger.** The overlay branch (`modules/desk/index.js:1759-1792`) does not call `_showTutorial('workspace')` directly; it calls `Tours.fire('workspace')` and lets the same gate decide.
-Rejected: exempting it like `full`. The wizard genuinely can reappear — `_reset()` returns before `onboarding.reset` (`onboarding-ui/app/main.js:930-934`) and desk's `"onboarding-completed"` handler writes `onboarded` in memory only (`modules/desk/index.js:3316-3327`) — so an exemption means a repeated wizard produces a repeated tour. The `IS NULL` predicate already makes the duplicate *write* harmless, so this is about the user's screen, not data integrity.
+**The post-onboarding `workspace` tour consults the seen-set like any other trigger.** The overlay branch (`modules/desk/index.js` `onPartReady` / `case "overlay"`) does not call `_showTutorial('workspace')` directly; it calls `Tours.fire('workspace')` and lets the same gate decide.
+Rejected: exempting it like `full`. The wizard genuinely can reappear — `_reset()` returns before `onboarding.reset` (`onboarding-ui/app/main.js:930-934`) and desk's `"onboarding-completed"` handler writes `onboarded` in memory only (`modules/desk/index.js` `case "onboarding-completed"`) — so an exemption means a repeated wizard produces a repeated tour. The `IS NULL` predicate already makes the duplicate *write* harmless, so this is about the user's screen, not data integrity.
 `?tutorial=<id>` and Get help → Product Tour stay exempt (they are explicit requests).
 
 **D4 — Mark on mount, via `markSeen()`, never in `fire()`.**
 The tour id is recorded when `tutorial_main` mounts with that tour — in its `onDomRefresh`, alongside the existing `feed(skeleton)` — not when the trigger fires and not on Done.
-Rejected: mark on Done (today's rule at `tutorial/index.js:149`). With no skip control (verified above) and `_enterWorkspace()` reachable only by completing every screen, a reload or an overlay re-feed mid-tour leaves nothing written, and the next qualifying click replays the whole thing — indefinitely.
+Rejected: mark on Done (today's rule at `modules/desk/tutorial/index.js` `_enterWorkspace`). With no skip control (verified above) and `_enterWorkspace()` reachable only by completing every screen, a reload or an overlay re-feed mid-tour leaves nothing written, and the next qualifying click replays the whole thing — indefinitely.
 Rejected: mark on fire. A tour whose chunk fails to load would be marked seen and never shown. **This is why `fire()` must not touch the seen-set** — see §3's event contract, which keeps the single-flight guard and the seen-set as separate members with separate lifetimes.
 Cost: a user who reloads during the tour never sees the rest of it. Accepted; re-interrupting is worse.
 
@@ -325,23 +344,23 @@ permanent. It is no more permanent than an accidental reload — the tour is
 recorded from mount either way — and a full-screen thing that cannot be
 dismissed with Escape is a UX smell.
 
-**Onboarding-skip marks `workspace` seen** (was OQ1). The `_reset()` → `"onboarding-completed"` path (`modules/desk/index.js:3316`) calls `Tours.markSeen('workspace')` directly, without mounting anything. A user who dismissed the wizard has declined the guided intro; injecting a tour into a branch built deliberately to skip it would override that. It also correctly suppresses the tour when the wizard reappears next session for the local-only-`onboarded` reason above.
+**Onboarding-skip marks `workspace` seen** (was OQ1). The `_reset()` → `"onboarding-completed"` path (`modules/desk/index.js` `case "onboarding-completed"`) calls `Tours.markSeen('workspace')` directly, without mounting anything. A user who dismissed the wizard has declined the guided intro; injecting a tour into a branch built deliberately to skip it would override that. It also correctly suppresses the tour when the wizard reappears next session for the local-only-`onboarded` reason above.
 Cost: a skipper never sees the workspace tour at all. Accepted — it is the one tour with no contextual trigger, so "later" does not exist for it.
 
 **D5 — Prefetch when the trigger surface renders, plus an idle sweep.**
-`Kind.waitFor(kind)` for a tour's step kinds fires when its trigger surface first becomes ready — `onPartReady("addmenu")` for `migrate`, `onPartReady(_a.list)` on the WM for `folder`, `window_folder` mount for `share` **and `task`** — plus a catch-all idle sweep chained off `_afterHomeSettled()` (`modules/desk/index.js:2398`). All fire-and-forget, exactly as `_preloadSteps()` (`tutorial/index.js:79`) does today.
+`Kind.waitFor(kind)` for a tour's step kinds fires when its trigger surface first becomes ready — `onPartReady("addmenu")` for `migrate`, `onPartReady(_a.list)` on the WM for `folder`, `window_folder` mount for `share` **and `task`** — plus a catch-all idle sweep chained off `_afterHomeSettled()` (`modules/desk/index.js` `_afterHomeSettled`). All fire-and-forget, exactly as `_preloadSteps()` (`modules/desk/tutorial/index.js` `_preloadSteps`) does today.
 If the click still beats the chunk: `desk_tutorial` mounts, the fake desk paints, the step slot holds the ui-core lazy-loader placeholder, and the spotlight stays at `state 0` (it is only raised by a step's `spotlight:focus`). The user sees the mock desk with no callout for the chunk's duration, then the callout appears. No spinner is added — the existing placeholder path already covers it. Note this is also why `markSeen()` runs on `tutorial_main`'s mount, which is reached, rather than on the step widget's.
 
 **D6 — Trigger instrumentation.**
 
 | Surface | Hook | Why |
 |---|---|---|
-| icons-list tile | `modules/desk/wm/index.js:2013` case `"open-node"`, **after** `this.openContent(cmd, args)` is dispatched | Past the per-node 1s debounce, so a swallowed duplicate cannot fire a tour. `cmd.mget(_a.filetype) ∈ {hub, folder}` is the discriminator — never the section `<div>` (tiles are re-appended into them by `utils.js:725-761` under a live observer). Rejected: a delegated listener on the list part — it would fire on the swallowed duplicate and would need its own filetype read anyway. |
-| sidebar workspace / folder row | `modules/desk/workspace-list/index.js:159` case `"load-workspace"` and `:179` case `"load-folder"` | See ⚠ Correction 4 and OQ3 below. |
-| + New | `desk_module.onPartReady` new case `"addmenu"` → `child.on(_e.open, …)` (`ui-core menu/index.js:361`) | The named class has no service (⚠ Correction 1). `_e.open` fires on open only, so a close cannot re-trigger. Re-bound automatically when `_updateAddmenu()` (`index.js:1573`) / `_onOverLimitChanged()` (`:2137`) re-feed the fragment, because the handler is bound in `onPartReady` and **all state lives in `libs/tutorial-tours.js`, none on the node or the widget**. Rejected: hooking service `new-workspace` — it is the *result* of the menu, and it fires from the sidebar (`sidebar.js:349`) and the desk context menu too, which the spec does not name. |
-| Tasks tab | `builtins/window/folder/index.js:1690` case `"tab-task"` | New in D11. |
-| Share A | `builtins/window/folder/index.js:1531` case `"folder-manage-access"`, guarded `if (!this.isShowSettings)` **before** calling `openManageAccess()` | `openManageAccess()` (`:5072`) toggles: a second click *closes* the drawer. Reading the flag before the call is the only place the open/close distinction exists. Covers the overflow-menu path (`window/skeleton/toolkit/index.js:1667`) for free — same service, same case. |
-| Share B | `builtins/media/interact.js:837` case `'secure-share'`, at the **top of the case**, before `Wm.getWindowPreset` | The `once()` latch races wrapper-resolved / rejected / 600ms timeout; firing at the top means the tour runs regardless of which path wins, including the floating-window fallback. |
+| icons-list tile | `modules/desk/wm/index.js` `case "open-node"` case `"open-node"`, **after** `this.openContent(cmd, args)` is dispatched | Past the per-node 1s debounce, so a swallowed duplicate cannot fire a tour. `cmd.mget(_a.filetype) ∈ {hub, folder}` is the discriminator — never the section `<div>` (tiles are re-appended into them by `utils.js:725-761` under a live observer). Rejected: a delegated listener on the list part — it would fire on the swallowed duplicate and would need its own filetype read anyway. |
+| sidebar workspace / folder row | `modules/desk/workspace-list/index.js` `case "load-workspace"` case `"load-workspace"` and `:179` case `"load-folder"` | See ⚠ Correction 4 and OQ3 below. |
+| + New | `desk_module.onPartReady` new case `"addmenu"` → `child.on(_e.open, …)` (`ui-core menu/index.js:361`) | The named class has no service (⚠ Correction 1). `_e.open` fires on open only, so a close cannot re-trigger. Re-bound automatically when `_updateAddmenu()` (`modules/desk/index.js` `_updateAddmenu`) / `_onOverLimitChanged()` (`:2137`) re-feed the fragment, because the handler is bound in `onPartReady` and **all state lives in `libs/tutorial-tours.js`, none on the node or the widget**. Rejected: hooking service `new-workspace` — it is the *result* of the menu, and it fires from the sidebar (`sidebar.js:349`) and the desk context menu too, which the spec does not name. |
+| Tasks tab | `builtins/window/folder/index.js` `case "tab-task"` case `"tab-task"` | New in D11. |
+| Share A | `builtins/window/folder/index.js` `case "folder-manage-access"` case `"folder-manage-access"`, guarded `if (!this.isShowSettings)` **before** calling `openManageAccess()` | `openManageAccess()` (`:5072`) toggles: a second click *closes* the drawer. Reading the flag before the call is the only place the open/close distinction exists. Covers the overflow-menu path (`window/skeleton/toolkit/index.js:1667`) for free — same service, same case. |
+| Share B | `builtins/media/interact.js` `case 'secure-share'` case `'secure-share'`, at the **top of the case**, before `Wm.getWindowPreset` | The `once()` latch races wrapper-resolved / rejected / 600ms timeout; firing at the top means the tour runs regardless of which path wins, including the floating-window fallback. |
 
 All of them raise the same channel; none awaits anything or returns early.
 
@@ -349,7 +368,7 @@ All of them raise the same channel; none awaits anything or returns early.
 
 **D7 — `meeting` confirmed untouched.** No contextual trigger, no flag, module unchanged. It remains reachable only through the `full` tour. **Therefore the `full` tour is permanent and must not sit behind the kill switch** — if `full` were removable, `tutorial_meeting` would become dead code.
 
-**D8 — Any `secure-share` click qualifies.** Rejected: restricting to `.group-section[data-group="doc"]`. `setGrouped` is only ever called by the folder window (`folder/index.js:426`, `:1377`), so the narrow rule means a user in flat or list view never sees the share tour, and the two share entry points — which share one flag — would behave inconsistently. The DOM section is also the wrong identity anyway (same reason as the icons list).
+**D8 — Any `secure-share` click qualifies.** Rejected: restricting to `.group-section[data-group="doc"]`. `setGrouped` is only ever called by the folder window (`builtins/window/folder/index.js` `initialize` (`setGrouped`), `:1377`), so the narrow rule means a user in flat or list view never sees the share tour, and the two share entry points — which share one flag — would behave inconsistently. The DOM section is also the wrong identity anyway (same reason as the icons list).
 
 **D9 — No tours on mobile at all — contextual *or* post-onboarding; flags are NOT set there.**
 
@@ -357,7 +376,7 @@ Gate on `Visitor.isMobile()` in `libs/tutorial-tours.js`, inside `fire()`.
 
 **Evidence.** The tutorial module carries **zero `@media` rules and no `data-device` branch** (verified, §1 revision 3). Its layout is fixed desktop geometry — `tutorial/skin/index.scss:50-53` `__sb-main { width: 231px; height: 100vh }`, `meeting/skin/index.scss:23` `max-width: 1242px` with a `min-width: 415px` rail at `:335`, `folder/skin/index.scss:21` `max-width: 850px`. On a phone the tour renders a 231px fixed sidebar and desktop-width panels with no reflow.
 
-*(Revision 2 also cited `_placeMenu()` measuring a button mobile never renders. That was wrong — the selector at `migrate/index.js:96` targets the tutorial's **own** fake topbar, `tutorial/skeleton/topbar.js:39`, which always renders. The claim is withdrawn; the conclusion does not depend on it.)*
+*(Revision 2 also cited `_placeMenu()` measuring a button mobile never renders. That was wrong — the selector at `…/tutorial/migrate/index.js` `_placeMenu` targets the tutorial's **own** fake topbar, `tutorial/skeleton/topbar.js:39`, which always renders. The claim is withdrawn; the conclusion does not depend on it.)*
 
 Not setting the flags means a mobile-first user still gets each tour on their first desktop session. Cost: a mobile-only user never sees any contextual tour.
 
@@ -369,7 +388,7 @@ Tablet (768–1024px) **does** run them: `Visitor.isMobile()` excludes it, the d
 
 **D10 — Kill switch: `Platform.get("contextual_tours")`, default off for one release.**
 Read in `libs/tutorial-tours.js` (same shape as `libs/billing.js` reading `Platform.billing_upgrade`), with a `localStorage.contextualTours` dev override. When **off**: the post-onboarding branch runs `full` exactly as today, no trigger site fires, no writes happen — the old behaviour is byte-for-byte reachable. When **on**: post-onboarding runs `workspace`, contextual triggers are live.
-Server side follows `over_limit_enforcement` verbatim (`server-team/service/lib/env.js:148`). Removal of the flag is the last item of the last phase.
+Server side follows `over_limit_enforcement` verbatim (`server-team/service/lib/env.js` (the `over_limit_enforcement` line)). Removal of the flag is the last item of the last phase.
 
 **"Off" includes the network.** `markSeen()` returns early when the switch is off, not just `fire()`. Without that, one path still writes with the feature disabled: the full tour's exit records every flagged tour (S7), and the full tour runs whether or not the switch is on. Five POSTs from a disabled feature is not "byte-for-byte today's behaviour".
 
@@ -377,9 +396,9 @@ Accepted cost: a user who completes `full` while the switch is off, and is then 
 
 **D11 — Split `folder_task` into `folder` and `task`** (was R6). **Two tours, two flags, two triggers.**
 
-The merged tour put **8 screens** behind the desk's primary navigation gesture. Opening a workspace tile is not a considered action; it is how the product is used. Worse, the reward for navigating is a mock desk covering the real one *while* `loadWorkspace` (`wm/index.js:783`) resets the collection, hides the list, calls `restart()` and re-partitions the grid underneath — so when the overlay clears after 8 screens the user has also lost the visual continuity of their own navigation. This is the single most likely source of complaints in the feature.
+The merged tour put **8 screens** behind the desk's primary navigation gesture. Opening a workspace tile is not a considered action; it is how the product is used. Worse, the reward for navigating is a mock desk covering the real one *while* `loadWorkspace` (`modules/desk/wm/index.js` `loadWorkspace`) resets the collection, hides the list, calls `restart()` and re-partitions the grid underneath — so when the overlay clears after 8 screens the user has also lost the visual continuity of their own navigation. This is the single most likely source of complaints in the feature.
 
-The split is honest because a matching trigger exists: `builtins/window/folder/index.js:1690` case `"tab-task"` → `showFolderTab(_a.task)`, raised by the Tasks tab entries at `builtins/window/skeleton/toolkit/index.js:234` and `:242`. That is precisely the surface `tutorial_task` mocks (`task/skeleton/index.js:99-120` renders folder chrome + a tab bar with `active: 'tasks'` + the five-view switcher). Clicking "Tasks" is a considered, low-frequency action on the exact thing the tour explains.
+The split is honest because a matching trigger exists: `builtins/window/folder/index.js` `case "tab-task"` case `"tab-task"` → `showFolderTab(_a.task)`, raised by the Tasks tab entries at `builtins/window/skeleton/toolkit/index.js:234` and `:242`. That is precisely the surface `tutorial_task` mocks (`task/skeleton/index.js:99-120` renders folder chrome + a tab bar with `active: 'tasks'` + the five-view switcher). Clicking "Tasks" is a considered, low-frequency action on the exact thing the tour explains.
 
 Result: `folder` = 3 screens on first workspace/folder open; `task` = 5 screens on first Tasks-tab open. Neither is 8.
 
@@ -435,15 +454,15 @@ const TOURS = {
 badgeText(tour, s, n) // → LOCALE.TUTORIAL_STEP.format(numerator + 1, denominator)
 ```
 
-The **step** numbers are passed down as a model attribute on the step widget, exactly as `enter_at_last` is today (`tutorial/index.js:102-111`): `badge_mode`, `screen_count`, and `badge_text` for the `'steps'` case. A `'screens'`-mode step recomputes its own `badge_text` on each screen change — it is the only object that knows `_screenIndex`, and it already re-renders the callout there (`folder/index.js:94` `_showScreen`, `task/index.js:104`, `share/index.js:139`, `migrate/index.js:115`). So the change to each step widget is one line in `_showScreen`, not a new mechanism.
+The **step** numbers are passed down as a model attribute on the step widget, exactly as `enter_at_last` is today (`modules/desk/tutorial/index.js` `_widgetAt`): `badge_mode`, `screen_count`, and `badge_text` for the `'steps'` case. A `'screens'`-mode step recomputes its own `badge_text` on each screen change — it is the only object that knows `_screenIndex`, and it already re-renders the callout there (`…/tutorial/folder/index.js` `_showScreen` `_showScreen`, `…/tutorial/task/index.js` `_showScreen`, `…/tutorial/share/index.js` `_showScreen`, `…/tutorial/migrate/index.js` `_showScreen`). So the change to each step widget is one line in `_showScreen`, not a new mechanism.
 
 Each step widget deletes its local `BADGE`/`badge_text` literals. New locale key `TUTORIAL_STEP` = `"STEP {0}/{1}"` in all six language files.
 
 Net effect: `migrate` reads STEP 1/3 → 2/3 → 3/3 across its screens; `full` still reads STEP 1/6 → … → 6/6 across its steps, with `tutorial_meeting` at 3/6.
 
-**Back at a tour boundary** (Hard requirement 4). `tutorial_main` passes `is_first: true` on the first step; `tooltipBadge` already supports `hide_back` (`skeleton/toolkit/tooltip.js:74-84`, param at `:28`). Each multi-screen step passes `hide_back: this.mget('is_first') && this._screenIndex === 0` instead of today's per-step logic (only `workspace/index.js:55` has any). One rule, driven by the registry.
+**Back at a tour boundary** (Hard requirement 4). `tutorial_main` passes `is_first: true` on the first step; `tooltipBadge` already supports `hide_back` (`…/toolkit/tooltip.js` `tooltipBadge` (`hide_back`), param at `:28`). Each multi-screen step passes `hide_back: this.mget('is_first') && this._screenIndex === 0` instead of today's per-step logic (only `…/tutorial/workspace/index.js` `_showBadge` has any). One rule, driven by the registry.
 
-**Backdrops** (Hard requirement 5). `backdrops.js` exports named composers (`workspaceFaded`, `workspaceGrid`, `folderInert`, …) returning the array of inert skeleton entries; `_widgetAt` composes `[...backdrop.map(fn => fn(this)), stepWidget]`. `tutorial_folder`'s no-service inert mode (`folder/index.js:70-75`) becomes a named backdrop rather than an implicit second personality — the existing check stays, so nothing regresses.
+**Backdrops** (Hard requirement 5). `backdrops.js` exports named composers (`workspaceFaded`, `workspaceGrid`, `folderInert`, …) returning the array of inert skeleton entries; `_widgetAt` composes `[...backdrop.map(fn => fn(this)), stepWidget]`. `tutorial_folder`'s no-service inert mode (`…/tutorial/folder/index.js` `onDomRefresh` (inert-backdrop check)) becomes a named backdrop rather than an implicit second personality — the existing check stays, so nothing regresses.
 
 ### Event contract (Hard requirement 9)
 
@@ -489,13 +508,13 @@ onDomRefresh()  → Tours.armed()   : clearTimeout(_guardTimer)      ← tour is
 destroy         → Tours.release() : _inFlight = null               ← tour is gone
 ```
 
-Revision 2 armed the timer in `fire()` and left it to expire, justified as a chunk-fetch bound. That was wrong: a user reading 3–5 screens comfortably exceeds 30s, so the timer would fire *while the tour was on screen*, null `_inFlight`, and let a second trigger mount a second tour — breaking Hard requirement 8 in the ordinary case rather than the pathological one. Cancelling on mount makes `GUARD_TIMEOUT_MS` an honest fetch bound; 30s, the same order as the existing 20s `_homeSettledFallback` (`modules/desk/index.js:1779`), is then generous rather than arbitrary.
+Revision 2 armed the timer in `fire()` and left it to expire, justified as a chunk-fetch bound. That was wrong: a user reading 3–5 screens comfortably exceeds 30s, so the timer would fire *while the tour was on screen*, null `_inFlight`, and let a second trigger mount a second tour — breaking Hard requirement 8 in the ordinary case rather than the pathological one. Cancelling on mount makes `GUARD_TIMEOUT_MS` an honest fetch bound; 30s, the same order as the existing 20s `_homeSettledFallback` (`modules/desk/index.js` `case "overlay"` (the 20s net)), is then generous rather than arbitrary.
 
 `release()` is idempotent and ignores a tour id that is not the current `_inFlight`, so a late `destroy` from a previous tour cannot clear a newer one's guard.
 
 Trigger sites therefore contain exactly one line — `require('libs/tutorial-tours').fire('share')` — and hold no state. `desk_module`'s listener calls `this._showTutorial(tourId)`.
 
-Rejected: `Wm.$el.trigger(...)` (the `desk:chrome` precedent at `index.js:288`). It works, but it is a jQuery DOM event on the window-manager element, so a listener must survive WM re-feeds; `RADIO_BROADCAST` is process-global, already the desk's idiom for a dozen `desk:*` channels, and has the `libs/over-limit.js:106` precedent for exactly this lib-owns-channel shape.
+Rejected: `Wm.$el.trigger(...)` (the `desk:chrome` precedent at `modules/desk/index.js` `_syncWorkspaceTopbar`). It works, but it is a jQuery DOM event on the window-manager element, so a listener must survive WM re-feeds; `RADIO_BROADCAST` is process-global, already the desk's idiom for a dozen `desk:*` channels, and has the `libs/over-limit.js:106` precedent for exactly this lib-owns-channel shape.
 
 ### `_showTutorial(tourId)` and the post-home chain (Hard requirement 7)
 
@@ -541,7 +560,7 @@ than after it, so a throw inside that timeout still leaves it in place.
 
 No other call site consumes the return value; every trigger discards it.
 
-`onPartReady("desk-tutorial")` (`index.js:1794`) gains a guard: the reward-flow / fallback chaining runs **only** when `child.mget('tour')` is `workspace` or `full` **and** `!this._homeSettledDone`. A contextual tour firing an hour later reaches `onPartReady` with `_homeSettledDone === true` and does nothing to the chain. The 20s `_homeSettledFallback` armed at `:1779` is untouched — it is armed in the overlay branch, which only the post-onboarding / `?tutorial=` path takes.
+`onPartReady("desk-tutorial")` (`modules/desk/index.js` `case "desk-tutorial"`) gains a guard: the reward-flow / fallback chaining runs **only** when `child.mget('tour')` is `workspace` or `full` **and** `!this._homeSettledDone`. A contextual tour firing an hour later reaches `onPartReady` with `_homeSettledDone === true` and does nothing to the chain. The 20s `_homeSettledFallback` armed at `:1779` is untouched — it is armed in the overlay branch, which only the post-onboarding / `?tutorial=` path takes.
 
 ---
 
@@ -583,10 +602,10 @@ POST drumate.tutorial_seen   { reset: 1 }                 dev-gated, see S8
 
 - `acl/drumate.json` — new `tutorial_seen` entry: `params.tour_id {type:"string", required:false}`, `params.reset {type:"boolean", required:false}`, `permission.src: "owner"`, `scope: "hub"`, **`"log": true`** (see S9), `returns.tutorials_seen {type:"object"}`.
 - `service/private/drumate.js` — new `async tutorial_seen()` beside `update_settings()` (`:514`): validate `tour_id` against a hardcoded allow-list constant (`['workspace','folder','task','share','migrate']`) and reject anything else, so the free-form settings blob cannot be used as a write primitive; then `await this.yp.await_proc('drumate_tutorial_seen', this.uid, tour_id, reset)`.
-  - **No constructor bind.** `__private_drumate` has neither a constructor nor method binds (`service/private/drumate.js:42` opens straight onto its methods) — that pattern belongs to `service/private/hub.js:86`. The router dispatches by method name; a new service is just a new method.
+  - **No constructor bind.** `__private_drumate` has neither a constructor nor method binds (`service/private/drumate.js` (the class declaration) opens straight onto its methods) — that pattern belongs to `service/private/hub.js:86`. The router dispatches by method name; a new service is just a new method.
   - **Error calls.** `this.exception.invalid_argument` does not exist. The class offers `server`, `user`, `email`, `bad_request`, `reject`, `unauthorized`, `forbiden`, `not_found`, `precondition`, `fatal` (`@drumee/server-core/lib/exception.js:117-175`). Use `bad_request('INVALID_TOUR_ID')` for an id outside the allow-list, and `forbiden()` for the reset dev gate — the latter is the established call for "authenticated but not allowed" (`service/private/channel.js:1426`, `service/private/secure_share.js:52`).
 
-**The allow-list lives in three places** (was M2). There is **no mechanism in this repo for sharing a constant between `ui-team` and `server-team`**: `getServices()` (`server-team/router/rest/index.js:474-488`) flattens each ACL module to `{ns: {method: "ns.method"}}` — names only — before `platform.services` is assembled (`service/lib/env.js:162`), so params, enums and doc strings never reach the client. Nothing else crosses the boundary.
+**The allow-list lives in three places** (was M2). There is **no mechanism in this repo for sharing a constant between `ui-team` and `server-team`**: `getServices()` (`server-team/router/rest/index.js:474-488`) flattens each ACL module to `{ns: {method: "ns.method"}}` — names only — before `platform.services` is assembled (`service/lib/env.js` (`platform.services`)), so params, enums and doc strings never reach the client. Nothing else crosses the boundary.
 
 The three sites are:
 
@@ -622,7 +641,7 @@ Concurrency is resolved at the storage layer: it is one `UPDATE` against one row
 
 ### S4 — Read path
 
-**Already present at bootstrap.** `get_user` selects `settings` (`schemas/yellow_page/procedures/directory/get_user.sql`), `get_env` returns it inside `data.user` (`server-team/service/lib/env.js:59`), `drumee.js:47/155` sets it on `Visitor`, and ui-core exposes `Visitor.settings()` (`letc/user.js:359`). `libs/tutorial-tours.js` reads `Visitor.settings().tutorials_seen` lazily on first use.
+**Already present at bootstrap.** `get_user` selects `settings` (`schemas/yellow_page/procedures/directory/get_user.sql`), `get_env` returns it inside `data.user` (`server-team/service/lib/env.js` `get_env` (the `data.user` payload)), `drumee.js:47/155` sets it on `Visitor`, and ui-core exposes `Visitor.settings()` (`letc/user.js:359`). `libs/tutorial-tours.js` reads `Visitor.settings().tutorials_seen` lazily on first use.
 
 Guaranteed before the first possible click: the desk module cannot render until `init_globals` has run.
 
@@ -671,7 +690,7 @@ Two mechanisms, for two different populations:
 
 Rejected: a server-side backfill (`UPDATE entity SET settings = JSON_MERGE_PATCH(...) WHERE JSON_EXTRACT(settings,'$.tutorial_done') = true`). It would touch every row of a FULLTEXT-indexed `mediumtext` column for a fact a one-line client read gives free.
 
-**Users who complete the `full` tour from Get help or `?tutorial=1`** are handled by writing, not by inference. `_enterWorkspace()` (`tutorial/index.js:149`), when the active tour is `full`, calls `markSeen()` for **every flagged tour** (`workspace`, `folder`, `task`, `share`, `migrate`) as well as keeping the legacy `tutorial_done` write.
+**Users who complete the `full` tour from Get help or `?tutorial=1`** are handled by writing, not by inference. `_enterWorkspace()` (`modules/desk/tutorial/index.js` `_enterWorkspace`), when the active tour is `full`, calls `markSeen()` for **every flagged tour** (`workspace`, `folder`, `task`, `share`, `migrate`) as well as keeping the legacy `tutorial_done` write.
 
 **This holds only while the kill switch is on.** `markSeen()` returns early when it is off (D10), so a `full` tour completed with the feature disabled records nothing but the legacy boolean — which is correct, because with the switch off there are no contextual tours to suppress. The consequence is stated in D10: switching on afterwards lets those users meet the contextual tours despite having seen the content.
 
@@ -695,7 +714,7 @@ The seen-record itself is **suppression state only**, and would work perfectly w
 
 **Would suppression work without it?** Yes, entirely. The `tutorials_seen` map holds the same timestamps, minus the headers and minus the per-call granularity. Anyone asking "when did this user first click share" can read `settings.tutorials_seen.share`.
 
-**Decision: `"log": true`, accepted.** The marginal privacy surface over the `tutorials_seen` map is the request headers and the row's presence in `services_log`, both of which every other logged drumate service already produces for these same users (`acl/drumate.json:254`, `:534`, `:581`, `:610`, `:810`, `:817`). The benefit is that product can answer questions about trigger *rates* — how many users ever reach the Tasks tab — which the settings map cannot answer, because it only records users who reached it. No separate telemetry call is added.
+**Decision: `"log": true`, accepted.** The marginal privacy surface over the `tutorials_seen` map is the request headers and the row's presence in `services_log`, both of which every other logged drumate service already produces for these same users (`acl/drumate.json` (the logged entries), `:534`, `:581`, `:610`, `:810`, `:817`). The benefit is that product can answer questions about trigger *rates* — how many users ever reach the Tasks tab — which the settings map cannot answer, because it only records users who reached it. No separate telemetry call is added.
 
 **If privacy review objects**, the mitigation is one character: `"log": false`. Suppression is unaffected; only the rate analytics are lost. This should be an explicit sign-off, not a default — see §9.
 
@@ -729,7 +748,7 @@ The seen-record itself is **suppression state only**, and would work perfectly w
 | # | Item | Note |
 |---|---|---|
 | X1 | Extract the duplicated share gate (`folder/skeleton/topbar.js:71-95` ↔ `window/skeleton/toolkit/index.js:1659-1672`) into one predicate | **Not a drive-by.** This work does not touch the gate — both paths raise `folder-manage-access`, so C9 covers both from the single handler. Risk if done: the gate decides *visibility* of a control that mints `can_edit` links; a mistake in extraction is a privilege leak, and it needs its own review. |
-| X2 | De-duplicate the navigate-and-repartition preamble (`utils.js:457`, `breadcrumb/index.js:287`, `:325`, `wm/index.js:783`) | **Not touched.** This plan adds nothing to the navigation path — the `folder` trigger lives in `open-node` (C8) and in the workspace-list cases (C8b), before navigation, so the four copies are not a hazard for this work. Listed because any future change there is 4-way. |
+| X2 | De-duplicate the navigate-and-repartition preamble (`utils.js:457`, `breadcrumb/index.js:287`, `:325`, `modules/desk/wm/index.js` `loadWorkspace`) | **Not touched.** This plan adds nothing to the navigation path — the `folder` trigger lives in `open-node` (C8) and in the workspace-list cases (C8b), before navigation, so the four copies are not a hazard for this work. Listed because any future change there is 4-way. |
 | X3 | Localise the callout `title` / `desc` copy | **Separate ticket** (was OQ2). All 14 sets are raw English literals in the step modules — a standing violation of `.claude/rules/framework-invariants.md` §5. ~40 keys × 6 languages ≈ 240 entries, which would make this plan's diff unreviewable, and the copy is likely to be rewritten anyway as part of splitting the tours. `TUTORIAL_STEP` and `SKIP_TOUR` stay in scope (C13). |
 
 ---
@@ -742,7 +761,7 @@ Client: C1, C2, C3, C7 (partial: `_showTutorial(tourId)`, channel bind, chain ga
 Ships: `migrate` (3 screens) and `folder` (3 screens) fire contextually, are recorded server-side **on mount**, badges are derived, Done renders on the last screen. Kill switch defaults **off**; behind the flag nothing changes.
 Exercises: registry, derived badges, backdrops, single-flight + guard timeout, mark-on-mount, persistence round trip, lazy reconciliation, chain gating.
 
-**Mark-on-mount is in this phase, not Phase 4** (R2). It is not optional scaffolding: `_enterWorkspace()` is reachable only by completing every screen (`tutorial/index.js:123`), the overlay is destroyed without it by three separate feed paths (`index.js:1902`, `:2077`, `:2661`), and there is no close affordance (`tooltip.js:57-93`). Shipping a contextual trigger with mark-on-Done means a reload mid-tour replays the tour on the next qualifying click, indefinitely. That is not "today's known behaviour" — today's tour runs once per signup, not once per navigation gesture.
+**Mark-on-mount is in this phase, not Phase 4** (R2). It is not optional scaffolding: `_enterWorkspace()` is reachable only by completing every screen (`modules/desk/tutorial/index.js` `_nextStep`), the overlay is destroyed without it by three separate feed paths (`modules/desk/index.js` `_showTutorial`, `:2077`, `:2661`), and there is no close affordance (`…/toolkit/tooltip.js` `tooltipBadge` (the card)). Shipping a contextual trigger with mark-on-Done means a reload mid-tour replays the tour on the next qualifying click, indefinitely. That is not "today's known behaviour" — today's tour runs once per signup, not once per navigation gesture.
 
 **Phase 2 — cross-tree triggers**
 C9, C10, C15, C5 (share + task), plus the `share` and `task` registry entries. First use of the channel from outside the desk tree; the two share entry points share one flag, and `task` gets its own (D11). Independently shippable: if it regresses, revert three one-line call sites.
@@ -776,11 +795,11 @@ X1/X2/X3 remain open, unscheduled.
 | Risk | Mitigation |
 |---|---|
 | A contextual tour interrupts a user mid-task | Bounded by once-ever suppression and the D4 skip control. `contextual_tours: 0` (or the key's absence) disables all of it without a client deploy. |
-| **8 screens on the desk's primary navigation gesture** | Resolved structurally by D11: `folder` is 3 screens on workspace/folder open, `task` is 5 on a deliberate Tasks-tab click. The residual for `folder` is 3 screens over a `loadWorkspace` that is repartitioning the grid underneath (`wm/index.js:783` → `_prepareListPartition`) — the mock desk hides that work, and the real grid is settled by the time the overlay clears, which reads better than watching it rebuild. |
+| **8 screens on the desk's primary navigation gesture** | Resolved structurally by D11: `folder` is 3 screens on workspace/folder open, `task` is 5 on a deliberate Tasks-tab click. The residual for `folder` is 3 screens over a `loadWorkspace` that is repartitioning the grid underneath (`modules/desk/wm/index.js` `loadWorkspace` → `_prepareListPartition`) — the mock desk hides that work, and the real grid is settled by the time the overlay clears, which reads better than watching it rebuild. |
 | The post-home chain (reward flow / LAUNCH30 / invited-workspace) breaks | Phase 3 is isolated and last. The chain gate is a positive test (`tour ∈ {workspace, full}`), so an unrecognised tour id can only *skip* the chain-arming, never double-arm it. Tests 1 + 2 are the gate. |
 | **A gated post-signup tour delays the chain** — `fire()` declines, nothing mounts, and the 20s net becomes the only route to `_afterHomeSettled` | `_launchHomeTutorial` reports whether anything launched; a false takes the existing 2s settle. Without it every mobile signup waits 18s longer for the reward flow, LAUNCH30 and the invited-workspace prompt. One test per decline reason, each produced against the real `fire()`. |
-| A contextual tour blocks the chain | Impossible by construction: `_afterHomeSettled` is once-per-session (`index.js:2408`) and a contextual tour reaches `onPartReady` with `_homeSettledDone` already true. |
-| Two tours mount at once | `_inFlight` in `Tours.fire()`. The existing `_startProductTour` guard (`index.js:1937-1944`) already covers the second case on its own and needs **no** change: every tour mounts under the same kind `desk_tutorial`, so its `kind === "desk_tutorial"` test blocks launching `full` over a running contextual tour just as it blocked a double launch before. An earlier revision asked for it to also test `mget('tour')`; that would be dead code. |
+| A contextual tour blocks the chain | Impossible by construction: `_afterHomeSettled` is once-per-session (`modules/desk/index.js` `_afterHomeSettled`) and a contextual tour reaches `onPartReady` with `_homeSettledDone` already true. |
+| Two tours mount at once | `_inFlight` in `Tours.fire()`. The existing `_startProductTour` guard (`modules/desk/index.js` `_startProductTour`) already covers the second case on its own and needs **no** change: every tour mounts under the same kind `desk_tutorial`, so its `kind === "desk_tutorial"` test blocks launching `full` over a running contextual tour just as it blocked a double launch before. An earlier revision asked for it to also test `mget('tour')`; that would be dead code. |
 | **The single-flight guard wedges the feature** — a tour that fires but never mounts never destroys, so `_inFlight` never clears | `GUARD_TIMEOUT_MS` fallback timer armed alongside `_inFlight`, **cancelled on mount** by `Tours.armed()` so it only ever bounds the chunk fetch (§3). Test 43a. |
 | **The guard releases while the tour is still on screen** — the mirror-image failure: a timer left running through a 3–5 screen read expires mid-tour and lets a second tour mount | Same fix from the other side: `armed()` cancels the timer at mount, after which only the tutorial's `destroy` clears `_inFlight` (C7). Test 43b. |
 | A brand-new account never sees any tour | S4's three-state read: an **absent** `tutorials_seen` is a new user (armed), not a failure (suppressed). Test 47 asserts it directly against an account with no `settings` write. |
@@ -858,7 +877,7 @@ same layer and portals itself to `document.body` to escape it.
    the caller's `sys_pn`, so `.desk-module__overlay` and `sys_pn: "overlay"` are
    the same element. Its `wrapper: 1` flag is inert — nothing in ui-core reads it.
 2. *The tutorial portals out, like reward-flow.* No — the only `closest()` in the
-   whole tutorial module is `migrate/index.js:90`, scoping a `querySelector`.
+   whole tutorial module is `…/tutorial/migrate/index.js` `_placeMenu`, scoping a `querySelector`.
    Neither `tutorial_main` nor the spotlight re-parents anything.
 3. *A `.dialog__wrapper` rule overrides it.* The Wrapper does add that class, but
    no base rule for it sets `opacity` or `pointer-events`.
