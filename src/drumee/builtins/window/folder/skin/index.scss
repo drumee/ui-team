@@ -95,12 +95,12 @@
       // theme-aware on its own (rgba(0,0,0,.4) light, rgba(20,17,35,.4) dark,
       // declared on :root / html[data-theme="dark"]), so unlike the glass
       // mixin no explicit dark-theme branch is needed here.
-      background-color: var(--overlay-bg);
-      // The 6px frost that rule pairs with the scrim in its own mobile-open
-      // state. Kept together deliberately: the two were designed as one look,
-      // and a 30px/60px frost under a 0.4 scrim just washes out.
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      //
+      // Shared with the create-workspace dialog and the invite popup
+      // (media/form/skin) so one recipe covers every mobile overlay surface.
+      // The mixin's ::before reset is inert on this element — it never carries
+      // `[data-overlay="blur"]`, so there is no stacked glass layer to clear.
+      @include drumee.scrim-overlay;
       // Deliberately UNDER the desk mobile topbar (99999): a tap up there
       // lands on a framework view, so RADIO_CLICK closes the menu anyway
       // and there is nothing to gain by masking it. (The desk overlay sits at

@@ -294,9 +294,12 @@
 // (modules/desk/wm/index.js), so on a phone this form floats over a fully
 // sharp desk with nothing separating it from the grid behind.
 //
-// Give it the standard glass backdrop on mobile only. The card itself stays
-// opaque — the blur belongs to the layer BEHIND it, so the form's own text
-// keeps a solid ground to sit on.
+// Give it the desk's own scrim on mobile only — the same backdrop
+// `.desk-module__overlay` puts behind the mobile drawer, via scrim-overlay
+// (skin/mixins/drumee.scss). This was glass-overlay; the flat scrim is what
+// the app's other mobile overlay surfaces use, so one recipe now covers them
+// all. The card itself stays opaque — the scrim belongs to the layer BEHIND
+// it, so the form's own text keeps a solid ground to sit on.
 //
 // Global (not nested) on purpose: the element being restyled is desk chrome
 // this widget does not own. Same reason and same shape as the reward flow's
@@ -307,19 +310,41 @@
 //
 // Out-specifies the `[data-state="open"] { backdrop-filter: none }` base in
 // wm's skin, and stays under the reward flow's `!important` neutraliser — so a
-// walkthrough spotlighting this same form still gets its flat dim, not frost.
+// walkthrough spotlighting this same form still gets its flat dim. That dim is
+// `var(--overlay-bg)` too (widget/reward-flow/skin), so the two now agree
+// instead of switching treatment mid-walkthrough.
 //
 // Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
 // answers "mobile" below 801px, so the attribute is missing in the DevTools
 // emulator and on a landscape phone.
-.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
+// The invite popup rides the SAME host (both call sites feed
+// Wm.__wrapperModal — desk/index.js and widget/settings/hub) and opts INTO the
+// glass itself (invite-popup/index.js sets data-overlay="blur" on its parent),
+// so it needs the scrim to out-specify that opt-in rather than fill a gap.
+// Listed here beside this dialog because the selector, host and both mobile
+// flags are identical; only the :has() target differs.
+// The class is doubled deliberately. The glass opt-in this has to beat is
+// `[data-state="open"][data-overlay="blur"]` (0,3,0), and the plain viewport
+// form below — one class, one attribute, one :has() — TIES it at (0,3,0), which
+// would leave the winner to file order across the SCSS graph. Doubling makes it
+// (0,4,0) and the outcome independent of load order. The device-attribute form
+// already wins on its own; it carries the same shape for symmetry.
+.window-manager__wrapper-modal.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
     .form-folder__main
+  ),
+.window-manager__wrapper-modal.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
+    .invite-popup__container
   ) {
-  @include drumee.glass-overlay;
+  @include drumee.scrim-overlay;
 }
 
 @media (max-width: 650px) {
-  .window-manager__wrapper-modal[data-state="open"]:has(.form-folder__main) {
-    @include drumee.glass-overlay;
+  .window-manager__wrapper-modal.window-manager__wrapper-modal[data-state="open"]:has(
+      .form-folder__main
+    ),
+  .window-manager__wrapper-modal.window-manager__wrapper-modal[data-state="open"]:has(
+      .invite-popup__container
+    ) {
+    @include drumee.scrim-overlay;
   }
 }
