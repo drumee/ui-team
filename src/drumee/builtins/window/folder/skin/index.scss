@@ -605,14 +605,6 @@
         stroke: currentColor;
       }
 
-      // The sprite build strips the source fill from `player-fullscreen` /
-      // `desktop_reduce`, so without this the glyph paints the SVG default
-      // black next to its currentColor neighbours.
-      &.fullscreen svg,
-      &.fullscreen use {
-        fill: currentColor;
-      }
-
       .window-folder__control-icon svg {
         transition: transform 0.2s ease;
       }

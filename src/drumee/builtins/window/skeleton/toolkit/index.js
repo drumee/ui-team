@@ -1613,15 +1613,28 @@ export function zoomMenu(ui) {
                 service,
                 uiHandler: [ui],
                 dataset: { preset, active: 0 },
-                kidsOpt: { active: 0 },
                 // The glyph is pure CSS: this Box is the outline, its kid
                 // the inner block whose width/position the skin varies by
                 // `data-preset`.
+                //
+                // `active: 0` must be set on EACH kid, not via the parent's
+                // `kidsOpt` — ui-core's mergeKidsOptions rebinds its local
+                // `item` and never writes back, so kidsOpt reaches nothing.
+                // An active kid binds its own onclick, and ui-core's
+                // __handleClick calls stopPropagation() BEFORE it discovers
+                // it has no uiHandler — so the glyph swallowed the click and
+                // the preset's service never ran. Only the second click of a
+                // double-click got through (the 300ms suppressor returns
+                // before stopPropagation). Mirrors topbarMoreMenu's items.
                 kids: [
                   Skeletons.Box.X({
                     className: `${cnRoot}-glyph`,
+                    active: 0,
                     kids: [
-                      Skeletons.Element({ className: `${cnRoot}-glyph-fill` }),
+                      Skeletons.Element({
+                        className: `${cnRoot}-glyph-fill`,
+                        active: 0,
+                      }),
                     ],
                   }),
                 ],
