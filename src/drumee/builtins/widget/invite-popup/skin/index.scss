@@ -36,13 +36,6 @@
   &__container {
     padding: 24px;
     gap: 16px;
-    // The card can never be taller than the viewport it is centered in.
-    // 32px matches the 16px-a-side inset the max-width guard on __ui uses, so
-    // the card keeps the same margin on all four edges. dvh second so a mobile
-    // browser's collapsing chrome is accounted for where it is supported, with
-    // vh as the fallback for where it is not.
-    max-height: calc(100vh - 32px);
-    max-height: calc(100dvh - 32px);
 
     // ── Responsive ────────────────────────────────────────────────────
     // Width is handled once, by the max-width guard on __ui above. What is
@@ -163,19 +156,6 @@
     padding: 6px 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     min-height: 32px;
-    // Chips are `display: contents`, so every recipient is a direct flex child
-    // of this row and wraps onto a new line. Invite twenty people and the row
-    // alone was taller than the card. ~3 wrapped lines, then it scrolls.
-    //
-    // An explicit cap rather than a flex share: this row is nested inside
-    // __email-field, not a direct child of __container, so the container's
-    // max-height cannot shrink it.
-    //
-    // Safe to scroll — the email dropdown (__suggestions) is a SIBLING of this
-    // row under __email-field, not a descendant, so it is not in this scroll
-    // box and cannot be clipped by it.
-    max-height: 96px;
-    overflow-y: auto;
   }
 
   &__chips {
@@ -304,44 +284,6 @@
   /* Workspace + role rows */
   &__workspaces {
     gap: 8px;
-    // Absorbs whatever the card's max-height cannot fit. The explicit
-    // min-height does two jobs: it overrides the flex default of
-    // `min-height: auto`, which refuses to shrink a child below its content
-    // (without that the rows push straight through the cap instead of
-    // scrolling), and it floors the list at roughly two rows.
-    //
-    // The floor is not cosmetic. At `min-height: 0` a twelve-row form on a
-    // 500px-tall viewport shrank this list to ONE pixel — every workspace row
-    // scrolled out of existence while the header and footer kept their space.
-    // The floor is chosen over that, knowingly: when even two rows plus the
-    // header and footer do not fit, the floor holds and the Send button is the
-    // thing pushed past the card's bottom edge instead.
-    //
-    // No max-height on purpose — the list stays at its natural height until the
-    // card actually runs out of room, so a two-row form looks exactly as it
-    // does today and only a long one scrolls.
-    //
-    // ── Two accepted costs, both deliberate (decided 2026-08-20) ──
-    //
-    // 1. A scrollbar appears even with ONE row. The three dropdowns hide with
-    //    `visibility: hidden`, not `display: none` (they have to — the
-    //    framework's `.box[data-flow="y"] { display: flex }` out-specifies a
-    //    plain class, which is why the original author reached for visibility),
-    //    so a CLOSED __role-options is still laid out and still counts toward
-    //    this box's scrollable overflow. Measured at one row: client 120,
-    //    scroll 223, of which 139 is the closed dropdown. Accepted rather than
-    //    forcing `display: none !important` here, which would change the hide
-    //    mechanism the reward-flow guide measures for its spotlight cutout.
-    //    Mobile and tablet scrollbars are overlay, so the cost lands on
-    //    desktop — where the card has room and rarely scrolls at all.
-    //
-    // 2. Once this box scrolls, the dropdowns raised FROM these rows
-    //    (__workspace-suggestions, __role-options) are clipped by it — they are
-    //    descendants, unlike the email row's __suggestions, which is a sibling
-    //    and therefore safe. Measured with the last of 8 rows open: dropdown
-    //    bottom 1395 vs list bottom 476.
-    min-height: 88px;
-    overflow-y: auto;
   }
 
   &__workspace-row {
