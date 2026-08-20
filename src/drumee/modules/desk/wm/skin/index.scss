@@ -1,5 +1,24 @@
 @use "../../../../skin/mixins/drumee.scss";
 
+// Centres a wrapper-modal's dialog on the viewport. See the include sites.
+@mixin wrapper-modal-mobile-centre {
+  position: fixed;
+  inset: 0;
+
+  > * {
+    // Join the flex flow so the host's align/justify centre this. Inset is
+    // reset because `relative` still honours the inline left/top the window
+    // manager writes; margin because a dialog may carry its own.
+    position: relative !important;
+    inset: auto !important;
+    margin: auto !important;
+    // Never wider or taller than the screen it is being centred on.
+    max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
+  }
+}
+
+
 .window-manager {
   &__ui {
     background-color: transparent;
@@ -153,6 +172,42 @@
     &[data-overlay="blur"],
     &[data-state="open"][data-overlay="blur"] {
       @include drumee.glass-overlay;
+    }
+
+    // ── Mobile: centre whatever this hosts ──────────────────────────────
+    // This element is already a full-inset centring flex container, but its
+    // children never benefit: dialogs fed in here are position:absolute (plus
+    // inline left/top the window manager stamps on the instance), so they sit
+    // out of flow and land wherever those offsets put them — top-left of the
+    // anchor, in practice.
+    //
+    // Centring each dialog from its own skin means naming its class, and that
+    // keeps missing: the trash Empty-Trash confirm renders a card that matches
+    // none of the .window-confirm__ui rules deployed for it. Centring from the
+    // HOST needs no class at all — every dialog Wm feeds through
+    // Wm.__wrapperModal (confirm, invite, request-access, the create-workspace
+    // form) is a direct child here, so this reaches all of them.
+    //
+    // `relative`, not `static`: it neutralises the inline offsets just the same
+    // once inset is reset, but it stays a containing block, so a dialog whose
+    // close button is position:absolute keeps resolving against its own card
+    // rather than escaping to this wrapper.
+    //
+    // The wrapper itself is pinned to the viewport here. Left absolute it spans
+    // .window-manager__ui — the desk BODY, which starts below the 44px mobile
+    // topbar — so "centred" would sit about 22px low.
+    //
+    // Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+    // answers "mobile" below 801px, so the attribute is absent in the DevTools
+    // emulator and on a landscape phone.
+    &[data-device="mobile"][data-state="open"] {
+      @include wrapper-modal-mobile-centre;
+    }
+
+    @media (max-width: 650px) {
+      &[data-state="open"] {
+        @include wrapper-modal-mobile-centre;
+      }
     }
   }
 
