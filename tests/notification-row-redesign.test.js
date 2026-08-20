@@ -314,23 +314,16 @@ test("rows with no folder_name simply get no chip", () => {
 test("every locale key the row uses resolves in every locale", () => {
   // A missing key renders its own NAME to the user (createSafeObject), not a
   // blank and not the `|| 'fallback'` — so a gap here is a visible bug.
-  const KNOWN_EN_ONLY = new Set([
-    // Pre-existing debt, reported to Duy 2026-08-20: added in earlier rounds
-    // without mirroring. Listed so this test guards against NEW gaps instead of
-    // staying red; remove each entry as it is translated.
-    "ENDED_MEETING_ACTION",
-    "STARTED_MEETING_ACTION",
-    "TASK_ASSIGNED_ACTION",
-    "TASK_COMMENT_REPLY_ACTION",
-    "TASK_MENTION_ACTION",
-  ]);
+  // No allowlist: the five en-only keys this used to tolerate were translated
+  // on 2026-08-20, so every key the row renders must now exist in every locale.
   const used = [...new Set([...skelSrc.matchAll(/LOCALE\.([A-Z0-9_]+)/g)].map((m) => m[1]))];
   assert.ok(used.length > 5, "no locale keys found — did the file move?");
   const gaps = [];
   for (const lang of ["en", "fr", "es", "ru", "zh", "km"]) {
     const j = JSON.parse(readFileSync(join(ROOT, "locale", `${lang}.json`), "utf8"));
     for (const k of used) {
-      if (!(k in j) && !KNOWN_EN_ONLY.has(k)) gaps.push(`${lang}.json missing ${k}`);
+      if (!(k in j)) gaps.push(`${lang}.json missing ${k}`);
+      else if (j[k] === k) gaps.push(`${lang}.json has ${k} set to its own key name`);
     }
   }
   assert.deepEqual(gaps, []);
