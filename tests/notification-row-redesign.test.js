@@ -340,6 +340,24 @@ test("the share branch renders instead of throwing", () => {
   assert.equal(metaFor(cases[0][0]).tone, "brand");
 });
 
+test("the tab pills grow but never shrink", () => {
+  // `flex: 1 0 auto` is load-bearing in BOTH directions and easy to "simplify"
+  // into a regression:
+  //   1 1 0    — an equal split leaves ~44px of label; "Meeting" needs ~49px, so
+  //              it ellipsises as soon as it carries a count badge;
+  //   1 1 auto — shrinking clips every label on the 360px mobile panel, where the
+  //              six natural widths do not fit and the bar is meant to scroll.
+  // Measured on the endpoint: 512px spans 16→16 untruncated, 360px scrolls with
+  // nothing clipped.
+  const panelSkin = readFileSync(join(ACT, "skin/index.scss"), "utf8");
+  const tab = /&__tab \{[\s\S]*?\n  \}/.exec(panelSkin);
+  assert.ok(tab, "the __tab rule moved");
+  assert.match(tab[0], /flex:\s*1 0 auto;/, "pills must grow but not shrink");
+  assert.ok(!/flex-shrink:\s*[1-9]/.test(tab[0]), "no shrink may be reintroduced");
+  assert.match(panelSkin, /&__tabbar \{[\s\S]*?overflow-x:\s*auto;/,
+    "the bar must still scroll when the pills genuinely do not fit");
+});
+
 test("every locale key the row uses resolves in every locale", () => {
   // A missing key renders its own NAME to the user (createSafeObject), not a
   // blank and not the `|| 'fallback'` — so a gap here is a visible bug.

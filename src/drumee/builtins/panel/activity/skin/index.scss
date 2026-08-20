@@ -474,15 +474,16 @@
     // Figma's filter box is `horizontal: fill` + `justifyContent: center`, i.e.
     // the pills spread across the bar instead of clumping at the left.
     //
-    // `1 1 auto`, NOT `1 1 0`: an equal split gives each pill 76px, which after
-    // 16px of padding and a count badge leaves ~44px for the label — "Meeting"
-    // needs ~49px, so equal shares would ellipsis it the moment it has unread
-    // items. Growing from the natural width distributes only the SLACK, so the
-    // row still reaches both edges and nothing is truncated. min-width: 0 plus
-    // the bar's existing overflow-x keep a very long locale degrading gracefully
-    // rather than overflowing.
-    flex: 1 1 auto;
-    min-width: 0;
+    // `1 0 auto` — grow to fill, but NEVER shrink:
+    //  * not `1 1 0` (an equal split): 76px per pill leaves ~44px of label after
+    //    padding, and "Meeting" needs ~49px, so equal shares would ellipsis it
+    //    the moment it carries a count badge;
+    //  * not `1 1 auto` either: shrinking is what breaks the 360px mobile panel,
+    //    where the six natural widths do not fit and every label gets clipped.
+    // Growing from the natural width distributes only the SLACK, so at 512px the
+    // row reaches both edges untruncated, and on mobile the pills keep their size
+    // and the bar scrolls instead — the behaviour flex-shrink: 0 used to give.
+    flex: 1 0 auto;
     justify-content: center;
     gap: 4px;
     padding: 8px;
