@@ -36,10 +36,29 @@
   width: calc(100vw - 32px) !important;
   max-width: 340px;
 
-  position: fixed;
-  inset: 0;
-  margin: auto;
-  height: fit-content;
+  // !important on every positioning property, and translate centring rather
+  // than inset:0 + margin:auto.
+  //
+  // The first cut used the plain form and did not move the card: the window
+  // manager stamps inline left/top on a window instance, and inline styles beat
+  // any stylesheet rule without !important — so the card stayed at the top-left
+  // of its anchor exactly as before. The width rules above kept working
+  // throughout, because those already carried !important, which is what made
+  // the failure look like a selector problem rather than a cascade one.
+  //
+  // This is the same recipe .window-info__ui[data-variant="notice"] uses in
+  // window/info/skin, for the same reason — its comment spells the cause out:
+  // "pin to the screen with !important to override the inline left/top the
+  // window manager sets on the instance". Translate centring also drops the
+  // need for a definite height, so the card sizes to its message.
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+  height: auto;
   max-height: calc(100dvh - 32px);
 }
 
