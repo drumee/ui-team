@@ -15,6 +15,17 @@
     // Never wider or taller than the screen it is being centred on.
     max-width: calc(100vw - 32px);
     max-height: calc(100dvh - 32px);
+
+    // ...and never a sliver. A dialog whose body renders empty collapses to
+    // its widest child — for the trash confirm that is the button row, about
+    // 190px on a 390px screen, which reads as a broken fragment rather than a
+    // dialog. A floor keeps it dialog-shaped whatever its content does.
+    //
+    // A minimum rather than a fixed width on purpose: dialogs that size
+    // themselves (the invite popup's 450px, the confirm's own
+    // calc(100vw - 32px)) still win, so this only catches the ones that end up
+    // with nothing to size against.
+    min-width: min(320px, calc(100vw - 32px));
   }
 }
 
@@ -200,12 +211,26 @@
     // Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
     // answers "mobile" below 801px, so the attribute is absent in the DevTools
     // emulator and on a landscape phone.
-    &[data-device="mobile"][data-state="open"] {
+    // Keyed on "does it hold a dialog", NOT on [data-state="open"].
+    //
+    // The open state is what gives this element its inset:0 size (see the rule
+    // above). When it is missing, a hosted dialog's max-width/max-height:100%
+    // resolve against a container with no size, so the card collapses to its
+    // widest child — the button row — and its body is clipped to nothing. That
+    // is the ~190px fragment the trash confirm was rendering as. Requiring the
+    // same attribute here would have made this rule sit out precisely when it
+    // is needed most.
+    //
+    // :has(> *) rather than :not(:empty): both mean "hosting something", but
+    // :empty is defeated by a stray whitespace text node, and being wrong in
+    // that direction would pin an invisible full-screen fixed layer over the
+    // app whenever the wrapper is idle.
+    &[data-device="mobile"]:has(> *) {
       @include wrapper-modal-mobile-centre;
     }
 
     @media (max-width: 650px) {
-      &[data-state="open"] {
+      &:has(> *) {
         @include wrapper-modal-mobile-centre;
       }
     }
