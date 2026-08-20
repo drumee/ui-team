@@ -341,10 +341,17 @@ test("the copy keys added for this change are in all six locales", () => {
 });
 
 test("routing and copy were not disturbed by the redesign", () => {
+  // `ui.megt` is a typo for `mget` (no such method exists anywhere in
+  // @drumee/*), introduced in 8ee9a78f while converting `preview.accessibility`
+  // to `ui.mget(_a.accessibility)` — the same commit spells mget correctly three
+  // times. Calling it throws TypeError, but the branch that does is currently
+  // unreachable: nothing emits `media.share` (0 rows in yp.mfs_changelog) and no
+  // path delivers a media-category row with is_forward === 1. Left as-is so this
+  // change stays behaviour-free; tracked with Duy. Assert it is still the typo so
+  // that whoever fixes it does so knowingly and updates this test with it.
   assert.ok(
     skelSrc.includes("ui.megt(_a.accessibility)"),
-    "the pre-existing ui.megt typo must stay until it is fixed deliberately — " +
-      "fixing it changes visible copy",
+    "ui.megt was changed — if that was intentional, update this assertion too",
   );
   assert.ok(skelSrc.includes("service: textBlockService"));
   for (const s of ["toggle-favorite", "dismiss-activity", "join-meeting"]) {
