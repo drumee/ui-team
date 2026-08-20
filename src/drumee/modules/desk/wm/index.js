@@ -539,6 +539,10 @@ class __window_manager extends push {
       return;
     }
     Desk.closeAllPanels();
+    // The call survives a workspace switch now (it lives in the call layer, not
+    // in the headlessLayer this method re-feeds) — park it in its corner tile so
+    // it doesn't cover the workspace the user just opened. No-op without a call.
+    this.parkLiveCall();
     // Close any settings/admin/apps panel that would occlude the workspace
     // grid. Sidebar workspace items dispatch directly to Wm.loadWorkspace
     // (not through desk.onUiEvent), so cleanup must live here too. Only
@@ -1553,7 +1557,65 @@ class __window_manager extends push {
       nodeId: Visitor.get(_a.home_id),
       area: _a.personal,
     });
+    // Re-feeding the skeleton rebuilds EVERY layer, so it destroys every
+    // window in them — including a live call, which released the room and
+    // dropped the user out of the meeting the moment they clicked Home. With a
+    // call up, reset the home view in place instead.
+    if (this.hasLiveCall && this.hasLiveCall()) {
+      this.parkLiveCall();
+      return this._resetHomeInPlace();
+    }
     this.feed(require("./skeleton")(this));
+  }
+
+  /**
+   * Ask a live call to shrink into its corner tile (window/meeting setCallTile).
+   * Broadcast rather than a direct call so this stays a no-op when nothing is
+   * live and Wm keeps no reference to the call window.
+   */
+  parkLiveCall() {
+    try {
+      if (!this.hasLiveCall()) return;
+      RADIO_BROADCAST.trigger("call:minimize");
+    } catch (e) { /* non-fatal */ }
+  }
+
+  /**
+   * Home, without rebuilding the skeleton: close the workspace pane and the
+   * floating windows (what the re-feed did anyway) and point the grid back at
+   * the user's home, leaving the layers themselves — and the live call inside
+   * the call layer — standing.
+   *
+   * The grid reset is the same sequence the breadcrumb's "load-home" uses
+   * (desk/breadcrumb/index.js), which exists for the same reason: navigate the
+   * main container without taking the open windows down with it. The upload
+   * floater is spared too; it lives in its own layer and an upload in flight is
+   * no more disposable than a call.
+   */
+  _resetHomeInPlace() {
+    for (const layer of [this.headlessLayer, this.windowsLayer]) {
+      if (!layer || (layer.isDestroyed && layer.isDestroyed())) continue;
+      if (_.isFunction(layer.clear)) layer.clear();
+    }
+    this.ensurePart("wrapper-modal").then((p) => {
+      if (p && _.isFunction(p.clear)) p.clear();
+    });
+    return this.ensurePart(_a.list).then((l) => {
+      if (!l || (l.isDestroyed && l.isDestroyed())) return;
+      // SERVICE.desk.home, not media.show_node_by: this is the API the
+      // skeleton's own grid is built with (wm/skeleton/index.js _icons_list),
+      // so the in-place path lands on exactly the view the re-feed produced.
+      l.setApi({ service: SERVICE.desk.home, hub_id: Visitor.id });
+      if (l.collection) l.collection.reset();
+      l.el.style.visibility = "hidden";
+      const scrollEl = l.el.querySelector(".smart-container");
+      if (scrollEl) {
+        scrollEl.dataset.partitioning = 1;
+        scrollEl.style.visibility = "hidden";
+      }
+      l.restart();
+      this._prepareListPartition(l);
+    });
   }
 
   /**

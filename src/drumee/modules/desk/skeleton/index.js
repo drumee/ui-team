@@ -187,6 +187,37 @@ const _desk_main = function (ui) {
         }),
       ],
     }),
+    // "Return to call" pill. It lives in the DESK shell, not in the window
+    // manager, on purpose: `.window-manager__ui` carries `isolation: isolate`
+    // (wm/skin), which caps every window layer inside the WM's stacking
+    // context — so a full-page screen in the settings slot (Settings, Billing,
+    // Admin Console, Get help, Calendar) paints over the parked call tile and
+    // there is nothing z-index can do about it from inside. This pill is a
+    // sibling of those screens, so it is always reachable. Desk shows it while
+    // a screen covers a live call (desk/index.js _setCallDock); clicking it
+    // closes the screen and brings the call back to size.
+    Skeletons.Box.X({
+      sys_pn: "call-dock",
+      className: `${ui.fig.family}__call-dock`,
+      service: "return-to-call",
+      uiHandler: [ui],
+      // attrOpt, not `state`: a bare `dataset` is dropped at render, and a
+      // `state` prop would install the toggle behaviour and flip the flag on
+      // every click — visibility here is owned by desk._setCallDock.
+      attrOpt: { "data-state": "0" },
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Box.X({
+          className: `${ui.fig.family}__call-dock-dot`,
+          active: 0,
+        }),
+        Skeletons.Note({
+          className: `${ui.fig.family}__call-dock-label`,
+          content: LOCALE.RETURN_TO_CALL,
+          active: 0,
+        }),
+      ],
+    }),
     Skeletons.Wrapper.Y({
       sys_pn: "overlay",
       className: `${ui.fig.family}__overlay`,

@@ -44,6 +44,61 @@ html {
     overflow: visible;
   }
 
+  // ── "Return to call" pill ────────────────────────────────────────────────
+  // Sits in the desk shell so it clears the full-page screens in
+  // __settings-main-slot (1500 / 20001) AND the window manager, whose
+  // `isolation: isolate` traps every window layer inside it — which is exactly
+  // why the parked call tile can't be seen from Settings or Billing.
+  &__call-dock {
+    // !important: this is a Box.X, so container.css matches it as
+    // .drumee-widget[data-flow="x"] at 0,2,0 and a plain single-class hide
+    // would lose — the pill would sit on screen with no call behind it.
+    display: none !important;
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 20002;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 20px;
+    background: var(--signal-error, #d74e49);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+
+    &[data-state="1"] {
+      display: flex !important;
+    }
+
+    &:hover {
+      background: #c0433e;
+      transform: translateY(-1px);
+    }
+
+    // The pill IS the click target (service: return-to-call).
+    * {
+      pointer-events: none;
+    }
+  }
+
+  &__call-dock-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    animation: desk-call-dock-pulse 1.6s ease-in-out infinite;
+  }
+
+  &__call-dock-label .note-content {
+    @include drumee.typo($size: 13px, $line: 18px, $color: #fff);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   &__overlay {
     position: absolute;
     width: 100%;
@@ -614,5 +669,16 @@ html {
         background-color: var(--primary-40, #5950ff);
       }
     }
+  }
+}
+
+// Live-call pulse on the desk "Return to call" pill.
+@keyframes desk-call-dock-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
   }
 }

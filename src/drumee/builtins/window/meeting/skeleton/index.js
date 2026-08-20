@@ -234,6 +234,52 @@ const __skl_window_meeting = function (_ui_, localUser) {
     }),
   );
 
+  // Always-visible "LIVE" mark for the parked tile (the cover below only shows
+  // on hover). Hidden by the skin at full size.
+  kids.push(
+    Skeletons.Box.X({
+      className: `${_ui_.fig.family}__call-tile-live`,
+      kidsOpt: { active: 0 },
+      active: 0,
+      kids: [
+        Skeletons.Box.X({
+          className: `${_ui_.fig.family}__call-tile-live-dot`,
+          active: 0,
+        }),
+        Skeletons.Note({
+          className: `${_ui_.fig.family}__call-tile-live-label`,
+          content: LOCALE.LIVE,
+          active: 0,
+        }),
+      ],
+    }),
+  );
+
+  // Return-to-call cover. Hidden until the window is parked as a corner tile
+  // (data-call-tile="1", set by meeting.setCallTile when the desk navigates
+  // away). It then covers the whole tile, so the single click that reaches this
+  // window brings the call back to size instead of hitting a 300px-wide copy of
+  // the in-call controls.
+  kids.push(
+    Skeletons.Box.Z({
+      className: `${_ui_.fig.family}__call-tile-cover`,
+      sys_pn: "call-tile-cover",
+      service: "restore-call",
+      uiHandler: [_ui_],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Image.Svg({
+          ico: "meet-expand",
+          className: `${_ui_.fig.family}__call-tile-ico`,
+        }),
+        Skeletons.Note({
+          className: `${_ui_.fig.family}__call-tile-label`,
+          content: LOCALE.RETURN_TO_CALL,
+        }),
+      ],
+    }),
+  );
+
   const a = Skeletons.Box.X({
     debug: __filename,
     sys_pn: 'xxcontent',

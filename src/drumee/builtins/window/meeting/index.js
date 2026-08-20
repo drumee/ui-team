@@ -10,6 +10,12 @@ const PARTY_TOAST_MS = 4000;
 // and switches to full-bleed overlay mode when opened by hand
 // (data-panel-overlay in webrtc/skin/meeting-shell.scss).
 const CHAT_AUTO_CLOSE_W = 950;
+// Corner-tile geometry used when the desk navigates away from a live call
+// (see setCallTile). Big enough to still read a face, small enough to leave
+// the screen behind it usable.
+const CALL_TILE_W = 300;
+const CALL_TILE_H = 180;
+const CALL_TILE_MARGIN = 20;
 
 class __window_meeting extends __room {
   /**
@@ -51,6 +57,30 @@ class __window_meeting extends __room {
     // can clear `_memberPresenting` on STOP_REMOTE_SCREEN, by which time
     // `presenterId` has already been nulled by the base class.
     this._currentPresenterUid = null;
+    // Host intent for THIS departure. 0 = leave only (the default, and what
+    // every path that isn't the explicit "End meeting" choice means): the room
+    // stays live for whoever is still in it. 1 = end for everyone, set only by
+    // the confirmed "End meeting" menu item, and the sole thing that unlocks
+    // the MEETING_END broadcast below.
+    this._endForAll = 0;
+
+    // Desk navigation asks a live call to step aside rather than closing it —
+    // see setCallTile and manager.js getCallPool.
+    //
+    // Deferred a frame on purpose: parking resizes the whole meeting shell
+    // (video stage, tiles, analyzers), and doing that synchronously inside the
+    // navigation click made the section the user asked for paint late. The
+    // screen renders first, the call steps aside right after.
+    this._onCallMinimize = () => {
+      if (this._callParkFrame) cancelAnimationFrame(this._callParkFrame);
+      this._callParkFrame = requestAnimationFrame(() => {
+        this._callParkFrame = 0;
+        this.setCallTile(1);
+      });
+    };
+    this._onCallRestore = () => this.setCallTile(0);
+    RADIO_BROADCAST.on("call:minimize", this._onCallMinimize);
+    RADIO_BROADCAST.on("call:restore", this._onCallRestore);
 
     if (this.mget("_meeting_standalone") && typeof this._setSize === "function") {
       this._setSize({
@@ -106,6 +136,11 @@ class __window_meeting extends __room {
   // data-compact on the root and let the skin adapt (panel → overlay, tighter
   // controls), Google-Meet style.
   responsive(m, ui) {
+    // Parked as a corner tile: the skin hides the whole control cluster and the
+    // side panel, so re-deriving narrow/compact from a 300px width would only
+    // churn datasets and auto-close the chat behind the user's back. Geometry
+    // comes back with the tile (setCallTile), which re-runs this.
+    if (this.el && this.el.dataset.callTile === "1") return;
     if (super.responsive) super.responsive(m, ui);
     if (!this.el || !this.$el) return;
     const w = this.$el.width() || this.el.offsetWidth || 0;
@@ -327,6 +362,15 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
+    if (this._callParkFrame) cancelAnimationFrame(this._callParkFrame);
+    RADIO_BROADCAST.off("call:minimize", this._onCallMinimize);
+    RADIO_BROADCAST.off("call:restore", this._onCallRestore);
+    // Tells the desk to drop its "Return to call" pill — the call it pointed at
+    // is gone. Fired from teardown so it covers every way out: Leave, End, the
+    // host ending it remotely, a duration cap, a tab close.
+    try {
+      RADIO_BROADCAST.trigger("call:ended");
+    } catch (e) { /* non-fatal */ }
     this._unbindResizeObserver();
     // Cancel any pending hand-raise auto-clear timers so they can't fire after
     // teardown.
@@ -340,8 +384,10 @@ class __window_meeting extends __room {
     // down while the picker is open (removeEventListener is a no-op otherwise).
     this._closeReactionsPicker();
     // Covers teardown paths that bypass _closeFeedbackAndLeave (tab close,
-    // error teardown). _meetingEndedBroadcast keeps it idempotent.
-    if (this._isHost && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
+    // error teardown). _meetingEndedBroadcast keeps it idempotent. Gated on
+    // _endForAll: a host who only left must not disconnect the room from here
+    // either — the meeting outlives their window.
+    if (this._isHost && this._endForAll && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
       this._meetingEndedBroadcast = 1;
       try {
         this.sendRoomSignaling(SERVICE.conference.broadcast, {
@@ -350,13 +396,20 @@ class __window_meeting extends __room {
         });
       } catch (e) { }
     }
-    // Flip the single start card to "ended" in place. Host on the way out, and
-    // ALSO whoever happens to be the last person in the room: the host may have
-    // dropped without its teardown running (tab closed, refresh, crash, network
-    // loss), and until someone flipped the card the chat kept offering "Join
-    // meeting" for a room nobody was in. Both paths funnel through
-    // _endMeetingCard, which is idempotent.
-    if (this._isHost || this._isLastParticipant()) this._endMeetingCard();
+    // Flip the single start card to "ended" in place — whoever actually ended
+    // the meeting for the room, and ALSO whoever happens to be the last person
+    // in it: the host may have dropped without its teardown running (tab
+    // closed, refresh, crash, network loss), and until someone flipped the card
+    // the chat kept offering "Join meeting" for a room nobody was in. Both
+    // paths funnel through _endMeetingCard, which is idempotent.
+    // Keyed off the broadcast, not off _endForAll, so the duration-cap end
+    // (_endOnMeetingLimit, which broadcasts for its own reason) still flips the
+    // card. A host who only LEFT broadcasts nothing and is deliberately
+    // excluded: the room is still live, so the card has to keep offering "Join
+    // meeting" — unless they were the last one in it, which _isLastParticipant()
+    // already covers.
+    if (this._meetingEndedBroadcast || this._isLastParticipant())
+      this._endMeetingCard();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -711,6 +764,9 @@ class __window_meeting extends __room {
     let service = args.service || cmd.get(_a.service);
     if (!service) return;
     switch (service) {
+      // Window X (and a guest's Leave pill). Answering yes is a plain LEAVE —
+      // _endForAll stays 0, so closing the window never ends a host's meeting
+      // for the room. Ending it for all is the explicit menu item below.
       case _a.close:
         this.warning(require("./skeleton/confirm")(this, null));
         break;
@@ -748,7 +804,30 @@ class __window_meeting extends __room {
         this.__wrapperOverlay.clear();
         break;
 
+      // The return-to-call cover, clicked while the window is a corner tile.
+      case "restore-call":
+        this.setCallTile(0);
+        break;
+
+      // Main half of the split button, and the menu's own "Leave meeting":
+      // leave only. Re-assert the default so a cancelled "End meeting" can
+      // never leak its intent into a later plain leave.
       case "leave-meeting":
+        this._endForAll = 0;
+        this._showFeedbackPopup();
+        break;
+
+      // Menu → "End meeting": destructive for everyone else, so it confirms
+      // first. The dialog's buttons come back as end-meeting-confirm /
+      // cancel-dialog.
+      case "end-meeting":
+        this.warning(require("./skeleton/end-confirm")(this));
+        break;
+
+      case "end-meeting-confirm":
+        this.warning();
+        this.__wrapperOverlay.clear();
+        this._endForAll = 1;
         this._showFeedbackPopup();
         break;
 
@@ -1509,6 +1588,114 @@ class __window_meeting extends __room {
     });
   }
 
+  // ── Return-to-call tile ───────────────────────────────────────────────────
+  // Desk navigation used to DESTROY this window: a call launched from a
+  // workspace landed in headlessLayer (Wm.getWindowsPool), which loadWorkspace
+  // re-feeds, Desk.onWorkspaceClosed clears and Wm.reload rebuilds — so opening
+  // the admin console (which cannot be closed by re-clicking its sidebar entry)
+  // and then clicking Home to get back silently dropped the user out of the
+  // meeting. The call now lives in its own layer (manager.js getCallPool) and
+  // survives all three. What is left is not to sit as a 960x600 popup over
+  // whatever the user navigated to, so it parks itself in the bottom-right
+  // corner with a "Return to call" cover and one click brings it back — Teams
+  // behaviour: the call follows you, small, until you come back to it.
+  //
+  // On a desk screen that covers the whole window manager (Settings, Billing,
+  // Admin Console…) the tile is not reachable at all: `isolation: isolate` on
+  // .window-manager__ui traps every window layer inside the WM's stacking
+  // context. The way back from there is the desk's own pill (desk/skeleton
+  // call-dock), which broadcasts "call:restore" to un-park this window.
+
+  /**
+   * The WM work area, in viewport coords. The call layer is anchored at the
+   * container's origin, so its size is also the coordinate space the tile's
+   * inline top/left are written in.
+   */
+  _callTileArea() {
+    try {
+      const host = window.Wm && Wm.el && (Wm.el.parentElement || Wm.el);
+      if (host) {
+        const r = host.getBoundingClientRect();
+        if (r.width && r.height) return r;
+      }
+    } catch (e) { /* fall through to the viewport */ }
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
+  /**
+   * `.window__ui` carries a 600x320 floor in window/skin/window.scss, and a CSS
+   * minimum WINS over a smaller inline width — the same trap window/frame.js
+   * documents for docked viewers. Pin the inline minimum (and the resizable
+   * option, so a drag right after doesn't snap it back up) to whatever size we
+   * are applying.
+   */
+  _pinCallTileMinimums(w, h) {
+    this.$el.css({ minWidth: w, minHeight: h });
+    try {
+      this.$el.resizable(_a.option, "minWidth", w);
+      this.$el.resizable(_a.option, "minHeight", h);
+    } catch (e) { /* not resizable (embedded / mobile) */ }
+  }
+
+  /**
+   * Park the call as a corner tile (`on`), or bring it back to the geometry it
+   * had before (`!on`). Idempotent, and a no-op while the browser owns the
+   * geometry in fullscreen.
+   * @param {Boolean|Number} on
+   */
+  setCallTile(on) {
+    if (!this.el || !this.$el || (this.isDestroyed && this.isDestroyed())) return;
+    // Free-floating windows only: an embedded meeting is sized by its host
+    // container (position: relative — see meeting-shell `&__ui`), so inline
+    // top/left/width would fight it rather than park it. Same guard the tile /
+    // reframe presets use.
+    if (this.el.dataset.standalone !== "1") return;
+    if (document.fullscreenElement) return;
+    const tiled = this.el.dataset.callTile === "1";
+    if (!!on === tiled) return;
+    if (on) return this._enterCallTile();
+    return this._leaveCallTile();
+  }
+
+  _enterCallTile() {
+    const s = this.el.style;
+    this._callTileRestore = {
+      top: s.top,
+      left: s.left,
+      width: s.width,
+      height: s.height,
+      minWidth: s.minWidth,
+      minHeight: s.minHeight,
+    };
+    const area = this._callTileArea();
+    const left = Math.max(0, (area.width || 0) - CALL_TILE_W - CALL_TILE_MARGIN);
+    const top = Math.max(0, (area.height || 0) - CALL_TILE_H - CALL_TILE_MARGIN);
+    this.el.dataset.callTile = "1";
+    this.$el.css({ top, left, width: CALL_TILE_W, height: CALL_TILE_H });
+    this._pinCallTileMinimums(CALL_TILE_W, CALL_TILE_H);
+  }
+
+  _leaveCallTile() {
+    const r = this._callTileRestore || {};
+    this._callTileRestore = null;
+    this.el.dataset.callTile = "0";
+    this.$el.css({
+      top: r.top || "",
+      left: r.left || "",
+      width: r.width || "",
+      height: r.height || "",
+    });
+    // Restore the floor the window had before it was parked; falling back to
+    // the launch minimums (folder/index.js _launchMeetingStandalone) when it
+    // never carried an inline one.
+    this._pinCallTileMinimums(
+      parseFloat(r.minWidth) || 480,
+      parseFloat(r.minHeight) || 420,
+    );
+    if (_.isFunction(this.raise)) this.raise();
+    this.responsive();
+  }
+
   /**
    * Mount the post-meeting feedback popup at the Wm-level wrapper-modal slot
    * (top of the desk shell) so the blurred backdrop covers the entire app
@@ -1526,6 +1713,10 @@ class __window_meeting extends __room {
     const m = Math.floor(elapsed / 60);
     const s = elapsed % 60;
     const duration = `${m}:${String(s).padStart(2, "0")}`;
+    // Truthful heading: "Meeting Ended" only when it actually is over — the host
+    // ended it for all, or there was nobody else left. A host who just stepped
+    // out of a call that is still running gets "You left the meeting".
+    const ended = !!this._endForAll || this._isLastParticipant();
     const participantCount = (this.__participants && this.__participants.collection)
       ? Math.max(this._maxParticipants || 0, this.__participants.collection.length)
       : (this._maxParticipants || 1);
@@ -1537,6 +1728,7 @@ class __window_meeting extends __room {
       modal.feed(require("./skeleton/feedback")(this, {
         duration,
         participantCount,
+        ended,
       }));
     });
   }
@@ -1570,9 +1762,10 @@ class __window_meeting extends __room {
   }
 
   _closeFeedbackAndLeave() {
-    // Host leaving ends the meeting for everyone else; non-host leaves
-    // don't broadcast so the rest of the room stays open.
-    if (this._isHost && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
+    // Only an explicit "End meeting" ends it for everyone else. A host who just
+    // leaves (and any non-host leave) doesn't broadcast, so the rest of the room
+    // stays in the call.
+    if (this._isHost && this._endForAll && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
       this._meetingEndedBroadcast = 1;
       try {
         this.sendRoomSignaling(SERVICE.conference.broadcast, {
