@@ -695,3 +695,139 @@
 @keyframes window-upload-progress-spin {
   to { transform: rotate(360deg); }
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Responsive: mobile centres the card over a frosted desk; tablet keeps the
+// corner floater it already has.
+//
+// Both branches are emitted twice throughout, the way mixins/responsive.scss
+// and the dock's own skin do it: Visitor.device() only answers "mobile" below
+// 801px, so the attribute is missing in the DevTools emulator and on a
+// landscape phone.
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── The backdrop ───────────────────────────────────────────────────────
+// Lives on the LAYER's pseudo-element, not the card's. Two reasons, both
+// found the hard way:
+//
+//   * A ::before on the CARD cannot be the backdrop. Negative-z-index
+//     children paint AFTER their parent's background, so the layer sampled
+//     the card's own opaque background and smeared it — the card rendered as
+//     a soft white blob with no border or corners. On the layer the card is a
+//     later sibling in paint order, so it stays crisp on top.
+//   * `position: fixed` on the pseudo escapes both the layer's 0x0 box and
+//     the card's `overflow: hidden`, because a fixed box's containing block
+//     is the viewport and neither ancestor creates one (no transform, no
+//     filter). That is also why the card is centred with `inset: 0` +
+//     `margin: auto` below rather than a transform: a transform on the card
+//     WOULD create that containing block.
+//
+// Gated on `:has(... [data-expanded="1"])`, which does the whole job of
+// "collapse drops the backdrop": collapse the card and the selector stops
+// matching, so the desk is sharp and usable again while the upload runs on.
+// An empty layer has no card and therefore no backdrop either.
+//
+// pointer-events: auto against the layer's `none` — while expanded this is a
+// real modal, so the desk underneath is deliberately not reachable. The card's
+// collapse chevron, its x and "Cancel all" are the ways out.
+@mixin upload-progress-backdrop {
+  content: "";
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  background-color: rgba(255, 255, 255, 0.55);
+  pointer-events: auto;
+}
+
+.upload-progress-layer[data-device="mobile"]:has(
+    .window-upload-progress__ui[data-expanded="1"]
+  )::before {
+  @include upload-progress-backdrop;
+}
+
+html[data-theme="dark"]
+  .upload-progress-layer[data-device="mobile"]:has(
+    .window-upload-progress__ui[data-expanded="1"]
+  )::before {
+  background-color: rgba(11, 10, 33, 0.55);
+}
+
+@media (max-width: 650px) {
+  .upload-progress-layer:has(
+      .window-upload-progress__ui[data-expanded="1"]
+    )::before {
+    @include upload-progress-backdrop;
+  }
+
+  html[data-theme="dark"]
+    .upload-progress-layer:has(
+      .window-upload-progress__ui[data-expanded="1"]
+    )::before {
+    background-color: rgba(11, 10, 33, 0.55);
+  }
+}
+
+// ── The card ───────────────────────────────────────────────────────────
+// Centred while expanded. `bottom: 130px` exists to line the card up with the
+// dock launcher, and the dock is `display: none !important` on mobile (see
+// wm/dock/skin) — so on a phone that offset was holding the card 130px clear
+// of nothing.
+//
+// Collapsed, it returns to the bottom of the screen: a 64px bar parked in the
+// middle of a now-sharp desk reads as a stuck dialog, and the bottom is where
+// this card has always rested.
+@mixin upload-progress-mobile-card {
+  &[data-expanded="1"] {
+    inset: 0;
+    margin: auto;
+    width: calc(100vw - 32px);
+    max-width: 400px;
+  }
+
+  &[data-expanded="0"] {
+    top: auto;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+.window-upload-progress__ui[data-device="mobile"] {
+  @include upload-progress-mobile-card;
+}
+
+@media (max-width: 650px) {
+  .window-upload-progress__ui {
+    @include upload-progress-mobile-card;
+  }
+}
+
+// ── Short viewports ────────────────────────────────────────────────────
+// A landscape phone is ~380px tall, and `bottom: 130px` + a 280px card needs
+// 410px — the card ran off the top. `[data-expanded="1"]` sets
+// `max-height: none`, so this clamp has to come after it (same specificity,
+// later in the file). max-height still clamps the used height even though the
+// height beside it is `!important` — they are different properties.
+//
+// This is also the only rule here a TABLET can reach, and only in a short
+// window: at 768px+ the card's 360px width already fits inside its existing
+// `max-width: calc(100vw - 48px)`, and the dock that `bottom: 130px` aligns to
+// is present, so the corner floater needs nothing else there.
+@media (max-height: 480px) {
+  .window-upload-progress__ui[data-expanded="1"] {
+    // `min-height: 0` FIRST, and it is not optional: [data-expanded="1"] also
+    // pins min-height to 280px, and CSS resolves a min-height larger than
+    // max-height in favour of the MINIMUM — so the clamp below was computing
+    // the right value (261px at a 293px viewport) and being ignored, leaving
+    // the card at 280px and still off-screen.
+    min-height: 0;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    // The 130px dock offset is most of the problem on its own: at a 293px
+    // viewport it pushes even a correctly-clamped card past the top edge.
+    bottom: 16px;
+  }
+}
