@@ -16,6 +16,12 @@
 
   &__ui {
     width: 450px;
+    // The popup is fed into Wm.__wrapperModal, which is a flex-centered
+    // full-inset box with `overflow: clip` — so a card wider than the viewport
+    // is CUT, not scrolled to. This guard is what keeps that from happening,
+    // and it needs no breakpoint: 450px already fits from 514px up, so the
+    // clamp only engages on the narrow screens that need it.
+    max-width: calc(100vw - 32px);
     background-color: var(--normal-bg-90, #f1f1f5);
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 6px;
@@ -30,6 +36,50 @@
   &__container {
     padding: 24px;
     gap: 16px;
+
+    // ── Responsive ────────────────────────────────────────────────────
+    // Width is handled once, by the max-width guard on __ui above. What is
+    // left for the small screens is this container's own breathing room:
+    // 24px of padding on a 328px-wide card leaves 280px of usable row,
+    // which is what made the workspace row's select and role chips crowd.
+    //
+    // DELIBERATELY no max-height / overflow-y here. The email, workspace
+    // and role dropdowns are `position: absolute; top: calc(100% + 4px)`
+    // on their own rows and are MEANT to spill past this container's
+    // bottom edge — the reward flow unions them into its spotlight cutout
+    // for exactly that reason (reward-flow/index.js POPUP_OVERFLOW). A
+    // scroll container here would clip them on precisely the screens this
+    // block is for.
+
+    // Mobile, emitted twice the way mixins/responsive.scss does it:
+    // Visitor.device() only answers "mobile" below 801px, so the attribute
+    // is absent in the DevTools emulator and on a landscape phone, and the
+    // viewport query below is the fallback. ui-core puts both
+    // `invite-popup` and `invite-popup__ui` on the widget root (letc.js
+    // addClass) — __ui is the name the rest of this file uses for it.
+    //
+    // The attribute can also fire on a 768px tablet with a mobile UA. That
+    // is why __ui keeps its 450px width there rather than stretching, and
+    // why this branch — being the more specific of the two — deliberately
+    // wins over the tablet padding below in that overlap: a client that
+    // calls itself mobile is taken at its word.
+    .invite-popup__ui[data-device="mobile"] & {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    @media (max-width: 650px) {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    // Tablet — the 768–1024px band on a coarse pointer, the same band and
+    // the same `pointer: coarse` test the desk sidebar uses to tell a
+    // tablet from a resized desktop window. A 450px card has room to spare
+    // at these widths, so this is only a modest step down from desktop.
+    @media (min-width: 768px) and (max-width: 1024px) and (pointer: coarse) {
+      padding: 20px;
+    }
   }
 
   &__header {
