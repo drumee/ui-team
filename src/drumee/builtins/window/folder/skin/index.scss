@@ -88,11 +88,27 @@
       display: block;
       position: fixed;
       inset: 0;
-      background-color: rgba(0, 0, 0, 0.45);
+      // The same frosted backdrop the folder-creation dialog gets on mobile
+      // (media/form/skin keys glass-overlay off :has(.form-folder__main)), so
+      // the two mobile surfaces read as one system rather than two different
+      // dims. Reusing the mixin also brings the theme pair with it —
+      // rgba(255,255,255,.55) light, rgba(11,10,33,.55) under
+      // html[data-theme="dark"] — which a hand-rolled rgba(0,0,0,.45) did not
+      // have. And the same split applies: the glass belongs to the layer
+      // BEHIND the card, while the card itself stays opaque so its rows keep
+      // a solid ground to sit on.
+      @include drumee.glass-overlay;
       // Deliberately UNDER the desk mobile topbar (99999): a tap up there
       // lands on a framework view, so RADIO_CLICK closes the menu anyway
       // and there is nothing to gain by masking it.
       z-index: 99998;
+
+      // glass-overlay rounds its inner blur layer's bottom corners to match
+      // the modal it was written for. This overlay is full-bleed, so square
+      // them or the blur stops 8px short of the two bottom corners.
+      &::before {
+        border-radius: 0;
+      }
     }
   }
 
