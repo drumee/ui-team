@@ -2205,6 +2205,9 @@
     display: none !important;
   }
 
+  // Parked call. The desk dock (desk/skin __call-dock) owns the box while the
+  // window is docked there — these rules are about what the window SHOWS at
+  // that size, plus the geometry the no-dock fallback (DMZ) needs.
   &__ui[data-call-tile="1"] {
     // The stylesheet floor (600x320 in window/skin/window.scss) would win over
     // the inline size; setCallTile pins the inline minimums too, this keeps the

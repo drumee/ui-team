@@ -1607,9 +1607,38 @@ class __window_meeting extends __room {
   // call-dock), which broadcasts "call:restore" to un-park this window.
 
   /**
-   * The WM work area, in viewport coords. The call layer is anchored at the
-   * container's origin, so its size is also the coordinate space the tile's
-   * inline top/left are written in.
+   * The layer this window belongs to when it is NOT docked. Used to put it back
+   * when the parent it was taken from is gone (the desk can rebuild while a
+   * call is parked), which would otherwise re-attach the window to a detached
+   * node — the call would keep running with nothing on screen.
+   * @returns {Element|null}
+   */
+  _callLayerEl() {
+    try {
+      const layer = window.Wm && Wm.callLayer;
+      return (layer && layer.el) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * The desk's dock element, or null when there is no desk (DMZ / share
+   * session, where the fallback below parks the window in place instead).
+   * @returns {Element|null}
+   */
+  _callDockEl() {
+    try {
+      const dock = window.Desk && _.isFunction(Desk.getPart) && Desk.getPart("call-dock");
+      return (dock && dock.el) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * The WM work area, in viewport coords — the coordinate space the window's
+   * inline top/left are written in. Only used by the no-dock fallback.
    */
   _callTileArea() {
     try {
@@ -1666,11 +1695,30 @@ class __window_meeting extends __room {
       height: s.height,
       minWidth: s.minWidth,
       minHeight: s.minHeight,
+      parent: this.el.parentNode,
     };
+    this.el.dataset.callTile = "1";
+    // Wm must stop re-fitting this window while the dock owns its box. Same
+    // flag window/frame.js sets for a viewer docked into a folder frame, and
+    // clampWindows already honours it.
+    this._frameTracking = 1;
+
+    const dock = this._callDockEl();
+    if (dock) {
+      // MOVE the live element (appendChild on an attached node is a move, not a
+      // remove + insert), so the WebRTC video elements keep their srcObject and
+      // never stop playing. This is the whole trick: docked in the desk shell,
+      // the call clears every desk screen, which it cannot do from inside the
+      // window manager's isolated stacking context.
+      dock.appendChild(this.el);
+      // Safari can pause a moved <video>; a no-op elsewhere.
+      this._resumeCallVideos();
+      return;
+    }
+    // No desk (DMZ / share): park it in place, in the corner of its own layer.
     const area = this._callTileArea();
     const left = Math.max(0, (area.width || 0) - CALL_TILE_W - CALL_TILE_MARGIN);
     const top = Math.max(0, (area.height || 0) - CALL_TILE_H - CALL_TILE_MARGIN);
-    this.el.dataset.callTile = "1";
     this.$el.css({ top, left, width: CALL_TILE_W, height: CALL_TILE_H });
     this._pinCallTileMinimums(CALL_TILE_W, CALL_TILE_H);
   }
@@ -1679,6 +1727,16 @@ class __window_meeting extends __room {
     const r = this._callTileRestore || {};
     this._callTileRestore = null;
     this.el.dataset.callTile = "0";
+    this._frameTracking = 0;
+    // Back into the layer it came from, before the geometry is re-applied: the
+    // inline top/left mean nothing until the element is a child of the layer
+    // they were measured in.
+    const home =
+      r.parent && r.parent.isConnected ? r.parent : this._callLayerEl();
+    if (home && home !== this.el.parentNode && home.appendChild) {
+      home.appendChild(this.el);
+      this._resumeCallVideos();
+    }
     this.$el.css({
       top: r.top || "",
       left: r.left || "",
@@ -1694,6 +1752,27 @@ class __window_meeting extends __room {
     );
     if (_.isFunction(this.raise)) this.raise();
     this.responsive();
+    // The screen that pushed the call into the dock is still up, and the
+    // full-size window lives back inside the window manager where that screen
+    // covers it — so ask the desk to take the screen down.
+    try {
+      RADIO_BROADCAST.trigger("call:returned");
+    } catch (e) { /* non-fatal */ }
+  }
+
+  /**
+   * Re-issue play() on the window's media elements after a DOM move. Moving an
+   * attached node keeps playback in Chrome and Firefox; Safari has historically
+   * paused it, and a paused self-view in a docked call looks like a dead call.
+   */
+  _resumeCallVideos() {
+    if (!this.el) return;
+    for (const v of this.el.querySelectorAll("video, audio")) {
+      if (v.paused && (v.srcObject || v.src)) {
+        const r = v.play();
+        if (r && r.catch) r.catch(() => { });
+      }
+    }
   }
 
   /**

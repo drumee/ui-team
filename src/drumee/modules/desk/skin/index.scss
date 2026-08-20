@@ -44,59 +44,55 @@ html {
     overflow: visible;
   }
 
-  // ── "Return to call" pill ────────────────────────────────────────────────
-  // Sits in the desk shell so it clears the full-page screens in
-  // __settings-main-slot (1500 / 20001) AND the window manager, whose
-  // `isolation: isolate` traps every window layer inside it — which is exactly
-  // why the parked call tile can't be seen from Settings or Billing.
+  // ── Parked-call dock ─────────────────────────────────────────────────────
+  // Hosts the live call window while the user is elsewhere in the desk. Fixed
+  // to the viewport and above every desk surface — the full-page screen slot
+  // (1500, 20001 with a modal), the slide-out panel containers (10001) and the
+  // sidebar (10002) — because the whole point of moving the window out of the
+  // window manager is to escape `isolation: isolate` there.
   &__call-dock {
-    // !important: this is a Box.X, so container.css matches it as
-    // .drumee-widget[data-flow="x"] at 0,2,0 and a plain single-class hide
-    // would lose — the pill would sit on screen with no call behind it.
+    // !important on both: this is a Box.X, matched by container.css as
+    // .drumee-widget[data-flow="x"] at 0,2,0, so a single-class hide loses and
+    // an EMPTY dock would sit in the corner as an invisible 300x180 click
+    // blocker at z 20002.
     display: none !important;
     position: fixed;
     right: 24px;
     bottom: 24px;
     z-index: 20002;
     box-sizing: border-box;
-    align-items: center;
-    gap: 8px;
-    height: 40px;
-    padding: 0 16px;
-    border-radius: 20px;
-    background: var(--signal-error, #d74e49);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-    cursor: pointer;
-    transition: background 0.15s ease, transform 0.15s ease;
+    width: 300px;
+    height: 180px;
 
-    &[data-state="1"] {
+    // Shown only while it actually holds the call.
+    &:not(:empty) {
       display: flex !important;
     }
 
-    &:hover {
-      background: #c0433e;
-      transform: translateY(-1px);
+    // A phone has no room for a 300px tile beside the screen it is covering.
+    @media (max-width: 650px) {
+      right: 12px;
+      bottom: 12px;
+      width: 168px;
+      height: 100px;
     }
 
-    // The pill IS the click target (service: return-to-call).
-    * {
-      pointer-events: none;
+    // The docked window is sized by the dock, not by the inline pixel geometry
+    // it carries as a free-floating window. !important because that inline
+    // geometry (and window/skin/window.scss's 600x320 floor) would otherwise
+    // win, and because Wm.clampWindows may rewrite left/top while it is parked.
+    > * {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: auto !important;
+      bottom: auto !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
     }
-  }
-
-  &__call-dock-dot {
-    flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #fff;
-    animation: desk-call-dock-pulse 1.6s ease-in-out infinite;
-  }
-
-  &__call-dock-label .note-content {
-    @include drumee.typo($size: 13px, $line: 18px, $color: #fff);
-    font-weight: 600;
-    white-space: nowrap;
   }
 
   &__overlay {
@@ -669,16 +665,5 @@ html {
         background-color: var(--primary-40, #5950ff);
       }
     }
-  }
-}
-
-// Live-call pulse on the desk "Return to call" pill.
-@keyframes desk-call-dock-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
   }
 }

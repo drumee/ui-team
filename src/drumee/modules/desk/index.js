@@ -117,9 +117,11 @@ class desk_module extends LetcBox {
     this._openTrashPanel = () => this._deskServiceShim("toggle-trash");
     this._openHomeFromPopup = () => this._deskServiceShim(_e.home);
     this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
-    // The call the pill points at ended (window/meeting onBeforeDestroy).
-    this._onCallEnded = () => this._setCallDock(0);
-    RADIO_BROADCAST.on("call:ended", this._onCallEnded);
+    // The user clicked the docked call to come back to it: take down whatever
+    // screen was covering the desk so the restored, full-size window is not
+    // parked behind it (window/meeting _leaveCallTile).
+    this._onCallReturned = () => this.closeAllPanels();
+    RADIO_BROADCAST.on("call:returned", this._onCallReturned);
     RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
@@ -396,7 +398,7 @@ class desk_module extends LetcBox {
       this._restoreClearTimer = null;
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
-    RADIO_BROADCAST.off("call:ended", this._onCallEnded);
+    RADIO_BROADCAST.off("call:returned", this._onCallReturned);
     RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
@@ -1205,6 +1207,7 @@ class desk_module extends LetcBox {
     if (service === "toggle-activity") {
       // Open-only: the live toggle would close the panel if state is already 1.
       this._dismissWmModal();
+      this._parkLiveCall();
       const p = await this.ensurePart("activity-panel");
       if (p && ~~p.mget(_a.state) !== 1) {
         p.activityState = 1;
@@ -2926,9 +2929,6 @@ class desk_module extends LetcBox {
   }
 
   _hidePanel(p) {
-    // A slide-out panel closing uncovers the parked call tile again (the panel
-    // containers sit at z 10001, above the isolated window manager).
-    this._setCallDock(0);
     if (!p || p.isEmpty()) return;
     const child = p.children.last();
     if (child && child.el && child.el.dataset.anim !== "out") {
@@ -2937,55 +2937,19 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * A full-page screen is about to cover the desk (settings / admin console /
-   * help / trash / chat). Ask a live call to step aside into its corner tile
-   * rather than leaving a 960x600 popup where the screen the user just opened
-   * is about to be, and raise the desk-level pill that leads back to it — the
-   * tile itself is unreachable from such a screen, because `isolation: isolate`
-   * on the window manager (wm/skin) traps every window layer inside it.
+   * A screen is about to cover the desk — a full-page one in the settings slot
+   * (Settings / Billing / Admin Console / Get help) or a slide-out panel
+   * (Inbox / Contacts / Trash). Ask a live call to park itself in the desk dock
+   * (./skeleton call-dock), which sits above both, instead of being buried
+   * inside the window manager where nothing can lift it.
    *
    * A broadcast, not a direct call: the desk deliberately owns no reference to
    * the call window, and this must stay a no-op when there is no call.
    */
   _parkLiveCall() {
     try {
-      // No Wm (or no call in it) → nothing to park, and above all no pill: it
-      // must never point at a call that isn't there.
-      if (!window.Wm || !_.isFunction(Wm.hasLiveCall) || !Wm.hasLiveCall()) {
-        return this._setCallDock(0);
-      }
+      if (!window.Wm || !_.isFunction(Wm.hasLiveCall) || !Wm.hasLiveCall()) return;
       RADIO_BROADCAST.trigger("call:minimize");
-      // The screen about to mount covers the whole window manager (see the
-      // isolation note on the call-dock part in ./skeleton), so the parked tile
-      // is not reachable from there — the desk-level pill is.
-      this._setCallDock(1);
-    } catch (e) { /* non-fatal */ }
-  }
-
-  /**
-   * Show / hide the "Return to call" pill. State-driven: the part is always
-   * mounted (empty and hidden) so there is nothing to build on a navigation.
-   * @param {Number|Boolean} on
-   */
-  _setCallDock(on) {
-    const show = !!on;
-    if (this._callDockShown === show) return;
-    this._callDockShown = show;
-    this.ensurePart("call-dock").then((p) => {
-      if (!p || !p.el) return;
-      p.el.dataset.state = show ? "1" : "0";
-    });
-  }
-
-  /**
-   * The call is coming back to the foreground: close the screen covering it and
-   * un-park the window. Safe with no call up — the broadcast is a no-op.
-   */
-  _returnToCall() {
-    this._setCallDock(0);
-    this.closeMainPanels();
-    try {
-      RADIO_BROADCAST.trigger("call:restore");
     } catch (e) { /* non-fatal */ }
   }
 
@@ -3423,9 +3387,6 @@ class desk_module extends LetcBox {
    * window manager / grid view is not left occluded.
    */
   closeMainPanels() {
-    // Nothing covers the window manager any more: the parked tile is visible
-    // again and the pill has no job.
-    this._setCallDock(0);
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
     const slots = ["settings-main-slot", "trash-panel", "chat-panel"];
@@ -3705,10 +3666,6 @@ class desk_module extends LetcBox {
 
       case "toggle-help":
         return this._openGetHelp();
-
-      // The desk-level "Return to call" pill (./skeleton call-dock).
-      case "return-to-call":
-        return this._returnToCall();
 
       // "Product Tour" button on the Get help screen.
       case "start-product-tour":
