@@ -40,6 +40,24 @@ function getCategory(data) {
 
 const COUNT_SUFFIX = (cnt) => (cnt > 1 ? ` (${cnt})` : '');
 
+// Round 3 row redesign (Figma component set 58187:90482 `notification card feed`).
+// Every branch of getActivityMeta below now also declares the 14x14 action badge
+// that sits on the leading element: `ico` is a sprite name (icons/src/normalized/
+// noti-*.svg, exported straight from the design's Phosphor set) and `tone` picks
+// the badge fill — brand Primary/40 #5950FF, error Signal/Error #D74E49, success
+// Signal/Success #54B684, warning Signal/Warning #E8A13B.
+//
+// The copy (before/label/after) and the routing are deliberately UNCHANGED; only
+// these presentation fields are new. Figma has no variant for a few events we do
+// emit (workspace move, ticket, storage alert, access request, share open), so
+// those reuse the nearest glyph from the same exported set — noted per branch.
+const BADGE = {
+  brand: 'brand',
+  error: 'error',
+  success: 'success',
+  warning: 'warning',
+};
+
 function getActivityMeta(ui, data) {
   const name = ui.getItemName();
   const cnt = parseInt(data.cnt, 10) || 0;
@@ -59,6 +77,9 @@ function getActivityMeta(ui, data) {
       after: '',
       colorClass: 'mention',
       badge: 'mention',
+      // Figma: Tab=Task, Action=New task comment.
+      ico: 'noti-chat-teardrop-dots',
+      tone: BADGE.brand,
     };
   }
 
@@ -70,6 +91,9 @@ function getActivityMeta(ui, data) {
       after: '',
       colorClass: 'mention',
       badge: 'mention',
+      // Figma: Tab=Task/Chat, Action=Mentioned.
+      ico: 'noti-at',
+      tone: BADGE.brand,
     };
   }
 
@@ -84,6 +108,10 @@ function getActivityMeta(ui, data) {
       after: '',
       colorClass: 'mention',
       badge: 'mention',
+      // No Figma variant: an admin-console system notice, so the Gear glyph on
+      // the warning tone (the design's only "needs attention" fill).
+      ico: 'noti-gear',
+      tone: BADGE.warning,
     };
   }
 
@@ -98,16 +126,25 @@ function getActivityMeta(ui, data) {
       after: '',
       colorClass: 'mention',
       badge: 'mention',
+      // Figma: Tab=Task, Action=Task assigned.
+      ico: 'noti-plus-circle',
+      tone: BADGE.brand,
     };
   }
 
   if (data.event === 'task_column_change') {
+    const created = data.task_action === 'created';
     return {
-      before: data.task_action === 'created' ? 'created task ' : 'moved task ',
+      before: created ? 'created task ' : 'moved task ',
       label: data.task_title || name,
       after: '',
       colorClass: 'mention',
       badge: 'mention',
+      // Figma: Tab=Task, Action=Status changed (ShareFat). A "created" row has
+      // no Figma variant — reuse the Task-assigned glyph, same meaning.
+      ico: created ? 'noti-plus-circle' : 'noti-share-fat',
+      tone: BADGE.brand,
+      chipIco: 'noti-list-checks',
     };
   }
 
@@ -123,6 +160,9 @@ function getActivityMeta(ui, data) {
       after: '',
       colorClass: 'mention',
       badge: 'mention',
+      // Figma: Tab=Task, Action=Mentioned in task.
+      ico: 'noti-at',
+      tone: BADGE.brand,
     };
   }
 
@@ -138,6 +178,10 @@ function getActivityMeta(ui, data) {
       after: ` to ${destinationName}`,
       colorClass: 'mention',
       badge: 'mention',
+      // No Figma variant. ShareFat is the design's "moved to" glyph (Task
+      // status change), which is exactly this event.
+      ico: 'noti-share-fat',
+      tone: BADGE.brand,
     };
   }
 
@@ -152,6 +196,11 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        // Figma Tab=Other, Action=Invitation carries a SmileySticker, which is
+        // a copy-paste leftover from the reaction card — PlusCircle ("added
+        // you") is the design's own invite glyph on the Task tab.
+        ico: 'noti-plus-circle',
+        tone: BADGE.brand,
       };
 
     case 'contact_invite':
@@ -169,6 +218,9 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        // An accepted invitation is the design's "completed" state.
+        ico: accepted ? 'noti-check-circle' : 'noti-plus-circle',
+        tone: accepted ? BADGE.success : BADGE.brand,
       };
     }
 
@@ -179,6 +231,9 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        // Figma: XCircle on the error fill (Meeting cancelled).
+        ico: 'noti-x-circle',
+        tone: BADGE.error,
       };
 
     case 'chat':
@@ -188,6 +243,9 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        // Figma: Tab=Chat, Action=New message.
+        ico: 'noti-chats-circle',
+        tone: BADGE.brand,
       };
 
     case 'teamchat':
@@ -197,14 +255,20 @@ function getActivityMeta(ui, data) {
       // <folder>" — actor name + avatar come from the same author fields. No count
       // suffix here (a meeting event is a single fact, not a message tally).
       if (data.meeting_action === 'start' || data.meeting_action === 'end') {
+        const ended = data.meeting_action === 'end';
         return {
-          before: data.meeting_action === 'start'
-            ? (LOCALE.STARTED_MEETING_ACTION || 'started a meeting in ')
-            : (LOCALE.ENDED_MEETING_ACTION || 'ended a meeting in '),
+          before: ended
+            ? (LOCALE.ENDED_MEETING_ACTION || 'ended a meeting in ')
+            : (LOCALE.STARTED_MEETING_ACTION || 'started a meeting in '),
           label: name,
           after: '',
           colorClass: 'mention',
           badge: 'mention',
+          // Figma: Instant meeting (VideoCamera). An "ended" row has no variant
+          // — XCircle is the design's meeting-over glyph, but on the brand fill
+          // because ending a meeting is not an error.
+          ico: ended ? 'noti-x-circle' : 'noti-video-camera',
+          tone: BADGE.brand,
         };
       }
       return {
@@ -213,6 +277,9 @@ function getActivityMeta(ui, data) {
         after: COUNT_SUFFIX(cnt),
         colorClass: 'mention',
         badge: 'mention',
+        // Figma: Tab=Chat, Action=Folder Message.
+        ico: 'noti-chats-circle',
+        tone: BADGE.brand,
       };
 
     case 'ticket':
@@ -222,6 +289,9 @@ function getActivityMeta(ui, data) {
         after: COUNT_SUFFIX(cnt),
         colorClass: 'mention',
         badge: 'mention',
+        // No Figma variant. ShootingStar is the design's generic "updated".
+        ico: 'noti-shooting-star',
+        tone: BADGE.brand,
       };
 
     case 'media':
@@ -235,6 +305,9 @@ function getActivityMeta(ui, data) {
             after: ' with you',
             colorClass: 'restricted',
             badge: 'share',
+            // Figma: Tab=files, Action=File shared.
+            ico: 'noti-share-network',
+            tone: BADGE.error,
           };
         }
         return {
@@ -243,6 +316,9 @@ function getActivityMeta(ui, data) {
           after: ' with you',
           colorClass: 'link-share',
           badge: 'share',
+          // Figma: Tab=files, Action=File shared.
+          ico: 'noti-share-network',
+          tone: BADGE.brand,
         };
       }
       if (data.event === 'media.remove') {
@@ -252,6 +328,10 @@ function getActivityMeta(ui, data) {
           after: '',
           colorClass: 'restricted',
           badge: 'share',
+          // Figma: Tab=files, Action=File delete (MinusCircle on error).
+          ico: 'noti-minus-circle',
+          tone: BADGE.error,
+          chipIco: 'noti-file-text',
         };
       }
       if (data.event === 'media.view') {
@@ -261,6 +341,9 @@ function getActivityMeta(ui, data) {
           after: '',
           colorClass: 'mention',
           badge: 'mention',
+          // No Figma variant. ShootingStar is the design's generic activity glyph.
+          ico: 'noti-shooting-star',
+          tone: BADGE.brand,
         };
       }
       if (ui.hasAttachment() && data.event !== 'media.new') {
@@ -270,6 +353,8 @@ function getActivityMeta(ui, data) {
           after: '',
           colorClass: 'link-share',
           badge: 'share',
+          ico: 'noti-share-network',
+          tone: BADGE.brand,
         };
       }
       // Default media event (media.new or aggregated rollup)
@@ -289,6 +374,10 @@ function getActivityMeta(ui, data) {
           after: cnt > 1 ? ` and ${cnt - 1} more` : '',
           colorClass: 'mention',
           badge: 'mention',
+          // Figma: Tab=files, Action=File uploaded (UploadSimple). A new folder
+          // is a creation, not an upload — PlusCircle from the same set.
+          ico: createdFolder ? 'noti-plus-circle' : 'noti-upload-simple',
+          tone: BADGE.brand,
         };
       }
 
@@ -300,6 +389,9 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        // Figma: Tab=Meeting, Action=Instant meeting.
+        ico: 'noti-video-camera',
+        tone: BADGE.brand,
       };
     }
 
@@ -311,6 +403,10 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        // No Figma variant. Gear is the design's permission glyph (Role changed),
+        // and an access request is a permission ask.
+        ico: 'noti-gear',
+        tone: BADGE.brand,
       };
 
     case 'share_open':
@@ -324,6 +420,9 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        // No Figma variant. This is share activity → the File-shared glyph.
+        ico: 'noti-share-network',
+        tone: BADGE.brand,
       };
 
     default:
@@ -333,8 +432,24 @@ function getActivityMeta(ui, data) {
         after: '',
         colorClass: 'mention',
         badge: 'mention',
+        ico: 'noti-shooting-star',
+        tone: BADGE.brand,
       };
   }
+}
+
+// Day-group header ("Today" / "Yesterday" / "Aug 13"). The panel stamps
+// `day_header` on the first row of each day before the rows become items — see
+// _stampDayHeaders in panel/activity/index.js — so the header is rendered by the
+// row that opens the group rather than by a synthetic list entry.
+function dayHeaderLabel(key, timestamp) {
+  if (key === 'today') return LOCALE.TODAY;
+  if (key === 'yesterday') return LOCALE.YESTERDAY;
+  if (!timestamp) return '';
+  const d = Dayjs.unix(timestamp);
+  // Same-year dates read as "Aug 13" (Figma); older ones need the year or two
+  // Augusts a year apart would be indistinguishable.
+  return d.year() === Dayjs().year() ? d.format('MMM D') : d.format('MMM D, YYYY');
 }
 
 module.exports = function (ui) {
@@ -345,22 +460,79 @@ module.exports = function (ui) {
   const text = `<span>${sender} ${escapeHtml(meta.before)}</span><span class="${pfx}__link ${meta.colorClass}">${escapeHtml(meta.label)}</span><span>${escapeHtml(meta.after)}</span>`;
   const avatarFirstname = data.author_firstname || data.firstname;
   const avatarLastname = data.author_lastname || data.lastname;
+  const category = getCategory(data);
 
+  // Unread = the design's white card; read = no fill. Rows the panel builds
+  // itself (access requests, live meetings) carry no is_read and are actionable,
+  // so an absent flag means unread.
+  const unread = parseInt(data.is_read, 10) === 1 ? '0' : '1';
+
+  // Leading element: the actor's avatar (32px, radius 12) — unchanged from the
+  // live panel — or the file-type chip (Overlay/brand fill, glyph inside).
+  //
+  // The chip is used ONLY where Figma is unambiguous that the row has no actor
+  // face: the two branches above that set `chipIco` (file deleted, task status
+  // changed). Deriving it from a "does this row name an actor" heuristic instead
+  // would silently flip the leading element on rows that render an avatar today,
+  // so the switch is opt-in per branch rather than inferred.
+  const leading = meta.chipIco
+    ? Skeletons.Box.X({
+      className: `${pfx}__chip`,
+      kids: [
+        Skeletons.Image.Svg({
+          className: `${pfx}__chip-ico`,
+          ico: meta.chipIco,
+        }),
+      ],
+    })
+    : Skeletons.UserProfile({
+      className: `${pfx}__avatar`,
+      id: ui.mget(_a.autho_id),
+      firstname: avatarFirstname,
+      lastname: avatarLastname,
+      type: 'thumb',
+    });
+
+  // 14x14 action badge pinned at (22,22) of the 32px leading element. `tone`
+  // selects the fill; the glyph is a normalized sprite exported from the design.
   const avatar = Skeletons.Box.Y({
-    className: `${pfx}__avatar-wrap`,
+    className: `${pfx}__leading`,
     kids: [
-      Skeletons.UserProfile({
-        className: `${pfx}__avatar`,
-        id: ui.mget(_a.autho_id),
-        firstname: avatarFirstname,
-        lastname: avatarLastname,
-        type: 'thumb',
-      }),
-      Skeletons.Note({
-        className: `${pfx}__badge ${meta.badge}`,
-        content: "",
+      leading,
+      Skeletons.Box.X({
+        className: `${pfx}__badge`,
+        dataset: { tone: meta.tone || BADGE.brand },
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${pfx}__badge-ico`,
+            ico: meta.ico || 'noti-shooting-star',
+          }),
+        ],
       }),
     ],
+  });
+
+  // Second line: optional folder/workspace chip (a Figma component property, so
+  // it toggles) followed by the relative time. The chip is suppressed when it
+  // would only repeat the label, and on peer-scoped rows (a direct chat or a
+  // contact request has no folder context to show).
+  const folderName = data.hub_name || data.workspace_name || '';
+  const PEER_SCOPED = ['chat', 'contact', 'contact_invite', 'contact_refused'];
+  const showFolder = !!folderName
+    && folderName !== meta.label
+    && PEER_SCOPED.indexOf(category) === -1;
+
+  const metaLine = Skeletons.Box.X({
+    className: `${pfx}__meta`,
+    kids: [
+      showFolder
+        ? Skeletons.Note({ className: `${pfx}__folder`, content: escapeHtml(folderName) })
+        : null,
+      Skeletons.Note({
+        className: `${pfx}__time`,
+        content: timeAgo(data.timestamp || data.ctime),
+      }),
+    ].filter(Boolean),
   });
 
   const textBlockService = data.category === 'access_request'
@@ -375,14 +547,13 @@ module.exports = function (ui) {
     uiHandler: ui,
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),
-      Skeletons.Note({ className: `${pfx}__time`, content: timeAgo(data.timestamp || data.ctime || preview.ctime) }),
+      metaLine,
     ],
   });
 
 
   // if (data.id != null) ui.mset('changelog_id', data.id);
 
-  const category = getCategory(data);
   const actionKids = category === 'meeting'
     ? [
       Skeletons.Button.Svg({
@@ -417,13 +588,30 @@ module.exports = function (ui) {
     kids: actionKids,
   });
 
+  // The caption is a label, not a control — but it cannot simply be inert.
+  // `active: 0` would leave it with no click handler of its own, so a click
+  // would bubble out of the group to the activity_item root (which binds one by
+  // default) and dispatch to the panel. Keeping it active gives it the framework
+  // handler, whose e.stopPropagation() contains the click; `day-header` is then
+  // swallowed explicitly in onUiEvent so it can never route anywhere.
+  const header = data.day_header
+    ? Skeletons.Note({
+      className: `${pfx}__day`,
+      content: escapeHtml(dayHeaderLabel(data.day_header, data.timestamp || data.ctime)),
+      service: 'day-header',
+      uiHandler: ui,
+    })
+    : null;
+
   return Skeletons.Box.Y({
     className: `${pfx}__group`,
     kids: [
+      header,
       Skeletons.Box.X({
         className: `${pfx}__row ${meta.badge}`,
+        dataset: { unread },
         kids: [avatar, textBlock, actions],
       }),
-    ],
+    ].filter(Boolean),
   });
 };

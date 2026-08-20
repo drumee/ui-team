@@ -7,7 +7,11 @@
     // parked absolute panel still adds to its ancestors' scrollWidth and
     // leaves the desk body scrollable sideways onto it.
     position: fixed;
-    width: 450px;
+    // Round 3: 512px per Figma (panel node 58187:81014). Only the width moves —
+    // the right-side docking below is Tobao's 4ee4277b and stays untouched, and
+    // the mobile block further down overrides the width with !important, so the
+    // phone card is unaffected.
+    width: 512px;
     height: 100vh;
     top: 0;
     right: 0;

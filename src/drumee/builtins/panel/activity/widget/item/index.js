@@ -249,6 +249,12 @@ class __activity_item extends LetcBox {
    * @returns 
    */
   onUiEvent(cmd, args = {}) {
+    // Day-group caption ("Today" / "Yesterday" / "Aug 13"). It lives inside the
+    // row so it scrolls with the feed, but it is a label and must never
+    // navigate. Read the service off the CLICKED widget rather than the resolved
+    // `service` below: that chain prefers this row's own model service, which
+    // would shadow the caption's and route the click as if the row was clicked.
+    if (cmd && cmd.get && cmd.get(_a.service) === 'day-header') return;
     const service = args.service || this.get(_a.service) || cmd.get(_a.service);
     const parent = this.mget('logicalParent');
     const cmdClass = cmd && cmd.el && cmd.el.classList ? cmd.el.classList[0] : null;

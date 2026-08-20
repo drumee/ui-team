@@ -43,6 +43,9 @@ class __panel_activity extends LetcBox {
     // first render requests the same unscoped feed the panel always has.
     this._filter = DEFAULT_BUCKET;
     this._mergedRows = [];
+    // Last day group emitted by _stampDayHeaders; reset whenever the feed
+    // restarts at page 1.
+    this._dayCursor = null;
     this._dismissedKeys = new Set();
     this._meetingItems = [];
     this.details = {};
@@ -126,6 +129,72 @@ class __panel_activity extends LetcBox {
       this.refreshActivity()
     })
     Wm.on(WS_EVENT, this.onWsMessage)
+  }
+
+  /**
+   * The feed list registers here so its `data` event can be hooked before it
+   * fetches anything (see the skeleton). Guarded super-delegation is the repo
+   * pattern: LetcBox defines no onPartReady, and the 'priority' part is reached
+   * through ensurePart rather than this hook.
+   */
+  onPartReady(child, pn) {
+    if (pn === _a.list && child && child.on) {
+      // renderData() emits this with the page's raw rows just before mapping
+      // them into item models — the one place the whole page is visible in
+      // order, which is what day grouping needs.
+      child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  /**
+   * Mark the first row of each day so the row widget can render a
+   * "Today" / "Yesterday" / "Aug 13" caption above itself. Grouping is entirely
+   * client-side off `timestamp || ctime`; no server field is involved.
+   *
+   * `_curPage` is still the page being rendered when this fires (handleResponse
+   * increments it only afterwards), so page 1 restarts the grouping and later
+   * pages continue it. restart() — tab switch, unread toggle, refresh — always
+   * returns to page 1, which resets the cursor.
+   *
+   * 🚨 The try/catch is load-bearing: ui-core calls renderData() inside
+   * `try { … } catch (error) {}`, so an exception raised in here would be
+   * swallowed and the feed would render EMPTY with no error anywhere.
+   */
+  _stampDayHeaders(list, rows) {
+    try {
+      if (!_.isArray(rows)) return;
+      if (!list || (list._curPage || 1) <= 1) this._dayCursor = null;
+      for (const row of rows) {
+        if (!row || !_.isObject(row)) continue;
+        const ts = parseInt(row.timestamp || row.ctime, 10);
+        if (!ts) {
+          delete row.day_header;
+          continue;
+        }
+        const key = this._dayKey(ts);
+        if (key === this._dayCursor) {
+          delete row.day_header;
+          continue;
+        }
+        this._dayCursor = key;
+        row.day_header = key;
+      }
+    } catch (e) {
+      this.warn('[panel_activity] day-header grouping failed', e);
+    }
+  }
+
+  /**
+   * 'today' | 'yesterday' | 'YYYY-MM-DD'. The row skeleton turns the first two
+   * into LOCALE.TODAY / LOCALE.YESTERDAY and formats the rest as "Aug 13".
+   */
+  _dayKey(ts) {
+    const day = Dayjs.unix(ts).startOf('day');
+    const diff = Dayjs().startOf('day').diff(day, 'day');
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'yesterday';
+    return day.format('YYYY-MM-DD');
   }
 
   /**
@@ -546,7 +615,7 @@ class __panel_activity extends LetcBox {
   // Lift the approve/result overlay out of the slide-transformed panel rail to
   // <body> so position:fixed centres it over the whole viewport (Figma 63/64/65/66).
   // A transformed/will-change ancestor (the panel's __ui slide) is a containing block
-  // for fixed descendants, so the overlay would otherwise stay trapped in the 450px
+  // for fixed descendants, so the overlay would otherwise stay trapped in the panel
   // rail. LETC routes button clicks by uiHandler ref (not DOM ancestry), so moving
   // the node keeps Confirm/Deny/level-select working. Idempotent.
   _liftArOverlay(p) {
