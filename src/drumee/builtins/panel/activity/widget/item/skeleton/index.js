@@ -271,15 +271,20 @@ function getActivityMeta(ui, data) {
           tone: BADGE.brand,
         };
       }
+      // Figma's Chat/"Folder Message" card carries NO folder in its sentence —
+      // the folder is the chip on the second line. This used to read "posted in
+      // <folder>", which both duplicated the chip and left nothing for it to
+      // show. Duy 2026-08-20: the sentence is "sent a message".
       return {
-        before: 'posted in ',
-        label: name,
+        before: LOCALE.SENT_A_MESSAGE,
+        label: '',
         after: COUNT_SUFFIX(cnt),
         colorClass: 'mention',
         badge: 'mention',
         // Figma: Tab=Chat, Action=Folder Message.
         ico: 'noti-chats-circle',
         tone: BADGE.brand,
+        folder: data.folder_name,
       };
 
     case 'ticket':
@@ -369,7 +374,11 @@ function getActivityMeta(ui, data) {
         const single = cnt <= 1;
         const label = (!createdFolder && single && data.item_filename) ? data.item_filename : name;
         return {
-          before: createdFolder ? 'created folder ' : 'uploaded file ',
+          // Figma reads "Sarah Chen uploaded {File-name}" — no "file" between
+          // the verb and the name (Duy 2026-08-20). "created folder" keeps its
+          // wording: the design has no variant for it, and dropping the noun
+          // there would leave "created <name>" with no clue what was created.
+          before: createdFolder ? 'created folder ' : LOCALE.UPLOADED_ACTION,
           label,
           after: cnt > 1 ? ` and ${cnt - 1} more` : '',
           colorClass: 'mention',
@@ -378,6 +387,9 @@ function getActivityMeta(ui, data) {
           // is a creation, not an upload — PlusCircle from the same set.
           ico: createdFolder ? 'noti-plus-circle' : 'noti-upload-simple',
           tone: BADGE.brand,
+          // The destination folder/workspace. Suppressed automatically when it
+          // would only repeat the label (a multi-file rollup labels the folder).
+          folder: data.folder_name,
         };
       }
 
@@ -513,14 +525,17 @@ module.exports = function (ui) {
   });
 
   // Second line: optional folder/workspace chip (a Figma component property, so
-  // it toggles) followed by the relative time. The chip is suppressed when it
-  // would only repeat the label, and on peer-scoped rows (a direct chat or a
-  // contact request has no folder context to show).
-  const folderName = data.hub_name || data.workspace_name || '';
-  const PEER_SCOPED = ['chat', 'contact', 'contact_invite', 'contact_refused'];
-  const showFolder = !!folderName
-    && folderName !== meta.label
-    && PEER_SCOPED.indexOf(category) === -1;
+  // it toggles) followed by the relative time.
+  //
+  // The chip is opt-in per branch via `meta.folder`, like the badge — the first
+  // version read `hub_name`/`workspace_name`, and NEITHER field exists on any
+  // feed row, so no chip ever rendered. The name comes from the server's
+  // normalized `folder_name`, which is resolved for both row shapes (rollups
+  // name the folder directly; raw changelog rows get it from their parent id).
+  // Still suppressed when it would only repeat the label, which is what a
+  // multi-file upload rollup does.
+  const folderName = meta.folder || '';
+  const showFolder = !!folderName && folderName !== meta.label;
 
   const metaLine = Skeletons.Box.X({
     className: `${pfx}__meta`,

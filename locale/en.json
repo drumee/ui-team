@@ -497,6 +497,8 @@
   "INVITE_EMAIL_SELF": "You cannot invite yourself.",
   "INVITE_WORKSPACE_REQUIRED": "Please select at least one workspace.",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "SENT_A_MESSAGE": "sent a message",
+  "UPLOADED_ACTION": "uploaded ",
   "WANTS_TO_CONNECT": "wants to connect",
   "ACCEPTED_YOUR_INVITATION": "accepted your invitation",
   "TASK_ASSIGNED_ACTION": "assigned you to ",

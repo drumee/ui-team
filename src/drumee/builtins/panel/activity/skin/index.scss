@@ -471,9 +471,21 @@
 
   &__tab {
     align-items: center;
+    // Figma's filter box is `horizontal: fill` + `justifyContent: center`, i.e.
+    // the pills spread across the bar instead of clumping at the left.
+    //
+    // `1 1 auto`, NOT `1 1 0`: an equal split gives each pill 76px, which after
+    // 16px of padding and a count badge leaves ~44px for the label — "Meeting"
+    // needs ~49px, so equal shares would ellipsis it the moment it has unread
+    // items. Growing from the natural width distributes only the SLACK, so the
+    // row still reaches both edges and nothing is truncated. min-width: 0 plus
+    // the bar's existing overflow-x keep a very long locale degrading gracefully
+    // rather than overflowing.
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
     gap: 4px;
     padding: 8px;
-    flex-shrink: 0;
     cursor: pointer;
     border-radius: 1111px;
     transition:
@@ -493,6 +505,10 @@
   &__tab-label {
     @include drumee.typo($color: #65656c, $size: 12px, $weight: 600, $line: 12px);
     white-space: nowrap;
+    // Only reachable when a locale's labels genuinely exceed the bar; the pills
+    // grow from their natural width, so normally nothing is clipped.
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     .panel-activity__tab[data-state="1"] & {
       color: #ffffff;

@@ -201,6 +201,152 @@ test("the day caption can never navigate", () => {
   );
 });
 
+// ── copy + folder chip, from the real getActivityMeta ──────────────────────
+//
+// LOCALE is a createSafeObject at runtime: a MISSING key returns the key's own
+// name, which is truthy. That is why `LOCALE.X || 'fallback'` never falls back —
+// the stub reproduces it so a missing key surfaces here instead of shipping a
+// raw key name to users.
+const enLocale = JSON.parse(readFileSync(join(ROOT, "locale/en.json"), "utf8"));
+const LOCALE = new Proxy(enLocale, {
+  get: (t, k) => (k in t ? t[k] : String(k)),
+});
+
+// "LOCALE"/"Visitor"/"_a"/"_"/"Dayjs" are harness parameters and are never
+// assigned on global in this file — see harness-hygiene.test.js.
+const meta = new Function(
+  "LOCALE",
+  "Visitor",
+  "_a",
+  "_",
+  "Dayjs",
+  `${skelSrc.slice(0, skelSrc.indexOf("module.exports"))}
+   return getActivityMeta;`,
+)(
+  LOCALE,
+  { id: "me" },
+  new Proxy({}, { get: (_t, k) => String(k) }),
+  require("lodash"),
+  require("dayjs"),
+);
+
+// getActivityMeta only ever reads these off the widget.
+const stub = (data) => ({
+  getItemName: () => data.filename || data.name || "item",
+  mget: (k) => data[k],
+  isFolder: () => data.filetype === "folder",
+  hasAttachment: () => !!data.attachment,
+});
+const metaFor = (data) => meta(stub(data), data);
+
+test("a folder chat message no longer names the folder in its sentence", () => {
+  const m = metaFor({
+    category: "teamchat", filename: "checkin", folder_name: "checkin", cnt: "1",
+  });
+  assert.equal(m.before, "sent a message");
+  assert.equal(m.label, "", "the folder must not be the label — it is the chip");
+  assert.equal(m.folder, "checkin", "the folder goes to the chip instead");
+  assert.ok(!/posted in/.test(m.before), "the old wording is gone");
+});
+
+test("a multi-message folder rollup keeps its count suffix", () => {
+  const m = metaFor({ category: "teamchat", filename: "checkin", folder_name: "checkin", cnt: "3" });
+  assert.equal(m.after, " (3)");
+});
+
+test("a meeting in a folder still names the folder in the sentence", () => {
+  // Figma keeps "started a meeting in {Folder-name}" as one sentence, so this
+  // branch must NOT be converted to the chip.
+  for (const [action, key] of [["start", "STARTED_MEETING_ACTION"], ["end", "ENDED_MEETING_ACTION"]]) {
+    const m = metaFor({
+      category: "teamchat", meeting_action: action, filename: "checkin", folder_name: "checkin",
+    });
+    assert.equal(m.label, "checkin", "the folder stays in the sentence here");
+    assert.equal(m.folder, undefined, "and must not also be a chip");
+    assert.equal(m.before, enLocale[key]);
+  }
+});
+
+test("an upload names the file, not \"file\", and puts the folder in the chip", () => {
+  const m = metaFor({
+    category: "media", event: "media.new", filename: "checkin",
+    item_filename: "document", item_filetype: "document", folder_name: "checkin", cnt: "1",
+  });
+  assert.equal(m.before, "uploaded ", "Figma has no \"file\" between verb and name");
+  assert.ok(!/uploaded file/.test(m.before));
+  assert.equal(m.label, "document", "the file is the label");
+  assert.equal(m.folder, "checkin", "the destination folder is the chip");
+});
+
+test("a new folder still says what was created", () => {
+  const m = metaFor({
+    category: "media", event: "media.new", filename: "Task", item_filetype: "folder", cnt: "1",
+  });
+  assert.equal(m.before, "created folder ");
+  assert.equal(m.label, "Task");
+});
+
+test("the chip is suppressed when it would only repeat the label", () => {
+  // A multi-file rollup labels the destination folder, so chip == label.
+  const m = metaFor({
+    category: "media", event: "media.new", filename: "checkin", folder_name: "checkin", cnt: "4",
+  });
+  assert.equal(m.label, "checkin");
+  assert.equal(m.folder, m.label, "meta still carries it…");
+  // …and the render guard drops it.
+  assert.match(skelSrc, /const showFolder = !!folderName && folderName !== meta\.label;/);
+});
+
+test("a direct message has no folder chip", () => {
+  const m = metaFor({ category: "chat", filename: "Duy Nguyen", cnt: "1" });
+  assert.equal(m.folder, undefined, "a peer conversation has no folder context");
+});
+
+test("rows with no folder_name simply get no chip", () => {
+  for (const data of [
+    { category: "teamchat", filename: "checkin", cnt: "1" },
+    { category: "media", event: "media.new", filename: "f", item_filename: "d", cnt: "1" },
+  ]) {
+    assert.equal(metaFor(data).folder, undefined);
+  }
+});
+
+test("every locale key the row uses resolves in every locale", () => {
+  // A missing key renders its own NAME to the user (createSafeObject), not a
+  // blank and not the `|| 'fallback'` — so a gap here is a visible bug.
+  const KNOWN_EN_ONLY = new Set([
+    // Pre-existing debt, reported to Duy 2026-08-20: added in earlier rounds
+    // without mirroring. Listed so this test guards against NEW gaps instead of
+    // staying red; remove each entry as it is translated.
+    "ENDED_MEETING_ACTION",
+    "STARTED_MEETING_ACTION",
+    "TASK_ASSIGNED_ACTION",
+    "TASK_COMMENT_REPLY_ACTION",
+    "TASK_MENTION_ACTION",
+  ]);
+  const used = [...new Set([...skelSrc.matchAll(/LOCALE\.([A-Z0-9_]+)/g)].map((m) => m[1]))];
+  assert.ok(used.length > 5, "no locale keys found — did the file move?");
+  const gaps = [];
+  for (const lang of ["en", "fr", "es", "ru", "zh", "km"]) {
+    const j = JSON.parse(readFileSync(join(ROOT, "locale", `${lang}.json`), "utf8"));
+    for (const k of used) {
+      if (!(k in j) && !KNOWN_EN_ONLY.has(k)) gaps.push(`${lang}.json missing ${k}`);
+    }
+  }
+  assert.deepEqual(gaps, []);
+});
+
+test("the copy keys added for this change are in all six locales", () => {
+  for (const lang of ["en", "fr", "es", "ru", "zh", "km"]) {
+    const j = JSON.parse(readFileSync(join(ROOT, "locale", `${lang}.json`), "utf8"));
+    for (const k of ["SENT_A_MESSAGE", "UPLOADED_ACTION"]) {
+      assert.ok(j[k], `${lang}.json missing ${k}`);
+      assert.notEqual(j[k], k, `${lang}.json ${k} must be copy, not the key name`);
+    }
+    assert.match(j.UPLOADED_ACTION, / $/, `${lang}: UPLOADED_ACTION precedes the file name`);
+  }
+});
+
 test("routing and copy were not disturbed by the redesign", () => {
   assert.ok(
     skelSrc.includes("ui.megt(_a.accessibility)"),

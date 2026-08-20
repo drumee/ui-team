@@ -1568,6 +1568,8 @@
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "Отправлено приглашений: {0}, не удалось: {1}",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "SENT_A_MESSAGE": "отправил(а) сообщение",
+  "UPLOADED_ACTION": "загрузил(а) ",
   "WANTS_TO_CONNECT": "хочет добавить вас в контакты",
   "ACCEPTED_YOUR_INVITATION": "принял ваше приглашение",
   "DECLINED_YOUR_INVITATION": "отклонил ваше приглашение в контакты",

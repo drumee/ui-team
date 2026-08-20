@@ -952,6 +952,8 @@
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "Enviada(s) {0} invitación(es), {1} fallida(s)",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "SENT_A_MESSAGE": "envió un mensaje",
+  "UPLOADED_ACTION": "subió ",
   "WANTS_TO_CONNECT": "quiere conectar contigo",
   "ACCEPTED_YOUR_INVITATION": "ha aceptado tu invitación",
   "DECLINED_YOUR_INVITATION": "ha rechazado tu invitación de contacto",

@@ -1568,6 +1568,8 @@
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "已发送 {0} 个邀请，{1} 个失败",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "SENT_A_MESSAGE": "发送了一条消息",
+  "UPLOADED_ACTION": "上传了 ",
   "WANTS_TO_CONNECT": "想要与您建立联系",
   "ACCEPTED_YOUR_INVITATION": "已接受您的邀请",
   "DECLINED_YOUR_INVITATION": "拒绝了您的联系人邀请",

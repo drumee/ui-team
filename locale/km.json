@@ -1568,6 +1568,8 @@
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "បានផ្ញើការអញ្ជើញ {0}, បរាជ័យ {1}",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "SENT_A_MESSAGE": "បានផ្ញើសារ",
+  "UPLOADED_ACTION": "បានផ្ទុកឡើង ",
   "WANTS_TO_CONNECT": "ចង់ភ្ជាប់ទំនាក់ទំនង",
   "ACCEPTED_YOUR_INVITATION": "បានទទួលយកការអញ្ជើញរបស់អ្នក",
   "DECLINED_YOUR_INVITATION": "បានបដិសេធការអញ្ជើញទំនាក់ទំនងរបស់អ្នក",
