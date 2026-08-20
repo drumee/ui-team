@@ -1,5 +1,48 @@
 @use "mixins/drumee";
 
+// =====================================================================
+// Centre the confirm card on the VIEWPORT on small screens.
+//
+// __ui is position:absolute, so it is out of flow and its placement comes from
+// its static position. Wm.confirm feeds every dialog into
+// .window-manager__wrapper-modal, which IS a full-inset centring flex container
+// (wm/skin, [data-state="open"]) — but an absolutely positioned child only
+// lands centred if the engine resolves its static position through the
+// container's align/justify, which they do not do consistently. Hence explicit
+// centring rather than trusting the parent.
+//
+// `fixed` rather than `absolute` because the ask is the SCREEN: that wrapper
+// spans the desk body, which on mobile begins below the 44px mobile topbar, so
+// centring inside it sits ~22px low. Nothing between here and the root carries
+// a transform/filter/will-change, so fixed resolves against the viewport.
+//
+// margin:auto needs a definite size on each axis it centres. Width already
+// comes from the rules at the include site; height therefore has to be pinned
+// to fit-content, with the cap keeping a long message inside the viewport.
+// =====================================================================
+@mixin confirm-mobile-centre {
+  // border-box first: __ui carries 20px of side padding and a 1px border, and
+  // without this `calc(100vw - 32px)` below resolves as the CONTENT width, so
+  // the card measured ~42px wider than asked and overflowed a 360px phone
+  // instead of leaving the intended 16px either side. Measured, not assumed.
+  box-sizing: border-box;
+
+  // Width belongs in here with the centring, not beside it. margin:auto can
+  // only centre what fits: the first cut left these keyed on the attribute
+  // alone, and on the very clients the @media fallback exists for the card kept
+  // its desktop min-width, overflowed, and pinned to x=0 — worse than the
+  // uncentred placement it replaced.
+  min-width: unset !important;
+  width: calc(100vw - 32px) !important;
+  max-width: 340px;
+
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+}
+
 .window-confirm {
   &__ui {
     background-color: var(--normal-bg-90);
@@ -19,9 +62,17 @@
     box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
 
     &[data-device="mobile"] {
-      min-width: unset !important;
-      width: calc(100vw - 32px) !important;
-      max-width: 340px;
+      @include confirm-mobile-centre;
+    }
+
+    // Viewport fallback, as mixins/responsive.scss does it: Visitor.device()
+    // only answers "mobile" below 801px, so the attribute is absent in the
+    // DevTools emulator and on a landscape phone. The card now sizes there too,
+    // where it previously kept its desktop width.
+    @media (max-width: 650px) {
+      & {
+        @include confirm-mobile-centre;
+      }
     }
 
     &[data-type="confirm"] {
