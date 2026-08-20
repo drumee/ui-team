@@ -39,16 +39,23 @@ module.exports = function (ui) {
         // No partHandler on purpose: the panel defines no onPartReady, and
         // `sys_pn` alone is enough for ensurePart() to reach these later.
         radio: `radio-${ui._id}`,
-        // The label and badge must not be independently clickable. Without
-        // active:0 a click on a child resolves handlers by walking the parent
-        // chain and reaches Wm with no service, which falls through to its
-        // default branch and clears the user's file selection. Same guard the
-        // unread toggle in topbar.js uses.
-        kidsOpt: { active: 0 },
         kids: [
+          // `active: 0` is set on EACH kid, not via the parent's `kidsOpt`.
+          // kidsOpt does not work: ui-core's mergeKidsOptions
+          // (letc/addons/letc.js) does `kids.map((item) => { item = {...item,
+          // ...kidsOpt} })`, rebinding the local parameter and discarding the
+          // map result, so it never reaches the child.
+          //
+          // It matters here because an active child binds its own onclick, and
+          // __handleClick calls stopPropagation() BEFORE it discovers it has no
+          // uiHandler — so a click landing on the label or the badge would die
+          // there and the tab's service would never fire. Only the pill's bare
+          // padding would switch tabs. Same fix as 97be5a4e (#510) for the
+          // window Move & Resize presets.
           Skeletons.Note({
             className: `${pfx}__tab-label`,
             content: LOCALE[tab.label],
+            active: 0,
           }),
           // Rendered empty and hidden via data-empty; _renderTabCounts fills it
           // once the counts arrive. Kept in the tree from the start so the part
@@ -58,6 +65,7 @@ module.exports = function (ui) {
             sys_pn: `tab-count-${tab.bucket}`,
             content: '',
             dataset: { empty: '1' },
+            active: 0,
           }),
         ],
       }),
