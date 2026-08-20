@@ -49,14 +49,32 @@
       // `.left [data-partname="trash-panel"]` containing-block rule in
       // desk/skin/index.scss).
       right: auto !important;
-      transform: translateX(-50%) translateY(100vh);
+
+      // Centred on the SCREEN, which needs the anchor at mid-viewport. The
+      // previous pair kept the base `top: 0` and pushed the card down by
+      // translateY(15%) — 15% of the CARD's own 500px, i.e. a fixed 75px from
+      // the top whatever the screen height, so it always sat high. A percentage
+      // translate cannot express "centre" from top:0; from top:50% it can.
+      top: 50% !important;
+
+      // Parked just off the bottom edge: from the 50% anchor, translateY(50vh)
+      // puts the top edge at 100vh — the same resting place and the same slide
+      // distance the old translateY(100vh) gave from top:0, so the animation
+      // feels unchanged.
+      transform: translate(-50%, 50vh);
+
+      // A hard 500px card would hang ~62px off both edges of a landscape phone
+      // (~375px tall) once centred — centred but unusable. The cap wins over
+      // the height above and keeps it on screen; __main is height:100% so it
+      // follows.
+      max-height: calc(100dvh - 32px);
 
       &[data-anim="in"] {
-        transform: translateX(-50%) translateY(15%);
+        transform: translate(-50%, -50%);
       }
 
       &[data-anim="out"] {
-        transform: translateX(-50%) translateY(100vh);
+        transform: translate(-50%, 50vh);
       }
     }
   }
