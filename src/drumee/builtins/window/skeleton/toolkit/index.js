@@ -148,7 +148,28 @@ function fileNewControl(ui) {
     // wrapper above cannot report that — it is a plain box, and the open state
     // lives on the menu widget. Named here rather than inside newMenu() so the
     // part belongs to the control that owns it.
-    kids: [{ ...newMenu(ui), sys_pn: "new-menu", partHandler: ui }],
+    kids: [
+      { ...newMenu(ui), sys_pn: "new-menu", partHandler: ui },
+      // Mobile-only dim layer behind the centred card (the skin re-anchors the
+      // panel to the viewport centre on small screens). Desktop never shows it.
+      //
+      // It has to be a real framework Box rather than a CSS ::before, because
+      // ui-core's menu closes on outside click via RADIO_CLICK, and that channel
+      // is only ever fired from View.prototype.triggerHandlers — i.e. by taps on
+      // framework views. A pseudo-element would dim the screen and then swallow
+      // every tap without closing anything, trapping the user in the menu.
+      //
+      // Deliberately a SIBLING *after* the menu, so the skin can reveal it with
+      // `…__wrapper[data-state="1"] ~ &` — a plain sibling combinator keyed off
+      // the state ui-core already writes, needing neither :has() nor a second
+      // piece of state to keep in sync. Paint order is set by z-index, not by
+      // this DOM order.
+      Skeletons.Box.X({
+        className: `${cnTopbar}__new-backdrop`,
+        service: "close-new-menu",
+        uiHandler: [ui],
+      }),
+    ],
   });
 }
 

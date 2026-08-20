@@ -1436,8 +1436,16 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // Close the merged "+ New" menu and reset its create flyout.
+  //
+  // Leaf rows live INSIDE the menu topic, so they resolve it by walking up.
+  // The mobile backdrop (skeleton/toolkit fileNewControl) is a SIBLING of the
+  // topic, not a descendant — the walk returns nothing there, so fall back to
+  // the part the window already owns. Same close for both entry points.
   closeNewMenu(cmd) {
-    const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
+    const menu =
+      (cmd && cmd.getParentByKind?.(KIND.menu.topic)) ||
+      (this.getPart && this.getPart("new-menu"));
     if (!menu) return;
     const group = menu.el?.querySelector(
       ".window-button__dropdown-menu__item--create-group",
@@ -1491,6 +1499,11 @@ class __window_folder extends mfsInteract {
 
       case "toggle-new-create-menu":
         return this.toggleNewCreateMenu(cmd);
+
+      // Tap on the mobile dim layer behind the centred "+ New" card. Same
+      // close a leaf row runs, so the card and its backdrop leave together.
+      case "close-new-menu":
+        return this.closeNewMenu(cmd);
 
       case "launch-gdrive-migration": {
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the

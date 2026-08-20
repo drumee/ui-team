@@ -2,6 +2,153 @@
 @use "./meeting-schedule";
 @use "./meeting-modal";
 
+// =====================================================================
+// Mobile presentation for the folder window's merged "+ New" control.
+//
+// Desktop anchors the panel under its trigger (position:absolute;
+// top: calc(100% + 6px); right: 0) and flies the "+ Add new" group out
+// to the RIGHT at left: calc(100% - 8px). On a phone that flyout leaves
+// the viewport entirely, so on small screens the panel becomes a
+// viewport-centred card and the group expands inline underneath instead.
+//
+// Included TWICE — once under `&[data-device="mobile"]`, once under
+// `@media (max-width: 650px)` — mirroring mixins/responsive.scss:
+// Visitor.device() only reports "mobile" below innerWidth 800, so the
+// attribute lies in the DevTools emulator and on landscape phones, and
+// the viewport query is the fallback that catches those. Every rule is
+// scoped inside this mixin, so desktop is untouched.
+//
+// `&` at the include site is the __new-ctrl box itself.
+// =====================================================================
+@mixin new-ctrl-mobile-card {
+  // Viewport-centred card. `right: auto` is required or the desktop
+  // `right: 0` fights the translate. No ancestor between here and the
+  // window root carries a transform/filter (the mobile-fullscreen-window
+  // mixin explicitly clears the WM's drag transform on __ui), so `fixed`
+  // resolves against the viewport rather than some intermediate box.
+  .menu-topic-items__wrapper {
+    // !important is load-bearing: the menu widget writes
+    // `position:absolute; overflow:hidden` INLINE on this node when its
+    // 'items-wrapper' part mounts (ui-core widgets/menu/index.js
+    // onPartReady), and an inline declaration outranks any stylesheet rule
+    // without it. The desktop block above gets away with a plain
+    // `position:absolute` only because it agrees with that inline value —
+    // `fixed` does not, and silently lost to it until this was flagged by a
+    // headless render (the card sat off-screen right, still anchored to the
+    // desktop `right: 0`).
+    position: fixed !important;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: min(320px, calc(100vw - 32px));
+    // Keeps the card clear of the desk's 44px mobile topbar at the top and
+    // of the home indicator at the bottom, so the two never overlap — the
+    // window's inline WM z-index makes __ui a stacking context, so a card
+    // that DID reach the topbar could not paint above it.
+    max-height: calc(100dvh - 96px);
+    z-index: 100000;
+  }
+
+  // Desktop needs `overflow: visible !important` here so the right-side
+  // "+ Add new" flyout can escape the panel. In the card that flyout is
+  // inline (position:static below), so nothing has to escape — and the card
+  // DOES need to scroll once the accordion opens on a short landscape
+  // viewport. Written as longhands so each axis lands later in the cascade
+  // than that shorthand at equal weight and wins on its own: y scrolls,
+  // x stays clipped so a stray sub-pixel cannot draw a scrollbar across
+  // the bottom of the card.
+  .menu-topic-items__wrapper[data-state="open"] {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  // Desktop sizes the panel to its widest row (width:max-content,
+  // min-width:242px). In the card the panel IS the card, so it fills the
+  // fixed width instead of re-deriving one from its content. border-box is
+  // load-bearing here: the desktop rules never set it, so `width: 100%` plus
+  // `padding: 8px` measured 336px inside the 320px card and drew a
+  // horizontal scrollbar — caught by a headless measurement, not by eye.
+  .menu-topic-items,
+  .menu-items {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  // Reveal the dim layer only while the menu is open. `:has()` rather than
+  // a sibling combinator because the menu renders a chain (__wrapper /
+  // .menu-topic / .menu-topic__ui) and which node carries the class is the
+  // widget's business, not ours — the same `:has(… [data-state="1"])`
+  // shape desk/wm/dock/skin/index.scss already keys its dock state off.
+  &:has(.window-button__dropdown-menu__wrapper[data-state="1"]) {
+    .window-folder-topbar__new-backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.45);
+      // Deliberately UNDER the desk mobile topbar (99999): a tap up there
+      // lands on a framework view, so RADIO_CLICK closes the menu anyway
+      // and there is nothing to gain by masking it.
+      z-index: 99998;
+    }
+  }
+
+  // 13px text in 8px padding is a desktop pointer target.
+  .window-button__dropdown-menu__item {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  // "+ Add new" expands INLINE as an accordion. flex-wrap lets the submenu
+  // take a full-width row of its own beneath the "+ Add new" label instead
+  // of being squeezed into the same line.
+  .window-button__dropdown-menu__item--create-group {
+    flex-wrap: wrap;
+  }
+
+  .window-button__dropdown-menu__create-submenu {
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    min-width: 0;
+    flex-basis: 100%;
+    margin-top: 4px;
+    padding: 0;
+    background-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  // Neutralise the hover branch, and do it BEFORE the data-submenu rule so
+  // the explicit toggle still wins. Touch browsers latch :hover onto the
+  // last-tapped element, which would leave the accordion stuck open after
+  // the user tapped it closed; the tap already flips data-submenu
+  // (folder/index.js toggleNewCreateMenu) and that is the only signal this
+  // should follow on a phone.
+  .window-button__dropdown-menu__item--create-group:hover
+    > .window-button__dropdown-menu__create-submenu {
+    display: none;
+  }
+
+  .window-button__dropdown-menu__item--create-group[data-submenu="open"]
+    > .window-button__dropdown-menu__create-submenu {
+    display: flex;
+  }
+
+  // Indent the create rows so the accordion reads as nested under
+  // "+ Add new" without a box of its own.
+  .window-button__dropdown-menu__submenu-item {
+    min-height: 44px;
+    padding-left: 22px;
+  }
+}
+
 .window-folder {
   &__ui {
     // Container query anchor. The folder window registers itself as a
@@ -581,6 +728,26 @@
         color: #ffa8dc;
       }
 
+      // ── Mobile: centred card instead of an anchored dropdown ────────
+      // Both flags, for the reason spelled out on the mixin.
+      &[data-device="mobile"] {
+        @include new-ctrl-mobile-card;
+      }
+
+      @media (max-width: 650px) {
+        & {
+          @include new-ctrl-mobile-card;
+        }
+      }
+    }
+
+    // Dim layer behind the mobile card (skeleton/toolkit fileNewControl).
+    // Hidden by default rather than left empty: it is a flex child of
+    // __file-controls, so an empty box would still draw that row's 8px gap
+    // next to the pill on desktop. The mobile mixin above reveals it while
+    // the menu is open.
+    &__new-backdrop {
+      display: none;
     }
 
     &__control-icon {
