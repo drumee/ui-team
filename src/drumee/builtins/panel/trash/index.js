@@ -270,8 +270,20 @@ class __panel_trash extends mfsInteract {
     this._purgeConfirmOpen = true;
     try {
       await Wm.confirm({
-        title: LOCALE.TRASH,
-        message: LOCALE.Q_DELETE_ALL_FILES,
+        // No title: the message is a complete question on its own, and "Trash"
+        // above it only repeats the panel the prompt was raised from.
+        //
+        // Q_DELETE_ALL_FILES is authored as two <p> blocks
+        // ("Do you want to delete " / "all files in the trash? "), which stack
+        // into two lines. Strip the markup and collapse the whitespace so it
+        // reads as one sentence, wrapping only if the card is too narrow for
+        // it. Done here rather than by styling those <p>s inline, so the fix
+        // stays with this prompt instead of changing every confirm that ships
+        // markup in its message — and the string stays localised.
+        message: `${LOCALE.Q_DELETE_ALL_FILES || ""}`
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim(),
         confirm: LOCALE.DELETE,
         cancel: LOCALE.CANCEL,
       });
