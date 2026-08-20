@@ -1409,6 +1409,14 @@
     min-width: 0;
   }
 
+  // Carousel footer, hidden by default: it only means anything in the compact
+  // @container layout below, which pages the strip two tabs at a time. Without
+  // this it would still be an extra (0-size) flex child of the tab-bar wrapper
+  // on desktop — the skeleton renders it at every width.
+  &__tab-bar-dots {
+    display: none;
+  }
+
   &__tab-bar-item {
     height: 32px;
     min-width: 84px;
@@ -3651,13 +3659,33 @@
       }
     }
 
-    // ── Tab bar (Files / Chat / Tasks) ───────────────────────────
-    // Horizontal scroll when there isn't room — keeps all tabs
-    // reachable without breaking row layout.
+    // ── Tab bar (Files / Chat / Tasks / Meeting) — carousel ──────
+    // This used to be a free-scrolling row: the WRAPPER scrolled, tabs kept
+    // their natural width, and the last tab was simply cut off mid-word with
+    // nothing to say more existed. It now pages two tabs at a time, with a dot
+    // per page underneath (skeleton/toolkit tabBar builds them).
+    //
+    // The scroller moves from the wrapper to the strip, so the dots can sit
+    // outside the scrolling area and stay put while the tabs move. The wrapper
+    // wraps instead, which is what puts the footer on its own line.
     &__tab-bar-wrapper {
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: var(--spacer-2);
+      overflow: visible;
+    }
+
+    &__tab-bar-tabs {
+      // Full row so a page is exactly the strip's width — the arithmetic the
+      // item's flex-basis and the JS `scrollLeft / clientWidth` both rely on.
+      flex: 1 1 100%;
+      min-width: 0;
+      gap: 8px;
       overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      // Hidden, not absent: the dots are the affordance now, and a scrollbar
+      // under a two-item strip reads as a second, competing one.
       scrollbar-width: none;
 
       &::-webkit-scrollbar {
@@ -3665,8 +3693,54 @@
       }
     }
 
+    // Two per page. The gap sits BETWEEN the pair, so each item is half of what
+    // is left after it — not half the strip, which would overflow by the gap
+    // and let a sliver of tab three show at the right edge.
     &__tab-bar-item {
-      flex: 0 0 auto;
+      flex: 0 0 calc((100% - 8px) / 2);
+      min-width: 0;
+      scroll-snap-align: start;
+    }
+
+    // ── Carousel footer ─────────────────────────────────────────
+    &__tab-bar-dots {
+      // Explicit, because the base rule above hides it at every other width.
+      display: flex;
+      flex: 1 1 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding-top: 2px;
+
+      // One page — nothing to page through (set in the skeleton).
+      &[data-visible="0"] {
+        display: none;
+      }
+    }
+
+    &__tab-bar-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 6px;
+      border-radius: 50%;
+      background-color: var(--normal-fg-10);
+      opacity: 0.25;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    // Active dot, driven entirely by the footer's own data-page — so a swipe
+    // only has to update one attribute and no per-dot state exists to drift.
+    // Two pages is the ceiling for this bar (four tabs max), so listing them
+    // beats generating a rule per index.
+    &__tab-bar-dots[data-page="0"] &__tab-bar-dot:nth-child(1),
+    &__tab-bar-dots[data-page="1"] &__tab-bar-dot:nth-child(2) {
+      opacity: 1;
+      transform: scale(1.15);
     }
 
     // ── Filter bar (All / Docs / PDF / Images / Other) ──────────

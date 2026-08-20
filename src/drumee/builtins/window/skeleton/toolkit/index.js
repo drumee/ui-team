@@ -343,16 +343,55 @@ export function tabBar(ui, opt = {}) {
       ? fileViewToggle(ui)
       : "";
 
+  // The strip is the scroller for the mobile carousel (folder skin's
+  // @container block pages it two tabs at a time), so it needs to be reachable
+  // from JS — the scroll listener that tracks the current page lives in
+  // folder/index.js onPartReady("tab-bar-tabs").
+  const tabStrip = Skeletons.Box.X({
+    className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
+    sys_pn: "tab-bar-tabs",
+    partHandler: ui,
+    kids,
+  });
+
+  // Carousel footer: one dot per page of two tabs, so a phone user can see that
+  // the strip continues past the two visible tabs. Built HERE rather than at
+  // runtime because the tab count is already settled at this point — Chat and
+  // Task have been dropped for DMZ shares above, and Meeting was pushed or not.
+  // `kids` carries "" for each dropped tab, hence the filter.
+  //
+  // Folder only. The container query that reveals these is window-folder-w, and
+  // the other families that share this tab bar would each need their own skin
+  // work and their own onPartReady hook — so they render no dots at all rather
+  // than dead markup.
+  //
+  // One page means nothing to page through: data-visible=0 hides the footer, the
+  // same convention __new-ctrl uses.
+  const tabPages = Math.ceil(kids.filter(Boolean).length / 2);
+  const tabDots = isFolder
+    ? Skeletons.Box.X({
+        className: `${cnRoot}-dots ${ui.fig.family}__tab-bar-dots`,
+        sys_pn: "tab-bar-dots",
+        partHandler: ui,
+        // `page` is the only state this footer has. The scroll listener writes
+        // it and the skin maps it to the active dot, so nothing per-dot has to
+        // be touched as the strip moves.
+        dataset: { page: 0, visible: tabPages > 1 ? 1 : 0 },
+        kids: Array.from({ length: tabPages }, (_, i) =>
+          Skeletons.Box.X({
+            className: `${cnRoot}-dot ${ui.fig.family}__tab-bar-dot`,
+            service: "tab-bar-page",
+            dataset: { page: i },
+            uiHandler: [ui],
+          }),
+        ),
+      })
+    : "";
+
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
-    kids: [
-      Skeletons.Box.X({
-        className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
-        kids,
-      }),
-      splitBtn,
-    ],
+    kids: [tabStrip, splitBtn, tabDots],
   });
 }
 

@@ -1067,6 +1067,18 @@ class __window_folder extends mfsInteract {
       }
       return;
     }
+    if (pn === "tab-bar-tabs") {
+      this._wireTabCarousel(child);
+      return;
+    }
+    if (pn === "tab-bar-dots") {
+      this._tabBarDots = child;
+      // The strip may have mounted first, in which case its listener already
+      // ran against no dots. Stamp the current page now so the footer is right
+      // on first paint rather than only after the first scroll.
+      this._syncTabCarouselPage();
+      return;
+    }
     if (pn === "new-ctrl") {
       // The button renders hidden (the skeleton is built before the window has
       // a privilege). Now that it is mounted, resolve the real answer once.
@@ -1442,6 +1454,52 @@ class __window_folder extends mfsInteract {
   // The mobile backdrop (skeleton/toolkit fileNewControl) is a SIBLING of the
   // topic, not a descendant — the walk returns nothing there, so fall back to
   // the part the window already owns. Same close for both entry points.
+  // ── Mobile tab-bar carousel ──────────────────────────────────────────
+  // The strip pages two tabs at a time on narrow layouts (folder skin's
+  // @container block owns the scroll-snap); this only keeps the footer's
+  // `data-page` in step with where the strip actually is, and the skin maps
+  // that one attribute to the active dot.
+  //
+  // Reads scrollLeft rather than tracking taps, so a swipe, a dot press and a
+  // programmatic scroll all converge on the same source of truth.
+  _wireTabCarousel(child) {
+    this._tabBarStrip = child;
+    if (!child || !child.el) return;
+    // rAF-throttled: a touch scroll fires this continuously, and all it has to
+    // produce is one attribute write per frame at most.
+    let queued = 0;
+    const onScroll = () => {
+      if (queued) return;
+      queued = 1;
+      requestAnimationFrame(() => {
+        queued = 0;
+        this._syncTabCarouselPage();
+      });
+    };
+    child.el.addEventListener("scroll", onScroll, { passive: true });
+    this._syncTabCarouselPage();
+  }
+
+  _syncTabCarouselPage() {
+    const strip = this._tabBarStrip;
+    const dots = this._tabBarDots;
+    if (!strip || !strip.el || !dots || !dots.el) return;
+    const w = strip.el.clientWidth;
+    // Desktop / one-page: clientWidth is the whole strip and scrollLeft stays 0,
+    // so this lands on page 0 and the skin has the footer hidden anyway.
+    const page = w > 0 ? Math.round(strip.el.scrollLeft / w) : 0;
+    if (`${page}` !== dots.el.dataset.page) dots.el.dataset.page = `${page}`;
+  }
+
+  // Dot press. Scrolls by whole pages; the scroll listener above then updates
+  // data-page, so this deliberately does not write it itself.
+  _showTabCarouselPage(cmd) {
+    const strip = this._tabBarStrip;
+    if (!strip || !strip.el || !cmd || !cmd.el) return;
+    const page = Number(cmd.el.dataset.page) || 0;
+    strip.el.scrollTo({ left: page * strip.el.clientWidth, behavior: "smooth" });
+  }
+
   closeNewMenu(cmd) {
     const menu =
       (cmd && cmd.getParentByKind?.(KIND.menu.topic)) ||
@@ -1496,6 +1554,9 @@ class __window_folder extends mfsInteract {
           kind: "editor_markdown",
           uiHandler: [this],
         });
+
+      case "tab-bar-page":
+        return this._showTabCarouselPage(cmd);
 
       case "toggle-new-create-menu":
         return this.toggleNewCreateMenu(cmd);
