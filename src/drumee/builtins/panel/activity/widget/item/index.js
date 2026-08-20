@@ -446,14 +446,39 @@ class __activity_item extends LetcBox {
         }
         break;
 
-      case 'share_open':
+      case 'share_open': {
         // Secure/public share-open notification ("{email} opened {folder}"), now an
-        // ordinary feed row. Clicking opens the shared folder so the creator can see
+        // ordinary feed row. Clicking opens the shared target so the creator can see
         // what was accessed, then marks it seen (persistent) and closes the panel —
         // matching the media/teamchat rows. `node_id` is the shared node. Pass
         // token_id + recipient_email so the panel persists the seen state via
         // secure_share.mark_open_seen (so it stays out of Unread + survives reload).
-        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${this.mget('node_id') || nid}&filetype=folder&pid=0&ts=${ts}`;
+        //
+        // A shared FILE must be revealed INSIDE its parent folder, exactly the way
+        // a media row does it (own nid + real filetype + parent as pid +
+        // highlight=1 → scroll/select/flash). This used to hardcode
+        // `filetype=folder&pid=0` for every share_open row, so a shared file was
+        // opened "as a folder with no parent" and the desk rendered a phantom
+        // empty folder bearing the file's name. Folders and workspaces keep the
+        // original link — opening the target itself is right for them.
+        //
+        // node_filetype / node_parent_id are new (see the secure_share_open_feed
+        // merge in service/private/activity.js). When they are absent — an older
+        // server, or a node whose attributes could not be read — this falls back
+        // to the byte-identical previous link rather than guessing.
+        // ⚠️ `filetype` must always be on the hash: without it the desk silently
+        // opens the workspace ROOT instead of the target.
+        const shareNid = this.mget('node_id') || nid;
+        const shareFiletype = this.mget('node_filetype');
+        const shareParentId = this.mget('node_parent_id');
+        const sharedFile = !!shareFiletype
+          && shareFiletype !== _a.folder
+          && shareFiletype !== 'hub';
+        if (sharedFile) {
+          location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${shareNid}&filetype=${shareFiletype}&pid=${shareParentId || "0"}&highlight=1&ts=${ts}`;
+        } else {
+          location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${shareNid}&filetype=folder&pid=0&ts=${ts}`;
+        }
         this.triggerHandlers({
           service: 'dismiss-activity', item_type, item_key,
           token_id: this.mget('token_id'),
@@ -461,6 +486,7 @@ class __activity_item extends LetcBox {
         });
         this.triggerHandlers({ service: 'close-activity-panel' });
         break;
+      }
     }
   }
 
