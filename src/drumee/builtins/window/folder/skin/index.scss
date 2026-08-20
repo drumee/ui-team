@@ -611,8 +611,32 @@
       // skin/lib/menu.scss only hides the inner .menu-items via
       // display:none on data-state. Hide the absolute wrapper too so
       // it doesn't intercept clicks while closed.
+      //
+      // These two selectors are kept for the pre-open case, but they cannot
+      // carry this on their own — see the menu-root rule below.
       .menu-topic-items__wrapper[data-state="closed"],
       .menu-topic-items__wrapper[data-state="0"] {
+        display: none;
+      }
+
+      // The wrapper is stamped data-state="open" by _openItems and is NEVER
+      // reset: ui-core's _onClosed resets the inner .menu-items and the menu
+      // root, but not the wrapper (widgets/menu/index.js). So the two rules
+      // above stop matching the moment the menu has been opened once, and the
+      // wrapper stays "open" for the rest of the session.
+      //
+      // On desktop that leftover is invisible: the inner items are display:none,
+      // so the absolutely positioned wrapper collapses to 0x0 under the trigger
+      // — which is also why the click-interception it was written to prevent
+      // went unnoticed. The mobile card below gives the same wrapper an explicit
+      // width and fixed, centred placement, so after dismissing the menu it
+      // stays on screen as an empty 320px panel over the file grid.
+      //
+      // Key the hide on the MENU ROOT, which _onClosed does reset to 0. That is
+      // the same signal the create-submenu rule further down already trusts, so
+      // both now agree on one source of truth for "this menu is closed".
+      .window-button__dropdown-menu__wrapper:not([data-state="1"])
+        .menu-topic-items__wrapper {
         display: none;
       }
 
