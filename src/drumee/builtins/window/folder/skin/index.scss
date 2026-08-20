@@ -3744,20 +3744,43 @@
     }
 
     // ── Filter bar (All / Docs / PDF / Images / Other) ──────────
-    // Bigger gap so the underline-pill tabs read as distinct chips
-    // rather than running into each other when the row scrolls
-    // horizontally on a narrow window.
+    // Two rows on a narrow layout: the New + view-toggle controls on top, the
+    // filter tabs beneath. This used to be one nowrap strip that scrolled
+    // horizontally, and it did not fit — at a 390px window the row needed
+    // 432px, so the view toggle was cut off the right edge with nothing to
+    // indicate it was there.
+    //
+    // Wrapping is enough to fix it because the tabs alone do fit: the five of
+    // them measure 190px, or 278px with their gaps and this padding, which
+    // clears even a 320px window. So overflow-x goes with the nowrap — with
+    // the bar wrapping there is nothing left to scroll — and the hidden
+    // scrollbar rules go with it.
+    //
+    // Column gap stays at --spacer-5 to keep the underline-pill tabs reading
+    // as distinct chips; the row gap is one step tighter so two rows do not
+    // make the bar tall.
     &__filter-bar {
-      flex-wrap: nowrap;
-      gap: var(--spacer-5);
-      overflow-x: auto;
+      flex-wrap: wrap;
+      gap: var(--spacer-4) var(--spacer-5);
       padding: var(--spacer-4);
       justify-content: center;
-      scrollbar-width: none;
+    }
 
-      &::-webkit-scrollbar {
-        display: none;
-      }
+    // The controls take the first row. `order: -1` lifts them above the tabs
+    // without touching the skeleton, which deliberately emits them LAST so the
+    // desktop row can right-align them with margin-left:auto — that ordering
+    // is worth leaving alone.
+    //
+    // Selector matches the base rule's shape (__main + the topbar element) so
+    // it carries the same specificity and wins on source order; a bare
+    // .window-folder-topbar__file-controls would lose to it.
+    &__main .window-folder-topbar__file-controls {
+      order: -1;
+      flex: 0 0 100%;
+      justify-content: center;
+      // The base margin-left:auto is what pushes these right on desktop. It is
+      // inert at 100% basis, but cleared so it cannot bite if that ever changes.
+      margin-left: 0;
     }
 
     // The rendered tab class is `__filter-tab-main` (see topbar/filter
