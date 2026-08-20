@@ -18,6 +18,8 @@ const {
 } = require("./helpers/render-desk-sidebar");
 
 const S = "desk-module-sidebar";
+// `_e.upload` — the harness's _e proxy echoes keys back as their own name.
+const _e_upload = "upload";
 const CREATE_SERVICES = [
   "new-workspace",
   "new-note",
@@ -120,6 +122,49 @@ test('the "Add new" row is marked as leading somewhere', () => {
     "it carries a trailing arrow, so it does not read as an action",
   );
   assert.deepEqual(labelsIn(row), ["ADD_NEW"]);
+});
+
+// ---- The Google Drive import row -------------------------------------------
+// It is the topbar dropdown's --gdrive row brought into the drawer. Same
+// service, same privilege question; only the position is the drawer's own.
+test("the actions list offers the Drive import right after Add new", () => {
+  const rows = findAll(find(render(), `${S}__actions-slot`), `${S}__item`);
+  const services = rows.map((r) => r.service);
+  assert.deepEqual(
+    services,
+    ["mobile-show-create", "launch-gdrive-migration", _e_upload, "open-mobile-search", "invite-member"],
+    "Drive sits between Add new and Upload",
+  );
+});
+
+test("the Drive row carries its BEM hook and the topbar's label", () => {
+  const row = findAll(find(render(), `${S}__actions-slot`), `${S}__item`).find(
+    (r) => r.service === "launch-gdrive-migration",
+  );
+  assert.ok(row, "the row is a sidebar item");
+  assert.ok(
+    row.className.split(/\s+/).includes(`${S}__item--gdrive`),
+    "it is reachable on its own, like the topbar's --gdrive",
+  );
+  assert.deepEqual(labelsIn(row), ["MIGRATE_GDRIVE_TITLE"]);
+});
+
+test("a viewer without write in the current workspace is offered no Drive import", () => {
+  // The import lands on the upload path, so it follows the same privilege the
+  // topbar's copy follows — `locked` alone would let it through.
+  const actions = find(
+    render({ _curWorkspaceCanWrite: () => false }),
+    `${S}__actions-slot`,
+  );
+  assert.ok(!servicesIn(actions).includes("launch-gdrive-migration"));
+  // The rows that do NOT depend on it must survive.
+  assert.ok(servicesIn(actions).includes("mobile-show-create"));
+  assert.ok(servicesIn(actions).includes("open-mobile-search"));
+});
+
+test("an over-limit org is offered no Drive import", () => {
+  const actions = find(render({}, { locked: true }), `${S}__actions-slot`);
+  assert.ok(!servicesIn(actions).includes("launch-gdrive-migration"));
 });
 
 test("an over-limit org cannot reach the create screen", () => {

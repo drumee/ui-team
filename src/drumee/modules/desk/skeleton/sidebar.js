@@ -62,7 +62,12 @@ const createNavItem = (
   }
 
   return Skeletons.Box.X({
-    className: cls(fig, "item"),
+    // `modifier` is a BEM hook for a row that needs to be reachable on its own
+    // — mirroring the topbar's --gdrive. Like that one it carries no style of
+    // its own today.
+    className: opts.modifier
+      ? `${cls(fig, "item")} ${cls(fig, `item--${opts.modifier}`)}`
+      : cls(fig, "item"),
     uiHandler: [ui],
     radio: `sidebar-radio`,
     service,
@@ -381,6 +386,13 @@ const createActionsNav = (ui) => {
   // While over-limit the create/upload/invite rows are omitted — same
   // rule as the topbar. Search stays (read).
   const locked = require("libs/over-limit").isLocked();
+  // Asked the way the topbar asks it. Distinct from `locked`: the org can be
+  // within its limits while THIS viewer still lacks write in the workspace they
+  // are standing in.
+  const mayWrite =
+    typeof ui._curWorkspaceCanWrite === "function"
+      ? ui._curWorkspaceCanWrite()
+      : true;
   const actionKids = [
     ...(locked
       ? []
@@ -400,6 +412,30 @@ const createActionsNav = (ui) => {
             null,
             { affordance: "arrow-right" },
           ),
+          // A Drive import lands on the same upload path as "From device", so
+          // it needs write in the CURRENT workspace — the topbar drops its own
+          // copy of this row on the same question, and the handler runs
+          // _guardWorkspaceWrite either way. `locked` above cannot stand in for
+          // it: an org within its limits still has view and chat members.
+          //
+          // No new service and no new drawer mode: launch-gdrive-migration
+          // already calls closeDeskNewMenu first, which dismisses the drawer on
+          // mobile.
+          ...(!mayWrite
+            ? []
+            : [
+                createNavItem(
+                  ui,
+                  "logo-google",
+                  LOCALE.MIGRATE_GDRIVE_TITLE || "Migrate from Google Drive",
+                  "launch-gdrive-migration",
+                  "",
+                  null,
+                  "mobile-gdrive",
+                  null,
+                  { modifier: "gdrive" },
+                ),
+              ]),
           createNavItem(
             ui,
             "app-upload",
