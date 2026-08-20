@@ -311,6 +311,35 @@ test("rows with no folder_name simply get no chip", () => {
   }
 });
 
+test("the share branch renders instead of throwing", () => {
+  // This branch called ui.megt() — a method that does not exist — so every row
+  // reaching it died with a TypeError and never rendered. It was unreachable in
+  // practice (nothing emits media.share, and no media-category row carries
+  // is_forward), which is why it went unnoticed. Now covered, so it stays fixed.
+  const cases = [
+    [{ category: "media", event: "media.share", filename: "budget.xlsx", filetype: "document" },
+      "shared a ", "budget.xlsx", " with you", "link-share"],
+    [{ category: "media", event: "media.share", filename: "x", filetype: "link" },
+      "shared a ", "Shared Link", " with you", "link-share"],
+    [{ category: "media", event: "media.share", filename: "x", accessibility: "restricted" },
+      "shared a ", "Restricted Link", " with you", "restricted"],
+    [{ category: "media", event: "media.new", is_forward: 1, filename: "y" },
+      "shared a ", "y", " with you", "link-share"],
+  ];
+  for (const [data, before, label, after, colorClass] of cases) {
+    let m;
+    assert.doesNotThrow(() => { m = metaFor(data); }, `threw for ${JSON.stringify(data)}`);
+    assert.equal(m.before, before);
+    assert.equal(m.label, label);
+    assert.equal(m.after, after);
+    assert.equal(m.colorClass, colorClass);
+    assert.equal(m.ico, "noti-share-network", "Figma: Tab=files, Action=File shared");
+  }
+  // Only the restricted variant is an error tone.
+  assert.equal(metaFor(cases[2][0]).tone, "error");
+  assert.equal(metaFor(cases[0][0]).tone, "brand");
+});
+
 test("every locale key the row uses resolves in every locale", () => {
   // A missing key renders its own NAME to the user (createSafeObject), not a
   // blank and not the `|| 'fallback'` — so a gap here is a visible bug.
@@ -341,18 +370,10 @@ test("the copy keys added for this change are in all six locales", () => {
 });
 
 test("routing and copy were not disturbed by the redesign", () => {
-  // `ui.megt` is a typo for `mget` (no such method exists anywhere in
-  // @drumee/*), introduced in 8ee9a78f while converting `preview.accessibility`
-  // to `ui.mget(_a.accessibility)` — the same commit spells mget correctly three
-  // times. Calling it throws TypeError, but the branch that does is currently
-  // unreachable: nothing emits `media.share` (0 rows in yp.mfs_changelog) and no
-  // path delivers a media-category row with is_forward === 1. Left as-is so this
-  // change stays behaviour-free; tracked with Duy. Assert it is still the typo so
-  // that whoever fixes it does so knowingly and updates this test with it.
-  assert.ok(
-    skelSrc.includes("ui.megt(_a.accessibility)"),
-    "ui.megt was changed — if that was intentional, update this assertion too",
-  );
+  // `megt` is not a method on anything, so these calls threw TypeError and took
+  // the row's render down with them. Fixed 2026-08-20; the share branch is
+  // exercised for real below.
+  assert.ok(!/\bui\.megt\(/.test(skelSrc), "ui.megt is a typo for ui.mget");
   assert.ok(skelSrc.includes("service: textBlockService"));
   for (const s of ["toggle-favorite", "dismiss-activity", "join-meeting"]) {
     assert.ok(skelSrc.includes(`service: '${s}'`), `${s} wiring lost`);

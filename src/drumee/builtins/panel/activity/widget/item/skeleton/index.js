@@ -303,7 +303,11 @@ function getActivityMeta(ui, data) {
     case 'mfs':
       // Sub-routing by `event` for individual mfs_changelog rows from get_feed.
       if (data.event === 'media.share' || data.is_forward === 1) {
-        if (ui.megt(_a.accessibility) === 'restricted') {
+        // `mget`, not `megt`: the latter is not a method on anything, so these
+        // two calls threw TypeError and took the whole row's render with them.
+        // Introduced in 8ee9a78f while converting `preview.accessibility` to
+        // `ui.mget(...)` — that commit spells mget correctly three times over.
+        if (ui.mget(_a.accessibility) === 'restricted') {
           return {
             before: 'shared a ',
             label: 'Restricted Link',
@@ -317,7 +321,7 @@ function getActivityMeta(ui, data) {
         }
         return {
           before: 'shared a ',
-          label: ui.megt(_a.filetype) === 'link' ? 'Shared Link' : name,
+          label: ui.mget(_a.filetype) === 'link' ? 'Shared Link' : name,
           after: ' with you',
           colorClass: 'link-share',
           badge: 'share',
