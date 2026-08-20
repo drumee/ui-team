@@ -539,3 +539,62 @@
     }
   }
 }
+
+// ── Mobile backdrop ─────────────────────────────────────────────────────
+// On a phone this panel is a centred card floating over a sharp desk, with no
+// backdrop of its own. Give it the desk's scrim — the same var(--overlay-bg)
+// and blur(6px) that .desk-module__overlay uses behind the mobile drawer, so
+// every mobile overlay surface matches.
+//
+// Anchored on the panel CONTAINER, not on the card. Three constraints force it
+// there:
+//   • Not the shared .desk-module__overlay: that element sits at z 10010, and
+//     this card lives inside .desk-module__panel-container, which is
+//     `position:relative; z-index:10001` — a stacking context. Nothing outside
+//     it can paint between the desk grid and this card whatever z-index it
+//     claims, so the borrowed overlay covered the card instead of backing it.
+//   • Not a ::before on the card itself: the card is centred AND animated with
+//     transform, and a transform makes it the containing block for fixed
+//     descendants, shrinking a full-viewport scrim to the card's own box. The
+//     only way round that is to drop the transform (what panel_activity does),
+//     which would cost this panel its slide-in.
+//   • The container is transform-free and IS that stacking context, so a
+//     negative-z pseudo here paints above the container's background — and
+//     therefore above the grid — while staying below the card, which is a
+//     positioned child at z 10050.
+//
+// Global (not nested) because the element being restyled is desk chrome this
+// widget does not own, and :has() keeps it to this panel — the same container
+// also hosts the chat and activity panels. Same shape as the create-workspace
+// dialog's wrapper override (media/form/skin).
+//
+// It captures taps so they cannot reach desk items behind the card, but does
+// NOT dismiss: the tap lands on the container, and _onOutsideClick only fires
+// for a source outside the panel. Closing stays with the header cross, exactly
+// as panel_activity behaves.
+//
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px, so the attribute is missing in the DevTools
+// emulator and on a landscape phone.
+@mixin panel-trash-mobile-scrim {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--overlay-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.desk-module__panel-container[data-device="mobile"]:has(
+    .panel-trash__ui[data-anim="in"]
+  )::before {
+  @include panel-trash-mobile-scrim;
+}
+
+@media (max-width: 650px) {
+  .desk-module__panel-container:has(.panel-trash__ui[data-anim="in"])::before {
+    @include panel-trash-mobile-scrim;
+  }
+}
