@@ -1599,6 +1599,11 @@ class desk_module extends LetcBox {
   }
 
   closeDeskNewMenu(cmd) {
+    // On mobile the same five services are reached from the drawer's `create`
+    // screen instead of a menu, so there is no menu to close — the DRAWER is
+    // what has to go, or the user is left staring at the screen they just left.
+    // Every new-* case calls this first, so one branch covers all of them.
+    if (Visitor.isMobile()) this._closeMobileDrawer();
     const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
     if (!menu) return;
     const group = menu.el?.querySelector(
@@ -2978,7 +2983,10 @@ class desk_module extends LetcBox {
    */
   _setMobileTopbarActive(activeMode) {
     const map = {
-      "mobile-add-btn": activeMode === "actions",
+      // "create" is a sub-screen of the add flow, not a sibling of it — the
+      // user reached it through this button, so it stays lit rather than
+      // going dark under a screen it owns.
+      "mobile-add-btn": activeMode === "actions" || activeMode === "create",
       "mobile-menu-btn": activeMode === "nav",
     };
     Object.entries(map).forEach(([pn, isActive]) => {
@@ -3556,8 +3564,17 @@ class desk_module extends LetcBox {
           { explicit: 1, singleton: 1 },
         );
 
+      // Also the create sub-screen's back arrow — returning to the actions
+      // list is the same thing as opening it.
       case "mobile-show-add":
         return this.openMobileDrawer("actions");
+
+      // The "Add new" row's destination: the five create options as their own
+      // drawer screen (skeleton/sidebar.js createCreateNav). A screen swap, not
+      // a write, so it takes no guard of its own — every row inside it lands on
+      // a case that carries one.
+      case "mobile-show-create":
+        return this.openMobileDrawer("create");
 
       case "mobile-show-menu":
         return this.openMobileDrawer("nav");

@@ -3,6 +3,8 @@
  * breadcrumb | [new | search | invite]
  */
 
+const { createEntries } = require("./create-items");
+
 const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
   Skeletons.Button.Label({
     ico,
@@ -14,18 +16,16 @@ const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
     uiHandler: [ui],
   });
 
-// The tablet "more" menu splices these in. Same rule as the "+ New" dropdown:
-// only "Workspace" is account-level and always stays; the four file entries
-// write into the CURRENT workspace and follow its privilege.
-const addItems = (pfx, ui, mayWrite) => [
-  addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", "", { highlight: 1, iconClass: "ico-workspace" }),
-  ...(!mayWrite ? [] : [
-  addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", "", { iconClass: "ico-note" }),
-  addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", "document.docx", { iconClass: "ico-document" }),
-  addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
-  addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
-  ]),
-];
+// The tablet "more" menu splices these in. Rows come from ./create-items, the
+// one list this menu, the "+ New" dropdown below and the mobile drawer's
+// `create` mode all read — see that file for the mayWrite rule.
+const addItems = (pfx, ui, mayWrite) =>
+  createEntries(mayWrite).map((e) =>
+    addMenuItem(pfx, ui, e.ico, e.label, e.service, e.name, {
+      highlight: e.highlight,
+      iconClass: e.iconClass,
+    }),
+  );
 
 const newMenuRow = (pfx, ui, {
   ico,
@@ -66,43 +66,17 @@ const newMenuRow = (pfx, ui, {
 // topbar when the answer flips, so the menu follows navigation into and out of a
 // workspace.
 const deskNewMenu = (pfx, ui, mayWrite) => {
-  const createItems = [
+  const createItems = createEntries(mayWrite).map((e) =>
     newMenuRow(pfx, ui, {
-      ico: "addmenu-folder",
-      label: LOCALE.WORKSPACE || "Workspace",
-      service: "new-workspace",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-workspace`,
+      ico: e.ico,
+      label: e.label,
+      service: e.service,
+      // undefined, not "": these rows previously passed no `name` at all, and
+      // the framework treats an empty string as a set-but-blank attribute.
+      name: e.name || undefined,
+      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ${e.iconClass}`,
     }),
-    ...(!mayWrite ? [] : [
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-note",
-      label: LOCALE.NOTE || "Note",
-      service: "new-note",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-note`,
-    }),
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-document",
-      label: LOCALE.DOCUMENT || "Document",
-      service: "new-document",
-      name: "document.docx",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-document`,
-    }),
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-spreadsheet",
-      label: LOCALE.SPREADSHEET || "Spreadsheet",
-      service: "new-spreadsheet",
-      name: "spreadsheet.xlsx",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-spreadsheet`,
-    }),
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-presentation",
-      label: LOCALE.PRESENTATION || "Presentation",
-      service: "new-presentation",
-      name: "presentation.pptx",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-presentation`,
-    }),
-    ]),
-  ];
+  );
 
   const createGroup = Skeletons.Box.X({
     className: `${pfx}__new-menu-item ${pfx}__new-menu-create-group`,

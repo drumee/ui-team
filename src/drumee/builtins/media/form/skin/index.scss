@@ -287,3 +287,39 @@
     }
   }
 }
+
+// ── Mobile backdrop ─────────────────────────────────────────────────────
+// The create-workspace dialog is opted OUT of the app's frosted backdrop:
+// Wm's "new-workspace" case sets `data-overlay="none"` on the wrapper
+// (modules/desk/wm/index.js), so on a phone this form floats over a fully
+// sharp desk with nothing separating it from the grid behind.
+//
+// Give it the standard glass backdrop on mobile only. The card itself stays
+// opaque — the blur belongs to the layer BEHIND it, so the form's own text
+// keeps a solid ground to sit on.
+//
+// Global (not nested) on purpose: the element being restyled is desk chrome
+// this widget does not own. Same reason and same shape as the reward flow's
+// wrapper override (widget/reward-flow/skin). Scoped with :has() so only THIS
+// dialog gets it — the wrapper also hosts permission_*, window_info and the
+// invite popup, and `.form-folder__*` belongs to this widget alone (the
+// in-workspace variant is `.folder-form__*`).
+//
+// Out-specifies the `[data-state="open"] { backdrop-filter: none }` base in
+// wm's skin, and stays under the reward flow's `!important` neutraliser — so a
+// walkthrough spotlighting this same form still gets its flat dim, not frost.
+//
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px, so the attribute is missing in the DevTools
+// emulator and on a landscape phone.
+.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
+    .form-folder__main
+  ) {
+  @include drumee.glass-overlay;
+}
+
+@media (max-width: 650px) {
+  .window-manager__wrapper-modal[data-state="open"]:has(.form-folder__main) {
+    @include drumee.glass-overlay;
+  }
+}

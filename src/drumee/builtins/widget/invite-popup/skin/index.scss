@@ -16,6 +16,12 @@
 
   &__ui {
     width: 450px;
+    // The popup is fed into Wm.__wrapperModal, which is a flex-centered
+    // full-inset box with `overflow: clip` — so a card wider than the viewport
+    // is CUT, not scrolled to. This guard is what keeps that from happening,
+    // and it needs no breakpoint: 450px already fits from 514px up, so the
+    // clamp only engages on the narrow screens that need it.
+    max-width: calc(100vw - 32px);
     background-color: var(--normal-bg-90, #f1f1f5);
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 6px;
@@ -30,6 +36,57 @@
   &__container {
     padding: 24px;
     gap: 16px;
+    // The card can never be taller than the viewport it is centered in: 8
+    // workspace rows on a 700px-tall screen made it 1346px, and __wrapper-modal
+    // clips rather than scrolls, so Send ended up unreachable. 32px matches the
+    // max-width guard on __ui, keeping an even margin on all four edges. dvh
+    // where supported (mobile chrome collapses), vh as the fallback.
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+
+    // ── Responsive ────────────────────────────────────────────────────
+    // Width is handled once, by the max-width guard on __ui above. What is
+    // left for the small screens is this container's own breathing room:
+    // 24px of padding on a 328px-wide card leaves 280px of usable row,
+    // which is what made the workspace row's select and role chips crowd.
+    //
+    // DELIBERATELY no max-height / overflow-y here. The email, workspace
+    // and role dropdowns are `position: absolute; top: calc(100% + 4px)`
+    // on their own rows and are MEANT to spill past this container's
+    // bottom edge — the reward flow unions them into its spotlight cutout
+    // for exactly that reason (reward-flow/index.js POPUP_OVERFLOW). A
+    // scroll container here would clip them on precisely the screens this
+    // block is for.
+
+    // Mobile, emitted twice the way mixins/responsive.scss does it:
+    // Visitor.device() only answers "mobile" below 801px, so the attribute
+    // is absent in the DevTools emulator and on a landscape phone, and the
+    // viewport query below is the fallback. ui-core puts both
+    // `invite-popup` and `invite-popup__ui` on the widget root (letc.js
+    // addClass) — __ui is the name the rest of this file uses for it.
+    //
+    // The attribute can also fire on a 768px tablet with a mobile UA. That
+    // is why __ui keeps its 450px width there rather than stretching, and
+    // why this branch — being the more specific of the two — deliberately
+    // wins over the tablet padding below in that overlap: a client that
+    // calls itself mobile is taken at its word.
+    .invite-popup__ui[data-device="mobile"] & {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    @media (max-width: 650px) {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    // Tablet — the 768–1024px band on a coarse pointer, the same band and
+    // the same `pointer: coarse` test the desk sidebar uses to tell a
+    // tablet from a resized desktop window. A 450px card has room to spare
+    // at these widths, so this is only a modest step down from desktop.
+    @media (min-width: 768px) and (max-width: 1024px) and (pointer: coarse) {
+      padding: 20px;
+    }
   }
 
   &__header {
@@ -106,6 +163,20 @@
     padding: 6px 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     min-height: 32px;
+    // Chips are `display: contents`, so every recipient is a direct flex child
+    // here and wraps onto a new line — twenty invitees made this row alone
+    // taller than the card. ~3 wrapped lines, then it scrolls.
+    //
+    // An explicit cap rather than a flex share: this row sits inside
+    // __email-field, not directly in __container, so the card's max-height
+    // cannot shrink it.
+    //
+    // Safe to scroll: the email dropdown (__suggestions) is a SIBLING of this
+    // row under __email-field, not a descendant, so it is not inside this
+    // scroll box and cannot be clipped by it. The two dropdowns raised from the
+    // workspace rows are NOT siblings — see __workspaces.
+    max-height: 96px;
+    overflow-y: auto;
   }
 
   &__chips {
@@ -234,6 +305,37 @@
   /* Workspace + role rows */
   &__workspaces {
     gap: 8px;
+    // Absorbs whatever the card's max-height cannot fit. `min-height: 0`
+    // overrides the flex default of `min-height: auto`, which refuses to shrink
+    // a child below its content — without it the rows push straight through the
+    // cap instead of scrolling.
+    //
+    // No min-height FLOOR and no max-height: the list keeps its natural size
+    // until the card actually runs out of room, so a one-row form is one row
+    // tall. An earlier attempt floored this at 88px and left a visibly empty
+    // box under the single row.
+    min-height: 0;
+    overflow-y: auto;
+
+    // `overflow` clips absolutely-positioned descendants whether or not
+    // anything is scrolling, and the workspace/role dropdowns are exactly that
+    // — anchored at `top: calc(100% + 4px)` inside these rows. Without this
+    // escape the role picker was invisible even on a ONE-ROW form: not a
+    // long-list edge case, the ordinary path.
+    //
+    // So while either dropdown is open, stop being a scroll container. The list
+    // is not being scrolled at that moment anyway — the user is picking from
+    // the menu. `data-state="1"` is the widget's own open flag (index.js
+    // toggles it on both boxes), and :has() is already used this way in the wm
+    // dock skin.
+    //
+    // Caveat: if the list HAD been scrolled, dropping to `overflow: visible`
+    // discards the scroll offset, so a long list jumps back to the top when a
+    // menu opens.
+    &:has(.invite-popup__role-options[data-state="1"]),
+    &:has(.invite-popup__workspace-suggestions[data-state="1"]) {
+      overflow: visible;
+    }
   }
 
   &__workspace-row {
@@ -317,6 +419,14 @@
   }
 
   &__workspace-suggestions {
+    // `display: none` while closed, not visibility alone. These are absolutely
+    // positioned inside __workspaces, which now scrolls, and a merely-invisible
+    // box still counts toward that box's scrollable overflow — the closed role
+    // menu is 139px, which put a scrollbar on a one-row list. !important for
+    // the same reason __chips needs it: the framework's
+    // `.box[data-flow="y"] { display: flex }` matches with equal specificity,
+    // which is why visibility was reached for in the first place.
+    display: none !important;
     visibility: hidden;
     pointer-events: none;
     position: absolute;
@@ -333,6 +443,7 @@
     padding: 8px;
 
     &[data-state="1"] {
+      display: flex !important;
       visibility: visible;
       pointer-events: auto;
     }
@@ -404,6 +515,14 @@
   }
 
   &__role-options {
+    // `display: none` while closed, not visibility alone. These are absolutely
+    // positioned inside __workspaces, which now scrolls, and a merely-invisible
+    // box still counts toward that box's scrollable overflow — the closed role
+    // menu is 139px, which put a scrollbar on a one-row list. !important for
+    // the same reason __chips needs it: the framework's
+    // `.box[data-flow="y"] { display: flex }` matches with equal specificity,
+    // which is why visibility was reached for in the first place.
+    display: none !important;
     visibility: hidden;
     pointer-events: none;
     position: absolute;
@@ -419,6 +538,7 @@
     overflow: visible;
 
     &[data-state="1"] {
+      display: flex !important;
       visibility: visible;
       pointer-events: auto;
     }
