@@ -41,6 +41,12 @@
       width: 360px !important;
       height: 500px !important;
       left: 50% !important;
+      // Above the desk overlay this card now borrows as its backdrop
+      // (desk/skin/index.scss lights __overlay at z 10010 on presence of
+      // [data-anim="in"]). Without this the card inherits the panel
+      // container's 10001 and the scrim paints OVER it. 10050 is the value
+      // panel_activity already uses for its own mobile card.
+      z-index: 10050;
       // Release the desktop right-edge anchor, otherwise left+width+right
       // are all set at once and the centring depends on the browser
       // silently dropping one of them. Now that the panel is fixed, this
