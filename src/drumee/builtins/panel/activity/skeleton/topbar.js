@@ -21,7 +21,10 @@ module.exports = function (ui) {
         kids: [
           Skeletons.Button.Label({
             className: `${pfx}__mark-read-btn`,
-            ico: 'desktop_check',
+            // Figma header (58187:81144) uses the DOUBLE tick `Checks`, not the
+            // single `desktop_check` — "mark as all read" is a read-receipt
+            // gesture, and one tick reads as a plain confirm.
+            ico: 'noti-checks',
             label: LOCALE.MARK_ALL_READ,
             service: 'clear-all',
             uiHandler: [ui],

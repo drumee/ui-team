@@ -301,7 +301,10 @@
     flex-shrink: 0;
     height: 56px;
     justify-content: space-between;
-    padding: 0 20px;
+    // 16px, not 20 — Figma gives the header, the filter bar and the feed the
+    // SAME 16px gutter (58187:81015 / 85045 / 81026). At 20 the title sat 4px
+    // right of the tab pills, which is what read as the tab row being adrift.
+    padding: 0 16px;
   }
 
   &__header {
@@ -369,8 +372,9 @@
     align-items: center;
     gap: 4px;
     svg {
-      width: 14px;
-      height: 14px;
+      // 20px per Figma (58187:81144); the glyph is now the double tick.
+      width: 20px;
+      height: 20px;
       flex-shrink: 0;
       color: #65656c;
     }
@@ -448,7 +452,9 @@
      this file, which is written that way throughout. */
   &__tabbar {
     gap: 4px;
-    padding: 4px 16px 8px;
+    // Figma filter-bar (58187:85045): 4px 16px. The feed's own 16px top padding
+    // supplies the rest of the space down to the first item.
+    padding: 4px 16px;
     flex-shrink: 0;
     /* Sits on the panel background, not a tinted strip — the design keeps the
        bar flush with the header. */
@@ -518,11 +524,17 @@
     flex: 1;
     overflow-y: auto;
     max-height: calc(100vh - 102px);
-    padding: 0 8px 16px;
+    // Figma "Feed Items List" (58187:81026): padding 16, gap 8. The 8px side
+    // gutter left the white unread cards nearly flush with the panel edge and
+    // out of line with the header and tabs.
+    padding: 16px;
+    gap: 8px;
   }
 
   &__priority {
     width: 100%;
+    // Pinned rows are the same cards, so they need the same 8px separation.
+    gap: 8px;
   }
 
   &__list {
@@ -536,6 +548,11 @@
       display: flex;
       flex-direction: column;
       width: 100%;
+      // The cards live here, not directly under __feed (whose gap only spaces
+      // the pinned box from this list), so the 8px feed gap has to be repeated
+      // on the real item parent — otherwise consecutive unread cards render as
+      // one continuous white slab.
+      gap: 8px;
     }
   }
 

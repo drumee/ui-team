@@ -12,13 +12,18 @@
 .activity-item {
   &__group {
     width: 100%;
+    // In Figma the day caption and the cards are siblings in one 8px-gap
+    // column. Here the caption is nested with its card (so it scrolls with the
+    // group it opens), so the same 8px is repeated inside the group; the feed
+    // list supplies the 8px between groups.
+    gap: 8px;
   }
 
   // Day-group caption ("Today" / "Yesterday" / "Aug 13"). Body/Mini Body on
-  // Grey/80. Sits outside the card, aligned to the card's text column.
+  // Grey/80, flush with the card's left edge. Spacing comes from the gaps
+  // above — the previous padding predated them and would now double up.
   &__day {
     @include drumee.typo($size: 12px, $weight: 400, $line: 1.4em, $color: var(--tertiary-grey-80));
-    padding: 12px 12px 4px;
     cursor: default;
     user-select: none;
   }
