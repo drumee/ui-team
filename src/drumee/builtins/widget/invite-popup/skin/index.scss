@@ -716,3 +716,50 @@
     transform: rotate(360deg);
   }
 }
+
+// ── Mobile backdrop ─────────────────────────────────────────────────────
+// This popup is fed into Wm.__wrapperModal (desk/index.js and
+// widget/settings/hub both do), and invite-popup/index.js opts that host INTO
+// the app's frosted glass by setting data-overlay="blur" on it. On a phone the
+// backdrop should instead be the desk's flat scrim — the same
+// var(--overlay-bg) + blur(6px) that .desk-module__overlay uses behind the
+// mobile drawer — so every mobile overlay surface matches.
+//
+// So this has to out-specify that opt-in rather than fill a gap. The
+// wrapper-modal element carries BOTH the family and group classes
+// (wm/skeleton: `${family}__wrapper-modal ${group}__wrapper-modal`), and glass
+// is included for both `.window-manager__wrapper-modal[data-overlay="blur"]`
+// (wm/skin) and `.window__wrapper-modal[data-overlay="blur"]`
+// (window/skin/window.scss). Doubling the class here takes this to (0,5,0),
+// clear of both and independent of stylesheet load order.
+//
+// CRITICAL — this rule belongs in THIS file, not in the skin of whichever
+// widget shares the host. Webpack injects a widget's stylesheet only when that
+// widget loads (`static initClass() { require("./skin") }`), so the rule has to
+// ship in the chunk that is guaranteed to be present whenever this popup is on
+// screen: its own. It previously lived in media/form/skin next to the
+// create-workspace dialog's identical rule, and was therefore absent from the
+// page unless that unrelated dialog had also been opened — the backdrop stayed
+// frosted for exactly that reason.
+//
+// Global (not nested) because the element being restyled is desk chrome this
+// widget does not own, and :has() keeps it to this popup — the wrapper also
+// hosts the create-workspace dialog, permission_*, window_info and
+// request_access, which must keep the glass.
+//
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px, so the attribute is absent in the DevTools
+// emulator and on a landscape phone.
+.window-manager__wrapper-modal.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
+    .invite-popup__container
+  ) {
+  @include drumee.scrim-overlay;
+}
+
+@media (max-width: 650px) {
+  .window-manager__wrapper-modal.window-manager__wrapper-modal[data-state="open"]:has(
+      .invite-popup__container
+    ) {
+    @include drumee.scrim-overlay;
+  }
+}

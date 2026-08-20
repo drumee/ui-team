@@ -317,23 +317,20 @@
 // Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
 // answers "mobile" below 801px, so the attribute is missing in the DevTools
 // emulator and on a landscape phone.
-// The invite popup rides the SAME host (both call sites feed
-// Wm.__wrapperModal — desk/index.js and widget/settings/hub) and opts INTO the
-// glass itself (invite-popup/index.js sets data-overlay="blur" on its parent),
-// so it needs the scrim to out-specify that opt-in rather than fill a gap.
-// Listed here beside this dialog because the selector, host and both mobile
-// flags are identical; only the :has() target differs.
 // The class is doubled deliberately. The glass opt-in this has to beat is
 // `[data-state="open"][data-overlay="blur"]` (0,3,0), and the plain viewport
 // form below — one class, one attribute, one :has() — TIES it at (0,3,0), which
 // would leave the winner to file order across the SCSS graph. Doubling makes it
 // (0,4,0) and the outcome independent of load order. The device-attribute form
 // already wins on its own; it carries the same shape for symmetry.
+// Lives in THIS widget's skin because webpack injects a widget's stylesheet
+// only when that widget loads (static initClass -> require("./skin")). A rule
+// for another widget's dialog placed here would simply be absent from the page
+// whenever this dialog has not been opened — which is exactly what happened to
+// the invite popup's scrim while it was parked in this file. Its rule now lives
+// in widget/invite-popup/skin.
 .window-manager__wrapper-modal.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
     .form-folder__main
-  ),
-.window-manager__wrapper-modal.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
-    .invite-popup__container
   ) {
   @include drumee.scrim-overlay;
 }
@@ -341,9 +338,6 @@
 @media (max-width: 650px) {
   .window-manager__wrapper-modal.window-manager__wrapper-modal[data-state="open"]:has(
       .form-folder__main
-    ),
-  .window-manager__wrapper-modal.window-manager__wrapper-modal[data-state="open"]:has(
-      .invite-popup__container
     ) {
     @include drumee.scrim-overlay;
   }
