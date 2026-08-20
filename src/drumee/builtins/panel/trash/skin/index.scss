@@ -69,6 +69,24 @@
       // follows.
       max-height: calc(100dvh - 32px);
 
+      // Rounded corners now that this is a floating card rather than the
+      // full-height drawer it is on desktop, where square edges are correct
+      // because it meets the viewport edge.
+      //
+      // overflow:hidden is what makes the radius visible: __topbar carries its
+      // own opaque background (var(--normal-bg-100)) and would paint square
+      // over the top two corners otherwise. It also clips the list, which is
+      // already the panel's own scroll container.
+      border-radius: 6px;
+      overflow: hidden;
+
+      // Asked for explicitly alongside the root. Redundant while the root
+      // clips, but it keeps __main correct on its own terms — it is the box
+      // that actually carries the card surface — and costs nothing.
+      .panel-trash__main {
+        border-radius: 6px;
+      }
+
       &[data-anim="in"] {
         transform: translate(-50%, -50%);
       }
