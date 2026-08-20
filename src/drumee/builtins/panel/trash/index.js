@@ -78,11 +78,12 @@ class __panel_trash extends mfsInteract {
 
   _wsRefresh() {
     if (!this.el || this.isDestroyed()) return;
-    // Don't clobber the empty-bin confirm overlay mid-decision — a rebuild
-    // replaces the whole subtree, overlay included. Flag it and replay once
-    // the overlay closes (cancel handler; confirm re-feeds anyway).
-    const overlay = this.getPart && this.getPart('overlay');
-    if (overlay && overlay.children && overlay.children.length) {
+    // Don't reload the list under the user mid-decision on Empty Trash. This
+    // used to look for children in the `overlay` part, which was where the
+    // panel-scoped confirm lived; that prompt is now the global confirm dialog
+    // (see _emptyBin), so the flag it sets is what reports the same state.
+    // Replayed once the prompt closes (cancel path; confirm re-feeds anyway).
+    if (this._purgeConfirmOpen) {
       this._pendingWsRefresh = true;
       return;
     }
@@ -250,9 +251,38 @@ class __panel_trash extends mfsInteract {
     });
   }
 
+  // Empty Trash confirmation. Uses the app's standard confirm dialog
+  // (window-confirm__main) rather than the panel-scoped __purge-* overlay this
+  // used to feed into its own `overlay` part, so the prompt matches every other
+  // destructive confirm and inherits their placement — including the mobile
+  // viewport centring.
+  //
+  // Wm.confirm resolves on confirm and rejects on cancel, so the two paths the
+  // old cancel-empty-bin / confirm-empty-bin services carried map onto
+  // try/catch. The footer already defaults confirm_type to "danger", which is
+  // what a purge should look like.
   async _emptyBin() {
-    const overlay = await this.ensurePart('overlay');
-    overlay.feed(require('./skeleton/confirm')(this));
+    // Held while the user decides. _wsRefresh used to detect "a decision is in
+    // progress" by looking for children in the `overlay` part; the dialog is
+    // now a global modal and never lands there, so the flag carries that intent
+    // instead. A rebuild can no longer destroy the prompt either way — the
+    // point now is simply not to reload the list under someone mid-decision.
+    this._purgeConfirmOpen = true;
+    try {
+      await Wm.confirm({
+        title: LOCALE.TRASH,
+        message: LOCALE.Q_DELETE_ALL_FILES,
+        confirm: LOCALE.DELETE,
+        cancel: LOCALE.CANCEL,
+      });
+    } catch (e) {
+      this._purgeConfirmOpen = false;
+      // Replay a websocket reload that was held back while the prompt was up.
+      if (this._pendingWsRefresh) this._wsRefresh();
+      return;
+    }
+    this._purgeConfirmOpen = false;
+    return this._confirmEmptyBin();
   }
 
   async _confirmEmptyBin() {
@@ -260,11 +290,14 @@ class __panel_trash extends mfsInteract {
       service: SERVICE.media.empty_bin,
       hub_id: Visitor.id,
     }).catch(() => null);
-    const overlay = await this.ensurePart('overlay');
-    overlay.clear();
+    // The `overlay` part used to be cleared here, because that is where the
+    // panel-scoped purge prompt lived. Nothing feeds it any more (the prompt is
+    // Wm.confirm, which closes itself), so the clear was a no-op. The part is
+    // still rendered by skeleton/index.js and is now unused — worth removing
+    // along with skeleton/confirm.js and the __purge-* styles in a tidy-up.
     if (data) RADIO_MEDIA.trigger(_a.free, data);
     // Full re-feed below IS the freshest state — drop any reload held back
-    // while the confirm overlay was open, including a debounce timer still
+    // while the prompt was open, including a debounce timer still
     // queued (a WS echo landing <400ms ago would otherwise re-feed AGAIN
     // right after this one: duplicate show_bin + visible flicker).
     if (this._wsRefresh.cancel) this._wsRefresh.cancel();
@@ -278,16 +311,12 @@ class __panel_trash extends mfsInteract {
     switch (service) {
       case 'empty-bin':
         return this._emptyBin();
+      // Kept: _confirmEmptyBin is the purge itself, now reached from _emptyBin's
+      // resolved confirm rather than from a button in the old overlay. The
+      // matching 'cancel-empty-bin' case went with that overlay — Wm.confirm's
+      // rejection is the cancel path now.
       case 'confirm-empty-bin':
         return this._confirmEmptyBin();
-      case 'cancel-empty-bin':
-        this.ensurePart('overlay').then(p => {
-          p.clear();
-          // Replay a websocket reload that was held back while the confirm
-          // overlay was open (see _wsRefresh).
-          if (this._pendingWsRefresh) this._wsRefresh();
-        });
-        return;
       case 'delete-permanently':
         return this.deleteFilePermanently(args.media || cmd);
       case 'restore-to-desk':
