@@ -777,30 +777,40 @@
   // State-agnostic first. Both width rules below sit inside a [data-expanded]
   // block, so until that attribute is written the desktop `width: 360px` and
   // `right: 24px` leak through and the card renders as a narrow corner floater
-  // on a phone. This is the full-width baseline; the state blocks only refine
-  // where it sits.
-  left: 16px;
-  right: 16px;
-  width: auto;
+  // on a phone. This is the full-bleed baseline; the state blocks only refine
+  // where it sits vertically.
+  //
+  // Edge to edge, not the 16px gutters this used to keep: the card is a
+  // full-screen sheet on a phone. `max-width: none` is required — the base
+  // caps at calc(100vw - 48px), which would otherwise hold it 48px short.
+  //
+  // border-box with it: the card carries a 1px border and is otherwise
+  // content-box, so `width: 100%` measured 2px WIDER than the viewport and
+  // overflowed it (782 against 780, i.e. a horizontal scrollbar on every
+  // phone). Measured, not assumed.
+  box-sizing: border-box;
+  left: 0;
+  right: 0;
+  width: 100%;
   max-width: none;
 
   &[data-expanded="1"] {
+    // inset:0 + margin:auto keeps it vertically centred; the left/right above
+    // already make it full width, so no horizontal margin is left to
+    // distribute.
     inset: 0;
     margin: auto;
-    width: calc(100vw - 32px);
-    // Was capped at 400px, which held the card short of the screen on any
-    // phone wider than 432px. Full width now — the 16px gutters either side
-    // come from the 32px subtracted above, matching the collapsed bar below so
-    // the card keeps the same edges in both states.
+    width: 100%;
     max-width: none;
   }
 
   &[data-expanded="0"] {
     top: auto;
+    // Still lifted off the bottom edge — only the WIDTH goes full-bleed here.
     bottom: 16px;
-    left: 16px;
-    right: 16px;
-    width: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
     max-width: none;
   }
 }
