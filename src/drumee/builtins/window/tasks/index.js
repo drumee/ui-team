@@ -1,4 +1,5 @@
 const { uploadFile } = require("@drumee/ui-essentials");
+const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
 const { resolveZone } = require("./drop-zones");
 const {
@@ -89,6 +90,18 @@ const BUILTIN_META = {
   complete: { label: "STATUS_COMPLETE", seed: "Complete" },
 };
 
+// Every people-picker scope. "create" / "detail" are the multi-select assignee
+// fields; the "-reporter" pair are single-select. A scope is the identity of one
+// picker: it names its Entry (assignee-search-{scope}), its two parts
+// ({scope}-assignee-chips / -suggestions) and its onUiEvent service
+// (pickerService). Keep it in sync with pickerService().
+const PICKER_SCOPES = [
+  "create",
+  "detail",
+  "create-reporter",
+  "detail-reporter",
+];
+
 // How long a "a peer changed this out from under you" notice stays up before
 // dismissing itself. Long enough to read mid-typing, short enough not to camp
 // on the screen.
@@ -135,6 +148,12 @@ class __tasks_panel extends LetcBox {
     this._createDefaults = null;
     this._detailId = null;
     this._detailDraft = null;
+    // List-view expand state: ids of the parents whose subtasks are showing.
+    // Purely local — collapsed is the default on every open, matching Jira.
+    this._subtasksOpen = new Set();
+    // Inline subtask creator in the detail panel. null = the "+ Add subtask"
+    // row is showing; an object = the creator is open on that draft.
+    this._subtaskDraft = null;
     this._attachments = {};
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings. Shared across
@@ -1174,7 +1193,8 @@ class __tasks_panel extends LetcBox {
       case "add-task":
         this._creating = true;
         this._createDefaults = {
-          status: trigger.mget("taskColumn") || "todo",
+          status: trigger.mget("taskColumn") || this.getDefaultStatus(),
+          reporter_uid: Visitor.id,
           title: "",
           description: "",
           priority: "medium",
@@ -1239,10 +1259,32 @@ class __tasks_panel extends LetcBox {
         return;
       }
 
-      case "toggle-assignee-list":
+      // Reporter pick — single-select, so it REPLACES rather than toggles, and
+      // the list closes after the pick (an assignee pick keeps it open so the
+      // next member can be added).
+      case "create-reporter":
+      case "set-reporter": {
+        const scope =
+          service === "create-reporter" ? "create-reporter" : "detail-reporter";
+        const draft = this._pickerDraft(scope);
+        const uid = trigger.mget("memberUid");
+        // No empty reporter: a task always reads as reported by somebody. A row
+        // with no uid can only come from a stale dropdown, so ignore it.
+        if (!draft || !uid) return;
+        draft.reporter_uid = String(uid);
+        return this._applyReporterChange(scope);
+      }
+
+      case "toggle-assignee-list": {
+        // The caret names its own scope. Pass it through instead of collapsing
+        // to create|detail: there are four pickers now (assignee + reporter, in
+        // each of the two cards), and a normalised scope would open the wrong
+        // dropdown — or the same one twice.
+        const scope = trigger.mget("assigneeScope");
         return this._toggleAssigneeList(
-          trigger.mget("assigneeScope") === "detail" ? "detail" : "create",
+          PICKER_SCOPES.includes(scope) ? scope : "create",
         );
+      }
 
       case "create-toggle-label":
         if (this._createDefaults) {
@@ -1304,15 +1346,24 @@ class __tasks_panel extends LetcBox {
       }
 
       case "filter-keyword": {
-        // Live task-title search — debounce so fast typing doesn't rebuild the
-        // list on every keystroke.
+        // Live task-title search — debounce so fast typing doesn't refilter on
+        // every keystroke.
+        //
+        // Deliberately NOT this._render(): a full feed() destroys and rebuilds
+        // the very input being typed in. ui-core seeds <input> values through a
+        // 200ms waitElement poll, so the rebuilt field starts EMPTY and then,
+        // 200ms later, overwrites whatever was typed in the meantime with the
+        // value the skeleton was built with — characters vanish, reappear and
+        // revert, and the caret jumps to 0. Refresh only the view body plus the
+        // two "a filter is active" flags; the popup (and the caret) stay put.
         this._filters.keyword =
           args && args.value != null ? String(args.value) : "";
         if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
         this._filterKwTimer = setTimeout(() => {
           this._filterKwTimer = null;
           this._notifyFilterState();
-          this._render();
+          this._syncFilterAffordances();
+          this._refreshViewBody();
         }, 200);
         return;
       }
@@ -1336,6 +1387,59 @@ class __tasks_panel extends LetcBox {
 
       case "toggle-complete":
         return this._toggleComplete(trigger);
+
+      // ── Subtasks ────────────────────────────────────────────────
+      case "toggle-subtasks":
+        return this._toggleSubtasks(trigger);
+
+      case "add-subtask":
+        return this._openSubtaskDraft();
+
+      case "cancel-subtask":
+        return this._closeSubtaskDraft();
+
+      case "create-subtask":
+        return this._commitSubtask();
+
+      case "toggle-subtask-complete":
+        return this._toggleSubtaskComplete(trigger);
+
+      case "set-subtask-priority": {
+        if (!this._subtaskDraft) return;
+        const next = trigger.mget("taskPriority");
+        this._subtaskDraft.priority = next;
+        // In place, not a re-feed: see toggle-subtask-assignee below.
+        if (this.el) {
+          this.el
+            .querySelectorAll(`.${this.fig.family}__subtask-create-priority`)
+            .forEach((el) => {
+              el.dataset.selected = el.dataset.priority === next ? "1" : "0";
+            });
+        }
+        return;
+      }
+
+      case "toggle-subtask-assignee": {
+        if (!this._subtaskDraft) return;
+        const uid = String(trigger.mget("memberUid") || "");
+        if (!uid) return;
+        const picked = this._subtaskDraft.assignees || [];
+        this._subtaskDraft.assignees = picked.includes(uid)
+          ? picked.filter((u) => u !== uid)
+          : picked.concat(uid);
+        // Re-feeding the block would blow away whatever title has been typed —
+        // the Entry is rebuilt empty. Flip the selected flag in place instead.
+        if (this.el) {
+          const el = this.el.querySelector(
+            `.${this.fig.family}__subtask-create-member[data-uid="${uid}"]`,
+          );
+          if (el)
+            el.dataset.selected = this._subtaskDraft.assignees.includes(uid)
+              ? "1"
+              : "0";
+        }
+        return;
+      }
 
       case "commit-description":
       case "commit-due-date":
@@ -1430,6 +1534,12 @@ class __tasks_panel extends LetcBox {
       case "set-view": {
         const v = trigger.mget("viewMode");
         if (v && v !== this._view) {
+          // Tier gate — THE enforcement point. The tab is deliberately still
+          // clickable (see the skeleton's viewTabs), so this is the only thing
+          // standing between a Free plan and the Gantt view. `_view` is never
+          // assigned a gated value here, which is what keeps getView()'s own
+          // guard a genuine defence-in-depth rather than the real check.
+          if (!isTaskViewAllowed(v)) return this._showTaskViewUpsell();
           this._view = v;
           // Deferred: paint the loading veil THIS frame so the click gets
           // instant feedback (Project Health links / viewbar tabs felt dead
@@ -1477,7 +1587,8 @@ class __tasks_panel extends LetcBox {
         const day = trigger.mget("calDay") || "";
         this._creating = true;
         this._createDefaults = {
-          status: "todo",
+          status: this.getDefaultStatus(),
+          reporter_uid: Visitor.id,
           title: "",
           description: "",
           priority: "medium",
@@ -1791,17 +1902,19 @@ class __tasks_panel extends LetcBox {
     });
   }
 
-  // The suggestions box of one scope. Both scopes render the same class, so
-  // resolve it inside the owning card.
+  // The suggestions box of one scope. Resolved by the part name the framework
+  // stamps on the element (registerPart writes data-partname), NOT by class
+  // inside the owning card: the detail panel now mounts TWO pickers (assignee +
+  // reporter) that render the same classes, so a class lookup would always
+  // return the assignee one and the reporter dropdown would never open.
   _assigneeListEl(scope) {
-    const root =
-      this.el &&
-      this.el.querySelector(
-        scope === "create"
-          ? ".tasks-panel__create-modal"
-          : ".tasks-panel__detail-panel",
-      );
-    return root ? root.querySelector(".tasks-panel__assignee-suggestions") : null;
+    return (
+      (this.el &&
+        this.el.querySelector(
+          `[data-partname="${scope}-assignee-suggestions"]`,
+        )) ||
+      null
+    );
   }
 
   _closeAssigneeList(scope) {
@@ -1837,13 +1950,56 @@ class __tasks_panel extends LetcBox {
     });
   }
 
-  _assigneeScopeService(scope) {
-    return scope === "create" ? "create-assignee" : "set-assignee";
+  /**
+   * Which onUiEvent service a people-picker scope dispatches.
+   *
+   * Public (the skeleton calls it as ui.pickerService) so the picker markup and
+   * the panel's surgical re-feeds can never disagree about it — adding a picker
+   * means adding a scope here and nowhere else.
+   *
+   * Scopes: "create" | "detail" (assignee, multi-select) and "create-reporter" |
+   * "detail-reporter" (reporter, single-select).
+   */
+  pickerService(scope) {
+    switch (scope) {
+      case "create":
+        return "create-assignee";
+      case "create-reporter":
+        return "create-reporter";
+      case "detail-reporter":
+        return "set-reporter";
+      default:
+        return "set-assignee";
+    }
   }
 
+  // Back-compat alias — same mapping, kept because the surgical helpers below
+  // read better as "the service for this scope".
+  _assigneeScopeService(scope) {
+    return this.pickerService(scope);
+  }
+
+  // Is this scope single-select (a reporter) rather than a set (assignees)?
+  _isSinglePicker(scope) {
+    return /-reporter$/.test(String(scope || ""));
+  }
+
+  // Which draft a picker scope edits.
+  _pickerDraft(scope) {
+    return /^create/.test(String(scope || ""))
+      ? this._createDefaults
+      : this._detailDraft;
+  }
+
+  // What is currently selected in a scope — the suggestion list filters these
+  // out, so a single-select picker hides only the person already chosen.
   _assigneeSelection(scope) {
-    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
-    return (draft && draft.assignees) || [];
+    const draft = this._pickerDraft(scope);
+    if (!draft) return [];
+    if (this._isSinglePicker(scope)) {
+      return draft.reporter_uid ? [draft.reporter_uid] : [];
+    }
+    return draft.assignees || [];
   }
 
   _assigneeSearchInput(scope) {
@@ -2014,7 +2170,7 @@ class __tasks_panel extends LetcBox {
             this._render();
             this._refreshOpenTaskHistory();
           });
-        } else if (this._view === "summary") {
+        } else if (this.getView() === "summary") {
           // Health view's activity feed surfaces file links even with no detail open.
           this._loadActivity().then(() => this._render());
         }
@@ -2046,7 +2202,7 @@ class __tasks_panel extends LetcBox {
           });
         }
         // Comments also appear in the Health view's activity feed.
-        if (this._view === "summary") {
+        if (this.getView() === "summary") {
           this._loadActivity().then(() => this._render());
         }
         return;
@@ -2128,7 +2284,13 @@ class __tasks_panel extends LetcBox {
   _onPeerTaskDeleted(data, options) {
     const id = data && (data.id || data.task_id);
     if (!id) return;
-    if (!this._detailId || String(this._detailId) !== String(id)) return;
+    // Match the cascaded subtasks too, not just the deleted task: removing a
+    // parent now takes its children with it server-side, so a user with one of
+    // those children open would otherwise watch the panel silently vanish on
+    // the next reload (getDetailTask goes null and the panel renders as []),
+    // with no word of who removed it.
+    const removed = [id, ...((data && data.subtask_ids) || [])].map(String);
+    if (!this._detailId || !removed.includes(String(this._detailId))) return;
     this._closeDetailSilently();
     const who = this._wsActorName(options);
     this._notifyPeerChange(
@@ -2329,6 +2491,17 @@ class __tasks_panel extends LetcBox {
       }
       result.linked_files = Array.isArray(files) ? files : [];
     }
+
+    // Subtask link. The server sends null for a top-level task, but a legacy
+    // row or a partial broadcast payload can carry "" — normalise both to null
+    // so isSubtask() and the parent_task_id === id lookups stay strict.
+    if (has("parent_task_id")) {
+      result.parent_task_id = row.parent_task_id || null;
+    }
+    // Server-computed rollup counters (see task_list). Kept numeric so the
+    // badge never renders "0/undefined".
+    if (has("subtask_total")) result.subtask_total = Number(row.subtask_total) || 0;
+    if (has("subtask_done")) result.subtask_done = Number(row.subtask_done) || 0;
 
     // Coerce due_date to YYYY-MM-DD so <input type="date"> renders it cleanly.
     if (has("due_date")) {
@@ -2592,6 +2765,17 @@ class __tasks_panel extends LetcBox {
     }
 
     if (value == null) value = "";
+
+    // The inline subtask creator keeps its own draft, so it needs its own
+    // branch: the generic tail below would write subtask-title onto
+    // _detailDraft (the open PARENT task) and the creator would still lose the
+    // text on the next re-render. Any peer WS event triggers _render(), so
+    // without this a colleague's edit wipes whatever is half-typed here.
+    if (name === "subtask-title") {
+      if (this._subtaskDraft) this._subtaskDraft.title = value;
+      return;
+    }
+
     const inCreate = this.el.querySelector(".tasks-panel__create-modal");
     const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
     if (
@@ -2632,8 +2816,10 @@ class __tasks_panel extends LetcBox {
         nid: this._scopeNid,
         title,
         description: description || null,
-        status: draft.status || "todo",
+        status: draft.status || this.getDefaultStatus(),
         priority: draft.priority || "medium",
+        // Omitted server-side = the creator, which is also this draft's default.
+        reporter_uid: draft.reporter_uid || null,
         due_date: dueRaw || null,
         start_date: startRaw || null,
         assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
@@ -2710,13 +2896,22 @@ class __tasks_panel extends LetcBox {
       if (!resp || (resp.affected !== 1 && resp.id !== id)) {
         // postService resolves falsy/error-payload on failure (it never
         // rejects) — surface it instead of silently ignoring the delete.
+        // NOTE `affected` now counts the task PLUS any cascaded subtasks, so it
+        // is legitimately > 1; the `resp.id !== id` arm is what carries the
+        // check for a parent with children.
         Wm.alert(LOCALE.ERROR_NETWORK);
         return;
       }
-      this._tasks = this._tasks.filter((t) => t.id !== id);
-      if (this._detailId === id) {
+      // Deleting a parent cascades to its subtasks server-side, so drop them
+      // locally too — otherwise the children linger as orphans until the next
+      // list reload, counted by Project Health and reachable from nowhere.
+      const gone = new Set([id, ...(resp.subtask_ids || [])]);
+      this._tasks = this._tasks.filter((t) => !gone.has(t.id));
+      this._subtasksOpen.delete(id);
+      if (gone.has(this._detailId)) {
         this._detailId = null;
         this._detailDraft = null;
+        this._subtaskDraft = null;
       }
     } catch (err) {
       console.error("[tasks_panel] task.delete failed:", err);
@@ -2754,6 +2949,14 @@ class __tasks_panel extends LetcBox {
       const row = Array.isArray(updated) ? updated[0] : updated;
       if (row && row.id) {
         this._mergeTask(row);
+        // Parent auto-complete rides back on the same response when this was
+        // the last outstanding subtask. Peers hear it on the broadcast; the
+        // user who ticked the box only ever sees this payload.
+        if (row.parent) {
+          this._mergeTask(row.parent);
+          this._syncSubtaskBadges(row.parent.id);
+          this._render();
+        }
       } else {
         // Failed silently (postService never rejects): revert the
         // optimistic flip instead of leaving unsaved state on screen.
@@ -2796,6 +2999,14 @@ class __tasks_panel extends LetcBox {
     }
     if ((draft.priority || "medium") !== (task.priority || "medium"))
       upd.priority = draft.priority;
+    // Reporter. Compared against the same created_by fallback the draft was
+    // seeded with, so merely opening and saving a pre-reporter task does NOT
+    // count as a reassignment (which would otherwise log a bogus 'reporter'
+    // entry in the activity feed on every Update).
+    const taskReporter = task.reporter_uid || task.created_by || "";
+    if ((draft.reporter_uid || "") !== taskReporter && draft.reporter_uid) {
+      upd.reporter_uid = draft.reporter_uid;
+    }
     const draftDue = (draft.due_date || "").trim();
     const taskDue = task.due_date || "";
     const dueChanged = draftDue !== taskDue;
@@ -2820,7 +3031,8 @@ class __tasks_panel extends LetcBox {
       );
     }
 
-    if ((draft.status || "todo") !== (task.status || "todo")) {
+    const noStatus = this.getDefaultStatus();
+    if ((draft.status || noStatus) !== (task.status || noStatus)) {
       calls.push(
         this.postService({
           service: SERVICE.task.update_status,
@@ -2946,8 +3158,13 @@ class __tasks_panel extends LetcBox {
           start_date: task.start_date || "",
           // Toggle state is derived from the stored range start.
           duration_on: !!task.start_date,
-          status: task.status || "todo",
+          status: task.status || this.getDefaultStatus(),
           priority: task.priority || "medium",
+          // Editable reporter. Falls back to created_by so a task from before
+          // alter_task_add_reporter.sql (or a hub DB that has not been patched,
+          // where the SP cannot answer with the column) still shows its creator
+          // — the picker then simply re-asserts that same uid on Update.
+          reporter_uid: task.reporter_uid || task.created_by || "",
           // Ex-members are dropped here too: the draft is what Update posts
           // back, so a stale uid would otherwise be re-asserted on save.
           assignees: this.getKnownAssignees(task).slice(),
@@ -2957,6 +3174,9 @@ class __tasks_panel extends LetcBox {
           pending_files: [],
         }
       : null;
+    // A half-typed subtask belongs to the task it was opened on — carrying it
+    // across to another task would create a child under the wrong parent.
+    this._subtaskDraft = null;
     // Reset comment state for the newly-opened task.
     // Row uploads deliberately SURVIVE a task switch — a terminal error must
     // still be there, with its retry, if the user comes back. But their image
@@ -3189,8 +3409,14 @@ class __tasks_panel extends LetcBox {
           hub_id: this._hubId,
           id,
         });
-        if (resp && (resp.affected === 1 || resp.id === id)) {
-          this._tasks = this._tasks.filter((t) => t.id !== id);
+        if (resp && (resp.affected >= 1 || resp.id === id)) {
+          // Prune the cascaded subtasks too, not just the task itself: a
+          // deleted parent takes its children with it server-side, and any
+          // left in this._tasks become invisible orphans that still inflate
+          // the Project Health totals (which count subtasks as work items).
+          const gone = new Set([id, ...(resp.subtask_ids || [])]);
+          this._tasks = this._tasks.filter((t) => !gone.has(t.id));
+          this._subtasksOpen.delete(id);
         }
       } catch (err) {
         console.error("[tasks_panel] gantt bulk delete failed:", id, err);
@@ -5227,7 +5453,7 @@ class __tasks_panel extends LetcBox {
     this._refreshFileSearchDropdown("detail");
   }
 
-  // Colors live in the skin (keyed on data-status/data-priority + data-active);
+  // Colors live in the skin (keyed on data-theme/data-priority + data-active);
   // these only flip the active flag so the selected pill restyles in place.
   _updateStatusPills(modalSel, pillSel, newStatus) {
     const root = this.el && this.el.querySelector(modalSel);
@@ -5333,6 +5559,91 @@ class __tasks_panel extends LetcBox {
       if (picked) input.focus();
     }
     this._filterAssignees(scope, "", picked ? { open: true } : {});
+  }
+
+  /**
+   * Repaint one reporter picker in place after a pick.
+   *
+   * Mirrors _applyAssigneeChange, with the two single-select differences: the
+   * chip row holds exactly one chip, and the dropdown CLOSES (there is nothing
+   * more to pick) instead of staying open for the next member.
+   */
+  _applyReporterChange(scope) {
+    if (!this.el) return;
+    const draft = this._pickerDraft(scope);
+    const uid = draft && draft.reporter_uid;
+    this.ensurePart(`${scope}-assignee-chips`)
+      .then((chips) => {
+        if (!chips || chips.isDestroyed?.()) return;
+        chips.feed(require("./skeleton").buildReporterChip(this, uid));
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
+    const input = this._assigneeSearchInput(scope);
+    if (input) {
+      input.value = "";
+      // Drop focus so the deferred focusout close doesn't reopen the list.
+      if (typeof input.blur === "function") input.blur();
+    }
+    this._closeAssigneeList(scope);
+    // The detail panel prints "Created by X" only while the reporter differs
+    // from the creator, so that line has to follow the pick.
+    this._syncReporterOrigin();
+  }
+
+  /**
+   * A member's display name, or LOCALE.FORMER_MEMBER once they have left.
+   *
+   * Same resolution order as the skeleton's fullName/authorName pair, including
+   * the Visitor fallback for the window before _loadMembers resolves — so a
+   * name written from JS never disagrees with the same name rendered from a
+   * skeleton.
+   */
+  _memberName(uid) {
+    if (!uid) return LOCALE.FORMER_MEMBER;
+    const m =
+      this.getMember(uid) ||
+      (String(uid) === String(Visitor.id)
+        ? {
+            firstname: Visitor.get("firstname"),
+            lastname: Visitor.get("lastname"),
+          }
+        : null);
+    if (!m) return LOCALE.FORMER_MEMBER;
+    return (
+      m.fullname ||
+      [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
+      m.email ||
+      LOCALE.FORMER_MEMBER
+    );
+  }
+
+  /**
+   * Keep the detail panel's provenance line in step with the picked reporter.
+   *
+   * Text-only, in place: rebuilding the row would tear down the picker that was
+   * just used (and, mid-edit, the unsaved title/description with it).
+   */
+  _syncReporterOrigin() {
+    if (!this.el) return;
+    const note = this.el.querySelector(
+      ".tasks-panel__detail-panel .tasks-panel__detail-reporter-time",
+    );
+    if (!note) return;
+    const task = this.getDetailTask();
+    const draft = this._detailDraft;
+    if (!task) return;
+    const reporter =
+      (draft && draft.reporter_uid) || task.reporter_uid || task.created_by || "";
+    const parts = [];
+    if (task.created_by && String(task.created_by) !== String(reporter)) {
+      parts.push(`${LOCALE.CREATED_BY} ${this._memberName(task.created_by)}`);
+    }
+    if (task.ctime) {
+      parts.push(Dayjs.unix(Number(task.ctime)).format("MMM D, YYYY HH:mm"));
+    }
+    note.textContent = parts.join(" · ");
   }
 
   // ── @-mention (contenteditable description editor) ─────────────
@@ -6308,6 +6619,17 @@ class __tasks_panel extends LetcBox {
       const ed = this.el.querySelector(sel);
       if (ed) this._initDescEditor(ed, scope);
     };
+    // The filter popup's keyword box, for the paths that DO full-render (a
+    // checkbox click, "Clear", a view switch). ui-core only seeds <input> values
+    // 200ms after the feed, so without this the field sits visibly empty for a
+    // fifth of a second every time. Live typing never gets here — it takes the
+    // surgical _refreshViewBody path instead.
+    if (this._pickerOpen === "filter") {
+      setVal(
+        '.tasks-panel__filter-picker [name="filter_keyword"]',
+        (this._filters || {}).keyword,
+      );
+    }
     if (this._creating && this._createDefaults) {
       setVal(
         '.tasks-panel__create-modal [name="title"]',
@@ -6456,6 +6778,59 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  /**
+   * Re-render ONLY the active view (board / list / calendar / gantt / summary).
+   *
+   * The skeleton mounts the view inside a named "view-host" part exactly so this
+   * is possible. Used by the live keyword filter: a full _render() would rebuild
+   * the focused filter input mid-typing (see the `filter-keyword` case).
+   *
+   * The whole skeleton tree is rebuilt to pick the host out of it — that is
+   * cheap (plain objects, no DOM) and keeps ONE source of truth for how the view
+   * is built, instead of a second copy of the view/board dispatch that would
+   * drift. Only the host's subtree is actually mounted.
+   */
+  _refreshViewBody() {
+    if (!this.el) return;
+    const savedScroll = this._captureViewScroll();
+    this.ensurePart("view-host").then((host) => {
+      if (!host || !this.el) return;
+      const root = require("./skeleton")(this);
+      const node = (root.kids || []).find(
+        (k) => k && k.sys_pn === "view-host",
+      );
+      // No host in the tree (skeleton restructured) — fall back to a full
+      // render rather than silently leaving a stale view on screen.
+      if (!node) return this._render();
+      host.feed(node.kids);
+      this._restoreViewScroll(savedScroll);
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(() => this._restoreViewScroll(savedScroll));
+      }
+    });
+  }
+
+  /**
+   * Flip the "a filter is active" flags in place.
+   *
+   * Everything else in the filter popup is driven by the user's own clicks, so
+   * these two are all that go stale when the view body is refreshed on its own:
+   * the viewbar button's highlight and the popup's "Clear" link (mounted always,
+   * hidden by `data-active="0"` in the skin), plus the keyword accordion head.
+   */
+  _syncFilterAffordances() {
+    if (!this.el) return;
+    const active = this.isFilterActive() ? "1" : "0";
+    const btn = this.el.querySelector(".tasks-panel__viewbar-filter");
+    if (btn) btn.dataset.active = active;
+    const clear = this.el.querySelector(".tasks-panel__filter-clear");
+    if (clear) clear.dataset.active = active;
+    const head = this.el.querySelector(
+      '.tasks-panel__filter-cat[data-dim="keyword"] .tasks-panel__filter-cat-head',
+    );
+    if (head) head.dataset.active = this.isFilterDimActive("keyword") ? "1" : "0";
+  }
+
   // Snapshot the scroll offsets of the current view's scrollable containers,
   // keyed by a stable selector so they reattach to the right node after the
   // feed() rebuild. Each view has one unique-class scroll root; the board also
@@ -6546,6 +6921,21 @@ class __tasks_panel extends LetcBox {
       position: i,
       custom: 0, // placeholder — no DB row to reorder/rename/delete yet
     })).concat(customs);
+  }
+
+  // The column a new task lands in when no other choice was made.
+  //
+  // NOT the literal "todo": the built-ins are ordinary task_column rows the user
+  // may rename, reorder or DELETE (task_column_list seeds them once per folder
+  // scope and records that, so a deleted built-in never comes back). On a board
+  // whose "To do" column is gone, "todo" is a status no column owns — the server
+  // refuses it (_isValidStatus) and the card would have no column to render in.
+  // The left-most column is always real, and is where the user sees it appear.
+  // The literal survives only as a pre-load fallback, for the window between
+  // mount and task.column_list resolving.
+  getDefaultStatus() {
+    const cols = this.getColumns();
+    return cols.length ? cols[0].key : "todo";
   }
 
   // Completion is column-driven: a task is "done" when its column has is_done.
@@ -6687,7 +7077,10 @@ class __tasks_panel extends LetcBox {
     // Bucket by column; a task whose status matches no column (e.g. its column
     // was just deleted by a peer) falls into the first column so it's never
     // hidden until the next list refresh.
+    // Subtasks are excluded: they belong to their parent's card, not to a card
+    // of their own (isSubtask — see getTopLevelTasks).
     this._tasks.forEach((t) => {
+      if (this.isSubtask(t)) return;
       if (!this._matchesFilter(t)) return;
       const k = keys.has(t.status) ? t.status : firstKey;
       if (k != null) state[k].push(t);
@@ -6695,9 +7088,270 @@ class __tasks_panel extends LetcBox {
     return state;
   }
 
-  // Flat member-filtered task list — the dataset for the List + Summary views.
+  // Is this row a subtask? Single predicate so every view agrees, and so the
+  // check survives the server sending "" / 0 instead of null.
+  isSubtask(t) {
+    return !!(t && t.parent_task_id);
+  }
+
+  /**
+   * Flat member-filtered task list, SUBTASKS INCLUDED.
+   *
+   * Only Project Health may use this: the spec counts a subtask as its own work
+   * item in every aggregate (total, status donut, priority split, workload), so
+   * the health view deliberately reads the unsplit set. Every other view wants
+   * getTopLevelTasks() — feeding this one to Board / List / Gantt / Calendar
+   * renders each subtask a second time as a card, row, bar or calendar chip.
+   */
   getFilteredTasks() {
     return this._tasks.filter((t) => this._matchesFilter(t));
+  }
+
+  /**
+   * The dataset for every view that draws one entry per task: Board, List,
+   * Gantt and Calendar. Subtasks are reached through their parent instead.
+   */
+  getTopLevelTasks() {
+    return this._tasks.filter(
+      (t) => !this.isSubtask(t) && this._matchesFilter(t),
+    );
+  }
+
+  /**
+   * Children of a task, in board order (column, then rank) so an expanded row
+   * reads the same way the board would.
+   *
+   * Deliberately NOT filtered: the badge counts every child (it is a property
+   * of the task, not of the current filter), so hiding some of them behind a
+   * member filter would render "2/3" next to a single visible row and read as
+   * a bug. Same reason the counts are computed server-side.
+   */
+  getSubtasks(parentId) {
+    if (!parentId) return [];
+    const order = this.getColumns().reduce(
+      (a, c, i) => ((a[c.key] = i), a),
+      {},
+    );
+    return this._tasks
+      .filter((t) => t.parent_task_id === parentId)
+      .sort(
+        (a, b) =>
+          (order[a.status] ?? 99) - (order[b.status] ?? 99) ||
+          (a.rank || 0) - (b.rank || 0),
+      );
+  }
+
+  // ── Subtask UI state ────────────────────────────────────────────
+  getTaskById(id) {
+    if (!id) return null;
+    return this._tasks.find((t) => t.id === id) || null;
+  }
+
+  isSubtasksOpen(id) {
+    return this._subtasksOpen.has(id);
+  }
+
+  getSubtaskDraft() {
+    return this._subtaskDraft;
+  }
+
+  // List chevron. Local-only toggle, but it changes how many rows the table
+  // has, so it re-renders rather than flipping an attribute.
+  _toggleSubtasks(trigger) {
+    const id = trigger.mget("taskId");
+    if (!id) return;
+    if (this._subtasksOpen.has(id)) this._subtasksOpen.delete(id);
+    else this._subtasksOpen.add(id);
+    this._render();
+  }
+
+  // "+ Add subtask" in the detail panel. Due date pre-fills from the parent —
+  // editable before Create, and independently afterwards.
+  _openSubtaskDraft() {
+    const parent = this.getDetailTask();
+    if (!parent) return;
+    this._subtaskDraft = {
+      title: "",
+      due_date: parent.due_date || "",
+      priority: "medium",
+      assignees: [],
+    };
+    this._refreshSubtaskSection();
+  }
+
+  _closeSubtaskDraft() {
+    this._subtaskDraft = null;
+    this._refreshSubtaskSection();
+  }
+
+  /**
+   * Re-feed ONLY the subtasks block.
+   *
+   * A full _render() here would rebuild the whole detail panel: it steals focus
+   * from the title/description editors and drops unsaved edits, which is why
+   * attachments, comments and the due section are all their own sys_pn parts.
+   */
+  _refreshSubtaskSection() {
+    if (!this._detailId) return;
+    this.ensurePart("subtask-rows").then((part) => {
+      if (!this._detailId || !part) return;
+      part.feed(
+        require("./skeleton").buildSubtaskRowsContent(this, this._detailId),
+      );
+    });
+  }
+
+  /**
+   * Create a subtask under the currently open task.
+   *
+   * Reads the title from the live input rather than a draft-change watcher: the
+   * creator is a transient row, so there is no committed draft to read back.
+   */
+  async _commitSubtask() {
+    const parentId = this._detailId;
+    const draft = this._subtaskDraft;
+    if (!parentId || !draft) return;
+
+    const input = this.el && this.el.querySelector(
+      `.${this.fig.family}__subtask-create-input input`,
+    );
+    const title = String((input && input.value) || draft.title || "").trim();
+    if (!title) {
+      if (input && typeof input.focus === "function") input.focus();
+      return;
+    }
+
+    // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
+    // _submitting flag that gates commit-task / commit-detail, and creating a
+    // subtask has no business silently disabling the parent task's own Update
+    // button (same reasoning as the comment actions above).
+    const submitBtn =
+      this.el &&
+      this.el.querySelector(`.${this.fig.family}__subtask-create-submit`);
+    this._setControlBusy(submitBtn, true, { swapLabel: true });
+    try {
+      const created = await this.postService({
+        service: SERVICE.task.create,
+        hub_id: this._hubId,
+        // nid is sent for parity with a normal create, but the server ignores
+        // it for a subtask and inherits the parent's folder instead.
+        nid: this._scopeNid,
+        parent_task_id: parentId,
+        title,
+        priority: draft.priority || "medium",
+        due_date: draft.due_date || null,
+        assignee_uids: draft.assignees || [],
+      });
+      const row = Array.isArray(created) ? created[0] : created;
+      if (!row || !row.id) {
+        // postService resolves falsy on failure rather than rejecting.
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+      this._mergeTask(row);
+      // Keep the creator open so several subtasks can be added in a row — the
+      // common case when breaking a task down. Only the title resets.
+      this._subtaskDraft = { ...draft, title: "" };
+      if (input) input.value = "";
+      this._refreshSubtaskSection();
+      // The parent's badge lives outside this part, so refresh the counters the
+      // views read. Cheap: no request, just the local array.
+      this._syncSubtaskBadges(parentId);
+    } catch (err) {
+      console.error("[tasks_panel] subtask create failed:", err);
+    } finally {
+      // The re-feed above replaces this node, so clearing a detached one is a
+      // no-op — but a throw must not leave a live button spinning forever.
+      this._setControlBusy(submitBtn, false, { swapLabel: true });
+    }
+  }
+
+  /**
+   * Toggle a subtask between the board's done and not-done columns from the
+   * detail panel's checkbox, and apply any parent rollup the server reports.
+   *
+   * Mirrors _toggleComplete's optimistic flip, but re-feeds only the subtask
+   * rows so the open panel doesn't rebuild under the user.
+   */
+  async _toggleSubtaskComplete(trigger) {
+    const id = trigger.mget("taskId");
+    const task = this._tasks.find((t) => t.id === id);
+    if (!task) return;
+    const originalStatus = task.status;
+    const cols = this.getColumns();
+    const target = this.isDoneStatus(originalStatus)
+      ? cols.find((c) => !c.is_done)
+      : cols.find((c) => c.is_done);
+    // No done column on this board (the user deleted it) — nothing to toggle
+    // to, and the server rollup is inert there too.
+    if (!target || target.key === originalStatus) return;
+
+    task.status = target.key;
+    this._refreshSubtaskSection();
+    try {
+      const updated = await this.postService({
+        service: SERVICE.task.update_status,
+        hub_id: this._hubId,
+        id,
+        status: target.key,
+      });
+      const row = Array.isArray(updated) ? updated[0] : updated;
+      if (row && row.id) {
+        this._mergeTask(row);
+        // The rollup rides back on the same response — see task.update_status.
+        // Without merging it the person who ticked the last subtask is the one
+        // user who never sees the parent flip.
+        if (row.parent) this._mergeTask(row.parent);
+        this._refreshSubtaskSection();
+        this._syncSubtaskBadges(task.parent_task_id);
+        // A parent that just auto-completed changes its own card/row/pill, so
+        // the underlying view does need the full rebuild.
+        if (row.parent) this._render();
+      } else {
+        task.status = originalStatus;
+        this._refreshSubtaskSection();
+      }
+    } catch (err) {
+      console.error("[tasks_panel] subtask toggle failed:", err);
+      task.status = originalStatus;
+      this._refreshSubtaskSection();
+    }
+  }
+
+  /**
+   * Keep a parent's server-sent counters in step with the local rows after an
+   * optimistic change, so the badge doesn't wait for the next list reload.
+   * getSubtaskCount prefers local rows anyway; this keeps the two consistent
+   * for any code path that reads the raw fields.
+   */
+  _syncSubtaskBadges(parentId) {
+    if (!parentId) return;
+    const parent = this._tasks.find((t) => t.id === parentId);
+    if (!parent) return;
+    const { done, total } = this.getSubtaskCount(parent);
+    parent.subtask_done = done;
+    parent.subtask_total = total;
+  }
+
+  /**
+   * done/total for a task's subtasks. Prefers the server-computed counters
+   * (task_list / task_create / task_update_status all carry them) and falls
+   * back to counting the local rows, which keeps the badge live between an
+   * optimistic change and the response that confirms it.
+   */
+  getSubtaskCount(t) {
+    if (!t) return { done: 0, total: 0 };
+    const local = this._tasks.filter((s) => s.parent_task_id === t.id);
+    if (local.length) {
+      return {
+        done: local.filter((s) => this.isDoneStatus(s.status)).length,
+        total: local.length,
+      };
+    }
+    return {
+      done: Number(t.subtask_done) || 0,
+      total: Number(t.subtask_total) || 0,
+    };
   }
 
   // Recent activity rows for the Project Health view (already folder-scoped by
@@ -6755,7 +7409,8 @@ class __tasks_panel extends LetcBox {
   openTaskWithFiles(nodes) {
     this._creating = true;
     this._createDefaults = {
-      status: "todo",
+      status: this.getDefaultStatus(),
+      reporter_uid: Visitor.id,
       title: "",
       description: "",
       priority: "medium",
@@ -6777,7 +7432,39 @@ class __tasks_panel extends LetcBox {
   }
 
   getView() {
-    return this._view || "board";
+    const v = this._view || "board";
+    // Defence in depth. `set-view` refuses to assign a gated view, so the only
+    // way one can be sitting in `_view` is a plan that changed while the panel
+    // was open — payment.plan_state_changed is a live push, and a downgrade
+    // must not leave someone parked on a view they no longer have. Board is
+    // the floor: it is on every plan, and it is what a fresh panel opens on.
+    if (!isTaskViewAllowed(v)) return "board";
+    return v;
+  }
+
+  /**
+   * Calendar / Gantt / Project Health are not on this plan.
+   *
+   * Same card the sidebar's Admin Console gate raises, via the shared
+   * feature-lock modal — one upsell, one look, wherever the product says no.
+   * Resolve = the reader took the CTA; the billing page is opened through the
+   * `desk:open-billing-page` broadcast rather than reached for directly,
+   * because this panel lives in a window and has no handle on the desk (the
+   * same route quota-exceeded documents and takes).
+   */
+  _showTaskViewUpsell() {
+    if (typeof Wm === "undefined" || !Wm || !Wm.openFeatureLock) return;
+    return Wm.openFeatureLock({ feature: "task_views" })
+      .then(() => {
+        // Matches the desk's own guard on its `upgrade-plan` case: the card
+        // only draws a CTA when this passes, so failing here means the plan
+        // changed under an open card.
+        if (!canUpgradePlan()) return;
+        RADIO_BROADCAST.trigger("desk:open-billing-page");
+      })
+      // Dismissed (close X or Escape) — confirm REJECTS, and an unhandled
+      // rejection on a modal the user simply closed is noise in the console.
+      .catch(() => {});
   }
   getSort() {
     return this._sort || null;

@@ -5,7 +5,7 @@
 // A purple "today" line and a shaded current-period band sit behind the bars.
 //   Figma: 2057-32279 (weeks), 2065-90472 (months), 2365-137835 (body detail).
 // Globals Skeletons/LOCALE/Dayjs are injected at runtime.
-const { priorityMeta, mayCreateTask } = require("./helpers");
+const { priorityMeta, mayCreateTask, subtaskBadge } = require("./helpers");
 
 const ASIDE_W = 300; // left task-list width
 const ROW_H = 56; // task row height (aside + track share it)
@@ -43,7 +43,7 @@ module.exports = function (ui) {
   // the task's start_date (Duration toggle) when set, else its created time as
   // a fallback. Clamped to ≤ end. Tasks with no due_date are dropped.
   const rows = [];
-  (ui.getFilteredTasks() || []).forEach((t) => {
+  (ui.getTopLevelTasks() || []).forEach((t) => {
     if (!t.due_date) return;
     let end;
     try {
@@ -202,6 +202,11 @@ module.exports = function (ui) {
               }),
             ],
           }),
+          // Still inert. Wiring it to expand nested sub-bars is the follow-up
+          // round: the aside rows and the timeline rows are two parallel arrays
+          // kept in step by fixed row height, so inserting children means
+          // inserting into both in the same order — every bar below shifts off
+          // its task otherwise. Gantt shows the count only until then.
           Skeletons.Note({ className: `${pfx}__gantt-chevron`, content: "›" }),
           task.priority
             ? Skeletons.Note({
@@ -217,6 +222,7 @@ module.exports = function (ui) {
             uiHandler: [ui],
             taskId: task.id,
           }),
+          subtaskBadge(ui, task, `${pfx}__gantt-subcount`),
           Skeletons.Button.Svg({
             className: `${pfx}__gantt-del`,
             ico: "cross",
