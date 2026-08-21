@@ -734,9 +734,17 @@
   content: "";
   position: fixed;
   inset: 0;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  background-color: rgba(255, 255, 255, 0.55);
+  // The desk's own scrim, matching .desk-module__overlay (desk/skin) and every
+  // other mobile overlay surface: var(--overlay-bg) with the blur(6px) that
+  // rule pairs with it, instead of the frosted glass this used to carry
+  // (rgba(255,255,255,.55) over blur(30px)).
+  //
+  // The token is theme-aware on its own — rgba(0,0,0,.4) on :root,
+  // rgba(20,17,35,.4) under html[data-theme="dark"] — which is why the two
+  // explicit dark-theme overrides that used to follow this are gone.
+  background-color: var(--overlay-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   pointer-events: auto;
 }
 
@@ -746,12 +754,6 @@
   @include upload-progress-backdrop;
 }
 
-html[data-theme="dark"]
-  .upload-progress-layer[data-device="mobile"]:has(
-    .window-upload-progress__ui[data-expanded="1"]
-  )::before {
-  background-color: rgba(11, 10, 33, 0.55);
-}
 
 @media (max-width: 650px) {
   .upload-progress-layer:has(
@@ -760,12 +762,6 @@ html[data-theme="dark"]
     @include upload-progress-backdrop;
   }
 
-  html[data-theme="dark"]
-    .upload-progress-layer:has(
-      .window-upload-progress__ui[data-expanded="1"]
-    )::before {
-    background-color: rgba(11, 10, 33, 0.55);
-  }
 }
 
 // ── The card ───────────────────────────────────────────────────────────
