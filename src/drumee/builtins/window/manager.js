@@ -476,14 +476,24 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   responsive(w, type) {
-    if (this._isResizing || !this.iconsList || this.getViewMode() === _a.row) {
+    // Still bail entirely mid-drag: the user is sizing a window by hand and
+    // nothing here should fight that.
+    if (this._isResizing) {
+      return;
+    }
+    // `docViewer` is the default box new windows and players open at, and it is
+    // derived from the VIEWPORT alone — nothing here depends on the icon grid.
+    // It used to sit below the guard, so resizing the browser while the desk was
+    // in row view left it stale and windows opened taller than the screen:
+    // measured 593px against a 457px viewport (136px over) after shrinking in
+    // row view. Kept above the grid guard so it tracks every view mode.
+    // (The two assignments below were previously written out twice, identically.)
+    _K.docViewer.width = Math.min(DEFAULT_WIDTH, window.innerWidth - 5);
+    _K.docViewer.height = Math.min(DEFAULT_HEIGHT, window.innerHeight);
+    if (!this.iconsList || this.getViewMode() === _a.row) {
       return;
     }
     w = window.innerWidth - (window.innerWidth % 62);
-    _K.docViewer.width = Math.min(DEFAULT_WIDTH, window.innerWidth - 5);
-    _K.docViewer.height = Math.min(DEFAULT_HEIGHT, window.innerHeight);
-    _K.docViewer.width = Math.min(DEFAULT_WIDTH, window.innerWidth - 5);
-    _K.docViewer.height = Math.min(DEFAULT_HEIGHT, window.innerHeight);
 
     const h = window.innerHeight - 125;
     const dw = w - this.iconsList.$el.width();

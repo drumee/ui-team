@@ -200,7 +200,12 @@ class __window_folder extends mfsInteract {
       this.el.dataset.state = 1;
     }
     this.$el.css({ display: "" });
-    const b = this._minimizedBounds;
+    // A full-frame window re-fits the CURRENT work area rather than the box it
+    // was minimized at: the desk header / tab strip can appear or disappear
+    // while a window sits minimized (it is skipped by _hasZoomedFolder, so the
+    // `desk:chrome` re-fit never reaches it), which leaves the snapshot taller
+    // than the area it comes back into.
+    const b = this._zoomed ? this._zoomTarget() : this._minimizedBounds;
     this._minimizedBounds = null;
     if (b) {
       this.size = { ...this.size, width: b.width, height: b.height };
@@ -612,9 +617,13 @@ class __window_folder extends mfsInteract {
   buildContent(child) {
     this.__content = child;
     this.setupInteract();
+    // Bound BEFORE the first bounds pass: applyDefaultBounds opens the window
+    // full-frame, which hides the desk header and therefore grows the
+    // wm-container. The re-fit for that growth arrives as `desk:chrome`, so the
+    // listener has to already be attached when the bounds are applied.
+    this._bindDeskChrome();
     this.applyDefaultBounds();
     this._bindViewportReframe();
-    this._bindDeskChrome();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the,
@@ -672,13 +681,49 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  // A folder window opens FULL-FRAME — the whole desk body, the same frame a
+  // workspace pane gets from the sidebar — instead of the inset popup box it
+  // used to land in (reported 2026-08-21: opening a folder should land
+  // full-frame, not in the small window).
+  //
+  // Implemented as the window's existing "full" snap preset rather than as new
+  // geometry, so nothing else shifts meaning: `_defaultBounds()` remains the
+  // reframe target, which keeps a second click on Zoom (and the Reframe preset)
+  // returning the window to its cascaded default size, keeps the Tile presets
+  // as they are, and reuses the desk-header handshake that a manual zoom
+  // already goes through. Headless workspace panes are already full-area and
+  // are left untouched; mobile is excluded by the guard above (those windows
+  // are full-screen via CSS).
   applyDefaultBounds() {
     if (this._defaultBoundsApplied || Visitor.isMobile()) return;
     this._defaultBoundsApplied = 1;
     const bounds = this._defaultBounds();
-    this.size = { ...this.size, ...bounds };
-    this.style.set(bounds);
-    this.$el.css(bounds);
+    let target = bounds;
+    if (!this.mget(_a.headless)) {
+      this._zoomed = true;
+      // Un-zoom restores the inset default this window would have opened at.
+      this._preZoomBounds = {
+        left: bounds.left,
+        top: bounds.top,
+        width: bounds.width,
+        height: bounds.height,
+      };
+      this.el.dataset.zoomed = 1;
+      this._snapMode = "full";
+      this._syncSnapPresets();
+      // Must run BEFORE measuring, exactly as in toggleZoom: hiding the desk
+      // header grows the wm-container and _zoomTarget() has to see the
+      // post-hide height. (The desk only learns about this window on the
+      // deferred `folder:open` from initialize, so on that ordering the header
+      // hides a tick later and _onDeskChrome re-fits us then.)
+      this._syncDeskChrome();
+      // Keep the min-width/min-height floors from `bounds`; take the geometry
+      // from the zoom target.
+      target = { ...bounds, ...this._zoomTarget() };
+    }
+    this.size = { ...this.size, ...target };
+    this.style.set(target);
+    this.$el.css(target);
     try {
       this.$el.resizable(_a.option, "disabled", false);
       this.$el.resizable(_a.option, "minWidth", bounds.minWidth);
@@ -712,6 +757,11 @@ class __window_folder extends mfsInteract {
         if (this.isDestroyed && this.isDestroyed()) return;
         if (this._isResizing) return; // user is dragging a resize handle
         if (this.mget(_a.minimize)) return; // leave minimized windows alone
+        // A full-frame window stays full-frame: re-fit it to the new work area
+        // instead of dropping it back to the inset default (which is what
+        // reframeToDefault does, and what it used to do to a zoomed window on
+        // every browser resize).
+        if (this._zoomed) return this._applyBoundsAfterFs(this._zoomTarget());
         this.reframeToDefault();
       }, 200);
     };
