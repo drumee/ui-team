@@ -668,15 +668,35 @@
   width: 100%;
 }
 
-.panel-trash__purge-brand {
-  width: 92px;
-  height: 20px;
+// Mirrors .window-confirm-topbar__logo (window/confirm/skin) so this prompt
+// carries the same mark at the same weight as every standard confirm: 40px
+// glyph in --primary-50, bold 24px wordmark, baseline-aligned with a 4px gap.
+.panel-trash__purge-logo {
+  align-items: end;
+  gap: var(--spacer-2);
   flex-shrink: 0;
+}
+
+.panel-trash__purge-logo-ico {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--primary-50);
+  // Decorative: the close control is the only interactive thing in this row.
+  pointer-events: none;
 
   svg {
     width: 100%;
     height: 100%;
+    fill: currentColor;
   }
+}
+
+.panel-trash__purge-logo-text {
+  font-weight: bold;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--normal-fg-10);
 }
 
 .panel-trash__purge-close {

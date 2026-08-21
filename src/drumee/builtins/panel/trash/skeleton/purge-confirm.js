@@ -37,9 +37,23 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${pfx}__purge-head`,
         kids: [
-          Skeletons.Image.Svg({
-            ico: "logo-upload",
-            className: `${pfx}__purge-brand`,
+          // Same logo the standard confirm puts in its header
+          // (window/confirm/skeleton/header.js): the mark plus the wordmark,
+          // not the mark alone — Button.Svg for the glyph and a Note carrying
+          // the text, so this prompt reads as the same family of dialog.
+          Skeletons.Box.X({
+            className: `${pfx}__purge-logo`,
+            kids: [
+              Skeletons.Button.Svg({
+                className: `${pfx}__purge-logo-ico`,
+                ico: "logo-upload",
+                active: 0,
+              }),
+              Skeletons.Note({
+                className: `${pfx}__purge-logo-text`,
+                text: "drumee",
+              }),
+            ],
           }),
           Skeletons.Box.X({
             className: `${pfx}__purge-close`,
