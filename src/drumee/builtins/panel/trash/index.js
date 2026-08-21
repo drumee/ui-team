@@ -33,6 +33,22 @@ class __panel_trash extends mfsInteract {
    * @param {*} e 
    */
   _onOutsideClick(e, source) {
+    // The Empty Trash prompt owns the interaction while it is up, so nothing
+    // counts as an outside click until it closes.
+    //
+    // Without this, pressing Delete closed the whole panel: the prompt is fed
+    // into Wm.__wrapperModal, which is NOT inside this panel's element, so the
+    // contains() test below reads a click on its own dialog as a click outside
+    // and slides the panel away. The overlay this replaced was fed into the
+    // panel's own `overlay` part — inside this.el — which is why the behaviour
+    // only appeared once the prompt moved to the shared wrapper.
+    //
+    // Guarding on the flag rather than on the source's service also covers the
+    // backdrop and anything else reachable while the prompt is open. Both close
+    // paths clear it (_closePurgeConfirm), so it cannot strand the panel in a
+    // state where outside clicks stop working.
+    if (this._purgeConfirmOpen) return;
+
     // Clicks coming from a sidebar toggle button are owned by
     // Desk.togglePanel — bail so we don't race it (flip anim to "out"
     // here and have togglePanel read it as closed and reopen).
@@ -78,11 +94,12 @@ class __panel_trash extends mfsInteract {
 
   _wsRefresh() {
     if (!this.el || this.isDestroyed()) return;
-    // Don't clobber the empty-bin confirm overlay mid-decision — a rebuild
-    // replaces the whole subtree, overlay included. Flag it and replay once
-    // the overlay closes (cancel handler; confirm re-feeds anyway).
-    const overlay = this.getPart && this.getPart('overlay');
-    if (overlay && overlay.children && overlay.children.length) {
+    // Don't reload the list under the user mid-decision on Empty Trash. This
+    // used to look for children in the `overlay` part, which was where the
+    // panel-scoped confirm lived; that prompt is now the global confirm dialog
+    // (see _emptyBin), so the flag it sets is what reports the same state.
+    // Replayed once the prompt closes (cancel path; confirm re-feeds anyway).
+    if (this._purgeConfirmOpen) {
       this._pendingWsRefresh = true;
       return;
     }
@@ -250,21 +267,47 @@ class __panel_trash extends mfsInteract {
     });
   }
 
+  // Empty Trash confirmation. Renders our own dialog (skeleton/purge-confirm)
+  // into Wm.__wrapperModal rather than going through Wm.confirm, so the content
+  // cannot be lost on the way to window_confirm's body and no window-manager
+  // instance stamps inline offsets on it. The wrapper is already a centring
+  // flex container, so the dialog needs no position of its own.
   async _emptyBin() {
-    const overlay = await this.ensurePart('overlay');
-    overlay.feed(require('./skeleton/confirm')(this));
+    const w = Wm && Wm.__wrapperModal;
+    if (!w) return;
+    // Held while the user decides, so a websocket echo cannot reload the list
+    // mid-decision. Replayed by the cancel path; confirm re-feeds anyway.
+    this._purgeConfirmOpen = true;
+    w.feed(require("./skeleton/purge-confirm")(this));
+    // The host is only SIZED by this attribute (wm/skin: position:absolute,
+    // inset:0, 100%x100%), and it is what makes it centre its child. Every
+    // other path that feeds this wrapper sets it the same way — wm/index.js
+    // openRequestAccessModal, invite-popup in its own onDomRefresh.
+    if (w.el) w.el.dataset.state = "open";
+  }
+
+  // Shared close for both outcomes. The wrapper's own behavior flips
+  // data-state back to closed once it empties, so clear() is all that is needed.
+  _closePurgeConfirm() {
+    this._purgeConfirmOpen = false;
+    const w = Wm && Wm.__wrapperModal;
+    if (w && typeof w.clear === "function") w.clear();
   }
 
   async _confirmEmptyBin() {
+    this._closePurgeConfirm();
     const data = await this.postService({
       service: SERVICE.media.empty_bin,
       hub_id: Visitor.id,
     }).catch(() => null);
-    const overlay = await this.ensurePart('overlay');
-    overlay.clear();
+    // The `overlay` part used to be cleared here, because that is where the
+    // panel-scoped purge prompt lived. Nothing feeds it any more (the prompt is
+    // Wm.confirm, which closes itself), so the clear was a no-op. The part is
+    // still rendered by skeleton/index.js and is now unused — worth removing
+    // along with skeleton/confirm.js and the __purge-* styles in a tidy-up.
     if (data) RADIO_MEDIA.trigger(_a.free, data);
     // Full re-feed below IS the freshest state — drop any reload held back
-    // while the confirm overlay was open, including a debounce timer still
+    // while the prompt was open, including a debounce timer still
     // queued (a WS echo landing <400ms ago would otherwise re-feed AGAIN
     // right after this one: duplicate show_bin + visible flicker).
     if (this._wsRefresh.cancel) this._wsRefresh.cancel();
@@ -278,15 +321,15 @@ class __panel_trash extends mfsInteract {
     switch (service) {
       case 'empty-bin':
         return this._emptyBin();
+      // Both are raised by skeleton/purge-confirm's buttons. _confirmEmptyBin is
+      // the purge itself; the cancel path just closes and replays anything the
+      // decision held back.
       case 'confirm-empty-bin':
         return this._confirmEmptyBin();
       case 'cancel-empty-bin':
-        this.ensurePart('overlay').then(p => {
-          p.clear();
-          // Replay a websocket reload that was held back while the confirm
-          // overlay was open (see _wsRefresh).
-          if (this._pendingWsRefresh) this._wsRefresh();
-        });
+        this._closePurgeConfirm();
+        // Replay a reload that was held back while the prompt was up.
+        if (this._pendingWsRefresh) this._wsRefresh();
         return;
       case 'delete-permanently':
         return this.deleteFilePermanently(args.media || cmd);

@@ -1519,6 +1519,20 @@ class __window_manager extends mfsInteract {
     return new Promise(function (resolve, reject) {
       Kind.waitFor(kind).then((a) => {
         const s = w.feed({ ...skl, kind });
+        // The host is only SIZED by its [data-state="open"] rule (wm/skin:
+        // position:absolute, inset:0, 100%x100%). Without the attribute it is an
+        // auto-sized box, and the dialog inside resolves max-width:100% /
+        // max-height:100% against nothing — so the card collapses to its widest
+        // child (its button row) and its body is clipped to zero height. That is
+        // the ~190px title-less fragment the Empty Trash prompt was rendering as
+        // on mobile, where there is no spare width to hide the collapse.
+        //
+        // Every other path that feeds this wrapper already sets it — wm/index.js
+        // openRequestAccessModal and the new-workspace case, invite-popup in its
+        // own onDomRefresh. confirm() was the one that did not. Set it here so
+        // every confirm gets a sized host rather than each caller remembering.
+        // The wrapper's own behavior clears it again when it empties.
+        if (w && w.el) w.el.dataset.state = "open";
         s.ask().then(resolve).catch(reject);
       });
     });
