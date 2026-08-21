@@ -4,6 +4,7 @@ class __chat_p2p extends LetcBox {
     this.getCurrentApi = this.getCurrentApi.bind(this);
     this.getContactsApi = this.getContactsApi.bind(this);
     this.openChat = this.openChat.bind(this);
+    this.openPeer = this.openPeer.bind(this);
     this._onDocClick = this._onDocClick.bind(this);
   }
 
@@ -170,15 +171,25 @@ class __chat_p2p extends LetcBox {
         child.once(_e.eod, async () => {
           this.el.dataset.anim = "in";
           this._applyFilter();
+          // Deliberately NOT awaited: resolving the support account is a
+          // network call, and putting it in front of the landing below would
+          // mean a slow or hanging lookup leaves the inbox with nothing open.
+          // It pins its own row and opens it only if nothing else did.
+          this._ensureSupportRow();
           await Kind.waitFor("widget_chat");
+          // Mounted with a conversation to open (Contact Support): honour it
+          // instead of landing on the first row, on every screen size — the
+          // user asked for this specific conversation, not the inbox.
+          const pending = this.mget("open_peer");
+          if (pending && pending.entity_id) {
+            this.mset("open_peer", null);
+            return this.openPeer(pending.entity_id, pending);
+          }
           // On mobile/tablet stay on the inbox — auto-opening the first
           // conversation would jump past the sidebar the user expects to
           // land on. They tap a contact to reveal the chat pane.
           if (this._isMobile()) return;
-          const first =
-            child.children && child.children.first && child.children.first();
-          if (first && first.el && first.el.style.display !== "none")
-            this.openChat(first);
+          this.openChat(this._landingRow(child));
         });
         break;
 
@@ -320,8 +331,11 @@ class __chat_p2p extends LetcBox {
       contact.resetNotification();
     }
 
+    // Unread / Mentions are "inbox to work through" filters: opening a row
+    // consumes it, so it drops out of the list. Support is a category, not a
+    // queue — a support row stays put once read.
     const filter = this._activeFilter || "all";
-    if (filter !== "all" && contact.el) {
+    if (filter !== "all" && filter !== "support" && contact.el) {
       contact.el.style.display = "none";
     }
 
@@ -342,7 +356,249 @@ class __chat_p2p extends LetcBox {
     // Ensure flag survives toLETC filtering — read directly from model
     const flag = (contact.mget && contact.mget(_a.flag)) || peer.flag;
     peer.flag = flag;
+    // Same for the support marker: it drives the header treatment and the
+    // conversation's empty state, and toLETC would otherwise drop it.
+    if (contact.mget && contact.mget("is_support")) peer.is_support = 1;
 
+    return this._openConversation(peer, contact);
+  }
+
+  /**
+   * Open a conversation with a peer identified by id, whether or not the
+   * inbox list has loaded a row for them.
+   *
+   * openChat() can only open a conversation the list already rendered — it
+   * reads the peer out of a chat_contact_item view. Contact Support has no
+   * such row to click (the support account is usually not in the user's
+   * address book at all), so this builds the peer from the id and selects
+   * the matching row afterwards if one happens to exist.
+   *
+   * @param {String} entity_id  peer's entity id
+   * @param {Object} meta       display fields + presentation flags (is_support)
+   */
+  async openPeer(entity_id, meta = {}) {
+    if (!entity_id) return;
+    if (entity_id === Visitor.id) {
+      // There is no conversation with yourself. Callers should not reach
+      // here (the support entry point hides for the support account), but a
+      // stale configuration must not mount a self-chat.
+      return this.warn("chat_p2p.openPeer: refusing to open a self conversation");
+    }
+
+    // Re-entrancy guard: the entry point is a button, and mounting the
+    // conversation is async. A second click while the first is in flight
+    // would feed the chat panel twice.
+    if (this._openingPeer === entity_id) return;
+    this._openingPeer = entity_id;
+
+    try {
+      const list = this.getPart && this.getPart("contact-list");
+      const rows =
+        (list && list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, entity_id)) || [];
+      const row = rows[0];
+
+      // A placeholder row is one WE drew because the server did not return
+      // the conversation — which is exactly what an archived conversation
+      // looks like. Un-archive before opening, or the thread comes back
+      // while the inbox keeps hiding it on every reload. Idempotent when it
+      // was never archived.
+      if (meta.is_support && (!row || row.mget("is_placeholder"))) {
+        await this._unarchivePeer(entity_id);
+      }
+
+      // A row exists (the conversation is already in the inbox) — go through
+      // the normal path so notification counts and selection state are reset
+      // exactly as a click would, then layer the presentation flags on top.
+      if (row) {
+        if (meta.is_support) row.mset("is_support", 1);
+        await this.openChat(row);
+        if (meta.is_support && this.activePeer) this.activePeer.is_support = 1;
+        return;
+      }
+
+      const peer = {
+        ...meta,
+        entity_id,
+        drumate_id: meta.drumate_id || entity_id,
+        flag: _a.contact,
+      };
+      // `display` is what the header and the inbox row both label the peer
+      // with; without it the conversation opens under a blank name.
+      if (!peer.display) {
+        peer.display =
+          `${meta.firstname || ""} ${meta.lastname || ""}`.trim() || entity_id;
+      }
+
+      // Give the conversation a row straight away rather than open a chat the
+      // sidebar has no trace of. Nothing is written server-side until the user
+      // posts, so a row for an unused conversation simply does not come back
+      // on the next load.
+      this._addOpenedContactRow(peer);
+
+      await this._openConversation(peer, this._peerShim(peer));
+    } finally {
+      this._openingPeer = null;
+    }
+  }
+
+  /**
+   * Bring a conversation out of the archive. Failure is non-fatal: the
+   * conversation still opens, it just stays hidden in the inbox listing.
+   * @param {String} entity_id
+   */
+  async _unarchivePeer(entity_id) {
+    try {
+      await this.postService(SERVICE.chat.change_status, {
+        entity_id,
+        status: _a.active,
+      });
+    } catch (e) {
+      this.warn("chat_p2p: could not unarchive the conversation", e);
+    }
+  }
+
+  /**
+   * Pin a "Drumee Support" row at the top of the inbox, so support is always
+   * reachable from the conversation list rather than only from the Get help
+   * screen.
+   *
+   * The server cannot supply this row: chat_rooms lists a peer once there is
+   * a conversation, and pre-loads same-domain colleagues only when
+   * `_domain_id > 1` — so on the main domain a support account nobody has
+   * written to yet appears in neither branch. The row is therefore drawn
+   * client-side until the first message makes it real, at which point the
+   * server returns it and this becomes a no-op.
+   */
+  async _ensureSupportRow() {
+    if (typeof Desk === "undefined" || !_.isFunction(Desk.supportContact)) return;
+
+    let support;
+    try {
+      support = await Desk.supportContact();
+    } catch (e) {
+      return;
+    }
+    // Nothing configured, or the viewer IS support — their inbox is the
+    // support queue, so a row pointing at themselves is meaningless.
+    if (!support || !support.entity_id || ~~support.is_self === 1) return;
+    if (support.entity_id === Visitor.id) return;
+
+    const list = this.getPart && this.getPart("contact-list");
+    if (!list) return;
+    const existing =
+      (list.getItemsByAttr &&
+        list.getItemsByAttr(_a.entity_id, support.entity_id)) || [];
+    // A real conversation already exists — leave the server's row alone.
+    if (existing.length) return;
+
+    const item = this._addOpenedContactRow(
+      {
+        entity_id: support.entity_id,
+        drumate_id: support.entity_id,
+        firstname: support.firstname || "",
+        lastname: support.lastname || "",
+        display: support.display || LOCALE.SUPPORT_CHAT_TITLE,
+        flag: _a.contact,
+        is_support: 1,
+      },
+      // Drawn by us, not the server: it must not steal the selection from a
+      // real conversation the landing already opened.
+      { select: false, placeholder: true },
+    );
+
+    // An account with no conversations at all lands on nothing, because the
+    // landing above ran before this row existed. Support is then the only
+    // thing in the inbox, and the right first screen.
+    if (item && !this.chatWidget && !this._isMobile()) {
+      this.openChat(item);
+    }
+  }
+
+  /**
+   * Which row to open when the inbox lands with nothing specific requested.
+   *
+   * Prefers a real conversation over a placeholder — landing on the pinned
+   * support row would bury the conversation the user actually came back for.
+   * Falls back to the placeholder when it is all there is, which is the right
+   * first screen for an account with no conversations yet.
+   *
+   * @param {View} list
+   * @returns {View|null}
+   */
+  _landingRow(list) {
+    const children = list && list.children;
+    if (!children) return null;
+    const kids = [];
+    if (_.isFunction(children.toArray)) {
+      kids.push(...children.toArray());
+    } else if (_.isFunction(children.forEach)) {
+      children.forEach((c) => kids.push(c));
+    } else if (_.isFunction(children.first)) {
+      // Last resort: only the head is reachable, which is the pre-existing
+      // behaviour this method replaced.
+      return children.first() || null;
+    }
+    const visible = kids.filter(
+      (c) => c && c.el && c.el.style.display !== "none",
+    );
+    return visible.find((c) => !c.mget("is_placeholder")) || visible[0] || null;
+  }
+
+  /**
+   * Add an inbox row for a conversation the list has no row for.
+   * @param {Object} peer
+   * @param {Object} opt   select: also make it the active row (default true)
+   *                       placeholder: drawn by us, not returned by the server
+   */
+  _addOpenedContactRow(peer, opt = {}) {
+    const list = this.getPart && this.getPart("contact-list");
+    if (!list || !_.isFunction(list.prepend)) return;
+
+    const { select = true, placeholder = false } = opt;
+    const itemsOpt = list.mget(_a.itemsOpt) || {};
+    const item = list.prepend({
+      ...itemsOpt,
+      ...peer,
+      // No history yet: an empty preview reads better than a stale one, and
+      // no timestamp is truthful until the first message exists.
+      message: peer.message || LOCALE.SUPPORT_START_CONVERSATION,
+      room_count: 0,
+      is_placeholder: placeholder ? 1 : 0,
+    });
+
+    // Select it, and drop whatever was selected before — openChat() does this
+    // for a clicked row, and this path bypasses it.
+    if (select && list.children) {
+      list.children.forEach((c) => {
+        if (c.el) c.el.dataset.radio = c === item ? "on" : "off";
+      });
+    }
+    this._applyFilter();
+    return item;
+  }
+
+  /**
+   * chat-header reads its fields through `mget`, which a plain peer object
+   * does not answer. Wrap one so a synthesised peer renders the same header
+   * a list-item-backed peer does.
+   */
+  _peerShim(peer) {
+    return {
+      mget: (k) => peer[k],
+      mset: (k, v) => {
+        peer[k] = v;
+      },
+      model: { toJSON: () => ({ ...peer }) },
+    };
+  }
+
+  /**
+   * Mount the conversation for a resolved peer.
+   * @param {Object} peer     plain peer data (entity_id, display, flag…)
+   * @param {Object} contact  view (or shim) the header reads its fields from
+   */
+  async _openConversation(peer, contact) {
+    const flag = peer.flag;
     const hub_id = peer.entity_id;
     if (!hub_id) return;
 
@@ -554,6 +810,11 @@ class __chat_p2p extends LetcBox {
         this._applyFilter();
         break;
 
+      case "filter-support":
+        this._activeFilter = "support";
+        this._applyFilter();
+        break;
+
       case "toggle-compose":
         this._toggleComposePopup();
         break;
@@ -638,7 +899,7 @@ class __chat_p2p extends LetcBox {
       item = list.getItemsByAttr && list.getItemsByAttr("hub_id", data.hub_id);
       item = item && item[0];
     }
-    if (!item) return;
+    if (!item) return this._addContactItemOnPost(list, data);
 
     let room_count = item.mget("room_count") || 0;
     if (item.mget(_a.state) === 1) {
@@ -655,6 +916,9 @@ class __chat_p2p extends LetcBox {
     item.mset("room_count", room_count);
     item.mset(_a.message, msg);
     item.mset(_a.ctime, data.ctime);
+    // The pinned support row stops being a placeholder the moment it carries
+    // a real message, so it can be landed on like any other conversation.
+    if (item.mget("is_placeholder")) item.mset("is_placeholder", 0);
 
     // Track has_mention: increment if this message mentions current user.
     // mention_ids may arrive as a JSON string from the DB — normalise first.
@@ -693,6 +957,81 @@ class __chat_p2p extends LetcBox {
     this._applyFilter();
   }
 
+  /**
+   * A message arrived from someone the inbox has no row for — the first
+   * contact of a brand-new conversation, which is exactly what a support
+   * request is. Without this the row only appears when the panel is next
+   * remounted, so an admin sitting on an open inbox never sees the request
+   * land.
+   *
+   * The WS payload carries everything a row needs: `peer_id` is the sender
+   * (the server rewrites it to the sender's id on the recipient's copy),
+   * plus their name, the message and the unread count.
+   */
+  _addContactItemOnPost(list, data) {
+    const peer_id = data.peer_id;
+    // Own echo from a sibling session, or a payload with no peer to key on.
+    if (!peer_id || peer_id === Visitor.id || data.author_id === Visitor.id) return;
+    if (!_.isFunction(list.prepend)) return;
+
+    let msg = data.message;
+    if (_.isEmpty(msg) && data.is_attachment === 1) msg = LOCALE.ATTACHMENT;
+
+    const firstname = data.firstname || "";
+    const lastname = data.lastname || "";
+    const display = `${firstname} ${lastname}`.trim() || peer_id;
+
+    const itemsOpt = list.mget(_a.itemsOpt) || {};
+    list.prepend({
+      ...itemsOpt,
+      entity_id: peer_id,
+      drumate_id: peer_id,
+      firstname,
+      lastname,
+      display,
+      flag: _a.contact,
+      // Not in the address book — this is what marks it a support request
+      // on the admin's side (see _isSupportRow).
+      status: "nocontact",
+      message: msg,
+      ctime: data.ctime,
+      room_count: ~~(data.room || 1),
+      is_attachment: data.is_attachment === 1 ? 1 : 0,
+    });
+
+    if (list.collection && list.collection.sort) list.collection.sort();
+    this._applyFilter();
+  }
+
+  /**
+   * Is this inbox row a support conversation?
+   *
+   * Two different questions depending on which side you are on, both
+   * answered from data the inbox already returns:
+   *  - as a user, the row IS the support account;
+   *  - as the admin who answers support, the row is someone with no address
+   *    book entry — chat_rooms reports them `status: 'nocontact'`. The
+   *    feature targets external users, so a stranger with a conversation is
+   *    a support request.
+   *
+   * @param {View|Object} item  a chat_contact_item (or anything with mget)
+   */
+  _isSupportRow(item) {
+    if (!item || !_.isFunction(item.mget)) return false;
+    if (item.mget("is_support")) return true;
+
+    const entity_id = item.mget(_a.entity_id);
+    const supportId =
+      typeof Desk !== "undefined" && _.isFunction(Desk.supportContactId)
+        ? Desk.supportContactId()
+        : null;
+    if (supportId && entity_id === supportId) return true;
+
+    // Admin side: only meaningful for the account that answers support.
+    if (!supportId || supportId !== Visitor.id) return false;
+    return item.mget(_a.status) === "nocontact";
+  }
+
   _applyFilter() {
     const list = this._contactList;
     if (!list || !list.children) return;
@@ -714,6 +1053,10 @@ class __chat_p2p extends LetcBox {
         const hasMention = ~~(item.mget("has_mention") || 0) > 0;
         item.el.style.display = hasMention ? "" : "none";
         if (hasMention) visible += 1;
+      } else if (filter === "support") {
+        const show = this._isSupportRow(item);
+        item.el.style.display = show ? "" : "none";
+        if (show) visible += 1;
       }
     });
     // Show "All read" only when the user is on the Unread tab and nothing

@@ -44,6 +44,57 @@ html {
     overflow: visible;
   }
 
+  // ── Parked-call dock ─────────────────────────────────────────────────────
+  // Hosts the live call window while the user is elsewhere in the desk. Fixed
+  // to the viewport and above every desk surface — the full-page screen slot
+  // (1500, 20001 with a modal), the slide-out panel containers (10001) and the
+  // sidebar (10002) — because the whole point of moving the window out of the
+  // window manager is to escape `isolation: isolate` there.
+  &__call-dock {
+    // !important on both: this is a Box.X, matched by container.css as
+    // .drumee-widget[data-flow="x"] at 0,2,0, so a single-class hide loses and
+    // an EMPTY dock would sit in the corner as an invisible 300x180 click
+    // blocker at z 20002.
+    display: none !important;
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 20002;
+    box-sizing: border-box;
+    width: 300px;
+    height: 180px;
+
+    // Shown only while it actually holds the call.
+    &:not(:empty) {
+      display: flex !important;
+    }
+
+    // A phone has no room for a 300px tile beside the screen it is covering.
+    @media (max-width: 650px) {
+      right: 12px;
+      bottom: 12px;
+      width: 168px;
+      height: 100px;
+    }
+
+    // The docked window is sized by the dock, not by the inline pixel geometry
+    // it carries as a free-floating window. !important because that inline
+    // geometry (and window/skin/window.scss's 600x320 floor) would otherwise
+    // win, and because Wm.clampWindows may rewrite left/top while it is parked.
+    > * {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: auto !important;
+      bottom: auto !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+    }
+  }
+
   &__overlay {
     position: absolute;
     width: 100%;

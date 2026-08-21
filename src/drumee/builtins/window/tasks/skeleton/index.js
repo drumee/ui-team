@@ -1,3 +1,5 @@
+const { isTaskViewAllowed } = require("libs/billing");
+
 function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   const pfx = ui.fig.family;
   const fileSearch = ui.getFileSearch();
@@ -71,7 +73,13 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
 }
 
 const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
-const { mayCreateTask } = require("./helpers");
+// formatDue is aliased: `make` declares its own closure const of that name, and
+// the subtask builders below live at module scope where that one isn't visible.
+const {
+  mayCreateTask,
+  subtaskBadge,
+  formatDue: formatDueDate,
+} = require("./helpers");
 
 const make = function (ui) {
   const pfx = ui.fig.family;
@@ -263,6 +271,9 @@ const make = function (ui) {
           })
         : null,
       task.due_date ? dueBadge(task) : null,
+      // Subtask count — rendered only when the task has children, so a board of
+      // ordinary tasks looks exactly as it does today.
+      subtaskBadge(ui, task, `${pfx}__task-subcount`),
     ].filter(Boolean);
     const meta = metaKids.length
       ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
@@ -572,7 +583,10 @@ const make = function (ui) {
       : selectedUids
         ? [String(selectedUids)]
         : [];
-    const service = scope === "create" ? "create-assignee" : "set-assignee";
+    // One mapping for both scopes, shared with the panel (_applyAssigneeChange
+    // / _filterAssignees resolve the same way) so a new picker only has to name
+    // its scope. "-reporter" scopes are single-select — see reporterPicker.
+    const service = ui.pickerService(scope);
     return Skeletons.Box.Y({
       className: `${pfx}__assignee-picker`,
       kids: [
@@ -618,6 +632,58 @@ const make = function (ui) {
       ],
     });
   };
+
+  // Reporter control — the assignee picker in single-select mode. Same shell
+  // (chips row + combobox + suggestions part), so it inherits the delegated
+  // focus/blur handling, the caret and the live member filter for free; the
+  // differences are that picking REPLACES instead of appending, and the chip
+  // has no ✕ because a task always reads as reported by somebody (it falls back
+  // to created_by). `scope` is "create-reporter" | "detail-reporter".
+  const reporterPicker = (uid, scope) =>
+    Skeletons.Box.Y({
+      // Same classes as the multi-select picker on purpose: it is the same
+      // control, and the single-select difference is behavioural (replace, not
+      // append) rather than visual.
+      className: `${pfx}__assignee-picker`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__assignee-control`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__assignee-chips`,
+              sys_pn: `${scope}-assignee-chips`,
+              partHandler: ui,
+              kids: buildReporterChip(ui, uid),
+            }),
+            Skeletons.Entry({
+              className: `${pfx}__assignee-search`,
+              name: `assignee-search-${scope}`,
+              placeholder: LOCALE.SEARCH_PEOPLE,
+              require: "any",
+              bubble: 0,
+              uiHandler: [ui],
+            }),
+            Skeletons.Button.Svg({
+              className: `${pfx}__assignee-caret`,
+              ico: "apps-caret-down",
+              bubble: 0,
+              service: "toggle-assignee-list",
+              uiHandler: [ui],
+              assigneeScope: scope,
+            }),
+          ],
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__assignee-suggestions`,
+          sys_pn: `${scope}-assignee-suggestions`,
+          partHandler: ui,
+          // dataset is dropped at render unless attrOpt is also set.
+          attrOpt: { "data-open": "0" },
+          bubble: 0,
+          kids: [],
+        }),
+      ],
+    });
 
   const buildDropdownContent = (results, query, resultRow) => {
     if (results && results.length) {
@@ -817,7 +883,7 @@ const make = function (ui) {
     // Render against the editable draft (seeded from the task on open).
     // Falls back to the task itself for safety.
     const dDraft = ui.getDetailDraft() || detail;
-    const dStatus = dDraft.status || detail.status || "todo";
+    const dStatus = dDraft.status || detail.status || ui.getDefaultStatus();
     const dPriority = dDraft.priority || detail.priority || "medium";
     const dAssignees = Array.isArray(dDraft.assignees)
       ? dDraft.assignees
@@ -833,8 +899,17 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
           content: c.name || LOCALE[c.label] || c.key,
-          // Selected/dot colors driven by `data-status` + `data-active` in skin.
-          dataset: { active: dStatus === c.key ? 1 : 0, status: c.key },
+          // Selected fill is driven by `data-theme` + `data-active` in the
+          // skin, NOT by data-status: a custom column's key is its DB id, so
+          // per-key rules never matched one and the pill stayed blank on click.
+          // The dot colour rides in as a custom property (skin reads it from a
+          // ::before, which can't take an inline style).
+          dataset: {
+            active: dStatus === c.key ? 1 : 0,
+            status: c.key,
+            theme: c.theme || "default",
+          },
+          styleOpt: { "--pill-dot": c.color || "#AEAEB2" },
           bubble: 0,
           service: "set-status",
           uiHandler: [ui],
@@ -928,48 +1003,45 @@ const make = function (ui) {
       kids: buildDueSectionContent(ui),
     });
 
-    // Reporter — who created the task (task.created_by, set server-side at
-    // create time). Read-only: creation is immutable.
-    const reporter = ui.getMember(detail.created_by) || {};
-    const reporterRow = detail.created_by
-      ? Skeletons.Box.Y({
-          className: `${pfx}__detail-row`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__detail-label`,
-              content: LOCALE.REPORTER,
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}__detail-reporter`,
-              kids: [
-                Skeletons.UserProfile({
-                  className: `${pfx}__detail-reporter-avatar`,
-                  id: detail.created_by,
-                  firstname: reporter.firstname,
-                  lastname: reporter.lastname,
-                  auto_color: 1,
-                  live_status: 0,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__detail-reporter-name`,
-                  content: authorName(reporter),
-                }),
-                // Creation time, small, right of the name (product ask
-                // 2026-07-30). task.ctime is set server-side at create and
-                // immutable, like created_by above. Absolute date, not
-                // fromNow(): the reporter row is provenance, and "3 weeks
-                // ago" decays while a date stays checkable.
-                detail.ctime
-                  ? Skeletons.Note({
-                      className: `${pfx}__detail-reporter-time`,
-                      content: Dayjs.unix(Number(detail.ctime)).format("MMM D, YYYY HH:mm"),
-                    })
-                  : null,
-              ].filter(Boolean),
-            }),
-          ],
-        })
-      : null;
+    // Reporter — who the task is reported by. EDITABLE (single-select), unlike
+    // task.created_by underneath it: the draft holds reporter_uid and Update
+    // posts it through task.update.
+    //
+    // The provenance line below keeps created_by + ctime visible, which is why
+    // the two are separate fields server-side: created_by is write-once, so
+    // "Created by X on <date>" stays true after a reassignment. It only names
+    // the creator when they are NOT the current reporter — otherwise the row
+    // would just repeat the chip above it.
+    const dReporter =
+      dDraft.reporter_uid || detail.reporter_uid || detail.created_by || "";
+    const creator = ui.getMember(detail.created_by) || {};
+    const originParts = [];
+    if (detail.created_by && String(detail.created_by) !== String(dReporter)) {
+      originParts.push(`${LOCALE.CREATED_BY} ${authorName(creator)}`);
+    }
+    // Absolute date, not fromNow(): this line is provenance, and "3 weeks ago"
+    // decays while a date stays checkable (product ask 2026-07-30).
+    if (detail.ctime) {
+      originParts.push(
+        Dayjs.unix(Number(detail.ctime)).format("MMM D, YYYY HH:mm"),
+      );
+    }
+    const reporterRow = Skeletons.Box.Y({
+      className: `${pfx}__detail-row`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__detail-label`,
+          content: LOCALE.REPORTER,
+        }),
+        reporterPicker(dReporter, "detail-reporter"),
+        originParts.length
+          ? Skeletons.Note({
+              className: `${pfx}__detail-reporter-time`,
+              content: originParts.join(" · "),
+            })
+          : null,
+      ].filter(Boolean),
+    });
 
     const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
 
@@ -990,6 +1062,22 @@ const make = function (ui) {
             }),
           ],
     });
+
+    // Subtasks sit between Description and Attachments, per the handoff.
+    // A re-feedable part of its own (see buildSubtaskRowsContent) so adding or
+    // ticking a child never rebuilds the panel around the user's edits.
+    //
+    // Omitted entirely when the open task IS a subtask: one level of nesting
+    // means it can never have children, and an empty "Subtasks / none yet"
+    // block would just be a section that can never fill.
+    const subtasksSection = ui.isSubtask(detail)
+      ? null
+      : Skeletons.Box.Y({
+          className: `${pfx}__subtasks`,
+          sys_pn: "subtask-rows",
+          partHandler: ui,
+          kids: buildSubtaskRowsContent(ui, detail.id),
+        });
 
     const attachmentsList = Skeletons.Box.Y({
       className: `${pfx}__attachments`,
@@ -1244,7 +1332,12 @@ const make = function (ui) {
                   // Description, then Attachments beneath it, then the Activity
                   // feed — a single stacked column (Attachments no longer sits
                   // to the right of the Description).
-                  kids: [descriptionRow, attachmentsList, commentsSection],
+                  kids: [
+                    descriptionRow,
+                    subtasksSection,
+                    attachmentsList,
+                    commentsSection,
+                  ].filter(Boolean),
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
@@ -1409,7 +1502,7 @@ const make = function (ui) {
 
   const createModal = () => {
     const cols = ui.getColumns();
-    const selectedStatus = draft?.status || "todo";
+    const selectedStatus = draft?.status || ui.getDefaultStatus();
     const selectedPriority = draft?.priority || "medium";
     const selectedAssignees = Array.isArray(draft?.assignees)
       ? draft.assignees
@@ -1422,9 +1515,15 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
           content: c.name || LOCALE[c.label] || c.key,
-          // `data-status` + `data-active` drive pill colors via the skin and
-          // let the JS update them in place without a re-render.
-          dataset: { active: selectedStatus === c.key ? 1 : 0, status: c.key },
+          // `data-theme` + `data-active` drive pill colors via the skin (see
+          // the detail switcher for why it can't be data-status) and let the JS
+          // update them in place without a re-render.
+          dataset: {
+            active: selectedStatus === c.key ? 1 : 0,
+            status: c.key,
+            theme: c.theme || "default",
+          },
+          styleOpt: { "--pill-dot": c.color || "#AEAEB2" },
           bubble: 0,
           service: "create-status",
           uiHandler: [ui],
@@ -1502,12 +1601,8 @@ const make = function (ui) {
       ],
     });
 
-    // Reporter — the current user (set server-side as created_by on submit).
-    // Read-only, mirroring the detail panel's reporter row (shares its skin).
-    const createReporter = ui.getMember(Visitor.id) || {
-      firstname: Visitor.get("firstname"),
-      lastname: Visitor.get("lastname"),
-    };
+    // Reporter — defaults to the current user, but pickable before submit (the
+    // uid is sent as reporter_uid; created_by is always the real creator).
     const reporterField = Skeletons.Box.Y({
       className: `${pfx}__create-field`,
       kids: [
@@ -1515,23 +1610,7 @@ const make = function (ui) {
           className: `${pfx}__create-label`,
           content: LOCALE.REPORTER,
         }),
-        Skeletons.Box.X({
-          className: `${pfx}__detail-reporter`,
-          kids: [
-            Skeletons.UserProfile({
-              className: `${pfx}__detail-reporter-avatar`,
-              id: Visitor.id,
-              firstname: createReporter.firstname,
-              lastname: createReporter.lastname,
-              auto_color: 1,
-              live_status: 0,
-            }),
-            Skeletons.Note({
-              className: `${pfx}__detail-reporter-name`,
-              content: authorName(createReporter),
-            }),
-          ],
-        }),
+        reporterPicker(draft?.reporter_uid || Visitor.id, "create-reporter"),
       ],
     });
 
@@ -1832,15 +1911,17 @@ const make = function (ui) {
         className: `${pfx}__filter-head`,
         kids: [
           Skeletons.Note({ className: `${pfx}__filter-title`, content: LOCALE.FILTER }),
-          ui.isFilterActive()
-            ? Skeletons.Note({
-                className: `${pfx}__filter-clear`,
-                content: LOCALE.CLEAR,
-                bubble: 0,
-                service: "filter-clear",
-                uiHandler: [ui],
-              })
-            : null,
+          // Always mounted, shown/hidden by `data-active` (skin) rather than by
+          // presence: _syncFilterAffordances flips the flag in place, so typing
+          // a keyword reveals "Clear" without re-rendering the popup.
+          Skeletons.Note({
+            className: `${pfx}__filter-clear`,
+            content: LOCALE.CLEAR,
+            attrOpt: { "data-active": ui.isFilterActive() ? "1" : "0" },
+            bubble: 0,
+            service: "filter-clear",
+            uiHandler: [ui],
+          }),
         ].filter(Boolean),
       }),
       ...filterCats.map(filterCategory),
@@ -1874,14 +1955,29 @@ const make = function (ui) {
       ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
       ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
       ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
-    ].map(([key, label, ico]) =>
-      Skeletons.Box.X({
+    ].map(([key, label, ico]) => {
+      // Tier gate (libs/billing.isTaskViewAllowed). A locked tab keeps its
+      // place AND keeps its click: the click is what opens the upsell, so
+      // hiding the tab would make the plan limit invisible and disabling it
+      // would read as a broken button. Same reasoning as the sidebar's Admin
+      // Console entry, which stays visible to personal plans for exactly this.
+      //
+      // Returns false for every view until the `task_views` entitlement is
+      // deployed — see taskViewsAllowed(), unknown means unrestricted.
+      const locked = !isTaskViewAllowed(key);
+      return Skeletons.Box.X({
         className: `${pfx}__viewbar-item`,
-        attrOpt: { "data-active": view === key ? "1" : "0" },
+        attrOpt: {
+          "data-active": view === key ? "1" : "0",
+          "data-locked": locked ? "1" : "0",
+        },
         bubble: 0,
         service: "set-view",
         uiHandler: [ui],
         viewMode: key,
+        tooltips: locked
+          ? { content: LOCALE.TASK_VIEW_LOCKED, className: `${pfx}__viewbar-item-tip` }
+          : undefined,
         kids: [
           // SVG glyph. `__viewbar-item-ico` is pointer-events:none in the skin,
           // so a click on the icon still bubbles to this tab's set-view service.
@@ -1893,9 +1989,15 @@ const make = function (ui) {
             className: `${pfx}__viewbar-item-label`,
             content: label,
           }),
-        ],
-      }),
-    ),
+          locked
+            ? Skeletons.Image.Svg({
+                className: `${pfx}__viewbar-item-lock`,
+                ico: "apps-lock-simple",
+              })
+            : null,
+        ].filter(Boolean),
+      });
+    }),
   });
 
   // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
@@ -1963,7 +2065,17 @@ const make = function (ui) {
     className: `${pfx}__root`,
     kids: [
       subHeader,
-      viewContent,
+      // The view body sits in a NAMED host so a filter keystroke can re-feed
+      // just this subtree (_refreshViewBody) instead of the whole panel. A full
+      // _render() rebuilds the focused filter input, and ui-core seeds <input>
+      // values through a 200ms waitElement poll — so the field blanks out
+      // mid-typing and then overwrites whatever was typed in that window with
+      // the value the skeleton was built with. Never full-render on a keystroke.
+      Skeletons.Box.Y({
+        className: `${pfx}__view-host`,
+        sys_pn: "view-host",
+        kids: [viewContent],
+      }),
       // Click-catcher behind the filter dropdown: a click outside it closes
       // the popup (sits below the dropdown's z-index). Fires toggle-filter.
       filterOpen
@@ -2015,6 +2127,57 @@ const memberLabel = (m) =>
   [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
   m.email ||
   "";
+
+/**
+ * The reporter as a single, non-removable chip. Exported so the panel can
+ * re-feed just the chips row after a pick.
+ *
+ * Deliberately NOT buildAssigneeChips: that one runs the uids through
+ * getKnownAssignees, which drops anybody who has left the workspace. That is
+ * right for an assignment (nobody is working on it any more) but wrong here —
+ * who reported a task is a historical fact, and dropping the uid would make the
+ * field read as empty and silently reassign the reporter on the next Update.
+ * authorName() labels a departed member instead of vanishing.
+ *
+ * Returns [] only when there is genuinely no uid, which the SPs make impossible
+ * for a live task (reporter_uid falls back to created_by).
+ */
+function buildReporterChip(ui, uid) {
+  const pfx = ui.fig.family;
+  if (!uid) return [];
+  // Visitor fallback: the member list loads asynchronously, and until it lands
+  // getMember answers null for everybody — including the current user, who is
+  // the default reporter on every create. Without this the field would open
+  // reading "Former member" about the person filling it in.
+  const m =
+    ui.getMember(uid) ||
+    (String(uid) === String(Visitor.id)
+      ? {
+          firstname: Visitor.get("firstname"),
+          lastname: Visitor.get("lastname"),
+        }
+      : {});
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}__assignee-chip`,
+      attrOpt: { "data-uid": uid },
+      kids: [
+        Skeletons.UserProfile({
+          className: `${pfx}__assignee-chip-avatar`,
+          id: uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__assignee-chip-name`,
+          content: authorName(m),
+        }),
+      ],
+    }),
+  ];
+}
 
 // Selected assignees as removable chips. Exported so the panel can re-feed
 // just the chips row after a pick/removal.
@@ -2851,6 +3014,7 @@ const HISTORY_VERBS = {
   status: "TASK_ACT_STATUS",
   complete: "TASK_ACT_COMPLETE",
   assignee: "TASK_ACT_ASSIGNEE",
+  reporter: "TASK_ACT_REPORTER",
   link_file: "TASK_ACT_LINKED_FILES",
   comment: "TASK_ACT_COMMENTED",
 };
@@ -3313,8 +3477,275 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
   return attachments.map((f) => attachmentRowDescriptor(ui, f, taskId));
 }
 
+/**
+ * Subtasks block of the detail panel: header + child rows + the inline creator.
+ *
+ * The COUNT lives in here rather than in the static header above it, so adding
+ * a subtask updates it without re-rendering the panel — this whole block is one
+ * re-feedable part (sys_pn "subtask-rows"), for the same reason attachments and
+ * comments are: a full _render() steals focus from the title/description
+ * editors and drops unsaved edits.
+ */
+function buildSubtaskRowsContent(ui, parentId) {
+  const pfx = ui.fig.family;
+  const parent = ui.getTaskById(parentId);
+  const subs = ui.getSubtasks(parentId);
+  const draft = ui.getSubtaskDraft();
+  const priorities = ui.getPriorities() || [];
+
+  const priorityPill = (t) => {
+    const p = priorities.find((x) => x.key === (t.priority || "medium")) || {};
+    if (!t.priority) return null;
+    return Skeletons.Note({
+      className: `${pfx}__subtask-priority`,
+      content: LOCALE[p.label] || p.key || "",
+      attrOpt: { "data-priority": t.priority },
+    });
+  };
+
+  const avatars = (t) => {
+    const uids = ui.getKnownAssignees(t);
+    if (!uids.length) return null;
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-avatars`,
+      kids: uids.slice(0, 2).map((uid) => {
+        const m = ui.getMember(uid) || {};
+        return Skeletons.UserProfile({
+          className: `${pfx}__subtask-avatar`,
+          id: uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        });
+      }),
+    });
+  };
+
+  // One child. Clicking the row opens that subtask's OWN detail panel — it is a
+  // full task, so everything the creator doesn't offer (description, files,
+  // comments, its own due date) is edited there.
+  const subRow = (t) => {
+    const done = ui.isDoneStatus(t.status);
+    const who = ui
+      .getKnownAssignees(t)
+      .map((uid) => fullName(ui.getMember(uid)))
+      .filter(Boolean)
+      .join(", ");
+    const due = t.due_date ? formatDueDate(t.due_date) : "";
+    const meta = [who, due].filter(Boolean).join(" · ");
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-row`,
+      bubble: 0,
+      service: "open-detail",
+      uiHandler: [ui],
+      taskId: t.id,
+      attrOpt: { "data-done": done ? "1" : "0" },
+      kids: [
+        Skeletons.Button.Svg({
+          className: `${pfx}__subtask-check`,
+          ico: "app-check",
+          bubble: 0,
+          service: "toggle-subtask-complete",
+          uiHandler: [ui],
+          taskId: t.id,
+          attrOpt: { "data-done": done ? "1" : "0" },
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__subtask-text`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__subtask-title`,
+              content: t.title || "",
+            }),
+            meta
+              ? Skeletons.Note({
+                  className: `${pfx}__subtask-meta`,
+                  content: meta,
+                })
+              : null,
+          ].filter(Boolean),
+        }),
+        priorityPill(t),
+        avatars(t),
+      ].filter(Boolean),
+    });
+  };
+
+  // Inline creator. Priority and assignees are set here; the due date is
+  // inherited from the parent and editable afterwards in the subtask's own
+  // panel, which is what the handoff's "editable now or later" allows.
+  const creator = () => {
+    const members = ui.getMembers() || [];
+    const MAX_MEMBERS = 8;
+    const shown = members.slice(0, MAX_MEMBERS);
+    const picked = draft.assignees || [];
+    return Skeletons.Box.Y({
+      className: `${pfx}__subtask-create`,
+      bubble: 0,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-create-input`,
+          kids: [
+            Skeletons.Entry({
+              className: `${pfx}__subtask-create-entry`,
+              name: "subtask-title",
+              // Explicit "" is required, not tidiness: the entry template
+              // interpolates value="${m.value}" straight from model.toJSON()
+              // and the widget then re-applies _input.value = value, so an
+              // omitted value renders the literal string "undefined" in the
+              // field. Every other text Entry in this file passes one too.
+              value: draft.title || "",
+              // Keystrokes land on the draft via the watch, so the typed title
+              // survives any re-render (a peer's WS update re-renders too).
+              watch: "task-input-changed",
+              placeholder: LOCALE.SUBTASK_PLACEHOLDER,
+              // Enter commits, matching the task title field.
+              mode: "commit",
+              service: "create-subtask",
+              bubble: 0,
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-create-fields`,
+          kids: [
+            // Priority — same four keys as a task.
+            Skeletons.Box.X({
+              className: `${pfx}__subtask-create-priorities`,
+              kids: priorities.map((p) =>
+                Skeletons.Note({
+                  className: `${pfx}__subtask-create-priority`,
+                  content: LOCALE[p.label] || p.key,
+                  bubble: 0,
+                  service: "set-subtask-priority",
+                  uiHandler: [ui],
+                  taskPriority: p.key,
+                  attrOpt: {
+                    "data-priority": p.key,
+                    "data-selected": draft.priority === p.key ? "1" : "0",
+                  },
+                }),
+              ),
+            }),
+            // Inherited due date, shown so the user knows what they are getting.
+            draft.due_date
+              ? Skeletons.Note({
+                  className: `${pfx}__subtask-create-due`,
+                  content: formatDueDate(draft.due_date),
+                })
+              : null,
+          ].filter(Boolean),
+        }),
+        shown.length
+          ? Skeletons.Box.X({
+              className: `${pfx}__subtask-create-members`,
+              kids: [
+                ...shown.map((m) =>
+                  Skeletons.UserProfile({
+                    className: `${pfx}__subtask-create-member`,
+                    id: m.uid || m.id,
+                    firstname: m.firstname,
+                    lastname: m.lastname,
+                    auto_color: 1,
+                    live_status: 0,
+                    bubble: 0,
+                    service: "toggle-subtask-assignee",
+                    uiHandler: [ui],
+                    memberUid: m.uid || m.id,
+                    attrOpt: {
+                      // data-uid so the handler can flip the selected flag in
+                      // place — re-feeding this block would rebuild the title
+                      // Entry empty and lose whatever has been typed.
+                      "data-uid": String(m.uid || m.id),
+                      "data-selected": picked.includes(String(m.uid || m.id))
+                        ? "1"
+                        : "0",
+                    },
+                  }),
+                ),
+                members.length > MAX_MEMBERS
+                  ? Skeletons.Note({
+                      className: `${pfx}__subtask-create-more`,
+                      content: `+${members.length - MAX_MEMBERS}`,
+                    })
+                  : null,
+              ].filter(Boolean),
+            })
+          : null,
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-create-actions`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__subtask-create-cancel`,
+              content: LOCALE.CANCEL,
+              bubble: 0,
+              service: "cancel-subtask",
+              uiHandler: [ui],
+            }),
+            Skeletons.Note({
+              className: `${pfx}__subtask-create-submit`,
+              content: LOCALE.CREATE,
+              bubble: 0,
+              service: "create-subtask",
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+      ].filter(Boolean),
+    });
+  };
+
+  const { done, total } = ui.getSubtaskCount(parent || { id: parentId });
+  // One level of nesting: a subtask never offers "+ Add subtask". Enforced
+  // server-side too (SUBTASK_NESTING_DENIED) — this only stops it being offered.
+  const isSub = ui.isSubtask(parent);
+  const canAdd = mayCreateTask(ui) && !isSub;
+
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}__subtask-header`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__detail-label`,
+          content: LOCALE.SUBTASKS,
+        }),
+        total
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-count`,
+              content: `${done}/${total}`,
+              attrOpt: { "data-complete": done === total ? "1" : "0" },
+            })
+          : null,
+        canAdd && !draft
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-add`,
+              content: LOCALE.ADD_SUBTASK,
+              bubble: 0,
+              service: "add-subtask",
+              uiHandler: [ui],
+            })
+          : null,
+      ].filter(Boolean),
+    }),
+    ...subs.map(subRow),
+    draft && canAdd ? creator() : null,
+    // Only when there is genuinely nothing: with the creator open the block is
+    // not empty, and an "no subtasks" line under an active form reads as an error.
+    !subs.length && !draft
+      ? Skeletons.Note({
+          className: `${pfx}__subtask-empty`,
+          content: LOCALE.NO_SUBTASKS,
+        })
+      : null,
+  ].filter(Boolean);
+}
+
+make.buildSubtaskRowsContent = buildSubtaskRowsContent;
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeChips = buildAssigneeChips;
+make.buildReporterChip = buildReporterChip;
 make.buildAssigneeSuggestions = buildAssigneeSuggestions;
 make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildLinkPromptContent = buildLinkPromptContent;

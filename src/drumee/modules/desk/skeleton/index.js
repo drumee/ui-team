@@ -187,6 +187,23 @@ const _desk_main = function (ui) {
         }),
       ],
     }),
+    // Host for a parked live call. The call WINDOW itself is moved in here
+    // (window/meeting setCallTile) rather than being represented by a proxy,
+    // because it is the only way to get it out of the window manager's stacking
+    // context: `.window-manager__ui` carries `isolation: isolate` (wm/skin), so
+    // no z-index on a window layer can clear the desk's own screens — the
+    // full-page slot (Settings / Billing / Admin Console / Get help) or the
+    // slide-out panels (Inbox / Contacts / Trash). Docked here the call sits
+    // above all of them, which is what makes it ONE affordance that behaves the
+    // same everywhere instead of a tile on some screens and a pill on others.
+    //
+    // Bare container on purpose: no service and no kids. The hosted window
+    // brings its own "Return to call" cover, and the dock hides itself
+    // (`:empty`) whenever no call is parked in it.
+    Skeletons.Box.X({
+      sys_pn: "call-dock",
+      className: `${ui.fig.family}__call-dock`,
+    }),
     Skeletons.Wrapper.Y({
       sys_pn: "overlay",
       className: `${ui.fig.family}__overlay`,

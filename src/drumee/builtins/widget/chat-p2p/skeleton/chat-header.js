@@ -71,6 +71,35 @@ module.exports = function (ui, contact) {
         className: `${fig}__header-profile icon raw-drumee_projectroom`
       });
 
+  // Two different support questions, and they want opposite treatments:
+  //  - talking TO support (the user's side): presence is replaced with an
+  //    expectation line. An "Offline" dot on the support contact reads as
+  //    "nobody will answer", which is not what it means.
+  //  - answering support (the admin's side): presence is exactly what they
+  //    want to know — is this person still at their desk?
+  const supportId =
+    typeof Desk !== 'undefined' && _.isFunction(Desk.supportContactId)
+      ? Desk.supportContactId()
+      : null;
+  const talkingToSupport = !!supportId && entityId === supportId;
+  const isSupportThread =
+    _.isFunction(ui._isSupportRow) && ui._isSupportRow(contact);
+
+  const statusNote = talkingToSupport
+    ? Skeletons.Note({
+        // Deliberately NOT `__header-status`: _onPeerData finds the presence
+        // element by that class and rewrites its text on every peer status
+        // broadcast, which would replace this line with "Offline".
+        className: `${fig}__header-support-note`,
+        content: LOCALE.SUPPORT_REPLY_TIME
+      })
+    : (isContact ? Skeletons.Note({
+        className: `${fig}__header-status`,
+        sys_pn: 'header-status',
+        dataset: { online: onlineState == null ? '' : onlineState },
+        content: statusLabel(onlineState)
+      }) : null);
+
   const info = Skeletons.Box.X({
     className: `${fig}__header-info`,
     kids: [
@@ -79,23 +108,29 @@ module.exports = function (ui, contact) {
       Skeletons.Box.Y({
         className: `${fig}__header-text`,
         kids: [
-          Skeletons.Note({
-            className: `${fig}__header-name`,
-            content: displayName
+          Skeletons.Box.X({
+            className: `${fig}__header-name-row`,
+            kids: [
+              Skeletons.Note({
+                className: `${fig}__header-name`,
+                content: displayName
+              }),
+              isSupportThread ? Skeletons.Note({
+                className: `${fig}__support-pill`,
+                content: LOCALE.SUPPORT_LABEL
+              }) : null
+            ]
           }),
-          isContact ? Skeletons.Note({
-            className: `${fig}__header-status`,
-            sys_pn: 'header-status',
-            dataset: { online: onlineState == null ? '' : onlineState },
-            content: statusLabel(onlineState)
-          }) : null
+          statusNote
         ]
       })
     ]
   });
 
   const flag = contact.mget(_a.flag);
-  const callable = flag !== _a.support;
+  // `_a.support` is the legacy ticket flag; talkingToSupport covers the live
+  // support conversation. Neither offers calls.
+  const callable = flag !== _a.support && !talkingToSupport;
 
   const videoBtn = callable ? Skeletons.Button.Svg({
     ico: 'video',
@@ -116,7 +151,10 @@ module.exports = function (ui, contact) {
     kids: [
       videoBtn,
       phoneBtn,
-      Skeletons.Button.Svg({
+      // `show-more` has no handler in chat_p2p — the button is inert. Leave it
+      // where it has always been, but keep it out of the support thread rather
+      // than offer a user in need of help a control that does nothing.
+      talkingToSupport ? null : Skeletons.Button.Svg({
         ico: 'menu_expand',
         className: `${fig}__header-btn`,
         service: 'show-more',

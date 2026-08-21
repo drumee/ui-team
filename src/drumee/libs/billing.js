@@ -368,9 +368,104 @@ function canShowSeatLimitPopup() {
   );
 }
 
+/**
+ * Is TIER GATING in force on this deployment at all?
+ *
+ * Separate from `canUpgradePlan` on purpose: that one asks whether a CTA
+ * should be drawn, this one asks whether the feature should be taken away in
+ * the first place. They are not the same question and conflating them is how
+ * you ship crippled software.
+ *
+ * A self-hosted pod has no payment backend and no checkout — `SERVICE.payment`
+ * simply is not merged into SERVICE there (drumee.js `init_globals`; the local
+ * lex/services.json fallback carries no `payment` entry). Locking a feature on
+ * such an install offers the operator no way whatsoever to unlock it: this is
+ * AGPL software that people run on their own hardware, and a gate they cannot
+ * pay to lift is not an upsell, it is a defect. The same is true when the
+ * operator has explicitly switched billing off.
+ *
+ * So gating follows the same switch the CTA does, one step earlier. Cloud
+ * installs gate and sell; pods do neither.
+ */
+function featureGatingActive() {
+  return billingAvailable();
+}
+
+/**
+ * Read a plan entitlement out of `Visitor.quota()`.
+ *
+ * Everything in the quota JSON arrives from yp.plan.quota, copied wholesale by
+ * payment_apply_entitlement and returned by the get_quota proc — so a new
+ * entitlement is a new key in that JSON and needs no plumbing on this side.
+ * (Note for anyone adding one: it goes in yp.plan.QUOTA, not yp.plan.FEATURES.
+ * `features` is read only by payment_get_catalog for the pricing page and
+ * never reaches the client.)
+ *
+ * @returns {*} undefined when quota has not loaded or has no such key
+ */
+function entitlement(key) {
+  const quota =
+    (typeof Visitor !== "undefined" && Visitor && Visitor.quota
+      ? Visitor.quota()
+      : null) || {};
+  const v = quota[key];
+  return v === "" ? undefined : v;
+}
+
+/**
+ * Which task-tracker views this plan may open.
+ *
+ * Entitlement: `quota.task_views` — a comma-separated whitelist ("board,list"),
+ * or "*" for every view.
+ *
+ * UNKNOWN MEANS EVERYTHING, and that is the whole safety story for this
+ * feature. The key does not exist in any deployed plan row until the schemas
+ * patch lands, so a missing value has to read as "no restriction" — fail it
+ * closed instead and the day this ships every user on every tier, Business
+ * included, silently loses Calendar, Gantt and Project Health. Same rule
+ * `isFreeSoloPlan` documents for a not-yet-loaded seat count, and for the same
+ * reason: this also runs during bootstrap, before quota is filled in.
+ *
+ * The consequence is that the UI change is INERT until the entitlement is
+ * deployed, which is exactly the rollout order you want — ship the client,
+ * watch nothing change, then turn it on from the database.
+ *
+ * @returns {String[]|null} allowed view keys, or null for "no restriction"
+ */
+function taskViewsAllowed() {
+  if (!featureGatingActive()) return null;
+  const raw = entitlement("task_views");
+  if (raw == null) return null;
+  const s = String(raw).trim().toLowerCase();
+  if (!s || s === "*" || s === "all") return null;
+  const list = s
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  // A present-but-unparseable value ("[]", ",,,") must not lock the panel down
+  // to nothing. Unknown fails open, and an empty list is unknown.
+  return list.length ? list : null;
+}
+
+/**
+ * May this plan open a given task-tracker view?
+ *
+ * @param {String} view "board" | "list" | "calendar" | "gantt" | "summary"
+ * @returns {Boolean}
+ */
+function isTaskViewAllowed(view) {
+  const allowed = taskViewsAllowed();
+  if (!allowed) return true;
+  return allowed.includes(String(view || "").trim().toLowerCase());
+}
+
 module.exports = {
   billingAvailable,
   canUpgradePlan,
+  featureGatingActive,
+  entitlement,
+  taskViewsAllowed,
+  isTaskViewAllowed,
   needsAdminConsoleUpgrade,
   planKey,
   planLabel,

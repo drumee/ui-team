@@ -450,6 +450,18 @@
       z-index: 50001 !important;
     }
 
+    // The call layer (see wm/skeleton) deliberately carries NO z-index of its
+    // own: it exists to keep a live call out of the layers the desk recycles,
+    // not to change how it stacks. It therefore behaves as any window layer —
+    // 50000 while it holds a window (the global `[data-state="open"]` lift in
+    // skin/lib/utils.scss), the 50001 focus lift above, ties broken by DOM
+    // order, which puts it above the other windows and below __wrapper-modal.
+    //
+    // And nothing here can lift it over the desk's full-page screens: `isolation:
+    // isolate` on &__ui (above) traps every layer inside the WM's stacking
+    // context by design. That is why the "come back to the call" affordance is a
+    // desk-level pill (desk/skeleton call-dock) rather than the parked tile.
+
     // Upload progress floater — above EVERY window layer, including the
     // active-window lift right above (50001) and the per-window lift in
     // window/skin/window.scss (`[data-state="1"]` → 10000 !important).

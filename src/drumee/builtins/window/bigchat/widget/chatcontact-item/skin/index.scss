@@ -53,6 +53,22 @@
     width: 100%;
   }
 
+  // Marks a support conversation in the inbox list. Sits between the name
+  // (flex:1, so it absorbs the row's free space and truncates) and the
+  // timestamp, which keeps the pill against the end of the name.
+  &__support-pill {
+    @include drumee.typo($size: 9px, $color: var(--active-border));
+    font-weight: 700;
+    background-color: var(--primary-30);
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.6px;
+    line-height: 14px;
+    padding: 0 5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
   &__icon {
     color: var(--normal-fg-50);
     height: 22px;

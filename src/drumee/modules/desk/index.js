@@ -9,6 +9,7 @@ const hubDeepLink = require("libs/hub-deep-link");
 // "Open this file once I am signed in" — a Designation link opened by a visitor
 // with no session. Armed at module scope in index.web.js, consumed below.
 const fileDeepLink = require("libs/file-deep-link");
+const { openSupportMail } = require("libs/support");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
 // hosts it. Opt-in: each implements onEscape() and returns true when it consumed
@@ -117,6 +118,11 @@ class desk_module extends LetcBox {
     this._openTrashPanel = () => this._deskServiceShim("toggle-trash");
     this._openHomeFromPopup = () => this._deskServiceShim(_e.home);
     this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
+    // The user clicked the docked call to come back to it: take down whatever
+    // screen was covering the desk so the restored, full-size window is not
+    // parked behind it (window/meeting _leaveCallTile).
+    this._onCallReturned = () => this.closeAllPanels();
+    RADIO_BROADCAST.on("call:returned", this._onCallReturned);
     RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
@@ -393,6 +399,7 @@ class desk_module extends LetcBox {
       this._restoreClearTimer = null;
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
+    RADIO_BROADCAST.off("call:returned", this._onCallReturned);
     RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
@@ -1201,6 +1208,7 @@ class desk_module extends LetcBox {
     if (service === "toggle-activity") {
       // Open-only: the live toggle would close the panel if state is already 1.
       this._dismissWmModal();
+      this._parkLiveCall();
       const p = await this.ensurePart("activity-panel");
       if (p && ~~p.mget(_a.state) !== 1) {
         p.activityState = 1;
@@ -1355,6 +1363,11 @@ class desk_module extends LetcBox {
     setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
     // PMF rating survey: accumulate active usage; popup fires at 30 min.
     this._initRatingSurveyTimer();
+    // Warm the support-account lookup so screens that need it can answer
+    // synchronously: the Get help screen hides Contact Support for the
+    // support account itself, and the inbox badges support conversations.
+    // Failure is already swallowed into null — nothing here depends on it.
+    this.supportContact();
   }
 
   /**
@@ -2168,6 +2181,104 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Resolve the account that answers Contact Support, once per session.
+   *
+   * Answers null whenever there is nobody to talk to — no support account
+   * configured, the configured one has been deleted, or the request failed.
+   * Every caller treats null as "fall back to the support mail link", so a
+   * deployment that never configures support keeps today's behaviour.
+   *
+   * @returns {Promise<Object|null>} {entity_id, display, firstname, lastname, is_self}
+   */
+  async supportContact() {
+    if (this._supportContact !== undefined) return this._supportContact;
+    // Share one in-flight request between concurrent callers (the Help screen
+    // and the sidebar can both ask before either has answered).
+    if (!this._supportContactPromise) {
+      this._supportContactPromise = this.fetchService(SERVICE.support.contact, {})
+        .then((res) => {
+          const ok = res && ~~res.configured === 1 && res.entity_id;
+          this._supportContact = ok ? res : null;
+          return this._supportContact;
+        })
+        .catch((e) => {
+          this.warn("desk: could not resolve the support contact", e);
+          this._supportContact = null;
+          return null;
+        })
+        .finally(() => {
+          this._supportContactPromise = null;
+        });
+    }
+    return this._supportContactPromise;
+  }
+
+  /**
+   * Support account id, or null — the synchronous view of supportContact()
+   * for code that only runs after it has resolved (inbox row badging).
+   */
+  supportContactId() {
+    return (this._supportContact && this._supportContact.entity_id) || null;
+  }
+
+  /**
+   * True when the signed-in user IS the support account. The entry point
+   * hides for them: there is no conversation to open with yourself.
+   */
+  isSupportContact() {
+    const id = this.supportContactId();
+    return !!id && id === Visitor.id;
+  }
+
+  /**
+   * Contact Support — open a live 1:1 conversation with the support account.
+   *
+   * There is no room to create: chat.post creates the thread on the first
+   * message, so this only has to put the right conversation on screen.
+   * Returns false when support could not be resolved, which tells the caller
+   * (help_main) to fall back to the mail link rather than leave the click dead.
+   *
+   * @returns {Promise<Boolean>} whether the conversation was opened
+   */
+  async openSupportChat() {
+    const support = await this.supportContact();
+    // Nobody to talk to (unconfigured, deleted, or lookup failed), or the
+    // caller IS support: fall back to mail rather than leave the click dead.
+    if (!support || ~~support.is_self === 1) {
+      openSupportMail();
+      return false;
+    }
+
+    const peer = {
+      entity_id: support.entity_id,
+      drumate_id: support.entity_id,
+      firstname: support.firstname || "",
+      lastname: support.lastname || "",
+      display: support.display || LOCALE.SUPPORT_CHAT_TITLE,
+      is_support: 1,
+    };
+
+    const part = this.getPart && this.getPart("chat-panel");
+    const child =
+      part && !part.isEmpty() && part.children && part.children.last();
+
+    // The chat panel is a keep-alive slot: once mounted it is hidden and
+    // reshown rather than rebuilt, and togglePanel's mounted-widget branch
+    // returns before it can pass options down. Drive the live widget directly
+    // so an already-open inbox switches to the support conversation instead
+    // of revealing whatever was last open — or toggling itself shut.
+    if (child && _.isFunction(child.openPeer)) {
+      this.closeOtherSidebarPanels("chat-panel");
+      this._showPanel(part);
+      await child.openPeer(peer.entity_id, peer);
+      return true;
+    }
+
+    await this.togglePanel("chat_p2p", "chat-panel", true, { open_peer: peer });
+    return true;
+  }
+
+  /**
    * Reward onboarding flow (Figma 3275:236091). Runs AFTER the 5-step
    * tutorial, and only for users the SERVER says are owed a run —
    * `reward.get_state` reads yp.reward_claim, which analytics-server seeds when
@@ -2901,6 +3012,7 @@ class desk_module extends LetcBox {
    * @param {*} pn  Slot name; tracked per-slot in `_pendingKinds`.
    */
   _loadKind(p, kind, pn, opt = {}) {
+    this._parkLiveCall();
     p.feed({
       kind,
       uiHandler: [this],
@@ -2929,6 +3041,23 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * A screen is about to cover the desk — a full-page one in the settings slot
+   * (Settings / Billing / Admin Console / Get help) or a slide-out panel
+   * (Inbox / Contacts / Trash). Ask a live call to park itself in the desk dock
+   * (./skeleton call-dock), which sits above both, instead of being buried
+   * inside the window manager where nothing can lift it.
+   *
+   * A broadcast, not a direct call: the desk deliberately owns no reference to
+   * the call window, and this must stay a no-op when there is no call.
+   */
+  _parkLiveCall() {
+    try {
+      if (!window.Wm || !_.isFunction(Wm.hasLiveCall) || !Wm.hasLiveCall()) return;
+      RADIO_BROADCAST.trigger("call:minimize");
+    } catch (e) { /* non-fatal */ }
+  }
+
+  /**
    * Any wrapper-modal dialog (alert / confirm / add-folder form / invite /
    * move…) lifts the WHOLE window-manager to z 30000 (the desk skin :has()
    * rule) so the dialog can sit above the side panels. The sidebar does not
@@ -2951,6 +3080,7 @@ class desk_module extends LetcBox {
 
   _showPanel(p) {
     this._dismissWmModal();
+    this._parkLiveCall();
     if (!p || p.isEmpty()) return false;
     const child = p.children.last();
     if (child && child.el) {
@@ -3640,6 +3770,12 @@ class desk_module extends LetcBox {
 
       case "toggle-help":
         return this._openGetHelp();
+
+      // "Contact Support" on the Get help screen — opens a live conversation
+      // with the support account. help_main handles the false return by
+      // falling back to its mail link.
+      case "contact-support":
+        return this.openSupportChat();
 
       // "Product Tour" button on the Get help screen.
       case "start-product-tour":

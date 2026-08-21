@@ -1,5 +1,54 @@
 @use "mixins/drumee";
 
+// ── Board colour system (Figma 2040-106090) ──────────────────────────────────
+// Every column carries a `theme` key from this 10-swatch palette. Column colour
+// MUST be keyed on `data-theme` — never on `data-status` / `data-column`: a
+// built-in column's key is a literal status word ("todo"), but a CUSTOM column's
+// key is its 16-char task_column.id (uniqueId()), so per-key rules only ever
+// matched the four seeded built-ins and left every user-created column grey.
+// That is why clicking a custom status pill used to look like a no-op: the
+// handler flipped data-active correctly, but no rule matched to fill the pill.
+//
+// Tints (translucent pill / chip washes). The board column body and the board
+// card pill keep their own inline maps below: those carry element-specific Figma
+// alphas (2021:117822 / 2040-106090) that deliberately differ from these.
+$theme-tints: (
+  "orange": rgba(232, 161, 59, 0.15),
+  "yellow": rgba(235, 210, 18, 0.16),
+  "green": rgba(84, 182, 132, 0.15),
+  "cyan": rgba(101, 208, 234, 0.16),
+  "blue": rgba(113, 163, 244, 0.14),
+  "purple": rgba(89, 80, 255, 0.1),
+  "pink": rgba(255, 168, 220, 0.2),
+  "red": rgba(215, 78, 73, 0.12),
+);
+
+// Solid accents — must mirror COLUMN_THEMES in index.js, the single source of
+// truth. Dots take their colour inline from there (styleOpt / --pill-dot); only
+// text colour, which has no element of its own, is duplicated here.
+$theme-colors: (
+  "orange": #e8a13b,
+  "yellow": #ebd212,
+  "green": #54b684,
+  "cyan": #65d0ea,
+  "blue": #71a3f4,
+  "purple": #847eff,
+  "pink": #ffa8dc,
+  "red": #d74e49,
+);
+
+// Tint an element from its own `data-theme`. $default covers theme "default"
+// and any unrecognised value, so each caller keeps the neutral tone it had.
+@mixin theme-tint($default) {
+  background: $default;
+
+  @each $theme, $tint in $theme-tints {
+    &[data-theme="#{$theme}"] {
+      background: $tint;
+    }
+  }
+}
+
 .tasks-panel {
   &__ui {
     width: 100%;
@@ -112,6 +161,18 @@
     // Twin of __ui's clamp — keep the column stack from widening the root past
     // its cell so the board's overflow-x engages.
     min-width: 0;
+  }
+
+  // Mount point for the active view (board / list / calendar / gantt / summary),
+  // named "view-host" so a filter keystroke re-feeds only this subtree. Purely
+  // structural: it repeats the flex clamps every view root carries so inserting
+  // it changes nothing about the layout, and it stays in the min-width:0 chain
+  // (__ui → __root → here → __main) that lets the board scroll horizontally.
+  &__view-host {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    align-items: stretch;
   }
 
   // ── Member filter dropdown ────────────────────────────────────
@@ -255,6 +316,13 @@
       $line: 16px,
       $color: var(--col-primary-40, #5950ff)
     );
+
+    // Hidden rather than unmounted while no filter is set, so the flag can be
+    // flipped in place (see _syncFilterAffordances) without rebuilding the
+    // popup — which would destroy the keyword input the user is typing in.
+    &[data-active="0"] {
+      display: none;
+    }
   }
 
   // Accordion category (row + collapsible value body).
@@ -396,9 +464,10 @@
 
   // ── Columns ───────────────────────────────────────────────────
   &__column {
-    // `--col-accent` (set inline per column from the COLUMNS table) still drives
-    // the drag-drop highlight; the static tints below are the exact Figma
-    // per-status overlays (2021:117822) keyed on `data-column`.
+    // `--col-accent` (set inline per column from getColumns) still drives the
+    // drag-drop highlight; the static tints below are the exact Figma overlays
+    // (2021:117822), keyed on `data-theme` — see the note at the top of this
+    // file for why never on `data-column`.
     // Grow to fill the panel when a few columns fit, but never shrink below
     // 260px — once the columns can't all fit at that width, they stop
     // collapsing and __main scrolls horizontally instead (at every size).
@@ -443,7 +512,8 @@
   // (TO DO → IN PROGRESS → REVIEW → COMPLETE) instead of stretching to fit.
   @media (max-width: 650px) {
     &__ui,
-    &__root {
+    &__root,
+    &__view-host {
       max-width: 100%;
     }
 
@@ -556,14 +626,13 @@
     border-radius: 16px;
     background-color: rgba(0, 0, 0, 0.05);
   }
-  &__column[data-column="in_progress"] &__column-title-dot-group {
-    background-color: rgba(89, 80, 255, 0.1);
-  }
-  &__column[data-column="to_review"] &__column-title-dot-group {
-    background-color: rgba(232, 161, 59, 0.15);
-  }
-  &__column[data-column="complete"] &__column-title-dot-group {
-    background-color: rgba(61, 222, 140, 0.15);
+  // Keyed on the column's theme, not its id — see $theme-tints. (Written as a
+  // descendant loop rather than @include theme-tint because the flag lives on
+  // the column, one level up from the pill.)
+  @each $theme, $tint in $theme-tints {
+    &__column[data-theme="#{$theme}"] &__column-title-dot-group {
+      background-color: $tint;
+    }
   }
 
   &__column-count {
@@ -571,7 +640,7 @@
     justify-content: center;
   }
 
-  // Count sits outside the pill, tinted with the exact per-status color.
+  // Count sits outside the pill, tinted with its column's accent.
   &__column-count-text {
     @include drumee.typo(
       $size: 14px,
@@ -580,14 +649,10 @@
       $color: var(--normal-fg-50, #65656c)
     );
   }
-  &__column[data-column="in_progress"] &__column-count-text {
-    color: #5950ff;
-  }
-  &__column[data-column="to_review"] &__column-count-text {
-    color: #e8a13b;
-  }
-  &__column[data-column="complete"] &__column-count-text {
-    color: #54b684;
+  @each $theme, $color in $theme-colors {
+    &__column[data-theme="#{$theme}"] &__column-count-text {
+      color: $color;
+    }
   }
 
   // ── Task card (Trello-like) ───────────────────────────────────
@@ -1584,36 +1649,20 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #aeaeb2;
-    }
-    &[data-status="in_progress"]::before {
-      background: #5950ff;
-    }
-    &[data-status="to_review"]::before {
-      background: #e8a13b;
-    }
-    &[data-status="complete"]::before {
-      background: #54b684;
+      // The dot takes the column's own colour, handed down inline as
+      // --pill-dot by the skeleton (a ::before can't be styled inline).
+      background: var(--pill-dot, #aeaeb2);
     }
 
     &:hover {
       background: rgba(0, 0, 0, 0.03);
     }
 
+    // Selected pill fills with its column's theme tint. Keyed on data-theme so
+    // a custom column lights up exactly like a built-in — see $theme-tints.
     &[data-active="1"] {
       border-color: transparent;
-    }
-    &[data-status="todo"][data-active="1"] {
-      background: rgba(0, 0, 0, 0.05);
-    }
-    &[data-status="in_progress"][data-active="1"] {
-      background: rgba(89, 80, 255, 0.1);
-    }
-    &[data-status="to_review"][data-active="1"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"][data-active="1"] {
-      background: rgba(61, 222, 140, 0.15);
+      @include theme-tint(rgba(0, 0, 0, 0.05));
     }
   }
 
@@ -1783,31 +1832,8 @@
   }
 
   // Description | Files two-up row atop the detail main column.
-  // Reporter (task creator) — avatar + name, read-only.
-  &__detail-reporter {
-    align-items: center;
-    gap: 8px;
-  }
-
-  &__detail-reporter-avatar {
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    overflow: hidden;
-  }
-
-  &__detail-reporter-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 500,
-      $line: 20px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
-  }
+  // (The Reporter field renders the shared __assignee-picker — it is editable
+  // now, so it no longer has an inline avatar+name row of its own.)
 
   &__detail-header {
     align-items: center;
@@ -3268,13 +3294,14 @@
     );
   }
 
+  // Provenance under the (editable) reporter picker: "Created by X · <date>",
+  // where the creator half shows only while it differs from the reporter.
+  // A block, not an inline tail — the picker above it owns the whole row.
   &__detail-reporter-time {
     font-size: 12px;
     line-height: 1.2;
     color: var(--normal-fg-30, rgba(11, 10, 33, 0.55));
-    margin-left: 8px;
-    white-space: nowrap;
-    align-self: center;
+    margin-top: 2px;
   }
 
   &__comment-body {
@@ -3832,6 +3859,7 @@
 
   &__viewbar-item {
     // Icon + label row (was a bare text Note).
+    position: relative; // anchor for the locked tooltip (&__viewbar-item-tip)
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
@@ -3852,6 +3880,60 @@
       color: var(--accent, #fa8540);
       background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
     }
+
+    // Not on this plan. Receded, but deliberately NOT `cursor: not-allowed`
+    // and NOT pointer-events:none — the click is the upsell, so the tab has to
+    // stay as clickable as it looks. Opacity alone says "unavailable" while
+    // the padlock says why; the modal says the rest.
+    &[data-locked="1"] {
+      opacity: 0.55;
+
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+  }
+
+  // Padlock after the label on a tab this plan cannot open. pointer-events
+  // none for the same reason as the leading glyph: the click belongs to the
+  // tab's set-view service.
+  &__viewbar-item-lock {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 12px;
+    margin-left: 2px;
+    color: currentColor;
+    pointer-events: none;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  // Hover label for a locked tab. Same treatment as the shared `&__tip` but
+  // opening DOWNWARD: the viewbar sits near the top of the panel, and a tip
+  // above the first row would be clipped by the window edge.
+  &__viewbar-item-tip {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    background: var(--normal-fg-10, rgba(28, 28, 30, 0.92));
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-bg-elevated, #fff)
+    );
   }
 
   // SVG glyph in front of each view tab's label. pointer-events:none so the
@@ -4275,19 +4357,10 @@
     padding: 3px 8px;
     border-radius: 6px;
     cursor: pointer;
-    background: rgba(174, 174, 178, 0.16);
     transform-origin: left center;
     transition: filter 0.12s, transform 0.12s;
-
-    &[data-status="in_progress"] {
-      background: rgba(89, 80, 255, 0.12);
-    }
-    &[data-status="to_review"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"] {
-      background: rgba(84, 182, 132, 0.15);
-    }
+    // Tint keyed on data-theme, so custom columns colour their chips too.
+    @include theme-tint(rgba(174, 174, 178, 0.16));
     &:hover {
       filter: brightness(0.97);
       transform: scale(1.03);
@@ -4443,26 +4516,15 @@
     );
   }
 
-  // Status pill — tint + dot driven by data-status (matches COLUMNS colors).
+  // Status pill — tint keyed on data-theme (see $theme-tints); the dot takes
+  // the column colour inline, like the board card's.
   &__cal-card-status {
     align-self: flex-start;
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
     border-radius: 71px;
-
-    &[data-status="todo"] {
-      background: rgba(174, 174, 178, 0.18);
-    }
-    &[data-status="in_progress"] {
-      background: rgba(89, 80, 255, 0.12);
-    }
-    &[data-status="to_review"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"] {
-      background: rgba(84, 182, 132, 0.15);
-    }
+    @include theme-tint(rgba(174, 174, 178, 0.18));
   }
 
   &__cal-card-status-dot {
@@ -4471,16 +4533,6 @@
     height: 8px;
     border-radius: 50%;
     background: #aeaeb2;
-  }
-
-  &__cal-card-status[data-status="in_progress"] &__cal-card-status-dot {
-    background: #5950ff;
-  }
-  &__cal-card-status[data-status="to_review"] &__cal-card-status-dot {
-    background: #e8a13b;
-  }
-  &__cal-card-status[data-status="complete"] &__cal-card-status-dot {
-    background: #54b684;
   }
 
   &__cal-card-status-label {
@@ -5069,7 +5121,8 @@
     }
   }
 
-  // Status cell — tinted pill + colored dot + dark label
+  // Status cell — tinted pill + colored dot + dark label. Tint keyed on
+  // data-theme (see $theme-tints); the dot is inline from the column colour.
   &__list-status {
     align-items: center;
     gap: 8px;
@@ -5079,19 +5132,7 @@
     box-sizing: border-box;
     white-space: nowrap;
     @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: #0b0a21);
-
-    &[data-status="todo"] {
-      background: rgba(0, 0, 0, 0.05);
-    }
-    &[data-status="in_progress"] {
-      background: rgba(89, 80, 255, 0.1);
-    }
-    &[data-status="to_review"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"] {
-      background: rgba(61, 222, 140, 0.15);
-    }
+    @include theme-tint(rgba(0, 0, 0, 0.05));
   }
 
   &__list-status-dot {
@@ -5100,15 +5141,6 @@
     height: 8px;
     border-radius: 50%;
     background: #aeaeb2;
-  }
-  &__list-status[data-status="in_progress"] &__list-status-dot {
-    background: #5950ff;
-  }
-  &__list-status[data-status="to_review"] &__list-status-dot {
-    background: #e8a13b;
-  }
-  &__list-status[data-status="complete"] &__list-status-dot {
-    background: #54b684;
   }
 
   // Due cell — overlay pill
@@ -6254,9 +6286,423 @@
       }
     }
   }
+
+  // ── Subtasks ────────────────────────────────────────────────────
+  // Shared done/total badge: board card, list row, calendar chip/card and the
+  // Gantt task list all render the same pill so the count reads identically
+  // wherever it appears. Only drawn when the task actually has subtasks.
+  &__task-subcount,
+  &__list-subcount,
+  &__cal-chip-subcount,
+  &__cal-card-subcount,
+  &__gantt-subcount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 100px;
+    white-space: nowrap;
+    background: var(--col-primary-10, #e4e3ff);
+    // typo()'s $weight is a no-op in this codebase — set it explicitly.
+    font-weight: 700;
+    @include drumee.typo(
+      $size: 10px,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    // Every child done — reads as finished without needing a second element.
+    &[data-complete="1"] {
+      background: #d8f0e4;
+      color: #1f6b47;
+    }
+  }
+
+  &__gantt-subcount,
+  &__cal-chip-subcount {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  // ── List view: expand chevron + child rows ──────────────────────
+  &__list-chevron {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 16px,
+      $color: var(--normal-fg-40, #6f6d87)
+    );
+
+    &[data-open="1"] {
+      transform: rotate(90deg);
+    }
+  }
+
+  // Rows with no subtasks get no chevron at all (no dead affordance), so pad
+  // their title cell by the same amount to keep every title on one x-position.
+  &__list-title-cell:not([data-sub="1"]) > &__list-check:first-child {
+    margin-left: 16px;
+  }
+
+  &__list-row[data-sub="1"] {
+    background: var(--normal-bg-90, #fafafc);
+
+    .tasks-panel__list-title {
+      @include drumee.typo(
+        $size: 12px,
+        $line: 18px,
+        $color: var(--normal-fg-30, #4a4a68)
+      );
+    }
+  }
+
+  &__list-title-cell[data-sub="1"] {
+    padding-left: 26px;
+  }
+
+  // ── Detail panel: Subtasks block ────────────────────────────────
+  &__subtasks {
+    gap: 2px;
+    margin-top: 18px;
+  }
+
+  &__subtask-header {
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  &__subtask-count {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 100px;
+    background: var(--normal-bg-80, #f0f0f5);
+    font-weight: 700;
+    @include drumee.typo(
+      $size: 10px,
+      $line: 18px,
+      $color: var(--normal-fg-30, #4a4a68)
+    );
+
+    &[data-complete="1"] {
+      background: #d8f0e4;
+      color: #1f6b47;
+    }
+  }
+
+  &__subtask-add {
+    margin-left: auto;
+    cursor: pointer;
+    font-weight: 600;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $color: var(--col-primary-100, #6c5ce7)
+    );
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__subtask-row {
+    align-items: center;
+    gap: 9px;
+    padding: 7px 2px;
+    border-bottom: 1px solid var(--normal-bg-80, #f0f0f5);
+    cursor: pointer;
+
+    &:last-of-type {
+      border-bottom: 0;
+    }
+
+    &:hover {
+      background: var(--normal-bg-90, #fafafc);
+    }
+
+    // A finished child is struck through rather than hidden — the list is a
+    // checklist, and disappearing rows lose the done/total context.
+    &[data-done="1"] .tasks-panel__subtask-title {
+      text-decoration: line-through;
+      color: var(--normal-fg-50, #8a8aa3);
+    }
+  }
+
+  &__subtask-check {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1.5px solid var(--normal-bg-70, #e0e0ea);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    svg {
+      width: 11px;
+      height: 11px;
+      fill: transparent;
+    }
+
+    &[data-done="1"] {
+      background: #22b573;
+      border-color: #22b573;
+
+      svg {
+        fill: #fff;
+      }
+    }
+  }
+
+  &__subtask-text {
+    flex: 1;
+    min-width: 0;
+    gap: 1px;
+  }
+
+  &__subtask-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 13px,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__subtask-meta {
+    @include drumee.typo(
+      $size: 11px,
+      $line: 14px,
+      $color: var(--normal-fg-50, #8a8aa3)
+    );
+  }
+
+  &__subtask-priority {
+    flex-shrink: 0;
+    height: 20px;
+    padding: 0 10px;
+    border-radius: 100px;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 500;
+    @include drumee.typo($size: 10px, $line: 20px, $color: #fff);
+
+    &[data-priority="low"] {
+      background: #54b684;
+    }
+    &[data-priority="medium"] {
+      background: #71a3f4;
+    }
+    &[data-priority="high"] {
+      background: #e8a13b;
+    }
+    &[data-priority="urgent"] {
+      background: #d74e49;
+    }
+  }
+
+  &__subtask-avatars {
+    flex-shrink: 0;
+    gap: 2px;
+  }
+
+  &__subtask-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  &__subtask-empty {
+    padding: 6px 2px;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $color: var(--normal-fg-50, #8a8aa3)
+    );
+  }
+
+  // ── Inline creator ──────────────────────────────────────────────
+  &__subtask-create {
+    gap: 8px;
+    margin-top: 6px;
+    padding: 10px;
+    border-radius: 10px;
+    background: var(--normal-bg-90, #fafafc);
+  }
+
+  &__subtask-create-input {
+    input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font-family: inherit;
+      @include drumee.typo(
+        $size: 13px,
+        $line: 20px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+    }
+  }
+
+  &__subtask-create-fields {
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__subtask-create-priorities {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  &__subtask-create-priority {
+    padding: 4px 9px;
+    border-radius: 100px;
+    border: 1px solid var(--normal-bg-70, #e0e0ea);
+    cursor: pointer;
+    background: var(--normal-bg-100, #fff);
+    @include drumee.typo(
+      $size: 10px,
+      $line: 14px,
+      $color: var(--normal-fg-30, #4a4a68)
+    );
+
+    &[data-selected="1"] {
+      color: #fff;
+      border-color: transparent;
+      font-weight: 600;
+    }
+    &[data-selected="1"][data-priority="low"] {
+      background: #54b684;
+    }
+    &[data-selected="1"][data-priority="medium"] {
+      background: #71a3f4;
+    }
+    &[data-selected="1"][data-priority="high"] {
+      background: #e8a13b;
+    }
+    &[data-selected="1"][data-priority="urgent"] {
+      background: #d74e49;
+    }
+  }
+
+  &__subtask-create-due {
+    padding: 4px 9px;
+    border-radius: 7px;
+    background: var(--normal-bg-100, #fff);
+    border: 1px solid var(--normal-bg-70, #e0e0ea);
+    @include drumee.typo(
+      $size: 10px,
+      $line: 14px,
+      $color: var(--normal-fg-40, #6f6d87)
+    );
+  }
+
+  &__subtask-create-members {
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  &__subtask-create-member {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    overflow: hidden;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.12s ease;
+
+    &[data-selected="1"] {
+      opacity: 1;
+      box-shadow: 0 0 0 2px var(--col-primary-100, #6c5ce7);
+    }
+  }
+
+  &__subtask-create-more {
+    @include drumee.typo(
+      $size: 10px,
+      $line: 24px,
+      $color: var(--normal-fg-50, #8a8aa3)
+    );
+  }
+
+  &__subtask-create-actions {
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  &__subtask-create-cancel,
+  &__subtask-create-submit {
+    padding: 6px 14px;
+    border-radius: 100px;
+    cursor: pointer;
+    font-weight: 600;
+    @include drumee.typo($size: 11px, $line: 16px, $color: #fff);
+  }
+
+  &__subtask-create-cancel {
+    background: transparent;
+    color: var(--normal-fg-40, #6f6d87);
+  }
+
+  &__subtask-create-submit {
+    background: var(--col-primary-100, #6c5ce7);
+
+    // _setControlBusy stamps data-loading, not data-busy.
+    &[data-loading="1"] {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
 }
 
 html[data-theme="dark"] .tasks-panel {
+  // Subtasks: the tokens carry themselves, but the three literals in the light
+  // rules (the all-done green and the checkbox fill) burn out on a dark ground.
+  &__task-subcount,
+  &__list-subcount,
+  &__cal-chip-subcount,
+  &__cal-card-subcount,
+  &__gantt-subcount,
+  &__subtask-count {
+    &[data-complete="1"] {
+      background: rgba(34, 181, 115, 0.22);
+      color: #7cc79b;
+    }
+  }
+
+  &__subtask-check[data-done="1"] {
+    background: #1f8f5c;
+    border-color: #1f8f5c;
+  }
+
+  &__subtask-row:hover,
+  &__list-row[data-sub="1"] {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &__subtask-create {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
   &__task-card {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 

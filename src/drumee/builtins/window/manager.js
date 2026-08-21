@@ -15,6 +15,10 @@ const { createQrcode } = require("@drumee/ui-essentials");
 const { filesize } = require("@drumee/ui-essentials");
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
+// Live call windows. They are the one kind that has to outlive desk
+// navigation, so they get their own layer instead of the recycled windows pool
+// — see getCallPool().
+const CALL_KINDS = ["window_meeting", "window_connect"];
 
 class __window_manager extends mfsInteract {
   constructor(...args) {
@@ -572,7 +576,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   addWindow(v) {
-    return this.getWindowsPool().append(v);
+    return this.getWindowsPool(v && v.kind).append(v);
   }
 
   /**
@@ -704,9 +708,11 @@ class __window_manager extends mfsInteract {
       case "windows-layer":
       case "headless-layer":
       case "upload-progress-layer":
+      case "call-layer":
         if (pn === "windows-layer") this.windowsLayer = child;
         if (pn === "headless-layer") this.headlessLayer = child;
         if (pn === "upload-progress-layer") this.uploadProgressLayer = child;
+        if (pn === "call-layer") this.callLayer = child;
         this._responsive = () => {
           const f = () => {
             this.responsive();
@@ -782,7 +788,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   getItemByKind(kind) {
-    for (let c of Array.from(this.getWindowsPool().children.toArray())) {
+    for (let c of Array.from(this.getWindowsPool(kind).children.toArray())) {
       if (c.mget(_a.kind) === kind) {
         return c;
       }
@@ -797,7 +803,7 @@ class __window_manager extends mfsInteract {
    */
   countItemsByKind(kind) {
     let c = 0;
-    for (let child of Array.from(this.getWindowsPool().children.toArray())) {
+    for (let child of Array.from(this.getWindowsPool(kind).children.toArray())) {
       if (child.mget(_a.kind) === kind) {
         c++;
       }
@@ -1084,14 +1090,50 @@ class __window_manager extends mfsInteract {
 
   /**
    * Returns the window container for the current mode:
+   * - Call windows (window_meeting / window_connect): always the dedicated
+   *   call layer, whatever else is open — see getCallPool().
    * - Headless mode (workspace opened from the sidebar): windows are added
    *   to headlessLayer, which hosts the singleton headless window_folder.
    * - Regular mode (workspace opened as a floating window, or no workspace
    *   open): windows are added to windowsLayer as usual.
+   *
+   * @param {String} [kind] kind about to be added / looked up. Omit for the
+   *   generic pool (folder windows, players, popups).
    */
-  getWindowsPool() {
+  getWindowsPool(kind) {
+    if (kind && CALL_KINDS.includes(kind)) return this.getCallPool();
     if (this.headlessLayer && !this.headlessLayer.isEmpty()) return this.headlessLayer
     return this.windowsLayer
+  }
+
+  /**
+   * Container for a live call.
+   *
+   * Never routed through the generic pool: that answers headlessLayer while a
+   * workspace pane is open, and the desk RECYCLES that layer — loadWorkspace
+   * re-feeds it on a workspace switch, Desk.onWorkspaceClosed clears it, and
+   * Wm.reload() re-feeds the whole skeleton. Each of those destroyed the call
+   * window mid-call, which released the room and dropped the user out of the
+   * meeting with no warning. This layer is touched by nothing but the call
+   * itself. Same rationale as getUploadProgressPool below.
+   */
+  getCallPool() {
+    return this.callLayer || this.windowsLayer;
+  }
+
+  /**
+   * Is there a live call window right now? Used by the desk/Wm navigation
+   * paths that would otherwise tear the layers down (wm/index.js reload).
+   * @returns {Boolean}
+   */
+  hasLiveCall() {
+    const pool = this.callLayer;
+    if (!pool || (pool.isDestroyed && pool.isDestroyed()) || !pool.children) {
+      return false;
+    }
+    return pool.children.toArray().some(
+      (c) => c && !(c.isDestroyed && c.isDestroyed()) && CALL_KINDS.includes(`${c.mget(_a.kind)}`)
+    );
   }
 
   /**
@@ -1383,7 +1425,7 @@ class __window_manager extends mfsInteract {
       Kind.waitFor(arg.kind).then(() => {
         const pool = arg.kind === "window_upload_progress"
           ? this.getUploadProgressPool()
-          : this.getWindowsPool();
+          : this.getWindowsPool(arg.kind);
         pool.append(arg);
       });
       return true;

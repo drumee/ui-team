@@ -85,6 +85,14 @@ module.exports = function (ui) {
 
   const filterRadio = `${fig}__filter`;
 
+  // Third filter, for the account that ANSWERS support: their inbox mixes
+  // support requests with colleague chats, and this is how they separate the
+  // two. Everyone else has at most one support conversation and needs no tab.
+  const answersSupport =
+    typeof Desk !== "undefined" &&
+    _.isFunction(Desk.isSupportContact) &&
+    Desk.isSupportContact();
+
   const filters = Skeletons.Box.X({
     className: `${fig}__filters`,
     kids: [
@@ -104,6 +112,16 @@ module.exports = function (ui) {
         service: "filter-unread",
         uiHandler: ui,
       }),
+      answersSupport
+        ? Skeletons.Button.Label({
+            className: `${fig}__filter-btn`,
+            label: LOCALE.SUPPORT_LABEL,
+            radio: filterRadio,
+            initialState: 0,
+            service: "filter-support",
+            uiHandler: ui,
+          })
+        : null,
     ],
   });
 

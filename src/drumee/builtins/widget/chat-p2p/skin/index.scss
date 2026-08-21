@@ -358,15 +358,45 @@
     line-height: 22.5px;
   }
 
+  &__header-name-row {
+    align-items: center;
+    gap: 8px;
+  }
+
   &__header-status {
     @include drumee.typo(
       $size: 10px,
       $weight: 600,
       $color: var(--active-border)
     );
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     font-family: var(--font-mono, var(--font-medium));
+  }
+
+  // Talking TO support: an expectation line replaces the presence dot, so it
+  // is running copy rather than a status token — no uppercase, no tracking.
+  // Its own class, not a modifier of __header-status: _onPeerData rewrites
+  // anything matching that class when a presence broadcast arrives.
+  &__header-support-note {
+    @include drumee.typo($size: 11px, $color: var(--normal-fg-50));
+  }
+
+  // Marks a support conversation in the chat header. The inbox row carries
+  // the same pill (chatcontact-item skin) so both views read alike.
+  &__support-pill {
+    @include drumee.typo($size: 9px, $color: var(--active-border));
+    font-weight: 700;
+    align-self: center;
+    background-color: var(--primary-30);
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.6px;
+    line-height: 14px;
+    padding: 0 5px;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   &__header-actions {

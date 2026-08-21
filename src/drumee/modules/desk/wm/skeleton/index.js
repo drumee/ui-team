@@ -87,6 +87,21 @@ const ___window_manager = function (ui) {
         sortWithCollection: false,
       }),
 
+      // Live audio/video calls (window_meeting / window_connect) get a layer of
+      // their own, for the same reason upload-progress has one: it must survive
+      // everything the desk does to the other layers. headlessLayer — where a
+      // call used to land, since getWindowsPool() answers it while a workspace
+      // pane is open — is re-fed on every workspace switch (wm/index.js
+      // loadWorkspace) and cleared when the last pane closes
+      // (Desk.onWorkspaceClosed), and BOTH those destroyed the call window and
+      // dropped the user out of the meeting. Routing is in
+      // manager.js getWindowsPool(kind) / getCallPool().
+      Skeletons.Wrapper.Y({
+        sys_pn: "call-layer",
+        className: `${ui.fig.family}__layer ${ui.fig.group}__layer call-layer`,
+        sortWithCollection: false,
+      }),
+
       // Transient "file created" card (bottom-right). Fed by
       // notifyFileCreated (wm/index.js) when a new document / spreadsheet /
       // presentation is created — the file no longer opens by itself.
