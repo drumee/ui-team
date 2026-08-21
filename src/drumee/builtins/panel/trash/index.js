@@ -33,6 +33,22 @@ class __panel_trash extends mfsInteract {
    * @param {*} e 
    */
   _onOutsideClick(e, source) {
+    // The Empty Trash prompt owns the interaction while it is up, so nothing
+    // counts as an outside click until it closes.
+    //
+    // Without this, pressing Delete closed the whole panel: the prompt is fed
+    // into Wm.__wrapperModal, which is NOT inside this panel's element, so the
+    // contains() test below reads a click on its own dialog as a click outside
+    // and slides the panel away. The overlay this replaced was fed into the
+    // panel's own `overlay` part — inside this.el — which is why the behaviour
+    // only appeared once the prompt moved to the shared wrapper.
+    //
+    // Guarding on the flag rather than on the source's service also covers the
+    // backdrop and anything else reachable while the prompt is open. Both close
+    // paths clear it (_closePurgeConfirm), so it cannot strand the panel in a
+    // state where outside clicks stop working.
+    if (this._purgeConfirmOpen) return;
+
     // Clicks coming from a sidebar toggle button are owned by
     // Desk.togglePanel — bail so we don't race it (flip anim to "out"
     // here and have togglePanel read it as closed and reopen).
