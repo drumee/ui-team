@@ -1213,7 +1213,13 @@ class __tasks_panel extends LetcBox {
 
       case "commit-task":
         if (this._submitting) return;
-        return this._commitTask();
+        // Same guard as commit-detail below — _commitTask resets the flag in a
+        // finally, but a throw escaping it would strand the create modal too.
+        return this._commitTask().catch((err) => {
+          console.error("[tasks_panel] commit-task failed:", err);
+          this._setSubmitting(".tasks-panel__create-submit", false);
+          this._render();
+        });
 
       case "cancel-add":
         this._creating = false;
@@ -1521,7 +1527,17 @@ class __tasks_panel extends LetcBox {
 
       case "commit-detail":
         if (this._submitting) return;
-        return this._commitDetail();
+        // Catch here rather than wrapping _commitDetail's 160-line body: the
+        // reset it does on the happy path is the ONLY one, and `_submitting` is
+        // a panel-wide flag this very case refuses to run past. So any throw in
+        // there left the flag stuck true and the Update button dead for the
+        // rest of the session — no request sent, nothing logged server-side.
+        // The draft is deliberately left intact so a retry keeps the edits.
+        return this._commitDetail().catch((err) => {
+          console.error("[tasks_panel] commit-detail failed:", err);
+          this._setSubmitting(".tasks-panel__detail-submit", false);
+          this._render();
+        });
 
       case "cancel-detail":
       case "close-detail":
@@ -2879,8 +2895,12 @@ class __tasks_panel extends LetcBox {
     } catch (err) {
       console.error("[tasks_panel] task.create failed:", err);
       Wm.alert(LOCALE.ERROR_NETWORK);
+    } finally {
+      // finally, not a trailing statement: a throw inside the catch above
+      // (Wm.alert) would otherwise skip the reset and leave _submitting stuck
+      // true, which permanently disables commit-task / commit-detail.
+      this._setSubmitting(".tasks-panel__create-submit", false);
     }
-    this._setSubmitting(".tasks-panel__create-submit", false);
     this._render();
   }
 
@@ -7253,10 +7273,18 @@ class __tasks_panel extends LetcBox {
       // common case when breaking a task down. Only the title resets.
       this._subtaskDraft = { ...draft, title: "" };
       if (input) input.value = "";
-      this._refreshSubtaskSection();
-      // The parent's badge lives outside this part, so refresh the counters the
-      // views read. Cheap: no request, just the local array.
+      // Full _render(), not just _refreshSubtaskSection(): the parent's count
+      // badge lives OUTSIDE this part — on the board card, list row, gantt row
+      // and calendar chip behind the modal. Re-feeding only the section left
+      // those stale until something else happened to render, which reads as
+      // the subtask never having been created.
+      //
+      // Deliberately NOT both: ensurePart resolves asynchronously, so a
+      // _refreshSubtaskSection() here would feed a part that _render() has
+      // already replaced. The re-render rebuilds this section anyway, and the
+      // creator survives it because its Entry is seeded from the draft.
       this._syncSubtaskBadges(parentId);
+      this._render();
     } catch (err) {
       console.error("[tasks_panel] subtask create failed:", err);
     } finally {
