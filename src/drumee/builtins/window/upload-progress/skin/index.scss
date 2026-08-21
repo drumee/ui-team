@@ -798,9 +798,13 @@
   // number came from JS rather than CSS. The base rule above already had to do
   // the same thing for `position: fixed !important`, for the same reason.
   box-sizing: border-box !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100% !important;
+  // 16px either side, the gutter this file already uses for the collapsed
+  // bar's bottom offset. `width: auto` rather than a calc: with both left and
+  // right set, the card fills what is between them, so the gutters stay right
+  // at any viewport without arithmetic.
+  left: 16px !important;
+  right: 16px !important;
+  width: auto !important;
   max-width: none !important;
 
   // Asked for explicitly. Applied on mobile only — the desktop corner floater
@@ -811,9 +815,12 @@
     // inset:0 + margin:auto keeps it vertically centred; the left/right above
     // already make it full width, so no horizontal margin is left to
     // distribute.
-    inset: 0 !important;
+    // inset:16px gives the same 16px gutters on all four sides; margin:auto
+    // then centres the card vertically inside that box, since its height is
+    // fixed at 280px by the base rule.
+    inset: 16px !important;
     margin: auto !important;
-    width: 100% !important;
+    width: auto !important;
     max-width: none !important;
   }
 
@@ -821,9 +828,9 @@
     top: auto !important;
     // Still lifted off the bottom edge — only the WIDTH goes full-bleed here.
     bottom: 16px !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
+    left: 16px !important;
+    right: 16px !important;
+    width: auto !important;
     max-width: none !important;
   }
 }
