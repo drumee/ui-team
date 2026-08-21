@@ -61,7 +61,7 @@ const metaFor = (data) => meta(stub(data), data);
 // The real sentence builder, so `noSender` / `tail` are proven end to end rather
 // than asserted as object fields nobody renders.
 const buildText = (m, sender) => {
-  const lead = m.noSender ? "" : `${sender} `;
+  const lead = m.noSender ? "" : `${String(sender).trim()} `;
   const tail = m.tail ? `<span class="x__link ${m.colorClass}">${m.tail}</span>` : "";
   return `<span>${lead}${m.before}</span><span class="x__link ${m.colorClass}">${m.label}</span><span>${m.after}</span>${tail}`;
 };
@@ -69,10 +69,33 @@ const buildText = (m, sender) => {
 const sentence = (data, sender = "Tran") =>
   buildText(metaFor(data), sender).replace(/<[^>]*>/g, "").trim();
 
+test("the actor's name never renders a double space", () => {
+  // Measured on the endpoint: the resolved `sender` is "Duy Nguyen " — 11
+  // characters, trailing space included — because the notification procs CONCAT
+  // the name. The template adds its own separator on top, so every actor row
+  // read "Duy Nguyen  mentioned you in …".
+  assert.match(
+    skelSrc,
+    /const lead = meta\.noSender \? '' : `\$\{String\(sender\)\.trim\(\)\} `;/,
+    "the trim is load-bearing: without it every actor row doubles the space",
+  );
+  const leadOf = (sender, m) => (m.noSender ? '' : `${String(sender).trim()} `);
+  assert.equal(leadOf("Duy Nguyen ", {}), "Duy Nguyen ");
+  assert.equal(leadOf("Duy Nguyen", {}), "Duy Nguyen ");
+  assert.equal(leadOf("  Duy  ", {}), "Duy ");
+  assert.equal(leadOf("Duy Nguyen ", { noSender: 1 }), "", "a factual card still names nobody");
+  // End to end through the real builder.
+  assert.equal(
+    buildText(metaFor({ event: "task_assigned", task_title: "T" }), "Duy Nguyen ")
+      .replace(/<[^>]*>/g, ""),
+    "Duy Nguyen assigned you to T",
+  );
+});
+
 test("the sentence builder in the skeleton matches the one modelled here", () => {
   // If the shipped builder changes shape, every `sentence()` assertion below is
   // measuring a paraphrase instead of the real thing.
-  assert.match(skelSrc, /const lead = meta\.noSender \? '' : `\$\{sender\} `;/);
+  assert.match(skelSrc, /const lead = meta\.noSender \? '' : `\$\{String\(sender\)\.trim\(\)\} `;/);
   assert.match(
     skelSrc,
     /const text = `<span>\$\{lead\}\$\{escapeHtml\(meta\.before\)\}<\/span>/,

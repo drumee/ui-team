@@ -786,7 +786,12 @@ module.exports = function (ui) {
   // <Column>", "<Meeting-name> on <time>". Those branches set `noSender` so the
   // sentence does not open with a name; the avatar still shows who did it.
   // Every other branch keeps the leading "<sender> " exactly as before.
-  const lead = meta.noSender ? '' : `${sender} `;
+  // Trimmed: the resolved name arrives WITH a trailing space (measured live on
+  // the endpoint — `sender` is "Duy Nguyen " at 11 chars, from the CONCAT in the
+  // notification procs), and the template adds its own separator, so every
+  // actor row rendered "Duy Nguyen  mentioned you in …" with a double space.
+  // Pre-existing and visible on rows this change does not otherwise touch.
+  const lead = meta.noSender ? '' : `${String(sender).trim()} `;
   // `tail` is a SECOND highlighted span, for the sentences Figma marks at both
   // ends ("… moved to {ts1}In Progress{/ts1}"). Absent on every other row, and
   // an empty one renders nothing at all.
