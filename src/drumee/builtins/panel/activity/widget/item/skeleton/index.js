@@ -58,6 +58,59 @@ const BADGE = {
   warning: 'warning',
 };
 
+// Built-in Kanban column keys → their locale label. A user-created column is
+// not in here: the server resolves its stored name and ships it as
+// `column_name`, which wins. Mirrors BUILTIN_META in window/tasks/index.js —
+// the two must agree, or a notification would name a column differently from
+// the board it came from.
+const COLUMN_LABEL = {
+  todo: 'STATUS_TODO',
+  in_progress: 'STATUS_IN_PROGRESS',
+  to_review: 'STATUS_TO_REVIEW',
+  complete: 'STATUS_COMPLETE',
+};
+
+const PRIORITY_LABEL = {
+  low: 'PRIORITY_LOW',
+  medium: 'PRIORITY_MEDIUM',
+  high: 'PRIORITY_HIGH',
+  urgent: 'PRIORITY_URGENT',
+};
+
+// Resolve a display name for a column/priority key. `stored` (the server-side
+// name of a custom column) wins; otherwise the key is looked up in `map` and
+// localised. An unknown key yields '' rather than the raw key — a key name
+// leaking into a sentence reads as a bug to the user.
+function labelOf(map, key, stored) {
+  if (stored) return String(stored);
+  const k = lookup(map, String(key || ''));
+  return k ? LOCALE[k] : '';
+}
+
+// Own-property lookup: `column_key` / `priority` come from the server, so a
+// value that happens to name an Object.prototype member ('constructor', …)
+// would otherwise resolve to an inherited function and be rendered.
+function lookup(map, key) {
+  if (!key) return null;
+  return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : null;
+}
+
+// "Aug 14, 10:00 AM" — Figma's scheduled-meeting card. Built from the meeting's
+// epoch `stime`, NOT from the `date` string stored on the node: that one was
+// formatted by the ORGANIZER, in the organizer's language and timezone.
+//
+// A comma joins the two halves rather than a localised "at": that word would
+// need its own locale key which is empty in some languages, and an empty joiner
+// leaves a double space. The comma reads correctly in all six.
+// Same year/other year rule as the day-group headers below, for the same reason.
+function meetingTime(stime) {
+  const ts = parseInt(stime, 10);
+  if (!ts) return '';
+  const d = Dayjs.unix(ts);
+  const day = d.year() === Dayjs().year() ? d.format('MMM D') : d.format('MMM D, YYYY');
+  return `${day}, ${d.format('h:mm A')}`;
+}
+
 function getActivityMeta(ui, data) {
   const name = ui.getItemName();
   const cnt = parseInt(data.cnt, 10) || 0;
@@ -65,22 +118,118 @@ function getActivityMeta(ui, data) {
     data.event === 'mention'
     || getMentionIds(data).some((id) => String(id) === String(Visitor.id));
 
-  // 0. Reply to your task comment ("{author} replied to your comment in {task}").
-  // It rides the same task_mention row (data.kind='reply' → task_kind), so it
-  // MUST be checked before the mention branch below: channel.list_notifications
-  // synthesises mention_ids for every task row, which would otherwise label a
-  // plain reply "mentioned you in" — a claim the sender never made.
-  if (data.event === 'task_mention' && data.task_kind === 'reply') {
-    return {
-      before: LOCALE.TASK_COMMENT_REPLY_ACTION || 'replied to your comment in ',
-      label: data.task_title || name,
-      after: '',
-      colorClass: 'mention',
-      badge: 'mention',
-      // Figma: Tab=Task, Action=New task comment.
-      ico: 'noti-chat-teardrop-dots',
-      tone: BADGE.brand,
-    };
+  // 0. A task_mention row carries more than @-mentions. `task_kind` (the `kind`
+  // field task._notifyMentions writes into the activity's JSON data) tells the
+  // four other things that ride the same event apart: a reply to your comment, a
+  // plain comment on your task, a priority change and a column move.
+  //
+  // Every kind MUST be matched before the generic mention branch below:
+  // channel.list_notifications synthesises mention_ids for every task row, so an
+  // unmatched kind would fall into that branch and claim the sender "mentioned
+  // you" — something they never did. That is why this is a switch with an
+  // explicit default rather than a chain of ifs.
+  if (data.event === 'task_mention' && data.task_kind) {
+    const taskName = data.task_title || name;
+    const folder = data.folder_name;
+    switch (data.task_kind) {
+      case 'reply':
+        return {
+          before: LOCALE.TASK_COMMENT_REPLY_ACTION,
+          label: taskName,
+          after: '',
+          colorClass: 'mention',
+          badge: 'mention',
+          // Figma: Tab=Task, Action=New task comment.
+          ico: 'noti-chat-teardrop-dots',
+          tone: BADGE.brand,
+          folder,
+        };
+
+      case 'comment':
+        // A comment on a task you are assigned to, where you were NOT
+        // @-mentioned and are not the person being replied to.
+        return {
+          before: LOCALE.TASK_COMMENTED_ACTION,
+          label: taskName,
+          after: '',
+          colorClass: 'mention',
+          badge: 'mention',
+          ico: 'noti-chat-teardrop-dots',
+          tone: BADGE.brand,
+          folder,
+        };
+
+      case 'priority':
+        return {
+          before: LOCALE.TASK_PRIORITY_ACTION,
+          label: taskName,
+          after: LOCALE.TASK_PRIORITY_TO,
+          // The new priority, highlighted like the task name (Figma marks both
+          // ends of a "moved to" sentence as {ts1}).
+          tail: labelOf(PRIORITY_LABEL, data.task_priority),
+          colorClass: 'mention',
+          badge: 'mention',
+          ico: 'noti-shooting-star',
+          tone: BADGE.brand,
+          folder,
+        };
+
+      case 'moved': {
+        // Figma's card for a status change carries no actor — the sentence is
+        // about the task, and the avatar already shows who moved it.
+        const done = parseInt(data.task_is_done, 10) === 1;
+        const column = labelOf(COLUMN_LABEL, data.column_key, data.column_name);
+        // With no resolvable column name "moved to " would dangle, so fall back
+        // to the plain completed/moved sentence instead of an empty tail.
+        // Leading element is the task chip, not a face, and the sentence names
+        // nobody — the same shape the column-watch row uses for the identical
+        // fact. One event must not render two different ways.
+        if (done || !column) {
+          return {
+            before: '',
+            label: taskName,
+            after: done ? LOCALE.TASK_COMPLETED_ACTION : LOCALE.TASK_MOVED_ACTION,
+            noSender: 1,
+            colorClass: 'mention',
+            badge: 'mention',
+            // Figma: CheckCircle on the success fill for a completed task.
+            ico: done ? 'noti-check-circle' : 'noti-share-fat',
+            tone: done ? BADGE.success : BADGE.brand,
+            chipIco: 'noti-list-checks',
+            folder,
+          };
+        }
+        return {
+          before: '',
+          label: taskName,
+          after: LOCALE.TASK_MOVED_TO_ACTION,
+          tail: column,
+          noSender: 1,
+          colorClass: 'mention',
+          badge: 'mention',
+          // Figma: Tab=Task, Action=Status changed (ShareFat).
+          ico: 'noti-share-fat',
+          tone: BADGE.brand,
+          chipIco: 'noti-list-checks',
+          folder,
+        };
+      }
+
+      default:
+        // An unknown kind from a newer server. Say the one thing that is
+        // certainly true rather than inventing a claim, and never fall through
+        // to "mentioned you in".
+        return {
+          before: LOCALE.TASK_UPDATED_ACTION,
+          label: taskName,
+          after: '',
+          colorClass: 'mention',
+          badge: 'mention',
+          ico: 'noti-shooting-star',
+          tone: BADGE.brand,
+          folder,
+        };
+    }
   }
 
   // 1. Mention is special — overrides any category branch.
@@ -129,22 +278,46 @@ function getActivityMeta(ui, data) {
       // Figma: Tab=Task, Action=Task assigned.
       ico: 'noti-plus-circle',
       tone: BADGE.brand,
+      // The task's own folder, resolved server-side (_stampTaskFolderNames).
+      // Without it the row never said WHERE the task lives.
+      folder: data.folder_name,
     };
   }
 
   if (data.event === 'task_column_change') {
+    // Column-watch notification (the bell toggle in a column header). The
+    // sentence follows Figma's status-change card, which is about the task and
+    // carries no actor — the avatar already shows who moved it.
     const created = data.task_action === 'created';
+    const column = labelOf(COLUMN_LABEL, data.column_key, data.column_name);
+    if (created || !column) {
+      return {
+        before: created ? LOCALE.TASK_CREATED_ACTION : '',
+        label: data.task_title || name,
+        after: created ? '' : LOCALE.TASK_MOVED_ACTION,
+        noSender: created ? 0 : 1,
+        colorClass: 'mention',
+        badge: 'mention',
+        // Figma: Tab=Task, Action=Status changed (ShareFat). A "created" row has
+        // no Figma variant — reuse the Task-assigned glyph, same meaning.
+        ico: created ? 'noti-plus-circle' : 'noti-share-fat',
+        tone: BADGE.brand,
+        chipIco: 'noti-list-checks',
+        folder: data.folder_name,
+      };
+    }
     return {
-      before: created ? 'created task ' : 'moved task ',
+      before: '',
       label: data.task_title || name,
-      after: '',
+      after: LOCALE.TASK_MOVED_TO_ACTION,
+      tail: column,
+      noSender: 1,
       colorClass: 'mention',
       badge: 'mention',
-      // Figma: Tab=Task, Action=Status changed (ShareFat). A "created" row has
-      // no Figma variant — reuse the Task-assigned glyph, same meaning.
-      ico: created ? 'noti-plus-circle' : 'noti-share-fat',
+      ico: 'noti-share-fat',
       tone: BADGE.brand,
       chipIco: 'noti-list-checks',
+      folder: data.folder_name,
     };
   }
 
@@ -163,7 +336,61 @@ function getActivityMeta(ui, data) {
       // Figma: Tab=Task, Action=Mentioned in task.
       ico: 'noti-at',
       tone: BADGE.brand,
+      // The task's folder — same reason as task_assigned above.
+      folder: data.folder_name,
     };
+  }
+
+  // A scheduled-meeting notice (invited / rescheduled / cancelled). A contact
+  // activity like the task events, so it carries no `category` and would
+  // otherwise fall into the contact branch and read "wants to connect".
+  if (data.event === 'meeting_notice') {
+    const meetingName = data.meeting_title || name;
+    const when = meetingTime(data.meeting_stime);
+    switch (data.meeting_kind) {
+      case 'cancelled':
+        return {
+          before: '',
+          label: meetingName,
+          after: LOCALE.MEETING_CANCELLED_ACTION,
+          noSender: 1,
+          colorClass: 'restricted',
+          badge: 'mention',
+          // Figma: XCircle on the error fill (Meeting cancelled).
+          ico: 'noti-x-circle',
+          tone: BADGE.error,
+          folder: data.folder_name,
+        };
+
+      case 'moved':
+        // Rescheduled. With no readable start time the sentence would end on a
+        // dangling preposition, so it degrades to the plain form.
+        return {
+          before: '',
+          label: meetingName,
+          after: when ? `${LOCALE.MEETING_RESCHEDULED_TO_ACTION}${when}` : LOCALE.MEETING_RESCHEDULED_ACTION,
+          noSender: 1,
+          colorClass: 'mention',
+          badge: 'mention',
+          ico: 'noti-video-camera',
+          tone: BADGE.warning,
+          folder: data.folder_name,
+        };
+
+      default:
+        // 'invite' — Duy 2026-08-21: this replaces the "uploaded <meeting>" row
+        // an invitee used to get, and it names the organizer.
+        return {
+          before: LOCALE.MEETING_INVITED_ACTION,
+          label: meetingName,
+          after: when ? `${LOCALE.MEETING_ON_ACTION}${when}` : '',
+          colorClass: 'mention',
+          badge: 'mention',
+          ico: 'noti-video-camera',
+          tone: BADGE.brand,
+          folder: data.folder_name,
+        };
+    }
   }
 
   if (data.event === 'media.workspace_move') {
@@ -271,6 +498,28 @@ function getActivityMeta(ui, data) {
           tone: BADGE.brand,
         };
       }
+      // At least one of this folder's unread messages @-mentions the viewer.
+      // The rollup is per folder, so a mention used to be indistinguishable from
+      // an ordinary message and read "sent a message"; the server now flags it
+      // (`mentioned_in` = the folder, from channel_list_notifications).
+      // Deliberately checked AFTER meeting_action: a rollup carrying both is a
+      // meeting, which is the more specific fact and owns the Meeting tab.
+      if (data.mentioned_in) {
+        return {
+          before: LOCALE.MENTIONED_YOU_IN_ACTION,
+          label: data.mentioned_in,
+          after: '',
+          colorClass: 'mention',
+          badge: 'mention',
+          // Figma: Tab=Chat, Action=Mentioned.
+          ico: 'noti-at',
+          tone: BADGE.brand,
+          folder: data.folder_name,
+          // Duy 2026-08-21 asked for the folder in the sentence AND the chip on
+          // this card, so it opts out of the "don't repeat the label" guard.
+          folderAlways: 1,
+        };
+      }
       // Figma's Chat/"Folder Message" card carries NO folder in its sentence —
       // the folder is the chip on the second line. This used to read "posted in
       // <folder>", which both duplicated the chip and left nothing for it to
@@ -341,6 +590,12 @@ function getActivityMeta(ui, data) {
           ico: 'noti-minus-circle',
           tone: BADGE.error,
           chipIco: 'noti-file-text',
+          // Figma's delete card reads "<File-name> has been move to trash" with
+          // no actor. Duy 2026-08-21 kept the actor sentence deliberately ("it
+          // shows who removed it") and asked only for the missing folder chip.
+          // The containing folder is already resolved server-side for every
+          // media.* changelog row.
+          folder: data.folder_name,
         };
       }
       if (data.event === 'media.view') {
@@ -366,9 +621,62 @@ function getActivityMeta(ui, data) {
           tone: BADGE.brand,
         };
       }
+      // A file's CONTENT changed: an editor save (media.save → _persist_file),
+      // an upload over an existing node, or an image rotate. Figma reads
+      // "<File-name> has been updated" with no actor, so the avatar carries the
+      // who and the sentence carries the what.
+      //
+      // media.rename gets the same sentence on purpose (Duy 2026-08-21): the row
+      // used to fall through to the upload branch below and announce a renamed
+      // file as a fresh upload, which is the one thing it definitely was not.
+      // The widget mset()s `dest` over `src`, so `name` is already the NEW name.
+      //
+      // Placed AFTER the share / view / attachment branches, never before, so a
+      // row that reaches one of those today keeps reaching it.
+      if (data.event === 'media.replace' || data.event === 'media.rename') {
+        return {
+          before: '',
+          label: name,
+          after: LOCALE.FILE_UPDATED_ACTION,
+          noSender: 1,
+          colorClass: 'mention',
+          badge: 'mention',
+          // No Figma variant for either. ShootingStar is the design's generic
+          // "updated" glyph, already used for the ticket row.
+          ico: 'noti-shooting-star',
+          tone: BADGE.brand,
+          folder: data.folder_name,
+        };
+      }
       // Default media event (media.new or aggregated rollup)
       {
         const itemFiletype = data.item_filetype || data.uploaded_filetype || ui.mget('item_filetype');
+        // A scheduled meeting is a media node too (room.book creates a
+        // `schedule` node), so notification_center_next rolls it up as an
+        // upload — which is why an invitation used to read "<organizer>
+        // uploaded <Meeting-name>" and sat in the Files tab. Only a SINGLE-item
+        // rollup can be trusted here: the rollup groups per folder and takes
+        // MAX(item_filetype), so a folder holding both a meeting and a file
+        // would otherwise be relabelled a meeting. cnt > 1 keeps its old
+        // upload wording, exactly as before.
+        if (itemFiletype === 'schedule' && cnt <= 1) {
+          const meetingLabel = data.item_filename || name;
+          const when = meetingTime(data.meeting_stime);
+          return {
+            // Figma's scheduled-meeting card is "<Meeting-name> on <time>" with
+            // the time in Primary/100 ({ts2}), i.e. not highlighted — so it goes
+            // in `after`, not `tail`.
+            before: '',
+            label: meetingLabel,
+            after: when ? `${LOCALE.MEETING_ON_ACTION}${when}` : '',
+            noSender: 1,
+            colorClass: 'mention',
+            badge: 'mention',
+            ico: 'noti-video-camera',
+            tone: BADGE.brand,
+            folder: data.folder_name,
+          };
+        }
         const createdFolder = itemFiletype ? itemFiletype === _a.folder : ui.isFolder();
         // A single-file upload shows the file's OWN name (item_filename, carried
         // by the server rollup); a multi-file rollup keeps the destination
@@ -473,7 +781,19 @@ module.exports = function (ui) {
   const data = ui.model.toJSON();
   const sender = escapeHtml(ui.mget(_a.sender));
   const meta = getActivityMeta(ui, data);
-  const text = `<span>${sender} ${escapeHtml(meta.before)}</span><span class="${pfx}__link ${meta.colorClass}">${escapeHtml(meta.label)}</span><span>${escapeHtml(meta.after)}</span>`;
+  // Several Figma cards state a fact about the item rather than an act by a
+  // person — "<File-name> has been updated", "<Task-name> has been moved to
+  // <Column>", "<Meeting-name> on <time>". Those branches set `noSender` so the
+  // sentence does not open with a name; the avatar still shows who did it.
+  // Every other branch keeps the leading "<sender> " exactly as before.
+  const lead = meta.noSender ? '' : `${sender} `;
+  // `tail` is a SECOND highlighted span, for the sentences Figma marks at both
+  // ends ("… moved to {ts1}In Progress{/ts1}"). Absent on every other row, and
+  // an empty one renders nothing at all.
+  const tail = meta.tail
+    ? `<span class="${pfx}__link ${meta.colorClass}">${escapeHtml(meta.tail)}</span>`
+    : '';
+  const text = `<span>${lead}${escapeHtml(meta.before)}</span><span class="${pfx}__link ${meta.colorClass}">${escapeHtml(meta.label)}</span><span>${escapeHtml(meta.after)}</span>${tail}`;
   const avatarFirstname = data.author_firstname || data.firstname;
   const avatarLastname = data.author_lastname || data.lastname;
   const category = getCategory(data);
@@ -539,7 +859,10 @@ module.exports = function (ui) {
   // Still suppressed when it would only repeat the label, which is what a
   // multi-file upload rollup does.
   const folderName = meta.folder || '';
-  const showFolder = !!folderName && folderName !== meta.label;
+  // `folderAlways` opts a branch out of the "don't repeat the label" guard —
+  // used only by the folder-mention row, where Duy asked for the folder in the
+  // sentence AND the chip.
+  const showFolder = !!folderName && (!!meta.folderAlways || folderName !== meta.label);
 
   const metaLine = Skeletons.Box.X({
     className: `${pfx}__meta`,

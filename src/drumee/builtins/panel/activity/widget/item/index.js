@@ -115,6 +115,11 @@ class __activity_item extends LetcBox {
         : opt.event === 'task_assigned' ? 'contact_invite'
         : opt.event === 'task_column_change' ? 'contact_invite'
         : opt.event === 'task_mention' ? 'contact_invite'
+        // A scheduled-meeting notice (invited / rescheduled / cancelled) is a
+        // yp.contact_activity row like the task events. Falling back to 'mfs'
+        // would dismiss a changelog id that does not exist, so the row would
+        // reappear on the next reload.
+        : opt.event === 'meeting_notice' ? 'contact_invite'
         : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
     this.mset({ category, sender, autho_id, item_type, item_key })
@@ -346,6 +351,24 @@ class __activity_item extends LetcBox {
       if (tTask) tHash += `&open_task_id=${tTask}`;
       location.hash = tHash + `&ts=${ts}`;
       this.triggerHandlers({ service: 'dismiss-activity', hub_id: tHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'close-activity-panel' });
+      return;
+    }
+    // A scheduled-meeting notice. The meeting lives as a `schedule` node in a
+    // folder (room.book creates it at the workspace root by default), so the
+    // click opens that folder — the calendar there is where the meeting can be
+    // seen, joined or edited. A CANCELLED meeting's node is hard-deleted
+    // (permission_revoke DELETEs a schedule row), so it deliberately opens the
+    // container rather than the node: pointing at a deleted nid would render
+    // the "file you requested does not exist" error.
+    if (this.mget('event') === 'meeting_notice') {
+      const mHub = this.mget('meeting_hub_id') || hub_id;
+      const mNidRaw = this.mget('meeting_pid');
+      const mNid = (mNidRaw != null && `${mNidRaw}` !== '0') ? mNidRaw : 0;
+      if (mHub) {
+        location.hash = `#/desk/wm/open/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&ts=${ts}`;
+      }
+      this.triggerHandlers({ service: 'dismiss-activity', hub_id: mHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }

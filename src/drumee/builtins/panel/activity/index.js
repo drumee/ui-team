@@ -1038,7 +1038,11 @@ class __panel_activity extends LetcBox {
       const rows = _.isArray(ta) ? ta : (_.isArray(ta?.data) ? ta.data : []);
       const dismissedTa = this._dismissedKeys || new Set();
       taskNotifications = rows
-        .filter((r) => r && ['task_assigned', 'task_column_change'].includes(r.event))
+        // meeting_notice rides this endpoint too (see list_task_assignments):
+        // without it the bell badge would under-count and read lower than the
+        // Meeting tab's own badge. Nothing here is RENDERED — the pinned section
+        // below keeps only access requests — so this only feeds the count.
+        .filter((r) => r && ['task_assigned', 'task_column_change', 'meeting_notice'].includes(r.event))
         .filter((r) => !dismissedTa.has(`contact_invite:${r.id}`))
         .map((r) => ({
           ...r,
@@ -1046,9 +1050,10 @@ class __panel_activity extends LetcBox {
           key_id: String(r.id),
           last_id: r.id,
           // The server stamps this bucket; the fallback covers the rollout window
-          // where this UI is live against a server that predates it. Rows here are
-          // already filtered to task events, so 'task' is the right default.
-          bucket: r.bucket || 'task',
+          // where this UI is live against a server that predates it. The default
+          // is per event, not a blanket 'task' — a meeting notice defaulting to
+          // Task would show a meeting under the wrong tab.
+          bucket: r.bucket || (r.event === 'meeting_notice' ? 'meeting' : 'task'),
         }));
     } catch (e) {
       this.warn('[panel_activity] task assignment fetch failed', e);

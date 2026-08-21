@@ -293,8 +293,24 @@ test("the chip is suppressed when it would only repeat the label", () => {
   });
   assert.equal(m.label, "checkin");
   assert.equal(m.folder, m.label, "meta still carries it…");
-  // …and the render guard drops it.
-  assert.match(skelSrc, /const showFolder = !!folderName && folderName !== meta\.label;/);
+  // …and the render guard drops it. `folderAlways` is the ONE documented escape
+  // hatch (the folder-mention row, where Duy asked for both); the
+  // label-comparison half must survive, or every multi-file upload rollup grows
+  // a chip that just repeats its own label.
+  assert.match(
+    skelSrc,
+    /const showFolder = !!folderName && \(!!meta\.folderAlways \|\| folderName !== meta\.label\);/,
+  );
+  const showFolderOf = (folderName, meta) =>
+    !!folderName && (!!meta.folderAlways || folderName !== meta.label);
+  assert.equal(showFolderOf("checkin", { label: "checkin" }), false);
+  assert.equal(showFolderOf("checkin", { label: "doc" }), true);
+  assert.equal(showFolderOf("", { label: "doc" }), false);
+  assert.equal(
+    showFolderOf("checkin", { label: "checkin", folderAlways: 1 }),
+    true,
+    "the mention row opts in to showing both",
+  );
 });
 
 test("a direct message has no folder chip", () => {
