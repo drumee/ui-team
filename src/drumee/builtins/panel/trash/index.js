@@ -251,53 +251,35 @@ class __panel_trash extends mfsInteract {
     });
   }
 
-  // Empty Trash confirmation. Uses the app's standard confirm dialog
-  // (window-confirm__main) rather than the panel-scoped __purge-* overlay this
-  // used to feed into its own `overlay` part, so the prompt matches every other
-  // destructive confirm and inherits their placement — including the mobile
-  // viewport centring.
-  //
-  // Wm.confirm resolves on confirm and rejects on cancel, so the two paths the
-  // old cancel-empty-bin / confirm-empty-bin services carried map onto
-  // try/catch. The footer already defaults confirm_type to "danger", which is
-  // what a purge should look like.
+  // Empty Trash confirmation. Renders our own dialog (skeleton/purge-confirm)
+  // into Wm.__wrapperModal rather than going through Wm.confirm, so the content
+  // cannot be lost on the way to window_confirm's body and no window-manager
+  // instance stamps inline offsets on it. The wrapper is already a centring
+  // flex container, so the dialog needs no position of its own.
   async _emptyBin() {
-    // Held while the user decides. _wsRefresh used to detect "a decision is in
-    // progress" by looking for children in the `overlay` part; the dialog is
-    // now a global modal and never lands there, so the flag carries that intent
-    // instead. A rebuild can no longer destroy the prompt either way — the
-    // point now is simply not to reload the list under someone mid-decision.
+    const w = Wm && Wm.__wrapperModal;
+    if (!w) return;
+    // Held while the user decides, so a websocket echo cannot reload the list
+    // mid-decision. Replayed by the cancel path; confirm re-feeds anyway.
     this._purgeConfirmOpen = true;
-    try {
-      await Wm.confirm({
-        // No title: the message is a complete question on its own, and "Trash"
-        // above it only repeats the panel the prompt was raised from.
-        //
-        // Q_DELETE_ALL_FILES is authored as two <p> blocks
-        // ("Do you want to delete " / "all files in the trash? "), which stack
-        // into two lines. Strip the markup and collapse the whitespace so it
-        // reads as one sentence, wrapping only if the card is too narrow for
-        // it. Done here rather than by styling those <p>s inline, so the fix
-        // stays with this prompt instead of changing every confirm that ships
-        // markup in its message — and the string stays localised.
-        message: `${LOCALE.Q_DELETE_ALL_FILES || ""}`
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim(),
-        confirm: LOCALE.DELETE,
-        cancel: LOCALE.CANCEL,
-      });
-    } catch (e) {
-      this._purgeConfirmOpen = false;
-      // Replay a websocket reload that was held back while the prompt was up.
-      if (this._pendingWsRefresh) this._wsRefresh();
-      return;
-    }
+    w.feed(require("./skeleton/purge-confirm")(this));
+    // The host is only SIZED by this attribute (wm/skin: position:absolute,
+    // inset:0, 100%x100%), and it is what makes it centre its child. Every
+    // other path that feeds this wrapper sets it the same way — wm/index.js
+    // openRequestAccessModal, invite-popup in its own onDomRefresh.
+    if (w.el) w.el.dataset.state = "open";
+  }
+
+  // Shared close for both outcomes. The wrapper's own behavior flips
+  // data-state back to closed once it empties, so clear() is all that is needed.
+  _closePurgeConfirm() {
     this._purgeConfirmOpen = false;
-    return this._confirmEmptyBin();
+    const w = Wm && Wm.__wrapperModal;
+    if (w && typeof w.clear === "function") w.clear();
   }
 
   async _confirmEmptyBin() {
+    this._closePurgeConfirm();
     const data = await this.postService({
       service: SERVICE.media.empty_bin,
       hub_id: Visitor.id,
@@ -323,12 +305,16 @@ class __panel_trash extends mfsInteract {
     switch (service) {
       case 'empty-bin':
         return this._emptyBin();
-      // Kept: _confirmEmptyBin is the purge itself, now reached from _emptyBin's
-      // resolved confirm rather than from a button in the old overlay. The
-      // matching 'cancel-empty-bin' case went with that overlay — Wm.confirm's
-      // rejection is the cancel path now.
+      // Both are raised by skeleton/purge-confirm's buttons. _confirmEmptyBin is
+      // the purge itself; the cancel path just closes and replays anything the
+      // decision held back.
       case 'confirm-empty-bin':
         return this._confirmEmptyBin();
+      case 'cancel-empty-bin':
+        this._closePurgeConfirm();
+        // Replay a reload that was held back while the prompt was up.
+        if (this._pendingWsRefresh) this._wsRefresh();
+        return;
       case 'delete-permanently':
         return this.deleteFilePermanently(args.media || cmd);
       case 'restore-to-desk':
