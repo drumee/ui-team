@@ -56,6 +56,14 @@ html {
     // an EMPTY dock would sit in the corner as an invisible 300x180 click
     // blocker at z 20002.
     display: none !important;
+    // Belt to the display brace, and the part that does NOT depend on browser
+    // support: a fixed 300x180 box at z 20002 pinned to the corner swallows
+    // every click landing there, so the CONTAINER must never intercept pointer
+    // input. Only real docked content opts back in (see `> *` below). Without
+    // this, anything that reveals the dock silently kills clicks in that corner
+    // — which is how this surfaced: it took out the task modal's Update button,
+    // and both buttons once that modal was zoomed full-screen.
+    pointer-events: none;
     position: fixed;
     right: 24px;
     bottom: 24px;
@@ -65,7 +73,12 @@ html {
     height: 180px;
 
     // Shown only while it actually holds the call.
-    &:not(:empty) {
+    // NOT `:not(:empty)`: ui-core renders a `widget-blank` placeholder as the
+    // emptyView of every empty collection (addons/marionette/collection-view
+    // -> KIND.blank), so this Box.X is NEVER :empty in the DOM even with no
+    // call parked. The reveal rule therefore always matched, un-hiding the box
+    // permanently. Test for a REAL child, not merely any child.
+    &:has(> :not(.widget-blank)) {
       display: flex !important;
     }
 
@@ -92,6 +105,14 @@ html {
       min-width: 0 !important;
       min-height: 0 !important;
       margin: 0 !important;
+      // The parked call itself must stay clickable.
+      pointer-events: auto;
+    }
+
+    // ...but ui-core's emptyView placeholder must not be. Higher specificity
+    // than the `> *` above (0,2,0 vs 0,1,0), so it wins without !important.
+    > .widget-blank {
+      pointer-events: none;
     }
   }
 
