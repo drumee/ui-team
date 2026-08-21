@@ -151,10 +151,9 @@ class __tasks_panel extends LetcBox {
     // List-view expand state: ids of the parents whose subtasks are showing.
     // Purely local — collapsed is the default on every open, matching Jira.
     this._subtasksOpen = new Set();
-    // Panel-wide commit mutex + when it was raised, so _submitBlocked can tell
-    // an in-flight commit from a flag that was never cleared.
+    // Panel-wide commit mutex: gates commit-task / commit-detail so two
+    // commits cannot overlap.
     this._submitting = false;
-    this._submittingSince = 0;
     // Inline subtask creator in the detail panel. null = the "+ Add subtask"
     // row is showing; an object = the creator is open on that draft.
     this._subtaskDraft = null;
@@ -1217,15 +1216,16 @@ class __tasks_panel extends LetcBox {
         return this._render();
 
       case "commit-task":
-        if (this._submitBlocked()) return;
-        // Same guard as commit-detail below — _commitTask resets the flag in a
-        // finally, but a throw escaping it would strand the create modal too.
+        if (this._submitting) return;
+        // _commitTask resets the mutex in a finally, but a throw escaping that
+        // finally would strand it; catch here so the create modal always
+        // recovers.
         return this._commitTask().catch((err) => {
           console.error("[tasks_panel] commit-task failed:", err);
           this._setSubmitting(".tasks-panel__create-submit", false);
           this._render();
-          // Say so. A commit that dies silently is indistinguishable from a
-          // dead button, which is exactly how this got reported.
+          // Say so: a commit that fails silently is indistinguishable from a
+          // dead button, which makes it needlessly hard to diagnose.
           Wm.alert(LOCALE.ERROR_NETWORK);
         });
 
@@ -1534,19 +1534,19 @@ class __tasks_panel extends LetcBox {
       }
 
       case "commit-detail":
-        if (this._submitBlocked()) return;
-        // Catch here rather than wrapping _commitDetail's 160-line body: the
-        // reset it does on the happy path is the ONLY one, and `_submitting` is
-        // a panel-wide flag this very case refuses to run past. So any throw in
-        // there left the flag stuck true and the Update button dead for the
-        // rest of the session — no request sent, nothing logged server-side.
-        // The draft is deliberately left intact so a retry keeps the edits.
+        if (this._submitting) return;
+        // _commitDetail clears the mutex only on its happy path, and this case
+        // refuses to run while the mutex is set — so an unhandled throw in
+        // there would leave Update permanently dead. Catch at the call site
+        // rather than wrapping its 160-line body, which would mean
+        // re-indenting a file another branch is actively editing. The draft is
+        // deliberately left intact so a retry keeps the user's edits.
         return this._commitDetail().catch((err) => {
           console.error("[tasks_panel] commit-detail failed:", err);
           this._setSubmitting(".tasks-panel__detail-submit", false);
           this._render();
-          // Say so. A commit that dies silently is indistinguishable from a
-          // dead button, which is exactly how this got reported.
+          // Say so: a commit that fails silently is indistinguishable from a
+          // dead button, which makes it needlessly hard to diagnose.
           Wm.alert(LOCALE.ERROR_NETWORK);
         });
 
@@ -4990,43 +4990,22 @@ class __tasks_panel extends LetcBox {
     return !!(el && el.dataset && el.dataset.loading === "1");
   }
 
-  /**
-   * Is a commit currently blocked by an in-flight one?
-   *
-   * `_submitting` is a panel-wide mutex with no timeout, and both commit-task
-   * and commit-detail refuse to run while it is set. Any path that sets it and
-   * never clears it — a throw, or a request that simply never settles — used to
-   * disable BOTH buttons for the rest of the session, recoverable only by
-   * reloading the page. Treat a flag older than the cutoff as stale: no task
-   * mutation takes that long, and wrongly allowing a click risks at worst a
-   * duplicate request, whereas wrongly blocking one bricks the panel.
-   */
-  _submitBlocked() {
-    if (!this._submitting) return false;
-    const since = this._submittingSince || 0;
-    if (since && Date.now() - since > 20000) {
-      console.warn("[tasks_panel] stale _submitting flag cleared");
-      this._submitting = false;
-      return false;
-    }
-    return true;
-  }
-
   _setSubmitting(selector, loading) {
     this._submitting = !!loading;
-    this._submittingSince = loading ? Date.now() : 0;
 
-    // Watchdog, and it is the load-bearing part of this method.
+    // Watchdog against a busy state outliving its operation.
     //
-    // The busy state sets data-loading="1", and the skin answers that with
-    // `pointer-events: none`. So an operation that never settles leaves the
-    // button PHYSICALLY unclickable — the click never fires, no handler runs,
-    // and no JS-side gate can recover it (that is why _submitBlocked alone was
-    // not enough: it never got the chance to run). Both Create and Update die
-    // this way, since each owns its own button but they share this method.
+    // The busy state sets data-loading="1" and the skin answers that with
+    // `pointer-events: none`, so a commit whose promise never settles would
+    // leave the button physically unclickable: no click event, no handler, and
+    // nothing on the JS side in a position to recover it. The try/finally and
+    // the call-site catches cover success and failure, so this covers only the
+    // "never settles" case.
     //
-    // Force-clear after the cutoff so a stuck request costs a retry instead of
-    // the whole panel until a page reload.
+    // 120s rather than something tighter: _commitTask awaits pending-file
+    // uploads, which can legitimately run long, and clearing the mutex under a
+    // live request would let a second click create a duplicate task. A
+    // last-resort net has to fire well past any plausible real operation.
     if (this._submitWatchdog) {
       clearTimeout(this._submitWatchdog);
       this._submitWatchdog = null;
@@ -5040,7 +5019,7 @@ class __tasks_panel extends LetcBox {
           selector,
         );
         this._setSubmitting(selector, false);
-      }, 20000);
+      }, 120000);
     }
 
     const btn = this.el?.querySelector(selector);
