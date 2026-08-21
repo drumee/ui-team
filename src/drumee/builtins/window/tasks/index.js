@@ -241,6 +241,7 @@ class __tasks_panel extends LetcBox {
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
     if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
     if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
+    if (this._submitWatchdog) clearTimeout(this._submitWatchdog);
     if (
       this._mediaDroppableInstalled &&
       typeof $ !== "undefined" &&
@@ -5014,6 +5015,34 @@ class __tasks_panel extends LetcBox {
   _setSubmitting(selector, loading) {
     this._submitting = !!loading;
     this._submittingSince = loading ? Date.now() : 0;
+
+    // Watchdog, and it is the load-bearing part of this method.
+    //
+    // The busy state sets data-loading="1", and the skin answers that with
+    // `pointer-events: none`. So an operation that never settles leaves the
+    // button PHYSICALLY unclickable — the click never fires, no handler runs,
+    // and no JS-side gate can recover it (that is why _submitBlocked alone was
+    // not enough: it never got the chance to run). Both Create and Update die
+    // this way, since each owns its own button but they share this method.
+    //
+    // Force-clear after the cutoff so a stuck request costs a retry instead of
+    // the whole panel until a page reload.
+    if (this._submitWatchdog) {
+      clearTimeout(this._submitWatchdog);
+      this._submitWatchdog = null;
+    }
+    if (loading) {
+      this._submitWatchdog = setTimeout(() => {
+        this._submitWatchdog = null;
+        if (!this._submitting) return;
+        console.warn(
+          "[tasks_panel] commit never settled; clearing busy state on",
+          selector,
+        );
+        this._setSubmitting(selector, false);
+      }, 20000);
+    }
+
     const btn = this.el?.querySelector(selector);
     if (!btn) return;
     if (loading) {
