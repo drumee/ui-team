@@ -26,3 +26,30 @@
     pointer-events: none;
   }
 }
+
+// =====================================================================
+// The desk's flat scrim — the backdrop `.desk-module__overlay` puts behind
+// the mobile drawer (modules/desk/skin/index.scss). Counterpart to
+// glass-overlay above: same job, flatter treatment.
+//
+// --overlay-bg is theme-aware on its own (rgba(0,0,0,.4) on :root,
+// rgba(20,17,35,.4) under html[data-theme="dark"]), so unlike glass-overlay
+// this needs no explicit dark branch. blur(6px) is the frost the desk rule
+// pairs with the scrim in its own mobile-open state; the two were designed
+// together, and a heavier frost under a 0.4 scrim just washes out.
+//
+// The ::before reset matters when this lands on a host that ALSO matches
+// `[data-overlay="blur"]`: glass-overlay stacks a second blurred layer
+// there (blur(60px)), and without clearing it the backdrop stays frosted
+// despite the flat colour underneath. Same reason the reward flow clears it
+// in widget/reward-flow/skin. Inert on hosts that never carried the glass.
+// =====================================================================
+@mixin scrim-overlay {
+  background-color: var(--overlay-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  &::before {
+    content: none;
+  }
+}

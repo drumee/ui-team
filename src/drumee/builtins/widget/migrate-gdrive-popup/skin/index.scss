@@ -1,5 +1,48 @@
 @use "mixins/drumee";
 
+// Opacity-only entry for the mobile card. The desktop keyframes animate
+// transform, and a retained transform (`both`) would trap the scrim below.
+@keyframes migrate-gdrive-in-mobile {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@mixin gdrive-mobile-card {
+  // inset:0 + margin:auto centres on both axes without a transform. `inset: 0`
+  // is what replaces the desktop top:50%/left:50% anchor — do NOT then set
+  // top/left back to auto, which leaves the card pinned bottom-right and
+  // margin:auto with nothing to distribute (caught by a headless measurement).
+  inset: 0;
+  margin: auto;
+  transform: none;
+  width: min(480px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100dvh - 48px);
+  animation: migrate-gdrive-in-mobile 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--overlay-bg);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    // Blocks taps reaching desk items behind the card. It does not dismiss:
+    // this popup has no outside-click handler, deliberately — a stray tap must
+    // not abandon an import in flight. Closing stays with its own ×.
+    pointer-events: auto;
+  }
+
+  // Opaque card surface above the negative-z scrim, or the dim and blur wash
+  // out the card itself. `inherit` tracks __ui's var(--normal-bg-90).
+  .migrate-gdrive-popup__container {
+    background-color: inherit;
+    border-radius: inherit;
+  }
+}
+
+
 // Quick "pop" when the SA email is copied (migrate-gdrive-popup__sa-copy).
 @keyframes migrate-gdrive-copy-pop {
   0% { transform: scale(0.85); }
@@ -77,6 +120,49 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     animation: migrate-gdrive-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 
     &[data-state="0"] { display: none; }
+
+    // ── Mobile backdrop ───────────────────────────────────────────────
+    // On a phone this card floats over a fully sharp desk. Give it the desk's
+    // own scrim — the same var(--overlay-bg) + blur(6px) that
+    // .desk-module__overlay uses behind the mobile drawer — as a ::before on
+    // the card itself, so it depends on NOTHING outside this widget.
+    //
+    // An earlier attempt hung the scrim off .window-manager__layer via :has().
+    // That reads better but ties the fix to where the window manager happens to
+    // mount this popup, which is not a contract this widget controls
+    // (Wm.launch -> getWindowsPool() returns windowsLayer OR headlessLayer).
+    // Self-contained is the safer trade for a backdrop.
+    //
+    // Three things have to change together for the pseudo to reach the
+    // viewport, and each is load-bearing:
+    //   • transform must go. A transform makes this card the containing block
+    //     for fixed descendants, which would shrink the scrim to the card.
+    //     Centring therefore moves to inset:0 + margin:auto, which needs a
+    //     definite size — hence height:fit-content with the max-height cap.
+    //   • the animation must go with it. Keyframes outrank normal
+    //     declarations, so `migrate-gdrive-in` (which animates transform, with
+    //     `both` retaining the end state) would defeat `transform: none`
+    //     without !important. Swapped for an opacity-only fade instead, so the
+    //     entry still animates.
+    //   • overflow stays on this element, not the pseudo, so a tall card still
+    //     scrolls inside the viewport cap.
+    //
+    // Same shape panel_activity uses for its own mobile card, including the
+    // opaque __container below — in-flow content outranks a negative-z pseudo,
+    // so without it the scrim's dim and blur wash out the card's own rows.
+    //
+    // Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+    // answers "mobile" below 801px, so the attribute is absent in the DevTools
+    // emulator and on a landscape phone.
+    &[data-device="mobile"] {
+      @include gdrive-mobile-card;
+    }
+
+    @media (max-width: 650px) {
+      & {
+        @include gdrive-mobile-card;
+      }
+    }
 
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;

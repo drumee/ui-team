@@ -49,14 +49,50 @@
       // `.left [data-partname="trash-panel"]` containing-block rule in
       // desk/skin/index.scss).
       right: auto !important;
-      transform: translateX(-50%) translateY(100vh);
+
+      // Centred on the SCREEN, which needs the anchor at mid-viewport. The
+      // previous pair kept the base `top: 0` and pushed the card down by
+      // translateY(15%) — 15% of the CARD's own 500px, i.e. a fixed 75px from
+      // the top whatever the screen height, so it always sat high. A percentage
+      // translate cannot express "centre" from top:0; from top:50% it can.
+      top: 50% !important;
+
+      // Parked just off the bottom edge: from the 50% anchor, translateY(50vh)
+      // puts the top edge at 100vh — the same resting place and the same slide
+      // distance the old translateY(100vh) gave from top:0, so the animation
+      // feels unchanged.
+      transform: translate(-50%, 50vh);
+
+      // A hard 500px card would hang ~62px off both edges of a landscape phone
+      // (~375px tall) once centred — centred but unusable. The cap wins over
+      // the height above and keeps it on screen; __main is height:100% so it
+      // follows.
+      max-height: calc(100dvh - 32px);
+
+      // Rounded corners now that this is a floating card rather than the
+      // full-height drawer it is on desktop, where square edges are correct
+      // because it meets the viewport edge.
+      //
+      // overflow:hidden is what makes the radius visible: __topbar carries its
+      // own opaque background (var(--normal-bg-100)) and would paint square
+      // over the top two corners otherwise. It also clips the list, which is
+      // already the panel's own scroll container.
+      border-radius: 6px;
+      overflow: hidden;
+
+      // Asked for explicitly alongside the root. Redundant while the root
+      // clips, but it keeps __main correct on its own terms — it is the box
+      // that actually carries the card surface — and costs nothing.
+      .panel-trash__main {
+        border-radius: 6px;
+      }
 
       &[data-anim="in"] {
-        transform: translateX(-50%) translateY(15%);
+        transform: translate(-50%, -50%);
       }
 
       &[data-anim="out"] {
-        transform: translateX(-50%) translateY(100vh);
+        transform: translate(-50%, 50vh);
       }
     }
   }
@@ -537,5 +573,228 @@
       height: 100%;
       max-width: 100%;
     }
+  }
+}
+
+// ── Mobile backdrop ─────────────────────────────────────────────────────
+// On a phone this panel is a centred card floating over a sharp desk, with no
+// backdrop of its own. Give it the desk's scrim — the same var(--overlay-bg)
+// and blur(6px) that .desk-module__overlay uses behind the mobile drawer, so
+// every mobile overlay surface matches.
+//
+// Anchored on the panel CONTAINER, not on the card. Three constraints force it
+// there:
+//   • Not the shared .desk-module__overlay: that element sits at z 10010, and
+//     this card lives inside .desk-module__panel-container, which is
+//     `position:relative; z-index:10001` — a stacking context. Nothing outside
+//     it can paint between the desk grid and this card whatever z-index it
+//     claims, so the borrowed overlay covered the card instead of backing it.
+//   • Not a ::before on the card itself: the card is centred AND animated with
+//     transform, and a transform makes it the containing block for fixed
+//     descendants, shrinking a full-viewport scrim to the card's own box. The
+//     only way round that is to drop the transform (what panel_activity does),
+//     which would cost this panel its slide-in.
+//   • The container is transform-free and IS that stacking context, so a
+//     negative-z pseudo here paints above the container's background — and
+//     therefore above the grid — while staying below the card, which is a
+//     positioned child at z 10050.
+//
+// Global (not nested) because the element being restyled is desk chrome this
+// widget does not own, and :has() keeps it to this panel — the same container
+// also hosts the chat and activity panels. Same shape as the create-workspace
+// dialog's wrapper override (media/form/skin).
+//
+// It captures taps so they cannot reach desk items behind the card, but does
+// NOT dismiss: the tap lands on the container, and _onOutsideClick only fires
+// for a source outside the panel. Closing stays with the header cross, exactly
+// as panel_activity behaves.
+//
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px, so the attribute is missing in the DevTools
+// emulator and on a landscape phone.
+@mixin panel-trash-mobile-scrim {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--overlay-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.desk-module__panel-container[data-device="mobile"]:has(
+    .panel-trash__ui[data-anim="in"]
+  )::before {
+  @include panel-trash-mobile-scrim;
+}
+
+@media (max-width: 650px) {
+  .desk-module__panel-container:has(.panel-trash__ui[data-anim="in"])::before {
+    @include panel-trash-mobile-scrim;
+  }
+}
+
+// ── Empty Trash confirmation ────────────────────────────────────────────
+// Rendered by skeleton/purge-confirm into Wm.__wrapperModal, NOT nested inside
+// the panel — hence global selectors rather than a nested block.
+//
+// Carries no position on purpose. The wrapper-modal is already
+// `position:absolute; inset:0` with `align-items/justify-content: center` once
+// it holds a dialog, so an ordinary in-flow child is centred by the host. That
+// is what makes this immune to the failure the window_confirm route kept
+// hitting: nothing to be knocked off-centre by inline offsets, and no
+// percentage sizing resolved against a container that might be unsized.
+//
+// Width is the mobile-first form: full bleed minus a 16px margin either side,
+// capped so it does not stretch on a desktop viewport.
+.panel-trash__purge {
+  width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 16px 20px 20px;
+  gap: 12px;
+  background-color: var(--normal-bg-90);
+  border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+  border-radius: var(--corner-radius-4, 12px);
+  box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
+  // A long translation must not push the buttons off a short screen.
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.panel-trash__purge-head {
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+// Mirrors .window-confirm-topbar__logo (window/confirm/skin) so this prompt
+// carries the same mark at the same weight as every standard confirm: 40px
+// glyph in --primary-50, bold 24px wordmark, baseline-aligned with a 4px gap.
+.panel-trash__purge-logo {
+  align-items: end;
+  gap: var(--spacer-2);
+  flex-shrink: 0;
+}
+
+.panel-trash__purge-logo-ico {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--primary-50);
+  // Decorative: the close control is the only interactive thing in this row.
+  pointer-events: none;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+}
+
+.panel-trash__purge-logo-text {
+  font-weight: bold;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--normal-fg-10);
+}
+
+.panel-trash__purge-close {
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  margin-left: auto;
+  border-radius: var(--corner-radius-2, 6px);
+  cursor: pointer;
+  color: var(--normal-fg-10);
+
+  &:hover {
+    background-color: var(--normal-bg-80);
+  }
+}
+
+.panel-trash__purge-close-ico {
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+}
+
+// --normal-fg-10, the token the rest of this panel uses, rather than the bare
+// --normal-fg the confirm widget reaches for. They resolve identically in both
+// themes today; this just keeps one convention in one file.
+.panel-trash__purge-message {
+  width: 100%;
+  @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 20px);
+}
+
+.panel-trash__purge-actions {
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.panel-trash__purge-btn {
+  align-items: center;
+  justify-content: center;
+  // 44px is the touch target; the button also has to survive a long label, so
+  // it grows with its text rather than being pinned to a fixed width.
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--corner-radius-2, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
+
+  &--cancel {
+    color: var(--normal-fg-10);
+    background-color: transparent;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+
+    &:hover {
+      background-color: var(--normal-bg-80);
+    }
+  }
+
+  &--danger {
+    color: #fff;
+    background-color: var(--error, #ff5a5f);
+    border: 1px solid transparent;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+  }
+}
+
+// Phones: the two buttons share the row evenly instead of hugging the right
+// edge, so neither becomes a small target on a narrow screen.
+//
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px, so the attribute is absent in the DevTools
+// emulator and on a landscape phone.
+@mixin purge-actions-mobile {
+  justify-content: stretch;
+
+  .panel-trash__purge-btn {
+    flex: 1 1 0;
+  }
+}
+
+.panel-trash__purge[data-device="mobile"] .panel-trash__purge-actions {
+  @include purge-actions-mobile;
+}
+
+@media (max-width: 650px) {
+  .panel-trash__purge-actions {
+    @include purge-actions-mobile;
   }
 }
