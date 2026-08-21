@@ -94,7 +94,9 @@ class desk_module extends LetcBox {
     });
     // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
     // open the full-page billing screen without a direct module reference.
-    this._openBillingPage = () => this.openBillingPage();
+    // `arg` (plan/cycle/tab preselect) rides through untouched — the
+    // upgrade-nudge popup uses it to land on the tier it was selling.
+    this._openBillingPage = (arg) => this.openBillingPage(arg);
     RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
     // Downgrade over-limit (libs/over-limit): the popup and banner raise
     // these instead of reaching into the desk. open-admin-console reuses the
@@ -2158,6 +2160,56 @@ class desk_module extends LetcBox {
     });
   }
 
+  // ── Upgrade nudges (payment.upgrade_nudge_state) ──────────────────────────
+
+  /**
+   * One boot-time question — "does THIS member get an upgrade nudge?".
+   *
+   * Everything that makes it fair lives server-side (lib/upgrade-nudge + the
+   * yp gate proc): which threshold fired, once per threshold per workspace,
+   * the shared daily cap, reset on upgrade. A granted answer is already
+   * MARKED shown, which is why this runs last in the _afterHomeSettled chain
+   * and re-checks that the screen is clear: fetching earlier could burn the
+   * grant under a promo or a lock popup and the member would never see it.
+   */
+  async _maybeShowUpgradeNudge() {
+    try {
+      if (!SERVICE.payment || !SERVICE.payment.upgrade_nudge_state) return;
+      // A locked workspace already has a louder popup with a real to-do list;
+      // upselling on top of it helps nobody.
+      const OverLimit = require("libs/over-limit");
+      if (OverLimit.enforcementOn() && OverLimit.isLocked()) return;
+      if (this._homePopupsBusy()) return;
+      const res = await this.fetchService(SERVICE.payment.upgrade_nudge_state, {
+        hub_id: Visitor.id,
+      });
+      const data = (res && res.data) || res || {};
+      if (!~~data.show || !data.trigger) return;
+      this._openUpgradeNudgePopup(data);
+    } catch (e) {
+      // Decoration only — a failed nudge must never mark the boot chain red.
+      this.warn && this.warn("[upgrade-nudge] state check failed", e);
+    }
+  }
+
+  async _openUpgradeNudgePopup(nudge) {
+    try {
+      await Kind.waitFor("upgrade_nudge_popup");
+    } catch (e) {
+      return;
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    Wm.launch(
+      {
+        kind: "upgrade_nudge_popup",
+        hub_id: Visitor.id,
+        wm_unique_id: "upgrade_nudge_popup",
+        nudge,
+      },
+      { explicit: 1, singleton: 1 },
+    );
+  }
+
   async _openOverLimitPopup() {
     try {
       await Kind.waitFor("over_limit_popup");
@@ -2436,6 +2488,11 @@ class desk_module extends LetcBox {
           // hand the loader over to.
           : this._hideInvitedWorkspaceLoader(),
       )
+      // Last in the chain on purpose: an upgrade nudge is the least urgent
+      // thing this boot can show, and asking the server only when the screen
+      // is actually clear means a granted (= marked shown) nudge is never
+      // burned underneath a promo, the reward flow or a lock popup.
+      .then(() => this._maybeShowUpgradeNudge())
       .catch((e) => {
         this._hideInvitedWorkspaceLoader();
         this.warn && this.warn("[home] post-ready chain failed", e);

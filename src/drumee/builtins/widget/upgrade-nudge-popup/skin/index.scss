@@ -1,0 +1,219 @@
+// Upgrade-nudge popup — the Figma "Upgrade Trigger" card on Drumee tokens.
+// Same shell mechanics as over-limit-popup/promo-launch30 (portalled to
+// <body>, fixed + high z-index). Figma: 398px sheet, 32px padding, radius
+// 12, centered headline, amber warning badge (red at the 90% threshold),
+// meter, check-circle benefit list, full-width brand CTA.
+.upgrade-nudge-popup {
+  &__ui {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    font-family: var(--font-main);
+  }
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-6);
+    background: var(--overlay-bg);
+    backdrop-filter: blur(2px);
+  }
+
+  &__card {
+    position: relative;
+    width: min(398px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--normal-bg-80);
+    border-radius: var(--corner-radius-6);
+    padding: 32px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    align-items: stretch;
+  }
+
+  &__close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--normal-fg-50);
+    }
+    &:hover {
+      background: var(--normal-bg-90);
+    }
+  }
+
+  // Warning badge — tinted rounded square, centered. Amber wash for the
+  // early thresholds, the red ramp once the 90% one fires.
+  &__badge {
+    align-self: center;
+    width: 64px;
+    height: 64px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-5);
+    background: var(--orange-100);
+    margin-bottom: var(--spacer-5);
+
+    &--danger {
+      background: var(--red-100);
+      .upgrade-nudge-popup__badge-ico svg {
+        fill: var(--red-600);
+      }
+    }
+  }
+
+  &__badge-ico svg {
+    width: 30px;
+    height: 30px;
+    fill: var(--orange-600);
+  }
+
+  &__title {
+    font-size: 21px;
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--normal-fg-800);
+    text-align: center;
+  }
+
+  &__lead {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--normal-fg-20);
+    margin-top: 9px;
+    text-align: center;
+  }
+
+  // "Used ......... 70 GB / 100 GB" + track
+  &__meter {
+    margin-top: var(--spacer-6);
+    gap: 8px;
+  }
+
+  &__meter-labels {
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  &__meter-left {
+    font-size: 12px;
+    color: var(--normal-fg-50);
+  }
+
+  &__meter-right {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+  }
+
+  &__meter-track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--normal-bg-80);
+    overflow: hidden;
+  }
+
+  &__meter-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--orange-500);
+
+    &--danger {
+      background: var(--red-500);
+    }
+  }
+
+  &__benefits {
+    margin-top: var(--spacer-6);
+    gap: var(--spacer-4);
+  }
+
+  &__benefits-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+  }
+
+  &__benefit-row {
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  &__benefit-tick {
+    flex: none;
+    margin-top: 2px;
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--primary-50);
+    }
+  }
+
+  &__benefit-text {
+    gap: 1px;
+  }
+
+  &__benefit-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+  }
+
+  &__benefit-sub {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--normal-fg-20);
+  }
+
+  &__cta-stack {
+    margin-top: var(--spacer-6);
+    gap: var(--spacer-3);
+  }
+
+  &__cta {
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-4);
+    background: var(--primary-50);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--primary-60);
+    }
+
+    &--ghost {
+      background: transparent;
+
+      &:hover {
+        
+        background: var(--normal-bg-90);
+      }
+
+      .upgrade-nudge-popup__cta-label {
+        color: var(--normal-fg-800);
+      }
+    }
+  }
+
+  &__cta-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+  }
+}
