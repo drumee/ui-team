@@ -2617,5 +2617,11 @@
   "FILE_THREAD_MOVED_AWAY": "Ce fichier a été déplacé vers un autre espace de travail. La conversation reste ici, en lecture seule.",
   "FILE_THREAD_FILE_DELETED": "Ce fichier a été supprimé. La conversation est conservée pour référence.",
   "FILE_THREAD_READ_ONLY": "Lecture seule",
-  "TUTORIAL_STEP": "ÉTAPE {0}/{1}"
+  "TUTORIAL_STEP": "ÉTAPE {0}/{1}",
+  "SUPPORT_LABEL": "Support",
+  "SUPPORT_CHAT_TITLE": "Drumee Support",
+  "SUPPORT_REPLY_TIME": "Usually replies within a few hours",
+  "SUPPORT_EMPTY_TITLE": "You're talking to a real person",
+  "SUPPORT_EMPTY_TEXT": "Describe what you need help with. Screenshots and files are welcome.",
+  "SUPPORT_START_CONVERSATION": "Start a conversation"
 }

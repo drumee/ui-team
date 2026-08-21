@@ -2616,5 +2616,11 @@
   "FILE_THREAD_MOVED_AWAY": "Файл перемещён в другое рабочее пространство. Обсуждение остаётся здесь и доступно только для чтения.",
   "FILE_THREAD_FILE_DELETED": "Файл удалён. Обсуждение сохранено для справки.",
   "FILE_THREAD_READ_ONLY": "Только чтение",
-  "TUTORIAL_STEP": "ШАГ {0}/{1}"
+  "TUTORIAL_STEP": "ШАГ {0}/{1}",
+  "SUPPORT_LABEL": "Support",
+  "SUPPORT_CHAT_TITLE": "Drumee Support",
+  "SUPPORT_REPLY_TIME": "Usually replies within a few hours",
+  "SUPPORT_EMPTY_TITLE": "You're talking to a real person",
+  "SUPPORT_EMPTY_TEXT": "Describe what you need help with. Screenshots and files are welcome.",
+  "SUPPORT_START_CONVERSATION": "Start a conversation"
 }

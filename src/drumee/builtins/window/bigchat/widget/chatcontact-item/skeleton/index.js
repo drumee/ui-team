@@ -35,6 +35,23 @@ const __skl_widget_chatcontactItem = function (ui) {
     escapeContextmenu: true
   });
 
+  // Support conversations are marked in both inboxes: as a user, so the
+  // support thread is findable among ordinary chats; as the admin who answers
+  // support, so a request from a stranger is not mistaken for a colleague.
+  // The owning chat_p2p panel decides — it is the one that knows which
+  // account answers support. Rows in window_bigchat have no such parent and
+  // simply never carry the pill.
+  const panel = _.isFunction(ui.getParentByKind)
+    ? ui.getParentByKind('chat_p2p')
+    : null;
+  const supportPill =
+    panel && _.isFunction(panel._isSupportRow) && panel._isSupportRow(ui)
+      ? Skeletons.Note({
+          className: `${contentFig}__support-pill`,
+          content: LOCALE.SUPPORT_LABEL
+        })
+      : null;
+
   const md = ui.mget(_a.metadata);
   if (md && (md.message_type === 'call')) {
     switch (md.call_status) {
@@ -78,10 +95,15 @@ const __skl_widget_chatcontactItem = function (ui) {
     escapeContextmenu: true
   });
 
+  // A conversation with no messages yet has no ctime — Dayjs.unix(undefined)
+  // formats as "Invalid Date", so render nothing instead.
+  const ctime = ui.mget(_a.ctime);
   const chatTime = Skeletons.Note({
     className: `${contentFig}__note time`,
     sys_pn: 'msg-time',
-    content: Dayjs.unix(ui.mget(_a.ctime)).locale(Visitor.language()).format("HH:mm")
+    content: ctime
+      ? Dayjs.unix(ctime).locale(Visitor.language()).format("HH:mm")
+      : ''
   });
 
   const value = ui.mget('room_count') || "";
@@ -122,6 +144,7 @@ const __skl_widget_chatcontactItem = function (ui) {
                 className: `${contentFig}__info-top`,
                 kids: [
                   name,
+                  supportPill,
                   chatTime
                 ]
               }),
