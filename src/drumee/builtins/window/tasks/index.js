@@ -151,6 +151,10 @@ class __tasks_panel extends LetcBox {
     // List-view expand state: ids of the parents whose subtasks are showing.
     // Purely local — collapsed is the default on every open, matching Jira.
     this._subtasksOpen = new Set();
+    // Panel-wide commit mutex + when it was raised, so _submitBlocked can tell
+    // an in-flight commit from a flag that was never cleared.
+    this._submitting = false;
+    this._submittingSince = 0;
     // Inline subtask creator in the detail panel. null = the "+ Add subtask"
     // row is showing; an object = the creator is open on that draft.
     this._subtaskDraft = null;
@@ -1212,13 +1216,16 @@ class __tasks_panel extends LetcBox {
         return this._render();
 
       case "commit-task":
-        if (this._submitting) return;
+        if (this._submitBlocked()) return;
         // Same guard as commit-detail below — _commitTask resets the flag in a
         // finally, but a throw escaping it would strand the create modal too.
         return this._commitTask().catch((err) => {
           console.error("[tasks_panel] commit-task failed:", err);
           this._setSubmitting(".tasks-panel__create-submit", false);
           this._render();
+          // Say so. A commit that dies silently is indistinguishable from a
+          // dead button, which is exactly how this got reported.
+          Wm.alert(LOCALE.ERROR_NETWORK);
         });
 
       case "cancel-add":
@@ -1526,7 +1533,7 @@ class __tasks_panel extends LetcBox {
       }
 
       case "commit-detail":
-        if (this._submitting) return;
+        if (this._submitBlocked()) return;
         // Catch here rather than wrapping _commitDetail's 160-line body: the
         // reset it does on the happy path is the ONLY one, and `_submitting` is
         // a panel-wide flag this very case refuses to run past. So any throw in
@@ -1537,6 +1544,9 @@ class __tasks_panel extends LetcBox {
           console.error("[tasks_panel] commit-detail failed:", err);
           this._setSubmitting(".tasks-panel__detail-submit", false);
           this._render();
+          // Say so. A commit that dies silently is indistinguishable from a
+          // dead button, which is exactly how this got reported.
+          Wm.alert(LOCALE.ERROR_NETWORK);
         });
 
       case "cancel-detail":
@@ -4979,8 +4989,31 @@ class __tasks_panel extends LetcBox {
     return !!(el && el.dataset && el.dataset.loading === "1");
   }
 
+  /**
+   * Is a commit currently blocked by an in-flight one?
+   *
+   * `_submitting` is a panel-wide mutex with no timeout, and both commit-task
+   * and commit-detail refuse to run while it is set. Any path that sets it and
+   * never clears it — a throw, or a request that simply never settles — used to
+   * disable BOTH buttons for the rest of the session, recoverable only by
+   * reloading the page. Treat a flag older than the cutoff as stale: no task
+   * mutation takes that long, and wrongly allowing a click risks at worst a
+   * duplicate request, whereas wrongly blocking one bricks the panel.
+   */
+  _submitBlocked() {
+    if (!this._submitting) return false;
+    const since = this._submittingSince || 0;
+    if (since && Date.now() - since > 20000) {
+      console.warn("[tasks_panel] stale _submitting flag cleared");
+      this._submitting = false;
+      return false;
+    }
+    return true;
+  }
+
   _setSubmitting(selector, loading) {
     this._submitting = !!loading;
+    this._submittingSince = loading ? Date.now() : 0;
     const btn = this.el?.querySelector(selector);
     if (!btn) return;
     if (loading) {
