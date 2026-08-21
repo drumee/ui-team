@@ -106,13 +106,21 @@
     }
   }
 
+  // The acknowledge mascot (ui-core preset/ack -> profile/templates/avatar)
+  // fills itself from a linearGradient whose two stops carry these classes, so
+  // its colour is CSS-driven. Both stops are the SAME brand indigo (#433cc5) —
+  // the flat logo, no gradient — matching the sidebar logo and
+  // icons/src/raw/logo-drumee-icon.svg.
+  // NOT --primary-500/-400: revamp.scss declares two --primary-* scales in the
+  // same :root and the later (lilac) one wins, so those resolved to #b251fb /
+  // #c781ff. --primary-purple-50 has no duplicate overriding it.
   &__gradient-mascot {
     &-start {
-      stop-color: var(--primary-500);
+      stop-color: var(--primary-purple-50);
     }
 
     &-end {
-      stop-color: var(--primary-400);
+      stop-color: var(--primary-purple-50);
     }
   }
 
@@ -124,6 +132,14 @@
       svg {
         width: 140px;
         height: 140px;
+      }
+
+      // The avatar template hardcodes a drop-shadow whose feColorMatrix is a
+      // purple (#881dd3) that no class can reach, so it survived the recolour
+      // as a lilac halo around an indigo logo. CSS `filter` overrides the SVG
+      // presentation attribute, giving the flat mark the brand sheet shows.
+      g[filter] {
+        filter: none;
       }
     }
 
