@@ -194,6 +194,7 @@ class __widget_chat extends LetcBox {
    *
    */
   onBeforeDestroy() {
+    this._closeMentionDropdown();
     this.unbindEvent(_a.live);
     RADIO_BROADCAST.off("chat:read", this._onReadContext);
     RADIO_BROADCAST.off("chat:posted", this._onPeerChatPosted);
@@ -1490,6 +1491,7 @@ class __widget_chat extends LetcBox {
    * @param {*} peer
    */
   reload(peer) {
+    this._closeMentionDropdown();
     let data = { ...peer.model.toJSON() };
     delete data.styleOpt;
     delete data.kids;
@@ -1563,6 +1565,7 @@ class __widget_chat extends LetcBox {
   setScopedFolderNid(folderNid) {
     const next = folderNid ? `${folderNid}` : "";
     if (this.scopedNid === next) return;
+    this._closeMentionDropdown();
     this.scopedNid = next;
     this._unfreezeIfScopeChanged();
     this.ensurePart(_a.list).then((list) => {
@@ -2865,7 +2868,11 @@ class __widget_chat extends LetcBox {
   onWsMessage(service, data, options) {
     const area = this.mget(_a.area) || this.mget(_a.type);
     const isPrivate = area === _a.personal || area === _a.privateRoom;
-    switch (options.service) {
+    const liveService = (options && options.service) || service;
+    if (typeof this._refreshFileMentionsAfterMutation === "function") {
+      this._refreshFileMentionsAfterMutation(liveService, data);
+    }
+    switch (liveService) {
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
         if (!this.peer || !isPrivate) {
@@ -3209,19 +3216,290 @@ class __widget_chat extends LetcBox {
     return false;
   }
 
+  _resolveFileMentionScope() {
+    const home = this.mget(_a.home);
+    let hubId = this.hubId || this.mget(_a.hub_id) || "";
+    let nid =
+      (this.getScopedNid && this.getScopedNid()) ||
+      this.scopedNid ||
+      this.mget(_a.nid) ||
+      "";
+
+    try {
+      const folderWindow =
+        this.getParentByKind &&
+        (this.getParentByKind("window_folder") ||
+          this.getParentByKind("window_team") ||
+          this.getParentByKind("window_sharebox"));
+      if (folderWindow) {
+        const actualNode =
+          folderWindow.actualNode && folderWindow.actualNode();
+        const actualNid =
+          actualNode && (actualNode.nid || actualNode.id);
+        const actualHubId =
+          actualNode && (actualNode.actual_hub_id || actualNode.hub_id);
+        const modelNid = folderWindow.mget && folderWindow.mget(_a.nid);
+        const modelHubId =
+          folderWindow.mget &&
+          (folderWindow.mget(_a.actual_hub_id) ||
+            folderWindow.mget(_a.hub_id));
+        nid = actualNid || modelNid || nid;
+        hubId = actualHubId || modelHubId || hubId;
+      }
+    } catch (e) {}
+
+    if (!nid) nid = (home && home.home_id) || hubId;
+    hubId = `${hubId || ""}`;
+    nid = `${nid || ""}`;
+    return { hubId, nid, key: `${hubId}:${nid}` };
+  }
+
+  _isFileMentionRequestCurrent(token) {
+    if (!token) return true;
+    if (this.isDestroyed && this.isDestroyed()) return false;
+    if (this._mentionRequestSeq !== token.requestSeq) return false;
+    const active = this._activeFileMention;
+    if (!active || active.requestSeq !== token.requestSeq) return false;
+    if (active.scopeKey !== token.scopeKey) return false;
+    return this._resolveFileMentionScope().key === token.scopeKey;
+  }
+
+  _isFileMentionMutation(service) {
+    switch (service) {
+      case "media.new":
+      case "media.remove":
+      case "media.make_dir":
+      case "media.upload":
+      case "media.save":
+      case "media.replace":
+      case "media.copy":
+      case "media.copy_all":
+      case "media.move":
+      case "media.move_all":
+      case "media.relocate":
+      case "media.workspace_move":
+      case "media.rename":
+      case "media.trash":
+      case "media.restore":
+      case "media.restore_into":
+      case "media.purge":
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  _refreshFileMentionsAfterMutation(service, data) {
+    if (!this._isFileMentionMutation(service)) return;
+    const active = this._activeFileMention;
+    if (!active) return;
+
+    // One socket carries pushes from every workspace the user belongs to.
+    // Ignore a clearly foreign single-node event, but keep invalidating for
+    // arrays/batches and payloads without a trustworthy hub identity.
+    const eventHubIds = new Set();
+    let hasAmbiguousHubPayload = Array.isArray(data);
+    const addHubId = (node) => {
+      if (!node) return;
+      if (Array.isArray(node)) {
+        hasAmbiguousHubPayload = true;
+        return;
+      }
+      const hubId = node.actual_hub_id || node.hub_id;
+      if (hubId) eventHubIds.add(`${hubId}`);
+    };
+    if (data && !Array.isArray(data)) {
+      addHubId(data);
+      addHubId(data.src);
+      addHubId(data.dest);
+      if (data.args) {
+        addHubId(data.args.src);
+        addHubId(data.args.dest);
+      }
+    }
+    if (
+      !hasAmbiguousHubPayload &&
+      eventHubIds.size &&
+      !eventHubIds.has(`${active.hubId}`)
+    ) {
+      return;
+    }
+
+    const scope = this._resolveFileMentionScope();
+    if (scope.key !== active.scopeKey) {
+      this._closeMentionDropdown();
+      return;
+    }
+
+    if (this._mentionRefreshTimer != null) {
+      clearTimeout(this._mentionRefreshTimer);
+      this._mentionRefreshTimer = null;
+    }
+    this._closeMentionDropdown({ preserveFileQuery: true });
+    this._mentionRefreshTimer = setTimeout(() => {
+      this._mentionRefreshTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) {
+        this._closeMentionDropdown();
+        return;
+      }
+      if (this._activeFileMention !== active) return;
+      if (this._resolveFileMentionScope().key !== active.scopeKey) {
+        this._closeMentionDropdown();
+        return;
+      }
+      this._showMentionFiles(active.filter, "file");
+    }, 120);
+  }
+
+  /**
+   * Normalize media-service response envelopes before rows are rendered.
+   */
+  _mentionRows(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.rows)) return data.rows;
+    if (Array.isArray(data.data)) return data.data;
+    if (data.data && Array.isArray(data.data.rows)) return data.data.rows;
+    return [];
+  }
+
+  _mentionErrorCode(data) {
+    if (!data) return "";
+    if (data instanceof Error && data.code) return `${data.code}`;
+    if (typeof data === "string") {
+      return /^[A-Z][A-Z0-9_]+$/.test(data) ? data : "";
+    }
+    const direct = [data.error_code, data.error, data.code, data.reason]
+      .find((value) => typeof value === "string" && value.length);
+    if (direct) return `${direct}`;
+    if (data.error && typeof data.error === "object") {
+      return this._mentionErrorCode(data.error);
+    }
+    if (typeof data.status === "string" &&
+      /^[A-Z][A-Z0-9_]+$/.test(data.status) &&
+      !["OK", "SUCCESS"].includes(data.status)) {
+      return data.status;
+    }
+    if (data.data && !Array.isArray(data.data) && typeof data.data === "object") {
+      return this._mentionErrorCode(data.data);
+    }
+    return "";
+  }
+
+  async _searchMentionFiles(folderHubId, folderNid, filter, requestToken) {
+    if (!this._isFileMentionRequestCurrent(requestToken)) return [];
+    const query = (filter || "").trim().replace(/\s+/g, " ");
+    const service = (SERVICE.media && SERVICE.media.search_names) ||
+      "media.search_names";
+    const response = await this.fetchService({
+      service,
+      hub_id: folderHubId,
+      nid: folderNid,
+      query,
+      limit: 6,
+    });
+    if (!this._isFileMentionRequestCurrent(requestToken)) return [];
+
+    const errorCode = this._mentionErrorCode(response);
+    if (errorCode) {
+      const error = new Error(errorCode);
+      error.code = errorCode;
+      error.error_code = errorCode;
+      throw error;
+    }
+
+    const rows = this._mentionRows(response);
+    if (rows.some((row) => !row || `${row.hub_id || ""}` !== `${folderHubId}`)) {
+      const error = new Error("MENTION_HUB_MISMATCH");
+      error.code = "MENTION_HUB_MISMATCH";
+      throw error;
+    }
+    return { rows: rows.slice(0, 6), canonical: true };
+  }
+
+  async _fetchDirectMentionFiles(folderHubId, folderNid, requestToken) {
+    const rows = [];
+    const seen = new Set();
+    const isCurrent = () =>
+      !requestToken || this._isFileMentionRequestCurrent(requestToken);
+    let page = 1;
+    const pageFingerprints = new Set();
+
+    while (rows.length < 6 && isCurrent()) {
+      const data = await this.fetchService({
+        service: SERVICE.media.show_node_by,
+        hub_id: folderHubId,
+        nid: folderNid,
+        page,
+        sort: "name",
+        order: "asc",
+      }).catch(() => null);
+      if (!isCurrent()) return rows;
+      const pageRows = this._mentionRows(data);
+      if (!pageRows.length) break;
+      const fingerprint = JSON.stringify(pageRows.map((item, index) => [
+        item && (item.nid || item.id || "") || "empty",
+        item && (item.filename || item.user_filename || "") || index,
+        item && (item.filetype || item.ftype || "") || "",
+      ]));
+      if (pageFingerprints.has(fingerprint)) break;
+      pageFingerprints.add(fingerprint);
+
+      for (const item of pageRows) {
+        if (!item) continue;
+        const nid = item.nid || item.id;
+        const filetype = item.filetype || item.ftype;
+        if (!nid || filetype === _a.hub || filetype === "root" || seen.has(`${nid}`)) {
+          continue;
+        }
+        seen.add(`${nid}`);
+        const filename = item.filename || item.user_filename || "";
+        rows.push({
+          ...item,
+          nid,
+          hub_id: item.hub_id || folderHubId,
+          filename,
+          mention_path: filename,
+        });
+        if (rows.length >= 6) break;
+      }
+      page += 1;
+    }
+    return rows;
+  }
+
   /**
    * Search files/folders under the current folder for mention suggestions.
    * Uses only read/list calls; sendMessage keeps mentions out of attachments.
    */
-  async _fetchMentionFiles(folderHubId, folderNid, filter) {
+  async _fetchMentionFiles(
+    folderHubId,
+    folderNid,
+    filter,
+    requestToken,
+    { boundedFallback = false } = {},
+  ) {
     const query = (filter || "").trim().toLowerCase();
+    if (!query) {
+      return this._fetchDirectMentionFiles(
+        folderHubId,
+        folderNid,
+        requestToken,
+      );
+    }
     const rows = [];
     const seen = new Set();
     const visitedFolders = new Set();
+    // The listing path is retained only for the typed secure-share/DMZ
+    // fallback. Keep its historical safety envelope there; direct tests and
+    // the explicitly-authorized legacy helper retain their prior completeness
+    // semantics when this flag is not set.
+    const maxDepth = boundedFallback ? 4 : Number.POSITIVE_INFINITY;
+    const maxFolders = boundedFallback ? 40 : Number.POSITIVE_INFINITY;
+    const maxRows = boundedFallback ? 80 : Number.POSITIVE_INFINITY;
+    const maxPages = boundedFallback ? 200 : Number.POSITIVE_INFINITY;
     const queue = [{ nid: folderNid, path: "", depth: 0 }];
-    const maxDepth = query ? 4 : 0;
-    const maxFolders = query ? 40 : 1;
-    const maxRows = 80;
+    let pagesVisited = 0;
 
     const toRows = (d) => {
       if (!d) return [];
@@ -3236,42 +3514,88 @@ class __widget_chat extends LetcBox {
       return name.includes(query) || path.includes(query);
     };
 
-    while (queue.length && visitedFolders.size < maxFolders && rows.length < maxRows) {
+    const isCurrent = () =>
+      !requestToken || this._isFileMentionRequestCurrent(requestToken);
+
+    while (
+      queue.length &&
+      visitedFolders.size < maxFolders &&
+      rows.length < maxRows &&
+      pagesVisited < maxPages &&
+      isCurrent()
+    ) {
       const folder = queue.shift();
       if (!folder || !folder.nid || visitedFolders.has(folder.nid)) continue;
       visitedFolders.add(folder.nid);
 
-      const data = await this.fetchService({
-        service: SERVICE.media.show_node_by,
-        hub_id: folderHubId,
-        nid: folder.nid,
-      }).catch(() => null);
+      const pageFingerprints = new Set();
+      let page = 1;
+      while (
+        isCurrent() &&
+        rows.length < maxRows &&
+        pagesVisited < maxPages
+      ) {
+        pagesVisited += 1;
+        const data = await this.fetchService({
+          service: SERVICE.media.show_node_by,
+          hub_id: folderHubId,
+          nid: folder.nid,
+          page,
+          sort: "name",
+          order: "asc",
+        }).catch(() => null);
+        if (!isCurrent()) return rows;
 
-      for (const item of toRows(data)) {
-        if (!item || item.filetype === _a.hub) continue;
-        const filename = item.filename || item.user_filename || "";
-        const mentionPath = folder.path ? `${folder.path}/${filename}` : filename;
-        const normalized = {
-          ...item,
-          filename,
-          mention_path: mentionPath,
-        };
-        const key = `${normalized.nid || ""}`;
-        const isFolder = item.filetype === _a.folder || item.ftype === _a.folder;
+        const pageRows = toRows(data);
+        if (!pageRows.length) break;
+        const fingerprint = JSON.stringify(
+          pageRows.map((item, index) => {
+            if (!item) return ["empty", index];
+            return [
+              item.nid || item.id || "",
+              item.filename || item.user_filename || "",
+              item.filetype || item.ftype || "",
+            ];
+          }),
+        );
+        if (pageFingerprints.has(fingerprint)) break;
+        pageFingerprints.add(fingerprint);
 
-        if (matches(normalized) && key && !seen.has(key)) {
-          seen.add(key);
-          rows.push(normalized);
-          if (rows.length >= maxRows) break;
+        for (const item of pageRows) {
+          if (!item || item.filetype === _a.hub) continue;
+          const filename = item.filename || item.user_filename || "";
+          const mentionPath = folder.path
+            ? `${folder.path}/${filename}`
+            : filename;
+          const normalized = {
+            ...item,
+            filename,
+            mention_path: mentionPath,
+          };
+          const key = `${normalized.nid || ""}`;
+          const isFolder =
+            item.filetype === _a.folder || item.ftype === _a.folder;
+
+          if (matches(normalized) && key && !seen.has(key)) {
+            seen.add(key);
+            rows.push(normalized);
+          }
+
+          if (
+            query &&
+            isFolder &&
+            item.nid &&
+            folder.depth < maxDepth &&
+            visitedFolders.size + queue.length < maxFolders
+          ) {
+            queue.push({
+              nid: item.nid,
+              path: mentionPath,
+              depth: folder.depth + 1,
+            });
+          }
         }
-
-        if (query && isFolder && item.nid && folder.depth < maxDepth) {
-          queue.push({
-            nid: item.nid,
-            path: mentionPath,
-            depth: folder.depth + 1,
-          });
-        }
+        page += 1;
       }
     }
 
@@ -3292,6 +3616,10 @@ class __widget_chat extends LetcBox {
       hasGetPart: !!this.getPart,
       fig: this.fig && this.fig.family,
     });
+    // A new query must not leave rows from the previous query selectable while
+    // its async traversal is running. This also cancels a delayed mutation
+    // refresh when the user switches to a contact mention.
+    this._closeMentionDropdown();
     // mention-dropdown is rendered nested inside chat-footer → getPart may
     // not resolve it through the part registry depending on partHandler
     // wiring. Fall back to a direct DOM lookup so folder-chat and bigchat
@@ -3316,46 +3644,85 @@ class __widget_chat extends LetcBox {
     }
     const dropdown = { el: dropdownEl };
 
-    // Staleness guard. File search fans out over many async fetchService calls
-    // and every keystroke starts a fresh, uncancelable request. Without a token
-    // an older (slower) search resolves AFTER the user already picked a file and
-    // closed the dropdown, re-opening it with no new input — forcing a second
-    // Enter and a duplicate mention. Capture the current sequence; the resolve
-    // handler bails if a newer request (or a close) has since bumped it.
+    // Staleness guard.  A sequence token prevents any late list/search response
+    // from reopening a dropdown that the user superseded or closed.
     const requestSeq = (this._mentionRequestSeq || 0) + 1;
     this._mentionRequestSeq = requestSeq;
 
     const hubId = this.hubId;
-    // `home` may be unset in folder-chat (toolkit/index.js passes `home_id`
-    // as a primitive, not the full `home` object). Don't early-return —
-    // `home` is only used as a fallback for file-mention's folderNid below,
-    // and that path is safely guarded.
-    const home = this.mget(_a.home);
-
     const mediaGridPreview = require("builtins/media/grid/template/preview");
 
     let filesPromise = Promise.resolve(null);
     let contactsPromise = Promise.resolve(null);
     let folderHubId = hubId;
+    let requestToken = null;
 
     if (mentionType === "file") {
-      let folderNid = this.mget(_a.nid);
-      try {
-        const folderWindow =
-          this.getParentByKind &&
-          (this.getParentByKind("window_folder") ||
-            this.getParentByKind("window_team") ||
-            this.getParentByKind("window_sharebox"));
-        if (folderWindow) {
-          const winNid = folderWindow.mget && folderWindow.mget(_a.nid);
-          const winHubId = folderWindow.mget && folderWindow.mget(_a.hub_id);
-          if (winNid) folderNid = winNid;
-          if (winHubId) folderHubId = winHubId;
-        }
-      } catch (e) {}
-      if (!folderNid) folderNid = (home && home.home_id) || folderHubId;
-
-      filesPromise = this._fetchMentionFiles(folderHubId, folderNid, filter);
+      const fileScope = this._resolveFileMentionScope();
+      folderHubId = fileScope.hubId;
+      this._activeFileMention = {
+        filter: filter || "",
+        hubId: fileScope.hubId,
+        nid: fileScope.nid,
+        scopeKey: fileScope.key,
+        requestSeq,
+      };
+      requestToken = {
+        requestSeq,
+        scopeKey: fileScope.key,
+      };
+      const searchFilter = (filter || "").trim().replace(/\s+/g, " ");
+      if (!searchFilter) {
+        filesPromise = this._fetchMentionFiles(
+          fileScope.hubId,
+          fileScope.nid,
+          "",
+          requestToken,
+        );
+      } else {
+        // A settled non-blank filter maps to exactly one scoped server search.
+        // The resolver is retained so closing/superseding the dropdown also
+        // settles this pending Promise instead of leaking a timer-owned chain.
+        filesPromise = new Promise((resolve, reject) => {
+          this._mentionQueryCancel = () => resolve([]);
+          this._mentionQueryTimer = setTimeout(async () => {
+            this._mentionQueryTimer = null;
+            this._mentionQueryCancel = null;
+            if (!this._isFileMentionRequestCurrent(requestToken)) {
+              resolve([]);
+              return;
+            }
+            try {
+              const result = await this._searchMentionFiles(
+                fileScope.hubId,
+                fileScope.nid,
+                searchFilter,
+                requestToken,
+              );
+              resolve(result);
+            } catch (error) {
+              // Secure-share/DMZ keeps its existing token-authoritative list
+              // behavior.  Every other search failure stays fail-closed.
+              if (this._mentionErrorCode(error) ===
+                "SEARCH_NAMES_UNSUPPORTED_CONTEXT") {
+                try {
+                  resolve(await this._fetchMentionFiles(
+                    fileScope.hubId,
+                    fileScope.nid,
+                    searchFilter,
+                    requestToken,
+                    { boundedFallback: true },
+                  ));
+                } catch (fallbackError) {
+                  reject(fallbackError);
+                }
+                return;
+              }
+              reject(error);
+            }
+          }, 120);
+        });
+      }
     }
 
     if (mentionType === "contact") {
@@ -3408,6 +3775,12 @@ class __widget_chat extends LetcBox {
         // already selected a file), while this request was in flight — drop the
         // stale result instead of re-opening the popup.
         if (this._mentionRequestSeq !== requestSeq) return;
+        if (
+          requestToken &&
+          !this._isFileMentionRequestCurrent(requestToken)
+        ) {
+          return;
+        }
         console.log("[mention] fetch resolved", {
           filesRaw: filesData,
           contactsRaw: contactsData,
@@ -3415,13 +3788,9 @@ class __widget_chat extends LetcBox {
             ? "array"
             : typeof contactsData,
         });
-        const toRows = (d) => {
-          if (!d) return [];
-          if (Array.isArray(d)) return d;
-          return d.rows || d.data || [];
-        };
-        let files = toRows(filesData);
-        let contacts = toRows(contactsData);
+        const canonicalFileSearch = !!(filesData && filesData.canonical);
+        let files = this._mentionRows(filesData);
+        let contacts = this._mentionRows(contactsData);
         console.log("[mention] toRows", {
           files: files.length,
           contacts: contacts.length,
@@ -3445,11 +3814,16 @@ class __widget_chat extends LetcBox {
 
         const normalizedFilter = (filter || "").toLowerCase();
         if (normalizedFilter) {
-          files = files.filter((f) => {
-            const name = (f.filename || "").toLowerCase();
-            const path = (f.mention_path || "").toLowerCase();
-            return name.includes(normalizedFilter) || path.includes(normalizedFilter);
-          });
+          // The server has already searched and ranked the complete readable
+          // subtree.  Re-filtering its six canonical rows in the browser can
+          // apply a different Unicode/collation rule and hide valid results.
+          if (!canonicalFileSearch) {
+            files = files.filter((f) => {
+              const name = (f.filename || "").toLowerCase();
+              const path = (f.mention_path || "").toLowerCase();
+              return name.includes(normalizedFilter) || path.includes(normalizedFilter);
+            });
+          }
           const contactsBeforeSearchFilter = contacts;
           contacts = contacts.filter((c) => {
             return mentionMemberSearchText(c).includes(normalizedFilter);
@@ -3578,13 +3952,27 @@ class __widget_chat extends LetcBox {
   /**
    * Close mention dropdown
    */
-  _closeMentionDropdown() {
+  _closeMentionDropdown({ preserveFileQuery = false } = {}) {
     // Invalidate any in-flight file search so a late resolve can't re-open the
     // popup after the dropdown is closed (see _showMentionFiles staleness guard).
     this._mentionRequestSeq = (this._mentionRequestSeq || 0) + 1;
+    if (this._mentionQueryTimer != null) {
+      clearTimeout(this._mentionQueryTimer);
+      this._mentionQueryTimer = null;
+    }
+    if (this._mentionQueryCancel) {
+      const cancel = this._mentionQueryCancel;
+      this._mentionQueryCancel = null;
+      cancel();
+    }
+    if (this._mentionRefreshTimer != null) {
+      clearTimeout(this._mentionRefreshTimer);
+      this._mentionRefreshTimer = null;
+    }
+    if (!preserveFileQuery) this._activeFileMention = null;
+    this._mentionDropdownIndex = -1;
     const dropdownEl = this._getMentionDropdownEl();
     if (!dropdownEl) return;
-    this._mentionDropdownIndex = -1;
     dropdownEl.dataset.state = _a.closed;
     dropdownEl.innerHTML = "";
   }
