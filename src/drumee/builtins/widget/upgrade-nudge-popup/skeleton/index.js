@@ -17,8 +17,15 @@ function planLabel(plan) {
   return p ? p.charAt(0).toUpperCase() + p.slice(1) : "";
 }
 
-/** The Figma card's benefit rows, per plan being sold. */
-function benefitRows(target) {
+/**
+ * Benefit rows per plan being sold — copy from the "Upgrade Popup Templates"
+ * doc linked in the Figma comments. Order follows the doc: the storage face
+ * leads with storage, the duration/seat faces lead with members; the seat
+ * face also carries its own sub-lines for the member perk.
+ */
+function benefitRows(target, family) {
+  const seats = family === "seats";
+  const leadMembers = family === "age" || seats;
   switch (target) {
     case "pro":
       return [
@@ -26,20 +33,30 @@ function benefitRows(target) {
         [LOCALE.UN_B_PRO_TRACKER || "Premium task tracker", LOCALE.UN_B_PRO_TRACKER_SUB || "Calendar, Gantt, Project health view"],
         [LOCALE.UN_B_PRO_MEETINGS || "Unlimited meetings", LOCALE.UN_B_PRO_MEETINGS_SUB || "no more time limits on calls"],
       ];
-    case "business":
-      return [
-        [LOCALE.UN_B_BIZ_STORAGE || "10× storage", LOCALE.UN_B_BIZ_STORAGE_SUB || "up to 1 TB total"],
-        [LOCALE.UN_B_BIZ_MEMBERS || "Unlimited members", LOCALE.UN_B_BIZ_MEMBERS_SUB || "bring your whole organization in"],
-        [LOCALE.UN_B_BIZ_HUBS || "Unlimited hubs", LOCALE.UN_B_BIZ_HUBS_SUB || "separate spaces per client or department"],
-        [LOCALE.UN_B_BIZ_CONSOLE || "Premium admin console", LOCALE.UN_B_BIZ_CONSOLE_SUB || "full audit log included"],
+    case "business": {
+      const storage = [LOCALE.UN_B_BIZ_STORAGE || "10× storage", LOCALE.UN_B_BIZ_STORAGE_SUB || "up to 1 TB total"];
+      const members = [
+        LOCALE.UN_B_BIZ_MEMBERS || "Unlimited members",
+        seats
+          ? (LOCALE.UN_B_BIZ_MEMBERS_SEATS_SUB || "no more seat limits")
+          : (LOCALE.UN_B_BIZ_MEMBERS_SUB || "bring your whole organization in"),
       ];
+      const hubs = [LOCALE.UN_B_BIZ_HUBS || "Unlimited hubs", LOCALE.UN_B_BIZ_HUBS_SUB || "separate spaces per client or department"];
+      const console_ = [LOCALE.UN_B_BIZ_CONSOLE || "Premium admin console", LOCALE.UN_B_BIZ_CONSOLE_SUB || "full audit log included"];
+      return leadMembers ? [members, hubs, storage, console_] : [storage, members, hubs, console_];
+    }
     case "team":
-    default:
-      return [
-        [LOCALE.UN_B_TEAM_STORAGE || "2× storage", LOCALE.UN_B_TEAM_STORAGE_SUB || "up to 100 GB total"],
-        [LOCALE.UN_B_TEAM_MEMBERS || "10 members", LOCALE.UN_B_TEAM_MEMBERS_SUB || "bring more of your team in"],
-        [LOCALE.UN_B_TEAM_CONSOLE || "Admin console", LOCALE.UN_B_TEAM_CONSOLE_SUB || "see and manage who has access"],
+    default: {
+      const storage = [LOCALE.UN_B_TEAM_STORAGE || "2× storage", LOCALE.UN_B_TEAM_STORAGE_SUB || "up to 100 GB total"];
+      const members = [
+        LOCALE.UN_B_TEAM_MEMBERS || "10 members",
+        seats
+          ? (LOCALE.UN_B_TEAM_MEMBERS_SEATS_SUB || "room for your whole team")
+          : (LOCALE.UN_B_TEAM_MEMBERS_SUB || "bring more of your team in"),
       ];
+      const console_ = [LOCALE.UN_B_TEAM_CONSOLE || "Admin console", LOCALE.UN_B_TEAM_CONSOLE_SUB || "see and manage who has access"];
+      return leadMembers ? [members, storage, console_] : [storage, members, console_];
+    }
   }
 }
 
@@ -71,14 +88,18 @@ function meter(fig, labelLeft, labelRight, pct, danger) {
 /** Family-specific headline + meter. */
 function face(fig, n) {
   const danger = /_(90)$/.test(n.trigger || "");
+  const target = n.target_plan || "team";
   switch (n.family) {
     case "seats": {
       const cap = ~~n.seat_limit || 1;
       return {
         danger,
-        title: LOCALE.UN_TITLE_SEATS || "You're almost out of seats",
-        lead: (LOCALE.UN_LEAD_SEATS ||
-          "Your team is filling up — {0} of {1} seats are taken. Need room for more people?")
+        title: LOCALE.UN_TITLE_SEATS || "Your team is growing",
+        lead: (target === "business"
+          ? (LOCALE.UN_LEAD_SEATS_BIZ ||
+            "You've invited {0} of {1} members — almost there. Ready to bring in your whole organization?")
+          : (LOCALE.UN_LEAD_SEATS_TEAM ||
+            "You've invited {0} of {1} members — almost there. Ready to bring in more of your team?"))
           .format(~~n.seats_used, cap),
         meterBox: meter(
           fig,
@@ -96,8 +117,13 @@ function face(fig, n) {
       return {
         danger: false,
         title: (LOCALE.UN_TITLE_AGE || "You've been enjoying Drumee for {0}").format(duration),
-        lead: LOCALE.UN_LEAD_AGE ||
-          "Your workspace is part of the routine now. The next tier gives it more room to grow.",
+        lead: target === "business"
+          ? (LOCALE.UN_LEAD_AGE_BIZ ||
+            "Your organization has been active and growing. Ready to scale without limits?")
+          : target === "team"
+            ? (LOCALE.UN_LEAD_AGE_TEAM ||
+              "Your team has been active and growing. Ready to bring more people in?")
+            : (LOCALE.UN_LEAD_AGE_PRO || "Ready to unlock more room to grow?"),
         meterBox: null,
       };
     }
@@ -107,9 +133,15 @@ function face(fig, n) {
       const limit = filesize(n.disk_limit || 0, { round: 0 });
       return {
         danger,
-        title: LOCALE.UN_TITLE_STORAGE || "Your workspace is growing",
-        lead: (LOCALE.UN_LEAD_STORAGE ||
-          "You're using {0} of {1}. Need more room for your files and team?")
+        // 70/80%: "growing"; 90%: "thriving — almost there" (content doc).
+        title: danger
+          ? (LOCALE.UN_TITLE_STORAGE_90 || "Your workspace is thriving")
+          : (LOCALE.UN_TITLE_STORAGE || "Your workspace is growing"),
+        lead: (danger
+          ? (LOCALE.UN_LEAD_STORAGE_90 ||
+            "You're using {0} of {1} — almost there. Ready to unlock more room to grow?")
+          : (LOCALE.UN_LEAD_STORAGE ||
+            "You're using {0} of {1}. Need more room for your files and team?"))
           .format(used, limit),
         meterBox: meter(
           fig,
@@ -159,7 +191,7 @@ module.exports = function (ui) {
           className: `${fig}__benefits-title`,
           content: (LOCALE.UN_BENEFITS_TITLE || "Upgrade to {0} and get:").format(planLabel(target)),
         }),
-        ...benefitRows(target).map(([title, sub]) =>
+        ...benefitRows(target, n.family).map(([title, sub]) =>
           Skeletons.Box.X({
             className: `${fig}__benefit-row`,
             kids: [
