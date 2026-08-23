@@ -132,13 +132,13 @@ module.exports = function (ui) {
   const kids = [
     Skeletons.Button.Svg({
       className: `${fig}__close`,
-      ico: "cross",
+      ico: "nudge-close",
       service: "upgrade-nudge-dismiss",
       uiHandler: [ui],
     }),
     Skeletons.Box.X({
       className: `${fig}__badge${f.danger ? ` ${fig}__badge--danger` : ""}`,
-      kids: [Skeletons.Image.Svg({ ico: "apps-warning", className: `${fig}__badge-ico` })],
+      kids: [Skeletons.Image.Svg({ ico: "nudge-warning", className: `${fig}__badge-ico` })],
     }),
     Skeletons.Note({ className: `${fig}__title`, content: f.title }),
     Skeletons.Note({ className: `${fig}__lead`, content: f.lead }),
@@ -158,7 +158,7 @@ module.exports = function (ui) {
           Skeletons.Box.X({
             className: `${fig}__benefit-row`,
             kids: [
-              Skeletons.Image.Svg({ ico: "apps-check-circle", className: `${fig}__benefit-tick` }),
+              Skeletons.Image.Svg({ ico: "nudge-check-circle", className: `${fig}__benefit-tick` }),
               Skeletons.Box.Y({
                 className: `${fig}__benefit-text`,
                 kids: [

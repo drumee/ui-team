@@ -47,8 +47,8 @@
     border-radius: var(--corner-radius-3);
     cursor: pointer;
     svg {
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       fill: var(--normal-fg-50);
     }
     &:hover {
@@ -77,8 +77,8 @@
   }
 
   &__badge-ico svg {
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     fill: var(--orange-600);
   }
 
@@ -156,10 +156,10 @@
 
   &__benefit-tick {
     flex: none;
-    margin-top: 2px;
+    margin-top: 0;
     svg {
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       fill: var(--primary-50);
     }
   }
