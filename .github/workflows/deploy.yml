@@ -51,7 +51,7 @@ jobs:
             PROD) ENV_FILE=production; EP=main;    PUB_PATH=/-/app/;         BRANCH=main; MODE=container ;;
             TEST) ENV_FILE=deploy;     EP=main;    PUB_PATH=/-/app/;         BRANCH=test;    MODE=stage ;;
             UAT)  ENV_FILE=deploy;     EP=preview; PUB_PATH=/-/preview/app/; BRANCH=preview; MODE=container ;;
-            STAGING) ENV_FILE=deploy;  EP=main;    PUB_PATH=/-/app/;         BRANCH=staging; MODE=container ;;
+            STAGING) ENV_FILE=production; EP=main; PUB_PATH=/-/app/;         BRANCH=staging; MODE=container ;;
             *) echo "Unknown target: $TARGET"; exit 1 ;;
           esac
           # STAGING deploys into the app.drumee.it clone container on the OVH VPS,
