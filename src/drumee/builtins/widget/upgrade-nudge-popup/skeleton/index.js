@@ -178,7 +178,15 @@ module.exports = function (ui) {
       })],
     }),
     Skeletons.Note({ className: `${fig}__title`, content: f.title }),
-    Skeletons.Note({ className: `${fig}__lead`, content: f.lead }),
+    // The lead carries its own line break (Figma: numbers on line 1, the
+    // question on line 2) — one Note per line, so the break is exact and no
+    // template whitespace leaks in as pre-line would let it.
+    Skeletons.Box.Y({
+      className: `${fig}__lead`,
+      kids: String(f.lead || "").split("\n").map((line) =>
+        Skeletons.Note({ className: `${fig}__lead-line`, content: line })
+      ),
+    }),
   ];
 
   if (f.meterBox) kids.push(f.meterBox);

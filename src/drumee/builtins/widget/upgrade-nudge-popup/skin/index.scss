@@ -84,23 +84,28 @@
     fill: var(--warning);
   }
 
+  // Notes are flex boxes: text-align centres the glyphs inside the span but
+  // the span itself hugs its text, so the row needs justify-content too.
   &__title {
     font-size: 16px;
     line-height: 24px;
     font-weight: 600;
     color: var(--normal-fg-800);
+    justify-content: center;
     text-align: center;
   }
 
   &__lead {
+    margin-top: 8px;
+    align-items: center;
+  }
+
+  &__lead-line {
     font-size: 14px;
     line-height: 1.4;
     color: var(--normal-fg-20);
-    margin-top: 8px;
+    justify-content: center;
     text-align: center;
-    // The copy carries its own line break (doc/Figma: numbers on line 1,
-    // question on line 2) — honour it instead of wrapping wherever.
-    white-space: pre-line;
   }
 
   // "Used ......... 70 GB / 100 GB" + track
