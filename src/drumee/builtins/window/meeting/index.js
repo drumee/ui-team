@@ -293,7 +293,15 @@ class __window_meeting extends __room {
       this._maxParticipants = 1;
       // Host-only, so exactly ONE card exists per meeting — the one the host
       // later flips to "ended" in place (rather than posting a second card).
-      if (this._isHost) this._postMeetingSystemMessage();
+      // STARTER-only too: conference_join now hands the host role to the first
+      // edit-tier joiner of a room that has LOST its host (that is what gives a
+      // host who stepped out their End button back on rejoin), so "host" no
+      // longer implies "started this meeting". `attendees` is everyone already
+      // in the room at join time, so an empty list is the honest test. A
+      // promoted host that later ends the meeting still flips the original
+      // card — _endMeetingCard falls back to _findLiveMeetingCardId.
+      const joinedLiveMeeting = !!(room.attendees && room.attendees.length);
+      if (this._isHost && !joinedLiveMeeting) this._postMeetingSystemMessage();
     } catch (e) {
       if (this.warn) this.warn("meeting onDomRefresh failed", e);
       // A blocked/missing/busy mic or camera is NOT an account-privilege
