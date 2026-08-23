@@ -1,10 +1,15 @@
 const __room = require("builtins/webrtc/room/jitsi");
+const { canUpgradePlan } = require("libs/billing");
 
 // Join/leave toasts stop once this many remote participants are already in the
 // room — past a handful, individual arrivals are noise.
 const PARTY_TOAST_MAX = 3;
 // Matches the window-meeting-party-toast fade-out tail.
 const PARTY_TOAST_MS = 4000;
+// How far ahead of the plan's duration cap the room gets a heads-up. Long
+// enough to finish a thought and say goodbye, short enough that it is not
+// hanging over the whole call. Only armed when the server sends a deadline.
+const MEETING_LIMIT_WARN_MS = 5 * 60 * 1000;
 // Below this window width the 420px side panel and the video stage can no
 // longer share the row, so the panel auto-collapses (see _applyChatAutoClose)
 // and switches to full-bleed overlay mode when opened by hand
@@ -290,6 +295,10 @@ class __window_meeting extends __room {
       this._renderHostLabel();
       this._announceHostIfNeeded();
       this._meetingStartedAt = Date.now();
+      // Plan duration cap, if this room has one. No-op when the server sends
+      // no deadline — 1:1 calls, unlimited plans, installs that do not sell,
+      // and every deployment whose entitlement patch has not run yet.
+      this._armMeetingDeadline(room);
       this._maxParticipants = 1;
       // Host-only, so exactly ONE card exists per meeting — the one the host
       // later flips to "ended" in place (rather than posting a second card).
@@ -379,6 +388,10 @@ class __window_meeting extends __room {
     try {
       RADIO_BROADCAST.trigger("call:ended");
     } catch (e) { /* non-fatal */ }
+    // Duration-cap timers. Left armed they would fire against a destroyed
+    // window minutes after the meeting was over — and the cutoff one would
+    // raise the upsell card at someone who has already left.
+    this._clearMeetingDeadline();
     this._unbindResizeObserver();
     // Cancel any pending hand-raise auto-clear timers so they can't fire after
     // teardown.
@@ -612,7 +625,7 @@ class __window_meeting extends __room {
     if (options.service === SERVICE.conference.broadcast) {
       const sameRoom = !data || !data.room_id || data.room_id === this.mget(_a.room_id);
       if (sameRoom && options.event === "MEETING_END") {
-        if (!this._isHost) this._handleRemoteMeetingEnd();
+        if (!this._isHost) this._handleRemoteMeetingEnd(data);
         return;
       }
       if (sameRoom && options.event === "HOST_HELLO") {
@@ -634,13 +647,170 @@ class __window_meeting extends __room {
     if (super.onWsMessage) return super.onWsMessage(service, data, options);
   }
 
-  _handleRemoteMeetingEnd() {
+  _handleRemoteMeetingEnd(data) {
     if (this._meetingEndedRemote) return;
     this._meetingEndedRemote = 1;
-    try {
-      Wm.alert(LOCALE.MEETING_ENDED_BY_HOST || "Meeting ended by host");
-    } catch (e) { }
+    // The broadcast says WHY. Hitting the plan's cap is not "the host ended
+    // the meeting" — same event, different sentence, and the upsell belongs
+    // on only one of them. A payload with no `reason` means the host chose to
+    // end it, which is what this event has always meant.
+    if (data && data.reason === "time_limit") {
+      this._meetingLimitMinutes =
+        parseInt(data.duration_limit, 10) || this._meetingLimitMinutes;
+      this._showMeetingLimitCard();
+    } else {
+      try {
+        Wm.alert(LOCALE.MEETING_ENDED_BY_HOST || "Meeting ended by host");
+      } catch (e) { }
+    }
     this._closeFeedbackAndLeave();
+  }
+
+  // ── Plan duration cap ─────────────────────────────────────────────────────
+  // The deadline is the SERVER's (conference.join → service/lib/meeting-limit):
+  // it is anchored to when the ROOM started rather than to this session, so a
+  // reload cannot restart the clock, and it is resolved from the WORKSPACE
+  // OWNER's plan, so every participant — a DMZ guest included, who has no plan
+  // of their own — is working to the same number.
+
+  /**
+   * Arm the warning and the cutoff, if this room is capped.
+   *
+   * Works from `remaining_sec` — a DURATION — and never from `expires_at`
+   * against `Date.now()`. The absolute timestamp is the server's; comparing it
+   * to the local wall clock would hand the cutoff back to whatever the
+   * browser's clock happens to say, and a machine ten minutes fast would end
+   * the call ten minutes early. Measuring an interval is something a client
+   * can do accurately with no idea what time it is.
+   *
+   * EVERY client arms its own cutoff, not just the host. The host also
+   * broadcasts, but a host whose tab was throttled, crashed or lost the
+   * network would otherwise leave the room running past its limit — and the
+   * host's broadcast is what flips the chat card, so it is still worth having.
+   * Both paths are idempotent.
+   */
+  _armMeetingDeadline(room) {
+    const remaining = parseInt(room && room.remaining_sec, 10);
+    const limit = parseInt(room && room.duration_limit, 10);
+    // No cap: the server sent no deadline, which is the normal case.
+    if (!Number.isFinite(remaining) || !Number.isFinite(limit) || limit <= 0) {
+      return;
+    }
+    this._meetingLimitMinutes = limit;
+
+    const ms = Math.max(0, remaining * 1000);
+    const warnMs = ms - MEETING_LIMIT_WARN_MS;
+    // Skipped when someone joins inside the last five minutes — there is no
+    // point warning about something that is about to happen anyway, and a
+    // negative delay would fire the toast immediately.
+    if (warnMs > 0) {
+      this._meetingWarnTimer = setTimeout(() => this._warnMeetingLimit(), warnMs);
+    }
+    this._meetingLimitTimer = setTimeout(() => this._endOnMeetingLimit(), ms);
+  }
+
+  _clearMeetingDeadline() {
+    clearTimeout(this._meetingWarnTimer);
+    clearTimeout(this._meetingLimitTimer);
+    this._meetingWarnTimer = null;
+    this._meetingLimitTimer = null;
+  }
+
+  /**
+   * "This meeting ends in 5 minutes."
+   *
+   * Its own toast rather than `_partyToast`, which drops anything raised while
+   * more than PARTY_TOAST_MAX people are in the room. That rule is right for
+   * "someone walked in" and wrong for this: the bigger the meeting, the more
+   * it matters that everyone gets the warning.
+   */
+  _warnMeetingLimit() {
+    if (this.isLeaving || this.isDestroyed()) return;
+    const mins = Math.round(MEETING_LIMIT_WARN_MS / 60000);
+    const text = LOCALE.MEETING_TIME_LIMIT_SOON.format(
+      this._meetingLimitMinutes,
+      mins,
+    );
+    this.ensurePart("party-toasts").then((stack) => {
+      if (!stack || stack.isDestroyed()) return;
+      const toast = stack.append(
+        Skeletons.Note({
+          className: `${this.fig.family}__party-toast`,
+          content: text,
+        }),
+      );
+      if (!toast) return;
+      // Held longer than an arrival notice — this one asks the room to act.
+      setTimeout(() => {
+        if (!toast.isDestroyed || !toast.isDestroyed()) toast.goodbye();
+      }, PARTY_TOAST_MS * 2);
+    });
+  }
+
+  /** The deadline passed. End the meeting and say why. */
+  _endOnMeetingLimit() {
+    if (this._meetingEndedRemote || this._meetingEndedByLimit) return;
+    this._meetingEndedByLimit = 1;
+    // Host tells the room, which is also what flips the chat card to "ended".
+    // Guarded by the same flag onBeforeDestroy uses so the two teardown paths
+    // cannot broadcast twice.
+    if (this._isHost && !this._meetingEndedBroadcast) {
+      this._meetingEndedBroadcast = 1;
+      try {
+        this.sendRoomSignaling(SERVICE.conference.broadcast, {
+          event: "MEETING_END",
+          payload: {
+            room_id: this.mget(_a.room_id),
+            reason: "time_limit",
+            duration_limit: this._meetingLimitMinutes,
+          },
+        });
+      } catch (e) { }
+    }
+    this._showMeetingLimitCard();
+    this._closeFeedbackAndLeave();
+  }
+
+  /**
+   * The upsell, on the shared feature-lock card.
+   *
+   * Raised BEFORE the window tears itself down, which is safe because the card
+   * is hosted by Wm's own modal wrapper and not by this window — the same
+   * reason `_handleRemoteMeetingEnd` can alert and then leave.
+   *
+   * The minutes come from the SERVER's `duration_limit`, not from the local
+   * entitlement: the room runs on the workspace owner's plan, which is not
+   * necessarily the plan this client could read for itself.
+   */
+  _showMeetingLimitCard() {
+    if (this._meetingLimitCardShown) return;
+    this._meetingLimitCardShown = 1;
+    try {
+      if (typeof Wm === "undefined" || !Wm) return;
+      // DMZ has its own window manager; openFeatureLock lives on the shared
+      // base so a guest gets the card too. Older/other hosts still get told
+      // what happened rather than nothing.
+      if (!Wm.openFeatureLock) {
+        Wm.alert(
+          LOCALE.UNLOCK_MEETING_DURATION_DESC.format(this._meetingLimitMinutes),
+        );
+        return;
+      }
+      Wm.openFeatureLock({
+        feature: "meeting_duration",
+        args: [this._meetingLimitMinutes],
+      })
+        .then(() => {
+          // A guest has nobody listening for this and no plan to buy; the desk
+          // is what owns the billing page. Same guard the desk puts on its own
+          // `upgrade-plan` case.
+          if (!canUpgradePlan()) return;
+          RADIO_BROADCAST.trigger("desk:open-billing-page");
+        })
+        // Dismissed — confirm rejects, and an unhandled rejection on a modal
+        // the user simply closed is console noise.
+        .catch(() => { });
+    } catch (e) { }
   }
 
   // ── Participant arrival / departure notices ───────────────────────────────

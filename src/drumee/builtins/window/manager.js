@@ -1591,6 +1591,48 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * Show the feature-lock upsell — "your plan does not include this".
+   *
+   * The tier-gate twin of `openQuotaExceeded`: that one answers "you ran out
+   * of X", this one answers "X is not on your plan". One helper so every gate
+   * reaches the user in the same words and the same shape — the problem
+   * openQuotaExceeded solved for quotas, which the tier gates then had all
+   * over again (Admin Console had its own hand-built card; nothing else had
+   * anything at all).
+   *
+   * Lives on the BASE window manager, not on the desk's, because the meeting
+   * cap has to reach a DMZ guest and `modules/dmz/wm` extends this class
+   * without the desk's additions. `confirm` is right here too, which is what
+   * this wraps.
+   *
+   * Riding `confirm` rather than feeding wrapper-modal directly inherits
+   * Escape-to-dismiss, the guard that keeps a modal on top, and the
+   * resolve/reject promise. `mode: "b"` renders the body alone — no header
+   * (its drumee logo is not part of this design) and no footer (the card
+   * draws its own CTA and its own close X).
+   *
+   * RESOLVES when the reader takes the CTA, REJECTS on close/Escape — the
+   * plain confirm contract. A caller that only wants the upsell SHOWN can
+   * ignore both, but must still `.catch()`: an unhandled rejection on a modal
+   * the user simply closed is console noise at best.
+   *
+   * The card decides for itself whether to draw a CTA at all
+   * (`canUpgradePlan()`), so callers pass what is locked, never what to draw.
+   *
+   * @param {Object} opt
+   * @param {String} opt.feature key into feature-lock's FEATURES map
+   * @param {Array} [opt.args] substituted into the description via `.format()`
+   * @returns {Promise} resolve = CTA taken, reject = dismissed
+   */
+  openFeatureLock(opt = {}) {
+    const { featureLockBody } = require("builtins/widget/feature-lock");
+    return this.confirm({
+      mode: "b",
+      body: featureLockBody(opt.feature, opt.args),
+    });
+  }
+
+  /**
    *
    * @param {*} skl
    * @param {*} opt
