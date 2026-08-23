@@ -29,7 +29,7 @@
     overflow-y: auto;
     background: var(--normal-bg-elevated);
     border: 1px solid var(--normal-bg-80);
-    border-radius: var(--corner-radius-6);
+    border-radius: var(--corner-radius-4); // Figma 12px
     padding: 32px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
     align-items: stretch;
@@ -37,8 +37,8 @@
 
   &__close {
     position: absolute;
-    top: 18px;
-    right: 18px;
+    top: 28px;
+    right: 28px;
     width: 28px;
     height: 28px;
     display: flex;
@@ -60,15 +60,15 @@
   // early thresholds, the red ramp once the 90% one fires.
   &__badge {
     align-self: center;
-    width: 64px;
-    height: 64px;
+    width: 48px;
+    height: 48px;
     align-items: center;
     justify-content: center;
-    border-radius: var(--corner-radius-5);
+    border-radius: var(--corner-radius-4); // Figma 12px
     // Figma Overlay/Orange = Signal/Warning at 15% — derived from the token
     // rather than a pasted rgba, so a palette change follows through.
     background: color-mix(in srgb, var(--warning) 15%, transparent);
-    margin-bottom: var(--spacer-5);
+    margin-bottom: 12px;
 
     &--danger {
       background: color-mix(in srgb, var(--signal-error) 15%, transparent);
@@ -84,26 +84,33 @@
     fill: var(--warning);
   }
 
+  // Notes are flex boxes: text-align centres the glyphs inside the span but
+  // the span itself hugs its text, so the row needs justify-content too.
   &__title {
-    font-size: 21px;
-    line-height: 1.25;
+    font-size: 16px;
+    line-height: 24px;
     font-weight: 600;
-    letter-spacing: -0.03em;
     color: var(--normal-fg-800);
+    justify-content: center;
     text-align: center;
   }
 
   &__lead {
-    font-size: 13px;
-    line-height: 1.6;
+    margin-top: 8px;
+    align-items: center;
+  }
+
+  &__lead-line {
+    font-size: 14px;
+    line-height: 1.4;
     color: var(--normal-fg-20);
-    margin-top: 9px;
+    justify-content: center;
     text-align: center;
   }
 
   // "Used ......... 70 GB / 100 GB" + track
   &__meter {
-    margin-top: var(--spacer-6);
+    margin-top: 32px;
     gap: 8px;
   }
 
@@ -114,19 +121,21 @@
 
   &__meter-left {
     font-size: 12px;
-    color: var(--normal-fg-50);
+    line-height: 1.4;
+    color: var(--normal-fg-20);
   }
 
   &__meter-right {
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.4;
     font-weight: 600;
-    color: var(--normal-fg-800);
+    color: var(--normal-fg-20);
   }
 
   &__meter-track {
-    height: 8px;
+    height: 12px;
     border-radius: 999px;
-    background: var(--normal-bg-80);
+    background: color-mix(in srgb, var(--normal-fg-800) 6%, transparent); // Figma Overlay/light mode (5% black)
     overflow: hidden;
   }
 
@@ -141,37 +150,44 @@
   }
 
   &__benefits {
-    margin-top: var(--spacer-6);
-    gap: var(--spacer-4);
+    margin-top: 32px;
+    gap: 8px;
+
+    // Directly under the meter the Figma gap is 24, not 32.
+    .upgrade-nudge-popup__meter + & {
+      margin-top: 24px;
+    }
   }
 
   &__benefits-title {
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.4;
     font-weight: 600;
     color: var(--normal-fg-800);
   }
 
   &__benefit-row {
-    gap: 10px;
+    gap: 8px;
     align-items: flex-start;
   }
 
   &__benefit-tick {
     flex: none;
-    margin-top: 0;
+    margin-top: 1px;
     svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       fill: var(--primary-50);
     }
   }
 
   &__benefit-text {
-    gap: 1px;
+    gap: 0;
   }
 
   &__benefit-title {
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.4;
     font-weight: 600;
     color: var(--normal-fg-800);
   }
@@ -183,15 +199,16 @@
   }
 
   &__cta-stack {
-    margin-top: var(--spacer-6);
-    gap: var(--spacer-3);
+    margin-top: 32px;
+    gap: 12px;
   }
 
   &__cta {
-    height: 42px;
+    min-height: 40px; // Figma: 8px 24px padding around a 20px label
+    padding: 8px 24px;
     align-items: center;
     justify-content: center;
-    border-radius: var(--corner-radius-4);
+    border-radius: var(--corner-radius-1); // Figma 4px
     background: var(--primary-50);
     cursor: pointer;
 
@@ -200,21 +217,23 @@
     }
 
     &--ghost {
+      min-height: 44px;
+      padding: 12px 24px;
       background: transparent;
 
       &:hover {
-        
         background: var(--normal-bg-90);
       }
 
       .upgrade-nudge-popup__cta-label {
-        color: var(--normal-fg-800);
+        color: var(--normal-fg-20);
       }
     }
   }
 
   &__cta-label {
     font-size: 14px;
+    line-height: 20px;
     font-weight: 600;
     color: var(--white);
   }
