@@ -138,7 +138,12 @@ module.exports = function (ui) {
     }),
     Skeletons.Box.X({
       className: `${fig}__badge${f.danger ? ` ${fig}__badge--danger` : ""}`,
-      kids: [Skeletons.Image.Svg({ ico: "nudge-warning", className: `${fig}__badge-ico` })],
+      // Figma: storage + seats carry the Warning triangle, the duration face a
+      // CalendarDots — the only icon that differs between the three cards.
+      kids: [Skeletons.Image.Svg({
+        ico: n.family === "age" ? "nudge-calendar-dots" : "nudge-warning",
+        className: `${fig}__badge-ico`,
+      })],
     }),
     Skeletons.Note({ className: `${fig}__title`, content: f.title }),
     Skeletons.Note({ className: `${fig}__lead`, content: f.lead }),
