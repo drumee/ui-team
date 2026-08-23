@@ -54,9 +54,6 @@ jobs:
             STAGING) ENV_FILE=production; EP=main; PUB_PATH=/-/app/;         BRANCH=staging; MODE=container ;;
             *) echo "Unknown target: $TARGET"; exit 1 ;;
           esac
-          # STAGING deploys into the app.drumee.it clone container on the OVH VPS,
-          # not the prod box (sgp). Override the SSH host + container name so the
-          # shared container-mode steps target the clone. PROD/UAT stay on sgp/drumee.
           if [ "$TARGET" = "STAGING" ]; then
             echo "SGP_HOST=vps-1b631265.vps.ovh.net" >> "$GITHUB_ENV"
             echo "CONTAINER=drumee-uat" >> "$GITHUB_ENV"
