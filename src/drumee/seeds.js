@@ -254,6 +254,9 @@ module.exports = {
   over_limit_banner: function () {
     return import("./builtins/widget/over-limit-banner");
   },
+  nudge_lab: function () {
+    return import("./builtins/widget/nudge-lab");
+  },
   upgrade_nudge_popup: function () {
     return import("./builtins/widget/upgrade-nudge-popup");
   },
