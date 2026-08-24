@@ -3224,6 +3224,37 @@ $theme-colors: (
     position: relative;
   }
 
+  // ── Busy row: attachment uploads in flight on this comment ─────────
+  // The ROW ITSELF keeps its pointer events. It has to stay a hit-test target
+  // or resolveZone's closest(".tasks-panel__comment-row[data-comment-id]")
+  // misses and the row silently stops being a drop zone — a row mid-upload
+  // still accepts more files. So the contents go inert instead, which is what
+  // makes the row read as disabled: body links, reply, reactions, edit, delete,
+  // unlink and opening a committed attachment are all out of reach.
+  //
+  // A row being EDITED is exempt from the inertness (not from the dimming): a
+  // drop resolves to the row even while its editor is open, and freezing a
+  // half-typed comment behind a large upload would trap the author — Cancel
+  // already refuses while files are in flight.
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-avatar,
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-main {
+    pointer-events: none;
+  }
+
+  &__comment-row[data-busy="1"] > &__comment-main > * {
+    opacity: 0.5;
+  }
+
+  // Two exceptions to the dimming, both because they are what the user is
+  // looking at: the strip carrying the spinner and filenames, and the editor
+  // (plus its Save / Cancel) of a row being edited. Declared after the rule
+  // above, which it ties with on specificity.
+  &__comment-row[data-busy="1"] &__comment-attachments,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-field,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-actions {
+    opacity: 1;
+  }
+
   // Files already attached to a saved comment.
   &__comment-attachments {
     flex-wrap: wrap;
@@ -3292,33 +3323,24 @@ $theme-colors: (
     }
   }
 
-  // The trailing slot is ALWAYS rendered, holding exactly one 12px control or
-  // nothing: unlink when committed and owned, a spinner while uploading, retry
-  // on error, empty on someone else's committed file. Reserving it is what
-  // keeps every chip the same size, so the in-flight → committed swap costs
-  // zero layout — the whole point of rendering both as chips rather than
-  // letting an in-flight fileCard stand 36px taller.
+  // The trailing slot is ALWAYS rendered, and holds one 12px control in every
+  // state but error: the ✕ (unlink when committed, discard while queued or
+  // failed, a spinner in its place mid-transfer) — or nothing at all on someone
+  // else's committed file, which cannot be unlinked from here. Reserving it is
+  // what keeps every chip the same size, so the in-flight → committed swap
+  // costs zero layout: both sides of that swap are one control.
+  //
+  // Error is the exception, carrying retry BESIDE the ✕ so a file that failed
+  // can be either re-sent or thrown away. It is a terminal state — nothing
+  // swaps out of it without a click — and it already reads as different with
+  // its red border, so the extra 16px is not a reflow anyone watches happen.
   &__comment-attachment-slot {
-    flex: 0 0 12px;
-    width: 12px;
+    flex: 0 0 auto;
+    min-width: 12px;
     height: 12px;
+    gap: 4px;
     align-items: center;
     justify-content: center;
-  }
-
-  // Same 12px spinner the unlink button already uses for its own in-flight
-  // state, so the two read as one family.
-  &__comment-attachment[data-status="uploading"] &__comment-attachment-slot,
-  &__comment-attachment[data-status="downloading"] &__comment-attachment-slot {
-    &::after {
-      content: "";
-      width: 12px;
-      height: 12px;
-      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
-      border-top-color: var(--accent, #433cc5);
-      border-radius: 50%;
-      animation: tasks-panel-spin 0.7s linear infinite;
-    }
   }
 
   &__comment-attachment[data-status="uploading"],
