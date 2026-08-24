@@ -195,6 +195,17 @@ function captureCampaignArrival() {
   try {
     sessionStorage.setItem(ARRIVAL_KEY, campaign);
   } catch (e) { /* private mode — the gate simply will not open */ }
+  // PERSIST BEFORE CONSUMING. This runs from the router's initialize(), before
+  // any module resolves — so it strips the markers before welcome/index.js and
+  // desk/index.js get their turn to call captureUtm(), and both of them then
+  // read an empty URL and store nothing. Measured: a cold arrival on a
+  // campaign link left localStorage['drumee_utm'] unset, which is every signup
+  // attribution on this path.
+  //
+  // captureUtm() is idempotent and cheap, and writing it here rather than
+  // reordering the callers means the guarantee does not depend on which module
+  // happens to load first.
+  captureUtm();
   // Consume the URL itself, so this arrival is counted once and not re-counted
   // on every subsequent load of the same address.
   stripCampaignParams();
