@@ -23,7 +23,12 @@ function banner(fig, ui) {
   let sub = "";
   if (p.show) {
     cls = "ok";
-    head = `Mở desk mới bây giờ → popup HIỆN: ${TRIGGER_LABEL[p.trigger] || p.trigger}`;
+    const s = ui.state();
+    // client-side mirror of the server ladder (seats on Free sells Team)
+    const target = s.scope === "org"
+      ? (s.plan === "team" ? "BUSINESS" : "TEAM")
+      : (p.family === "seats" ? "TEAM" : (s.plan === "pro" ? "TEAM" : "PRO"));
+    head = `Mở desk mới bây giờ → popup HIỆN: ${TRIGGER_LABEL[p.trigger] || p.trigger} — mời nâng cấp lên ${target}`;
     sub = "Bấm nút xanh ở Bước 3, đợi ~15 giây sau khi desk load xong.";
   } else if (p.reason === "no-trigger") {
     cls = "idle";
@@ -160,8 +165,15 @@ module.exports = function (ui) {
               className: `${fig}__row`,
               kids: [
                 Skeletons.Note({ className: `${fig}__row-label`, content: "Plan" }),
-                button(fig, ui, "nudge-lab-scenario", "plan_up", s.scope === "org" ? "lên Business" : "lên Pro"),
-                button(fig, ui, "nudge-lab-scenario", "plan_restore", s.scope === "org" ? "về Team" : "về Free"),
+                ...(s.scope === "org"
+                  ? [
+                      button(fig, ui, "nudge-lab-scenario", "plan_restore", "TEAM — popup mời lên Business", { active: s.plan === "team" }),
+                      button(fig, ui, "nudge-lab-scenario", "plan_up", "BUSINESS — hết bậc, không popup", { active: s.plan === "business" }),
+                    ]
+                  : [
+                      button(fig, ui, "nudge-lab-scenario", "plan_restore", "FREE — popup mời lên Pro (seats mời Team)", { active: s.plan === "free" }),
+                      button(fig, ui, "nudge-lab-scenario", "plan_up", "PRO — popup mời lên Team", { active: s.plan === "pro" }),
+                    ]),
               ],
             }),
           ],
