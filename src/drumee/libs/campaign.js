@@ -44,7 +44,13 @@ const PROMO_CAMPAIGN = "launch30";
 
 // A Set: this is read as a membership test far more often than it is iterated,
 // and insertion order is preserved, so the `for ... of` below is unaffected.
-const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign"]);
+// utm_content is in here because the UTM builder puts it on EVERY link it
+// makes, and the click log records it — so without it a campaign's content is
+// measurable on the click side and invisible on the signup side, and "which
+// post brought the signups" has no answer.
+// KEEP IN SYNC with signup/src/widgets/router/index.js captureUtm, which
+// iterates its own copy of this list.
+const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign", "utm_content"]);
 // Long enough for any real campaign name, short enough that a crafted link
 // cannot bloat localStorage.
 const MAX_LEN = 64;
@@ -189,6 +195,17 @@ function captureCampaignArrival() {
   try {
     sessionStorage.setItem(ARRIVAL_KEY, campaign);
   } catch (e) { /* private mode — the gate simply will not open */ }
+  // PERSIST BEFORE CONSUMING. This runs from the router's initialize(), before
+  // any module resolves — so it strips the markers before welcome/index.js and
+  // desk/index.js get their turn to call captureUtm(), and both of them then
+  // read an empty URL and store nothing. Measured: a cold arrival on a
+  // campaign link left localStorage['drumee_utm'] unset, which is every signup
+  // attribution on this path.
+  //
+  // captureUtm() is idempotent and cheap, and writing it here rather than
+  // reordering the callers means the guarantee does not depend on which module
+  // happens to load first.
+  captureUtm();
   // Consume the URL itself, so this arrival is counted once and not re-counted
   // on every subsequent load of the same address.
   stripCampaignParams();
