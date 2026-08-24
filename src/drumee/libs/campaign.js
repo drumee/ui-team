@@ -44,7 +44,13 @@ const PROMO_CAMPAIGN = "launch30";
 
 // A Set: this is read as a membership test far more often than it is iterated,
 // and insertion order is preserved, so the `for ... of` below is unaffected.
-const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign"]);
+// utm_content is in here because the UTM builder puts it on EVERY link it
+// makes, and the click log records it — so without it a campaign's content is
+// measurable on the click side and invisible on the signup side, and "which
+// post brought the signups" has no answer.
+// KEEP IN SYNC with signup/src/widgets/router/index.js captureUtm, which
+// iterates its own copy of this list.
+const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign", "utm_content"]);
 // Long enough for any real campaign name, short enough that a crafted link
 // cannot bloat localStorage.
 const MAX_LEN = 64;
