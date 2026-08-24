@@ -1,90 +1,98 @@
 /**
- * Nudge Lab skeleton — state panel + one button per scenario, grouped the
- * way testers think: Storage / Seats / Age / Plan / Gate. Dev-only tool
- * (devel module), so the strings stay English literals behind LOCALE
- * fallbacks like the other devel pages.
+ * Nudge Lab skeleton — 3 numbered steps around a prediction banner.
+ * Internal tester tool (devel module): Vietnamese-first literals on purpose,
+ * matching the team its testers come from; scenario names keep the popup's
+ * own English words so what you click is what you'll read on the popup.
  */
 const { filesize } = require("@drumee/ui-essentials");
 
-const GROUPS = [
-  {
-    title: "Storage",
-    hint: "sets your usage to a % of the plan disk, then Reset + open a fresh desk tab",
-    buttons: [
-      ["storage_70", "70% (amber)"],
-      ["storage_80", "80% (amber)"],
-      ["storage_90", "90% (red)"],
-      ["storage_low", "Below threshold"],
-    ],
-  },
-  {
-    title: "Seats",
-    hint: "org: squeezes the seat cap around the current headcount · personal: adds 3 lab members (cap 3)",
-    buttons: [
-      ["seats_70", "≈75% (amber)"],
-      ["seats_90", "100% (red)"],
-      ["seats_off", "Back to roomy"],
-    ],
-  },
-  {
-    title: "Workspace age",
-    hint: "fakes the creation date; Restore puts the real date back",
-    buttons: [
-      ["age_14d", "2 weeks old"],
-      ["age_30d", "1 month old"],
-      ["age_reset", "Restore real age"],
-    ],
-  },
-  {
-    title: "Plan",
-    hint: "org: Team ⇄ Business · personal: Free ⇄ Pro — a plan change re-arms every threshold",
-    buttons: [
-      ["plan_up", "Upgrade plan"],
-      ["plan_restore", "Restore plan"],
-    ],
-  },
-  {
-    title: "Gate",
-    hint: "New day lifts today's 1-popup cap but keeps what you've seen; Reset wipes everything",
-    buttons: [
-      ["new_day", "New day (lift cap)"],
-      ["reset", "Reset popups"],
-      ["cleanup", "Cleanup (baseline)"],
-    ],
-  },
-];
+const TRIGGER_LABEL = {
+  storage_70: "Storage 70% (amber)",
+  storage_80: "Storage 80% (amber)",
+  storage_90: "Storage 90% (đỏ)",
+  seats_70: "Seats ~75% (amber)",
+  seats_90: "Seats 100% (đỏ)",
+  age_14d: "Duration — 2 weeks",
+  age_30d: "Duration — 1 month",
+};
 
-function stateRows(fig, s) {
-  const rows = [
-    ["Scope", s.scope === "org" ? `Organisation (${s.id})` : `Personal account (${s.uid})`],
-    ["Plan", s.plan || "—"],
-    [
-      "Storage",
-      s.disk_limit
-        ? `${filesize(s.disk_used || 0, { round: 1 })} / ${filesize(s.disk_limit, { round: 0 })}  (${s.disk_pct}%)`
-        : "—",
+function banner(fig, ui) {
+  const p = ui.predict();
+  let cls = "warn";
+  let head = "";
+  let sub = "";
+  if (p.show) {
+    cls = "ok";
+    head = `Mở desk mới bây giờ → popup HIỆN: ${TRIGGER_LABEL[p.trigger] || p.trigger}`;
+    sub = "Bấm nút xanh ở Bước 3, đợi ~15 giây sau khi desk load xong.";
+  } else if (p.reason === "no-trigger") {
+    cls = "idle";
+    head = "Mở desk bây giờ → KHÔNG có popup (chưa kịch bản nào đủ điều kiện)";
+    sub = "Chọn một kịch bản ở Bước 1 trước.";
+  } else if (p.reason === "daily-cap") {
+    cls = "block";
+    head = "KHÔNG hiện — hôm nay (UTC) account này đã dùng lượt popup";
+    sub = "Bấm “New day” (giữ lịch sử) hoặc “Reset” (xoá hết) ở Bước 2 rồi mở desk lại.";
+  } else if (p.reason === "all-seen") {
+    cls = "block";
+    head = `KHÔNG hiện — ngưỡng ${TRIGGER_LABEL[p.trigger] || p.trigger} đã xem rồi (mỗi ngưỡng chỉ hiện 1 lần)`;
+    sub = "Bấm “Reset” ở Bước 2, hoặc chọn ngưỡng khác chưa xem.";
+  } else {
+    cls = "idle";
+    head = "Chưa đọc được trạng thái";
+    sub = "Bấm “Đọc lại trạng thái” bên dưới.";
+  }
+  return Skeletons.Box.Y({
+    className: `${fig}__banner ${fig}__banner--${cls}`,
+    kids: [
+      Skeletons.Note({ className: `${fig}__banner-head`, content: head }),
+      Skeletons.Note({ className: `${fig}__banner-sub`, content: sub }),
     ],
-    ["Seats", s.seat_limit ? `${s.seats_used} / ${s.seat_limit}` : `${s.seats_used} / unlimited`],
-    ["Age", `${s.age_days} days`],
+  });
+}
+
+function chips(fig, s) {
+  const seen = (s.block && s.block.seen) || {};
+  const seenList = Object.keys(seen);
+  const today = new Date().toISOString().slice(0, 10);
+  const capUsed = !!(s.block && s.block.last_shown && s.block.last_shown[s.uid] === today);
+  const items = [
+    ["Account", s.scope === "org" ? "Org" : "Cá nhân"],
+    ["Plan", (s.plan || "?").toUpperCase()],
+    ["Storage", s.disk_limit ? `${filesize(s.disk_used || 0, { round: 1 })}/${filesize(s.disk_limit, { round: 0 })} · ${s.disk_pct}%` : "?"],
+    ["Seats", s.seat_limit ? `${s.seats_used}/${s.seat_limit}` : `${s.seats_used}/∞`],
+    ["Tuổi", `${s.age_days} ngày`],
+    ["Đã xem", seenList.length ? seenList.join(", ") : "chưa gì"],
+    ["Lượt hôm nay", capUsed ? "ĐÃ DÙNG" : "còn"],
   ];
-  const b = s.block;
-  rows.push([
-    "Seen",
-    b && b.seen ? Object.keys(b.seen).join(", ") : "nothing yet",
-  ]);
-  rows.push([
-    "Daily cap",
-    b && b.last_shown && b.last_shown[s.uid] ? `used on ${b.last_shown[s.uid]} (UTC)` : "free today",
-  ]);
-  return rows.map(([k, v]) =>
-    Skeletons.Box.X({
-      className: `${fig}__state-row`,
-      kids: [
-        Skeletons.Note({ className: `${fig}__state-key`, content: k }),
-        Skeletons.Note({ className: `${fig}__state-val`, content: String(v) }),
-      ],
-    })
-  );
+  return Skeletons.Box.X({
+    className: `${fig}__chips`,
+    kids: items.map(([k, v]) =>
+      Skeletons.Box.X({
+        className: `${fig}__chip`,
+        kids: [
+          Skeletons.Note({ className: `${fig}__chip-key`, content: k }),
+          Skeletons.Note({ className: `${fig}__chip-val`, content: String(v) }),
+        ],
+      })
+    ),
+  });
+}
+
+function button(fig, ui, svc, name, label, opts = {}) {
+  const cls = [
+    `${fig}__btn`,
+    opts.active ? `${fig}__btn--active` : "",
+    opts.primary ? `${fig}__btn--primary` : "",
+    ui.busy() ? `${fig}__btn--busy` : "",
+  ].filter(Boolean).join(" ");
+  return Skeletons.Box.X({
+    className: cls,
+    service: svc,
+    scenario: name,
+    uiHandler: [ui],
+    kids: [Skeletons.Note({ className: `${fig}__btn-label`, active: 0, content: label })],
+  });
 }
 
 module.exports = function (ui) {
@@ -96,72 +104,119 @@ module.exports = function (ui) {
       className: `${fig}__wrap`,
       kids: [
         Skeletons.Note({ className: `${fig}__title`, content: "Nudge Lab" }),
-        Skeletons.Note({
-          className: `${fig}__hint`,
-          content: "Disabled here — the nudge_lab flag is off on this server.",
-        }),
+        Skeletons.Note({ className: `${fig}__hint`, content: "Đang tắt ở server này (cờ nudge_lab)." }),
       ],
     });
   }
 
+  const pct = Number(s.disk_pct) || 0;
+  const seatPct = ~~s.seat_limit > 0 ? (100 * ~~s.seats_used) / ~~s.seat_limit : 0;
+  const age = ~~s.age_days;
+
   const kids = [
-    Skeletons.Note({ className: `${fig}__title`, content: "Nudge Lab — upgrade popup scenarios" }),
-    Skeletons.Note({
-      className: `${fig}__lead`,
-      content:
-        "Pick a scenario for YOUR account, hit Reset if you want the popup again, then open a fresh desk tab and wait ~15s. One popup per person per day (UTC) — New day lifts it.",
-    }),
-    s.error
-      ? Skeletons.Note({ className: `${fig}__error`, content: String(s.error) })
-      : null,
-    Skeletons.Box.Y({ className: `${fig}__state`, kids: stateRows(fig, s) }),
-  ];
+    Skeletons.Note({ className: `${fig}__title`, content: "Nudge Lab — test popup nâng cấp gói" }),
+    s.error ? Skeletons.Note({ className: `${fig}__error`, content: String(s.error) }) : null,
 
-  for (const g of GROUPS) {
-    kids.push(
-      Skeletons.Box.Y({
-        className: `${fig}__group`,
-        kids: [
-          Skeletons.Note({ className: `${fig}__group-title`, content: g.title }),
-          Skeletons.Note({ className: `${fig}__group-hint`, content: g.hint }),
-          Skeletons.Box.X({
-            className: `${fig}__buttons`,
-            kids: g.buttons.map(([name, label]) =>
-              Skeletons.Box.X({
-                className: `${fig}__btn${ui.busy() ? ` ${fig}__btn--busy` : ""}`,
-                service: "nudge-lab-scenario",
-                scenario: name,
-                uiHandler: [ui],
-                kids: [
-                  Skeletons.Note({ className: `${fig}__btn-label`, active: 0, content: label }),
-                ],
-              })
-            ),
-          }),
-        ],
-      })
-    );
-  }
+    banner(fig, ui),
+    chips(fig, s),
 
-  kids.push(
-    Skeletons.Box.X({
-      className: `${fig}__footer`,
+    // ── Bước 1 ───────────────────────────────────────────────────────────
+    Skeletons.Box.Y({
+      className: `${fig}__step`,
       kids: [
-        Skeletons.Box.X({
-          className: `${fig}__btn ${fig}__btn--primary`,
-          service: "nudge-lab-open-desk",
-          uiHandler: [ui],
-          kids: [Skeletons.Note({ className: `${fig}__btn-label`, active: 0, content: "Open desk (new tab)" })],
+        Skeletons.Note({ className: `${fig}__step-title`, content: "① Chọn kịch bản (dữ liệu của CHÍNH account này được chỉnh)" }),
+        Skeletons.Box.Y({
+          className: `${fig}__rows`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${fig}__row`,
+              kids: [
+                Skeletons.Note({ className: `${fig}__row-label`, content: "Storage" }),
+                button(fig, ui, "nudge-lab-scenario", "storage_70", "70% · amber", { active: pct >= 70 && pct < 80 }),
+                button(fig, ui, "nudge-lab-scenario", "storage_80", "80% · amber", { active: pct >= 80 && pct < 90 }),
+                button(fig, ui, "nudge-lab-scenario", "storage_90", "90% · đỏ", { active: pct >= 90 }),
+                button(fig, ui, "nudge-lab-scenario", "storage_low", "về 0", { active: pct < 70 }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${fig}__row`,
+              kids: [
+                Skeletons.Note({ className: `${fig}__row-label`, content: "Seats" }),
+                button(fig, ui, "nudge-lab-scenario", "seats_70", "~75% · amber", { active: seatPct >= 70 && seatPct < 90 }),
+                button(fig, ui, "nudge-lab-scenario", "seats_90", "100% · đỏ", { active: seatPct >= 90 }),
+                button(fig, ui, "nudge-lab-scenario", "seats_off", "trả lại", { active: ~~s.seat_limit > 0 && seatPct < 70 }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${fig}__row`,
+              kids: [
+                Skeletons.Note({ className: `${fig}__row-label`, content: "Tuổi ws" }),
+                button(fig, ui, "nudge-lab-scenario", "age_14d", "2 tuần", { active: age >= 14 && age < 30 }),
+                button(fig, ui, "nudge-lab-scenario", "age_30d", "1 tháng", { active: age >= 30 }),
+                button(fig, ui, "nudge-lab-scenario", "age_reset", "ngày thật", { active: age < 14 }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${fig}__row`,
+              kids: [
+                Skeletons.Note({ className: `${fig}__row-label`, content: "Plan" }),
+                button(fig, ui, "nudge-lab-scenario", "plan_up", s.scope === "org" ? "lên Business" : "lên Pro"),
+                button(fig, ui, "nudge-lab-scenario", "plan_restore", s.scope === "org" ? "về Team" : "về Free"),
+              ],
+            }),
+          ],
         }),
         Skeletons.Box.X({
-          className: `${fig}__btn`,
-          service: "nudge-lab-refresh",
+          className: `${fig}__toggle`,
+          service: "nudge-lab-toggle-autoreset",
           uiHandler: [ui],
-          kids: [Skeletons.Note({ className: `${fig}__btn-label`, active: 0, content: "Refresh state" })],
+          kids: [
+            Skeletons.Note({
+              className: `${fig}__toggle-box`,
+              active: 0,
+              content: ui.autoReset() ? "☑" : "☐",
+            }),
+            Skeletons.Note({
+              className: `${fig}__toggle-label`,
+              active: 0,
+              content: "Tự Reset lịch sử popup sau khi chọn (khuyên dùng — tắt đi khi muốn test luật once-per-threshold / daily cap)",
+            }),
+          ],
         }),
       ],
-    })
-  );
+    }),
+
+    // ── Bước 2 ───────────────────────────────────────────────────────────
+    Skeletons.Box.Y({
+      className: `${fig}__step`,
+      kids: [
+        Skeletons.Note({ className: `${fig}__step-title`, content: "② Luật hiển thị (chỉ cần khi banner báo KHÔNG hiện)" }),
+        Skeletons.Box.X({
+          className: `${fig}__row`,
+          kids: [
+            button(fig, ui, "nudge-lab-gate", "new_day", "New day — bỏ giới hạn 1 popup/ngày, GIỮ lịch sử đã xem"),
+            button(fig, ui, "nudge-lab-gate", "reset", "Reset — xoá hết, ngưỡng nào cũng hiện lại được"),
+            button(fig, ui, "nudge-lab-gate", "cleanup", "Cleanup — trả mọi thứ về nguyên trạng"),
+          ],
+        }),
+      ],
+    }),
+
+    // ── Bước 3 ───────────────────────────────────────────────────────────
+    Skeletons.Box.Y({
+      className: `${fig}__step`,
+      kids: [
+        Skeletons.Note({ className: `${fig}__step-title`, content: "③ Xem popup" }),
+        Skeletons.Box.X({
+          className: `${fig}__footer`,
+          kids: [
+            button(fig, ui, "nudge-lab-open-desk", "", "Mở desk (tab mới) → đợi ~15 giây", { primary: true }),
+            button(fig, ui, "nudge-lab-refresh", "", "Đọc lại trạng thái"),
+          ],
+        }),
+      ],
+    }),
+  ];
 
   return Skeletons.Box.Y({ debug: __filename, className: `${fig}__wrap`, kids });
 };
