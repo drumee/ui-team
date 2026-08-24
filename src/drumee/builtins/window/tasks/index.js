@@ -285,6 +285,14 @@ class __tasks_panel extends LetcBox {
       document.removeEventListener("mouseup", this._pointerRelease, true);
       this._pointerRelease = null;
     }
+    if (this._pasteHandler && typeof document !== "undefined") {
+      document.removeEventListener("paste", this._pasteHandler);
+      this._pasteHandler = null;
+    }
+    if (this._pointerExit && this.el) {
+      this.el.removeEventListener("mouseleave", this._pointerExit);
+      this._pointerExit = null;
+    }
     // Release pending-file image-preview blob URLs — the two task forms and
     // the three comment drafts, which carry their own queued files.
     for (const draft of [
@@ -417,6 +425,7 @@ class __tasks_panel extends LetcBox {
     this._installBoardPan();
     this._installMediaDroppable();
     this._trackPointer();
+    this._installPasteAttach();
     this._installFileSearchFocus();
     this._installAssigneeSearch();
     await Promise.all([
@@ -1925,7 +1934,9 @@ class __tasks_panel extends LetcBox {
         return this._unlinkAttachment(trigger);
 
       case "open-attachment":
-        return this._openAttachment(trigger.mget("fileNid"));
+        // The trigger comes along so the clicked chip / card can show that it
+        // is working — opening a node is a fetch plus a kind load.
+        return this._openAttachment(trigger.mget("fileNid"), trigger);
 
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
@@ -3755,6 +3766,17 @@ class __tasks_panel extends LetcBox {
     const btn = trigger && trigger.el;
     if (this._isControlBusy(btn)) return;
     this._setControlBusy(btn, true);
+    // The whole chip goes inert with it, not just the button: while the unlink
+    // is in flight the chip was still a live open-attachment target, so a click
+    // beside the ✕ opened the very file being detached. A separate flag from the
+    // data-loading of an OPENING chip — that one puts a spinner where the
+    // file-type icon sits, and here the spinner belongs on the ✕, which is the
+    // control doing the work.
+    const chip =
+      btn && btn.closest
+        ? btn.closest(`.${this.fig.family}__comment-attachment`)
+        : null;
+    if (chip && chip.dataset) chip.dataset.removing = "1";
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -3769,6 +3791,9 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] comment.unlink_file failed:", err);
     } finally {
       this._setControlBusy(btn, false);
+      // A successful unlink takes the chip away with the reload above; this is
+      // for the refusal, which leaves it on screen and clickable again.
+      if (chip && chip.dataset) delete chip.dataset.removing;
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -4793,6 +4818,141 @@ class __tasks_panel extends LetcBox {
     return this._activeUploadScope(e);
   }
 
+  /**
+   * image/* files carried by a paste, in clipboard order.
+   *
+   * `items` is the authoritative list (a screenshot is an item with no entry in
+   * some engines' `files`), with `files` as the fallback for engines that only
+   * populate that. Everything non-image is left alone: the paste then falls
+   * through to whatever the browser would have done with it.
+   */
+  _clipboardImages(e) {
+    const dt =
+      (e && e.clipboardData) ||
+      (e && e.originalEvent && e.originalEvent.clipboardData);
+    if (!dt) return [];
+    const out = [];
+    const items = dt.items || [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (!it || it.kind !== "file" || !/^image\//.test(it.type || "")) continue;
+      const f = it.getAsFile && it.getAsFile();
+      if (f) out.push(f);
+    }
+    if (!out.length) {
+      for (const f of Array.from(dt.files || [])) {
+        if (/^image\//.test((f && f.type) || "")) out.push(f);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * A pasted image usually arrives named ("image.png"), a screenshot sometimes
+   * not at all. Give the nameless ones something to be called, because the name
+   * is what the folder stores and what the chip shows; the collision suffix is
+   * added later, at upload (_finalizePendingName).
+   */
+  _namedPasteFile(file, i) {
+    if (!file || file.name) return file;
+    const ext = String(file.type || "").split("/")[1] || "png";
+    const n = i ? `pasted-image-${i + 1}` : "pasted-image";
+    try {
+      return new File([file], `${n}.${ext}`, { type: file.type });
+    } catch (_) {
+      return file; // no File constructor: staging still copes, unnamed
+    }
+  }
+
+  /**
+   * Where a pasted image lands.
+   *
+   * The same ZONES walk a drop gets, from the pointer rather than from an
+   * event — so ownership (a row must be yours), permissions and "is that
+   * surface even open" all come from _zoneFor and need no rules of their own.
+   *
+   * Two deliberate differences from _pointerScope:
+   *
+   * - No POINTER_TTL. That window exists because a DROP follows a mousemove
+   *   within a frame or two; a paste follows a keystroke, and a pointer that has
+   *   not moved for a minute is not stale — it is simply where the mouse is.
+   *   elementsFromPoint hit-tests live, so a wheel-scroll under a motionless
+   *   cursor resolves to whatever is under it now, exactly as :hover would.
+   * - The panel clears _lastPointer on mouseleave (_installPasteAttach), which
+   *   is what stops a cursor that has left resolving to the row it exited over.
+   */
+  _pasteZone() {
+    const p = this._lastPointer;
+    if (!p) return null;
+    const at = { clientX: p.x, clientY: p.y };
+    // The listener is on document, so EVERY open task panel hears the paste.
+    // Only the one under the cursor may claim it.
+    if (!this._dropPointEl(at)) return null;
+    const zone = this._activeUploadScope(at);
+    if (zone) return zone;
+    // Inside the panel but over no zone — including over another author's
+    // comment, which resolveZone refuses rather than passing through. The
+    // composer is where a paste belongs by default; its draft is allocated on
+    // demand, exactly as a drop on the composer does.
+    if (!this._detailId || !this._mayWriteTasks()) return null;
+    return { scope: "comment", key: "comment" };
+  }
+
+  // Does this element take typed input? Such an element owns any paste that
+  // reaches it — see _onPasteAttach.
+  _isTextEntry(el) {
+    if (!el || !el.closest) return false;
+    return !!el.closest('[contenteditable="true"], input, textarea');
+  }
+
+  /**
+   * Ctrl/Cmd+V with an image in the clipboard, with nothing editable focused →
+   * attach it where the cursor is.
+   *
+   * Refusals come first and cheapest-first, and preventDefault is called ONLY
+   * once we have committed to handling the event, so every paste we decline
+   * behaves exactly as it does today. In particular a paste inside a comment
+   * editor is already handled by _onEditorPaste (inline image at the caret),
+   * which calls preventDefault for an image — focus beats hover, and this sees
+   * nothing.
+   */
+  _onPasteAttach(e) {
+    if (!this.el || !e || e.defaultPrevented) return;
+    const focused =
+      typeof document !== "undefined" ? document.activeElement : null;
+    if (this._isTextEntry(e.target) || this._isTextEntry(focused)) return;
+    if (!this._detailId) return;
+    const files = this._clipboardImages(e);
+    if (!files.length) return;
+    const zone = this._pasteZone();
+    if (!zone) return;
+    e.preventDefault();
+    return this._attachFilesToZone(
+      zone,
+      files.map((f, i) => this._namedPasteFile(f, i)),
+    );
+  }
+
+  /**
+   * Install the paste route.
+   *
+   * On document, because a paste with nothing focused has no target inside the
+   * panel to bubble from. Non-capture, so an editor's own onpaste runs first
+   * and can claim the event (see _onPasteAttach).
+   */
+  _installPasteAttach() {
+    if (this._pasteHandler || typeof document === "undefined") return;
+    this._pasteHandler = (e) => this._onPasteAttach(e);
+    document.addEventListener("paste", this._pasteHandler);
+    if (!this.el) return;
+    // A cursor that has left the panel must not still resolve to a zone: the
+    // remembered position is only "where the mouse is" while the mouse is here.
+    this._pointerExit = () => {
+      this._lastPointer = null;
+    };
+    this.el.addEventListener("mouseleave", this._pointerExit);
+  }
+
   // Last resort: no event, no pointer. A comment being edited owns the drop
   // surface, and with no position there is nothing to say the drop landed on
   // it — so nothing attaches, rather than the file quietly becoming a task
@@ -4850,14 +5010,27 @@ class __tasks_panel extends LetcBox {
     }
     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
     if (!files.length) return;
-    // A comment row has no submit, so the drop IS the commit.
-    if (scope.scope === "comment-row") {
-      return this._dropOnCommentRow(scope.commentId, files);
+    return this._attachFilesToZone(scope, files);
+  }
+
+  /**
+   * Send files to whatever a resolved zone means, and nothing else.
+   *
+   * The zone→destination rule, held in one place because there is now more than
+   * one way to arrive with files and a zone: a drop, and a paste. Same reason
+   * resolveZone was factored out for the three drag routes — two entry points
+   * that agree by construction rather than by being written twice.
+   */
+  async _attachFilesToZone(zone, files) {
+    if (!zone || !files || !files.length) return;
+    // A comment row has no submit, so arriving IS the commit.
+    if (zone.scope === "comment-row") {
+      return this._dropOnCommentRow(zone.commentId, files);
     }
-    const draft = this._draftForScope(scope);
+    const draft = this._draftForScope(zone);
     if (!draft) return;
     await this._stashPendingFiles(draft, files);
-    this._refreshPendingList(this._scopeKey(scope));
+    this._refreshPendingList(this._scopeKey(zone));
   }
 
   // Queues File objects onto a draft's pending list (picker + drag-drop),
@@ -5152,10 +5325,32 @@ class __tasks_panel extends LetcBox {
     return null;
   }
 
+  /**
+   * Open an attachment, showing the click as busy until the viewer is up.
+   *
+   * node_info plus a Kind load is a visible wait on a cold kind, and until now
+   * the chip gave no sign it had been clicked — so it read as a dead control and
+   * invited a second click, which would open a second window.
+   *
+   * The busy flag is cleared in a `finally` because _openAttachmentNode has
+   * five ways out: two early returns, a web link opened in a tab, an archive
+   * downloaded, and the media window itself (plus its own catch).
+   */
+  async _openAttachment(fileNid, trigger) {
+    const el = trigger && trigger.el;
+    if (this._isControlBusy(el)) return;
+    this._setControlBusy(el, true);
+    try {
+      return await this._openAttachmentNode(fileNid);
+    } finally {
+      this._setControlBusy(el, false);
+    }
+  }
+
   // Open an attachment in its player — mirrors the desk WM's open-by-nid path:
   // node_info → media widget from a Backbone.Model → append the app to the WM
   // pool. (Don't call media.initData() — that throws on an unrendered widget.)
-  async _openAttachment(fileNid) {
+  async _openAttachmentNode(fileNid) {
     if (!fileNid || typeof Wm === "undefined") return;
     const rec = this._findAttachmentRecord(fileNid);
     const hub = (rec && rec.hub_id) || this._hubId;
@@ -6382,6 +6577,22 @@ class __tasks_panel extends LetcBox {
     }
     if (file) {
       e.preventDefault();
+      // A comment being EDITED attaches instead of inlining. That row is the
+      // same surface a drop and the paperclip beside it already attach to
+      // (comment-row:<id>), and it commits now for the same reason: a row has
+      // no submit of its own for files. Deliberately this scope ONLY — the
+      // composer, the reply box and the two description editors keep the inline
+      // image at the caret.
+      //
+      // Takes every image in the clipboard, not just the first: the attachment
+      // strip holds a list, where the caret could only ever take one.
+      if (scope === "comment-edit" && this._editingCommentId) {
+        const imgs = this._clipboardImages(e);
+        return this._dropOnCommentRow(
+          this._editingCommentId,
+          (imgs.length ? imgs : [file]).map((f, i) => this._namedPasteFile(f, i)),
+        );
+      }
       // Capture the caret now — the async upload would otherwise lose it.
       const sel = window.getSelection();
       let range = null;

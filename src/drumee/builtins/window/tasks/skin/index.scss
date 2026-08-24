@@ -3143,8 +3143,14 @@ $theme-colors: (
   // The two icon buttons have no label to swap, so the glyph itself steps
   // aside and the spinner takes its place — the button keeps its box, so
   // neither the comment footer nor the attachment card reflows mid-request.
+  //
+  // Third case, same recipe: a chip being OPENED (node_info + a kind load) puts
+  // the spinner where its file-type icon sits. The flag is on the chip, not on
+  // the icon, because the chip is the control that was clicked — hence the
+  // descendant selector.
   &__comment-attachment-unlink[data-loading="1"],
-  &__comment-action-ico[data-loading="1"] {
+  &__comment-action-ico[data-loading="1"],
+  &__comment-attachment[data-loading="1"] &__comment-attachment-ico {
     pointer-events: none;
     position: relative;
 
@@ -3164,6 +3170,22 @@ $theme-colors: (
       border-radius: 50%;
       animation: tasks-panel-spin 0.7s linear infinite;
     }
+  }
+
+  // A chip mid-open takes no further clicks: a second one would open a second
+  // window. _isControlBusy refuses it as well — this is the half that stops the
+  // click ever being dispatched.
+  &__comment-attachment[data-loading="1"] {
+    pointer-events: none;
+  }
+
+  // A chip being detached (its ✕ clicked, the unlink in flight) is inert for the
+  // same reason and dimmed a little further than an upload in progress: it is
+  // leaving, not arriving. The spinner stays on the ✕ — the control doing the
+  // work — so this state adds no second one.
+  &__comment-attachment[data-removing="1"] {
+    pointer-events: none;
+    opacity: 0.5;
   }
 
   // ── Pending-file states ───────────────────────────────────────────
