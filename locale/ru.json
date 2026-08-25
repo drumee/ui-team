@@ -2719,5 +2719,7 @@
   "PASSWORD_PROTECTION_HINT": "Задайте пароль для доступа",
   "CREATE_MEETING_SEND_INVITE": "Создать встречу и отправить приглашение",
   "INVITE_LINK_READY": "Ссылка-приглашение готова",
-  "PREVIOUS": "Назад"
+  "PREVIOUS": "Назад",
+  "MUTE": "Отключить",
+  "JUST_NOW": "Только что"
 }

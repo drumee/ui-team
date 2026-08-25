@@ -8,6 +8,9 @@ const WS_EVENT = "ws:event";
 // The tab set is declared once, in the tab bar skeleton, and imported here so
 // the panel and the bar can never disagree about which buckets exist.
 const { BUCKETS: TAB_BUCKETS, DEFAULT_BUCKET } = require('./skeleton/tabbar');
+// Round 3 Phase 2: the real-time chat card. Built to Figma
+// (58208:83650) — see chat-toast.js for the measurements and the rules.
+const { showChatToast, killChatToast } = require('./chat-toast');
 require('./skin');
 
 class __panel_activity extends LetcBox {
@@ -97,6 +100,9 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
+    // The card lives in the window layer, not inside this panel, so it would
+    // outlive the panel — along with its pending dismiss timer.
+    killChatToast(this);
   }
 
   /**
@@ -272,6 +278,9 @@ class __panel_activity extends LetcBox {
     switch (service) {
       case 'open-activity-panel':
         this.activityState = 1;
+        // "No toast while the Center is open" also means: not one already on
+        // screen when it opens. The row is in the list behind it either way.
+        killChatToast(this);
         this.setState(1);
         return '';
 
@@ -1453,9 +1462,19 @@ class __panel_activity extends LetcBox {
    *
    */
   _notify(data = {}) {
-    if (!window.Notification) return;
     let opt = data[0] || data;
     let meeting;
+    // Captured BEFORE the switch: the MEETING:start branch below REWRITES
+    // opt.message into "X joined the meeting Y", so by the time the chat card
+    // is decided the "[[MEETING:" marker is gone and testing opt.message there
+    // would let a meeting card through as a chat message.
+    const rawMessage = String(opt.message || "");
+    // NOTE: the `!window.Notification` bail-out used to stand here. It now
+    // sits just above the permission checks that actually need it (nothing
+    // between here and there touches Notification), so the in-app chat card
+    // still appears in a browser with no Notification API — and, more to the
+    // point, when the user has denied OS notifications. Moving it is what
+    // makes the card independent of a permission it has nothing to do with.
     const now = Date.now();
     this.debug("AAA:766", data)
     let url = `#/desk/wm`;
@@ -1498,6 +1517,26 @@ class __panel_activity extends LetcBox {
         }
         break;
     }
+    // Round 3 Phase 2 — the in-app chat card. Placed here, after the switch
+    // has resolved `url` and taken its early exits (a MEETING:end post returns
+    // above and never reaches this line), but BEFORE every OS-notification
+    // guard below: the card is not an OS notification and must not inherit its
+    // permission state or its 5 s self-throttle. Its own "replace and restart
+    // the 10 s timer" rule is what paces it.
+    //
+    // Chat only, matched on the two services the switch above handles —
+    // never files, task or other. A meeting card posted into a folder chat
+    // arrives as channel.post too, and is excluded: the meeting popup is the
+    // surface for that, and this would be a second card saying the same thing.
+    if (
+      (data.service === SERVICE.chat.post || data.service === SERVICE.channel.post) &&
+      !/\[\[MEETING:/.test(rawMessage) &&
+      !/^meeting\./.test(String(opt.message_type || ""))
+    ) {
+      showChatToast(this, opt, url);
+    }
+
+    if (!window.Notification) return;
     if (Notification.permission === "denied") return;
     if (Notification.permission === "default" && this._permission_asked) return;
 

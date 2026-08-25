@@ -2720,5 +2720,7 @@
   "PASSWORD_PROTECTION_HINT": "Define una contraseña de acceso",
   "CREATE_MEETING_SEND_INVITE": "Crear reunión y enviar invitación",
   "INVITE_LINK_READY": "Enlace de invitación listo",
-  "PREVIOUS": "Anterior"
+  "PREVIOUS": "Anterior",
+  "MUTE": "Silenciar",
+  "JUST_NOW": "Ahora mismo"
 }

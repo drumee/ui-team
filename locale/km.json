@@ -2719,5 +2719,7 @@
   "PASSWORD_PROTECTION_HINT": "កំណត់ពាក្យសម្ងាត់សម្រាប់ចូល",
   "CREATE_MEETING_SEND_INVITE": "បង្កើតការប្រជុំ និងផ្ញើការអញ្ជើញ",
   "INVITE_LINK_READY": "តំណអញ្ជើញរួចរាល់",
-  "PREVIOUS": "មុន"
+  "PREVIOUS": "មុន",
+  "MUTE": "បិទសំឡេង",
+  "JUST_NOW": "ទើបតែឥឡូវនេះ"
 }

@@ -2719,5 +2719,7 @@
   "PASSWORD_PROTECTION_HINT": "设置访问密码",
   "CREATE_MEETING_SEND_INVITE": "创建会议并发送邀请",
   "INVITE_LINK_READY": "邀请链接已就绪",
-  "PREVIOUS": "上一个"
+  "PREVIOUS": "上一个",
+  "MUTE": "静音",
+  "JUST_NOW": "刚刚"
 }

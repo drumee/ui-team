@@ -2882,5 +2882,7 @@
   "PASSWORD_PROTECTION_HINT": "Set a password for access",
   "CREATE_MEETING_SEND_INVITE": "Create meeting & send invite",
   "INVITE_LINK_READY": "Invite link ready",
-  "PREVIOUS": "Previous"
+  "PREVIOUS": "Previous",
+  "MUTE": "Mute",
+  "JUST_NOW": "Just now"
 }

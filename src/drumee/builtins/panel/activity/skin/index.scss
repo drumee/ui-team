@@ -804,3 +804,213 @@ html[data-theme="dark"] {
     &:hover { filter: brightness(1.08); }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Real-time chat toast — Round 3 Phase 2.
+//
+// Figma "folder chat notification - toast": wrapper 58208:83649 at x 1360,
+// y 52 with 24px padding inside a 1920x1080 frame (⇒ 24px from the right edge,
+// 76px from the top), card `call-pop-up` 58208:83650 at 512 wide, padding 24,
+// gap 24, radius 12, white, drop shadow + backdrop blur.
+//
+// It renders into the window layer, NOT inside .panel-activity, so this is a
+// sibling block rather than a nested one — the panel is 512px and right-docked,
+// and nesting would scope the card to a panel that is closed whenever the card
+// is allowed to show.
+//
+// 🚨 Colour tokens are picked deliberately. `--primary-100` is declared TWICE
+// in vars/revamp.scss — #0b0a21 at line 121 and #f4e7ff at line 134 — and the
+// LAST one wins, so it resolves to a near-white. Figma's Primary/100 text
+// colour must therefore come from `--primary-purple-100`, which is declared
+// once. Same reasoning for the brand indigo: `--primary-purple-50`.
+.panel-activity-toast {
+  position: fixed;
+  top: 76px;
+  right: 24px;
+  z-index: 99999; // just under the centred meeting card's 100000
+  box-sizing: border-box;
+  width: 512px;
+  max-width: calc(100vw - 32px);
+  padding: 24px;
+  gap: 24px;
+  border-radius: 12px;
+  background: var(--normal-bg-elevated, #ffffff);
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.15),
+    0 7px 10px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(50px);
+  cursor: default;
+  animation: panel-activity-toast-in 160ms ease-out both;
+
+  // Replacing a card that was already on screen: same box, new content, no
+  // re-entry. Without this a burst of messages strobes.
+  &[data-replace="1"] {
+    animation: none;
+  }
+
+  &__head {
+    position: relative;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  &__avatar-wrap {
+    position: relative;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+  }
+
+  // Figma places the badge at 30,30 inside the 40x40 container, so it overhangs
+  // the avatar's bottom-right corner by 4px.
+  &__badge {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    width: 14px;
+    height: 14px;
+    padding: 2px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--primary-purple-40, #5950ff);
+
+    svg {
+      width: 8px;
+      height: 8px;
+      fill: #ffffff;
+    }
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-width: 0; // let a long message ellipsize instead of widening the card
+    gap: 4px;
+  }
+
+  &__title-row {
+    gap: 8px;
+    align-items: center;
+    // Leave room for the ✕, which Figma parks at the head row's top right.
+    padding-right: 28px;
+  }
+
+  &__sender {
+    @include drumee.typo($size: 16px, $line: 1.2em, $weight: 600, $color: var(--primary-purple-100, #0b0a21));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__chip {
+    flex: 0 0 auto;
+    padding: 0 8px;
+    border-radius: 4px;
+    background: rgba(89, 80, 255, 0.1); // Figma Overlay/brand
+    @include drumee.typo($size: 16px, $line: 1.2em, $weight: 600, $color: var(--primary-purple-40, #5950ff));
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__message {
+    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    // Two lines, then ellipsis — a long message must not grow the card.
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+
+  &__time {
+    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
+  }
+
+  &__close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.6;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover { opacity: 1; }
+  }
+
+  &__actions {
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  &__mute,
+  &__open {
+    flex: 1 1 0;
+    box-sizing: border-box;
+    padding: 12px 24px;
+    text-align: center;
+    border-radius: 4px;
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
+
+    &:hover { filter: brightness(0.97); }
+  }
+
+  &__mute {
+    background: var(--tertiary-grey-20, #f2f2f7);
+    color: var(--primary-purple-100, #0b0a21);
+  }
+
+  &__open {
+    background: var(--primary-purple-50, #433cc5);
+    color: #ffffff;
+
+    &:hover { filter: brightness(1.08); }
+  }
+
+  // The 360px phone panel. Figma only specs desktop; the card has to stop
+  // being 512px wide before it reaches the viewport edge. Declared AFTER the
+  // rules it overrides — Sass splits a block around a nested @media, so a
+  // media query placed above them would lose.
+  @media screen and (max-width: 560px) {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    padding: 16px;
+    gap: 16px;
+
+    &__head { gap: 12px; }
+    &__chip { max-width: 120px; }
+  }
+}
+
+@keyframes panel-activity-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
