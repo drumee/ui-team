@@ -127,8 +127,8 @@ class __push_manager extends winman {
 
       // A workspace member scheduled/invited you to a meeting (room.js
       // _notify_invitees). Show a transient top-right toast — NOT a modal.
-      // (The persistent notification-sidebar entry is a separate follow-up
-      // that needs the notification_center_next aggregation extended.)
+      // The persistent notification-sidebar entry is handled separately by
+      // panel/activity (meeting_notice rows + the conference.start branch).
       case "room.scheduled":
         return this._showMeetingToast(data);
 
@@ -137,6 +137,20 @@ class __push_manager extends winman {
       // with a Join button that opens the meeting.
       case "room.reminder":
         return this._showMeetingToast(data, { reminder: 1 });
+
+      // Someone STARTED a meeting in a workspace we belong to. conference.js
+      // sendRoomInfo fans this to every hub member socket, and until now the
+      // desk did nothing with it: the only reaction anywhere was the panel's
+      // persistent row, so a member with the panel closed never learned a
+      // meeting had begun. Show the "now" flavour — the room is open, so Join
+      // lands in a live call rather than an empty one.
+      //
+      // NOT a plain literal by accident: SERVICE.conference has no `start`
+      // key (it is a push, not an ACL method — verified against the live
+      // get_env), so `case SERVICE.conference.start:` would be
+      // `case undefined:` and would swallow every push with no service.
+      case "conference.start":
+        return this._showMeetingStartToast(data);
 
       // Downgrade over-limit: the server re-evaluates the org after every
       // plan change and every resolution action (purge, member removal…) and
@@ -551,7 +565,13 @@ class __push_manager extends winman {
       const toast = layer.append(
         Skeletons.Box.Y({
           className: "desk-meeting-toast",
-          attrOpt: { "data-variant": variant },
+          // data-hub lets a later push tell whether a card for the SAME
+          // workspace is already on screen. The per-key dedup below cannot:
+          // reminderWorker sends the meeting node's nid while conference_join
+          // returns the room id, so the same meeting arrives under two
+          // different keys. Empty for room.scheduled, which carries no hub_id
+          // — harmless, that one is never the "now" flavour.
+          attrOpt: { "data-variant": variant, "data-hub": String(data.hub_id || "") },
           // Centring is `top:50%` + a -50% translate (see meeting-toast.scss),
           // so nudging `top` keeps the transform and the card centred.
           styleOpt: offset ? { top: `calc(50% + ${offset}px)` } : undefined,
@@ -648,6 +668,89 @@ class __push_manager extends winman {
       setTimeout(kill, variant === "now" ? 20000 : 8000);
     } catch (e) {
       this.warn && this.warn("meeting toast failed", e);
+    }
+  }
+
+  /**
+   * Is a meeting card for this workspace already on screen?
+   *
+   * Used only to stop conference.start from doubling a card the reminder has
+   * already put up; see _showMeetingStartToast. Destroyed entries are swept as
+   * we go, exactly as _showMeetingToast does.
+   */
+  _hasLiveMeetingToastFor(hub_id) {
+    if (!hub_id || !this._meetingToasts) return false;
+    for (const [k, t] of this._meetingToasts) {
+      if (!t || (t.isDestroyed && t.isDestroyed())) {
+        this._meetingToasts.delete(k);
+        continue;
+      }
+      if (t.el && t.el.getAttribute("data-hub") == hub_id) return true;
+    }
+    return false;
+  }
+
+  /**
+   * conference.start → the "meeting has begun" card, in its "now" flavour so
+   * it offers Join (the room is open by definition — the host is in it).
+   *
+   * A method of its own rather than a line in the switch, because this push
+   * needs three guards that none of the room.* pushes do:
+   *
+   *  1. **room_type.** conference.js calls `inform(..., "conference.start")`
+   *     for EVERY room type (service/conference.js:157) and only afterwards
+   *     fans the meeting-only copy out to hub members (:172). So a P2P call
+   *     reaches this case too — and it carries a hub_id, because
+   *     conference_join selects one for every row, so hub_id cannot be used to
+   *     tell the two apart. Only the hub fan-out stamps room_type; requiring
+   *     it is what makes a call unable to raise a meeting card.
+   *  2. **self.** entity_sockets excludes by SOCKET id, not uid
+   *     (`AND s.id NOT IN (...)`), so the starter's other open tabs receive
+   *     their own start event. Without this, starting a meeting pops a
+   *     "Join" card in your second tab for the meeting you are hosting.
+   *  3. **a card already up for this workspace.** A punctual host makes
+   *     reminderWorker's room.reminder and this event land seconds apart, and
+   *     the per-key dedup inside _showMeetingToast cannot see they are the
+   *     same meeting: the reminder sends the meeting node's nid, while
+   *     conference_join returns the room id. The reminder is the better card
+   *     of the two (it has the title, the agenda and the invitee stack), so
+   *     this one stands down rather than stacking a second box on top of it.
+   */
+  _showMeetingStartToast(data = {}) {
+    try {
+      if (!data || data.room_type != _a.meeting) return;
+      if (!data.hub_id) return;
+      if (data.uid && data.uid == Visitor.id) return;
+      if (this._hasLiveMeetingToastFor(data.hub_id)) return;
+
+      // Same derivation the switchcall popup uses for this very payload, so
+      // the two surfaces never disagree about who started what and where.
+      // `details` is mfs_node_attr(room_id) run against the hub's own db and
+      // comes back EMPTY for a meeting (the hub node lives in its owner's db),
+      // which is why the server carries hub_name explicitly.
+      const name =
+        data.username || data.firstname || data.lastname || data.email || "";
+      const where =
+        (data.details && data.details.filename) || data.filename || data.hub_name || "";
+
+      // The workspace is the heading, the sentence underneath says who — so
+      // neither names the workspace twice. It doubles as the window title when
+      // Join opens the folder (_joinMeetingFromData reads data.title), which is
+      // the other reason not to put "Meeting Started" there.
+      // No name means no honest sentence: ".format" would render a leading
+      // space and " started a meeting". Leave the heading standing alone.
+      const title = where || LOCALE.MEETING_STARTED;
+      const message = name ? LOCALE.X_STARTED_A_MEETING.format(name) : "";
+
+      // reminder:1 with no lead_min is what selects the "now" variant — Join
+      // plus the 20 s linger. room_id keys the card; it is also what
+      // _joinMeetingFromData opens.
+      return this._showMeetingToast(
+        { hub_id: data.hub_id, room_id: data.room_id || data.hub_id, title, message },
+        { reminder: 1 },
+      );
+    } catch (e) {
+      this.warn && this.warn("meeting start toast failed", e);
     }
   }
 
