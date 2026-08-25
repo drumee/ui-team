@@ -443,3 +443,30 @@ test("the card is cleaned up when the Center opens and when the panel dies", () 
     "the card outlives the panel — it lives in the window layer",
   );
 });
+
+// The server now names the folder on the push itself (channel.js
+// _chat_folder_name). Resolving it client-side was a per-recipient round trip
+// that silently yielded nothing in the real environment — Duy saw no chip on a
+// folder chat even after a hard reload. The lookup stays as a fallback.
+test("a server-stamped folder_name is used directly, with no lookup at all", () => {
+  reset();
+  const host = panel();
+  let asked = 0;
+  host.fetchService = () => { asked++; return Promise.resolve({}); };
+  showChatToast(host, msg({ nid: "chip-srv", hub_id: "H1", folder_name: "Q3 Launch" }), "#/x");
+  assert.equal(text("chip"), "Q3 Launch");
+  assert.equal(asked, 0, "a stamped name must not trigger a round trip");
+});
+
+test("the stamped name beats an open window naming the same node differently", () => {
+  reset();
+  OPEN_WINDOWS = [{ isDestroyed: () => false, mget: (k) => ({ nid: "chip-p", filename: "Stale" }[k]) }];
+  assert.equal(folderLabel({ nid: "chip-p", folder_name: "Fresh" }), "Fresh");
+});
+
+test("a null folder_name still falls back rather than rendering 'null'", () => {
+  reset();
+  OPEN_WINDOWS = [{ isDestroyed: () => false, mget: (k) => ({ nid: "chip-n", filename: "Design" }[k]) }];
+  // _chat_folder_name returns null when the name is withheld or unreadable.
+  assert.equal(folderLabel({ nid: "chip-n", folder_name: null }), "Design");
+});

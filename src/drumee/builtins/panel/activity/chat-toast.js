@@ -85,6 +85,11 @@ function cacheName(key, name) {
  */
 function folderLabel(model = {}) {
   try {
+    // PRIMARY source: the server now names the folder on the push itself
+    // (channel.js `_chat_folder_name`). Everything below it is fallback for a
+    // server that predates that, and for the P2P chat push, which has no
+    // folder at all.
+    if (model.folder_name) return String(model.folder_name);
     // A workspace-level post has no nid; mfs_node_attr answers with the
     // WORKSPACE name for the hub root, which is the right label for it.
     const nid = model.nid || model.hub_id;
