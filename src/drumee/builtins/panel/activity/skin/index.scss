@@ -322,6 +322,7 @@
       $line: 24px,
       $color: #0b0a21
     );
+    font-weight: 600;
   }
 
   &__unread-toggle {
@@ -505,6 +506,7 @@
 
   &__tab-label {
     @include drumee.typo($color: #65656c, $size: 12px, $weight: 600, $line: 12px);
+    font-weight: 600;
     white-space: nowrap;
     // Only reachable when a locale's labels genuinely exceed the bar; the pills
     // grow from their natural width, so normally nothing is clipped.
@@ -673,6 +675,7 @@ html[data-theme="dark"] {
 
   &__title {
     @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--default-text-color, #0b0a21));
+    font-weight: 600;
   }
 
   &__close {
@@ -708,6 +711,7 @@ html[data-theme="dark"] {
 
   &__info-email {
     @include drumee.typo($size: 14px, $line: 18px, $weight: 600, $color: var(--default-text-color, #0b0a21));
+    font-weight: 600;
   }
 
   &__info-level {
@@ -721,6 +725,7 @@ html[data-theme="dark"] {
 
   &__grant-label {
     @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--tertiary-grey-70, #65656c));
+    font-weight: 500;
   }
 
   &__levels { gap: 8px; }
@@ -789,6 +794,7 @@ html[data-theme="dark"] {
     border-radius: 8px;
     background: var(--primary-50, #433cc5);
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-weight: 600;
 
     &:hover { filter: brightness(1.08); }
   }
@@ -800,6 +806,7 @@ html[data-theme="dark"] {
     border-radius: 8px;
     background: var(--red-500, #ff5a5f);
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-weight: 600;
 
     &:hover { filter: brightness(1.08); }
   }
@@ -904,8 +911,15 @@ html[data-theme="dark"] {
     padding-right: 28px;
   }
 
+  // 🚨 font-weight is written out EXPLICITLY on every rule below. The
+  // drumee.typo mixin does NOT emit font-weight at all — it only maps a weight
+  // onto a font-family, and it has no branch for 600, so `$weight: 600` emits
+  // NOTHING and the text renders at the inherited weight. That is exactly why
+  // the sender name came out non-bold. meeting-toast.scss already works around
+  // it the same way (`@include drumee.typo(...)` then `font-weight: 600;`).
   &__sender {
-    @include drumee.typo($size: 16px, $line: 1.2em, $weight: 600, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 16px, $line: 1.2em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -913,18 +927,27 @@ html[data-theme="dark"] {
 
   &__chip {
     flex: 0 0 auto;
+    align-items: center;
     padding: 0 8px;
     border-radius: 4px;
     background: rgba(89, 80, 255, 0.1); // Figma Overlay/brand
-    @include drumee.typo($size: 16px, $line: 1.2em, $weight: 600, $color: var(--primary-purple-40, #5950ff));
+    @include drumee.typo($size: 16px, $line: 1.2em, $color: var(--primary-purple-40, #5950ff));
+    font-weight: 600;
     max-width: 180px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // The chip is always rendered so its name can be filled in once
+    // media.get_node_attr answers; until then it must take no space.
+    &:empty {
+      display: none;
+    }
   }
 
   &__message {
-    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 14px, $line: 1.2em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 400;
     // Two lines, then ellipsis — a long message must not grow the card.
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -934,7 +957,8 @@ html[data-theme="dark"] {
   }
 
   &__time {
-    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
+    @include drumee.typo($size: 12px, $line: 1.4em, $color: var(--tertiary-grey-80, #65656c));
+    font-weight: 400;
   }
 
   &__close {
@@ -964,12 +988,21 @@ html[data-theme="dark"] {
   &__mute,
   &__open {
     flex: 1 1 0;
+    min-width: 0;
     box-sizing: border-box;
+    // Figma centres the label on both axes. `text-align` alone does NOT do it:
+    // the framework renders these as FLEX containers, so the label is a flex
+    // item and only justify/align-items move it. meeting-toast.scss centres its
+    // two buttons the same way.
+    align-items: center;
+    justify-content: center;
     padding: 12px 24px;
     text-align: center;
+    white-space: nowrap;
     border-radius: 4px;
     cursor: pointer;
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 600;
 
     &:hover { filter: brightness(0.97); }
   }

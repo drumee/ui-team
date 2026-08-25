@@ -17,54 +17,60 @@
   transform: translate(-50%, -50%);
   z-index: 100000;
   box-sizing: border-box;
-  width: 440px;
+  // Figma `call-pop-up` (component set 2561:154659, variants type=schedule /
+  // type=directly): 520 wide, padding 24, radius 12, gap 32 between the
+  // content block and the actions row, effect "Blur + Shadow Big".
+  width: 520px;
   max-width: calc(100vw - 32px);
-  padding: 28px 32px 24px;
-  gap: 0;
-  align-items: center;
-  border-radius: 20px;
+  padding: 24px;
+  gap: 12px; // icon → body; the actions row adds the rest to reach Figma's 32
+  align-items: stretch;
+  border-radius: 12px;
   background: var(--normal-bg-elevated, #ffffff);
-  border: 1px solid var(--border-default, #e5e5ea);
-  box-shadow: 0 24px 64px rgba(11, 10, 33, 0.24);
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.3),
+    0 7px 10px rgba(0, 0, 0, 0.09);
+  backdrop-filter: blur(50px);
   cursor: default;
   animation: desk-meeting-toast-in 160ms ease-out both;
 
   &__close {
     position: absolute;
-    top: 18px;
-    right: 18px;
+    top: 24px;
+    right: 24px;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
     cursor: pointer;
-    opacity: 0.55;
+    opacity: 0.8;
 
     svg {
-      width: 15px;
-      height: 15px;
-      fill: var(--normal-fg, #0b0a21);
+      width: 14px;
+      height: 14px;
+      fill: var(--tertiary-grey-80, #65656c);
     }
 
     &:hover {
       opacity: 1;
-      background: var(--hover-bg-40, rgba(0, 0, 0, 0.06));
     }
   }
 
-  // Rounded lavender badge holding the camera glyph.
+  // 48x48 brand-overlay tile holding the camera glyph (Figma 2561:154662).
   &__icon {
+    align-self: center;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
     background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
 
     svg {
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       fill: none;
       stroke: var(--primary-40, #5950ff);
       stroke-width: 2;
@@ -74,20 +80,20 @@
   &__body {
     align-items: center;
     width: 100%;
-    margin-top: 16px;
-    gap: 6px;
+    gap: 12px;
   }
 
   &__title-row {
     align-items: center;
     justify-content: center;
     max-width: 100%;
-    gap: 10px;
+    gap: 8px;
   }
 
+  // Figma Body/Sub Title on Grey/90. No token holds #34343a, so it is literal.
   &__title {
-    @include drumee.typo($size: 22px, $line: 28px, $color: var(--normal-fg, #0b0a21));
-    font-weight: 700;
+    @include drumee.typo($size: 20px, $line: 1.2em, $color: #34343a);
+    font-weight: 600;
     text-align: center;
     // A long meeting name must not push the live dot out of the card.
     overflow: hidden;
@@ -95,19 +101,21 @@
     white-space: nowrap;
   }
 
-  // "In progress" dot — a ring with a filled centre, as in the design.
+  // "In progress" dot — Figma draws a 10x10 hairline ring around a 6px core.
   &__live {
     flex-shrink: 0;
-    width: 14px;
-    height: 14px;
+    box-sizing: border-box;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    border: 2px solid var(--primary-40, #5950ff);
+    border: 0.5px solid var(--primary-40, #5950ff);
     box-shadow: inset 0 0 0 2px var(--normal-bg-elevated, #ffffff);
     background: var(--primary-40, #5950ff);
   }
 
   &__desc {
-    @include drumee.typo($size: 15px, $line: 22px, $color: var(--normal-fg, #0b0a21));
+    @include drumee.typo($size: 14px, $line: 1.2em, $color: var(--tertiary-grey-80, #65656c));
+    font-weight: 400;
     text-align: center;
     // Agendas can be long — show a couple of lines, then ellipsize.
     display: -webkit-box;
@@ -120,59 +128,63 @@
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
-    margin-top: 6px;
-    gap: 8px;
+    gap: 4px;
   }
 
-  // Overlapping avatar stack.
+  // Overlapping avatar stack — Figma 24px circles at a -8 gap.
   &__avatars {
     align-items: center;
   }
 
   &__avatar {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background-size: cover;
     background-position: center;
     border: 2px solid var(--normal-bg-elevated, #ffffff);
 
     & + & {
-      margin-left: -10px;
+      margin-left: -8px;
     }
   }
 
   &__avatar-more {
     align-items: center;
     justify-content: center;
-    min-width: 28px;
-    height: 28px;
-    padding: 0 6px;
-    margin-left: -10px;
-    border-radius: 50%;
+    box-sizing: border-box;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 4px;
+    margin-left: -8px;
+    border-radius: 200px;
     border: 2px solid var(--normal-bg-elevated, #ffffff);
-    background: var(--overlay-brand, rgba(89, 80, 255, 0.16));
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--primary-40, #5950ff));
+    background: var(--primary-purple-10, #e4e3ff);
+    @include drumee.typo($size: 12px, $line: 1.2em, $color: var(--primary-purple-50, #433cc5));
     font-weight: 600;
   }
 
   &__count {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--primary-40, #5950ff));
-    font-weight: 500;
+    @include drumee.typo($size: 12px, $line: 1.4em, $color: var(--primary-40, #5950ff));
+    font-weight: 400;
   }
 
   &__dot {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-50, #84848c));
+    @include drumee.typo($size: 12px, $line: 1.4em, $color: var(--tertiary-grey-80, #65656c));
+    font-weight: 400;
   }
 
   &__when {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg, #0b0a21));
+    @include drumee.typo($size: 12px, $line: 1.4em, $color: var(--tertiary-grey-80, #65656c));
+    font-weight: 400;
   }
 
-  // Two equal actions filling the card width.
+  // Two equal actions filling the card width. Figma's card gap is 32 between
+  // the content block and this row; the card itself contributes 12, so the
+  // remaining 20 is added here.
   &__actions {
     width: 100%;
-    margin-top: 24px;
+    margin-top: 20px;
     gap: 12px;
   }
 
@@ -180,19 +192,21 @@
   &__join {
     flex: 1 1 0;
     min-width: 0;
+    box-sizing: border-box;
     align-items: center;
     justify-content: center;
-    height: 52px;
-    border-radius: 10px;
+    padding: 12px 24px;
+    border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
-    @include drumee.typo($size: 16px, $line: 22px);
+    text-align: center;
+    @include drumee.typo($size: 16px, $line: 24px);
     font-weight: 600;
   }
 
   &__dismiss {
-    background: var(--hover-bg-40, #f1f1f4);
-    color: var(--normal-fg, #0b0a21);
+    background: var(--tertiary-grey-20, #f2f2f7);
+    color: var(--primary-purple-100, #0b0a21);
 
     &:hover {
       opacity: 0.85;
@@ -200,7 +214,7 @@
   }
 
   &__join {
-    background: var(--primary-40, #5950ff);
+    background: var(--primary-purple-50, #433cc5);
     color: #ffffff;
 
     &:hover {

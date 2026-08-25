@@ -28,6 +28,8 @@ global.LOCALE = new Proxy(
   { get: (t, k) => (k in t ? t[k] : String(k)) },
 );
 global._a = new Proxy({}, { get: (_t, k) => String(k) });
+// Mirrors the real service map, where every entry is its own dotted name.
+global.SERVICE = { media: { get_node_attr: "media.get_node_attr" } };
 
 const node = (type) => (o = {}) => ({ type, ...o, kids: (o.kids || []).filter(Boolean) });
 global.Skeletons = {
@@ -49,9 +51,21 @@ global.Wm = {
     append: (tree) => {
       const listeners = [];
       const attrs = { ...(tree.attrOpt || {}) };
+      // A minimal element tree so the module's querySelector + textContent
+      // path is exercised for real rather than stubbed away.
+      const byClass = new Map();
+      (function walk(n) {
+        if (!n || typeof n !== "object") return;
+        if (n.className && !byClass.has(n.className)) {
+          byClass.set(n.className, { textContent: n.content == null ? "" : String(n.content) });
+        }
+        (n.kids || []).forEach(walk);
+      })(tree);
       const el = {
         addEventListener: (n, fn, capture) => listeners.push({ n, fn, capture }),
         getAttribute: (k) => (k in attrs ? attrs[k] : null),
+        querySelector: (sel) => byClass.get(sel.replace(/^\./, "")) || null,
+        query: (sel) => byClass.get(sel.replace(/^\./, "")) || null,
       };
       const inst = {
         tree,
@@ -220,32 +234,127 @@ test("the click delegate is bound in the CAPTURE phase", () => {
   assert.equal(l[0].capture, true, "ui-core's own onclick ends in stopImmediatePropagation");
 });
 
-test("the folder chip is shown when the folder window is open and dropped when it is not", () => {
+// The chip names WHERE the message came from, and Figma always shows it. It is
+// therefore ALWAYS rendered — empty at first if nothing has resolved yet, and
+// filled in by resolveChipLater. `&__chip:empty` keeps an unresolved one out of
+// the layout. (Rendering it conditionally was the first version, and it meant
+// the chip never appeared at all unless that exact folder happened to be open.)
+test("the chip element is always rendered, so it can be filled in later", () => {
   reset();
-  // No nid at all — a workspace-level post.
-  showChatToast(panel(), msg(), "#/x");
-  assert.equal(find(card().tree, "panel-activity-toast__chip"), null);
+  showChatToast(panel(), msg({ nid: "chip-a" }), "#/x");
+  const chip = find(card().tree, "panel-activity-toast__chip");
+  assert.ok(chip, "the chip node must exist even before the name is known");
+  assert.equal(chip.content, "", "and be empty, which CSS hides");
+});
 
-  // nid present but no window open: the live push carries no folder name, and
-  // inventing one is worse than omitting the chip.
+test("an open folder window names the chip synchronously", () => {
   reset();
-  showChatToast(panel(), msg({ nid: "N1" }), "#/x");
-  assert.equal(find(card().tree, "panel-activity-toast__chip"), null);
-
-  // Window open on that node.
-  reset();
-  OPEN_WINDOWS = [{ isDestroyed: () => false, mget: (k) => ({ nid: "N1", filename: "Design" }[k]) }];
-  showChatToast(panel(), msg({ nid: "N1" }), "#/x");
+  OPEN_WINDOWS = [{ isDestroyed: () => false, mget: (k) => ({ nid: "chip-b", filename: "Design" }[k]) }];
+  showChatToast(panel(), msg({ nid: "chip-b" }), "#/x");
   assert.equal(text("chip"), "Design");
 });
 
 test("folderLabel ignores a destroyed window and a non-matching nid", () => {
   reset();
-  OPEN_WINDOWS = [{ isDestroyed: () => true, mget: (k) => ({ nid: "N1", filename: "Design" }[k]) }];
-  assert.equal(folderLabel({ nid: "N1" }), "");
-  OPEN_WINDOWS = [{ isDestroyed: () => false, mget: (k) => ({ nid: "OTHER", filename: "Design" }[k]) }];
-  assert.equal(folderLabel({ nid: "N1" }), "");
+  OPEN_WINDOWS = [{ isDestroyed: () => true, mget: (k) => ({ nid: "chip-c", filename: "Design" }[k]) }];
+  assert.equal(folderLabel({ nid: "chip-c" }), "");
+  OPEN_WINDOWS = [{ isDestroyed: () => false, mget: (k) => ({ nid: "other", filename: "Design" }[k]) }];
+  assert.equal(folderLabel({ nid: "chip-d" }), "");
   assert.equal(folderLabel({}), "");
+});
+
+test("a workspace-level post falls back to the hub id, so it still gets a name", () => {
+  reset();
+  OPEN_WINDOWS = [{ isDestroyed: () => false, mget: (k) => ({ nid: "H9", filename: "Marketing" }[k]) }];
+  // No nid — mfs_node_attr answers with the WORKSPACE name for the hub root.
+  assert.equal(folderLabel({ hub_id: "H9" }), "Marketing");
+});
+
+test("resolveChipLater fills the chip from media.get_node_attr", async () => {
+  reset();
+  const host = panel();
+  let asked = null;
+  host.fetchService = (svc, args) => {
+    asked = { svc, args };
+    return Promise.resolve({ filename: "Q3 Launch" });
+  };
+  showChatToast(host, msg({ nid: "chip-e", hub_id: "H1" }), "#/x");
+  await new Promise((r) => setImmediate(r));
+  assert.ok(asked, "the name must actually be requested");
+  assert.deepEqual(asked.args, { nid: "chip-e", hub_id: "H1" });
+  const el = card().el.query(".panel-activity-toast__chip");
+  assert.equal(el.textContent, "Q3 Launch");
+});
+
+test("a name arriving after the card was replaced never touches the new card", async () => {
+  reset();
+  const host = panel();
+  // One resolver PER call — the second card issues its own lookup, and reusing
+  // a single `release` would resolve that one instead, which is what made the
+  // first version of this test fail against correct code.
+  const releases = [];
+  host.fetchService = () => new Promise((r) => releases.push(r));
+  showChatToast(host, msg({ nid: "chip-f", hub_id: "H1" }), "#/a");
+  const stale = card();
+  // A second message replaces the card while the first lookup is still in flight.
+  showChatToast(host, msg({ nid: "chip-g", hub_id: "H1" }), "#/b");
+  const live = card();
+  assert.equal(releases.length, 2, "each card asks for its own name");
+  releases[0]({ filename: "Late" }); // answer only the SUPERSEDED card's request
+  await new Promise((r) => setImmediate(r));
+  assert.equal(
+    live.el.query(".panel-activity-toast__chip").textContent,
+    "",
+    "the in-flight name belonged to a card that is gone",
+  );
+  assert.notEqual(stale, live);
+});
+
+// The two staleness guards in resolveChipLater are NOT redundant — each is the
+// only one that fires in one of these two cases. Both were untested until a
+// mutation run showed either could be deleted with the suite still green.
+test("a widget with no isDestroyed is still protected, by the identity guard", async () => {
+  reset();
+  const host = panel();
+  const releases = [];
+  host.fetchService = () => new Promise((r) => releases.push(r));
+  showChatToast(host, msg({ nid: "chip-i", hub_id: "H1" }), "#/a");
+  // killChatToast falls back to remove() when goodbye() is absent, and such a
+  // widget never reports itself destroyed — only `host._chatToast !== toast`
+  // can tell that this card has been superseded.
+  const stale = card();
+  delete stale.isDestroyed;
+  delete stale.goodbye;
+  stale.remove = () => {};
+  showChatToast(host, msg({ nid: "chip-j", hub_id: "H1" }), "#/b");
+  releases[0]({ filename: "Ghost" });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(stale.el.query(".panel-activity-toast__chip").textContent, "");
+});
+
+test("a card destroyed by the layer is still protected, by the destroyed guard", async () => {
+  reset();
+  const host = panel();
+  let release;
+  host.fetchService = () => new Promise((r) => { release = r; });
+  showChatToast(host, msg({ nid: "chip-k", hub_id: "H1" }), "#/a");
+  const t = card();
+  // Torn down by the window layer rather than through killChatToast — so it is
+  // destroyed while STILL being host._chatToast, and only isDestroyed knows.
+  t.destroyed = true;
+  assert.equal(host._chatToast, t, "the panel still points at it");
+  release({ filename: "Ghost" });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(t.el.query(".panel-activity-toast__chip").textContent, "");
+});
+
+test("a failed lookup leaves the card intact rather than throwing", async () => {
+  reset();
+  const host = panel();
+  host.fetchService = () => Promise.reject(new Error("offline"));
+  assert.doesNotThrow(() => showChatToast(host, msg({ nid: "chip-h" }), "#/x"));
+  await new Promise((r) => setImmediate(r));
+  assert.equal(card().el.query(".panel-activity-toast__chip").textContent, "");
 });
 
 test("senderLabel falls back rather than rendering blank", () => {

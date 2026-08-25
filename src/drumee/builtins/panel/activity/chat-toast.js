@@ -50,30 +50,85 @@ const CHAT_TOAST_MS = 10000;
 
 const esc = (v = "") => _.escape(String(v));
 
+// Resolved node names, keyed by nid. A folder's name is stable enough for a
+// ten-second card, and this keeps the lookup below to ONE request per folder
+// per session instead of one per message. Capped so a long session in a busy
+// workspace cannot grow it without bound.
+const NAME_CACHE = new Map();
+const NAME_CACHE_MAX = 200;
+
+function cacheName(key, name) {
+  if (!key || !name) return name;
+  if (NAME_CACHE.size >= NAME_CACHE_MAX) {
+    NAME_CACHE.delete(NAME_CACHE.keys().next().value);
+  }
+  NAME_CACHE.set(key, name);
+  return name;
+}
+
 /**
- * The workspace/folder chip.
+ * The location chip — Figma puts the folder (or workspace) name beside the
+ * sender, and it is the only thing on the card that says WHERE the message
+ * came from.
  *
- * The live push carries no name: channel.post sends message, message_id,
- * hub_id, nid and the author's identity, and nothing resolves the folder — the
- * server's normalized `folder_name` exists only on FEED rows (and `hub_name` /
- * `workspace_name` exist on none of them, which is what made the row chip
- * render blank the first time). Rather than pay a per-message lookup on the
- * hottest push in the app, read the name off an open folder window when there
- * is one and drop the chip when there is not — the chip is hug-width, so its
- * absence leaves a valid layout.
+ * Synchronous best effort, in order: the cache, then an open folder window.
+ * The live push carries no name of its own — channel.post sends message,
+ * message_id, hub_id, nid and the author's identity, and nothing resolves the
+ * folder (the server's normalized `folder_name` exists only on FEED rows, and
+ * `hub_name` / `workspace_name` exist on none of them, which is what made the
+ * feed row's chip render blank the first time it was built).
+ *
+ * When this comes back empty the card still renders and `resolveChipLater`
+ * fills the chip in from media.get_node_attr. Doing it that way rather than
+ * awaiting keeps the toast instant, and keeps the cost off the server's
+ * hottest push path — only the recipient who needs the name asks for it, once.
  */
 function folderLabel(model = {}) {
   try {
-    const nid = model.nid;
-    if (!nid || typeof Wm === "undefined" || !Wm.getItemsByKind) return "";
+    // A workspace-level post has no nid; mfs_node_attr answers with the
+    // WORKSPACE name for the hub root, which is the right label for it.
+    const nid = model.nid || model.hub_id;
+    if (!nid) return "";
+    if (NAME_CACHE.has(nid)) return NAME_CACHE.get(nid);
+    if (typeof Wm === "undefined" || !Wm.getItemsByKind) return "";
     const win = (Wm.getItemsByKind("window_folder") || []).find(
       (w) => w && !w.isDestroyed() && w.mget(_a.nid) == nid,
     );
     if (!win) return "";
-    return win.mget(_a.filename) || win.mget(_a.name) || "";
+    return cacheName(nid, win.mget(_a.filename) || win.mget(_a.name) || "");
   } catch (e) {
     return "";
   }
+}
+
+/**
+ * Fill the chip in once the server names the node.
+ *
+ * The chip element is ALWAYS rendered (CSS hides it while empty), so this only
+ * sets text — no DOM is built here, and nothing moves if the request fails.
+ */
+function resolveChipLater(host, model, toast) {
+  try {
+    const nid = model.nid || model.hub_id;
+    if (!nid || !host || !host.fetchService || !toast || !toast.el) return;
+    Promise.resolve(
+      host.fetchService(SERVICE.media.get_node_attr, { nid, hub_id: model.hub_id }),
+    )
+      .then((a) => {
+        const row = a && (a[0] || a);
+        const name = row && (row.filename || row.user_filename || row.name);
+        if (!name) return;
+        cacheName(nid, name);
+        // The card may have been dismissed or REPLACED by a later message
+        // while this was in flight — only touch the one we were given, and
+        // only while it is still the live card.
+        if (toast.isDestroyed && toast.isDestroyed()) return;
+        if (host._chatToast !== toast) return;
+        const el = toast.el.querySelector(".panel-activity-toast__chip");
+        if (el) el.textContent = name;
+      })
+      .catch(() => {});
+  } catch (e) {}
 }
 
 function senderLabel(model = {}) {
@@ -113,10 +168,12 @@ function buildCard(model, url, replacing) {
     className: `${pfx}__title-row`,
     kids: [
       Skeletons.Note({ className: `${pfx}__sender`, content: esc(senderLabel(model)) }),
-      chip
-        ? Skeletons.Note({ className: `${pfx}__chip`, content: esc(chip) })
-        : null,
-    ].filter(Boolean),
+      // ALWAYS rendered, even with no name yet: resolveChipLater fills it in
+      // from media.get_node_attr, and `&__chip:empty` keeps it out of the
+      // layout until then. Rendering it conditionally would mean building DOM
+      // after the fact, which this framework does not do from raw markup.
+      Skeletons.Note({ className: `${pfx}__chip`, content: chip ? esc(chip) : "" }),
+    ],
   });
 
   const body = Skeletons.Box.Y({
@@ -221,6 +278,9 @@ function showChatToast(host, model = {}, url = "") {
     const toast = layer.append(buildCard(model, url, replacing));
     host._chatToast = toast;
     host._chatToastTimer = setTimeout(() => killChatToast(host), CHAT_TOAST_MS);
+    // Name the location if the synchronous lookup could not. Never awaited —
+    // the card is already on screen.
+    if (!folderLabel(model)) resolveChipLater(host, model, toast);
 
     if (toast && toast.el) {
       toast.el.addEventListener(
@@ -254,4 +314,4 @@ function showChatToast(host, model = {}, url = "") {
   }
 }
 
-module.exports = { showChatToast, killChatToast, folderLabel, senderLabel, CHAT_TOAST_MS };
+module.exports = { showChatToast, killChatToast, folderLabel, senderLabel, resolveChipLater, CHAT_TOAST_MS };
