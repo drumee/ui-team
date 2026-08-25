@@ -589,9 +589,20 @@ class __push_manager extends winman {
             Skeletons.Box.X({
               className: "desk-meeting-toast__actions",
               kids: [
+                // Figma's meeting card labels this secondary button "Mute",
+                // but the designer has not updated that node yet — Duy's
+                // ruling 2026-08-25 stands: on the MEETING popup it is
+                // Cancel, and Cancel == close == ✕. It writes NOTHING and it
+                // does not cancel the meeting, so the popup needs no mute
+                // entry point and no outgoing flow. Mute stays on the CHAT
+                // card only, where Phase 3 wires it.
+                //
+                // The CLASS deliberately keeps its `__dismiss` name: the
+                // capture-phase click delegate below matches on it, and that
+                // delegate is not to be re-plumbed. Only the label changes.
                 Skeletons.Note({
                   className: "desk-meeting-toast__dismiss",
-                  content: LOCALE.DISMISS,
+                  content: LOCALE.CANCEL,
                 }),
                 // Join ONLY once the meeting has actually started. An invite
                 // announces a meeting that may be days away and the heads-up

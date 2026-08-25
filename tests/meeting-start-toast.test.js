@@ -278,3 +278,53 @@ test("the toast carries data-hub, which is what the duplicate guard reads", () =
   // The existing variant attribute must survive alongside it.
   assert.ok(/"data-variant":\s*variant/.test(src), "data-variant must not be dropped");
 });
+
+// ------------------------------------------------- Cancel == close == ✕
+
+// Figma's meeting card labels the secondary button "Mute"; the designer has
+// not updated that node yet. Duy's ruling 2026-08-25: on the MEETING popup it
+// is Cancel, it only closes the card, and it writes nothing — mute belongs to
+// the chat card alone, where Phase 3 wires it.
+test("the meeting card's secondary action is Cancel, never Mute or Dismiss", () => {
+  assert.ok(
+    /content: LOCALE\.CANCEL/.test(code),
+    "the secondary button must be labelled Cancel",
+  );
+  assert.ok(
+    !/content: LOCALE\.DISMISS/.test(code),
+    "the old Dismiss label must be gone",
+  );
+  assert.ok(
+    !/LOCALE\.MUTE/.test(code),
+    "the meeting popup must have NO mute entry point — that is chat-only",
+  );
+});
+
+test("Cancel still shares the close path, so it cannot drift from ✕", () => {
+  // The class keeps its `__dismiss` name on purpose: the capture-phase
+  // delegate matches on it and must not be re-plumbed. Only the label moved.
+  assert.ok(
+    /className: "desk-meeting-toast__dismiss"/.test(code),
+    "the class must not be renamed — the delegate selector depends on it",
+  );
+  const sel = code.indexOf(
+    't.closest(".desk-meeting-toast__close, .desk-meeting-toast__dismiss")',
+  );
+  assert.ok(sel > -1, "✕ and Cancel must be handled by ONE branch");
+});
+
+test("Cancel writes nothing — it never calls the server or joins the room", () => {
+  // Isolate the ✕/Cancel branch and prove it only closes.
+  const at = code.indexOf(
+    't.closest(".desk-meeting-toast__close, .desk-meeting-toast__dismiss")',
+  );
+  assert.ok(at > -1);
+  const branch = code.slice(at, code.indexOf("}", code.indexOf("kill()", at)));
+  assert.ok(/kill\(\)/.test(branch), "it closes the card");
+  for (const forbidden of ["postService", "fetchService", "SERVICE.", "_joinMeetingFromData"]) {
+    assert.ok(
+      !branch.includes(forbidden),
+      `Cancel must not ${forbidden} — it does not cancel the meeting`,
+    );
+  }
+});
