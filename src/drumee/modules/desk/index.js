@@ -1,6 +1,6 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
-const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
+const { canUpgradePlan, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
 const {
   captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
@@ -102,7 +102,9 @@ class desk_module extends LetcBox {
     });
     // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
     // open the full-page billing screen without a direct module reference.
-    this._openBillingPage = () => this.openBillingPage();
+    // `arg` (plan/cycle/tab preselect) rides through untouched — the
+    // upgrade-nudge popup uses it to land on the tier it was selling.
+    this._openBillingPage = (arg) => this.openBillingPage(arg);
     RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
     // Downgrade over-limit (libs/over-limit): the popup and banner raise
     // these instead of reaching into the desk. open-admin-console reuses the
@@ -2447,6 +2449,56 @@ class desk_module extends LetcBox {
     });
   }
 
+  // ── Upgrade nudges (payment.upgrade_nudge_state) ──────────────────────────
+
+  /**
+   * One boot-time question — "does THIS member get an upgrade nudge?".
+   *
+   * Everything that makes it fair lives server-side (lib/upgrade-nudge + the
+   * yp gate proc): which threshold fired, once per threshold per workspace,
+   * the shared daily cap, reset on upgrade. A granted answer is already
+   * MARKED shown, which is why this runs last in the _afterHomeSettled chain
+   * and re-checks that the screen is clear: fetching earlier could burn the
+   * grant under a promo or a lock popup and the member would never see it.
+   */
+  async _maybeShowUpgradeNudge() {
+    try {
+      if (!SERVICE.payment || !SERVICE.payment.upgrade_nudge_state) return;
+      // A locked workspace already has a louder popup with a real to-do list;
+      // upselling on top of it helps nobody.
+      const OverLimit = require("libs/over-limit");
+      if (OverLimit.enforcementOn() && OverLimit.isLocked()) return;
+      if (this._homePopupsBusy()) return;
+      const res = await this.fetchService(SERVICE.payment.upgrade_nudge_state, {
+        hub_id: Visitor.id,
+      });
+      const data = (res && res.data) || res || {};
+      if (!~~data.show || !data.trigger) return;
+      this._openUpgradeNudgePopup(data);
+    } catch (e) {
+      // Decoration only — a failed nudge must never mark the boot chain red.
+      this.warn && this.warn("[upgrade-nudge] state check failed", e);
+    }
+  }
+
+  async _openUpgradeNudgePopup(nudge) {
+    try {
+      await Kind.waitFor("upgrade_nudge_popup");
+    } catch (e) {
+      return;
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    Wm.launch(
+      {
+        kind: "upgrade_nudge_popup",
+        hub_id: Visitor.id,
+        wm_unique_id: "upgrade_nudge_popup",
+        nudge,
+      },
+      { explicit: 1, singleton: 1 },
+    );
+  }
+
   async _openOverLimitPopup() {
     try {
       await Kind.waitFor("over_limit_popup");
@@ -2725,6 +2777,11 @@ class desk_module extends LetcBox {
           // hand the loader over to.
           : this._hideInvitedWorkspaceLoader(),
       )
+      // Last in the chain on purpose: an upgrade nudge is the least urgent
+      // thing this boot can show, and asking the server only when the screen
+      // is actually clear means a granted (= marked shown) nudge is never
+      // burned underneath a promo, the reward flow or a lock popup.
+      .then(() => this._maybeShowUpgradeNudge())
       .catch((e) => {
         this._hideInvitedWorkspaceLoader();
         this.warn && this.warn("[home] post-ready chain failed", e);
@@ -3352,75 +3409,29 @@ class desk_module extends LetcBox {
 
   /**
    * "Unlock Admin Console" upsell when a personal-plan user (free / pro /
-   * legacy advanced) clicks the sidebar Admin Console entry. Centered body
-   * (icon / title / desc) + a single Upgrade CTA underneath — no "Later".
+   * legacy advanced) clicks the sidebar Admin Console entry.
    *
-   * The modal itself always shows: the plan simply doesn't include the console,
-   * whatever the billing setup. Only the CTA is conditional — it is dropped
-   * where the deployment doesn't sell plans (`billing_upgrade: 0` in
-   * myDrumee.json, or no payment backend at all), because an Upgrade button
-   * that cannot reach checkout is worse than no button.
+   * The card itself now lives in `builtins/widget/feature-lock` and is shared
+   * with the other tier gates (task views, meeting duration) — it used to be
+   * built inline here, which is why it could not be reused by anything outside
+   * this module. Copy, layout and the close X moved with it unchanged; see
+   * that file for why the X is drawn in the body rather than the confirm
+   * header, and for the CTA rule.
    *
-   * The close X is rendered here, in the card, rather than coming from the
-   * shared confirm header: `mode: "b"` drops that header to keep the drumee
-   * logo out of this design, and the header is where the X normally lives
-   * (window/confirm/skeleton/header.js). Without it the only way out is the
-   * Escape key — which touch devices don't have, so a phone user tapping Admin
-   * Console would be trapped in the modal (backdrop clicks don't dismiss it).
+   * The modal itself always shows: the plan simply doesn't include the
+   * console, whatever the billing setup. Only the CTA is conditional.
+   *
+   * What stays here is what is specific to THIS caller — where the CTA leads,
+   * and putting the sidebar highlight back afterwards either way.
    */
   _showAdminUnlockModal() {
-    // See above: no checkout reachable → no CTA, but the card still explains why.
-    const canBuy = billingAvailable();
-    const body = (confirmUi) =>
-      Skeletons.Box.Y({
-        className: "desk-module__admin-unlock",
-        // Do not use kidsOpt.active:0 — it would zero out the CTA click handler.
-        kids: [
-          Skeletons.Box.X({
-            className: "desk-module__admin-unlock-close",
-            signal: _e.cancel,
-            uiHandler: [confirmUi],
-            bubble: 0,
-            kidsOpt: { active: 0 },
-            kids: [
-              Skeletons.Image.Svg({
-                ico: "cross",
-                className: "desk-module__admin-unlock-close-ico",
-              }),
-            ],
-          }),
-          Skeletons.Image.Svg({
-            ico: "cloud-pause",
-            className: "desk-module__admin-unlock-icon",
-            active: 0,
-          }),
-          Skeletons.Note({
-            className: "desk-module__admin-unlock-title",
-            content: LOCALE.UNLOCK_ADMIN_CONSOLE,
-            active: 0,
-          }),
-          Skeletons.Note({
-            className: "desk-module__admin-unlock-desc",
-            content: LOCALE.UNLOCK_ADMIN_DESC,
-            active: 0,
-          }),
-          canBuy
-            ? Skeletons.Note({
-                className: "desk-module__admin-unlock-cta",
-                content: LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
-                signal: _e.confirm,
-                uiHandler: [confirmUi],
-              })
-            : null,
-        ],
-      });
-    return Wm.confirm({
-      // Body only — no logo/drumee header (matches unlock card design).
-      mode: "b",
-      body,
-    })
+    return Wm.openFeatureLock({ feature: "admin_console" })
       .then(() => {
-        if (!billingAvailable()) return this._restoreCurrentSidebarHighlight();
+        // Defence in depth behind the card's own CTA gate: it only renders the
+        // button when canUpgradePlan() passes, so reaching here without it
+        // means the plan changed while the card sat open. Same guard, same
+        // rule, one source — libs/billing.
+        if (!canUpgradePlan()) return this._restoreCurrentSidebarHighlight();
         return this.openBillingPage().then(() =>
           this._restoreCurrentSidebarHighlight()
         );
@@ -3786,7 +3797,8 @@ class desk_module extends LetcBox {
         // cannot use Admin Console; short-circuit with the Unlock upsell instead
         // of loading the plugin. Org tiers (team, …) fall through. quota.organization
         // is NOT used: Pro also seeds organization:1. Modal always shows; its
-        // Upgrade button is gated solely by billingAvailable() (billing_upgrade).
+        // Upgrade button is gated by canUpgradePlan() (deployment can sell AND
+        // this reader may buy) — see builtins/widget/feature-lock.
         if (needsAdminConsoleUpgrade()) {
           return this._showAdminUnlockModal();
         }

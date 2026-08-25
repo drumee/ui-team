@@ -2556,34 +2556,64 @@ function commentAttachments(ui, c, isOwn) {
     const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
     const status = opt.pending ? f.status || "queued" : null;
     const busy = status === "uploading" || status === "downloading";
-    let trailing = null;
-    if (status === "error") {
+    const pendingKey = String(f.localKey || f.nid || "");
+    // Slot contents, in order. Retry is the extra one — only an error state has
+    // two controls, and that state is terminal, so the in-flight → committed
+    // swap the equal-width rule exists for still moves between one and one.
+    const controls = [];
+    if (status === "error" && (f.file || f.nid)) {
       // Suppressed when there is nothing a retry could do: a cross-hub
       // placeholder whose download failed carries neither file nor nid, so the
-      // link has no input and the fetch is never re-run. A stuck card with only
-      // a remove action is honest; a button that does nothing is not.
-      trailing = (f.file || f.nid)
-        ? Skeletons.Button.Svg({
-            className: `${pfx}__comment-attachment-retry`,
-            ico: "refresh-view",
-            bubble: 0,
-            service: "retry-pending-file",
-            uiHandler: [ui],
-            pendingKey: String(f.localKey || f.nid || ""),
-            commentId: c && c.id,
-            tooltips: LOCALE.RETRY || "Retry",
-          })
-        : null;
-    } else if (!status && isOwn) {
-      trailing = Skeletons.Button.Svg({
-        className: `${pfx}__comment-attachment-unlink`,
-        ico: "cross",
-        bubble: 0,
-        service: "comment-unlink-attachment",
-        uiHandler: [ui],
-        commentId: c && c.id,
-        fileNid: nid,
-      });
+      // link has no input and the fetch is never re-run. The ✕ below is what
+      // makes that chip disposable instead of merely stuck.
+      controls.push(
+        Skeletons.Button.Svg({
+          className: `${pfx}__comment-attachment-retry`,
+          ico: "refresh-view",
+          bubble: 0,
+          service: "retry-pending-file",
+          uiHandler: [ui],
+          pendingKey,
+          commentId: c && c.id,
+          tooltips: LOCALE.RETRY || "Retry",
+        }),
+      );
+    }
+    // ✕ on every chip of a comment you wrote, whatever state it is in — what it
+    // removes is what differs. task.comment_unlink_file is author-checked
+    // server-side, so someone else's attachment gets no ✕ rather than one that
+    // always fails.
+    if (isOwn) {
+      controls.push(
+        status
+          ? Skeletons.Button.Svg({
+              // Same class as the unlink ✕: one control, one look, and it picks
+              // up the data-loading spinner contract below for free.
+              className: `${pfx}__comment-attachment-unlink`,
+              ico: "cross",
+              bubble: 0,
+              service: "discard-row-file",
+              uiHandler: [ui],
+              commentId: c && c.id,
+              pendingKey,
+              // Mid-transfer there is nothing to cancel — no abort path exists
+              // for an upload already on the wire. The glyph gives way to the
+              // spinner and the button goes inert (skin: [data-loading="1"]),
+              // which is also why the slot no longer draws a spinner of its
+              // own: it would double up with this one.
+              attrOpt: { "data-loading": busy ? "1" : "0" },
+              tooltips: LOCALE.REMOVE || LOCALE.DELETE,
+            })
+          : Skeletons.Button.Svg({
+              className: `${pfx}__comment-attachment-unlink`,
+              ico: "cross",
+              bubble: 0,
+              service: "comment-unlink-attachment",
+              uiHandler: [ui],
+              commentId: c && c.id,
+              fileNid: nid,
+            }),
+      );
     }
     return Skeletons.Box.X({
       className: `${pfx}__comment-attachment`,
@@ -2592,7 +2622,7 @@ function commentAttachments(ui, c, isOwn) {
       uiHandler: nid && !busy && !status ? [ui] : null,
       fileNid: nid,
       attrOpt: {
-        ...(status ? { "data-status": status, "data-key": String(f.localKey || f.nid || "") } : {}),
+        ...(status ? { "data-status": status, "data-key": pendingKey } : {}),
       },
       kids: [
         Skeletons.Image.Svg({
@@ -2607,10 +2637,11 @@ function commentAttachments(ui, c, isOwn) {
           content: name,
         }),
         // Always rendered, even when empty: reserving the slot keeps every
-        // chip the same width regardless of state or authorship.
+        // chip the same width regardless of state or authorship. It holds one
+        // control in every state but error, which adds retry beside the ✕.
         Skeletons.Box.X({
           className: `${pfx}__comment-attachment-slot`,
-          kids: [trailing].filter(Boolean),
+          kids: controls,
         }),
       ],
     });
@@ -2792,6 +2823,14 @@ function buildCommentListContent(ui) {
         attrOpt: {
           "data-reply": isReply ? "1" : "0",
           "data-comment-id": c.id,
+          // Uploads in flight on this comment: the skin dims the row and takes
+          // its controls out of reach (see _refuseWhileRowBusy for the
+          // matching handler guard).
+          "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
+          // ...except the editor itself. A drop lands on the row even while it
+          // is being edited, and freezing a half-typed comment behind a video
+          // upload would trap the author: Cancel already refuses mid-save.
+          "data-editing": "1",
         },
         kids: [
           avatar,
@@ -2848,6 +2887,10 @@ function buildCommentListContent(ui) {
       attrOpt: {
         "data-reply": isReply ? "1" : "0",
         "data-comment-id": c.id,
+        // See the edit-mode row above. Rendered on every row so the state is
+        // read from one place — the panel's isCommentRowBusy — rather than
+        // written onto the DOM by whoever happens to notice a status change.
+        "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
       },
       kids: [
         avatar,

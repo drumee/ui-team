@@ -44,7 +44,13 @@ const PROMO_CAMPAIGN = "launch30";
 
 // A Set: this is read as a membership test far more often than it is iterated,
 // and insertion order is preserved, so the `for ... of` below is unaffected.
-const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign"]);
+// utm_content is in here because the UTM builder puts it on EVERY link it
+// makes, and the click log records it — so without it a campaign's content is
+// measurable on the click side and invisible on the signup side, and "which
+// post brought the signups" has no answer.
+// KEEP IN SYNC with signup/src/widgets/router/index.js captureUtm, which
+// iterates its own copy of this list.
+const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign", "utm_content"]);
 // Long enough for any real campaign name, short enough that a crafted link
 // cannot bloat localStorage.
 const MAX_LEN = 64;
@@ -183,12 +189,97 @@ function stripCampaignParams() {
  * page load look like a fresh click, and a browser still holding someone else's
  * stored campaign would manufacture a click for whoever signed in next.
  */
+/**
+ * The service that records a campaign click, named as a literal.
+ *
+ * NOT SERVICE.analytics.utm_click. This fires from the router's initialize(),
+ * and `SERVICE` is assembled in init_globals during that same boot — reading
+ * it here is a race that resolves differently depending on load order. The
+ * wire name is the contract either way; see acl/analytics.json.
+ */
+const CLICK_SERVICE = "analytics.utm_click";
+
+/**
+ * Tell the server a campaign link was opened.
+ *
+ * WHY THE BROWSER HAS TO DO THIS. Campaign links tag the URL FRAGMENT
+ * (#/welcome/signin?utm_*), and a fragment is never transmitted — nginx
+ * receives only the path, so the access log cannot hold the tags and the
+ * dashboard's click count has nothing to read. Measured on stage: a real click
+ * on such a link logged exactly "/-/huan/". The browser is the only party that
+ * can see those tags, so it reports them.
+ *
+ * fetch with keepalive, for the reason builtins/widget/reward-flow/beacon.js
+ * sets out at length: the arrival is immediately followed by routing, and a
+ * plain fetch can be cancelled by the navigation that follows it. No headers
+ * are built here because the service is anonymous — the visitor has just
+ * arrived from a marketing link and has no session yet.
+ *
+ * FAILING IS SAFE AND SILENT. This runs while someone is trying to reach a
+ * signin form. A missed click is a missing row on a dashboard; a throw here
+ * would be in front of the visitor.
+ *
+ * @param {Object} utm the markers read off the URL
+ * @returns {Boolean} whether a request was dispatched — for tests only, there
+ *   is no answer worth waiting for
+ */
+function reportCampaignClick(utm) {
+  // Each of these is legitimately absent somewhere: `fetch` under an old UA,
+  // `bootstrap` before the app has booted. Guards rather than optional chains
+  // because `bootstrap` is a bare global, and `bootstrap?.()` still throws
+  // ReferenceError when it was never declared.
+  if (typeof fetch !== "function") return false;
+  if (typeof bootstrap !== "function") return false;
+  if (!utm || !utm.utm_campaign) return false;
+
+  try {
+    const { svc } = bootstrap() || {};
+    if (!svc) return false;
+
+    const q = [];
+    for (const k of PARAMS) {
+      if (utm[k]) q.push(`${k}=${encodeURIComponent(utm[k])}`);
+    }
+    // The path the visitor actually landed on, so the recorded row says where
+    // the click went rather than only which campaign it carried.
+    q.push(`path=${encodeURIComponent(location.pathname || "/")}`);
+    if (document.referrer) q.push(`referrer=${encodeURIComponent(document.referrer)}`);
+
+    fetch(`${svc}${CLICK_SERVICE}?${q.join("&")}`, {
+      method: "GET",
+      // Routing follows immediately; without this the request can be cancelled
+      // by the very navigation the click caused.
+      keepalive: true,
+      mode: "cors",
+      cache: "no-cache",
+    }).catch(() => { /* a missed click is a missing row, nothing more */ });
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function captureCampaignArrival() {
   const campaign = readUrlMarkers().utm_campaign;
   if (!campaign) return;
   try {
     sessionStorage.setItem(ARRIVAL_KEY, campaign);
   } catch (e) { /* private mode — the gate simply will not open */ }
+  // Report the click while the tags are still readable. Once per arrival: the
+  // strip below consumes the URL, so a reload cannot fire this again.
+  reportCampaignClick(readUrlMarkers());
+  // PERSIST BEFORE CONSUMING. This runs from the router's initialize(), before
+  // any module resolves — so it strips the markers before welcome/index.js and
+  // desk/index.js get their turn to call captureUtm(), and both of them then
+  // read an empty URL and store nothing. Measured: a cold arrival on a
+  // campaign link left localStorage['drumee_utm'] unset, which is every signup
+  // attribution on this path.
+  //
+  // captureUtm() is idempotent and cheap, and writing it here rather than
+  // reordering the callers means the guarantee does not depend on which module
+  // happens to load first.
+  captureUtm();
   // Consume the URL itself, so this arrival is counted once and not re-counted
   // on every subsequent load of the same address.
   stripCampaignParams();
@@ -216,5 +307,6 @@ function campaignArrival(consume) {
 
 module.exports = {
   captureUtm, captureCampaignArrival, campaignArrival, ARRIVAL_KEY,
+  reportCampaignClick,
   REWARD_CAMPAIGN, PROMO_CAMPAIGN,
 };

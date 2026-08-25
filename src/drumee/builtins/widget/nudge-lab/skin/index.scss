@@ -1,0 +1,205 @@
+// Nudge Lab — tester tool. Three numbered steps around one loud prediction
+// banner; scenario buttons highlight the state that is currently live.
+.nudge-lab {
+  &__ui {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: var(--normal-bg-100);
+  }
+
+  &__wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 28px 24px 64px;
+    gap: 14px;
+  }
+
+  &__title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+  }
+
+  &__error {
+    font-size: 13px;
+    color: var(--signal-error);
+  }
+
+  // ── the promise ─────────────────────────────────────────────
+  &__banner {
+    border-radius: var(--corner-radius-3);
+    padding: 14px 16px;
+    gap: 4px;
+    border: 1px solid transparent;
+
+    &--ok {
+      background: color-mix(in srgb, var(--green-500) 12%, transparent);
+      border-color: var(--green-400);
+      .nudge-lab__banner-head { color: var(--green-700); }
+    }
+    &--block {
+      background: color-mix(in srgb, var(--signal-error) 10%, transparent);
+      border-color: var(--signal-error);
+      .nudge-lab__banner-head { color: var(--signal-error); }
+    }
+    &--warn,
+    &--idle {
+      background: color-mix(in srgb, var(--warning) 12%, transparent);
+      border-color: var(--warning);
+      .nudge-lab__banner-head { color: var(--orange-700); }
+    }
+  }
+
+  &__banner-head {
+    font-size: 14.5px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  &__banner-sub {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--normal-fg-20);
+  }
+
+  // ── state chips ─────────────────────────────────────────────
+  &__chips {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__chip {
+    gap: 6px;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--normal-bg-80);
+  }
+
+  &__chip-key {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--normal-fg-50);
+    text-transform: uppercase;
+  }
+
+  &__chip-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+  }
+
+  // ── steps ───────────────────────────────────────────────────
+  &__step {
+    border: 1px solid var(--normal-bg-80);
+    border-radius: var(--corner-radius-3);
+    background: var(--normal-bg-elevated);
+    padding: 14px 16px;
+    gap: 10px;
+  }
+
+  &__step-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--normal-fg-800);
+  }
+
+  &__hint {
+    font-size: 12.5px;
+    color: var(--normal-fg-20);
+  }
+
+  &__rows {
+    gap: 8px;
+  }
+
+  &__row {
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__row-label {
+    width: 64px;
+    flex: none;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--normal-fg-50);
+  }
+
+  // ── buttons ─────────────────────────────────────────────────
+  &__btn {
+    padding: 7px 12px;
+    border: 1px solid var(--normal-bg-80);
+    border-radius: var(--corner-radius-2);
+    background: var(--normal-bg-100);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--normal-bg-90);
+    }
+
+    &--active {
+      border-color: var(--primary-50);
+      background: color-mix(in srgb, var(--primary-50) 10%, transparent);
+
+      .nudge-lab__btn-label {
+        color: var(--primary-50);
+      }
+    }
+
+    &--busy {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    &--primary {
+      background: var(--primary-50);
+      border-color: var(--primary-50);
+      padding: 10px 18px;
+
+      .nudge-lab__btn-label {
+        color: var(--white);
+        font-size: 13.5px;
+      }
+
+      &:hover {
+        background: var(--primary-60);
+      }
+    }
+  }
+
+  &__btn-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+    line-height: 1.35;
+  }
+
+  // ── auto-reset toggle ───────────────────────────────────────
+  &__toggle {
+    gap: 8px;
+    align-items: flex-start;
+    cursor: pointer;
+    padding: 4px 2px;
+  }
+
+  &__toggle-box {
+    font-size: 15px;
+    line-height: 1.2;
+    color: var(--primary-50);
+  }
+
+  &__toggle-label {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--normal-fg-20);
+  }
+
+  &__footer {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}

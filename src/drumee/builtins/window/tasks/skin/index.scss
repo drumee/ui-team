@@ -49,6 +49,86 @@ $theme-colors: (
   }
 }
 
+// ── Size-adaptive modal metrics (detail / create / new-board popups) ─────────
+// The task popups live INSIDE the workspace window, so their usable box is the
+// window's content area — never the viewport. The Figma chrome is a fixed
+// pixel budget (64px backdrop inset + 64px panel padding + 64px of gaps +
+// header + footer ≈ 287px) and only the body flexes, so on a short host — a
+// 14" laptop leaves the panel root ~450px — both columns collapse to a ~110px
+// scroll port and neither can show one complete field.
+//
+// These mixins hold the reclaimed metrics; the `@container task-modal` blocks
+// at the foot of this file apply them by AVAILABLE SIZE. Container queries
+// (not `@media`) for the same reason as `@container cal` further down: the
+// window is resizable, so the viewport says nothing about the panel's box.
+// The `data-mobile` rules keep their own metrics — see the `:not()` guards.
+
+// One shared scroll port instead of two. The desktop detail layout gives the
+// main column and the rail an `overflow-y: auto` each, which is right when the
+// popup is tall and actively harmful when it is short: two ~110px ports, each
+// too small to show one complete field. Handing the scroll to the body means a
+// single gesture moves the whole issue, exactly as Jira's issue view does.
+@mixin tasks-modal-single-scroll {
+  .tasks-panel__modal-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .tasks-panel__modal-main,
+  .tasks-panel__modal-side {
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  // The detail main column reserves a 12px gutter for its own scrollbar; once
+  // the body owns the scroll that gutter is just dead width.
+  .tasks-panel__modal-main {
+    padding-right: 0;
+  }
+
+  // Stretch so the rail's accent border runs the full scrolled height rather
+  // than stopping at the last field.
+  .tasks-panel__modal-side {
+    align-self: stretch;
+  }
+}
+
+// Single COLUMN, for hosts too narrow to seat a 380px rail beside the main
+// column. Built on the shared scroll port above, then wrapped: `flex-wrap`
+// rather than `flex-direction`, because Box.X / Box.Y own the direction in the
+// framework and SCSS must not fight it (CLAUDE.md → "Never add display:flex or
+// flex-direction for Box elements").
+//
+// $rail — only the detail panel has a left accent to relocate to a top
+// divider; the create modal's side column has no divider and must not gain one.
+@mixin tasks-modal-stacked($rail: false) {
+  @include tasks-modal-single-scroll;
+
+  .tasks-panel__modal-body {
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
+
+  .tasks-panel__modal-main,
+  .tasks-panel__modal-side {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .tasks-panel__modal-side {
+    @if $rail {
+      padding: 12px 0 0;
+      border-left: 0;
+      border-top: 3px solid var(--col-primary-40, #5950ff);
+    } @else {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+}
+
 .tasks-panel {
   &__ui {
     width: 100%;
@@ -1170,6 +1250,12 @@ $theme-colors: (
   &__board-backdrop {
     position: absolute;
     inset: 0;
+    // Query container for the size-adaptive popup metrics at the foot of this
+    // file. `inset: 0` gives the backdrop a definite box in both axes, which is
+    // what `container-type: size` requires — and that box IS the panel root,
+    // i.e. exactly the space the popup has to work with.
+    container-type: size;
+    container-name: task-modal;
     background: rgba(250, 250, 250, 0.05);
     backdrop-filter: blur(30px);
     align-items: center;
@@ -1180,8 +1266,10 @@ $theme-colors: (
   &__board-modal {
     position: relative;
     width: 520px;
-    max-width: 94%;
-    max-height: 88vh;
+    max-width: calc(100% - 32px);
+    // Bounded by the WINDOW, not the viewport: 88vh overflowed the panel root
+    // whenever the workspace window was shorter than the screen.
+    max-height: calc(100% - 32px);
     gap: 24px;
     padding: 32px;
     box-sizing: border-box;
@@ -1363,6 +1451,10 @@ $theme-colors: (
   &__create-backdrop {
     position: absolute;
     inset: 0;
+    // Query container for the size-adaptive popup metrics (see the mixins at
+    // the head of this file and the `@container task-modal` blocks at its foot).
+    container-type: size;
+    container-name: task-modal;
     background: rgba(250, 250, 250, 0.05);
     backdrop-filter: blur(30px);
     align-items: center;
@@ -1508,8 +1600,10 @@ $theme-colors: (
     .tasks-panel__desc-editor {
       height: 100%;
       // Jira-style tall description: the box takes the bulk of the modal's
-      // main column so the create form reads description-first.
+      // main column so the create form reads description-first — but capped to
+      // the room the popup actually has (see __detail-panel __desc-editor).
       min-height: 240px;
+      min-height: min(240px, 30cqh);
       max-height: none;
     }
   }
@@ -1804,6 +1898,10 @@ $theme-colors: (
   &__detail-backdrop {
     position: absolute;
     inset: 0;
+    // Query container for the size-adaptive popup metrics (see the mixins at
+    // the head of this file and the `@container task-modal` blocks at its foot).
+    container-type: size;
+    container-name: task-modal;
     background: rgba(250, 250, 250, 0.05);
     backdrop-filter: blur(30px);
     align-items: center;
@@ -2561,8 +2659,15 @@ $theme-colors: (
   // Detail-panel description: taller box (Jira issue-view ratio) than the
   // compact base height.
   &__detail-panel &__desc-editor {
+    // Fluid, not a flat floor: on a short host a 200px minimum is larger than
+    // the entire body, so the description alone forced the column to scroll
+    // before anything else could show. `cqh` resolves against the popup's
+    // query container (the backdrop = the panel root), so the box tracks the
+    // room actually available and still caps at the Figma size on a tall one.
     min-height: 200px;
     max-height: 340px;
+    min-height: min(200px, 26cqh);
+    max-height: min(340px, 42cqh);
   }
 
   // The comment composer/edit/reply inputs are shorter than the description.
@@ -3038,8 +3143,14 @@ $theme-colors: (
   // The two icon buttons have no label to swap, so the glyph itself steps
   // aside and the spinner takes its place — the button keeps its box, so
   // neither the comment footer nor the attachment card reflows mid-request.
+  //
+  // Third case, same recipe: a chip being OPENED (node_info + a kind load) puts
+  // the spinner where its file-type icon sits. The flag is on the chip, not on
+  // the icon, because the chip is the control that was clicked — hence the
+  // descendant selector.
   &__comment-attachment-unlink[data-loading="1"],
-  &__comment-action-ico[data-loading="1"] {
+  &__comment-action-ico[data-loading="1"],
+  &__comment-attachment[data-loading="1"] &__comment-attachment-ico {
     pointer-events: none;
     position: relative;
 
@@ -3059,6 +3170,22 @@ $theme-colors: (
       border-radius: 50%;
       animation: tasks-panel-spin 0.7s linear infinite;
     }
+  }
+
+  // A chip mid-open takes no further clicks: a second one would open a second
+  // window. _isControlBusy refuses it as well — this is the half that stops the
+  // click ever being dispatched.
+  &__comment-attachment[data-loading="1"] {
+    pointer-events: none;
+  }
+
+  // A chip being detached (its ✕ clicked, the unlink in flight) is inert for the
+  // same reason and dimmed a little further than an upload in progress: it is
+  // leaving, not arriving. The spinner stays on the ✕ — the control doing the
+  // work — so this state adds no second one.
+  &__comment-attachment[data-removing="1"] {
+    pointer-events: none;
+    opacity: 0.5;
   }
 
   // ── Pending-file states ───────────────────────────────────────────
@@ -3117,6 +3244,37 @@ $theme-colors: (
   // The spinner and the retry button are positioned against the thumb box.
   &__attachment-thumb-box {
     position: relative;
+  }
+
+  // ── Busy row: attachment uploads in flight on this comment ─────────
+  // The ROW ITSELF keeps its pointer events. It has to stay a hit-test target
+  // or resolveZone's closest(".tasks-panel__comment-row[data-comment-id]")
+  // misses and the row silently stops being a drop zone — a row mid-upload
+  // still accepts more files. So the contents go inert instead, which is what
+  // makes the row read as disabled: body links, reply, reactions, edit, delete,
+  // unlink and opening a committed attachment are all out of reach.
+  //
+  // A row being EDITED is exempt from the inertness (not from the dimming): a
+  // drop resolves to the row even while its editor is open, and freezing a
+  // half-typed comment behind a large upload would trap the author — Cancel
+  // already refuses while files are in flight.
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-avatar,
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-main {
+    pointer-events: none;
+  }
+
+  &__comment-row[data-busy="1"] > &__comment-main > * {
+    opacity: 0.5;
+  }
+
+  // Two exceptions to the dimming, both because they are what the user is
+  // looking at: the strip carrying the spinner and filenames, and the editor
+  // (plus its Save / Cancel) of a row being edited. Declared after the rule
+  // above, which it ties with on specificity.
+  &__comment-row[data-busy="1"] &__comment-attachments,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-field,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-actions {
+    opacity: 1;
   }
 
   // Files already attached to a saved comment.
@@ -3187,33 +3345,24 @@ $theme-colors: (
     }
   }
 
-  // The trailing slot is ALWAYS rendered, holding exactly one 12px control or
-  // nothing: unlink when committed and owned, a spinner while uploading, retry
-  // on error, empty on someone else's committed file. Reserving it is what
-  // keeps every chip the same size, so the in-flight → committed swap costs
-  // zero layout — the whole point of rendering both as chips rather than
-  // letting an in-flight fileCard stand 36px taller.
+  // The trailing slot is ALWAYS rendered, and holds one 12px control in every
+  // state but error: the ✕ (unlink when committed, discard while queued or
+  // failed, a spinner in its place mid-transfer) — or nothing at all on someone
+  // else's committed file, which cannot be unlinked from here. Reserving it is
+  // what keeps every chip the same size, so the in-flight → committed swap
+  // costs zero layout: both sides of that swap are one control.
+  //
+  // Error is the exception, carrying retry BESIDE the ✕ so a file that failed
+  // can be either re-sent or thrown away. It is a terminal state — nothing
+  // swaps out of it without a click — and it already reads as different with
+  // its red border, so the extra 16px is not a reflow anyone watches happen.
   &__comment-attachment-slot {
-    flex: 0 0 12px;
-    width: 12px;
+    flex: 0 0 auto;
+    min-width: 12px;
     height: 12px;
+    gap: 4px;
     align-items: center;
     justify-content: center;
-  }
-
-  // Same 12px spinner the unlink button already uses for its own in-flight
-  // state, so the two read as one family.
-  &__comment-attachment[data-status="uploading"] &__comment-attachment-slot,
-  &__comment-attachment[data-status="downloading"] &__comment-attachment-slot {
-    &::after {
-      content: "";
-      width: 12px;
-      height: 12px;
-      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
-      border-top-color: var(--accent, #433cc5);
-      border-radius: 50%;
-      animation: tasks-panel-spin 0.7s linear infinite;
-    }
   }
 
   &__comment-attachment[data-status="uploading"],
@@ -3405,8 +3554,9 @@ $theme-colors: (
 
     // Flyover tooltip: the framework appends it as a CHILD of the icon
     // (ui-core __addTooltips → this.$el.append), so it is clipped by any
-    // scrolling ancestor — here __modal-main, whose `overflow-y: auto` also
-    // makes overflow-x compute to auto.
+    // scrolling ancestor — __modal-main, whose `overflow-y: auto` also makes
+    // overflow-x compute to auto (on a short host the scrollport moves up to
+    // __modal-body instead, but it is still a scrollport, so this holds).
     //
     // It therefore opens ABOVE the icon, not below. The action row is the LAST
     // row of a comment card, so on the last comment of the feed a tooltip
@@ -6983,10 +7133,15 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
 // TOP-LEVEL rules (not nested under `.tasks-panel`) keyed on `data-mobile="1"`,
 // which the skeleton stamps DIRECTLY on each of these roots via
 // `Visitor.isMobile()`. Deliberately NOT a viewport `@media` (the panel lives
-// in a resizable window, so the viewport is never the panel width),
-// NOT `@container` (unsupported in the target runtime), and NOT an ancestor
-// `[data-device]` selector — the flag is on the element the rule targets, so
-// matching cannot fail. IMPORTANT: these must stay at file top level. An
+// in a resizable window, so the viewport is never the panel width) and NOT an
+// ancestor `[data-device]` selector — the flag is on the element the rule
+// targets, so matching cannot fail. It is not `@container` either, but for a
+// different reason than an earlier revision of this comment claimed: container
+// queries DO work here (see `@container cal` below and the size-adaptive popup
+// tiers at the foot of this file — verified through dart-sass +
+// postcss-preset-env + cssnano). They answer "how big is the box", whereas
+// this flag answers "is this a phone", which no amount of box size can tell
+// you. The two are complementary, and both are used. IMPORTANT: these must stay at file top level. An
 // earlier version sat inside the dark-theme `.flatpickr-calendar` block, so
 // every selector compiled with that prefix and never matched — the reason
 // prior attempts appeared to "do nothing". The modal bodies + the detail
@@ -7110,5 +7265,186 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
 @keyframes tasks-panel-view-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+// ── Size-adaptive task popups (detail/update · create · new-board) ───────────
+// Applies the reclaimed metrics defined by the mixins at the head of this file.
+// The query container is each popup's backdrop (`container-name: task-modal`),
+// whose box is the panel root — the real space the popup has, as opposed to
+// the viewport, which tells us nothing about a resizable window.
+//
+// TOP-LEVEL rules on purpose: this file has several top-level blocks after the
+// main `.tasks-panel { … }` (dark theme, flatpickr), and rules appended into
+// the wrong one compile with that prefix and silently never match.
+//
+// Tiers, applied cumulatively (later blocks are tighter and win on source
+// order — `@container` adds no specificity of its own):
+//   ≤760px tall  compact  — chrome shrinks, two columns and two scrollers kept
+//   ≤560px tall  short    — chrome shrinks further, ONE shared scroll port
+//   ≤900px wide  narrow   — single column (no room for a 380px rail beside it)
+//   ≤720px wide  compact chrome for narrow hosts
+// Height and width are independent: a wide-but-short host keeps its columns
+// and merely shares their scroll, which reads better than stacking would.
+// `data-mobile="1"` popups are excluded throughout: the phone layout has its
+// own tested metrics above, and stamping both would let them fight.
+
+// ── Compact: short host, two columns retained ────────────────────────────────
+@container task-modal (max-height: 760px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    width: calc(100% - 32px);
+    height: calc(100% - 24px);
+    padding: 20px 24px;
+    gap: 16px;
+
+    .tasks-panel__detail-title textarea {
+      font-size: 19px;
+      line-height: 24px;
+      min-height: 26px;
+      // Two lines instead of three: a long title used to eat ~60px of a body
+      // that only had ~110px to give.
+      max-height: 52px;
+    }
+
+    .tasks-panel__modal-main {
+      gap: 16px;
+    }
+
+    .tasks-panel__modal-side {
+      padding: 0 20px;
+      gap: 14px;
+    }
+
+    .tasks-panel__detail-row {
+      gap: 8px;
+    }
+
+    .tasks-panel__detail-actions {
+      padding-top: 12px;
+    }
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    width: calc(100% - 32px);
+    height: calc(100% - 24px);
+
+    .tasks-panel__create-form {
+      padding: 20px 24px;
+      gap: 16px;
+    }
+
+    .tasks-panel__create-title {
+      font-size: 19px;
+      line-height: 24px;
+    }
+
+    .tasks-panel__modal-body {
+      gap: 24px;
+    }
+
+    .tasks-panel__modal-main,
+    .tasks-panel__modal-side {
+      gap: 20px;
+    }
+
+    .tasks-panel__create-field {
+      gap: 8px;
+    }
+  }
+
+  .tasks-panel__board-modal {
+    padding: 20px 24px;
+    gap: 16px;
+  }
+}
+
+// ── Short: one shared scroll port beats two unusable ones ────────────────────
+@container task-modal (max-height: 560px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+    height: calc(100% - 12px);
+    padding: 14px 16px;
+    gap: 12px;
+
+    @include tasks-modal-single-scroll;
+
+    .tasks-panel__detail-title textarea {
+      font-size: 17px;
+      line-height: 22px;
+      min-height: 24px;
+      max-height: 44px;
+    }
+
+    // With one shared scroll port the description no longer competes with the
+    // fields under it for a tiny viewport, so a flat workable floor is enough
+    // here — no need for the fluid `cqh` cap the taller tiers use.
+    .tasks-panel__desc-editor {
+      min-height: 110px;
+      max-height: 220px;
+    }
+
+    .tasks-panel__detail-actions {
+      padding-top: 10px;
+    }
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+    height: calc(100% - 12px);
+
+    @include tasks-modal-single-scroll;
+
+    .tasks-panel__create-form {
+      padding: 14px 16px;
+      gap: 12px;
+    }
+
+    .tasks-panel__create-title {
+      font-size: 17px;
+      line-height: 22px;
+    }
+
+    .tasks-panel__create-field-grow .tasks-panel__desc-editor {
+      min-height: 110px;
+    }
+  }
+
+  .tasks-panel__board-modal {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+}
+
+// ── Narrow: no room for a 380px rail beside the main column ──────────────────
+@container task-modal (max-width: 900px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    @include tasks-modal-stacked($rail: true);
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    @include tasks-modal-stacked;
+
+    .tasks-panel__create-actions,
+    .tasks-panel__create-files {
+      margin-top: 0;
+    }
+  }
+}
+
+// ── Narrow chrome: reclaim the horizontal insets too ─────────────────────────
+@container task-modal (max-width: 720px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+
+    .tasks-panel__create-form {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
   }
 }
