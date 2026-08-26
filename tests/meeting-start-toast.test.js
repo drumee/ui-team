@@ -374,6 +374,7 @@ const LOC2 = {
   X_INVITED_COUNT: "{0} invited",
   X_JOINED_COUNT: "{0} joined",
   MEETING_START_AT: "Start at {0}",
+  MEETING_START_NOW: "Start now",
   X_INVITED_YOU_TO_MEETING: "{0} invited you to a meeting",
 };
 const DAYJS = { unix: () => ({ format: () => "9:00 AM" }) };
@@ -518,4 +519,53 @@ test("a conference.start with no roster still renders, with no meta line", () =>
   assert.deepEqual(shown[0].data.attendees, []);
   const t = build(shown[0].data, shown[0].opt);
   assert.equal(pick(t, "desk-meeting-toast__count"), null, "no count without data");
+});
+
+// ------------------------------------------------------------- "Start now"
+//
+// Duy, 2026-08-26: a meeting started on the spot must carry the same "when"
+// slot as a scheduled one — "N joined - Start now" beside "N invited - Start
+// at 9:00 AM". conference.start has no stime (there is nothing to schedule),
+// so the slot cannot key off stime alone.
+
+test("an instantly started meeting says 'Start now' beside the count", () => {
+  const t = build(
+    { title: "M", attendees: [{ uid: "a" }, { uid: "b" }], joined: 2, starts_now: 1 },
+    { reminder: 1 },
+  );
+  assert.equal(say(t, "count"), "2 joined");
+  assert.equal(say(t, "dot"), "-");
+  assert.equal(say(t, "when"), "Start now");
+});
+
+test("a scheduled meeting still prints its clock time, not 'Start now'", () => {
+  const t = build({ title: "M", attendees: ["a"], stime: 1 }, {});
+  assert.equal(say(t, "when"), "Start at 9:00 AM");
+});
+
+test("a real stime wins over the flag, so a scheduled meeting never loses its time", () => {
+  const t = build({ title: "M", attendees: ["a"], stime: 1, starts_now: 1 }, { reminder: 1 });
+  assert.equal(say(t, "when"), "Start at 9:00 AM");
+});
+
+test("'Start now' stands alone when nobody has joined yet", () => {
+  // An older server sends no roster, so there is no count to sit beside.
+  const t = build({ title: "M", starts_now: 1 }, { reminder: 1 });
+  assert.equal(say(t, "when"), "Start now");
+  assert.equal(pick(t, "desk-meeting-toast__dot"), null, "no separator with nothing on the left");
+});
+
+test("a card with neither a time nor the flag shows no when slot at all", () => {
+  const t = build({ title: "M", attendees: ["a"] }, { reminder: 1 });
+  assert.equal(pick(t, "desk-meeting-toast__when"), null);
+});
+
+test("conference.start sets the flag on the card it builds", () => {
+  const { shown } = start(meeting({ attendees: [{ uid: "a" }], joined: 1 }));
+  assert.equal(shown[0].data.starts_now, 1);
+  assert.equal(shown[0].data.stime, undefined, "an instant start has no scheduled time");
+  // End to end: the payload conference.start produces renders the full line.
+  const t = build(shown[0].data, shown[0].opt);
+  assert.equal(say(t, "count"), "1 joined");
+  assert.equal(say(t, "when"), "Start now");
 });

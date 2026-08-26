@@ -467,6 +467,9 @@ class __push_manager extends winman {
       // How many are actually in the room. Only a started meeting carries it.
       const joined = Number(data.joined) || 0;
       const stime = Number(data.stime) || 0;
+      // A meeting started on the spot has no scheduled time to print, but the
+      // slot still belongs there — see the meta block below.
+      const startsNow = !!data.starts_now;
 
       // Meta line: avatar stack · N invited · start time. Each piece is dropped
       // when its data is absent rather than rendering an empty separator.
@@ -520,7 +523,12 @@ class __push_manager extends winman {
           }),
         );
       }
-      if (stime) {
+      // The "when" slot. A scheduled meeting prints its start time; one
+      // started on the spot says "Start now" in the same place, so both
+      // flavours read the same way beside the count (Duy, 2026-08-26).
+      // conference.start carries no stime — there is nothing to schedule —
+      // which is why this cannot key off stime alone.
+      if (stime || startsNow) {
         if (meta.length) {
           // Figma bakes the separator into the time string as "  - Start at
           // 9:00 AM"; kept as its own node so the gap stays CSS-controlled.
@@ -529,7 +537,9 @@ class __push_manager extends winman {
         meta.push(
           Skeletons.Note({
             className: "desk-meeting-toast__when",
-            content: LOCALE.MEETING_START_AT.format(Dayjs.unix(stime).format("h:mm A")),
+            content: stime
+              ? LOCALE.MEETING_START_AT.format(Dayjs.unix(stime).format("h:mm A"))
+              : LOCALE.MEETING_START_NOW,
           }),
         );
       }
@@ -800,6 +810,9 @@ class __push_manager extends winman {
           message,
           attendees: Array.isArray(data.attendees) ? data.attendees : [],
           joined: Number(data.joined) || 0,
+          // Started on the spot: the meta line reads "N joined - Start now",
+          // mirroring the scheduled card's "N invited - Start at 9:00 AM".
+          starts_now: 1,
         },
         { reminder: 1 },
       );

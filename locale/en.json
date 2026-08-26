@@ -2885,5 +2885,6 @@
   "PREVIOUS": "Previous",
   "MUTE": "Mute",
   "JUST_NOW": "Just now",
-  "X_JOINED_COUNT": "{0} joined"
+  "X_JOINED_COUNT": "{0} joined",
+  "MEETING_START_NOW": "Start now"
 }

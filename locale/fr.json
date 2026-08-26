@@ -2723,5 +2723,6 @@
   "PREVIOUS": "Précédent",
   "MUTE": "Mettre en sourdine",
   "JUST_NOW": "À l'instant",
-  "X_JOINED_COUNT": "{0} ont rejoint"
+  "X_JOINED_COUNT": "{0} ont rejoint",
+  "MEETING_START_NOW": "Commence maintenant"
 }

@@ -2722,5 +2722,6 @@
   "PREVIOUS": "上一个",
   "MUTE": "静音",
   "JUST_NOW": "刚刚",
-  "X_JOINED_COUNT": "{0} 人已加入"
+  "X_JOINED_COUNT": "{0} 人已加入",
+  "MEETING_START_NOW": "现在开始"
 }
