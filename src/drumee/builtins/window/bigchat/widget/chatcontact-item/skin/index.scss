@@ -53,6 +53,24 @@
     width: 100%;
   }
 
+  // Same product mark the chat header shows, at the inbox row's 48px avatar
+  // size — see libs/support.supportAvatar and the chat-p2p skin.
+  &__support-avatar {
+    align-items: center;
+    background-color: var(--primary-40);
+    border-radius: 12px;
+    flex-shrink: 0;
+    height: 48px;
+    justify-content: center;
+    width: 48px;
+  }
+
+  &__support-avatar-ico {
+    color: var(--gray-white);
+    height: 26px;
+    width: 26px;
+  }
+
   // Marks a support conversation in the inbox list. Sits between the name
   // (flex:1, so it absorbs the row's free space and truncates) and the
   // timestamp, which keeps the pill against the end of the name.
