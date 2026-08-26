@@ -345,6 +345,7 @@ const BUILD = methodBody("_showMeetingToast");
 // (harness-hygiene.test.js). SHOW_EARLY_MEETING_REMINDER is a MODULE const, so
 // a slice of the method cannot see it and it has to be passed in.
 const runBuild = new Function(
+  "_",
   "_a",
   "Wm",
   "Skeletons",
@@ -376,7 +377,7 @@ const LOC2 = {
   MEETING_START_AT: "Start at {0}",
   MEETING_START_NOW: "Start now",
   MEETING_INVITE_TITLE: "You have been invited to a Meeting",
-  X_INVITED_YOU_JOIN_MEETING_IN: "{0} invited you joining the meeting in {1}",
+  X_INVITED_YOU_JOIN_MEETING_IN: "{0} invited you to join the meeting in {1}",
   X_INVITED_YOU_TO_MEETING: "{0} invited you to a meeting",
 };
 const DAYJS = { unix: () => ({ format: () => "9:00 AM" }) };
@@ -388,7 +389,7 @@ function build(data, opt = {}) {
   const realSet = global.setTimeout;
   global.setTimeout = () => 0; // the card's own auto-dismiss
   try {
-    runBuild.call(self, attr, { windowsLayer: layer }, SK, LOC2, DAYJS, 0, data, opt);
+    runBuild.call(self, require("lodash"), attr, { windowsLayer: layer }, SK, LOC2, DAYJS, 0, data, opt);
   } finally {
     global.setTimeout = realSet;
   }
@@ -456,14 +457,14 @@ test("a real agenda is never replaced by the fallback", () => {
 
 test("the invite keeps its own sentence and gains no fallback", () => {
   const t = build({ title: "M", from: "Duy", stime: 1 }, {});
-  assert.equal(say(t, "desc"), "Duy invited you to a meeting");
+  assert.equal(say(t, "desc"), "<b>Duy</b> invited you to a meeting");
   assert.equal(all(t, "desk-meeting-toast__desc").length, 1);
 });
 
 test("an invite with an agenda shows both lines, not the fallback", () => {
   const t = build({ title: "M", from: "Duy", message: "Bring the deck" }, {});
   const lines = all(t, "desk-meeting-toast__desc").map((n) => n.content);
-  assert.deepEqual(lines, ["Duy invited you to a meeting", "Bring the deck"]);
+  assert.deepEqual(lines, ["<b>Duy</b> invited you to a meeting", "Bring the deck"]);
 });
 
 // --------------------------------------------------- "joined" vs "invited"
@@ -590,18 +591,21 @@ test("the invitation heads with Figma's fixed line, not the meeting's name", () 
 
 test("the invitation names the organiser and where the meeting is", () => {
   const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "Folder 1" }, {});
-  assert.equal(say(t, "desc"), "Duy Nguyen invited you joining the meeting in Folder 1");
+  assert.equal(
+    say(t, "desc"),
+    "<b>Duy Nguyen</b> invited you to join the meeting in <b>Folder 1</b>",
+  );
 });
 
 test("with no folder name it falls back rather than trailing a dangling 'in'", () => {
   const t = build({ title: "m4", from: "Duy Nguyen" }, {});
-  assert.equal(say(t, "desc"), "Duy Nguyen invited you to a meeting");
+  assert.equal(say(t, "desc"), "<b>Duy Nguyen</b> invited you to a meeting");
   assert.ok(!say(t, "desc").endsWith("in "), "never a dangling preposition");
 });
 
 test("a blank folder name is treated as absent", () => {
   const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "   " }, {});
-  assert.equal(say(t, "desc"), "Duy Nguyen invited you to a meeting");
+  assert.equal(say(t, "desc"), "<b>Duy Nguyen</b> invited you to a meeting");
 });
 
 test("the invitation carries NO live dot — nothing is in progress yet", () => {
@@ -631,4 +635,75 @@ test("the meeting card uses the Phosphor glyph Figma does, not the legacy asset"
     !/ico: "video-camera"/.test(code),
     "the legacy video-camera asset must be gone",
   );
+});
+
+// ------------------------------------- emphasis, grammar and escaping
+//
+// Duy, 2026-08-26 (mtp7.jpg): Figma bolds the organiser and the folder inside
+// the invitation sentence, and "invited you joining" should read "invited you
+// to join". The <b> is applied in CODE, not in the locale string, so the
+// translations stay markup-free and their placeholders stay reorderable.
+
+test("the sentence reads 'invited you to join', not 'invited you joining'", () => {
+  const t = build({ title: "m4", from: "Duy", folder_name: "F" }, {});
+  assert.ok(/invited you to join/.test(say(t, "desc")));
+  assert.ok(!/invited you joining/.test(say(t, "desc")), "the old wording is gone");
+});
+
+test("only the organiser and the folder are emphasised, not the whole line", () => {
+  const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "checkin" }, {});
+  const d = say(t, "desc");
+  assert.equal((d.match(/<b>/g) || []).length, 2, "exactly two emphasised spans");
+  assert.ok(d.includes("<b>Duy Nguyen</b>"));
+  assert.ok(d.includes("<b>checkin</b>"));
+  assert.ok(!d.startsWith("<b>invited"), "the connecting words stay Regular");
+});
+
+test("the locale strings themselves carry NO markup", () => {
+  // Emphasis lives in the code so translators never have to preserve tags,
+  // and so a reordered sentence still bolds the right words.
+  const en = JSON.parse(readFileSync(join(__dirname, "../locale/en.json"), "utf8"));
+  for (const k of ["X_INVITED_YOU_JOIN_MEETING_IN", "X_INVITED_YOU_TO_MEETING", "MEETING_INVITE_TITLE"]) {
+    assert.ok(!/[<>]/.test(en[k]), `${k} must not contain markup`);
+  }
+  assert.equal(en.X_INVITED_YOU_JOIN_MEETING_IN, "{0} invited you to join the meeting in {1}");
+});
+
+test("a hostile organiser name or folder name cannot inject markup", () => {
+  const t = build(
+    { title: "m4", from: '<img src=x onerror=alert(1)>', folder_name: "<script>bad</script>" },
+    {},
+  );
+  const d = say(t, "desc");
+  assert.ok(!d.includes("<img"), "the name must be escaped");
+  assert.ok(!d.includes("<script>"), "the folder must be escaped");
+  assert.ok(d.includes("&lt;img"), "escaped, not stripped");
+  // The emphasis we added ourselves is still real markup.
+  assert.equal((d.match(/<b>/g) || []).length, 2);
+});
+
+test("a hostile meeting title or agenda cannot inject markup either", () => {
+  const t = build({ title: "<script>x</script>", message: "<b>agenda</b>", stime: 1 }, { reminder: 1 });
+  assert.ok(!say(t, "title").includes("<script>"));
+  assert.ok(!say(t, "desc").includes("<b>agenda"), "an agenda is not trusted markup");
+});
+
+// The invitation card was missing its meta line entirely: room.js never sent
+// the invitee list, so there was nothing to count or draw faces for.
+test("the invitation counts its invitees, like the other cards do", () => {
+  const t = build(
+    {
+      title: "m4",
+      from: "Duy",
+      folder_name: "F",
+      stime: 1,
+      attendees: [{ uid: "a", name: "Ann" }, { uid: "b", name: "Bo" }, { uid: "c", name: "Cy" }],
+    },
+    {},
+  );
+  assert.equal(say(t, "count"), "3 invited", "an invitation names invitees, never 'joined'");
+  assert.equal(all(t, "desk-meeting-toast__avatar").length, 2);
+  assert.equal(say(t, "avatar-more"), "+1");
+  assert.equal(say(t, "when"), "Start at 9:00 AM");
+  assert.equal(say(t, "dot"), "-");
 });

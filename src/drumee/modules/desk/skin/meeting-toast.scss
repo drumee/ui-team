@@ -139,6 +139,15 @@
     overflow: hidden;
   }
 
+  // Figma emphasises the organiser and the folder inside the invitation
+  // sentence. The rest of the line stays Regular. `drumee.typo` never emits a
+  // font-weight of its own, so this is written out — see the notes in the
+  // activity panel skin.
+  &__desc b {
+    font-weight: 600;
+    color: inherit;
+  }
+
   &__meta {
     align-items: center;
     justify-content: center;

@@ -465,6 +465,16 @@ class __push_manager extends winman {
       // line and names the organiser and the location underneath, rather than
       // using the meeting's own name as the heading. The other two flavours
       // still head with the meeting title.
+      // Skeletons.Note renders its content as MARKUP, so every user-controlled
+      // value has to be escaped on the way in — a meeting titled
+      // "<img onerror=…>" would otherwise execute. `bold` additionally wraps a
+      // value in <b>: Figma emphasises the organiser and the folder inside the
+      // invitation sentence, and doing that here rather than in the locale
+      // string keeps the translations free of markup and leaves the
+      // placeholders reorderable for languages that need a different order.
+      const esc = (v) => _.escape(String(v == null ? "" : v));
+      const bold = (v) => `<b>${esc(v)}</b>`;
+
       const heading =
         variant === "invite"
           ? LOCALE.MEETING_INVITE_TITLE
@@ -555,7 +565,7 @@ class __push_manager extends winman {
         Skeletons.Box.X({
           className: "desk-meeting-toast__title-row",
           kids: [
-            Skeletons.Note({ className: "desk-meeting-toast__title", content: heading }),
+            Skeletons.Note({ className: "desk-meeting-toast__title", content: esc(heading) }),
             // The dot means "in progress". An invitation is for a meeting that
             // has not started — often days away — so it would be stating
             // something untrue. Only the live flavours carry it.
@@ -578,8 +588,8 @@ class __push_manager extends winman {
           Skeletons.Note({
             className: "desk-meeting-toast__desc",
             content: where
-              ? LOCALE.X_INVITED_YOU_JOIN_MEETING_IN.format(data.from, where)
-              : LOCALE.X_INVITED_YOU_TO_MEETING.format(data.from),
+              ? LOCALE.X_INVITED_YOU_JOIN_MEETING_IN.format(bold(data.from), bold(where))
+              : LOCALE.X_INVITED_YOU_TO_MEETING.format(bold(data.from)),
           }),
         );
         hasDesc = 1;
@@ -588,7 +598,7 @@ class __push_manager extends winman {
         body.push(
           Skeletons.Note({
             className: "desk-meeting-toast__desc",
-            content: description,
+            content: esc(description),
           }),
         );
         hasDesc = 1;
