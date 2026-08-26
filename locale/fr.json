@@ -2724,5 +2724,7 @@
   "MUTE": "Mettre en sourdine",
   "JUST_NOW": "À l'instant",
   "X_JOINED_COUNT": "{0} ont rejoint",
-  "MEETING_START_NOW": "Commence maintenant"
+  "MEETING_START_NOW": "Commence maintenant",
+  "MEETING_INVITE_TITLE": "Vous avez été invité à une réunion",
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} vous a invité à rejoindre la réunion dans {1}"
 }

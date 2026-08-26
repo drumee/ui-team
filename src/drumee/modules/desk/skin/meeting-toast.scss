@@ -68,12 +68,17 @@
     border-radius: 8px;
     background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
 
+    // The Phosphor glyph is a FILLED path (`fill="black"`, no stroke
+    // attributes anywhere), so it takes a fill — stroking it draws an outline
+    // AROUND a solid shape, which is what made it look washed out. Same
+    // `fill: currentColor` convention the notification row badges use.
+    color: var(--primary-40, #5950ff);
+
     svg {
+      display: block;
       width: 32px;
       height: 32px;
-      fill: none;
-      stroke: var(--primary-40, #5950ff);
-      stroke-width: 2;
+      fill: currentColor;
     }
   }
 
@@ -99,6 +104,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // The invite heading is a full SENTENCE, not a meeting name, and it has no
+  // live dot to keep on the same line — so let it wrap instead of clipping.
+  // Declared after &__title so it wins; translations run well past the
+  // English ("Vous avez été invité à une réunion").
+  &[data-variant="invite"] &__title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   // "In progress" dot — Figma draws a 10x10 hairline ring around a 6px core.

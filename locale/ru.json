@@ -2723,5 +2723,7 @@
   "MUTE": "Отключить",
   "JUST_NOW": "Только что",
   "X_JOINED_COUNT": "{0} присоединились",
-  "MEETING_START_NOW": "Начинается сейчас"
+  "MEETING_START_NOW": "Начинается сейчас",
+  "MEETING_INVITE_TITLE": "Вас пригласили на встречу",
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} пригласил вас присоединиться к встрече в {1}"
 }

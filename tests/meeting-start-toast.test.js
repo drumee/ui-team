@@ -375,6 +375,8 @@ const LOC2 = {
   X_JOINED_COUNT: "{0} joined",
   MEETING_START_AT: "Start at {0}",
   MEETING_START_NOW: "Start now",
+  MEETING_INVITE_TITLE: "You have been invited to a Meeting",
+  X_INVITED_YOU_JOIN_MEETING_IN: "{0} invited you joining the meeting in {1}",
   X_INVITED_YOU_TO_MEETING: "{0} invited you to a meeting",
 };
 const DAYJS = { unix: () => ({ format: () => "9:00 AM" }) };
@@ -568,4 +570,65 @@ test("conference.start sets the flag on the card it builds", () => {
   const t = build(shown[0].data, shown[0].opt);
   assert.equal(say(t, "count"), "1 joined");
   assert.equal(say(t, "when"), "Start now");
+});
+
+// ------------------------------------------------------- the INVITATION card
+//
+// Duy, 2026-08-26 (mtp6.jpg): the schedule notice did not match Figma's
+// `type=directly` card. It headed with the meeting's own name and said only
+// "X invited you to a meeting". Figma leads with a fixed line and names the
+// organiser AND the location underneath.
+//
+// ⚠️ Figma's API was rate limited when this was built, so the exact node could
+// not be re-read — the copy comes from Duy's description of it.
+
+test("the invitation heads with Figma's fixed line, not the meeting's name", () => {
+  const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "Folder 1", stime: 1 }, {});
+  assert.equal(say(t, "title"), "You have been invited to a Meeting");
+  assert.notEqual(say(t, "title"), "m4");
+});
+
+test("the invitation names the organiser and where the meeting is", () => {
+  const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "Folder 1" }, {});
+  assert.equal(say(t, "desc"), "Duy Nguyen invited you joining the meeting in Folder 1");
+});
+
+test("with no folder name it falls back rather than trailing a dangling 'in'", () => {
+  const t = build({ title: "m4", from: "Duy Nguyen" }, {});
+  assert.equal(say(t, "desc"), "Duy Nguyen invited you to a meeting");
+  assert.ok(!say(t, "desc").endsWith("in "), "never a dangling preposition");
+});
+
+test("a blank folder name is treated as absent", () => {
+  const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "   " }, {});
+  assert.equal(say(t, "desc"), "Duy Nguyen invited you to a meeting");
+});
+
+test("the invitation carries NO live dot — nothing is in progress yet", () => {
+  const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "F" }, {});
+  assert.equal(pick(t, "desk-meeting-toast__live"), null);
+});
+
+test("the live flavours keep both the dot and the meeting's own name", () => {
+  const now = build({ title: "m4", attendees: ["a"], joined: 1, starts_now: 1 }, { reminder: 1 });
+  assert.equal(say(now, "title"), "m4");
+  assert.ok(pick(now, "desk-meeting-toast__live"), "a started meeting IS in progress");
+});
+
+test("the invitation still shows its start time", () => {
+  const t = build({ title: "m4", from: "Duy Nguyen", folder_name: "F", stime: 1 }, {});
+  assert.equal(say(t, "when"), "Start at 9:00 AM");
+});
+
+test("the meeting card uses the Phosphor glyph Figma does, not the legacy asset", () => {
+  // `video-camera` is an Illustrator export on a 468px viewBox whose paths are
+  // solid; outlining it produced the washed-out camera in mtp5.jpg.
+  assert.ok(
+    /ico: "noti-video-camera"/.test(code),
+    "Figma's tile holds the Phosphor VideoCamera, already in the sprite",
+  );
+  assert.ok(
+    !/ico: "video-camera"/.test(code),
+    "the legacy video-camera asset must be gone",
+  );
 });

@@ -2886,5 +2886,7 @@
   "MUTE": "Mute",
   "JUST_NOW": "Just now",
   "X_JOINED_COUNT": "{0} joined",
-  "MEETING_START_NOW": "Start now"
+  "MEETING_START_NOW": "Start now",
+  "MEETING_INVITE_TITLE": "You have been invited to a Meeting",
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} invited you joining the meeting in {1}"
 }

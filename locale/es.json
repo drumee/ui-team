@@ -2724,5 +2724,7 @@
   "MUTE": "Silenciar",
   "JUST_NOW": "Ahora mismo",
   "X_JOINED_COUNT": "{0} se han unido",
-  "MEETING_START_NOW": "Empieza ahora"
+  "MEETING_START_NOW": "Empieza ahora",
+  "MEETING_INVITE_TITLE": "Has sido invitado a una reunión",
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} te ha invitado a unirte a la reunión en {1}"
 }

@@ -461,7 +461,14 @@ class __push_manager extends winman {
       const variant = !opt.reminder ? "invite" : leadMin > 0 ? "soon" : "now";
       if (variant === "soon" && !SHOW_EARLY_MEETING_REMINDER) return;
 
-      const heading = data.title || LOCALE.MEETING;
+      // Figma's invite card (call-pop-up type=directly) leads with a fixed
+      // line and names the organiser and the location underneath, rather than
+      // using the meeting's own name as the heading. The other two flavours
+      // still head with the meeting title.
+      const heading =
+        variant === "invite"
+          ? LOCALE.MEETING_INVITE_TITLE
+          : data.title || LOCALE.MEETING;
       const description = String(data.message || "").trim();
       const attendees = Array.isArray(data.attendees) ? data.attendees : [];
       // How many are actually in the room. Only a started meeting carries it.
@@ -549,8 +556,13 @@ class __push_manager extends winman {
           className: "desk-meeting-toast__title-row",
           kids: [
             Skeletons.Note({ className: "desk-meeting-toast__title", content: heading }),
-            Skeletons.Note({ className: "desk-meeting-toast__live" }),
-          ],
+            // The dot means "in progress". An invitation is for a meeting that
+            // has not started — often days away — so it would be stating
+            // something untrue. Only the live flavours carry it.
+            variant === "invite"
+              ? null
+              : Skeletons.Note({ className: "desk-meeting-toast__live" }),
+          ].filter(Boolean),
         }),
       ];
       // An invitation has to say it is one, and by whom. Without this the card
@@ -558,10 +570,16 @@ class __push_manager extends winman {
       // "starting now" reminder, which is the one flavour that means "go now".
       let hasDesc = 0;
       if (variant === "invite" && data.from) {
+        // room.js stamps folder_name on the invitation push. Without it there
+        // is no honest "in <somewhere>" to print, so the shorter sentence
+        // stands in rather than trailing a dangling "in ".
+        const where = String(data.folder_name || "").trim();
         body.push(
           Skeletons.Note({
             className: "desk-meeting-toast__desc",
-            content: LOCALE.X_INVITED_YOU_TO_MEETING.format(data.from),
+            content: where
+              ? LOCALE.X_INVITED_YOU_JOIN_MEETING_IN.format(data.from, where)
+              : LOCALE.X_INVITED_YOU_TO_MEETING.format(data.from),
           }),
         );
         hasDesc = 1;
@@ -624,9 +642,15 @@ class __push_manager extends winman {
               ico: _a.cross,
               tooltips: LOCALE.CLOSE,
             }),
+            // `noti-video-camera`, NOT `video-camera`. Figma's tile holds the
+            // Phosphor VideoCamera (component 5:66204), which is exactly the
+            // glyph already in the sprite as noti-video-camera — the same one
+            // the Meeting notification rows use. `video-camera` is a legacy
+            // Illustrator asset on a 468px viewBox whose paths are solid, so
+            // outlining it produced the washed-out camera Duy reported.
             Skeletons.Box.Y({
               className: "desk-meeting-toast__icon",
-              kids: [Skeletons.Image.Svg({ ico: "video-camera" })],
+              kids: [Skeletons.Image.Svg({ ico: "noti-video-camera" })],
             }),
             Skeletons.Box.Y({ className: "desk-meeting-toast__body", kids: body }),
             Skeletons.Box.X({

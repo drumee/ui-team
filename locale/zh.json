@@ -2723,5 +2723,7 @@
   "MUTE": "静音",
   "JUST_NOW": "刚刚",
   "X_JOINED_COUNT": "{0} 人已加入",
-  "MEETING_START_NOW": "现在开始"
+  "MEETING_START_NOW": "现在开始",
+  "MEETING_INVITE_TITLE": "您被邀请参加会议",
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} 邀请您加入 {1} 中的会议"
 }
