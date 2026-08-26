@@ -105,25 +105,51 @@ test("the message is still there", () => {
   assert.match(markup(), /is being loaded/i);
 });
 
-test("the lockup scales by height, never by two fixed sides", () => {
-  // The file is 120.723 x 24 — a 5.03:1 lockup. Pinning both sides to hand
-  // -picked numbers is how it gets subtly squashed, and nobody notices a
-  // wordmark that is 4% too narrow. Height plus `width: auto` cannot distort
-  // it, and the tag's width/height attributes still supply the ratio the
-  // browser reserves space with before the CSS lands.
+test("the lockup scales by height, and matches the other screen's", () => {
+  // The file is 120.723 x 24, a 5.03:1 lockup. Two hand-picked side lengths
+  // are how a wordmark ends up quietly squashed; height plus `width: auto`
+  // cannot distort it. The 32px is pinned in BOTH copies of this template —
+  // see analytics-ui/test/access-limited.test.js.
   const img = skin.match(/&__logo[\s\S]*?img\s*\{([\s\S]*?)\}/);
   assert.ok(img, "no img rule under __logo");
   assert.match(img[1], /width:\s*auto/, "width must be auto so the ratio is preserved");
-  assert.match(img[1], /height:\s*(\d+)px/, "the lockup is sized by its height");
-  assert.ok(Number(img[1].match(/height:\s*(\d+)px/)[1]) > 24,
-    "this is a full-screen state — the lockup should be bigger than the sign-in card's 24px");
+  assert.match(img[1], /height:\s*32px/, "the lockup height must match the authorization screen's");
 });
 
-test("the lockup and the message are not crowded together", () => {
+// ── the shared template ────────────────────────────────────────────────
+// One template with analytics-ui's authorization screen: the sign-in page's
+// backdrop, the sign-in card, the lockup top-left, text centred. Written
+// twice — different repos, no shared package — so both copies pin the same
+// values and cannot drift apart in silence.
+
+test("the card is the sign-in card", () => {
+  const card = skin.match(/&__card\s*\{([\s\S]*?)\n {2}\}/);
+  assert.ok(card, "no __card block — the screen is not on the template");
+  assert.match(card[1], /max-width:\s*520px/, "the card width must match the sign-in card");
+  assert.match(card[1], /border-radius:\s*12px/);
+});
+
+test("the backdrop is the sign-in page's", () => {
   const main = skin.match(/&__main\s*\{([\s\S]*?)\n {2}\}/);
   assert.ok(main, "no __main block");
-  const gap = Number((main[1].match(/gap:\s*(\d+)px/) || [])[1]);
-  assert.ok(gap >= 24, `the stack needs breathing room, got gap: ${gap}px`);
+  assert.match(main[1], /#f2f2f7/i, "the sign-in base colour is missing");
+  assert.match(main[1], /radial-gradient/, "the brand glow is missing");
+  assert.match(main[1], /89,\s*80,\s*255/, "the glow is not the brand purple");
+});
+
+test("the lockup sits at the card's TOP-LEFT", () => {
+  // The card centres its children, so the lockup must opt out explicitly or
+  // it centres with the message and the template is wrong.
+  const logo = skin.match(/&__logo\s*\{([\s\S]*?)\n {4}img/);
+  assert.ok(logo, "no __logo block");
+  assert.match(logo[1], /align-self:\s*flex-start/,
+    "the lockup must opt out of the card's centring");
+});
+
+test("the message is centred", () => {
+  const msg = skin.match(/&__message\s*\{([\s\S]*?)\n {2}\}/);
+  assert.ok(msg, "no __message block");
+  assert.match(msg[1], /text-align:\s*center/);
 });
 
 test("the message is painted with --an-purple", () => {

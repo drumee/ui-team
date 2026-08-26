@@ -33,18 +33,25 @@
 const LOGO = require("assets/drumee-logo.svg");
 
 module.exports = function (ui, name) {
+  const fig = ui.fig.family;
   const logo = LOGO.default || LOGO;
   return Skeletons.Box.Y({
-    className: `${ui.fig.family}__main`,
+    className: `${fig}__main`,
     kids: [
-      Skeletons.Element({
-        className: `${ui.fig.family}__logo`,
-        // Intrinsic size of the exported file, as the sign-in card states it.
-        content: `<img src="${logo}" alt="drumee" width="121" height="24">`,
-      }),
-      Skeletons.Note({
-        className: `${ui.fig.family}__message`,
-        content: `The plugin ${decodeURI(name)} is being loaded. Please wait...`
+      Skeletons.Box.Y({
+        className: `${fig}__card`,
+        kids: [
+          Skeletons.Element({
+            className: `${fig}__logo`,
+            // Intrinsic size of the exported file, as the sign-in card
+            // states it; the skin scales it by height alone.
+            content: `<img src="${logo}" alt="drumee" width="121" height="24">`,
+          }),
+          Skeletons.Note({
+            className: `${fig}__message`,
+            content: `The plugin ${decodeURI(name)} is being loaded. Please wait...`
+          }),
+        ],
       }),
     ]
   })

@@ -7,22 +7,55 @@
     background-color: var(--neutral-100);
   }
 
+  /* ONE TEMPLATE WITH THE AUTHORIZATION SCREEN in analytics-ui
+     (app/skin/legacy.scss, __access-limited-*): the sign-in page's backdrop,
+     the sign-in card, the lockup top-left, text centred. Both are "you
+     cannot use the app yet" holding screens, and a visitor reaching either
+     has usually just come from the sign-in card.
+
+     Written twice — the two live in different repos with no shared package.
+     Both test suites pin these same values so the copies cannot drift apart
+     quietly.
+
+     LIGHT IN BOTH THEMES, deliberately: the sign-in card has no dark variant,
+     and matching it is the point. Hence literals, not tokens — these are the
+     sign-in values. */
   &__main {
     height: 100%;
     width: 100%;
     flex: 1;
-    justify-content: center;
-    align-content: center;
-    flex-wrap: wrap;
-    // The mark sits ABOVE the message rather than beside it. __main is a
-    // Box.Y, but it also carries flex-wrap:wrap for the single-child case it
-    // used to have; column direction is what actually stacks the two now.
+    box-sizing: border-box;
+    padding: 40px;
+    overflow: auto;
     flex-direction: column;
+    justify-content: center;
     align-items: center;
-    // Roomy on purpose: this is a full-viewport holding screen, not a dense
-    // panel, and the lockup and the line below it read as one unit only if
-    // they are not touching.
-    gap: 32px;
+    align-content: center;
+    /* Verbatim from signin/src/widgets/router/skin/index.scss. */
+    background-color: #f2f2f7;
+    background-image: radial-gradient(
+      120% 62% at 50% 116%,
+      rgba(89, 80, 255, 0.45) 0%,
+      rgba(89, 80, 255, 0.12) 34%,
+      rgba(242, 242, 247, 0) 68%
+    );
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  /* The sign-in card's own metrics (its toolkit __main). */
+  &__card {
+    width: 100%;
+    max-width: 520px;
+    box-sizing: border-box;
+    padding: 24px 40px;
+    gap: 20px;
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 12px;
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
   }
 
   // The exported lockup (assets/drumee-logo.svg), the same file the sign-in
@@ -30,30 +63,25 @@
   // `logo` symbol — which carries no fill and paints black until something
   // colours it — this file has its own (#433CC5 mark, #0B0A21 wordmark), and
   // an <img> ignores `color` anyway.
+  /* The card centres its children, so the lockup opts OUT of that to sit
+     top-left. Sized by height alone: the file is 120.723 x 24, and two
+     hand-picked side lengths are how a wordmark ends up quietly squashed.
+     The 32px is the same number the authorization screen uses. */
   &__logo {
+    align-self: flex-start;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    // flex: 0 0 — the lockup must not be squeezed by the message under it.
-    flex: 0 0 auto;
 
     img {
-      // `display: block` kills the inline-baseline gap that would otherwise
-      // widen the gap below it by a few unexplained pixels.
       display: block;
-      // Sized by HEIGHT alone. The file is 120.723 x 24, a 5.03:1 lockup, and
-      // two hand-picked side lengths are how that gets quietly squashed;
-      // `width: auto` cannot. The tag keeps its intrinsic width/height
-      // attributes, so the browser reserves the right box before this lands.
-      // Bigger than the sign-in card's 24px because this fills the viewport
-      // rather than sitting in a 600px card.
       width: auto;
-      height: 44px;
+      height: 32px;
     }
   }
 
   &__message {
     font-size: 20px;
+    text-align: center;
+    width: 100%;
     // --an-purple is ANALYTICS-UI's token, not one of ours. That plugin
     // declares it in the stylesheet it loads from require('./skin') inside
     // its own initialize() — which runs only once its bundle has arrived,
