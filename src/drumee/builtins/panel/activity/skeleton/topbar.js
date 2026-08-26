@@ -1,3 +1,5 @@
+const { muteState } = require("../mute");
+
 module.exports = function (ui) {
   const pfx = ui.fig.family;
 
@@ -28,6 +30,44 @@ module.exports = function (ui) {
             label: LOCALE.MARK_ALL_READ,
             service: 'clear-all',
             uiHandler: [ui],
+          }),
+          // 🚨 THIS IS THE ONLY WAY BACK. A global mute silences every popup,
+          // and the scope picker lives INSIDE a popup — so once everything is
+          // muted there is no toast to open the picker from. Without a control
+          // here, muting all workspaces would be a ONE-WAY DOOR. That is why
+          // this sits in the Center's own topbar, which stays reachable however
+          // quiet the popups are.
+          //
+          // Reflects the GLOBAL flag only. Turning it off calls
+          // notification_mute_unset(''), which clears per-workspace mutes too —
+          // that is the stored contract, and it is what "unmute everything"
+          // has to mean for this to be a reliable way out.
+          Skeletons.Box.X({
+            className: `${pfx}__mute-toggle`,
+            sys_pn: 'mute-toggle',
+            service: 'toggle-mute',
+            state: muteState().global ? 1 : 0,
+            uiHandler: ui,
+            partHandler: ui,
+            // `active: 0` on EVERY descendant, for the reason spelled out on
+            // the unread toggle below: kidsOpt is a no-op and `active` does not
+            // cascade, so any active element in the click path binds its own
+            // onclick and __handleClick's stopPropagation kills the event
+            // before `toggle-mute` can fire.
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__mute-label`,
+                content: LOCALE.MUTE_ALL,
+                active: 0,
+              }),
+              Skeletons.Box.X({
+                className: `${pfx}__toggle-track`,
+                active: 0,
+                kids: [
+                  Skeletons.Box.X({ className: `${pfx}__toggle-thumb`, active: 0 }),
+                ],
+              }),
+            ],
           }),
           Skeletons.Box.X({
             className: `${pfx}__unread-toggle`,

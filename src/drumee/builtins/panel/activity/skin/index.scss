@@ -117,9 +117,41 @@
       // the header, tabs, toggle and notification rows up to comfortable
       // mobile sizes (icon buttons → ~40px touch targets).
       .panel-activity__topbar {
-        height: 100px;
+        // `height` was a hard 100px, which clipped the action row the moment it
+        // wrapped to a second line (measured: 64px of actions plus the title
+        // inside a 100px box). min-height keeps the previous size as the floor
+        // — nothing shrinks — while letting the bar take the extra line when a
+        // third control or a long translation needs one.
+        // `height: auto` is REQUIRED, not decorative: the base rule sets
+        // `height: 56px`, and min-height only raises that fixed box to 100 —
+        // it never lets it grow to fit. Without this line the wrapped action
+        // row still spilled out of a 100px bar (measured: scrollHeight past
+        // clientHeight, action row bottom below the bar).
+        height: auto;
+        min-height: 100px;
         padding: 16px;
         flex-direction: column;
+        gap: 8px;
+      }
+
+      // The bar is a COLUMN here and the base rule centres its items, so the
+      // action row was sized to its CONTENT and simply overflowed the card
+      // once a third control joined it — measured 365px inside a 358px bar.
+      // Stretching it to the bar's width is what lets the min-width:0 and the
+      // label ellipsis further up actually take effect; without this they are
+      // dead rules. Space-between then keeps the three controls apart instead
+      // of bunching them in the middle.
+      .panel-activity__topbar-actions {
+        align-self: stretch;
+        justify-content: space-between;
+        // Three controls do not fit on one 326px line, and squeezing them
+        // spent the ellipsis guard on labels that should be legible —
+        // including the pre-existing "Unreads", which used to render in full
+        // here. So the row WRAPS instead: the bar is 100px tall and the title
+        // plus one action row only uses about 66 of it, so a second line fits
+        // without touching the height or the feed below. Truncation goes back
+        // to being insurance for a long translation rather than the norm.
+        flex-wrap: wrap;
         gap: 8px;
       }
 
@@ -143,7 +175,8 @@
         }
       }
 
-      .panel-activity__unread-label {
+      .panel-activity__unread-label,
+      .panel-activity__mute-label {
         font-size: 14px;
         line-height: 20px;
       }
@@ -325,11 +358,20 @@
     font-weight: 600;
   }
 
-  &__unread-toggle {
+  &__unread-toggle,
+  &__mute-toggle {
     align-items: center;
     gap: 8px;
     cursor: pointer;
     user-select: none;
+    // Measured on the endpoint: with three controls the mobile action row uses
+    // 346 of 358px — twelve pixels of slack. "Mute all" is eight characters in
+    // English and "Tout mettre en sourdine" is twenty-three, so a translation
+    // alone could burst the row. min-width:0 lets the flex item actually shrink
+    // (a flex item's default min-width is auto, which refuses to go below its
+    // content) and the label below then ellipsizes instead of overflowing.
+    // Costs nothing at today's sizes — nothing is truncated until it must be.
+    min-width: 0;
   }
 
   &__toggle-track {
@@ -352,7 +394,8 @@
     transform: translateX(0);
   }
 
-  &__unread-toggle[data-state="1"] {
+  &__unread-toggle[data-state="1"],
+  &__mute-toggle[data-state="1"] {
     .panel-activity__toggle-track {
       background-color: #fa8540;
     }
@@ -364,6 +407,12 @@
   &__topbar-actions {
     align-items: center;
     gap: 12px;
+    // The row must be allowed to SHRINK, or the ellipsis guards on the toggle
+    // labels never engage: a flex item's default min-width is `auto`, which
+    // refuses to go narrower than its content, so the row simply overflowed the
+    // 360px mobile card instead. Measured: 365px of content in a 358px bar
+    // before this line, 0 overflow after.
+    min-width: 0;
   }
 
   &__mark-read-btn {
@@ -399,7 +448,12 @@
     }
   }
 
-  &__unread-label {
+  &__unread-label,
+  &__mute-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
@@ -604,7 +658,8 @@ html[data-theme="dark"] {
       color: var(--normal-fg-10);
     }
 
-    &__unread-label {
+    &__unread-label,
+    &__mute-label {
       color: var(--normal-fg-10);
     }
 

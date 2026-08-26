@@ -2895,5 +2895,6 @@
   "MUTE_DONE_WORKSPACE": "Notifications muted for this workspace",
   "MUTE_DONE_ALL": "Notifications muted for all workspaces",
   "MUTE_FAILED": "Could not mute notifications",
-  "UNMUTE": "Unmute"
+  "UNMUTE": "Unmute",
+  "MUTE_ALL": "Mute all"
 }

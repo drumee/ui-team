@@ -14,7 +14,7 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 // Round 3 Phase 3: which popups the user has switched off. Read once here and
 // refreshed from every mute_set — never per message. Suppresses the CARD only:
 // the feed, the badge and the tab counts are untouched by design.
-const { loadMuteState } = require('./mute');
+const { loadMuteState, setMute, muteState } = require('./mute');
 require('./skin');
 
 class __panel_activity extends LetcBox {
@@ -290,6 +290,10 @@ class __panel_activity extends LetcBox {
         // "No toast while the Center is open" also means: not one already on
         // screen when it opens. The row is in the list behind it either way.
         killChatToast(this);
+        // Repaint the mute switch AFTER the kill, never before: dismissing the
+        // card is the time-critical half of opening the Center, and a test
+        // pins that it happens promptly here.
+        this._syncMuteToggle();
         this.setState(1);
         return '';
 
@@ -356,6 +360,9 @@ class __panel_activity extends LetcBox {
           if (p && p.el) p.el.dataset.state = this._unreadsOnly ? '1' : '0';
         });
         return this.ensurePart(_a.list).then((list) => list.restart());
+
+      case 'toggle-mute':
+        return this._toggleMute();
 
       case 'clear-all':
         return this._clearAll();
@@ -517,6 +524,45 @@ class __panel_activity extends LetcBox {
         return;
       }
     }
+  }
+
+  /**
+   * Mute or unmute every workspace's popups, from the Center's own topbar.
+   *
+   * 🚨 THIS IS THE ONLY WAY BACK OUT OF A GLOBAL MUTE. The scope picker lives
+   * inside a chat popup, and a global mute stops those appearing — so without
+   * this control, muting everything would be irreversible from the UI.
+   *
+   * The switch is driven from the SERVER'S ANSWER, never optimistically: the
+   * write can fail (the driver returns undefined rather than throwing, so the
+   * server reports it), and a switch that flipped anyway would tell the user
+   * their notifications are off while the next message pops up regardless.
+   */
+  async _toggleMute() {
+    const wasGlobal = !!muteState().global;
+    let ok = false;
+    try {
+      ({ ok } = await setMute(this, '', !wasGlobal));
+    } catch (e) {
+      ok = false;
+    }
+    if (!ok) this.warn('mute toggle failed');
+    // Repaint from the cache, which setMute only advances on success — so a
+    // failed write leaves the switch showing what is actually stored.
+    return this._syncMuteToggle();
+  }
+
+  /**
+   * Paint the topbar switch from the cached state.
+   *
+   * Called after a toggle and whenever the panel opens, because the state can
+   * have moved since the last render — muted from a toast, or from another
+   * device (it is read once at boot, so a reload is what picks that up).
+   */
+  _syncMuteToggle() {
+    return this.ensurePart('mute-toggle').then((p) => {
+      if (p && p.el) p.el.dataset.state = muteState().global ? '1' : '0';
+    }).catch(() => {});
   }
 
   async _clearAll() {
