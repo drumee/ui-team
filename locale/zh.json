@@ -2732,6 +2732,5 @@
   "MUTE_DONE_WORKSPACE": "已关闭此工作区的通知",
   "MUTE_DONE_ALL": "已关闭所有工作区的通知",
   "MUTE_FAILED": "无法关闭通知",
-  "UNMUTE": "开启通知",
-  "MUTE_ALL": "全部静音"
+  "UNMUTE": "开启通知"
 }

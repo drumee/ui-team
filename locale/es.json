@@ -2733,6 +2733,5 @@
   "MUTE_DONE_WORKSPACE": "Notificaciones silenciadas para este espacio de trabajo",
   "MUTE_DONE_ALL": "Notificaciones silenciadas para todos los espacios de trabajo",
   "MUTE_FAILED": "No se pudieron silenciar las notificaciones",
-  "UNMUTE": "Reactivar las notificaciones",
-  "MUTE_ALL": "Silenciar todo"
+  "UNMUTE": "Reactivar las notificaciones"
 }

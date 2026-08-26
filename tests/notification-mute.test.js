@@ -54,7 +54,7 @@ global.Skeletons = {
   Box: { Y: node("box-y"), X: node("box-x") },
   Note: node("note"),
   Image: { Svg: node("svg") },
-  Button: { Svg: node("button"), Label: node("button-label") },
+  Button: { Svg: node("button") },
   Avatar: (ava, cn, name) => ({ type: "avatar", ava, className: cn, name }),
 };
 
@@ -623,77 +623,6 @@ test("the count is fetched ONCE per session, not per Mute click", async () => {
   await showScopePicker(h, msg({ hub_id: "H1" }));
   const deskCalls = h.calls.filter((c) => c.svc === "desk.home").length;
   assert.equal(deskCalls, 1, "cached after the first click");
-});
-
-// ------------------------------------------------- the topbar mute switch
-//
-// 🚨 WHY THIS CONTROL HAS TO EXIST. A global mute silences every popup, and the
-// scope picker lives INSIDE a popup — so once everything is muted there is no
-// toast left to open the picker from. Without a control in the Center's own
-// topbar, muting all workspaces would be a ONE-WAY DOOR with no way back.
-
-test("the topbar carries a mute switch wired to toggle-mute", () => {
-  reset();
-  const topbar = require(join(BASE, "skeleton/topbar.js"));
-  const tree = topbar({ fig: { family: "panel-activity" }, _unreadsOnly: 1 });
-  const t = findAny(tree, "panel-activity__mute-toggle");
-  assert.ok(t, "the switch is rendered");
-  assert.equal(t.service, "toggle-mute", "wired to the panel's handler");
-  assert.equal(t.sys_pn, "mute-toggle", "addressable for repainting");
-});
-
-test("the switch reflects the STORED global flag, not a guess", () => {
-  const topbar = require(join(BASE, "skeleton/topbar.js"));
-  const read = () => {
-    delete require.cache[require.resolve(join(BASE, "skeleton/topbar.js"))];
-    const tb = require(join(BASE, "skeleton/topbar.js"));
-    return findAny(tb({ fig: { family: "panel-activity" } }), "panel-activity__mute-toggle").state;
-  };
-  reset();
-  assert.equal(read(), 0, "nothing muted -> off");
-  applyMuteStateFromServer({ global: 1, hubs: [] });
-  assert.equal(read(), 1, "globally muted -> on");
-  // A per-workspace mute is NOT a global mute and must not light the switch,
-  // or turning it "off" would clear mutes the user never set globally.
-  reset();
-  applyMuteStateFromServer({ global: 0, hubs: ["H1"] });
-  assert.equal(read(), 0, "a per-workspace mute leaves the global switch off");
-});
-
-test("every descendant of the switch is active:0", () => {
-  reset();
-  const topbar = require(join(BASE, "skeleton/topbar.js"));
-  const t = findAny(topbar({ fig: { family: "panel-activity" } }), "panel-activity__mute-toggle");
-  // ui-core's mergeKidsOptions discards its own map result, so `kidsOpt` is a
-  // no-op, and `active` does not cascade — any active element in the click path
-  // binds its own onclick and __handleClick's stopPropagation kills the event
-  // before `toggle-mute` can fire. Every descendant must carry it explicitly.
-  (function walk(n, depth) {
-    for (const k of n.kids || []) {
-      assert.equal(k.active, 0,
-        `descendant ${k.className} at depth ${depth} must be active:0`);
-      walk(k, depth + 1);
-    }
-  })(t, 1);
-});
-
-test("_toggleMute writes the GLOBAL scope and repaints from stored state", () => {
-  const { readFileSync } = require("node:fs");
-  const src = readFileSync(join(BASE, "index.js"), "utf8");
-  const at = src.indexOf("async _toggleMute()");
-  assert.ok(at > -1, "_toggleMute must exist");
-  const body = src.slice(at, src.indexOf("\n  }", at));
-
-  assert.ok(/setMute\(this, '', !wasGlobal\)/.test(body),
-    "it toggles the GLOBAL scope, derived from the stored flag");
-  // 🚨 The switch must be painted from the CACHE, which setMute only advances
-  // on success — never optimistically from what we asked for. A switch that
-  // flipped anyway would tell the user their notifications are off while the
-  // next message pops up regardless.
-  assert.ok(/_syncMuteToggle\(\)/.test(body), "it repaints from stored state");
-  assert.ok(!/dataset\.state\s*=/.test(body),
-    "it must not paint the switch directly — that would bypass the success check");
-  assert.ok(/if \(!ok\)/.test(body), "a failed write is reported");
 });
 
 // --------------------------------------------------------- scope containment

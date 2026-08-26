@@ -2733,6 +2733,5 @@
   "MUTE_DONE_WORKSPACE": "Notifications désactivées pour cet espace de travail",
   "MUTE_DONE_ALL": "Notifications désactivées pour tous les espaces de travail",
   "MUTE_FAILED": "Impossible de désactiver les notifications",
-  "UNMUTE": "Réactiver les notifications",
-  "MUTE_ALL": "Tout mettre en sourdine"
+  "UNMUTE": "Réactiver les notifications"
 }
