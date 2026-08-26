@@ -372,6 +372,7 @@ const LOC2 = {
   JOIN_MEETING: "Join meeting",
   MEETING_STARTING_NOW: "Your meeting is starting now",
   X_INVITED_COUNT: "{0} invited",
+  X_JOINED_COUNT: "{0} joined",
   MEETING_START_AT: "Start at {0}",
   X_INVITED_YOU_TO_MEETING: "{0} invited you to a meeting",
 };
@@ -460,4 +461,61 @@ test("an invite with an agenda shows both lines, not the fallback", () => {
   const t = build({ title: "M", from: "Duy", message: "Bring the deck" }, {});
   const lines = all(t, "desk-meeting-toast__desc").map((n) => n.content);
   assert.deepEqual(lines, ["Duy invited you to a meeting", "Bring the deck"]);
+});
+
+// --------------------------------------------------- "joined" vs "invited"
+//
+// Duy, 2026-08-26: "N joined" belongs to a meeting that has STARTED and has
+// people in it; "N invited" belongs to a schedule notice where the meeting has
+// not started (or it is not yet time) and nobody has joined. So the wording is
+// decided by the actual join count, NOT by which push arrived.
+
+test("a started meeting reports who is IN it", () => {
+  const t = build({ title: "M", attendees: [{ uid: "a" }, { uid: "b" }], joined: 2 }, { reminder: 1 });
+  assert.equal(say(t, "count"), "2 joined");
+});
+
+test("a schedule notice reports invitees, because the room is empty", () => {
+  const t = build({ title: "M", attendees: ["a", "b", "c"], stime: 1 }, {});
+  assert.equal(say(t, "count"), "3 invited");
+});
+
+test("a reminder never claims attendance nobody verified", () => {
+  // reminderWorker fires at the start time whether or not anyone turned up,
+  // and its payload carries no join data at all.
+  const t = build({ title: "M", attendees: ["a", "b"], stime: 1 }, { reminder: 1 });
+  assert.equal(say(t, "count"), "2 invited");
+});
+
+test("joined:0 is treated as no join data, not as zero attendees", () => {
+  const t = build({ title: "M", attendees: ["a"], joined: 0 }, { reminder: 1 });
+  assert.equal(say(t, "count"), "1 invited");
+});
+
+test("the count and the faces come from the same roster", () => {
+  const t = build(
+    { title: "M", attendees: [{ uid: "a", name: "Ann" }, { uid: "b", name: "Bo" }, { uid: "c", name: "Cy" }], joined: 3 },
+    { reminder: 1 },
+  );
+  assert.equal(say(t, "count"), "3 joined");
+  assert.equal(all(t, "desk-meeting-toast__avatar").length, 2, "still two faces");
+  assert.equal(say(t, "avatar-more"), "+1");
+});
+
+test("conference.start forwards the roster and the count to the card", () => {
+  const { shown } = start(
+    meeting({ attendees: [{ uid: "a", name: "Ann" }, { uid: "me", name: "Duy" }], joined: 2 }),
+  );
+  assert.equal(shown.length, 1);
+  assert.equal(shown[0].data.joined, 2, "the count must survive the hand-off");
+  assert.equal(shown[0].data.attendees.length, 2, "and so must the faces");
+});
+
+test("a conference.start with no roster still renders, with no meta line", () => {
+  // An older server that predates the roster: the card must not break.
+  const { shown } = start(meeting());
+  assert.equal(shown[0].data.joined, 0);
+  assert.deepEqual(shown[0].data.attendees, []);
+  const t = build(shown[0].data, shown[0].opt);
+  assert.equal(pick(t, "desk-meeting-toast__count"), null, "no count without data");
 });

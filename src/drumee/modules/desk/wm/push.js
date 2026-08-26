@@ -464,6 +464,8 @@ class __push_manager extends winman {
       const heading = data.title || LOCALE.MEETING;
       const description = String(data.message || "").trim();
       const attendees = Array.isArray(data.attendees) ? data.attendees : [];
+      // How many are actually in the room. Only a started meeting carries it.
+      const joined = Number(data.joined) || 0;
       const stime = Number(data.stime) || 0;
 
       // Meta line: avatar stack · N invited · start time. Each piece is dropped
@@ -500,10 +502,21 @@ class __push_manager extends winman {
             }),
           );
         }
+        // "N joined" vs "N invited" is decided by whether anyone is actually
+        // IN the room, not by which push arrived (Duy, 2026-08-26):
+        //   · a started meeting HAS people in it — conference.js sends the
+        //     room's roster and `joined`, so this says "joined";
+        //   · a schedule notice names invitees and the room is empty (or it is
+        //     not even time yet), so it says "invited".
+        // room.reminder carries no join data at all — it fires at the start
+        // time whether or not anyone turned up — so it correctly stays
+        // "invited" rather than claiming attendance nobody has verified.
         meta.push(
           Skeletons.Note({
             className: "desk-meeting-toast__count",
-            content: LOCALE.X_INVITED_COUNT.format(attendees.length),
+            content: joined
+              ? LOCALE.X_JOINED_COUNT.format(joined)
+              : LOCALE.X_INVITED_COUNT.format(attendees.length),
           }),
         );
       }
@@ -776,8 +789,18 @@ class __push_manager extends winman {
       // reminder:1 with no lead_min is what selects the "now" variant — Join
       // plus the 20 s linger. room_id keys the card; it is also what
       // _joinMeetingFromData opens.
+      // The room's roster and the count of who is in it. conference.js sends
+      // both, and they are what make this card say "N joined" rather than
+      // "N invited" — a started meeting has people in it by definition.
       return this._showMeetingToast(
-        { hub_id: data.hub_id, room_id: data.room_id || data.hub_id, title, message },
+        {
+          hub_id: data.hub_id,
+          room_id: data.room_id || data.hub_id,
+          title,
+          message,
+          attendees: Array.isArray(data.attendees) ? data.attendees : [],
+          joined: Number(data.joined) || 0,
+        },
         { reminder: 1 },
       );
     } catch (e) {

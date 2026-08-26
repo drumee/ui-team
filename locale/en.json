@@ -2884,5 +2884,6 @@
   "INVITE_LINK_READY": "Invite link ready",
   "PREVIOUS": "Previous",
   "MUTE": "Mute",
-  "JUST_NOW": "Just now"
+  "JUST_NOW": "Just now",
+  "X_JOINED_COUNT": "{0} joined"
 }

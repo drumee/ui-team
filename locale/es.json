@@ -2722,5 +2722,6 @@
   "INVITE_LINK_READY": "Enlace de invitación listo",
   "PREVIOUS": "Anterior",
   "MUTE": "Silenciar",
-  "JUST_NOW": "Ahora mismo"
+  "JUST_NOW": "Ahora mismo",
+  "X_JOINED_COUNT": "{0} se han unido"
 }

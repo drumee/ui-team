@@ -2721,5 +2721,6 @@
   "INVITE_LINK_READY": "邀请链接已就绪",
   "PREVIOUS": "上一个",
   "MUTE": "静音",
-  "JUST_NOW": "刚刚"
+  "JUST_NOW": "刚刚",
+  "X_JOINED_COUNT": "{0} 人已加入"
 }
