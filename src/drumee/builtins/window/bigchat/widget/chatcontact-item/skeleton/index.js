@@ -1,4 +1,6 @@
 
+const { supportAvatar } = require("libs/support");
+
 const __skl_widget_chatcontactItem = function (ui) {
   let chat_icon, msg, state;
   const contentFig = ui.fig.family;
@@ -10,7 +12,20 @@ const __skl_widget_chatcontactItem = function (ui) {
   const lname = ui.mget(_a.lastname) || '';
   const fullname = ui.mget(_a.fullname) || `${fname} ${lname}`.trim();
   const displayName = (ui.mget('display') || '').trim() || fullname || fname || lname;
-  if (ui.mget('flag') === 'contact') {
+  // The row whose PEER is the support account — the user's side of the
+  // conversation. The account that answers support can never match: its own
+  // id is not among its rows' peers.
+  const supportPeer =
+    typeof Desk !== 'undefined' &&
+    _.isFunction(Desk.supportContactId) &&
+    !!Desk.supportContactId() &&
+    Desk.supportContactId() === ui.mget('entity_id');
+
+  if (supportPeer) {
+    // Product mark rather than auto-coloured initials, so support does not
+    // read as one more contact in the list. See libs/support.supportAvatar.
+    chat_icon = supportAvatar(`${contentFig}__support-avatar`);
+  } else if (ui.mget('flag') === 'contact') {
     chat_icon = Skeletons.UserProfile({
       className: `${contentFig}__profile`,
       id: ui.mget('entity_id'),
@@ -97,13 +112,15 @@ const __skl_widget_chatcontactItem = function (ui) {
 
   // A conversation with no messages yet has no ctime — Dayjs.unix(undefined)
   // formats as "Invalid Date", so render nothing instead.
+  // Support with nothing said yet reads "Always" rather than blank — the row
+  // is pinned and permanent, and an empty slot makes it look unfinished.
   const ctime = ui.mget(_a.ctime);
   const chatTime = Skeletons.Note({
     className: `${contentFig}__note time`,
     sys_pn: 'msg-time',
     content: ctime
       ? Dayjs.unix(ctime).locale(Visitor.language()).format("HH:mm")
-      : ''
+      : (supportPeer ? LOCALE.SUPPORT_ALWAYS : '')
   });
 
   const value = ui.mget('room_count') || "";

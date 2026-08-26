@@ -358,6 +358,26 @@
     line-height: 22.5px;
   }
 
+  // Support's avatar (Figma 58186-204873): the product mark on a brand tile
+  // instead of the auto-coloured initials an ordinary contact gets. Sized to
+  // the 40px UserProfile tile it replaces, so the header does not reflow when
+  // the conversation changes.
+  &__header-support-avatar {
+    align-items: center;
+    background-color: var(--primary-40);
+    border-radius: 8px;
+    flex-shrink: 0;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+  }
+
+  &__header-support-avatar-ico {
+    color: var(--gray-white);
+    height: 22px;
+    width: 22px;
+  }
+
   &__header-name-row {
     align-items: center;
     gap: 8px;
@@ -379,8 +399,10 @@
   // is running copy rather than a status token — no uppercase, no tracking.
   // Its own class, not a modifier of __header-status: _onPeerData rewrites
   // anything matching that class when a presence broadcast arrives.
+  // Green, like a presence line, because it stands in for one: this is the
+  // slot the peer's online status occupies for every other conversation.
   &__header-support-note {
-    @include drumee.typo($size: 11px, $color: var(--normal-fg-50));
+    @include drumee.typo($size: 12px, $color: var(--success));
   }
 
   // Marks a support conversation in the chat header. The inbox row carries

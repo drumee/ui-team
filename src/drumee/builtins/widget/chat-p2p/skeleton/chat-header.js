@@ -1,3 +1,5 @@
+const { supportAvatar } = require("libs/support");
+
 /**
  * Header for the selected contact's chat panel.
  * @param {View} ui    - The chat_p2p widget
@@ -55,22 +57,6 @@ module.exports = function (ui, contact) {
     return LOCALE.OFFLINE;
   };
 
-  const profileIcon = isContact
-    ? Skeletons.UserProfile({
-        className: `${fig}__header-profile`,
-        id: entityId,
-        firstname: fname,
-        lastname: lname,
-        fullname,
-        online: onlineState,
-        live_status: 1,
-        sys_pn: 'header-profile'
-      })
-    : Skeletons.Button.Svg({
-        ico: 'raw-drumee_projectroom',
-        className: `${fig}__header-profile icon raw-drumee_projectroom`
-      });
-
   // Two different support questions, and they want opposite treatments:
   //  - talking TO support (the user's side): presence is replaced with an
   //    expectation line. An "Offline" dot on the support contact reads as
@@ -85,13 +71,34 @@ module.exports = function (ui, contact) {
   const isSupportThread =
     _.isFunction(ui._isSupportRow) && ui._isSupportRow(contact);
 
+  // Support gets the product's own mark, not auto-coloured initials — see
+  // supportAvatar(). Only on the user's side: to the agent ANSWERING support
+  // the peer is a person, and their avatar and presence are the useful thing.
+  const profileIcon = talkingToSupport
+    ? supportAvatar(`${fig}__header-support-avatar`)
+    : isContact
+      ? Skeletons.UserProfile({
+        className: `${fig}__header-profile`,
+        id: entityId,
+        firstname: fname,
+        lastname: lname,
+        fullname,
+        online: onlineState,
+        live_status: 1,
+        sys_pn: 'header-profile'
+      })
+      : Skeletons.Button.Svg({
+        ico: 'raw-drumee_projectroom',
+        className: `${fig}__header-profile icon raw-drumee_projectroom`
+      });
+
   const statusNote = talkingToSupport
     ? Skeletons.Note({
         // Deliberately NOT `__header-status`: _onPeerData finds the presence
         // element by that class and rewrites its text on every peer status
         // broadcast, which would replace this line with "Offline".
         className: `${fig}__header-support-note`,
-        content: LOCALE.SUPPORT_REPLY_TIME
+        content: LOCALE.SUPPORT_AVAILABILITY
       })
     : (isContact ? Skeletons.Note({
         className: `${fig}__header-status`,

@@ -21,4 +21,30 @@ function openSupportMail() {
   window.location.assign(`mailto:${to}?subject=${encodeURIComponent(subject)}`);
 }
 
-module.exports = { openSupportMail };
+/**
+ * The support account's avatar: the headset glyph on a brand-coloured tile
+ * (Figma 58186-204873), used everywhere the account is shown — the inbox row
+ * and the chat header.
+ *
+ * Support is not a person, and rendering it through UserProfile gave it
+ * auto-coloured initials that read as one: an ordinary contact among the
+ * user's ordinary contacts. A fixed mark says "this is the product" at a
+ * glance, and stays identical for every user in every install.
+ *
+ * @param {String} className  BEM class for the tile, prefixed by the caller
+ * @returns Skeleton
+ */
+function supportAvatar(className) {
+  return Skeletons.Box.X({
+    className,
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Image.Svg({
+        ico: "ph-headset",
+        className: `${className}-ico`,
+      }),
+    ],
+  });
+}
+
+module.exports = { openSupportMail, supportAvatar };

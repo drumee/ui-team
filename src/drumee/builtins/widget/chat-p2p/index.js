@@ -593,6 +593,55 @@ class __chat_p2p extends LetcBox {
   }
 
   /**
+   * Seed the support conversation with its greeting, the first time it is
+   * opened. The text is the server's — it is posted AS the support account,
+   * and a client-supplied body would let anyone write in support's name.
+   *
+   * The server is idempotent (a conversation that already has messages is a
+   * no-op), so the once-per-panel latch here is only about not paying for a
+   * round trip on every reopen. Failure is silent: the conversation still
+   * opens, it just opens empty.
+   */
+  async _greetSupport() {
+    // Latched before the await, not after: two opens racing would otherwise
+    // both find it unset and post twice.
+    if (this._greeted) return;
+    this._greeted = true;
+    try {
+      const res = await this.postService(SERVICE.support.greet, {});
+      if (!res || ~~res.posted !== 1) return;
+      // The pinned row still reads "Start a conversation" — it was drawn
+      // before the greeting existed. Show what the thread now actually says.
+      this._setSupportPreview(res.message);
+    } catch (e) {
+      // Unlatch, so the next open tries again rather than leaving the thread
+      // permanently blank on one dropped request. Safe to retry: the server
+      // is idempotent, so at worst this costs a round trip.
+      this._greeted = false;
+      this.warn("chat_p2p: could not seed the support greeting", e);
+    }
+  }
+
+  /**
+   * Update the inbox preview of the support row after the greeting lands.
+   * @param {String} message
+   */
+  _setSupportPreview(message) {
+    if (!message) return;
+    const id =
+      typeof Desk !== "undefined" && _.isFunction(Desk.supportContactId)
+        ? Desk.supportContactId()
+        : null;
+    const list = this.getPart && this.getPart("contact-list");
+    if (!id || !list || !_.isFunction(list.getItemsByAttr)) return;
+    const row = (list.getItemsByAttr(_a.entity_id, id) || [])[0];
+    if (!row || !_.isFunction(row.mset)) return;
+    row.mset(_a.message, message);
+    const note = row.el && row.el.querySelector(`.${row.fig.family}__note.message`);
+    if (note) note.textContent = message;
+  }
+
+  /**
    * Mount the conversation for a resolved peer.
    * @param {Object} peer     plain peer data (entity_id, display, flag…)
    * @param {Object} contact  view (or shim) the header reads its fields from
@@ -601,6 +650,22 @@ class __chat_p2p extends LetcBox {
     const flag = peer.flag;
     const hub_id = peer.entity_id;
     if (!hub_id) return;
+
+    // Support opens with support having already said hello (Figma
+    // 58186-204873). Awaited on purpose: widget_chat loads its messages as it
+    // mounts, so a greeting written after that point would not appear until
+    // the next reload.
+    //
+    // The id check is what makes this fire on EVERY route into the thread.
+    // `is_support` is only carried by rows we drew ourselves; once the
+    // conversation is real the server returns an ordinary row, and clicking
+    // it — or landing on it — would otherwise skip the greeting entirely.
+    const supportId =
+      typeof Desk !== "undefined" && _.isFunction(Desk.supportContactId)
+        ? Desk.supportContactId()
+        : null;
+    if (supportId && hub_id === supportId) peer.is_support = 1;
+    if (peer.is_support) await this._greetSupport();
 
     let type;
     let home = null;

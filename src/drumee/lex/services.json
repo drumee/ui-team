@@ -178,6 +178,7 @@
     "check_cooldown": "reward_hub.check_cooldown"
   },
   "support": {
-    "contact": "support.contact"
+    "contact": "support.contact",
+    "greet": "support.greet"
   }
 }
