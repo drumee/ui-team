@@ -940,7 +940,14 @@ html[data-theme="dark"] {
 
     // The chip is always rendered so its name can be filled in once
     // media.get_node_attr answers; until then it must take no space.
-    &:empty {
+    //
+    // 🚨 THIS WAS `&:empty` AND IT NEVER MATCHED. ui-core renders every Note
+    // with an inner `<div class="note-content">`, and `:empty` fails on any
+    // child — verified on the endpoint: `chip.matches(":empty") === false` with
+    // no text, so the chip stayed a 16x0 box holding 24px of the title row.
+    // `:empty` is unusable on ANY ui-core widget for this reason; the emptiness
+    // is flagged in JS instead (chat-toast.js buildCard / resolveChipLater).
+    &[data-empty="1"] {
       display: none;
     }
   }

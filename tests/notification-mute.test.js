@@ -72,7 +72,16 @@ global.Wm = {
       (function walk(n) {
         if (!n || typeof n !== "object") return;
         if (n.className && !byClass.has(n.className)) {
-          byClass.set(n.className, { textContent: n.content == null ? "" : String(n.content) });
+          // A faithful-enough element: real code sets text AND attributes on
+          // these nodes, so the stub must support both. A stub missing
+          // setAttribute makes the real call throw into a .catch() and the
+          // test then "passes" against behaviour the browser never has.
+          const attrs = { ...(n.attrOpt || {}) };
+          byClass.set(n.className, {
+            textContent: n.content == null ? "" : String(n.content),
+            getAttribute: (k) => (k in attrs ? attrs[k] : null),
+            setAttribute: (k, v) => { attrs[k] = String(v); },
+          });
         }
         (n.kids || []).forEach(walk);
       })(tree);

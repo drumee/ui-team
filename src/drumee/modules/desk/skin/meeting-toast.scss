@@ -143,7 +143,18 @@
   // sentence. The rest of the line stays Regular. `drumee.typo` never emits a
   // font-weight of its own, so this is written out — see the notes in the
   // activity panel skin.
-  &__desc b {
+  // 🚨 THE REPEATED BLOCK CLASS IS LOAD-BEARING — it is specificity, not style.
+  // `.window-manager b { font-weight: bold }` (modules/desk/wm/skin/index.scss)
+  // matches this very <b> with the SAME specificity (0,1,1) and ships LATER in
+  // the cascade, so it won and the organiser/folder rendered at 700 instead of
+  // 600. Measured on the endpoint: computed font-weight 700 while this rule
+  // said 600 and `matches()` confirmed the selector applied.
+  //
+  // Repeating the block class makes this (0,2,1) so it wins deterministically.
+  // The global is deliberately NOT touched: every other <b> inside the window
+  // manager depends on it, and narrowing it would be a far wider change than
+  // this card's two bold words justify.
+  & &__desc b {
     font-weight: 600;
     color: inherit;
   }

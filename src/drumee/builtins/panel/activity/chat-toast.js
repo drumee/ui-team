@@ -141,7 +141,12 @@ function resolveChipLater(host, model, toast) {
         if (toast.isDestroyed && toast.isDestroyed()) return;
         if (host._chatToast !== toast) return;
         const el = toast.el.querySelector(".panel-activity-toast__chip");
-        if (el) el.textContent = name;
+        if (el) {
+          el.textContent = name;
+          // Reveal it: the flag is what the stylesheet reads, so filling the
+          // text without clearing it would leave the chip hidden.
+          el.setAttribute("data-empty", "0");
+        }
       })
       .catch(() => {});
   } catch (e) {}
@@ -196,10 +201,22 @@ function buildCard(model, url, replacing) {
     kids: [
       Skeletons.Note({ className: `${pfx}__sender`, content: esc(senderLabel(model)) }),
       // ALWAYS rendered, even with no name yet: resolveChipLater fills it in
-      // from media.get_node_attr, and `&__chip:empty` keeps it out of the
-      // layout until then. Rendering it conditionally would mean building DOM
-      // after the fact, which this framework does not do from raw markup.
-      Skeletons.Note({ className: `${pfx}__chip`, content: chip ? esc(chip) : "" }),
+      // from media.get_node_attr, and the CSS keeps it out of the layout until
+      // then. Rendering it conditionally would mean building DOM after the
+      // fact, which this framework does not do from raw markup.
+      //
+      // 🚨 `data-empty` EXISTS BECAUSE `:empty` CANNOT WORK HERE. The rule used
+      // to be `&__chip:empty { display: none }`, and it never once matched:
+      // ui-core renders every Note with an inner `<div class="note-content">`,
+      // and `:empty` fails on any child — measured on the endpoint,
+      // `chip.matches(":empty")` is false even with no text. The whitespace
+      // inside that div defeats `:empty` on the inner node too. So the state is
+      // stated explicitly instead of inferred from the DOM shape.
+      Skeletons.Note({
+        className: `${pfx}__chip`,
+        content: chip ? esc(chip) : "",
+        attrOpt: { "data-empty": chip ? "0" : "1" },
+      }),
     ],
   });
 

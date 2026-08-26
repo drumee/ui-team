@@ -57,7 +57,16 @@ global.Wm = {
       (function walk(n) {
         if (!n || typeof n !== "object") return;
         if (n.className && !byClass.has(n.className)) {
-          byClass.set(n.className, { textContent: n.content == null ? "" : String(n.content) });
+          // A faithful-enough element: real code sets text AND attributes on
+          // these nodes, so the stub must support both. A stub missing
+          // setAttribute makes the real call throw into a .catch() and the
+          // test then "passes" against behaviour the browser never has.
+          const attrs = { ...(n.attrOpt || {}) };
+          byClass.set(n.className, {
+            textContent: n.content == null ? "" : String(n.content),
+            getAttribute: (k) => (k in attrs ? attrs[k] : null),
+            setAttribute: (k, v) => { attrs[k] = String(v); },
+          });
         }
         (n.kids || []).forEach(walk);
       })(tree);
@@ -451,6 +460,43 @@ test("the card is cleaned up when the Center opens and when the panel dies", () 
     /killChatToast\(this\)/.test(src.slice(destroy, destroy + 520)),
     "the card outlives the panel — it lives in the window layer",
   );
+});
+
+test("the empty chip is flagged, because :empty cannot work on a ui-core Note", () => {
+  reset();
+  // 🚨 `&__chip:empty` never matched: ui-core renders every Note with an inner
+  // <div class="note-content">, and :empty fails on ANY child. Measured on the
+  // endpoint — chip.matches(":empty") was false with no text, so the chip kept
+  // 24px of the title row instead of collapsing. The state is now explicit.
+  showChatToast(panel(), msg(), "#/x");            // p2p: no nid, no folder_name
+  const chip = find(card().tree, "panel-activity-toast__chip");
+  assert.ok(chip, "the chip is always rendered");
+  assert.equal(chip.content, "", "with nothing to say");
+  assert.equal(chip.attrOpt["data-empty"], "1", "and flagged empty so CSS can hide it");
+
+  // With a name, it must NOT be flagged.
+  reset();
+  showChatToast(panel(), msg({ folder_name: "Q3 Launch" }), "#/x");
+  const filled = find(card().tree, "panel-activity-toast__chip");
+  assert.equal(filled.content, "Q3 Launch");
+  assert.equal(filled.attrOpt["data-empty"], "0", "a named chip must be visible");
+});
+
+test("filling the chip late also clears the empty flag", async () => {
+  reset();
+  // A late resolve that set the text but left data-empty="1" would leave the
+  // chip hidden with the answer already in it — silently worse than before.
+  const h = panel({
+    fetchService: () => Promise.resolve([{ filename: "Checkin" }]),
+  });
+  // A nid nothing else has used: NAME_CACHE is module-level and survives
+  // reset(), so a shared id would resolve synchronously from an earlier test's
+  // answer and this late-fill path would never run.
+  showChatToast(h, msg({ nid: "N-late-fill-1" }), "#/x");
+  await new Promise((r) => setTimeout(r, 0));
+  const el = card().el.querySelector(".panel-activity-toast__chip");
+  assert.equal(el.textContent, "Checkin", "the name landed");
+  assert.equal(el.getAttribute("data-empty"), "0", "and the chip was revealed");
 });
 
 // The server now names the folder on the push itself (channel.js
