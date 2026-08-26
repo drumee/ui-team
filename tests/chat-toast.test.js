@@ -66,14 +66,23 @@ global.Wm = {
         getAttribute: (k) => (k in attrs ? attrs[k] : null),
         querySelector: (sel) => byClass.get(sel.replace(/^\./, "")) || null,
         query: (sel) => byClass.get(sel.replace(/^\./, "")) || null,
+        get isConnected() { return inst.attached; },
+        remove() { inst.attached = false; },
       };
       const inst = {
         tree,
         el,
         listeners,
         destroyed: false,
+        attached: true,
         isDestroyed() { return this.destroyed; },
-        goodbye() { this.destroyed = true; },
+        // 🚨 FAITHFUL TO THE REAL WIDGET, measured on the endpoint 2026-08-26:
+        // goodbye() returns without throwing and does NOT destroy the view or
+        // detach the node. The previous stub marked it destroyed — i.e. the
+        // stub was MORE CAPABLE than reality, which is exactly why the suite
+        // stayed green while the shipped card never left the screen.
+        goodbye() { /* no-op, exactly as measured */ },
+        destroy() { this.destroyed = true; this.attached = false; },
       };
       APPENDED.push(inst);
       return inst;

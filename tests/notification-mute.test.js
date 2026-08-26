@@ -79,11 +79,21 @@ global.Wm = {
         addEventListener: (n, fn, capture) => listeners.push({ n, fn, capture }),
         getAttribute: (k) => (k in attrs ? attrs[k] : null),
         querySelector: (sel) => byClass.get(sel.replace(/^\./, "")) || null,
+        get isConnected() { return inst.attached; },
+        remove() { inst.attached = false; },
       };
       const inst = {
-        tree, el, listeners, destroyed: false,
+        tree, el, listeners,
+        destroyed: false,
+        attached: true,
         isDestroyed() { return this.destroyed; },
-        goodbye() { this.destroyed = true; },
+        // 🚨 FAITHFUL TO THE REAL WIDGET, measured on the endpoint 2026-08-26:
+        // goodbye() returns without throwing and does NOT destroy the view or
+        // detach the node. The previous stub marked it destroyed — i.e. the
+        // stub was MORE CAPABLE than reality, which is exactly why the suite
+        // stayed green while the shipped card never left the screen.
+        goodbye() { /* no-op, exactly as measured */ },
+        destroy() { this.destroyed = true; this.attached = false; },
       };
       APPENDED.push(inst);
       return inst;
@@ -430,6 +440,77 @@ test("a rejected state read leaves popups working", async () => {
   const h = panel({ fetchService: () => Promise.reject(new Error("boom")) });
   await assert.doesNotReject(() => loadMuteState(h));
   assert.equal(isPopupMuted(msg({ hub_id: "H1" })), false);
+});
+
+// ------------------------------------------------------------- card removal
+
+test("killChatToast really DETACHES the card — goodbye() alone does not", () => {
+  reset();
+  const h = panel();
+  showChatToast(h, msg(), "#/x");
+  const inst = card();
+  assert.equal(inst.attached, true, "mounted");
+
+  killChatToast(h);
+
+  // 🚨 The bug this defends, found by the first live DOM measurement on
+  // 2026-08-26: goodbye() is a NO-OP for a card appended straight to the
+  // windows layer, so the shipped card was never removed. The 10 s
+  // auto-dismiss did nothing, and every later message stacked another card on
+  // top of the last. Both symptoms come from this one line.
+  assert.equal(inst.attached, false, "the node must be detached, not just forgotten");
+  assert.equal(inst.isDestroyed(), true, "and the view destroyed");
+  assert.equal(h._chatToast, null, "and the panel's pointer cleared");
+});
+
+test("a widget whose destroy() does NOT detach is still cleared from the DOM", () => {
+  reset();
+  // The second half of the belt-and-braces pair. destroy() detaches for the
+  // widget we measured, so without this case the DOM fallback would be
+  // unprovable — and an unprovable guard is the kind a later edit deletes as
+  // dead code. Here destroy() marks the view destroyed but leaves the node
+  // attached, which is precisely the failure the fallback exists for.
+  const layer = global.Wm.windowsLayer;
+  const made = [];
+  global.Wm.windowsLayer = {
+    append: (tree) => {
+      const inst = {
+        tree, listeners: [], destroyed: false, attached: true,
+        isDestroyed() { return this.destroyed; },
+        goodbye() {},
+        destroy() { this.destroyed = true; },     // marks, does NOT detach
+      };
+      inst.el = {
+        addEventListener() {}, getAttribute: () => null, querySelector: () => null,
+        get isConnected() { return inst.attached; },
+        remove() { inst.attached = false; },
+      };
+      made.push(inst);
+      return inst;
+    },
+  };
+  try {
+    const h = panel();
+    showChatToast(h, msg(), "#/x");
+    killChatToast(h);
+    assert.equal(made[0].attached, false,
+      "the DOM fallback must detach a node destroy() left behind");
+  } finally {
+    global.Wm.windowsLayer = layer;
+  }
+});
+
+test("every state swap leaves exactly ONE live card", async () => {
+  reset();
+  const h = panel();
+  showChatToast(h, msg(), "#/x");
+  showChatToast(h, msg({ message: "second" }), "#/x");
+  showScopePicker(h, msg());
+  await applyMute(h, "H1", h._chatToast);
+
+  const live = APPENDED.filter((a) => a.attached);
+  assert.equal(live.length, 1, `exactly one card on screen, got ${live.length}`);
+  assert.equal(live[0], h._chatToast, "and it is the one the panel points at");
 });
 
 // --------------------------------------------------------- scope containment

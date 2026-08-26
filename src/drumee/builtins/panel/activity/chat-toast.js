@@ -163,8 +163,19 @@ function killChatToast(host) {
     const t = host._chatToast;
     host._chatToast = null;
     if (t && (!t.isDestroyed || !t.isDestroyed())) {
-      if (t.goodbye) t.goodbye();
+      const node = t.el;
+      // 🚨 goodbye() is a NO-OP for a card appended straight to the windows
+      // layer. MEASURED on the endpoint 2026-08-26: it returns without
+      // throwing, but the view is NOT marked destroyed and the node is STILL
+      // connected afterwards — so the card never left the screen, a second
+      // message stacked another on top of it, and the 10 s auto-dismiss did
+      // nothing at all. (Phase 2 shipped this; it was never DOM-verified.)
+      // destroy() is the Marionette API and does both — verified 0 nodes left.
+      if (t.destroy) t.destroy();
       else if (t.remove) t.remove();
+      // The DOM is the source of truth for whether the user can still see a
+      // card, so make certain of it rather than trusting the view layer.
+      if (node && node.isConnected && node.remove) node.remove();
     }
   } catch (e) {}
 }
