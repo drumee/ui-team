@@ -46,6 +46,7 @@ global._a = new Proxy({}, { get: (_t, k) => String(k) });
 global.SERVICE = {
   media: { get_node_attr: "media.get_node_attr" },
   activity: { mute_state: "activity.mute_state", mute_set: "activity.mute_set" },
+  desk: { home: "desk.home" },
 };
 
 const node = (type) => (o = {}) => ({ type, ...o, kids: (o.kids || []).filter(Boolean) });
@@ -105,6 +106,7 @@ const BASE = join(__dirname, "../src/drumee/builtins/panel/activity");
 const { showChatToast, killChatToast, applyMute, showScopePicker } = require(join(BASE, "chat-toast.js"));
 const {
   isPopupMuted, setMute, loadMuteState, muteState, resetMuteState,
+  resetWorkspaceCount, isWorkspaceRow,
 } = require(join(BASE, "mute.js"));
 
 // ------------------------------------------------------------------ helpers
@@ -225,15 +227,18 @@ test("mute is the LAST guard — it never masks a structural reason", () => {
 
 // ----------------------------------------------------------- the scope picker
 
-test("Mute swaps the card for the picker IN PLACE, in the same shell", () => {
+test("Mute swaps the card for the picker IN PLACE, in the same shell", async () => {
   reset();
   const h = panel();
   showChatToast(h, msg(), "#/x");
   const first = card();
   assert.equal(state(), undefined, "the message card carries no state flag");
 
-  // Click Mute through the real capture-phase delegate.
+  // Click Mute through the real capture-phase delegate. The delegate does not
+  // await — showScopePicker resolves the workspace count first — so yield a
+  // tick before measuring, exactly as the browser would.
   clickIn(first, "panel-activity-toast__mute");
+  await new Promise((r) => setTimeout(r, 0));
 
   assert.equal(APPENDED.length, 2, "a new card was mounted");
   assert.equal(card().tree.className, "panel-activity-toast", "SAME shell class");
@@ -242,10 +247,10 @@ test("Mute swaps the card for the picker IN PLACE, in the same shell", () => {
   assert.equal((card().tree.attrOpt || {})["data-replace"], "1", "no entry animation");
 });
 
-test("the picker offers this workspace and all workspaces", () => {
+test("the picker offers this workspace and all workspaces", async () => {
   reset();
   const h = panel();
-  showScopePicker(h, msg({ hub_id: "H9" }));
+  await showScopePicker(h, msg({ hub_id: "H9" }));
   const one = findAny(card().tree, "panel-activity-toast__scope--one");
   const all = findAny(card().tree, "panel-activity-toast__scope--all");
   assert.ok(one, "the per-workspace option is offered");
@@ -255,18 +260,18 @@ test("the picker offers this workspace and all workspaces", () => {
   assert.equal(all.content, "All workspaces");
 });
 
-test("a push with no workspace offers ONLY the global scope", () => {
+test("a push with no workspace offers ONLY the global scope", async () => {
   reset();
-  showScopePicker(panel(), msg({ hub_id: "" }));
+  await showScopePicker(panel(), msg({ hub_id: "" }));
   assert.equal(findAny(card().tree, "panel-activity-toast__scope--one"), null,
     "there is no workspace id to write, so no per-workspace option");
   assert.ok(findAny(card().tree, "panel-activity-toast__scope--all"));
 });
 
-test("the picker names the workspace, ESCAPED", () => {
+test("the picker names the workspace, ESCAPED", async () => {
   reset();
   // Note renders content as MARKUP — an unescaped name is script injection.
-  showScopePicker(panel(), msg({ hub_id: "H1", folder_name: '<img src=x onerror="boom()">' }));
+  await showScopePicker(panel(), msg({ hub_id: "H1", folder_name: '<img src=x onerror="boom()">' }));
   const one = findAny(card().tree, "panel-activity-toast__scope--one");
   assert.ok(!/<img/.test(one.content), `escaped, got ${one.content}`);
   assert.match(one.content, /&lt;img/);
@@ -275,7 +280,7 @@ test("the picker names the workspace, ESCAPED", () => {
 test("the picker does NOT auto-dismiss", async () => {
   reset();
   const h = panel();
-  showScopePicker(h, msg());
+  await showScopePicker(h, msg());
   assert.equal(h._chatToastTimer, undefined,
     "no timer: a chooser must not vanish mid-decision");
   // The message card, by contrast, does set one.
@@ -290,7 +295,7 @@ test("the picker does NOT auto-dismiss", async () => {
 test("choosing a scope writes it, and confirms only on success", async () => {
   reset();
   const h = panel({ answer: { status: "ok", global: 0, hubs: ["H1"] } });
-  showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
   await applyMute(h, "H1");
 
   const post = h.calls.find((c) => c.kind === "post");
@@ -309,7 +314,7 @@ test("choosing a scope writes it, and confirms only on success", async () => {
 test("the global scope confirms with the all-workspaces line", async () => {
   reset();
   const h = panel({ answer: { status: "ok", global: 1, hubs: [] } });
-  showScopePicker(h, msg());
+  await showScopePicker(h, msg());
   await applyMute(h, "");
   assert.equal(h.calls.find((c) => c.kind === "post").p.hub_id, "");
   assert.equal(
@@ -321,7 +326,7 @@ test("the global scope confirms with the all-workspaces line", async () => {
 test("a write that did NOT land is reported, never confirmed", async () => {
   reset();
   const h = panel({ answer: { status: "error", global: 0, hubs: [] } });
-  showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
   await applyMute(h, "H1");
 
   assert.equal(state(), "failed");
@@ -351,7 +356,7 @@ test("a FAILED write must not move the cache, whatever it returns with", async (
 test("a rejected request is survived and reported the same way", async () => {
   reset();
   const h = panel({ postService: () => Promise.reject(new Error("offline")) });
-  showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
   await assert.doesNotReject(() => applyMute(h, "H1"));
   assert.equal(state(), "failed");
   assert.equal(isPopupMuted(msg({ hub_id: "H1" })), false);
@@ -360,7 +365,7 @@ test("a rejected request is survived and reported the same way", async () => {
 test("a card the user already closed is not resurrected by a late reply", async () => {
   reset();
   const h = panel();
-  showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
   const picker = h._chatToast;
   const before = APPENDED.length;
   killChatToast(h); // the user dismissed it while the write was in flight
@@ -379,7 +384,7 @@ test("a card the user already closed is not resurrected by a late reply", async 
 test("a message that arrives mid-write keeps its card — the confirmation yields", async () => {
   reset();
   const h = panel();
-  showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
   const picker = h._chatToast;
   // A new message lands while the mute request is still in flight and mounts
   // its own card. Confirming over it would silently eat that popup.
@@ -395,7 +400,7 @@ test("a message that arrives mid-write keeps its card — the confirmation yield
 test("the confirmation dismisses itself", async () => {
   reset();
   const h = panel();
-  showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
   await applyMute(h, "H1");
   assert.ok(h._chatToastTimer, "a dismiss timer is armed for the confirmation");
 });
@@ -444,7 +449,7 @@ test("a rejected state read leaves popups working", async () => {
 
 // ----------------------------------------------------------- card lifetime
 
-test("the message card lasts 30 s; the confirmation 2 s; the picker forever", () => {
+test("the message card lasts 30 s; the confirmation 2 s; the picker forever", async () => {
   const { CHAT_TOAST_MS, CHAT_CONFIRM_MS } = require(join(BASE, "chat-toast.js"));
   // Raised 10 -> 20 -> 30 s on Duy's call 2026-08-26: the card carries a Mute
   // button and a scope choice behind it, so it is something to act on, not
@@ -457,7 +462,7 @@ test("the message card lasts 30 s; the confirmation 2 s; the picker forever", ()
   // never taken away, however long the message card lives.
   reset();
   const h = panel();
-  showScopePicker(h, msg());
+  await showScopePicker(h, msg());
   assert.equal(h._chatToastTimer, undefined, "the picker has no timeout");
 });
 
@@ -524,12 +529,100 @@ test("every state swap leaves exactly ONE live card", async () => {
   const h = panel();
   showChatToast(h, msg(), "#/x");
   showChatToast(h, msg({ message: "second" }), "#/x");
-  showScopePicker(h, msg());
+  await showScopePicker(h, msg());
   await applyMute(h, "H1", h._chatToast);
 
   const live = APPENDED.filter((a) => a.attached);
   assert.equal(live.length, 1, `exactly one card on screen, got ${live.length}`);
   assert.equal(live[0], h._chatToast, "and it is the one the panel points at");
+});
+
+// --------------------------------------------- the 1-workspace collapse
+
+// A panel whose desk.home answers with `rows`.
+function deskPanel(rows, over = {}) {
+  return panel({
+    fetchService(svc, p) {
+      this.calls.push({ kind: "get", svc, p });
+      if (svc === "desk.home") return Promise.resolve(rows);
+      return Promise.resolve(this.answer);
+    },
+    ...over,
+  });
+}
+
+test("ONE workspace collapses the picker to a single Mute button", async () => {
+  reset(); resetWorkspaceCount();
+  const h = deskPanel([{ filetype: "hub", area: "private" }]);
+  await showScopePicker(h, msg({ hub_id: "H1" }));
+  const scopes = [...(function walk(n, acc) {
+    if (String(n.className || "").split(/\s+/).includes("panel-activity-toast__scope")) acc.push(n);
+    (n.kids || []).forEach((k) => walk(k, acc));
+    return acc;
+  })(card().tree, [])];
+  assert.equal(scopes.length, 1, "one workspace, one button");
+  assert.equal(scopes[0].content, "Mute", "it is just Mute, not a choice");
+  // It targets THIS workspace, not everything: a workspace created later must
+  // not arrive pre-muted by a decision taken before it existed.
+  assert.equal(scopes[0].attrOpt["data-scope"], "H1");
+});
+
+test("TWO workspaces keep both scopes", async () => {
+  reset(); resetWorkspaceCount();
+  const h = deskPanel([
+    { filetype: "hub", area: "private" },
+    { filetype: "folder" },
+  ]);
+  await showScopePicker(h, msg({ hub_id: "H1" }));
+  assert.ok(findAny(card().tree, "panel-activity-toast__scope--one"), "per-workspace option kept");
+  assert.ok(findAny(card().tree, "panel-activity-toast__scope--all"), "global option kept");
+});
+
+test("an UNPROVEN count keeps both scopes — the failure modes are not symmetric", async () => {
+  // Showing two options to a one-workspace user is redundant; showing ONE to a
+  // user with several would mute a scope they never chose. So anything short
+  // of proof must keep the full picker.
+  for (const [label, rows] of [
+    ["request rejected", null],
+    ["not an array", { oops: 1 }],
+    ["empty", []],
+  ]) {
+    reset(); resetWorkspaceCount();
+    const h = rows === null
+      ? panel({ fetchService: () => Promise.reject(new Error("offline")) })
+      : deskPanel(rows);
+    await showScopePicker(h, msg({ hub_id: "H1" }));
+    assert.ok(findAny(card().tree, "panel-activity-toast__scope--all"),
+      `${label}: global option must survive`);
+    if (label !== "empty") {
+      assert.ok(findAny(card().tree, "panel-activity-toast__scope--one"),
+        `${label}: full picker must be kept when the count is unproven`);
+    }
+  }
+});
+
+test("the workspace filter matches the sidebar's definition", () => {
+  // Mirrors desk/workspace-list onPartReady. Drift here silently changes the
+  // collapse rule, so it is pinned rather than left implicit.
+  assert.equal(isWorkspaceRow({ filetype: "folder" }), true, "personal workspace");
+  assert.equal(isWorkspaceRow({ filetype: "hub", area: "private" }), true);
+  assert.equal(isWorkspaceRow({ filetype: "hub", area: "share" }), true);
+  assert.equal(isWorkspaceRow({ filetype: "hub", area: "restricted" }), true);
+  assert.equal(isWorkspaceRow({ filetype: "hub", area: "public" }), true);
+  assert.equal(isWorkspaceRow({ filetype: "hub", area: "dmz" }), false, "not a real area");
+  assert.equal(isWorkspaceRow({ filetype: "hub" }), false, "a hub with no area is not a workspace");
+  assert.equal(isWorkspaceRow({ filetype: "file" }), false);
+  assert.equal(isWorkspaceRow(null), false);
+});
+
+test("the count is fetched ONCE per session, not per Mute click", async () => {
+  reset(); resetWorkspaceCount();
+  const h = deskPanel([{ filetype: "hub", area: "private" }]);
+  await showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
+  await showScopePicker(h, msg({ hub_id: "H1" }));
+  const deskCalls = h.calls.filter((c) => c.svc === "desk.home").length;
+  assert.equal(deskCalls, 1, "cached after the first click");
 });
 
 // ------------------------------------------------- the topbar mute switch

@@ -126,6 +126,64 @@ async function setMute(host, hub_id, muted = true) {
   }
 }
 
+/**
+ * How many workspaces does this user actually have?
+ *
+ * Used for one thing only: when there is exactly ONE, "this workspace" and
+ * "all workspaces" mute the same thing, so the picker collapses to a single
+ * Mute button rather than asking a question with two identical answers.
+ *
+ * 🚨 IT FAILS TO "UNKNOWN", AND UNKNOWN MEANS SHOW BOTH. The two failure modes
+ * are not symmetric: showing two options to a one-workspace user is merely
+ * redundant, while showing ONE option to a user who has several would mute a
+ * scope they did not choose. So anything short of proof — a failed request, an
+ * older server, an unexpected shape — leaves the full picker in place.
+ *
+ * FETCHED LAZILY, on the first Mute click, and cached for the session. Putting
+ * it in the panel's boot would spend a request on every user who never opens
+ * the picker.
+ *
+ * THE FILTER MIRRORS THE SIDEBAR'S (desk/workspace-list onPartReady): a
+ * `folder` row is a personal workspace, a `hub` row counts only in a real
+ * area, and anything else is not a workspace. Kept deliberately in step with
+ * that rule — if the sidebar's definition changes, this has to change with it.
+ *
+ * PAGINATION IS NOT A HAZARD HERE. desk.home is paged, but the only question
+ * asked is "is it exactly one", and a user with more than one has more than
+ * one on the first page.
+ */
+let WORKSPACE_COUNT = null; // null = not asked yet / unknown
+
+function isWorkspaceRow(it) {
+  if (!it) return false;
+  const ft = it.filetype;
+  if (ft === 'folder') return true;
+  if (ft === 'hub') return /^(share|private|restricted|public)$/.test(String(it.area || ''));
+  return false;
+}
+
+async function workspaceCount(host) {
+  if (WORKSPACE_COUNT != null) return WORKSPACE_COUNT;
+  try {
+    const svc = (typeof SERVICE !== 'undefined' && SERVICE.desk && SERVICE.desk.home) || null;
+    if (!svc || !host || !host.fetchService) return null;
+    const rows = await host.fetchService(svc, { hub_id: Visitor.id, type: 'node' });
+    // Documentation, not protection: a non-array would throw on .filter below
+    // and the catch would return null anyway, so deleting this line changes
+    // nothing observable (a mutation run confirmed that). It states the shape
+    // this function requires rather than leaving it to an exception.
+    if (!Array.isArray(rows)) return null;
+    WORKSPACE_COUNT = rows.filter(isWorkspaceRow).length;
+    return WORKSPACE_COUNT;
+  } catch (e) {
+    return null;
+  }
+}
+
+function resetWorkspaceCount() {
+  WORKSPACE_COUNT = null;
+}
+
 module.exports = {
   loadMuteState,
   isPopupMuted,
@@ -134,4 +192,7 @@ module.exports = {
   applyMuteState,
   resetMuteState,
   muteService,
+  workspaceCount,
+  resetWorkspaceCount,
+  isWorkspaceRow,
 };

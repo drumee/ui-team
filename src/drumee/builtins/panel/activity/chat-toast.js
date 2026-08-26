@@ -57,7 +57,7 @@ const CHAT_TOAST_MS = 30000;
 // it a single line and it goes on its own.
 const CHAT_CONFIRM_MS = 2000;
 
-const { isPopupMuted, setMute } = require("./mute");
+const { isPopupMuted, setMute, workspaceCount } = require("./mute");
 
 const esc = (v = "") => _.escape(String(v));
 
@@ -287,10 +287,53 @@ function buildCard(model, url, replacing) {
  * workspace": there would be no id to write. It gets the global choice only,
  * which is the sole thing that can silence it.
  */
-function buildScopePicker(model = {}, replacing) {
+function buildScopePicker(model = {}, replacing, wsCount) {
   const pfx = "panel-activity-toast";
   const hubId = model.hub_id == null ? "" : String(model.hub_id);
   const where = folderLabel(model);
+
+  // ONE workspace ⇒ the two scopes silence exactly the same thing, so asking
+  // the question is asking for a choice that does not exist. Collapse to a
+  // single Mute button. It targets THIS workspace rather than everything: with
+  // one workspace the effect is identical today, and if the user creates a
+  // second one later it should not arrive pre-muted by a decision taken before
+  // it existed.
+  //
+  // `wsCount` is null whenever the count could not be PROVEN — see mute.js.
+  // Unknown keeps the full picker, because collapsing wrongly would mute a
+  // scope the user never picked, while an extra option is only redundant.
+  if (wsCount === 1) {
+    return Skeletons.Box.Y({
+      className: pfx,
+      attrOpt: { "data-replace": replacing ? "1" : "0", "data-state": "picker" },
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__head`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__prompt`,
+              content: LOCALE.MUTE_NOTIFICATION_FROM,
+            }),
+            Skeletons.Button.Svg({
+              className: `${pfx}__close`,
+              ico: _a.cross,
+              tooltips: LOCALE.CLOSE,
+            }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__actions`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__scope ${pfx}__scope--all`,
+              content: LOCALE.MUTE,
+              attrOpt: { "data-scope": hubId },
+            }),
+          ],
+        }),
+      ],
+    });
+  }
 
   const scopes = [];
   if (hubId) {
@@ -504,9 +547,20 @@ function bindCardClicks(host, toast) {
  * question, and the ten-second clock that paces an unread message would take
  * the question away mid-answer.
  */
-function showScopePicker(host, model) {
-  const toast = mountCard(host, (replacing) => buildScopePicker(model, replacing), 0);
+async function showScopePicker(host, model) {
+  // Resolved BEFORE the swap so the picker is drawn once, in its final shape,
+  // rather than flickering from two options down to one. Cached per session,
+  // so only the first Mute click in a session pays for it, and it never
+  // rejects — an unknown count simply keeps the full picker.
+  let wsCount = null;
+  try {
+    wsCount = await workspaceCount(host);
+  } catch (e) {
+    wsCount = null;
+  }
+  const toast = mountCard(host, (replacing) => buildScopePicker(model, replacing, wsCount), 0);
   if (toast) toast._chatModel = model;
+  return toast;
 }
 
 /**
