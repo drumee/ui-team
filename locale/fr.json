@@ -1947,6 +1947,8 @@
   "TASK_VIEW_LOCKED": "Inclus dès le forfait Team",
   "UNLOCK_MEETING_DURATION": "Limite de durée de réunion atteinte",
   "UNLOCK_MEETING_DURATION_DESC": "Les réunions sont limitées à {0} minutes avec votre forfait. Passez à un forfait supérieur pour des réunions sans limite de durée.",
+  "UNLOCK_MEETING_SCHEDULE": "Cette réunion est trop longue pour votre forfait",
+  "UNLOCK_MEETING_SCHEDULE_DESC": "Votre forfait limite les réunions à {0} minutes. Raccourcissez cette réunion ou passez à un forfait supérieur pour des réunions sans limite de durée.",
   "MEETING_TIME_LIMIT_SOON": "Cette réunion atteint la limite de {0} minutes de votre forfait dans {1} min.",
   "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "Comment devons-nous vous appeler ?",
   "ONBOARDING_WHAT_KIND_OF_WORK": "Bonjour {0}, quel type de travail faites-vous ?",

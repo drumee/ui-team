@@ -75,6 +75,29 @@ const FEATURES = {
     title: () => LOCALE.UNLOCK_MEETING_DURATION,
     desc: (args) => LOCALE.UNLOCK_MEETING_DURATION_DESC.format(args[0]),
   },
+
+  /**
+   * SCHEDULING a meeting longer than the plan's cap — the same limit as
+   * `meeting_duration`, met before the meeting exists rather than while it is
+   * running.
+   *
+   * Its own copy on purpose. "Meeting time limit reached" is a statement about
+   * a call in progress, and it is the wrong sentence for someone still filling
+   * in a form: nothing has been reached, and unlike the person whose call just
+   * ended they have an obvious way out that does not involve paying — shorten
+   * the meeting — which the words have to offer them, or the card reads as a
+   * paywall on a field they can simply edit.
+   *
+   * `args[0]` is the cap in minutes, read here from the SCHEDULER's own
+   * entitlement (`libs/billing.overMeetingCap`). Unlike meeting_duration there
+   * is no server-stamped `duration_limit` to quote — the room has never been
+   * opened, so no deadline exists yet.
+   */
+  meeting_schedule: {
+    ico: "apps-clock-countdown",
+    title: () => LOCALE.UNLOCK_MEETING_SCHEDULE,
+    desc: (args) => LOCALE.UNLOCK_MEETING_SCHEDULE_DESC.format(args[0]),
+  },
 };
 
 /**
@@ -194,4 +217,44 @@ function featureLockBody(feature, args) {
   };
 }
 
-module.exports = { FEATURES, featureLockBody, closingLine };
+/**
+ * Raise a feature-lock card and route its CTA to the billing page.
+ *
+ * Every caller wants the same three things wrapped around `Wm.openFeatureLock`
+ * and none of them are interesting: don't explode on a host that has no such
+ * method (DMZ ran into this — see window/meeting), walk a confirming reader to
+ * checkout only when they may actually buy, and swallow the rejection, because
+ * `confirm` rejects on dismiss and an unhandled rejection for a modal somebody
+ * simply closed is nothing but console noise.
+ *
+ * Always resolves. The gate has already been decided by the time this is
+ * called; what the reader does with the card cannot un-gate anything, so there
+ * is no outcome here for a caller to branch on.
+ *
+ * @param {String} feature key into FEATURES
+ * @param {Array} [args] copy substitutions (`.format()`)
+ * @returns {Promise}
+ */
+function promptFeatureLock(feature, args) {
+  const a = Array.isArray(args) ? args : args == null ? [] : [args];
+  try {
+    if (typeof Wm === "undefined" || !Wm) return Promise.resolve();
+    // No card available on this host — still say what happened. Silence would
+    // read as a broken button on the very click that was refused.
+    if (!Wm.openFeatureLock) {
+      const spec = FEATURES[feature];
+      if (spec && Wm.alert) Wm.alert(spec.desc(a));
+      return Promise.resolve();
+    }
+    return Wm.openFeatureLock({ feature, args: a })
+      .then(() => {
+        if (!canUpgradePlan()) return;
+        RADIO_BROADCAST.trigger("desk:open-billing-page");
+      })
+      .catch(() => {});
+  } catch (e) {
+    return Promise.resolve();
+  }
+}
+
+module.exports = { FEATURES, featureLockBody, promptFeatureLock, closingLine };

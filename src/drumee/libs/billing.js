@@ -459,6 +459,54 @@ function isTaskViewAllowed(view) {
   return allowed.includes(String(view || "").trim().toLowerCase());
 }
 
+/**
+ * How long a single meeting may run on this plan, in minutes.
+ *
+ * Entitlement: `quota.meeting_minutes`. Read with exactly the convention the
+ * SERVER uses in `service/lib/meeting-limit.js capMinutes()` — a positive
+ * integer is the cap, and 0 (or absent, or unparseable) means no cap at all.
+ * The two readings have to agree: the server's decides what actually happens
+ * to a live room, this one only decides what the UI says beforehand, so any
+ * drift shows up as the UI refusing a meeting the server would happily run, or
+ * promising one it is going to cut off mid-sentence.
+ *
+ * Unknown fails OPEN for the reason `taskViewsAllowed` sets out at length: the
+ * key does not exist in any deployed plan row until the schemas patch lands,
+ * and this also runs during bootstrap, before Visitor.quota() is filled in.
+ *
+ * @returns {Number|null} cap in minutes, or null for "no limit / not known"
+ */
+function meetingMinutesCap() {
+  if (!featureGatingActive()) return null;
+  const raw = entitlement("meeting_minutes");
+  if (raw == null) return null;
+  const m = parseInt(raw, 10);
+  return Number.isFinite(m) && m > 0 ? m : null;
+}
+
+/**
+ * Is a meeting of `seconds` longer than this plan allows?
+ *
+ * Answers with the CAP rather than with a boolean, so the caller can name the
+ * number in the upsell without reading the entitlement a second time (and
+ * without the two reads disagreeing should quota land in between).
+ *
+ * Compares whole minutes, rounded DOWN. A 45-minute cap must not reject a
+ * meeting the organiser entered as 45 minutes because the epochs came out a
+ * few seconds over; the server measures elapsed wall-clock from the first
+ * join, so nothing here needs to be stricter than the minute that was typed.
+ *
+ * @param {Number} seconds meeting duration
+ * @returns {Number} the cap in minutes when it is exceeded, else 0
+ */
+function overMeetingCap(seconds) {
+  const cap = meetingMinutesCap();
+  if (!cap) return 0;
+  const mins = Math.floor(Number(seconds) / 60);
+  if (!Number.isFinite(mins) || mins <= cap) return 0;
+  return cap;
+}
+
 module.exports = {
   billingAvailable,
   canUpgradePlan,
@@ -466,6 +514,8 @@ module.exports = {
   entitlement,
   taskViewsAllowed,
   isTaskViewAllowed,
+  meetingMinutesCap,
+  overMeetingCap,
   needsAdminConsoleUpgrade,
   planKey,
   planLabel,
