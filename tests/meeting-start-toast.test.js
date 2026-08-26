@@ -300,6 +300,35 @@ test("the meeting card's secondary action is Cancel, never Mute or Dismiss", () 
   );
 });
 
+test("a dismissed meeting card is DETACHED, not just faded", () => {
+  // 🚨 The bug this defends, measured on the endpoint 2026-08-26: goodbye()
+  // fades the card but leaves the node attached, at opacity 0 with
+  // pointer-events auto. elementFromPoint at its centre returned the card, so
+  // every dismissed meeting card left an invisible 520x277 dead zone over the
+  // desk that silently swallowed clicks.
+  // Match the CALL, not the definition — `function detachWhenFaded(node) {`
+  // also contains "detachWhenFaded(node)", so a laxer pattern stayed true
+  // after the call site was deleted. The trailing semicolon separates them.
+  assert.ok(
+    /detachWhenFaded\(node\);/.test(code),
+    "kill() must CALL detachWhenFaded after the fade",
+  );
+  assert.ok(
+    /function detachWhenFaded\(node\)\s*\{/.test(code),
+    "the helper must exist",
+  );
+
+  // It must wait for the fade rather than cutting it short — the exit
+  // animation is signed-off behaviour.
+  const body = code.slice(code.indexOf("function detachWhenFaded"));
+  assert.ok(/getAnimations/.test(body), "it waits on the running animation");
+  assert.ok(/isConnected/.test(body), "and only removes a node still attached");
+  // ...and it must still finish in a BACKGROUND TAB, where the animation clock
+  // is frozen and `finished` never resolves. Both halves are load-bearing.
+  assert.ok(/setTimeout\(drop,\s*\d+\)/.test(body),
+    "a timer fallback is required for the frozen-clock case");
+});
+
 test("every meeting card lives 30 s — one lifetime, no variant split", () => {
   // Duy, 2026-08-26: meeting cards last 30 s, the same as the chat toast.
   const m = src.match(/const MEETING_TOAST_MS = (\d+);/);

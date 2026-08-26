@@ -23,6 +23,36 @@ const SHOW_EARLY_MEETING_REMINDER = 0;
 // 20 s; it is simply likelier now.
 const MEETING_TOAST_MS = 30000;
 
+/**
+ * Detach a dismissed card once its fade-out has actually run.
+ *
+ * 🚨 WHY THIS EXISTS. `goodbye()` fades the card but leaves the NODE ATTACHED.
+ * Measured on the endpoint 2026-08-26: half a minute after a meeting card was
+ * shown it was still `isConnected`, at `opacity: 0`, with `pointer-events:
+ * auto` — and `elementFromPoint` at its centre returned the card. An invisible
+ * 520x277 rectangle that still swallows clicks is a dead zone sitting over the
+ * desk, and EVERY meeting card left one behind. (The chat toast had the same
+ * class of leak, with the worse symptom that its goodbye() did not even fade.)
+ *
+ * The fade is kept — this waits for it rather than cutting it short, so the
+ * card still leaves the way Duy signed off on.
+ */
+function detachWhenFaded(node) {
+  if (!node || typeof node.remove !== "function") return;
+  const drop = () => { try { if (node.isConnected) node.remove(); } catch (e) {} };
+  let anims = [];
+  try { anims = node.getAnimations ? node.getAnimations() : []; } catch (e) { anims = []; }
+  if (anims.length) {
+    Promise.all(anims.map((a) => (a && a.finished ? a.finished.catch(() => {}) : null)))
+      .then(drop, drop);
+  }
+  // Belt and braces, and each half is needed: a browser reporting no animation
+  // at all, one whose animation never settles, and a BACKGROUND TAB — where the
+  // animation clock is frozen and `finished` therefore never resolves — must
+  // all still end with the node gone. 1200 ms is comfortably past the fade.
+  setTimeout(drop, 1200);
+}
+
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 
@@ -720,8 +750,13 @@ class __push_manager extends winman {
           // leave a gap that keeps pushing later ones further down.
           if (this._meetingToasts) this._meetingToasts.delete(key);
           if (toast && (!toast.isDestroyed || !toast.isDestroyed())) {
+            const node = toast.el;
             if (toast.goodbye) toast.goodbye();
             else if (toast.remove) toast.remove();
+            // The fade leaves the node attached and still hit-testing — see
+            // detachWhenFaded. Without this every dismissed card leaves an
+            // invisible dead zone over the desk.
+            detachWhenFaded(node);
           }
         } catch (e) {}
       };
