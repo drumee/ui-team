@@ -1946,6 +1946,8 @@
   "TASK_VIEW_LOCKED": "自 Team 套餐起包含",
   "UNLOCK_MEETING_DURATION": "已达到会议时长上限",
   "UNLOCK_MEETING_DURATION_DESC": "您的套餐会议时长限制为 {0} 分钟。升级即可享受无时长限制的会议。",
+  "UNLOCK_MEETING_SCHEDULE": "会议时长超出您的套餐限制",
+  "UNLOCK_MEETING_SCHEDULE_DESC": "您的套餐会议时长限制为 {0} 分钟。请缩短本次会议，或升级以享受无时长限制的会议。",
   "MEETING_TIME_LIMIT_SOON": "此会议将在 {1} 分钟后达到您套餐的 {0} 分钟上限。",
   "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "我们应该怎么称呼你？",
   "ONBOARDING_WHAT_KIND_OF_WORK": "你好 {0}，你从事什么工作？",

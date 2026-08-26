@@ -1947,6 +1947,8 @@
   "TASK_VIEW_LOCKED": "Incluido desde el plan Team",
   "UNLOCK_MEETING_DURATION": "Límite de duración de la reunión alcanzado",
   "UNLOCK_MEETING_DURATION_DESC": "Las reuniones están limitadas a {0} minutos en tu plan. Mejora tu plan para reuniones sin límite de tiempo.",
+  "UNLOCK_MEETING_SCHEDULE": "La reunión es demasiado larga para tu plan",
+  "UNLOCK_MEETING_SCHEDULE_DESC": "Tu plan limita las reuniones a {0} minutos. Acorta esta reunión o mejora tu plan para reuniones sin límite de tiempo.",
   "MEETING_TIME_LIMIT_SOON": "Esta reunión alcanzará el límite de {0} minutos de tu plan en {1} min.",
   "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "What should we call you?",
   "ONBOARDING_WHAT_KIND_OF_WORK": "Hi {0}, what kind of work do you do?",

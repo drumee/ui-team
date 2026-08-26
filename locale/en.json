@@ -2053,6 +2053,8 @@
   "TASK_VIEW_LOCKED": "Included from the Team plan",
   "UNLOCK_MEETING_DURATION": "Meeting time limit reached",
   "UNLOCK_MEETING_DURATION_DESC": "Meetings are limited to {0} minutes on your plan. Upgrade for meetings with no time limit.",
+  "UNLOCK_MEETING_SCHEDULE": "Meeting is too long for your plan",
+  "UNLOCK_MEETING_SCHEDULE_DESC": "Your plan limits meetings to {0} minutes. Shorten this meeting, or upgrade for meetings with no time limit.",
   "MEETING_TIME_LIMIT_SOON": "This meeting reaches your plan's {0}-minute limit in {1} min.",
   "NO_MEMBERS_FOR_FILTER": "No members match this filter.",
   "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "What should we call you?",
