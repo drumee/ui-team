@@ -6,6 +6,23 @@ const WS_EVENT = "ws:event";
 // redeployed server-side to enable it.
 const SHOW_EARLY_MEETING_REMINDER = 0;
 
+// How long a meeting card stays on screen. 30 s, on Duy's call 2026-08-26, and
+// deliberately the SAME number the chat toast uses (CHAT_TOAST_MS) — two cards
+// that look alike and sit in the same layer should not disappear on different
+// clocks.
+//
+// 🔑 THIS REPLACES A SPLIT that used to read `variant === "now" ? 20000 : 8000`
+// — the actionable "now" card lingered while the informational `invite` and
+// `soon` ones cleared quickly. That distinction is GONE on purpose: an
+// invitation names an organiser, a folder and an attendee count, which is more
+// to read than 8 s allows, and the reason for lengthening the chat toast (time
+// to notice, read, and decide) applies to it just as much.
+//
+// ⚠️ Cards stack at 28px offsets while several are live (see `_meetingToasts`),
+// so a longer life means more of them can overlap. That was already true at
+// 20 s; it is simply likelier now.
+const MEETING_TOAST_MS = 30000;
+
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 
@@ -751,9 +768,8 @@ class __push_manager extends winman {
           true,
         );
       }
-      // Auto-dismiss: the actionable "now" toast lingers, the informational
-      // ones clear quickly.
-      setTimeout(kill, variant === "now" ? 20000 : 8000);
+      // Auto-dismiss. One lifetime for every variant — see MEETING_TOAST_MS.
+      setTimeout(kill, MEETING_TOAST_MS);
     } catch (e) {
       this.warn && this.warn("meeting toast failed", e);
     }
@@ -830,8 +846,8 @@ class __push_manager extends winman {
       const title = where || LOCALE.MEETING_STARTED;
       const message = name ? LOCALE.X_STARTED_A_MEETING.format(name) : "";
 
-      // reminder:1 with no lead_min is what selects the "now" variant — Join
-      // plus the 20 s linger. room_id keys the card; it is also what
+      // reminder:1 with no lead_min is what selects the "now" variant — the
+      // one that offers Join. room_id keys the card; it is also what
       // _joinMeetingFromData opens.
       // The room's roster and the count of who is in it. conference.js sends
       // both, and they are what make this card say "N joined" rather than

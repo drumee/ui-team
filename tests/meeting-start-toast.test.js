@@ -300,6 +300,41 @@ test("the meeting card's secondary action is Cancel, never Mute or Dismiss", () 
   );
 });
 
+test("every meeting card lives 30 s — one lifetime, no variant split", () => {
+  // Duy, 2026-08-26: meeting cards last 30 s, the same as the chat toast.
+  const m = src.match(/const MEETING_TOAST_MS = (\d+);/);
+  assert.ok(m, "MEETING_TOAST_MS must exist as a named constant");
+  assert.equal(Number(m[1]), 30000, "meeting card lifetime");
+
+  // It must be USED, not merely declared.
+  assert.ok(
+    /setTimeout\(kill, MEETING_TOAST_MS\)/.test(code),
+    "the auto-dismiss must use the constant",
+  );
+
+  // 🚨 The old split was `variant === "now" ? 20000 : 8000` — the actionable
+  // card lingered while the informational ones cleared in 8 s. That is
+  // deliberately gone: an invitation names an organiser, a folder and an
+  // attendee count, which is more than 8 s of reading. If a raw number comes
+  // back into the dismiss call, the distinction has been silently reinstated.
+  assert.ok(
+    !/setTimeout\(kill,[^)]*\d{4}/.test(code),
+    "no hard-coded duration in the dismiss call",
+  );
+  assert.ok(
+    !/variant === "now" \?\s*\d+/.test(code),
+    "the per-variant lifetime split must not return",
+  );
+
+  // The two surfaces must agree: same layer, same look, same clock.
+  const chat = readFileSync(
+    join(__dirname, "../src/drumee/builtins/panel/activity/chat-toast.js"), "utf8",
+  ).match(/const CHAT_TOAST_MS = (\d+);/);
+  assert.ok(chat, "CHAT_TOAST_MS must exist");
+  assert.equal(Number(chat[1]), Number(m[1]),
+    "the chat toast and the meeting cards must share one lifetime");
+});
+
 test("Cancel still shares the close path, so it cannot drift from ✕", () => {
   // The class keeps its `__dismiss` name on purpose: the capture-phase
   // delegate matches on it and must not be re-plumbed. Only the label moved.

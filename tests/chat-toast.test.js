@@ -7,7 +7,7 @@
 // hazards found while wiring it:
 //
 //  · replace, never stack — a second message kills the first card and
-//    restarts the 20 s timer;
+//    restarts the 30 s timer;
 //  · nothing while the Notification Center is open;
 //  · chat only, and a meeting card posted into a folder chat is NOT chat;
 //  · never a card for my own message;
@@ -94,7 +94,7 @@ const MOD = join(__dirname, "../src/drumee/builtins/panel/activity/chat-toast.js
 const { showChatToast, killChatToast, folderLabel, senderLabel, CHAT_TOAST_MS } = require(MOD);
 
 // ------------------------------------------------------------------ helpers
-// Every panel handed out is tracked so its pending 20 s dismiss timer can be
+// Every panel handed out is tracked so its pending 30 s dismiss timer can be
 // cleared at the end — otherwise a real timer holds the process open and the
 // whole suite takes ten seconds to exit.
 const HOSTS = [];

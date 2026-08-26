@@ -444,12 +444,12 @@ test("a rejected state read leaves popups working", async () => {
 
 // ----------------------------------------------------------- card lifetime
 
-test("the message card lasts 20 s; the confirmation 2 s; the picker forever", () => {
+test("the message card lasts 30 s; the confirmation 2 s; the picker forever", () => {
   const { CHAT_TOAST_MS, CHAT_CONFIRM_MS } = require(join(BASE, "chat-toast.js"));
-  // Raised from 10 s on Duy's call 2026-08-26: the card now carries a Mute
+  // Raised 10 -> 20 -> 30 s on Duy's call 2026-08-26: the card carries a Mute
   // button and a scope choice behind it, so it is something to act on, not
-  // just to read.
-  assert.equal(CHAT_TOAST_MS, 20000, "message card lifetime");
+  // just to read. The meeting cards use the same number.
+  assert.equal(CHAT_TOAST_MS, 30000, "message card lifetime");
   assert.equal(CHAT_CONFIRM_MS, 2000, "the confirmation is an acknowledgement, not a message");
   assert.ok(CHAT_CONFIRM_MS < CHAT_TOAST_MS, "an acknowledgement must not outlive the message");
 

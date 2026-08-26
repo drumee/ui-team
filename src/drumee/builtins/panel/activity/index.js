@@ -1531,7 +1531,7 @@ class __panel_activity extends LetcBox {
     // above and never reaches this line), but BEFORE every OS-notification
     // guard below: the card is not an OS notification and must not inherit its
     // permission state or its 5 s self-throttle. Its own "replace and restart
-    // the 20 s timer" rule is what paces it.
+    // the 30 s timer" rule is what paces it.
     //
     // Chat only, matched on the two services the switch above handles —
     // never files, task or other. A meeting card posted into a folder chat

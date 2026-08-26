@@ -24,7 +24,7 @@
 //             padding 12 24, SemiBold 14/20
 //
 // Duy's rules, 2026-08-22:
-//   · a second message REPLACES the card and resets the 20 s timer — the two
+//   · a second message REPLACES the card and resets the 30 s timer — the two
 //     never stack;
 //   · nothing while the Notification Center is open;
 //   · chat only — never files, task or other;
@@ -46,12 +46,13 @@
 // 3 lands before it. Until then the button reports itself as unwired rather
 // than silently doing nothing.
 
-// 20 s, raised from 10 s on Duy's call 2026-08-26. A chat card now carries a
-// Mute button and a scope choice behind it, so the card is something to ACT
-// on rather than only to read — ten seconds is not long enough to notice it,
-// read the message, and decide. The picker itself still has NO timeout, so a
-// decision in progress is never taken away.
-const CHAT_TOAST_MS = 20000;
+// 30 s, raised 10 → 20 → 30 on Duy's call 2026-08-26. A chat card carries a
+// Mute button and a scope choice behind it, so it is something to ACT on
+// rather than only to read, and it has to survive long enough to notice, read
+// and decide. The meeting cards use the same 30 s for the same reason.
+// The picker itself still has NO timeout, so a decision already in progress is
+// never taken away, however this number moves.
+const CHAT_TOAST_MS = 30000;
 // The confirmation is an acknowledgement, not a message to read — Figma gives
 // it a single line and it goes on its own.
 const CHAT_CONFIRM_MS = 2000;
@@ -400,7 +401,7 @@ function showChatToast(host, model = {}, url = "") {
     if (isPopupMuted(model)) return;
 
     // Replace, never stack: the previous card goes before the new one lands,
-    // and the 20 s timer starts again from this message.
+    // and the 30 s timer starts again from this message.
     const toast = mountCard(host, (replacing) => buildCard(model, url, replacing), CHAT_TOAST_MS);
     if (!toast) return;
     // Name the location if the synchronous lookup could not. Never awaited —
