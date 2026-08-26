@@ -11,6 +11,10 @@ const { BUCKETS: TAB_BUCKETS, DEFAULT_BUCKET } = require('./skeleton/tabbar');
 // Round 3 Phase 2: the real-time chat card. Built to Figma
 // (58208:83650) — see chat-toast.js for the measurements and the rules.
 const { showChatToast, killChatToast } = require('./chat-toast');
+// Round 3 Phase 3: which popups the user has switched off. Read once here and
+// refreshed from every mute_set — never per message. Suppresses the CARD only:
+// the feed, the badge and the tab counts are untouched by design.
+const { loadMuteState } = require('./mute');
 require('./skin');
 
 class __panel_activity extends LetcBox {
@@ -56,6 +60,11 @@ class __panel_activity extends LetcBox {
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.onWsMessage = this.onWsMessage.bind(this)
     this._last_notified = 0;
+    // Fire and forget: the panel must come up whether or not this answers, and
+    // it never rejects. Until it lands nothing is muted, which is the safe
+    // direction — a failed read shows a popup that should have been silenced,
+    // where the opposite default would silence one that should have shown.
+    loadMuteState(this);
   }
 
   /**

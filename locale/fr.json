@@ -2726,5 +2726,12 @@
   "X_JOINED_COUNT": "{0} ont rejoint",
   "MEETING_START_NOW": "Commence maintenant",
   "MEETING_INVITE_TITLE": "Vous avez été invité à une réunion",
-  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} vous a invité à rejoindre la réunion dans {1}"
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} vous a invité à rejoindre la réunion dans {1}",
+  "MUTE_NOTIFICATION_FROM": "Mettre en sourdine les notifications de",
+  "MUTE_THIS_WORKSPACE": "Cet espace de travail",
+  "MUTE_ALL_WORKSPACES": "Tous les espaces de travail",
+  "MUTE_DONE_WORKSPACE": "Notifications désactivées pour cet espace de travail",
+  "MUTE_DONE_ALL": "Notifications désactivées pour tous les espaces de travail",
+  "MUTE_FAILED": "Impossible de désactiver les notifications",
+  "UNMUTE": "Réactiver les notifications"
 }

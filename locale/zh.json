@@ -2725,5 +2725,12 @@
   "X_JOINED_COUNT": "{0} 人已加入",
   "MEETING_START_NOW": "现在开始",
   "MEETING_INVITE_TITLE": "您被邀请参加会议",
-  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} 邀请您加入 {1} 中的会议"
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} 邀请您加入 {1} 中的会议",
+  "MUTE_NOTIFICATION_FROM": "关闭以下来源的通知",
+  "MUTE_THIS_WORKSPACE": "此工作区",
+  "MUTE_ALL_WORKSPACES": "所有工作区",
+  "MUTE_DONE_WORKSPACE": "已关闭此工作区的通知",
+  "MUTE_DONE_ALL": "已关闭所有工作区的通知",
+  "MUTE_FAILED": "无法关闭通知",
+  "UNMUTE": "开启通知"
 }

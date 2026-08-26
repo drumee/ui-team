@@ -1019,6 +1019,94 @@ html[data-theme="dark"] {
     &:hover { filter: brightness(1.08); }
   }
 
+  // ── Phase 3: the mute flow, in this same shell ───────────────────────────
+  //
+  // The scope picker reuses the card's own COLUMN shell (Figma 58222:33821),
+  // which is what makes it read as the card changing rather than a second
+  // dialog opening over it. The confirmation is a ROW (58222:34431 /
+  // :34450) — one glyph, one line.
+  //
+  // 🚨 font-weight is written out on every rule here for the same reason as
+  // above: drumee.typo emits none, and has no branch for 600 at all.
+
+  // The picker's question. Sits where the sender name sits on the message
+  // card, so the two states line up rather than jumping.
+  &__prompt {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 16px, $line: 1.2em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 600;
+  }
+
+  // A scope option. Same geometry as the message card's two buttons — Figma
+  // keeps the button shape across both states — so it inherits that rule's
+  // padding, radius and centring by sharing the selector list below.
+  &__scope {
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    text-align: center;
+    border-radius: 4px;
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 600;
+    // A workspace name can be long and is user-controlled; it must ellipsize
+    // rather than widen the card or wrap it to two lines.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover { filter: brightness(0.97); }
+
+    // "this workspace" is the lighter, secondary choice; "all workspaces" is
+    // the emphatic one, matching Mute/Open's own weighting.
+    &--one {
+      background: var(--tertiary-grey-20, #f2f2f7);
+      color: var(--primary-purple-100, #0b0a21);
+    }
+
+    &--all {
+      background: var(--primary-purple-50, #433cc5);
+      color: #ffffff;
+
+      &:hover { filter: brightness(1.08); }
+    }
+  }
+
+  // The confirmation row. Figma gives it the shell's own 24px gap.
+  &__result {
+    gap: 24px;
+    align-items: center;
+  }
+
+  &__result-ico {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+
+    // The sprite glyphs are solid paths; filling via currentColor is the
+    // convention the row badges already use, and it is what keeps a stroked
+    // outline from being traced around a filled shape.
+    svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+  }
+
+  &[data-state="done"] &__result-ico { color: var(--primary-purple-50, #433cc5); }
+  &[data-state="failed"] &__result-ico { color: var(--tertiary-grey-80, #65656c); }
+
+  &__result-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 14px, $line: 1.4em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 400;
+  }
+
   // The 360px phone panel. Figma only specs desktop; the card has to stop
   // being 512px wide before it reaches the viewport edge. Declared AFTER the
   // rules it overrides — Sass splits a block around a nested @media, so a
@@ -1034,6 +1122,14 @@ html[data-theme="dark"] {
 
     &__head { gap: 12px; }
     &__chip { max-width: 120px; }
+    // The two scopes do not fit side by side at 360px — "All workspaces" alone
+    // is 13 characters before translation, and fr/ru run half as long again.
+    // Stacked with wrap + a full-width basis rather than `flex-direction`,
+    // which is owned by the Box.X that renders this row and must not be
+    // overridden in SCSS (framework invariant).
+    &__actions { flex-wrap: wrap; }
+    &__scope { flex-basis: 100%; }
+    &__result { gap: 16px; }
   }
 }
 

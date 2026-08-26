@@ -47,6 +47,11 @@
 // than silently doing nothing.
 
 const CHAT_TOAST_MS = 10000;
+// The confirmation is an acknowledgement, not a message to read — Figma gives
+// it a single line and it goes on its own.
+const CHAT_CONFIRM_MS = 2000;
+
+const { isPopupMuted, setMute } = require("./mute");
 
 const esc = (v = "") => _.escape(String(v));
 
@@ -252,6 +257,110 @@ function buildCard(model, url, replacing) {
 }
 
 /**
+ * The scope chooser — Figma frame `Mute notification from` (58222:33811, inner
+ * card 58222:33821). It reuses THIS card's own column shell, which is why it
+ * swaps in place instead of opening a second modal on top of the first.
+ *
+ * Two scopes, and only two: the workspace this message came from, and every
+ * workspace. They are alternatives rather than layers — muting globally clears
+ * the per-workspace mutes server-side — which is also what Figma shows, with
+ * one exclusive confirmation state for each.
+ *
+ * ⚠️ A push with no workspace (a p2p DM carries none) cannot offer "this
+ * workspace": there would be no id to write. It gets the global choice only,
+ * which is the sole thing that can silence it.
+ */
+function buildScopePicker(model = {}, replacing) {
+  const pfx = "panel-activity-toast";
+  const hubId = model.hub_id == null ? "" : String(model.hub_id);
+  const where = folderLabel(model);
+
+  const scopes = [];
+  if (hubId) {
+    scopes.push(
+      Skeletons.Note({
+        className: `${pfx}__scope ${pfx}__scope--one`,
+        // The name is user-controlled and Note renders content as MARKUP.
+        content: where ? esc(where) : LOCALE.MUTE_THIS_WORKSPACE,
+        attrOpt: { "data-scope": hubId },
+      }),
+    );
+  }
+  scopes.push(
+    Skeletons.Note({
+      className: `${pfx}__scope ${pfx}__scope--all`,
+      content: LOCALE.MUTE_ALL_WORKSPACES,
+      attrOpt: { "data-scope": "" },
+    }),
+  );
+
+  return Skeletons.Box.Y({
+    className: pfx,
+    attrOpt: { "data-replace": replacing ? "1" : "0", "data-state": "picker" },
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__head`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__prompt`,
+            content: LOCALE.MUTE_NOTIFICATION_FROM,
+          }),
+          Skeletons.Button.Svg({
+            className: `${pfx}__close`,
+            ico: _a.cross,
+            tooltips: LOCALE.CLOSE,
+          }),
+        ],
+      }),
+      Skeletons.Box.X({ className: `${pfx}__actions`, kids: scopes }),
+    ],
+  });
+}
+
+/**
+ * The confirmation — Figma `muted-all-workspace` (58222:34431) and
+ * `muted-selected-workspace` (58222:34450). Both are the same ROW layout in
+ * the same shell, differing only in which scope they name.
+ *
+ * Also carries the FAILURE line. The two share a builder because they are the
+ * same shape and the same 2 s dismissal; only a card that says something true
+ * is worth showing, and "it did not work" is the true thing to say when the
+ * write did not land.
+ */
+function buildResult(hubId, ok, replacing) {
+  const pfx = "panel-activity-toast";
+  const label = ok
+    ? hubId
+      ? LOCALE.MUTE_DONE_WORKSPACE
+      : LOCALE.MUTE_DONE_ALL
+    : LOCALE.MUTE_FAILED;
+
+  return Skeletons.Box.Y({
+    className: pfx,
+    attrOpt: {
+      "data-replace": replacing ? "1" : "0",
+      "data-state": ok ? "done" : "failed",
+    },
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__result`,
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${pfx}__result-ico`,
+            // Both glyphs are ALREADY in the sprite (the notification rows use
+            // them), so this needs no icon build — the same check that saved a
+            // sprite rebuild for the meeting card's camera. There is no
+            // `noti-warning-circle`; x-circle is the failure glyph that exists.
+            ico: ok ? "noti-check-circle" : "noti-x-circle",
+          }),
+          Skeletons.Note({ className: `${pfx}__result-text`, content: label }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
  * Show (or replace) the chat toast.
  *
  * @param {object} host  the activity panel — holds the card + timer, and
@@ -268,55 +377,160 @@ function showChatToast(host, model = {}, url = "") {
     // Never toast my own message. shouldNofity already drops these, but
     // _notify is also reachable from the activity:notify radio channel.
     if (model.author_id && model.author_id == Visitor.id) return;
-
-    const layer = typeof Wm !== "undefined" && Wm && Wm.windowsLayer;
-    if (!layer || !layer.append) return;
+    // Muted: the popup is the ONLY thing this suppresses. The row is still
+    // being added to the Notification Center behind us and the badge still
+    // counts it — see mute.js. Placed last of the guards so that a mute can
+    // never mask one of the cheaper structural reasons not to show a card.
+    if (isPopupMuted(model)) return;
 
     // Replace, never stack: the previous card goes before the new one lands,
     // and the 10 s timer starts again from this message.
-    const replacing = !!(
-      host._chatToast &&
-      (!host._chatToast.isDestroyed || !host._chatToast.isDestroyed())
-    );
-    killChatToast(host);
-
-    const toast = layer.append(buildCard(model, url, replacing));
-    host._chatToast = toast;
-    host._chatToastTimer = setTimeout(() => killChatToast(host), CHAT_TOAST_MS);
+    const toast = mountCard(host, (replacing) => buildCard(model, url, replacing), CHAT_TOAST_MS);
+    if (!toast) return;
     // Name the location if the synchronous lookup could not. Never awaited —
     // the card is already on screen.
     if (!folderLabel(model)) resolveChipLater(host, model, toast);
-
-    if (toast && toast.el) {
-      toast.el.addEventListener(
-        "click",
-        (e) => {
-          const t = e.target;
-          if (!t || !t.closest) return;
-          if (t.closest(`.panel-activity-toast__open`)) {
-            e.stopPropagation();
-            const href = toast.el.getAttribute("data-url");
-            killChatToast(host);
-            if (href) location.hash = href;
-            return;
-          }
-          if (t.closest(`.panel-activity-toast__mute`)) {
-            e.stopPropagation();
-            // Phase 3 replaces this with the in-place scope picker.
-            if (host.warn) host.warn("chat toast: mute is wired in Phase 3");
-            return;
-          }
-          if (t.closest(`.panel-activity-toast__close`)) {
-            e.stopPropagation();
-            killChatToast(host);
-          }
-        },
-        true,
-      );
-    }
+    // The card needs its own model to build the scope picker if Mute is
+    // pressed, and the delegate only has the DOM.
+    toast._chatModel = model;
   } catch (e) {
     if (host && host.warn) host.warn("chat toast failed", e);
   }
 }
 
-module.exports = { showChatToast, killChatToast, folderLabel, senderLabel, resolveChipLater, CHAT_TOAST_MS };
+/**
+ * Put a card on screen and wire it.
+ *
+ * Every state of this toast — the message, the scope picker, the confirmation
+ * — is mounted through here, so they share one shell, one delegate and one
+ * timer discipline. Swapping states reuses the SAME replace path a second
+ * message already uses (kill, then append with the entry animation
+ * suppressed), which is why the picker appears in place rather than as a
+ * second card floating over the first.
+ *
+ * @param {function} build  receives `replacing` and returns the skeleton
+ * @param {number}   ms     auto-dismiss delay; 0 keeps the card until the user
+ *                          acts, which is what the scope picker needs — a
+ *                          chooser that vanishes mid-decision is worse than no
+ *                          chooser at all.
+ */
+function mountCard(host, build, ms) {
+  const layer = typeof Wm !== "undefined" && Wm && Wm.windowsLayer;
+  if (!layer || !layer.append) return null;
+
+  const replacing = !!(
+    host._chatToast &&
+    (!host._chatToast.isDestroyed || !host._chatToast.isDestroyed())
+  );
+  killChatToast(host);
+
+  const toast = layer.append(build(replacing));
+  host._chatToast = toast;
+  if (ms) host._chatToastTimer = setTimeout(() => killChatToast(host), ms);
+
+  if (toast && toast.el) bindCardClicks(host, toast);
+  return toast;
+}
+
+/**
+ * The capture-phase click delegate.
+ *
+ * 🚨 Capture phase is not optional: ui-core gives every widget its own
+ * `el.onclick` at render time and that handler ends in
+ * `stopImmediatePropagation()`, so a listener bound to the same element
+ * afterwards never runs and the button looks like it needs a double click.
+ *
+ * Bound to the card ROOT and matched with `closest()`, so it keeps working
+ * across a state swap without re-plumbing anything.
+ */
+function bindCardClicks(host, toast) {
+  toast.el.addEventListener(
+    "click",
+    (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest(`.panel-activity-toast__open`)) {
+        e.stopPropagation();
+        const href = toast.el.getAttribute("data-url");
+        killChatToast(host);
+        if (href) location.hash = href;
+        return;
+      }
+      if (t.closest(`.panel-activity-toast__mute`)) {
+        e.stopPropagation();
+        showScopePicker(host, toast._chatModel || {});
+        return;
+      }
+      const scope = t.closest(`.panel-activity-toast__scope`);
+      if (scope) {
+        e.stopPropagation();
+        // data-scope carries the hub id, or "" for every workspace. Read off
+        // the DOM rather than closed over, so the handler stays correct for
+        // whatever card is currently mounted. `toast` is passed so the reply
+        // can tell whether it is still the card the user clicked.
+        applyMute(host, scope.getAttribute("data-scope") || "", toast);
+        return;
+      }
+      if (t.closest(`.panel-activity-toast__close`)) {
+        e.stopPropagation();
+        killChatToast(host);
+      }
+    },
+    true,
+  );
+}
+
+/**
+ * Swap the message card for the scope chooser, in place.
+ *
+ * No auto-dismiss while it is open (`ms` = 0): the user is being asked a
+ * question, and the ten-second clock that paces an unread message would take
+ * the question away mid-answer.
+ */
+function showScopePicker(host, model) {
+  const toast = mountCard(host, (replacing) => buildScopePicker(model, replacing), 0);
+  if (toast) toast._chatModel = model;
+}
+
+/**
+ * Write the mute, then confirm it — but ONLY if it actually landed.
+ *
+ * `setMute` reports `ok:false` when the write did not reach the database
+ * (the server's driver swallows SQL errors and returns undefined rather than
+ * throwing, so the server checks and says so). Confirming regardless would
+ * tell the user a workspace is muted when the next message will pop up all
+ * the same, and that is the one failure they could never diagnose.
+ */
+async function applyMute(host, hubId, from) {
+  let ok = false;
+  try {
+    ({ ok } = await setMute(host, hubId, true));
+  } catch (e) {
+    ok = false;
+  }
+  // TWO staleness guards, and they catch different things — the same pairing
+  // the Phase 2 chip needed:
+  //   · no card at all  → the user dismissed the picker while the write was in
+  //     flight. Do not resurrect what they closed.
+  //   · a DIFFERENT card → a new message landed and mounted its own card in the
+  //     meantime. Confirming here would silently eat that message's popup, so
+  //     the newer card wins; the mute itself has still taken effect, and the
+  //     next message from that workspace simply will not appear.
+  if (!host._chatToast) return;
+  if (from && host._chatToast !== from) return;
+  mountCard(host, (replacing) => buildResult(hubId, ok, replacing), CHAT_CONFIRM_MS);
+}
+
+module.exports = {
+  showChatToast,
+  killChatToast,
+  folderLabel,
+  senderLabel,
+  resolveChipLater,
+  buildScopePicker,
+  buildResult,
+  showScopePicker,
+  applyMute,
+  CHAT_TOAST_MS,
+  CHAT_CONFIRM_MS,
+};

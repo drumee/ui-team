@@ -2888,5 +2888,12 @@
   "X_JOINED_COUNT": "{0} joined",
   "MEETING_START_NOW": "Start now",
   "MEETING_INVITE_TITLE": "You have been invited to a Meeting",
-  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} invited you to join the meeting in {1}"
+  "X_INVITED_YOU_JOIN_MEETING_IN": "{0} invited you to join the meeting in {1}",
+  "MUTE_NOTIFICATION_FROM": "Mute notifications from",
+  "MUTE_THIS_WORKSPACE": "This workspace",
+  "MUTE_ALL_WORKSPACES": "All workspaces",
+  "MUTE_DONE_WORKSPACE": "Notifications muted for this workspace",
+  "MUTE_DONE_ALL": "Notifications muted for all workspaces",
+  "MUTE_FAILED": "Could not mute notifications",
+  "UNMUTE": "Unmute"
 }
