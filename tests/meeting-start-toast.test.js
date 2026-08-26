@@ -328,3 +328,136 @@ test("Cancel writes nothing — it never calls the server or joins the room", ()
     );
   }
 });
+
+// ------------------------------------------------------- card CONTENT vs Figma
+//
+// Duy, 2026-08-25: "why is the content in the meeting cards not the same as
+// Figma?" The styling pass matched the box; these pin the TEXT inside it,
+// against the captured `type=schedule` node (component 2561:154660):
+//
+//   title + live dot / description / avatars + count + "- Start at 9:00 AM"
+//
+// The real _showMeetingToast body is sliced and executed, so the variant logic
+// is exercised rather than described.
+const BUILD = methodBody("_showMeetingToast");
+
+// All harness parameters — none is assigned on global in this file
+// (harness-hygiene.test.js). SHOW_EARLY_MEETING_REMINDER is a MODULE const, so
+// a slice of the method cannot see it and it has to be passed in.
+const runBuild = new Function(
+  "_a",
+  "Wm",
+  "Skeletons",
+  "LOCALE",
+  "Dayjs",
+  "SHOW_EARLY_MEETING_REMINDER",
+  "data",
+  "opt",
+  `return (function(){ ${BUILD} }).call(this);`,
+);
+
+const skelNode = (t) => (o = {}) => ({ t, ...o, kids: (o.kids || []).filter(Boolean) });
+const SK = {
+  Box: { Y: skelNode("y"), X: skelNode("x") },
+  Note: skelNode("note"),
+  Image: { Svg: skelNode("svg") },
+  Button: { Svg: skelNode("btn") },
+  Avatar: (ava, cn, name) => ({ t: "avatar", ava, className: cn, name }),
+};
+const LOC2 = {
+  MEETING: "Meeting",
+  DISMISS: "Dismiss",
+  CANCEL: "Cancel",
+  CLOSE: "Close",
+  JOIN_MEETING: "Join meeting",
+  MEETING_STARTING_NOW: "Your meeting is starting now",
+  X_INVITED_COUNT: "{0} invited",
+  MEETING_START_AT: "Start at {0}",
+  X_INVITED_YOU_TO_MEETING: "{0} invited you to a meeting",
+};
+const DAYJS = { unix: () => ({ format: () => "9:00 AM" }) };
+
+function build(data, opt = {}) {
+  let tree = null;
+  const layer = { append: (t) => { tree = t; return { el: null, isDestroyed: () => false }; } };
+  const self = { _meetingToasts: new Map(), warn: () => {} };
+  const realSet = global.setTimeout;
+  global.setTimeout = () => 0; // the card's own auto-dismiss
+  try {
+    runBuild.call(self, attr, { windowsLayer: layer }, SK, LOC2, DAYJS, 0, data, opt);
+  } finally {
+    global.setTimeout = realSet;
+  }
+  return tree;
+}
+function pick(tree, cn) {
+  if (!tree) return null;
+  if (tree.className === cn) return tree;
+  for (const k of tree.kids || []) { const h = pick(k, cn); if (h) return h; }
+  return null;
+}
+function all(tree, cn, out = []) {
+  if (!tree) return out;
+  if (tree.className === cn) out.push(tree);
+  (tree.kids || []).forEach((k) => all(k, cn, out));
+  return out;
+}
+const say = (tree, cn) => { const n = pick(tree, `desk-meeting-toast__${cn}`); return n ? n.content : null; };
+
+test("Figma's stack shows TWO faces and rolls the rest into +N", () => {
+  const t = build({ title: "M", attendees: ["a", "b", "c", "d"], stime: 1 }, { reminder: 1 });
+  assert.equal(all(t, "desk-meeting-toast__avatar").length, 2, "two faces, not three");
+  assert.equal(say(t, "avatar-more"), "+2", "the remainder is summarised");
+});
+
+test("three attendees still overflow, two do not", () => {
+  const t3 = build({ title: "M", attendees: ["a", "b", "c"] }, { reminder: 1 });
+  assert.equal(say(t3, "avatar-more"), "+1");
+  const t2 = build({ title: "M", attendees: ["a", "b"] }, { reminder: 1 });
+  assert.equal(pick(t2, "desk-meeting-toast__avatar-more"), null, "no chip when nothing overflows");
+});
+
+test("the meta separator is Figma's dash, not a bullet", () => {
+  const t = build({ title: "M", attendees: ["a"], stime: 1 }, { reminder: 1 });
+  assert.equal(say(t, "dot"), "-");
+  assert.notEqual(say(t, "dot"), "•");
+});
+
+test("the separator only appears when there is something on both sides", () => {
+  const t = build({ title: "M", stime: 1 }, { reminder: 1 });
+  assert.equal(pick(t, "desk-meeting-toast__dot"), null, "a lone time needs no separator");
+});
+
+// The count says "invited", NOT Figma's "joined". `attendees` is the meeting
+// node's INVITEE list (room.js _index_meeting), so we have no join count at
+// all — rendering "joined" would state something we cannot know. Deliberate
+// deviation; see the note to Duy.
+test("the count reports invitees, which is what the data actually is", () => {
+  const t = build({ title: "M", attendees: ["a", "b"] }, { reminder: 1 });
+  assert.equal(say(t, "count"), "2 invited");
+});
+
+test("the reminder always carries a description, as Figma's card does", () => {
+  // A meeting booked with no agenda: the slot would otherwise be empty and the
+  // card would read as an invitation rather than "go now".
+  const t = build({ title: "M", stime: 1 }, { reminder: 1 });
+  assert.equal(say(t, "desc"), "Your meeting is starting now");
+});
+
+test("a real agenda is never replaced by the fallback", () => {
+  const t = build({ title: "M", message: "Bring the deck" }, { reminder: 1 });
+  assert.equal(say(t, "desc"), "Bring the deck");
+  assert.equal(all(t, "desk-meeting-toast__desc").length, 1, "exactly one description line");
+});
+
+test("the invite keeps its own sentence and gains no fallback", () => {
+  const t = build({ title: "M", from: "Duy", stime: 1 }, {});
+  assert.equal(say(t, "desc"), "Duy invited you to a meeting");
+  assert.equal(all(t, "desk-meeting-toast__desc").length, 1);
+});
+
+test("an invite with an agenda shows both lines, not the fallback", () => {
+  const t = build({ title: "M", from: "Duy", message: "Bring the deck" }, {});
+  const lines = all(t, "desk-meeting-toast__desc").map((n) => n.content);
+  assert.deepEqual(lines, ["Duy invited you to a meeting", "Bring the deck"]);
+});

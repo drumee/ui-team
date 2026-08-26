@@ -479,7 +479,7 @@ class __push_manager extends winman {
             // off it gave every swatch an empty name, and Avatar hashes the
             // name for its fallback colour — a row of blank circles. Fall back
             // to the uid so each one at least gets its own colour.
-            kids: attendees.slice(0, 3).map((a) => {
+            kids: attendees.slice(0, 2).map((a) => {
               const uid = typeof a === "string" ? a : (a && a.uid) || "";
               const name = (a && a.name) || String(uid || "");
               return Skeletons.Avatar(
@@ -490,11 +490,13 @@ class __push_manager extends winman {
             }),
           }),
         );
-        if (attendees.length > 3) {
+        // Figma's stack (component "3+ members") shows TWO faces and rolls the
+        // rest into the +N chip beside them.
+        if (attendees.length > 2) {
           meta.push(
             Skeletons.Note({
               className: "desk-meeting-toast__avatar-more",
-              content: `+${attendees.length - 3}`,
+              content: `+${attendees.length - 2}`,
             }),
           );
         }
@@ -507,7 +509,9 @@ class __push_manager extends winman {
       }
       if (stime) {
         if (meta.length) {
-          meta.push(Skeletons.Note({ className: "desk-meeting-toast__dot", content: "•" }));
+          // Figma bakes the separator into the time string as "  - Start at
+          // 9:00 AM"; kept as its own node so the gap stays CSS-controlled.
+          meta.push(Skeletons.Note({ className: "desk-meeting-toast__dot", content: "-" }));
         }
         meta.push(
           Skeletons.Note({
@@ -529,6 +533,7 @@ class __push_manager extends winman {
       // An invitation has to say it is one, and by whom. Without this the card
       // is just a meeting title and a time — indistinguishable from the
       // "starting now" reminder, which is the one flavour that means "go now".
+      let hasDesc = 0;
       if (variant === "invite" && data.from) {
         body.push(
           Skeletons.Note({
@@ -536,12 +541,27 @@ class __push_manager extends winman {
             content: LOCALE.X_INVITED_YOU_TO_MEETING.format(data.from),
           }),
         );
+        hasDesc = 1;
       }
       if (description) {
         body.push(
           Skeletons.Note({
             className: "desk-meeting-toast__desc",
             content: description,
+          }),
+        );
+        hasDesc = 1;
+      }
+      // Figma's card always carries a description line under the title. The
+      // reminder is the one flavour that can reach here with nothing to say —
+      // a meeting booked without an agenda — and a card that is only a title
+      // and a time reads as an invitation rather than "go now". Say what the
+      // reminder actually means instead of leaving the slot empty.
+      if (!hasDesc && variant === "now") {
+        body.push(
+          Skeletons.Note({
+            className: "desk-meeting-toast__desc",
+            content: LOCALE.MEETING_STARTING_NOW,
           }),
         );
       }
