@@ -14,10 +14,56 @@
     justify-content: center;
     align-content: center;
     flex-wrap: wrap;
+    // The mark sits ABOVE the message rather than beside it. __main is a
+    // Box.Y, but it also carries flex-wrap:wrap for the single-child case it
+    // used to have; column direction is what actually stacks the two now.
+    flex-direction: column;
+    align-items: center;
+    // Roomy on purpose: this is a full-viewport holding screen, not a dense
+    // panel, and the lockup and the line below it read as one unit only if
+    // they are not touching.
+    gap: 32px;
+  }
+
+  // The exported lockup (assets/drumee-logo.svg), the same file the sign-in
+  // card shows. No colour is set, and none should be: unlike the sprite's
+  // `logo` symbol — which carries no fill and paints black until something
+  // colours it — this file has its own (#433CC5 mark, #0B0A21 wordmark), and
+  // an <img> ignores `color` anyway.
+  &__logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // flex: 0 0 — the lockup must not be squeezed by the message under it.
+    flex: 0 0 auto;
+
+    img {
+      // `display: block` kills the inline-baseline gap that would otherwise
+      // widen the gap below it by a few unexplained pixels.
+      display: block;
+      // Sized by HEIGHT alone. The file is 120.723 x 24, a 5.03:1 lockup, and
+      // two hand-picked side lengths are how that gets quietly squashed;
+      // `width: auto` cannot. The tag keeps its intrinsic width/height
+      // attributes, so the browser reserves the right box before this lands.
+      // Bigger than the sign-in card's 24px because this fills the viewport
+      // rather than sitting in a 600px card.
+      width: auto;
+      height: 44px;
+    }
   }
 
   &__message {
     font-size: 20px;
-    color: var(--primary-600);
+    // --an-purple is ANALYTICS-UI's token, not one of ours. That plugin
+    // declares it in the stylesheet it loads from require('./skin') inside
+    // its own initialize() — which runs only once its bundle has arrived,
+    // i.e. at the exact moment this screen is torn down. Nothing in this app
+    // declares it, so on this screen the token is ALWAYS undefined.
+    //
+    // An unresolved var() is invalid at computed-value time, so `color` would
+    // fall back to inherited and the message would render in the panel's
+    // default colour, looking merely unstyled with nothing logged. Hence the
+    // literal: #534ab7 is that token's own value in analytics-ui.
+    color: var(--an-purple, #534ab7);
   }
 }
