@@ -442,6 +442,25 @@ test("a rejected state read leaves popups working", async () => {
   assert.equal(isPopupMuted(msg({ hub_id: "H1" })), false);
 });
 
+// ----------------------------------------------------------- card lifetime
+
+test("the message card lasts 20 s; the confirmation 2 s; the picker forever", () => {
+  const { CHAT_TOAST_MS, CHAT_CONFIRM_MS } = require(join(BASE, "chat-toast.js"));
+  // Raised from 10 s on Duy's call 2026-08-26: the card now carries a Mute
+  // button and a scope choice behind it, so it is something to act on, not
+  // just to read.
+  assert.equal(CHAT_TOAST_MS, 20000, "message card lifetime");
+  assert.equal(CHAT_CONFIRM_MS, 2000, "the confirmation is an acknowledgement, not a message");
+  assert.ok(CHAT_CONFIRM_MS < CHAT_TOAST_MS, "an acknowledgement must not outlive the message");
+
+  // And the picker must still arm NO timer at all — a decision in progress is
+  // never taken away, however long the message card lives.
+  reset();
+  const h = panel();
+  showScopePicker(h, msg());
+  assert.equal(h._chatToastTimer, undefined, "the picker has no timeout");
+});
+
 // ------------------------------------------------------------- card removal
 
 test("killChatToast really DETACHES the card — goodbye() alone does not", () => {
@@ -455,7 +474,7 @@ test("killChatToast really DETACHES the card — goodbye() alone does not", () =
 
   // 🚨 The bug this defends, found by the first live DOM measurement on
   // 2026-08-26: goodbye() is a NO-OP for a card appended straight to the
-  // windows layer, so the shipped card was never removed. The 10 s
+  // windows layer, so the shipped card was never removed. The
   // auto-dismiss did nothing, and every later message stacked another card on
   // top of the last. Both symptoms come from this one line.
   assert.equal(inst.attached, false, "the node must be detached, not just forgotten");

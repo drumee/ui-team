@@ -7,7 +7,7 @@
 // hazards found while wiring it:
 //
 //  · replace, never stack — a second message kills the first card and
-//    restarts the 10 s timer;
+//    restarts the 20 s timer;
 //  · nothing while the Notification Center is open;
 //  · chat only, and a meeting card posted into a folder chat is NOT chat;
 //  · never a card for my own message;
@@ -94,7 +94,7 @@ const MOD = join(__dirname, "../src/drumee/builtins/panel/activity/chat-toast.js
 const { showChatToast, killChatToast, folderLabel, senderLabel, CHAT_TOAST_MS } = require(MOD);
 
 // ------------------------------------------------------------------ helpers
-// Every panel handed out is tracked so its pending 10 s dismiss timer can be
+// Every panel handed out is tracked so its pending 20 s dismiss timer can be
 // cleared at the end — otherwise a real timer holds the process open and the
 // whole suite takes ten seconds to exit.
 const HOSTS = [];
@@ -182,7 +182,7 @@ test("the replacing card suppresses the entry animation", () => {
   assert.equal(card().tree.attrOpt["data-replace"], "1", "the replacement does not");
 });
 
-test("the 10 s dismiss timer is restarted by the second message", () => {
+test("the dismiss timer is restarted by the second message", () => {
   reset();
   const host = panel();
   const realSet = global.setTimeout;
@@ -195,7 +195,7 @@ test("the 10 s dismiss timer is restarted by the second message", () => {
   try {
     showChatToast(host, msg(), "#/a");
     showChatToast(host, msg(), "#/b");
-    assert.deepEqual(set, [CHAT_TOAST_MS, CHAT_TOAST_MS], "each message arms a fresh 10 s timer");
+    assert.deepEqual(set, [CHAT_TOAST_MS, CHAT_TOAST_MS], "each message arms a fresh full-length timer");
     assert.deepEqual(cleared, [1], "and the previous one is cleared, so it cannot fire early");
   } finally {
     global.setTimeout = realSet;

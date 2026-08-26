@@ -24,7 +24,7 @@
 //             padding 12 24, SemiBold 14/20
 //
 // Duy's rules, 2026-08-22:
-//   · a second message REPLACES the card and resets the 10 s timer — the two
+//   · a second message REPLACES the card and resets the 20 s timer — the two
 //     never stack;
 //   · nothing while the Notification Center is open;
 //   · chat only — never files, task or other;
@@ -46,7 +46,12 @@
 // 3 lands before it. Until then the button reports itself as unwired rather
 // than silently doing nothing.
 
-const CHAT_TOAST_MS = 10000;
+// 20 s, raised from 10 s on Duy's call 2026-08-26. A chat card now carries a
+// Mute button and a scope choice behind it, so the card is something to ACT
+// on rather than only to read — ten seconds is not long enough to notice it,
+// read the message, and decide. The picker itself still has NO timeout, so a
+// decision in progress is never taken away.
+const CHAT_TOAST_MS = 20000;
 // The confirmation is an acknowledgement, not a message to read — Figma gives
 // it a single line and it goes on its own.
 const CHAT_CONFIRM_MS = 2000;
@@ -168,7 +173,7 @@ function killChatToast(host) {
       // layer. MEASURED on the endpoint 2026-08-26: it returns without
       // throwing, but the view is NOT marked destroyed and the node is STILL
       // connected afterwards — so the card never left the screen, a second
-      // message stacked another on top of it, and the 10 s auto-dismiss did
+      // message stacked another on top of it, and the auto-dismiss did
       // nothing at all. (Phase 2 shipped this; it was never DOM-verified.)
       // destroy() is the Marionette API and does both — verified 0 nodes left.
       if (t.destroy) t.destroy();
@@ -395,7 +400,7 @@ function showChatToast(host, model = {}, url = "") {
     if (isPopupMuted(model)) return;
 
     // Replace, never stack: the previous card goes before the new one lands,
-    // and the 10 s timer starts again from this message.
+    // and the 20 s timer starts again from this message.
     const toast = mountCard(host, (replacing) => buildCard(model, url, replacing), CHAT_TOAST_MS);
     if (!toast) return;
     // Name the location if the synchronous lookup could not. Never awaited —
