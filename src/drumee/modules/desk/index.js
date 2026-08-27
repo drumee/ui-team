@@ -16,6 +16,21 @@ const { openSupportMail } = require("libs/support");
 // the press. See _closeEscapeModal for why this is an explicit list.
 const ESCAPE_MODAL_KINDS = ["tasks_panel"];
 
+/**
+ * How long the billing chunk may take before a loader is worth showing, in ms.
+ *
+ * The chunk is ~280KB on a cold open and cached on every open after that, so
+ * the usual case resolves in a few milliseconds. Raising a spinner for that
+ * produces a flash — a window that appears and disappears inside a frame or
+ * two, which reads as a glitch rather than as progress and is worse than the
+ * honest nothing it replaced.
+ *
+ * 220ms is under the ~250ms at which a delay starts being felt as a wait, so a
+ * connection fast enough to beat it never sees the loader and never needed one;
+ * anything slower gets told something is happening. See _showBillingLoader.
+ */
+const DESK_BILLING_LOADER_DELAY = 220;
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -3556,9 +3571,106 @@ class desk_module extends LetcBox {
     // plain "Upgrade plan" trigger passes nothing, so the page opens on its
     // default tab exactly as before.
     const opt = Object.assign({ page: 1 }, preselect || {});
-    return Kind.waitFor("settings_billing").then(() =>
-      this.togglePanel("settings_billing", "settings-main-slot", true, opt)
-    );
+    // WHAT THE LOADER COVERS, and it is only this line. Kind.waitFor resolves a
+    // dynamic import: settings_billing is a ~280KB chunk, and until it lands
+    // nothing on screen changes at all — the previous panel simply sits there
+    // while the click appears to have done nothing.
+    //
+    // It does NOT cover the widget's own data load, deliberately. onDomRefresh
+    // paints immediately from Visitor.quota()'s cache and re-renders when the
+    // catalog and subscription land; that was a deliberate fix for this same
+    // screen sitting blank through two round trips, and covering it with a
+    // spinner would put one back over a page that is already readable.
+    this._showBillingLoader();
+    return Kind.waitFor("settings_billing")
+      .then(() => this.togglePanel("settings_billing", "settings-main-slot", true, opt))
+      .finally(() => this._hideBillingLoader());
+  }
+
+  /** The live billing loader window, or null. */
+  _billingLoader() {
+    try {
+      const all = (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("window_info")) || [];
+      for (const w of all) {
+        if (!w || (w.isDestroyed && w.isDestroyed())) continue;
+        if (w.mget && w.mget("billing_loading")) return w;
+      }
+    } catch (e) {
+      /* Wm not answering */
+    }
+    return null;
+  }
+
+  /**
+   * "Loading plans…" while the billing chunk downloads.
+   *
+   * Modelled on _showInvitedWorkspaceLoader, and it shares that one's two
+   * safety properties: a `dismiss_after` backstop, because a loader with no
+   * footer cannot be dismissed by a button and must not outlive its reason even
+   * if a future path forgets; and mode "hb", which keeps the drumee/✕ header so
+   * it can always be closed by hand.
+   *
+   * TWO THINGS DIFFER FROM THAT ONE, and both matter here.
+   *
+   * IT IS DELAYED. The chunk is cached after the first open, so on every visit
+   * after that Kind.waitFor resolves in a few milliseconds — and a spinner that
+   * appears and vanishes inside one frame reads as a glitch, which is worse
+   * than the honest nothing it replaced. The window is only raised if the wait
+   * is still running when the timer fires.
+   *
+   * IT IS NOT ONCE-PER-SESSION. The invited-workspace loader latches on a flag
+   * it never clears, because that intent is consumed once. Billing can be
+   * opened as many times as somebody clicks Upgrade plan, so the latch is
+   * released in _hideBillingLoader — otherwise the second visit, which is
+   * usually the cached one, would be the only one that could show it, and the
+   * first, which is the slow one, would not.
+   */
+  _showBillingLoader() {
+    if (this._billingLoaderPending) return;
+    this._billingLoaderPending = true;
+    this._billingLoaderTimer = setTimeout(() => {
+      this._billingLoaderTimer = null;
+      // The wait ended while we were holding back — this is the cached path,
+      // and nothing should appear.
+      if (!this._billingLoaderPending) return;
+      if (!window.Wm || !Wm.info) return;
+      const fig = "window-info";
+      Wm.info({
+        variant: "notice",
+        mode: "hb",
+        billing_loading: 1,
+        dismiss_after: 30000,
+        message: [
+          Skeletons.Box.X({
+            className: `${fig}__loader`,
+            kids: [
+              Skeletons.Element({ className: `${fig}__loader-spinner` }),
+              Skeletons.Note({
+                className: `${fig}__loader-label`,
+                content: LOCALE.LOADING_BILLING || "Loading plans…",
+              }),
+            ],
+          }),
+        ],
+      });
+    }, DESK_BILLING_LOADER_DELAY);
+  }
+
+  /**
+   * Take it down. Idempotent, and called from `finally` so a failed import —
+   * an offline tab, a chunk 404 after a redeploy — cannot leave a spinner
+   * standing over a desk that has stopped trying.
+   */
+  _hideBillingLoader() {
+    if (this._billingLoaderTimer) {
+      clearTimeout(this._billingLoaderTimer);
+      this._billingLoaderTimer = null;
+    }
+    // Released, not latched: see _showBillingLoader. The next Upgrade plan
+    // click has to be able to raise it again.
+    this._billingLoaderPending = false;
+    const w = this._billingLoader();
+    if (w && w.goodbye) w.goodbye();
   }
 
   /**
