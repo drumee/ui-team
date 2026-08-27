@@ -57,7 +57,16 @@ module.exports = function (ui) {
   // malformed response can only ever render a number.
   const n = (v) => String(Math.max(0, Number(v) || 0));
 
-  return Skeletons.Box.Z({
+  // Box.Y, NOT Box.Z. Measured on the endpoint: Box.Z renders `display: block`,
+  // so `align-items` / `justify-content` on the backdrop are INERT and the card
+  // sat at 0,0 instead of centred. Box.Y is a real flex column, which centres
+  // horizontally on the cross axis and vertically on the main axis. This is the
+  // mirror image of the known Skeletons.Note trap, where text-align is the
+  // thing that does nothing because Note IS a flex container.
+  // Do not "simplify" this back to Box.Z, and do not paper over it with
+  // `display: flex` in the skin — the repo rule is that Box variants own that
+  // property.
+  return Skeletons.Box.Y({
     className: `${pfx}__backdrop`,
     kids: [
       Skeletons.Box.Y({

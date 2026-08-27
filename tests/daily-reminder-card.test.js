@@ -95,6 +95,24 @@ const hasClass = (n, c) => typeof n.className === "string" && n.className.split(
 const find = (t, c) => { for (const n of walk(t)) if (hasClass(n, c)) return n; return null; };
 const findAll = (t, c) => { const o = []; for (const n of walk(t)) if (hasClass(n, c)) o.push(n); return o; };
 
+test("the backdrop is a REAL flex container, or the card is not centred", () => {
+  // Measured on the endpoint: Skeletons.Box.Z renders `display: block`, so
+  // align-items / justify-content on it are inert and the card rendered at
+  // 0,0 instead of centred. Box.Y is a real flex column. This is the mirror
+  // of the Skeletons.Note trap, where text-align is what does nothing.
+  const code = stripComments(skelSrc);
+  const ret = /return Skeletons\.Box\.([A-Z])\(\{\s*className: `\$\{pfx\}__backdrop`/.exec(code);
+  assert.ok(ret, "the backdrop is the returned root");
+  assert.equal(ret[1], "Y", "Box.Z renders display:block and would leave the card at 0,0");
+  // And the centring must come from flex properties, not from a display
+  // override in the skin — Box variants own that property.
+  assert.ok(/&__backdrop \{[\s\S]*?align-items: center;/.test(skinSrc), "centres on the cross axis");
+  assert.ok(/&__backdrop \{[\s\S]*?justify-content: center;/.test(skinSrc), "and on the main axis");
+  const bd = /&__backdrop \{([\s\S]*?)\n  \}/.exec(skinSrc);
+  assert.ok(!/display:\s*flex/.test(bd[1]), "no display override in the skin");
+  assert.ok(/position: fixed/.test(bd[1]), "and it covers the viewport");
+});
+
 test("the card renders the three counts from the digest", () => {
   const tree = renderCard();
   const labels = findAll(tree, "daily-reminder-popup__stat-label").map((n) => n.content);
