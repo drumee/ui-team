@@ -2,8 +2,29 @@
 
 // Centres a wrapper-modal's dialog on the viewport. See the include sites.
 @mixin wrapper-modal-mobile-centre {
-  position: fixed;
-  inset: 0;
+  // !important on both, and it is the whole reason this mixin does anything.
+  //
+  // The sibling `&[data-state="open"]` rule above sets `position: absolute;
+  // inset: 0` at specificity 0,2,0. Two of this mixin's three include sites
+  // are `&:has(> *)` inside a media query, and `:has()` takes the specificity
+  // of its argument — `> *` is the universal selector, which contributes
+  // nothing — so those sites land at 0,1,0 and LOSE. The wrapper stayed
+  // absolute over .window-manager__ui, i.e. the desk body, which begins below
+  // the 44px mobile topbar.
+  //
+  // That is not cosmetic. This element takes `backdrop-filter` in blur mode,
+  // and a backdrop-filter makes an element the containing block for its
+  // fixed-position descendants — so a dialog centring itself with
+  // `position: fixed` resolves against THIS box, not the viewport. Measured at
+  // a 500px viewport before this change: the confirm card centred at (238, 401)
+  // against a screen centre of (250, 357) — off by the topbar vertically and by
+  // half the scrollbar horizontally, and by much more whenever this box is
+  // narrower than the screen.
+  //
+  // Pinning the wrapper to the viewport fixes both paths at once: the flex
+  // centring below, and any dialog that still positions itself fixed.
+  position: fixed !important;
+  inset: 0 !important;
 
   > * {
     // Join the flex flow so the host's align/justify centre this. Inset is
@@ -12,6 +33,25 @@
     position: relative !important;
     inset: auto !important;
     margin: auto !important;
+    // The fourth neutraliser, and the one whose absence broke this.
+    //
+    // A dialog that centres ITSELF does it with `position: fixed; left: 50%;
+    // top: 50%` plus `transform: translate(-50%, -50%)` — the translate exists
+    // only to cancel the 50% offsets. The three lines above strip the offsets,
+    // but a transform is not a positioning property and survived them, so the
+    // translate stayed and displaced a card that flex had already centred.
+    //
+    // Measured on a 390×844 phone, confirm card 351×157: flex placed it at
+    // x = (390-351)/2 = 19.5, then the orphaned translate moved it to
+    // 19.5 - 175.5 = -156 — 156px off the left edge of the screen, with its
+    // own centre at x=20 against a screen centre of 195. Vertically the same:
+    // 343.5 - 78.5 = 265.
+    //
+    // Joining the flex flow and self-centring are alternatives, never both.
+    // This is what makes that exclusive, for every dialog fed through here —
+    // not only the confirm, whose own mixin is simply the one that happens to
+    // use the translate recipe today.
+    transform: none !important;
     // Never wider or taller than the screen it is being centred on.
     max-width: calc(100vw - 32px);
     max-height: calc(100dvh - 32px);
@@ -201,6 +241,26 @@
       @include drumee.glass-overlay;
     }
 
+    // The flat alternative to the glass above: `--overlay-bg` (the same
+    // theme-aware scrim the activity panel puts behind its mobile card) with
+    // the blur(6px) it was designed to pair with, and glass's stacked
+    // `::before` layer switched off — all of which scrim-overlay does.
+    //
+    // A separate `data-overlay` value rather than a `:has()` override on the
+    // blur one (which is how invite-popup and the media form reach the same
+    // mixin). Those predate this value and each had to name the dialog inside
+    // the wrapper, with a doubled class to win specificity; a caller that owns
+    // its own open path — window_confirm does, see manager.js confirm() — can
+    // simply ask for the backdrop it wants instead.
+    //
+    // Emitted in both forms for the same reason the blur rule is: the sibling
+    // `[data-state="open"]` block sets `backdrop-filter: none` at 0,2,0, so the
+    // bare 0,2,0 form would only tie with it and be decided by source order.
+    &[data-overlay="scrim"],
+    &[data-state="open"][data-overlay="scrim"] {
+      @include drumee.scrim-overlay;
+    }
+
     // ── Mobile: centre whatever this hosts ──────────────────────────────
     // This element is already a full-inset centring flex container, but its
     // children never benefit: dialogs fed in here are position:absolute (plus
@@ -246,6 +306,29 @@
     }
 
     @media (max-width: 650px) {
+      &:has(> *) {
+        @include wrapper-modal-mobile-centre;
+      }
+    }
+
+    // Tablets. Same recipe, same reasoning — the only thing that changes is
+    // which viewports reach it. Visitor.device() has no tablet tier (user.js
+    // returns `desktop` above 800px, and `mobile` only below that AND with
+    // /mobile/i in the UA, which a modern iPad's Macintosh UA never matches),
+    // so neither branch above fires on a tablet and every dialog this hosts
+    // stayed at the window manager's inline left/top.
+    //
+    // Centring from the HOST rather than from each dialog's own skin matters
+    // more here than the note above already argues, because a dialog centring
+    // itself with `position: fixed` cannot be trusted to reach the viewport:
+    // this wrapper takes `backdrop-filter` in blur mode (see [data-overlay]
+    // above), and a backdrop-filter makes an element the containing block for
+    // its fixed-position descendants. Verified in a headless render — with the
+    // filter applied, a fixed card centres on THIS box, and when this box is
+    // narrower than the card's min-width the card anchors to its edge and
+    // overflows instead of centring. Flex-centring a `position: relative`
+    // child, which is what the mixin switches to, has no such failure mode.
+    @media (min-width: 651px) and (max-width: 1024px) {
       &:has(> *) {
         @include wrapper-modal-mobile-centre;
       }

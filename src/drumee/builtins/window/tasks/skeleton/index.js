@@ -1975,15 +1975,26 @@ const make = function (ui) {
             ? require("./summary")(ui)
             : boardView();
 
+  // Tuple list kept as its own const so the carousel footer below can count
+  // pages from it — the dots must agree with the strip about how many tabs
+  // there are, and deriving both from one array is what keeps them in step.
+  const viewDefs = [
+    ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
+    ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
+    ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
+    ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
+    ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
+  ];
+
+  // The strip is the scroller for the compact carousel (the skin's
+  // `@container tasks-panel-w` block pages it two tabs at a time), so it has to
+  // be reachable from JS — the scroll listener that tracks the current page
+  // lives in tasks/index.js onPartReady("viewbar-tabs").
   const viewTabs = Skeletons.Box.X({
     className: `${pfx}__viewbar-tabs`,
-    kids: [
-      ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
-      ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
-      ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
-      ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
-      ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
-    ].map(([key, label, ico]) => {
+    sys_pn: "viewbar-tabs",
+    partHandler: ui,
+    kids: viewDefs.map(([key, label, ico]) => {
       // Tier gate (libs/billing.isTaskViewAllowed). A locked tab keeps its
       // place AND keeps its click: the click is what opens the upsell, so
       // hiding the tab would make the plan limit invisible and disabling it
@@ -2067,6 +2078,33 @@ const make = function (ui) {
     ],
   });
 
+  // Carousel footer: one dot per page of two tabs, so a phone user can see the
+  // strip continues past the two visible tabs. Built HERE rather than at
+  // runtime because the tab count is settled — viewDefs is a fixed list, and
+  // every view tab stays rendered even when the plan gates it (a locked tab
+  // keeps its place; the click is what opens the upsell).
+  //
+  // `page` is the only state this footer has: the scroll listener writes it and
+  // the skin maps it to the active dot, so nothing per-dot is ever touched as
+  // the strip moves. One page means nothing to page through — data-visible=0
+  // hides the footer, the same convention the folder tab bar uses.
+  const viewPages = Math.ceil(viewDefs.length / 2);
+  const viewDots = Skeletons.Box.X({
+    className: `${pfx}__viewbar-dots`,
+    sys_pn: "viewbar-dots",
+    partHandler: ui,
+    dataset: { page: 0, visible: viewPages > 1 ? 1 : 0 },
+    kids: Array.from({ length: viewPages }, (_, i) =>
+      Skeletons.Box.X({
+        className: `${pfx}__viewbar-dot`,
+        dataset: { page: i },
+        bubble: 0,
+        service: "viewbar-page",
+        uiHandler: [ui],
+      }),
+    ),
+  });
+
   const subHeader = Skeletons.Box.X({
     className: `${pfx}__viewbar`,
     kids: [
@@ -2086,6 +2124,7 @@ const make = function (ui) {
           filterBtn,
         ].filter(Boolean),
       }),
+      viewDots,
     ],
   });
 
