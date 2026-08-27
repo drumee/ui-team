@@ -1,3 +1,5 @@
+const { supportAvatar, isSupportEntity } = require("libs/support");
+
 /**
  * Header for the selected contact's chat panel.
  * @param {View} ui    - The chat_p2p widget
@@ -55,8 +57,23 @@ module.exports = function (ui, contact) {
     return LOCALE.OFFLINE;
   };
 
-  const profileIcon = isContact
-    ? Skeletons.UserProfile({
+  // Two different support questions, and they want opposite treatments:
+  //  - talking TO support (the user's side): presence is replaced with an
+  //    expectation line. An "Offline" dot on the support contact reads as
+  //    "nobody will answer", which is not what it means.
+  //  - answering support (the admin's side): presence is exactly what they
+  //    want to know — is this person still at their desk?
+  const talkingToSupport = isSupportEntity(entityId);
+  const isSupportThread =
+    _.isFunction(ui._isSupportRow) && ui._isSupportRow(contact);
+
+  // Support gets the product's own mark, not auto-coloured initials — see
+  // supportAvatar(). Only on the user's side: to the agent ANSWERING support
+  // the peer is a person, and their avatar and presence are the useful thing.
+  const profileIcon = talkingToSupport
+    ? supportAvatar(`${fig}__header-support-avatar`)
+    : isContact
+      ? Skeletons.UserProfile({
         className: `${fig}__header-profile`,
         id: entityId,
         firstname: fname,
@@ -66,24 +83,10 @@ module.exports = function (ui, contact) {
         live_status: 1,
         sys_pn: 'header-profile'
       })
-    : Skeletons.Button.Svg({
+      : Skeletons.Button.Svg({
         ico: 'raw-drumee_projectroom',
         className: `${fig}__header-profile icon raw-drumee_projectroom`
       });
-
-  // Two different support questions, and they want opposite treatments:
-  //  - talking TO support (the user's side): presence is replaced with an
-  //    expectation line. An "Offline" dot on the support contact reads as
-  //    "nobody will answer", which is not what it means.
-  //  - answering support (the admin's side): presence is exactly what they
-  //    want to know — is this person still at their desk?
-  const supportId =
-    typeof Desk !== 'undefined' && _.isFunction(Desk.supportContactId)
-      ? Desk.supportContactId()
-      : null;
-  const talkingToSupport = !!supportId && entityId === supportId;
-  const isSupportThread =
-    _.isFunction(ui._isSupportRow) && ui._isSupportRow(contact);
 
   const statusNote = talkingToSupport
     ? Skeletons.Note({
@@ -91,7 +94,7 @@ module.exports = function (ui, contact) {
         // element by that class and rewrites its text on every peer status
         // broadcast, which would replace this line with "Offline".
         className: `${fig}__header-support-note`,
-        content: LOCALE.SUPPORT_REPLY_TIME
+        content: LOCALE.SUPPORT_AVAILABILITY
       })
     : (isContact ? Skeletons.Note({
         className: `${fig}__header-status`,
@@ -115,7 +118,11 @@ module.exports = function (ui, contact) {
                 className: `${fig}__header-name`,
                 content: displayName
               }),
-              isSupportThread ? Skeletons.Note({
+              // Only on the agent's side. Talking TO support, the Drumee mark
+              // and the name already say what this conversation is, and the
+              // badge just repeats them; answering support, it is the one
+              // thing marking a stranger's message as a request for help.
+              isSupportThread && !talkingToSupport ? Skeletons.Note({
                 className: `${fig}__support-pill`,
                 content: LOCALE.SUPPORT_LABEL
               }) : null

@@ -8,6 +8,8 @@ const {
   nextGroupViewState,
 } = require("../skeleton/toolkit/file-group");
 
+const { overMeetingCap } = require("libs/billing");
+
 const {
 
   
@@ -2577,6 +2579,9 @@ class __window_folder extends mfsInteract {
     // user becomes the creator on submit).
     this._mmCreatedBy = prefill ? prefill.created_by : null;
     this._mmBusy = {};
+    // Also cleared on close; reset here too so a modal re-opened without one
+    // (create → edit) cannot start out suppressing the availability banner.
+    this._mmCapNotice = 0;
     // Fetch the workspace member pool first so the invitee chips can render.
     const loadMembers = this.fetchService(SERVICE.hub.get_members_by_type, {
       type: "all",
@@ -2646,6 +2651,7 @@ class __window_folder extends mfsInteract {
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
     this._mmBusy = {};
+    this._mmCapNotice = 0;
     if (this.dialogWrapper) {
       if (this.dialogWrapper.el) {
         this.dialogWrapper.el.removeAttribute("data-variant");
@@ -2853,6 +2859,13 @@ class __window_folder extends mfsInteract {
       return el ? String(el.value || "").trim() : "";
     };
     const setBanner = (txt) => {
+      // This banner line is shared with the plan-cap notice, and clicking
+      // Schedule blurs the time field — which fires this probe on the very
+      // same click that raised the notice. Clearing to empty afterwards would
+      // erase the reason the save was refused, seconds after showing it. A
+      // real busy warning still wins: that is new information, not a stale
+      // blank. The notice is dropped by the next submit.
+      if (!txt && this._mmCapNotice) return;
       const el = root.querySelector(`.${this.fig.family}__meeting-modal-availability`);
       if (el) el.textContent = txt || "";
     };
@@ -2962,6 +2975,34 @@ class __window_folder extends mfsInteract {
     };
   }
 
+  /**
+   * The plan's meeting-length cap when this form exceeds it, else 0.
+   *
+   * Read from the VIEWER's own entitlement, with no ownership test.
+   *
+   * There was one here, gating only workspaces whose `privilege` carried the
+   * owner bit, on the grounds that a room runs on the workspace OWNER's plan
+   * (the server stamps its deadline from the hub's owner_id — meeting-limit
+   * roomDeadline). That is true and it is still the wrong rule, because inside
+   * an organisation the hub owner and the billing entity are not the same
+   * thing: every member shares the ORG's plan, so a workspace admin who simply
+   * does not happen to own the hub would have been waved through in silence —
+   * the common case — to avoid refusing a Free user booking into somebody
+   * else's paid workspace, which is the rare one. A silent no-op is the worse
+   * failure of the two: being told to shorten the meeting or upgrade is an
+   * inconvenience the reader can act on, while a gate that quietly does
+   * nothing is indistinguishable from a broken build.
+   *
+   * The residual mismatch is bounded and self-correcting either way: the room
+   * is capped server-side from the owner's plan regardless of what this says,
+   * so the worst outcome is a card shown to someone whose meeting would not
+   * actually have been cut.
+   */
+  _meetingOverPlanCap(form) {
+    if (!form) return 0;
+    return overMeetingCap(form.etime - form.stime);
+  }
+
   // Optimistically upsert a meeting into this._meetings from the form so it
   // shows immediately; a later room.list fetch overwrites it.
   _upsertLocalMeeting(nid, form) {
@@ -3066,8 +3107,35 @@ class __window_folder extends mfsInteract {
       if (input && input.focus) input.focus();
       return;
     }
+    // Each submit re-decides the cap from the times as they stand now, so any
+    // notice left over from the previous attempt goes first — otherwise a
+    // shortened meeting would still be carrying the old refusal on screen.
+    this._mmCapNotice = 0;
     this._mmBanner("");
     this._mmMarkTitleError(0);
+
+    // Plan cap on meeting LENGTH. Checked on submit rather than while the time
+    // fields are being edited: a half-filled form passes through every invalid
+    // duration on its way to a valid one, and nagging at each of them would
+    // make the card an obstacle instead of an answer. This is the click that
+    // committed to those times.
+    //
+    // The dialog deliberately stays OPEN behind the card — the fix is to
+    // shorten the meeting, and that is only possible in the form the card
+    // would otherwise have closed. The banner keeps the reason on screen after
+    // the card is dismissed.
+    const capMins = this._meetingOverPlanCap(form);
+    if (capMins) {
+      this._mmCapNotice = 1;
+      this._mmBanner(LOCALE.UNLOCK_MEETING_SCHEDULE_DESC.format(capMins));
+      // Required here, not at module scope: the card pulls its own skin in,
+      // and a folder window / calendar that never hits the cap should not be
+      // paying for the upsell's CSS. Same reason Wm.openFeatureLock defers it.
+      const { promptFeatureLock } = require("builtins/widget/feature-lock");
+      promptFeatureLock("meeting_schedule", [capMins]);
+      return;
+    }
+
     this._mmSubmitting = 1;
     // Stale reason from an earlier call must not colour this one's message.
     this._lastServiceError = null;

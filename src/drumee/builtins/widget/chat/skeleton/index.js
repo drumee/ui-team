@@ -81,7 +81,9 @@ const __skl_widget_chat = function (ui) {
     formItem: 'messages',
     dataType: _a.array,
     dataset: {
-      role: _a.container,
+      // Stop the window marquee selector at the chat surface so browser text
+      // selection can span lines and message bubbles for copy/paste.
+      role: _a.root,
       area: ui.mget(_a.area)
     },
     spinnerWait: 500,
