@@ -242,6 +242,9 @@ module.exports = {
   migrate_gdrive_popup: function () {
     return import("./builtins/widget/migrate-gdrive-popup");
   },
+  daily_reminder_popup: function () {
+    return import("./builtins/widget/daily-reminder-popup");
+  },
   rating_survey_popup: function () {
     return import("./builtins/widget/rating-survey-popup");
   },

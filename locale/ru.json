@@ -2737,5 +2737,14 @@
   "MUTE_DONE_ALL": "Уведомления отключены для всех рабочих пространств",
   "MUTE_FAILED": "Не удалось отключить уведомления",
   "UNMUTE": "Включить уведомления",
-  "CREATE_CHILD_TASK": "Создать дочерние задачи"
+  "CREATE_CHILD_TASK": "Создать дочерние задачи",
+  "DAILY_REMINDER_TITLE": "Привет, {0}! Сегодня у вас ...",
+  "DAILY_REMINDER_TITLE_NO_NAME": "Сегодня у вас ...",
+  "DAILY_REMINDER_MESSAGES": "{0} непрочитанных сообщений",
+  "DAILY_REMINDER_TASKS": "{0} задач к сроку",
+  "DAILY_REMINDER_MEETINGS": "{0} встреч",
+  "DAILY_REMINDER_SUBLINE": "Посмотрите свой календарь",
+  "DAILY_REMINDER_NO_CALENDAR": "Ваш личный календарь пока недоступен",
+  "DISCARD": "Отклонить",
+  "MY_CALENDAR": "Мой календарь"
 }

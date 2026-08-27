@@ -1365,11 +1365,94 @@ class desk_module extends LetcBox {
     setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
     // PMF rating survey: accumulate active usage; popup fires at 30 min.
     this._initRatingSurveyTimer();
+    // Daily reminder card. Delayed like the migration prompt so the workspace
+    // renders first — the card is a greeting, not a gate.
+    setTimeout(() => this._maybeShowDailyReminder(), 2000);
     // Warm the support-account lookup so screens that need it can answer
     // synchronously: the Get help screen hides Contact Support for the
     // support account itself, and the inbox badges support conversations.
     // Failure is already swallowed into null — nothing here depends on it.
     this.supportContact();
+  }
+
+
+  /**
+   * Daily reminder card — Round 3 / Sprint 1 row 7.
+   *
+   * Fires on the FIRST DESK LOAD OF THE DAY, keyed in localStorage on the
+   * viewer's LOCAL date. Per device on purpose: a two-device user seeing it
+   * twice is accepted, and it costs no schema.
+   *
+   * The day window is computed HERE, from the viewer's own clock, and sent to
+   * the server — "today" is whatever the person in front of the screen calls
+   * today, and the server has no way to know their timezone.
+   *
+   * The day is marked consumed BEFORE the request, not after. Two desk loads
+   * in quick succession would otherwise both pass the check and fan out across
+   * every workspace twice; and a card that failed to load is not worth
+   * retrying all day.
+   *
+   * An all-zero day renders nothing. A card announcing three zeroes is noise,
+   * and the day is still marked so it does not re-query on every load.
+   */
+  async _maybeShowDailyReminder() {
+    let Popup;
+    try {
+      Popup = require("builtins/widget/daily-reminder-popup");
+    } catch (e) {
+      return; // widget not in this build — nothing to show
+    }
+    const key = Popup.dayKey();
+    if (Popup.alreadyShownToday(key)) return;
+    Popup.markShownToday(key);
+
+    // Local midnight → next local midnight. Built from the date parts rather
+    // than by adding 86400s, so the window stays correct across a daylight
+    // saving change.
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    let counts;
+    try {
+      counts = await this.fetchService({
+        // SERVICE.activity is NOT in lex/services.json — it exists only in the
+        // backend map merged in at bootstrap, so the whole namespace can be
+        // undefined and `SERVICE.activity.daily_digest` would throw. The
+        // activity panel already guards its calls this way; same idiom here.
+        service:
+          (SERVICE.activity && SERVICE.activity.daily_digest) ||
+          "activity.daily_digest",
+        hub_id: Visitor.id,
+        day: key,
+        stime: Math.floor(start.getTime() / 1000),
+        etime: Math.floor(end.getTime() / 1000),
+      });
+    } catch (e) {
+      return;
+    }
+    // fetchService resolves undefined (or an error payload) rather than
+    // rejecting when a call does not complete, so a non-object IS the failure
+    // path — see _loadTasks in the task panel for the same shape.
+    if (!counts || typeof counts !== "object" || Array.isArray(counts)) return;
+
+    const total =
+      (Number(counts.unread_messages) || 0) +
+      (Number(counts.due_tasks) || 0) +
+      (Number(counts.meetings) || 0);
+    if (total <= 0) return;
+
+    await Kind.waitFor("daily_reminder_popup");
+    Wm.launch(
+      {
+        kind: "daily_reminder_popup",
+        hub_id: Visitor.id,
+        nid: Visitor.get(_a.home_id),
+        counts,
+        wm_unique_id: "daily_reminder_popup",
+      },
+      { explicit: 1, singleton: 1 },
+    );
   }
 
   /**

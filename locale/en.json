@@ -2900,5 +2900,14 @@
   "MUTE_DONE_ALL": "Notifications muted for all workspaces",
   "MUTE_FAILED": "Could not mute notifications",
   "UNMUTE": "Unmute",
-  "CREATE_CHILD_TASK": "Create child task items"
+  "CREATE_CHILD_TASK": "Create child task items",
+  "DAILY_REMINDER_TITLE": "Hi {0}, today you have ...",
+  "DAILY_REMINDER_TITLE_NO_NAME": "Today you have ...",
+  "DAILY_REMINDER_MESSAGES": "{0} unread messages",
+  "DAILY_REMINDER_TASKS": "{0} due tasks",
+  "DAILY_REMINDER_MEETINGS": "{0} meetings",
+  "DAILY_REMINDER_SUBLINE": "Check your calendar now",
+  "DAILY_REMINDER_NO_CALENDAR": "Your personal calendar is not available yet",
+  "DISCARD": "Discard",
+  "MY_CALENDAR": "My calendar"
 }

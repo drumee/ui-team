@@ -1,0 +1,178 @@
+@use "mixins/drumee";
+
+// Daily reminder card — Round 3 / Sprint 1 row 7 (screenshot Downloads/dr1.jpg).
+//
+// Sizing follows the sibling Round 3 cards (call-pop-up: 520 wide, padding 24,
+// radius 12) rather than being measured off the screenshot, which carries no
+// scale. If Figma later gives exact numbers, only this file changes.
+//
+// 🚨 Every drumee.typo include is followed by an explicit font-weight.
+// skin/mixins/typo.scss maps $weight onto a font-FAMILY and emits NO
+// font-weight at all — it has no branch for 600 — so a rule that passes
+// $weight and stops there renders at whatever it inherits. Five Phase 1 rules
+// were silently light for exactly this reason.
+.daily-reminder-popup {
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 10, 33, 0.45);
+    z-index: 99998;
+  }
+
+  &__card {
+    position: relative;
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    padding: 24px;
+    gap: 24px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow:
+      0 40px 80px rgba(11, 10, 33, 0.3),
+      0 7px 10px rgba(11, 10, 33, 0.09);
+  }
+
+  &__close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    opacity: 0.6;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__title {
+    @include drumee.typo(
+      $size: 20px,
+      $weight: 600,
+      $line: 28px,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
+    font-weight: 600;
+    // Note renders a FLEX container, so text-align does nothing on its own —
+    // only align-items / justify-content move the label. That is why the
+    // Phase 2 "Mute"/"Open" labels sat off-centre.
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 32px; // clear of the ✕
+  }
+
+  &__stats {
+    align-items: flex-start;
+    justify-content: space-around;
+    gap: 16px;
+  }
+
+  &__stat {
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  &__stat-tile {
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--primary-purple-10, #e4e3ff);
+  }
+
+  &__stat-ico {
+    width: 24px;
+    height: 24px;
+    // The sprite glyphs are monochrome and inherit currentColor.
+    color: var(--primary-purple-40, #5950ff);
+    fill: var(--primary-purple-40, #5950ff);
+  }
+
+  &__stat-label {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
+    font-weight: 400;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    // A long translation must wrap rather than push the row wider than the
+    // card — three tiles share the width and each can be narrow.
+    word-break: break-word;
+  }
+
+  &__subline {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 22px,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
+    font-weight: 600;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  &__actions {
+    gap: 16px;
+  }
+
+  &__btn {
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+    padding: 16px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    @include drumee.typo($size: 16px, $weight: 600, $line: 24px);
+    font-weight: 600;
+
+    &--ghost {
+      background: var(--tertiary-grey-20, #f2f2f7);
+      color: var(--primary-purple-100, #0b0a21);
+
+      &:hover {
+        background: #e7e7ef;
+      }
+    }
+
+    // Brand indigo. --primary-purple-50, NOT --primary-500/--primary-400:
+    // revamp.scss declares two --primary-* scales in one :root and the LILAC
+    // one wins, so those resolve to the wrong colour entirely.
+    &--primary {
+      background: var(--primary-purple-50, #433cc5);
+      color: #fff;
+
+      &:hover {
+        background: var(--primary-purple-60, #4642a9);
+      }
+    }
+  }
+}
+
+// The card is a HEIGHT-constrained surface on a 14" laptop (596–740px of
+// viewport), which is the axis that actually bites — every max-width
+// breakpoint in this repo sits above a 14" CSS width. Keep it scrollable
+// rather than clipped, the failure the wallpaper dialog shipped with.
+@media (max-height: 600px) {
+  .daily-reminder-popup__card {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}
