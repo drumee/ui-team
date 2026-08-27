@@ -1768,6 +1768,24 @@ class __widget_chat extends LetcBox {
     }, 700);
   }
 
+  // The server sends the synthetic file.thread root card to other recipients
+  // but suppresses it from the caller's socket. Refresh the owning folder's
+  // General list when this caller creates the thread; the child payload must
+  // remain scoped to the file thread and must not be mirrored into General.
+  _notifyFileThreadCreated(data = {}) {
+    const created = data.file_thread && data.file_thread.is_new;
+    if (!(created === true || created === 1 || created === "1")) return;
+    const folderWindow =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    if (
+      folderWindow &&
+      !(folderWindow.isDestroyed && folderWindow.isDestroyed()) &&
+      _.isFunction(folderWindow.onFileThreadCreated)
+    ) {
+      folderWindow.onFileThreadCreated(data);
+    }
+  }
+
   /**
    *
    * @param {*} mkdir
@@ -1887,6 +1905,17 @@ class __widget_chat extends LetcBox {
   _ftSvc(name) {
     const c = (SERVICE && SERVICE.channel) || {};
     return c[`file_thread_${name}`] || `channel.file_thread_${name}`;
+  }
+
+  // A Reply-in-thread action carries the originating General message as a
+  // visual quote, but that message is not a child of the file thread. Sending
+  // its id as `thread_id` makes channel.file_thread_post reject the post with
+  // INVALID_REPLY_SCOPE. Normal replies made to a message already inside the
+  // file thread still send their parent id as usual.
+  _getSendThreadId() {
+    if (!this.threadId) return "";
+    if (this.isFileThreadMode() && this._replyInThread) return "";
+    return this.threadId;
   }
 
   // Resolve thread info for the scoped file WITHOUT creating one. Stores
@@ -2148,9 +2177,8 @@ class __widget_chat extends LetcBox {
       return false;
     }
 
-    if (this.threadId) {
-      api.thread_id = this.threadId;
-    }
+    const sendThreadId = this._getSendThreadId();
+    if (sendThreadId) api.thread_id = sendThreadId;
 
     if (messenger && _.isFunction(messenger.getMentionUserIds)) {
       const mentionIds = messenger.getMentionUserIds();
@@ -2314,6 +2342,7 @@ class __widget_chat extends LetcBox {
           return;
         }
         this._syncScopedFolderContent(data, api);
+        this._notifyFileThreadCreated(data);
         // First file-thread send returns the freshly-created thread id. The
         // server suppresses our own WS echo, so adopt it from the POST response
         // for realtime matching + subsequent sends (plan crit 4).

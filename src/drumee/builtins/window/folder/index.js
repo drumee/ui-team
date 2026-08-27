@@ -4046,6 +4046,26 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // The first local file-thread post returns the child message but the server
+  // intentionally does not echo its synthetic `file.thread` root card to the
+  // caller. Refresh the mounted General conversation so the persisted card is
+  // visible when the user closes the file-thread panel. An in-place/compact
+  // file scope keeps its current child list; clearing that scope already
+  // restarts the same widget against General. The rail is independent of the
+  // middle widget, so refresh it in both layouts.
+  onFileThreadCreated() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._populateThreadRail();
+    return this.ensurePart("folder-chat")
+      .then((chat) => {
+        if (!chat || (chat.isFileThreadMode && chat.isFileThreadMode())) return;
+        return chat.ensurePart(_a.list).then((list) => {
+          if (list && _.isFunction(list.restart)) list.restart();
+        });
+      })
+      .catch(() => {});
+  }
+
   // ── Team-chat header thread-switch dropdown ────────────────────────────
   // Toggle the header 3-dot dropdown. On open, fetch the current folder's file
   // threads (channel.file_thread_list_by_folder) and feed the menu part; the
