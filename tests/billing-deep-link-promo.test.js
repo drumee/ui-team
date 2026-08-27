@@ -38,6 +38,7 @@ const stripComments = (src) => src
 
 const LIB = SRC("src/drumee/libs/billing-deep-link.js");
 const WIDGET = SRC("src/drumee/builtins/widget/settings/account/billing/index.js");
+const WIDGET_DESK = SRC("src/drumee/modules/desk/index.js");
 
 /**
  * One function or method, lifted whole from a source file.
@@ -94,6 +95,91 @@ test("parseParams stays an allowlist", () => {
   const out = parseWith("#/desk/billing?promo=OK&evil=1&plan=team");
   assert.equal(out.evil, undefined, "parseParams forwards arbitrary keys");
   assert.deepEqual(Object.keys(out).sort(), ["plan", "promo"]);
+});
+
+// ── the link is addressed, and a forwarded one is refused ──────────────
+//
+// A mail gets forwarded, screenshotted, and opened on machines already signed
+// in as a colleague. Without the marker, every one of those walks that person
+// into a discounted checkout with a partner code applied that was never offered
+// to them.
+//
+// A UX GUARD, NOT A SECURITY CONTROL — mkt_coupon_reserve has no recipient
+// allowlist, so the code can still be typed by anyone who learns it. What is
+// pinned here is that the AUTOMATIC path is addressed.
+const LIBFN = (name) => {
+  const m = new RegExp(`function ${name}\\(([^)]*)\\) \\{([\\s\\S]*?)\\n\\}`).exec(LIB);
+  assert.ok(m, `${name} not found`);
+  return { args: m[1], body: m[2] };
+};
+const tagFn = LIBFN("recipientTag");
+const tag = new Function(tagFn.args, tagFn.body);
+
+test("parseParams carries the recipient marker", () => {
+  const out = parseWith("#/desk/billing?promo=X&for=cd8f5912");
+  assert.equal(out.for, "cd8f5912",
+    "the marker is dropped at the first hop — every link would read as unaddressed");
+});
+
+test("the client's tag matches analytics-server's, byte for byte", () => {
+  // The two are separate implementations in separate repos. If they drift,
+  // EVERY campaign link is refused and the feature dies silently — which is a
+  // worse failure than the one the marker prevents.
+  const SRV = readFileSync(
+    "/home/drumee/analytics-server/service/index.js", "utf8");
+  const m = /_recipientTag\(email\) \{([\s\S]*?)\n  \}/.exec(SRV);
+  assert.ok(m, "analytics-server _recipientTag is gone — the contract has one end");
+  const srv = new Function("email", m[1]);
+  for (const e of ["midax74173@kolsea.com", "huan@drumee.org", "a@b.c",
+                   "  MiXeD@Case.COM  ", ""]) {
+    assert.equal(tag(e), srv(e), `tags disagree for ${JSON.stringify(e)}`);
+  }
+});
+
+test("the tag ignores case and surrounding whitespace", () => {
+  // One side reads a ticked table row, the other a session profile.
+  assert.equal(tag("A@B.C"), tag("  a@b.c  "));
+  assert.equal(tag(""), null);
+  assert.equal(tag(null), null);
+});
+
+// isForCurrentUser, driven against a stubbed Visitor.
+const forFn = LIBFN("isForCurrentUser");
+const isFor = (preselect, email) => new Function(
+  "Visitor", "recipientTag", forFn.args, forFn.body,
+)({ profile: () => ({ email }) }, tag, preselect);
+
+test("a link addressed to this account passes", () => {
+  assert.equal(isFor({ for: tag("midax74173@kolsea.com") }, "midax74173@kolsea.com"), true);
+});
+
+test("a link addressed to somebody else is refused", () => {
+  assert.equal(isFor({ for: tag("midax74173@kolsea.com") }, "someone.else@example.com"), false,
+    "a forwarded mail still opens a discounted checkout for the wrong account");
+});
+
+test("an UNADDRESSED link passes — absent means not bound, not refuse", () => {
+  // Every link written before the marker existed carries none, and so does one
+  // a caller built by hand. Refusing those would kill working links.
+  assert.equal(isFor({ plan: "team" }, "anyone@example.com"), true);
+  assert.equal(isFor({ for: "" }, "anyone@example.com"), true);
+});
+
+test("a session with no readable address passes rather than dead-ends", () => {
+  // Turning a missing profile field into a silently dead campaign link is a
+  // worse failure than the one this guards against.
+  assert.equal(isFor({ for: tag("a@b.c") }, ""), true);
+  assert.equal(isFor({ for: tag("a@b.c") }, undefined), true);
+});
+
+test("the desk drops a mismatched link instead of leaving it armed", () => {
+  const body = stripComments(methodBody(WIDGET_DESK, "_maybeOpenBillingDeepLink() {"));
+  const consume = body.indexOf("consume()");
+  const check = body.indexOf("isForCurrentUser");
+  assert.ok(check > 0, "the desk never checks who the link was addressed to");
+  assert.ok(check > consume,
+    "the check runs before consume() — a link for somebody else would stay "
+    + "armed and fire for whoever signs in next on this tab");
 });
 
 // ── hop 2: the widget seeds the field, and only the field ──────────────

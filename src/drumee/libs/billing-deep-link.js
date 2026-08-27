@@ -30,6 +30,69 @@
 const KEY = "drumee_billingDeepLink";
 
 /**
+ * The opaque marker naming who a campaign CTA was written for.
+ *
+ * A mail link ends up forwarded, screenshotted, and opened on machines already
+ * signed in as somebody else. Without this, any of those walks that person into
+ * a discounted checkout with a partner code applied that was never offered to
+ * them. With it, the desk drops the destination when the signed-in account does
+ * not match, and they land on an ordinary desk.
+ *
+ * A UX GUARD, NOT A SECURITY CONTROL. mkt_coupon_reserve has no recipient
+ * allowlist, so anyone who learns the code can type it into the promo field.
+ * What this stops is the AUTOMATIC path, not redemption. Restricting the code
+ * itself belongs in the proc.
+ *
+ * FNV-1a, matching analytics-server's _recipientTag byte for byte — the two
+ * must agree or every link is refused. Not cryptographic and not required to
+ * be: it is computed here synchronously (SubtleCrypto is async, and this runs
+ * inside a routing decision), and it protects nothing a determined person could
+ * not do by hand.
+ *
+ * @param {String} email
+ * @returns {String|null} 8 hex chars, or null for an unusable address
+ */
+function recipientTag(email) {
+  const s = String(email || "").trim().toLowerCase();
+  if (!s) return null;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
+/**
+ * Is this destination addressed to the account now signed in?
+ *
+ * TRUE WHEN THE LINK NAMES NOBODY, deliberately: every link written before this
+ * existed carries no marker, and so does one a caller built by hand. An absent
+ * marker means "not bound", not "refuse".
+ *
+ * TRUE WHEN THE SESSION HAS NO ADDRESS TO COMPARE. Refusing there would turn a
+ * missing profile field into a silently dead campaign link, which is a worse
+ * failure than the one this guards against.
+ *
+ * @param {Object} preselect from consume()
+ * @returns {Boolean}
+ */
+function isForCurrentUser(preselect) {
+  const want = preselect && preselect.for;
+  if (!want) return true;
+  let email = "";
+  try {
+    email = (typeof Visitor !== "undefined" && Visitor && Visitor.profile
+      ? (Visitor.profile() || {}).email
+      : "") || "";
+  } catch (e) {
+    return true;
+  }
+  if (!email) return true;
+  return recipientTag(email) === String(want).trim().toLowerCase();
+}
+
+/**
  * Shapes that mean "open billing".
  *
  * Two of them, because they survive different things:
@@ -87,7 +150,9 @@ function urlWantsBilling() {
  * across the sign-in reload as well — and a mail recipient is very often
  * signed out.
  *
- * @returns {{plan?:string, cycle?:string, tab?:string, promo?:string}}
+ * `for` is the recipient marker — see recipientTag below.
+ *
+ * @returns {{plan?:string, cycle?:string, tab?:string, promo?:string, for?:string}}
  */
 function parseParams() {
   const out = {};
@@ -96,7 +161,7 @@ function parseParams() {
     const q = hash.indexOf("?");
     if (q === -1) return out;
     const usp = new URLSearchParams(hash.slice(q + 1));
-    for (const k of ["plan", "cycle", "tab", "promo"]) {
+    for (const k of ["plan", "cycle", "tab", "promo", "for"]) {
       const v = usp.get(k);
       if (v) out[k] = v;
     }
@@ -160,4 +225,7 @@ function consume() {
   return urlWantsBilling() ? parseParams() : null;
 }
 
-module.exports = { arm, consume, captureFromUrl, urlWantsBilling, parseParams, KEY };
+module.exports = {
+  arm, consume, captureFromUrl, urlWantsBilling, parseParams,
+  recipientTag, isForCurrentUser, KEY,
+};
