@@ -1,13 +1,8 @@
 @use "mixins/drumee";
 
-// Foreign-DOM annotation: the guide adds this to the topbar Add-menu items it
-// wants disabled (everything but "Workspace") while it holds the dropdown open,
-// and removes it on teardown. Global (not nested) because it lands on desk
-// chrome the reward flow does not own.
-.reward-guide-disabled {
-  opacity: 0.4 !important;
-  pointer-events: none !important;
-}
+// The greyed-sibling rule (`.guided-flow-disabled`) that used to live here now
+// ships with the reconcile engine that applies it — see
+// libs/guided-flow/skin, required alongside this file by skin/index.js.
 
 // The reward flow marks any wrapper-modal it owns (see index.js _openModal and
 // _markInviteOverlay) so the app's frosted-glass overlay gives way to the

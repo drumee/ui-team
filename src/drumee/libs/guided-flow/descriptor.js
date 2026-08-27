@@ -1,10 +1,11 @@
 /**
- * The Step 1 workspace descriptor.
+ * The workspace descriptor a guided flow carries between its steps.
  *
- * Step 3 reopens the workspace the user created in Step 1, so the flow has to
- * remember it across a page reload. Kept in its own module (no DOM, no
- * globals) so the parsing is unit-testable — index.js extends the LetcBox
- * global and cannot be required under bare Node.
+ * Every flow here works the same way: one step creates a workspace, a later
+ * one reopens it to upload into. The descriptor is what connects the two, and
+ * it may have to survive a page reload in between. Kept in its own module (no
+ * DOM, no globals) so the parsing is unit-testable — the orchestrators extend
+ * the LetcBox global and cannot be required under bare Node.
  */
 
 /** The only fields Wm.loadWorkspace reads. Anything else the server sent is
