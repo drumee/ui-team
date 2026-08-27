@@ -13,6 +13,50 @@ function escapeHtml(value = "") {
   return _.escape(String(value));
 }
 
+// The language the string table declared. locale/index.js currently hardcodes
+// declare-lang('en') and loads only en.json, so this is 'en' today — but it is
+// READ rather than assumed, so the counts inflect correctly the moment a real
+// loader lands.
+function docLang() {
+  try {
+    if (typeof document === "undefined") return "en";
+    return (document.documentElement.getAttribute("lang") || "en").trim() || "en";
+  } catch (e) {
+    return "en";
+  }
+}
+
+// LOCALE is a createSafeObject: a MISSING key resolves to the key's own NAME,
+// never to undefined. So the usual `LOCALE.X || fallback` is DEAD CODE — the
+// test has to be against the key name itself.
+function localeOr(key, fallbackKey) {
+  const v = LOCALE[key];
+  if (v && v !== key) return v;
+  const f = LOCALE[fallbackKey];
+  return f && f !== fallbackKey ? f : "";
+}
+
+// Pick the plural form for `n` in the document language.
+//
+// "1 unread messages" was wrong, and the fix cannot be `n === 1 ? singular :
+// plural`: that is right for English and Spanish, wrong for French (0 takes
+// the singular), and badly wrong for Russian, which has THREE forms chosen on
+// n%10 and n%100 — 1 and 21 take one form, 2-4 another, 5-20 a third. Chinese
+// and Khmer do not inflect at all. Intl.PluralRules is the CLDR table for
+// exactly this and ships in every browser this app supports.
+//
+// Falls back to _OTHER for any category a language does not define, so adding
+// a language never renders a raw key name.
+function pluralized(base, n) {
+  let cat = n === 1 ? "one" : "other";
+  try {
+    cat = new Intl.PluralRules(docLang()).select(n);
+  } catch (e) {
+    /* keep the English-shaped default */
+  }
+  return localeOr(`${base}_${cat.toUpperCase()}`, `${base}_OTHER`);
+}
+
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const counts = ui.getCounts() || {};
@@ -54,8 +98,13 @@ module.exports = function (ui) {
 
   // Counts flow into Note as markup too. They are ours, not user input, but
   // they arrive over the wire — coercing to a non-negative integer means a
-  // malformed response can only ever render a number.
-  const n = (v) => String(Math.max(0, Number(v) || 0));
+  // malformed response can only ever render a number. The SAME coerced value
+  // picks the plural form, so the word can never disagree with the digit.
+  const num = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  const stat = (base, v) => {
+    const c = num(v);
+    return pluralized(base, c).replace("{0}", String(c));
+  };
 
   // Box.Y, NOT Box.Z. Measured on the endpoint: Box.Z renders `display: block`,
   // so `align-items` / `justify-content` on the backdrop are INERT and the card
@@ -90,15 +139,15 @@ module.exports = function (ui) {
             kids: [
               tile(
                 "noti-chat-teardrop-dots",
-                LOCALE.DAILY_REMINDER_MESSAGES.replace("{0}", n(counts.unread_messages)),
+                stat("DAILY_REMINDER_MESSAGES", counts.unread_messages),
               ),
               tile(
                 "noti-list-checks",
-                LOCALE.DAILY_REMINDER_TASKS.replace("{0}", n(counts.due_tasks)),
+                stat("DAILY_REMINDER_TASKS", counts.due_tasks),
               ),
               tile(
                 "noti-video-camera",
-                LOCALE.DAILY_REMINDER_MEETINGS.replace("{0}", n(counts.meetings)),
+                stat("DAILY_REMINDER_MEETINGS", counts.meetings),
               ),
             ],
           }),

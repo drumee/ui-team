@@ -121,6 +121,30 @@ test("EVERY descendant in the click path is active: 0", () => {
   assert.notEqual(row.active, 0, "the row itself stays clickable");
 });
 
+test("the board modal's 'Set as default' row is clickable on the LABEL too", () => {
+  // Pre-existing defect, fixed alongside the done toggle: the row carries the
+  // click service, but its label and switch were left at ui-core's default
+  // active:1 — so each bound its own onclick and __handleClick
+  // stopPropagation()d before dispatching. A click on the words "Set as
+  // default", or on the switch itself, died there; only the row's bare
+  // padding ever toggled it.
+  const tree = render({
+    getBoardModalState: () => ({ open: true, theme: "default", title: "", isDefault: true }),
+  });
+  const row = find(tree, "tasks-panel__board-default-row");
+  assert.ok(row, "the row renders when the modal is open");
+  assert.equal(row.service, "board-default", "the row owns the click");
+  const kids = [...walk(row)].filter((n) => n !== row);
+  assert.ok(kids.length >= 3, `label, switch and knob are all present (${kids.length})`);
+  const offenders = kids.filter((n) => n.active !== 0).map((n) => n.className || n.__kind);
+  assert.deepEqual(
+    offenders,
+    [],
+    "every descendant must carry active: 0, or it swallows the click meant for the row",
+  );
+  assert.notEqual(row.active, 0, "the row itself stays clickable");
+});
+
 test("the label is localised, never a literal", () => {
   const label = find(menuTree(), "tasks-panel__col-done-label");
   assert.ok(label, "the label renders");

@@ -2903,11 +2903,14 @@
   "CREATE_CHILD_TASK": "Create child task items",
   "DAILY_REMINDER_TITLE": "Hi {0}, today you have ...",
   "DAILY_REMINDER_TITLE_NO_NAME": "Today you have ...",
-  "DAILY_REMINDER_MESSAGES": "{0} unread messages",
-  "DAILY_REMINDER_TASKS": "{0} due tasks",
-  "DAILY_REMINDER_MEETINGS": "{0} meetings",
   "DAILY_REMINDER_SUBLINE": "Check your calendar now",
   "DAILY_REMINDER_NO_CALENDAR": "Your personal calendar is not available yet",
   "DISCARD": "Discard",
-  "MY_CALENDAR": "My calendar"
+  "MY_CALENDAR": "My calendar",
+  "DAILY_REMINDER_MESSAGES_ONE": "{0} unread message",
+  "DAILY_REMINDER_MESSAGES_OTHER": "{0} unread messages",
+  "DAILY_REMINDER_TASKS_ONE": "{0} due task",
+  "DAILY_REMINDER_TASKS_OTHER": "{0} due tasks",
+  "DAILY_REMINDER_MEETINGS_ONE": "{0} meeting",
+  "DAILY_REMINDER_MEETINGS_OTHER": "{0} meetings"
 }

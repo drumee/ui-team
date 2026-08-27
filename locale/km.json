@@ -2740,11 +2740,14 @@
   "CREATE_CHILD_TASK": "បង្កើតកិច្ចការរង",
   "DAILY_REMINDER_TITLE": "សួស្ដី {0} ថ្ងៃនេះអ្នកមាន ...",
   "DAILY_REMINDER_TITLE_NO_NAME": "ថ្ងៃនេះអ្នកមាន ...",
-  "DAILY_REMINDER_MESSAGES": "សារមិនទាន់អាន {0}",
-  "DAILY_REMINDER_TASKS": "កិច្ចការដល់កំណត់ {0}",
-  "DAILY_REMINDER_MEETINGS": "កិច្ចប្រជុំ {0}",
   "DAILY_REMINDER_SUBLINE": "ពិនិត្យប្រតិទិនរបស់អ្នកឥឡូវនេះ",
   "DAILY_REMINDER_NO_CALENDAR": "ប្រតិទិនផ្ទាល់ខ្លួនរបស់អ្នកមិនទាន់មានទេ",
   "DISCARD": "បោះបង់",
-  "MY_CALENDAR": "ប្រតិទិនរបស់ខ្ញុំ"
+  "MY_CALENDAR": "ប្រតិទិនរបស់ខ្ញុំ",
+  "DAILY_REMINDER_MESSAGES_ONE": "សារមិនទាន់អាន {0}",
+  "DAILY_REMINDER_MESSAGES_OTHER": "សារមិនទាន់អាន {0}",
+  "DAILY_REMINDER_TASKS_ONE": "កិច្ចការដល់កំណត់ {0}",
+  "DAILY_REMINDER_TASKS_OTHER": "កិច្ចការដល់កំណត់ {0}",
+  "DAILY_REMINDER_MEETINGS_ONE": "កិច្ចប្រជុំ {0}",
+  "DAILY_REMINDER_MEETINGS_OTHER": "កិច្ចប្រជុំ {0}"
 }

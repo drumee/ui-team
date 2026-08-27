@@ -58,9 +58,12 @@ function renderCard(over = {}) {
     {
       DAILY_REMINDER_TITLE: "Hi {0}, today you have ...",
       DAILY_REMINDER_TITLE_NO_NAME: "Today you have ...",
-      DAILY_REMINDER_MESSAGES: "{0} unread messages",
-      DAILY_REMINDER_TASKS: "{0} due tasks",
-      DAILY_REMINDER_MEETINGS: "{0} meetings",
+      DAILY_REMINDER_MESSAGES_ONE: "{0} unread message",
+      DAILY_REMINDER_MESSAGES_OTHER: "{0} unread messages",
+      DAILY_REMINDER_TASKS_ONE: "{0} due task",
+      DAILY_REMINDER_TASKS_OTHER: "{0} due tasks",
+      DAILY_REMINDER_MEETINGS_ONE: "{0} meeting",
+      DAILY_REMINDER_MEETINGS_OTHER: "{0} meetings",
       DAILY_REMINDER_SUBLINE: "Check your calendar now",
       DISCARD: "Discard",
       MY_CALENDAR: "My calendar",
@@ -162,7 +165,69 @@ test("counts are coerced — a malformed response can only render a number", () 
     getCounts: () => ({ unread_messages: "<b>x</b>", due_tasks: -7, meetings: null }),
   });
   const labels = findAll(t, "daily-reminder-popup__stat-label").map((n) => n.content);
+  // 0 is CLDR "other" in English, so these stay plural.
   assert.deepEqual(labels, ["0 unread messages", "0 due tasks", "0 meetings"]);
+});
+
+test("a count of 1 reads SINGULAR — '1 unread messages' was the bug", () => {
+  const t = renderCard({
+    getCounts: () => ({ unread_messages: 1, due_tasks: 1, meetings: 1 }),
+  });
+  assert.deepEqual(
+    findAll(t, "daily-reminder-popup__stat-label").map((n) => n.content),
+    ["1 unread message", "1 due task", "1 meeting"],
+  );
+});
+
+test("the plural form comes from Intl.PluralRules, not from n === 1", () => {
+  // A hand-rolled `n === 1 ? one : other` is right for English and Spanish,
+  // wrong for French (0 takes the singular) and badly wrong for Russian
+  // (three integer forms keyed on n%10 and n%100). Assert the real CLDR
+  // table is what selects the key.
+  const code = stripComments(skelSrc);
+  assert.ok(/new Intl\.PluralRules\(/.test(code), "uses Intl.PluralRules");
+  assert.ok(
+    /\$\{base\}_\$\{cat\.toUpperCase\(\)\}/.test(code),
+    "and builds the key from the category it returns",
+  );
+  // Sanity-check the categories the locale files must cover, using the same
+  // API the code uses — so this test fails if a form is missing rather than
+  // rendering a raw key name.
+  const need = {
+    en: new Set(), fr: new Set(), es: new Set(), ru: new Set(), zh: new Set(), km: new Set(),
+  };
+  for (const lang of Object.keys(need)) {
+    const pr = new Intl.PluralRules(lang);
+    for (const n of [0, 1, 2, 3, 4, 5, 11, 21, 22, 25, 35, 100]) need[lang].add(pr.select(n));
+  }
+  // Russian genuinely needs more than two.
+  assert.ok(need.ru.size >= 3, `ru uses ${[...need.ru].join(",")} — more than one/other`);
+  assert.ok(need.zh.size === 1, "zh does not inflect");
+  const dir = join(ROOT, "locale");
+  const missing = [];
+  for (const [lang, cats] of Object.entries(need)) {
+    const d = JSON.parse(readFileSync(join(dir, `${lang}.json`), "utf8"));
+    for (const base of ["DAILY_REMINDER_MESSAGES", "DAILY_REMINDER_TASKS", "DAILY_REMINDER_MEETINGS"]) {
+      for (const c of cats) {
+        const k = `${base}_${c.toUpperCase()}`;
+        if (!d[k] || !String(d[k]).includes("{0}")) missing.push(`${lang}:${k}`);
+      }
+    }
+  }
+  assert.deepEqual(missing, [], "every category a language actually uses has a key carrying {0}");
+});
+
+test("a missing plural form falls back to _OTHER, never to a raw key name", () => {
+  // LOCALE is a createSafeObject: an absent key resolves to the key's own
+  // NAME, so `LOCALE.X || fallback` is dead code and a naive lookup would
+  // render "DAILY_REMINDER_TASKS_FEW" on screen.
+  const code = stripComments(skelSrc);
+  assert.ok(/v !== key/.test(code), "the miss is detected by comparing against the key name");
+  assert.ok(/_OTHER/.test(code), "and falls back to the _OTHER form");
+  assert.ok(
+    !/LOCALE\[[^\]]+\]\s*\|\|/.test(code),
+    "no `LOCALE[...] || fallback` — that never fires with a safe object",
+  );
 });
 
 test("EVERY non-interactive node carries active: 0", () => {
@@ -286,14 +351,16 @@ test("the widget kind is registered, or Wm.launch silently never resolves", () =
   assert.ok(/kind: "daily_reminder_popup"/.test(deskSrc), "and the desk launches that exact kind");
 });
 
-test("every locale defines all nine keys", () => {
+test("every locale defines every card key", () => {
   const dir = join(ROOT, "locale");
   const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
   assert.equal(files.length, 6);
   const KEYS = [
-    "DAILY_REMINDER_TITLE", "DAILY_REMINDER_TITLE_NO_NAME", "DAILY_REMINDER_MESSAGES",
-    "DAILY_REMINDER_TASKS", "DAILY_REMINDER_MEETINGS", "DAILY_REMINDER_SUBLINE",
-    "DAILY_REMINDER_NO_CALENDAR", "DISCARD", "MY_CALENDAR",
+    "DAILY_REMINDER_TITLE", "DAILY_REMINDER_TITLE_NO_NAME",
+    "DAILY_REMINDER_MESSAGES_ONE", "DAILY_REMINDER_MESSAGES_OTHER",
+    "DAILY_REMINDER_TASKS_ONE", "DAILY_REMINDER_TASKS_OTHER",
+    "DAILY_REMINDER_MEETINGS_ONE", "DAILY_REMINDER_MEETINGS_OTHER",
+    "DAILY_REMINDER_SUBLINE", "DAILY_REMINDER_NO_CALENDAR", "DISCARD", "MY_CALENDAR",
   ];
   const missing = [];
   for (const f of files) {
@@ -302,7 +369,7 @@ test("every locale defines all nine keys", () => {
       if (!(k in d) || !String(d[k]).trim()) missing.push(`${f}:${k}`);
     }
     // The counted keys must keep their placeholder or the number vanishes.
-    for (const k of ["DAILY_REMINDER_MESSAGES", "DAILY_REMINDER_TASKS", "DAILY_REMINDER_MEETINGS", "DAILY_REMINDER_TITLE"]) {
+    for (const k of KEYS.filter((x) => /_(ONE|OTHER)$/.test(x)).concat("DAILY_REMINDER_TITLE")) {
       if (d[k] && !String(d[k]).includes("{0}")) missing.push(`${f}:${k} lost its {0}`);
     }
   }

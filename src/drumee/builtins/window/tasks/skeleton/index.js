@@ -1540,16 +1540,29 @@ const make = function (ui) {
               bubble: 0,
               service: "board-default",
               uiHandler: [ui],
+              // active: 0 on every child. ui-core defaults `active` to 1 when
+              // it is not set (letc.js: `if (a == null) a = 1`), binds an
+              // onclick to each such widget, and __handleClick calls
+              // e.stopPropagation() BEFORE triggerHandlers — so a click on the
+              // label or on the switch itself died there and never reached the
+              // row's "board-default" service. Only the row's padding actually
+              // toggled, which is almost nowhere. `active` does not cascade and
+              // kidsOpt is a no-op for it, so it goes on each node.
               kids: [
                 Skeletons.Note({
                   className: `${pfx}__board-default-label`,
                   content: LOCALE.SET_AS_DEFAULT,
+                  active: 0,
                 }),
                 Skeletons.Box.X({
                   className: `${pfx}__board-toggle`,
                   dataset: { on: st.isDefault ? 1 : 0 },
+                  active: 0,
                   kids: [
-                    Skeletons.Note({ className: `${pfx}__board-toggle-knob` }),
+                    Skeletons.Note({
+                      className: `${pfx}__board-toggle-knob`,
+                      active: 0,
+                    }),
                   ],
                 }),
               ],

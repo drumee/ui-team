@@ -2741,11 +2741,14 @@
   "CREATE_CHILD_TASK": "Créer des tâches enfants",
   "DAILY_REMINDER_TITLE": "Bonjour {0}, aujourd'hui vous avez ...",
   "DAILY_REMINDER_TITLE_NO_NAME": "Aujourd'hui vous avez ...",
-  "DAILY_REMINDER_MESSAGES": "{0} messages non lus",
-  "DAILY_REMINDER_TASKS": "{0} tâches à échéance",
-  "DAILY_REMINDER_MEETINGS": "{0} réunions",
   "DAILY_REMINDER_SUBLINE": "Consultez votre calendrier",
   "DAILY_REMINDER_NO_CALENDAR": "Votre calendrier personnel n'est pas encore disponible",
   "DISCARD": "Ignorer",
-  "MY_CALENDAR": "Mon calendrier"
+  "MY_CALENDAR": "Mon calendrier",
+  "DAILY_REMINDER_MESSAGES_ONE": "{0} message non lu",
+  "DAILY_REMINDER_MESSAGES_OTHER": "{0} messages non lus",
+  "DAILY_REMINDER_TASKS_ONE": "{0} tâche à échéance",
+  "DAILY_REMINDER_TASKS_OTHER": "{0} tâches à échéance",
+  "DAILY_REMINDER_MEETINGS_ONE": "{0} réunion",
+  "DAILY_REMINDER_MEETINGS_OTHER": "{0} réunions"
 }

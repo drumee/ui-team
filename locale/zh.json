@@ -2740,11 +2740,14 @@
   "CREATE_CHILD_TASK": "创建子任务项",
   "DAILY_REMINDER_TITLE": "你好 {0}，今天你有 ...",
   "DAILY_REMINDER_TITLE_NO_NAME": "今天你有 ...",
-  "DAILY_REMINDER_MESSAGES": "{0} 条未读消息",
-  "DAILY_REMINDER_TASKS": "{0} 项到期任务",
-  "DAILY_REMINDER_MEETINGS": "{0} 场会议",
   "DAILY_REMINDER_SUBLINE": "立即查看你的日历",
   "DAILY_REMINDER_NO_CALENDAR": "你的个人日历尚未开放",
   "DISCARD": "忽略",
-  "MY_CALENDAR": "我的日历"
+  "MY_CALENDAR": "我的日历",
+  "DAILY_REMINDER_MESSAGES_ONE": "{0} 条未读消息",
+  "DAILY_REMINDER_MESSAGES_OTHER": "{0} 条未读消息",
+  "DAILY_REMINDER_TASKS_ONE": "{0} 项到期任务",
+  "DAILY_REMINDER_TASKS_OTHER": "{0} 项到期任务",
+  "DAILY_REMINDER_MEETINGS_ONE": "{0} 场会议",
+  "DAILY_REMINDER_MEETINGS_OTHER": "{0} 场会议"
 }
