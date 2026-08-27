@@ -1933,6 +1933,52 @@ $theme-colors: (
   // (The Reporter field renders the shared __assignee-picker — it is editable
   // now, so it no longer has an inline avatar+name row of its own.)
 
+  // Breadcrumb shown only when the open task is a child: names the parent and
+  // is the route back to it (the X walks back there too).
+  &__detail-parent {
+    align-items: center;
+    gap: 4px;
+    align-self: flex-start;
+    max-width: 100%;
+    // __detail-panel is a 32px-gap column, which parks the crumb miles above
+    // the title it belongs to. Pull it back to ~8px.
+    margin-bottom: -24px;
+    padding: 2px 6px 2px 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+  }
+
+  &__detail-parent-ico {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+
+    svg {
+      display: block; // inline svg would sit on the baseline — see chip-ico
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
+  }
+
+  &__detail-parent-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-40, #6f6d87)
+    );
+  }
+
   &__detail-header {
     align-items: center;
     justify-content: space-between;
@@ -4801,7 +4847,12 @@ $theme-colors: (
   }
 
   &__gantt-chevron {
-    flex: 0 0 auto;
+    // Fixed width, not `auto`: the `data-empty` spacer on a childless or child
+    // row has no glyph, so an auto-width one collapses to 0 and the titles it
+    // was meant to align drift left.
+    flex: 0 0 10px;
+    width: 10px;
+    text-align: center;
     cursor: pointer;
     @include drumee.typo(
       $size: 16px,
@@ -5153,9 +5204,34 @@ $theme-colors: (
     box-sizing: border-box;
   }
 
-  // Task cell — checkbox + title
+  // Task cell — chevron + checkbox + title
   &__list-title-cell {
     gap: 10px;
+  }
+
+  // Expand/collapse control for a task with children. Fixed width so the
+  // inert `data-empty` spacer on a childless or child row reserves exactly the
+  // same column and every checkbox stays on one vertical line.
+  &__list-chevron {
+    flex: 0 0 10px;
+    width: 10px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease;
+    @include drumee.typo(
+      $size: 16px,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &[data-open="1"] {
+      transform: rotate(90deg);
+    }
+    &[data-empty="1"] {
+      cursor: default;
+      visibility: hidden;
+    }
   }
 
   &__list-check {
@@ -6393,103 +6469,45 @@ $theme-colors: (
     }
   }
 
-  // ── Subtasks ────────────────────────────────────────────────────
-  // Shared done/total badge: board card, list row, calendar chip/card and the
-  // Gantt task list all render the same pill so the count reads identically
-  // wherever it appears. Only drawn when the task actually has subtasks.
-  &__task-subcount,
-  &__list-subcount,
-  &__cal-chip-subcount,
-  &__cal-card-subcount,
-  &__gantt-subcount {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 18px;
-    padding: 0 7px;
-    border-radius: 100px;
-    white-space: nowrap;
-    background: var(--col-primary-10, #e4e3ff);
-    // typo()'s $weight is a no-op in this codebase — set it explicitly.
-    font-weight: 700;
-    @include drumee.typo(
-      $size: 10px,
-      $line: 18px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
-
-    // Every child done — reads as finished without needing a second element.
-    &[data-complete="1"] {
-      background: #d8f0e4;
-      color: #1f6b47;
-    }
-  }
-
-  &__gantt-subcount,
-  &__cal-chip-subcount {
-    margin-left: auto;
-    flex-shrink: 0;
-  }
-
-  // ── List view: expand chevron + child rows ──────────────────────
-  &__list-chevron {
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    user-select: none;
-    transition: transform 0.15s ease;
-    @include drumee.typo(
-      $size: 14px,
-      $line: 16px,
-      $color: var(--normal-fg-40, #6f6d87)
-    );
-
-    &[data-open="1"] {
-      transform: rotate(90deg);
-    }
-  }
-
-  // Rows with no subtasks get no chevron at all (no dead affordance), so pad
-  // their title cell by the same amount to keep every title on one x-position.
-  &__list-title-cell:not([data-sub="1"]) > &__list-check:first-child {
-    margin-left: 16px;
-  }
-
-  &__list-row[data-sub="1"] {
-    background: var(--normal-bg-90, #fafafc);
-
-    .tasks-panel__list-title {
-      @include drumee.typo(
-        $size: 12px,
-        $line: 18px,
-        $color: var(--normal-fg-30, #4a4a68)
-      );
-    }
-  }
-
-  &__list-title-cell[data-sub="1"] {
-    padding-left: 26px;
-  }
-
-  // ── Detail panel: Subtasks block ────────────────────────────────
+  // ── Child task items (Figma 58471:222398 / 58471:222650) ────────
+  // Lives in the detail panel's metadata sidebar, so everything here is sized
+  // for that narrow column rather than the main content width.
   &__subtasks {
-    gap: 2px;
-    margin-top: 18px;
+    gap: 8px;
+    margin-top: 4px;
   }
 
   &__subtask-header {
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
-    margin-bottom: 6px;
+  }
+
+  &__subtask-header-text {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__subtask-heading {
+    font-weight: 600;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // "Add child work item" — the caption under the heading.
+  &__subtask-subheading {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
   }
 
   &__subtask-count {
-    display: inline-flex;
-    align-items: center;
+    flex-shrink: 0;
     height: 18px;
     padding: 0 7px;
     border-radius: 100px;
@@ -6508,64 +6526,118 @@ $theme-colors: (
   }
 
   &__subtask-add {
-    margin-left: auto;
+    // positioning context for the __tip flyover child
+    position: relative;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
     cursor: pointer;
-    font-weight: 600;
-    @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
-      $color: var(--col-primary-100, #6c5ce7)
-    );
+    transition: background 0.15s;
 
     &:hover {
-      text-decoration: underline;
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+
+    // NB no `overflow: hidden` here (unlike __task-remove): the flyover
+    // tooltip is appended as a CHILD of this button, and clipping the button
+    // would clip the tooltip with it.
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-10, #0b0a21);
+    }
+
+    // The tooltip is appended INSIDE this button and the shared rule centres it
+    // (left:50% + translateX(-50%)). This button sits flush against the right
+    // edge of __modal-side, which is `overflow-y:auto` — and a non-visible
+    // overflow on one axis forces the other to `auto` too, so a centred nowrap
+    // label half a column wide was clipped and popped a horizontal scrollbar on
+    // hover. Anchor it to the button's right edge instead: same label, entirely
+    // inside the column, no reflow.
+    .tasks-panel__tip {
+      left: auto;
+      right: 0;
+      transform: none;
     }
   }
 
+  // ── An existing child ───────────────────────────────────────────
   &__subtask-row {
     align-items: center;
-    gap: 9px;
-    padding: 7px 2px;
+    gap: 8px;
+    padding: 6px 2px;
     border-bottom: 1px solid var(--normal-bg-80, #f0f0f5);
     cursor: pointer;
 
     &:last-of-type {
       border-bottom: 0;
     }
-
     &:hover {
       background: var(--normal-bg-90, #fafafc);
     }
-
-    // A finished child is struck through rather than hidden — the list is a
-    // checklist, and disappearing rows lose the done/total context.
+    // Struck through rather than hidden: this is a checklist, and a
+    // disappearing row loses the done/total context.
     &[data-done="1"] .tasks-panel__subtask-title {
       text-decoration: line-through;
       color: var(--normal-fg-50, #8a8aa3);
     }
   }
 
+  // One-click remove, styled exactly like the board card's __task-remove:
+  // hidden until the row is hovered, red on its own hover.
+  &__subtask-del {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    padding: 2px;
+    border-radius: 4px;
+    color: var(--normal-fg-50, #84848c);
+    opacity: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    transition:
+      opacity 0.15s,
+      color 0.15s,
+      background 0.15s;
+
+    svg {
+      display: block;
+      width: 10px;
+      height: 10px;
+    }
+
+    &:hover {
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.1);
+    }
+  }
+
+  &__subtask-row:hover &__subtask-del {
+    opacity: 1;
+  }
+
   &__subtask-check {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 5px;
     border: 1.5px solid var(--normal-bg-70, #e0e0ea);
-    display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
 
     svg {
-      width: 11px;
-      height: 11px;
+      width: 10px;
+      height: 10px;
       fill: transparent;
     }
 
     &[data-done="1"] {
-      background: #22b573;
-      border-color: #22b573;
-
+      background: #54b684;
+      border-color: #54b684;
       svg {
         fill: #fff;
       }
@@ -6583,200 +6655,315 @@ $theme-colors: (
     text-overflow: ellipsis;
     white-space: nowrap;
     @include drumee.typo(
-      $size: 13px,
-      $line: 18px,
+      $size: 12px,
+      $line: 16px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
   &__subtask-meta {
     @include drumee.typo(
-      $size: 11px,
+      $size: 10px,
       $line: 14px,
       $color: var(--normal-fg-50, #8a8aa3)
     );
   }
 
-  &__subtask-priority {
+  &__subtask-dot {
     flex-shrink: 0;
-    height: 20px;
-    padding: 0 10px;
-    border-radius: 100px;
-    display: inline-flex;
-    align-items: center;
-    font-weight: 500;
-    @include drumee.typo($size: 10px, $line: 20px, $color: #fff);
-
-    &[data-priority="low"] {
-      background: #54b684;
-    }
-    &[data-priority="medium"] {
-      background: #71a3f4;
-    }
-    &[data-priority="high"] {
-      background: #e8a13b;
-    }
-    &[data-priority="urgent"] {
-      background: #d74e49;
-    }
-  }
-
-  &__subtask-avatars {
-    flex-shrink: 0;
-    gap: 2px;
-  }
-
-  &__subtask-avatar {
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
-    overflow: hidden;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
   }
 
   &__subtask-empty {
-    padding: 6px 2px;
+    padding: 4px 2px;
     @include drumee.typo(
       $size: 12px,
-      $line: 18px,
+      $line: 16px,
       $color: var(--normal-fg-50, #8a8aa3)
     );
   }
 
-  // ── Inline creator ──────────────────────────────────────────────
-  &__subtask-create {
-    gap: 8px;
-    margin-top: 6px;
-    padding: 10px;
-    border-radius: 10px;
-    background: var(--normal-bg-90, #fafafc);
+  // ── Creator card ────────────────────────────────────────────────
+  // White card, 1px hairline, 12px radius / padding / gap (Figma 2065:85499).
+  // position:relative anchors the chip dropdowns.
+  &__subtask-card {
+    position: relative;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--normal-bg-100, #fff);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
   }
 
-  &__subtask-create-input {
+  &__subtask-card-head {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__subtask-card-title {
+    flex: 1;
+    min-width: 0;
+
     input {
       width: 100%;
       border: 0;
       outline: 0;
       background: transparent;
       font-family: inherit;
+      font-weight: 600;
       @include drumee.typo(
-        $size: 13px,
-        $line: 20px,
+        $size: 12px,
+        $line: 18px,
         $color: var(--normal-fg-10, #0b0a21)
       );
     }
   }
 
-  &__subtask-create-fields {
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+  &__subtask-card-close {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
   }
 
-  &__subtask-create-priorities {
+  &__subtask-card-chips {
+    align-items: center;
     gap: 4px;
     flex-wrap: wrap;
   }
 
-  &__subtask-create-priority {
-    padding: 4px 9px;
-    border-radius: 100px;
-    border: 1px solid var(--normal-bg-70, #e0e0ea);
-    cursor: pointer;
-    background: var(--normal-bg-100, #fff);
-    @include drumee.typo(
-      $size: 10px,
-      $line: 14px,
-      $color: var(--normal-fg-30, #4a4a68)
-    );
-
-    &[data-selected="1"] {
-      color: #fff;
-      border-color: transparent;
-      font-weight: 600;
-    }
-    &[data-selected="1"][data-priority="low"] {
-      background: #54b684;
-    }
-    &[data-selected="1"][data-priority="medium"] {
-      background: #71a3f4;
-    }
-    &[data-selected="1"][data-priority="high"] {
-      background: #e8a13b;
-    }
-    &[data-selected="1"][data-priority="urgent"] {
-      background: #d74e49;
-    }
-  }
-
-  &__subtask-create-due {
-    padding: 4px 9px;
-    border-radius: 7px;
-    background: var(--normal-bg-100, #fff);
-    border: 1px solid var(--normal-bg-70, #e0e0ea);
-    @include drumee.typo(
-      $size: 10px,
-      $line: 14px,
-      $color: var(--normal-fg-40, #6f6d87)
-    );
-  }
-
-  &__subtask-create-members {
-    gap: 4px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  &__subtask-create-member {
-    width: 24px;
-    height: 24px;
-    border-radius: 7px;
-    overflow: hidden;
-    cursor: pointer;
-    opacity: 0.45;
-    transition: opacity 0.12s ease;
-
-    &[data-selected="1"] {
-      opacity: 1;
-      box-shadow: 0 0 0 2px var(--col-primary-100, #6c5ce7);
-    }
-  }
-
-  &__subtask-create-more {
-    @include drumee.typo(
-      $size: 10px,
-      $line: 24px,
-      $color: var(--normal-fg-50, #8a8aa3)
-    );
-  }
-
-  &__subtask-create-actions {
-    gap: 8px;
-    align-items: center;
+  // Explicit Create for the inline creator. The card is a form inside a panel
+  // that has its own Update button, so it needs a commit of its own — see the
+  // skeleton's note.
+  &__subtask-card-actions {
     justify-content: flex-end;
   }
 
-  &__subtask-create-cancel,
   &__subtask-create-submit {
-    padding: 6px 14px;
-    border-radius: 100px;
+    padding: 5px 14px;
+    border-radius: 6px;
     cursor: pointer;
+    background: var(--col-primary-40, #5950ff);
     font-weight: 600;
-    @include drumee.typo($size: 11px, $line: 16px, $color: #fff);
-  }
+    transition: opacity 0.15s;
+    @include drumee.typo($size: 12px, $line: 16px, $color: #fff);
 
-  &__subtask-create-cancel {
-    background: transparent;
-    color: var(--normal-fg-40, #6f6d87);
-  }
-
-  &__subtask-create-submit {
-    background: var(--col-primary-100, #6c5ce7);
-
-    // _setControlBusy stamps data-loading, not data-busy.
-    &[data-loading="1"] {
-      opacity: 0.6;
-      pointer-events: none;
+    &:hover {
+      opacity: 0.88;
     }
+    // _setControlBusy stamps this while the create is in flight.
+    &[data-loading="1"] {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+  }
+
+  // Priority / Due date / Status chips — outlined pill, caret or calendar.
+  &__subtask-chip {
+    position: relative;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 2px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
+    }
+    &[data-open="1"] {
+      border-color: var(--col-primary-100, #5950ff);
+    }
+  }
+
+  &__subtask-chip-label {
+    @include drumee.typo(
+      $size: 11px,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__subtask-chip-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__subtask-chip-ico {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+
+    svg {
+      // Image.Svg drops a bare <svg> into a plain <div>, and an inline svg
+      // sits on the text baseline — which is why the caret and the calendar
+      // hung below the middle of the chip instead of centring with the label.
+      display: block;
+      width: 10px;
+      height: 10px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
+  }
+
+  // The native picker covers the whole chip so a click opens the platform date
+  // UI; it is invisible, the chip's own label is what shows.
+  &__subtask-date-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+
+    &::-webkit-calendar-picker-indicator {
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+  }
+
+  // ── Chip dropdown ───────────────────────────────────────────────
+  // Anchored to the chip that opened it (__subtask-chip is position:relative),
+  // not to the card — against the card it dropped below the whole form, well
+  // away from the control that was clicked.
+  &__subtask-menu {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 132px;
+    // Card-anchored it was left/right-pinned, so its width was fixed and long
+    // column names ellipsised. Chip-anchored it sizes to content, so cap it or
+    // a long custom column name widens the menu straight out of the card.
+    max-width: 240px;
+    z-index: 30;
+    padding: 4px;
+    gap: 1px;
+    border-radius: 10px;
+    background: var(--normal-bg-100, #fff);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    max-height: 176px;
+    overflow-y: auto;
+  }
+
+  &__subtask-menu-item {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover,
+    &[data-selected="1"] {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+  }
+
+  &__subtask-menu-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__subtask-menu-label {
+    min-width: 0; // required for the ellipsis to engage inside the flex row
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // ── Gantt: expanded child rows + chevron ────────────────────────
+  &__gantt-chevron {
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease;
+
+    &[data-open="1"] {
+      transform: rotate(90deg);
+    }
+    // Rendered but blank on a childless or child row, purely to hold the
+    // column so every title lines up.
+    &[data-empty="1"] {
+      cursor: default;
+      visibility: hidden;
+    }
+  }
+
+  &__gantt-arow[data-child="1"] {
+    background: var(--normal-bg-90, #fafafc);
+
+    .tasks-panel__gantt-title {
+      padding-left: 18px;
+      @include drumee.typo(
+        $size: 12px,
+        $color: var(--normal-fg-30, #4a4a68)
+      );
+    }
+  }
+
+  // Child bars read as a lighter variant of the parent's, so a nested run is
+  // legible as subordinate at a glance.
+  &__gantt-track[data-child="1"] &__gantt-bar {
+    height: 14px;
+    margin-top: 5px;
+    opacity: 0.72;
+  }
+
+  // ── Gantt: create-child control on every row ────────────────────
+  &__gantt-add-child {
+    // positioning context for the __tip flyover child
+    position: relative;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
+
+    // Right-anchored for the same reason as __subtask-add's: centred, this
+    // nowrap label spilled out of the gantt's left column and across the
+    // timeline header. Flipped BELOW the button too — every gantt row has the
+    // toolbar and the month/day header directly above it, and covering
+    // "Delete selected" mid-hover is worse than covering the next data row.
+    .tasks-panel__tip {
+      left: auto;
+      right: 0;
+      top: calc(100% + 6px);
+      bottom: auto;
+      transform: none;
+    }
+  }
+
+  // Revealed on row hover, like the row's delete control.
+  &__gantt-arow:hover &__gantt-add-child {
+    opacity: 1;
   }
 }
 
@@ -6805,8 +6992,31 @@ html[data-theme="dark"] .tasks-panel {
     background: rgba(255, 255, 255, 0.04);
   }
 
-  &__subtask-create {
-    background: rgba(255, 255, 255, 0.04);
+  // The creator card and its chip dropdown are white/hairline in light mode;
+  // both need a real surface on a dark ground or they vanish into it.
+  &__subtask-card,
+  &__subtask-menu {
+    background: var(--normal-bg-100, #1b1f22);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  &__subtask-menu {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  &__subtask-chip {
+    border-color: rgba(255, 255, 255, 0.14);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  &__subtask-menu-item {
+    &:hover,
+    &[data-selected="1"] {
+      background: rgba(255, 255, 255, 0.08);
+    }
   }
 
   &__task-card {

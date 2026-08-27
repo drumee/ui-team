@@ -148,6 +148,11 @@ class __tasks_panel extends LetcBox {
     this._createDefaults = null;
     this._detailId = null;
     this._detailDraft = null;
+    // Set when a CHILD is opened from its parent's panel: closing the child
+    // then returns to the parent instead of dismissing the whole thing. There
+    // is only one detail panel, so without this a child replaced the parent and
+    // the X closed both at once, with no route back.
+    this._detailReturnTo = null;
     // List-view expand state: ids of the parents whose subtasks are showing.
     // Purely local — collapsed is the default on every open, matching Jira.
     this._subtasksOpen = new Set();
@@ -235,6 +240,10 @@ class __tasks_panel extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    // Parts that never mounted leave their waiter behind (their promise simply
+    // never settles, exactly as ensurePart's would) — drop them with the panel.
+    for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
+    this._partWaiters = null;
     this._closeCommentReactionsPicker();
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
@@ -372,6 +381,7 @@ class __tasks_panel extends LetcBox {
       this._createDefaults = null;
       this._detailId = null;
       this._detailDraft = null;
+      this._detailReturnTo = null;
       this._pickerOpen = null;
       this._tasks = [];
       if (typeof this._resetFileSearch === "function") this._resetFileSearch();
@@ -394,6 +404,7 @@ class __tasks_panel extends LetcBox {
     this._trackPointer();
     this._installFileSearchFocus();
     this._installAssigneeSearch();
+    this._installSubtaskDateWatch();
     await Promise.all([
       this._loadTasks(),
       this._loadColumns(),
@@ -1409,6 +1420,18 @@ class __tasks_panel extends LetcBox {
       case "add-subtask":
         return this._openSubtaskDraft();
 
+      // Gantt row ＋ : open that task's detail with the creator already showing.
+      case "add-child-task": {
+        const id = trigger.mget("taskId");
+        if (!id) return;
+        // _openDetail already renders the panel, and _openSubtaskDraft re-feeds
+        // just the subtask block on top of it — so no _render() of our own. The
+        // one this used to do rebuilt the entire panel a second time, for a
+        // draft the section refresh had already drawn.
+        this._openDetail(id);
+        return this._openSubtaskDraft();
+      }
+
       case "cancel-subtask":
         return this._closeSubtaskDraft();
 
@@ -1418,40 +1441,30 @@ class __tasks_panel extends LetcBox {
       case "toggle-subtask-complete":
         return this._toggleSubtaskComplete(trigger);
 
-      case "set-subtask-priority": {
+      case "toggle-subtask-menu": {
         if (!this._subtaskDraft) return;
-        const next = trigger.mget("taskPriority");
-        this._subtaskDraft.priority = next;
-        // In place, not a re-feed: see toggle-subtask-assignee below.
-        if (this.el) {
-          this.el
-            .querySelectorAll(`.${this.fig.family}__subtask-create-priority`)
-            .forEach((el) => {
-              el.dataset.selected = el.dataset.priority === next ? "1" : "0";
-            });
-        }
+        const kind = trigger.mget("menuKind");
+        this._subtaskDraft.menu = this._subtaskDraft.menu === kind ? null : kind;
+        // A plain re-feed is safe here: the card's title Entry is seeded from
+        // the draft and kept current by the `task-input-changed` watch, so
+        // rebuilding the block cannot lose what has been typed.
+        this._refreshSubtaskSection();
         return;
       }
 
-      case "toggle-subtask-assignee": {
+      case "set-subtask-priority": {
         if (!this._subtaskDraft) return;
-        const uid = String(trigger.mget("memberUid") || "");
-        if (!uid) return;
-        const picked = this._subtaskDraft.assignees || [];
-        this._subtaskDraft.assignees = picked.includes(uid)
-          ? picked.filter((u) => u !== uid)
-          : picked.concat(uid);
-        // Re-feeding the block would blow away whatever title has been typed —
-        // the Entry is rebuilt empty. Flip the selected flag in place instead.
-        if (this.el) {
-          const el = this.el.querySelector(
-            `.${this.fig.family}__subtask-create-member[data-uid="${uid}"]`,
-          );
-          if (el)
-            el.dataset.selected = this._subtaskDraft.assignees.includes(uid)
-              ? "1"
-              : "0";
-        }
+        this._subtaskDraft.priority = trigger.mget("taskPriority");
+        this._subtaskDraft.menu = null;
+        this._refreshSubtaskSection();
+        return;
+      }
+
+      case "set-subtask-status": {
+        if (!this._subtaskDraft) return;
+        this._subtaskDraft.status = trigger.mget("taskStatus");
+        this._subtaskDraft.menu = null;
+        this._refreshSubtaskSection();
         return;
       }
 
@@ -1551,9 +1564,20 @@ class __tasks_panel extends LetcBox {
         });
 
       case "cancel-detail":
-      case "close-detail":
+      case "close-detail": {
+        // A child opened from its parent's own panel walks BACK to the parent
+        // rather than dismissing everything — there is one detail panel, so
+        // closing the child used to take the parent with it. Read the target
+        // first: _closeDetailSilently clears it.
+        const back = this._detailReturnTo;
         this._closeDetailSilently();
+        // _openDetail renders on its own — a _renderDeferred() on top of it
+        // would be a second full rebuild of the panel just painted.
+        if (back && this._tasks.some((t) => t.id === back)) {
+          return this._openDetail(back);
+        }
         return this._renderDeferred();
+      }
 
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
@@ -1945,7 +1969,7 @@ class __tasks_panel extends LetcBox {
   }
 
   _closeAssigneeList(scope) {
-    this.ensurePart(`${scope}-assignee-suggestions`)
+    this._withPart(`${scope}-assignee-suggestions`)
       .then((part) => {
         if (!part || part.isDestroyed?.()) return;
         part.feed([]);
@@ -2050,7 +2074,7 @@ class __tasks_panel extends LetcBox {
     const list = this._assigneeListEl(scope);
     const open =
       opt.open != null ? !!opt.open : !!(list && list.dataset.open === "1");
-    this.ensurePart(`${scope}-assignee-suggestions`)
+    this._withPart(`${scope}-assignee-suggestions`)
       .then((part) => {
         if (!part || part.isDestroyed?.()) return;
         part.feed(rows);
@@ -2068,6 +2092,29 @@ class __tasks_panel extends LetcBox {
   // rebuilt on every _render(), so per-input listeners would race the focus
   // restoration. The 200ms blur deferral lets a click on a result row fire
   // before the dropdown is hidden.
+  /**
+   * Due-date chip on the child-item creator card.
+   *
+   * The chip carries a native <input type="date"> laid invisibly over it, so
+   * clicking it opens the platform picker. Delegated on the persistent panel
+   * root, like the assignee and file-search fields: the card is rebuilt on
+   * every re-feed of the block, so a per-node listener would not survive.
+   */
+  _installSubtaskDateWatch() {
+    if (this._subtaskDateInstalled || !this.el) return;
+    this._subtaskDateInstalled = true;
+    this.el.addEventListener("change", (e) => {
+      const t = e.target;
+      if (!t || !t.matches || !t.matches(`.${this.fig.family}__subtask-date-input`)) {
+        return;
+      }
+      if (!this._subtaskDraft) return;
+      // "" when the user clears the field — a child with no due date is valid.
+      this._subtaskDraft.due_date = t.value || "";
+      this._refreshSubtaskSection();
+    });
+  }
+
   _installFileSearchFocus() {
     if (this._fileSearchFocusInstalled || !this.el) return;
     this._fileSearchFocusInstalled = true;
@@ -2287,6 +2334,9 @@ class __tasks_panel extends LetcBox {
   _closeDetailSilently() {
     this._detailId = null;
     this._detailDraft = null;
+    // A silent close is a real close (peer delete, task switch, commit) — the
+    // breadcrumb must not survive it and re-open a panel the user just left.
+    this._detailReturnTo = null;
     this._pickerOpen = null;
     this._comments = [];
     this._discardCommentPending(this._commentDraft);
@@ -2918,6 +2968,10 @@ class __tasks_panel extends LetcBox {
   async _removeTask(trigger) {
     const id = trigger.mget("taskId");
     if (!id) return;
+    // Captured BEFORE the row is pruned: deleting a child changes the parent's
+    // done/total, and the badge is rebuilt from the local rows.
+    const doomed = this._tasks.find((t) => t.id === id);
+    const parentOfDoomed = (doomed && doomed.parent_task_id) || null;
     try {
       const resp = await this.postService({
         service: SERVICE.task.delete,
@@ -2939,13 +2993,29 @@ class __tasks_panel extends LetcBox {
       const gone = new Set([id, ...(resp.subtask_ids || [])]);
       this._tasks = this._tasks.filter((t) => !gone.has(t.id));
       this._subtasksOpen.delete(id);
+      // Deleting a child moves the parent's counter. Without this the parent
+      // kept the server's pre-delete numbers and its badge read "0/1" against
+      // an empty child list until the next full reload.
+      if (parentOfDoomed) this._syncSubtaskBadges(parentOfDoomed);
       if (gone.has(this._detailId)) {
         this._detailId = null;
         this._detailDraft = null;
         this._subtaskDraft = null;
+        // The panel it would return to may be one of the rows just pruned.
+        this._detailReturnTo = null;
       }
     } catch (err) {
       console.error("[tasks_panel] task.delete failed:", err);
+    }
+    // Deleting a child from the OPEN parent's panel (the child row's ✕) refreshes
+    // only the board behind the modal and the child list. A full _render() here
+    // rebuilds the whole panel and, as feed() notes, drops it back to scroll 0 —
+    // so removing one child from a long task threw the reader to the top. The
+    // other callers (board card, gantt row, calendar chip) have no detail open
+    // and keep the full rebuild.
+    if (this._detailId && parentOfDoomed === this._detailId) {
+      this._refreshViewBody();
+      return this._refreshSubtaskSection();
     }
     this._render();
   }
@@ -3160,11 +3230,21 @@ class __tasks_panel extends LetcBox {
     if (calls.length) await Promise.all(calls);
 
     await this._loadTasks();
+    // Update on a child returns to the parent, exactly as its X does — leaving
+    // Update to dump the user back on the board while Cancel walked up one
+    // level would be the same "it closed everything" surprise, just on the
+    // happier path. Read before the reset clears it.
+    const back = this._detailReturnTo;
     this._detailId = null;
     this._detailDraft = null;
+    this._detailReturnTo = null;
     this._pickerOpen = null;
     this._resetFileSearch();
     this._setSubmitting(".tasks-panel__detail-submit", false);
+    if (back && this._tasks.some((t) => t.id === back)) {
+      // _openDetail renders on its own.
+      return this._openDetail(back);
+    }
     this._render();
   }
 
@@ -3173,6 +3253,14 @@ class __tasks_panel extends LetcBox {
   _openDetail(id) {
     if (!id) return;
     const task = this._tasks.find((t) => t.id === id);
+    // Coming from the parent's panel (its child rows, or "add-child-task")?
+    // Remember it so close-detail returns there. Computed BEFORE _detailId is
+    // reassigned, and cleared on any other transition — a breadcrumb pointing
+    // somewhere the user never was would send the X to a surprising place.
+    this._detailReturnTo =
+      task && task.parent_task_id && this._detailId === task.parent_task_id
+        ? task.parent_task_id
+        : null;
     this._detailId = id;
     // Description is stored/edited in marker form (`[@Name](user:uid)`); the
     // editor renders chips from it. Seed mention_uids from the existing markers
@@ -3435,6 +3523,9 @@ class __tasks_panel extends LetcBox {
     if (!ids.length) return;
     for (const id of ids) {
       try {
+        // Same reason as _removeTask: read the parent before the row goes.
+        const doomed = this._tasks.find((t) => t.id === id);
+        const parentOfDoomed = (doomed && doomed.parent_task_id) || null;
         const resp = await this.postService({
           service: SERVICE.task.delete,
           hub_id: this._hubId,
@@ -3448,6 +3539,7 @@ class __tasks_panel extends LetcBox {
           const gone = new Set([id, ...(resp.subtask_ids || [])]);
           this._tasks = this._tasks.filter((t) => !gone.has(t.id));
           this._subtasksOpen.delete(id);
+          if (parentOfDoomed) this._syncSubtaskBadges(parentOfDoomed);
         }
       } catch (err) {
         console.error("[tasks_panel] gantt bulk delete failed:", id, err);
@@ -4014,7 +4106,7 @@ class __tasks_panel extends LetcBox {
   // Touches only the comment part — the change log is fed by
   // _refreshHistoryList below, so neither reload rebuilds the other's rows.
   _refreshCommentList() {
-    return this.ensurePart("comment-list")
+    return this._withPart("comment-list")
       .then((p) => {
         if (!p || (p.isDestroyed && p.isDestroyed())) return;
         p.feed(require("./skeleton").buildCommentListContent(this));
@@ -4065,7 +4157,7 @@ class __tasks_panel extends LetcBox {
   // Sibling of _refreshCommentList for the change log. No body rendering and no
   // editors to rewire — history rows are plain text — so this is just a feed.
   _refreshHistoryList() {
-    return this.ensurePart("history-list")
+    return this._withPart("history-list")
       .then((p) => {
         if (!p || (p.isDestroyed && p.isDestroyed())) return;
         p.feed(require("./skeleton").buildHistoryListContent(this));
@@ -4089,7 +4181,7 @@ class __tasks_panel extends LetcBox {
         ? raw
         : "detail";
     // FileSelector hardcodes sys_pn to "fileselector".
-    return this.ensurePart("fileselector").then((sel) => {
+    return this._withPart("fileselector").then((sel) => {
       // sel.open() rebinds onchange every call (overrides the one set in
       // onPartReady), so use sel.el's input directly to preserve our handler.
       const input = sel.el.querySelector?.("input[type='file']") || sel.el;
@@ -5041,7 +5133,7 @@ class __tasks_panel extends LetcBox {
     const isCreate = scope === "create";
     if (isCreate ? !this._creating : !this._detailId) return;
     const partName = isCreate ? "create-due-section" : "due-section";
-    this.ensurePart(partName)
+    this._withPart(partName)
       .then((part) => {
         if (!part || part.isDestroyed?.()) return;
         part.feed(require("./skeleton").buildDueSectionContent(this, scope));
@@ -5056,7 +5148,7 @@ class __tasks_panel extends LetcBox {
     const taskId = this._detailId;
     if (!taskId) return;
     const attachments = this._attachments[taskId] || [];
-    this.ensurePart("attachment-rows")
+    this._withPart("attachment-rows")
       .then((rows) => {
         if (!rows || rows.isDestroyed?.()) return;
         const skel = require("./skeleton");
@@ -5181,7 +5273,7 @@ class __tasks_panel extends LetcBox {
     const draft = this._draftForKey(scope);
     const pendingFiles = (draft && draft.pending_files) || [];
     const partName = `file-pending-list-${scope}`;
-    this.ensurePart(partName)
+    this._withPart(partName)
       .then((list) => {
         if (!list || list.isDestroyed?.()) return;
         const skel = require("./skeleton");
@@ -5237,7 +5329,7 @@ class __tasks_panel extends LetcBox {
   _refreshFileSearchDropdown(scope, { preserveScroll = false } = {}) {
     if (!scope) return;
     const partName = `file-search-dropdown-${scope}`;
-    this.ensurePart(partName)
+    this._withPart(partName)
       .then((dropdown) => {
         if (!dropdown || dropdown.isDestroyed?.()) return;
         // feed() recreates the scrollable results element, resetting scrollTop
@@ -5509,7 +5601,11 @@ class __tasks_panel extends LetcBox {
       this._refreshPendingList(key);
     }
     // "Linked" badges in the search dropdown depend on the pending set —
-    // refresh both; ensurePart silently no-ops if the part isn't mounted.
+    // refresh both. Only one scope's part can be mounted at a time, so the
+    // other simply waits (see _withPart). It does NOT no-op: under ui-core's
+    // ensurePart that pending waiter used to clear every OTHER in-flight one
+    // when it eventually fired, which is why unrelated refreshes here would
+    // occasionally just not happen.
     this._refreshFileSearchDropdown("create");
     this._refreshFileSearchDropdown("detail");
   }
@@ -5598,7 +5694,7 @@ class __tasks_panel extends LetcBox {
   _applyAssigneeChange(kind, assignees, picked = false) {
     if (!this.el) return;
     const scope = kind === "create-assignee" ? "create" : "detail";
-    this.ensurePart(`${scope}-assignee-chips`)
+    this._withPart(`${scope}-assignee-chips`)
       .then((chips) => {
         if (!chips || chips.isDestroyed?.()) return;
         chips.feed(
@@ -5633,7 +5729,7 @@ class __tasks_panel extends LetcBox {
     if (!this.el) return;
     const draft = this._pickerDraft(scope);
     const uid = draft && draft.reporter_uid;
-    this.ensurePart(`${scope}-assignee-chips`)
+    this._withPart(`${scope}-assignee-chips`)
       .then((chips) => {
         if (!chips || chips.isDestroyed?.()) return;
         chips.feed(require("./skeleton").buildReporterChip(this, uid));
@@ -6389,7 +6485,7 @@ class __tasks_panel extends LetcBox {
 
   _openMention(scope, members, editorEl) {
     const skel = require("./skeleton");
-    this.ensurePart(`${scope}-mention`)
+    this._withPart(`${scope}-mention`)
       .then((part) => {
         if (!part || (part.isDestroyed && part.isDestroyed())) return;
         part.feed(skel.buildMentionItemsContent(this, members));
@@ -6512,7 +6608,7 @@ class __tasks_panel extends LetcBox {
     };
     this._linkPrompt = ref;
     const skel = require("./skeleton");
-    this.ensurePart(`${scope}-link`)
+    this._withPart(`${scope}-link`)
       .then((part) => {
         if (!part || (part.isDestroyed && part.isDestroyed())) return;
         if (this._linkPrompt !== ref) return;
@@ -6735,6 +6831,10 @@ class __tasks_panel extends LetcBox {
     const idx = this._tasks.findIndex((t) => t.id === row.id);
     if (idx === -1) this._tasks.push(normalized);
     else this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+    // Replacing a row in place changes neither the array's identity nor its
+    // length, so _childIndex's guard cannot see it — and it would keep handing
+    // out the superseded object. Drop the cache here.
+    this._childIdx = null;
   }
 
   // Heavy view switches: _render() re-feeds the WHOLE panel synchronously, so
@@ -6840,6 +6940,49 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
+   * ensurePart(), minus the hazard that makes part refreshes intermittently
+   * do nothing.
+   *
+   * ui-core's ensurePart resolves straight away when the branch is mounted, but
+   * otherwise parks a `part.ready` listener that clears itself with
+   * `this.off(_e.part.ready)` — no callback argument, so Backbone drops EVERY
+   * listener on that event, including the ones other in-flight ensurePart calls
+   * are waiting on. Those promises then never settle and their `.then` never
+   * runs, so the refresh they were going to do is silently skipped.
+   *
+   * This panel fires several part refreshes in quick succession (subtask
+   * section, view body, attachments, comment list, the scope-suffixed mention /
+   * link / assignee parts) and routinely asks for a part belonging to a closed
+   * overlay, which is exactly the case that parks a listener. Same contract,
+   * but the listener removes only its own callback.
+   */
+  _withPart(name) {
+    let branch = null;
+    try {
+      branch = this._branches ? this._branches[name] : null;
+    } catch (_) {
+      branch = null;
+    }
+    if (branch && (!branch.isDestroyed || !branch.isDestroyed())) {
+      return Promise.resolve(branch);
+    }
+    return new Promise((resolve) => {
+      const onReady = (child) => {
+        if (!child || child.mget(_a.sys_pn) != name) return;
+        this.off(_e.part.ready, onReady);
+        const list = this._partWaiters;
+        if (list) {
+          const i = list.indexOf(onReady);
+          if (i !== -1) list.splice(i, 1);
+        }
+        resolve(child);
+      };
+      this.on(_e.part.ready, onReady);
+      (this._partWaiters = this._partWaiters || []).push(onReady);
+    });
+  }
+
+  /**
    * Re-render ONLY the active view (board / list / calendar / gantt / summary).
    *
    * The skeleton mounts the view inside a named "view-host" part exactly so this
@@ -6854,7 +6997,7 @@ class __tasks_panel extends LetcBox {
   _refreshViewBody() {
     if (!this.el) return;
     const savedScroll = this._captureViewScroll();
-    this.ensurePart("view-host").then((host) => {
+    this._withPart("view-host").then((host) => {
       if (!host || !this.el) return;
       const root = require("./skeleton")(this);
       const node = (root.kids || []).find(
@@ -6942,12 +7085,36 @@ class __tasks_panel extends LetcBox {
   }
 
   // ── Skeleton accessors ─────────────────────────────────────────
-  // Board columns = the four built-ins followed by this folder's custom
-  // columns. Every entry is render-ready: `name` is the display string
-  // (LOCALE for built-ins, user text for customs), `color` the accent hex,
-  // `theme` the palette key driving pill tints, `custom` marks editability.
+  /**
+   * Board columns = the four built-ins followed by this folder's custom
+   * columns. Every entry is render-ready: `name` is the display string
+   * (LOCALE for built-ins, user text for customs), `color` the accent hex,
+   * `theme` the palette key driving pill tints, `custom` marks editability.
+   *
+   * MEMOISED — treat the result as read-only.
+   *
+   * isDoneStatus(), statusMeta() and getSubtasks() each call this, and they run
+   * once per rendered task AND once per subtask, so an un-cached build ran a
+   * `.some` + a `.map` allocating a fresh object (with a LOCALE lookup) per
+   * column, several thousand times per render on a busy board. The rows are
+   * mutated in place (rename, theme, reorder) as well as reassigned, so the
+   * cache keys on a content signature rather than array identity; that is
+   * O(columns) and columns are single digits.
+   */
   getColumns() {
     const rows = this._customColumns || [];
+    let sig = String(rows.length);
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      sig += `\u0001${r.id}\u0002${r.name}\u0002${r.theme}\u0002${r.is_done}\u0002${r.position}`;
+    }
+    if (this._colsCache && this._colsSig === sig) return this._colsCache;
+    this._colsSig = sig;
+    this._colsCache = this._buildColumns(rows);
+    return this._colsCache;
+  }
+
+  _buildColumns(rows) {
     // Has this scope been seeded? A single stored built-in row proves it has —
     // and once seeded, a MISSING built-in means the user DELETED it, so it must
     // stay deleted. Only when NO built-in row exists at all (column_list has
@@ -7003,8 +7170,33 @@ class __tasks_panel extends LetcBox {
   // Replaces scattered `status === "complete"` literals so renamed/custom done
   // columns are honored everywhere (list, gantt, project health).
   isDoneStatus(status) {
-    const c = this.getColumns().find((x) => String(x.key) === String(status));
-    return !!(c && c.is_done);
+    if (status == null || status === "") return false;
+    return this._doneKeys().has(String(status));
+  }
+
+  // The done-column keys, rebuilt only when getColumns() hands back a
+  // different array — which the memo above does exactly when they change.
+  _doneKeys() {
+    const cols = this.getColumns();
+    if (this._doneKeysSrc !== cols) {
+      this._doneKeysSrc = cols;
+      this._doneKeysSet = new Set(
+        cols.filter((c) => c.is_done).map((c) => String(c.key)),
+      );
+    }
+    return this._doneKeysSet;
+  }
+
+  // key → board position, for ordering subtasks the way the board reads.
+  _columnOrder() {
+    const cols = this.getColumns();
+    if (this._colOrderSrc !== cols) {
+      this._colOrderSrc = cols;
+      const m = new Map();
+      cols.forEach((c, i) => m.set(String(c.key), i));
+      this._colOrderMap = m;
+    }
+    return this._colOrderMap;
   }
   getColumnThemes() {
     return COLUMN_THEMES;
@@ -7189,17 +7381,56 @@ class __tasks_panel extends LetcBox {
    */
   getSubtasks(parentId) {
     if (!parentId) return [];
-    const order = this.getColumns().reduce(
-      (a, c, i) => ((a[c.key] = i), a),
-      {},
+    const kids = this._childIndex().get(parentId);
+    if (!kids || !kids.length) return [];
+    const order = this._columnOrder();
+    // slice() — the bucket is shared and cached; sorting it in place would
+    // reorder what every other caller sees.
+    return kids.slice().sort(
+      (a, b) =>
+        (order.get(String(a.status)) ?? 99) -
+          (order.get(String(b.status)) ?? 99) ||
+        (a.rank || 0) - (b.rank || 0),
     );
-    return this._tasks
-      .filter((t) => t.parent_task_id === parentId)
-      .sort(
-        (a, b) =>
-          (order[a.status] ?? 99) - (order[b.status] ?? 99) ||
-          (a.rank || 0) - (b.rank || 0),
-      );
+  }
+
+  /**
+   * parent id → children. Built once, reused by getSubtasks and
+   * getSubtaskCount.
+   *
+   * Both used to scan the whole task list, and getSubtaskCount runs once per
+   * rendered card / row / bar / chip — so a board of N tasks made N full
+   * passes, O(N^2) on every re-render. That is the subtask lag.
+   *
+   * Membership changes only when a task is added or removed, never when one is
+   * edited in place, so the cache keys on the array's identity plus its length:
+   * a reassignment (list reload, delete) and a push/splice are both caught
+   * without every mutation site having to remember to invalidate. The one case
+   * that changes neither is _mergeTask replacing a row in place — it drops the
+   * cache explicitly.
+   */
+  _childIndex() {
+    const tasks = this._tasks || [];
+    if (
+      this._childIdx &&
+      this._childIdxSrc === tasks &&
+      this._childIdxLen === tasks.length
+    ) {
+      return this._childIdx;
+    }
+    const idx = new Map();
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      const p = t.parent_task_id;
+      if (!p) continue;
+      const bucket = idx.get(p);
+      if (bucket) bucket.push(t);
+      else idx.set(p, [t]);
+    }
+    this._childIdx = idx;
+    this._childIdxSrc = tasks;
+    this._childIdxLen = tasks.length;
+    return idx;
   }
 
   // ── Subtask UI state ────────────────────────────────────────────
@@ -7216,14 +7447,20 @@ class __tasks_panel extends LetcBox {
     return this._subtaskDraft;
   }
 
-  // List chevron. Local-only toggle, but it changes how many rows the table
-  // has, so it re-renders rather than flipping an attribute.
+  // List / Gantt chevron. Local-only toggle, but it changes how many rows the
+  // view has, so it re-feeds rather than flipping an attribute.
+  //
+  // _refreshViewBody, not _render: _subtasksOpen is read ONLY by list.js and
+  // gantt.js, both of which live inside the "view-host" part. A full render
+  // would additionally rebuild the detail panel, the modals, re-seed every
+  // <input> and re-render the comment bodies — none of which this changes, and
+  // all of which made the chevron feel sticky on a busy board.
   _toggleSubtasks(trigger) {
     const id = trigger.mget("taskId");
     if (!id) return;
     if (this._subtasksOpen.has(id)) this._subtasksOpen.delete(id);
     else this._subtasksOpen.add(id);
-    this._render();
+    this._refreshViewBody();
   }
 
   // "+ Add subtask" in the detail panel. Due date pre-fills from the parent —
@@ -7231,11 +7468,17 @@ class __tasks_panel extends LetcBox {
   _openSubtaskDraft() {
     const parent = this.getDetailTask();
     if (!parent) return;
+    const cols = this.getColumns();
+    const firstOpen = cols.find((c) => !c.is_done) || cols[0];
     this._subtaskDraft = {
       title: "",
+      // Pre-filled from the parent, and editable right here via the Due date
+      // chip (the earlier build only inherited it read-only).
       due_date: parent.due_date || "",
       priority: "medium",
-      assignees: [],
+      status: firstOpen ? firstOpen.key : "todo",
+      // Which chip's dropdown is open: null | "priority" | "status".
+      menu: null,
     };
     this._refreshSubtaskSection();
   }
@@ -7254,7 +7497,7 @@ class __tasks_panel extends LetcBox {
    */
   _refreshSubtaskSection() {
     if (!this._detailId) return;
-    this.ensurePart("subtask-rows").then((part) => {
+    this._withPart("subtask-rows").then((part) => {
       if (!this._detailId || !part) return;
       part.feed(
         require("./skeleton").buildSubtaskRowsContent(this, this._detailId),
@@ -7273,9 +7516,14 @@ class __tasks_panel extends LetcBox {
     const draft = this._subtaskDraft;
     if (!parentId || !draft) return;
 
-    const input = this.el && this.el.querySelector(
-      `.${this.fig.family}__subtask-create-input input`,
-    );
+    // The creator's title field is `__subtask-card-title` (a Skeletons.Entry,
+    // so the value lives on its inner <input>). The old
+    // `__subtask-create-input` selector no longer matched anything, which left
+    // this reading the draft alone — fine while the watch keeps up, but the
+    // empty-title branch below then focused nothing and the create looked dead.
+    const input =
+      this.el &&
+      this.el.querySelector(`.${this.fig.family}__subtask-card-title input`);
     const title = String((input && input.value) || draft.title || "").trim();
     if (!title) {
       if (input && typeof input.focus === "function") input.focus();
@@ -7300,8 +7548,8 @@ class __tasks_panel extends LetcBox {
         parent_task_id: parentId,
         title,
         priority: draft.priority || "medium",
+        status: draft.status || undefined,
         due_date: draft.due_date || null,
-        assignee_uids: draft.assignees || [],
       });
       const row = Array.isArray(created) ? created[0] : created;
       if (!row || !row.id) {
@@ -7312,25 +7560,32 @@ class __tasks_panel extends LetcBox {
       this._mergeTask(row);
       // Keep the creator open so several subtasks can be added in a row — the
       // common case when breaking a task down. Only the title resets.
-      this._subtaskDraft = { ...draft, title: "" };
+      this._subtaskDraft = { ...draft, title: "", menu: null };
       if (input) input.value = "";
-      // Full _render(), not just _refreshSubtaskSection(): the parent's count
-      // badge lives OUTSIDE this part — on the board card, list row, gantt row
-      // and calendar chip behind the modal. Re-feeding only the section left
-      // those stale until something else happened to render, which reads as
-      // the subtask never having been created.
+      // Two targeted re-feeds rather than a full _render().
       //
-      // Deliberately NOT both: ensurePart resolves asynchronously, so a
-      // _refreshSubtaskSection() here would feed a part that _render() has
-      // already replaced. The re-render rebuilds this section anyway, and the
-      // creator survives it because its Entry is seeded from the draft.
+      // The parent's count badge lives OUTSIDE this part — on the board card,
+      // list row, gantt row and calendar chip behind the modal — so the view
+      // does have to be rebuilt or those read as "the subtask was never
+      // created". But the view sits in its own "view-host" part, a SIBLING of
+      // the detail wrapper, so re-feeding it leaves this section (and the
+      // creator's focused input) alone. Both calls are therefore safe together:
+      // they touch disjoint subtrees, which was not true of the old
+      // _render()-then-ensurePart pairing.
+      //
+      // Keeping the panel intact also keeps the caret in the title box, so the
+      // next child can be typed straight away — the common case, and the whole
+      // reason the creator stays open.
       this._syncSubtaskBadges(parentId);
-      this._render();
+      this._refreshViewBody();
+      this._refreshSubtaskSection();
     } catch (err) {
       console.error("[tasks_panel] subtask create failed:", err);
     } finally {
-      // The re-feed above replaces this node, so clearing a detached one is a
-      // no-op — but a throw must not leave a live button spinning forever.
+      // _refreshSubtaskSection replaces this node asynchronously, so on the
+      // happy path this usually clears a soon-to-be-detached button — harmless.
+      // It matters on the throw path, which must not leave a live button
+      // spinning forever.
       this._setControlBusy(submitBtn, false, { swapLabel: true });
     }
   }
@@ -7374,8 +7629,10 @@ class __tasks_panel extends LetcBox {
         this._refreshSubtaskSection();
         this._syncSubtaskBadges(task.parent_task_id);
         // A parent that just auto-completed changes its own card/row/pill, so
-        // the underlying view does need the full rebuild.
-        if (row.parent) this._render();
+        // the underlying view does need rebuilding — but only the view: the
+        // open detail panel was already refreshed above, and a full _render()
+        // here would rebuild it a second time under the user's cursor.
+        if (row.parent) this._refreshViewBody();
       } else {
         task.status = originalStatus;
         this._refreshSubtaskSection();
@@ -7390,16 +7647,27 @@ class __tasks_panel extends LetcBox {
   /**
    * Keep a parent's server-sent counters in step with the local rows after an
    * optimistic change, so the badge doesn't wait for the next list reload.
-   * getSubtaskCount prefers local rows anyway; this keeps the two consistent
-   * for any code path that reads the raw fields.
+   * Every reader (getSubtaskCount, the card / row / bar badges) then agrees,
+   * including the ones that go straight to the raw fields.
    */
   _syncSubtaskBadges(parentId) {
     if (!parentId) return;
     const parent = this._tasks.find((t) => t.id === parentId);
     if (!parent) return;
-    const { done, total } = this.getSubtaskCount(parent);
+    // Straight off the index, NOT through getSubtaskCount: that falls back to
+    // the server's counters when the bucket is empty, so removing the last
+    // child would write the stale pre-delete total back onto the parent and
+    // pin the badge at "0/1". This runs only where the local rows are the
+    // truth (just created / just toggled / just deleted a child).
+    const kids = this._childIndex().get(parentId) || [];
+    const doneKeys = this._doneKeys();
+    let done = 0;
+    for (let i = 0; i < kids.length; i++) {
+      const st = kids[i].status;
+      if (st != null && st !== "" && doneKeys.has(String(st))) done++;
+    }
     parent.subtask_done = done;
-    parent.subtask_total = total;
+    parent.subtask_total = kids.length;
   }
 
   /**
@@ -7410,12 +7678,15 @@ class __tasks_panel extends LetcBox {
    */
   getSubtaskCount(t) {
     if (!t) return { done: 0, total: 0 };
-    const local = this._tasks.filter((s) => s.parent_task_id === t.id);
-    if (local.length) {
-      return {
-        done: local.filter((s) => this.isDoneStatus(s.status)).length,
-        total: local.length,
-      };
+    const local = this._childIndex().get(t.id);
+    if (local && local.length) {
+      const doneKeys = this._doneKeys();
+      let done = 0;
+      for (let i = 0; i < local.length; i++) {
+        const st = local[i].status;
+        if (st != null && st !== "" && doneKeys.has(String(st))) done++;
+      }
+      return { done, total: local.length };
     }
     return {
       done: Number(t.subtask_done) || 0,

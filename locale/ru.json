@@ -2674,10 +2674,10 @@
   "SUPPORT_EMPTY_TITLE": "You're talking to a real person",
   "SUPPORT_EMPTY_TEXT": "Describe what you need help with. Screenshots and files are welcome.",
   "SUPPORT_START_CONVERSATION": "Start a conversation",
-  "SUBTASKS": "Подзадачи",
-  "ADD_SUBTASK": "+ Добавить подзадачу",
-  "NO_SUBTASKS": "Подзадач пока нет",
-  "SUBTASK_PLACEHOLDER": "Что нужно сделать?",
+  "SUBTASKS": "Дочерние задачи",
+  "ADD_SUBTASK": "Добавить дочернюю задачу",
+  "NO_SUBTASKS": "Дочерних задач пока нет",
+  "SUBTASK_PLACEHOLDER": "Задача",
   "CALENDAR": "Календарь",
   "PERSONAL_CALENDAR": "Личный календарь",
   "BADGE_NEW": "НОВОЕ",
@@ -2699,5 +2699,6 @@
   "PASSWORD_PROTECTION_HINT": "Задайте пароль для доступа",
   "CREATE_MEETING_SEND_INVITE": "Создать встречу и отправить приглашение",
   "INVITE_LINK_READY": "Ссылка-приглашение готова",
-  "PREVIOUS": "Назад"
+  "PREVIOUS": "Назад",
+  "CREATE_CHILD_TASK": "Создать дочерние задачи"
 }

@@ -2674,10 +2674,10 @@
   "SUPPORT_EMPTY_TITLE": "You're talking to a real person",
   "SUPPORT_EMPTY_TEXT": "Describe what you need help with. Screenshots and files are welcome.",
   "SUPPORT_START_CONVERSATION": "Start a conversation",
-  "SUBTASKS": "子任务",
-  "ADD_SUBTASK": "+ 添加子任务",
-  "NO_SUBTASKS": "暂无子任务",
-  "SUBTASK_PLACEHOLDER": "需要做什么？",
+  "SUBTASKS": "子任务项",
+  "ADD_SUBTASK": "添加子工作项",
+  "NO_SUBTASKS": "暂无子任务项",
+  "SUBTASK_PLACEHOLDER": "任务",
   "CALENDAR": "日历",
   "PERSONAL_CALENDAR": "个人日历",
   "BADGE_NEW": "新",
@@ -2699,5 +2699,6 @@
   "PASSWORD_PROTECTION_HINT": "设置访问密码",
   "CREATE_MEETING_SEND_INVITE": "创建会议并发送邀请",
   "INVITE_LINK_READY": "邀请链接已就绪",
-  "PREVIOUS": "上一个"
+  "PREVIOUS": "上一个",
+  "CREATE_CHILD_TASK": "创建子任务项"
 }
