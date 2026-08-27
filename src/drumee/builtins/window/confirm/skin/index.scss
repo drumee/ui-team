@@ -62,6 +62,73 @@
   max-height: calc(100dvh - 32px);
 }
 
+// ── Tablet: centre on the screen, keeping the card's own width ──────────────
+// Visitor.device() has no tablet tier — user.js returns `desktop` for anything
+// wider than 800px, and only says `mobile` below that AND with /mobile/i in the
+// UA. A modern iPad reports a Macintosh UA and so answers `desktop` at every
+// size, while the 650px viewport fallback does not reach it either. Measured on
+// an 834px viewport before this rule existed: the card stayed position:absolute
+// at the window manager's inline left:120/top:80 — centre (310, 205) against a
+// screen centre of (417, 407).
+//
+// The same measurement showed the second half of the problem: with a long
+// message the card ballooned to 714px wide (904px at a 1024px viewport),
+// because __ui's `max-width: 100%` resolves against the full-width modal
+// wrapper. So this caps as well as centres.
+//
+// Horizontal centring differs from the phone mixin ON PURPOSE, and the
+// difference is the whole reason these are two mixins rather than one.
+//
+// The phone pins `left: 50%` and translates back, which works there only
+// because that tier also sets an explicit `width`. A tablet card has no
+// explicit width — the point is to let it size to its message between the
+// 340px floor and the cap — and an auto-width fixed box with `left: 50%;
+// right: auto` is shrink-to-fit against the space from its left edge to the
+// viewport edge, i.e. 50vw. Measured with the translate form: 350px at a 700px
+// viewport, 417px at 834px, 512px at 1024px — every one exactly half, and the
+// `max-width` below never got to apply at all.
+//
+// `left: 0; right: 0` + `margin-inline: auto` gives shrink-to-fit the full
+// viewport to work against, so the card sizes to its content and the caps mean
+// something. !important throughout for the same reason the phone mixin needs
+// it: the window manager stamps inline left/top on the instance.
+@mixin confirm-tablet-centre {
+  // Same reason as the phone mixin: __ui carries 20px of side padding and a
+  // 1px border, so without this the max-width below resolves as CONTENT width.
+  box-sizing: border-box;
+
+  position: fixed !important;
+  top: 50% !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  margin: 0 auto !important;
+
+  height: auto;
+
+  // `fit-content`, not the `auto` the card carries by default. With `left` and
+  // `right` both pinned and width auto, the abs-pos width equation FILLS the
+  // space between them and auto margins collapse to 0 — measured: every card
+  // came out at the 520px cap, short "Delete this?" included. `fit-content`
+  // asks for shrink-to-fit against the full containing block instead, which is
+  // what makes the floor and the cap below the two ends of a real range.
+  //
+  // Deliberately not !important, so the [data-maxsize] variants (0,2,0) still
+  // win and keep their intended 500px — comfortably inside the cap.
+  width: fit-content;
+
+  // No `min-width: unset` here, unlike the phone tier: 340px always fits a
+  // tablet (this block starts at 651px), and dropping the floor collapsed a
+  // short "Delete this?" card to 216px in testing.
+  //
+  // `min()` keeps the 500px [data-maxsize] dialogs intact while stopping the
+  // balloon; the height cap hands overflow to __body's scroller (see the
+  // tablet block at the foot of this file).
+  max-width: min(520px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+}
+
 .window-confirm {
   &__ui {
     background-color: var(--normal-bg-90);
@@ -91,6 +158,21 @@
     @media (max-width: 650px) {
       & {
         @include confirm-mobile-centre;
+      }
+    }
+
+    // Tablets. Starts where the phone fallback stops so the two never overlap.
+    // The upper bound is 1024px — iPad Pro 12.9" portrait, the widest common
+    // tablet in the orientation where this matters; past it the viewport is a
+    // laptop's and the window manager's own placement is left alone.
+    //
+    // A phone-UA device between 651 and 800px matches BOTH this and the
+    // [data-device="mobile"] block above. That is deliberate and safe: the
+    // placement is identical, and the attribute selector is 0,2,0 against this
+    // block's 0,1,0, so the phone width clamp still wins where it applies.
+    @media (min-width: 651px) and (max-width: 1024px) {
+      & {
+        @include confirm-tablet-centre;
       }
     }
 
@@ -395,7 +477,17 @@
       }
     }
 
+    // Same flex floor problem the tablet block below documents: __main carries
+    // `height: 100%` and an `auto` min-height, so it will not shrink and the
+    // __body scroller under it never engages.
+    &__main {
+      height: auto;
+      min-height: 0;
+      max-height: 100%;
+    }
+
     &__body {
+      min-height: 0;
       overflow-y: auto;
     }
 
@@ -412,6 +504,35 @@
         flex-basis: 100%;
         min-width: 0;
       }
+    }
+  }
+}
+
+// ── Tablet: card internals ──────────────────────────────────────────────────
+// Companion to confirm-tablet-centre (see the mixin at the head of this file),
+// which caps the card's height instead of letting it grow with its message.
+// Once capped, something inside has to scroll or a long message is simply
+// clipped by __ui's `overflow: hidden` with no way to read it — the phone block
+// above hands that job to __body, and this does the same.
+@media (min-width: 651px) and (max-width: 1024px) {
+  .window-confirm {
+    // __main is the skeleton root (a Box.Y holding topbar / body / buttons) and
+    // carries `height: 100%`. As a flex item in a max-height column that leaves
+    // it at its content height with a min-height floor of `auto`, so it refuses
+    // to shrink and pushes the buttons out of the clipped card. `min-height: 0`
+    // is what lets it give way, and `max-height: 100%` keeps it inside the cap.
+    &__main {
+      height: auto;
+      min-height: 0;
+      max-height: 100%;
+    }
+
+    // The scroller. Needs its own min-height:0 for the same reason __main does
+    // — the flex `auto` floor would otherwise keep it at content height and
+    // nothing would ever overflow it.
+    &__body {
+      min-height: 0;
+      overflow-y: auto;
     }
   }
 }

@@ -1666,6 +1666,10 @@ class __tasks_panel extends LetcBox {
         return;
       }
 
+      // Compact viewbar carousel footer — page the view-tab strip.
+      case "viewbar-page":
+        return this._showViewbarPage(trigger);
+
       case "set-cal-mode": {
         const m = trigger.mget("calMode") === "week" ? "week" : "month";
         if (m !== this._calMode) {
@@ -1970,6 +1974,18 @@ class __tasks_panel extends LetcBox {
   onPartReady(child, pn) {
     if (pn === "fileselector") {
       child.el.onchange = (e) => this._onAttachmentPicked(e);
+      return;
+    }
+    if (pn === "viewbar-tabs") {
+      this._wireViewbarCarousel(child);
+      return;
+    }
+    if (pn === "viewbar-dots") {
+      this._viewbarDots = child;
+      // The strip may have mounted first, in which case its listener already
+      // ran against no dots. Stamp the current page now so the footer is right
+      // on first paint rather than only after the first scroll.
+      this._syncViewbarPage();
       return;
     }
     // Mention editors register as "<scope>-desc-editor" (create / detail /
@@ -7526,6 +7542,95 @@ class __tasks_panel extends LetcBox {
       this.on(_e.part.ready, onReady);
       (this._partWaiters = this._partWaiters || []).push(onReady);
     });
+  }
+
+  // ── Compact viewbar carousel ─────────────────────────────────────────
+  // The view-tab strip pages two tabs at a time once the panel is narrow (the
+  // skin's `@container tasks-panel-w` block owns the scroll-snap); this only
+  // keeps the footer's `data-page` in step with where the strip actually is,
+  // and the skin maps that one attribute to the active dot.
+  //
+  // Reads scrollLeft rather than tracking taps, so a swipe, a dot press and a
+  // programmatic scroll all converge on the same source of truth.
+  _wireViewbarCarousel(child) {
+    this._viewbarStrip = child;
+    if (!child || !child.el) return;
+    // rAF-throttled: a touch scroll fires this continuously, and all it has to
+    // produce is one attribute write per frame at most.
+    let queued = 0;
+    const onScroll = () => {
+      if (queued) return;
+      queued = 1;
+      requestAnimationFrame(() => {
+        queued = 0;
+        this._syncViewbarPage();
+      });
+    };
+    child.el.addEventListener("scroll", onScroll, { passive: true });
+    // Unlike the folder window's tab bar — which only flips data-state on a tab
+    // press — `set-view` runs a full _render(), so this strip is REBUILT every
+    // time a view is chosen and comes back scrolled to 0. Picking Summary from
+    // page 2 would land the user on a bar showing Board/Calendar with the tab
+    // they just chose off-screen. Restore the page from the active tab instead.
+    this._scrollActiveViewTabIntoView();
+  }
+
+  // Put the page holding the active tab under the viewport, without animating:
+  // this runs on mount, where a smooth scroll from 0 would read as the bar
+  // drifting on its own after every view switch.
+  //
+  // `behavior: "instant"` is load-bearing. The skin sets `scroll-behavior:
+  // smooth` on the strip (so a dot press animates), and that applies to
+  // PROGRAMMATIC scrolls too — both a bare `scrollLeft =` assignment and
+  // `scrollTo({behavior: "auto"})`, since "auto" means "defer to the computed
+  // scroll-behavior". Only "instant" overrides it.
+  _scrollActiveViewTabIntoView() {
+    const strip = this._viewbarStrip;
+    if (!strip || !strip.el) return;
+    const w = strip.el.clientWidth;
+    const active = strip.el.querySelector(
+      `.${this.fig.family}__viewbar-item[data-active="1"]`,
+    );
+    // Nothing to do on the wide layout: clientWidth is the whole strip, so
+    // there is one page and the offset below floors to 0 anyway.
+    if (!active || w <= 0) return this._syncViewbarPage();
+    // Measured off the rects rather than offsetLeft. offsetLeft resolves
+    // against the nearest positioned ancestor, which here is __root (it is
+    // `position: relative`, and the container-type on it would make it the
+    // containing block regardless) — NOT the strip. So it carries the viewbar's
+    // own padding and left-hand chrome, and the page it produced was wrong:
+    // Summary landed on page 0 with the active tab off-screen. Adding back the
+    // live scrollLeft makes this the tab's true offset inside the scroll
+    // content, whatever the offsetParent turns out to be.
+    const x =
+      active.getBoundingClientRect().left -
+      strip.el.getBoundingClientRect().left +
+      strip.el.scrollLeft;
+    strip.el.scrollTo({
+      left: Math.floor(Math.max(0, x) / w) * w,
+      behavior: "instant",
+    });
+    this._syncViewbarPage();
+  }
+
+  _syncViewbarPage() {
+    const strip = this._viewbarStrip;
+    const dots = this._viewbarDots;
+    if (!strip || !strip.el || !dots || !dots.el) return;
+    const w = strip.el.clientWidth;
+    // Wide / one-page: clientWidth is the whole strip and scrollLeft stays 0,
+    // so this lands on page 0 and the skin has the footer hidden anyway.
+    const page = w > 0 ? Math.round(strip.el.scrollLeft / w) : 0;
+    if (`${page}` !== dots.el.dataset.page) dots.el.dataset.page = `${page}`;
+  }
+
+  // Dot press. Scrolls by whole pages; the scroll listener above then updates
+  // data-page, so this deliberately does not write it itself.
+  _showViewbarPage(cmd) {
+    const strip = this._viewbarStrip;
+    if (!strip || !strip.el || !cmd || !cmd.el) return;
+    const page = Number(cmd.el.dataset.page) || 0;
+    strip.el.scrollTo({ left: page * strip.el.clientWidth, behavior: "smooth" });
   }
 
   /**

@@ -25,6 +25,12 @@ const {
 
 require("./skin");
 
+// Compact breakpoint for the Meeting-tab schedule (see
+// _wireScheduleBreakpoint). Must stay in step with the skin's
+// `@container window-folder-w (max-width: 700px)` blocks — the folder skin's
+// own compact threshold, and the one meeting-schedule.scss already uses.
+const SCHED_NARROW_PX = 700;
+
 class __window_folder extends mfsInteract {
   constructor(...args) {
     super(...args);
@@ -1168,6 +1174,10 @@ class __window_folder extends mfsInteract {
       }
       return;
     }
+    // Arm the responsive view switch whenever the schedule mounts. Separate
+    // from (and ahead of) the start_meeting branch below, which is gated on a
+    // launch flag and must keep its existing fall-through.
+    if (pn === "meeting-panel") this._wireScheduleBreakpoint();
     if (pn == "meeting-panel" && this.mget(_a.start_meeting)) {
       this._launchMeetingInPanel();
       return;
@@ -1912,6 +1922,13 @@ class __window_folder extends mfsInteract {
 
       case "sched-toggle-view": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
+        // Explicit pick: from here on this view is the user's, so widening the
+        // panel must not revert it (see _applyScheduleBreakpoint).
+        st.autoDaily = false;
+        // NOTE: from "daily" this lands on "monthly", not "weekly" — the knob
+        // has only two positions and daily is a drill-down of weekly. Existing
+        // behaviour, left as-is; it is simply reachable more often now that a
+        // narrow panel starts in daily.
         st.view = st.view === "monthly" ? "weekly" : "monthly";
         return this._refreshSchedule();
       }
@@ -1921,6 +1938,10 @@ class __window_folder extends mfsInteract {
         const v =
           (cmd.mget && (cmd.mget("schedView") || cmd.mget("view"))) ||
           (cmd.el && cmd.el.dataset.view);
+        // Cleared even when the view does not change: tapping "Weekly" while
+        // already weekly is still the user claiming the choice, and it should
+        // survive the next resize.
+        if (v) st.autoDaily = false;
         if (v && v !== st.view) {
           st.view = v;
           return this._refreshSchedule();
@@ -1956,6 +1977,9 @@ class __window_folder extends mfsInteract {
         if (d) {
           st.anchor = Dayjs(d);
           st.view = "daily";
+          // Drilling into a day is an explicit choice too — widening the panel
+          // afterwards should leave the user on that day, not snap to weekly.
+          st.autoDaily = false;
           st.pickerOpen = false;
           return this._refreshSchedule();
         }
@@ -2385,6 +2409,90 @@ class __window_folder extends mfsInteract {
   // panel — it opens as its own free-floating window. See _launchMeetingStandalone.
   _launchMeetingInPanel() {
     return this._launchMeetingStandalone();
+  }
+
+  // ── Meeting schedule: responsive view breakpoint ─────────────────────────
+  // A 7-day hourly grid does not fit a phone. Rather than build a third
+  // rendering path, this switches the panel to the DAILY view that already
+  // exists (skeleton/meeting-schedule weeklyGrid renders nDays = 1 when
+  // st.view === "daily" — the same view the mini-calendar drills into).
+  //
+  // Observes `this.el`, which IS `.window-folder__ui` — deliberately the same
+  // element the skin's `@container window-folder-w` query measures, so the CSS
+  // and this JS cannot drift apart on where 700px is. Observing the panel
+  // instead would measure a box inset by the window chrome and cross the
+  // threshold at a different screen width than the stylesheet does.
+  //
+  // Width, not a device flag: Visitor.device() has no tablet tier (user.js
+  // returns `desktop` above 800px and only says `mobile` with /mobile/i in the
+  // UA, which a modern iPad's Macintosh UA never matches), and a width test
+  // additionally catches a narrow folder window on a wide desktop — the
+  // split-with-chat case a viewport @media misses entirely.
+  _wireScheduleBreakpoint() {
+    if (
+      this._schedResizeObserver ||
+      !this.el ||
+      typeof ResizeObserver !== "function"
+    )
+      return;
+    // null, not a boolean: the first ResizeObserver callback (which fires
+    // immediately on observe()) then reads as a crossing and seeds the state,
+    // so opening the Meeting tab on a phone lands on daily without a separate
+    // measure-on-mount path.
+    this._schedNarrow = null;
+    this._schedResizeObserver = new ResizeObserver((entries) => {
+      if (this.isDestroyed?.()) return this._unwireScheduleBreakpoint();
+      const box = entries && entries[0] && entries[0].contentRect;
+      const w = box ? box.width : this.el.clientWidth;
+      // Ignore a zero measure: the panel reports 0×0 while its tab is hidden,
+      // and treating that as "narrow" would switch the view behind a tab the
+      // user is not looking at.
+      if (!w) return;
+      const narrow = w <= SCHED_NARROW_PX;
+      // Only a CROSSING acts. This is what keeps the observer off the render
+      // path: _applyScheduleBreakpoint re-feeds the panel, which resizes it,
+      // which calls this back — comparing against the last known side is what
+      // stops that being a loop, and it also spares the refetch that
+      // _refreshSchedule does on every call.
+      if (narrow === this._schedNarrow) return;
+      this._schedNarrow = narrow;
+      this._applyScheduleBreakpoint(narrow);
+    });
+    this._schedResizeObserver.observe(this.el);
+  }
+
+  _unwireScheduleBreakpoint() {
+    if (!this._schedResizeObserver) return;
+    this._schedResizeObserver.disconnect();
+    this._schedResizeObserver = null;
+  }
+
+  /**
+   * Apply the narrow/wide decision to the schedule view.
+   *
+   * Monthly is deliberately untouched in both directions: a month grid is
+   * legible on a phone (the skin tightens its cells), and someone who picked
+   * Monthly asked for it.
+   *
+   * @param {boolean} narrow  panel is at or below the compact breakpoint
+   */
+  _applyScheduleBreakpoint(narrow) {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    let next = st.view;
+    if (narrow) {
+      if (st.view === "weekly") {
+        next = "daily";
+        st.autoDaily = true;
+      }
+    } else if (st.autoDaily) {
+      // Undo only OUR switch. An explicit pick cleared the flag, so widening
+      // never yanks the user out of a view they chose themselves.
+      if (st.view === "daily") next = "weekly";
+      st.autoDaily = false;
+    }
+    if (next === st.view) return;
+    st.view = next;
+    this._refreshSchedule();
   }
 
   // Re-render the Meeting-tab schedule in place after a nav/toggle service
