@@ -358,14 +358,12 @@
     line-height: 22.5px;
   }
 
-  // Support's avatar (Figma 58186-204873): the product mark on a brand tile
-  // instead of the auto-coloured initials an ordinary contact gets. Sized to
-  // the 40px UserProfile tile it replaces, so the header does not reflow when
-  // the conversation changes.
+  // Support's avatar: the Drumee mark instead of the auto-coloured initials an
+  // ordinary contact gets. Sized to the 40px UserProfile tile it replaces, so
+  // the header does not reflow when the conversation changes. No background —
+  // the asset carries its own.
   &__header-support-avatar {
     align-items: center;
-    background-color: var(--primary-40);
-    border-radius: 8px;
     flex-shrink: 0;
     height: 40px;
     justify-content: center;
@@ -373,9 +371,8 @@
   }
 
   &__header-support-avatar-ico {
-    color: var(--gray-white);
-    height: 22px;
-    width: 22px;
+    height: 32px;
+    width: 32px;
   }
 
   &__header-name-row {

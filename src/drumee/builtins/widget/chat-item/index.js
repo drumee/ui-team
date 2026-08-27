@@ -1,4 +1,5 @@
 const { toggleState, colorFromName, copyToClipboard } = require("@drumee/ui-essentials");
+const { isSupportEntity, supportMarkup } = require("libs/support");
 require("./skin");
 class ___widget_chatItem extends LetcBox {
   /**
@@ -519,8 +520,23 @@ class ___widget_chatItem extends LetcBox {
    */
   _loadAvatar(img) {
     if (!img) return;
-    const url = Visitor.avatar(this.mget(_a.author_id), _a.vignette);
+    const author_id = this.mget(_a.author_id);
     const profile = img.parentElement;
+
+    // Support is the product, not a person. The account has no photo, so the
+    // fallback below drew initials from its username — a bare "S" on a
+    // generated colour, next to a message signed "Drumee Support Center".
+    // Give it the same mark the inbox row and the header show instead.
+    if (profile && isSupportEntity(author_id)) {
+      const mark = `${this.fig.family}__profile-mark`;
+      img.style.display = "none";
+      if (!profile.querySelector(`.${mark}`)) {
+        profile.insertAdjacentHTML("beforeend", supportMarkup(mark));
+      }
+      return;
+    }
+
+    const url = Visitor.avatar(author_id, _a.vignette);
     img.style.display = "none";
     img.onerror = () => {
       if (!profile) return;

@@ -1,4 +1,4 @@
-const { supportAvatar } = require("libs/support");
+const { supportAvatar, isSupportEntity } = require("libs/support");
 
 /**
  * Header for the selected contact's chat panel.
@@ -63,11 +63,7 @@ module.exports = function (ui, contact) {
   //    "nobody will answer", which is not what it means.
   //  - answering support (the admin's side): presence is exactly what they
   //    want to know — is this person still at their desk?
-  const supportId =
-    typeof Desk !== 'undefined' && _.isFunction(Desk.supportContactId)
-      ? Desk.supportContactId()
-      : null;
-  const talkingToSupport = !!supportId && entityId === supportId;
+  const talkingToSupport = isSupportEntity(entityId);
   const isSupportThread =
     _.isFunction(ui._isSupportRow) && ui._isSupportRow(contact);
 
@@ -122,7 +118,11 @@ module.exports = function (ui, contact) {
                 className: `${fig}__header-name`,
                 content: displayName
               }),
-              isSupportThread ? Skeletons.Note({
+              // Only on the agent's side. Talking TO support, the Drumee mark
+              // and the name already say what this conversation is, and the
+              // badge just repeats them; answering support, it is the one
+              // thing marking a stranger's message as a request for help.
+              isSupportThread && !talkingToSupport ? Skeletons.Note({
                 className: `${fig}__support-pill`,
                 content: LOCALE.SUPPORT_LABEL
               }) : null

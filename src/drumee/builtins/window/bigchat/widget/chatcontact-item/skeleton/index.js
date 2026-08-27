@@ -1,5 +1,5 @@
 
-const { supportAvatar } = require("libs/support");
+const { supportAvatar, isSupportEntity } = require("libs/support");
 
 const __skl_widget_chatcontactItem = function (ui) {
   let chat_icon, msg, state;
@@ -15,11 +15,7 @@ const __skl_widget_chatcontactItem = function (ui) {
   // The row whose PEER is the support account — the user's side of the
   // conversation. The account that answers support can never match: its own
   // id is not among its rows' peers.
-  const supportPeer =
-    typeof Desk !== 'undefined' &&
-    _.isFunction(Desk.supportContactId) &&
-    !!Desk.supportContactId() &&
-    Desk.supportContactId() === ui.mget('entity_id');
+  const supportPeer = isSupportEntity(ui.mget('entity_id'));
 
   if (supportPeer) {
     // Product mark rather than auto-coloured initials, so support does not
@@ -59,8 +55,11 @@ const __skl_widget_chatcontactItem = function (ui) {
   const panel = _.isFunction(ui.getParentByKind)
     ? ui.getParentByKind('chat_p2p')
     : null;
+  // Not on the user's own support row: the Drumee mark and the name already
+  // say what it is, and the badge only repeats them. It stays on the agent's
+  // side, where it is what marks a stranger's row as a request for help.
   const supportPill =
-    panel && _.isFunction(panel._isSupportRow) && panel._isSupportRow(ui)
+    !supportPeer && panel && _.isFunction(panel._isSupportRow) && panel._isSupportRow(ui)
       ? Skeletons.Note({
           className: `${contentFig}__support-pill`,
           content: LOCALE.SUPPORT_LABEL

@@ -21,17 +21,43 @@ function openSupportMail() {
   window.location.assign(`mailto:${to}?subject=${encodeURIComponent(subject)}`);
 }
 
+/** The Drumee mark, in the raw sprite (`icons/src/raw/logo-drumee-icon.svg`). */
+const SUPPORT_ICO = "raw-logo-drumee-icon";
+
 /**
- * The support account's avatar: the headset glyph on a brand-coloured tile
- * (Figma 58186-204873), used everywhere the account is shown — the inbox row
- * and the chat header.
+ * The account that answers Contact Support, or null when none is configured.
+ *
+ * Desk resolves it once at startup. Guarded because the skeletons below also
+ * render in windows that mount before (or without) the desk.
+ */
+function supportContactId() {
+  return typeof Desk !== "undefined" && _.isFunction(Desk.supportContactId)
+    ? Desk.supportContactId()
+    : null;
+}
+
+/**
+ * Whether an entity id is the support account.
+ * @param {String} id
+ */
+function isSupportEntity(id) {
+  const supportId = supportContactId();
+  return !!supportId && !!id && id === supportId;
+}
+
+/**
+ * The support account's avatar: the Drumee mark, used everywhere the account
+ * is shown — the inbox row, the chat header, and its message bubbles.
  *
  * Support is not a person, and rendering it through UserProfile gave it
  * auto-coloured initials that read as one: an ordinary contact among the
- * user's ordinary contacts. A fixed mark says "this is the product" at a
- * glance, and stays identical for every user in every install.
+ * user's ordinary contacts. Worse, the account has no photo, so the initials
+ * fell back to its username and drew a bare "S". The product's own mark says
+ * "this is Drumee" at a glance, and stays identical in every install.
  *
- * @param {String} className  BEM class for the tile, prefixed by the caller
+ * The mark carries its own colour and needs no tile behind it.
+ *
+ * @param {String} className  BEM class for the avatar, prefixed by the caller
  * @returns Skeleton
  */
 function supportAvatar(className) {
@@ -40,11 +66,36 @@ function supportAvatar(className) {
     kidsOpt: { active: 0 },
     kids: [
       Skeletons.Image.Svg({
-        ico: "ph-headset",
+        ico: SUPPORT_ICO,
         className: `${className}-ico`,
       }),
     ],
   });
 }
 
-module.exports = { openSupportMail, supportAvatar };
+/**
+ * The same mark as raw markup, for the message list.
+ *
+ * chat-item builds its rows from HTML template modules and fills the avatar
+ * imperatively, so it has no skeleton to hand `supportAvatar()` to. Mirrors
+ * what Skeletons.Image.Svg emits, so both paths reference one sprite symbol.
+ *
+ * @param {String} className
+ * @returns {String} svg markup
+ */
+function supportMarkup(className) {
+  return (
+    `<svg class="${className}">` +
+    `<use xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+    `xlink:href="#--icon-${SUPPORT_ICO}"></use>` +
+    `</svg>`
+  );
+}
+
+module.exports = {
+  openSupportMail,
+  supportAvatar,
+  supportMarkup,
+  supportContactId,
+  isSupportEntity,
+};

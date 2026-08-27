@@ -1,3 +1,5 @@
+const { supportContactId, isSupportEntity } = require("libs/support");
+
 class __chat_p2p extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -628,10 +630,7 @@ class __chat_p2p extends LetcBox {
    */
   _setSupportPreview(message) {
     if (!message) return;
-    const id =
-      typeof Desk !== "undefined" && _.isFunction(Desk.supportContactId)
-        ? Desk.supportContactId()
-        : null;
+    const id = supportContactId();
     const list = this.getPart && this.getPart("contact-list");
     if (!id || !list || !_.isFunction(list.getItemsByAttr)) return;
     const row = (list.getItemsByAttr(_a.entity_id, id) || [])[0];
@@ -660,11 +659,7 @@ class __chat_p2p extends LetcBox {
     // `is_support` is only carried by rows we drew ourselves; once the
     // conversation is real the server returns an ordinary row, and clicking
     // it — or landing on it — would otherwise skip the greeting entirely.
-    const supportId =
-      typeof Desk !== "undefined" && _.isFunction(Desk.supportContactId)
-        ? Desk.supportContactId()
-        : null;
-    if (supportId && hub_id === supportId) peer.is_support = 1;
+    if (isSupportEntity(hub_id)) peer.is_support = 1;
     if (peer.is_support) await this._greetSupport();
 
     let type;
@@ -1085,12 +1080,9 @@ class __chat_p2p extends LetcBox {
     if (!item || !_.isFunction(item.mget)) return false;
     if (item.mget("is_support")) return true;
 
-    const entity_id = item.mget(_a.entity_id);
-    const supportId =
-      typeof Desk !== "undefined" && _.isFunction(Desk.supportContactId)
-        ? Desk.supportContactId()
-        : null;
-    if (supportId && entity_id === supportId) return true;
+    if (isSupportEntity(item.mget(_a.entity_id))) return true;
+
+    const supportId = supportContactId();
 
     // Admin side: only meaningful for the account that answers support.
     if (!supportId || supportId !== Visitor.id) return false;
