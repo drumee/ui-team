@@ -1,5 +1,6 @@
 const { userMenu } = require("../../../builtins/skeleton/toolkit/user");
 const { canUpgradePlan, planLabel } = require("libs/billing");
+const { createEntries } = require("./create-items");
 
 /**
  * Sidebar module (refactored)
@@ -23,6 +24,7 @@ const createNavItem = (
   on_click,
   sys_pn,
   badgePn,
+  opts = {},
 ) => {
   const fig = `${ui.fig.family}-sidebar`;
 
@@ -33,6 +35,19 @@ const createNavItem = (
     }),
     createText(fig, `item-text ${color}`, label),
   ];
+
+  // A row that leads somewhere rather than doing something (the mobile "Add
+  // new" row, which swaps the drawer to its `create` mode) carries a trailing
+  // arrow so it reads as navigation. Pushed before the badge so a row could
+  // carry both.
+  if (opts.affordance) {
+    kids.push(
+      Skeletons.Button.Svg({
+        ico: opts.affordance,
+        className: cls(fig, "item-affordance"),
+      }),
+    );
+  }
 
   if (badgePn) {
     kids.push(
@@ -47,10 +62,19 @@ const createNavItem = (
   }
 
   return Skeletons.Box.X({
-    className: cls(fig, "item"),
+    // `modifier` is a BEM hook for a row that needs to be reachable on its own
+    // — mirroring the topbar's --gdrive. Like that one it carries no style of
+    // its own today.
+    className: opts.modifier
+      ? `${cls(fig, "item")} ${cls(fig, `item--${opts.modifier}`)}`
+      : cls(fig, "item"),
     uiHandler: [ui],
     radio: `sidebar-radio`,
     service,
+    // Template filename for the office create services — Wm.newDocument reads
+    // it back with cmd.mget(_a.name), so it has to be a model field on the row
+    // itself. undefined for every row that has no use for it.
+    name: opts.name,
     on_click,
     sys_pn,
     kidsOpt: {
@@ -200,46 +224,70 @@ const createFooter = (ui, username) => {
 };
 
 // ---------- Logo Row (logo + mobile close button) ----------
-// Used at the top of both createNav and createActionsNav so the close
-// button sits consistently on the right. The close button is rendered
-// in both contexts but is hidden via CSS on non-mobile devices.
-const createLogoRow = (ui) => {
+// Used at the top of createNav, createActionsNav and createCreateNav so the
+// close button sits consistently on the right. The close button is rendered
+// in every context but is hidden via CSS on non-mobile devices.
+//
+// `opts` turns the row into a SUB-SCREEN header instead: `back` is the service
+// a leading arrow fires (the drawer mode to return to) and `title` replaces the
+// wordmark. Called with no opts it emits exactly the markup it always has, so
+// createNav and createActionsNav are unaffected. The sub-screen form drops the
+// pin toggle — it is desktop-only, and this header only ever renders inside the
+// mobile drawer — which also keeps its `sidebar-pin-btn` part from gaining a
+// third registration.
+const createLogoRow = (ui, opts = {}) => {
   const fig = getSidebarFig(ui);
+  const isSub = !!opts.back;
 
-  return Skeletons.Box.X({
-    className: `${fig}__logo-row`,
-    kids: [
-      Skeletons.Box.Y({
-        className: `${fig}__logo`,
-        kids: [
-          // Full wordmark (shown expanded / on hover) + compact mark
-          // (shown in the collapsed mini rail). CSS toggles between them.
-          Skeletons.Button.Svg({
-            ico: "raw-logo-drumee-full",
-            className: `${fig}__logo-icon`,
-          }),
-          Skeletons.Button.Svg({
-            ico: "raw-logo-drumee-icon",
-            className: `${fig}__logo-mark`,
-          }),
-          createText(
-            fig,
-            "header",
-            Organization.name() || LOCALE.WORKSPACE_NAME,
-          ),
-        ],
-      }),
-      // Desktop collapse/pin toggle — a panel/sidebar glyph (same in both
-      // states; the rail itself shows whether it's open or mini). Hidden on
-      // mobile via CSS (the drawer uses the close button on the right).
-      Skeletons.Button.Svg({
+  const lead = isSub
+    ? Skeletons.Button.Svg({
+        ico: "arrow-left",
+        className: `${fig}__logo-back-btn`,
+        service: opts.back,
+        uiHandler: [ui],
+        sys_pn: "mobile-back-btn",
+      })
+    : Skeletons.Button.Svg({
         ico: "square-split-horizontal",
         className: `${fig}__logo-pin-btn`,
         service: "toggle-sidebar-pin",
         uiHandler: [ui],
         sys_pn: "sidebar-pin-btn",
         partHandler: ui,
+      });
+
+  return Skeletons.Box.X({
+    className: `${fig}__logo-row`,
+    kids: [
+      // Sub-screen: the back arrow leads, so it comes first and the title takes
+      // the wordmark's place. Default: logo block first, pin toggle after it.
+      ...(isSub ? [lead] : []),
+      Skeletons.Box.Y({
+        className: `${fig}__logo`,
+        kids: isSub
+          ? [createText(fig, "logo-title", opts.title || "")]
+          : [
+              // Full wordmark (shown expanded / on hover) + compact mark
+              // (shown in the collapsed mini rail). CSS toggles between them.
+              Skeletons.Button.Svg({
+                ico: "raw-logo-drumee-full",
+                className: `${fig}__logo-icon`,
+              }),
+              Skeletons.Button.Svg({
+                ico: "raw-logo-drumee-icon",
+                className: `${fig}__logo-mark`,
+              }),
+              createText(
+                fig,
+                "header",
+                Organization.name() || LOCALE.WORKSPACE_NAME,
+              ),
+            ],
       }),
+      // Desktop collapse/pin toggle — a panel/sidebar glyph (same in both
+      // states; the rail itself shows whether it's open or mini). Hidden on
+      // mobile via CSS (the drawer uses the close button on the right).
+      ...(isSub ? [] : [lead]),
       Skeletons.Button.Svg({
         ico: "cross",
         className: `${fig}__logo-close-btn`,
@@ -338,19 +386,56 @@ const createActionsNav = (ui) => {
   // While over-limit the create/upload/invite rows are omitted — same
   // rule as the topbar. Search stays (read).
   const locked = require("libs/over-limit").isLocked();
+  // Asked the way the topbar asks it. Distinct from `locked`: the org can be
+  // within its limits while THIS viewer still lacks write in the workspace they
+  // are standing in.
+  const mayWrite =
+    typeof ui._curWorkspaceCanWrite === "function"
+      ? ui._curWorkspaceCanWrite()
+      : true;
   const actionKids = [
     ...(locked
       ? []
       : [
+          // Leads to the drawer's `create` mode rather than creating anything
+          // itself. It used to fire "new-workspace" straight off, which offered
+          // one of the five things the desktop "+ New" group offers; the
+          // sub-screen carries the whole list from ./create-items.
           createNavItem(
             ui,
             "app-add",
             LOCALE.ADD_NEW || "Add new",
-            "new-workspace",
+            "mobile-show-create",
             "",
             null,
             "mobile-add-new",
+            null,
+            { affordance: "arrow-right" },
           ),
+          // A Drive import lands on the same upload path as "From device", so
+          // it needs write in the CURRENT workspace — the topbar drops its own
+          // copy of this row on the same question, and the handler runs
+          // _guardWorkspaceWrite either way. `locked` above cannot stand in for
+          // it: an org within its limits still has view and chat members.
+          //
+          // No new service and no new drawer mode: launch-gdrive-migration
+          // already calls closeDeskNewMenu first, which dismisses the drawer on
+          // mobile.
+          ...(!mayWrite
+            ? []
+            : [
+                createNavItem(
+                  ui,
+                  "logo-google",
+                  LOCALE.MIGRATE_GDRIVE_TITLE || "Migrate from Google Drive",
+                  "launch-gdrive-migration",
+                  "",
+                  null,
+                  "mobile-gdrive",
+                  null,
+                  { modifier: "gdrive" },
+                ),
+              ]),
           createNavItem(
             ui,
             "app-upload",
@@ -361,11 +446,15 @@ const createActionsNav = (ui) => {
             "mobile-upload",
           ),
         ]),
+    // "open-mobile-search", not "search-files": the latter is the search
+    // INPUT's per-keystroke service, so a row sharing it landed in the
+    // debounce branch and did nothing. This row opens the card; the input
+    // inside the card keeps "search-files".
     createNavItem(
       ui,
       "app-search",
       LOCALE.SEARCH || "Search",
-      "search-files",
+      "open-mobile-search",
       "",
       null,
       "mobile-search",
@@ -393,6 +482,58 @@ const createActionsNav = (ui) => {
       Skeletons.Box.Y({
         className: `${fig}__nav-main`,
         kids: actionKids,
+      }),
+    ],
+  });
+};
+
+// ---------- Create Navigation (mobile only) ----------
+// The drawer's `create` sub-screen, reached from the "Add new" row above. Same
+// shape as createActionsNav — a header plus nav-main rows — but its header is
+// the sub-screen form: a back arrow to `actions` and "Add new" as the title.
+//
+// The rows are the desktop "+ New" group's own list (./create-items), rendered
+// as ordinary sidebar items and carrying the SAME services, so Desk.onUiEvent
+// handles a tap here exactly as it handles one in the topbar dropdown — with
+// the over-limit and workspace-privilege guards each of those cases already
+// runs.
+//
+// `mayWrite` is asked the same way the topbar asks it, so a view/chat member is
+// offered Workspace alone on mobile just as on desktop, rather than four rows
+// that can only end in a refusal. Over-limit needs no check here: the "Add new"
+// row is absent while locked, so this screen is unreachable.
+const createCreateNav = (ui) => {
+  const fig = getSidebarFig(ui);
+  const mayWrite =
+    typeof ui._curWorkspaceCanWrite === "function"
+      ? ui._curWorkspaceCanWrite()
+      : true;
+
+  return Skeletons.Box.Y({
+    className: `${fig}__nav`,
+    kids: [
+      createLogoRow(ui, {
+        back: "mobile-show-add",
+        title: LOCALE.ADD_NEW || "Add new",
+      }),
+
+      Skeletons.Box.Y({
+        className: `${fig}__nav-main`,
+        kids: createEntries(mayWrite).map((e) =>
+          createNavItem(
+            ui,
+            e.ico,
+            e.label,
+            e.service,
+            "",
+            null,
+            null,
+            null,
+            // The office services need the template filename the topbar rows
+            // pass ("document.docx"); Wm.newDocument reads it off the trigger.
+            { name: e.name || undefined },
+          ),
+        ),
       }),
     ],
   });
@@ -431,12 +572,13 @@ module.exports = function (ui) {
   }
 
   // Mobile: sidebar becomes a slide-in drawer. data-mode picks between
-  // "nav" (default sidebar content) and "actions" (Add new / Upload /
+  // "nav" (default sidebar content), "actions" (Add new / Upload /
   // Search / Invite rendered as nav-item rows with the same logo
-  // header). The footer (Settings / Theme / Sign out / Profile) lives
-  // outside both slots so it stays visible in both modes — and so its
-  // sys_pn elements (sidebar-avatar, etc.) stay unique.
-  // data-state toggles closed (off-screen) vs open.
+  // header) and "create" (the sub-screen the "Add new" row leads to,
+  // holding the five create options). The footer (Settings / Theme /
+  // Sign out / Profile) lives outside all three slots so it stays visible in
+  // every mode — and so its sys_pn elements (sidebar-avatar, etc.) stay
+  // unique. data-state toggles closed (off-screen) vs open.
   return Skeletons.Box.Y({
     className: cls(fig, "main"),
     sys_pn: "sidebar-main",
@@ -453,6 +595,10 @@ module.exports = function (ui) {
       Skeletons.Box.Y({
         className: cls(fig, "actions-slot"),
         kids: [createActionsNav(ui)],
+      }),
+      Skeletons.Box.Y({
+        className: cls(fig, "create-slot"),
+        kids: [createCreateNav(ui)],
       }),
       createFooter(ui, Visitor.firstname()),
     ],

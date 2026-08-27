@@ -1,4 +1,5 @@
 const mock = require("./mock");
+const { openSupportMail } = require("libs/support");
 
 /**
  * Full-area "Get help" page rendered into the desk settings-main-slot when
@@ -296,25 +297,31 @@ class help_main extends LetcBox {
   }
 
   /**
-   * Contact support. `telegram` and `mail` come from the two icon buttons
-   * beside the "Contact Support" link; the bare link defaults to mail.
+   * Contact support.
    *
-   * Both destinations are LOCALE-configured so a self-hosted install can
-   * point them at its own channels — same approach as SALES_CONTACT_EMAIL
-   * in settings_billing. HELP_SUPPORT_TELEGRAM_URL ships empty (no public
-   * Drumee support channel yet), so that button no-ops until one is set.
+   * The bare link opens a live 1:1 conversation with the support account —
+   * the desk owns that (it owns the chat panel), so this hands off upward the
+   * same way `start-product-tour` does. When no support account is configured,
+   * or it has been deleted, or the lookup fails, the desk answers false and we
+   * fall back to the mail link, which is what this button did before.
+   *
+   * `telegram` and `mail` remain the two icon buttons beside the link. Both
+   * destinations stay LOCALE-configured so a self-hosted install can point
+   * them at its own channels — same approach as SALES_CONTACT_EMAIL in
+   * settings_billing. HELP_SUPPORT_TELEGRAM_URL ships empty (no public Drumee
+   * support channel yet), so that button no-ops until one is set.
    */
-  contactSupport(channel = "mail") {
+  contactSupport(channel = "chat") {
     if (channel === "telegram") {
       const url = LOCALE.HELP_SUPPORT_TELEGRAM_URL;
       if (!url) return this.warn("help_main: no support telegram configured");
       return window.open(url, "_blank", "noopener");
     }
-    const to = LOCALE.HELP_SUPPORT_EMAIL || "contact@drumee.org";
-    const subject = LOCALE.HELP_SUPPORT_MAIL_SUBJECT || "Drumee support request";
-    // mailto via location.assign, not window.open: a popup blocker silently
-    // swallows the latter (see settings_billing._openSalesMail).
-    window.location.assign(`mailto:${to}?subject=${encodeURIComponent(subject)}`);
+    if (channel === "mail") return openSupportMail();
+    // Live chat. The desk owns the chat panel and owns the fallback to mail
+    // when no support account can be resolved, so this is a plain hand-off —
+    // triggerHandlers reports nothing back to branch on.
+    return this.triggerHandlers({ service: "contact-support" });
   }
 
   /**

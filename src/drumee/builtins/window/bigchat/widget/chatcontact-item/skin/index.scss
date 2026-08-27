@@ -53,6 +53,38 @@
     width: 100%;
   }
 
+  // Same product mark the chat header shows, at the inbox row's 48px avatar
+  // size — see libs/support.supportAvatar and the chat-p2p skin. No background
+  // of its own: the asset carries one.
+  &__support-avatar {
+    align-items: center;
+    flex-shrink: 0;
+    height: 48px;
+    justify-content: center;
+    width: 48px;
+  }
+
+  &__support-avatar-ico {
+    height: 38px;
+    width: 38px;
+  }
+
+  // Marks a support conversation in the inbox list. Sits between the name
+  // (flex:1, so it absorbs the row's free space and truncates) and the
+  // timestamp, which keeps the pill against the end of the name.
+  &__support-pill {
+    @include drumee.typo($size: 9px, $color: var(--active-border));
+    font-weight: 700;
+    background-color: var(--primary-30);
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.6px;
+    line-height: 14px;
+    padding: 0 5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
   &__icon {
     color: var(--normal-fg-50);
     height: 22px;

@@ -8,6 +8,8 @@ const {
   nextGroupViewState,
 } = require("../skeleton/toolkit/file-group");
 
+const { overMeetingCap } = require("libs/billing");
+
 const {
 
   
@@ -22,6 +24,12 @@ const {
 } = require("../skeleton/toolkit");
 
 require("./skin");
+
+// Compact breakpoint for the Meeting-tab schedule (see
+// _wireScheduleBreakpoint). Must stay in step with the skin's
+// `@container window-folder-w (max-width: 700px)` blocks — the folder skin's
+// own compact threshold, and the one meeting-schedule.scss already uses.
+const SCHED_NARROW_PX = 700;
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -200,7 +208,12 @@ class __window_folder extends mfsInteract {
       this.el.dataset.state = 1;
     }
     this.$el.css({ display: "" });
-    const b = this._minimizedBounds;
+    // A full-frame window re-fits the CURRENT work area rather than the box it
+    // was minimized at: the desk header / tab strip can appear or disappear
+    // while a window sits minimized (it is skipped by _hasZoomedFolder, so the
+    // `desk:chrome` re-fit never reaches it), which leaves the snapshot taller
+    // than the area it comes back into.
+    const b = this._zoomed ? this._zoomTarget() : this._minimizedBounds;
     this._minimizedBounds = null;
     if (b) {
       this.size = { ...this.size, width: b.width, height: b.height };
@@ -422,6 +435,14 @@ class __window_folder extends mfsInteract {
     // placeholders still resolve exactly as before.
     if (Kind && _.isFunction(Kind.waitFor)) {
       Kind.waitFor("media").catch(() => { });
+      // Warm the one tour this window can still trigger — Manage access and
+      // the kebab Share item. The tracker moved back into `folder_task`, which
+      // the desk raises and warms. Safe to repeat per window: waitFor returns
+      // the registered class on its first line once the chunk has landed
+      // (ui-core letc/kind/index.js:244), and before that webpack has already
+      // memoized the import() promise, so several open folders cost one fetch
+      // and then a map lookup each.
+      Kind.waitFor("tutorial_share").catch(() => { });
     }
     setGrouped(this, true);
     this.setViewMode(_a.icon, false);
@@ -604,9 +625,13 @@ class __window_folder extends mfsInteract {
   buildContent(child) {
     this.__content = child;
     this.setupInteract();
+    // Bound BEFORE the first bounds pass: applyDefaultBounds opens the window
+    // full-frame, which hides the desk header and therefore grows the
+    // wm-container. The re-fit for that growth arrives as `desk:chrome`, so the
+    // listener has to already be attached when the bounds are applied.
+    this._bindDeskChrome();
     this.applyDefaultBounds();
     this._bindViewportReframe();
-    this._bindDeskChrome();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the,
@@ -664,13 +689,49 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  // A folder window opens FULL-FRAME — the whole desk body, the same frame a
+  // workspace pane gets from the sidebar — instead of the inset popup box it
+  // used to land in (reported 2026-08-21: opening a folder should land
+  // full-frame, not in the small window).
+  //
+  // Implemented as the window's existing "full" snap preset rather than as new
+  // geometry, so nothing else shifts meaning: `_defaultBounds()` remains the
+  // reframe target, which keeps a second click on Zoom (and the Reframe preset)
+  // returning the window to its cascaded default size, keeps the Tile presets
+  // as they are, and reuses the desk-header handshake that a manual zoom
+  // already goes through. Headless workspace panes are already full-area and
+  // are left untouched; mobile is excluded by the guard above (those windows
+  // are full-screen via CSS).
   applyDefaultBounds() {
     if (this._defaultBoundsApplied || Visitor.isMobile()) return;
     this._defaultBoundsApplied = 1;
     const bounds = this._defaultBounds();
-    this.size = { ...this.size, ...bounds };
-    this.style.set(bounds);
-    this.$el.css(bounds);
+    let target = bounds;
+    if (!this.mget(_a.headless)) {
+      this._zoomed = true;
+      // Un-zoom restores the inset default this window would have opened at.
+      this._preZoomBounds = {
+        left: bounds.left,
+        top: bounds.top,
+        width: bounds.width,
+        height: bounds.height,
+      };
+      this.el.dataset.zoomed = 1;
+      this._snapMode = "full";
+      this._syncSnapPresets();
+      // Must run BEFORE measuring, exactly as in toggleZoom: hiding the desk
+      // header grows the wm-container and _zoomTarget() has to see the
+      // post-hide height. (The desk only learns about this window on the
+      // deferred `folder:open` from initialize, so on that ordering the header
+      // hides a tick later and _onDeskChrome re-fits us then.)
+      this._syncDeskChrome();
+      // Keep the min-width/min-height floors from `bounds`; take the geometry
+      // from the zoom target.
+      target = { ...bounds, ...this._zoomTarget() };
+    }
+    this.size = { ...this.size, ...target };
+    this.style.set(target);
+    this.$el.css(target);
     try {
       this.$el.resizable(_a.option, "disabled", false);
       this.$el.resizable(_a.option, "minWidth", bounds.minWidth);
@@ -704,6 +765,11 @@ class __window_folder extends mfsInteract {
         if (this.isDestroyed && this.isDestroyed()) return;
         if (this._isResizing) return; // user is dragging a resize handle
         if (this.mget(_a.minimize)) return; // leave minimized windows alone
+        // A full-frame window stays full-frame: re-fit it to the new work area
+        // instead of dropping it back to the inset default (which is what
+        // reframeToDefault does, and what it used to do to a zoomed window on
+        // every browser resize).
+        if (this._zoomed) return this._applyBoundsAfterFs(this._zoomTarget());
         this.reframeToDefault();
       }, 200);
     };
@@ -1059,10 +1125,46 @@ class __window_folder extends mfsInteract {
       }
       return;
     }
+    if (pn === "tab-bar-tabs") {
+      this._wireTabCarousel(child);
+      return;
+    }
+    if (pn === "tab-bar-dots") {
+      this._tabBarDots = child;
+      // The strip may have mounted first, in which case its listener already
+      // ran against no dots. Stamp the current page now so the footer is right
+      // on first paint rather than only after the first scroll.
+      this._syncTabCarouselPage();
+      return;
+    }
     if (pn === "new-ctrl") {
       // The button renders hidden (the skeleton is built before the window has
       // a privilege). Now that it is mounted, resolve the real answer once.
       this.syncNewCtrlVisibility();
+      return;
+    }
+    // Second entry point for the migrate tour, alongside the desk topbar's
+    // + New (desk/index.js, case "addmenu"). Both are the same gesture — "I
+    // want to bring something in" — so they share the `migrate` flag: whichever
+    // is pressed first runs the tour, and the other then finds it seen. This is
+    // the shape the share tour already uses across its own two entry points.
+    //
+    // `open` is the signal rather than a click on the wrapper: it fires only on
+    // opening, never on closing, so re-opening the menu cannot re-trigger, and
+    // a click that lands on the control's padding is not mistaken for the
+    // gesture. Nothing is remembered here — every gate lives in
+    // libs/tutorial-tours — so a topbar rebuild can neither lose nor duplicate
+    // the trigger.
+    if (pn === "new-menu") {
+      const Tours = require("libs/tutorial-tours");
+      if (_.isFunction(child.on)) {
+        child.on(_e.open, () => Tours.fire("migrate", this));
+      }
+      // Warm the chunk while the surface that triggers it is on screen, so
+      // pressing the button renders from memory rather than from the network.
+      if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+        Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
+      }
       return;
     }
     if (pn === _a.list) {
@@ -1072,6 +1174,10 @@ class __window_folder extends mfsInteract {
       }
       return;
     }
+    // Arm the responsive view switch whenever the schedule mounts. Separate
+    // from (and ahead of) the start_meeting branch below, which is gated on a
+    // launch flag and must keep its existing fall-through.
+    if (pn === "meeting-panel") this._wireScheduleBreakpoint();
     if (pn == "meeting-panel" && this.mget(_a.start_meeting)) {
       this._launchMeetingInPanel();
       return;
@@ -1404,8 +1510,62 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // Close the merged "+ New" menu and reset its create flyout.
+  //
+  // Leaf rows live INSIDE the menu topic, so they resolve it by walking up.
+  // The mobile backdrop (skeleton/toolkit fileNewControl) is a SIBLING of the
+  // topic, not a descendant — the walk returns nothing there, so fall back to
+  // the part the window already owns. Same close for both entry points.
+  // ── Mobile tab-bar carousel ──────────────────────────────────────────
+  // The strip pages two tabs at a time on narrow layouts (folder skin's
+  // @container block owns the scroll-snap); this only keeps the footer's
+  // `data-page` in step with where the strip actually is, and the skin maps
+  // that one attribute to the active dot.
+  //
+  // Reads scrollLeft rather than tracking taps, so a swipe, a dot press and a
+  // programmatic scroll all converge on the same source of truth.
+  _wireTabCarousel(child) {
+    this._tabBarStrip = child;
+    if (!child || !child.el) return;
+    // rAF-throttled: a touch scroll fires this continuously, and all it has to
+    // produce is one attribute write per frame at most.
+    let queued = 0;
+    const onScroll = () => {
+      if (queued) return;
+      queued = 1;
+      requestAnimationFrame(() => {
+        queued = 0;
+        this._syncTabCarouselPage();
+      });
+    };
+    child.el.addEventListener("scroll", onScroll, { passive: true });
+    this._syncTabCarouselPage();
+  }
+
+  _syncTabCarouselPage() {
+    const strip = this._tabBarStrip;
+    const dots = this._tabBarDots;
+    if (!strip || !strip.el || !dots || !dots.el) return;
+    const w = strip.el.clientWidth;
+    // Desktop / one-page: clientWidth is the whole strip and scrollLeft stays 0,
+    // so this lands on page 0 and the skin has the footer hidden anyway.
+    const page = w > 0 ? Math.round(strip.el.scrollLeft / w) : 0;
+    if (`${page}` !== dots.el.dataset.page) dots.el.dataset.page = `${page}`;
+  }
+
+  // Dot press. Scrolls by whole pages; the scroll listener above then updates
+  // data-page, so this deliberately does not write it itself.
+  _showTabCarouselPage(cmd) {
+    const strip = this._tabBarStrip;
+    if (!strip || !strip.el || !cmd || !cmd.el) return;
+    const page = Number(cmd.el.dataset.page) || 0;
+    strip.el.scrollTo({ left: page * strip.el.clientWidth, behavior: "smooth" });
+  }
+
   closeNewMenu(cmd) {
-    const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
+    const menu =
+      (cmd && cmd.getParentByKind?.(KIND.menu.topic)) ||
+      (this.getPart && this.getPart("new-menu"));
     if (!menu) return;
     const group = menu.el?.querySelector(
       ".window-button__dropdown-menu__item--create-group",
@@ -1457,8 +1617,16 @@ class __window_folder extends mfsInteract {
           uiHandler: [this],
         });
 
+      case "tab-bar-page":
+        return this._showTabCarouselPage(cmd);
+
       case "toggle-new-create-menu":
         return this.toggleNewCreateMenu(cmd);
+
+      // Tap on the mobile dim layer behind the centred "+ New" card. Same
+      // close a leaf row runs, so the card and its backdrop leave together.
+      case "close-new-menu":
+        return this.closeNewMenu(cmd);
 
       case "launch-gdrive-migration": {
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
@@ -1536,6 +1704,22 @@ class __window_folder extends mfsInteract {
         if (this.canUpload && !this.canUpload()) {
           if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
           return;
+        }
+        // Contextual tour, raised BEFORE openManageAccess because that call
+        // TOGGLES: with a drawer already open it clears it and returns, so the
+        // flag read after the call means the opposite of what it means here.
+        // `!isShowSettings` is precisely "this click is going to OPEN the
+        // panel" — a closing click, and a click that dismisses the folder
+        // settings drawer (which shares the flag), are both correctly not
+        // treated as reaching Manage access for the first time.
+        //
+        // Placed in the handler rather than at either call site on purpose:
+        // the topbar icon and the overflow menu both raise this service with
+        // uiHandler: [ui] (folder/skeleton/topbar.js:96, window/skeleton/
+        // toolkit/index.js:1666), so one line covers both without going near
+        // their duplicated visibility gate.
+        if (!this.isShowSettings) {
+          require("libs/tutorial-tours").fire("share", this);
         }
         return this.openManageAccess();
 
@@ -1688,6 +1872,9 @@ class __window_folder extends mfsInteract {
       }
 
       case "tab-task":
+        // No tour here. The tracker is step two of `folder_task`, which the
+        // desk raises when a workspace or folder is opened — the Tasks tab is
+        // not where a first-time user goes looking for it.
         return this.showFolderTab(_a.task);
 
       case "toggle-task-filter":
@@ -1735,6 +1922,13 @@ class __window_folder extends mfsInteract {
 
       case "sched-toggle-view": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
+        // Explicit pick: from here on this view is the user's, so widening the
+        // panel must not revert it (see _applyScheduleBreakpoint).
+        st.autoDaily = false;
+        // NOTE: from "daily" this lands on "monthly", not "weekly" — the knob
+        // has only two positions and daily is a drill-down of weekly. Existing
+        // behaviour, left as-is; it is simply reachable more often now that a
+        // narrow panel starts in daily.
         st.view = st.view === "monthly" ? "weekly" : "monthly";
         return this._refreshSchedule();
       }
@@ -1744,6 +1938,10 @@ class __window_folder extends mfsInteract {
         const v =
           (cmd.mget && (cmd.mget("schedView") || cmd.mget("view"))) ||
           (cmd.el && cmd.el.dataset.view);
+        // Cleared even when the view does not change: tapping "Weekly" while
+        // already weekly is still the user claiming the choice, and it should
+        // survive the next resize.
+        if (v) st.autoDaily = false;
         if (v && v !== st.view) {
           st.view = v;
           return this._refreshSchedule();
@@ -1779,6 +1977,9 @@ class __window_folder extends mfsInteract {
         if (d) {
           st.anchor = Dayjs(d);
           st.view = "daily";
+          // Drilling into a day is an explicit choice too — widening the panel
+          // afterwards should leave the user on that day, not snap to weekly.
+          st.autoDaily = false;
           st.pickerOpen = false;
           return this._refreshSchedule();
         }
@@ -2210,6 +2411,90 @@ class __window_folder extends mfsInteract {
     return this._launchMeetingStandalone();
   }
 
+  // ── Meeting schedule: responsive view breakpoint ─────────────────────────
+  // A 7-day hourly grid does not fit a phone. Rather than build a third
+  // rendering path, this switches the panel to the DAILY view that already
+  // exists (skeleton/meeting-schedule weeklyGrid renders nDays = 1 when
+  // st.view === "daily" — the same view the mini-calendar drills into).
+  //
+  // Observes `this.el`, which IS `.window-folder__ui` — deliberately the same
+  // element the skin's `@container window-folder-w` query measures, so the CSS
+  // and this JS cannot drift apart on where 700px is. Observing the panel
+  // instead would measure a box inset by the window chrome and cross the
+  // threshold at a different screen width than the stylesheet does.
+  //
+  // Width, not a device flag: Visitor.device() has no tablet tier (user.js
+  // returns `desktop` above 800px and only says `mobile` with /mobile/i in the
+  // UA, which a modern iPad's Macintosh UA never matches), and a width test
+  // additionally catches a narrow folder window on a wide desktop — the
+  // split-with-chat case a viewport @media misses entirely.
+  _wireScheduleBreakpoint() {
+    if (
+      this._schedResizeObserver ||
+      !this.el ||
+      typeof ResizeObserver !== "function"
+    )
+      return;
+    // null, not a boolean: the first ResizeObserver callback (which fires
+    // immediately on observe()) then reads as a crossing and seeds the state,
+    // so opening the Meeting tab on a phone lands on daily without a separate
+    // measure-on-mount path.
+    this._schedNarrow = null;
+    this._schedResizeObserver = new ResizeObserver((entries) => {
+      if (this.isDestroyed?.()) return this._unwireScheduleBreakpoint();
+      const box = entries && entries[0] && entries[0].contentRect;
+      const w = box ? box.width : this.el.clientWidth;
+      // Ignore a zero measure: the panel reports 0×0 while its tab is hidden,
+      // and treating that as "narrow" would switch the view behind a tab the
+      // user is not looking at.
+      if (!w) return;
+      const narrow = w <= SCHED_NARROW_PX;
+      // Only a CROSSING acts. This is what keeps the observer off the render
+      // path: _applyScheduleBreakpoint re-feeds the panel, which resizes it,
+      // which calls this back — comparing against the last known side is what
+      // stops that being a loop, and it also spares the refetch that
+      // _refreshSchedule does on every call.
+      if (narrow === this._schedNarrow) return;
+      this._schedNarrow = narrow;
+      this._applyScheduleBreakpoint(narrow);
+    });
+    this._schedResizeObserver.observe(this.el);
+  }
+
+  _unwireScheduleBreakpoint() {
+    if (!this._schedResizeObserver) return;
+    this._schedResizeObserver.disconnect();
+    this._schedResizeObserver = null;
+  }
+
+  /**
+   * Apply the narrow/wide decision to the schedule view.
+   *
+   * Monthly is deliberately untouched in both directions: a month grid is
+   * legible on a phone (the skin tightens its cells), and someone who picked
+   * Monthly asked for it.
+   *
+   * @param {boolean} narrow  panel is at or below the compact breakpoint
+   */
+  _applyScheduleBreakpoint(narrow) {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    let next = st.view;
+    if (narrow) {
+      if (st.view === "weekly") {
+        next = "daily";
+        st.autoDaily = true;
+      }
+    } else if (st.autoDaily) {
+      // Undo only OUR switch. An explicit pick cleared the flag, so widening
+      // never yanks the user out of a view they chose themselves.
+      if (st.view === "daily") next = "weekly";
+      st.autoDaily = false;
+    }
+    if (next === st.view) return;
+    st.view = next;
+    this._refreshSchedule();
+  }
+
   // Re-render the Meeting-tab schedule in place after a nav/toggle service
   // (state lives in this._sched — see skeleton/meeting-schedule.js). Refetches
   // the hub's meetings for the (possibly changed) visible range first, so the
@@ -2402,6 +2687,9 @@ class __window_folder extends mfsInteract {
     // user becomes the creator on submit).
     this._mmCreatedBy = prefill ? prefill.created_by : null;
     this._mmBusy = {};
+    // Also cleared on close; reset here too so a modal re-opened without one
+    // (create → edit) cannot start out suppressing the availability banner.
+    this._mmCapNotice = 0;
     // Fetch the workspace member pool first so the invitee chips can render.
     const loadMembers = this.fetchService(SERVICE.hub.get_members_by_type, {
       type: "all",
@@ -2471,6 +2759,7 @@ class __window_folder extends mfsInteract {
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
     this._mmBusy = {};
+    this._mmCapNotice = 0;
     if (this.dialogWrapper) {
       if (this.dialogWrapper.el) {
         this.dialogWrapper.el.removeAttribute("data-variant");
@@ -2678,6 +2967,13 @@ class __window_folder extends mfsInteract {
       return el ? String(el.value || "").trim() : "";
     };
     const setBanner = (txt) => {
+      // This banner line is shared with the plan-cap notice, and clicking
+      // Schedule blurs the time field — which fires this probe on the very
+      // same click that raised the notice. Clearing to empty afterwards would
+      // erase the reason the save was refused, seconds after showing it. A
+      // real busy warning still wins: that is new information, not a stale
+      // blank. The notice is dropped by the next submit.
+      if (!txt && this._mmCapNotice) return;
       const el = root.querySelector(`.${this.fig.family}__meeting-modal-availability`);
       if (el) el.textContent = txt || "";
     };
@@ -2787,6 +3083,34 @@ class __window_folder extends mfsInteract {
     };
   }
 
+  /**
+   * The plan's meeting-length cap when this form exceeds it, else 0.
+   *
+   * Read from the VIEWER's own entitlement, with no ownership test.
+   *
+   * There was one here, gating only workspaces whose `privilege` carried the
+   * owner bit, on the grounds that a room runs on the workspace OWNER's plan
+   * (the server stamps its deadline from the hub's owner_id — meeting-limit
+   * roomDeadline). That is true and it is still the wrong rule, because inside
+   * an organisation the hub owner and the billing entity are not the same
+   * thing: every member shares the ORG's plan, so a workspace admin who simply
+   * does not happen to own the hub would have been waved through in silence —
+   * the common case — to avoid refusing a Free user booking into somebody
+   * else's paid workspace, which is the rare one. A silent no-op is the worse
+   * failure of the two: being told to shorten the meeting or upgrade is an
+   * inconvenience the reader can act on, while a gate that quietly does
+   * nothing is indistinguishable from a broken build.
+   *
+   * The residual mismatch is bounded and self-correcting either way: the room
+   * is capped server-side from the owner's plan regardless of what this says,
+   * so the worst outcome is a card shown to someone whose meeting would not
+   * actually have been cut.
+   */
+  _meetingOverPlanCap(form) {
+    if (!form) return 0;
+    return overMeetingCap(form.etime - form.stime);
+  }
+
   // Optimistically upsert a meeting into this._meetings from the form so it
   // shows immediately; a later room.list fetch overwrites it.
   _upsertLocalMeeting(nid, form) {
@@ -2891,8 +3215,35 @@ class __window_folder extends mfsInteract {
       if (input && input.focus) input.focus();
       return;
     }
+    // Each submit re-decides the cap from the times as they stand now, so any
+    // notice left over from the previous attempt goes first — otherwise a
+    // shortened meeting would still be carrying the old refusal on screen.
+    this._mmCapNotice = 0;
     this._mmBanner("");
     this._mmMarkTitleError(0);
+
+    // Plan cap on meeting LENGTH. Checked on submit rather than while the time
+    // fields are being edited: a half-filled form passes through every invalid
+    // duration on its way to a valid one, and nagging at each of them would
+    // make the card an obstacle instead of an answer. This is the click that
+    // committed to those times.
+    //
+    // The dialog deliberately stays OPEN behind the card — the fix is to
+    // shorten the meeting, and that is only possible in the form the card
+    // would otherwise have closed. The banner keeps the reason on screen after
+    // the card is dismissed.
+    const capMins = this._meetingOverPlanCap(form);
+    if (capMins) {
+      this._mmCapNotice = 1;
+      this._mmBanner(LOCALE.UNLOCK_MEETING_SCHEDULE_DESC.format(capMins));
+      // Required here, not at module scope: the card pulls its own skin in,
+      // and a folder window / calendar that never hits the cap should not be
+      // paying for the upsell's CSS. Same reason Wm.openFeatureLock defers it.
+      const { promptFeatureLock } = require("builtins/widget/feature-lock");
+      promptFeatureLock("meeting_schedule", [capMins]);
+      return;
+    }
+
     this._mmSubmitting = 1;
     // Stale reason from an earlier call must not colour this one's message.
     this._lastServiceError = null;
@@ -3801,6 +4152,26 @@ class __window_folder extends mfsInteract {
       if (chat && _.isFunction(chat.setScopedFolderNid))
         chat.setScopedFolderNid(folderNid);
     });
+  }
+
+  // The first local file-thread post returns the child message but the server
+  // intentionally does not echo its synthetic `file.thread` root card to the
+  // caller. Refresh the mounted General conversation so the persisted card is
+  // visible when the user closes the file-thread panel. An in-place/compact
+  // file scope keeps its current child list; clearing that scope already
+  // restarts the same widget against General. The rail is independent of the
+  // middle widget, so refresh it in both layouts.
+  onFileThreadCreated() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._populateThreadRail();
+    return this.ensurePart("folder-chat")
+      .then((chat) => {
+        if (!chat || (chat.isFileThreadMode && chat.isFileThreadMode())) return;
+        return chat.ensurePart(_a.list).then((list) => {
+          if (list && _.isFunction(list.restart)) list.restart();
+        });
+      })
+      .catch(() => {});
   }
 
   // ── Team-chat header thread-switch dropdown ────────────────────────────

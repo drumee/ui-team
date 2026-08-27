@@ -1,8 +1,18 @@
 diff --git a/node_modules/@drumee/ui-core/letc/addons/letc.js b/node_modules/@drumee/ui-core/letc/addons/letc.js
-index be31634..74857a8 100644
+index be31634..413d616 100644
 --- a/node_modules/@drumee/ui-core/letc/addons/letc.js
 +++ b/node_modules/@drumee/ui-core/letc/addons/letc.js
-@@ -91,7 +91,7 @@ function deviceChanged() {
+@@ -12,6 +12,9 @@ const { View } = Backbone;
+ // ========================
+ 
+ const { isNumeric, timestamp, log } = require("@drumee/ui-essentials");
++// Resolved through the app's global `libs` webpack alias (webpack/resolve.js),
++// which applies to requires from node_modules too. See __handleContextmenu.
++const { isTextEntry } = require("libs/is-text-entry");
+ const ORIENTATION = {
+   'landscape-primary': 'x',
+   'landscape': 'x',
+@@ -91,7 +94,7 @@ function deviceChanged() {
  
  const Timer = new Map();
  
@@ -11,7 +21,7 @@ index be31634..74857a8 100644
  
  
  /** Common addons */
-@@ -317,10 +317,19 @@ View.prototype.__handleClick = function (e) {
+@@ -317,10 +320,19 @@ View.prototype.__handleClick = function (e) {
      }
    }
  
@@ -33,7 +43,31 @@ index be31634..74857a8 100644
    e.stopPropagation();
    this.triggerHandlers(e);
    e.stopImmediatePropagation();
-@@ -1101,13 +1110,21 @@ View.prototype.actualNode = function (format = _a.orig) {
+@@ -371,6 +383,23 @@ View.prototype.__handleContextmenu = function (e) {
+     }
+   }
+ 
++  // Text entry keeps the browser's own cut/copy/paste/spellcheck menu. The
++  // event is answered here rather than by the input, which owns no view: the
++  // Entry widget injects a raw <input> as innerHTML, so the contextmenu bubbles
++  // one level to the Entry root. Without this the walk below reaches the owning
++  // window and preventDefault()s the native menu — the reason a Drive link
++  // could not be pasted (migrate-gdrive-popup) among others.
++  //
++  // A view that wants its app menu on an input anyway sets forceContextmenu,
++  // read exactly like escapeContextmenu below.
++  //
++  // The bare `return` matters: this is a property-style `oncontextmenu`
++  // handler, so returning `false` cancels the default — which is precisely the
++  // suppression being removed. Returning undefined lets the browser proceed.
++  if (!(this.forceContextmenu || this.mget('forceContextmenu')) && isTextEntry(e.target)) {
++    return
++  }
++
+   if (this.escapeContextmenu || this.mget('escapeContextmenu')) {
+     return
+   }
+@@ -1101,13 +1130,21 @@ View.prototype.actualNode = function (format = _a.orig) {
  View.prototype.ensureElement = function (el) {
    return new Promise((resolve, reject) => {
      if (!el) el = this.el;
@@ -56,7 +90,7 @@ index be31634..74857a8 100644
        const timer = Timer.get(timerId)
        if (timer) {
          clearInterval(timer)
-@@ -1131,7 +1148,16 @@ View.prototype.ensureElement = function (el) {
+@@ -1131,7 +1168,16 @@ View.prototype.ensureElement = function (el) {
          reject()
        }
      };
@@ -102,8 +136,37 @@ index a288e64..4b85937 100644
      const { endpoint } = bootstrap();
      let base = `${endpoint}avatar/${id}?type=${type}&ts=${ts}`;
      return base
+diff --git a/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js b/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js
+index e035048..43c1c6a 100644
+--- a/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js
++++ b/node_modules/@drumee/ui-core/letc/widgets/entry/input/index.js
+@@ -56,12 +56,22 @@ const __compliances = {
+     regexp: /^.+$/,
+     explain: LOCALE.REQUIRE_THIS_FIELD
+   },
++  // `any` and `text` mean "printable text", but the old class spelled that as
++  // [\x20-\x7E\x80-\xFF] — ASCII plus Latin-1 only. Vietnamese diacritics
++  // outside Latin-1 (ă ơ ư đ and every hook/dot-below tone, U+0102–U+1EF9)
++  // therefore failed, and because `any` is anchored a single one failed the
++  // whole value: checkSanity() returned false, commit() bailed before
++  // triggerHandlers, and Enter silently did nothing. That is why a file or
++  // workspace could not be renamed to "Tài liệu" while "Tai lieu" was fine.
++  // Both classes below are strict supersets of the old ones, so nothing that
++  // validated before stops validating. Neither is the filename gate — that is
++  // media/core.js checkSanity() plus the server's own check, both unchanged.
+   any: {
+-    regexp: /^([\x20-\x7E\x80-\xFF])+$/,
++    regexp: /^([^\x00-\x1F\x7F])+$/,
+     explain: LOCALE.REQUIRE_STRING
+   },
+   text: {
+-    regexp: /([\x20-\x7E\x80-\xFF])+/,
++    regexp: /([^\x00-\x1F\x7F])+/,
+     explain: LOCALE.REQUIRE_TEXT
+   },
+   gender: {
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
-index 13edb44..eda76e5 100644
+index 13edb44..e8df4bc 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 +++ b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 @@ -16,7 +16,23 @@ class __user_profile extends LetcBox {
@@ -196,7 +259,7 @@ index 13edb44..eda76e5 100644
 +      return;
 +    }
 +
-     // Optimization : prevent reload when marked as error
+     // Optimization : prevent reload when marked as error 
 -    if (__cache[this.mget(_a.id)]) {
 +    if (__cache[this._avatarKey()]) {
        this.el.dataset.default = 1;

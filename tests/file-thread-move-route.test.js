@@ -1,85 +1,62 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const { join } = require("node:path");
 
-const {
-  isMoveResultSuccessful,
-  selectCrossWorkspaceMoveService,
-} = require("../src/drumee/builtins/media/file-thread-move-route");
+const interactSource = readFileSync(
+  join(__dirname, "../src/drumee/builtins/media/interact.js"),
+  "utf8",
+);
 
-const services = {
-  media: {
-    move_cross_hub: "media.move_cross_hub",
-    workspace_move: "media.workspace_move",
-  },
-};
+function extractClassMethod(source, name) {
+  const start = source.indexOf(`  ${name}()`);
+  assert.notEqual(start, -1, `${name} not found in production source`);
+  const end = source.indexOf("\n  }\n", start);
+  assert.notEqual(end, -1, `${name} has no closing brace`);
+  return source.slice(start, end + 4);
+}
 
-test("file threads use the durable cross-hub move coordinator", () => {
-  const service = selectCrossWorkspaceMoveService(
-    { exists_thread: 1, file_thread_id: "thread-1" },
-    services,
+const moveSource = extractClassMethod(interactSource, "move");
+
+test("single-destination cross-workspace moves use workspace_move", () => {
+  assert.match(
+    moveSource,
+    /const movingAcrossWorkspaces = crossHub && isSingleDestinationMove;/,
   );
-
-  assert.equal(service, "media.move_cross_hub");
-});
-
-test("files without a thread keep the generic workspace move", () => {
-  const service = selectCrossWorkspaceMoveService(
-    { exists_thread: 0 },
-    services,
-  );
-
-  assert.equal(service, "media.workspace_move");
-});
-
-test("an incomplete thread probe does not enter the thread saga", () => {
-  const service = selectCrossWorkspaceMoveService(
-    { exists_thread: 1 },
-    services,
-  );
-
-  assert.equal(service, "media.workspace_move");
-});
-
-test("an empty thread probe keeps the generic workspace move", () => {
-  assert.equal(
-    selectCrossWorkspaceMoveService(null, services),
-    "media.workspace_move",
+  assert.match(
+    moveSource,
+    /if \(movingAcrossWorkspaces\) \{[\s\S]*?service = \(SERVICE\.media && SERVICE\.media\.workspace_move\) \|\|\s*["']media\.workspace_move["'];[\s\S]*?\}/,
   );
 });
 
-test("service fallbacks work before the runtime registry is hydrated", () => {
-  assert.equal(
-    selectCrossWorkspaceMoveService({ exists_thread: 0 }),
-    "media.workspace_move",
-  );
-  assert.equal(
-    selectCrossWorkspaceMoveService({ exists_thread: 1, file_thread_id: "thread-1" }),
-    "media.move_cross_hub",
+test("the client does not probe for a thread or revive the retired move saga", () => {
+  assert.doesNotMatch(moveSource, /file_thread_info/);
+  assert.doesNotMatch(moveSource, /move_cross_hub/);
+  assert.doesNotMatch(moveSource, /selectCrossWorkspaceMoveService/);
+  assert.doesNotMatch(moveSource, /isMoveResultSuccessful/);
+});
+
+test("cross-workspace move payload keeps move semantics", () => {
+  assert.match(
+    moveSource,
+    /const payload = crossHub \? \{[\s\S]*?service,[\s\S]*?action: movingAcrossWorkspaces \? _a\.move : _a\.copy,[\s\S]*?hub_id: itemHubId,[\s\S]*?recipient_id: dest\.hub_id,[\s\S]*?notify: 1,[\s\S]*?moved_in: 1,[\s\S]*?async: 1,/,
   );
 });
 
-test("only a committed thread saga is treated as a completed move", () => {
-  assert.equal(
-    isMoveResultSuccessful("media.move_cross_hub", { state: "committed" }, services),
-    true,
+test("same-workspace moves keep the media.move service", () => {
+  assert.match(
+    moveSource,
+    /let service = crossHub \? SERVICE\.media\.copy : SERVICE\.media\.move;/,
   );
-  assert.equal(
-    isMoveResultSuccessful("media.move_cross_hub", { state: "compensated" }, services),
-    false,
-  );
-  assert.equal(
-    isMoveResultSuccessful("media.move_cross_hub", { state: "failed" }, services),
-    false,
+  assert.match(
+    moveSource,
+    /\} : \{\s*service: SERVICE\.media\.move,\s*nid,\s*pid,\s*action: _a\.move,\s*hub_id: itemHubId,/,
   );
 });
 
-test("legacy move responses remain truthy-compatible", () => {
-  assert.equal(
-    isMoveResultSuccessful("media.workspace_move", { nid: "file-1" }, services),
-    true,
-  );
-  assert.equal(
-    isMoveResultSuccessful("media.workspace_move", null, services),
-    false,
+test("multi-destination copies still trash the source only after copying", () => {
+  assert.match(
+    moveSource,
+    /if \(!crossHubDestinations\.length \|\| isSingleDestinationMove\) return;\s*return this\.postService\(\{\s*service: SERVICE\.media\.trash,/,
   );
 });

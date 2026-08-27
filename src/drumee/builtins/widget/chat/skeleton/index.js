@@ -1,8 +1,37 @@
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ * Empty state for a support conversation that has not started yet.
+ *
+ * A blank "No discussions yet" is the wrong first thing to show someone who
+ * has just asked for help: it reads as an error, not an invitation. Returns
+ * null for every other conversation, which keeps the default placeholder.
+ *
+ * @param {*} ui
+ * @returns Skeleton|null
+ */
+function supportPlaceholder(ui) {
+  const peer = ui.mget('peer');
+  if (!peer || !peer.is_support) return null;
+  const chatFig = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${chatFig}__support-empty no-content`,
+    kids: [
+      Skeletons.Note({
+        className: `${chatFig}__support-empty-title`,
+        content: LOCALE.SUPPORT_EMPTY_TITLE
+      }),
+      Skeletons.Note({
+        className: `${chatFig}__support-empty-text`,
+        content: LOCALE.SUPPORT_EMPTY_TEXT
+      })
+    ]
+  });
+}
+
+/**
+ *
+ * @param {*} ui
+ * @returns
  */
 const __skl_widget_chat = function (ui) {
 
@@ -52,12 +81,14 @@ const __skl_widget_chat = function (ui) {
     formItem: 'messages',
     dataType: _a.array,
     dataset: {
-      role: _a.container,
+      // Stop the window marquee selector at the chat surface so browser text
+      // selection can span lines and message bubbles for copy/paste.
+      role: _a.root,
       area: ui.mget(_a.area)
     },
     spinnerWait: 500,
     spinner: true,
-    placeholder: Skeletons.Note(LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
+    placeholder: supportPlaceholder(ui) || Skeletons.Note(LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
     itemsOpt: {
       // Item widget kind is configurable so a host (e.g. the DMZ share chat)
       // can swap in a variant — see chat-item-other, which pins every message

@@ -36,7 +36,13 @@
       box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
       border-radius: var(--corner-radius-3);
       background-color: white;
-      color: var(--primary-500);
+      // Drumee brand indigo (#433cc5) — matches the mascot above it and the
+      // sidebar logo. Inherited by the acknowledge Note, which sets no colour
+      // of its own. NOT --primary-500: revamp.scss declares two --primary-*
+      // scales in the same :root and the later (lilac) one wins, so that token
+      // resolved to #b251fb. --primary-purple-50 holds the same value as the
+      // first scale's --primary-50 and has no duplicate overriding it.
+      color: var(--primary-purple-50);
     }
 
     &__action {

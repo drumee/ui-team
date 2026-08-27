@@ -1,3 +1,5 @@
+const { isTaskViewAllowed } = require("libs/billing");
+
 function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   const pfx = ui.fig.family;
   const fileSearch = ui.getFileSearch();
@@ -71,7 +73,13 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
 }
 
 const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
-const { mayCreateTask } = require("./helpers");
+// formatDue is aliased: `make` declares its own closure const of that name, and
+// the subtask builders below live at module scope where that one isn't visible.
+const {
+  mayCreateTask,
+  subtaskBadge,
+  formatDue: formatDueDate,
+} = require("./helpers");
 
 const make = function (ui) {
   const pfx = ui.fig.family;
@@ -263,6 +271,9 @@ const make = function (ui) {
           })
         : null,
       task.due_date ? dueBadge(task) : null,
+      // Subtask count — rendered only when the task has children, so a board of
+      // ordinary tasks looks exactly as it does today.
+      subtaskBadge(ui, task, `${pfx}__task-subcount`),
     ].filter(Boolean);
     const meta = metaKids.length
       ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
@@ -572,7 +583,10 @@ const make = function (ui) {
       : selectedUids
         ? [String(selectedUids)]
         : [];
-    const service = scope === "create" ? "create-assignee" : "set-assignee";
+    // One mapping for both scopes, shared with the panel (_applyAssigneeChange
+    // / _filterAssignees resolve the same way) so a new picker only has to name
+    // its scope. "-reporter" scopes are single-select — see reporterPicker.
+    const service = ui.pickerService(scope);
     return Skeletons.Box.Y({
       className: `${pfx}__assignee-picker`,
       kids: [
@@ -618,6 +632,58 @@ const make = function (ui) {
       ],
     });
   };
+
+  // Reporter control — the assignee picker in single-select mode. Same shell
+  // (chips row + combobox + suggestions part), so it inherits the delegated
+  // focus/blur handling, the caret and the live member filter for free; the
+  // differences are that picking REPLACES instead of appending, and the chip
+  // has no ✕ because a task always reads as reported by somebody (it falls back
+  // to created_by). `scope` is "create-reporter" | "detail-reporter".
+  const reporterPicker = (uid, scope) =>
+    Skeletons.Box.Y({
+      // Same classes as the multi-select picker on purpose: it is the same
+      // control, and the single-select difference is behavioural (replace, not
+      // append) rather than visual.
+      className: `${pfx}__assignee-picker`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__assignee-control`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__assignee-chips`,
+              sys_pn: `${scope}-assignee-chips`,
+              partHandler: ui,
+              kids: buildReporterChip(ui, uid),
+            }),
+            Skeletons.Entry({
+              className: `${pfx}__assignee-search`,
+              name: `assignee-search-${scope}`,
+              placeholder: LOCALE.SEARCH_PEOPLE,
+              require: "any",
+              bubble: 0,
+              uiHandler: [ui],
+            }),
+            Skeletons.Button.Svg({
+              className: `${pfx}__assignee-caret`,
+              ico: "apps-caret-down",
+              bubble: 0,
+              service: "toggle-assignee-list",
+              uiHandler: [ui],
+              assigneeScope: scope,
+            }),
+          ],
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__assignee-suggestions`,
+          sys_pn: `${scope}-assignee-suggestions`,
+          partHandler: ui,
+          // dataset is dropped at render unless attrOpt is also set.
+          attrOpt: { "data-open": "0" },
+          bubble: 0,
+          kids: [],
+        }),
+      ],
+    });
 
   const buildDropdownContent = (results, query, resultRow) => {
     if (results && results.length) {
@@ -817,7 +883,7 @@ const make = function (ui) {
     // Render against the editable draft (seeded from the task on open).
     // Falls back to the task itself for safety.
     const dDraft = ui.getDetailDraft() || detail;
-    const dStatus = dDraft.status || detail.status || "todo";
+    const dStatus = dDraft.status || detail.status || ui.getDefaultStatus();
     const dPriority = dDraft.priority || detail.priority || "medium";
     const dAssignees = Array.isArray(dDraft.assignees)
       ? dDraft.assignees
@@ -833,8 +899,17 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
           content: c.name || LOCALE[c.label] || c.key,
-          // Selected/dot colors driven by `data-status` + `data-active` in skin.
-          dataset: { active: dStatus === c.key ? 1 : 0, status: c.key },
+          // Selected fill is driven by `data-theme` + `data-active` in the
+          // skin, NOT by data-status: a custom column's key is its DB id, so
+          // per-key rules never matched one and the pill stayed blank on click.
+          // The dot colour rides in as a custom property (skin reads it from a
+          // ::before, which can't take an inline style).
+          dataset: {
+            active: dStatus === c.key ? 1 : 0,
+            status: c.key,
+            theme: c.theme || "default",
+          },
+          styleOpt: { "--pill-dot": c.color || "#AEAEB2" },
           bubble: 0,
           service: "set-status",
           uiHandler: [ui],
@@ -928,48 +1003,45 @@ const make = function (ui) {
       kids: buildDueSectionContent(ui),
     });
 
-    // Reporter — who created the task (task.created_by, set server-side at
-    // create time). Read-only: creation is immutable.
-    const reporter = ui.getMember(detail.created_by) || {};
-    const reporterRow = detail.created_by
-      ? Skeletons.Box.Y({
-          className: `${pfx}__detail-row`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__detail-label`,
-              content: LOCALE.REPORTER,
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}__detail-reporter`,
-              kids: [
-                Skeletons.UserProfile({
-                  className: `${pfx}__detail-reporter-avatar`,
-                  id: detail.created_by,
-                  firstname: reporter.firstname,
-                  lastname: reporter.lastname,
-                  auto_color: 1,
-                  live_status: 0,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__detail-reporter-name`,
-                  content: authorName(reporter),
-                }),
-                // Creation time, small, right of the name (product ask
-                // 2026-07-30). task.ctime is set server-side at create and
-                // immutable, like created_by above. Absolute date, not
-                // fromNow(): the reporter row is provenance, and "3 weeks
-                // ago" decays while a date stays checkable.
-                detail.ctime
-                  ? Skeletons.Note({
-                      className: `${pfx}__detail-reporter-time`,
-                      content: Dayjs.unix(Number(detail.ctime)).format("MMM D, YYYY HH:mm"),
-                    })
-                  : null,
-              ].filter(Boolean),
-            }),
-          ],
-        })
-      : null;
+    // Reporter — who the task is reported by. EDITABLE (single-select), unlike
+    // task.created_by underneath it: the draft holds reporter_uid and Update
+    // posts it through task.update.
+    //
+    // The provenance line below keeps created_by + ctime visible, which is why
+    // the two are separate fields server-side: created_by is write-once, so
+    // "Created by X on <date>" stays true after a reassignment. It only names
+    // the creator when they are NOT the current reporter — otherwise the row
+    // would just repeat the chip above it.
+    const dReporter =
+      dDraft.reporter_uid || detail.reporter_uid || detail.created_by || "";
+    const creator = ui.getMember(detail.created_by) || {};
+    const originParts = [];
+    if (detail.created_by && String(detail.created_by) !== String(dReporter)) {
+      originParts.push(`${LOCALE.CREATED_BY} ${authorName(creator)}`);
+    }
+    // Absolute date, not fromNow(): this line is provenance, and "3 weeks ago"
+    // decays while a date stays checkable (product ask 2026-07-30).
+    if (detail.ctime) {
+      originParts.push(
+        Dayjs.unix(Number(detail.ctime)).format("MMM D, YYYY HH:mm"),
+      );
+    }
+    const reporterRow = Skeletons.Box.Y({
+      className: `${pfx}__detail-row`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__detail-label`,
+          content: LOCALE.REPORTER,
+        }),
+        reporterPicker(dReporter, "detail-reporter"),
+        originParts.length
+          ? Skeletons.Note({
+              className: `${pfx}__detail-reporter-time`,
+              content: originParts.join(" · "),
+            })
+          : null,
+      ].filter(Boolean),
+    });
 
     const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
 
@@ -991,6 +1063,23 @@ const make = function (ui) {
           ],
     });
 
+    // "Child task items" — the metadata sidebar, under Due date (Figma
+    // 58471:222398). A re-feedable part of its own (see
+    // buildSubtaskRowsContent) so adding or ticking a child never rebuilds the
+    // panel around the user's edits.
+    //
+    // Omitted entirely when the open task IS a subtask: one level of nesting
+    // means it can never have children, and an empty "Subtasks / none yet"
+    // block would just be a section that can never fill.
+    const subtasksSection = ui.isSubtask(detail)
+      ? null
+      : Skeletons.Box.Y({
+          className: `${pfx}__subtasks`,
+          sys_pn: "subtask-rows",
+          partHandler: ui,
+          kids: buildSubtaskRowsContent(ui, detail.id),
+        });
+
     const attachmentsList = Skeletons.Box.Y({
       className: `${pfx}__attachments`,
       kids: [
@@ -1010,13 +1099,16 @@ const make = function (ui) {
           // Detail pending list — files queued for upload/link on Update.
           pendingFiles: dDraft.pending_files || [],
         }),
+        // Region overlay: this block IS the task drop zone now, so the
+        // affordance belongs to it rather than to the whole panel.
+        dropOverlay(ui),
       ],
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
-    // Activity header: title + All / Comments / History tabs, which re-feed the
-    // list part below.
-    const currentTab = ui.getActivityTab ? ui.getActivityTab() : "all";
+    // Activity header: title + Comments / History tabs, which flip which of the
+    // two independently-fed lists below is visible. Comments is the default.
+    const currentTab = ui.getActivityTab ? ui.getActivityTab() : "comments";
     const activityTab = (tab, label, icon) =>
       Skeletons.Box.X({
         className: `${pfx}__activity-tab`,
@@ -1058,7 +1150,6 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__activity-tabs`,
               kids: [
-                activityTab("all", LOCALE.ALL),
                 activityTab("comments", LOCALE.COMMENTS, "message"),
                 activityTab("history", LOCALE.HISTORY, "apps-clock"),
               ],
@@ -1096,12 +1187,20 @@ const make = function (ui) {
                 }),
               ],
             }),
+            // The composer is its own drop zone: a file dropped here rides the
+            // comment draft and commits on Send, exactly as the paperclip
+            // beside it already does.
+            commentDropOverlay(ui),
           ],
         }),
+        // Files queued on the composer (paperclip or drop), attached to the
+        // comment once it is sent. Its own part, so queueing a file never
+        // re-feeds the composer and drops the caret mid-sentence.
+        pendingStrip(ui, "comment"),
         // Each list sits in its own section so the caption can live OUTSIDE the
         // fed part — a comment or history reload replaces only the rows, never
-        // the label. Captions only earn their place on "All", where the two
-        // runs are stacked; the other tabs are already named by the active tab.
+        // the label. The active tab already names its run, so the captions are
+        // kept for structure but never drawn.
         Skeletons.Box.Y({
           className: `${pfx}__activity-section`,
           attrOpt: {
@@ -1168,6 +1267,33 @@ const make = function (ui) {
       ],
     });
 
+    // A child opens in the SAME panel as its parent — without this the panel
+    // gives no sign it is showing a child, and no way back. Names the parent and
+    // routes to it; close-detail returns here too (see _openDetail's
+    // _detailReturnTo).
+    const parentTask = ui.isSubtask(detail)
+      ? ui.getTaskById(detail.parent_task_id)
+      : null;
+    const parentCrumb = parentTask
+      ? Skeletons.Box.X({
+          className: `${pfx}__detail-parent`,
+          bubble: 0,
+          service: "open-detail",
+          uiHandler: [ui],
+          taskId: parentTask.id,
+          kids: [
+            Skeletons.Image.Svg({
+              ico: "caret-left",
+              className: `${pfx}__detail-parent-ico`,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-title`,
+              content: parentTask.title || "",
+            }),
+          ],
+        })
+      : null;
+
     const header = Skeletons.Box.X({
       className: `${pfx}__detail-header`,
       kids: [
@@ -1223,6 +1349,7 @@ const make = function (ui) {
           attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [
+            parentCrumb,
             header,
             // Column on mobile (Box.Y) so the main content + metadata side
             // stack instead of squeezing into two narrow columns.
@@ -1244,12 +1371,14 @@ const make = function (ui) {
                     assigneeRow,
                     reporterRow,
                     dueRow,
+                    // Figma 58471:222398 puts "Child task items" here, in the
+                    // metadata column directly under Due date.
+                    subtasksSection,
                   ].filter(Boolean),
                 }),
               ],
             }),
             actions,
-            dropOverlay(ui),
             // Floating full emoji picker for the comment "…" more button, fed
             // on demand (assets/emojis) and positioned below the react bar —
             // modeled on the meeting reactions picker. Anchored to the
@@ -1258,7 +1387,8 @@ const make = function (ui) {
               className: `${pfx}__reactions-picker`,
               name: "reactions",
             }),
-          ],
+            // filter: parentCrumb is null on a top-level task.
+          ].filter(Boolean),
         }),
       ],
     });
@@ -1400,7 +1530,7 @@ const make = function (ui) {
 
   const createModal = () => {
     const cols = ui.getColumns();
-    const selectedStatus = draft?.status || "todo";
+    const selectedStatus = draft?.status || ui.getDefaultStatus();
     const selectedPriority = draft?.priority || "medium";
     const selectedAssignees = Array.isArray(draft?.assignees)
       ? draft.assignees
@@ -1413,9 +1543,15 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
           content: c.name || LOCALE[c.label] || c.key,
-          // `data-status` + `data-active` drive pill colors via the skin and
-          // let the JS update them in place without a re-render.
-          dataset: { active: selectedStatus === c.key ? 1 : 0, status: c.key },
+          // `data-theme` + `data-active` drive pill colors via the skin (see
+          // the detail switcher for why it can't be data-status) and let the JS
+          // update them in place without a re-render.
+          dataset: {
+            active: selectedStatus === c.key ? 1 : 0,
+            status: c.key,
+            theme: c.theme || "default",
+          },
+          styleOpt: { "--pill-dot": c.color || "#AEAEB2" },
           bubble: 0,
           service: "create-status",
           uiHandler: [ui],
@@ -1450,8 +1586,9 @@ const make = function (ui) {
           content: LOCALE.NO_LABELS,
         });
 
-    // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour.
-    const field = (labelText, control, extraCn = "") =>
+    // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour;
+    // `zone` adds the region drop overlay for a field that is a drop zone.
+    const field = (labelText, control, extraCn = "", zone = false) =>
       Skeletons.Box.Y({
         className: `${pfx}__create-field${extraCn ? " " + extraCn : ""}`,
         kids: [
@@ -1460,7 +1597,8 @@ const make = function (ui) {
             content: labelText,
           }),
           control,
-        ],
+          zone ? dropOverlay(ui) : null,
+        ].filter(Boolean),
       });
 
     // Textarea (not Entry) so a long title wraps and stays fully visible
@@ -1491,12 +1629,8 @@ const make = function (ui) {
       ],
     });
 
-    // Reporter — the current user (set server-side as created_by on submit).
-    // Read-only, mirroring the detail panel's reporter row (shares its skin).
-    const createReporter = ui.getMember(Visitor.id) || {
-      firstname: Visitor.get("firstname"),
-      lastname: Visitor.get("lastname"),
-    };
+    // Reporter — defaults to the current user, but pickable before submit (the
+    // uid is sent as reporter_uid; created_by is always the real creator).
     const reporterField = Skeletons.Box.Y({
       className: `${pfx}__create-field`,
       kids: [
@@ -1504,23 +1638,7 @@ const make = function (ui) {
           className: `${pfx}__create-label`,
           content: LOCALE.REPORTER,
         }),
-        Skeletons.Box.X({
-          className: `${pfx}__detail-reporter`,
-          kids: [
-            Skeletons.UserProfile({
-              className: `${pfx}__detail-reporter-avatar`,
-              id: Visitor.id,
-              firstname: createReporter.firstname,
-              lastname: createReporter.lastname,
-              auto_color: 1,
-              live_status: 0,
-            }),
-            Skeletons.Note({
-              className: `${pfx}__detail-reporter-name`,
-              content: authorName(createReporter),
-            }),
-          ],
-        }),
+        reporterPicker(draft?.reporter_uid || Visitor.id, "create-reporter"),
       ],
     });
 
@@ -1566,6 +1684,7 @@ const make = function (ui) {
                     pendingFiles: draft?.pending_files || [],
                   }),
                   `${pfx}__create-files`,
+                  true, // this field is the create modal's drop zone
                 ),
               ],
             }),
@@ -1626,7 +1745,7 @@ const make = function (ui) {
           // JS-stamped phone flag — see `isMobile` at the top of make().
           attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
-          kids: [form, dropOverlay(ui)],
+          kids: [form],
         }),
       ],
     });
@@ -1820,15 +1939,17 @@ const make = function (ui) {
         className: `${pfx}__filter-head`,
         kids: [
           Skeletons.Note({ className: `${pfx}__filter-title`, content: LOCALE.FILTER }),
-          ui.isFilterActive()
-            ? Skeletons.Note({
-                className: `${pfx}__filter-clear`,
-                content: LOCALE.CLEAR,
-                bubble: 0,
-                service: "filter-clear",
-                uiHandler: [ui],
-              })
-            : null,
+          // Always mounted, shown/hidden by `data-active` (skin) rather than by
+          // presence: _syncFilterAffordances flips the flag in place, so typing
+          // a keyword reveals "Clear" without re-rendering the popup.
+          Skeletons.Note({
+            className: `${pfx}__filter-clear`,
+            content: LOCALE.CLEAR,
+            attrOpt: { "data-active": ui.isFilterActive() ? "1" : "0" },
+            bubble: 0,
+            service: "filter-clear",
+            uiHandler: [ui],
+          }),
         ].filter(Boolean),
       }),
       ...filterCats.map(filterCategory),
@@ -1854,22 +1975,48 @@ const make = function (ui) {
             ? require("./summary")(ui)
             : boardView();
 
+  // Tuple list kept as its own const so the carousel footer below can count
+  // pages from it — the dots must agree with the strip about how many tabs
+  // there are, and deriving both from one array is what keeps them in step.
+  const viewDefs = [
+    ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
+    ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
+    ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
+    ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
+    ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
+  ];
+
+  // The strip is the scroller for the compact carousel (the skin's
+  // `@container tasks-panel-w` block pages it two tabs at a time), so it has to
+  // be reachable from JS — the scroll listener that tracks the current page
+  // lives in tasks/index.js onPartReady("viewbar-tabs").
   const viewTabs = Skeletons.Box.X({
     className: `${pfx}__viewbar-tabs`,
-    kids: [
-      ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
-      ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
-      ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
-      ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
-      ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
-    ].map(([key, label, ico]) =>
-      Skeletons.Box.X({
+    sys_pn: "viewbar-tabs",
+    partHandler: ui,
+    kids: viewDefs.map(([key, label, ico]) => {
+      // Tier gate (libs/billing.isTaskViewAllowed). A locked tab keeps its
+      // place AND keeps its click: the click is what opens the upsell, so
+      // hiding the tab would make the plan limit invisible and disabling it
+      // would read as a broken button. Same reasoning as the sidebar's Admin
+      // Console entry, which stays visible to personal plans for exactly this.
+      //
+      // Returns false for every view until the `task_views` entitlement is
+      // deployed — see taskViewsAllowed(), unknown means unrestricted.
+      const locked = !isTaskViewAllowed(key);
+      return Skeletons.Box.X({
         className: `${pfx}__viewbar-item`,
-        attrOpt: { "data-active": view === key ? "1" : "0" },
+        attrOpt: {
+          "data-active": view === key ? "1" : "0",
+          "data-locked": locked ? "1" : "0",
+        },
         bubble: 0,
         service: "set-view",
         uiHandler: [ui],
         viewMode: key,
+        tooltips: locked
+          ? { content: LOCALE.TASK_VIEW_LOCKED, className: `${pfx}__viewbar-item-tip` }
+          : undefined,
         kids: [
           // SVG glyph. `__viewbar-item-ico` is pointer-events:none in the skin,
           // so a click on the icon still bubbles to this tab's set-view service.
@@ -1881,9 +2028,15 @@ const make = function (ui) {
             className: `${pfx}__viewbar-item-label`,
             content: label,
           }),
-        ],
-      }),
-    ),
+          locked
+            ? Skeletons.Image.Svg({
+                className: `${pfx}__viewbar-item-lock`,
+                ico: "apps-lock-simple",
+              })
+            : null,
+        ].filter(Boolean),
+      });
+    }),
   });
 
   // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
@@ -1925,6 +2078,33 @@ const make = function (ui) {
     ],
   });
 
+  // Carousel footer: one dot per page of two tabs, so a phone user can see the
+  // strip continues past the two visible tabs. Built HERE rather than at
+  // runtime because the tab count is settled — viewDefs is a fixed list, and
+  // every view tab stays rendered even when the plan gates it (a locked tab
+  // keeps its place; the click is what opens the upsell).
+  //
+  // `page` is the only state this footer has: the scroll listener writes it and
+  // the skin maps it to the active dot, so nothing per-dot is ever touched as
+  // the strip moves. One page means nothing to page through — data-visible=0
+  // hides the footer, the same convention the folder tab bar uses.
+  const viewPages = Math.ceil(viewDefs.length / 2);
+  const viewDots = Skeletons.Box.X({
+    className: `${pfx}__viewbar-dots`,
+    sys_pn: "viewbar-dots",
+    partHandler: ui,
+    dataset: { page: 0, visible: viewPages > 1 ? 1 : 0 },
+    kids: Array.from({ length: viewPages }, (_, i) =>
+      Skeletons.Box.X({
+        className: `${pfx}__viewbar-dot`,
+        dataset: { page: i },
+        bubble: 0,
+        service: "viewbar-page",
+        uiHandler: [ui],
+      }),
+    ),
+  });
+
   const subHeader = Skeletons.Box.X({
     className: `${pfx}__viewbar`,
     kids: [
@@ -1944,6 +2124,7 @@ const make = function (ui) {
           filterBtn,
         ].filter(Boolean),
       }),
+      viewDots,
     ],
   });
 
@@ -1951,7 +2132,17 @@ const make = function (ui) {
     className: `${pfx}__root`,
     kids: [
       subHeader,
-      viewContent,
+      // The view body sits in a NAMED host so a filter keystroke can re-feed
+      // just this subtree (_refreshViewBody) instead of the whole panel. A full
+      // _render() rebuilds the focused filter input, and ui-core seeds <input>
+      // values through a 200ms waitElement poll — so the field blanks out
+      // mid-typing and then overwrites whatever was typed in that window with
+      // the value the skeleton was built with. Never full-render on a keystroke.
+      Skeletons.Box.Y({
+        className: `${pfx}__view-host`,
+        sys_pn: "view-host",
+        kids: [viewContent],
+      }),
       // Click-catcher behind the filter dropdown: a click outside it closes
       // the popup (sits below the dropdown's z-index). Fires toggle-filter.
       filterOpen
@@ -2003,6 +2194,57 @@ const memberLabel = (m) =>
   [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
   m.email ||
   "";
+
+/**
+ * The reporter as a single, non-removable chip. Exported so the panel can
+ * re-feed just the chips row after a pick.
+ *
+ * Deliberately NOT buildAssigneeChips: that one runs the uids through
+ * getKnownAssignees, which drops anybody who has left the workspace. That is
+ * right for an assignment (nobody is working on it any more) but wrong here —
+ * who reported a task is a historical fact, and dropping the uid would make the
+ * field read as empty and silently reassign the reporter on the next Update.
+ * authorName() labels a departed member instead of vanishing.
+ *
+ * Returns [] only when there is genuinely no uid, which the SPs make impossible
+ * for a live task (reporter_uid falls back to created_by).
+ */
+function buildReporterChip(ui, uid) {
+  const pfx = ui.fig.family;
+  if (!uid) return [];
+  // Visitor fallback: the member list loads asynchronously, and until it lands
+  // getMember answers null for everybody — including the current user, who is
+  // the default reporter on every create. Without this the field would open
+  // reading "Former member" about the person filling it in.
+  const m =
+    ui.getMember(uid) ||
+    (String(uid) === String(Visitor.id)
+      ? {
+          firstname: Visitor.get("firstname"),
+          lastname: Visitor.get("lastname"),
+        }
+      : {});
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}__assignee-chip`,
+      attrOpt: { "data-uid": uid },
+      kids: [
+        Skeletons.UserProfile({
+          className: `${pfx}__assignee-chip-avatar`,
+          id: uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__assignee-chip-name`,
+          content: authorName(m),
+        }),
+      ],
+    }),
+  ];
+}
 
 // Selected assignees as removable chips. Exported so the panel can re-feed
 // just the chips row after a pick/removal.
@@ -2112,9 +2354,15 @@ function mentionDropdown(ui, scope) {
 }
 
 // Attachment (paperclip) + @-mention buttons shared by the main comment
-// composer and the inline edit / reply composers. The paperclip attaches a file
-// to the open task (the existing task-attachment flow); "@" focuses the scope's
+// composer and the inline edit / reply composers. "@" focuses the scope's
 // editor, inserts an "@" and opens the mention popup.
+//
+// The paperclip carries its scope so the picked file lands on the SAME draft a
+// dropped file would: inside a comment row it attaches to that comment, and
+// only the task-level composer attaches to the task. Without it every paperclip
+// fell through to "detail" — a file picked while editing a comment was queued
+// on the task's own attachment strip, far up the panel, and committed by Update
+// instead of Save.
 function composerTools(ui, scope) {
   const pfx = ui.fig.family;
   return [
@@ -2124,6 +2372,7 @@ function composerTools(ui, scope) {
       bubble: 0,
       service: "pick-attachment",
       uiHandler: [ui],
+      searchScope: scope,
     }),
     Skeletons.Note({
       className: `${pfx}__composer-at`,
@@ -2269,10 +2518,10 @@ const fullName = (m) => {
 // functions now, and both attribute rows.
 const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
-// Drop affordance for a single comment (edit row / reply composer). Same copy
-// and treatment as the panel-wide __drop-overlay, sized to the row it covers;
-// lit by data-comment-file-drag on the panel root, which _setDragAffordance
-// keeps mutually exclusive with the task-level flag.
+// Drop affordance for one comment surface (composer / row / reply composer).
+// Same copy and treatment as __drop-overlay, sized to the region it covers;
+// lit by data-drop-active on its OWN zone element, which _setDragAffordance
+// keeps to exactly one element at a time.
 function commentDropOverlay(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -2294,7 +2543,7 @@ function commentDropOverlay(ui) {
 function pendingStrip(ui, scope) {
   const pfx = ui.fig.family;
   const draft =
-    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentEditDraft();
+    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentDraft();
   const pending = (draft && draft.pending_files) || [];
   return Skeletons.Box.X({
     className: `${pfx}__comment-pending-list`,
@@ -2352,46 +2601,131 @@ function attachmentIcon(f) {
 function commentAttachments(ui, c, isOwn) {
   const pfx = ui.fig.family;
   const files = (c && c.attachments) || [];
-  if (!files.length) return null;
+  // Files dropped straight onto this row, still uploading or failed. They
+  // render in the SAME strip as the committed ones — the row has no submit, so
+  // there is nowhere else for them to live. data-scope is what _setPendingStatus
+  // addresses, and it carries the comment id so two rows never collide.
+  const inFlight = (ui.getRowUploads && ui.getRowUploads(c && c.id)) || [];
+  if (!files.length && !inFlight.length) return null;
+
+  /**
+   * One chip, whatever state it is in. Committed and in-flight entries share
+   * the SAME shape deliberately: rendering in-flight ones as the taller
+   * fileCard made the whole thread jump 36px the moment an upload committed,
+   * which with a second drop in flight moved the list under the cursor.
+   *
+   * The trailing 12px slot is always present and holds exactly one thing —
+   * unlink, spinner, retry, or nothing — so width never varies by state or by
+   * ownership either.
+   */
+  const chip = (f, opt = {}) => {
+    const nid = f.file_nid || f.nid;
+    const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
+    const status = opt.pending ? f.status || "queued" : null;
+    const busy = status === "uploading" || status === "downloading";
+    const pendingKey = String(f.localKey || f.nid || "");
+    // Slot contents, in order. Retry is the extra one — only an error state has
+    // two controls, and that state is terminal, so the in-flight → committed
+    // swap the equal-width rule exists for still moves between one and one.
+    const controls = [];
+    if (status === "error" && (f.file || f.nid)) {
+      // Suppressed when there is nothing a retry could do: a cross-hub
+      // placeholder whose download failed carries neither file nor nid, so the
+      // link has no input and the fetch is never re-run. The ✕ below is what
+      // makes that chip disposable instead of merely stuck.
+      controls.push(
+        Skeletons.Button.Svg({
+          className: `${pfx}__comment-attachment-retry`,
+          ico: "refresh-view",
+          bubble: 0,
+          service: "retry-pending-file",
+          uiHandler: [ui],
+          pendingKey,
+          commentId: c && c.id,
+          tooltips: {
+            content: LOCALE.RETRY || "Retry",
+            className: `${pfx}__tip`,
+          },
+        }),
+      );
+    }
+    // ✕ on every chip of a comment you wrote, whatever state it is in — what it
+    // removes is what differs. task.comment_unlink_file is author-checked
+    // server-side, so someone else's attachment gets no ✕ rather than one that
+    // always fails.
+    if (isOwn) {
+      controls.push(
+        status
+          ? Skeletons.Button.Svg({
+              // Same class as the unlink ✕: one control, one look, and it picks
+              // up the data-loading spinner contract below for free.
+              className: `${pfx}__comment-attachment-unlink`,
+              ico: "cross",
+              bubble: 0,
+              service: "discard-row-file",
+              uiHandler: [ui],
+              commentId: c && c.id,
+              pendingKey,
+              // Mid-transfer there is nothing to cancel — no abort path exists
+              // for an upload already on the wire. The glyph gives way to the
+              // spinner and the button goes inert (skin: [data-loading="1"]),
+              // which is also why the slot no longer draws a spinner of its
+              // own: it would double up with this one.
+              attrOpt: { "data-loading": busy ? "1" : "0" },
+              tooltips: {
+                content: LOCALE.REMOVE || LOCALE.DELETE,
+                className: `${pfx}__tip`,
+              },
+            })
+          : Skeletons.Button.Svg({
+              className: `${pfx}__comment-attachment-unlink`,
+              ico: "cross",
+              bubble: 0,
+              service: "comment-unlink-attachment",
+              uiHandler: [ui],
+              commentId: c && c.id,
+              fileNid: nid,
+            }),
+      );
+    }
+    return Skeletons.Box.X({
+      className: `${pfx}__comment-attachment`,
+      // A chip mid-upload is not a click target for opening the file.
+      service: nid && !busy && !status ? "open-attachment" : null,
+      uiHandler: nid && !busy && !status ? [ui] : null,
+      fileNid: nid,
+      attrOpt: {
+        ...(status ? { "data-status": status, "data-key": pendingKey } : {}),
+      },
+      kids: [
+        Skeletons.Image.Svg({
+          ico: attachmentIcon(f),
+          className: `${pfx}__comment-attachment-ico`,
+          // Lets the skin treat a type differently without the renderer
+          // knowing about colour — see the office rule in the skin.
+          attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
+        }),
+        Skeletons.Note({
+          className: `${pfx}__comment-attachment-name`,
+          content: name,
+        }),
+        // Always rendered, even when empty: reserving the slot keeps every
+        // chip the same width regardless of state or authorship. It holds one
+        // control in every state but error, which adds retry beside the ✕.
+        Skeletons.Box.X({
+          className: `${pfx}__comment-attachment-slot`,
+          kids: controls,
+        }),
+      ],
+    });
+  };
+
   return Skeletons.Box.X({
     className: `${pfx}__comment-attachments`,
-    kids: files.map((f) => {
-      const nid = f.file_nid || f.nid;
-      const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
-      const ico = attachmentIcon(f);
-      return Skeletons.Box.X({
-        className: `${pfx}__comment-attachment`,
-        service: nid ? "open-attachment" : null,
-        uiHandler: nid ? [ui] : null,
-        fileNid: nid,
-        kids: [
-          Skeletons.Image.Svg({
-            ico,
-            className: `${pfx}__comment-attachment-ico`,
-            // Lets the skin treat a type differently without the renderer
-            // knowing about colour — see the office rule in the skin.
-            attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
-          }),
-          Skeletons.Note({
-            className: `${pfx}__comment-attachment-name`,
-            content: name,
-          }),
-          // Author-only, like editing or deleting the comment itself — the
-          // server enforces the same rule.
-          isOwn
-            ? Skeletons.Button.Svg({
-                className: `${pfx}__comment-attachment-unlink`,
-                ico: "cross",
-                bubble: 0,
-                service: "comment-unlink-attachment",
-                uiHandler: [ui],
-                commentId: c.id,
-                fileNid: nid,
-              })
-            : null,
-        ].filter(Boolean),
-      });
-    }),
+    attrOpt: { "data-scope": `comment-row:${c && c.id}` },
+    kids: files
+      .map((f) => chip(f))
+      .concat(inFlight.map((f) => chip(f, { pending: true }))),
   });
 }
 
@@ -2500,26 +2834,41 @@ function buildCommentListContent(ui) {
         : actionIcon("ph-thumbs-up", "comment-react-add", {
             commentId: c.id,
             emoji: LIKE_EMOJI,
-            tooltips: LOCALE.LIKE || "Thumbs up",
+            tooltips: {
+              content: LOCALE.LIKE || "Thumbs up",
+              className: `${pfx}__tip`,
+            },
           }),
       actionIcon("ph-smiley-sticker", "comment-react-toggle", {
         commentId: c.id,
-        tooltips: LOCALE.ADD_REACTION,
+        tooltips: {
+          content: LOCALE.ADD_REACTION,
+          className: `${pfx}__tip`,
+        },
       }),
       actionIcon("ph-chat-teardrop-text", "comment-reply", {
         commentId: c.id,
-        tooltips: LOCALE.REPLY,
+        tooltips: {
+          content: LOCALE.REPLY,
+          className: `${pfx}__tip`,
+        },
       }),
     ].filter(Boolean);
     if (isOwn) {
       kids.push(
         actionIcon("ph-pencil-simple-line", "comment-edit", {
           commentId: c.id,
-          tooltips: LOCALE.EDIT,
+          tooltips: {
+            content: LOCALE.EDIT,
+            className: `${pfx}__tip`,
+          },
         }),
         actionIcon("ph-trash", "comment-delete", {
           commentId: c.id,
-          tooltips: LOCALE.DELETE,
+          tooltips: {
+            content: LOCALE.DELETE,
+            className: `${pfx}__tip`,
+          },
         }),
       );
     }
@@ -2556,13 +2905,20 @@ function buildCommentListContent(ui) {
     if (editingId && String(editingId) === String(c.id)) {
       return Skeletons.Box.X({
         className: `${pfx}__comment-row`,
-        // data-comment-id is what a file drag resolves against: while this row
-        // is being edited it owns the panel's drop surface (see
-        // _commentDropTarget), so a file dropped on it attaches to the comment
-        // rather than to the task.
+        // data-comment-id is what a file drag resolves against (ZONES:
+        // __comment-row[data-comment-id]). Every row carries it, edited or
+        // not — see the normal-row render below.
         attrOpt: {
           "data-reply": isReply ? "1" : "0",
           "data-comment-id": c.id,
+          // Uploads in flight on this comment: the skin dims the row and takes
+          // its controls out of reach (see _refuseWhileRowBusy for the
+          // matching handler guard).
+          "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
+          // ...except the editor itself. A drop lands on the row even while it
+          // is being edited, and freezing a half-typed comment behind a video
+          // upload would trap the author: Cancel already refuses mid-save.
+          "data-editing": "1",
         },
         kids: [
           avatar,
@@ -2579,13 +2935,10 @@ function buildCommentListContent(ui) {
               // after a partly-failed save the ones that landed are here, and
               // only the ones still to retry are in the strip below.
               commentAttachments(ui, c, isOwn),
-              // Files dropped on the row while editing, before they are
-              // uploaded and attached on Save.
-              pendingStrip(ui, "comment-edit"),
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
-                  ...composerTools(ui, "comment-edit"),
+                  ...composerTools(ui, `comment-row:${c.id}`),
                   Skeletons.Note({
                     className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
                     content: LOCALE.SAVE,
@@ -2605,8 +2958,8 @@ function buildCommentListContent(ui) {
               // commentAttachments returns null when there are none.
             ].filter(Boolean),
           }),
-          // Covers this row alone, in place of the panel-wide overlay, which is
-          // suppressed for as long as a comment is being edited.
+          // Covers this row alone. Every row has one; there is no longer a
+          // panel-wide overlay to stand in for.
           commentDropOverlay(ui),
         ],
       });
@@ -2614,7 +2967,19 @@ function buildCommentListContent(ui) {
 
     return Skeletons.Box.X({
       className: `${pfx}__comment-row`,
-      attrOpt: { "data-reply": isReply ? "1" : "0" },
+      // data-comment-id is what a file drag resolves against (ZONES:
+      // __comment-row[data-comment-id]). It used to be set ONLY on the
+      // edit-mode row above, which made the attribute itself the edit-mode
+      // gate — every other row was invisible to the resolver. Rows are
+      // unconditional drop targets now, so every row carries it.
+      attrOpt: {
+        "data-reply": isReply ? "1" : "0",
+        "data-comment-id": c.id,
+        // See the edit-mode row above. Rendered on every row so the state is
+        // read from one place — the panel's isCommentRowBusy — rather than
+        // written onto the DOM by whoever happens to notice a status change.
+        "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
+      },
       kids: [
         avatar,
         Skeletons.Box.Y({
@@ -2642,6 +3007,9 @@ function buildCommentListContent(ui) {
             pickerRow(c),
           ].filter(Boolean),
         }),
+        // Every row is a drop target now, not just the one being edited, so
+        // every row needs the overlay its data-drop-active reveals.
+        commentDropOverlay(ui),
       ],
     });
   };
@@ -2777,6 +3145,7 @@ const HISTORY_VERBS = {
   status: "TASK_ACT_STATUS",
   complete: "TASK_ACT_COMPLETE",
   assignee: "TASK_ACT_ASSIGNEE",
+  reporter: "TASK_ACT_REPORTER",
   link_file: "TASK_ACT_LINKED_FILES",
   comment: "TASK_ACT_COMMENTED",
 };
@@ -2863,7 +3232,8 @@ function buildMentionItemsContent(ui, members) {
   });
 }
 
-// "Drop to attach" overlay, shown while data-file-drag="1" is set on the root.
+// "Drop to attach" overlay for a task region (__attachments / __create-files),
+// shown while data-drop-active="1" is set on that region's own element.
 function dropOverlay(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -2963,8 +3333,12 @@ function fileCard(ui, f, opt = {}) {
             attrOpt: { title: LOCALE.LOADING || "…" },
           }),
         ]
-      : status === "error"
+      : status === "error" && (f.file || f.nid)
         ? [
+            // Suppressed when neither file nor nid is present: that is a
+            // cross-hub placeholder whose download failed, so the link has no
+            // input and the fetch is never re-run. Same rule as the comment
+            // chip — a button that cannot work must not be offered.
             Skeletons.Button.Svg({
               className: `${pfx}__file-pending-retry`,
               ico: "refresh-view",
@@ -2972,7 +3346,13 @@ function fileCard(ui, f, opt = {}) {
               service: "retry-pending-file",
               uiHandler: [ui],
               pendingKey,
-              tooltips: LOCALE.RETRY || "Retry",
+              // Row uploads are keyed per comment; the staged strips pass
+              // nothing here and keep the old single-retry path.
+              commentId: opt.commentId,
+              tooltips: {
+                content: LOCALE.RETRY || "Retry",
+                className: `${pfx}__tip`,
+              },
             }),
           ]
         : [];
@@ -3231,8 +3611,337 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
   return attachments.map((f) => attachmentRowDescriptor(ui, f, taskId));
 }
 
+/**
+ * "Child task items" block — Figma 58471:222398 / 58471:222650.
+ *
+ * Lives in the detail panel's RIGHT sidebar, under Due date (that is where the
+ * design puts it; the earlier written spec had said between Description and
+ * Attachments). Header, then the existing children, then the inline creator
+ * card when one is open.
+ *
+ * The whole block is one re-feedable part (sys_pn "subtask-rows") for the same
+ * reason attachments and comments are: a full _render() steals focus from the
+ * title/description editors and drops unsaved edits. Re-feeding THIS block is
+ * safe even mid-typing, because the card's title Entry is seeded from the draft
+ * and kept in sync by the `task-input-changed` watch.
+ */
+function buildSubtaskRowsContent(ui, parentId) {
+  const pfx = ui.fig.family;
+  const parent = ui.getTaskById(parentId);
+  const subs = ui.getSubtasks(parentId);
+  const draft = ui.getSubtaskDraft();
+  const priorities = ui.getPriorities() || [];
+  const cols = ui.getColumns() || [];
+  const { done, total } = ui.getSubtaskCount(parent || { id: parentId });
+  // One level of nesting: a child never offers a child of its own. Enforced
+  // server-side too (SUBTASK_NESTING_DENIED); this only stops it being offered.
+  const canAdd = mayCreateTask(ui) && !ui.isSubtask(parent);
+
+  const metaOf = (list, key) => list.find((x) => x.key === key) || null;
+
+  // ── Header: label + "Add child work item" caption + the ＋ ──────────────
+  const header = Skeletons.Box.X({
+    className: `${pfx}__subtask-header`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}__subtask-header-text`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__subtask-heading`,
+            content: LOCALE.SUBTASKS,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__subtask-subheading`,
+            content: LOCALE.ADD_SUBTASK,
+          }),
+        ],
+      }),
+      // done/total is not in the Figma frames, but the written spec calls for a
+      // count and the header is the only place it fits in this column.
+      total
+        ? Skeletons.Note({
+            className: `${pfx}__subtask-count`,
+            content: `${done}/${total}`,
+            attrOpt: { "data-complete": done === total ? "1" : "0" },
+          })
+        : null,
+      canAdd
+        ? Skeletons.Button.Svg({
+            className: `${pfx}__subtask-add`,
+            // app-add, NOT "plus": that glyph is a filled disc with the plus
+            // knocked out of it, so colouring the svg painted a solid black
+            // circle. app-add is the bare 12px plus stroke.
+            ico: "app-add",
+            bubble: 0,
+            service: "add-subtask",
+            uiHandler: [ui],
+            // See gantt.js: the bare string form renders the tooltip as
+            // inline text inside the button and hides the icon.
+            tooltips: {
+              content: LOCALE.CREATE_CHILD_TASK,
+              className: `${pfx}__tip`,
+            },
+          })
+        : null,
+    ].filter(Boolean),
+  });
+
+  // ── An existing child ───────────────────────────────────────────────────
+  // Not specified in the Figma frames (they only show the creator), so this
+  // keeps the earlier design, compacted for the ~220px sidebar column: the
+  // status toggle, the title, and a priority dot rather than a full pill.
+  const subRow = (t) => {
+    const isDone = ui.isDoneStatus(t.status);
+    const pm = metaOf(priorities, t.priority || "medium");
+    const due = t.due_date ? formatDueDate(t.due_date) : "";
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-row`,
+      bubble: 0,
+      service: "open-detail",
+      uiHandler: [ui],
+      taskId: t.id,
+      attrOpt: { "data-done": isDone ? "1" : "0" },
+      kids: [
+        Skeletons.Button.Svg({
+          className: `${pfx}__subtask-check`,
+          ico: "app-check",
+          bubble: 0,
+          service: "toggle-subtask-complete",
+          uiHandler: [ui],
+          taskId: t.id,
+          attrOpt: { "data-done": isDone ? "1" : "0" },
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__subtask-text`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__subtask-title`,
+              content: t.title || "",
+            }),
+            due
+              ? Skeletons.Note({
+                  className: `${pfx}__subtask-meta`,
+                  content: due,
+                })
+              : null,
+          ].filter(Boolean),
+        }),
+        t.priority && pm
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-dot`,
+              styleOpt: { background: pm.color },
+            })
+          : null,
+        // Same one-click remove the board card, gantt row and calendar chip
+        // already carry, so a child is deletable from where it is listed
+        // instead of only after opening it.
+        Skeletons.Button.Svg({
+          className: `${pfx}__subtask-del`,
+          ico: "cross",
+          bubble: 0,
+          service: "remove-task",
+          uiHandler: [ui],
+          taskId: t.id,
+        }),
+      ].filter(Boolean),
+    });
+  };
+
+  // ── Creator card (Figma) ────────────────────────────────────────────────
+  // Bordered card: title + ✕ on the first row, then the Priority / Due date /
+  // Status chips, then Create. The Figma frame has no Create button — it
+  // assumes Enter — but the panel's own Update sits right below the card, so
+  // "fill it in and press save" hit Update, which commits the PARENT and closes
+  // the panel. Enter still commits; the button is the discoverable path.
+  const chip = (kind, label, dot, extraClass) =>
+    Skeletons.Box.X({
+      className: `${pfx}__subtask-chip${extraClass ? " " + extraClass : ""}`,
+      attrOpt: {
+        "data-kind": kind,
+        "data-open": draft && draft.menu === kind ? "1" : "0",
+      },
+      bubble: 0,
+      service: kind === "date" ? null : "toggle-subtask-menu",
+      uiHandler: kind === "date" ? null : [ui],
+      menuKind: kind,
+      kids: [
+        dot
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-chip-dot`,
+              styleOpt: { background: dot },
+            })
+          : null,
+        Skeletons.Note({
+          className: `${pfx}__subtask-chip-label`,
+          content: label,
+        }),
+        Skeletons.Image.Svg({
+          ico: kind === "date" ? "calendar" : "apps-caret-down",
+          className: `${pfx}__subtask-chip-ico`,
+        }),
+        // The native picker sits invisibly over the whole chip so the click
+        // opens the platform date UI. Its change is caught by a delegated
+        // listener on the panel root (the card is rebuilt on every re-feed, so
+        // a per-node listener would not survive).
+        kind === "date"
+          ? Skeletons.Element({
+              tagName: "input",
+              className: `${pfx}__subtask-date-input`,
+              attrOpt: { type: "date", value: (draft && draft.due_date) || "" },
+            })
+          : null,
+        // The dropdown is a child of the chip that opened it, not of the card:
+        // absolutely positioned against the card it dropped below the WHOLE
+        // form, nowhere near the control that was clicked. __subtask-chip is
+        // position:relative, so anchoring here puts it under its own chip.
+        draft && draft.menu === kind ? menu(kind) : null,
+      ].filter(Boolean),
+    });
+
+  const menu = (kind) => {
+    if (!draft || !kind || kind === "date") return null;
+    const isPriority = kind === "priority";
+    const items = isPriority
+      ? priorities.map((p) => ({
+          key: p.key,
+          label: LOCALE[p.label] || p.key,
+          color: p.color,
+          selected: draft.priority === p.key,
+        }))
+      : cols.map((c) => ({
+          key: c.key,
+          label: c.name || LOCALE[c.label] || c.key,
+          color: c.color,
+          selected: draft.status === c.key,
+        }));
+    return Skeletons.Box.Y({
+      className: `${pfx}__subtask-menu`,
+      attrOpt: { "data-kind": kind },
+      bubble: 0,
+      kids: items.map((i) =>
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-menu-item`,
+          attrOpt: { "data-selected": i.selected ? "1" : "0" },
+          bubble: 0,
+          service: isPriority ? "set-subtask-priority" : "set-subtask-status",
+          uiHandler: [ui],
+          taskPriority: i.key,
+          taskStatus: i.key,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__subtask-menu-dot`,
+              styleOpt: { background: i.color || "#AEAEB2" },
+            }),
+            Skeletons.Note({
+              className: `${pfx}__subtask-menu-label`,
+              content: i.label,
+            }),
+          ],
+        }),
+      ),
+    });
+  };
+
+  const creator = () => {
+    const pm = metaOf(priorities, draft.priority);
+    const sm = metaOf(cols, draft.status);
+    return Skeletons.Box.Y({
+      className: `${pfx}__subtask-card`,
+      bubble: 0,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-head`,
+          kids: [
+            Skeletons.Entry({
+              className: `${pfx}__subtask-card-title`,
+              name: "subtask-title",
+              // Explicit "" matters: the entry template interpolates
+              // value="${m.value}" straight from model.toJSON(), so an omitted
+              // value renders the literal string "undefined" in the field.
+              value: draft.title || "",
+              // Keystrokes land on the draft, so the typed title survives any
+              // re-feed of this block (a peer's WS update re-renders too).
+              watch: "task-input-changed",
+              placeholder: LOCALE.SUBTASK_PLACEHOLDER,
+              mode: "commit",
+              service: "create-subtask",
+              bubble: 0,
+              uiHandler: [ui],
+            }),
+            Skeletons.Button.Svg({
+              className: `${pfx}__subtask-card-close`,
+              ico: "cross",
+              bubble: 0,
+              service: "cancel-subtask",
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-chips`,
+          kids: [
+            chip(
+              "priority",
+              pm ? LOCALE[pm.label] || pm.key : LOCALE.PRIORITY,
+              pm && pm.color,
+            ),
+            chip(
+              "date",
+              draft.due_date ? formatDueDate(draft.due_date) : LOCALE.DUE_DATE,
+              null,
+            ),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-chips`,
+          kids: [
+            chip(
+              "status",
+              sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
+              sm && sm.color,
+            ),
+          ],
+        }),
+        // Explicit Create. The Figma frame has no button — it assumes Enter —
+        // but with the panel's own Update button sitting right below the card,
+        // "fill the fields, press the save button" hit Update instead: that
+        // commits the PARENT and closes the panel, so the child was never
+        // created and the draft went with it. Enter still commits.
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-actions`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__subtask-create-submit`,
+              content: LOCALE.CREATE,
+              bubble: 0,
+              service: "create-subtask",
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+      ].filter(Boolean),
+    });
+  };
+
+  return [
+    header,
+    ...subs.map(subRow),
+    draft && canAdd ? creator() : null,
+    // Only when there is genuinely nothing: with the creator open the block is
+    // not empty, and an empty-state line under an active form reads as an error.
+    !subs.length && !draft
+      ? Skeletons.Note({
+          className: `${pfx}__subtask-empty`,
+          content: LOCALE.NO_SUBTASKS,
+        })
+      : null,
+  ].filter(Boolean);
+}
+
+make.buildSubtaskRowsContent = buildSubtaskRowsContent;
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeChips = buildAssigneeChips;
+make.buildReporterChip = buildReporterChip;
 make.buildAssigneeSuggestions = buildAssigneeSuggestions;
 make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildLinkPromptContent = buildLinkPromptContent;

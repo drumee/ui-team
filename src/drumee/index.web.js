@@ -29,6 +29,14 @@ let bunldes = new Map();
 // the original URL, and sessionStorage outlives the navigation.
 require('libs/billing-deep-link').captureFromUrl();
 
+// "#/desk/wm/o/…" — a Designation link sent to somebody else, opened by a visitor
+// with no session. Captured here for the same reason and at the same moment as
+// the line above: `locationOnStart`, which wm.route() used to rely on, is
+// rewritten on every boot, so it holds "#/welcome/signin" by the time the desk
+// asks. Module scope runs while the URL is still the original one. See
+// libs/file-deep-link.
+require('libs/file-deep-link').captureFromUrl();
+
 // Google tag (gtag.js). Module scope for the same reason as the capture above:
 // this is the earliest code the app runs, which is as close as a bundle can get
 // to the <head> placement Google asks for. Self-gating — it installs nothing

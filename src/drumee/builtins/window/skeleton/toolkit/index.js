@@ -143,7 +143,33 @@ function fileNewControl(ui) {
     // Resolve write permission after mount; starting hidden prevents a flash
     // for viewers who cannot upload or create files.
     dataset: { visible: 0 },
-    kids: [newMenu(ui)],
+    // The menu is registered as a part in its own right, not just wrapped: the
+    // folder window listens for its `open` to trigger the migrate tour, and the
+    // wrapper above cannot report that — it is a plain box, and the open state
+    // lives on the menu widget. Named here rather than inside newMenu() so the
+    // part belongs to the control that owns it.
+    kids: [
+      { ...newMenu(ui), sys_pn: "new-menu", partHandler: ui },
+      // Mobile-only dim layer behind the centred card (the skin re-anchors the
+      // panel to the viewport centre on small screens). Desktop never shows it.
+      //
+      // It has to be a real framework Box rather than a CSS ::before, because
+      // ui-core's menu closes on outside click via RADIO_CLICK, and that channel
+      // is only ever fired from View.prototype.triggerHandlers — i.e. by taps on
+      // framework views. A pseudo-element would dim the screen and then swallow
+      // every tap without closing anything, trapping the user in the menu.
+      //
+      // Deliberately a SIBLING *after* the menu, so the skin can reveal it with
+      // `…__wrapper[data-state="1"] ~ &` — a plain sibling combinator keyed off
+      // the state ui-core already writes, needing neither :has() nor a second
+      // piece of state to keep in sync. Paint order is set by z-index, not by
+      // this DOM order.
+      Skeletons.Box.X({
+        className: `${cnTopbar}__new-backdrop`,
+        service: "close-new-menu",
+        uiHandler: [ui],
+      }),
+    ],
   });
 }
 
@@ -317,16 +343,55 @@ export function tabBar(ui, opt = {}) {
       ? fileViewToggle(ui)
       : "";
 
+  // The strip is the scroller for the mobile carousel (folder skin's
+  // @container block pages it two tabs at a time), so it needs to be reachable
+  // from JS — the scroll listener that tracks the current page lives in
+  // folder/index.js onPartReady("tab-bar-tabs").
+  const tabStrip = Skeletons.Box.X({
+    className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
+    sys_pn: "tab-bar-tabs",
+    partHandler: ui,
+    kids,
+  });
+
+  // Carousel footer: one dot per page of two tabs, so a phone user can see that
+  // the strip continues past the two visible tabs. Built HERE rather than at
+  // runtime because the tab count is already settled at this point — Chat and
+  // Task have been dropped for DMZ shares above, and Meeting was pushed or not.
+  // `kids` carries "" for each dropped tab, hence the filter.
+  //
+  // Folder only. The container query that reveals these is window-folder-w, and
+  // the other families that share this tab bar would each need their own skin
+  // work and their own onPartReady hook — so they render no dots at all rather
+  // than dead markup.
+  //
+  // One page means nothing to page through: data-visible=0 hides the footer, the
+  // same convention __new-ctrl uses.
+  const tabPages = Math.ceil(kids.filter(Boolean).length / 2);
+  const tabDots = isFolder
+    ? Skeletons.Box.X({
+        className: `${cnRoot}-dots ${ui.fig.family}__tab-bar-dots`,
+        sys_pn: "tab-bar-dots",
+        partHandler: ui,
+        // `page` is the only state this footer has. The scroll listener writes
+        // it and the skin maps it to the active dot, so nothing per-dot has to
+        // be touched as the strip moves.
+        dataset: { page: 0, visible: tabPages > 1 ? 1 : 0 },
+        kids: Array.from({ length: tabPages }, (_, i) =>
+          Skeletons.Box.X({
+            className: `${cnRoot}-dot ${ui.fig.family}__tab-bar-dot`,
+            service: "tab-bar-page",
+            dataset: { page: i },
+            uiHandler: [ui],
+          }),
+        ),
+      })
+    : "";
+
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
-    kids: [
-      Skeletons.Box.X({
-        className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
-        kids,
-      }),
-      splitBtn,
-    ],
+    kids: [tabStrip, splitBtn, tabDots],
   });
 }
 
@@ -1608,15 +1673,28 @@ export function zoomMenu(ui) {
                 service,
                 uiHandler: [ui],
                 dataset: { preset, active: 0 },
-                kidsOpt: { active: 0 },
                 // The glyph is pure CSS: this Box is the outline, its kid
                 // the inner block whose width/position the skin varies by
                 // `data-preset`.
+                //
+                // `active: 0` must be set on EACH kid, not via the parent's
+                // `kidsOpt` — ui-core's mergeKidsOptions rebinds its local
+                // `item` and never writes back, so kidsOpt reaches nothing.
+                // An active kid binds its own onclick, and ui-core's
+                // __handleClick calls stopPropagation() BEFORE it discovers
+                // it has no uiHandler — so the glyph swallowed the click and
+                // the preset's service never ran. Only the second click of a
+                // double-click got through (the 300ms suppressor returns
+                // before stopPropagation). Mirrors topbarMoreMenu's items.
                 kids: [
                   Skeletons.Box.X({
                     className: `${cnRoot}-glyph`,
+                    active: 0,
                     kids: [
-                      Skeletons.Element({ className: `${cnRoot}-glyph-fill` }),
+                      Skeletons.Element({
+                        className: `${cnRoot}-glyph-fill`,
+                        active: 0,
+                      }),
                     ],
                   }),
                 ],

@@ -166,16 +166,44 @@ module.exports = {
       actor: this._ftActorName(payload.actor),
     };
 
+    // The person who moved or deleted the file is not told about it: they just
+    // did it, and the notice would only name them to themselves. Everything
+    // else is identical to any other viewer — writes refused, thread locked,
+    // window back to General — so the announcement is the only difference.
+    //
+    // The event reaches them because it is addressed to every socket in the
+    // workspace (entity_sockets, media.js), which has no notion of who acted;
+    // the actor id it carries is what makes the distinction possible here.
+    const self = this._ftIsSelfActor(payload.actor);
+
     // 1. Freeze synchronously. Nothing below this line may run before the
     //    guards are in place — the popup renders async, and the user still has
     //    keyboard focus in the composer until it does.
-    this._ftFreeze(captured.fileNid);
+    //
+    //    The blur half only exists to make a dead thread read as inert BEHIND
+    //    the notice, so the actor takes writes-only: with no notice to explain
+    //    it, blurring would be a flash of unexplained grey on the way to
+    //    General.
+    this._ftFreeze(captured.fileNid, !self);
 
     // 2. Exactly one warning per accepted revoke. A second event for the same
     //    thread (duplicate socket, both presentations open) must not stack.
     if (this._ftRevoked && this._ftRevoked.key === key) return;
     this._ftRevoked = captured;
+
+    if (self) return this._finalizeRevokedFileThread();
     return this._ftShowRevokedNotice(captured);
+  },
+
+  // Did this viewer cause the transition? Compared on the server-supplied actor
+  // id (media.js _fileMoveActor sends the acting uid), never on a name: two
+  // people can share a display name, and the actor falls back to a generic
+  // label when the name is empty. Same self-check idiom the chat widget uses
+  // to tell its own messages from everyone else's.
+  _ftIsSelfActor(actor) {
+    const id = `${(actor && actor.id) || ""}`;
+    if (!id) return false;
+    return id === `${Visitor.id || ""}`;
   },
 
   // ── file deleted outright (orphaned) ────────────────────────────────────

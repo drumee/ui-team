@@ -71,6 +71,9 @@ function statusMeta(ui, key) {
       key,
       label: "",
       color: "#AEAEB2",
+      // `theme` drives every tinted status pill in the skin — a fallback
+      // without it would render `data-theme="undefined"` and match nothing.
+      theme: "default",
     }
   );
 }
@@ -96,8 +99,28 @@ function mayCreateTask(ui) {
   }
 }
 
+/**
+ * done/total pill for a task that has subtasks — shared by the Board card, the
+ * List row and the Calendar chip so all three read identically.
+ *
+ * Returns null when the task has no subtasks: the spec is explicit that the
+ * badge only exists when there is something to count, and rendering an empty
+ * "0/0" would be a dead affordance. `data-complete` lets the skin tint the
+ * finished state without a second class.
+ */
+function subtaskBadge(ui, t, cls) {
+  const { done, total } = ui.getSubtaskCount(t);
+  if (!total) return null;
+  return Skeletons.Note({
+    className: cls,
+    content: `${done}/${total}`,
+    attrOpt: { "data-complete": done === total ? "1" : "0" },
+  });
+}
+
 module.exports = {
   mayCreateTask,
+  subtaskBadge,
   PRIORITY_RANK,
   fullName,
   assigneeUids,

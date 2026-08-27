@@ -1,5 +1,134 @@
 @use "mixins/drumee";
 
+// ── Board colour system (Figma 2040-106090) ──────────────────────────────────
+// Every column carries a `theme` key from this 10-swatch palette. Column colour
+// MUST be keyed on `data-theme` — never on `data-status` / `data-column`: a
+// built-in column's key is a literal status word ("todo"), but a CUSTOM column's
+// key is its 16-char task_column.id (uniqueId()), so per-key rules only ever
+// matched the four seeded built-ins and left every user-created column grey.
+// That is why clicking a custom status pill used to look like a no-op: the
+// handler flipped data-active correctly, but no rule matched to fill the pill.
+//
+// Tints (translucent pill / chip washes). The board column body and the board
+// card pill keep their own inline maps below: those carry element-specific Figma
+// alphas (2021:117822 / 2040-106090) that deliberately differ from these.
+$theme-tints: (
+  "orange": rgba(232, 161, 59, 0.15),
+  "yellow": rgba(235, 210, 18, 0.16),
+  "green": rgba(84, 182, 132, 0.15),
+  "cyan": rgba(101, 208, 234, 0.16),
+  "blue": rgba(113, 163, 244, 0.14),
+  "purple": rgba(89, 80, 255, 0.1),
+  "pink": rgba(255, 168, 220, 0.2),
+  "red": rgba(215, 78, 73, 0.12),
+);
+
+// Solid accents — must mirror COLUMN_THEMES in index.js, the single source of
+// truth. Dots take their colour inline from there (styleOpt / --pill-dot); only
+// text colour, which has no element of its own, is duplicated here.
+$theme-colors: (
+  "orange": #e8a13b,
+  "yellow": #ebd212,
+  "green": #54b684,
+  "cyan": #65d0ea,
+  "blue": #71a3f4,
+  "purple": #847eff,
+  "pink": #ffa8dc,
+  "red": #d74e49,
+);
+
+// Tint an element from its own `data-theme`. $default covers theme "default"
+// and any unrecognised value, so each caller keeps the neutral tone it had.
+@mixin theme-tint($default) {
+  background: $default;
+
+  @each $theme, $tint in $theme-tints {
+    &[data-theme="#{$theme}"] {
+      background: $tint;
+    }
+  }
+}
+
+// ── Size-adaptive modal metrics (detail / create / new-board popups) ─────────
+// The task popups live INSIDE the workspace window, so their usable box is the
+// window's content area — never the viewport. The Figma chrome is a fixed
+// pixel budget (64px backdrop inset + 64px panel padding + 64px of gaps +
+// header + footer ≈ 287px) and only the body flexes, so on a short host — a
+// 14" laptop leaves the panel root ~450px — both columns collapse to a ~110px
+// scroll port and neither can show one complete field.
+//
+// These mixins hold the reclaimed metrics; the `@container task-modal` blocks
+// at the foot of this file apply them by AVAILABLE SIZE. Container queries
+// (not `@media`) for the same reason as `@container cal` further down: the
+// window is resizable, so the viewport says nothing about the panel's box.
+// The `data-mobile` rules keep their own metrics — see the `:not()` guards.
+
+// One shared scroll port instead of two. The desktop detail layout gives the
+// main column and the rail an `overflow-y: auto` each, which is right when the
+// popup is tall and actively harmful when it is short: two ~110px ports, each
+// too small to show one complete field. Handing the scroll to the body means a
+// single gesture moves the whole issue, exactly as Jira's issue view does.
+@mixin tasks-modal-single-scroll {
+  .tasks-panel__modal-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .tasks-panel__modal-main,
+  .tasks-panel__modal-side {
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  // The detail main column reserves a 12px gutter for its own scrollbar; once
+  // the body owns the scroll that gutter is just dead width.
+  .tasks-panel__modal-main {
+    padding-right: 0;
+  }
+
+  // Stretch so the rail's accent border runs the full scrolled height rather
+  // than stopping at the last field.
+  .tasks-panel__modal-side {
+    align-self: stretch;
+  }
+}
+
+// Single COLUMN, for hosts too narrow to seat a 380px rail beside the main
+// column. Built on the shared scroll port above, then wrapped: `flex-wrap`
+// rather than `flex-direction`, because Box.X / Box.Y own the direction in the
+// framework and SCSS must not fight it (CLAUDE.md → "Never add display:flex or
+// flex-direction for Box elements").
+//
+// $rail — only the detail panel has a left accent to relocate to a top
+// divider; the create modal's side column has no divider and must not gain one.
+@mixin tasks-modal-stacked($rail: false) {
+  @include tasks-modal-single-scroll;
+
+  .tasks-panel__modal-body {
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
+
+  .tasks-panel__modal-main,
+  .tasks-panel__modal-side {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .tasks-panel__modal-side {
+    @if $rail {
+      padding: 12px 0 0;
+      border-left: 0;
+      border-top: 3px solid var(--col-primary-40, #5950ff);
+    } @else {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+}
+
 .tasks-panel {
   &__ui {
     width: 100%;
@@ -10,18 +139,32 @@
     min-width: 0;
   }
 
-  // Reveal the "Drop files to attach" overlay while a file is dragged over.
-  // data-file-drag is never set while a comment is being edited — that state
-  // hands the drop surface to the comment (data-comment-file-drag below), so
-  // the two overlays can't appear at once.
-  &[data-file-drag="1"] &__drop-overlay {
+  // Reveal the "Drop files to attach" overlay while a file is dragged over its
+  // region. The flag lives on the ZONE ELEMENT, not the panel root, and
+  // _setDragAffordance clears the previous element before setting the next —
+  // so exactly one overlay is ever visible, the invariant the old pair of root
+  // flags held, generalised to N zones.
+  &__attachments[data-drop-active="1"] > &__drop-overlay,
+  &__create-files[data-drop-active="1"] > &__drop-overlay,
+  &__comment-composer[data-drop-active="1"] > &__comment-drop-overlay,
+  &__comment-row[data-drop-active="1"] > &__comment-drop-overlay,
+  &__comment-replybox[data-drop-active="1"] > &__comment-drop-overlay {
     opacity: 1;
     visibility: visible;
   }
 
-  &[data-comment-file-drag="1"] &__comment-drop-overlay {
-    opacity: 1;
-    visibility: visible;
+  // Breathing room around the "Drop files to attach" overlay while it is up, so
+  // the dashed frame does not sit flush against the content it covers.
+  &__attachments[data-drop-active="1"],
+  &__comment-composer[data-drop-active="1"] {
+    padding: 20px;
+  }
+
+  // Each zone anchors its own overlay.
+  &__attachments,
+  &__create-files,
+  &__comment-composer {
+    position: relative;
   }
 
   // Instant feedback for heavy view switches (Project Health links, viewbar
@@ -98,6 +241,35 @@
     // Twin of __ui's clamp — keep the column stack from widening the root past
     // its cell so the board's overflow-x engages.
     min-width: 0;
+    // Query container anchor for the compact viewbar at the foot of this file.
+    // Deliberately the PANEL, not the viewport and not the host window: the
+    // task panel shares the folder window's split body with the file list, so
+    // a 900px window can still leave the panel at 400px — a viewport `@media`
+    // misses that entirely, and `@container window-folder-w` would measure the
+    // whole window rather than the strip's actual room. Same reasoning that
+    // put the folder window's own container on the window instead of a media
+    // query, applied one level further in.
+    //
+    // Safe to contain here: __root is already `position: relative`, so it is
+    // the containing block its absolutely-positioned overlays (__detail-wrapper
+    // / __create-wrapper / __board-wrapper, all `position: absolute; inset: 0`)
+    // already resolve against — the implied `contain: layout` changes nothing
+    // for them, and there is no `position: fixed` descendant to trap. It also
+    // implies no PAINT containment, so nothing gets newly clipped.
+    container-type: inline-size;
+    container-name: tasks-panel-w;
+  }
+
+  // Mount point for the active view (board / list / calendar / gantt / summary),
+  // named "view-host" so a filter keystroke re-feeds only this subtree. Purely
+  // structural: it repeats the flex clamps every view root carries so inserting
+  // it changes nothing about the layout, and it stays in the min-width:0 chain
+  // (__ui → __root → here → __main) that lets the board scroll horizontally.
+  &__view-host {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    align-items: stretch;
   }
 
   // ── Member filter dropdown ────────────────────────────────────
@@ -241,6 +413,13 @@
       $line: 16px,
       $color: var(--col-primary-40, #5950ff)
     );
+
+    // Hidden rather than unmounted while no filter is set, so the flag can be
+    // flipped in place (see _syncFilterAffordances) without rebuilding the
+    // popup — which would destroy the keyword input the user is typing in.
+    &[data-active="0"] {
+      display: none;
+    }
   }
 
   // Accordion category (row + collapsible value body).
@@ -382,9 +561,10 @@
 
   // ── Columns ───────────────────────────────────────────────────
   &__column {
-    // `--col-accent` (set inline per column from the COLUMNS table) still drives
-    // the drag-drop highlight; the static tints below are the exact Figma
-    // per-status overlays (2021:117822) keyed on `data-column`.
+    // `--col-accent` (set inline per column from getColumns) still drives the
+    // drag-drop highlight; the static tints below are the exact Figma overlays
+    // (2021:117822), keyed on `data-theme` — see the note at the top of this
+    // file for why never on `data-column`.
     // Grow to fill the panel when a few columns fit, but never shrink below
     // 260px — once the columns can't all fit at that width, they stop
     // collapsing and __main scrolls horizontally instead (at every size).
@@ -429,7 +609,8 @@
   // (TO DO → IN PROGRESS → REVIEW → COMPLETE) instead of stretching to fit.
   @media (max-width: 650px) {
     &__ui,
-    &__root {
+    &__root,
+    &__view-host {
       max-width: 100%;
     }
 
@@ -542,14 +723,13 @@
     border-radius: 16px;
     background-color: rgba(0, 0, 0, 0.05);
   }
-  &__column[data-column="in_progress"] &__column-title-dot-group {
-    background-color: rgba(89, 80, 255, 0.1);
-  }
-  &__column[data-column="to_review"] &__column-title-dot-group {
-    background-color: rgba(232, 161, 59, 0.15);
-  }
-  &__column[data-column="complete"] &__column-title-dot-group {
-    background-color: rgba(61, 222, 140, 0.15);
+  // Keyed on the column's theme, not its id — see $theme-tints. (Written as a
+  // descendant loop rather than @include theme-tint because the flag lives on
+  // the column, one level up from the pill.)
+  @each $theme, $tint in $theme-tints {
+    &__column[data-theme="#{$theme}"] &__column-title-dot-group {
+      background-color: $tint;
+    }
   }
 
   &__column-count {
@@ -557,7 +737,7 @@
     justify-content: center;
   }
 
-  // Count sits outside the pill, tinted with the exact per-status color.
+  // Count sits outside the pill, tinted with its column's accent.
   &__column-count-text {
     @include drumee.typo(
       $size: 14px,
@@ -566,14 +746,10 @@
       $color: var(--normal-fg-50, #65656c)
     );
   }
-  &__column[data-column="in_progress"] &__column-count-text {
-    color: #5950ff;
-  }
-  &__column[data-column="to_review"] &__column-count-text {
-    color: #e8a13b;
-  }
-  &__column[data-column="complete"] &__column-count-text {
-    color: #54b684;
+  @each $theme, $color in $theme-colors {
+    &__column[data-theme="#{$theme}"] &__column-count-text {
+      color: $color;
+    }
   }
 
   // ── Task card (Trello-like) ───────────────────────────────────
@@ -1091,6 +1267,12 @@
   &__board-backdrop {
     position: absolute;
     inset: 0;
+    // Query container for the size-adaptive popup metrics at the foot of this
+    // file. `inset: 0` gives the backdrop a definite box in both axes, which is
+    // what `container-type: size` requires — and that box IS the panel root,
+    // i.e. exactly the space the popup has to work with.
+    container-type: size;
+    container-name: task-modal;
     background: rgba(250, 250, 250, 0.05);
     backdrop-filter: blur(30px);
     align-items: center;
@@ -1101,8 +1283,10 @@
   &__board-modal {
     position: relative;
     width: 520px;
-    max-width: 94%;
-    max-height: 88vh;
+    max-width: calc(100% - 32px);
+    // Bounded by the WINDOW, not the viewport: 88vh overflowed the panel root
+    // whenever the workspace window was shorter than the screen.
+    max-height: calc(100% - 32px);
     gap: 24px;
     padding: 32px;
     box-sizing: border-box;
@@ -1284,6 +1468,10 @@
   &__create-backdrop {
     position: absolute;
     inset: 0;
+    // Query container for the size-adaptive popup metrics (see the mixins at
+    // the head of this file and the `@container task-modal` blocks at its foot).
+    container-type: size;
+    container-name: task-modal;
     background: rgba(250, 250, 250, 0.05);
     backdrop-filter: blur(30px);
     align-items: center;
@@ -1429,8 +1617,10 @@
     .tasks-panel__desc-editor {
       height: 100%;
       // Jira-style tall description: the box takes the bulk of the modal's
-      // main column so the create form reads description-first.
+      // main column so the create form reads description-first — but capped to
+      // the room the popup actually has (see __detail-panel __desc-editor).
       min-height: 240px;
+      min-height: min(240px, 30cqh);
       max-height: none;
     }
   }
@@ -1570,36 +1760,20 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #aeaeb2;
-    }
-    &[data-status="in_progress"]::before {
-      background: #5950ff;
-    }
-    &[data-status="to_review"]::before {
-      background: #e8a13b;
-    }
-    &[data-status="complete"]::before {
-      background: #54b684;
+      // The dot takes the column's own colour, handed down inline as
+      // --pill-dot by the skeleton (a ::before can't be styled inline).
+      background: var(--pill-dot, #aeaeb2);
     }
 
     &:hover {
       background: rgba(0, 0, 0, 0.03);
     }
 
+    // Selected pill fills with its column's theme tint. Keyed on data-theme so
+    // a custom column lights up exactly like a built-in — see $theme-tints.
     &[data-active="1"] {
       border-color: transparent;
-    }
-    &[data-status="todo"][data-active="1"] {
-      background: rgba(0, 0, 0, 0.05);
-    }
-    &[data-status="in_progress"][data-active="1"] {
-      background: rgba(89, 80, 255, 0.1);
-    }
-    &[data-status="to_review"][data-active="1"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"][data-active="1"] {
-      background: rgba(61, 222, 140, 0.15);
+      @include theme-tint(rgba(0, 0, 0, 0.05));
     }
   }
 
@@ -1741,6 +1915,10 @@
   &__detail-backdrop {
     position: absolute;
     inset: 0;
+    // Query container for the size-adaptive popup metrics (see the mixins at
+    // the head of this file and the `@container task-modal` blocks at its foot).
+    container-type: size;
+    container-name: task-modal;
     background: rgba(250, 250, 250, 0.05);
     backdrop-filter: blur(30px);
     align-items: center;
@@ -1769,29 +1947,52 @@
   }
 
   // Description | Files two-up row atop the detail main column.
-  // Reporter (task creator) — avatar + name, read-only.
-  &__detail-reporter {
+  // (The Reporter field renders the shared __assignee-picker — it is editable
+  // now, so it no longer has an inline avatar+name row of its own.)
+
+  // Breadcrumb shown only when the open task is a child: names the parent and
+  // is the route back to it (the X walks back there too).
+  &__detail-parent {
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    align-self: flex-start;
+    max-width: 100%;
+    // __detail-panel is a 32px-gap column, which parks the crumb miles above
+    // the title it belongs to. Pull it back to ~8px.
+    margin-bottom: -24px;
+    padding: 2px 6px 2px 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
   }
 
-  &__detail-reporter-avatar {
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    overflow: hidden;
+  &__detail-parent-ico {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+
+    svg {
+      display: block; // inline svg would sit on the baseline — see chip-ico
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
   }
 
-  &__detail-reporter-name {
+  &__detail-parent-title {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     @include drumee.typo(
-      $size: 14px,
+      $size: 12px,
       $weight: 500,
-      $line: 20px,
-      $color: var(--normal-fg-10, #0b0a21)
+      $line: 16px,
+      $color: var(--normal-fg-40, #6f6d87)
     );
   }
 
@@ -2521,8 +2722,15 @@
   // Detail-panel description: taller box (Jira issue-view ratio) than the
   // compact base height.
   &__detail-panel &__desc-editor {
+    // Fluid, not a flat floor: on a short host a 200px minimum is larger than
+    // the entire body, so the description alone forced the column to scroll
+    // before anything else could show. `cqh` resolves against the popup's
+    // query container (the backdrop = the panel root), so the box tracks the
+    // room actually available and still caps at the Figma size on a tall one.
     min-height: 200px;
     max-height: 340px;
+    min-height: min(200px, 26cqh);
+    max-height: min(340px, 42cqh);
   }
 
   // The comment composer/edit/reply inputs are shorter than the description.
@@ -2774,7 +2982,7 @@
     background: #fff;
   }
 
-  // Activity header (title + All / Comments / History tabs).
+  // Activity header (title + Comments / History tabs).
   &__activity-head {
     align-items: center;
     justify-content: space-between;
@@ -2841,9 +3049,10 @@
     gap: 8px;
   }
 
-  // Section caption, right-aligned above its list ("Comments" / "History").
-  // Only the "All" tab stacks the two runs and needs them told apart — on the
-  // single-type tabs the active tab is already the label.
+  // Section caption above its list ("Comments" / "History"). Every tab now
+  // shows exactly one run, so the active tab is already the label — the caption
+  // is kept in the markup (both sections stay structurally identical) but never
+  // drawn.
   &__section-label {
     align-self: flex-start;
     text-transform: uppercase;
@@ -2854,31 +3063,18 @@
       $line: 16px,
       $color: var(--normal-fg-40, #84848c)
     );
-  }
-
-  &__comments:not([data-tab="all"]) &__section-label {
     display: none;
   }
 
-  // Activity tabs are a pure visibility switch over two independently-fed
-  // parts: "all" shows both (comments first, change log below), the other two
-  // hide the section they exclude — caption included. Nothing is re-rendered
-  // on a tab click.
+  // The tabs are a pure visibility switch over two independently-fed parts:
+  // each tab hides the section it excludes. Nothing is re-rendered on a click,
+  // so switching can't drop the caret out of an open composer.
   &__comments[data-tab="comments"] &__activity-section[data-kind="history"],
   &__comments[data-tab="history"] &__activity-section[data-kind="comments"] {
     display: none;
   }
 
-  // On "all" the two empty states would stack ("No comments yet" + "No
-  // history") under two captions; the comment one already says the task has
-  // nothing on it, so an empty change log drops out entirely there — caption
-  // included, rather than leaving "HISTORY" hanging over a placeholder. On the
-  // History tab it stays: that tab has nothing else to show.
-  &__comments[data-tab="all"] &__activity-section[data-kind="history"][data-empty="1"] {
-    display: none;
-  }
-
-  // ── Change-log line (History / All tabs) ──────────────────────────
+  // ── Change-log line (History tab) ─────────────────────────────────
   // Lighter than a comment row — no card, small avatar, one line — so a run of
   // them reads as a log beside the comment cards.
   &__history-row {
@@ -3010,8 +3206,14 @@
   // The two icon buttons have no label to swap, so the glyph itself steps
   // aside and the spinner takes its place — the button keeps its box, so
   // neither the comment footer nor the attachment card reflows mid-request.
+  //
+  // Third case, same recipe: a chip being OPENED (node_info + a kind load) puts
+  // the spinner where its file-type icon sits. The flag is on the chip, not on
+  // the icon, because the chip is the control that was clicked — hence the
+  // descendant selector.
   &__comment-attachment-unlink[data-loading="1"],
-  &__comment-action-ico[data-loading="1"] {
+  &__comment-action-ico[data-loading="1"],
+  &__comment-attachment[data-loading="1"] &__comment-attachment-ico {
     pointer-events: none;
     position: relative;
 
@@ -3031,6 +3233,22 @@
       border-radius: 50%;
       animation: tasks-panel-spin 0.7s linear infinite;
     }
+  }
+
+  // A chip mid-open takes no further clicks: a second one would open a second
+  // window. _isControlBusy refuses it as well — this is the half that stops the
+  // click ever being dispatched.
+  &__comment-attachment[data-loading="1"] {
+    pointer-events: none;
+  }
+
+  // A chip being detached (its ✕ clicked, the unlink in flight) is inert for the
+  // same reason and dimmed a little further than an upload in progress: it is
+  // leaving, not arriving. The spinner stays on the ✕ — the control doing the
+  // work — so this state adds no second one.
+  &__comment-attachment[data-removing="1"] {
+    pointer-events: none;
+    opacity: 0.5;
   }
 
   // ── Pending-file states ───────────────────────────────────────────
@@ -3089,6 +3307,37 @@
   // The spinner and the retry button are positioned against the thumb box.
   &__attachment-thumb-box {
     position: relative;
+  }
+
+  // ── Busy row: attachment uploads in flight on this comment ─────────
+  // The ROW ITSELF keeps its pointer events. It has to stay a hit-test target
+  // or resolveZone's closest(".tasks-panel__comment-row[data-comment-id]")
+  // misses and the row silently stops being a drop zone — a row mid-upload
+  // still accepts more files. So the contents go inert instead, which is what
+  // makes the row read as disabled: body links, reply, reactions, edit, delete,
+  // unlink and opening a committed attachment are all out of reach.
+  //
+  // A row being EDITED is exempt from the inertness (not from the dimming): a
+  // drop resolves to the row even while its editor is open, and freezing a
+  // half-typed comment behind a large upload would trap the author — Cancel
+  // already refuses while files are in flight.
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-avatar,
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-main {
+    pointer-events: none;
+  }
+
+  &__comment-row[data-busy="1"] > &__comment-main > * {
+    opacity: 0.5;
+  }
+
+  // Two exceptions to the dimming, both because they are what the user is
+  // looking at: the strip carrying the spinner and filenames, and the editor
+  // (plus its Save / Cancel) of a row being edited. Declared after the rule
+  // above, which it ties with on specificity.
+  &__comment-row[data-busy="1"] &__comment-attachments,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-field,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-actions {
+    opacity: 1;
   }
 
   // Files already attached to a saved comment.
@@ -3159,6 +3408,55 @@
     }
   }
 
+  // The trailing slot is ALWAYS rendered, and holds one 12px control in every
+  // state but error: the ✕ (unlink when committed, discard while queued or
+  // failed, a spinner in its place mid-transfer) — or nothing at all on someone
+  // else's committed file, which cannot be unlinked from here. Reserving it is
+  // what keeps every chip the same size, so the in-flight → committed swap
+  // costs zero layout: both sides of that swap are one control.
+  //
+  // Error is the exception, carrying retry BESIDE the ✕ so a file that failed
+  // can be either re-sent or thrown away. It is a terminal state — nothing
+  // swaps out of it without a click — and it already reads as different with
+  // its red border, so the extra 16px is not a reflow anyone watches happen.
+  &__comment-attachment-slot {
+    flex: 0 0 auto;
+    min-width: 12px;
+    height: 12px;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__comment-attachment[data-status="uploading"],
+  &__comment-attachment[data-status="downloading"] {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  &__comment-attachment[data-status="error"] {
+    border-color: var(--signal-error, #d74e49);
+  }
+
+  &__comment-attachment-retry {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    position: relative; // anchors the hit expansion below
+    color: var(--signal-error, #d74e49);
+
+    // A 12px glyph is a small target. Expand the hit area without changing
+    // layout — same trick __comment-action-ico uses, so it is consistent
+    // rather than novel.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border-radius: 6px;
+    }
+  }
+
   // Bordered comment card (Figma Activity: 1px border, radius 12, padding 16).
   &__comment-row {
     gap: 12px;
@@ -3208,13 +3506,14 @@
     );
   }
 
+  // Provenance under the (editable) reporter picker: "Created by X · <date>",
+  // where the creator half shows only while it differs from the reporter.
+  // A block, not an inline tail — the picker above it owns the whole row.
   &__detail-reporter-time {
     font-size: 12px;
     line-height: 1.2;
     color: var(--normal-fg-30, rgba(11, 10, 33, 0.55));
-    margin-left: 8px;
-    white-space: nowrap;
-    align-self: center;
+    margin-top: 2px;
   }
 
   &__comment-body {
@@ -3316,11 +3615,20 @@
       }
     }
 
-    // Flyover tooltip: the framework appends it as a child and shows it on
-    // hover. A small dark pill centred below the icon.
+    // Flyover tooltip: the framework appends it as a CHILD of the icon
+    // (ui-core __addTooltips → this.$el.append), so it is clipped by any
+    // scrolling ancestor — __modal-main, whose `overflow-y: auto` also makes
+    // overflow-x compute to auto (on a short host the scrollport moves up to
+    // __modal-body instead, but it is still a scrollport, so this holds).
+    //
+    // It therefore opens ABOVE the icon, not below. The action row is the LAST
+    // row of a comment card, so on the last comment of the feed a tooltip
+    // hanging below fell past the bottom of the scrollport and was cut in half;
+    // on any other comment it landed on top of the next card's border. There is
+    // always the comment's own body above the icons, so upwards always fits.
     .tooltips {
       position: absolute;
-      top: calc(100% + 8px);
+      bottom: calc(100% + 8px);
       left: 50%;
       transform: translateX(-50%);
       padding: 4px 8px;
@@ -3337,15 +3645,15 @@
         $color: var(--tooltip-fg, #ffffff)
       );
 
-      // Small caret pointing up at the icon.
+      // Small caret pointing down at the icon.
       &::before {
         content: "";
         position: absolute;
-        bottom: 100%;
+        top: 100%;
         left: 50%;
         transform: translateX(-50%);
         border: 4px solid transparent;
-        border-bottom-color: var(--tooltip-bg, #1f1f28);
+        border-top-color: var(--tooltip-bg, #1f1f28);
       }
     }
   }
@@ -3764,6 +4072,7 @@
 
   &__viewbar-item {
     // Icon + label row (was a bare text Note).
+    position: relative; // anchor for the locked tooltip (&__viewbar-item-tip)
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
@@ -3784,6 +4093,60 @@
       color: var(--accent, #fa8540);
       background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
     }
+
+    // Not on this plan. Receded, but deliberately NOT `cursor: not-allowed`
+    // and NOT pointer-events:none — the click is the upsell, so the tab has to
+    // stay as clickable as it looks. Opacity alone says "unavailable" while
+    // the padlock says why; the modal says the rest.
+    &[data-locked="1"] {
+      opacity: 0.55;
+
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+  }
+
+  // Padlock after the label on a tab this plan cannot open. pointer-events
+  // none for the same reason as the leading glyph: the click belongs to the
+  // tab's set-view service.
+  &__viewbar-item-lock {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 12px;
+    margin-left: 2px;
+    color: currentColor;
+    pointer-events: none;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  // Hover label for a locked tab. Same treatment as the shared `&__tip` but
+  // opening DOWNWARD: the viewbar sits near the top of the panel, and a tip
+  // above the first row would be clipped by the window edge.
+  &__viewbar-item-tip {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    background: var(--normal-fg-10, rgba(28, 28, 30, 0.92));
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-bg-elevated, #fff)
+    );
   }
 
   // SVG glyph in front of each view tab's label. pointer-events:none so the
@@ -3811,6 +4174,20 @@
   &__viewbar-tabs {
     align-items: center;
     gap: 4px;
+  }
+
+  // Carousel footer, hidden by default: it only means anything in the compact
+  // `@container tasks-panel-w` layout at the foot of this file, which pages the
+  // strip two tabs at a time. Without this it would still be a visible extra
+  // row under the viewbar at every width — the skeleton always renders it.
+  //
+  // !important for the reason webrtc/skin/meeting-shell.scss documents at
+  // length: this footer is a Box.X, so ui-styles/container.css matches it with
+  // `.drumee-box[data-flow="x"] { display: flex }` at specificity 0,2,0. A bare
+  // single-class rule here is 0,1,0 and simply loses — the dots would show on
+  // desktop. Do not "clean this up".
+  &__viewbar-dots {
+    display: none !important;
   }
 
   &__viewbar-new {
@@ -4207,19 +4584,10 @@
     padding: 3px 8px;
     border-radius: 6px;
     cursor: pointer;
-    background: rgba(174, 174, 178, 0.16);
     transform-origin: left center;
     transition: filter 0.12s, transform 0.12s;
-
-    &[data-status="in_progress"] {
-      background: rgba(89, 80, 255, 0.12);
-    }
-    &[data-status="to_review"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"] {
-      background: rgba(84, 182, 132, 0.15);
-    }
+    // Tint keyed on data-theme, so custom columns colour their chips too.
+    @include theme-tint(rgba(174, 174, 178, 0.16));
     &:hover {
       filter: brightness(0.97);
       transform: scale(1.03);
@@ -4375,26 +4743,15 @@
     );
   }
 
-  // Status pill — tint + dot driven by data-status (matches COLUMNS colors).
+  // Status pill — tint keyed on data-theme (see $theme-tints); the dot takes
+  // the column colour inline, like the board card's.
   &__cal-card-status {
     align-self: flex-start;
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
     border-radius: 71px;
-
-    &[data-status="todo"] {
-      background: rgba(174, 174, 178, 0.18);
-    }
-    &[data-status="in_progress"] {
-      background: rgba(89, 80, 255, 0.12);
-    }
-    &[data-status="to_review"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"] {
-      background: rgba(84, 182, 132, 0.15);
-    }
+    @include theme-tint(rgba(174, 174, 178, 0.18));
   }
 
   &__cal-card-status-dot {
@@ -4403,16 +4760,6 @@
     height: 8px;
     border-radius: 50%;
     background: #aeaeb2;
-  }
-
-  &__cal-card-status[data-status="in_progress"] &__cal-card-status-dot {
-    background: #5950ff;
-  }
-  &__cal-card-status[data-status="to_review"] &__cal-card-status-dot {
-    background: #e8a13b;
-  }
-  &__cal-card-status[data-status="complete"] &__cal-card-status-dot {
-    background: #54b684;
   }
 
   &__cal-card-status-label {
@@ -4575,7 +4922,12 @@
   }
 
   &__gantt-chevron {
-    flex: 0 0 auto;
+    // Fixed width, not `auto`: the `data-empty` spacer on a childless or child
+    // row has no glyph, so an auto-width one collapses to 0 and the titles it
+    // was meant to align drift left.
+    flex: 0 0 10px;
+    width: 10px;
+    text-align: center;
     cursor: pointer;
     @include drumee.typo(
       $size: 16px,
@@ -4927,9 +5279,34 @@
     box-sizing: border-box;
   }
 
-  // Task cell — checkbox + title
+  // Task cell — chevron + checkbox + title
   &__list-title-cell {
     gap: 10px;
+  }
+
+  // Expand/collapse control for a task with children. Fixed width so the
+  // inert `data-empty` spacer on a childless or child row reserves exactly the
+  // same column and every checkbox stays on one vertical line.
+  &__list-chevron {
+    flex: 0 0 10px;
+    width: 10px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease;
+    @include drumee.typo(
+      $size: 16px,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &[data-open="1"] {
+      transform: rotate(90deg);
+    }
+    &[data-empty="1"] {
+      cursor: default;
+      visibility: hidden;
+    }
   }
 
   &__list-check {
@@ -5001,7 +5378,8 @@
     }
   }
 
-  // Status cell — tinted pill + colored dot + dark label
+  // Status cell — tinted pill + colored dot + dark label. Tint keyed on
+  // data-theme (see $theme-tints); the dot is inline from the column colour.
   &__list-status {
     align-items: center;
     gap: 8px;
@@ -5011,19 +5389,7 @@
     box-sizing: border-box;
     white-space: nowrap;
     @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: #0b0a21);
-
-    &[data-status="todo"] {
-      background: rgba(0, 0, 0, 0.05);
-    }
-    &[data-status="in_progress"] {
-      background: rgba(89, 80, 255, 0.1);
-    }
-    &[data-status="to_review"] {
-      background: rgba(232, 161, 59, 0.15);
-    }
-    &[data-status="complete"] {
-      background: rgba(61, 222, 140, 0.15);
-    }
+    @include theme-tint(rgba(0, 0, 0, 0.05));
   }
 
   &__list-status-dot {
@@ -5032,15 +5398,6 @@
     height: 8px;
     border-radius: 50%;
     background: #aeaeb2;
-  }
-  &__list-status[data-status="in_progress"] &__list-status-dot {
-    background: #5950ff;
-  }
-  &__list-status[data-status="to_review"] &__list-status-dot {
-    background: #e8a13b;
-  }
-  &__list-status[data-status="complete"] &__list-status-dot {
-    background: #54b684;
   }
 
   // Due cell — overlay pill
@@ -6186,9 +6543,557 @@
       }
     }
   }
+
+  // ── Child task items (Figma 58471:222398 / 58471:222650) ────────
+  // Lives in the detail panel's metadata sidebar, so everything here is sized
+  // for that narrow column rather than the main content width.
+  &__subtasks {
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  &__subtask-header {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  &__subtask-header-text {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__subtask-heading {
+    font-weight: 600;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // "Add child work item" — the caption under the heading.
+  &__subtask-subheading {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+  }
+
+  &__subtask-count {
+    flex-shrink: 0;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 100px;
+    background: var(--normal-bg-80, #f0f0f5);
+    font-weight: 700;
+    @include drumee.typo(
+      $size: 10px,
+      $line: 18px,
+      $color: var(--normal-fg-30, #4a4a68)
+    );
+
+    &[data-complete="1"] {
+      background: #d8f0e4;
+      color: #1f6b47;
+    }
+  }
+
+  &__subtask-add {
+    // positioning context for the __tip flyover child
+    position: relative;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+
+    // NB no `overflow: hidden` here (unlike __task-remove): the flyover
+    // tooltip is appended as a CHILD of this button, and clipping the button
+    // would clip the tooltip with it.
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-10, #0b0a21);
+    }
+
+    // The tooltip is appended INSIDE this button and the shared rule centres it
+    // (left:50% + translateX(-50%)). This button sits flush against the right
+    // edge of __modal-side, which is `overflow-y:auto` — and a non-visible
+    // overflow on one axis forces the other to `auto` too, so a centred nowrap
+    // label half a column wide was clipped and popped a horizontal scrollbar on
+    // hover. Anchor it to the button's right edge instead: same label, entirely
+    // inside the column, no reflow.
+    .tasks-panel__tip {
+      left: auto;
+      right: 0;
+      transform: none;
+    }
+  }
+
+  // ── An existing child ───────────────────────────────────────────
+  &__subtask-row {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 2px;
+    border-bottom: 1px solid var(--normal-bg-80, #f0f0f5);
+    cursor: pointer;
+
+    &:last-of-type {
+      border-bottom: 0;
+    }
+    &:hover {
+      background: var(--normal-bg-90, #fafafc);
+    }
+    // Struck through rather than hidden: this is a checklist, and a
+    // disappearing row loses the done/total context.
+    &[data-done="1"] .tasks-panel__subtask-title {
+      text-decoration: line-through;
+      color: var(--normal-fg-50, #8a8aa3);
+    }
+  }
+
+  // One-click remove, styled exactly like the board card's __task-remove:
+  // hidden until the row is hovered, red on its own hover.
+  &__subtask-del {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    padding: 2px;
+    border-radius: 4px;
+    color: var(--normal-fg-50, #84848c);
+    opacity: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    transition:
+      opacity 0.15s,
+      color 0.15s,
+      background 0.15s;
+
+    svg {
+      display: block;
+      width: 10px;
+      height: 10px;
+    }
+
+    &:hover {
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.1);
+    }
+  }
+
+  &__subtask-row:hover &__subtask-del {
+    opacity: 1;
+  }
+
+  &__subtask-check {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    border: 1.5px solid var(--normal-bg-70, #e0e0ea);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      fill: transparent;
+    }
+
+    &[data-done="1"] {
+      background: #54b684;
+      border-color: #54b684;
+      svg {
+        fill: #fff;
+      }
+    }
+  }
+
+  &__subtask-text {
+    flex: 1;
+    min-width: 0;
+    gap: 1px;
+  }
+
+  &__subtask-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__subtask-meta {
+    @include drumee.typo(
+      $size: 10px,
+      $line: 14px,
+      $color: var(--normal-fg-50, #8a8aa3)
+    );
+  }
+
+  &__subtask-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__subtask-empty {
+    padding: 4px 2px;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--normal-fg-50, #8a8aa3)
+    );
+  }
+
+  // ── Creator card ────────────────────────────────────────────────
+  // White card, 1px hairline, 12px radius / padding / gap (Figma 2065:85499).
+  // position:relative anchors the chip dropdowns.
+  &__subtask-card {
+    position: relative;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--normal-bg-100, #fff);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+  }
+
+  &__subtask-card-head {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__subtask-card-title {
+    flex: 1;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font-family: inherit;
+      font-weight: 600;
+      @include drumee.typo(
+        $size: 12px,
+        $line: 18px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+    }
+  }
+
+  &__subtask-card-close {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
+  }
+
+  &__subtask-card-chips {
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  // Explicit Create for the inline creator. The card is a form inside a panel
+  // that has its own Update button, so it needs a commit of its own — see the
+  // skeleton's note.
+  &__subtask-card-actions {
+    justify-content: flex-end;
+  }
+
+  &__subtask-create-submit {
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--col-primary-40, #5950ff);
+    font-weight: 600;
+    transition: opacity 0.15s;
+    @include drumee.typo($size: 12px, $line: 16px, $color: #fff);
+
+    &:hover {
+      opacity: 0.88;
+    }
+    // _setControlBusy stamps this while the create is in flight.
+    &[data-loading="1"] {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+  }
+
+  // Priority / Due date / Status chips — outlined pill, caret or calendar.
+  &__subtask-chip {
+    position: relative;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 2px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
+    }
+    &[data-open="1"] {
+      border-color: var(--col-primary-100, #5950ff);
+    }
+  }
+
+  &__subtask-chip-label {
+    @include drumee.typo(
+      $size: 11px,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__subtask-chip-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__subtask-chip-ico {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+
+    svg {
+      // Image.Svg drops a bare <svg> into a plain <div>, and an inline svg
+      // sits on the text baseline — which is why the caret and the calendar
+      // hung below the middle of the chip instead of centring with the label.
+      display: block;
+      width: 10px;
+      height: 10px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
+  }
+
+  // The native picker covers the whole chip so a click opens the platform date
+  // UI; it is invisible, the chip's own label is what shows.
+  &__subtask-date-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+
+    &::-webkit-calendar-picker-indicator {
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+  }
+
+  // ── Chip dropdown ───────────────────────────────────────────────
+  // Anchored to the chip that opened it (__subtask-chip is position:relative),
+  // not to the card — against the card it dropped below the whole form, well
+  // away from the control that was clicked.
+  &__subtask-menu {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 132px;
+    // Card-anchored it was left/right-pinned, so its width was fixed and long
+    // column names ellipsised. Chip-anchored it sizes to content, so cap it or
+    // a long custom column name widens the menu straight out of the card.
+    max-width: 240px;
+    z-index: 30;
+    padding: 4px;
+    gap: 1px;
+    border-radius: 10px;
+    background: var(--normal-bg-100, #fff);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    max-height: 176px;
+    overflow-y: auto;
+  }
+
+  &__subtask-menu-item {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover,
+    &[data-selected="1"] {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+  }
+
+  &__subtask-menu-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__subtask-menu-label {
+    min-width: 0; // required for the ellipsis to engage inside the flex row
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // ── Gantt: expanded child rows + chevron ────────────────────────
+  &__gantt-chevron {
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease;
+
+    &[data-open="1"] {
+      transform: rotate(90deg);
+    }
+    // Rendered but blank on a childless or child row, purely to hold the
+    // column so every title lines up.
+    &[data-empty="1"] {
+      cursor: default;
+      visibility: hidden;
+    }
+  }
+
+  &__gantt-arow[data-child="1"] {
+    background: var(--normal-bg-90, #fafafc);
+
+    .tasks-panel__gantt-title {
+      padding-left: 18px;
+      @include drumee.typo(
+        $size: 12px,
+        $color: var(--normal-fg-30, #4a4a68)
+      );
+    }
+  }
+
+  // Child bars read as a lighter variant of the parent's, so a nested run is
+  // legible as subordinate at a glance.
+  &__gantt-track[data-child="1"] &__gantt-bar {
+    height: 14px;
+    margin-top: 5px;
+    opacity: 0.72;
+  }
+
+  // ── Gantt: create-child control on every row ────────────────────
+  &__gantt-add-child {
+    // positioning context for the __tip flyover child
+    position: relative;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-40, #6f6d87);
+    }
+
+    // Right-anchored for the same reason as __subtask-add's: centred, this
+    // nowrap label spilled out of the gantt's left column and across the
+    // timeline header. Flipped BELOW the button too — every gantt row has the
+    // toolbar and the month/day header directly above it, and covering
+    // "Delete selected" mid-hover is worse than covering the next data row.
+    .tasks-panel__tip {
+      left: auto;
+      right: 0;
+      top: calc(100% + 6px);
+      bottom: auto;
+      transform: none;
+    }
+  }
+
+  // Revealed on row hover, like the row's delete control.
+  &__gantt-arow:hover &__gantt-add-child {
+    opacity: 1;
+  }
 }
 
 html[data-theme="dark"] .tasks-panel {
+  // Subtasks: the tokens carry themselves, but the three literals in the light
+  // rules (the all-done green and the checkbox fill) burn out on a dark ground.
+  &__task-subcount,
+  &__list-subcount,
+  &__cal-chip-subcount,
+  &__cal-card-subcount,
+  &__gantt-subcount,
+  &__subtask-count {
+    &[data-complete="1"] {
+      background: rgba(34, 181, 115, 0.22);
+      color: #7cc79b;
+    }
+  }
+
+  &__subtask-check[data-done="1"] {
+    background: #1f8f5c;
+    border-color: #1f8f5c;
+  }
+
+  &__subtask-row:hover,
+  &__list-row[data-sub="1"] {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  // The creator card and its chip dropdown are white/hairline in light mode;
+  // both need a real surface on a dark ground or they vanish into it.
+  &__subtask-card,
+  &__subtask-menu {
+    background: var(--normal-bg-100, #1b1f22);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  &__subtask-menu {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  &__subtask-chip {
+    border-color: rgba(255, 255, 255, 0.14);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  &__subtask-menu-item {
+    &:hover,
+    &[data-selected="1"] {
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
   &__task-card {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 
@@ -6469,10 +7374,15 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
 // TOP-LEVEL rules (not nested under `.tasks-panel`) keyed on `data-mobile="1"`,
 // which the skeleton stamps DIRECTLY on each of these roots via
 // `Visitor.isMobile()`. Deliberately NOT a viewport `@media` (the panel lives
-// in a resizable window, so the viewport is never the panel width),
-// NOT `@container` (unsupported in the target runtime), and NOT an ancestor
-// `[data-device]` selector — the flag is on the element the rule targets, so
-// matching cannot fail. IMPORTANT: these must stay at file top level. An
+// in a resizable window, so the viewport is never the panel width) and NOT an
+// ancestor `[data-device]` selector — the flag is on the element the rule
+// targets, so matching cannot fail. It is not `@container` either, but for a
+// different reason than an earlier revision of this comment claimed: container
+// queries DO work here (see `@container cal` below and the size-adaptive popup
+// tiers at the foot of this file — verified through dart-sass +
+// postcss-preset-env + cssnano). They answer "how big is the box", whereas
+// this flag answers "is this a phone", which no amount of box size can tell
+// you. The two are complementary, and both are used. IMPORTANT: these must stay at file top level. An
 // earlier version sat inside the dark-theme `.flatpickr-calendar` block, so
 // every selector compiled with that prefix and never matched — the reason
 // prior attempts appeared to "do nothing". The modal bodies + the detail
@@ -6596,5 +7506,347 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
 @keyframes tasks-panel-view-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+// ── Size-adaptive task popups (detail/update · create · new-board) ───────────
+// Applies the reclaimed metrics defined by the mixins at the head of this file.
+// The query container is each popup's backdrop (`container-name: task-modal`),
+// whose box is the panel root — the real space the popup has, as opposed to
+// the viewport, which tells us nothing about a resizable window.
+//
+// TOP-LEVEL rules on purpose: this file has several top-level blocks after the
+// main `.tasks-panel { … }` (dark theme, flatpickr), and rules appended into
+// the wrong one compile with that prefix and silently never match.
+//
+// Tiers, applied cumulatively (later blocks are tighter and win on source
+// order — `@container` adds no specificity of its own):
+//   ≤760px tall  compact  — chrome shrinks, two columns and two scrollers kept
+//   ≤560px tall  short    — chrome shrinks further, ONE shared scroll port
+//   ≤900px wide  narrow   — single column (no room for a 380px rail beside it)
+//   ≤720px wide  compact chrome for narrow hosts
+// Height and width are independent: a wide-but-short host keeps its columns
+// and merely shares their scroll, which reads better than stacking would.
+// `data-mobile="1"` popups are excluded throughout: the phone layout has its
+// own tested metrics above, and stamping both would let them fight.
+
+// ── Compact: short host, two columns retained ────────────────────────────────
+@container task-modal (max-height: 760px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    width: calc(100% - 32px);
+    height: calc(100% - 24px);
+    padding: 20px 24px;
+    gap: 16px;
+
+    .tasks-panel__detail-title textarea {
+      font-size: 19px;
+      line-height: 24px;
+      min-height: 26px;
+      // Two lines instead of three: a long title used to eat ~60px of a body
+      // that only had ~110px to give.
+      max-height: 52px;
+    }
+
+    .tasks-panel__modal-main {
+      gap: 16px;
+    }
+
+    .tasks-panel__modal-side {
+      padding: 0 20px;
+      gap: 14px;
+    }
+
+    .tasks-panel__detail-row {
+      gap: 8px;
+    }
+
+    .tasks-panel__detail-actions {
+      padding-top: 12px;
+    }
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    width: calc(100% - 32px);
+    height: calc(100% - 24px);
+
+    .tasks-panel__create-form {
+      padding: 20px 24px;
+      gap: 16px;
+    }
+
+    .tasks-panel__create-title {
+      font-size: 19px;
+      line-height: 24px;
+    }
+
+    .tasks-panel__modal-body {
+      gap: 24px;
+    }
+
+    .tasks-panel__modal-main,
+    .tasks-panel__modal-side {
+      gap: 20px;
+    }
+
+    .tasks-panel__create-field {
+      gap: 8px;
+    }
+  }
+
+  .tasks-panel__board-modal {
+    padding: 20px 24px;
+    gap: 16px;
+  }
+}
+
+// ── Short: one shared scroll port beats two unusable ones ────────────────────
+@container task-modal (max-height: 560px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+    height: calc(100% - 12px);
+    padding: 14px 16px;
+    gap: 12px;
+
+    @include tasks-modal-single-scroll;
+
+    .tasks-panel__detail-title textarea {
+      font-size: 17px;
+      line-height: 22px;
+      min-height: 24px;
+      max-height: 44px;
+    }
+
+    // With one shared scroll port the description no longer competes with the
+    // fields under it for a tiny viewport, so a flat workable floor is enough
+    // here — no need for the fluid `cqh` cap the taller tiers use.
+    .tasks-panel__desc-editor {
+      min-height: 110px;
+      max-height: 220px;
+    }
+
+    .tasks-panel__detail-actions {
+      padding-top: 10px;
+    }
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+    height: calc(100% - 12px);
+
+    @include tasks-modal-single-scroll;
+
+    .tasks-panel__create-form {
+      padding: 14px 16px;
+      gap: 12px;
+    }
+
+    .tasks-panel__create-title {
+      font-size: 17px;
+      line-height: 22px;
+    }
+
+    .tasks-panel__create-field-grow .tasks-panel__desc-editor {
+      min-height: 110px;
+    }
+  }
+
+  .tasks-panel__board-modal {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+}
+
+// ── Narrow: no room for a 380px rail beside the main column ──────────────────
+@container task-modal (max-width: 900px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    @include tasks-modal-stacked($rail: true);
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    @include tasks-modal-stacked;
+
+    .tasks-panel__create-actions,
+    .tasks-panel__create-files {
+      margin-top: 0;
+    }
+  }
+}
+
+// ── Narrow chrome: reclaim the horizontal insets too ─────────────────────────
+@container task-modal (max-width: 720px) {
+  .tasks-panel__detail-panel:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .tasks-panel__create-modal:not([data-mobile="1"]) {
+    width: calc(100% - 16px);
+
+    .tasks-panel__create-form {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+  }
+}
+
+// ── Compact viewbar (container query) ────────────────────────────────────────
+// Fires whenever the TASK PANEL's own width drops below 700px, regardless of
+// viewport — so it covers both a real phone and the panel sharing a wide
+// desktop folder window with the file list, which a viewport media query would
+// miss. Container anchor is `tasks-panel__root` (see its rule above).
+//
+// The view-tab strip used to be a plain nowrap flex row: five tabs (Board,
+// Calendar, Gantt, List, Summary) measuring ~500px with their gaps, in a bar
+// that has ~366px of usable width at a 390px phone. List and Summary were
+// simply cut off the right edge with nothing to say they existed. It now pages
+// two tabs at a time with a dot per page underneath (skeleton/index.js builds
+// the footer), mirroring the folder window's own tab-bar carousel.
+@container tasks-panel-w (max-width: 700px) {
+  .tasks-panel {
+    // Row spacing is set per-row (see the `margin-top`s on __viewbar-dots and
+    // __viewbar-right below) rather than by one uniform `row-gap`, because the
+    // three stacked rows are not three peers: the dot footer is the TAB
+    // STRIP's pager and has to read as part of it, while the controls are a
+    // separate group. A single row-gap can only make all three equidistant,
+    // which leaves the dots floating ambiguously between the two and reads as
+    // if they belong to the buttons.
+    //
+    // Vertical padding opens up with them — the bar is three rows tall here
+    // instead of one, and the desktop 6px looked pinched against the panel
+    // edge once it stacked.
+    &__viewbar {
+      row-gap: 0;
+      padding: 10px 12px 12px;
+    }
+
+    &__viewbar-tabs {
+      // Full row so a page is exactly the strip's width — the arithmetic that
+      // the item's flex-basis and the JS `scrollLeft / clientWidth` both rely
+      // on. Also what puts the controls and the footer on their own lines.
+      flex: 1 1 100%;
+      min-width: 0;
+      gap: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      // Hidden, not absent: the dots are the affordance now, and a scrollbar
+      // under a two-item strip reads as a second, competing one.
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    // Two per page. The gap sits BETWEEN the pair, so each item is half of what
+    // is left after it — not half the strip, which would overflow by the gap
+    // and let a sliver of the third tab show at the right edge.
+    &__viewbar-item {
+      flex: 0 0 calc((100% - 8px) / 2);
+      min-width: 0;
+      // REQUIRED, not decorative: the base rule carries `padding: 5px 12px` and
+      // sets no box-sizing, so under content-box the flex-basis above is the
+      // CONTENT width and each tab renders 24px wider than the half it was
+      // asked for. Measured at a 356px strip: 198px per tab, so the pair plus
+      // its gap came to 404px and a sliver of the third tab sat in the gutter
+      // — the exact overflow the halving is meant to prevent.
+      box-sizing: border-box;
+      justify-content: center;
+      scroll-snap-align: start;
+    }
+
+    // Half a narrow strip still clears the longest label ("Calendar"), but the
+    // lock glyph on a gated tab can tip it over — ellipsis rather than a glyph
+    // pushed out of its own pill.
+    &__viewbar-item-label {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    // The locked-tab tip is a HOVER affordance anchored below its tab, so in a
+    // strip that now clips its own vertical overflow it would be sheared off
+    // mid-line. Drop it here: there is no hover on the touch layouts this
+    // fires for, and the tier gate is unaffected — a locked tab still takes
+    // the tap and still opens the upsell (index.js `set-view`).
+    &__viewbar-item-tip {
+      display: none;
+    }
+
+    // ── Right cluster: centred ──────────────────────────────────────────────
+    // The base rule pins this right with `margin-left: auto` so it hugs the
+    // edge on whichever row it lands. On its own full-width row that reads as
+    // the controls having drifted off to one side, so centre them instead —
+    // margin-left must be reset explicitly or `auto` still eats the free space
+    // before `justify-content` ever gets to distribute it.
+    &__viewbar-right {
+      flex: 1 1 100%;
+      margin-left: 0;
+      justify-content: center;
+      // Last of the three rows. The skeleton emits this BEFORE the dot footer
+      // (so the desktop bar can right-align it with margin-left:auto against
+      // the tabs, with the hidden footer contributing nothing) — that source
+      // order is worth leaving alone, so the stack is reordered here instead.
+      // Same move, and the same reasoning, as the folder skin's `order: -1` on
+      // its file-controls row.
+      order: 1;
+      // The clear break in the bar: everything above it belongs to the tab
+      // strip, everything from here down is controls.
+      margin-top: 14px;
+    }
+
+    // ── Carousel footer ─────────────────────────────────────────────────────
+    &__viewbar-dots {
+      // Explicit, and !important to answer the base rule's own !important
+      // above (which is there to beat the framework's 0,2,0 flex rule).
+      // @container contributes no specificity, so this call site can reach
+      // 0,1,0 at best and needs the same lever to win.
+      display: flex !important;
+      flex: 1 1 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      // Deliberately tighter than the gap under it: this pager sits directly
+      // beneath the strip it pages, close enough to read as attached to it.
+      // `order` is left at its default 0 so it lands between the tabs (also 0,
+      // and earlier in source) and the controls (order 1).
+      margin-top: 8px;
+
+      // One page — nothing to page through (set in the skeleton). Five view
+      // tabs always make three pages, so this is dormant today; it is the same
+      // guard the folder tab bar carries and costs nothing to keep correct.
+      &[data-visible="0"] {
+        display: none !important;
+      }
+    }
+
+    &__viewbar-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 6px;
+      border-radius: 50%;
+      background-color: var(--normal-fg-10, #0b0a21);
+      opacity: 0.25;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    // Active dot, driven entirely by the footer's own data-page — so a swipe
+    // only has to update one attribute and no per-dot state exists to drift.
+    // Five view tabs is the fixed set, so three pages is the ceiling and
+    // listing them beats generating a rule per index.
+    &__viewbar-dots[data-page="0"] &__viewbar-dot:nth-child(1),
+    &__viewbar-dots[data-page="1"] &__viewbar-dot:nth-child(2),
+    &__viewbar-dots[data-page="2"] &__viewbar-dot:nth-child(3) {
+      opacity: 1;
+      transform: scale(1.15);
+    }
   }
 }

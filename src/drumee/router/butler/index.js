@@ -250,8 +250,14 @@ class __router_butler extends LetcBox {
       case _e.close:
         this.trigger("close-content");
         this.sleep();
+        // One-shot. _onClose was set and never cleared, so a callback handed to
+        // say()/alert()/message() stayed armed and fired again on the close of
+        // every LATER, unrelated dialog — a navigating callback would then take
+        // the user somewhere the second dialog said nothing about.
         if (_.isFunction(this._onClose)) {
-          return this._onClose();
+          const done = this._onClose;
+          this._onClose = null;
+          return done();
         }
         break;
 
@@ -282,8 +288,8 @@ class __router_butler extends LetcBox {
    * @param {*} cb
    * @returns
    */
-  say(message, cb) {
-    this.feed(require("./skeleton/message")(this, message, "info"));
+  say(message, cb, opt = {}) {
+    this.feed(require("./skeleton/message")(this, message, "info", opt));
     this.el.dataset.state = _a.open;
     if (_.isFunction(cb)) {
       return (this._onClose = cb);

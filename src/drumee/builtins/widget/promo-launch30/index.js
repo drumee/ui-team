@@ -24,7 +24,12 @@ class __promo_launch30 extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._surface = opt.surface === "billing" ? "billing" : "home";
-    this._state = opt.state === "welcome" ? "welcome" : "offer";
+    this._state = ["welcome", "ended"].includes(opt.state) ? opt.state : "offer";
+    // Second screen of the 'ended' gate — reached only by choosing Free with a
+    // workspace that no longer fits it. Informational: the plan already
+    // changed on promoExpiryWorker's timer long before this renders.
+    this._endedOverLimit = false;
+    this._overLimit = opt.over_limit || null;
     this._claiming = false;
     this._trialEndsAt = opt.trial_ends_at || null;
     // Seeded position + campaign end date (product decisions 2026-07-31,
@@ -46,6 +51,13 @@ class __promo_launch30 extends LetcBox {
     this._portalToBody();
     this._render();
     this._warmAdminConsole();
+    if (this._state === "ended") {
+      // A gate, not a one-shot: rendering it must NOT mark anything seen, or
+      // it would never come back and the owner could dodge the choice by
+      // reloading. Only answering it (_markEndedAnswered) closes it for good.
+      this._track("trial_ended_popup_shown", { over_limit: this._overLimit ? 1 : 0 });
+      return;
+    }
     // Show-once: mark the surface seen as soon as the modal actually
     // renders, not only on an explicit X-dismiss (tester feedback
     // 2026-07-31 #3 — the full modal must never re-appear once shown,
@@ -105,6 +117,37 @@ class __promo_launch30 extends LetcBox {
 
   // ───────── skeleton accessors ─────────
   getState() { return this._state; }
+  isOverLimitScreen() { return this._endedOverLimit; }
+
+  /**
+   * Price for the gate's headline figure, in the viewer's locale.
+   *
+   * Intl where available so a French viewer reads "29 $" and not "$29"; the
+   * plain form is the fallback for anything that cannot do it.
+   */
+  formatMoney(amount) {
+    try {
+      return new Intl.NumberFormat(Visitor.language && Visitor.language() || "en", {
+        style: "currency", currency: "USD", maximumFractionDigits: 0,
+      }).format(amount);
+    } catch (e) {
+      return `$${amount}`;
+    }
+  }
+
+  /**
+   * Report a step of the trial-ended funnel.
+   *
+   * Named events rather than one generic upgrade-popup counter, because the
+   * KPI that matters is trial -> paid, and it has to be separable from every
+   * other upgrade prompt in the product. Self-gating off drumee.com — see
+   * libs/gtag.
+   */
+  _track(name, params = {}) {
+    try {
+      require("libs/gtag").event(name, params);
+    } catch (e) { /* measurement must never break the flow being measured */ }
+  }
   getSurface() { return this._surface; }
   isClaiming() { return this._claiming; }
   getTrialEndsAt() { return this._trialEndsAt; }
@@ -240,6 +283,61 @@ class __promo_launch30 extends LetcBox {
   }
 
   /**
+   * The trial-ended gate has been ANSWERED.
+   *
+   * Distinct from _markSeen: the other surfaces record "we showed it", this
+   * records "they chose", and it is the only thing that stops the modal
+   * returning on the next home mount. Awaited by the callers so the choice is
+   * durable before the modal disappears — a failed write here means the gate
+   * comes back, which is the safe way to be wrong.
+   */
+  _markEndedAnswered() {
+    return this.postService(SERVICE.promo.dismiss, {
+      hub_id: this._hubId(),
+      surface: "ended",
+    }).catch((e) => this.warn && this.warn("[promo-launch30] ended dismiss failed", e));
+  }
+
+  /**
+   * Upgrade — hand off to the existing Billing checkout, preselected on Team.
+   *
+   * Deliberately no payment UI of our own: the billing page owns Stripe, the
+   * cycle switch, proration and every error path already. This only names the
+   * destination.
+   */
+  async _endUpgrade() {
+    this._track("trial_upgrade_clicked", { plan: "team" });
+    await this._markEndedAnswered();
+    this._close();
+    RADIO_BROADCAST.trigger("desk:open-billing-page", { plan: "team" });
+  }
+
+  /**
+   * Continue on Free.
+   *
+   * Two outcomes. A workspace that still fits Free is simply let go — the
+   * choice is recorded and the gate closes. One that does not gets the second
+   * screen, which explains what is locked and how long they have; the org is
+   * ALREADY over-limit at this point (promoExpiryWorker ran OverLimit.evaluate
+   * when it cleared the entitlement), so this reports that state rather than
+   * causing it.
+   */
+  async _endContinueFree() {
+    this._track("trial_continue_free_clicked");
+    await this._markEndedAnswered();
+    if (!this._overLimit) return this._close();
+    this._track("trial_downgrade_lock_applied", this._overLimit);
+    this._endedOverLimit = true;
+    this._render();
+  }
+
+  /** Straight into the existing over-limit resolution flow. */
+  _endResolve() {
+    this._close();
+    RADIO_BROADCAST.trigger("desk:open-admin-console", { tab: "storage" });
+  }
+
+  /**
    * D2: land on Admin Console → Members with Invite open.
    *
    * This used to set two flags and call location.reload(), on the reasoning
@@ -296,6 +394,14 @@ class __promo_launch30 extends LetcBox {
 
       case "promo-later":
         return this._close();
+
+      // ── trial-ended gate ──
+      case "promo-end-upgrade":
+        return this._endUpgrade();
+      case "promo-end-continue-free":
+        return this._endContinueFree();
+      case "promo-end-resolve":
+        return this._endResolve();
 
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);

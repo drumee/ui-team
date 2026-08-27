@@ -61,7 +61,11 @@ function getOptions(ui, cycle = "monthly") {
         // 3, not "1 (solo)" — the 2026-08-14 restructure opens invites on the
         // entry tiers. Counts the owner, like every other tier's number.
         row(LOCALE.UP_TO_3, LOCALE.FEAT_UNIT_MEMBER),
-        row("5 GB", LOCALE.FEAT_UNIT_STORAGE),
+        // 25 GB since the 2026-08-18 pricing change. The figure lives in the
+        // catalog (yp.plan free.quota.$.disk) and is mirrored here as a literal
+        // like every other card's — see schemas
+        // yellow_page/patches/2026-08-18-free-plan-25gb.sql.
+        row("25 GB", LOCALE.FEAT_UNIT_STORAGE),
         // NOT ENFORCED YET. The 1-pager's Free/Pro split on task depth and
         // meeting length is labelled here first, gate to follow. Both under-
         // promise for now — a Free account actually gets the full tracker and
