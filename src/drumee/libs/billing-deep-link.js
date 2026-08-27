@@ -66,13 +66,28 @@ function urlWantsBilling() {
 }
 
 /**
- * Pull the preselect out of the hash's query string, e.g.
- * `#/desk/billing?plan=pro&cycle=yearly&tab=checkout`. Only the keys actually
- * present are returned; validating the VALUES is the billing widget's job (this
- * lib stays dumb so a malformed param can never break the boot). Returns {}
- * when the link carries no preselect.
+ * Pull the preselect out of the hash's query string, e.g. the link the segment
+ * campaign mails carry:
  *
- * @returns {{plan?:string, cycle?:string, tab?:string}}
+ *   #/desk/billing?plan=team&cycle=monthly&tab=checkout&promo=EMAILMKT270826_2
+ *
+ * Only the keys actually present are returned; validating the VALUES is the
+ * billing widget's job (this lib stays dumb so a malformed param can never
+ * break the boot). Returns {} when the link carries no preselect.
+ *
+ * AN ALLOWLIST, NOT A PASSTHROUGH, and it has to stay one. This runs from the
+ * router's initialize, before a module — and therefore before anything that
+ * could sanitise a value — is in play, and whatever it returns is handed
+ * straight to sessionStorage by arm(). Forwarding arbitrary keys would put
+ * unread link content into storage and then into a widget's options.
+ *
+ * `promo` is the coupon the CTA carries into checkout. It is on this list
+ * rather than read from the URL later for the reason the whole module exists:
+ * arm() stores what THIS function returns, so a key missing here is a key lost
+ * across the sign-in reload as well — and a mail recipient is very often
+ * signed out.
+ *
+ * @returns {{plan?:string, cycle?:string, tab?:string, promo?:string}}
  */
 function parseParams() {
   const out = {};
@@ -81,7 +96,7 @@ function parseParams() {
     const q = hash.indexOf("?");
     if (q === -1) return out;
     const usp = new URLSearchParams(hash.slice(q + 1));
-    for (const k of ["plan", "cycle", "tab"]) {
+    for (const k of ["plan", "cycle", "tab", "promo"]) {
       const v = usp.get(k);
       if (v) out[k] = v;
     }
@@ -95,7 +110,7 @@ function parseParams() {
  * Remember that this visit should end on the billing screen, with whatever
  * plan/cycle/tab preselect the link carried.
  *
- * @param {Object} [params] preselect from parseParams()
+ * @param {Object} [params] preselect from parseParams() — {plan,cycle,tab,promo}
  */
 function arm(params) {
   try {
@@ -126,7 +141,7 @@ function captureFromUrl() {
  * The url is accepted as a second source so the signed-in case does not depend
  * on storage at all: there, the hash is still intact by the time the desk boots.
  *
- * @returns {Object|null} the preselect object ({plan?,cycle?,tab?}, possibly
+ * @returns {Object|null} the preselect object ({plan?,cycle?,tab?,promo?}, possibly
  *   empty) when this boot should open billing, else null. An empty object is
  *   still truthy, so callers that only test truthiness keep working unchanged.
  */
