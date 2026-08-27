@@ -1664,6 +1664,7 @@
   "COLOR_RED": "Rojo",
   "ADD_COLUMN": "Añadir columna",
   "COLUMN_NAME": "Nombre de la columna",
+  "COLUMN_MARK_DONE": "Las tareas aquí están terminadas",
   "WEEKS": "Semanas",
   "MONTHS": "Meses",
   "DETAIL": "Detalle",

@@ -85,6 +85,7 @@
     "column_list": "task.column_list",
     "column_create": "task.column_create",
     "column_update": "task.column_update",
+    "column_set_done": "task.column_set_done",
     "column_delete": "task.column_delete",
     "column_reorder": "task.column_reorder",
     "comment_list": "task.comment_list",

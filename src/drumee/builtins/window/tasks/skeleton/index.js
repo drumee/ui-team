@@ -404,6 +404,45 @@ const make = function (ui) {
             }),
           ),
         }),
+        // "Tasks here are done". is_done is what completion is keyed on
+        // everywhere — completed_at, the subtask done/total badge, the
+        // completion filters — but until this toggle existed only the seeded
+        // built-in `complete` ever carried it, so a board whose columns were
+        // renamed or replaced had no finished column at all. More than one
+        // column may carry it; this is a per-column flag, not a radio.
+        // The click service sits on the ROW, so every descendant in the click
+        // path carries `active: 0` — WITHOUT it ui-core binds an onclick to
+        // each of them (letc.js: `active` defaults to 1 when unset) and
+        // __handleClick calls e.stopPropagation() BEFORE triggerHandlers, so a
+        // click landing on the label or the knob — i.e. almost every real
+        // click — would die there and never reach this row. `active` does not
+        // cascade and `kidsOpt: {active: 0}` is a no-op, so it must be written
+        // on each node.
+        Skeletons.Box.X({
+          className: `${pfx}__col-done-row`,
+          bubble: 0,
+          service: "col-done-toggle",
+          uiHandler: [ui],
+          taskColumn: col.key,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-done-label`,
+              content: LOCALE.COLUMN_MARK_DONE,
+              active: 0,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__col-done-toggle`,
+              dataset: { on: col.is_done ? 1 : 0 },
+              active: 0,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__col-done-knob`,
+                  active: 0,
+                }),
+              ],
+            }),
+          ],
+        }),
         Skeletons.Box.X({
           className: `${pfx}__col-menu-actions`,
           kids: [

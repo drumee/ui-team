@@ -1671,6 +1671,7 @@
   "COLOR_RED": "红色",
   "ADD_COLUMN": "添加列",
   "COLUMN_NAME": "列名称",
+  "COLUMN_MARK_DONE": "此列中的任务视为已完成",
   "WEEKS": "周",
   "MONTHS": "月",
   "DETAIL": "详情",
