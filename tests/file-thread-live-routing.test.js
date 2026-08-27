@@ -7,6 +7,10 @@ const chatSource = readFileSync(
   join(__dirname, "../src/drumee/builtins/widget/chat/index.js"),
   "utf8",
 );
+const folderSource = readFileSync(
+  join(__dirname, "../src/drumee/builtins/window/folder/index.js"),
+  "utf8",
+);
 
 function extractClassMethod(source, name) {
   const start = source.indexOf(`  ${name}(`);
@@ -19,6 +23,7 @@ function extractClassMethod(source, name) {
 
 const underscore = {
   isArray: Array.isArray,
+  isFunction: (value) => typeof value === "function",
 };
 const attrs = {
   area: "area",
@@ -31,6 +36,7 @@ const attrs = {
   private: "private",
   ticket: "ticket",
   ui: "ui",
+  list: "list",
 };
 const services = {
   contact: {},
@@ -51,8 +57,19 @@ function compileMethod(name) {
   )(underscore, attrs, services, visitor, require);
 }
 
+function compileFolderMethod(name) {
+  return new Function(
+    "_",
+    "_a",
+    `return (${extractClassMethod(folderSource, name)});`,
+  )(underscore, attrs);
+}
+
 const matchesScopedChannel = compileMethod("matchesScopedChannel");
 const onWsMessage = compileMethod("onWsMessage");
+const notifyFileThreadCreated = compileMethod("_notifyFileThreadCreated");
+const getSendThreadId = compileMethod("_getSendThreadId");
+const onFileThreadCreated = compileFolderMethod("onFileThreadCreated");
 
 function fileThreadEvent({ fileNid, fileThreadId, messageId }) {
   return {
@@ -171,4 +188,69 @@ test("a file-thread child never appears in General chat", () => {
 
   assert.equal(received.length, 0);
   assert.equal(acknowledged.length, 0);
+});
+
+test("Reply in thread keeps the General quote visual but omits its invalid parent id", () => {
+  const chat = {
+    threadId: "general-message-a",
+    _replyInThread: true,
+    isFileThreadMode: () => true,
+  };
+
+  assert.equal(getSendThreadId.call(chat), "");
+});
+
+test("a normal reply inside a file thread still sends its child parent id", () => {
+  const chat = {
+    threadId: "file-thread-child-b",
+    _replyInThread: false,
+    isFileThreadMode: () => true,
+  };
+
+  assert.equal(getSendThreadId.call(chat), "file-thread-child-b");
+});
+
+test("the first local file-thread post refreshes the owning folder", () => {
+  const calls = [];
+  const folder = {
+    onFileThreadCreated(data) {
+      calls.push(data);
+    },
+  };
+  const chat = {
+    getParentByKind(kind) {
+      assert.equal(kind, "window_folder");
+      return folder;
+    },
+  };
+  const first = { file_thread: { is_new: 1 } };
+  notifyFileThreadCreated.call(chat, first);
+  notifyFileThreadCreated.call(chat, { file_thread: { is_new: 0 } });
+  assert.deepEqual(calls, [first]);
+});
+
+test("folder refresh reloads General and the thread rail without resetting a file scope", async () => {
+  const calls = [];
+  const list = { restart: () => calls.push("general-restart") };
+  const chat = {
+    isFileThreadMode: () => false,
+    ensurePart(name) {
+      assert.equal(name, attrs.list);
+      return Promise.resolve(list);
+    },
+  };
+  const folder = {
+    _populateThreadRail: () => calls.push("rail-refresh"),
+    ensurePart(name) {
+      assert.equal(name, "folder-chat");
+      return Promise.resolve(chat);
+    },
+  };
+  await onFileThreadCreated.call(folder);
+  assert.deepEqual(calls, ["rail-refresh", "general-restart"]);
+
+  calls.length = 0;
+  chat.isFileThreadMode = () => true;
+  await onFileThreadCreated.call(folder);
+  assert.deepEqual(calls, ["rail-refresh"]);
 });
