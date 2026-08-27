@@ -172,7 +172,29 @@ class __form_folder extends LetcBox {
       team: { area: "private", post: "permission_restricted" },
       share: { area: "share", post: "permission_restricted" },
     };
-    const { area, post } = FLOW[status] || FLOW.team;
+    const { area, post: defaultPost } = FLOW[status] || FLOW.team;
+
+    /**
+     * WHICH SURFACE OPENS AFTER THE WORKSPACE EXISTS, and who gets to decide.
+     *
+     * By default the type decides, per FLOW above: a team workspace opens the
+     * members panel in this same wrapper-modal, a share workspace closes the
+     * form and launches the secure-share dock as a window.
+     *
+     * A caller may override it, and exactly one does today — the
+     * activate-workspace onboarding flow, which needs an external workspace to
+     * end on the members panel so its invite step has a surface to run on (the
+     * dock offers link management, not membership). The override is threaded
+     * desk -> wm -> here rather than decided here, because "is an onboarding
+     * walkthrough running" is not something this form can or should know.
+     *
+     * Scoped deliberately. Changing FLOW.share itself would take the
+     * secure-share dock off EVERY workspace creation in the app — topbar,
+     * sidebar, workspace-list, context menu and reward-flow alike — at the one
+     * moment link management matters most for an external workspace. With no
+     * override the behaviour below is byte-identical to what it always was.
+     */
+    const post = this.mget("post_override") || defaultPost;
 
     this._pending = 1;
     this.postService(SERVICE.desk.create_hub, {

@@ -1971,6 +1971,12 @@ class desk_module extends LetcBox {
         // The tutorial exists and owns the hand-off from here.
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
+        // Was this the onboarding tour, or a user rewatching it from Get help?
+        // Recorded HERE because the flag that answers it is consumed by
+        // _chainHelpReturnAfterTutorial below, and the activation flow that
+        // needs the answer does not run until the tour is destroyed. See
+        // _maybeStartActivateWorkspace.
+        this._tutorialWasAutomatic = !this._tourReturnsToHelp;
         this._chainRewardFlowAfterTutorial(child);
         // Only fires for a tour launched from Get help; the automatic
         // post-signup run leaves the user on the desk as before.
@@ -2377,7 +2383,14 @@ class desk_module extends LetcBox {
    * walking anyone through a reward that no longer exists.
    */
   async _maybeStartRewardFlow() {
-    const forced = !!Visitor.parseModuleArgs().reward;
+    const args = Visitor.parseModuleArgs();
+    const forced = !!args.reward;
+    // `?activate=1` asked for the OTHER walkthrough. Both open by having the
+    // user create a workspace, so this one stands down rather than winning the
+    // race it normally wins and swallowing the flag — a tester on an account
+    // that happens to hold a reward_claim row would otherwise see the reward
+    // flow and conclude activation was broken.
+    if (args.activate) return;
     if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
     // Synchronous in-flight latch: onPartReady("overlay") can fire more than
     // once (e.g. re-navigation re-feeding the same module), and the guard
@@ -2463,6 +2476,135 @@ class desk_module extends LetcBox {
       });
       this._rewardFlowInFlight = false;
     });
+  }
+
+  /**
+   * Anything the create-workspace form should do differently because a guided
+   * flow is on screen.
+   *
+   * Today one thing, for one flow. activate-workspace's Step 2 invites a
+   * teammate, and it needs Step 1 to end on a surface that can do that. For a
+   * team workspace it already does — the members panel opens in the same
+   * wrapper-modal. For an EXTERNAL one the form launches the secure-share dock
+   * instead, which manages links rather than membership, so the walkthrough had
+   * no invite surface to hand over to and the user fell through to the plain
+   * Step 2 card and its popup — the route a brand-new free-solo account cannot
+   * use at all. Overriding the follow-up gives external workspaces the same
+   * panel route team workspaces get.
+   *
+   * Gated on the flow being ON SCREEN rather than on it being in Step 1
+   * specifically. It owns the screen for its whole run, so a workspace created
+   * while it is up belongs to it either way, and tracking the step here would
+   * put a second copy of that state outside the widget that owns it.
+   *
+   * Returns a spreadable object so the call site reads as "plus whatever a flow
+   * asks for", and stays empty — changing nothing — in every ordinary session.
+   */
+  _createFormOverrides() {
+    if (!this._activateFlow || this._activateFlow.isDestroyed()) return {};
+    return { post_override: "permission_restricted" };
+  }
+
+  /**
+   * Workspace activation flow (builtins/widget/activate-workspace) — the
+   * practical half of onboarding: the product tour SHOWS the app on a mock
+   * desk, this walks the user through building the real thing, a workspace
+   * with a file in it.
+   *
+   * WHEN IT RUNS. Only after an AUTOMATIC product tour — the post-signup one,
+   * or `?tutorial=1`. That is the whole gate, and it is what makes the flow
+   * one-shot without a latch to store anywhere: the automatic tour happens once
+   * per signup and nothing else re-triggers this. A user who leaves the flow
+   * half-done does not get it again, which is the accepted cost of not keeping
+   * per-user state for it (see the design doc).
+   *
+   * A tour REPLAYED from Get help is deliberately excluded: handing a
+   * months-old account a "create your first workspace" walkthrough because they
+   * rewatched the tour would be nonsense. `_tutorialWasAutomatic` is what tells
+   * the two apart, and it is recorded when the tour MOUNTS — the flag it reads,
+   * `_tourReturnsToHelp`, is consumed by _chainHelpReturnAfterTutorial in that
+   * same onPartReady, so by the time the tour is destroyed and this runs there
+   * is nothing left to read.
+   *
+   * It stays unset when no tour ran at all — a plain login, or the fallback
+   * that settles home when the tour never mounted — which turns this off for
+   * exactly the sessions that were not onboarding anybody.
+   *
+   * NOT ALONGSIDE THE REWARD FLOW. That flow opens with the same
+   * create-workspace walkthrough, and running both back to back would ask the
+   * user to build two workspaces. Reward-flow is the one that wins: it is
+   * campaign-gated, time-limited and has a prize attached, while this one is
+   * evergreen.
+   *
+   * `?activate=1` forces it for testing, the way `?reward=1` forces the reward
+   * flow — see startActivateWorkspace for why a forced run needs no special
+   * behaviour of its own, unlike a forced reward run.
+   */
+  _maybeStartActivateWorkspace() {
+    // Forced for a test run: skip the onboarding gate, but keep every guard
+    // below that stops two flows fighting over the screen.
+    if (!Visitor.parseModuleArgs().activate) {
+      // No automatic product tour this session — nobody is being onboarded.
+      if (!this._tutorialWasAutomatic) return;
+    }
+    // Reward-flow is on screen or on its way there — see the docblock. It
+    // cannot be both, because a `?activate=1` load makes that flow stand down
+    // (see _maybeStartRewardFlow), but a test run started by hand can land
+    // while it is up.
+    if (this._rewardFlowInFlight) return;
+    if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
+    return this._mountActivateWorkspace();
+  }
+
+  /**
+   * Run the activation walkthrough NOW, whatever the gate would have said.
+   *
+   * The hand-operated entry point, and the counterpart to the reward flow's
+   * `?reward=1`: `window.Desk = this`, so this is callable straight from the
+   * console —
+   *
+   *   Desk.startActivateWorkspace()
+   *
+   * — which is the only way to see the flow without a fresh signup, since its
+   * automatic trigger is the end of a tour that runs once per account. It is
+   * re-callable: the flow keeps no state and latches nothing off, so each call
+   * starts a clean run (and each run creates its own workspace).
+   *
+   * A FORCED RUN IS AN ORDINARY RUN, which is the whole difference from
+   * `?reward=1`. That flag has to be threaded into the reward widget so a test
+   * cannot write to the campaign funnel or burn one of its limited slots. There
+   * is no funnel here, no prize and no latch, so a forced run behaves exactly
+   * like a real one and the widget is never told which it is.
+   *
+   * Bypasses the gate, not the mount latch below: two of these on screen at
+   * once would be a mess whoever asked for it.
+   */
+  startActivateWorkspace() {
+    return this._mountActivateWorkspace();
+  }
+
+  /** Feed the widget into the desk `overlay` part. Shared by the automatic gate
+   *  and the hand-operated entry point above, so both mount it identically. */
+  _mountActivateWorkspace() {
+    if (this._activateFlow && !this._activateFlow.isDestroyed()) return;
+    // Same synchronous latch as the reward flow's: onPartReady("overlay") can
+    // fire more than once, and the guard above cannot see a mount still pending
+    // past the await below.
+    if (this._activateFlowInFlight) return;
+    this._activateFlowInFlight = true;
+    return Kind.waitFor("activate_workspace")
+      .then(() => this.ensurePart("overlay"))
+      .then((p) => {
+        p.feed({ kind: "activate_workspace", uiHandler: [this] });
+        this._activateFlow = p.children.last();
+        this._activateFlow.once(_e.destroy, () => {
+          this._activateFlow = null;
+        });
+        this._activateFlowInFlight = false;
+      })
+      .catch(() => {
+        this._activateFlowInFlight = false;
+      });
   }
 
   /**
@@ -2803,10 +2945,11 @@ class desk_module extends LetcBox {
    * plain login where neither happens — it was written out three times, which
    * is why the guest-join prompt is appended HERE rather than at each site.
    *
-   * Order matters and is the existing one: reward flow, then LAUNCH30, then the
-   * invited-workspace prompt. Both of the first two are full-screen and
-   * self-gating; the prompt is a small dialog and goes last so it never stacks
-   * on top of them.
+   * Order matters: reward flow, then workspace activation, then LAUNCH30, then
+   * the invited-workspace prompt. The first three are full-screen and
+   * self-gating (activation additionally stands down when the reward flow took
+   * the screen — they open with the same walkthrough); the prompt is a small
+   * dialog and goes last so it never stacks on top of them.
    *
    * `immediate` says the screen is KNOWN to be clear because a tutorial just
    * finished on it, which is the one moment the LAUNCH30 offer does not have to
@@ -2851,6 +2994,10 @@ class desk_module extends LetcBox {
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
       .then(() => this._maybeStartRewardFlow())
+      // After the reward flow, and skipped entirely when that one mounted: both
+      // open with the same create-workspace walkthrough (see
+      // _maybeStartActivateWorkspace).
+      .then(() => this._maybeStartActivateWorkspace())
       .then(() => this._maybeShowPromoLaunch30("home", { defer: !opt.immediate }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
@@ -2890,7 +3037,8 @@ class desk_module extends LetcBox {
    *   offered on the next login rather than being stacked on a live overlay.
    */
   /**
-   * Is a full-screen home flow (reward, LAUNCH30) on screen right now?
+   * Is a full-screen home flow (reward, workspace activation, LAUNCH30) on
+   * screen right now?
    *
    * Extracted from _waitForHomePopups' local busy() so the invited-workspace
    * loader can gate itself on the same answer — one definition, so the loader can
@@ -2903,7 +3051,13 @@ class desk_module extends LetcBox {
    */
   _homePopupsBusy() {
     if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
+    if (this._activateFlowInFlight) return true;
     if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
+      return true;
+    }
+    // The activation walkthrough owns the whole screen for as long as it runs,
+    // exactly like the reward flow above it.
+    if (this._activateFlow && !this._activateFlow.isDestroyed?.()) {
       return true;
     }
     try {
@@ -4007,7 +4161,11 @@ class desk_module extends LetcBox {
         // desk.create_hub ever runs (context menu, sidebar, topbar all land
         // here or on Wm's twin case).
         if (require("libs/over-limit").guardWrite("write")) return;
-        return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+        return Wm.onUiEvent(cmd, {
+          ...args,
+          service: "new-workspace",
+          ...this._createFormOverrides(),
+        });
       }
 
       case "new-note": {
@@ -4053,10 +4211,17 @@ class desk_module extends LetcBox {
         return this._openInvitePopup(cmd);
       }
 
-      // Reward-flow Step 1 walkthrough: open/close the topbar Add-new dropdown
-      // on its behalf (the desk owns the `addmenu` part). Used by the guide's
-      // Back to step from the create-modal back to the dropdown, and from the
-      // dropdown back to the Add-new button.
+      // A guided walkthrough (reward-flow's Step 1, activate-workspace's) is
+      // asking the desk to open/close the topbar Add-new dropdown on its behalf
+      // — the desk owns the `addmenu` part. Used by their Back to step from the
+      // create-modal back to the dropdown, and from the dropdown back to the
+      // Add-new button.
+      //
+      // Two names for one case: `reward-*` is the original, kept because
+      // reward-flow still fires it, and `guided-*` is what every flow written
+      // since asks for. Renaming the original would have meant editing a live
+      // campaign widget for cosmetics.
+      case "guided-set-add-menu":
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
           if (!p || !_.isFunction(p.changeState)) return;
@@ -4094,6 +4259,8 @@ class desk_module extends LetcBox {
           setCreateMenuState(_a.open);
         });
 
+      // Same pair of names, same reason as the case above.
+      case "guided-set-new-create-menu":
       case "reward-set-new-create-menu":
         return this.ensurePart("desk-new-create-group").then((p) => {
           if (p && p.el) {
@@ -4101,12 +4268,17 @@ class desk_module extends LetcBox {
           }
         });
 
-      // Relayed to the reward flow: it opened this popup through the
-      // "invite-member" service above, so the popup's uiHandler is the desk,
-      // not the flow.
+      // Relayed to whichever guided flow is running: it opened this popup
+      // through the "invite-member" service above, so the popup's uiHandler is
+      // the desk, not the flow. Both are told — they cannot be on screen
+      // together (activation stands down when the reward flow mounts), so at
+      // most one of these does anything.
       case "invitation-sent":
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitationSent();
+        }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitationSent();
         }
         return;
 
@@ -4240,8 +4412,14 @@ class desk_module extends LetcBox {
       this._invitePopup = Wm.__wrapperModal.children.last();
       this._invitePopup.once(_e.destroy, () => {
         this._invitePopup = null;
+        // Same pair as the "invitation-sent" relay above: whichever guided flow
+        // asked for this popup needs to know it has gone, and only one of them
+        // can be running.
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitePopupClosed();
+        }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitePopupClosed();
         }
       });
     });
