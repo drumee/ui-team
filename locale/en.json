@@ -2842,10 +2842,10 @@
   "SUPPORT_EMPTY_TITLE": "You're talking to a real person",
   "SUPPORT_EMPTY_TEXT": "Describe what you need help with. Screenshots and files are welcome.",
   "SUPPORT_START_CONVERSATION": "Start a conversation",
-  "SUBTASKS": "Subtasks",
-  "ADD_SUBTASK": "+ Add subtask",
-  "NO_SUBTASKS": "No subtasks yet",
-  "SUBTASK_PLACEHOLDER": "What needs to be done?",
+  "SUBTASKS": "Child task items",
+  "ADD_SUBTASK": "Add child work item",
+  "NO_SUBTASKS": "No child items yet",
+  "SUBTASK_PLACEHOLDER": "Task",
   "CALENDAR": "Calendar",
   "PERSONAL_CALENDAR": "Personal Calendar",
   "BADGE_NEW": "NEW",
@@ -2867,5 +2867,6 @@
   "PASSWORD_PROTECTION_HINT": "Set a password for access",
   "CREATE_MEETING_SEND_INVITE": "Create meeting & send invite",
   "INVITE_LINK_READY": "Invite link ready",
-  "PREVIOUS": "Previous"
+  "PREVIOUS": "Previous",
+  "CREATE_CHILD_TASK": "Create child task items"
 }

@@ -93,9 +93,15 @@ module.exports = function (ui) {
   const titleCell = (t, sub) => {
     const done = ui.isDoneStatus(t.status);
     const { total } = ui.getSubtaskCount(t);
-    // The chevron is NOT rendered at 0 subtasks — no dead affordance. It needs
-    // bubble:0 of its own: the whole row carries service:"open-detail", so
-    // without it expanding a task would also open the modal.
+    // A task with no children gets no live chevron — no dead affordance — but
+    // it still renders the element as an inert, invisible spacer. Without one
+    // its checkbox and title sit a chevron-width to the left of every
+    // expandable neighbour's, and the column visibly jitters row to row. Child
+    // rows take the spacer too: one level of nesting, so a subtask never has
+    // children of its own. Same treatment as gantt.js.
+    //
+    // The live chevron needs bubble:0 of its own: the whole row carries
+    // service:"open-detail", so without it expanding would also open the modal.
     const chevron =
       !sub && total
         ? Skeletons.Note({
@@ -107,7 +113,10 @@ module.exports = function (ui) {
             taskId: t.id,
             attrOpt: { "data-open": ui.isSubtasksOpen(t.id) ? "1" : "0" },
           })
-        : null;
+        : Skeletons.Note({
+            className: `${pfx}__list-chevron`,
+            attrOpt: { "data-empty": "1" },
+          });
     return Skeletons.Box.X({
       className: `${pfx}__list-cell ${pfx}__list-title-cell`,
       attrOpt: sub ? { "data-sub": "1" } : undefined,

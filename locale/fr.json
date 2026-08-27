@@ -2675,10 +2675,10 @@
   "SUPPORT_EMPTY_TITLE": "You're talking to a real person",
   "SUPPORT_EMPTY_TEXT": "Describe what you need help with. Screenshots and files are welcome.",
   "SUPPORT_START_CONVERSATION": "Start a conversation",
-  "SUBTASKS": "Sous-tâches",
-  "ADD_SUBTASK": "+ Ajouter une sous-tâche",
-  "NO_SUBTASKS": "Aucune sous-tâche",
-  "SUBTASK_PLACEHOLDER": "Que faut-il faire ?",
+  "SUBTASKS": "Tâches enfants",
+  "ADD_SUBTASK": "Ajouter une tâche enfant",
+  "NO_SUBTASKS": "Aucune tâche enfant",
+  "SUBTASK_PLACEHOLDER": "Tâche",
   "CALENDAR": "Calendrier",
   "PERSONAL_CALENDAR": "Calendrier personnel",
   "BADGE_NEW": "NOUVEAU",
@@ -2700,5 +2700,6 @@
   "PASSWORD_PROTECTION_HINT": "Définir un mot de passe d'accès",
   "CREATE_MEETING_SEND_INVITE": "Créer la réunion et envoyer l'invitation",
   "INVITE_LINK_READY": "Lien d'invitation prêt",
-  "PREVIOUS": "Précédent"
+  "PREVIOUS": "Précédent",
+  "CREATE_CHILD_TASK": "Créer des tâches enfants"
 }

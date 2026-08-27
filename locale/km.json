@@ -2675,9 +2675,9 @@
   "SUPPORT_EMPTY_TEXT": "Describe what you need help with. Screenshots and files are welcome.",
   "SUPPORT_START_CONVERSATION": "Start a conversation",
   "SUBTASKS": "កិច្ចការរង",
-  "ADD_SUBTASK": "+ បន្ថែមកិច្ចការរង",
+  "ADD_SUBTASK": "បន្ថែមកិច្ចការរង",
   "NO_SUBTASKS": "មិនទាន់មានកិច្ចការរង",
-  "SUBTASK_PLACEHOLDER": "តើត្រូវធ្វើអ្វី?",
+  "SUBTASK_PLACEHOLDER": "កិច្ចការ",
   "CALENDAR": "ប្រតិទិន",
   "PERSONAL_CALENDAR": "ប្រតិទិនផ្ទាល់ខ្លួន",
   "BADGE_NEW": "ថ្មី",
@@ -2699,5 +2699,6 @@
   "PASSWORD_PROTECTION_HINT": "កំណត់ពាក្យសម្ងាត់សម្រាប់ចូល",
   "CREATE_MEETING_SEND_INVITE": "បង្កើតការប្រជុំ និងផ្ញើការអញ្ជើញ",
   "INVITE_LINK_READY": "តំណអញ្ជើញរួចរាល់",
-  "PREVIOUS": "មុន"
+  "PREVIOUS": "មុន",
+  "CREATE_CHILD_TASK": "បង្កើតកិច្ចការរង"
 }

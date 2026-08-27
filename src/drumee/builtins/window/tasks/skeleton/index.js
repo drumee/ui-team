@@ -1063,9 +1063,10 @@ const make = function (ui) {
           ],
     });
 
-    // Subtasks sit between Description and Attachments, per the handoff.
-    // A re-feedable part of its own (see buildSubtaskRowsContent) so adding or
-    // ticking a child never rebuilds the panel around the user's edits.
+    // "Child task items" — the metadata sidebar, under Due date (Figma
+    // 58471:222398). A re-feedable part of its own (see
+    // buildSubtaskRowsContent) so adding or ticking a child never rebuilds the
+    // panel around the user's edits.
     //
     // Omitted entirely when the open task IS a subtask: one level of nesting
     // means it can never have children, and an empty "Subtasks / none yet"
@@ -1266,6 +1267,33 @@ const make = function (ui) {
       ],
     });
 
+    // A child opens in the SAME panel as its parent — without this the panel
+    // gives no sign it is showing a child, and no way back. Names the parent and
+    // routes to it; close-detail returns here too (see _openDetail's
+    // _detailReturnTo).
+    const parentTask = ui.isSubtask(detail)
+      ? ui.getTaskById(detail.parent_task_id)
+      : null;
+    const parentCrumb = parentTask
+      ? Skeletons.Box.X({
+          className: `${pfx}__detail-parent`,
+          bubble: 0,
+          service: "open-detail",
+          uiHandler: [ui],
+          taskId: parentTask.id,
+          kids: [
+            Skeletons.Image.Svg({
+              ico: "caret-left",
+              className: `${pfx}__detail-parent-ico`,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-title`,
+              content: parentTask.title || "",
+            }),
+          ],
+        })
+      : null;
+
     const header = Skeletons.Box.X({
       className: `${pfx}__detail-header`,
       kids: [
@@ -1321,6 +1349,7 @@ const make = function (ui) {
           attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [
+            parentCrumb,
             header,
             // Column on mobile (Box.Y) so the main content + metadata side
             // stack instead of squeezing into two narrow columns.
@@ -1332,12 +1361,7 @@ const make = function (ui) {
                   // Description, then Attachments beneath it, then the Activity
                   // feed — a single stacked column (Attachments no longer sits
                   // to the right of the Description).
-                  kids: [
-                    descriptionRow,
-                    subtasksSection,
-                    attachmentsList,
-                    commentsSection,
-                  ].filter(Boolean),
+                  kids: [descriptionRow, attachmentsList, commentsSection],
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
@@ -1347,6 +1371,9 @@ const make = function (ui) {
                     assigneeRow,
                     reporterRow,
                     dueRow,
+                    // Figma 58471:222398 puts "Child task items" here, in the
+                    // metadata column directly under Due date.
+                    subtasksSection,
                   ].filter(Boolean),
                 }),
               ],
@@ -1360,7 +1387,8 @@ const make = function (ui) {
               className: `${pfx}__reactions-picker`,
               name: "reactions",
             }),
-          ],
+            // filter: parentCrumb is null on a top-level task.
+          ].filter(Boolean),
         }),
       ],
     });
@@ -2575,7 +2603,10 @@ function commentAttachments(ui, c, isOwn) {
           uiHandler: [ui],
           pendingKey,
           commentId: c && c.id,
-          tooltips: LOCALE.RETRY || "Retry",
+          tooltips: {
+            content: LOCALE.RETRY || "Retry",
+            className: `${pfx}__tip`,
+          },
         }),
       );
     }
@@ -2602,7 +2633,10 @@ function commentAttachments(ui, c, isOwn) {
               // which is also why the slot no longer draws a spinner of its
               // own: it would double up with this one.
               attrOpt: { "data-loading": busy ? "1" : "0" },
-              tooltips: LOCALE.REMOVE || LOCALE.DELETE,
+              tooltips: {
+                content: LOCALE.REMOVE || LOCALE.DELETE,
+                className: `${pfx}__tip`,
+              },
             })
           : Skeletons.Button.Svg({
               className: `${pfx}__comment-attachment-unlink`,
@@ -2761,26 +2795,41 @@ function buildCommentListContent(ui) {
         : actionIcon("ph-thumbs-up", "comment-react-add", {
             commentId: c.id,
             emoji: LIKE_EMOJI,
-            tooltips: LOCALE.LIKE || "Thumbs up",
+            tooltips: {
+              content: LOCALE.LIKE || "Thumbs up",
+              className: `${pfx}__tip`,
+            },
           }),
       actionIcon("ph-smiley-sticker", "comment-react-toggle", {
         commentId: c.id,
-        tooltips: LOCALE.ADD_REACTION,
+        tooltips: {
+          content: LOCALE.ADD_REACTION,
+          className: `${pfx}__tip`,
+        },
       }),
       actionIcon("ph-chat-teardrop-text", "comment-reply", {
         commentId: c.id,
-        tooltips: LOCALE.REPLY,
+        tooltips: {
+          content: LOCALE.REPLY,
+          className: `${pfx}__tip`,
+        },
       }),
     ].filter(Boolean);
     if (isOwn) {
       kids.push(
         actionIcon("ph-pencil-simple-line", "comment-edit", {
           commentId: c.id,
-          tooltips: LOCALE.EDIT,
+          tooltips: {
+            content: LOCALE.EDIT,
+            className: `${pfx}__tip`,
+          },
         }),
         actionIcon("ph-trash", "comment-delete", {
           commentId: c.id,
-          tooltips: LOCALE.DELETE,
+          tooltips: {
+            content: LOCALE.DELETE,
+            className: `${pfx}__tip`,
+          },
         }),
       );
     }
@@ -3261,7 +3310,10 @@ function fileCard(ui, f, opt = {}) {
               // Row uploads are keyed per comment; the staged strips pass
               // nothing here and keep the old single-retry path.
               commentId: opt.commentId,
-              tooltips: LOCALE.RETRY || "Retry",
+              tooltips: {
+                content: LOCALE.RETRY || "Retry",
+                className: `${pfx}__tip`,
+              },
             }),
           ]
         : [];
@@ -3521,13 +3573,18 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
 }
 
 /**
- * Subtasks block of the detail panel: header + child rows + the inline creator.
+ * "Child task items" block — Figma 58471:222398 / 58471:222650.
  *
- * The COUNT lives in here rather than in the static header above it, so adding
- * a subtask updates it without re-rendering the panel — this whole block is one
- * re-feedable part (sys_pn "subtask-rows"), for the same reason attachments and
- * comments are: a full _render() steals focus from the title/description
- * editors and drops unsaved edits.
+ * Lives in the detail panel's RIGHT sidebar, under Due date (that is where the
+ * design puts it; the earlier written spec had said between Description and
+ * Attachments). Header, then the existing children, then the inline creator
+ * card when one is open.
+ *
+ * The whole block is one re-feedable part (sys_pn "subtask-rows") for the same
+ * reason attachments and comments are: a full _render() steals focus from the
+ * title/description editors and drops unsaved edits. Re-feeding THIS block is
+ * safe even mid-typing, because the card's title Entry is seeded from the draft
+ * and kept in sync by the `task-input-changed` watch.
  */
 function buildSubtaskRowsContent(ui, parentId) {
   const pfx = ui.fig.family;
@@ -3535,55 +3592,76 @@ function buildSubtaskRowsContent(ui, parentId) {
   const subs = ui.getSubtasks(parentId);
   const draft = ui.getSubtaskDraft();
   const priorities = ui.getPriorities() || [];
+  const cols = ui.getColumns() || [];
+  const { done, total } = ui.getSubtaskCount(parent || { id: parentId });
+  // One level of nesting: a child never offers a child of its own. Enforced
+  // server-side too (SUBTASK_NESTING_DENIED); this only stops it being offered.
+  const canAdd = mayCreateTask(ui) && !ui.isSubtask(parent);
 
-  const priorityPill = (t) => {
-    const p = priorities.find((x) => x.key === (t.priority || "medium")) || {};
-    if (!t.priority) return null;
-    return Skeletons.Note({
-      className: `${pfx}__subtask-priority`,
-      content: LOCALE[p.label] || p.key || "",
-      attrOpt: { "data-priority": t.priority },
-    });
-  };
+  const metaOf = (list, key) => list.find((x) => x.key === key) || null;
 
-  const avatars = (t) => {
-    const uids = ui.getKnownAssignees(t);
-    if (!uids.length) return null;
-    return Skeletons.Box.X({
-      className: `${pfx}__subtask-avatars`,
-      kids: uids.slice(0, 2).map((uid) => {
-        const m = ui.getMember(uid) || {};
-        return Skeletons.UserProfile({
-          className: `${pfx}__subtask-avatar`,
-          id: uid,
-          firstname: m.firstname,
-          lastname: m.lastname,
-          auto_color: 1,
-          live_status: 0,
-        });
+  // ── Header: label + "Add child work item" caption + the ＋ ──────────────
+  const header = Skeletons.Box.X({
+    className: `${pfx}__subtask-header`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}__subtask-header-text`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__subtask-heading`,
+            content: LOCALE.SUBTASKS,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__subtask-subheading`,
+            content: LOCALE.ADD_SUBTASK,
+          }),
+        ],
       }),
-    });
-  };
+      // done/total is not in the Figma frames, but the written spec calls for a
+      // count and the header is the only place it fits in this column.
+      total
+        ? Skeletons.Note({
+            className: `${pfx}__subtask-count`,
+            content: `${done}/${total}`,
+            attrOpt: { "data-complete": done === total ? "1" : "0" },
+          })
+        : null,
+      canAdd
+        ? Skeletons.Button.Svg({
+            className: `${pfx}__subtask-add`,
+            // app-add, NOT "plus": that glyph is a filled disc with the plus
+            // knocked out of it, so colouring the svg painted a solid black
+            // circle. app-add is the bare 12px plus stroke.
+            ico: "app-add",
+            bubble: 0,
+            service: "add-subtask",
+            uiHandler: [ui],
+            // See gantt.js: the bare string form renders the tooltip as
+            // inline text inside the button and hides the icon.
+            tooltips: {
+              content: LOCALE.CREATE_CHILD_TASK,
+              className: `${pfx}__tip`,
+            },
+          })
+        : null,
+    ].filter(Boolean),
+  });
 
-  // One child. Clicking the row opens that subtask's OWN detail panel — it is a
-  // full task, so everything the creator doesn't offer (description, files,
-  // comments, its own due date) is edited there.
+  // ── An existing child ───────────────────────────────────────────────────
+  // Not specified in the Figma frames (they only show the creator), so this
+  // keeps the earlier design, compacted for the ~220px sidebar column: the
+  // status toggle, the title, and a priority dot rather than a full pill.
   const subRow = (t) => {
-    const done = ui.isDoneStatus(t.status);
-    const who = ui
-      .getKnownAssignees(t)
-      .map((uid) => fullName(ui.getMember(uid)))
-      .filter(Boolean)
-      .join(", ");
+    const isDone = ui.isDoneStatus(t.status);
+    const pm = metaOf(priorities, t.priority || "medium");
     const due = t.due_date ? formatDueDate(t.due_date) : "";
-    const meta = [who, due].filter(Boolean).join(" · ");
     return Skeletons.Box.X({
       className: `${pfx}__subtask-row`,
       bubble: 0,
       service: "open-detail",
       uiHandler: [ui],
       taskId: t.id,
-      attrOpt: { "data-done": done ? "1" : "0" },
+      attrOpt: { "data-done": isDone ? "1" : "0" },
       kids: [
         Skeletons.Button.Svg({
           className: `${pfx}__subtask-check`,
@@ -3592,7 +3670,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           service: "toggle-subtask-complete",
           uiHandler: [ui],
           taskId: t.id,
-          attrOpt: { "data-done": done ? "1" : "0" },
+          attrOpt: { "data-done": isDone ? "1" : "0" },
         }),
         Skeletons.Box.Y({
           className: `${pfx}__subtask-text`,
@@ -3601,132 +3679,198 @@ function buildSubtaskRowsContent(ui, parentId) {
               className: `${pfx}__subtask-title`,
               content: t.title || "",
             }),
-            meta
+            due
               ? Skeletons.Note({
                   className: `${pfx}__subtask-meta`,
-                  content: meta,
+                  content: due,
                 })
               : null,
           ].filter(Boolean),
         }),
-        priorityPill(t),
-        avatars(t),
+        t.priority && pm
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-dot`,
+              styleOpt: { background: pm.color },
+            })
+          : null,
+        // Same one-click remove the board card, gantt row and calendar chip
+        // already carry, so a child is deletable from where it is listed
+        // instead of only after opening it.
+        Skeletons.Button.Svg({
+          className: `${pfx}__subtask-del`,
+          ico: "cross",
+          bubble: 0,
+          service: "remove-task",
+          uiHandler: [ui],
+          taskId: t.id,
+        }),
       ].filter(Boolean),
     });
   };
 
-  // Inline creator. Priority and assignees are set here; the due date is
-  // inherited from the parent and editable afterwards in the subtask's own
-  // panel, which is what the handoff's "editable now or later" allows.
-  const creator = () => {
-    const members = ui.getMembers() || [];
-    const MAX_MEMBERS = 8;
-    const shown = members.slice(0, MAX_MEMBERS);
-    const picked = draft.assignees || [];
+  // ── Creator card (Figma) ────────────────────────────────────────────────
+  // Bordered card: title + ✕ on the first row, then the Priority / Due date /
+  // Status chips, then Create. The Figma frame has no Create button — it
+  // assumes Enter — but the panel's own Update sits right below the card, so
+  // "fill it in and press save" hit Update, which commits the PARENT and closes
+  // the panel. Enter still commits; the button is the discoverable path.
+  const chip = (kind, label, dot, extraClass) =>
+    Skeletons.Box.X({
+      className: `${pfx}__subtask-chip${extraClass ? " " + extraClass : ""}`,
+      attrOpt: {
+        "data-kind": kind,
+        "data-open": draft && draft.menu === kind ? "1" : "0",
+      },
+      bubble: 0,
+      service: kind === "date" ? null : "toggle-subtask-menu",
+      uiHandler: kind === "date" ? null : [ui],
+      menuKind: kind,
+      kids: [
+        dot
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-chip-dot`,
+              styleOpt: { background: dot },
+            })
+          : null,
+        Skeletons.Note({
+          className: `${pfx}__subtask-chip-label`,
+          content: label,
+        }),
+        Skeletons.Image.Svg({
+          ico: kind === "date" ? "calendar" : "apps-caret-down",
+          className: `${pfx}__subtask-chip-ico`,
+        }),
+        // The native picker sits invisibly over the whole chip so the click
+        // opens the platform date UI. Its change is caught by a delegated
+        // listener on the panel root (the card is rebuilt on every re-feed, so
+        // a per-node listener would not survive).
+        kind === "date"
+          ? Skeletons.Element({
+              tagName: "input",
+              className: `${pfx}__subtask-date-input`,
+              attrOpt: { type: "date", value: (draft && draft.due_date) || "" },
+            })
+          : null,
+        // The dropdown is a child of the chip that opened it, not of the card:
+        // absolutely positioned against the card it dropped below the WHOLE
+        // form, nowhere near the control that was clicked. __subtask-chip is
+        // position:relative, so anchoring here puts it under its own chip.
+        draft && draft.menu === kind ? menu(kind) : null,
+      ].filter(Boolean),
+    });
+
+  const menu = (kind) => {
+    if (!draft || !kind || kind === "date") return null;
+    const isPriority = kind === "priority";
+    const items = isPriority
+      ? priorities.map((p) => ({
+          key: p.key,
+          label: LOCALE[p.label] || p.key,
+          color: p.color,
+          selected: draft.priority === p.key,
+        }))
+      : cols.map((c) => ({
+          key: c.key,
+          label: c.name || LOCALE[c.label] || c.key,
+          color: c.color,
+          selected: draft.status === c.key,
+        }));
     return Skeletons.Box.Y({
-      className: `${pfx}__subtask-create`,
+      className: `${pfx}__subtask-menu`,
+      attrOpt: { "data-kind": kind },
+      bubble: 0,
+      kids: items.map((i) =>
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-menu-item`,
+          attrOpt: { "data-selected": i.selected ? "1" : "0" },
+          bubble: 0,
+          service: isPriority ? "set-subtask-priority" : "set-subtask-status",
+          uiHandler: [ui],
+          taskPriority: i.key,
+          taskStatus: i.key,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__subtask-menu-dot`,
+              styleOpt: { background: i.color || "#AEAEB2" },
+            }),
+            Skeletons.Note({
+              className: `${pfx}__subtask-menu-label`,
+              content: i.label,
+            }),
+          ],
+        }),
+      ),
+    });
+  };
+
+  const creator = () => {
+    const pm = metaOf(priorities, draft.priority);
+    const sm = metaOf(cols, draft.status);
+    return Skeletons.Box.Y({
+      className: `${pfx}__subtask-card`,
       bubble: 0,
       kids: [
         Skeletons.Box.X({
-          className: `${pfx}__subtask-create-input`,
+          className: `${pfx}__subtask-card-head`,
           kids: [
             Skeletons.Entry({
-              className: `${pfx}__subtask-create-entry`,
+              className: `${pfx}__subtask-card-title`,
               name: "subtask-title",
-              // Explicit "" is required, not tidiness: the entry template
-              // interpolates value="${m.value}" straight from model.toJSON()
-              // and the widget then re-applies _input.value = value, so an
-              // omitted value renders the literal string "undefined" in the
-              // field. Every other text Entry in this file passes one too.
+              // Explicit "" matters: the entry template interpolates
+              // value="${m.value}" straight from model.toJSON(), so an omitted
+              // value renders the literal string "undefined" in the field.
               value: draft.title || "",
-              // Keystrokes land on the draft via the watch, so the typed title
-              // survives any re-render (a peer's WS update re-renders too).
+              // Keystrokes land on the draft, so the typed title survives any
+              // re-feed of this block (a peer's WS update re-renders too).
               watch: "task-input-changed",
               placeholder: LOCALE.SUBTASK_PLACEHOLDER,
-              // Enter commits, matching the task title field.
               mode: "commit",
               service: "create-subtask",
               bubble: 0,
               uiHandler: [ui],
             }),
-          ],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__subtask-create-fields`,
-          kids: [
-            // Priority — same four keys as a task.
-            Skeletons.Box.X({
-              className: `${pfx}__subtask-create-priorities`,
-              kids: priorities.map((p) =>
-                Skeletons.Note({
-                  className: `${pfx}__subtask-create-priority`,
-                  content: LOCALE[p.label] || p.key,
-                  bubble: 0,
-                  service: "set-subtask-priority",
-                  uiHandler: [ui],
-                  taskPriority: p.key,
-                  attrOpt: {
-                    "data-priority": p.key,
-                    "data-selected": draft.priority === p.key ? "1" : "0",
-                  },
-                }),
-              ),
-            }),
-            // Inherited due date, shown so the user knows what they are getting.
-            draft.due_date
-              ? Skeletons.Note({
-                  className: `${pfx}__subtask-create-due`,
-                  content: formatDueDate(draft.due_date),
-                })
-              : null,
-          ].filter(Boolean),
-        }),
-        shown.length
-          ? Skeletons.Box.X({
-              className: `${pfx}__subtask-create-members`,
-              kids: [
-                ...shown.map((m) =>
-                  Skeletons.UserProfile({
-                    className: `${pfx}__subtask-create-member`,
-                    id: m.uid || m.id,
-                    firstname: m.firstname,
-                    lastname: m.lastname,
-                    auto_color: 1,
-                    live_status: 0,
-                    bubble: 0,
-                    service: "toggle-subtask-assignee",
-                    uiHandler: [ui],
-                    memberUid: m.uid || m.id,
-                    attrOpt: {
-                      // data-uid so the handler can flip the selected flag in
-                      // place — re-feeding this block would rebuild the title
-                      // Entry empty and lose whatever has been typed.
-                      "data-uid": String(m.uid || m.id),
-                      "data-selected": picked.includes(String(m.uid || m.id))
-                        ? "1"
-                        : "0",
-                    },
-                  }),
-                ),
-                members.length > MAX_MEMBERS
-                  ? Skeletons.Note({
-                      className: `${pfx}__subtask-create-more`,
-                      content: `+${members.length - MAX_MEMBERS}`,
-                    })
-                  : null,
-              ].filter(Boolean),
-            })
-          : null,
-        Skeletons.Box.X({
-          className: `${pfx}__subtask-create-actions`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__subtask-create-cancel`,
-              content: LOCALE.CANCEL,
+            Skeletons.Button.Svg({
+              className: `${pfx}__subtask-card-close`,
+              ico: "cross",
               bubble: 0,
               service: "cancel-subtask",
               uiHandler: [ui],
             }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-chips`,
+          kids: [
+            chip(
+              "priority",
+              pm ? LOCALE[pm.label] || pm.key : LOCALE.PRIORITY,
+              pm && pm.color,
+            ),
+            chip(
+              "date",
+              draft.due_date ? formatDueDate(draft.due_date) : LOCALE.DUE_DATE,
+              null,
+            ),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-chips`,
+          kids: [
+            chip(
+              "status",
+              sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
+              sm && sm.color,
+            ),
+          ],
+        }),
+        // Explicit Create. The Figma frame has no button — it assumes Enter —
+        // but with the panel's own Update button sitting right below the card,
+        // "fill the fields, press the save button" hit Update instead: that
+        // commits the PARENT and closes the panel, so the child was never
+        // created and the draft went with it. Enter still commits.
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-actions`,
+          kids: [
             Skeletons.Note({
               className: `${pfx}__subtask-create-submit`,
               content: LOCALE.CREATE,
@@ -3740,42 +3884,12 @@ function buildSubtaskRowsContent(ui, parentId) {
     });
   };
 
-  const { done, total } = ui.getSubtaskCount(parent || { id: parentId });
-  // One level of nesting: a subtask never offers "+ Add subtask". Enforced
-  // server-side too (SUBTASK_NESTING_DENIED) — this only stops it being offered.
-  const isSub = ui.isSubtask(parent);
-  const canAdd = mayCreateTask(ui) && !isSub;
-
   return [
-    Skeletons.Box.X({
-      className: `${pfx}__subtask-header`,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}__detail-label`,
-          content: LOCALE.SUBTASKS,
-        }),
-        total
-          ? Skeletons.Note({
-              className: `${pfx}__subtask-count`,
-              content: `${done}/${total}`,
-              attrOpt: { "data-complete": done === total ? "1" : "0" },
-            })
-          : null,
-        canAdd && !draft
-          ? Skeletons.Note({
-              className: `${pfx}__subtask-add`,
-              content: LOCALE.ADD_SUBTASK,
-              bubble: 0,
-              service: "add-subtask",
-              uiHandler: [ui],
-            })
-          : null,
-      ].filter(Boolean),
-    }),
+    header,
     ...subs.map(subRow),
     draft && canAdd ? creator() : null,
     // Only when there is genuinely nothing: with the creator open the block is
-    // not empty, and an "no subtasks" line under an active form reads as an error.
+    // not empty, and an empty-state line under an active form reads as an error.
     !subs.length && !draft
       ? Skeletons.Note({
           className: `${pfx}__subtask-empty`,
