@@ -34,7 +34,12 @@ const SRC = (p) => readFileSync(join(__dirname, "..", p), "utf8");
  */
 const stripComments = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, "")
-  .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  .replace(/(^|[^:])\/\/.*$/gm, "$1")
+  // Collapse what the stripping left behind. This codebase comments densely, so
+  // removing a docblock can leave thirty blank lines between two statements —
+  // enough to push the second one outside a fixed-size slice window and fail a
+  // case against correct code, which is how two cases here first failed.
+  .replace(/\n\s*\n+/g, "\n");
 
 const LIB = SRC("src/drumee/libs/billing-deep-link.js");
 const WIDGET = SRC("src/drumee/builtins/widget/settings/account/billing/index.js");
@@ -238,13 +243,20 @@ test("a refusal keeps the intent; the recipient's use takes it", () => {
   assert.equal(lib.peek(), null, "billing would reopen without a click");
 });
 
-test("the router disarms for the recipient and not for anyone else", () => {
+test("the router disarms only when the URL is carrying the destination", () => {
+  // ASKED OF THE URL, NOT OF THE USER. This previously gated on
+  // isForCurrentUser, which decides from Visitor.profile().email — while signin
+  // decides whether to put the destination on the URL from
+  // data.user.profile.email. Two sources for one decision: if they disagree for
+  // a single page load, signin refuses (URL clean) and the router disarms
+  // anyway, destroying the destination with nothing carrying it onward.
   const body = stripComments(routerSrc);
   const i = body.indexOf("if (this.changeHost(Organization.host()))");
   const branch = body.slice(i, i + 700);
-  assert.match(branch, /isForCurrentUser\(billingDeepLink\.peek\(\)\)[\s\S]*?disarm\(\)/,
-    "the origin being left is disarmed unconditionally — a refused visitor would "
-    + "take the recipient's destination with them");
+  assert.match(branch, /urlWantsBilling\(\)[\s\S]*?disarm\(\)/,
+    "the disarm is not gated on the URL actually carrying the destination");
+  assert.ok(!/isForCurrentUser/.test(branch),
+    "the disarm still asks who the user is — it must ask whether the URL has it");
 });
 
 // ── the destination is single-use across the host switch ───────────────
@@ -272,6 +284,8 @@ test("the router disarms the origin it is switching away from", () => {
   assert.match(branch, /billingDeepLink\.disarm\(\)/,
     "the origin being left keeps its copy — logout returns here and the next "
     + "sign-in replays the flow without a click");
+  assert.match(branch, /urlWantsBilling\(\)/,
+    "the disarm is unconditional — it would drop a destination the URL is not carrying");
   assert.ok(branch.indexOf("disarm()") < branch.indexOf("return;"),
     "disarm must run before the early return, or it never runs at all");
 });
@@ -287,7 +301,7 @@ test("disarm only fires on a switch that actually happened", () => {
   const i = body.indexOf("if (this.changeHost(Organization.host()))");
   assert.ok(i > 0, "the guarded host switch is gone");
   const branch = body.slice(i, i + 400);
-  assert.match(branch, /if \(this\.changeHost\(Organization\.host\(\)\)\) \{[\s\S]*?disarm\(\)[\s\S]*?return;[\s\S]*?\n      \}/,
+  assert.match(branch, /if \(this\.changeHost\(Organization\.host\(\)\)\) \{[\s\S]*?urlWantsBilling\(\)[\s\S]*?disarm\(\)[\s\S]*?return;[\s\S]*?\n      \}/,
     "disarm sits outside the success branch — it would drop the destination on "
     + "a switch that never occurred");
 });

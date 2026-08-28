@@ -404,16 +404,26 @@ class drumee_router extends LetcBox {
         // Only on a switch that actually happened: changeHost answers false for
         // a loose_host module and in the DMZ, and there the copy is still the
         // carrier.
-        // ONLY FOR THE RECIPIENT. When this session is the one the link was
-        // written for, signin has put the destination on the URL and it will be
-        // re-armed on the new origin — this copy is redundant, and keeping it
-        // would let it replay after a later sign-out.
+        // ONLY WHEN THE URL IS ACTUALLY CARRYING IT.
         //
-        // For anyone else, signin deliberately did NOT hand it over, so the URL
-        // is clean and this copy is the last one there is. Dropping it would
-        // throw away a destination nobody has used, on behalf of a visitor who
-        // was just refused.
-        if (billingDeepLink.isForCurrentUser(billingDeepLink.peek())) {
+        // location.host keeps path and hash, so a destination already on the URL
+        // survives to the new origin and is re-armed there; this copy is then
+        // redundant, and keeping it would let it replay after a later sign-out.
+        // When the URL carries nothing, this copy is the only one there is.
+        //
+        // ASKED OF THE URL, NOT OF THE USER, and that distinction is the bug it
+        // replaces. This used to disarm whenever `Visitor` said the session was
+        // the link's recipient — on the assumption that signin had therefore
+        // handed the destination to the URL. But signin decides from the SIGN-IN
+        // RESPONSE (data.user.profile.email) and this decided from the RESTORED
+        // SESSION (Visitor.profile().email). Two sources for one decision: let
+        // them disagree for a single page load and signin refuses — leaving the
+        // URL clean — while this disarms anyway, destroying the destination with
+        // nothing carrying it onward.
+        //
+        // urlWantsBilling() has no such coupling. It asks the only question that
+        // actually licenses dropping the copy: is it somewhere else already?
+        if (billingDeepLink.urlWantsBilling()) {
           billingDeepLink.disarm();
         }
         return;
