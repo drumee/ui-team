@@ -254,6 +254,16 @@ class __activity_item extends LetcBox {
    * @returns 
    */
   onUiEvent(cmd, args = {}) {
+    // ⚠️ EVERY dismiss in THIS method fires 'read-activity', never
+    // 'dismiss-activity'. This is the body-click path -- the user opened the
+    // notification -- and since 2026-08-28 that marks it read and LEAVES THE
+    // ROW IN PLACE, without the unread tint. Firing 'dismiss-activity' here is
+    // what used to delete a notification simply because it had been read, which
+    // is the bug Lexis asked to fix; do not "tidy" the two names back together.
+    //
+    // 'dismiss-activity' belongs exclusively to _dispatchService above, which
+    // handles the trash BUTTON, and it now deletes permanently.
+    //
     // Day-group caption ("Today" / "Yesterday" / "Aug 13"). It lives inside the
     // row so it scrolls with the feed, but it is a label and must never
     // navigate. Read the service off the CLICKED widget rather than the resolved
@@ -334,7 +344,7 @@ class __activity_item extends LetcBox {
       let tHash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
       if (tTask) tHash += `&open_task_id=${tTask}`;
       location.hash = tHash + `&ts=${ts}`;
-      this.triggerHandlers({ service: 'dismiss-activity', hub_id: tHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'read-activity', hub_id: tHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
@@ -350,7 +360,7 @@ class __activity_item extends LetcBox {
       let tHash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
       if (tTask) tHash += `&open_task_id=${tTask}`;
       location.hash = tHash + `&ts=${ts}`;
-      this.triggerHandlers({ service: 'dismiss-activity', hub_id: tHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'read-activity', hub_id: tHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
@@ -368,14 +378,14 @@ class __activity_item extends LetcBox {
       if (mHub) {
         location.hash = `#/desk/wm/open/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&ts=${ts}`;
       }
-      this.triggerHandlers({ service: 'dismiss-activity', hub_id: mHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'read-activity', hub_id: mHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
     if (this.mget('event') === 'media.workspace_move') {
       const sourceHubId = this.mget('source_hub_id') || hub_id;
       location.hash = `#/desk/wm/open/?hub_id=${sourceHubId}&nid=0&filetype=folder&pid=0&ts=${ts}`;
-      this.triggerHandlers({ service: 'dismiss-activity', hub_id: sourceHubId, item_type, changelog_id });
+      this.triggerHandlers({ service: 'read-activity', hub_id: sourceHubId, item_type, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
@@ -396,7 +406,7 @@ class __activity_item extends LetcBox {
         // highlight=1 → reveal the file in its folder (scroll + select + flash)
         // instead of opening it in a player. Scoped to notification clicks.
         location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
-        this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: target_nid, item_type, changelog_id })
+        this.triggerHandlers({ service: 'read-activity', hub_id, nid: target_nid, item_type, changelog_id })
         // Opening the file is an explicit "I've handled this" → close the panel.
         // Kept separate from dismiss-activity (the trash button uses that alone
         // and must NOT close the panel) and from item destroy (see onDomRefresh
@@ -406,7 +416,7 @@ class __activity_item extends LetcBox {
 
       case _a.hub_invite:
         location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${ts}`;
-        this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, changelog_id })
+        this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, changelog_id })
         return
 
       case _a.teamchat: {
@@ -423,30 +433,30 @@ class __activity_item extends LetcBox {
           hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${folder_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
           if (message_id) hash = hash + `&message_id=${message_id}`;
           location.hash = hash + `&ts=${ts}`;
-          this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: folder_nid, item_type, changelog_id })
+          this.triggerHandlers({ service: 'read-activity', hub_id, nid: folder_nid, item_type, changelog_id })
           break;
         }
         hash = `#/desk/wm/${category}/?hub_id=${hub_id}&nid=0&pid=0`;
         if (message_id) hash = hash + `&message_id=${message_id}`;
         location.hash = hash + `&ts=${ts}`;
-        this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, changelog_id })
+        this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, changelog_id })
         break;
       }
       case _a.chat:
         hash = `#/desk/wm/${category}/?drumate_id=${drumate_id}`;
         if (message_id) hash = hash + `&message_id=${message_id}`;
         location.hash = hash + `&ts=${ts}`;
-        this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, item_key, changelog_id })
+        this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, item_key, changelog_id })
         break;
 
       case _a.contact:
         hash = `#/desk/wm/${category}`;
         location.hash = hash + `&ts=${ts}`;
-        this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, item_key, changelog_id })
+        this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, item_key, changelog_id })
         break;
 
       case 'contact_refused':
-        this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+        this.triggerHandlers({ service: 'read-activity', item_type, item_key })
         break;
 
       case 'access_request':
@@ -503,7 +513,7 @@ class __activity_item extends LetcBox {
           location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${shareNid}&filetype=folder&pid=0&ts=${ts}`;
         }
         this.triggerHandlers({
-          service: 'dismiss-activity', item_type, item_key,
+          service: 'read-activity', item_type, item_key,
           token_id: this.mget('token_id'),
           recipient_email: this.mget('recipient_email'),
         });

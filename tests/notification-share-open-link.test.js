@@ -139,18 +139,31 @@ test("filetype, hub_id and nid are always on the hash", () => {
 });
 
 test("the seen/dismiss side effects are unchanged in every case", () => {
+  // 2026-08-28: the SERVICE NAME changed, the side effect did not. A body click
+  // now fires 'read-activity' instead of 'dismiss-activity' because reading a
+  // notification must no longer delete it (Lexis). Both names route to the same
+  // panel handler and, for share_open, to the same secure_share.mark_open_seen
+  // write -- 'read' simply leaves the row in the list afterwards.
+  //
+  // The negative assertion is the load-bearing one: 'dismiss-activity' is now
+  // the TRASH button and deletes permanently, so if a body click ever fired it
+  // again, merely reading a share-open notification would destroy it.
   for (const model of [
     { hub_id: "H", node_id: "N" },
     { hub_id: "H", node_id: "N", node_filetype: "folder" },
     { hub_id: "H", node_id: "N", node_filetype: "image", node_parent_id: "P" },
   ]) {
     const { triggered } = open({ ...model, token_id: "TOK", recipient_email: "a@b.c" });
-    assert.equal(triggered.length, 2, "exactly dismiss + close");
-    const dismiss = triggered.find((t) => t.service === "dismiss-activity");
-    assert.ok(dismiss, "dismiss-activity must still fire");
+    assert.equal(triggered.length, 2, "exactly read + close");
+    const read = triggered.find((t) => t.service === "read-activity");
+    assert.ok(read, "read-activity must fire");
+    assert.ok(
+      !triggered.some((t) => t.service === "dismiss-activity"),
+      "a body click must NEVER fire the permanent-delete service",
+    );
     // Both are what secure_share.mark_open_seen needs to persist the seen state.
-    assert.equal(dismiss.token_id, "TOK");
-    assert.equal(dismiss.recipient_email, "a@b.c");
+    assert.equal(read.token_id, "TOK");
+    assert.equal(read.recipient_email, "a@b.c");
     assert.ok(triggered.some((t) => t.service === "close-activity-panel"));
   }
 });

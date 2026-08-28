@@ -45,7 +45,14 @@ class __panel_activity extends LetcBox {
     this._onOutsideClick = this._onOutsideClick.bind(this);
     this._currentCount = 0;
     this._currentPayload = {};
-    this._unreadsOnly = 1;
+    // The panel opens showing READ AND UNREAD, and the Unreads toggle narrows
+    // to unread. Lexis 2026-08-28: reading a notification must no longer make
+    // it disappear, and this default is what makes that visible -- a read row
+    // stays in the list and simply loses the unread card tint (the styling for
+    // that already existed: item/skin/index.scss keys the fill on
+    // [data-unread="1"]). Before this the panel opened unread-only, so a row
+    // was filtered out the moment it was read.
+    this._unreadsOnly = 0;
     // Selected Notification Center tab. 'all' = no bucket scope, so the very
     // first render requests the same unscoped feed the panel always has.
     this._filter = DEFAULT_BUCKET;
@@ -301,8 +308,17 @@ class __panel_activity extends LetcBox {
         cmd.goodbye();
         return this.deleteEntityResponse(cmd);
 
+      // The TRASH BUTTON. Permanent since 2026-08-28: the row is removed and
+      // stays removed across reloads.
       case 'dismiss-activity':
-        return this._dismissActivity(cmd, args);
+        return this._dismissActivity(cmd, args, 'delete');
+
+      // Opening a row's body. Records that the user has read it and leaves the
+      // row in the list, without the unread tint. This is what a body click
+      // fires now; it used to fire 'dismiss-activity', which is why reading a
+      // notification deleted it.
+      case 'read-activity':
+        return this._dismissActivity(cmd, args, 'read');
 
       case 'toggle-favorite':
         return this._toggleFavorite(cmd, args);
@@ -693,6 +709,37 @@ class __panel_activity extends LetcBox {
     if (item && item.goodbye) item.goodbye({ duration: 0.3, timeout: 50, now: 1 });
   }
 
+  /**
+   * Turn a row from unread into read, in place.
+   *
+   * The styling already existed before this feature: item/skin/index.scss keys
+   * the card fill on `&__row[data-unread="1"]`, so clearing the attribute is
+   * the entire visual change and no CSS was added. The attribute lives on
+   * `.activity-item__row`, a CHILD of the widget root (the skeleton puts it on
+   * the inner Box.X, under a `__group` wrapper that also holds the day header),
+   * which is why this searches rather than writing to cmd.el.
+   *
+   * The model is updated too. The DOM write is what the user sees now; `is_read`
+   * is what the row skeleton reads if anything re-renders this item from its
+   * model before the next fetch, and without it the tint would come back.
+   *
+   * Silent when the row is already gone -- a read that resolves after the list
+   * restarted must not throw into the caller's catch and be logged as a failed
+   * dismiss.
+   */
+  _markRowRead(cmd) {
+    if (!cmd) return;
+    try {
+      if (cmd.mset) cmd.mset('is_read', 1);
+      const el = cmd.el;
+      if (!el || !el.isConnected) return;
+      const row = el.matches && el.matches('[data-unread]') ? el : (el.querySelector && el.querySelector('[data-unread]'));
+      if (row) row.dataset.unread = '0';
+    } catch (e) {
+      this.warn('[activity] could not mark row read', e);
+    }
+  }
+
   _decrementBadge(by = 1) {
     Desk.ensurePart('activity-count').then((p) => {
       if (!p || !p.el) return;
@@ -1022,7 +1069,12 @@ class __panel_activity extends LetcBox {
         service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
         hub_id: Visitor.id,
         type: 'mention',
-        unread_only: this._unreadsOnly,
+        // Pinned to 1, deliberately NOT this._unreadsOnly. These rows are never
+        // rendered -- updatePriorityListUnified keeps only access_request -- and
+        // exist purely to feed the bell badge, which counts UNREAD only. Passing
+        // the toggle here made the badge include already-read task mentions the
+        // moment the panel's default flipped to showing read rows.
+        unread_only: 1,
       });
       const rows = _.isArray(tm) ? tm : (_.isArray(tm?.data) ? tm.data : []);
       const dismissedTm = this._dismissedKeys || new Set();
@@ -1663,7 +1715,26 @@ class __panel_activity extends LetcBox {
     return _.values(this.details) || []
   }
 
-  async _dismissActivity(cmd, args = {}) {
+  /**
+   * Acting on one notification row.
+   *
+   * `mode` is the whole point of this function since 2026-08-28. The two
+   * actions used to be one: a body click and the trash button both landed here
+   * and both removed the row, which is what Lexis asked to stop.
+   *
+   *   'read'   — the user opened it. Persist the read state, drop the unread
+   *              tint, decrement the badge, and LEAVE THE ROW IN PLACE.
+   *   'delete' — the trash button. Persist a permanent deletion and remove the
+   *              row, as before.
+   *
+   * Both modes walk the identical routing and key-resolution below, because the
+   * two actions differ only in which endpoint they call and whether the row
+   * survives. Splitting them into separate functions would have duplicated
+   * ninety lines of per-category key resolution, and the copy that drifted
+   * would have been the one nobody was testing.
+   */
+  async _dismissActivity(cmd, args = {}, mode = 'delete') {
+    const read = mode === 'read';
     const itemKey = args.item_key
       || (cmd && cmd.mget && cmd.mget('item_key'));
     const itemType = args.item_type
@@ -1673,7 +1744,11 @@ class __panel_activity extends LetcBox {
       || (cmd && cmd.mget && (cmd.mget('changelog_id') || cmd.mget(_a.id) || cmd.mget('id')));
     this.verbose('[activity] dismiss', { itemType, itemKey, changelogId });
 
-    if (itemKey) {
+    // Client-side hiding is for DELETE only. _dismissedKeys makes refreshActivity
+    // skip the row for the rest of the session; applying it on read would hide
+    // the very row that is now meant to stay, undoing the feature at the first
+    // background refresh.
+    if (itemKey && !read) {
       this._dismissedKeys = this._dismissedKeys || new Set();
       this._dismissedKeys.add(itemKey);
       const lastId = args.last_id
@@ -1682,13 +1757,22 @@ class __panel_activity extends LetcBox {
       this._dismissedLastIds = this._dismissedLastIds || new Map();
       this._dismissedLastIds.set(itemKey, Number(lastId));
     }
-    this._decrementBadge(1);
+    // Only an UNREAD row was ever counted, so only an unread row may decrement.
+    //
+    // This guard is new with the read/delete split and it is not defensive
+    // padding: a read row now STAYS in the list and stays clickable, so a user
+    // who opens the same notification twice used to walk the badge down once
+    // per click. The same applies to trashing something already read. `is_read`
+    // is absent on live rollups and on client-built rows, which are unread by
+    // construction, so an absent flag counts as unread.
+    const wasUnread = !(cmd && cmd.mget && parseInt(cmd.mget('is_read'), 10) === 1);
+    if (wasUnread) this._decrementBadge(1);
 
     if (itemType === 'access_request') {
       // Pending secure-share request: no server-side dismiss endpoint (resolved via
       // approve/deny). Client-only — its key is tracked in _dismissedKeys above so
       // refreshActivity skips it this session; it reappears only on a full reload.
-      if (cmd && cmd.goodbye) cmd.goodbye();
+      if (!read && cmd && cmd.goodbye) cmd.goodbye();
       return;
     }
 
@@ -1713,18 +1797,26 @@ class __panel_activity extends LetcBox {
           this.warn('[activity] mark_open_seen failed', e);
         }
       }
-      if (cmd && cmd.goodbye) cmd.goodbye();
+      if (!read && cmd && cmd.goodbye) cmd.goodbye();
       return;
     }
 
     if (itemType === 'mfs' && changelogId) {
-      this.verbose('[activity] → POST activity.dismiss', { changelog_id: changelogId });
+      // activity.dismiss records "read" and leaves the event in the feed;
+      // activity.delete_activity records a permanent removal. Two endpoints
+      // rather than a flag on one, because the server had to add the second
+      // without changing the arity of the procedure behind the first.
+      const svc = read
+        ? ((SERVICE.activity && SERVICE.activity.dismiss) || 'activity.dismiss')
+        : ((SERVICE.activity && SERVICE.activity.delete_activity) || 'activity.delete_activity');
+      this.verbose('[activity] → POST', { svc, changelog_id: changelogId, mode });
       try {
-        await this.postService(SERVICE.activity.dismiss, {
+        await this.postService({
+          service: svc,
           hub_id: Visitor.id,
           changelog_id: changelogId,
         });
-        cmd.goodbye()
+        if (read) this._markRowRead(cmd); else cmd.goodbye();
       } catch (e) {
         this.warn('dismiss-activity failed', e);
       }
@@ -1735,14 +1827,17 @@ class __panel_activity extends LetcBox {
       const activityId = changelogId
         || (cmd && cmd.mget && (cmd.mget(_a.id) || cmd.mget('id') || cmd.mget('last_id') || cmd.mget('key_id')));
       if (activityId) {
-        this.verbose('[activity] → POST activity.dismiss_contact_event', { activity_id: activityId });
+        const svc = read
+          ? ((SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event')
+          : ((SERVICE.activity && SERVICE.activity.delete_contact_event) || 'activity.delete_contact_event');
+        this.verbose('[activity] → POST', { svc, activity_id: activityId, mode });
         try {
           await this.postService({
-            service: (SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event',
+            service: svc,
             hub_id: Visitor.id,
             activity_id: activityId,
           });
-          cmd.goodbye()
+          if (read) this._markRowRead(cmd); else cmd.goodbye();
         } catch (e) {
           this.warn('dismiss contact_activity failed', e);
         }
@@ -1788,18 +1883,31 @@ class __panel_activity extends LetcBox {
       if (!keyId) {
         console.warn('[activity] notification_dismiss skipped — no key_id', { itemType, itemKey });
       } else {
-        this.verbose('[activity] → POST activity.dismiss_rollup', { category: itemType, key_id: keyId, hub_id: hubId, last_id: lastId });
+        // READ advances the underlying read pointer, which is all "I have read
+        // this" means for a rollup. The row survives because the server keeps a
+        // copy in notification_rollup and renders it back with is_read = 1 --
+        // the live rollup itself is recomputed from unread state and simply
+        // stops existing once read, which is why it used to vanish.
+        //
+        // DELETE does that AND flags the stored copy. Both writes are required:
+        // flagging alone leaves the live rollup regenerating on the next
+        // refresh, and dismissing alone is exactly today's behaviour, where the
+        // row returns as a read row instead of staying gone.
+        const svc = read
+          ? ((SERVICE.activity && SERVICE.activity.dismiss_rollup)
+            || (SERVICE.activity && SERVICE.activity.notification_dismiss)
+            || 'activity.dismiss_rollup')
+          : ((SERVICE.activity && SERVICE.activity.delete_rollup) || 'activity.delete_rollup');
+        this.verbose('[activity] → POST', { svc, category: itemType, key_id: keyId, hub_id: hubId, last_id: lastId, mode });
         try {
           await this.postService({
-            service: (SERVICE.activity && SERVICE.activity.dismiss_rollup)
-              || (SERVICE.activity && SERVICE.activity.notification_dismiss)
-              || 'activity.dismiss_rollup',
+            service: svc,
             category: itemType,
             key_id: keyId,
             hub_id: hubId,
             last_id: lastId,
           });
-          cmd.goodbye()
+          if (read) this._markRowRead(cmd); else cmd.goodbye();
         } catch (e) {
           this.warn('notification_dismiss failed', e);
         }
