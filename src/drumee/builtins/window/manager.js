@@ -15,6 +15,10 @@ const { createQrcode } = require("@drumee/ui-essentials");
 const { filesize } = require("@drumee/ui-essentials");
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
+// Live call windows. They are the one kind that has to outlive desk
+// navigation, so they get their own layer instead of the recycled windows pool
+// — see getCallPool().
+const CALL_KINDS = ["window_meeting", "window_connect"];
 
 class __window_manager extends mfsInteract {
   constructor(...args) {
@@ -472,14 +476,24 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   responsive(w, type) {
-    if (this._isResizing || !this.iconsList || this.getViewMode() === _a.row) {
+    // Still bail entirely mid-drag: the user is sizing a window by hand and
+    // nothing here should fight that.
+    if (this._isResizing) {
+      return;
+    }
+    // `docViewer` is the default box new windows and players open at, and it is
+    // derived from the VIEWPORT alone — nothing here depends on the icon grid.
+    // It used to sit below the guard, so resizing the browser while the desk was
+    // in row view left it stale and windows opened taller than the screen:
+    // measured 593px against a 457px viewport (136px over) after shrinking in
+    // row view. Kept above the grid guard so it tracks every view mode.
+    // (The two assignments below were previously written out twice, identically.)
+    _K.docViewer.width = Math.min(DEFAULT_WIDTH, window.innerWidth - 5);
+    _K.docViewer.height = Math.min(DEFAULT_HEIGHT, window.innerHeight);
+    if (!this.iconsList || this.getViewMode() === _a.row) {
       return;
     }
     w = window.innerWidth - (window.innerWidth % 62);
-    _K.docViewer.width = Math.min(DEFAULT_WIDTH, window.innerWidth - 5);
-    _K.docViewer.height = Math.min(DEFAULT_HEIGHT, window.innerHeight);
-    _K.docViewer.width = Math.min(DEFAULT_WIDTH, window.innerWidth - 5);
-    _K.docViewer.height = Math.min(DEFAULT_HEIGHT, window.innerHeight);
 
     const h = window.innerHeight - 125;
     const dw = w - this.iconsList.$el.width();
@@ -572,7 +586,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   addWindow(v) {
-    return this.getWindowsPool().append(v);
+    return this.getWindowsPool(v && v.kind).append(v);
   }
 
   /**
@@ -704,9 +718,11 @@ class __window_manager extends mfsInteract {
       case "windows-layer":
       case "headless-layer":
       case "upload-progress-layer":
+      case "call-layer":
         if (pn === "windows-layer") this.windowsLayer = child;
         if (pn === "headless-layer") this.headlessLayer = child;
         if (pn === "upload-progress-layer") this.uploadProgressLayer = child;
+        if (pn === "call-layer") this.callLayer = child;
         this._responsive = () => {
           const f = () => {
             this.responsive();
@@ -782,7 +798,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   getItemByKind(kind) {
-    for (let c of Array.from(this.getWindowsPool().children.toArray())) {
+    for (let c of Array.from(this.getWindowsPool(kind).children.toArray())) {
       if (c.mget(_a.kind) === kind) {
         return c;
       }
@@ -797,7 +813,7 @@ class __window_manager extends mfsInteract {
    */
   countItemsByKind(kind) {
     let c = 0;
-    for (let child of Array.from(this.getWindowsPool().children.toArray())) {
+    for (let child of Array.from(this.getWindowsPool(kind).children.toArray())) {
       if (child.mget(_a.kind) === kind) {
         c++;
       }
@@ -1084,14 +1100,50 @@ class __window_manager extends mfsInteract {
 
   /**
    * Returns the window container for the current mode:
+   * - Call windows (window_meeting / window_connect): always the dedicated
+   *   call layer, whatever else is open — see getCallPool().
    * - Headless mode (workspace opened from the sidebar): windows are added
    *   to headlessLayer, which hosts the singleton headless window_folder.
    * - Regular mode (workspace opened as a floating window, or no workspace
    *   open): windows are added to windowsLayer as usual.
+   *
+   * @param {String} [kind] kind about to be added / looked up. Omit for the
+   *   generic pool (folder windows, players, popups).
    */
-  getWindowsPool() {
+  getWindowsPool(kind) {
+    if (kind && CALL_KINDS.includes(kind)) return this.getCallPool();
     if (this.headlessLayer && !this.headlessLayer.isEmpty()) return this.headlessLayer
     return this.windowsLayer
+  }
+
+  /**
+   * Container for a live call.
+   *
+   * Never routed through the generic pool: that answers headlessLayer while a
+   * workspace pane is open, and the desk RECYCLES that layer — loadWorkspace
+   * re-feeds it on a workspace switch, Desk.onWorkspaceClosed clears it, and
+   * Wm.reload() re-feeds the whole skeleton. Each of those destroyed the call
+   * window mid-call, which released the room and dropped the user out of the
+   * meeting with no warning. This layer is touched by nothing but the call
+   * itself. Same rationale as getUploadProgressPool below.
+   */
+  getCallPool() {
+    return this.callLayer || this.windowsLayer;
+  }
+
+  /**
+   * Is there a live call window right now? Used by the desk/Wm navigation
+   * paths that would otherwise tear the layers down (wm/index.js reload).
+   * @returns {Boolean}
+   */
+  hasLiveCall() {
+    const pool = this.callLayer;
+    if (!pool || (pool.isDestroyed && pool.isDestroyed()) || !pool.children) {
+      return false;
+    }
+    return pool.children.toArray().some(
+      (c) => c && !(c.isDestroyed && c.isDestroyed()) && CALL_KINDS.includes(`${c.mget(_a.kind)}`)
+    );
   }
 
   /**
@@ -1383,7 +1435,7 @@ class __window_manager extends mfsInteract {
       Kind.waitFor(arg.kind).then(() => {
         const pool = arg.kind === "window_upload_progress"
           ? this.getUploadProgressPool()
-          : this.getWindowsPool();
+          : this.getWindowsPool(arg.kind);
         pool.append(arg);
       });
       return true;
@@ -1519,8 +1571,89 @@ class __window_manager extends mfsInteract {
     return new Promise(function (resolve, reject) {
       Kind.waitFor(kind).then((a) => {
         const s = w.feed({ ...skl, kind });
-        s.ask().then(resolve).catch(reject);
+        // The host is only SIZED by its [data-state="open"] rule (wm/skin:
+        // position:absolute, inset:0, 100%x100%). Without the attribute it is an
+        // auto-sized box, and the dialog inside resolves max-width:100% /
+        // max-height:100% against nothing — so the card collapses to its widest
+        // child (its button row) and its body is clipped to zero height. That is
+        // the ~190px title-less fragment the Empty Trash prompt was rendering as
+        // on mobile, where there is no spare width to hide the collapse.
+        //
+        // Every other path that feeds this wrapper already sets it — wm/index.js
+        // openRequestAccessModal and the new-workspace case, invite-popup in its
+        // own onDomRefresh. confirm() was the one that did not. Set it here so
+        // every confirm gets a sized host rather than each caller remembering.
+        // The wrapper's own behavior clears it again when it empties.
+        if (w && w.el) {
+          w.el.dataset.state = "open";
+          // Backdrop behind the card. "scrim", not the "blur" glass the other
+          // modals through this host use (openRequestAccessModal,
+          // reward-flow, create-folder): the confirm takes the flat
+          // `--overlay-bg` treatment the activity panel puts behind its mobile
+          // card. The skin does the work — wm/skin's `[data-overlay="scrim"]`
+          // includes drumee.scrim-overlay, and --overlay-bg is theme-aware on
+          // its own, so there is no dark-mode branch to keep in step here.
+          w.el.dataset.overlay = "scrim";
+        }
+        // Clear the backdrop when the prompt settles, whichever way it goes.
+        //
+        // Not optional, and not symmetry for its own sake: this host is SHARED,
+        // and wm/index.js documents the failure at both of its own call sites —
+        // an overlay value one dialog leaves behind dims the desk behind the
+        // NEXT card, which never asked for it. data-state is cleared for us
+        // when the wrapper empties; data-overlay is not.
+        //
+        // Two-arg then(), not .then().catch(): a .catch() placed after would
+        // also swallow anything resolve() itself throws, and turn a caller's
+        // bug into a silent rejection of this promise.
+        const settle = (fn) => (v) => {
+          if (w && w.el) w.el.dataset.overlay = "";
+          return fn(v);
+        };
+        s.ask().then(settle(resolve), settle(reject));
       });
+    });
+  }
+
+  /**
+   * Show the feature-lock upsell — "your plan does not include this".
+   *
+   * The tier-gate twin of `openQuotaExceeded`: that one answers "you ran out
+   * of X", this one answers "X is not on your plan". One helper so every gate
+   * reaches the user in the same words and the same shape — the problem
+   * openQuotaExceeded solved for quotas, which the tier gates then had all
+   * over again (Admin Console had its own hand-built card; nothing else had
+   * anything at all).
+   *
+   * Lives on the BASE window manager, not on the desk's, because the meeting
+   * cap has to reach a DMZ guest and `modules/dmz/wm` extends this class
+   * without the desk's additions. `confirm` is right here too, which is what
+   * this wraps.
+   *
+   * Riding `confirm` rather than feeding wrapper-modal directly inherits
+   * Escape-to-dismiss, the guard that keeps a modal on top, and the
+   * resolve/reject promise. `mode: "b"` renders the body alone — no header
+   * (its drumee logo is not part of this design) and no footer (the card
+   * draws its own CTA and its own close X).
+   *
+   * RESOLVES when the reader takes the CTA, REJECTS on close/Escape — the
+   * plain confirm contract. A caller that only wants the upsell SHOWN can
+   * ignore both, but must still `.catch()`: an unhandled rejection on a modal
+   * the user simply closed is console noise at best.
+   *
+   * The card decides for itself whether to draw a CTA at all
+   * (`canUpgradePlan()`), so callers pass what is locked, never what to draw.
+   *
+   * @param {Object} opt
+   * @param {String} opt.feature key into feature-lock's FEATURES map
+   * @param {Array} [opt.args] substituted into the description via `.format()`
+   * @returns {Promise} resolve = CTA taken, reject = dismissed
+   */
+  openFeatureLock(opt = {}) {
+    const { featureLockBody } = require("builtins/widget/feature-lock");
+    return this.confirm({
+      mode: "b",
+      body: featureLockBody(opt.feature, opt.args),
     });
   }
 

@@ -13,6 +13,10 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
+  // getFilteredTasks (not getTopLevelTasks) is deliberate and the ONLY correct
+  // use of it: Project Health counts a subtask as its own work item in every
+  // aggregate — total, status donut, priority split, team workload. That means
+  // this view's totals legitimately exceed the number of cards on the board.
   const tasks = ui.getFilteredTasks();
   const cols = ui.getColumns();
   const priorities = ui.getPriorities();
@@ -281,6 +285,7 @@ module.exports = function (ui) {
     status: LOCALE.TASK_ACT_STATUS,
     complete: LOCALE.TASK_ACT_COMPLETE,
     assignee: LOCALE.TASK_ACT_ASSIGNEE,
+    reporter: LOCALE.TASK_ACT_REPORTER,
     link_file: LOCALE.TASK_ACT_LINK_FILE,
     comment: LOCALE.TASK_ACT_COMMENT,
   };

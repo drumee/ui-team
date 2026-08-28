@@ -43,15 +43,19 @@ const Attr = {
   array: "array",
   closed: "closed",
   email: "email",
+  entity_id: "entity_id",
   firstname: "firstname",
   fullname: "fullname",
   id: "id",
   interactive: "interactive",
+  itemsOpt: "itemsOpt",
   lastname: "lastname",
   name: "name",
   online: "online",
   open: "open",
   peer_id: "peer_id",
+  all: "all",
+  drumate_id: "drumate_id",
   privateRoom: "privateRoom",
   search: "search",
   service: "service",
@@ -75,6 +79,9 @@ const Locale = {
 };
 
 const Services = {
+  hub: {
+    get_members_by_type: "hub.get_members_by_type",
+  },
   chat: {
     contact_rooms: "chat.contact_rooms",
     forward: "chat.forward",
@@ -237,6 +244,11 @@ function createPickerMethods({ timers, wm } = {}) {
     [
       "_sourceHubId",
       "_needsEligibility",
+      "_usesWorkspaceMembers",
+      "_svcPayload",
+      "getContactList",
+      "getRoomSearchApi",
+      "memberSearchRows",
       "_registerShareRoom",
       "_flushShareEligibility",
       "_isShareRoomEligible",
@@ -306,6 +318,7 @@ function makeForwardPicker({
 
   picker._sourceHubId = methods._sourceHubId.bind(picker);
   picker._needsEligibility = methods._needsEligibility.bind(picker);
+  picker._svcPayload = methods._svcPayload.bind(picker);
   picker._isShareRoomEligible = methods._isShareRoomEligible.bind(picker);
   picker.filterData = methods.filterData.bind(picker);
   picker.forwardMessage = methods.forwardMessage.bind(picker);
@@ -396,21 +409,29 @@ test("an eligibility request failure maps every requested hub to zero", async ()
   assert.deepEqual(rows.map((row) => row.refreshes), [1, 1]);
 });
 
-function makeSkeletonUi(msgHubID) {
+function makeSkeletonUi(msgHubID, { members = null, search = "" } = {}) {
   const methods = createPickerMethods({});
+  const values = { [Attr.type]: Attr.shareRoom, [Attr.search]: search };
   const ui = {
     _msgHubID: msgHubID,
     _selectedShareRooms: [],
     _seletecdContacts: [],
     _shareEligibility: Object.create(null),
+    _workspaceMembers: members,
     fig: { family: "chat-item-forward" },
-    getContactList() {},
-    getRoomSearchApi() {},
     getShareRoomList() {},
-    mget: (key) => key === Attr.type ? Attr.shareRoom : undefined,
+    mget: (key) => values[key],
   };
-  ui._sourceHubId = methods._sourceHubId.bind(ui);
-  ui._needsEligibility = methods._needsEligibility.bind(ui);
+  for (const name of [
+    "_sourceHubId",
+    "_needsEligibility",
+    "_usesWorkspaceMembers",
+    "getContactList",
+    "getRoomSearchApi",
+    "memberSearchRows",
+  ]) {
+    ui[name] = methods[name].bind(ui);
+  }
   return ui;
 }
 
@@ -434,6 +455,213 @@ function makeSkeletonLists(ui) {
     shareSearch: smartList(searchSkeleton(ui)),
   };
 }
+
+function makePickerListPart(type) {
+  const listeners = new Map();
+  return {
+    emit(event, rows) {
+      for (const listener of listeners.get(event) || []) listener(rows);
+    },
+    listenerCount(event) {
+      return (listeners.get(event) || []).length;
+    },
+    mget(key) {
+      return key === Attr.itemsOpt ? { [Attr.type]: type } : undefined;
+    },
+    on(event, listener) {
+      if (!listeners.has(event)) listeners.set(event, []);
+      listeners.get(event).push(listener);
+    },
+  };
+}
+
+function makeWorkspaceMemberCachePicker({
+  msgHubID = "source-hub",
+  search = "",
+  searchResult = null,
+  searchSkeleton = () => ({}),
+  type,
+} = {}) {
+  const methods = compileClassMethods(
+    PICKER_SOURCE,
+    [
+      "onPartReady",
+      "_sourceHubId",
+      "_usesWorkspaceMembers",
+      "_workspaceMemberId",
+      "_cacheWorkspaceMembers",
+      "_cacheEmptyWorkspaceMembers",
+      "_refreshWorkspaceMemberSearch",
+    ],
+    {
+      _: Underscore,
+      _a: Attr,
+      _e: { data: "data", eod: "eod" },
+      WORKSPACE_MEMBER_ID_RE: /^[0-9a-zA-Z_-]{1,32}$/,
+      Visitor,
+      require(request) {
+        assert.equal(request, "./skeleton/search");
+        return searchSkeleton;
+      },
+    }
+  );
+  const picker = {
+    _msgHubID: msgHubID,
+    _workspaceMembers: null,
+    debug() {},
+    getPart: (pn) => pn === "search-result" ? searchResult : undefined,
+    mget: (key) => ({ [Attr.search]: search, [Attr.type]: type })[key],
+  };
+  for (const [name, method] of Object.entries(methods)) {
+    picker[name] = method.bind(picker);
+  }
+  return picker;
+}
+
+test("only the workspace-member SmartList can populate the member cache", () => {
+  for (const eventOrder of ["member-first", "share-first"]) {
+    const picker = makeWorkspaceMemberCachePicker();
+    const memberList = makePickerListPart(Attr.privateRoom);
+    const shareList = makePickerListPart(Attr.shareRoom);
+    const memberRows = [{ id: `member-${eventOrder}` }];
+    const shareRows = [{ id: `share-${eventOrder}` }];
+
+    picker.onPartReady(memberList, "forward-room-list");
+    picker.onPartReady(shareList, "forward-room-list");
+
+    const emissions = eventOrder === "member-first"
+      ? [[memberList, memberRows], [shareList, shareRows]]
+      : [[shareList, shareRows], [memberList, memberRows]];
+    for (const [list, rows] of emissions) list.emit("data", rows);
+
+    assert.strictEqual(picker._workspaceMembers, memberRows,
+      `share-room data must not win when emitted ${eventOrder}`);
+    assert.equal(memberList.listenerCount("data"), 1);
+    assert.equal(shareList.listenerCount("data"), 0);
+  }
+
+  const p2pPicker = makeWorkspaceMemberCachePicker({
+    msgHubID: Visitor.get(Attr.id),
+  });
+  const p2pContactList = makePickerListPart(Attr.privateRoom);
+  const p2pShareList = makePickerListPart(Attr.shareRoom);
+  p2pPicker.onPartReady(p2pContactList, "forward-room-list");
+  p2pPicker.onPartReady(p2pShareList, "forward-room-list");
+  assert.equal(p2pContactList.listenerCount("data"), 0);
+  assert.equal(p2pShareList.listenerCount("data"), 0);
+});
+
+test("an empty member-list eod caches an empty result without erasing data", () => {
+  const emptyPicker = makeWorkspaceMemberCachePicker();
+  const emptyMemberList = makePickerListPart(Attr.privateRoom);
+  emptyPicker.onPartReady(emptyMemberList, "forward-room-list");
+  emptyMemberList.emit("eod");
+  assert.deepEqual(emptyPicker._workspaceMembers, []);
+
+  const populatedPicker = makeWorkspaceMemberCachePicker();
+  const populatedMemberList = makePickerListPart(Attr.privateRoom);
+  const memberRows = [{ id: "member-kept" }];
+  populatedPicker.onPartReady(populatedMemberList, "forward-room-list");
+  populatedMemberList.emit("data", memberRows);
+  populatedMemberList.emit("eod");
+  assert.strictEqual(populatedPicker._workspaceMembers, memberRows,
+    "eod after a short nonempty page must preserve its cached rows");
+});
+
+test("workspace member rows normalize in place and reject unsafe identities", () => {
+  const picker = makeWorkspaceMemberCachePicker();
+  const memberList = makePickerListPart(Attr.privateRoom);
+  const conflictingAliases = {
+    entity_id: "entity-conflict",
+    drumate_id: "drumate-conflict",
+  };
+  const conflictingLegacyId = {
+    entity_id: "entity-conflict",
+    id: "legacy-conflict",
+  };
+  const conflictingDrumateLegacy = {
+    drumate_id: "drumate-conflict",
+    id: "legacy-conflict",
+  };
+  const threeWayConflict = {
+    entity_id: "entity-conflict",
+    drumate_id: "drumate-conflict",
+    id: "legacy-conflict",
+  };
+  const invalidPopulatedAlias = {
+    entity_id: { unsafe: true },
+    drumate_id: "otherwise-valid",
+  };
+  const malformedString = { entity_id: "bad id" };
+  const noValidIdentity = { entity_id: "  ", drumate_id: 42, id: null };
+  const contactOnly = { contact_id: "contact-only" };
+  const rows = [
+    { entity_id: "entity-only" },
+    { drumate_id: "drumate-only" },
+    {
+      entity_id: "same-id",
+      drumate_id: " same-id ",
+      id: "same-id",
+    },
+    { id: "existing-id" },
+    { entity_id: "  ", drumate_id: " trimmed-drumate " },
+    conflictingAliases,
+    conflictingLegacyId,
+    conflictingDrumateLegacy,
+    threeWayConflict,
+    invalidPopulatedAlias,
+    malformedString,
+    noValidIdentity,
+    contactOnly,
+  ];
+
+  picker.onPartReady(memberList, "forward-room-list");
+  memberList.emit("data", rows);
+
+  assert.deepEqual(rows.map((row) => row.id), [
+    "entity-only",
+    "drumate-only",
+    "same-id",
+    "existing-id",
+    "trimmed-drumate",
+  ]);
+  assert.strictEqual(picker._workspaceMembers, rows,
+    "the rows normalized for rendering must also back local search");
+  for (const rejected of [
+    conflictingAliases,
+    conflictingLegacyId,
+    conflictingDrumateLegacy,
+    threeWayConflict,
+    invalidPopulatedAlias,
+    malformedString,
+    noValidIdentity,
+    contactOnly,
+  ]) {
+    assert.equal(rows.includes(rejected), false,
+      "conflicting or invalid identities must be removed before rendering");
+  }
+});
+
+test("member cache arrival rebuilds an active workspace search", () => {
+  const fed = [];
+  const rendered = { rendered: "filtered-member-search" };
+  const picker = makeWorkspaceMemberCachePicker({
+    search: "anh",
+    searchResult: {
+      el: { dataset: { mode: Attr.open } },
+      feed: (skeleton) => fed.push(skeleton),
+    },
+    searchSkeleton: () => rendered,
+    type: Attr.privateRoom,
+  });
+  const memberList = makePickerListPart(Attr.privateRoom);
+
+  picker.onPartReady(memberList, "forward-room-list");
+  memberList.emit("data", [{ entity_id: "member-anh" }]);
+
+  assert.deepEqual(picker._workspaceMembers.map((row) => row.id), ["member-anh"]);
+  assert.deepEqual(fed, [rendered]);
+});
 
 test("a P2P source gates share rooms only, leaving contacts selectable", () => {
   const ui = makeSkeletonUi(Visitor.get(Attr.id));
@@ -529,7 +757,7 @@ test("an unresolved row stays disabled until its verdict arrives", () => {
   });
   const methods = compileClassMethods(
     LIST_ITEM_SOURCE,
-    ["isChatDisabled", "disabledReason", "getPresenceText", "getUserState"],
+    ["isChatDisabled", "eligibilityMap", "disabledReason", "getPresenceText", "getUserState"],
     { _a: Attr, LOCALE: Locale }
   );
   // A contact row in a gated list, before the batched response lands.
@@ -618,7 +846,7 @@ test("disabled share rows expose a reason and inert checkbox controls", () => {
   });
   const methods = compileClassMethods(
     LIST_ITEM_SOURCE,
-    ["isChatDisabled", "disabledReason", "getPresenceText", "getUserState"],
+    ["isChatDisabled", "eligibilityMap", "disabledReason", "getPresenceText", "getUserState"],
     { _a: Attr, LOCALE: Locale }
   );
   const values = {
@@ -652,4 +880,188 @@ test("disabled share rows expose a reason and inert checkbox controls", () => {
   assert.equal(checkbox.state, 0);
   assert.equal(checkbox.service, null);
   assert.deepEqual(checkbox.uiHandler, []);
+});
+
+test("a workspace forward lists that workspace's members, not the contact book", () => {
+  // The bug this locks: joining a workspace creates no contact
+  // (drumate/hubs/join_hub.sql files the hub as a media node and nothing else),
+  // so sourcing the people tab from chat.contact_rooms listed colleagues the
+  // server would accept only by coincidence — usually none of them.
+  const workspace = makeSkeletonUi("source-hub");
+  assert.deepEqual(workspace.getContactList(), {
+    service: Services.hub.get_members_by_type,
+    hub_id: "source-hub",
+    type: Attr.all,
+  });
+
+  // A P2P chat belongs to no workspace and keeps the contact book.
+  const p2p = makeSkeletonUi(Visitor.get(Attr.id));
+  assert.equal(p2p.getContactList().service, Services.chat.contact_rooms);
+});
+
+test("the member list is pinned to one page and never re-fetched", () => {
+  // hub_get_members_by_type returns every member at once — its LIMIT is
+  // commented out — so a second page would repeat the same rows and the picker
+  // would show each member twice.
+  const workspace = makeSkeletonLists(makeSkeletonUi("source-hub"));
+  assert.equal(workspace.contactContent.max_page, 1);
+  assert.equal(workspace.shareContent.max_page, undefined);
+
+  const p2p = makeSkeletonLists(makeSkeletonUi(Visitor.get(Attr.id)));
+  assert.equal(p2p.contactContent.max_page, undefined);
+});
+
+test("member search filters the loaded rows on name and email", () => {
+  const members = [
+    { id: "a", firstname: "Anh", lastname: "Tran", email: "anh@example.com" },
+    { id: "b", firstname: "Bao", lastname: "Le", email: "bao@example.com" },
+    { id: "c", firstname: "Chi", lastname: "Nguyen", email: "anh.chi@corp.io" },
+  ];
+
+  // hub_get_members_by_type accepts no search key, so an unfiltered search
+  // would list every member however specific the query.
+  const byName = makeSkeletonUi("source-hub", { members, search: "bao" });
+  assert.deepEqual(byName.memberSearchRows().map((r) => r.id), ["b"]);
+
+  // Email counts because the row displays it — matching only names would hide
+  // a result the user can plainly see.
+  const byEmail = makeSkeletonUi("source-hub", { members, search: "anh" });
+  assert.deepEqual(byEmail.memberSearchRows().map((r) => r.id), ["a", "c"]);
+
+  const noMatch = makeSkeletonUi("source-hub", { members, search: "zzz" });
+  assert.deepEqual(noMatch.memberSearchRows(), []);
+
+  // Nothing cached yet -> null, so the search skeleton can fail closed with
+  // safe empty kids until the member list publishes its cache.
+  assert.equal(makeSkeletonUi("source-hub").memberSearchRows(), null);
+});
+
+test("workspace member search stays empty until its cache is ready", () => {
+  const ui = makeSkeletonUi("source-hub", { search: "anh" });
+  ui.mget = (key) => ({ [Attr.type]: Attr.privateRoom, [Attr.search]: "anh" })[key];
+
+  const Skeletons = createSkeletons();
+  const searchSkeleton = loadCommonJsFactory(SEARCH_SKELETON_PATH, {
+    Skeletons,
+    _a: Attr,
+    _e: { search: "search" },
+    LOCALE: Locale,
+  });
+  const list = findSkeleton(
+    searchSkeleton(ui),
+    (node) => node.sys_pn === "forward-search-list"
+  );
+
+  assert.deepEqual(list.kids, [],
+    "a pending member cache must render no unfiltered recipients");
+  assert.equal(list.api, undefined,
+    "hub.get_members_by_type cannot safely serve a search query");
+  assert.equal(list.itemsOpt, undefined,
+    "static kids must not enter SmartList's kids-plus-itemsOpt corruption path");
+
+  const p2p = makeSkeletonUi(Visitor.get(Attr.id), { search: "anh" });
+  p2p.mget = (key) => ({ [Attr.type]: Attr.privateRoom, [Attr.search]: "anh" })[key];
+  const p2pList = findSkeleton(
+    searchSkeleton(p2p),
+    (node) => node.sys_pn === "forward-search-list"
+  );
+  assert.equal(p2pList.api, p2p.getRoomSearchApi,
+    "P2P contact search must keep its server API");
+  assert.equal(p2pList.itemsOpt.kind, "widget_chat_forward_list_item");
+  assert.equal(p2pList.kids, undefined);
+});
+
+test("the member search renders cached rows without a second request", () => {
+  const members = [
+    { id: "a", firstname: "Anh", lastname: "Tran", email: "anh@example.com" },
+  ];
+  const ui = makeSkeletonUi("source-hub", { members, search: "anh" });
+  // The people tab is the one under search here, not the default share tab.
+  ui.mget = (key) => ({ [Attr.type]: Attr.privateRoom, [Attr.search]: "anh" })[key];
+
+  const Skeletons = createSkeletons();
+  const searchSkeleton = loadCommonJsFactory(SEARCH_SKELETON_PATH, {
+    Skeletons,
+    _a: Attr,
+    _e: { search: "search" },
+    LOCALE: Locale,
+  });
+  const list = findSkeleton(
+    searchSkeleton(ui),
+    (node) => node.sys_pn === "forward-search-list"
+  );
+
+  assert.deepEqual(list.kids.map((row) => row.id), ["a"]);
+  assert.equal(list.kids[0].kind, "widget_chat_forward_list_item");
+  assert.equal(list.kids[0].type, Attr.privateRoom);
+  assert.equal(list.kids[0].eligibilityOwner, ui);
+  assert.equal(list.kids[0].shareEligibility, ui._shareEligibility);
+  assert.equal(list.api, undefined, "cached rows must not trigger a fetch");
+  assert.equal(list.itemsOpt, undefined,
+    "prepared static rows must not be reshaped by List.initialize");
+});
+
+test("an async acknowledgement envelope still scores the rows it carries", async () => {
+  // Observed live on stage: chat.forward_eligibility answered with the map
+  // nested inside {__ack__, __status__, data:{...}} rather than at the top
+  // level, and every row stayed disabled — indexing the envelope yields
+  // undefined for each recipient, which fail-closes to 0.
+  const { picker, timers } = makeBatchPicker({
+    msgHubID: "source-hub",
+    postService: () => Promise.resolve({
+      __ack__: "chat.forward_eligibility",
+      __status__: "online",
+      __timestamp__: 1786793193099,
+      data: { "4222452f42224533": 1, "97b24b3d97b24b42": 1 },
+    }),
+  });
+
+  const rows = [makeRow("4222452f42224533"), makeRow("97b24b3d97b24b42")];
+  for (const row of rows) picker._registerShareRoom(row);
+  await timers.runNext();
+
+  assert.equal(picker._isShareRoomEligible("4222452f42224533"), true);
+  assert.equal(picker._isShareRoomEligible("97b24b3d97b24b42"), true);
+  assert.ok(rows.every((row) => row.refreshes === 1),
+    "each row must re-render once its verdict lands");
+
+  // A real eligibility map carries no __ack__ and must pass through as-is.
+  assert.deepEqual(picker._svcPayload({ a: 1, b: 0 }), { a: 1, b: 0 });
+});
+
+test("a row reads the owner's live verdict, not its own model snapshot", () => {
+  // The bug this locks, reproduced on stage: `shareEligibility` is handed to the
+  // row through itemsOpt, so it lands in a Backbone model — which COPIES the
+  // attributes it is given. The row kept the empty object captured before any
+  // response arrived while the picker went on filling its own map, so every
+  // recipient read "no verdict" and stayed disabled even though the server had
+  // answered 1 for each of them.
+  const methods = compileClassMethods(
+    LIST_ITEM_SOURCE,
+    ["isChatDisabled", "eligibilityMap"],
+    { _a: Attr, LOCALE: Locale }
+  );
+
+  const owner = { _shareEligibility: { "member-chat": 1, "member-view": 0 } };
+  // The snapshot the model holds: empty, exactly as it was at render time.
+  const values = { id: "member-chat", shareEligibility: {}, eligibilityOwner: owner };
+  const row = { mget: (key) => values[key] };
+  for (const [name, fn] of Object.entries(methods)) row[name] = fn.bind(row);
+
+  assert.equal(row.isChatDisabled(), false, "an allowed recipient must be selectable");
+
+  values.id = "member-view";
+  assert.equal(row.isChatDisabled(), true, "a refused recipient stays disabled");
+
+  // Ungated tab (no map passed at all) stays selectable — the model value is
+  // still what decides WHETHER the row is gated.
+  const ungated = { mget: (key) => ({ id: "anyone" })[key] };
+  for (const [name, fn] of Object.entries(methods)) ungated[name] = fn.bind(ungated);
+  assert.equal(ungated.isChatDisabled(), false);
+
+  // No owner reachable (defensive): fall back to the model's own copy.
+  const orphanValues = { id: "x", shareEligibility: { x: 1 } };
+  const orphan = { mget: (key) => orphanValues[key] };
+  for (const [name, fn] of Object.entries(methods)) orphan[name] = fn.bind(orphan);
+  assert.equal(orphan.isChatDisabled(), false);
 });

@@ -107,23 +107,6 @@ const __skl_folder_topbar = function (ui) {
   // window can be dismissed.
   const headless = ui.mget(_a.headless);
 
-  // Browser fullscreen — fills the monitor, distinct from the Move & Resize
-  // presets which only ever fill the workspace. It used to be the first row of
-  // the zoom dropdown; the dropdown is now the players' preset panel, which has
-  // no room for it, so it sits inline next to the gear exactly as it does in
-  // the document player's header. The glyph flips with the real state
-  // (folder/index.js `_syncFullscreenBtn`), so ESC can't leave it inverted.
-  const fullscreenBtn = headless
-    ? ""
-    : Skeletons.Button.Svg({
-        className: `${cnFolder}__control-icon fullscreen`,
-        ico: "player-fullscreen",
-        service: "fullscreen",
-        sys_pn: "ctrl-fullscreen",
-        uiHandler: [ui],
-        partHandler: ui,
-      });
-
   const settingsBtn = inShare ? "" : Skeletons.Button.Svg({
     className: `${cnFolder}__control-icon settings`,
     ico: "gear-header",
@@ -155,7 +138,6 @@ const __skl_folder_topbar = function (ui) {
     className: `${cnFolder}__right`,
     kids: [
       shareBtn,
-      fullscreenBtn,
       settingsBtn,
       moreMenu,
       zoomBtn,

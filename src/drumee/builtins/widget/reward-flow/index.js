@@ -8,16 +8,17 @@
  *   step1_guide    → the walkthrough that creates the workspace (see guide.js)
  *   step2          → "Invite member" fires the desk's "invite-member" service
  *   step2_waiting  → a real surface is open and the card waits beside it. Two
- *                    ways in: the INTERNAL (team) permission panel the
- *                    walkthrough ends on, which IS Step 2 — it is where members
- *                    are invited — so Step 1 hands straight over to it
- *                    (onInvitePanel); or the invite popup opened from the card,
- *                    where onInvitationSent() advances. Either way the step is
+ *                    ways in: the members permission panel the walkthrough ends
+ *                    on, which IS Step 2 — it is where members are invited — so
+ *                    Step 1 hands straight over to it (onInvitePanel); or the
+ *                    invite popup opened from the card, where
+ *                    onInvitationSent() advances. Either way the step is
  *                    completed by an invitation actually going out: closing the
  *                    panel without sending one rewinds to step1_guide with the
  *                    create form re-opened (_awaitPanelClosed →
- *                    _resumeCreateForm). Every other Step 1 outcome — personal,
- *                    external/secure-share — lands on the step2 card first.
+ *                    _resumeCreateForm). BOTH hub types take this route now
+ *                    (team and share alike); only personal, which opens no
+ *                    panel at all, lands on the step2 card first.
  *   step3          → "Upload" fires the desk's _e.upload service
  *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
  *   step3_guide    → the walkthrough inside the workspace created in Step 1. It
@@ -64,9 +65,10 @@ const { beaconPost } = require("./beacon");
 const { coachAnchor, coachCenter } = require("../../../libs/guided-flow/anchor");
 
 // Recorded on every funnel post so the row says which campaign it belongs to.
-// Must match the utm_campaign analytics-server puts on the claim-reward email
-// CTA (service/index.js _rewardCtaLink).
-const CAMPAIGN = "free-storage";
+// Defined in libs/campaign, not here: the desk has to compare an arrival
+// against this name before consuming it, and a module-local const in a
+// lazily-loaded widget bundle is not reachable from there.
+const { REWARD_CAMPAIGN: CAMPAIGN } = require("libs/campaign");
 
 // How long "Open workspace" waits for the workspace window before giving up and
 // dropping Step 3 to its legacy topbar-upload variant. Loading is a fetch plus
@@ -101,7 +103,7 @@ const TARGET_WAIT_MS = 8000;
 const DROP_POST_TIMEOUT_MS = 1500;
 
 // The surfaces Step 2 hands the user to, all fed into the shared wrapper-modal:
-// the internal permission panel Step 1 ends on (onInvitePanel) OR the invite
+// the members permission panel Step 1 ends on (onInvitePanel) OR the invite
 // popup, then the invite-sent confirmation that REPLACES either of them on a
 // successful send (Wm.alert → window_info). A click on any of them is the user
 // working; a click beside them is the abandon gesture the flow guards.
@@ -1151,19 +1153,20 @@ class __reward_flow extends LetcBox {
       this._goto("step2");
       return;
     }
-    // The area picks the guide's safety budget for the follow-up surface: the
-    // external branch's is a lazily imported window and needs far longer than
-    // the internal branch's panel. Passed even when the descriptor was
-    // unusable (undefined → the guide waits the long budget).
+    // The area picks the guide's safety budget for the follow-up surface. Both
+    // areas now open the same lazily imported panel by the same route, so the
+    // split is headroom rather than two arrival paths — see the note on the
+    // constants in guide.js. Passed even when the descriptor was unusable
+    // (undefined → the guide waits the long budget).
     if (this._guide) this._guide.onWorkspaceCreated(ws?.area);
     else this.onGuideComplete();
   }
 
   /**
-   * The walkthrough reached the INTERNAL (team) permission panel — the surface
-   * that invites members. That IS what Step 2 asks for, so the flow enters
-   * Step 2 on it rather than trailing Step 1 and then asking for the same thing
-   * again on a card.
+   * The walkthrough reached the members permission panel — the surface that
+   * invites members. That IS what Step 2 asks for, so the flow enters Step 2 on
+   * it rather than trailing Step 1 and then asking for the same thing again on
+   * a card.
    *
    * Step 1 ENDS here: the walkthrough is stopped and the Step 2 card takes the
    * coach's place. Running the two side by side was the alternative and it does
@@ -1171,9 +1174,12 @@ class __reward_flow extends LetcBox {
    * claim the overlay, and a walkthrough state renders no card at all, which is
    * why counting the panel as Step 2 showed nothing on screen.
    *
-   * The external (secure-share) branch is NOT this: it opens a share dock, not
-   * an invite panel, so it stays inside Step 1 and lands on the Step 2 card
-   * with its Invite button, exactly as before.
+   * BOTH hub branches reach this now. External (share) creation used to open a
+   * share dock instead — not an invite panel — so it stayed inside Step 1 and
+   * landed on the Step 2 card with its Invite button. media_form now ends
+   * internal and external creation on the same permission_restricted panel, so
+   * external takes this handoff too. Personal is still not this: it is a folder
+   * with no follow-up panel and finishes at Step 2 directly.
    */
   onInvitePanel() {
     if (this._step !== "step1_guide") return;
@@ -1296,8 +1302,8 @@ class __reward_flow extends LetcBox {
   /**
    * Put Step 2 back on the permission panel of the workspace this run created.
    *
-   * Reached by stepping back out of Step 3. For a workspace made through the
-   * INTERNAL branch, Step 2 was never the desk's Invite button — it was that
+   * Reached by stepping back out of Step 3. For a workspace made through either
+   * HUB branch, Step 2 was never the desk's Invite button — it was that
    * workspace's own members panel — so going back to a card pointing at the
    * topbar would send the user somewhere they have never been. Reopen the panel
    * instead, on the same workspace, and let Step 2 resume exactly where it was.
@@ -1306,13 +1312,23 @@ class __reward_flow extends LetcBox {
    * optional), so the descriptor this run has been carrying since Step 1 is
    * enough to bring it back.
    *
-   * @returns {Boolean} false when this run has no internal workspace to go back
-   *   to — an external or personal one, or a reload that lost the descriptor —
-   *   leaving the plain Step 2 card in charge.
+   * Both hub areas qualify: media_form's FLOW map now ends internal AND external
+   * creation on the same permission_restricted panel, so external reached Step 2
+   * the same way internal did and has the same place to go back to.
+   *
+   * Whitelisted rather than "anything but personal": onWorkspaceCreated stores
+   * the descriptor BEFORE its personal branch, so this._workspace is set for a
+   * personal workspace too — and that one is a home-root folder with no hub and
+   * no panel to reopen. Naming the two real hub areas keeps an unrecognised area
+   * out as well.
+   *
+   * @returns {Boolean} false when this run has no hub workspace to go back to —
+   *   a personal one, or a reload that lost the descriptor — leaving the plain
+   *   Step 2 card in charge.
    */
   _reopenInvitePanel() {
     const ws = this._workspace;
-    if (!ws || String(ws.area) !== "private") return false;
+    if (!ws || !["private", "share"].includes(String(ws.area))) return false;
     if (typeof Wm === "undefined" || typeof Wm.__wrapperModal?.feed !== "function") {
       return false;
     }
@@ -1438,9 +1454,9 @@ class __reward_flow extends LetcBox {
    * The guide finished its perm phase (panel closed) → Step 2.
    *
    * Only the branches the walkthrough still owns reach this: personal (no panel
-   * at all) and external/secure-share. The internal branch leaves the guide the
-   * moment its panel appears — that panel IS Step 2, and _awaitPanelClosed
-   * carries it from there (see onInvitePanel).
+   * at all), and the safety timeout when no panel ever appears. Both hub types
+   * leave the guide the moment their members panel appears — that panel IS
+   * Step 2, and _awaitPanelClosed carries it from there (see onInvitePanel).
    */
   onGuideComplete() {
     if (this._step !== "step1_guide") return;
@@ -1885,10 +1901,13 @@ class __reward_flow extends LetcBox {
     // panel (media_form feeds `permission_restricted` into this same host), or
     // Step 2's invite popup and the confirmation that replaces it.
     this._clearWrapperModal();
-    // The perm phase's OTHER branch. An external ("share") workspace opens the
-    // secure-share dock as a real WINDOW (media_form → Wm.launch), not into the
-    // wrapper-modal, so clearing that host above does not touch it. Same
-    // sub-step, same abandonment, same orphan.
+    // Legacy safety net. External ("share") creation used to open the
+    // secure-share dock as a real WINDOW (media_form → Wm.launch) rather than
+    // into the wrapper-modal, so clearing that host did not touch it. Both hub
+    // types now feed permission_restricted into the wrapper-modal, so the line
+    // above already covers them and this is normally a no-op. Kept because it
+    // is the only thing that would clean up such a dock if one is on screen
+    // during the walkthrough — abandoning with it open would strand it.
     if (guided) this._closeSecureShare();
   }
 
@@ -1912,11 +1931,13 @@ class __reward_flow extends LetcBox {
     }
   }
 
-  /** Close the secure-share dock the Step 1 create step may have launched.
+  /** Close any secure-share dock left open during the walkthrough. Step 1's
+   *  create step used to launch one for external workspaces; it no longer does
+   *  (both hub types end on the members panel), so this is normally a no-op.
    *  Driven through the window's own close service, like _closeStep3Workspace,
    *  so it unregisters from the pool instead of just leaving the DOM. During
-   *  the walkthrough the flow owns the screen, so any such window is the one
-   *  that step just opened. */
+   *  the walkthrough the flow owns the screen, so any such window is one the
+   *  user is not meant to be left with. */
   _closeSecureShare() {
     if (typeof Wm === "undefined" || typeof Wm.getItemsByKind !== "function") {
       return;

@@ -8,7 +8,7 @@
  */
 const __window_meeting_feedback = function (_ui_, opts = {}) {
   const fig = _ui_.fig.family;
-  const { duration = "0:00", participantCount = 0 } = opts;
+  const { duration = "0:00", participantCount = 0, ended = true } = opts;
 
   const stars = [];
   for (let i = 1; i <= 5; i++) {
@@ -37,7 +37,9 @@ const __window_meeting_feedback = function (_ui_, opts = {}) {
           }),
           Skeletons.Note({
             className: `${fig}__feedback-title`,
-            content: LOCALE.MEETING_ENDED || "Meeting Ended",
+            // `ended` false = the host left a meeting that is still running for
+            // everyone else, so it has NOT ended.
+            content: ended ? LOCALE.MEETING_ENDED : LOCALE.YOU_LEFT_THE_MEETING,
           }),
         ],
       }),

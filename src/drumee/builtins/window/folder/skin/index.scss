@@ -2,6 +2,167 @@
 @use "./meeting-schedule";
 @use "./meeting-modal";
 
+// =====================================================================
+// Mobile presentation for the folder window's merged "+ New" control.
+//
+// Desktop anchors the panel under its trigger (position:absolute;
+// top: calc(100% + 6px); right: 0) and flies the "+ Add new" group out
+// to the RIGHT at left: calc(100% - 8px). On a phone that flyout leaves
+// the viewport entirely, so on small screens the panel becomes a
+// viewport-centred card and the group expands inline underneath instead.
+//
+// Included TWICE — once under `&[data-device="mobile"]`, once under
+// `@media (max-width: 650px)` — mirroring mixins/responsive.scss:
+// Visitor.device() only reports "mobile" below innerWidth 800, so the
+// attribute lies in the DevTools emulator and on landscape phones, and
+// the viewport query is the fallback that catches those. Every rule is
+// scoped inside this mixin, so desktop is untouched.
+//
+// `&` at the include site is the __new-ctrl box itself.
+// =====================================================================
+@mixin new-ctrl-mobile-card {
+  // Viewport-centred card. `right: auto` is required or the desktop
+  // `right: 0` fights the translate. No ancestor between here and the
+  // window root carries a transform/filter (the mobile-fullscreen-window
+  // mixin explicitly clears the WM's drag transform on __ui), so `fixed`
+  // resolves against the viewport rather than some intermediate box.
+  .menu-topic-items__wrapper {
+    // !important is load-bearing: the menu widget writes
+    // `position:absolute; overflow:hidden` INLINE on this node when its
+    // 'items-wrapper' part mounts (ui-core widgets/menu/index.js
+    // onPartReady), and an inline declaration outranks any stylesheet rule
+    // without it. The desktop block above gets away with a plain
+    // `position:absolute` only because it agrees with that inline value —
+    // `fixed` does not, and silently lost to it until this was flagged by a
+    // headless render (the card sat off-screen right, still anchored to the
+    // desktop `right: 0`).
+    position: fixed !important;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: min(320px, calc(100vw - 32px));
+    // Keeps the card clear of the desk's 44px mobile topbar at the top and
+    // of the home indicator at the bottom, so the two never overlap — the
+    // window's inline WM z-index makes __ui a stacking context, so a card
+    // that DID reach the topbar could not paint above it.
+    max-height: calc(100dvh - 96px);
+    z-index: 100000;
+  }
+
+  // Desktop needs `overflow: visible !important` here so the right-side
+  // "+ Add new" flyout can escape the panel. In the card that flyout is
+  // inline (position:static below), so nothing has to escape — and the card
+  // DOES need to scroll once the accordion opens on a short landscape
+  // viewport. Written as longhands so each axis lands later in the cascade
+  // than that shorthand at equal weight and wins on its own: y scrolls,
+  // x stays clipped so a stray sub-pixel cannot draw a scrollbar across
+  // the bottom of the card.
+  .menu-topic-items__wrapper[data-state="open"] {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  // Desktop sizes the panel to its widest row (width:max-content,
+  // min-width:242px). In the card the panel IS the card, so it fills the
+  // fixed width instead of re-deriving one from its content. border-box is
+  // load-bearing here: the desktop rules never set it, so `width: 100%` plus
+  // `padding: 8px` measured 336px inside the 320px card and drew a
+  // horizontal scrollbar — caught by a headless measurement, not by eye.
+  .menu-topic-items,
+  .menu-items {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  // Reveal the dim layer only while the menu is open. `:has()` rather than
+  // a sibling combinator because the menu renders a chain (__wrapper /
+  // .menu-topic / .menu-topic__ui) and which node carries the class is the
+  // widget's business, not ours — the same `:has(… [data-state="1"])`
+  // shape desk/wm/dock/skin/index.scss already keys its dock state off.
+  &:has(.window-button__dropdown-menu__wrapper[data-state="1"]) {
+    .window-folder-topbar__new-backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      // Same scrim the desk's own tap-to-close backdrop uses
+      // (desk/skin/index.scss `.desk-module__overlay`), which is what sits
+      // behind the mobile drawer — the nearest sibling to this surface, and a
+      // closer match than the modal-dialog glass this replaced. The token is
+      // theme-aware on its own (rgba(0,0,0,.4) light, rgba(20,17,35,.4) dark,
+      // declared on :root / html[data-theme="dark"]), so unlike the glass
+      // mixin no explicit dark-theme branch is needed here.
+      //
+      // Shared with the create-workspace dialog and the invite popup
+      // (media/form/skin) so one recipe covers every mobile overlay surface.
+      // The mixin's ::before reset is inert on this element — it never carries
+      // `[data-overlay="blur"]`, so there is no stacked glass layer to clear.
+      @include drumee.scrim-overlay;
+      // Deliberately UNDER the desk mobile topbar (99999): a tap up there
+      // lands on a framework view, so RADIO_CLICK closes the menu anyway
+      // and there is nothing to gain by masking it. (The desk overlay sits at
+      // 10010 for its own reasons — it only has to clear desk chrome, where
+      // this has to clear the folder window's content.)
+      z-index: 99998;
+    }
+  }
+
+  // 13px text in 8px padding is a desktop pointer target.
+  .window-button__dropdown-menu__item {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  // "+ Add new" expands INLINE as an accordion. flex-wrap lets the submenu
+  // take a full-width row of its own beneath the "+ Add new" label instead
+  // of being squeezed into the same line.
+  .window-button__dropdown-menu__item--create-group {
+    flex-wrap: wrap;
+  }
+
+  .window-button__dropdown-menu__create-submenu {
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    min-width: 0;
+    flex-basis: 100%;
+    margin-top: 4px;
+    padding: 0;
+    background-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  // Neutralise the hover branch, and do it BEFORE the data-submenu rule so
+  // the explicit toggle still wins. Touch browsers latch :hover onto the
+  // last-tapped element, which would leave the accordion stuck open after
+  // the user tapped it closed; the tap already flips data-submenu
+  // (folder/index.js toggleNewCreateMenu) and that is the only signal this
+  // should follow on a phone.
+  .window-button__dropdown-menu__item--create-group:hover
+    > .window-button__dropdown-menu__create-submenu {
+    display: none;
+  }
+
+  .window-button__dropdown-menu__item--create-group[data-submenu="open"]
+    > .window-button__dropdown-menu__create-submenu {
+    display: flex;
+  }
+
+  // Indent the create rows so the accordion reads as nested under
+  // "+ Add new" without a box of its own.
+  .window-button__dropdown-menu__submenu-item {
+    min-height: 44px;
+    padding-left: 22px;
+  }
+}
+
 .window-folder {
   &__ui {
     // Container query anchor. The folder window registers itself as a
@@ -450,8 +611,32 @@
       // skin/lib/menu.scss only hides the inner .menu-items via
       // display:none on data-state. Hide the absolute wrapper too so
       // it doesn't intercept clicks while closed.
+      //
+      // These two selectors are kept for the pre-open case, but they cannot
+      // carry this on their own — see the menu-root rule below.
       .menu-topic-items__wrapper[data-state="closed"],
       .menu-topic-items__wrapper[data-state="0"] {
+        display: none;
+      }
+
+      // The wrapper is stamped data-state="open" by _openItems and is NEVER
+      // reset: ui-core's _onClosed resets the inner .menu-items and the menu
+      // root, but not the wrapper (widgets/menu/index.js). So the two rules
+      // above stop matching the moment the menu has been opened once, and the
+      // wrapper stays "open" for the rest of the session.
+      //
+      // On desktop that leftover is invisible: the inner items are display:none,
+      // so the absolutely positioned wrapper collapses to 0x0 under the trigger
+      // — which is also why the click-interception it was written to prevent
+      // went unnoticed. The mobile card below gives the same wrapper an explicit
+      // width and fixed, centred placement, so after dismissing the menu it
+      // stays on screen as an empty 320px panel over the file grid.
+      //
+      // Key the hide on the MENU ROOT, which _onClosed does reset to 0. That is
+      // the same signal the create-submenu rule further down already trusts, so
+      // both now agree on one source of truth for "this menu is closed".
+      .window-button__dropdown-menu__wrapper:not([data-state="1"])
+        .menu-topic-items__wrapper {
         display: none;
       }
 
@@ -581,6 +766,26 @@
         color: #ffa8dc;
       }
 
+      // ── Mobile: centred card instead of an anchored dropdown ────────
+      // Both flags, for the reason spelled out on the mixin.
+      &[data-device="mobile"] {
+        @include new-ctrl-mobile-card;
+      }
+
+      @media (max-width: 650px) {
+        & {
+          @include new-ctrl-mobile-card;
+        }
+      }
+    }
+
+    // Dim layer behind the mobile card (skeleton/toolkit fileNewControl).
+    // Hidden by default rather than left empty: it is a flex child of
+    // __file-controls, so an empty box would still draw that row's 8px gap
+    // next to the pill on desktop. The mobile mixin above reveals it while
+    // the menu is open.
+    &__new-backdrop {
+      display: none;
     }
 
     &__control-icon {
@@ -603,14 +808,6 @@
       &.settings use {
         fill: none;
         stroke: currentColor;
-      }
-
-      // The sprite build strips the source fill from `player-fullscreen` /
-      // `desktop_reduce`, so without this the glyph paints the SVG default
-      // black next to its currentColor neighbours.
-      &.fullscreen svg,
-      &.fullscreen use {
-        fill: currentColor;
       }
 
       .window-folder__control-icon svg {
@@ -1210,6 +1407,14 @@
     align-items: center;
     gap: 16px;
     min-width: 0;
+  }
+
+  // Carousel footer, hidden by default: it only means anything in the compact
+  // @container layout below, which pages the strip two tabs at a time. Without
+  // this it would still be an extra (0-size) flex child of the tab-bar wrapper
+  // on desktop — the skeleton renders it at every width.
+  &__tab-bar-dots {
+    display: none;
   }
 
   &__tab-bar-item {
@@ -3454,13 +3659,33 @@
       }
     }
 
-    // ── Tab bar (Files / Chat / Tasks) ───────────────────────────
-    // Horizontal scroll when there isn't room — keeps all tabs
-    // reachable without breaking row layout.
+    // ── Tab bar (Files / Chat / Tasks / Meeting) — carousel ──────
+    // This used to be a free-scrolling row: the WRAPPER scrolled, tabs kept
+    // their natural width, and the last tab was simply cut off mid-word with
+    // nothing to say more existed. It now pages two tabs at a time, with a dot
+    // per page underneath (skeleton/toolkit tabBar builds them).
+    //
+    // The scroller moves from the wrapper to the strip, so the dots can sit
+    // outside the scrolling area and stay put while the tabs move. The wrapper
+    // wraps instead, which is what puts the footer on its own line.
     &__tab-bar-wrapper {
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: var(--spacer-2);
+      overflow: visible;
+    }
+
+    &__tab-bar-tabs {
+      // Full row so a page is exactly the strip's width — the arithmetic the
+      // item's flex-basis and the JS `scrollLeft / clientWidth` both rely on.
+      flex: 1 1 100%;
+      min-width: 0;
+      gap: 8px;
       overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      // Hidden, not absent: the dots are the affordance now, and a scrollbar
+      // under a two-item strip reads as a second, competing one.
       scrollbar-width: none;
 
       &::-webkit-scrollbar {
@@ -3468,25 +3693,117 @@
       }
     }
 
+    // Two per page. The gap sits BETWEEN the pair, so each item is half of what
+    // is left after it — not half the strip, which would overflow by the gap
+    // and let a sliver of tab three show at the right edge.
     &__tab-bar-item {
-      flex: 0 0 auto;
+      flex: 0 0 calc((100% - 8px) / 2);
+      min-width: 0;
+      scroll-snap-align: start;
+    }
+
+    // ── Carousel footer ─────────────────────────────────────────
+    &__tab-bar-dots {
+      // Explicit, because the base rule above hides it at every other width.
+      display: flex;
+      flex: 1 1 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding-top: 2px;
+
+      // One page — nothing to page through (set in the skeleton).
+      &[data-visible="0"] {
+        display: none;
+      }
+    }
+
+    &__tab-bar-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 6px;
+      border-radius: 50%;
+      background-color: var(--normal-fg-10);
+      opacity: 0.25;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    // Active dot, driven entirely by the footer's own data-page — so a swipe
+    // only has to update one attribute and no per-dot state exists to drift.
+    // Two pages is the ceiling for this bar (four tabs max), so listing them
+    // beats generating a rule per index.
+    &__tab-bar-dots[data-page="0"] &__tab-bar-dot:nth-child(1),
+    &__tab-bar-dots[data-page="1"] &__tab-bar-dot:nth-child(2) {
+      opacity: 1;
+      transform: scale(1.15);
     }
 
     // ── Filter bar (All / Docs / PDF / Images / Other) ──────────
-    // Bigger gap so the underline-pill tabs read as distinct chips
-    // rather than running into each other when the row scrolls
-    // horizontally on a narrow window.
+    // Two rows on a narrow layout: the New + view-toggle controls on top, the
+    // filter tabs beneath. This used to be one nowrap strip that scrolled
+    // horizontally, and it did not fit — at a 390px window the row needed
+    // 432px, so the view toggle was cut off the right edge with nothing to
+    // indicate it was there.
+    //
+    // Wrapping is enough to fix it because the tabs alone do fit: the five of
+    // them measure 190px, or 278px with their gaps and this padding, which
+    // clears even a 320px window. So overflow-x goes with the nowrap — with
+    // the bar wrapping there is nothing left to scroll — and the hidden
+    // scrollbar rules go with it.
+    //
+    // Spacing is set from a measured width budget, not by eye. At a 320px
+    // window — the narrowest this bar is designed for, per the note above —
+    // the five tabs are 185px of content, so the row costs 185 + 4 column gaps
+    // + 2 side paddings and everything left over is slack:
+    //
+    //   column-gap 16px, padding 12px  →  249 + 24 = 273px used, 47px free
+    //   column-gap 24px, padding 12px  →  281 + 24 = 305px used, 15px free
+    //
+    // So the column gap can go up one token step and still clear 320px, which
+    // is what it does here: --spacer-6 (24px) matches the DESKTOP separation,
+    // so the tabs get the same breathing room on a phone that they have on a
+    // wide window, instead of being the one place they crowd together.
+    //
+    // The horizontal padding deliberately stays at --spacer-4. It is the other
+    // claim on the same 320px budget, and spending it twice is what would push
+    // a tab onto a third row; the vertical padding is what opens up instead,
+    // where nothing competes for the space.
+    //
+    // Row gap goes up with it so the controls row and the tab row read as two
+    // groups rather than one block — it is free, since rows cost height and
+    // height is not scarce here.
+    //
+    // Measured wrap point after this change: the five tabs hold one row down to
+    // 310px and split onto a third row below that (280px was checked too). That
+    // is under the 320px floor either way, and the split is graceful — the bar
+    // wraps, it does not clip or scroll.
     &__filter-bar {
-      flex-wrap: nowrap;
-      gap: var(--spacer-5);
-      overflow-x: auto;
-      padding: var(--spacer-4);
+      flex-wrap: wrap;
+      gap: var(--spacer-5) var(--spacer-6);
+      padding: var(--spacer-5) var(--spacer-4);
       justify-content: center;
-      scrollbar-width: none;
+    }
 
-      &::-webkit-scrollbar {
-        display: none;
-      }
+    // The controls take the first row. `order: -1` lifts them above the tabs
+    // without touching the skeleton, which deliberately emits them LAST so the
+    // desktop row can right-align them with margin-left:auto — that ordering
+    // is worth leaving alone.
+    //
+    // Selector matches the base rule's shape (__main + the topbar element) so
+    // it carries the same specificity and wins on source order; a bare
+    // .window-folder-topbar__file-controls would lose to it.
+    &__main .window-folder-topbar__file-controls {
+      order: -1;
+      flex: 0 0 100%;
+      justify-content: center;
+      // The base margin-left:auto is what pushes these right on desktop. It is
+      // inert at 100% basis, but cleared so it cannot bite if that ever changes.
+      margin-left: 0;
     }
 
     // The rendered tab class is `__filter-tab-main` (see topbar/filter

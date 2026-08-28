@@ -358,15 +358,64 @@
     line-height: 22.5px;
   }
 
+  // Support's avatar: the Drumee mark instead of the auto-coloured initials an
+  // ordinary contact gets. Sized to the 40px UserProfile tile it replaces, so
+  // the header does not reflow when the conversation changes. No background —
+  // the asset carries its own.
+  &__header-support-avatar {
+    align-items: center;
+    flex-shrink: 0;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+  }
+
+  &__header-support-avatar-ico {
+    height: 32px;
+    width: 32px;
+  }
+
+  &__header-name-row {
+    align-items: center;
+    gap: 8px;
+  }
+
   &__header-status {
     @include drumee.typo(
       $size: 10px,
       $weight: 600,
       $color: var(--active-border)
     );
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     font-family: var(--font-mono, var(--font-medium));
+  }
+
+  // Talking TO support: an expectation line replaces the presence dot, so it
+  // is running copy rather than a status token — no uppercase, no tracking.
+  // Its own class, not a modifier of __header-status: _onPeerData rewrites
+  // anything matching that class when a presence broadcast arrives.
+  // Green, like a presence line, because it stands in for one: this is the
+  // slot the peer's online status occupies for every other conversation.
+  &__header-support-note {
+    @include drumee.typo($size: 12px, $color: var(--success));
+  }
+
+  // Marks a support conversation in the chat header. The inbox row carries
+  // the same pill (chatcontact-item skin) so both views read alike.
+  &__support-pill {
+    @include drumee.typo($size: 9px, $color: var(--active-border));
+    font-weight: 700;
+    align-self: center;
+    background-color: var(--primary-30);
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.6px;
+    line-height: 14px;
+    padding: 0 5px;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   &__header-actions {

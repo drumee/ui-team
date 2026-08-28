@@ -368,9 +368,154 @@ function canShowSeatLimitPopup() {
   );
 }
 
+/**
+ * Is TIER GATING in force on this deployment at all?
+ *
+ * Separate from `canUpgradePlan` on purpose: that one asks whether a CTA
+ * should be drawn, this one asks whether the feature should be taken away in
+ * the first place. They are not the same question and conflating them is how
+ * you ship crippled software.
+ *
+ * A self-hosted pod has no payment backend and no checkout — `SERVICE.payment`
+ * simply is not merged into SERVICE there (drumee.js `init_globals`; the local
+ * lex/services.json fallback carries no `payment` entry). Locking a feature on
+ * such an install offers the operator no way whatsoever to unlock it: this is
+ * AGPL software that people run on their own hardware, and a gate they cannot
+ * pay to lift is not an upsell, it is a defect. The same is true when the
+ * operator has explicitly switched billing off.
+ *
+ * So gating follows the same switch the CTA does, one step earlier. Cloud
+ * installs gate and sell; pods do neither.
+ */
+function featureGatingActive() {
+  return billingAvailable();
+}
+
+/**
+ * Read a plan entitlement out of `Visitor.quota()`.
+ *
+ * Everything in the quota JSON arrives from yp.plan.quota, copied wholesale by
+ * payment_apply_entitlement and returned by the get_quota proc — so a new
+ * entitlement is a new key in that JSON and needs no plumbing on this side.
+ * (Note for anyone adding one: it goes in yp.plan.QUOTA, not yp.plan.FEATURES.
+ * `features` is read only by payment_get_catalog for the pricing page and
+ * never reaches the client.)
+ *
+ * @returns {*} undefined when quota has not loaded or has no such key
+ */
+function entitlement(key) {
+  const quota =
+    (typeof Visitor !== "undefined" && Visitor && Visitor.quota
+      ? Visitor.quota()
+      : null) || {};
+  const v = quota[key];
+  return v === "" ? undefined : v;
+}
+
+/**
+ * Which task-tracker views this plan may open.
+ *
+ * Entitlement: `quota.task_views` — a comma-separated whitelist ("board,list"),
+ * or "*" for every view.
+ *
+ * UNKNOWN MEANS EVERYTHING, and that is the whole safety story for this
+ * feature. The key does not exist in any deployed plan row until the schemas
+ * patch lands, so a missing value has to read as "no restriction" — fail it
+ * closed instead and the day this ships every user on every tier, Business
+ * included, silently loses Calendar, Gantt and Project Health. Same rule
+ * `isFreeSoloPlan` documents for a not-yet-loaded seat count, and for the same
+ * reason: this also runs during bootstrap, before quota is filled in.
+ *
+ * The consequence is that the UI change is INERT until the entitlement is
+ * deployed, which is exactly the rollout order you want — ship the client,
+ * watch nothing change, then turn it on from the database.
+ *
+ * @returns {String[]|null} allowed view keys, or null for "no restriction"
+ */
+function taskViewsAllowed() {
+  if (!featureGatingActive()) return null;
+  const raw = entitlement("task_views");
+  if (raw == null) return null;
+  const s = String(raw).trim().toLowerCase();
+  if (!s || s === "*" || s === "all") return null;
+  const list = s
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  // A present-but-unparseable value ("[]", ",,,") must not lock the panel down
+  // to nothing. Unknown fails open, and an empty list is unknown.
+  return list.length ? list : null;
+}
+
+/**
+ * May this plan open a given task-tracker view?
+ *
+ * @param {String} view "board" | "list" | "calendar" | "gantt" | "summary"
+ * @returns {Boolean}
+ */
+function isTaskViewAllowed(view) {
+  const allowed = taskViewsAllowed();
+  if (!allowed) return true;
+  return allowed.includes(String(view || "").trim().toLowerCase());
+}
+
+/**
+ * How long a single meeting may run on this plan, in minutes.
+ *
+ * Entitlement: `quota.meeting_minutes`. Read with exactly the convention the
+ * SERVER uses in `service/lib/meeting-limit.js capMinutes()` — a positive
+ * integer is the cap, and 0 (or absent, or unparseable) means no cap at all.
+ * The two readings have to agree: the server's decides what actually happens
+ * to a live room, this one only decides what the UI says beforehand, so any
+ * drift shows up as the UI refusing a meeting the server would happily run, or
+ * promising one it is going to cut off mid-sentence.
+ *
+ * Unknown fails OPEN for the reason `taskViewsAllowed` sets out at length: the
+ * key does not exist in any deployed plan row until the schemas patch lands,
+ * and this also runs during bootstrap, before Visitor.quota() is filled in.
+ *
+ * @returns {Number|null} cap in minutes, or null for "no limit / not known"
+ */
+function meetingMinutesCap() {
+  if (!featureGatingActive()) return null;
+  const raw = entitlement("meeting_minutes");
+  if (raw == null) return null;
+  const m = parseInt(raw, 10);
+  return Number.isFinite(m) && m > 0 ? m : null;
+}
+
+/**
+ * Is a meeting of `seconds` longer than this plan allows?
+ *
+ * Answers with the CAP rather than with a boolean, so the caller can name the
+ * number in the upsell without reading the entitlement a second time (and
+ * without the two reads disagreeing should quota land in between).
+ *
+ * Compares whole minutes, rounded DOWN. A 45-minute cap must not reject a
+ * meeting the organiser entered as 45 minutes because the epochs came out a
+ * few seconds over; the server measures elapsed wall-clock from the first
+ * join, so nothing here needs to be stricter than the minute that was typed.
+ *
+ * @param {Number} seconds meeting duration
+ * @returns {Number} the cap in minutes when it is exceeded, else 0
+ */
+function overMeetingCap(seconds) {
+  const cap = meetingMinutesCap();
+  if (!cap) return 0;
+  const mins = Math.floor(Number(seconds) / 60);
+  if (!Number.isFinite(mins) || mins <= cap) return 0;
+  return cap;
+}
+
 module.exports = {
   billingAvailable,
   canUpgradePlan,
+  featureGatingActive,
+  entitlement,
+  taskViewsAllowed,
+  isTaskViewAllowed,
+  meetingMinutesCap,
+  overMeetingCap,
   needsAdminConsoleUpgrade,
   planKey,
   planLabel,

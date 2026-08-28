@@ -1,9 +1,15 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
-const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
+const { canUpgradePlan, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
-const { captureUtm, campaignArrival } = require("libs/campaign");
+const {
+  captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
+} = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
+// "Open this file once I am signed in" — a Designation link opened by a visitor
+// with no session. Armed at module scope in index.web.js, consumed below.
+const fileDeepLink = require("libs/file-deep-link");
+const { openSupportMail } = require("libs/support");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
 // hosts it. Opt-in: each implements onEscape() and returns true when it consumed
@@ -61,6 +67,13 @@ class desk_module extends LetcBox {
 
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     Visitor.on(_e.change, this._updateAvatar);
+    // Contextual tutorial tours. The trigger surfaces are spread across the
+    // desk, the window manager, the sidebar workspace list and (later) the
+    // folder window, none of which share a part tree with the overlay the tour
+    // mounts into — so they raise one broadcast and the desk is the only
+    // listener. Same shape as the over-limit channel above.
+    this._onTourTrigger = this._onTourTrigger.bind(this);
+    RADIO_BROADCAST.on(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
     // capture listener only exists while a desk is alive — both of its targets
@@ -89,7 +102,9 @@ class desk_module extends LetcBox {
     });
     // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
     // open the full-page billing screen without a direct module reference.
-    this._openBillingPage = () => this.openBillingPage();
+    // `arg` (plan/cycle/tab preselect) rides through untouched — the
+    // upgrade-nudge popup uses it to land on the tier it was selling.
+    this._openBillingPage = (arg) => this.openBillingPage(arg);
     RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
     // Downgrade over-limit (libs/over-limit): the popup and banner raise
     // these instead of reaching into the desk. open-admin-console reuses the
@@ -105,6 +120,11 @@ class desk_module extends LetcBox {
     this._openTrashPanel = () => this._deskServiceShim("toggle-trash");
     this._openHomeFromPopup = () => this._deskServiceShim(_e.home);
     this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
+    // The user clicked the docked call to come back to it: take down whatever
+    // screen was covering the desk so the restored, full-size window is not
+    // parked behind it (window/meeting _leaveCallTile).
+    this._onCallReturned = () => this.closeAllPanels();
+    RADIO_BROADCAST.on("call:returned", this._onCallReturned);
     RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
@@ -381,12 +401,14 @@ class desk_module extends LetcBox {
       this._restoreClearTimer = null;
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
+    RADIO_BROADCAST.off("call:returned", this._onCallReturned);
     RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
+    RADIO_BROADCAST.off(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchHotkey || this._escHotkey) {
       const hk = require("libs/hotkeys");
@@ -488,6 +510,38 @@ class desk_module extends LetcBox {
     // Don't let desk-state restore pull the screen back to the remembered one.
     this._restoreInFlight = false;
     this.openBillingPage(preselect);
+    return true;
+  }
+
+  /**
+   * Open the file a signed-out visitor arrived on, now that they are in.
+   *
+   * A Designation link is sent TO somebody, so it is usually opened without a
+   * session. The hash does not survive that: the router replaces it with
+   * "#/welcome/signin" and sign-in reloads the document, so wm.route()'s
+   * `locationOnStart` holds the sign-in screen by the time it looks. The link is
+   * captured at module scope in index.web.js instead and replayed here — the
+   * same shape, and the same reason, as _maybeOpenBillingDeepLink above.
+   *
+   * Consumed exactly once, here: reading clears the intent, so it can never
+   * reopen the file over whatever the visitor does next. The warm path (already
+   * signed in, wm.route() opens it directly) clears it there instead.
+   *
+   * @returns {Boolean} whether this boot carried such a link
+   */
+  _maybeOpenFileDeepLink() {
+    const hash = fileDeepLink.consume();
+    if (!hash) return false;
+    // Same as billing: the remembered screen must not pull focus off the file.
+    this._restoreInFlight = false;
+    try {
+      Wm.openDeepLinkHash(hash);
+    } catch (e) {
+      // A malformed or unresolvable link must never break the desk boot; the
+      // visitor simply lands on home, which is what happened before this existed.
+      this.warn && this.warn("[file-deep-link] could not open", e);
+      return false;
+    }
     return true;
   }
 
@@ -1016,6 +1070,10 @@ class desk_module extends LetcBox {
       // localStorage copy (libs/hub-deep-link), and desk-state restore must stand
       // down for that one too or it races the workspace about to open.
       if (hubDeepLink.has()) return true;
+      // Same reasoning for a file link a signed-out visitor arrived on: the
+      // remembered screen must not race the file about to open. peek(), not
+      // consume() — _maybeOpenFileDeepLink is the single consumer.
+      if (fileDeepLink.peek()) return true;
       if (sessionStorage.getItem("drumee_secure_share_return")) {
         return true;
       }
@@ -1152,6 +1210,7 @@ class desk_module extends LetcBox {
     if (service === "toggle-activity") {
       // Open-only: the live toggle would close the panel if state is already 1.
       this._dismissWmModal();
+      this._parkLiveCall();
       const p = await this.ensurePart("activity-panel");
       if (p && ~~p.mget(_a.state) !== 1) {
         p.activityState = 1;
@@ -1306,6 +1365,11 @@ class desk_module extends LetcBox {
     setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
     // PMF rating survey: accumulate active usage; popup fires at 30 min.
     this._initRatingSurveyTimer();
+    // Warm the support-account lookup so screens that need it can answer
+    // synchronously: the Get help screen hides Contact Support for the
+    // support account itself, and the inbox badges support conversations.
+    // Failure is already swallowed into null — nothing here depends on it.
+    this.supportContact();
   }
 
   /**
@@ -1550,6 +1614,11 @@ class desk_module extends LetcBox {
   }
 
   closeDeskNewMenu(cmd) {
+    // On mobile the same five services are reached from the drawer's `create`
+    // screen instead of a menu, so there is no menu to close — the DRAWER is
+    // what has to go, or the user is left staring at the screen they just left.
+    // Every new-* case calls this first, so one branch covers all of them.
+    if (Visitor.isMobile()) this._closeMobileDrawer();
     const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
     if (!menu) return;
     const group = menu.el?.querySelector(
@@ -1649,6 +1718,13 @@ class desk_module extends LetcBox {
         this._searchSuggestions = child;
         return;
 
+      // Mobile only — the card that hosts search-box / search-suggestions when
+      // the desktop topbar is display:none. Its absence is how
+      // _closeMobileSearch knows there is no card to close.
+      case "mobile-search-card":
+        this._mobileSearchCard = child;
+        return;
+
       case "suggestions-list":
         // Topbar search must not surface the user's hidden personal hub
         // (area='personal') or the auto-created wicket/dmz. Filter hub
@@ -1708,14 +1784,61 @@ class desk_module extends LetcBox {
         this._userMenuItems = child;
         return;
 
+      // "+ New" dropdown. The button that opens it
+      // (desk-module-topbar__new-workspace-btn) is the Menu's `trigger` and
+      // carries no service, so desk onUiEvent never sees it — the menu's own
+      // open event is the signal. _e.open fires only on open, never on close,
+      // so re-opening the menu cannot re-trigger.
+      //
+      // Re-bound automatically: _updateAddmenu and _onOverLimitChanged re-feed
+      // the whole topbar fragment, which lands here again with a new menu
+      // widget. Nothing is remembered on the node or the widget — every gate
+      // lives in libs/tutorial-tours — so a rebuild can neither lose nor
+      // duplicate the trigger.
+      case "addmenu": {
+        const Tours = require("libs/tutorial-tours");
+        if (_.isFunction(child.on)) {
+          child.on(_e.open, () => Tours.fire("migrate", this));
+        }
+        // Warm the chunk while the surface that triggers it is on screen, so
+        // pressing the button renders from memory rather than from the network.
+        if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+          Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
+        }
+        return;
+      }
+
       case "overlay":
+        // `?tutorial=reset` is a QA affordance, not a tour: it clears the
+        // seen-set so every contextual tour becomes triggerable again on this
+        // account. The server re-checks profile.devel, so this is only the
+        // client half. It deliberately does NOT mount anything.
+        if (Visitor.parseModuleArgs().tutorial === "reset") {
+          require("libs/tutorial-tours").reset(this);
+          setTimeout(() => {
+            this._afterHomeSettled();
+          }, 2000);
+          return;
+        }
         if (
           Visitor.parseModuleArgs().tutorial ||
           this._postOnboardingTutorial
         ) {
           this._postOnboardingTutorial = false;
+          const explicit = !!Visitor.parseModuleArgs().tutorial;
+          const forced = this._forcedTourId();
           setTimeout(() => {
-            this._showTutorial();
+            if (this._launchHomeTutorial(explicit, forced)) return;
+            // Nothing mounted, and nothing is going to: the post-onboarding
+            // tour was gated (already seen, mobile, or the switch is off in a
+            // way that produced no tour). The 20s net below exists for a
+            // tutorial that was LAUNCHED and failed to report in; waiting it
+            // out here would delay the reward flow, LAUNCH30 and the
+            // invited-workspace prompt by 18 seconds for — among others —
+            // every mobile signup. Settle now, exactly as the else-branch does.
+            clearTimeout(this._homeSettledFallback);
+            this._homeSettledFallback = null;
+            this._afterHomeSettled();
           }, 2000);
           // Safety net. In this branch the ONLY route to _afterHomeSettled is
           // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
@@ -1727,6 +1850,9 @@ class desk_module extends LetcBox {
           //
           // Cleared as soon as the tutorial does report in, so the normal path
           // is untouched and the chain still waits for the tutorial to finish.
+          // Also cleared by the launcher above when it turns out no tutorial is
+          // coming at all — armed here rather than after the 2s decision so a
+          // throw inside that timeout still leaves the net in place.
           clearTimeout(this._homeSettledFallback);
           this._homeSettledFallback = setTimeout(() => {
             this.warn && this.warn("[home] tutorial never mounted; settling anyway");
@@ -1743,7 +1869,22 @@ class desk_module extends LetcBox {
         }
         return;
 
-      case "desk-tutorial":
+      case "desk-tutorial": {
+        const tour = (child && child.mget && child.mget("tour")) || "full";
+        // Release single-flight for EVERY tour, deliberately outside the chain
+        // gate below: a contextual tour that is never released would block the
+        // next trigger for the rest of the session. Hangs off the same destroy
+        // event _chainRewardFlowAfterTutorial uses.
+        if (_.isFunction(child.once)) {
+          child.once(_e.destroy, () =>
+            require("libs/tutorial-tours").release(tour),
+          );
+        }
+        // Only the post-onboarding run and the full tour own the hand-off to
+        // the post-home chain. A contextual tour firing an hour later reaches
+        // this line with _homeSettledDone already true and must not re-enter
+        // it — and must not be able to block it either.
+        if (tour !== "workspace" && tour !== "full") return;
         // The tutorial exists and owns the hand-off from here.
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
@@ -1758,6 +1899,7 @@ class desk_module extends LetcBox {
         // post-signup run leaves the user on the desk as before.
         this._chainHelpReturnAfterTutorial(child);
         return;
+      }
     }
   }
 
@@ -1856,10 +1998,109 @@ class desk_module extends LetcBox {
    * framework's own reliable hand-off for a just-rendered child; use it
    * instead of leaning on the feed() return value.
    */
-  _showTutorial() {
+  /**
+   * Which tour `?tutorial=` asked for.
+   *
+   * `?tutorial=1` (and anything unrecognised) keeps meaning the whole
+   * six-step tour, which is what it has always meant. A recognised tour id
+   * runs that tour on its own, which is the only way to reach one without
+   * performing its trigger — QA cannot otherwise test a tour twice.
+   *
+   * @returns {String} a tour id
+   */
+  _forcedTourId() {
+    const arg = Visitor.parseModuleArgs().tutorial;
+    const { TOURS } = require("desk/tutorial/tours");
+    if (typeof arg === "string" && TOURS[arg]) return arg;
+    return "full";
+  }
+
+  _showTutorial(tourId, opt = {}) {
+    const tour = tourId || "full";
     this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "desk_tutorial", sys_pn: "desk-tutorial", partHandler: this });
+      p.feed({
+        kind: "desk_tutorial",
+        tour,
+        sys_pn: "desk-tutorial",
+        partHandler: this,
+        ...opt,
+      });
     });
+  }
+
+  /**
+   * Force a tour onto the screen from the URL, for checking the UI.
+   *
+   *   #/desk?tutorial=share                 the share tour, from screen 1
+   *   #/desk?tutorial=share&screen=3        straight to its third screen
+   *   #/desk?tutorial=folder_task&step=2    straight to the tracker step
+   *   #/desk?tutorial=folder_task&step=2&screen=4   ...and its fourth view
+   *   #/desk?tutorial=1                     the whole six-step tour
+   *   #/desk?tutorial=reset                 clear the seen-set (devel only)
+   *
+   * `step` and `screen` are 1-based, matching what the badge shows, and are
+   * clamped — a nonsense value lands on a real screen rather than rendering
+   * nothing.
+   *
+   * These runs are PREVIEWS: they do not record the tour as seen, so the same
+   * URL works twice and the real contextual trigger stays armed. Without that,
+   * one look at `?tutorial=migrate` would kill the + New trigger for the
+   * account permanently, since a tour records itself on mount.
+   *
+   * @returns {Object} extra attributes for the tutorial widget
+   */
+  _forcedTourOpt() {
+    const args = Visitor.parseModuleArgs();
+    const opt = { preview: 1 };
+    if (args.step) opt.enter_at_step = args.step;
+    if (args.screen) opt.enter_at_screen = args.screen;
+    return opt;
+  }
+
+  /**
+   * Start whatever tutorial this boot owes the user, and say whether one is
+   * actually on its way.
+   *
+   * Three routes, and only the first two are unconditional:
+   *
+   *   explicit    `?tutorial=<id>` / `?tutorial=1`. A person typed this; it is
+   *               never gated on the seen-set, the mobile check or the kill
+   *               switch, because otherwise QA cannot reach a tour twice.
+   *   switch off  the six-step tour, exactly as before this feature existed.
+   *   otherwise   the post-onboarding `workspace` tour, gated like any other
+   *               trigger — the whole point of a server-side flag is that a
+   *               wizard shown twice does not produce a tour shown twice, and
+   *               the wizard genuinely can reappear (the skip path writes
+   *               `onboarded` locally only).
+   *
+   * @returns {Boolean} true when something was launched. False means no
+   *   tutorial is coming and the caller must settle home itself.
+   */
+  _launchHomeTutorial(explicit, forced) {
+    if (explicit) {
+      this._showTutorial(forced, this._forcedTourOpt());
+      return true;
+    }
+    const Tours = require("libs/tutorial-tours");
+    if (!Tours.enabled()) {
+      this._showTutorial("full");
+      return true;
+    }
+    // fire() broadcasts synchronously, so by the time it returns true the
+    // desk's own channel listener has already called _showTutorial. A true
+    // here means "launched", not "mounted" — the chunk can still fail, which
+    // is what the 20s net is for.
+    return Tours.fire("workspace", this);
+  }
+
+  /**
+   * A trigger surface asked for a tour. libs/tutorial-tours has already
+   * decided that it should run — kill switch, mobile, seen-set and
+   * single-flight are all settled there — so this only mounts it.
+   */
+  _onTourTrigger(args = {}) {
+    if (!args.tour) return;
+    this._showTutorial(args.tour);
   }
 
   /**
@@ -1948,6 +2189,104 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Resolve the account that answers Contact Support, once per session.
+   *
+   * Answers null whenever there is nobody to talk to — no support account
+   * configured, the configured one has been deleted, or the request failed.
+   * Every caller treats null as "fall back to the support mail link", so a
+   * deployment that never configures support keeps today's behaviour.
+   *
+   * @returns {Promise<Object|null>} {entity_id, display, firstname, lastname, is_self}
+   */
+  async supportContact() {
+    if (this._supportContact !== undefined) return this._supportContact;
+    // Share one in-flight request between concurrent callers (the Help screen
+    // and the sidebar can both ask before either has answered).
+    if (!this._supportContactPromise) {
+      this._supportContactPromise = this.fetchService(SERVICE.support.contact, {})
+        .then((res) => {
+          const ok = res && ~~res.configured === 1 && res.entity_id;
+          this._supportContact = ok ? res : null;
+          return this._supportContact;
+        })
+        .catch((e) => {
+          this.warn("desk: could not resolve the support contact", e);
+          this._supportContact = null;
+          return null;
+        })
+        .finally(() => {
+          this._supportContactPromise = null;
+        });
+    }
+    return this._supportContactPromise;
+  }
+
+  /**
+   * Support account id, or null — the synchronous view of supportContact()
+   * for code that only runs after it has resolved (inbox row badging).
+   */
+  supportContactId() {
+    return (this._supportContact && this._supportContact.entity_id) || null;
+  }
+
+  /**
+   * True when the signed-in user IS the support account. The entry point
+   * hides for them: there is no conversation to open with yourself.
+   */
+  isSupportContact() {
+    const id = this.supportContactId();
+    return !!id && id === Visitor.id;
+  }
+
+  /**
+   * Contact Support — open a live 1:1 conversation with the support account.
+   *
+   * There is no room to create: chat.post creates the thread on the first
+   * message, so this only has to put the right conversation on screen.
+   * Returns false when support could not be resolved, which tells the caller
+   * (help_main) to fall back to the mail link rather than leave the click dead.
+   *
+   * @returns {Promise<Boolean>} whether the conversation was opened
+   */
+  async openSupportChat() {
+    const support = await this.supportContact();
+    // Nobody to talk to (unconfigured, deleted, or lookup failed), or the
+    // caller IS support: fall back to mail rather than leave the click dead.
+    if (!support || ~~support.is_self === 1) {
+      openSupportMail();
+      return false;
+    }
+
+    const peer = {
+      entity_id: support.entity_id,
+      drumate_id: support.entity_id,
+      firstname: support.firstname || "",
+      lastname: support.lastname || "",
+      display: support.display || LOCALE.SUPPORT_CHAT_TITLE,
+      is_support: 1,
+    };
+
+    const part = this.getPart && this.getPart("chat-panel");
+    const child =
+      part && !part.isEmpty() && part.children && part.children.last();
+
+    // The chat panel is a keep-alive slot: once mounted it is hidden and
+    // reshown rather than rebuilt, and togglePanel's mounted-widget branch
+    // returns before it can pass options down. Drive the live widget directly
+    // so an already-open inbox switches to the support conversation instead
+    // of revealing whatever was last open — or toggling itself shut.
+    if (child && _.isFunction(child.openPeer)) {
+      this.closeOtherSidebarPanels("chat-panel");
+      this._showPanel(part);
+      await child.openPeer(peer.entity_id, peer);
+      return true;
+    }
+
+    await this.togglePanel("chat_p2p", "chat-panel", true, { open_peer: peer });
+    return true;
+  }
+
+  /**
    * Reward onboarding flow (Figma 3275:236091). Runs AFTER the 5-step
    * tutorial, and only for users the SERVER says are owed a run —
    * `reward.get_state` reads yp.reward_claim, which analytics-server seeds when
@@ -2005,7 +2344,16 @@ class desk_module extends LetcBox {
         // rides through the login reload to here, where there is finally a uid
         // to attribute it to. Awaited before get_state so the row is already
         // 'clicked' when we ask; only consumed once the server has it.
-        if (campaignArrival()) {
+        //
+        // MATCHED BY NAME, not by truthiness. There is one arrival slot and now
+        // more than one campaign using it, and this runs BEFORE the LAUNCH30
+        // check in the same chain (_afterHomeSettled). A bare `if
+        // (campaignArrival())` therefore did two wrong things to a promo click:
+        // filed it in the reward funnel as a 'clicked' row for an offer the
+        // user was never sent, and consumed the marker, so the promo found
+        // nothing left to read. Anything that is not ours is left untouched for
+        // whoever it belongs to.
+        if (campaignArrival() === REWARD_CAMPAIGN) {
           await this.postService(SERVICE.reward.track, {
             hub_id: Visitor.id,
             status: "clicked",
@@ -2243,6 +2591,56 @@ class desk_module extends LetcBox {
     });
   }
 
+  // ── Upgrade nudges (payment.upgrade_nudge_state) ──────────────────────────
+
+  /**
+   * One boot-time question — "does THIS member get an upgrade nudge?".
+   *
+   * Everything that makes it fair lives server-side (lib/upgrade-nudge + the
+   * yp gate proc): which threshold fired, once per threshold per workspace,
+   * the shared daily cap, reset on upgrade. A granted answer is already
+   * MARKED shown, which is why this runs last in the _afterHomeSettled chain
+   * and re-checks that the screen is clear: fetching earlier could burn the
+   * grant under a promo or a lock popup and the member would never see it.
+   */
+  async _maybeShowUpgradeNudge() {
+    try {
+      if (!SERVICE.payment || !SERVICE.payment.upgrade_nudge_state) return;
+      // A locked workspace already has a louder popup with a real to-do list;
+      // upselling on top of it helps nobody.
+      const OverLimit = require("libs/over-limit");
+      if (OverLimit.enforcementOn() && OverLimit.isLocked()) return;
+      if (this._homePopupsBusy()) return;
+      const res = await this.fetchService(SERVICE.payment.upgrade_nudge_state, {
+        hub_id: Visitor.id,
+      });
+      const data = (res && res.data) || res || {};
+      if (!~~data.show || !data.trigger) return;
+      this._openUpgradeNudgePopup(data);
+    } catch (e) {
+      // Decoration only — a failed nudge must never mark the boot chain red.
+      this.warn && this.warn("[upgrade-nudge] state check failed", e);
+    }
+  }
+
+  async _openUpgradeNudgePopup(nudge) {
+    try {
+      await Kind.waitFor("upgrade_nudge_popup");
+    } catch (e) {
+      return;
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    Wm.launch(
+      {
+        kind: "upgrade_nudge_popup",
+        hub_id: Visitor.id,
+        wm_unique_id: "upgrade_nudge_popup",
+        nudge,
+      },
+      { explicit: 1, singleton: 1 },
+    );
+  }
+
   async _openOverLimitPopup() {
     try {
       await Kind.waitFor("over_limit_popup");
@@ -2317,6 +2715,17 @@ class desk_module extends LetcBox {
    * own persistent "claim pill" for an already-seen, still-unclaimed offer
    * (tester feedback 2026-07-31 #3) — one fetch, two callers.
    *
+   * A click on the campaign mail's CTA (utm_campaign=launch30, put there by
+   * analytics-server _promoCtaLink) outranks both of the gates the passive
+   * path applies. It skips the five-minute hold, because someone who followed
+   * a link asking them to claim has already done the waiting the hold exists
+   * to protect; and it shows for `eligible_seen` too, because the list this
+   * mail goes to is mostly people who were shown Modal A once and did nothing
+   * — leaving the show-once flag in charge would make the CTA dead for exactly
+   * the audience it was sent to. A deliberate click beats a passive
+   * impression, the same reasoning billing's claim pill already uses
+   * (settings/account/billing _reopenPromoOffer).
+   *
    * @param {string} surface  'home' | 'billing'
    * @returns {Promise<object|undefined>} the fetched promo state, or
    *   undefined if a concurrent call was already in flight or the fetch
@@ -2324,6 +2733,11 @@ class desk_module extends LetcBox {
    */
   async _maybeShowPromoLaunch30(surface, opt = {}) {
     const defer = !!opt.defer;
+    // Read, not consumed: the marker is spent below, and only once we know
+    // whether it produced anything. Spending it here would lose the click to
+    // any early return — an unreachable server, a widget bundle that will not
+    // load — with nothing shown for it.
+    const arrived = campaignArrival() === PROMO_CAMPAIGN;
     if (this._promoLaunch30InFlight) return;
     this._promoLaunch30InFlight = true;
     try {
@@ -2334,7 +2748,12 @@ class desk_module extends LetcBox {
         return;
       }
       if (!state) return;
-      if (state.state === "eligible_unseen") {
+      // Nothing to offer this account — already claimed, in someone else's
+      // org, or the campaign is over. Spend the marker anyway: there is no
+      // second thing for it to trigger, and leaving it would re-run all of
+      // this on every hashchange for the life of the tab.
+      if (arrived && !/^eligible_/.test(state.state || "")) campaignArrival(true);
+      if (state.state === "eligible_unseen" || (arrived && state.state === "eligible_seen")) {
         // The OFFER waits until the account has actually used Drumee for a
         // while. It used to fire the moment the home screen settled — for a
         // brand-new account that is the instant the tutorial ends, so the
@@ -2345,13 +2764,18 @@ class desk_module extends LetcBox {
         // Deferred, never awaited: _afterHomeSettled chains the
         // invited-workspace prompt behind this call, and awaiting a
         // five-minute timer would hold that prompt for five minutes too.
-        if (defer) {
+        //
+        // A CTA click skips the hold entirely — see the note on this method.
+        if (defer && !arrived) {
           this._schedulePromoOffer(surface, state);
           return state;
         }
         try {
           await Kind.waitFor("promo_launch30");
         } catch (e) {
+          // Marker deliberately NOT spent: the bundle failed to load, nothing
+          // was shown, and a later route in this tab can still honour the
+          // click.
           return state;
         }
         Wm.launch({
@@ -2363,6 +2787,8 @@ class desk_module extends LetcBox {
           hub_id: Visitor.id,
           wm_unique_id: "promo_launch30",
         }, { explicit: 1, singleton: 1 });
+        // Spent only now, with the modal actually on screen.
+        if (arrived) campaignArrival(true);
         return state;
       }
       if (surface === "home" && state.state === "claimed_active" && !state.welcome_seen) {
@@ -2376,6 +2802,44 @@ class desk_module extends LetcBox {
           surface,
           state: "welcome",
           trial_ends_at: state.trial_ends_at,
+          hub_id: Visitor.id,
+          wm_unique_id: "promo_launch30",
+        }, { explicit: 1, singleton: 1 });
+      }
+      // The trial-ended gate. Unlike the two above it is not one-shot: it
+      // returns on every home mount until `ended_seen` says the owner answered
+      // it, because losing Team without ever being asked is the outcome this
+      // exists to prevent. promoExpiryWorker has already cleared the
+      // entitlement by now, so this reports a completed change rather than
+      // proposing one.
+      if (surface === "home" && state.state === "claimed_expired" && !state.ended_seen) {
+        try {
+          await Kind.waitFor("promo_launch30");
+        } catch (e) {
+          return state;
+        }
+        // Whether Free still fits decides the second screen. Read here rather
+        // than in the widget so the gate opens with the answer already in
+        // hand — a modal that has to fetch before it can respond to a click
+        // is a modal that stalls on the click.
+        // Through libs/over-limit rather than a private fetch: it owns the
+        // enforcement flag, the shared cache and the CHANGED broadcast, so the
+        // banner and this gate stay on one version of the truth. It keeps the
+        // last known state on failure and never invents a lock.
+        let overLimit = null;
+        try {
+          const ol = (await require("libs/over-limit").refresh(this)) || {};
+          const flags = ol.flags || {};
+          if (ol.state && ol.state !== "ok" && (flags.storage || flags.seats)) {
+            overLimit = { storage: flags.storage ? 1 : 0, seats: flags.seats ? 1 : 0 };
+          }
+        } catch (e) { /* unknown -> treat as fitting; the banner still shows */ }
+        Wm.launch({
+          kind: "promo_launch30",
+          surface,
+          state: "ended",
+          trial_ends_at: state.trial_ends_at,
+          over_limit: overLimit,
           hub_id: Visitor.id,
           wm_unique_id: "promo_launch30",
         }, { explicit: 1, singleton: 1 });
@@ -2404,13 +2868,27 @@ class desk_module extends LetcBox {
    * the screen — they open with the same walkthrough); the prompt is a small
    * dialog and goes last so it never stacks on top of them.
    *
+   * `immediate` says the screen is KNOWN to be clear because a tutorial just
+   * finished on it, which is the one moment the LAUNCH30 offer does not have to
+   * wait out its five-minute hold. Exactly one of the four callers passes it —
+   * see _chainRewardFlowAfterTutorial. The other three cannot: two of them fire
+   * precisely because the tutorial's state could not be established, and the
+   * third is a returning user the hold was written for.
+   *
+   * @param {Object}  [opt]
+   * @param {Boolean} [opt.immediate] show the LAUNCH30 offer without the hold
    * @returns {Promise}
    */
-  _afterHomeSettled() {
+  _afterHomeSettled(opt = {}) {
     // Once per session. There are now four ways in — no-tutorial, after the
     // tutorial, the tutorial-never-mounted fallback, and a re-fed module — and
     // running the chain twice would ask the reward flow to mount twice and
     // could show the invite dialog again.
+    //
+    // Set BEFORE the chain below starts, with no await in between, so a second
+    // caller cannot interleave: a "Product Tour" replayed from Get help runs
+    // the same tutorial-destroy path as a first run and would otherwise reach
+    // the immediate branch long after home settled.
     if (this._homeSettledDone) return Promise.resolve();
     this._homeSettledDone = true;
     clearTimeout(this._homeSettledFallback);
@@ -2423,6 +2901,12 @@ class desk_module extends LetcBox {
     // destination the visitor asked for, and letting the reward flow or the
     // LAUNCH30 offer land on top of it would bury it.
     this._maybeOpenBillingDeepLink();
+    // Same tier, same reasoning: a file link is an explicit destination the
+    // visitor asked for, so it opens before the reward / LAUNCH30 flows rather
+    // than underneath them. After billing only because billing was here first;
+    // the two are mutually exclusive in practice (a URL is either #/desk/billing
+    // or a file link, never both).
+    this._maybeOpenFileDeepLink();
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
@@ -2431,7 +2915,7 @@ class desk_module extends LetcBox {
       // open with the same create-workspace walkthrough (see
       // _maybeStartActivateWorkspace).
       .then(() => this._maybeStartActivateWorkspace())
-      .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
+      .then(() => this._maybeShowPromoLaunch30("home", { defer: !opt.immediate }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
         clear
@@ -2440,6 +2924,11 @@ class desk_module extends LetcBox {
           // hand the loader over to.
           : this._hideInvitedWorkspaceLoader(),
       )
+      // Last in the chain on purpose: an upgrade nudge is the least urgent
+      // thing this boot can show, and asking the server only when the screen
+      // is actually clear means a granted (= marked shown) nudge is never
+      // burned underneath a promo, the reward flow or a lock popup.
+      .then(() => this._maybeShowUpgradeNudge())
       .catch((e) => {
         this._hideInvitedWorkspaceLoader();
         this.warn && this.warn("[home] post-ready chain failed", e);
@@ -2524,10 +3013,27 @@ class desk_module extends LetcBox {
     });
   }
 
+  /**
+   * Hand off to the post-home chain once the tutorial is done with the screen.
+   *
+   * The two branches are NOT interchangeable, and only the first may settle
+   * immediately:
+   *
+   *   once(destroy)  the tutorial ran and has torn itself down. The screen is
+   *                  known clear, and the user has just been walked through
+   *                  the product — the one moment the LAUNCH30 offer is worth
+   *                  showing without its five-minute hold.
+   *   fall-through   we never got a usable handle on the tutorial. That is the
+   *                  p.feed()/children.last() race written up on _showTutorial,
+   *                  and it means the tutorial is very likely ON SCREEN right
+   *                  now. Firing the offer immediately here is the regression a
+   *                  tester reported as Modal A stacked over step 1/5; it stays
+   *                  on the hold, which is what makes that harmless.
+   */
   _chainRewardFlowAfterTutorial(tutorial) {
     if (tutorial && _.isFunction(tutorial.once)) {
       tutorial.once(_e.destroy, () => {
-        this._afterHomeSettled();
+        this._afterHomeSettled({ immediate: 1 });
       });
       return;
     }
@@ -2717,6 +3223,7 @@ class desk_module extends LetcBox {
    * @param {*} pn  Slot name; tracked per-slot in `_pendingKinds`.
    */
   _loadKind(p, kind, pn, opt = {}) {
+    this._parkLiveCall();
     p.feed({
       kind,
       uiHandler: [this],
@@ -2745,6 +3252,23 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * A screen is about to cover the desk — a full-page one in the settings slot
+   * (Settings / Billing / Admin Console / Get help) or a slide-out panel
+   * (Inbox / Contacts / Trash). Ask a live call to park itself in the desk dock
+   * (./skeleton call-dock), which sits above both, instead of being buried
+   * inside the window manager where nothing can lift it.
+   *
+   * A broadcast, not a direct call: the desk deliberately owns no reference to
+   * the call window, and this must stay a no-op when there is no call.
+   */
+  _parkLiveCall() {
+    try {
+      if (!window.Wm || !_.isFunction(Wm.hasLiveCall) || !Wm.hasLiveCall()) return;
+      RADIO_BROADCAST.trigger("call:minimize");
+    } catch (e) { /* non-fatal */ }
+  }
+
+  /**
    * Any wrapper-modal dialog (alert / confirm / add-folder form / invite /
    * move…) lifts the WHOLE window-manager to z 30000 (the desk skin :has()
    * rule) so the dialog can sit above the side panels. The sidebar does not
@@ -2767,6 +3291,7 @@ class desk_module extends LetcBox {
 
   _showPanel(p) {
     this._dismissWmModal();
+    this._parkLiveCall();
     if (!p || p.isEmpty()) return false;
     const child = p.children.last();
     if (child && child.el) {
@@ -2799,7 +3324,10 @@ class desk_module extends LetcBox {
    */
   _setMobileTopbarActive(activeMode) {
     const map = {
-      "mobile-add-btn": activeMode === "actions",
+      // "create" is a sub-screen of the add flow, not a sibling of it — the
+      // user reached it through this button, so it stays lit rather than
+      // going dark under a screen it owns.
+      "mobile-add-btn": activeMode === "actions" || activeMode === "create",
       "mobile-menu-btn": activeMode === "nav",
     };
     Object.entries(map).forEach(([pn, isActive]) => {
@@ -2826,13 +3354,71 @@ class desk_module extends LetcBox {
     });
   }
 
-  _closeMobileDrawer() {
+  /**
+   * `keepBackdrop` is for the drawer → search-card handoff. _setMobileBackdrop
+   * writes inside ensurePart().then(), so two callers racing false-then-true
+   * would be ordered only by promise resolution, not by program order — correct
+   * today merely because "overlay" is already mounted and resolves eagerly, and
+   * silently wrong the day ensurePart goes cold. The handoff therefore suppresses
+   * this closer's write entirely and lets _openMobileSearch issue the single
+   * one, so the backdrop's final state does not depend on ordering at all.
+   */
+  _closeMobileDrawer(keepBackdrop) {
     this.ensurePart("sidebar-main").then((p) => {
       if (!p || !p.el) return;
       p.el.dataset.state = "closed";
     });
-    this._setMobileBackdrop(false);
+    if (!keepBackdrop) this._setMobileBackdrop(false);
     this._setMobileTopbarActive(null);
+  }
+
+  /**
+   * Open the mobile search card (skeleton/index.js). The caller closes the
+   * drawer first; the card then re-lights the SAME backdrop, so the two never
+   * show together and one tap outside dismisses whichever is up.
+   *
+   * The card reuses the topbar's part names, so `_searchBoxInner` and
+   * `_searchSuggestions` already point at its input and list by the time this
+   * runs — nothing here is mobile-specific beyond the card's own visibility.
+   *
+   * Focus stays inside the click's microtask (no rAF / setTimeout) so the tap's
+   * user activation still counts and the soft keyboard opens. focus() fires
+   * focusin, whose handler (onPartReady, "search-box") already fetches — the
+   * explicit fetch below is the fallback for when it didn't, so the card is
+   * never left blank. An empty query is not a no-op: desk.search short-circuits
+   * it to mfs_show_node_by, i.e. the user's workspaces.
+   */
+  _openMobileSearch() {
+    return this.ensurePart("mobile-search-card").then((p) => {
+      if (!p || !p.el) return;
+      p.setState(1);
+      this._setMobileBackdrop(true);
+      if (this._searchBoxInner && _.isFunction(this._searchBoxInner.focus)) {
+        this._searchBoxInner.focus();
+      }
+      const shown =
+        this._searchSuggestions &&
+        this._searchSuggestions.el.dataset.state === "1";
+      if (shown) return;
+      return this._updateSearchSuggestions();
+    });
+  }
+
+  /**
+   * Close the mobile search card and drop its query. A no-op wherever the card
+   * was never built (desktop / tablet), which is what lets the shared backdrop,
+   * Escape and open-search-hit all call it unconditionally.
+   */
+  _closeMobileSearch() {
+    if (!this._mobileSearchCard) return false;
+    if (this._mobileSearchCard.el.dataset.state !== "1") return false;
+    this._mobileSearchCard.setState(0);
+    this._hideSearchSuggestions();
+    if (this._searchBoxInner && _.isFunction(this._searchBoxInner.setValue)) {
+      this._searchBoxInner.setValue("");
+    }
+    this._setMobileBackdrop(false);
+    return true;
   }
 
   /**
@@ -2977,75 +3563,29 @@ class desk_module extends LetcBox {
 
   /**
    * "Unlock Admin Console" upsell when a personal-plan user (free / pro /
-   * legacy advanced) clicks the sidebar Admin Console entry. Centered body
-   * (icon / title / desc) + a single Upgrade CTA underneath — no "Later".
+   * legacy advanced) clicks the sidebar Admin Console entry.
    *
-   * The modal itself always shows: the plan simply doesn't include the console,
-   * whatever the billing setup. Only the CTA is conditional — it is dropped
-   * where the deployment doesn't sell plans (`billing_upgrade: 0` in
-   * myDrumee.json, or no payment backend at all), because an Upgrade button
-   * that cannot reach checkout is worse than no button.
+   * The card itself now lives in `builtins/widget/feature-lock` and is shared
+   * with the other tier gates (task views, meeting duration) — it used to be
+   * built inline here, which is why it could not be reused by anything outside
+   * this module. Copy, layout and the close X moved with it unchanged; see
+   * that file for why the X is drawn in the body rather than the confirm
+   * header, and for the CTA rule.
    *
-   * The close X is rendered here, in the card, rather than coming from the
-   * shared confirm header: `mode: "b"` drops that header to keep the drumee
-   * logo out of this design, and the header is where the X normally lives
-   * (window/confirm/skeleton/header.js). Without it the only way out is the
-   * Escape key — which touch devices don't have, so a phone user tapping Admin
-   * Console would be trapped in the modal (backdrop clicks don't dismiss it).
+   * The modal itself always shows: the plan simply doesn't include the
+   * console, whatever the billing setup. Only the CTA is conditional.
+   *
+   * What stays here is what is specific to THIS caller — where the CTA leads,
+   * and putting the sidebar highlight back afterwards either way.
    */
   _showAdminUnlockModal() {
-    // See above: no checkout reachable → no CTA, but the card still explains why.
-    const canBuy = billingAvailable();
-    const body = (confirmUi) =>
-      Skeletons.Box.Y({
-        className: "desk-module__admin-unlock",
-        // Do not use kidsOpt.active:0 — it would zero out the CTA click handler.
-        kids: [
-          Skeletons.Box.X({
-            className: "desk-module__admin-unlock-close",
-            signal: _e.cancel,
-            uiHandler: [confirmUi],
-            bubble: 0,
-            kidsOpt: { active: 0 },
-            kids: [
-              Skeletons.Image.Svg({
-                ico: "cross",
-                className: "desk-module__admin-unlock-close-ico",
-              }),
-            ],
-          }),
-          Skeletons.Image.Svg({
-            ico: "cloud-pause",
-            className: "desk-module__admin-unlock-icon",
-            active: 0,
-          }),
-          Skeletons.Note({
-            className: "desk-module__admin-unlock-title",
-            content: LOCALE.UNLOCK_ADMIN_CONSOLE,
-            active: 0,
-          }),
-          Skeletons.Note({
-            className: "desk-module__admin-unlock-desc",
-            content: LOCALE.UNLOCK_ADMIN_DESC,
-            active: 0,
-          }),
-          canBuy
-            ? Skeletons.Note({
-                className: "desk-module__admin-unlock-cta",
-                content: LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
-                signal: _e.confirm,
-                uiHandler: [confirmUi],
-              })
-            : null,
-        ],
-      });
-    return Wm.confirm({
-      // Body only — no logo/drumee header (matches unlock card design).
-      mode: "b",
-      body,
-    })
+    return Wm.openFeatureLock({ feature: "admin_console" })
       .then(() => {
-        if (!billingAvailable()) return this._restoreCurrentSidebarHighlight();
+        // Defence in depth behind the card's own CTA gate: it only renders the
+        // button when canUpgradePlan() passes, so reaching here without it
+        // means the plan changed while the card sat open. Same guard, same
+        // rule, one source — libs/billing.
+        if (!canUpgradePlan()) return this._restoreCurrentSidebarHighlight();
         return this.openBillingPage().then(() =>
           this._restoreCurrentSidebarHighlight()
         );
@@ -3260,6 +3800,20 @@ class desk_module extends LetcBox {
           let p = Visitor.profile && Visitor.profile();
           if (p) p.onboarded = 1;
         }
+        // Closing the wizard is a decision, not an accident: someone who
+        // dismissed the guided intro has declined it, and injecting the
+        // workspace tour into a branch built to skip the wizard would override
+        // that. Marked seen rather than merely skipped, for a second reason —
+        // this branch writes `onboarded` into the LOCAL profile only (the
+        // plugin returns before onboarding.reset), so the wizard can legitimately
+        // reappear next session, and without the record the tour would reappear
+        // with it. Marked directly rather than through fire(): nothing mounts.
+        //
+        // `workspace` is the one tour with no contextual trigger, so "later"
+        // does not exist for it — the accepted cost is that a skipper never
+        // sees it. markSeen no-ops while the kill switch is off, which is
+        // correct: with the feature off there is nothing to suppress.
+        require("libs/tutorial-tours").markSeen("workspace", this);
         return this.loadDefault();
 
       case _e.upload: {
@@ -3305,14 +3859,36 @@ class desk_module extends LetcBox {
           { explicit: 1, singleton: 1 },
         );
 
+      // Also the create sub-screen's back arrow — returning to the actions
+      // list is the same thing as opening it.
       case "mobile-show-add":
         return this.openMobileDrawer("actions");
+
+      // The "Add new" row's destination: the five create options as their own
+      // drawer screen (skeleton/sidebar.js createCreateNav). A screen swap, not
+      // a write, so it takes no guard of its own — every row inside it lands on
+      // a case that carries one.
+      case "mobile-show-create":
+        return this.openMobileDrawer("create");
 
       case "mobile-show-menu":
         return this.openMobileDrawer("nav");
 
+      // The backdrop is shared between the drawer and the search card, so one
+      // tap has to dismiss whichever layer is actually up. Both closers are
+      // no-ops when their layer is already closed.
       case "mobile-close-drawer":
+        this._closeMobileSearch();
         return this._closeMobileDrawer();
+
+      // Hand off to the card without touching the backdrop — it stays lit
+      // across the swap, and _openMobileSearch performs the only write.
+      case "open-mobile-search":
+        this._closeMobileDrawer(1);
+        return this._openMobileSearch();
+
+      case "close-mobile-search":
+        return this._closeMobileSearch();
 
       case "toggle-sidebar-pin":
         return this._toggleSidebarPin();
@@ -3360,6 +3936,12 @@ class desk_module extends LetcBox {
       case "toggle-help":
         return this._openGetHelp();
 
+      // "Contact Support" on the Get help screen — opens a live conversation
+      // with the support account. help_main handles the false return by
+      // falling back to its mail link.
+      case "contact-support":
+        return this.openSupportChat();
+
       // "Product Tour" button on the Get help screen.
       case "start-product-tour":
         return this._startProductTour();
@@ -3369,7 +3951,8 @@ class desk_module extends LetcBox {
         // cannot use Admin Console; short-circuit with the Unlock upsell instead
         // of loading the plugin. Org tiers (team, …) fall through. quota.organization
         // is NOT used: Pro also seeds organization:1. Modal always shows; its
-        // Upgrade button is gated solely by billingAvailable() (billing_upgrade).
+        // Upgrade button is gated by canUpgradePlan() (deployment can sell AND
+        // this reader may buy) — see builtins/widget/feature-lock.
         if (needsAdminConsoleUpgrade()) {
           return this._showAdminUnlockModal();
         }
@@ -3464,6 +4047,7 @@ class desk_module extends LetcBox {
         //   message      → open the hosting chat scope (see _openMessageHit)
         // Files/folders reuse the notification-reveal path (openFileLocation).
         this._hideSearchSuggestions();
+        this._closeMobileSearch();
         const hit = cmd && cmd.model ? cmd.model.toJSON() : {};
         if (hit.result_type === "message") {
           return this._openMessageHit(hit);
@@ -3787,6 +4371,10 @@ class desk_module extends LetcBox {
       this._dismissTransientUi();
       return false;
     }
+    // Ahead of _closeEscapeModal: the search card is the topmost layer on
+    // mobile, so it must consume the press before anything under it. Returns
+    // false (no card / already closed) everywhere else, so desktop is unchanged.
+    if (this._closeMobileSearch()) return false;
     if (this._closeEscapeModal()) return false;
     this._closeEscapeWindow();
     return false;
@@ -3998,6 +4586,12 @@ class desk_module extends LetcBox {
     if (this._searchSuggestions.el.dataset.state !== "1") {
       this._searchSuggestions.setState(1);
     }
+    // Mobile: no outside-click dismisser. The list is the body of the search
+    // card, not a dropdown hanging off a topbar — `_searchContainer` is the
+    // topbar cluster, which does not exist on mobile, so the check below would
+    // read every tap as "outside" and collapse the card's own results on first
+    // touch. Dismissal there is the backdrop, the ✕ and Escape.
+    if (this._mobileSearchCard) return;
     if (this._suggestionsDismiss) return;
     this._suggestionsDismiss = (e) => {
       const inside =
