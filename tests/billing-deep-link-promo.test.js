@@ -102,6 +102,153 @@ test("parseParams stays an allowlist", () => {
   assert.deepEqual(Object.keys(out).sort(), ["plan", "promo"]);
 });
 
+test("parseParams carries the grant token", () => {
+  const out = parseWith(
+    "#/desk/billing?plan=team&cycle=monthly&tab=checkout&g=0c43e931431d0df8a4");
+  assert.equal(out.g, "0c43e931431d0df8a4",
+    "the grant token is dropped at the first hop — the link would arrive with "
+    + "no offer behind it at all, and the coupon is no longer in the URL to "
+    + "fall back on");
+});
+
+// ── the grant: the server decides, and it decides ONCE ─────────────────
+//
+// THE CAMPAIGN'S REQUIREMENT, in two steps:
+//
+//   1. click the CTA, sign in           -> billing opens, coupon applied
+//   2. sign out, click the SAME CTA,
+//      sign in as the SAME account      -> NOTHING HAPPENS
+//
+// Step 2 cannot be enforced in this browser. Clicking the link again re-arms
+// the intent from the URL (captureFromUrl), so no amount of local
+// consume()-ing survives a second click. The single-use property has to live
+// on the server, in mkt_mail_grant, and the desk's job is to ask before it
+// opens anything.
+//
+// DRIVEN, not read: the real method, against a stubbed service and lib.
+function runDeepLink({ preselect, claim, canUpgrade = true }) {
+  const calls = { claimed: [], disarmed: 0, consumed: 0, opened: null };
+  const body = methodBody(WIDGET_DESK, "async _maybeOpenBillingDeepLink() {");
+  const claimBody = methodBody(WIDGET_DESK, "async _claimBillingGrant(g) {");
+  const billingDeepLink = {
+    peek: () => preselect,
+    consume: () => { calls.consumed++; return preselect; },
+    disarm: () => { calls.disarmed++; },
+    isForCurrentUser: () => true,
+  };
+  const ctx = {
+    _restoreInFlight: true,
+    openBillingPage: (o) => { calls.opened = o; },
+    postService: async (svc, args) => {
+      calls.claimed.push(args.g);
+      if (typeof claim === "function") return claim(args.g);
+      return claim;
+    },
+    warn() {}, debug() {},
+  };
+  const SERVICE = { payment: { claim_offer: "payment.claim_offer" } };
+  const fn = new Function(
+    "ctx", "billingDeepLink", "canUpgradePlan", "SERVICE",
+    `ctx._claimBillingGrant = ${claimBody.replace(/^async _claimBillingGrant/, "async function")
+      .replace(/\bthis\b/g, "ctx")};`
+    + `const m = ${body.replace(/^async _maybeOpenBillingDeepLink/, "async function")
+      .replace(/\bthis\b/g, "ctx")};`
+    + "return m();",
+  );
+  return fn(ctx, billingDeepLink, () => canUpgrade, SERVICE).then((r) => ({ r, calls, ctx }));
+}
+
+const OK = { status: "OK", code: "EMAILMKT270826_3", percent_off: 50 };
+
+test("step 1 — the token is exchanged and billing opens with the code", async () => {
+  const { r, calls } = await runDeepLink({
+    preselect: { plan: "team", tab: "checkout", g: "TOK" }, claim: OK,
+  });
+  assert.equal(r, true, "the deep link was not honoured");
+  assert.deepEqual(calls.claimed, ["TOK"], "the token was not claimed");
+  assert.equal(calls.opened && calls.opened.promo, "EMAILMKT270826_3",
+    "the claimed code did not reach the billing screen — the widget seeds its "
+    + "promo field from `promo`, so the reader would land on a bare checkout");
+  assert.equal(calls.consumed, 1);
+});
+
+test("step 2 — a spent link opens NOTHING", async () => {
+  const { r, calls } = await runDeepLink({
+    preselect: { plan: "team", tab: "checkout", g: "TOK" },
+    claim: { status: "OFFER_SPENT" },
+  });
+  assert.equal(r, false);
+  assert.equal(calls.opened, null,
+    "the billing screen opened for a spent link — the requirement is that "
+    + "nothing happens, not that a checkout appears carrying an error");
+});
+
+test("an answered refusal disarms; a failed CALL does not", async () => {
+  // Opposite treatments, and the asymmetry is the point. A refusal means the
+  // token is dead for good, and keeping it makes every future boot retry a
+  // link that can never work. A dropped connection means nothing is known —
+  // destroying a live offer over a network blink has no way back.
+  const refused = await runDeepLink({
+    preselect: { g: "TOK" }, claim: { status: "OFFER_NOT_YOURS" },
+  });
+  assert.equal(refused.calls.disarmed, 1, "a dead token stays armed forever");
+
+  const threw = await runDeepLink({
+    preselect: { g: "TOK" },
+    claim: () => { throw new Error("network"); },
+  });
+  assert.equal(threw.calls.disarmed, 0,
+    "a network failure destroyed the offer — the one refusal with no way back");
+  assert.equal(threw.calls.opened, null);
+});
+
+test("an ineligible account never spends the grant", async () => {
+  // The claim is a one-way door. Burning somebody's single run on a screen
+  // they would have been bounced off is the worst outcome available, so
+  // eligibility is settled first.
+  const { r, calls } = await runDeepLink({
+    preselect: { g: "TOK" }, claim: OK, canUpgrade: false,
+  });
+  assert.equal(r, false);
+  assert.deepEqual(calls.claimed, [],
+    "the grant was claimed for an account that cannot buy");
+  assert.equal(calls.consumed, 0, "and the intent was thrown away with it");
+});
+
+test("the claim is awaited before anything opens", () => {
+  const body = stripComments(
+    methodBody(WIDGET_DESK, "async _maybeOpenBillingDeepLink() {"));
+  const claim = body.indexOf("_claimBillingGrant");
+  const open = body.indexOf("openBillingPage");
+  assert.ok(claim > 0 && open > claim,
+    "billing opens before the claim resolves — a dead link would flash a "
+    + "checkout screen");
+  assert.match(body, /await this\._claimBillingGrant/,
+    "the claim is not awaited");
+});
+
+test("a legacy link still works, and is still checked in the browser", async () => {
+  // 203 links carrying promo= and for= are already in inboxes. They cannot be
+  // made safe — the code is public in every one of them — but breaking them
+  // strands real recipients.
+  const { r, calls } = await runDeepLink({
+    preselect: { plan: "team", tab: "checkout", promo: "EMAILMKT270826_2",
+      for: "cd8f5912" },
+    claim: OK,
+  });
+  assert.equal(r, true, "a legacy link no longer opens billing");
+  assert.deepEqual(calls.claimed, [], "a legacy link tried to claim a grant");
+  assert.equal(calls.opened.promo, "EMAILMKT270826_2");
+});
+
+test("no read-only probe exists for a token", () => {
+  // One would let anyone holding a forwarded link test whether it is live,
+  // which is most of what the token was hiding.
+  const desk = stripComments(WIDGET_DESK);
+  assert.ok(!/peek_offer|offer_state|check_offer/.test(desk),
+    "the desk probes a grant without spending it");
+});
+
 // ── the link is addressed, and a forwarded one is refused ──────────────
 //
 // A mail gets forwarded, screenshotted, and opened on machines already signed
