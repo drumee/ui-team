@@ -20,7 +20,7 @@ class __module_plugins extends LetcBox {
   route() {
     let opt = Visitor.parseModuleArgs();
     let { name, kind, title } = opt;
-    this.feed(require("./skeleton").default(this, title || name))
+    this.feed(require("./skeleton")(this, title || name))
     Kind.loadPlugin({ name, kind }).then(async (p) => {
       await Kind.waitFor(kind)
       this.feed({ ...opt, kind })
