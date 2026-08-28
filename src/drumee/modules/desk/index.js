@@ -532,10 +532,6 @@ class desk_module extends LetcBox {
     // discounted checkout with a partner code applied that was never offered to
     // them.
     //
-    // Checked AFTER consume(), so the destination is dropped rather than left
-    // armed: a link that is not for this session should not fire later for
-    // whoever signs in next on the same tab.
-    //
     // A link with no marker passes — see isForCurrentUser, which treats absent
     // as "not bound" rather than "refuse", so every link written before this
     // existed still works.
