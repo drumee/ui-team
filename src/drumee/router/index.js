@@ -404,7 +404,18 @@ class drumee_router extends LetcBox {
         // Only on a switch that actually happened: changeHost answers false for
         // a loose_host module and in the DMZ, and there the copy is still the
         // carrier.
-        billingDeepLink.disarm();
+        // ONLY FOR THE RECIPIENT. When this session is the one the link was
+        // written for, signin has put the destination on the URL and it will be
+        // re-armed on the new origin — this copy is redundant, and keeping it
+        // would let it replay after a later sign-out.
+        //
+        // For anyone else, signin deliberately did NOT hand it over, so the URL
+        // is clean and this copy is the last one there is. Dropping it would
+        // throw away a destination nobody has used, on behalf of a visitor who
+        // was just refused.
+        if (billingDeepLink.isForCurrentUser(billingDeepLink.peek())) {
+          billingDeepLink.disarm();
+        }
         return;
       }
     }

@@ -519,7 +519,11 @@ class desk_module extends LetcBox {
    * @returns {Boolean} whether the billing screen was opened
    */
   _maybeOpenBillingDeepLink() {
-    const preselect = billingDeepLink.consume();
+    // PEEK, NOT CONSUME. Both gates below can refuse, and a refusal must leave
+    // the destination exactly as it found it: consuming first made every
+    // refusal permanent, so a wrong-account sign-in destroyed a link written
+    // for somebody else, who then signed in and found nothing.
+    const preselect = billingDeepLink.peek();
     if (!preselect) return false;
     // Addressed to somebody else. A campaign CTA carries an opaque marker for
     // the recipient it was written for (analytics-server _recipientTag), and a
@@ -535,8 +539,20 @@ class desk_module extends LetcBox {
     // A link with no marker passes — see isForCurrentUser, which treats absent
     // as "not bound" rather than "refuse", so every link written before this
     // existed still works.
+    // KEPT, not consumed: this session is not the one the link was written for,
+    // so the recipient has not had their chance yet. They may sign in on this
+    // very tab a moment from now — which is the case this whole ordering exists
+    // for.
     if (!billingDeepLink.isForCurrentUser(preselect)) return false;
+    // KEPT for the same reason, and this one can genuinely change underneath:
+    // ownership, or a payment backend that had not finished loading. Throwing
+    // the destination away on a verdict that is not final is the harsher answer.
     if (!canUpgradePlan()) return false;
+    // Committed. Taking it here — and only here — is what keeps the destination
+    // SINGLE-USE: it must not replay for this account after a later sign-out.
+    // The value is already in hand from the peek above, so the return is
+    // deliberately discarded.
+    billingDeepLink.consume();
     // Don't let desk-state restore pull the screen back to the remembered one.
     this._restoreInFlight = false;
     this.openBillingPage(preselect);

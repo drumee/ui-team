@@ -227,21 +227,31 @@ function disarm() {
 }
 
 /**
- * Take the intent, if there is one. Reading CLEARS the stored copy — an intent
- * acted on twice would reopen billing over whatever the user did next.
+ * Read the intent without taking it.
+ *
+ * THE READ HALF of consume(), split out because a caller has to be able to
+ * decide BEFORE it commits. Refusing after consuming throws away a destination
+ * nobody used: a wrong-account sign-in, or an account that cannot buy yet,
+ * permanently destroyed a link written for somebody else — who then signed in
+ * and found nothing.
+ *
+ * Three functions, one decision:
+ *   peek     read, take nothing     — for a caller that might refuse
+ *   consume  read and take          — for the caller that is acting on it
+ *   disarm   take without reading   — when the URL is carrying it onward
  *
  * The url is accepted as a second source so the signed-in case does not depend
  * on storage at all: there, the hash is still intact by the time the desk boots.
  *
- * @returns {Object|null} the preselect object ({plan?,cycle?,tab?,promo?}, possibly
- *   empty) when this boot should open billing, else null. An empty object is
- *   still truthy, so callers that only test truthiness keep working unchanged.
+ * @returns {Object|null} the preselect object
+ *   ({plan?,cycle?,tab?,promo?,for?}, possibly empty) when this boot should open
+ *   billing, else null. An empty object is still truthy, so callers that only
+ *   test truthiness keep working unchanged.
  */
-function consume() {
+function peek() {
   try {
     const raw = sessionStorage.getItem(KEY);
     if (raw != null) {
-      sessionStorage.removeItem(KEY);
       try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
     }
   } catch (e) {
@@ -252,7 +262,29 @@ function consume() {
   return urlWantsBilling() ? parseParams() : null;
 }
 
+/**
+ * Take the intent, if there is one.
+ *
+ * ONLY CALL THIS WHEN YOU ARE GOING TO ACT ON IT. A caller that reads here and
+ * then refuses has destroyed a destination nobody used — see peek().
+ *
+ * Consuming IS what makes the destination single-use, and that is not being
+ * relaxed: the matching account still takes it, so it cannot replay after a
+ * later sign-out.
+ *
+ * Defined in terms of peek() so the two cannot answer differently — the URL
+ * fallback especially, where a direct click and a stored intent would otherwise
+ * be able to take different paths.
+ *
+ * @returns {Object|null} as peek()
+ */
+function consume() {
+  const found = peek();
+  if (found) disarm();
+  return found;
+}
+
 module.exports = {
-  arm, disarm, consume, captureFromUrl, urlWantsBilling, parseParams,
+  arm, disarm, peek, consume, captureFromUrl, urlWantsBilling, parseParams,
   recipientTag, isForCurrentUser, KEY,
 };

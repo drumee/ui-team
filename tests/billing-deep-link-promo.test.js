@@ -172,14 +172,79 @@ test("a session with no readable address passes rather than dead-ends", () => {
   assert.equal(isFor({ for: tag("a@b.c") }, undefined), true);
 });
 
-test("the desk drops a mismatched link instead of leaving it armed", () => {
+test("the desk decides BEFORE it consumes", () => {
+  // This case previously asserted the reverse — that the check ran after
+  // consume() — on the reasoning that a link for somebody else should not stay
+  // armed. That was wrong, and it is the bug this ordering fixes: consuming
+  // first made every refusal permanent, so a wrong-account sign-in destroyed a
+  // destination the recipient had not used yet.
   const body = stripComments(methodBody(WIDGET_DESK, "_maybeOpenBillingDeepLink() {"));
-  const consume = body.indexOf("consume()");
+  const peek = body.indexOf("billingDeepLink.peek()");
   const check = body.indexOf("isForCurrentUser");
-  assert.ok(check > 0, "the desk never checks who the link was addressed to");
-  assert.ok(check > consume,
-    "the check runs before consume() — a link for somebody else would stay "
-    + "armed and fire for whoever signs in next on this tab");
+  const upgrade = body.indexOf("canUpgradePlan()");
+  const consume = body.indexOf("billingDeepLink.consume()");
+  assert.ok(peek >= 0, "the desk still consumes up front — every refusal is permanent");
+  assert.ok(check > peek && upgrade > peek, "the gates run before anything is read out");
+  assert.ok(consume > check && consume > upgrade,
+    "consume() runs before a gate can refuse — a refused destination is destroyed");
+});
+
+test("consuming is still what makes it single-use", () => {
+  // The other half, and the two are easy to break in each other's name: the
+  // matching account MUST take it, or it replays after a later sign-out (the
+  // regression fixed in e4230226).
+  const body = stripComments(methodBody(WIDGET_DESK, "_maybeOpenBillingDeepLink() {"));
+  const consume = body.indexOf("billingDeepLink.consume()");
+  const open = body.indexOf("this.openBillingPage(");
+  assert.ok(consume > 0, "nothing takes the intent — it would reopen on the next sign-in");
+  assert.ok(consume < open, "it is taken after the screen opens; a failure in between would leave it armed");
+});
+
+// ── the scenario, driven against the real peek/consume/disarm ──────────
+// Addressed to A. B signs in → refused, and it SURVIVES. A signs in → opens,
+// and it is gone. A again → nothing.
+function libStore(initial) {
+  const m = new Map();
+  if (initial != null) m.set("drumee_billingDeepLink", initial);
+  return { getItem: (k) => (m.has(k) ? m.get(k) : null),
+           removeItem: (k) => m.delete(k), setItem: (k, v) => m.set(k, v),
+           size: () => m.size };
+}
+function libFns(ss) {
+  const grab = (n) => new RegExp(`function ${n}\\(\\)[\\s\\S]*?\\n\\}`).exec(LIB)[0];
+  const src = grab("peek") + grab("disarm") + grab("consume")
+    + "\nreturn { peek, disarm, consume };";
+  return new Function("sessionStorage", "urlWantsBilling", "parseParams", "KEY", "console", src)(
+    ss, () => false, () => null, "drumee_billingDeepLink", console);
+}
+
+test("a refusal keeps the intent; the recipient's use takes it", () => {
+  const INTENT = JSON.stringify({ plan: "team", promo: "P1", for: tag("a@example.com") });
+  const ss = libStore(INTENT);
+  const lib = libFns(ss);
+
+  // B signs in: the desk peeks, refuses, consumes nothing.
+  const seen = lib.peek();
+  assert.equal(isFor(seen, "b@example.com"), false, "B was not refused");
+  assert.equal(ss.size(), 1, "a refused sign-in destroyed the destination");
+
+  // A signs in: peek, accept, consume.
+  const seen2 = lib.peek();
+  assert.equal(isFor(seen2, "a@example.com"), true, "A was refused");
+  lib.consume();
+  assert.equal(ss.size(), 0, "A's use did not take it — it would replay");
+
+  // A again, no new click.
+  assert.equal(lib.peek(), null, "billing would reopen without a click");
+});
+
+test("the router disarms for the recipient and not for anyone else", () => {
+  const body = stripComments(routerSrc);
+  const i = body.indexOf("if (this.changeHost(Organization.host()))");
+  const branch = body.slice(i, i + 700);
+  assert.match(branch, /isForCurrentUser\(billingDeepLink\.peek\(\)\)[\s\S]*?disarm\(\)/,
+    "the origin being left is disarmed unconditionally — a refused visitor would "
+    + "take the recipient's destination with them");
 });
 
 // ── the destination is single-use across the host switch ───────────────
