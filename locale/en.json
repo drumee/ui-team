@@ -2687,6 +2687,7 @@
   "GUEST_JOIN_OPEN_WORKSPACE_MSG": "You can now open the workspace you were invited to: %s",
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "You can now open the workspace you were invited to.",
   "PREPARING_INVITED_WORKSPACE": "Preparing your workspace…",
+  "LOADING_BILLING": "Loading plans…",
   "ROTATE": "Rotate",
   "MOVE_RESIZE": "Move & Resize",
   "QX_SEAT_CHECK_FAILED": "Could not check how many seats are in use. Please try again.",
