@@ -205,6 +205,34 @@ test("consuming is still what makes it single-use", () => {
   assert.ok(consume < open, "it is taken after the screen opens; a failure in between would leave it armed");
 });
 
+// ── one identity source, and it is Visitor ─────────────────────────────
+// signin used to decide whether to hand the destination over, reading the
+// signer from data.user.profile.email — a shape that app does not otherwise
+// use. Unverifiable, and a wrong answer there decided everything: refuse when it
+// should not, and the recipient never gets their destination.
+//
+// The decision is now asked only of Visitor, in the two places that run after a
+// session exists. A second source anywhere reintroduces the gap where the two
+// disagree and the destination dies.
+test("the recipient decision is asked only of Visitor", () => {
+  const isFor = stripComments(LIBFN("isForCurrentUser").body);
+  assert.match(isFor, /Visitor\s*\.\s*profile/,
+    "isForCurrentUser no longer reads the session profile");
+  const signin = readFileSync(
+    "/home/drumee/signin/src/widgets/form/index.js", "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  // Deliberately broad: `data.user.profile.email` was only ONE spelling of the
+  // second source, and the next one will be spelled differently. After the
+  // removal this file contains no occurrence of any of these words outside a
+  // comment, so the assertion costs nothing until somebody reaches for an
+  // identity here again.
+  assert.ok(!/\bprofile\b|\bsigner\b/.test(signin),
+    "signin reads an identity again — that is the second source, and when the "
+    + "two disagree the destination is destroyed in the gap between them");
+  assert.ok(!/intentIsForSigner|recipientTag/.test(signin),
+    "signin decides recipiency again — it belongs to Visitor");
+});
+
 // ── a click and a hand-off are different URLs ──────────────────────────
 // THE BUG THIS CAUGHT. urlWantsBilling() is true for both shapes, and they mean
 // opposite things at the switch:
@@ -278,14 +306,16 @@ test("the router disarms only when the URL is carrying the destination", () => {
   const body = stripComments(routerSrc);
   const i = body.indexOf("if (this.changeHost(Organization.host()))");
   const branch = body.slice(i, i + 700);
-  assert.match(branch, /urlIsHandoff\(\)[\s\S]*?disarm\(\)/,
-    "the disarm is not gated on the URL being a HAND-OFF");
-  assert.ok(!/isForCurrentUser/.test(branch),
-    "the disarm still asks who the user is — it must ask what the URL is");
-  assert.ok(!/urlWantsBilling\(\)[\s\S]{0,80}disarm/.test(branch),
+  // BOTH conditions. The hand-off form says the URL is carrying it; Visitor
+  // says it belongs to this session. signin hands off unconditionally now — it
+  // has no identity it can trust — so the form alone no longer implies
+  // ownership, and this is the only place left that decides.
+  assert.match(branch, /urlIsHandoff\(\)[\s\S]*?isForCurrentUser\(billingDeepLink\.peek\(\)\)[\s\S]*?disarm\(\)/,
+    "the disarm is not gated on BOTH the hand-off form and the recipient");
+  assert.ok(!/urlWantsBilling\(\)[\s\S]{0,120}disarm/.test(branch),
     "gated on urlWantsBilling, which is ALSO true for the CTA link itself — a "
-    + "refused visitor being switched to their org host would take the "
-    + "recipient's only surviving copy with them");
+    + "refused visitor switched to their org host would take the recipient's "
+    + "only surviving copy with them");
 });
 
 // ── the destination is single-use across the host switch ───────────────
