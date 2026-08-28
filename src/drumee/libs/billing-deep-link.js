@@ -218,6 +218,37 @@ function captureFromUrl() {
  * against the live site. The only place the copy can be dropped for good is
  * after the URL has demonstrably taken over.
  */
+/**
+ * Is the CURRENT url a hand-off — a destination signin put there so it would
+ * survive the host switch?
+ *
+ * NOT the same question as urlWantsBilling(), and the difference is a bug that
+ * shipped. That one is true for BOTH url shapes, and the two mean opposite
+ * things here:
+ *
+ *   #/desk/billing?…   A CLICK. The CTA itself, as the visitor arrived on it.
+ *                      changeHost keeps path and hash, so it rides to the org
+ *                      host under its own steam — and this origin's stored copy
+ *                      is still the only one that survives a later sign-out.
+ *   ?billing=1&…       A HAND-OFF. Written only by signin's billingReturnUrl,
+ *                      for exactly one purpose: to carry the destination across
+ *                      the switch on behalf of the account it belongs to.
+ *
+ * Disarming on the first form drops the destination while a REFUSED visitor is
+ * being switched to their own org host — measured: a wrong-account sign-in
+ * landed on `…#/desk/billing?…&for=…`, having taken the recipient's copy with
+ * it, and the recipient's own sign-in afterwards found nothing.
+ *
+ * @returns {Boolean}
+ */
+function urlIsHandoff() {
+  try {
+    return ARG.test(String(window.location.hash || ""));
+  } catch (e) {
+    return false;
+  }
+}
+
 function disarm() {
   try {
     sessionStorage.removeItem(KEY);
@@ -285,6 +316,7 @@ function consume() {
 }
 
 module.exports = {
-  arm, disarm, peek, consume, captureFromUrl, urlWantsBilling, parseParams,
+  arm, disarm, peek, consume, captureFromUrl, urlWantsBilling, urlIsHandoff,
+  parseParams,
   recipientTag, isForCurrentUser, KEY,
 };

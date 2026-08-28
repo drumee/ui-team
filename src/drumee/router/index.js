@@ -421,9 +421,15 @@ class drumee_router extends LetcBox {
         // URL clean — while this disarms anyway, destroying the destination with
         // nothing carrying it onward.
         //
-        // urlWantsBilling() has no such coupling. It asks the only question that
-        // actually licenses dropping the copy: is it somewhere else already?
-        if (billingDeepLink.urlWantsBilling()) {
+        // AND IT MUST BE THE HAND-OFF FORM, not merely "the url mentions
+        // billing". urlWantsBilling() is true for the CTA link itself
+        // (#/desk/billing?…), which changeHost carries here under its own steam
+        // — including for a visitor who was just REFUSED. Disarming then took
+        // the recipient's only surviving copy with it, which is exactly what
+        // broke: a wrong-account sign-in landed on
+        // team-NNNN…/#/desk/billing?…&for=… and the recipient's own sign-in
+        // afterwards found nothing. urlIsHandoff() asks the narrower question.
+        if (billingDeepLink.urlIsHandoff()) {
           billingDeepLink.disarm();
         }
         return;

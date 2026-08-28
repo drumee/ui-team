@@ -205,6 +205,31 @@ test("consuming is still what makes it single-use", () => {
   assert.ok(consume < open, "it is taken after the screen opens; a failure in between would leave it armed");
 });
 
+// ── a click and a hand-off are different URLs ──────────────────────────
+// THE BUG THIS CAUGHT. urlWantsBilling() is true for both shapes, and they mean
+// opposite things at the switch:
+//   #/desk/billing?…  a CLICK — the CTA as the visitor arrived on it. changeHost
+//                     carries it onward under its own steam, and this origin's
+//                     copy is still the only one that survives a sign-out.
+//   ?billing=1&…      a HAND-OFF — written only by signin, to carry the
+//                     destination across on behalf of the account it belongs to.
+// Measured: a refused wrong-account sign-in landed on
+// team-NNNN…/#/desk/billing?…&for=… — the CTA hash, carried across — and the
+// disarm fired on it, taking the recipient's copy.
+test("only the hand-off form licenses a disarm", () => {
+  const fn = LIBFN("urlIsHandoff");
+  const run = (hash) => new Function("window", "ARG",
+    `function urlIsHandoff() {${fn.body}}; return urlIsHandoff();`
+  )({ location: { hash } }, /[?&]billing=1(?:&|$)/i);
+  assert.equal(run("#/desk/billing?plan=team&for=cd8f5912"), false,
+    "the CTA link reads as a hand-off — a refused visitor would disarm on it");
+  assert.equal(run("#/welcome/signin?billing=1&plan=team"), true,
+    "signin's hand-off is not recognised — the destination would replay");
+  assert.equal(run("#/desk?billing=1"), true);
+  assert.equal(run("#/welcome/signin"), false);
+  assert.equal(run("#/desk"), false);
+});
+
 // ── the scenario, driven against the real peek/consume/disarm ──────────
 // Addressed to A. B signs in → refused, and it SURVIVES. A signs in → opens,
 // and it is gone. A again → nothing.
@@ -253,10 +278,14 @@ test("the router disarms only when the URL is carrying the destination", () => {
   const body = stripComments(routerSrc);
   const i = body.indexOf("if (this.changeHost(Organization.host()))");
   const branch = body.slice(i, i + 700);
-  assert.match(branch, /urlWantsBilling\(\)[\s\S]*?disarm\(\)/,
-    "the disarm is not gated on the URL actually carrying the destination");
+  assert.match(branch, /urlIsHandoff\(\)[\s\S]*?disarm\(\)/,
+    "the disarm is not gated on the URL being a HAND-OFF");
   assert.ok(!/isForCurrentUser/.test(branch),
-    "the disarm still asks who the user is — it must ask whether the URL has it");
+    "the disarm still asks who the user is — it must ask what the URL is");
+  assert.ok(!/urlWantsBilling\(\)[\s\S]{0,80}disarm/.test(branch),
+    "gated on urlWantsBilling, which is ALSO true for the CTA link itself — a "
+    + "refused visitor being switched to their org host would take the "
+    + "recipient's only surviving copy with them");
 });
 
 // ── the destination is single-use across the host switch ───────────────
@@ -284,8 +313,9 @@ test("the router disarms the origin it is switching away from", () => {
   assert.match(branch, /billingDeepLink\.disarm\(\)/,
     "the origin being left keeps its copy — logout returns here and the next "
     + "sign-in replays the flow without a click");
-  assert.match(branch, /urlWantsBilling\(\)/,
-    "the disarm is unconditional — it would drop a destination the URL is not carrying");
+  assert.match(branch, /urlIsHandoff\(\)/,
+    "the disarm is unconditional, or gated on the wrong question — it would drop "
+    + "a destination the URL is not handing over");
   assert.ok(branch.indexOf("disarm()") < branch.indexOf("return;"),
     "disarm must run before the early return, or it never runs at all");
 });
@@ -301,7 +331,7 @@ test("disarm only fires on a switch that actually happened", () => {
   const i = body.indexOf("if (this.changeHost(Organization.host()))");
   assert.ok(i > 0, "the guarded host switch is gone");
   const branch = body.slice(i, i + 400);
-  assert.match(branch, /if \(this\.changeHost\(Organization\.host\(\)\)\) \{[\s\S]*?urlWantsBilling\(\)[\s\S]*?disarm\(\)[\s\S]*?return;[\s\S]*?\n      \}/,
+  assert.match(branch, /if \(this\.changeHost\(Organization\.host\(\)\)\) \{[\s\S]*?urlIsHandoff\(\)[\s\S]*?disarm\(\)[\s\S]*?return;[\s\S]*?\n      \}/,
     "disarm sits outside the success branch — it would drop the destination on "
     + "a switch that never occurred");
 });
