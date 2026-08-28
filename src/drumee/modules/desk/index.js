@@ -1436,12 +1436,14 @@ class desk_module extends LetcBox {
     // path — see _loadTasks in the task panel for the same shape.
     if (!counts || typeof counts !== "object" || Array.isArray(counts)) return;
 
-    const total =
-      (Number(counts.unread_messages) || 0) +
-      (Number(counts.due_tasks) || 0) +
-      (Number(counts.meetings) || 0);
-    if (total <= 0) return;
-
+    // A day with nothing due still shows the card, reading "nothing due
+    // today" instead of three zeroes. It used to return here, and the first
+    // consequence was the feature looking BROKEN: you open the desk, see
+    // nothing, and cannot tell "quiet day" apart from "it didn't work". A
+    // morning greeting that is silent exactly when there is nothing to report
+    // is indistinguishable from one that failed, and "you're clear today" is
+    // real information. The card renders nothing only when the request itself
+    // did not come back, which is handled above.
     await Kind.waitFor("daily_reminder_popup");
     Wm.launch(
       {

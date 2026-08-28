@@ -113,6 +113,20 @@
     word-break: break-word;
   }
 
+  // The empty-day line, standing in for the three tiles.
+  &__empty {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 400,
+      $line: 22px,
+      $color: var(--tertiary-grey-80, #65656c)
+    );
+    font-weight: 400;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
   &__subline {
     @include drumee.typo(
       $size: 16px,

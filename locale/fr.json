@@ -2750,5 +2750,6 @@
   "DAILY_REMINDER_TASKS_ONE": "{0} tâche à échéance",
   "DAILY_REMINDER_TASKS_OTHER": "{0} tâches à échéance",
   "DAILY_REMINDER_MEETINGS_ONE": "{0} réunion",
-  "DAILY_REMINDER_MEETINGS_OTHER": "{0} réunions"
+  "DAILY_REMINDER_MEETINGS_OTHER": "{0} réunions",
+  "DAILY_REMINDER_NOTHING": "Rien à faire aujourd'hui"
 }

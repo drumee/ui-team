@@ -2755,5 +2755,6 @@
   "DAILY_REMINDER_MEETINGS_ONE": "{0} встреча",
   "DAILY_REMINDER_MEETINGS_FEW": "{0} встречи",
   "DAILY_REMINDER_MEETINGS_MANY": "{0} встреч",
-  "DAILY_REMINDER_MEETINGS_OTHER": "{0} встреч"
+  "DAILY_REMINDER_MEETINGS_OTHER": "{0} встреч",
+  "DAILY_REMINDER_NOTHING": "На сегодня ничего нет"
 }

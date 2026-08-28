@@ -2939,5 +2939,6 @@
   "DAILY_REMINDER_TASKS_ONE": "{0} due task",
   "DAILY_REMINDER_TASKS_OTHER": "{0} due tasks",
   "DAILY_REMINDER_MEETINGS_ONE": "{0} meeting",
-  "DAILY_REMINDER_MEETINGS_OTHER": "{0} meetings"
+  "DAILY_REMINDER_MEETINGS_OTHER": "{0} meetings",
+  "DAILY_REMINDER_NOTHING": "Nothing due today"
 }

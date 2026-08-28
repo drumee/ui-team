@@ -65,6 +65,7 @@ function renderCard(over = {}) {
       DAILY_REMINDER_MEETINGS_ONE: "{0} meeting",
       DAILY_REMINDER_MEETINGS_OTHER: "{0} meetings",
       DAILY_REMINDER_SUBLINE: "Check your calendar now",
+      DAILY_REMINDER_NOTHING: "Nothing due today",
       DISCARD: "Discard",
       MY_CALENDAR: "My calendar",
     },
@@ -161,12 +162,66 @@ test("the display name is escaped — Note renders content as MARKUP", () => {
 });
 
 test("counts are coerced — a malformed response can only render a number", () => {
+  // Garbage in every field coerces to 0, which is now the empty-day branch.
   const t = renderCard({
     getCounts: () => ({ unread_messages: "<b>x</b>", due_tasks: -7, meetings: null }),
   });
-  const labels = findAll(t, "daily-reminder-popup__stat-label").map((n) => n.content);
-  // 0 is CLDR "other" in English, so these stay plural.
-  assert.deepEqual(labels, ["0 unread messages", "0 due tasks", "0 meetings"]);
+  assert.equal(findAll(t, "daily-reminder-popup__stat-label").length, 0);
+  assert.equal(find(t, "daily-reminder-popup__empty").content, "Nothing due today");
+  // With one real count present the tiles come back, and 0 stays PLURAL in
+  // English (0 is CLDR "other", not "one").
+  const t2 = renderCard({
+    getCounts: () => ({ unread_messages: "<b>x</b>", due_tasks: 2, meetings: null }),
+  });
+  assert.deepEqual(
+    findAll(t2, "daily-reminder-popup__stat-label").map((n) => n.content),
+    ["0 unread messages", "2 due tasks", "0 meetings"],
+  );
+});
+
+test("an all-zero day shows a LINE, not three zeroes", () => {
+  // Suppressing the card entirely on a quiet day made the feature look
+  // broken: you open the desk, see nothing, and cannot tell "nothing due"
+  // apart from "it didn't work". That is exactly how it was first reported.
+  const t = renderCard({ getCounts: () => ({ unread_messages: 0, due_tasks: 0, meetings: 0 }) });
+  assert.ok(find(t, "daily-reminder-popup__card"), "the card still renders");
+  const empty = find(t, "daily-reminder-popup__empty");
+  assert.ok(empty, "the empty-day line renders");
+  assert.equal(empty.content, "Nothing due today");
+  assert.equal(empty.active, 0, "it is decorative, so it must not bind a click");
+  assert.equal(findAll(t, "daily-reminder-popup__stat-label").length, 0, "no zero tiles");
+  assert.equal(find(t, "daily-reminder-popup__stats"), null, "the tile row is gone entirely");
+  // The rest of the card is unchanged — it is still a greeting with actions.
+  assert.ok(find(t, "daily-reminder-popup__subline"), "the sub-line stays");
+  assert.equal(findAll(t, "daily-reminder-popup__btn").length, 2, "both buttons stay");
+});
+
+test("one non-zero count is enough to bring the tiles back", () => {
+  for (const counts of [
+    { unread_messages: 1, due_tasks: 0, meetings: 0 },
+    { unread_messages: 0, due_tasks: 1, meetings: 0 },
+    { unread_messages: 0, due_tasks: 0, meetings: 1 },
+  ]) {
+    const t = renderCard({ getCounts: () => counts });
+    assert.equal(find(t, "daily-reminder-popup__empty"), null,
+      `${JSON.stringify(counts)} is not an empty day`);
+    assert.equal(findAll(t, "daily-reminder-popup__stat-label").length, 3);
+  }
+});
+
+test("the desk no longer suppresses a quiet day", () => {
+  const fn = /async _maybeShowDailyReminder\(\) \{[\s\S]*?\n  \}/.exec(deskSrc);
+  const code = stripComments(fn[0]);
+  assert.ok(
+    !/total\s*<=\s*0/.test(code),
+    "an all-zero day must reach the card, which renders its own empty state",
+  );
+  // But a request that did not come back still shows nothing — a card with no
+  // data is worse than no card.
+  assert.ok(
+    /if \(!counts \|\| typeof counts !== "object" \|\| Array\.isArray\(counts\)\) return;/.test(code),
+    "a failed request still renders nothing",
+  );
 });
 
 test("a count of 1 reads SINGULAR — '1 unread messages' was the bug", () => {
@@ -317,7 +372,7 @@ test("every localStorage access is wrapped and fails toward SHOWING the card", (
     "unreadable storage reports NOT-shown — showing twice beats breaking a desk load");
 });
 
-test("the desk marks the day BEFORE fanning out, and skips an all-zero day", () => {
+test("the desk marks the day BEFORE fanning out", () => {
   const fn = /async _maybeShowDailyReminder\(\) \{[\s\S]*?\n  \}/.exec(deskSrc);
   assert.ok(fn, "_maybeShowDailyReminder is found");
   const code = stripComments(fn[0]);
@@ -328,7 +383,6 @@ test("the desk marks the day BEFORE fanning out, and skips an all-zero day", () 
     markAt < fetchAt,
     "the day is consumed BEFORE the request — two quick desk loads would otherwise both pass the check and fan out across every workspace twice",
   );
-  assert.ok(/if \(total <= 0\) return;/.test(code), "an all-zero day renders nothing");
   assert.ok(
     /SERVICE\.activity && SERVICE\.activity\.daily_digest/.test(code),
     "the activity namespace is guarded — it lives only in the backend map, so it can be undefined",
@@ -360,7 +414,8 @@ test("every locale defines every card key", () => {
     "DAILY_REMINDER_MESSAGES_ONE", "DAILY_REMINDER_MESSAGES_OTHER",
     "DAILY_REMINDER_TASKS_ONE", "DAILY_REMINDER_TASKS_OTHER",
     "DAILY_REMINDER_MEETINGS_ONE", "DAILY_REMINDER_MEETINGS_OTHER",
-    "DAILY_REMINDER_SUBLINE", "DAILY_REMINDER_NO_CALENDAR", "DISCARD", "MY_CALENDAR",
+    "DAILY_REMINDER_SUBLINE", "DAILY_REMINDER_NO_CALENDAR", "DAILY_REMINDER_NOTHING",
+    "DISCARD", "MY_CALENDAR",
   ];
   const missing = [];
   for (const f of files) {

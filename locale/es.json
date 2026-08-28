@@ -2750,5 +2750,6 @@
   "DAILY_REMINDER_TASKS_ONE": "{0} tarea pendiente",
   "DAILY_REMINDER_TASKS_OTHER": "{0} tareas pendientes",
   "DAILY_REMINDER_MEETINGS_ONE": "{0} reunión",
-  "DAILY_REMINDER_MEETINGS_OTHER": "{0} reuniones"
+  "DAILY_REMINDER_MEETINGS_OTHER": "{0} reuniones",
+  "DAILY_REMINDER_NOTHING": "Nada pendiente para hoy"
 }

@@ -105,6 +105,10 @@ module.exports = function (ui) {
     const c = num(v);
     return pluralized(base, c).replace("{0}", String(c));
   };
+  // Coerced exactly the way the tiles are, so "nothing to report" and the
+  // numbers on screen can never disagree.
+  const total =
+    num(counts.unread_messages) + num(counts.due_tasks) + num(counts.meetings);
 
   // Box.Y, NOT Box.Z. Measured on the endpoint: Box.Z renders `display: block`,
   // so `align-items` / `justify-content` on the backdrop are INERT and the card
@@ -133,24 +137,32 @@ module.exports = function (ui) {
             content: title,
             active: 0,
           }),
-          Skeletons.Box.X({
-            className: `${pfx}__stats`,
-            active: 0,
-            kids: [
-              tile(
-                "noti-chat-teardrop-dots",
-                stat("DAILY_REMINDER_MESSAGES", counts.unread_messages),
-              ),
-              tile(
-                "noti-list-checks",
-                stat("DAILY_REMINDER_TASKS", counts.due_tasks),
-              ),
-              tile(
-                "noti-video-camera",
-                stat("DAILY_REMINDER_MEETINGS", counts.meetings),
-              ),
-            ],
-          }),
+          // A completely empty day gets ONE line rather than three zero tiles.
+          // Three zeroes read as a malfunction; a sentence reads as an answer.
+          total === 0
+            ? Skeletons.Note({
+                className: `${pfx}__empty`,
+                content: LOCALE.DAILY_REMINDER_NOTHING,
+                active: 0,
+              })
+            : Skeletons.Box.X({
+                className: `${pfx}__stats`,
+                active: 0,
+                kids: [
+                  tile(
+                    "noti-chat-teardrop-dots",
+                    stat("DAILY_REMINDER_MESSAGES", counts.unread_messages),
+                  ),
+                  tile(
+                    "noti-list-checks",
+                    stat("DAILY_REMINDER_TASKS", counts.due_tasks),
+                  ),
+                  tile(
+                    "noti-video-camera",
+                    stat("DAILY_REMINDER_MEETINGS", counts.meetings),
+                  ),
+                ],
+              }),
           Skeletons.Note({
             className: `${pfx}__subline`,
             content: LOCALE.DAILY_REMINDER_SUBLINE,
