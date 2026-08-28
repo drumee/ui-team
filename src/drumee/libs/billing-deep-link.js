@@ -150,16 +150,9 @@ function urlWantsBilling() {
  * across the sign-in reload as well — and a mail recipient is very often
  * signed out.
  *
- * `for` is the recipient marker — see recipientTag below. LEGACY: it is
- * checked in this browser, which is why it was only ever a UX guard.
+ * `for` is the recipient marker — see recipientTag below.
  *
- * `g` is the grant token, and it replaces BOTH `promo` and `for`. The mail no
- * longer carries the coupon at all: the token is exchanged for it by
- * payment.claim_offer, which checks the recipient server-side and spends the
- * grant. A forwarded link therefore hands the reader nothing. Both older keys
- * stay on this list because 203 links carrying them are already in inboxes.
- *
- * @returns {{plan?:string, cycle?:string, tab?:string, promo?:string, for?:string, g?:string}}
+ * @returns {{plan?:string, cycle?:string, tab?:string, promo?:string, for?:string}}
  */
 function parseParams() {
   const out = {};
@@ -168,7 +161,7 @@ function parseParams() {
     const q = hash.indexOf("?");
     if (q === -1) return out;
     const usp = new URLSearchParams(hash.slice(q + 1));
-    for (const k of ["plan", "cycle", "tab", "promo", "for", "g"]) {
+    for (const k of ["plan", "cycle", "tab", "promo", "for"]) {
       const v = usp.get(k);
       if (v) out[k] = v;
     }

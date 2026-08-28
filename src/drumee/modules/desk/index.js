@@ -518,106 +518,41 @@ class desk_module extends LetcBox {
    *
    * @returns {Boolean} whether the billing screen was opened
    */
-  async _maybeOpenBillingDeepLink() {
+  _maybeOpenBillingDeepLink() {
     // PEEK, NOT CONSUME. Both gates below can refuse, and a refusal must leave
     // the destination exactly as it found it: consuming first made every
     // refusal permanent, so a wrong-account sign-in destroyed a link written
     // for somebody else, who then signed in and found nothing.
-    let preselect = billingDeepLink.peek();
+    const preselect = billingDeepLink.peek();
     if (!preselect) return false;
-    // ELIGIBILITY FIRST, and it moved above the recipient checks on purpose.
-    // An account that cannot buy must not spend a grant finding that out: the
-    // claim below is a one-way door, and burning somebody's single run at an
-    // offer on a screen they would have been bounced off is the worst outcome
-    // available. KEPT, never consumed — ownership and a payment backend that
-    // had not finished loading are both verdicts that change underneath.
+    // Addressed to somebody else. A campaign CTA carries an opaque marker for
+    // the recipient it was written for (analytics-server _recipientTag), and a
+    // mail gets forwarded, screenshotted, and opened on machines already signed
+    // in as a colleague. Without this, any of those walks that person into a
+    // discounted checkout with a partner code applied that was never offered to
+    // them.
+    //
+    // A link with no marker passes — see isForCurrentUser, which treats absent
+    // as "not bound" rather than "refuse", so every link written before this
+    // existed still works.
+    // KEPT, not consumed: this session is not the one the link was written for,
+    // so the recipient has not had their chance yet. They may sign in on this
+    // very tab a moment from now — which is the case this whole ordering exists
+    // for.
+    if (!billingDeepLink.isForCurrentUser(preselect)) return false;
+    // KEPT for the same reason, and this one can genuinely change underneath:
+    // ownership, or a payment backend that had not finished loading. Throwing
+    // the destination away on a verdict that is not final is the harsher answer.
     if (!canUpgradePlan()) return false;
-
-    if (preselect.g) {
-      // THE SERVER DECIDES, and it is the only thing that can. The coupon is
-      // not in the link any more — `g` is an opaque token, worth nothing until
-      // payment.claim_offer exchanges it for the code, having checked the
-      // recipient against the signed-in address and spent the grant.
-      //
-      // AWAITED BEFORE ANYTHING OPENS. Opening billing first and reporting the
-      // refusal on it would put the checkout screen in front of someone whose
-      // link is dead — the campaign's requirement is that a spent link does
-      // NOTHING, not that it opens a screen carrying an error.
-      const claimed = await this._claimBillingGrant(preselect.g);
-      if (!claimed) return false;
-      // The code the server just revealed becomes an ordinary `promo`
-      // preselect, so the billing widget's existing seed-then-preview path
-      // handles it unchanged — _applyDeepLink seeds the field,
-      // _autoApplyDeepLinkPromo asks preview_coupon, and that call now passes
-      // because the grant it checks was claimed a moment ago.
-      preselect = Object.assign({}, preselect, { promo: claimed.code });
-    } else if (!billingDeepLink.isForCurrentUser(preselect)) {
-      // LEGACY LINKS ONLY — the 203 already in inboxes, which carry the coupon
-      // in cleartext and an FNV marker of the recipient. Checked here, in this
-      // browser, which is exactly why it was only ever a UX guard: the marker
-      // is recomputable for any address. A link with no marker passes, since
-      // absent means "not bound" rather than "refuse".
-      //
-      // KEPT, not consumed: this session is not the one the link was written
-      // for, so the recipient has not had their chance yet. They may sign in on
-      // this very tab a moment from now — the case the whole ordering exists
-      // for.
-      return false;
-    }
     // Committed. Taking it here — and only here — is what keeps the destination
-    // SINGLE-USE on this device: it must not replay for this account after a
-    // later sign-out. For a grant link the server has already spent it, so this
-    // is belt and braces; for a legacy link it is the only thing that does.
+    // SINGLE-USE: it must not replay for this account after a later sign-out.
+    // The value is already in hand from the peek above, so the return is
+    // deliberately discarded.
     billingDeepLink.consume();
     // Don't let desk-state restore pull the screen back to the remembered one.
     this._restoreInFlight = false;
     this.openBillingPage(preselect);
     return true;
-  }
-
-  /**
-   * Exchange a campaign link's grant token for the coupon behind it.
-   *
-   * ONE-WAY. A successful claim SPENDS a single-use grant, so this is only
-   * called once eligibility is settled and the desk is going to act on the
-   * answer. There is deliberately no read-only variant: one would let anyone
-   * holding a forwarded link probe whether it is still live.
-   *
-   * WHAT HAPPENS TO THE ARMED COPY on a refusal is the interesting part, and
-   * the two cases are opposites:
-   *
-   *   the server ANSWERED and said no    the token is dead for good — spent,
-   *                                      revoked, or addressed to someone else.
-   *                                      Disarm, or every future boot on this
-   *                                      origin retries a link that can never
-   *                                      work.
-   *   the call did not COMPLETE          a dropped connection, a backend
-   *                                      mid-deploy. Keep it. Destroying a live
-   *                                      offer because the network blinked is
-   *                                      the one failure with no way back.
-   *
-   * @param {String} g the token from the link
-   * @returns {Promise<Object|null>} the claimed offer, or null
-   */
-  async _claimBillingGrant(g) {
-    // Shipped from the backend ACL. An older server has no such service, and
-    // the desk must boot against one — it simply cannot honour grant links.
-    if (!SERVICE.payment || !SERVICE.payment.claim_offer) return null;
-    let res;
-    try {
-      res = await this.postService(SERVICE.payment.claim_offer, { g });
-    } catch (e) {
-      this.warn && this.warn("[billing-deep-link] claim failed", e);
-      return null;
-    }
-    const data = res || {};
-    if (data.status === "OK" && data.code) return data;
-    // An answered refusal. Nothing is shown: a spent link doing nothing is the
-    // campaign's own requirement, and a stranger who opened a forwarded mail
-    // must not be told anything about whose offer it was.
-    this.debug && this.debug("[billing-deep-link] refused", data.status);
-    billingDeepLink.disarm();
-    return null;
   }
 
   /**
