@@ -3602,8 +3602,16 @@ class desk_module extends LetcBox {
     // Fire-and-forget, and never awaited: the user asked for the billing page
     // and an analytics row must not be able to delay or block it. A rejection
     // is swallowed for the same reason.
-    this.postService(SERVICE.desk.cta_click, { cta: "upgrade", hub_id: Visitor.id },
-      { async: 1 }).catch(() => {});
+    //
+    // Ship-ahead guard: `desk` services arrive from the server's ACL via
+    // Platform.get('services') -- lex/services.json has no `desk` key -- so
+    // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
+    // postService throws synchronously on an undefined descriptor, which the
+    // trailing .catch cannot intercept, and this method opens the billing page.
+    if (SERVICE.desk && SERVICE.desk.cta_click) {
+      this.postService(SERVICE.desk.cta_click, { cta: "upgrade", hub_id: Visitor.id },
+        { async: 1 }).catch(() => {});
+    }
     // `preselect` (plan/cycle/tab) rides in from a #/desk/billing deep link; a
     // plain "Upgrade plan" trigger passes nothing, so the page opens on its
     // default tab exactly as before.
