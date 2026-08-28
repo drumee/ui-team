@@ -431,6 +431,61 @@ test("every locale defines every card key", () => {
   assert.deepEqual(missing, []);
 });
 
+test("the card matches Figma call-pop-up 58222:35191", () => {
+  // Every number here was read off the node itself (file
+  // MVL1Q9puypsTAJXvx9whCa, section Notification 58187:57778) on 2026-08-27,
+  // NOT off the screenshot. The first build guessed these from the sibling
+  // cards and got the tiles, the button radius and every gap wrong, so they
+  // are pinned rather than left to drift back.
+  const rule = (sel) => {
+    const m = new RegExp("&__" + sel + " \\{([\\s\\S]*?)\\n  \\}").exec(skinSrc);
+    assert.ok(m, `rule for &__${sel} exists`);
+    return m[1];
+  };
+  const has = (sel, re, why) =>
+    assert.ok(re.test(rule(sel)), `${sel}: ${why}`);
+
+  has("card", /gap:\s*32px/, "Figma itemSpacing 32 between the two groups");
+  has("card", /border-radius:\s*12px/, "radius 12");
+  has("card", /padding:\s*24px/, "padding 24");
+  has("card", /width:\s*520px/, "520 wide");
+  has("card", /rgba\(0,\s*0,\s*0,\s*0\.3\)/, "shadow is pure black at 30%, not the ink token");
+  has("head", /gap:\s*24px/, "title+stats group is gap 24");
+  has("foot", /gap:\s*12px/, "sub-line+buttons group is gap 12");
+  has("title", /\$line:\s*24px/, "title line-height 24 (via drumee.typo $line)");
+  has("title", /#34343a/, "title colour #34343a — Figma Grey/90, no token exists");
+  has("stat-tile", /width:\s*32px/, "tile is 32, not the 48 that was guessed");
+  has("stat-tile", /border-radius:\s*8px/, "tile radius 8, not 12");
+  has("stat-tile", /padding:\s*4px/, "tile padding 4");
+  has("stat-tile", /rgba\(89,\s*80,\s*255,\s*0\.1\)/,
+    "tile fill is Primary/40 at 10% OPACITY — a wash. --primary-purple-10 is a different colour");
+  has("stat-label", /\$line:\s*17px/, "label line-height 17 (via drumee.typo $line)");
+  has("subline", /#34343a/, "sub-line colour #34343a");
+  has("subline", /\$line:\s*19px/, "sub-line line-height 19 (via drumee.typo $line)");
+  has("actions", /gap:\s*12px/, "buttons gap 12, not 16");
+  has("btn", /border-radius:\s*4px/, "button radius 4, not 8");
+  has("btn", /padding:\s*12px 24px/, "button padding 12/24, not 16/24");
+  has("close", /width:\s*14px/, "close icon is 14, not 24");
+  has("close", /--tertiary-grey-80/, "close icon is Grey/80, not an opacity fade");
+});
+
+test("the card keeps Figma's two-group structure", () => {
+  // Flattening these into one evenly spaced column puts the wrong air
+  // between every pair — most of why the first build did not match.
+  const t = renderCard();
+  const head = find(t, "daily-reminder-popup__head");
+  const foot = find(t, "daily-reminder-popup__foot");
+  assert.ok(head, "title + stats live in one group");
+  assert.ok(foot, "sub-line + buttons live in another");
+  assert.ok(find(head, "daily-reminder-popup__title"), "title is inside __head");
+  assert.ok(find(head, "daily-reminder-popup__stats"), "stats are inside __head");
+  assert.ok(find(foot, "daily-reminder-popup__subline"), "sub-line is inside __foot");
+  assert.ok(find(foot, "daily-reminder-popup__actions"), "buttons are inside __foot");
+  // Both wrappers are pure layout and must not intercept clicks.
+  assert.equal(head.active, 0);
+  assert.equal(foot.active, 0);
+});
+
 test("every typo rule writes font-weight out", () => {
   // drumee.typo maps $weight onto a font-FAMILY and emits no font-weight at
   // all, so a rule that passes $weight and stops there renders at whatever it

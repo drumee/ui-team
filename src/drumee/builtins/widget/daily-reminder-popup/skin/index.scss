@@ -1,16 +1,19 @@
 @use "mixins/drumee";
 
-// Daily reminder card — Round 3 / Sprint 1 row 7 (screenshot Downloads/dr1.jpg).
+// Daily reminder card — Round 3 / Sprint 1 row 7.
 //
-// Sizing follows the sibling Round 3 cards (call-pop-up: 520 wide, padding 24,
-// radius 12) rather than being measured off the screenshot, which carries no
-// scale. If Figma later gives exact numbers, only this file changes.
+// 📐 EVERY value below is taken from Figma `call-pop-up` **58222:35191**
+// (file MVL1Q9puypsTAJXvx9whCa, section Notification 58187:57778), pulled
+// 2026-08-27 once the API rate limit cleared. It was previously built from a
+// screenshot with sizes borrowed from the sibling cards, which is why it did
+// not match: the tiles were 48/r12 on a solid tint instead of 32/r8 on a 10%
+// wash, the buttons were r8 with the wrong padding, and the card used one
+// even gap instead of 32 / 24 / 12.
 //
 // 🚨 Every drumee.typo include is followed by an explicit font-weight.
 // skin/mixins/typo.scss maps $weight onto a font-FAMILY and emits NO
-// font-weight at all — it has no branch for 600 — so a rule that passes
-// $weight and stops there renders at whatever it inherits. Five Phase 1 rules
-// were silently light for exactly this reason.
+// font-weight at all, so a rule that passes $weight and stops there renders
+// at whatever it inherits.
 .daily-reminder-popup {
   &__backdrop {
     position: fixed;
@@ -27,25 +30,31 @@
     max-width: calc(100vw - 32px);
     box-sizing: border-box;
     padding: 24px;
-    gap: 24px;
+    // Figma: VERTICAL, itemSpacing 32 between the two content groups.
+    gap: 32px;
     border-radius: 12px;
     background: #fff;
+    // Figma effects: DROP_SHADOW 0/40 blur 80 #000 @30%, DROP_SHADOW 0/7
+    // blur 10 #000 @9%, plus BACKGROUND_BLUR 100.
     box-shadow:
-      0 40px 80px rgba(11, 10, 33, 0.3),
-      0 7px 10px rgba(11, 10, 33, 0.09);
+      0 40px 80px rgba(0, 0, 0, 0.3),
+      0 7px 10px rgba(0, 0, 0, 0.09);
+    backdrop-filter: blur(100px);
   }
 
   &__close {
     position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 24px;
-    height: 24px;
+    top: 24px;
+    right: 24px;
+    // Figma: 14x14 icon, Grey/80.
+    width: 14px;
+    height: 14px;
     cursor: pointer;
-    opacity: 0.6;
+    color: var(--tertiary-grey-80, #65656c);
+    fill: var(--tertiary-grey-80, #65656c);
 
     &:hover {
-      opacity: 1;
+      opacity: 0.7;
     }
   }
 
@@ -53,8 +62,10 @@
     @include drumee.typo(
       $size: 20px,
       $weight: 600,
-      $line: 28px,
-      $color: var(--primary-purple-100, #0b0a21)
+      $line: 24px,
+      // Figma Grey/90 #34343a — no token exists for it, same as the meeting
+      // card's title.
+      $color: #34343a
     );
     font-weight: 600;
     // Note renders a FLEX container, so text-align does nothing on its own —
@@ -66,10 +77,13 @@
     padding: 0 32px; // clear of the ✕
   }
 
+  // Figma lays the three out on a GRID of equal 157px cells inside the 472px
+  // content width; three flex-1 columns are the same thing and survive a
+  // longer translation.
   &__stats {
     align-items: flex-start;
-    justify-content: space-around;
-    gap: 16px;
+    justify-content: space-between;
+    gap: 0;
   }
 
   &__stat {
@@ -82,11 +96,16 @@
   &__stat-tile {
     align-items: center;
     justify-content: center;
-    flex: 0 0 48px;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: var(--primary-purple-10, #e4e3ff);
+    // Figma: 32x32, radius 8, padding 4.
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    box-sizing: border-box;
+    padding: 4px;
+    border-radius: 8px;
+    // Figma fill is Primary/40 #5950ff at 10% OPACITY — a wash, not the solid
+    // --primary-purple-10 tint this used to use.
+    background: rgba(89, 80, 255, 0.1);
   }
 
   &__stat-ico {
@@ -101,7 +120,7 @@
     @include drumee.typo(
       $size: 14px,
       $weight: 400,
-      $line: 20px,
+      $line: 17px,
       $color: var(--primary-purple-100, #0b0a21)
     );
     font-weight: 400;
@@ -127,12 +146,22 @@
     text-align: center;
   }
 
+  // Figma Frame 1618873181 — title + stats, itemSpacing 24.
+  &__head {
+    gap: 24px;
+  }
+
+  // Figma Frame 1618873180 — sub-line + buttons, itemSpacing 12.
+  &__foot {
+    gap: 12px;
+  }
+
   &__subline {
     @include drumee.typo(
       $size: 16px,
       $weight: 600,
-      $line: 22px,
-      $color: var(--primary-purple-100, #0b0a21)
+      $line: 19px,
+      $color: #34343a
     );
     font-weight: 600;
     align-items: center;
@@ -141,7 +170,8 @@
   }
 
   &__actions {
-    gap: 16px;
+    // Figma: two 230px buttons, gap 12, inside the 472px content width.
+    gap: 12px;
   }
 
   &__btn {
@@ -151,8 +181,9 @@
     justify-content: center;
     text-align: center;
     box-sizing: border-box;
-    padding: 16px 24px;
-    border-radius: 8px;
+    // Figma: padding 12/24, radius 4, height 48.
+    padding: 12px 24px;
+    border-radius: 4px;
     cursor: pointer;
     @include drumee.typo($size: 16px, $weight: 600, $line: 24px);
     font-weight: 600;

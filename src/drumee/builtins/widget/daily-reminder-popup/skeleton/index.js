@@ -119,6 +119,11 @@ module.exports = function (ui) {
   // Do not "simplify" this back to Box.Z, and do not paper over it with
   // `display: flex` in the skin — the repo rule is that Box variants own that
   // property.
+  // Structure mirrors Figma `call-pop-up` 58222:35191 exactly: the card is a
+  // VERTICAL stack with gap 32 holding TWO groups — [title + stats] at gap 24
+  // and [sub-line + buttons] at gap 12. Flattening those into one evenly
+  // spaced column (what this used to do) puts the wrong air between every
+  // pair, which is most of why it did not match.
   return Skeletons.Box.Y({
     className: `${pfx}__backdrop`,
     kids: [
@@ -132,62 +137,75 @@ module.exports = function (ui) {
             service: "daily-reminder-close",
             uiHandler: [ui],
           }),
-          Skeletons.Note({
-            className: `${pfx}__title`,
-            content: title,
-            active: 0,
-          }),
-          // A completely empty day gets ONE line rather than three zero tiles.
-          // Three zeroes read as a malfunction; a sentence reads as an answer.
-          total === 0
-            ? Skeletons.Note({
-                className: `${pfx}__empty`,
-                content: LOCALE.DAILY_REMINDER_NOTHING,
-                active: 0,
-              })
-            : Skeletons.Box.X({
-                className: `${pfx}__stats`,
-                active: 0,
-                kids: [
-                  tile(
-                    "noti-chat-teardrop-dots",
-                    stat("DAILY_REMINDER_MESSAGES", counts.unread_messages),
-                  ),
-                  tile(
-                    "noti-list-checks",
-                    stat("DAILY_REMINDER_TASKS", counts.due_tasks),
-                  ),
-                  tile(
-                    "noti-video-camera",
-                    stat("DAILY_REMINDER_MEETINGS", counts.meetings),
-                  ),
-                ],
-              }),
-          Skeletons.Note({
-            className: `${pfx}__subline`,
-            content: LOCALE.DAILY_REMINDER_SUBLINE,
-            active: 0,
-          }),
-          Skeletons.Box.X({
-            className: `${pfx}__actions`,
+          Skeletons.Box.Y({
+            className: `${pfx}__head`,
             active: 0,
             kids: [
               Skeletons.Note({
-                className: `${pfx}__btn ${pfx}__btn--ghost`,
-                content: LOCALE.DISCARD,
-                bubble: 0,
-                service: "daily-reminder-discard",
-                uiHandler: [ui],
+                className: `${pfx}__title`,
+                content: title,
+                active: 0,
               }),
-              // Drawn per the design but DELIBERATELY NOT WIRED to a
-              // destination — there is no personal Calendar yet. Its service
-              // only raises a notice. See the widget header.
+              // A completely empty day gets ONE line rather than three zero
+              // tiles. Three zeroes read as a malfunction; a sentence reads
+              // as an answer.
+              total === 0
+                ? Skeletons.Note({
+                    className: `${pfx}__empty`,
+                    content: LOCALE.DAILY_REMINDER_NOTHING,
+                    active: 0,
+                  })
+                : Skeletons.Box.X({
+                    className: `${pfx}__stats`,
+                    active: 0,
+                    kids: [
+                      tile(
+                        "noti-chat-teardrop-dots",
+                        stat("DAILY_REMINDER_MESSAGES", counts.unread_messages),
+                      ),
+                      tile(
+                        "noti-list-checks",
+                        stat("DAILY_REMINDER_TASKS", counts.due_tasks),
+                      ),
+                      tile(
+                        "noti-video-camera",
+                        stat("DAILY_REMINDER_MEETINGS", counts.meetings),
+                      ),
+                    ],
+                  }),
+            ],
+          }),
+          Skeletons.Box.Y({
+            className: `${pfx}__foot`,
+            active: 0,
+            kids: [
               Skeletons.Note({
-                className: `${pfx}__btn ${pfx}__btn--primary`,
-                content: LOCALE.MY_CALENDAR,
-                bubble: 0,
-                service: "daily-reminder-calendar",
-                uiHandler: [ui],
+                className: `${pfx}__subline`,
+                content: LOCALE.DAILY_REMINDER_SUBLINE,
+                active: 0,
+              }),
+              Skeletons.Box.X({
+                className: `${pfx}__actions`,
+                active: 0,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}__btn ${pfx}__btn--ghost`,
+                    content: LOCALE.DISCARD,
+                    bubble: 0,
+                    service: "daily-reminder-discard",
+                    uiHandler: [ui],
+                  }),
+                  // Drawn per the design but DELIBERATELY NOT WIRED to a
+                  // destination — there is no personal Calendar yet. Its
+                  // service only raises a notice. See the widget header.
+                  Skeletons.Note({
+                    className: `${pfx}__btn ${pfx}__btn--primary`,
+                    content: LOCALE.MY_CALENDAR,
+                    bubble: 0,
+                    service: "daily-reminder-calendar",
+                    uiHandler: [ui],
+                  }),
+                ],
               }),
             ],
           }),
