@@ -486,6 +486,40 @@ test("the card keeps Figma's two-group structure", () => {
   assert.equal(foot.active, 0);
 });
 
+test("the close button uses a sprite symbol that EXISTS", () => {
+  // ico:"close" renders an empty <svg> — there is no --icon-close symbol in
+  // the sprite. The element still measures 14x14, so a DOM rect proves
+  // nothing; only the painted bbox (or the sprite source) does. 36 other
+  // widgets use "cross".
+  const close = find(renderCard(), "daily-reminder-popup__close");
+  assert.ok(close, "the close button renders");
+  assert.equal(close.ico, "cross", 'ico must be "cross" — "close" is not in the sprite');
+  const dir = readdirSync(join(ROOT, "icons/src/normalized"));
+  assert.ok(dir.includes(`${close.ico}.svg`), `${close.ico}.svg exists in the sprite source`);
+  assert.ok(!dir.includes("close.svg"), "close.svg still does not exist — do not switch back");
+});
+
+test("every text rule writes BOTH font-family and font-weight", () => {
+  // Two compounding reasons this is mandatory here:
+  //  1. drumee.typo has no branch for weight 600, so it emits neither a
+  //     family nor a weight for the title, sub-line and buttons.
+  //  2. the card is portaled to document.body, so it inherits nothing from
+  //     the app shell.
+  // Together those rendered the card in TIMES NEW ROMAN.
+  const offenders = [];
+  for (const m of skinSrc.matchAll(/&__([a-z-]+)\s*\{([\s\S]*?)\n  \}/g)) {
+    const [, name, body] = m;
+    if (!/@include drumee\.typo/.test(body)) continue;
+    if (!/font-weight:\s*\d+;/.test(body)) offenders.push(`${name}: no font-weight`);
+    if (!/font-family:/.test(body)) offenders.push(`${name}: no font-family`);
+  }
+  assert.deepEqual(offenders, [], "each of these would inherit from <body> and fall back to a serif");
+  // Figma specifies Geist; Armin Grotesk is the face actually loaded, so it is
+  // the fallback rather than a generic sans.
+  assert.ok(/"Geist", var\(--font-main\), sans-serif/.test(skinSrc),
+    "the stack names Geist first (Figma), then the loaded brand face");
+});
+
 test("every typo rule writes font-weight out", () => {
   // drumee.typo maps $weight onto a font-FAMILY and emits no font-weight at
   // all, so a rule that passes $weight and stops there renders at whatever it

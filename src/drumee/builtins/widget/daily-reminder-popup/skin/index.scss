@@ -10,6 +10,16 @@
 // wash, the buttons were r8 with the wrong padding, and the card used one
 // even gap instead of 32 / 24 / 12.
 //
+// 🚨 Every drumee.typo include is followed by an explicit font-family AND
+// font-weight. The mixin has no branch for weight 600, so it emits NEITHER for
+// the title, sub-line and buttons — and the card is portaled to document.body
+// by _portalToBody(), so it inherits nothing from the app shell. Together that
+// rendered the whole card in Times New Roman.
+// Figma specifies Geist (window/folder/skin sets the same precedent), but only
+// Armin Grotesk is actually loaded, so the brand face is the fallback rather
+// than a generic sans.
+$font: "Geist", var(--font-main), sans-serif;
+
 // 🚨 Every drumee.typo include is followed by an explicit font-weight.
 // skin/mixins/typo.scss maps $weight onto a font-FAMILY and emits NO
 // font-weight at all, so a rule that passes $weight and stops there renders
@@ -68,6 +78,7 @@
       $color: #34343a
     );
     font-weight: 600;
+    font-family: $font;
     // Note renders a FLEX container, so text-align does nothing on its own —
     // only align-items / justify-content move the label. That is why the
     // Phase 2 "Mute"/"Open" labels sat off-centre.
@@ -124,6 +135,7 @@
       $color: var(--primary-purple-100, #0b0a21)
     );
     font-weight: 400;
+    font-family: $font;
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -141,6 +153,7 @@
       $color: var(--tertiary-grey-80, #65656c)
     );
     font-weight: 400;
+    font-family: $font;
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -164,6 +177,7 @@
       $color: #34343a
     );
     font-weight: 600;
+    font-family: $font;
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -187,6 +201,7 @@
     cursor: pointer;
     @include drumee.typo($size: 16px, $weight: 600, $line: 24px);
     font-weight: 600;
+    font-family: $font;
 
     &--ghost {
       background: var(--tertiary-grey-20, #f2f2f7);

@@ -132,7 +132,11 @@ module.exports = function (ui) {
         kids: [
           Skeletons.Button.Svg({
             className: `${pfx}__close`,
-            ico: "close",
+            // "cross", NOT "close": there is no --icon-close symbol in the
+            // sprite, so ico:"close" renders an empty <svg> whose painted
+            // bbox is 0x0 — the element measures 14x14 and looks fine in the
+            // DOM while nothing is drawn. 36 other widgets use "cross".
+            ico: "cross",
             bubble: 0,
             service: "daily-reminder-close",
             uiHandler: [ui],
