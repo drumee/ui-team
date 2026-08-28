@@ -128,11 +128,17 @@ class __daily_reminder_popup extends LetcBox {
       // 🚨 DELIBERATELY NOT WIRED — see the header. Do not "fix" this by
       // routing it somewhere plausible; there is no personal Calendar yet and
       // a wrong destination is worse than an honest notice.
-      case "daily-reminder-calendar":
-        if (typeof Butler !== "undefined" && Butler.say) {
-          Butler.say(LOCALE.DAILY_REMINDER_NO_CALENDAR);
-        }
+      case "daily-reminder-calendar": {
+        // CLOSE FIRST, then raise the notice. Butler renders BEHIND this card,
+        // so saying it while the card is still up hides the message until the
+        // user dismisses the card — which reads as the button doing nothing.
+        // The message is captured before _close() because this widget may be
+        // destroyed by it.
+        const msg = LOCALE.DAILY_REMINDER_NO_CALENDAR;
+        this._close();
+        if (typeof Butler !== "undefined" && Butler.say) Butler.say(msg);
         return;
+      }
     }
   }
 }

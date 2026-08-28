@@ -327,6 +327,38 @@ test("🚨 [My calendar] is DELIBERATELY NOT WIRED", () => {
         `If one now exists: wire it and DELETE this test deliberately, do not edit it.`,
     );
   }
+  // ...and it must CLOSE THE CARD BEFORE saying it. Butler renders behind the
+  // card, so a notice raised while the card is still up is invisible until the
+  // card is dismissed — which reads as the button doing nothing at all.
+  const closeAt = body.indexOf("this._close()");
+  const sayAt = body.indexOf("Butler.say");
+  assert.ok(closeAt > -1, "[My calendar] closes the card");
+  assert.ok(sayAt > -1, "[My calendar] still says why");
+  assert.ok(closeAt < sayAt, "the card is closed BEFORE the notice is raised, or the notice is hidden behind it");
+});
+
+test("the ✕ is actually CLICKABLE, not just visible", () => {
+  // It is absolutely positioned inside a flex column; the flex siblings that
+  // follow it paint as though they were z-index 0, so without an explicit
+  // z-index __head covers it and every click lands on the title. The icon
+  // still draws, so this is invisible to any check that only looks at whether
+  // the element renders — a hit test on the endpoint is what caught it.
+  const m = /&__close \{([\s\S]*?)\n  \}/.exec(skinSrc);
+  assert.ok(m, "the close rule exists");
+  const body = m[1];
+  assert.ok(/position:\s*absolute/.test(body), "it is absolutely positioned");
+  assert.ok(/z-index:\s*[1-9]/.test(body),
+    "it needs a positive z-index or the flex siblings paint over it and swallow the click");
+  // The icon keeps Figma's size/position while the hit area is padded out.
+  assert.ok(/width:\s*14px/.test(body) && /height:\s*14px/.test(body), "icon stays 14x14 per Figma");
+  assert.ok(/box-sizing:\s*content-box/.test(body), "padding must grow the box, not shrink the icon");
+  const pad = /padding:\s*(\d+)px/.exec(body);
+  const top = /top:\s*(\d+)px/.exec(body);
+  const right = /right:\s*(\d+)px/.exec(body);
+  assert.ok(pad && top && right, "padding and offsets are set");
+  // The icon must still land on Figma's 24/24 once the padding is accounted for.
+  assert.equal(Number(top[1]) + Number(pad[1]), 24, "icon top stays at Figma's 24");
+  assert.equal(Number(right[1]) + Number(pad[1]), 24, "icon right stays at Figma's 24");
 });
 
 test("Discard and ✕ are the same action, and neither writes", () => {

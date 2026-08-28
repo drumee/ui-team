@@ -54,8 +54,20 @@ $font: "Geist", var(--font-main), sans-serif;
 
   &__close {
     position: absolute;
-    top: 24px;
-    right: 24px;
+    // 🚨 WITHOUT z-index THE BUTTON IS UNCLICKABLE. It is absolutely
+    // positioned with z-index auto, and the flex siblings that follow it in
+    // the card paint as though they were z-index 0 — so __head covers it and
+    // every click lands on the title instead. The icon still DRAWS (the
+    // title's background is transparent), which is why this looked correct
+    // until someone actually tried to click it.
+    z-index: 1;
+    // The ICON keeps Figma's 24/24 position and 14x14 size, but the BUTTON is
+    // padded out to a 32px hit area: 15 = 24 - 9. A bare 14px target is very
+    // hard to hit, and this costs nothing visually.
+    top: 15px;
+    right: 15px;
+    box-sizing: content-box;
+    padding: 9px;
     // Figma: 14x14 icon, Grey/80.
     width: 14px;
     height: 14px;
