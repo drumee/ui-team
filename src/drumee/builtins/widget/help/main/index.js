@@ -167,8 +167,8 @@ class help_main extends LetcBox {
     // Ship-ahead guard: `desk` services arrive from the server's ACL via
     // Platform.get('services') -- lex/services.json has no `desk` key -- so
     // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
-    // postService throws synchronously on an undefined descriptor, which the
-    // trailing .catch cannot intercept.
+    // postService is async and its promise rejection is swallowed by .catch,
+    // but without this guard the call POSTs to a path built from `undefined`.
     if (id === "self-hosting" && SERVICE.desk && SERVICE.desk.cta_click) {
       this.postService(SERVICE.desk.cta_click, { cta: "selfhosted", hub_id: Visitor.id },
         { async: 1 }).catch(() => {});
