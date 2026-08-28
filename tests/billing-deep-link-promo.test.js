@@ -182,6 +182,60 @@ test("the desk drops a mismatched link instead of leaving it armed", () => {
     + "armed and fire for whoever signs in next on this tab");
 });
 
+// ── the destination is single-use across the host switch ───────────────
+// THE BUG: open checkout from a CTA, log out, log back in as the SAME account
+// without touching the mail — and it reopened with the coupon reapplied.
+//
+// The intent is armed on TWO origins. The main domain, where the CTA was
+// clicked; and the org host (team-NNNN.drumee.in) the router switches to after
+// sign-in. consume() runs on the org host and clears only that one. Butler.logout
+// then does `location.hostname = main_domain`, landing back on the origin still
+// holding the other copy, and the next sign-in reads it.
+//
+// CLEARING AT THE SIGN-IN FORM DOES NOT FIX IT, which is what made this subtle
+// and is why the fix lives here instead: signin clears the value, writes it into
+// the URL, and the reload's own captureFromUrl re-arms it from that URL before
+// the switch. Measured against the live site — cleared, then present again one
+// page load later.
+const routerSrc = SRC("src/drumee/router/index.js");
+
+test("the router disarms the origin it is switching away from", () => {
+  const body = stripComments(routerSrc);
+  const i = body.indexOf("changeHost(Organization.host())");
+  assert.ok(i > 0, "the host switch is gone");
+  const branch = body.slice(i, i + 400);
+  assert.match(branch, /billingDeepLink\.disarm\(\)/,
+    "the origin being left keeps its copy — logout returns here and the next "
+    + "sign-in replays the flow without a click");
+  assert.ok(branch.indexOf("disarm()") < branch.indexOf("return;"),
+    "disarm must run before the early return, or it never runs at all");
+});
+
+test("disarm only fires on a switch that actually happened", () => {
+  // changeHost answers false for a loose_host module and in the DMZ, and there
+  // the stored copy is still the only carrier.
+  const body = stripComments(routerSrc);
+  // Anchored on the `if`, not on the call inside it: slicing from
+  // indexOf("changeHost(Organization.host())") starts AFTER the `if (this.`
+  // that has to be matched, which is how this case first failed against correct
+  // code.
+  const i = body.indexOf("if (this.changeHost(Organization.host()))");
+  assert.ok(i > 0, "the guarded host switch is gone");
+  const branch = body.slice(i, i + 400);
+  assert.match(branch, /if \(this\.changeHost\(Organization\.host\(\)\)\) \{[\s\S]*?disarm\(\)[\s\S]*?return;[\s\S]*?\n      \}/,
+    "disarm sits outside the success branch — it would drop the destination on "
+    + "a switch that never occurred");
+});
+
+test("disarm is not consume — it returns nothing and acts on nothing", () => {
+  const fn = LIBFN("disarm");
+  assert.ok(!/return\s+\w/.test(fn.body),
+    "disarm returns a value — it means 'somebody else is carrying this', not "
+    + "'I am acting on it now'");
+  assert.match(fn.body, /removeItem\(KEY\)/, "disarm does not remove the key");
+  assert.match(fn.body, /catch/, "disarm throws on blocked storage");
+});
+
 // ── hop 2: the widget seeds the field, and only the field ──────────────
 const applyDeepLink = stripComments(methodBody(WIDGET, "_applyDeepLink(opt) {"));
 

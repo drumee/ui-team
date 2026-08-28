@@ -394,6 +394,17 @@ class drumee_router extends LetcBox {
     let [hostname] = location.host.split(':'); /** In case specific port */
     if (Visitor.isOnline() && hostname != Organization.host()) {
       if (this.changeHost(Organization.host())) {
+        // The URL is the carrier from here: location.host keeps path and hash,
+        // so the billing destination travels to the new origin and is re-armed
+        // there. This origin's stored copy is now a liability — Butler.logout
+        // brings the visitor straight back here, and a copy left sitting would
+        // be read at the next sign-in and reopen checkout for somebody who
+        // never clicked the CTA.
+        //
+        // Only on a switch that actually happened: changeHost answers false for
+        // a loose_host module and in the DMZ, and there the copy is still the
+        // carrier.
+        billingDeepLink.disarm();
         return;
       }
     }

@@ -200,6 +200,33 @@ function captureFromUrl() {
 }
 
 /**
+ * Drop the intent on THIS origin, without acting on it.
+ *
+ * For the one moment the URL takes over as the carrier: the router is about to
+ * set location.host, which keeps path and hash, so the destination travels to
+ * the new origin and is re-armed there by captureFromUrl. The copy left behind
+ * is then pure liability — Butler.logout brings the visitor back to this very
+ * origin, and a copy sitting here is read at the NEXT sign-in and replays the
+ * whole flow for somebody who never clicked anything.
+ *
+ * NOT consume(). That means "I am acting on this now" and returns the value;
+ * this means "somebody else is carrying it from here".
+ *
+ * Clearing at the sign-in form instead does not work, and the reason is worth
+ * recording: the value is cleared there, then written into the URL, and the
+ * reload's own captureFromUrl immediately re-arms it from that URL. Measured
+ * against the live site. The only place the copy can be dropped for good is
+ * after the URL has demonstrably taken over.
+ */
+function disarm() {
+  try {
+    sessionStorage.removeItem(KEY);
+  } catch (e) {
+    // Blocked storage — there was nothing to drop.
+  }
+}
+
+/**
  * Take the intent, if there is one. Reading CLEARS the stored copy — an intent
  * acted on twice would reopen billing over whatever the user did next.
  *
@@ -226,6 +253,6 @@ function consume() {
 }
 
 module.exports = {
-  arm, consume, captureFromUrl, urlWantsBilling, parseParams,
+  arm, disarm, consume, captureFromUrl, urlWantsBilling, parseParams,
   recipientTag, isForCurrentUser, KEY,
 };
