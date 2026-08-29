@@ -568,7 +568,8 @@ class __tasks_panel extends LetcBox {
       "task.delete", "task.link_file", "task.unlink_file", "task.link_label",
       "task.unlink_label", "task.comment_create", "task.comment_update",
       "task.comment_delete", "task.comment_react", "task.column_create",
-      "task.column_update", "task.column_delete", "task.column_reorder",
+      "task.column_update", "task.column_set_done", "task.column_delete",
+      "task.column_reorder",
       // Both comment-file services were missing from this list while being
       // `src: write` server-side. _zoneFor already refuses a viewer without
       // task rights, but that is UX — this is the boundary, and nothing stops
@@ -1829,6 +1830,9 @@ class __tasks_panel extends LetcBox {
       case "col-theme-set":
         return this._themeColumn(trigger);
 
+      case "col-done-toggle":
+        return this._toggleColumnDone(trigger);
+
       case "col-delete":
         return this._deleteColumn(trigger);
 
@@ -2340,6 +2344,13 @@ class __tasks_panel extends LetcBox {
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
+      // A peer flipped which column means finished. Completion is read from
+      // is_done all over this window (the subtask badge, the completed
+      // filters, where a new task lands), so a stale flag silently
+      // mis-reports — reload the columns exactly like a rename.
+      // SERVICE.task.column_set_done is defined in lex/services.json, so this
+      // is never `case undefined:` even if the backend map lacks it.
+      case SERVICE.task.column_set_done:
         Promise.all([this._loadColumns(), this._loadTasks()]).then(() =>
           this._render(),
         );
@@ -3544,6 +3555,53 @@ class __tasks_panel extends LetcBox {
     } catch (err) {
       console.error("[tasks_panel] column.theme failed:", err);
     }
+    this._render();
+  }
+
+  /**
+   * Flip "tasks in this column are done".
+   *
+   * is_done is what completion is actually keyed on everywhere in this window
+   * (_doneKeys, the subtask badge, the completed filters) — but until now only
+   * the seeded built-in `complete` ever carried it, so a board whose columns
+   * were renamed or replaced had no finished column at all.
+   *
+   * The row is only mutated locally AFTER the server confirms: getColumns()
+   * caches on a signature that includes is_done, so writing it optimistically
+   * would flip every completion read in the window on a call that may not have
+   * landed. postService resolves undefined when a call does not complete (the
+   * write guard above does exactly that for a viewer), so an empty response is
+   * a failure, not a success with no body.
+   */
+  async _toggleColumnDone(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    if (!id) return;
+    const rec = this._customColumns.find((c) => c.id === id);
+    if (!rec) return;
+    const next = Number(rec.is_done) ? 0 : 1;
+    try {
+      const resp = await this.postService({
+        service: SERVICE.task.column_set_done,
+        hub_id: this._hubId,
+        // Folder-scoped — see _renameColumn.
+        nid: this._scopeNid,
+        id,
+        is_done: next,
+      });
+      const row = Array.isArray(resp) ? resp[0] : resp;
+      if (!row || row.id == null) return; // refused or not applied — keep the old value
+      rec.is_done = Number(row.is_done) ? 1 : 0;
+    } catch (err) {
+      console.error("[tasks_panel] column.set_done failed:", err);
+      return;
+    }
+    // The done/total subtask badge is `subtask_done` from task.list, counted
+    // SERVER-side over the columns flagged is_done — so it does not follow
+    // from the local row and is stale the moment the flag moves. Reload the
+    // tasks, exactly as the peer branch of onWsMessage does; without it the
+    // person who flipped the switch is the only one seeing the old counts.
+    // _loadTasks never rejects and keeps the previous rows on failure.
+    await this._loadTasks();
     this._render();
   }
 

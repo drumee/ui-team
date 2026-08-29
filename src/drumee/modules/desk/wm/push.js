@@ -6,6 +6,53 @@ const WS_EVENT = "ws:event";
 // redeployed server-side to enable it.
 const SHOW_EARLY_MEETING_REMINDER = 0;
 
+// How long a meeting card stays on screen. 30 s, on Duy's call 2026-08-26, and
+// deliberately the SAME number the chat toast uses (CHAT_TOAST_MS) — two cards
+// that look alike and sit in the same layer should not disappear on different
+// clocks.
+//
+// 🔑 THIS REPLACES A SPLIT that used to read `variant === "now" ? 20000 : 8000`
+// — the actionable "now" card lingered while the informational `invite` and
+// `soon` ones cleared quickly. That distinction is GONE on purpose: an
+// invitation names an organiser, a folder and an attendee count, which is more
+// to read than 8 s allows, and the reason for lengthening the chat toast (time
+// to notice, read, and decide) applies to it just as much.
+//
+// ⚠️ Cards stack at 28px offsets while several are live (see `_meetingToasts`),
+// so a longer life means more of them can overlap. That was already true at
+// 20 s; it is simply likelier now.
+const MEETING_TOAST_MS = 30000;
+
+/**
+ * Detach a dismissed card once its fade-out has actually run.
+ *
+ * 🚨 WHY THIS EXISTS. `goodbye()` fades the card but leaves the NODE ATTACHED.
+ * Measured on the endpoint 2026-08-26: half a minute after a meeting card was
+ * shown it was still `isConnected`, at `opacity: 0`, with `pointer-events:
+ * auto` — and `elementFromPoint` at its centre returned the card. An invisible
+ * 520x277 rectangle that still swallows clicks is a dead zone sitting over the
+ * desk, and EVERY meeting card left one behind. (The chat toast had the same
+ * class of leak, with the worse symptom that its goodbye() did not even fade.)
+ *
+ * The fade is kept — this waits for it rather than cutting it short, so the
+ * card still leaves the way Duy signed off on.
+ */
+function detachWhenFaded(node) {
+  if (!node || typeof node.remove !== "function") return;
+  const drop = () => { try { if (node.isConnected) node.remove(); } catch (e) {} };
+  let anims = [];
+  try { anims = node.getAnimations ? node.getAnimations() : []; } catch (e) { anims = []; }
+  if (anims.length) {
+    Promise.all(anims.map((a) => (a && a.finished ? a.finished.catch(() => {}) : null)))
+      .then(drop, drop);
+  }
+  // Belt and braces, and each half is needed: a browser reporting no animation
+  // at all, one whose animation never settles, and a BACKGROUND TAB — where the
+  // animation clock is frozen and `finished` therefore never resolves — must
+  // all still end with the node gone. 1200 ms is comfortably past the fade.
+  setTimeout(drop, 1200);
+}
+
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 
@@ -127,8 +174,8 @@ class __push_manager extends winman {
 
       // A workspace member scheduled/invited you to a meeting (room.js
       // _notify_invitees). Show a transient top-right toast — NOT a modal.
-      // (The persistent notification-sidebar entry is a separate follow-up
-      // that needs the notification_center_next aggregation extended.)
+      // The persistent notification-sidebar entry is handled separately by
+      // panel/activity (meeting_notice rows + the conference.start branch).
       case "room.scheduled":
         return this._showMeetingToast(data);
 
@@ -137,6 +184,20 @@ class __push_manager extends winman {
       // with a Join button that opens the meeting.
       case "room.reminder":
         return this._showMeetingToast(data, { reminder: 1 });
+
+      // Someone STARTED a meeting in a workspace we belong to. conference.js
+      // sendRoomInfo fans this to every hub member socket, and until now the
+      // desk did nothing with it: the only reaction anywhere was the panel's
+      // persistent row, so a member with the panel closed never learned a
+      // meeting had begun. Show the "now" flavour — the room is open, so Join
+      // lands in a live call rather than an empty one.
+      //
+      // NOT a plain literal by accident: SERVICE.conference has no `start`
+      // key (it is a push, not an ACL method — verified against the live
+      // get_env), so `case SERVICE.conference.start:` would be
+      // `case undefined:` and would swallow every push with no service.
+      case "conference.start":
+        return this._showMeetingStartToast(data);
 
       // Downgrade over-limit: the server re-evaluates the org after every
       // plan change and every resolution action (purge, member removal…) and
@@ -447,10 +508,32 @@ class __push_manager extends winman {
       const variant = !opt.reminder ? "invite" : leadMin > 0 ? "soon" : "now";
       if (variant === "soon" && !SHOW_EARLY_MEETING_REMINDER) return;
 
-      const heading = data.title || LOCALE.MEETING;
+      // Figma's invite card (call-pop-up type=directly) leads with a fixed
+      // line and names the organiser and the location underneath, rather than
+      // using the meeting's own name as the heading. The other two flavours
+      // still head with the meeting title.
+      // Skeletons.Note renders its content as MARKUP, so every user-controlled
+      // value has to be escaped on the way in — a meeting titled
+      // "<img onerror=…>" would otherwise execute. `bold` additionally wraps a
+      // value in <b>: Figma emphasises the organiser and the folder inside the
+      // invitation sentence, and doing that here rather than in the locale
+      // string keeps the translations free of markup and leaves the
+      // placeholders reorderable for languages that need a different order.
+      const esc = (v) => _.escape(String(v == null ? "" : v));
+      const bold = (v) => `<b>${esc(v)}</b>`;
+
+      const heading =
+        variant === "invite"
+          ? LOCALE.MEETING_INVITE_TITLE
+          : data.title || LOCALE.MEETING;
       const description = String(data.message || "").trim();
       const attendees = Array.isArray(data.attendees) ? data.attendees : [];
+      // How many are actually in the room. Only a started meeting carries it.
+      const joined = Number(data.joined) || 0;
       const stime = Number(data.stime) || 0;
+      // A meeting started on the spot has no scheduled time to print, but the
+      // slot still belongs there — see the meta block below.
+      const startsNow = !!data.starts_now;
 
       // Meta line: avatar stack · N invited · start time. Each piece is dropped
       // when its data is absent rather than rendering an empty separator.
@@ -465,7 +548,7 @@ class __push_manager extends winman {
             // off it gave every swatch an empty name, and Avatar hashes the
             // name for its fallback colour — a row of blank circles. Fall back
             // to the uid so each one at least gets its own colour.
-            kids: attendees.slice(0, 3).map((a) => {
+            kids: attendees.slice(0, 2).map((a) => {
               const uid = typeof a === "string" ? a : (a && a.uid) || "";
               const name = (a && a.name) || String(uid || "");
               return Skeletons.Avatar(
@@ -476,29 +559,51 @@ class __push_manager extends winman {
             }),
           }),
         );
-        if (attendees.length > 3) {
+        // Figma's stack (component "3+ members") shows TWO faces and rolls the
+        // rest into the +N chip beside them.
+        if (attendees.length > 2) {
           meta.push(
             Skeletons.Note({
               className: "desk-meeting-toast__avatar-more",
-              content: `+${attendees.length - 3}`,
+              content: `+${attendees.length - 2}`,
             }),
           );
         }
+        // "N joined" vs "N invited" is decided by whether anyone is actually
+        // IN the room, not by which push arrived (Duy, 2026-08-26):
+        //   · a started meeting HAS people in it — conference.js sends the
+        //     room's roster and `joined`, so this says "joined";
+        //   · a schedule notice names invitees and the room is empty (or it is
+        //     not even time yet), so it says "invited".
+        // room.reminder carries no join data at all — it fires at the start
+        // time whether or not anyone turned up — so it correctly stays
+        // "invited" rather than claiming attendance nobody has verified.
         meta.push(
           Skeletons.Note({
             className: "desk-meeting-toast__count",
-            content: LOCALE.X_INVITED_COUNT.format(attendees.length),
+            content: joined
+              ? LOCALE.X_JOINED_COUNT.format(joined)
+              : LOCALE.X_INVITED_COUNT.format(attendees.length),
           }),
         );
       }
-      if (stime) {
+      // The "when" slot. A scheduled meeting prints its start time; one
+      // started on the spot says "Start now" in the same place, so both
+      // flavours read the same way beside the count (Duy, 2026-08-26).
+      // conference.start carries no stime — there is nothing to schedule —
+      // which is why this cannot key off stime alone.
+      if (stime || startsNow) {
         if (meta.length) {
-          meta.push(Skeletons.Note({ className: "desk-meeting-toast__dot", content: "•" }));
+          // Figma bakes the separator into the time string as "  - Start at
+          // 9:00 AM"; kept as its own node so the gap stays CSS-controlled.
+          meta.push(Skeletons.Note({ className: "desk-meeting-toast__dot", content: "-" }));
         }
         meta.push(
           Skeletons.Note({
             className: "desk-meeting-toast__when",
-            content: LOCALE.MEETING_START_AT.format(Dayjs.unix(stime).format("h:mm A")),
+            content: stime
+              ? LOCALE.MEETING_START_AT.format(Dayjs.unix(stime).format("h:mm A"))
+              : LOCALE.MEETING_START_NOW,
           }),
         );
       }
@@ -507,27 +612,54 @@ class __push_manager extends winman {
         Skeletons.Box.X({
           className: "desk-meeting-toast__title-row",
           kids: [
-            Skeletons.Note({ className: "desk-meeting-toast__title", content: heading }),
-            Skeletons.Note({ className: "desk-meeting-toast__live" }),
-          ],
+            Skeletons.Note({ className: "desk-meeting-toast__title", content: esc(heading) }),
+            // The dot means "in progress". An invitation is for a meeting that
+            // has not started — often days away — so it would be stating
+            // something untrue. Only the live flavours carry it.
+            variant === "invite"
+              ? null
+              : Skeletons.Note({ className: "desk-meeting-toast__live" }),
+          ].filter(Boolean),
         }),
       ];
       // An invitation has to say it is one, and by whom. Without this the card
       // is just a meeting title and a time — indistinguishable from the
       // "starting now" reminder, which is the one flavour that means "go now".
+      let hasDesc = 0;
       if (variant === "invite" && data.from) {
+        // room.js stamps folder_name on the invitation push. Without it there
+        // is no honest "in <somewhere>" to print, so the shorter sentence
+        // stands in rather than trailing a dangling "in ".
+        const where = String(data.folder_name || "").trim();
         body.push(
           Skeletons.Note({
             className: "desk-meeting-toast__desc",
-            content: LOCALE.X_INVITED_YOU_TO_MEETING.format(data.from),
+            content: where
+              ? LOCALE.X_INVITED_YOU_JOIN_MEETING_IN.format(bold(data.from), bold(where))
+              : LOCALE.X_INVITED_YOU_TO_MEETING.format(bold(data.from)),
           }),
         );
+        hasDesc = 1;
       }
       if (description) {
         body.push(
           Skeletons.Note({
             className: "desk-meeting-toast__desc",
-            content: description,
+            content: esc(description),
+          }),
+        );
+        hasDesc = 1;
+      }
+      // Figma's card always carries a description line under the title. The
+      // reminder is the one flavour that can reach here with nothing to say —
+      // a meeting booked without an agenda — and a card that is only a title
+      // and a time reads as an invitation rather than "go now". Say what the
+      // reminder actually means instead of leaving the slot empty.
+      if (!hasDesc && variant === "now") {
+        body.push(
+          Skeletons.Note({
+            className: "desk-meeting-toast__desc",
+            content: LOCALE.MEETING_STARTING_NOW,
           }),
         );
       }
@@ -551,7 +683,13 @@ class __push_manager extends winman {
       const toast = layer.append(
         Skeletons.Box.Y({
           className: "desk-meeting-toast",
-          attrOpt: { "data-variant": variant },
+          // data-hub lets a later push tell whether a card for the SAME
+          // workspace is already on screen. The per-key dedup below cannot:
+          // reminderWorker sends the meeting node's nid while conference_join
+          // returns the room id, so the same meeting arrives under two
+          // different keys. Empty for room.scheduled, which carries no hub_id
+          // — harmless, that one is never the "now" flavour.
+          attrOpt: { "data-variant": variant, "data-hub": String(data.hub_id || "") },
           // Centring is `top:50%` + a -50% translate (see meeting-toast.scss),
           // so nudging `top` keeps the transform and the card centred.
           styleOpt: offset ? { top: `calc(50% + ${offset}px)` } : undefined,
@@ -561,17 +699,34 @@ class __push_manager extends winman {
               ico: _a.cross,
               tooltips: LOCALE.CLOSE,
             }),
+            // `noti-video-camera`, NOT `video-camera`. Figma's tile holds the
+            // Phosphor VideoCamera (component 5:66204), which is exactly the
+            // glyph already in the sprite as noti-video-camera — the same one
+            // the Meeting notification rows use. `video-camera` is a legacy
+            // Illustrator asset on a 468px viewBox whose paths are solid, so
+            // outlining it produced the washed-out camera Duy reported.
             Skeletons.Box.Y({
               className: "desk-meeting-toast__icon",
-              kids: [Skeletons.Image.Svg({ ico: "video-camera" })],
+              kids: [Skeletons.Image.Svg({ ico: "noti-video-camera" })],
             }),
             Skeletons.Box.Y({ className: "desk-meeting-toast__body", kids: body }),
             Skeletons.Box.X({
               className: "desk-meeting-toast__actions",
               kids: [
+                // Figma's meeting card labels this secondary button "Mute",
+                // but the designer has not updated that node yet — Duy's
+                // ruling 2026-08-25 stands: on the MEETING popup it is
+                // Cancel, and Cancel == close == ✕. It writes NOTHING and it
+                // does not cancel the meeting, so the popup needs no mute
+                // entry point and no outgoing flow. Mute stays on the CHAT
+                // card only, where Phase 3 wires it.
+                //
+                // The CLASS deliberately keeps its `__dismiss` name: the
+                // capture-phase click delegate below matches on it, and that
+                // delegate is not to be re-plumbed. Only the label changes.
                 Skeletons.Note({
                   className: "desk-meeting-toast__dismiss",
-                  content: LOCALE.DISMISS,
+                  content: LOCALE.CANCEL,
                 }),
                 // Join ONLY once the meeting has actually started. An invite
                 // announces a meeting that may be days away and the heads-up
@@ -595,8 +750,13 @@ class __push_manager extends winman {
           // leave a gap that keeps pushing later ones further down.
           if (this._meetingToasts) this._meetingToasts.delete(key);
           if (toast && (!toast.isDestroyed || !toast.isDestroyed())) {
+            const node = toast.el;
             if (toast.goodbye) toast.goodbye();
             else if (toast.remove) toast.remove();
+            // The fade leaves the node attached and still hit-testing — see
+            // detachWhenFaded. Without this every dismissed card leaves an
+            // invisible dead zone over the desk.
+            detachWhenFaded(node);
           }
         } catch (e) {}
       };
@@ -643,11 +803,106 @@ class __push_manager extends winman {
           true,
         );
       }
-      // Auto-dismiss: the actionable "now" toast lingers, the informational
-      // ones clear quickly.
-      setTimeout(kill, variant === "now" ? 20000 : 8000);
+      // Auto-dismiss. One lifetime for every variant — see MEETING_TOAST_MS.
+      setTimeout(kill, MEETING_TOAST_MS);
     } catch (e) {
       this.warn && this.warn("meeting toast failed", e);
+    }
+  }
+
+  /**
+   * Is a meeting card for this workspace already on screen?
+   *
+   * Used only to stop conference.start from doubling a card the reminder has
+   * already put up; see _showMeetingStartToast. Destroyed entries are swept as
+   * we go, exactly as _showMeetingToast does.
+   */
+  _hasLiveMeetingToastFor(hub_id) {
+    if (!hub_id || !this._meetingToasts) return false;
+    for (const [k, t] of this._meetingToasts) {
+      if (!t || (t.isDestroyed && t.isDestroyed())) {
+        this._meetingToasts.delete(k);
+        continue;
+      }
+      if (t.el && t.el.getAttribute("data-hub") == hub_id) return true;
+    }
+    return false;
+  }
+
+  /**
+   * conference.start → the "meeting has begun" card, in its "now" flavour so
+   * it offers Join (the room is open by definition — the host is in it).
+   *
+   * A method of its own rather than a line in the switch, because this push
+   * needs three guards that none of the room.* pushes do:
+   *
+   *  1. **room_type.** conference.js calls `inform(..., "conference.start")`
+   *     for EVERY room type (service/conference.js:157) and only afterwards
+   *     fans the meeting-only copy out to hub members (:172). So a P2P call
+   *     reaches this case too — and it carries a hub_id, because
+   *     conference_join selects one for every row, so hub_id cannot be used to
+   *     tell the two apart. Only the hub fan-out stamps room_type; requiring
+   *     it is what makes a call unable to raise a meeting card.
+   *  2. **self.** entity_sockets excludes by SOCKET id, not uid
+   *     (`AND s.id NOT IN (...)`), so the starter's other open tabs receive
+   *     their own start event. Without this, starting a meeting pops a
+   *     "Join" card in your second tab for the meeting you are hosting.
+   *  3. **a card already up for this workspace.** A punctual host makes
+   *     reminderWorker's room.reminder and this event land seconds apart, and
+   *     the per-key dedup inside _showMeetingToast cannot see they are the
+   *     same meeting: the reminder sends the meeting node's nid, while
+   *     conference_join returns the room id. The reminder is the better card
+   *     of the two (it has the title, the agenda and the invitee stack), so
+   *     this one stands down rather than stacking a second box on top of it.
+   */
+  _showMeetingStartToast(data = {}) {
+    try {
+      if (!data || data.room_type != _a.meeting) return;
+      if (!data.hub_id) return;
+      if (data.uid && data.uid == Visitor.id) return;
+      if (this._hasLiveMeetingToastFor(data.hub_id)) return;
+
+      // Same derivation the switchcall popup uses for this very payload, so
+      // the two surfaces never disagree about who started what and where.
+      // `details` is mfs_node_attr(room_id) run against the hub's own db and
+      // comes back EMPTY for a meeting (the hub node lives in its owner's db),
+      // which is why the server carries hub_name explicitly.
+      const name =
+        data.username || data.firstname || data.lastname || data.email || "";
+      const where =
+        (data.details && data.details.filename) || data.filename || data.hub_name || "";
+
+      // The workspace is the heading, the sentence underneath says who — so
+      // neither names the workspace twice. It doubles as the window title when
+      // Join opens the folder (_joinMeetingFromData reads data.title), which is
+      // the other reason not to put "Meeting Started" there.
+      // No name means no honest sentence: ".format" would render a leading
+      // space and " started a meeting". Leave the heading standing alone.
+      const title = where || LOCALE.MEETING_STARTED;
+      const message = name ? LOCALE.X_STARTED_A_MEETING.format(name) : "";
+
+      // reminder:1 with no lead_min is what selects the "now" variant — the
+      // one that offers Join. room_id keys the card; it is also what
+      // _joinMeetingFromData opens.
+      // The room's roster and the count of who is in it. conference.js sends
+      // both, and they are what make this card say "N joined" rather than
+      // "N invited" — a started meeting has people in it by definition.
+      return this._showMeetingToast(
+        {
+          hub_id: data.hub_id,
+          room_id: data.room_id || data.hub_id,
+          title,
+          message,
+          attendees: Array.isArray(data.attendees) ? data.attendees : [],
+          joined: Number(data.joined) || 0,
+          // Started on the spot: the meta line reads "N joined - Start now",
+          // mirroring the scheduled card's "N invited - Start at 9:00 AM".
+          starts_now: 1,
+        },
+        { reminder: 1 },
+      );
+    } catch (e) {
+      this.warn && this.warn("meeting start toast failed", e);
     }
   }
 

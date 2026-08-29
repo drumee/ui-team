@@ -5,6 +5,16 @@ const CATEGORIES = {
   media: "mediaCount",
 }
 const WS_EVENT = "ws:event";
+// The tab set is declared once, in the tab bar skeleton, and imported here so
+// the panel and the bar can never disagree about which buckets exist.
+const { BUCKETS: TAB_BUCKETS, DEFAULT_BUCKET } = require('./skeleton/tabbar');
+// Round 3 Phase 2: the real-time chat card. Built to Figma
+// (58208:83650) — see chat-toast.js for the measurements and the rules.
+const { showChatToast, killChatToast } = require('./chat-toast');
+// Round 3 Phase 3: which popups the user has switched off. Read once here and
+// refreshed from every mute_set — never per message. Suppresses the CARD only:
+// the feed, the badge and the tab counts are untouched by design.
+const { loadMuteState } = require('./mute');
 require('./skin');
 
 class __panel_activity extends LetcBox {
@@ -35,7 +45,21 @@ class __panel_activity extends LetcBox {
     this._onOutsideClick = this._onOutsideClick.bind(this);
     this._currentCount = 0;
     this._currentPayload = {};
-    this._unreadsOnly = 1;
+    // The panel opens showing READ AND UNREAD, and the Unreads toggle narrows
+    // to unread. Lexis 2026-08-28: reading a notification must no longer make
+    // it disappear, and this default is what makes that visible -- a read row
+    // stays in the list and simply loses the unread card tint (the styling for
+    // that already existed: item/skin/index.scss keys the fill on
+    // [data-unread="1"]). Before this the panel opened unread-only, so a row
+    // was filtered out the moment it was read.
+    this._unreadsOnly = 0;
+    // Selected Notification Center tab. 'all' = no bucket scope, so the very
+    // first render requests the same unscoped feed the panel always has.
+    this._filter = DEFAULT_BUCKET;
+    this._mergedRows = [];
+    // Last day group emitted by _stampDayHeaders; reset whenever the feed
+    // restarts at page 1.
+    this._dayCursor = null;
     this._dismissedKeys = new Set();
     this._meetingItems = [];
     this.details = {};
@@ -43,6 +67,11 @@ class __panel_activity extends LetcBox {
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.onWsMessage = this.onWsMessage.bind(this)
     this._last_notified = 0;
+    // Fire and forget: the panel must come up whether or not this answers, and
+    // it never rejects. Until it lands nothing is muted, which is the safe
+    // direction — a failed read shows a popup that should have been silenced,
+    // where the opposite default would silence one that should have shown.
+    loadMuteState(this);
   }
 
   /**
@@ -87,6 +116,9 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
+    // The card lives in the window layer, not inside this panel, so it would
+    // outlive the panel — along with its pending dismiss timer.
+    killChatToast(this);
   }
 
   /**
@@ -122,32 +154,126 @@ class __panel_activity extends LetcBox {
   }
 
   /**
+   * The feed list registers here so its `data` event can be hooked before it
+   * fetches anything (see the skeleton). Guarded super-delegation is the repo
+   * pattern: LetcBox defines no onPartReady, and the 'priority' part is reached
+   * through ensurePart rather than this hook.
+   */
+  onPartReady(child, pn) {
+    if (pn === _a.list && child && child.on) {
+      // renderData() emits this with the page's raw rows just before mapping
+      // them into item models — the one place the whole page is visible in
+      // order, which is what day grouping needs.
+      child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  /**
+   * Mark the first row of each day so the row widget can render a
+   * "Today" / "Yesterday" / "Aug 13" caption above itself. Grouping is entirely
+   * client-side off `timestamp || ctime`; no server field is involved.
+   *
+   * `_curPage` is still the page being rendered when this fires (handleResponse
+   * increments it only afterwards), so page 1 restarts the grouping and later
+   * pages continue it. restart() — tab switch, unread toggle, refresh — always
+   * returns to page 1, which resets the cursor.
+   *
+   * 🚨 The try/catch is load-bearing: ui-core calls renderData() inside
+   * `try { … } catch (error) {}`, so an exception raised in here would be
+   * swallowed and the feed would render EMPTY with no error anywhere.
+   */
+  _stampDayHeaders(list, rows) {
+    try {
+      if (!_.isArray(rows)) return;
+      if (!list || (list._curPage || 1) <= 1) this._dayCursor = null;
+      for (const row of rows) {
+        if (!row || !_.isObject(row)) continue;
+        const ts = parseInt(row.timestamp || row.ctime, 10);
+        if (!ts) {
+          delete row.day_header;
+          continue;
+        }
+        const key = this._dayKey(ts);
+        if (key === this._dayCursor) {
+          delete row.day_header;
+          continue;
+        }
+        this._dayCursor = key;
+        row.day_header = key;
+      }
+    } catch (e) {
+      this.warn('[panel_activity] day-header grouping failed', e);
+    }
+  }
+
+  /**
+   * 'today' | 'yesterday' | 'YYYY-MM-DD'. The row skeleton turns the first two
+   * into LOCALE.TODAY / LOCALE.YESTERDAY and formats the rest as "Aug 13".
+   */
+  _dayKey(ts) {
+    const day = Dayjs.unix(ts).startOf('day');
+    const diff = Dayjs().startOf('day').diff(day, 'day');
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'yesterday';
+    return day.format('YYYY-MM-DD');
+  }
+
+  /**
    * 
    * @returns 
    */
   getCurrentApi() {
-    if (this._filter === 'mentions') {
-      return {
-        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
-        hub_id: Visitor.id,
-        type: 'mention',
-        unread_only: this._unreadsOnly,
-      };
-    }
-    if (this._filter === 'shares') {
-      return {
-        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
-        hub_id: Visitor.id,
-        type: 'share',
-        unread_only: this._unreadsOnly,
-      };
-    }
-    return {
+    const api = {
       service: SERVICE.activity.get_feed,
       hub_id: Visitor.id,
-      filter: this._filter,
       unread_only: this._unreadsOnly,
     };
+    // 'All' is the ABSENCE of a tab scope, not a scope named "all": the server
+    // returns the whole feed when no bucket is sent, which is byte-for-byte the
+    // pre-existing behaviour. Every other tab narrows to its bucket, assigned
+    // server-side (see bucketOf in service/private/activity.js).
+    //
+    // `filter` is deliberately no longer sent. It only ever selected the retired
+    // Mentions / Shares tabs; the server defaults it to 'all', which is what the
+    // old All tab sent anyway — so dropping it changes nothing.
+    if (this._filter && this._filter !== DEFAULT_BUCKET) api.bucket = this._filter;
+    return api;
+  }
+
+  /**
+   * Fetch the per-tab unread counts and write them into the tab badges.
+   *
+   * One call for all six numbers (activity.unread_counts). The counts cannot be
+   * derived on the client: get_feed is paginated, so the panel only ever holds
+   * one page and can never know a tab's total.
+   *
+   * Updates each badge through its own part, so a refresh never re-renders the
+   * tab bar — re-rendering would drop the user's selected tab mid-session.
+   * Best-effort: on failure the badges keep their last values rather than
+   * flashing to zero, which would read as "nothing unread".
+   */
+  async _renderTabCounts() {
+    let counts;
+    try {
+      counts = await this.postService({
+        service: (SERVICE.activity && SERVICE.activity.unread_counts) || 'activity.unread_counts',
+        hub_id: Visitor.id,
+      });
+    } catch (e) {
+      this.warn('[panel_activity] unread_counts failed', e);
+      return;
+    }
+    if (!counts || typeof counts !== 'object') return;
+    for (const bucket of TAB_BUCKETS) {
+      const total = parseInt(counts[bucket], 10) || 0;
+      this.ensurePart(`tab-count-${bucket}`).then((p) => {
+        if (!p || !p.el) return;
+        p.el.innerText = total > 99 ? '99+' : String(total);
+        // Hidden rather than showing a 0 — the design has no zero state.
+        p.el.dataset.empty = total ? '0' : '1';
+      });
+    }
   }
 
   /**
@@ -156,9 +282,21 @@ class __panel_activity extends LetcBox {
   */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    // Tab clicks (`tab-all` … `tab-other`) are matched by prefix against the one
+    // canonical bucket list instead of a case per tab, so the tab set stays
+    // defined in exactly one place — the tab bar skeleton. An unknown `tab-*`
+    // falls through to the switch untouched rather than silently selecting
+    // something.
+    if (typeof service === 'string' && service.indexOf('tab-') === 0) {
+      const bucket = service.slice(4);
+      if (TAB_BUCKETS.indexOf(bucket) !== -1) return this._setTab(bucket);
+    }
     switch (service) {
       case 'open-activity-panel':
         this.activityState = 1;
+        // "No toast while the Center is open" also means: not one already on
+        // screen when it opens. The row is in the list behind it either way.
+        killChatToast(this);
         this.setState(1);
         return '';
 
@@ -170,8 +308,17 @@ class __panel_activity extends LetcBox {
         cmd.goodbye();
         return this.deleteEntityResponse(cmd);
 
+      // The TRASH BUTTON. Permanent since 2026-08-28: the row is removed and
+      // stays removed across reloads.
       case 'dismiss-activity':
-        return this._dismissActivity(cmd, args);
+        return this._dismissActivity(cmd, args, 'delete');
+
+      // Opening a row's body. Records that the user has read it and leaves the
+      // row in the list, without the unread tint. This is what a body click
+      // fires now; it used to fire 'dismiss-activity', which is why reading a
+      // notification deleted it.
+      case 'read-activity':
+        return this._dismissActivity(cmd, args, 'read');
 
       case 'toggle-favorite':
         return this._toggleFavorite(cmd, args);
@@ -225,15 +372,6 @@ class __panel_activity extends LetcBox {
           if (p && p.el) p.el.dataset.state = this._unreadsOnly ? '1' : '0';
         });
         return this.ensurePart(_a.list).then((list) => list.restart());
-
-      case 'tab-all':
-        return this._setTab('all');
-
-      case 'tab-mentions':
-        return this._setTab('mentions');
-
-      case 'tab-shares':
-        return this._setTab('shares');
 
       case 'clear-all':
         return this._clearAll();
@@ -398,6 +536,10 @@ class __panel_activity extends LetcBox {
   }
 
   async _clearAll() {
+    // "Mark as all read" acts on the tab in view. null = the All tab = clear
+    // everything, which is the pre-existing behaviour, byte for byte.
+    const bucket = (this._filter && this._filter !== DEFAULT_BUCKET) ? this._filter : null;
+    if (bucket) return this._clearBucket(bucket);
     this._dismissedKeys = this._dismissedKeys || new Set();
     try {
       const [invitations, messages, hubInvites] = await Promise.all([
@@ -423,6 +565,32 @@ class __panel_activity extends LetcBox {
     });
     if (this.__list && !this.__list.isDestroyed()) this.__list.restart();
     RADIO_BROADCAST.trigger('activity-update', { unread_count: 0 });
+    this._renderTabCounts();
+  }
+
+  /**
+   * Mark one tab's notifications as read (the scoped half of _clearAll).
+   *
+   * Deliberately does NOT hand-maintain the local dismissed-key bookkeeping the
+   * unscoped path uses: the server has already persisted the read state for this
+   * bucket, so re-reading the truth via refreshActivity is both simpler and
+   * safer than duplicating the per-category key formats here — and it repairs
+   * the bell badge and every tab count in the same pass, instead of asserting a
+   * zero that is only true for one tab.
+   */
+  async _clearBucket(bucket) {
+    try {
+      await this.postService(SERVICE.activity.mark_all_read, {
+        hub_id: Visitor.id,
+        bucket,
+      });
+    } catch (e) {
+      this.warn('mark_all_read failed', e);
+      return;
+    }
+    // Live meeting rows are client-side only, so no server call can clear them.
+    if (bucket === 'meeting') this._meetingItems = [];
+    return this.refreshActivity(0);
   }
 
   _findActivityItem(cmd) {
@@ -481,7 +649,7 @@ class __panel_activity extends LetcBox {
   // Lift the approve/result overlay out of the slide-transformed panel rail to
   // <body> so position:fixed centres it over the whole viewport (Figma 63/64/65/66).
   // A transformed/will-change ancestor (the panel's __ui slide) is a containing block
-  // for fixed descendants, so the overlay would otherwise stay trapped in the 450px
+  // for fixed descendants, so the overlay would otherwise stay trapped in the panel
   // rail. LETC routes button clicks by uiHandler ref (not DOM ancestry), so moving
   // the node keeps Confirm/Deny/level-select working. Idempotent.
   _liftArOverlay(p) {
@@ -539,6 +707,37 @@ class __panel_activity extends LetcBox {
       if (p && typeof p.catch === 'function') p.catch(() => { });
     }
     if (item && item.goodbye) item.goodbye({ duration: 0.3, timeout: 50, now: 1 });
+  }
+
+  /**
+   * Turn a row from unread into read, in place.
+   *
+   * The styling already existed before this feature: item/skin/index.scss keys
+   * the card fill on `&__row[data-unread="1"]`, so clearing the attribute is
+   * the entire visual change and no CSS was added. The attribute lives on
+   * `.activity-item__row`, a CHILD of the widget root (the skeleton puts it on
+   * the inner Box.X, under a `__group` wrapper that also holds the day header),
+   * which is why this searches rather than writing to cmd.el.
+   *
+   * The model is updated too. The DOM write is what the user sees now; `is_read`
+   * is what the row skeleton reads if anything re-renders this item from its
+   * model before the next fetch, and without it the tint would come back.
+   *
+   * Silent when the row is already gone -- a read that resolves after the list
+   * restarted must not throw into the caller's catch and be logged as a failed
+   * dismiss.
+   */
+  _markRowRead(cmd) {
+    if (!cmd) return;
+    try {
+      if (cmd.mset) cmd.mset('is_read', 1);
+      const el = cmd.el;
+      if (!el || !el.isConnected) return;
+      const row = el.matches && el.matches('[data-unread]') ? el : (el.querySelector && el.querySelector('[data-unread]'));
+      if (row) row.dataset.unread = '0';
+    } catch (e) {
+      this.warn('[activity] could not mark row read', e);
+    }
   }
 
   _decrementBadge(by = 1) {
@@ -621,15 +820,22 @@ class __panel_activity extends LetcBox {
 
 
   /**
+   * Select a Notification Center tab. `bucket` is one of TAB_BUCKETS; 'all'
+   * means no scope.
    *
-   * @param {*} filter 
+   * The panel shows TWO lists at once — the pinned `priority` section (rollups
+   * from activity.list and friends) and the paginated smart list (get_feed) —
+   * so a tab has to narrow both or the same event shows on the wrong tab.
+   *
+   * The old code hid the priority section outright on any tab but All, which
+   * would now mean every pinned row (chat rollups, invites, meetings, access
+   * requests) disappeared from the very tabs meant to show them. It is filtered
+   * instead, re-rendered from the last fetched rows so switching tabs costs no
+   * request.
    */
-  _setTab(filter) {
-    this._filter = filter || 'all';
-    this.ensurePart('priority').then((p) => {
-      if (!p || !p.el) return;
-      p.el.style.display = (this._filter === 'all') ? '' : 'none';
-    });
+  _setTab(bucket) {
+    this._filter = bucket || DEFAULT_BUCKET;
+    this.updatePriorityListUnified(this._mergedRows || []);
     this.ensurePart(_a.list).then((list) => list.restart());
   }
 
@@ -837,6 +1043,11 @@ class __panel_activity extends LetcBox {
           category: 'access_request',
           key_id: r.request_id,
           last_id: r.ctime,
+          // These rows come from secure_share.*, not from activity.*, so the
+          // server never stamped a bucket on them. An access request is always
+          // Other — fixed by construction, exactly like the `category` above,
+          // and it matches what bucketOf returns for category 'access_request'.
+          bucket: 'other',
         }));
     } catch (e) {
       this.warn('[panel_activity] secure_share.list_requests failed', e);
@@ -858,7 +1069,12 @@ class __panel_activity extends LetcBox {
         service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
         hub_id: Visitor.id,
         type: 'mention',
-        unread_only: this._unreadsOnly,
+        // Pinned to 1, deliberately NOT this._unreadsOnly. These rows are never
+        // rendered -- updatePriorityListUnified keeps only access_request -- and
+        // exist purely to feed the bell badge, which counts UNREAD only. Passing
+        // the toggle here made the badge include already-read task mentions the
+        // moment the panel's default flipped to showing read rows.
+        unread_only: 1,
       });
       const rows = _.isArray(tm) ? tm : (_.isArray(tm?.data) ? tm.data : []);
       const dismissedTm = this._dismissedKeys || new Set();
@@ -870,6 +1086,12 @@ class __panel_activity extends LetcBox {
           category: 'contact_invite',
           key_id: String(r.id),
           last_id: r.id,
+          // channel.list_notifications does not stamp buckets. These rows are
+          // filtered to event === 'task_mention' just above, so they are always
+          // Task — the same answer bucketOf gives for that event. Set explicitly
+          // because the synthetic 'contact_invite' category assigned here (needed
+          // for dismiss routing) would otherwise read as Other.
+          bucket: 'task',
         }));
     } catch (e) {
       this.warn('[panel_activity] task mention fetch failed', e);
@@ -886,21 +1108,35 @@ class __panel_activity extends LetcBox {
       const rows = _.isArray(ta) ? ta : (_.isArray(ta?.data) ? ta.data : []);
       const dismissedTa = this._dismissedKeys || new Set();
       taskNotifications = rows
-        .filter((r) => r && ['task_assigned', 'task_column_change'].includes(r.event))
+        // meeting_notice rides this endpoint too (see list_task_assignments):
+        // without it the bell badge would under-count and read lower than the
+        // Meeting tab's own badge. Nothing here is RENDERED — the pinned section
+        // below keeps only access requests — so this only feeds the count.
+        .filter((r) => r && ['task_assigned', 'task_column_change', 'meeting_notice'].includes(r.event))
         .filter((r) => !dismissedTa.has(`contact_invite:${r.id}`))
         .map((r) => ({
           ...r,
           category: 'contact_invite',
           key_id: String(r.id),
           last_id: r.id,
+          // The server stamps this bucket; the fallback covers the rollout window
+          // where this UI is live against a server that predates it. The default
+          // is per event, not a blanket 'task' — a meeting notice defaulting to
+          // Task would show a meeting under the wrong tab.
+          bucket: r.bucket || (r.event === 'meeting_notice' ? 'meeting' : 'task'),
         }));
     } catch (e) {
       this.warn('[panel_activity] task assignment fetch failed', e);
     }
     const merged = accessReqs.concat(taskMentions, taskNotifications, live);
 
+    // Kept so switching tabs can re-filter the pinned section without refetching.
+    this._mergedRows = merged;
+    // The bell badge stays the total across every tab, unchanged — the per-tab
+    // numbers come from activity.unread_counts instead.
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
+    this._renderTabCounts();
     this.updatePriorityListUnified(merged);
     if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
@@ -1030,7 +1266,18 @@ class __panel_activity extends LetcBox {
     }
     const dismissed = this._dismissedKeys || new Set();
     const meetingItems = (this._meetingItems || []).filter(m => !dismissed.has(m.item_key));
-    const combined = [...meetingItems, ...list];
+    let combined = [...meetingItems, ...list];
+    // Narrow the pinned section to the selected tab. Today that means access
+    // requests appear under Other and live meeting rows under Meeting; on 'All'
+    // nothing is filtered, which is the pre-existing behaviour.
+    //
+    // A row with no bucket is KEPT rather than dropped: every producer stamps one
+    // (server-side for activity.*, by construction for the client-built rows), so
+    // a missing bucket means an unforeseen source — and showing it on the wrong
+    // tab is a far smaller failure than making a notification unreachable.
+    if (this._filter && this._filter !== DEFAULT_BUCKET) {
+      combined = combined.filter((row) => !row || !row.bucket || row.bucket === this._filter);
+    }
     this.ensurePart('priority').then((p) => {
       if (!p) return;
       p.feed(combined);
@@ -1254,6 +1501,10 @@ class __panel_activity extends LetcBox {
       event_type: 'meeting',
       item_type: 'meeting',
       item_key: key,
+      // Client-built row (WS conference.start), so nothing stamped a bucket on
+      // it. Always Meeting — the same answer bucketOf gives for category
+      // 'meeting'. Without it the row would be filtered out of the Meeting tab.
+      bucket: 'meeting',
       // NOTE: do NOT set a model-level `service` here. The item's onUiEvent
       // resolves `args.service || this.get('service') || cmd.get('service')`, so
       // a model `service` would SHADOW the per-element service and every click
@@ -1272,9 +1523,19 @@ class __panel_activity extends LetcBox {
    *
    */
   _notify(data = {}) {
-    if (!window.Notification) return;
     let opt = data[0] || data;
     let meeting;
+    // Captured BEFORE the switch: the MEETING:start branch below REWRITES
+    // opt.message into "X joined the meeting Y", so by the time the chat card
+    // is decided the "[[MEETING:" marker is gone and testing opt.message there
+    // would let a meeting card through as a chat message.
+    const rawMessage = String(opt.message || "");
+    // NOTE: the `!window.Notification` bail-out used to stand here. It now
+    // sits just above the permission checks that actually need it (nothing
+    // between here and there touches Notification), so the in-app chat card
+    // still appears in a browser with no Notification API — and, more to the
+    // point, when the user has denied OS notifications. Moving it is what
+    // makes the card independent of a permission it has nothing to do with.
     const now = Date.now();
     this.debug("AAA:766", data)
     let url = `#/desk/wm`;
@@ -1317,6 +1578,26 @@ class __panel_activity extends LetcBox {
         }
         break;
     }
+    // Round 3 Phase 2 — the in-app chat card. Placed here, after the switch
+    // has resolved `url` and taken its early exits (a MEETING:end post returns
+    // above and never reaches this line), but BEFORE every OS-notification
+    // guard below: the card is not an OS notification and must not inherit its
+    // permission state or its 5 s self-throttle. Its own "replace and restart
+    // the 30 s timer" rule is what paces it.
+    //
+    // Chat only, matched on the two services the switch above handles —
+    // never files, task or other. A meeting card posted into a folder chat
+    // arrives as channel.post too, and is excluded: the meeting popup is the
+    // surface for that, and this would be a second card saying the same thing.
+    if (
+      (data.service === SERVICE.chat.post || data.service === SERVICE.channel.post) &&
+      !/\[\[MEETING:/.test(rawMessage) &&
+      !/^meeting\./.test(String(opt.message_type || ""))
+    ) {
+      showChatToast(this, opt, url);
+    }
+
+    if (!window.Notification) return;
     if (Notification.permission === "denied") return;
     if (Notification.permission === "default" && this._permission_asked) return;
 
@@ -1434,7 +1715,26 @@ class __panel_activity extends LetcBox {
     return _.values(this.details) || []
   }
 
-  async _dismissActivity(cmd, args = {}) {
+  /**
+   * Acting on one notification row.
+   *
+   * `mode` is the whole point of this function since 2026-08-28. The two
+   * actions used to be one: a body click and the trash button both landed here
+   * and both removed the row, which is what Lexis asked to stop.
+   *
+   *   'read'   — the user opened it. Persist the read state, drop the unread
+   *              tint, decrement the badge, and LEAVE THE ROW IN PLACE.
+   *   'delete' — the trash button. Persist a permanent deletion and remove the
+   *              row, as before.
+   *
+   * Both modes walk the identical routing and key-resolution below, because the
+   * two actions differ only in which endpoint they call and whether the row
+   * survives. Splitting them into separate functions would have duplicated
+   * ninety lines of per-category key resolution, and the copy that drifted
+   * would have been the one nobody was testing.
+   */
+  async _dismissActivity(cmd, args = {}, mode = 'delete') {
+    const read = mode === 'read';
     const itemKey = args.item_key
       || (cmd && cmd.mget && cmd.mget('item_key'));
     const itemType = args.item_type
@@ -1444,7 +1744,11 @@ class __panel_activity extends LetcBox {
       || (cmd && cmd.mget && (cmd.mget('changelog_id') || cmd.mget(_a.id) || cmd.mget('id')));
     this.verbose('[activity] dismiss', { itemType, itemKey, changelogId });
 
-    if (itemKey) {
+    // Client-side hiding is for DELETE only. _dismissedKeys makes refreshActivity
+    // skip the row for the rest of the session; applying it on read would hide
+    // the very row that is now meant to stay, undoing the feature at the first
+    // background refresh.
+    if (itemKey && !read) {
       this._dismissedKeys = this._dismissedKeys || new Set();
       this._dismissedKeys.add(itemKey);
       const lastId = args.last_id
@@ -1453,49 +1757,78 @@ class __panel_activity extends LetcBox {
       this._dismissedLastIds = this._dismissedLastIds || new Map();
       this._dismissedLastIds.set(itemKey, Number(lastId));
     }
-    this._decrementBadge(1);
+    // Only an UNREAD row was ever counted, so only an unread row may decrement.
+    //
+    // This guard is new with the read/delete split and it is not defensive
+    // padding: a read row now STAYS in the list and stays clickable, so a user
+    // who opens the same notification twice used to walk the badge down once
+    // per click. The same applies to trashing something already read. `is_read`
+    // is absent on live rollups and on client-built rows, which are unread by
+    // construction, so an absent flag counts as unread.
+    const wasUnread = !(cmd && cmd.mget && parseInt(cmd.mget('is_read'), 10) === 1);
+    if (wasUnread) this._decrementBadge(1);
 
     if (itemType === 'access_request') {
       // Pending secure-share request: no server-side dismiss endpoint (resolved via
       // approve/deny). Client-only — its key is tracked in _dismissedKeys above so
       // refreshActivity skips it this session; it reappears only on a full reload.
-      if (cmd && cmd.goodbye) cmd.goodbye();
+      if (!read && cmd && cmd.goodbye) cmd.goodbye();
       return;
     }
 
     if (itemType === 'share_open') {
-      // Persistent dismiss: mark THIS open-notification group (token + recipient)
-      // seen on the server so it stays out of the Unread feed and survives a reload
-      // (still shows under Unread OFF). Scoped server-side to the caller's own
-      // shares. Best-effort: goodbye() the row regardless so the UI feels instant.
+      // Both actions address the same (token + recipient) group, scoped
+      // server-side to the caller's own shares. They differ only in which marker
+      // they write:
+      //   read   -> creator_seen_at    ("I have looked at this"); the row stays
+      //   delete -> creator_deleted_at (the trash button); the row goes for good
+      // Until 2026-08-28 there was only the first, and because the panel opened
+      // unread-only, marking seen LOOKED like deleting. Now that read rows stay,
+      // the two need separate markers.
       const tokenId = args.token_id || (cmd && cmd.mget && cmd.mget('token_id'));
       const recipientEmail = (args.recipient_email != null)
         ? args.recipient_email
         : (cmd && cmd.mget && cmd.mget('recipient_email'));
+      const svc = read
+        ? ((SERVICE.secure_share && SERVICE.secure_share.mark_open_seen) || 'secure_share.mark_open_seen')
+        : ((SERVICE.secure_share && SERVICE.secure_share.delete_open) || 'secure_share.delete_open');
       if (tokenId) {
         try {
           await this.postService({
-            service: (SERVICE.secure_share && SERVICE.secure_share.mark_open_seen) || 'secure_share.mark_open_seen',
+            service: svc,
             hub_id: Visitor.id,
             token_id: tokenId,
             recipient_email: recipientEmail || null,
           });
+          if (read) this._markRowRead(cmd); else if (cmd && cmd.goodbye) cmd.goodbye();
         } catch (e) {
-          this.warn('[activity] mark_open_seen failed', e);
+          this.warn('[activity] share_open ' + mode + ' failed', e);
         }
+      } else {
+        // No token means the row cannot be addressed on the server at all. Fall
+        // back to the local effect only, rather than silently doing nothing.
+        if (read) this._markRowRead(cmd);
+        else if (cmd && cmd.goodbye) cmd.goodbye();
       }
-      if (cmd && cmd.goodbye) cmd.goodbye();
       return;
     }
 
     if (itemType === 'mfs' && changelogId) {
-      this.verbose('[activity] → POST activity.dismiss', { changelog_id: changelogId });
+      // activity.dismiss records "read" and leaves the event in the feed;
+      // activity.delete_activity records a permanent removal. Two endpoints
+      // rather than a flag on one, because the server had to add the second
+      // without changing the arity of the procedure behind the first.
+      const svc = read
+        ? ((SERVICE.activity && SERVICE.activity.dismiss) || 'activity.dismiss')
+        : ((SERVICE.activity && SERVICE.activity.delete_activity) || 'activity.delete_activity');
+      this.verbose('[activity] → POST', { svc, changelog_id: changelogId, mode });
       try {
-        await this.postService(SERVICE.activity.dismiss, {
+        await this.postService({
+          service: svc,
           hub_id: Visitor.id,
           changelog_id: changelogId,
         });
-        cmd.goodbye()
+        if (read) this._markRowRead(cmd); else cmd.goodbye();
       } catch (e) {
         this.warn('dismiss-activity failed', e);
       }
@@ -1506,14 +1839,17 @@ class __panel_activity extends LetcBox {
       const activityId = changelogId
         || (cmd && cmd.mget && (cmd.mget(_a.id) || cmd.mget('id') || cmd.mget('last_id') || cmd.mget('key_id')));
       if (activityId) {
-        this.verbose('[activity] → POST activity.dismiss_contact_event', { activity_id: activityId });
+        const svc = read
+          ? ((SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event')
+          : ((SERVICE.activity && SERVICE.activity.delete_contact_event) || 'activity.delete_contact_event');
+        this.verbose('[activity] → POST', { svc, activity_id: activityId, mode });
         try {
           await this.postService({
-            service: (SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event',
+            service: svc,
             hub_id: Visitor.id,
             activity_id: activityId,
           });
-          cmd.goodbye()
+          if (read) this._markRowRead(cmd); else cmd.goodbye();
         } catch (e) {
           this.warn('dismiss contact_activity failed', e);
         }
@@ -1559,18 +1895,31 @@ class __panel_activity extends LetcBox {
       if (!keyId) {
         console.warn('[activity] notification_dismiss skipped — no key_id', { itemType, itemKey });
       } else {
-        this.verbose('[activity] → POST activity.dismiss_rollup', { category: itemType, key_id: keyId, hub_id: hubId, last_id: lastId });
+        // READ advances the underlying read pointer, which is all "I have read
+        // this" means for a rollup. The row survives because the server keeps a
+        // copy in notification_rollup and renders it back with is_read = 1 --
+        // the live rollup itself is recomputed from unread state and simply
+        // stops existing once read, which is why it used to vanish.
+        //
+        // DELETE does that AND flags the stored copy. Both writes are required:
+        // flagging alone leaves the live rollup regenerating on the next
+        // refresh, and dismissing alone is exactly today's behaviour, where the
+        // row returns as a read row instead of staying gone.
+        const svc = read
+          ? ((SERVICE.activity && SERVICE.activity.dismiss_rollup)
+            || (SERVICE.activity && SERVICE.activity.notification_dismiss)
+            || 'activity.dismiss_rollup')
+          : ((SERVICE.activity && SERVICE.activity.delete_rollup) || 'activity.delete_rollup');
+        this.verbose('[activity] → POST', { svc, category: itemType, key_id: keyId, hub_id: hubId, last_id: lastId, mode });
         try {
           await this.postService({
-            service: (SERVICE.activity && SERVICE.activity.dismiss_rollup)
-              || (SERVICE.activity && SERVICE.activity.notification_dismiss)
-              || 'activity.dismiss_rollup',
+            service: svc,
             category: itemType,
             key_id: keyId,
             hub_id: hubId,
             last_id: lastId,
           });
-          cmd.goodbye()
+          if (read) this._markRowRead(cmd); else cmd.goodbye();
         } catch (e) {
           this.warn('notification_dismiss failed', e);
         }

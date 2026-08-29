@@ -30,6 +30,11 @@ module.exports = function (ui) {
           Skeletons.List.Smart({
             className: `${pfx}__list`,
             sys_pn: _a.list,
+            // partHandler so the panel can hook the list's `data` event the
+            // moment the part registers — strictly before the list's own
+            // onDomRefresh starts fetching. That is what lets day-group headers
+            // be stamped on page 1 rather than only from the second render on.
+            partHandler: ui,
             flow: _a.none,
             spinner: true,
             spinnerWait: 500,
