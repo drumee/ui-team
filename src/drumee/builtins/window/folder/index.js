@@ -128,10 +128,14 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * A zoomed window owns the whole desk body, header included — the same deal
-   * a headless workspace pane gets from the sidebar. Desk listens on Wm.$el and
+   * A zoomed window owns the whole desk body, header included, because it is
+   * still a real window with its own titlebar. Desk listens on Wm.$el and
    * re-runs _syncWorkspaceTopbar, which reads `_zoomed` back off every open
-   * folder window. Headless panes already hide the header via workspace:open.
+   * folder window.
+   *
+   * A headless workspace pane no longer does this: it has no chrome of its
+   * own, so the desk topbar is its header and must stay up (see
+   * _syncWorkspaceTopbar).
    */
   _syncDeskChrome() {
     if (this.mget(_a.headless)) return;
@@ -142,16 +146,22 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * The header can come back while this window is still zoomed — a second
-   * window flips the bar into strip-only mode — which shrinks the container
-   * under inline-pixel geometry. Skipped during _syncDeskChrome: toggleZoom
-   * applies the new bounds itself right after.
+   * The work area changed under inline-pixel geometry — re-fit.
+   *
+   * Fired by the WM (`reflowWorkArea`) for every change of the container's box:
+   * the desk header coming back while this window is zoomed (a second window
+   * flips the bar into strip-only mode), the sidebar rail being pinned or
+   * collapsed (64px ↔ 231px reserved column, so the container both moves and
+   * shrinks), a slide-out panel, a browser resize. Skipped during
+   * _syncDeskChrome: toggleZoom applies the new bounds itself right after.
    */
   _onDeskChrome() {
     if (this._zoomSyncing) return;
-    if (!this._zoomed || this.mget(_a.minimize)) return;
+    if (this.mget(_a.minimize)) return;
     if (this.isDestroyed && this.isDestroyed()) return;
-    const target = this._zoomTarget();
+    if (this._isResizing) return;
+    const target = this._refitTarget();
+    if (!target) return;
     const cur = this._snapshotBounds();
     if (
       cur.left === target.left &&
@@ -161,7 +171,54 @@ class __window_folder extends mfsInteract {
     ) {
       return;
     }
-    this._applyBoundsAfterFs(target);
+    this._applyBoundsAfterFs(target, target.minWidth ? { minWidth: target.minWidth } : undefined);
+  }
+
+  /**
+   * Where this window belongs in the CURRENT work area, or null when it is
+   * already fine where it is.
+   *
+   * A window that owns a Move & Resize preset RECOMPUTES it, so it tracks the
+   * work area in both directions — a maximised window re-fills after the
+   * sidebar is pinned, and fills the reclaimed 167px again once it is
+   * collapsed. Clamping alone can only ever shrink, which is what used to
+   * leave a window stuck narrow (and shifted) after the rail was toggled.
+   *
+   * A free-floating window is left exactly where the user put it unless it no
+   * longer fits, in which case it is pulled back inside — its right edge
+   * otherwise sits past the viewport border, clipped by
+   * `.desk-module__body { overflow: hidden }` and unreachable.
+   */
+  _refitTarget(from) {
+    const ws = this._workspaceRect();
+    if (!ws.width || !ws.height) return null;
+    if (this._zoomed || this._snapMode === "full") {
+      return { left: 0, top: 0, width: ws.width, height: ws.height };
+    }
+    if (this._snapMode === "left" || this._snapMode === "right") {
+      // Same split as tileToSide: left takes the floored half, right the
+      // remainder, so an odd width leaves neither a gap nor an overlap.
+      const halfW = Math.floor(ws.width / 2);
+      const leftW = halfW;
+      const rightW = ws.width - halfW;
+      return this._snapMode === "right"
+        ? { left: halfW, top: 0, width: rightW, height: ws.height, minWidth: rightW }
+        : { left: 0, top: 0, width: leftW, height: ws.height, minWidth: leftW };
+    }
+    const cur = from || this._snapshotBounds();
+    const width = Math.min(cur.width, ws.width);
+    const height = Math.min(cur.height, ws.height);
+    const left = Math.max(0, Math.min(cur.left, ws.width - width));
+    const top = Math.max(0, Math.min(cur.top, ws.height - height));
+    if (
+      width === cur.width &&
+      height === cur.height &&
+      left === cur.left &&
+      top === cur.top
+    ) {
+      return null;
+    }
+    return { left, top, width, height };
   }
 
   // Override the inherited utils.js minimize/wake. The inherited version
@@ -210,9 +267,23 @@ class __window_folder extends mfsInteract {
     const b = this._zoomed ? this._zoomTarget() : this._minimizedBounds;
     this._minimizedBounds = null;
     if (b) {
-      this.size = { ...this.size, width: b.width, height: b.height };
-      this.style.set(b);
-      this.$el.css(b);
+      // The bounds were captured on minimize and the work area may have
+      // changed since (the sidebar rail pinned/collapsed while the window sat
+      // in the tab strip — _onDeskChrome deliberately skips minimized
+      // windows). Restoring them verbatim puts a maximised window's right side
+      // past the viewport border, clipped and unreachable. Re-fit instead:
+      // a preset window re-fills the CURRENT area, a free-floating one is
+      // clamped back inside it.
+      const fit = this._refitTarget(b) || b;
+      this.size = { ...this.size, width: fit.width, height: fit.height };
+      this.style.set(fit);
+      this.$el.css(fit);
+      if (fit.minWidth) {
+        this.$el.css({ minWidth: fit.minWidth });
+        try {
+          this.$el.resizable(_a.option, "minWidth", fit.minWidth);
+        } catch (e) {}
+      }
       if (this.syncBounds) this.syncBounds(true);
     }
     this.$el.stop(true, false).css({ opacity: 0 }).animate(
@@ -1385,6 +1456,14 @@ class __window_folder extends mfsInteract {
         .map((s) => Object.assign({}, ctx, s));
     }
     const depth = this._navStack.length;
+    // The in-window crumb strip lives in the window topbar, which a headless
+    // workspace pane no longer renders — the DESK topbar carries the path
+    // instead (Wm.updateBreadcrumb / desk_breadcrumb). Bail before the
+    // ensurePart: it never settles for a part that will not mount, so the
+    // continuation below would be dead weight held for the pane's lifetime.
+    // _navStack is still built above, which is what in-pane back navigation
+    // (_navigateToStackIndex) actually reads.
+    if (this.mget(_a.headless)) return;
     this.ensurePart("folder-breadcrumb-path").then((box) => {
       if (!box || (box.isDestroyed && box.isDestroyed())) return;
       box.el.dataset.state = depth ? 1 : 0;
@@ -4840,10 +4919,18 @@ class __window_folder extends mfsInteract {
     // admin did, elsewhere — and stealing focus would bury whatever they have
     // open on top of this workspace, e.g. a document they are editing. Suppress
     // the raise for the duration of the re-feed instead.
-    this._suppressRaise = 1;
-    this.feedPart("folder-header", require("./skeleton/topbar")(this))
-      .catch(() => { })
-      .then(() => { this._suppressRaise = 0; });
+    // A headless workspace pane renders NO folder-header (skeleton/index.js:
+    // the desk topbar is its header), so there is nothing to re-feed. Guarded
+    // because feedPart resolves through ensurePart, which never settles for a
+    // part that will not mount — the .then below would not run and
+    // _suppressRaise would stay latched at 1 for the life of the pane,
+    // silently swallowing every later raise.
+    if (!this.mget(_a.headless)) {
+      this._suppressRaise = 1;
+      this.feedPart("folder-header", require("./skeleton/topbar")(this))
+        .catch(() => { })
+        .then(() => { this._suppressRaise = 0; });
+    }
     this.refreshBreadcrumbsUI();
     this._syncChatGate();
     // Losing chat access with a thread already open leaves its conversation

@@ -5,13 +5,18 @@
     width: 100%;
   }
 
+  // Figma 43:29418 "notification card feed": a 62px CARD — r=8, 12px padding,
+  // 12px between its three columns — on white, with 8px between cards.
   &__row {
     align-items: center;
+    background-color: var(--normal-bg-elevated, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 8px;
+    box-sizing: border-box;
     cursor: pointer;
     gap: 12px;
-    min-height: 48px;
-    padding: 8px 12px;
+    min-height: 62px;
+    padding: 12px;
     transition: background-color 0.12s;
     width: 100%;
 
@@ -120,13 +125,34 @@
     }
   }
 
-  &__time {
-    @include drumee.typo($color: #65656c, $size: 10px, $weight: 400, $line: 14px);
-    margin-top: 1px;
+  // Second line: chip + timestamp, 8px apart.
+  &__meta {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  // Workspace chip — indigo on a 10% indigo ground, matching the frame.
+  &__origin {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 60%;
+    padding: 0 8px;
+    border-radius: 4px;
+    background-color: var(--radio-on-bg);
+    @include drumee.typo($color: var(--primary-40), $size: 12px, $weight: 400, $line: 17px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 100%;
+  }
+
+  &__time {
+    @include drumee.typo($color: #65656c, $size: 12px, $weight: 400, $line: 17px);
+    flex: 0 0 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__actions {

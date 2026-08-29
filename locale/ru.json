@@ -2685,8 +2685,8 @@
   "CAL_VIEW_WEEK": "Неделя",
   "CAL_VIEW_DAY": "День",
   "CAL_FILTER_ALL": "Все",
-  "CAL_FILTER_TASK": "Только задачи",
-  "CAL_FILTER_MEETING": "Только встречи",
+  "CAL_FILTER_TASK": "Задачи",
+  "CAL_FILTER_MEETING": "Встречи",
   "CAL_NOTHING_SCHEDULED": "Ничего не запланировано",
   "NEW_PERSONAL_TASK": "Новая личная задача",
   "EDIT_PERSONAL_TASK": "Изменить личную задачу",
@@ -2700,5 +2700,9 @@
   "CREATE_MEETING_SEND_INVITE": "Создать встречу и отправить приглашение",
   "INVITE_LINK_READY": "Ссылка-приглашение готова",
   "PREVIOUS": "Назад",
-  "CREATE_CHILD_TASK": "Создать дочерние задачи"
+  "CREATE_CHILD_TASK": "Создать дочерние задачи",
+  "DIRECT_CHAT": "Личный чат",
+  "WORKSPACE_CHAT": "Чат пространства",
+  "MEET": "Встреча",
+  "ACCESS": "Доступ"
 }

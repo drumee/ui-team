@@ -106,6 +106,9 @@
     "update": "label.update",
     "delete": "label.delete"
   },
+  "calendar": {
+    "list": "calendar.list"
+  },
   "admin": {
     "member_stats": "admin.member_stats",
     "member_list_workspaces": "admin.member_list_workspaces",

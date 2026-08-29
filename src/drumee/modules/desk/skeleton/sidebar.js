@@ -122,6 +122,48 @@ const isSidebarPinned = () => {
   }
 };
 
+/**
+ * Desktop rail footer — Figma 43:23955: Invite over Plan, pinned to the bottom.
+ *
+ * The old desktop footer (Upgrade / Get help / Settings / Sign out / avatar)
+ * did not shrink, it MOVED: Settings, Get help and Sign out are now the topbar
+ * avatar menu (59:55943), and the avatar itself is the topbar's last utility
+ * icon. Upgrade plan becomes "Plan" here.
+ *
+ * The MOBILE drawer keeps the full footer below — the desk topbar is
+ * display:none at mobile widths, so there is no avatar menu there to hold
+ * those rows, and dropping them would strand Settings and Sign out on phones.
+ */
+const createRailFooter = (ui) => {
+  const fig = getSidebarFig(ui);
+  return Skeletons.Box.Y({
+    className: cls(fig, "footer"),
+    kids: [
+      createNavItem(
+        ui,
+        "rail-invite",
+        LOCALE.INVITE,
+        "invite-member",
+        "",
+        null,
+        "sidebar-invite",
+      ),
+      // Opens the billing page. `upgrade-plan` is the desk's existing service
+      // and already carries the canUpgradePlan() gate, so an account that
+      // cannot buy still lands somewhere sensible rather than on a dead row.
+      createNavItem(
+        ui,
+        "rail-plan",
+        LOCALE.PLAN,
+        "upgrade-plan",
+        "",
+        null,
+        "sidebar-plan",
+      ),
+    ],
+  });
+};
+
 const createFooter = (ui, username) => {
   const fig = getSidebarFig(ui);
   // Real plan badge under the username. planLabel (libs/billing) resolves it
@@ -273,8 +315,12 @@ const createLogoRow = (ui, opts = {}) => {
                 ico: "raw-logo-drumee-full",
                 className: `${fig}__logo-icon`,
               }),
+              // `rail-logo` is the mark exactly as 43:23955 draws it (32x27,
+              // single path, currentColor) so it sits white on the indigo
+              // rail. The old raw-logo-drumee-icon carries its own brand
+              // colours, which read as a dark blob on that ground.
               Skeletons.Button.Svg({
-                ico: "raw-logo-drumee-icon",
+                ico: "rail-logo",
                 className: `${fig}__logo-mark`,
               }),
               createText(
@@ -300,7 +346,7 @@ const createLogoRow = (ui, opts = {}) => {
 };
 
 // ---------- Navigation ----------
-const createNav = (ui) => {
+const createRailNav = (ui) => {
   const fig = getSidebarFig(ui);
 
   return Skeletons.Box.Y({
@@ -309,69 +355,56 @@ const createNav = (ui) => {
     kids: [
       createLogoRow(ui),
 
+      // Workspace-scoped rail — Figma 43:23955 plus the per-tab frames
+      // (52:43332 files, 52:43936 chat, 53:51691 task, 53:52738 meet,
+      // 59:54860 access). These are the folder window's OWN tabs promoted to
+      // global nav: each drives the ACTIVE workspace window, not the desk, so
+      // the handler resolves Wm.getActiveWindow(1) at click time.
+      //
+      // What used to live here moved out rather than away: notifications,
+      // calendar, inbox, contacts, trash and the admin console are now the
+      // topbar utility cluster, and Settings / Get help / Sign out are in the
+      // topbar avatar menu (59:55943) — both in skeleton/topbar.js. Home is
+      // the logo row above.
       Skeletons.Box.Y({
         className: `${fig}__nav-main`,
         kids: [
-          createNavItem(
-            ui,
-            "sidebar_home",
-            LOCALE.HOME,
-            _e.home,
-            "",
-            null,
-            "sidebar-home",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_notifications",
-            LOCALE.NOTIFICATIONS,
-            "toggle-activity",
-            "",
-            null,
-            "sidebar-notifications",
-            "activity-count",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_inbox",
-            LOCALE.INBOX,
-            "toggle-inbox",
-            "",
-            null,
-            "sidebar-inbox",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_contacts",
-            LOCALE.CONTACTS,
-            "toggle-contacts",
-            "",
-            null,
-            "sidebar-contacts",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_trash",
-            LOCALE.TRASH,
-            "toggle-trash",
-            "",
-            null,
-            "sidebar-trash",
-          ),
-          // Admin Console — the full in-desk console (apps_main), loaded from the
-          // @drumee/admin-console plugin on click (see desk onUiEvent "toggle-apps").
-          createNavItem(
-            ui,
-            "sidebar_apps",
-            LOCALE.ADMIN_CONSOLE,
-            "toggle-apps",
-            "",
-            null,
-            "sidebar-apps",
-          ),
+          createNavItem(ui, "rail-files", LOCALE.FILES, "rail-files", "", null, "sidebar-files"),
+          createNavItem(ui, "rail-chat", LOCALE.CHAT, "rail-chat", "", null, "sidebar-chat"),
+          createNavItem(ui, "rail-task", LOCALE.TASK, "rail-task", "", null, "sidebar-task"),
+          createNavItem(ui, "rail-meet", LOCALE.MEET, "rail-meet", "", null, "sidebar-meet"),
+          createNavItem(ui, "rail-access", LOCALE.ACCESS, "rail-access", "", null, "sidebar-access"),
         ],
       }),
+    ],
+  });
+};
 
+// ---------- Navigation (mobile drawer) ----------
+// The drawer keeps the ORIGINAL rows. The desktop rail's utilities moved to the
+// topbar (utility cluster + avatar menu), but the desk topbar is display:none
+// at mobile widths — so on a phone this drawer is the ONLY way to reach
+// notifications, inbox, contacts, trash, the calendar, the admin console and
+// the workspace list. Dropping them here would strand all of them.
+const createNav = (ui) => {
+  const fig = getSidebarFig(ui);
+
+  return Skeletons.Box.Y({
+    className: `${fig}__nav`,
+    kids: [
+      createLogoRow(ui),
+      Skeletons.Box.Y({
+        className: `${fig}__nav-main`,
+        kids: [
+          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home, "", null, "sidebar-home"),
+          createNavItem(ui, "sidebar_calendar", LOCALE.CALENDAR, "toggle-calendar", "", null, "sidebar-calendar"),
+          createNavItem(ui, "sidebar_notifications", LOCALE.NOTIFICATIONS, "toggle-activity", "", null, "sidebar-notifications", "activity-count"),
+          createNavItem(ui, "sidebar_inbox", LOCALE.INBOX, "toggle-inbox", "", null, "sidebar-inbox"),
+          createNavItem(ui, "sidebar_contacts", LOCALE.CONTACTS, "toggle-contacts", "", null, "sidebar-contacts"),
+          createNavItem(ui, "sidebar_trash", LOCALE.TRASH, "toggle-trash", "", null, "sidebar-trash"),
+          createNavItem(ui, "sidebar_apps", LOCALE.ADMIN_CONSOLE, "toggle-apps", "", null, "sidebar-apps"),
+        ],
+      }),
       createWorkspaceSection(ui),
     ],
   });
@@ -565,7 +598,7 @@ module.exports = function (ui) {
       kids: [
         Skeletons.Box.Y({
           className: cls(fig, "main"),
-          kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
+          kids: [createRailNav(ui), createRailFooter(ui)],
         }),
       ],
     });

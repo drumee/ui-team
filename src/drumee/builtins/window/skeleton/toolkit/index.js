@@ -175,9 +175,26 @@ function fileNewControl(ui) {
 
 function fileFilterControls(ui) {
   const cnTopbar = `${ui.fig.family}-topbar`;
+  // 43:23955's workspace toolbar right group is: Search... | + New | the three
+  // view toggles. Search used to live in the desk topbar; it is built here now
+  // from the desk's own builder, so the desk stays the handler and the
+  // search-files / open-search-hit wiring is untouched.
+  //
+  // Folder windows on a real desk only: a DMZ sharebox has no Desk, and a
+  // second copy anywhere would break the "exactly one mounted" rule the
+  // sys_pn-based wiring depends on.
+  const search =
+    ui.fig.family === "window-folder" &&
+    typeof Desk !== "undefined" &&
+    Desk &&
+    !Visitor.isMobile()
+      ? require("desk/skeleton/topbar").deskSearchBox(Desk, cnTopbar)
+      : "";
+
   return Skeletons.Box.X({
     className: `${cnTopbar}__file-controls`,
     kids: [
+      search,
       fileNewControl(ui),
       fileViewToggle(ui, {
         namedState: true,

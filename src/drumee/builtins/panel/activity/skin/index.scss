@@ -157,14 +157,17 @@
       }
 
       .panel-activity__tabbar {
-        gap: 20px;
-        padding: 14px 16px;
-        justify-content: center;
+        // Six pills need to wrap and start from the left on a phone; a
+        // centred 20px-gap row assumed the old three text tabs.
+        gap: 4px;
+        padding: 12px 16px;
+        justify-content: flex-start;
       }
 
-      .panel-activity__tab {
+      // The label holds the type now — sizing __tab does nothing.
+      .panel-activity__tab-label {
         font-size: 15px;
-        line-height: 15px;
+        line-height: 18px;
       }
 
       .panel-activity__empty {
@@ -422,35 +425,74 @@
     }
   }
 
+  // Tab row — Figma 43:29418. Six object-type tabs, the active one a filled
+  // indigo pill rather than the old underline. Wraps: six labels plus counts
+  // do not fit the panel width on a narrow desk.
+  // Segmented control, per 43:29418: the six tabs sit in a #F2F2F7 TROUGH
+  // (r=12, 4px padding) rather than floating on the panel — the trough is what
+  // makes them read as one control instead of six loose pills.
   &__tabbar {
-    gap: 16px;
-    padding: 12px 20px;
+    gap: 4px;
+    margin: 0 12px;
+    padding: 4px;
     flex-shrink: 0;
-    background-color: rgba(0, 0, 0, 0.05);
+    flex-wrap: wrap;
+    border-radius: 12px;
+    background-color: var(--normal-bg-90);
   }
 
   &__tab {
-    @include drumee.typo(
-      $color: #0b0a21,
-      $size: 12px,
-      $weight: 600,
-      $line: 12px
-    );
-    padding: 0 0 4px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 33px;
+    padding: 8px;
+    border-radius: 8px;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
+    white-space: nowrap;
     transition:
       color 0.15s,
-      border-color 0.15s;
+      background-color 0.15s;
 
     &:hover {
-      color: #5950ff;
+      background: var(--overlay-bg-05);
     }
 
     &[data-state="1"] {
-      color: #5950ff;
-      border-bottom-color: #5950ff;
-      padding-bottom: 6px;
+      background: var(--primary-40);
+
+      .panel-activity__tab-label {
+        color: var(--gray-white);
+      }
+    }
+  }
+
+  &__tab-label {
+    @include drumee.typo($color: var(--normal-fg-20), $size: 14px, $line: 17px);
+    font-weight: 600;
+  }
+
+  // Per-tab unread count. Built by the skeleton and hidden until something
+  // fills it — get_feed returns no per-category aggregate yet, so today it is
+  // always empty.
+  &__tab-count {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--signal-error, #d74e49);
+    color: var(--gray-white);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    box-sizing: border-box;
+
+    &[data-count="0"],
+    &:empty {
+      display: none !important;
     }
   }
 
@@ -523,7 +565,10 @@ html[data-theme="dark"] {
       background-color: var(--overlay-bg-05);
     }
 
-    &__tab {
+    // The label carries the colour now that __tab is the pill, so recolouring
+    // __tab itself would do nothing. The active pill keeps its white label
+    // from the base rule — --primary-40 is legible in both themes.
+    &__tab-label {
       color: var(--normal-fg-10);
     }
 

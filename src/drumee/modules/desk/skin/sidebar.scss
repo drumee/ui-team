@@ -117,7 +117,10 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
   // unaffected by everything here.
   &__rail {
     position: relative;
-    height: 100vh;
+    // 100% of the desk's padded canvas. At 100vh the rail was 16px taller than
+    // its container, so its rounded bottom corners sat below the viewport and
+    // the panel read as square-bottomed.
+    height: 100%;
     box-sizing: border-box;
     // Pinned: reserve the full column.
     flex: 0 0 231px;
@@ -729,6 +732,301 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
       line-height: 1.4;
     }
   }
+
+  // ── Static workspace rail (Figma 43:23955) ────────────────────────────────
+  // Scoped to `&__rail &__main`, which by construction never matches the
+  // mobile drawer (its __main has no rail wrapper) — so the drawer keeps the
+  // horizontal icon+label rows and its full footer untouched.
+  //
+  // The rail is now a FIXED 64px indigo column with the icon stacked over an
+  // always-visible label. It no longer hover-expands, so the width transition
+  // and the label fade are switched off here rather than deleted: the mixin
+  // and the pin machinery still serve the drawer and the tablet band.
+  // 43:23955 measures the rail as a PANEL, not a full-bleed column:
+  //   64x1026 at (8,418), fill #3C3989 (--primary-70), r=8,
+  //   stroke #000 @5%, padding (16, 12, 16, 12)
+  // It sits on the white canvas with 8px gutters — 8px from the page edge,
+  // 8px below the top bar, and 8px before the workspace panel (which starts
+  // at x=80 while the rail ends at 72).
+  //
+  // The 12px side padding is what makes the inner icon column exactly 40px
+  // (64 - 12 - 12), which is the width every nav item and the divider use.
+  &__rail &__main {
+    width: 64px;
+    background-color: var(--primary-70);
+    // 16px top/bottom per the frame, but NO horizontal padding: the frame lets
+    // labels overflow the 40px icon column ("Access" is ~50px at 14/600), and
+    // with 12px side padding plus overflow:hidden on this element that overflow
+    // was being clipped. Giving the columns the full 64px lets the label
+    // centre in the rail instead of in the icon column, which is what the
+    // frame looks like. The 40px column is preserved where it matters — the
+    // icon box and the divider are both 40px and centred.
+    padding: 16px 0;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: none;
+    transition: none;
+  }
+
+  // MUST repeat the `__rail __main __nav` depth, not `__rail __nav`: the
+  // hover-expand block pins these columns at 231px with a 3-class selector
+  // (so labels don't re-wrap during the width animation), which out-specifies
+  // a 2-class override no matter where it sits.
+  //
+  // This was why the logo vanished. The nav stayed 231px inside a 64px rail
+  // with overflow:hidden, and the logo row centres itself (margin: 0 auto) —
+  // so it sat at ~95px, entirely outside the visible strip. The nav ITEMS are
+  // left-aligned, which is why the icons showed and the logo did not.
+  &__rail &__main &__nav,
+  &__rail &__main &__footer {
+    width: 64px;
+    min-width: 64px;
+  }
+
+  &__rail &__nav-main {
+    gap: 12px;
+    padding: 0;
+  }
+
+  // 16px above the rail's bottom edge in the frame — supplied by __main's own
+  // padding, so the footer adds none of its own.
+  &__rail &__footer {
+    gap: 12px;
+    padding: 0;
+    border-top: none;
+  }
+
+  // Item metrics read off 43:23955: a 40x61 stack — a 40x40 icon box (r=8)
+  // over a 4px gap over a 14px/600 label — with 12px between items.
+  //
+  // The ACTIVE state is a --primary-40 pill on the ICON BOX only, not on the
+  // whole row: the label sits outside it and just turns white. Inactive is
+  // --tertiary-grey-40 (#d1d1d6, exactly the frame's value) for icon and
+  // label alike.
+  &__rail &__item {
+    flex-direction: column !important;
+    align-items: center;
+    justify-content: flex-start;
+    width: 64px;
+    min-height: 61px;
+    padding: 0;
+    gap: 4px;
+    border-left: none;
+    border-radius: 0;
+    background-color: transparent;
+    color: var(--tertiary-grey-40);
+
+    &:hover {
+      border-left-color: transparent;
+      background-color: transparent;
+      color: var(--gray-white);
+
+      .desk-module-sidebar__item-icon {
+        background-color: rgba(255, 255, 255, 0.12);
+      }
+    }
+
+    &[data-radio="on"],
+    &[data-state="1"] {
+      border-left-color: transparent;
+      background-color: transparent;
+      color: var(--gray-white);
+
+      .desk-module-sidebar__item-icon {
+        background-color: var(--primary-40);
+      }
+    }
+  }
+
+  // The icon element IS the 40x40 pill; the glyph inside stays 28px.
+  &__rail &__item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    padding: 0;
+    border-radius: 8px;
+    color: currentColor;
+    transition: background-color 0.12s ease;
+
+    svg {
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  // Labels are part of the rail now, so the mini-icon fade must not touch
+  // them. !important mirrors the mixin's own !important.
+  &__rail &__item-text {
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-size: 14px;
+    line-height: 17px;
+    font-weight: 600;
+    text-align: center;
+    color: currentColor;
+    margin-left: 0;
+    // Full 64px column so the longest label ("Access") fits outright rather
+    // than overflowing and being clipped.
+    width: 100%;
+    padding: 0 2px;
+    box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+
+    // A Note is a FLEX box wrapping an inner `.note-content` div (see
+    // ui-core widgets/text/template). text-align on this element therefore
+    // does nothing to the inner div's position — it was left-packed by the
+    // default justify-content, which is why the labels sat left of their
+    // icons. Centre the flex child, and centre the text inside it.
+    justify-content: center;
+
+    // BOTH classes: the template emits `class="... inner note-content"`, and
+    // the base rule `__item-text .inner { display: flex }` makes this element a
+    // flex CONTAINER as well. So its text is an anonymous flex item, packed
+    // left by the default justify-content — text-align alone never moved it.
+    // Centring has to happen at every flex level between the item and the
+    // glyph, which is why the label stayed left after the last two attempts.
+    .inner,
+    .note-content {
+      width: 100%;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Unread pill sits on the icon, not after the label.
+  &__rail &__badge {
+    position: absolute;
+    top: 4px;
+    right: 12px;
+    left: auto;
+    margin-left: 0;
+  }
+
+  // ── Cancel the hover-expand model ─────────────────────────────────────────
+  // The collapse/pin rules above are attribute-qualified, so a bare-class
+  // override loses to them on specificity no matter where it sits. These
+  // repeat the ORIGINAL selector shapes so equal specificity + later source
+  // order decides, rather than escalating to !important.
+  //
+  // The machinery itself is left in place: the mobile drawer and the
+  // 768–1024px tablet band still use it, and the pin toggle still writes
+  // data-collapsed (harmlessly — both states are now 64px).
+  &__rail,
+  &__rail[data-collapsed="0"],
+  &__rail[data-collapsed="1"] {
+    flex: 0 0 64px;
+  }
+
+  &__rail[data-collapsed="1"] &__main,
+  &__rail[data-collapsed="1"] &__main:hover {
+    width: 64px;
+    box-shadow: var(--shadow-right-big, 0 1px 11px rgba(0, 0, 0, 0.13));
+  }
+
+  // sidebar-mini-icons fades the labels out with !important from a
+  // 5-class selector. The rail's labels are permanent now, so re-assert them
+  // at matching depth — !important on both sides means specificity decides.
+  &__rail[data-collapsed="1"] &__main:not(:hover) &__item-text {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  // The pin toggle is meaningless on a rail that cannot expand.
+  &__rail &__logo-pin-btn {
+    display: none !important;
+  }
+
+  // The mini-icon mixin swaps the wordmark for the compact mark, but it is
+  // gated on :not(:hover) — with the rail permanently 64px, hovering would
+  // otherwise bring the 231px wordmark back into a 64px column. Pin the mark
+  // in both states.
+  &__rail &__logo-icon {
+    display: none !important;
+  }
+
+  &__rail &__logo-mark {
+    display: flex !important;
+  }
+
+  // Logo block geometry read off 43:23955: the rail starts at y=418, the mark
+  // sits at y=434 (the 16px __main padding supplies that), its baseline is 461,
+  // the rule is at 485 and the first nav item at 509 — i.e. 24px above and
+  // below the rule. The rule spans the 40px icon column, not the full 64px
+  // rail, so the row is constrained to 40px and centred.
+  //
+  // The base __logo-row carries `padding: 0 24px`, which inside a 64px rail
+  // leaves 16px of usable width and clipped the mark — hence the reset.
+  &__rail &__logo-row {
+    width: 40px;
+    margin: 0 auto 24px;
+    padding: 0 0 24px;
+    min-height: 0;
+    justify-content: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  &__rail &__logo {
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  // 32x27 per the frame, white on the indigo rail. margin-left:-2px on the
+  // base rule was nudging it off-centre in a centred column.
+  // 32x27 per the frame, white on the indigo rail.
+  //
+  // The fill is forced on the inner <svg class="drumee-picto"> rather than
+  // left to inheritance. The rendered tree is
+  //   .logo-mark > svg.drumee-picto > use -> <symbol><path fill="currentColor">
+  // and the global rule (skin/lib/svg.scss) only sets `fill: currentcolor` on
+  // that svg, so the mark's colour depended on `color` resolving correctly
+  // through two levels AND across the <use> boundary. It did not — the mark
+  // came out in the inherited body ink, near-invisible against the indigo.
+  // Setting fill AND color explicitly here removes the dependency entirely.
+  //
+  // The inner svg is `.full` (100%/100%), so it also needs the parent to have
+  // real dimensions — margin-left:-2px from the base rule additionally pulled
+  // it off-centre in a centred column.
+  &__rail &__logo-mark {
+    width: 32px;
+    height: 27px;
+    margin-left: 0;
+    color: var(--gray-white);
+
+    svg,
+    svg.drumee-picto {
+      width: 32px;
+      height: 27px;
+      color: var(--gray-white);
+      fill: var(--gray-white);
+    }
+  }
+
+  // The workspace list left the rail for the topbar switcher; if any path
+  // still renders it here, it must not reappear in a 64px column.
+  &__rail &__workspace {
+    display: none !important;
+  }
+
+  // The organisation name ("stage", or whatever the install is called) that
+  // createLogoRow renders under the wordmark. 43:23955's rail is logo,
+  // divider, nav — nothing else — and at 64px the name only ever truncated.
+  //
+  // It needs its own rule because sidebar-mini-icons only hides it while
+  // `:not(:hover)`, and the rail no longer expands on hover: hovering made it
+  // reappear. The MOBILE drawer keeps it (that __main has no rail wrapper, so
+  // this compound selector never matches there), where it still identifies the
+  // organisation.
+  &__rail &__header {
+    display: none !important;
+  }
+
 }
 
 @media (min-width: 768px) and (max-width: 1024px) and (pointer: fine) {

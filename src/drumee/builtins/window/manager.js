@@ -9,6 +9,7 @@ if (window.innerWidth > 900) {
 }
 const Rectangle = require("rectangle-node");
 const mfsInteract = require("./interact");
+const snap = require("./snap");
 const pseudo_media = require("media/pseudo");
 const { xhRequest, dataTransfer } = require("@drumee/ui-essentials");
 const { createQrcode } = require("@drumee/ui-essentials");
@@ -502,65 +503,189 @@ class __window_manager extends mfsInteract {
     if (this.isWm) {
       this.$el.css({ width: "" });
     }
-    // Clamp every open window into the visible work area — the WM's container
-    // (offset by the sidebar rail and topbar), not the full viewport. Measured
-    // via getBoundingClientRect so it holds whether the windows layer is
-    // position:fixed or absolute.
+    this.clampWindows({ dw, dh });
+  }
+
+  /**
+   * Re-fit every open window to the CURRENT work area.
+   *
+   * The work area is the WM's container (`.desk-module__wm-container`) — the
+   * desk body minus the sidebar column and the top bar — and it changes
+   * WITHOUT a browser resize event: pinning / unpinning the sidebar rail
+   * swaps its reserved width between 64px and 231px, which moves the
+   * container's left edge and shrinks its width by 167px. Windows carry
+   * inline PIXEL geometry (zoom, tile, default bounds), so nothing brings
+   * them back inside on their own: a maximised window keeps its old width
+   * while its origin shifts right, so its whole right side — toolbar, close
+   * button, chat panel — lands past the viewport edge, where
+   * `.desk-module__body { overflow: hidden }` clips it out of reach.
+   *
+   * Two steps, in this order:
+   *   1. `clampWindows` — every window is pulled back inside the area, so
+   *      nothing is left hanging off an edge.
+   *   2. `desk:chrome` — windows that own a layout preset (a zoomed or tiled
+   *      folder window) then recompute that preset against the new area
+   *      themselves, so they GROW back too when the area widens again;
+   *      clamping alone only ever shrinks. Second on purpose: their re-fit is
+   *      animated, and a clamp landing mid-animation would fight it.
+   */
+  reflowWorkArea() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this._isResizing) return;
+    this.clampWindows();
+    if (this.$el) this.$el.trigger("desk:chrome");
+  }
+
+  /**
+   * Clamp every open window into the visible work area — the WM's container
+   * (offset by the sidebar rail and topbar), not the full viewport. Measured
+   * via getBoundingClientRect so it holds whether the windows layer is
+   * position:fixed or absolute.
+   *
+   * Every layer is walked, not `getWindowsPool()`: that answers headlessLayer
+   * alone whenever a workspace pane is open, which would leave every floating
+   * window behind the pane overflowing — and the call layer is never in it.
+   */
+  clampWindows(opt = {}) {
+    if (this._isResizing) return;
     const host = this.el.parentElement || this.el;
     const area = host.getBoundingClientRect();
-    const pool = this.getWindowsPool();
-    pool.children.each((c) => {
-      // Window rect in viewport coords (wr) + its CSS offset (pos). The
-      // viewport↔CSS delta is constant: newCssLeft = pos.left + (target - wr.left).
-      const wr = c.el.getBoundingClientRect();
-      const pos = c.$el.position();
-      const cw = wr.width;
-      const ch = wr.height;
-      const headerH = c.topbarHeight || 40;
-      const opt = {};
+    if (!area.width || !area.height) return;
+    for (const pool of [this.windowsLayer, this.headlessLayer, this.callLayer]) {
+      if (!pool || (pool.isDestroyed && pool.isDestroyed())) continue;
+      if (!pool.children) continue;
+      pool.children.each((c) => this._clampWindow(c, area, opt));
+    }
+  }
 
-      if (c.mget(_a.kind) === "audio_player") {
-        let o = c.$el.position();
-        if (Visitor.isMobile()) {
-          o.left = 0;
-          o.top = 0;
-        }
-        c.$el.css({ left: o.left + dw });
-        c.$el.css({ top: o.top + dh });
-      }
+  /**
+   * Pull one window inside `area`.
+   *
+   * Skipped: minimized windows (display:none, so they measure 0×0 — clamping
+   * that would rewrite their restore offset with garbage) and viewers docked
+   * into a folder frame (window/frame.js owns their geometry and re-docks them
+   * from its own ResizeObserver).
+   */
+  _clampWindow(c, area, o = {}) {
+    if (!c || !c.el || (c.isDestroyed && c.isDestroyed())) return;
+    if (c.mget(_a.minimize)) return;
+    if (c._frameTracking) return;
+    // Browser fullscreen ignores inline geometry until it exits; the window
+    // re-applies its own bounds on `fullscreenchange`.
+    if (document.fullscreenElement === c.el) return;
+    // A window parked in a "fill the work area" preset has to FOLLOW the new
+    // area, not merely be clamped into it — clamping only ever shrinks, so a
+    // maximised window would stay narrow for good once the sidebar rail is
+    // collapsed again. Folder windows do this themselves (they track their
+    // tile presets too) through the `desk:chrome` event; the players only
+    // know about zoom, and snap.applyBounds is the very call their own zoom
+    // button makes.
+    if (c._zoomed && !c._deskChromeBound) {
+      snap.applyBounds(c, {
+        left: 0,
+        top: 0,
+        width: Math.round(area.width),
+        height: Math.round(area.height),
+      });
+      return;
+    }
+    const { dw = 0, dh = 0 } = o;
+    // Window rect in viewport coords (wr) + its CSS offset (pos). The
+    // viewport↔CSS delta is constant: newCssLeft = pos.left + (target - wr.left).
+    let wr = c.el.getBoundingClientRect();
+    if (!wr.width || !wr.height) return;
+    let pos = c.$el.position();
 
-      // Width: never wider than the work area.
-      if (cw > area.width) opt.width = Math.round(area.width);
+    if (c.mget(_a.kind) === "audio_player") {
+      let p = c.$el.position();
+      if (Visitor.isMobile()) {
+        p.left = 0;
+        p.top = 0;
+      }
+      c.$el.css({ left: p.left + dw });
+      c.$el.css({ top: p.top + dh });
+    }
 
-      // Left: keep inside [area.left, area.right]. A window wider than the
-      // section (intrinsic min-width) is right-aligned so its toolbar/close
-      // and a grabbable header stay on-screen instead of overflowing right.
-      let vpLeft = wr.left;
-      if (cw > area.width) {
-        vpLeft = area.right - cw;
-      } else {
-        vpLeft = Math.max(area.left, Math.min(vpLeft, area.right - cw));
-      }
-      const newLeft = pos.left + (vpLeft - wr.left);
-      if (Math.abs(newLeft - pos.left) >= 1) opt.left = Math.round(newLeft);
+    // ── 1. Size ──────────────────────────────────────────────────────────
+    // Never wider/taller than the work area.
+    const size = {};
+    if (wr.width > area.width) size.width = Math.round(area.width);
+    if (wr.height > area.height) size.height = Math.round(area.height);
 
-      // Height: never taller than the work area; keep the header reachable.
-      if (ch > area.height) opt.height = Math.round(area.height);
-      const vpTop = Math.max(area.top, Math.min(wr.top, area.bottom - headerH));
-      const newTop = pos.top + (vpTop - wr.top);
-      if (Math.abs(newTop - pos.top) >= 1) opt.top = Math.round(newTop);
+    // An inline minimum WINS over the width we are about to write (snap and
+    // frame pin one to hold a tile below the 600px stylesheet floor), so a
+    // shrinking work area would otherwise leave the window stuck at its old
+    // size and still overflowing. Lower the floor to the area, and keep the
+    // resizable option in step so a manual drag right after this doesn't snap
+    // it back up.
+    if (size.width != null) {
+      const minW = parseFloat(c.el.style.minWidth);
+      if (Number.isFinite(minW) && minW > size.width) {
+        c.$el.css({ minWidth: size.width });
+        try {
+          c.$el.resizable(_a.option, "minWidth", size.width);
+        } catch (e) {}
+      }
+    }
+    if (size.height != null) {
+      const minH = parseFloat(c.el.style.minHeight);
+      if (Number.isFinite(minH) && minH > size.height) {
+        c.$el.css({ minHeight: size.height });
+        try {
+          c.$el.resizable(_a.option, "minHeight", size.height);
+        } catch (e) {}
+      }
+    }
 
-      if (Object.keys(opt).length) {
-        c.$el.css(opt);
-        c.style.set(opt);
+    if (Object.keys(size).length) {
+      c.$el.css(size);
+      c.style.set(size);
+      if (c.size) {
+        c.size = {
+          ...c.size,
+          width: size.width != null ? size.width : c.size.width,
+          height: size.height != null ? size.height : c.size.height,
+        };
       }
-      if (c.syncGeometry) {
-        c.syncGeometry();
-      }
-      if (c.setupInteract) {
-        c.setupInteract();
-      }
-    });
+      // Re-measure before placing: whether the window ENDED UP inside the work
+      // area is not knowable in advance — the stylesheet floor
+      // (`.window__ui { min-width: 600px }`) and the content's own min-content
+      // width can both refuse the size just written. Placing from a stale
+      // measurement is what used to slide a maximised window left by its whole
+      // overhang and park it under the sidebar.
+      wr = c.el.getBoundingClientRect();
+      pos = c.$el.position();
+    }
+
+    // ── 2. Place ─────────────────────────────────────────────────────────
+    // A window that still doesn't fit is right-aligned on purpose: its
+    // toolbar, close button and a grabbable header stay on screen and the
+    // overflow goes off the LEFT (under the sidebar), never off the right edge
+    // where `.desk-module__body { overflow: hidden }` puts it out of reach.
+    const opt = {};
+    const headerH = c.topbarHeight || 40;
+    const vpLeft =
+      wr.width > area.width
+        ? area.right - wr.width
+        : Math.max(area.left, Math.min(wr.left, area.right - wr.width));
+    const newLeft = pos.left + (vpLeft - wr.left);
+    if (Math.abs(newLeft - pos.left) >= 1) opt.left = Math.round(newLeft);
+
+    // Keep the header reachable when the window is taller than the area.
+    const vpTop = Math.max(area.top, Math.min(wr.top, area.bottom - headerH));
+    const newTop = pos.top + (vpTop - wr.top);
+    if (Math.abs(newTop - pos.top) >= 1) opt.top = Math.round(newTop);
+
+    if (Object.keys(opt).length) {
+      c.$el.css(opt);
+      c.style.set(opt);
+    }
+    if (c.syncGeometry) {
+      c.syncGeometry();
+    }
+    if (c.setupInteract) {
+      c.setupInteract();
+    }
   }
 
   /**
@@ -740,6 +865,24 @@ class __window_manager extends mfsInteract {
             this._viewportResizeTimer = setTimeout(() => this.responsive(), 150);
           };
           window.addEventListener("resize", this._onViewportResize);
+        }
+        // A browser resize is NOT the only thing that resizes the work area:
+        // pinning / collapsing the sidebar rail (64px ↔ 231px), a slide-out
+        // panel, or the desk hiding its top bar all reflow the WM container
+        // with no `resize` event to hook. Watch the container itself so any of
+        // them re-fits the open windows. Debounced on the trailing edge: the
+        // rail width is a 0.18s CSS transition, so this fires once the new
+        // size has settled instead of on all ~11 animation frames.
+        if (!this._workAreaBound && typeof ResizeObserver !== "undefined") {
+          const area = this.el && (this.el.parentElement || this.el);
+          if (area) {
+            this._workAreaBound = true;
+            this._workAreaRo = new ResizeObserver(() => {
+              clearTimeout(this._workAreaTimer);
+              this._workAreaTimer = setTimeout(() => this.reflowWorkArea(), 150);
+            });
+            this._workAreaRo.observe(area);
+          }
         }
         child.onAddKid = (c) => {
           c.once(_e.destroy, () => {

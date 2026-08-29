@@ -196,37 +196,102 @@
     padding: 0 24px 24px;
   }
 
+  // Scope tabs — Figma 43:32209: sentence-case pills on a light ground, the
+  // active one filled indigo with white text. The old treatment was uppercase
+  // 10px mono, which the design drops.
   &__filter-btn {
-    border-radius: 12px;
+    align-items: center;
+    gap: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 5px 13px;
-    background-color: var(--overlay-bg-05);
-    @include drumee.typo(
-      $size: 10px,
-      $weight: 600,
-      $color: var(--normal-fg-50)
-    );
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    font-family: var(--font-mono, var(--font-medium));
+    padding: 7px 14px;
+    background-color: var(--normal-bg-90);
 
     &[data-radio="on"],
     &[data-state="1"] {
-      background-color: rgba(89, 80, 255, 0.1);
-      border: 1px solid rgba(89, 80, 255, 0.1);
-      @include drumee.typo(
-        $size: 10px,
-        $weight: 600,
-        $color: var(--active-border)
-      );
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      font-family: var(--font-mono, var(--font-medium));
+      background-color: var(--primary-40);
+
+      .chat-p2p__filter-label {
+        color: var(--gray-white);
+      }
     }
 
     svg {
       display: none;
     }
+  }
+
+  &__filter-label {
+    @include drumee.typo($size: 13px, $line: 17px, $color: var(--normal-fg-20));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  // Per-tab unread count. Hidden until something fills it — chat_rooms carries
+  // per-room counts, not a per-scope total.
+  &__filter-count {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--signal-error, #d74e49);
+    color: var(--gray-white);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    box-sizing: border-box;
+
+    &[data-count="0"],
+    &:empty {
+      display: none !important;
+    }
+  }
+
+  // ── Unreads header toggle (moved out of the tab row) ──────────────
+  &__unread-toggle {
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  &__unread-label {
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  &__toggle-track {
+    position: relative;
+    width: 34px;
+    height: 20px;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    background: var(--normal-bg-80, var(--overlay-bg-05));
+    transition: background-color 0.15s ease;
+  }
+
+  &__toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--gray-white, #fff);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s ease;
+  }
+
+  &__unread-toggle[data-state="1"] &__toggle-track {
+    background: var(--primary-40);
+  }
+
+  &__unread-toggle[data-state="1"] &__toggle-thumb {
+    transform: translateX(14px);
   }
 
   // ── Contact list ─────────────────────────────────────────────────

@@ -75,6 +75,18 @@
     overflow: visible;
   }
 
+  // While a workspace occupies the canvas the home grid is not just covered —
+  // it is REMOVED. It sits in a layer below headlessLayer, so during a
+  // workspace switch (old pane destroyed, new one fed) it was briefly the only
+  // thing painted and the old home screen flashed through.
+  //
+  // Driven by data-workspace, stamped in wm/index.js _syncHomeGrid across the
+  // whole transition. display:none also stops the grid doing layout and
+  // loading thumbnails for a screen nobody can see.
+  &__ui[data-workspace="1"] &__icons-list {
+    display: none !important;
+  }
+
   &__icons-list {
     display: flex;
     flex-direction: row;

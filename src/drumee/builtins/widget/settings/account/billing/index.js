@@ -77,6 +77,7 @@ class settings_billing extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    clearTimeout(this._motionTimer);
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
@@ -587,6 +588,37 @@ class settings_billing extends LetcBox {
   }
 
   /**
+   * Arm the entrance animations for the NEXT render pass only.
+   *
+   * Every surface on this page is rebuilt by a full feed(), and feed() runs on
+   * background events too — the catalog landing a few hundred ms after first
+   * paint, a payment.plan_updated WS message, the visibilitychange re-sync.
+   * Ungated, the cards would replay their entrance on each of those, seconds
+   * apart, with the user having done nothing. So motion is opt-in per render:
+   * the skeletons read _motion while they are BUILT (synchronously, in the
+   * same task as the feed() call that follows), and the timeout below clears
+   * it before any later render can see it. Armed only where a person actually
+   * changed what is on screen — first paint, a Monthly/Yearly switch, entering
+   * Checkout.
+   */
+  _armMotion() {
+    this._motion = true;
+    clearTimeout(this._motionTimer);
+    this._motionTimer = setTimeout(() => {
+      this._motion = false;
+    }, 0);
+  }
+
+  /**
+   * Class suffix the skeletons append to a container whose entrance should
+   * animate on this render.
+   * @returns {string} " is-anim" while a render is armed, "" otherwise
+   */
+  _motionClass() {
+    return this._motion ? " is-anim" : "";
+  }
+
+  /**
    * Re-initialize UI when DOM is refreshed
    */
   async onDomRefresh() {
@@ -599,6 +631,8 @@ class settings_billing extends LetcBox {
       this.state.currentTab = TAB_MONTHLY;
     }
     this.tab = this.state.currentTab;
+    // First paint is the one render nobody has to ask for — let it animate in.
+    this._armMotion();
     // Render immediately with Visitor.quota()'s cached plan/seats/storage and
     // the hardcoded fallback catalog prices — was two sequential awaited
     // fetches (catalog, then subscription) BEFORE the first feed(), so the
@@ -1568,6 +1602,9 @@ class settings_billing extends LetcBox {
           this.state.plansTab.cycle =
             posNum === TAB_MONTHLY ? "monthly" : "yearly";
           this.tab = posNum;
+          // Every price on screen is about to change: animate the cards back
+          // in so the switch reads as one movement instead of a hard cut.
+          this._armMotion();
           this.renderContent();
         }
       }
@@ -1892,6 +1929,7 @@ class settings_billing extends LetcBox {
         if (this.state.currentTab !== TAB_CHECKOUT) {
           this.state.currentTab = TAB_CHECKOUT;
           this.tab = TAB_CHECKOUT;
+          this._armMotion();
           this.renderContent();
         }
         return false;
@@ -1960,6 +1998,13 @@ class settings_billing extends LetcBox {
       case "resume-subscription":
         // Undo a scheduled cancellation.
         this._resumeSubscription();
+        return false;
+
+      // Footer contact card. Reuses the sales-led plans' own handler so the
+      // enquiry arrives identified and the no-mail-client fallback (the
+      // address in an alert) is the same one the Sovereign CTA already has.
+      case "contact-sales":
+        this._openSalesMail(LOCALE.ENTERPRISE || "enterprise");
         return false;
 
       case "manage-billing":

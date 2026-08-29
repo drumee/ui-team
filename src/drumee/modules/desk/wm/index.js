@@ -538,6 +538,15 @@ class __window_manager extends push {
       if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;
     }
+    // Hide the home grid for the WHOLE switch, starting now.
+    //
+    // __icons-list (the home workspace tiles) lives in a sibling layer BELOW
+    // headlessLayer, so it stays mounted behind an open workspace. Switching
+    // destroys the old pane and feeds a new one, and in that gap the old home
+    // screen flashed through. Stamping here — before the async media.attributes
+    // fetch, not in apply() — covers the entire transition. Cleared in
+    // reload(), which is the only path back to the home view.
+    this._syncHomeGrid(1);
     Desk.closeAllPanels();
     // The call survives a workspace switch now (it lives in the call layer, not
     // in the headlessLayer this method re-feeds) — park it in its corner tile so
@@ -1546,8 +1555,25 @@ class __window_manager extends push {
    *
    * @param {*} view
    */
+  /**
+   * Show or hide the home workspace-tile grid.
+   *
+   * A data flag rather than a CSS :has() on the headless pane: during a
+   * workspace SWITCH the pane is momentarily absent, and a structural selector
+   * would blink the grid back for exactly that frame — which is the flash this
+   * exists to remove.
+   *
+   * @param {0|1} open whether a workspace occupies the canvas
+   */
+  _syncHomeGrid(open) {
+    if (!this.el) return;
+    this.el.dataset.workspace = open ? "1" : "0";
+  }
+
   reload() {
     this._cleanupPartition();
+    // Back to the home view — the grid is the screen again.
+    this._syncHomeGrid(0);
     // Clear the per-workspace context so the topbar's + Add new button
     // reverts to the workspace creation flow on the home view.
     this._curWorkspace = null;

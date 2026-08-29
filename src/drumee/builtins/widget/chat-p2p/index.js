@@ -131,13 +131,45 @@ class __chat_p2p extends LetcBox {
   /**
    * Returns the API config for the contact list.
    */
+  /**
+   * The inbox list source, chosen by the active scope tab (Figma 43:32209).
+   *
+   * Direct Chat  → chat.chat_rooms with flag=contact — person-to-person rooms.
+   * Workspace chat → chat.share_rooms (group_chat_rooms) — the group rooms
+   *   that belong to workspaces rather than to a contact pair.
+   *
+   * Support keeps the direct query: a support conversation IS a contact room;
+   * that tab narrows it client-side in _applyFilter, exactly as before.
+   */
   getCurrentApi() {
+    if (this._roomScope === "workspace") {
+      return {
+        service: SERVICE.chat.share_rooms,
+        hub_id: Visitor.get(_a.id),
+      };
+    }
     return {
       service: SERVICE.chat.chat_rooms,
       flag: _a.contact,
       option: _a.active,
       hub_id: Visitor.get(_a.id),
     };
+  }
+
+  /**
+   * Switch the list SOURCE. Unlike the old filter tabs this is a refetch, not
+   * a show/hide — the two scopes come from different services. No-op when the
+   * scope is unchanged, so re-clicking the active tab doesn't refetch.
+   */
+  _setRoomScope(scope) {
+    const next = scope || "direct";
+    if (this._roomScope === next) return;
+    this._roomScope = next;
+    // Support narrows the direct list, so it shares that query.
+    this._activeFilter = next === "support" ? "support" : "all";
+    this.ensurePart("contact-list").then((list) => {
+      if (list && _.isFunction(list.restart)) list.restart();
+    });
   }
 
   /**
@@ -855,6 +887,26 @@ class __chat_p2p extends LetcBox {
         this.el.dataset.mview = "sidebar";
         break;
 
+      // Scope tabs (Figma 43:32209) — these switch the QUERY, see _setRoomScope.
+      case "filter-direct":
+        this._setRoomScope("direct");
+        break;
+
+      case "filter-workspace":
+        this._setRoomScope("workspace");
+        break;
+
+      // Unreads is now a header toggle rather than a tab, so it layers on top
+      // of whichever scope is showing instead of replacing it.
+      case "toggle-unreads":
+        this._unreadOnly = this._unreadOnly ? 0 : 1;
+        this.ensurePart("unread-toggle").then((p) => {
+          if (p && p.el) p.el.dataset.state = this._unreadOnly ? "1" : "0";
+        });
+        this._applyFilter();
+        break;
+
+      // Retained for callers outside the tab row (deep links, tests).
       case "filter-all":
         this._activeFilter = "all";
         this._applyFilter();
@@ -871,7 +923,10 @@ class __chat_p2p extends LetcBox {
         break;
 
       case "filter-support":
-        this._activeFilter = "support";
+        // A support room is a contact room, so this shares the direct query
+        // and narrows it in _applyFilter — but it is still a scope TAB, so it
+        // goes through _setRoomScope to keep the tab state coherent.
+        this._setRoomScope("support");
         this._applyFilter();
         break;
 
@@ -1093,9 +1148,18 @@ class __chat_p2p extends LetcBox {
     const list = this._contactList;
     if (!list || !list.children) return;
     const filter = this._activeFilter || "all";
+    // The Unreads header toggle layers on top of the scope tab: a row must
+    // satisfy BOTH to stay visible. Applied first so every branch below sees
+    // the same gate rather than each re-implementing it.
+    const unreadGate = (item) =>
+      !this._unreadOnly || ~~(item.mget("room_count") || 0) > 0;
     let visible = 0;
     list.children.forEach((item) => {
       if (!item.el) return;
+      if (!unreadGate(item)) {
+        item.el.style.display = "none";
+        return;
+      }
       if (filter === "all") {
         item.el.style.display = "";
         visible += 1;
@@ -1116,11 +1180,14 @@ class __chat_p2p extends LetcBox {
         if (show) visible += 1;
       }
     });
-    // Show "All read" only when the user is on the Unread tab and nothing
-    // matches (i.e. there ARE rooms, just none with unread messages).
+    // Show "All read" only while unread-only is in force and nothing matches
+    // (i.e. there ARE rooms, just none with unread messages). Now keyed on the
+    // header toggle as well as the retained 'unread' filter value, since the
+    // Unread tab became a toggle.
     if (this._allReadEmpty && this._allReadEmpty.el) {
+      const unreadMode = !!this._unreadOnly || filter === "unread";
       const showAllRead =
-        filter === "unread" && visible === 0 && list.children.length > 0;
+        unreadMode && visible === 0 && list.children.length > 0;
       this._allReadEmpty.el.dataset.state = showAllRead ? 1 : 0;
     }
   }

@@ -2853,8 +2853,8 @@
   "CAL_VIEW_WEEK": "Week",
   "CAL_VIEW_DAY": "Day",
   "CAL_FILTER_ALL": "All",
-  "CAL_FILTER_TASK": "Task only",
-  "CAL_FILTER_MEETING": "Meeting only",
+  "CAL_FILTER_TASK": "Task",
+  "CAL_FILTER_MEETING": "Meet",
   "CAL_NOTHING_SCHEDULED": "Nothing scheduled",
   "NEW_PERSONAL_TASK": "New personal task",
   "EDIT_PERSONAL_TASK": "Edit personal task",
@@ -2868,5 +2868,9 @@
   "CREATE_MEETING_SEND_INVITE": "Create meeting & send invite",
   "INVITE_LINK_READY": "Invite link ready",
   "PREVIOUS": "Previous",
-  "CREATE_CHILD_TASK": "Create child task items"
+  "CREATE_CHILD_TASK": "Create child task items",
+  "DIRECT_CHAT": "Direct Chat",
+  "WORKSPACE_CHAT": "Workspace chat",
+  "MEET": "Meet",
+  "ACCESS": "Access"
 }

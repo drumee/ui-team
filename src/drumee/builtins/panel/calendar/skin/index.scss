@@ -1,0 +1,1207 @@
+@use "mixins/drumee";
+
+// Personal Calendar — full-canvas screen in the desk's settings-main-slot.
+// Figma 58222:173474 (month), 58222:171611 (week), 58222:172317 (day).
+//
+// Colours come from the theme token set (router/skin/themes/*.scss), so light
+// and dark are both covered without a second rule anywhere in this file.
+// NOTE: `--primary-100` is defined TWICE in skin/vars/revamp.scss — the second
+// wins and is a pale lavender. `--primary-purple-100` is the dark navy, and is
+// what this file uses for ink.
+//
+// Box.Y / Box.X already set display:flex and the direction, so no rule here
+// sets either.
+
+.calendar-main {
+  // Chip / cell geometry in one place, so the three grids stay in step.
+  --cal-gap: 4px;
+  --cal-radius: 8px;
+  // 43:31159 gives a month row ~150px and lets it grow with its fullest cell.
+  --cal-cell-min: 140px;
+  --cal-hour-height: 56px;
+
+  &__ui {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    background: var(--normal-bg);
+  }
+
+  &__page {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 24px 24px 0;
+    gap: 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  // ── header ────────────────────────────────────────────────────────────────
+  &__header {
+    flex: 0 0 auto;
+    align-items: center;
+  }
+
+  &__title {
+    // 20px/600 per Figma 43:31159 — the page title sits just above the toolbar
+    // rather than acting as a display heading.
+    // font-weight explicit: drumee.typo()'s $weight is a no-op.
+    @include drumee.typo($size: 20px, $line: 24px, $color: var(--primary-purple-100));
+    font-weight: 600;
+  }
+
+  // ── toolbar ───────────────────────────────────────────────────────────────
+  &__toolbar {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  &__toolbar-left,
+  &__toolbar-right {
+    align-items: center;
+    gap: 12px;
+  }
+
+  // ‹ Today › reads as one filled pill in 43:31159 — a 5%-black ground with no
+  // border, not an outlined group.
+  &__nav {
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--overlay-bg-05);
+    border-radius: 999px;
+  }
+
+  &__nav-arrow {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+    border-radius: 50%;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg);
+    }
+  }
+
+  &__nav-today {
+    @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  // The range label owns a dropdown, so it needs its own positioning context.
+  &__range-picker {
+    position: relative;
+  }
+
+  &__range {
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+
+    &:hover,
+    &[data-open="1"] {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__range-label {
+    @include drumee.typo($size: 16px, $line: 22px, $color: var(--normal-fg));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__range-caret {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    color: var(--normal-fg);
+    transition: transform 0.15s ease-out;
+  }
+
+  &__range[data-open="1"] &__range-caret {
+    transform: rotate(180deg);
+  }
+
+  &__range-menu {
+    width: 232px;
+    gap: 8px;
+  }
+
+  &__range-year {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__range-year-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Four across, three down — the shape a month picker is read in. A wrapped
+  // Box.X rather than a grid: the framework owns `display` on Box-rendered
+  // elements, so setting `display: grid` here would fight it.
+  &__range-months {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__range-month {
+    flex: 0 0 calc(25% - 3px);
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    padding: 7px 0;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--radio-on-bg);
+    }
+
+    &[data-active="1"] {
+      background: var(--primary-40);
+      color: var(--gray-white);
+      font-weight: 600;
+    }
+  }
+
+  // view picker + New: both own a dropdown, so both need a positioning context
+  &__view-picker,
+  &__new {
+    position: relative;
+  }
+
+  &__view-button,
+  &__new-button {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  &__view-button {
+    background: var(--normal-bg-90);
+    color: var(--normal-fg);
+
+    &:hover,
+    &[data-open="1"] {
+      background: var(--normal-bg-80);
+    }
+  }
+
+  &__view-ico,
+  &__view-caret {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: currentColor;
+  }
+
+  &__view-caret {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.15s ease-out;
+  }
+
+  &__view-button[data-open="1"] &__view-caret {
+    transform: rotate(180deg);
+  }
+
+  &__view-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    font-weight: 400;
+  }
+
+  &__new-button {
+    background: var(--primary-50);
+    color: var(--gray-white);
+
+    &:hover {
+      background: var(--primary-40);
+    }
+  }
+
+  &__new-plus {
+    @include drumee.typo($size: 18px, $line: 18px, $color: inherit);
+    font-weight: 500;
+  }
+
+  &__new-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    font-weight: 600;
+  }
+
+  // shared dropdown for the view picker and the New menu
+  &__menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    min-width: 150px;
+    padding: 8px;
+    gap: 4px;
+    z-index: 40;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+
+    &[data-anchor="view"],
+    &[data-anchor="range"] {
+      left: 0;
+    }
+
+    // Anchored right: the New button sits at the far edge of the toolbar.
+    &[data-anchor="new"] {
+      right: 0;
+    }
+  }
+
+  &__menu-item {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--radio-on-bg);
+    }
+
+    &[data-active="1"] {
+      background: var(--radio-on-bg);
+      font-weight: 600;
+      color: var(--primary-40);
+    }
+  }
+
+  // segmented All / Task / Meet — 43:31159: 14px labels, the active pill on
+  // --primary-40 (#5950ff) inside an --normal-bg-90 (#f2f2f7) trough.
+  &__filter {
+    align-items: center;
+    padding: 4px;
+    gap: 2px;
+    background: var(--normal-bg-90);
+    border-radius: 12px;
+  }
+
+  &__filter-item {
+    @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg));
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--normal-fg);
+    }
+
+    &[data-active="1"] {
+      background: var(--primary-40);
+      color: var(--gray-white);
+      font-weight: 600;
+    }
+  }
+
+  // ── body / grid shell ─────────────────────────────────────────────────────
+  &__body {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  &__grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    // Cells draw right+bottom only, so the container supplies the top and left
+    // edges. Same 5%-black hairline as the cells — otherwise the frame reads
+    // heavier than the lines inside it.
+    border-top: 1px solid var(--overlay-bg-05);
+    border-left: 1px solid var(--overlay-bg-05);
+    overflow: auto;
+  }
+
+  &__empty {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    height: fit-content;
+    width: fit-content;
+    pointer-events: none;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-50));
+  }
+
+  // ── month grid ────────────────────────────────────────────────────────────
+  &__weekdays {
+    flex: 0 0 auto;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--normal-bg);
+    // Doubles as the grid's top rule, so it matches the cell hairline.
+    border-bottom: 1px solid var(--overlay-bg-05);
+  }
+
+  &__weekday {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 12px;
+    text-align: center;
+    @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg-20));
+    font-weight: 400;
+  }
+
+  &__month {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  &__week-row {
+    flex: 1 1 0;
+    min-height: var(--cal-cell-min);
+    align-items: stretch;
+  }
+
+  &__day {
+    flex: 1 1 0;
+    min-width: 0;
+    // 43:31159: 12px cell padding, 10px between the head and the chip stack,
+    // and a 5%-black hairline rather than the heavier --border-default.
+    padding: 12px;
+    gap: 10px;
+    border-right: 1px solid var(--overlay-bg-05);
+    border-bottom: 1px solid var(--overlay-bg-05);
+    overflow: hidden;
+
+    // 43:31159 does NOT dim the lead/trail days — every cell is the same white
+    // ground with the same --normal-fg-20 label, and the month boundary is
+    // carried entirely by the "Jun 1" / "Jul 1" abbreviation the 1st renders
+    // (see month.js numText). data-outside is still emitted, so restoring a
+    // dimmed treatment is a style-only change if the frame turns out to be
+    // wrong about this.
+
+    // Today's column tinted brand, per the frames.
+    &[data-today="1"] {
+      background: var(--radio-on-bg);
+    }
+
+    &:hover .calendar-main__day-add {
+      opacity: 1;
+    }
+  }
+
+  &__day-head {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  // Right-aligned, 14px/400 in --normal-fg-20 — the date is a label on the
+  // cell, not a heading for it.
+  &__day-num {
+    @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg-20));
+    font-weight: 400;
+    margin-left: auto;
+  }
+
+  &__day-add {
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease-out;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__day-add-ico {
+    @include drumee.typo($size: 15px, $line: 15px, $color: var(--normal-fg-20));
+  }
+
+  &__day-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: var(--cal-gap);
+    overflow: hidden;
+  }
+
+  &__day-more {
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
+    font-weight: 600;
+    padding-left: 4px;
+    cursor: pointer;
+  }
+
+  // ── chips ─────────────────────────────────────────────────────────────────
+  &__chip {
+    flex: 0 0 auto;
+    position: relative;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 7px;
+    border-radius: 6px;
+    min-width: 0;
+    overflow: hidden;
+    cursor: default;
+
+    // A folder-owned chip is read-only from the Calendar (decision C-10) —
+    // the cursor is the only affordance saying so, until the quick-preview
+    // frames land.
+    &[data-writable="1"] {
+      cursor: pointer;
+    }
+
+    // 43:31159 gives the two kinds deliberately different silhouettes:
+    //
+    //   task    — a white card, hairline border, evenly rounded. Reads as an
+    //             object that sits on the day.
+    //   meeting — a 10% brand wash with a 4px brand bar down the left and the
+    //             left corners squared off, so the bar runs the full height.
+    //             Reads as a span of time anchored to the left edge.
+    &[data-kind="task"] {
+      background: var(--normal-bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    &[data-kind="meeting"] {
+      background: var(--radio-on-bg);
+      border-left: 4px solid var(--primary-40);
+      border-radius: 0 8px 8px 0;
+      padding: 4px 12px;
+    }
+
+    &[data-occurrence="1"] {
+      // A generated occurrence is not its own record.
+      opacity: 0.85;
+    }
+
+    &:hover .calendar-main__chip-remove {
+      opacity: 1;
+    }
+  }
+
+  &__chip-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  // The time sits in body ink at regular weight — the bold belongs to the
+  // title beside it, so the eye lands on what the item IS before when it is.
+  &__chip-time {
+    flex: 0 0 auto;
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg));
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__chip-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg));
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+
+  // Provenance pill (decision C-04). Truncates the title before itself: in an
+  // aggregated calendar, WHERE an item lives matters more than the rest of a
+  // long name.
+  &__chip-origin {
+    flex: 0 0 auto;
+    max-width: 84px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20));
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &[data-scope="folder"] {
+      background: var(--normal-bg-80);
+      color: var(--normal-fg-20);
+    }
+
+    &[data-scope="personal"] {
+      background: var(--primary-40);
+      color: var(--gray-white);
+    }
+  }
+
+  &__chip-desc {
+    @include drumee.typo($size: 11px, $line: 15px, $color: var(--normal-fg-20));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+  }
+
+  &__chip-status {
+    align-items: center;
+    gap: 4px;
+    margin-top: auto;
+  }
+
+  &__chip-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  &__chip-status-label {
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20));
+    font-weight: 500;
+  }
+
+  &__chip-remove {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    color: var(--normal-fg-20);
+    background: var(--normal-bg-elevated);
+    transition: opacity 0.12s ease-out;
+
+    &:hover {
+      color: var(--signal-error, #d74e49);
+    }
+  }
+
+  // ── hour canvas (week + day) ───────────────────────────────────────────────
+  &__hours-head {
+    flex: 0 0 auto;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--normal-bg);
+    border-bottom: 1px solid var(--border-default);
+    align-items: stretch;
+  }
+
+  &__hours-head-spacer {
+    flex: 0 0 64px;
+    border-right: 1px solid var(--border-default);
+  }
+
+  &__hours-head-cell {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px;
+    gap: 6px;
+    border-right: 1px solid var(--border-default);
+
+    &[data-today="1"] {
+      background: var(--radio-on-bg);
+    }
+  }
+
+  &__hours-head-date {
+    align-items: baseline;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  &__hours-head-num {
+    @include drumee.typo($size: 18px, $line: 22px, $color: var(--normal-fg));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__hours-head-name {
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+  }
+
+  // All-day strip. Tasks live here rather than at an invented hour: due_date
+  // carries no time (see skeleton/hours.js).
+  &__allday {
+    gap: var(--cal-gap);
+  }
+
+  &__hours-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  &__hours-gutter {
+    flex: 0 0 64px;
+    border-right: 1px solid var(--border-default);
+  }
+
+  &__hour-label {
+    flex: 0 0 var(--cal-hour-height);
+    height: var(--cal-hour-height);
+    padding: 2px 8px;
+    align-items: flex-end;
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-50));
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__hours-col {
+    flex: 1 1 0;
+    min-width: 0;
+    position: relative;
+    border-right: 1px solid var(--border-default);
+
+    &[data-today="1"] {
+      background: var(--radio-on-bg);
+    }
+  }
+
+  &__hour-rules {
+    flex: 1 1 auto;
+  }
+
+  &__hour-rule {
+    flex: 0 0 var(--cal-hour-height);
+    height: var(--cal-hour-height);
+    border-bottom: 1px solid var(--border-muted);
+
+    // Dashed half-hour line, per the frames.
+    background-image: linear-gradient(
+      to bottom,
+      transparent calc(50% - 1px),
+      var(--border-muted) calc(50%),
+      transparent calc(50% + 1px)
+    );
+  }
+
+  // Timed blocks sit over the rules. Geometry (top/height/left/width) is inline
+  // because it is data — see skeleton/hours.js.
+  &__hour-blocks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__hour-blocks > .calendar-main__chip {
+    position: absolute;
+    pointer-events: auto;
+    align-items: flex-start;
+    box-sizing: border-box;
+    // Hairline gutter so adjacent concurrent blocks read as separate.
+    margin-right: 2px;
+    overflow: hidden;
+  }
+
+  // ── modal ─────────────────────────────────────────────────────────────────
+  &__modal-wrapper {
+    position: fixed;
+    inset: 0;
+    // Matches settings_main's overlay so the desk's slot lift (which keys on
+    // data-state="open") puts the backdrop over the sidebar too.
+    z-index: 20000;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+
+    &[data-state="open"] {
+      pointer-events: auto;
+      background: var(--overlay-bg);
+    }
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__modal {
+    width: 400px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 64px);
+    padding: 20px;
+    gap: 16px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    background: var(--normal-bg-elevated);
+    // 22px, per the prototype spec's modal radius.
+    border-radius: 22px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+
+    &[data-form="meeting"] {
+      width: 440px;
+    }
+  }
+
+  &__modal-head {
+    flex: 0 0 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__modal-title {
+    @include drumee.typo($size: 20px, $line: 26px, $color: var(--primary-purple-100));
+    font-weight: 600;
+  }
+
+  &__modal-close {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg);
+    }
+  }
+
+  &__modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 16px;
+  }
+
+  &__modal-foot {
+    flex: 0 0 auto;
+    gap: 10px;
+    align-items: center;
+
+    // Edit mode pairs Delete with Update; create has a single full-width CTA.
+    &[data-mode="edit"] > * {
+      flex: 1 1 0;
+    }
+  }
+
+  &__field {
+    gap: 6px;
+  }
+
+  &__field-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 600;
+  }
+
+  &__input,
+  &__textarea,
+  &__date-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--normal-bg-90);
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    &:focus-within {
+      border-color: var(--active-border);
+      background: var(--normal-bg);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 0;
+      background: transparent;
+      outline: none;
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+  }
+
+  // ── pills (status / priority) ─────────────────────────────────────────────
+  &__pills {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__pill {
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    background: var(--normal-bg);
+
+    &:hover {
+      border-color: var(--hover-border-40);
+    }
+
+    &[data-active="1"] {
+      background: var(--radio-on-bg);
+      border-color: var(--radio-on-border);
+
+      .calendar-main__pill-label {
+        font-weight: 600;
+        color: var(--primary-40);
+      }
+    }
+  }
+
+  &__pill-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__pill-label {
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+    white-space: nowrap;
+  }
+
+  // ── time pickers ──────────────────────────────────────────────────────────
+  &__time-row {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  &__time-arrow {
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--normal-fg-50));
+    align-self: center;
+    padding-top: 18px;
+  }
+
+  &__time {
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  &__time-part {
+    gap: 2px;
+    width: 48px;
+  }
+
+  &__time-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--normal-bg-90);
+    border-radius: 6px;
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 6px;
+      border: 0;
+      background: transparent;
+      outline: none;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      @include drumee.typo($size: 14px, $line: 18px, $color: var(--normal-fg));
+      font-family: inherit;
+    }
+  }
+
+  &__time-caption {
+    text-align: center;
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-50));
+  }
+
+  &__time-colon {
+    @include drumee.typo($size: 14px, $line: 18px, $color: var(--normal-fg-20));
+    padding-top: 8px;
+  }
+
+  &__meridiem {
+    gap: 2px;
+  }
+
+  &__meridiem-item {
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid transparent;
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+
+    &[data-active="1"] {
+      border-color: var(--radio-on-border);
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
+      font-weight: 600;
+    }
+  }
+
+  // ── invite block (mirrors the secure-share panel) ──────────────────────────
+  &__invite {
+    gap: 10px;
+  }
+
+  &__invite-group {
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  &__toggle-row {
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__toggle-ico {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-20);
+  }
+
+  &__toggle-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 1px;
+  }
+
+  &__toggle-label {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    font-weight: 500;
+  }
+
+  &__toggle-hint {
+    @include drumee.typo($size: 11px, $line: 15px, $color: var(--normal-fg-50));
+  }
+
+  &__checkbox {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid var(--border-strong);
+    box-sizing: border-box;
+    position: relative;
+
+    &[data-checked="1"] {
+      background: var(--primary-40);
+      border-color: var(--primary-40);
+
+      // Tick drawn in CSS: a sprite <use> cannot be recoloured across the
+      // symbol boundary here.
+      &::after {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 2px;
+        width: 5px;
+        height: 9px;
+        border-right: 2px solid var(--gray-white);
+        border-bottom: 2px solid var(--gray-white);
+        transform: rotate(45deg);
+      }
+    }
+  }
+
+  &__invite-sub {
+    padding: 0 12px 12px;
+    gap: 8px;
+    border-top: 1px solid var(--border-muted);
+  }
+
+  &__switch-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 10px;
+    cursor: pointer;
+  }
+
+  &__switch-label {
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+  }
+
+  &__switch {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--normal-bg-40);
+    position: relative;
+    transition: background 0.15s ease-out;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--gray-white);
+      transition: transform 0.15s ease-out;
+    }
+
+    &[data-on="1"] {
+      background: var(--primary-40);
+
+      &::after {
+        transform: translateX(16px);
+      }
+    }
+  }
+
+  &__recipients {
+    gap: 8px;
+  }
+
+  &__chips {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  &__email-chip {
+    align-items: center;
+    gap: 4px;
+    padding: 3px 4px 3px 8px;
+    border-radius: 999px;
+    background: var(--normal-bg-80);
+    max-width: 100%;
+  }
+
+  &__email-chip-text {
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__email-chip-remove {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    &:hover {
+      color: var(--signal-error, #d74e49);
+    }
+  }
+
+  // ── invite link ready ─────────────────────────────────────────────────────
+  &__link-row {
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+    cursor: pointer;
+  }
+
+  &__link-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__link-copy {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: var(--primary-40);
+  }
+
+  // ── buttons ───────────────────────────────────────────────────────────────
+  &__button {
+    flex: 1 1 auto;
+    padding: 12px 16px;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--gray-white));
+    font-weight: 600;
+
+    &--primary {
+      background: var(--primary-50);
+
+      &:hover {
+        background: var(--primary-40);
+      }
+    }
+
+    &--danger {
+      background: var(--signal-error, #d74e49);
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+  }
+
+  // ── narrow widths ─────────────────────────────────────────────────────────
+  // Desktop-only for this sprint (decision §3), but the month grid is unusable
+  // below ~700px, so a narrow viewport gets the Day view rather than a broken
+  // one. The widget stamps nothing here: this only hides the two view options
+  // that cannot render, so a user who lands in month mode still sees a usable
+  // screen instead of seven 40px columns.
+  @media (max-width: 700px) {
+    &__page {
+      padding: 16px 12px 0;
+    }
+
+    &__title {
+      @include drumee.typo($size: 22px, $line: 1.15em, $color: var(--primary-purple-100));
+      font-weight: 600;
+    }
+
+    &__toolbar-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    &__grid {
+      overflow-x: auto;
+    }
+
+    &__month {
+      min-width: 640px;
+    }
+
+    &__hours-head,
+    &__hours-body {
+      min-width: 640px;
+    }
+  }
+}

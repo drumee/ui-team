@@ -488,7 +488,11 @@ function billing_content(ui, cycle = "monthly") {
       // revealed this layout also forced `display: flex !important`; removing
       // that query took the flex context with it.
       Skeletons.Box.X({
-        className: `${fig}-narrow`,
+        // is-anim (settings_billing._motionClass) is added only for a render
+        // a person asked for — first paint, or a Monthly/Yearly switch. The
+        // stagger and the price roll hang off it, so the background re-syncs
+        // that re-feed this same row repaint it silently.
+        className: `${fig}-narrow${ui._motionClass ? ui._motionClass() : ""}`,
         kids: [
           item(ui, "free", options.free),
           item(ui, "pro", options.pro),

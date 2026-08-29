@@ -211,13 +211,71 @@
     // the pane overflows right and its top-right icons get clipped. Headless
     // panes aren't draggable/resizable (interact base returns early), so the
     // `!important` overrides of the inline geometry are safe.
+    // 43:23955: the workspace ("file space") is a rounded CARD, not a
+    // full-bleed region — 992x1026 at x=80 with r=8 and a 5%-black hairline,
+    // sitting in the canvas's 8px gutter next to the rail. It used to flatten
+    // its corners here precisely because it WAS full-bleed; the frame says
+    // otherwise, and the desk now supplies the gutter (skin/index.scss
+    // __main / __wm-container).
+    //
+    // The 100%/!important geometry stays: the pane still fills whatever box
+    // the layer gives it, and that box is now inset by the canvas padding.
+    // 43:23955 puts the workspace ("file space", 992x1026 at x=80) and the
+    // chat panel (512x1026 at x=1080) side by side as SIBLING cards with an
+    // 8px gutter — not two flush columns inside one container. So the headless
+    // pane is the ROW: transparent and unrounded, with the cards on its two
+    // children (.window__files-panel / .window__chat-panel below).
     &[data-headless="1"] {
       border-radius: 0;
+      border: none;
+      background-color: transparent;
       box-shadow: none;
       left: 0 !important;
+
+      // The shared popup surface (window/skin/group/body/main.scss
+      // `.window__main`) paints --normal-bg-90 with a border and radius —
+      // right for a real popup window, wrong for the workspace row.
+      //
+      // It gets the CANVAS colour rather than `transparent`, and that matters:
+      // the window manager still renders the desk home grid in the layer BELOW
+      // this pane, so a transparent row let those workspace/folder tiles show
+      // through the 8px gutter between the two cards. Painting the row white
+      // both matches the frame (the gutter is white canvas there) and occludes
+      // the grid behind it.
+      .window-folder__main,
+      .window__main {
+        background-color: var(--normal-bg);
+        border: none;
+        border-radius: 0;
+      }
       top: 0 !important;
       width: 100% !important;
       height: 100% !important;
+
+      // 43:23955's content frame carries 12px padding, and the toolbar and the
+      // file grid share that left edge — the filter tabs and the "Folders"
+      // heading both start 12px inside the card. The shared grid rule uses
+      // 24px, which is right for a popup window but left the grid indented
+      // past the toolbar here. Scoped to the workspace pane so real popups
+      // keep their own spacing.
+      .window__icons-list .smart-container {
+        padding: 12px;
+      }
+
+      // Gutter between the two cards. DESCENDANT, not `>`: data-headless is
+      // stamped on the widget ROOT (.window-folder__ui) while split-body is a
+      // grandchild (__ui > __main > __split-body), so a child combinator
+      // matched nothing and the panels stayed flush.
+      //
+      // 4px, not the canvas's 8px. The frame uses 8px here too, but both cards
+      // carry 12px of inner padding, so an 8px gutter reads far wider than the
+      // rail-to-workspace gap where only one side is padded. Half it so the
+      // two gutters look equal, which is what the frame looks like even though
+      // the numbers differ.
+      .window-folder__split-body,
+      .window__split-body {
+        gap: 4px;
+      }
     }
   }
 
@@ -2382,7 +2440,12 @@
   &__split-body {
     grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 360px);
     height: 100%;
-    background: var(--normal-bg-90);
+    // Transparent: this is the ROW that holds the two cards, and in 43:23955
+    // the 8px gutter between them shows the white canvas. A grey ground here
+    // painted the gutter — and everything behind the cards — the wrong colour,
+    // which is what made the file space read as a different shade than the
+    // frame. The cards carry their own fills (white / #F2F2F7).
+    background: transparent;
 
     .tasks-panel__ui {
       display: none;
@@ -2497,9 +2560,13 @@
     max-width: 380px;
   }
 
+  // Card, per 43:23955: r=8 with a 5%-black hairline on white. It was square
+  // and grey because it used to butt against the chat column.
   .window__files-panel {
-    border-radius: 0;
-    background: var(--normal-bg-90);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--normal-bg-elevated, #fff);
+    overflow: hidden;
   }
 
   // The New cascade now starts inside the Files column. Lift that column above
@@ -2519,18 +2586,93 @@
     min-height: 0;
   }
 
+  // Card too — #F2F2F7 in the frame, which is exactly --normal-bg-90. The
+  // border-left divider goes: the 8px gutter separates the two cards now, so a
+  // divider on top of it reads as a seam.
   .window__chat-panel {
-    border-left: 1px solid var(--border-muted);
-    border-radius: 0;
+    border-left: none;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
     background: var(--normal-bg-90);
+    overflow: hidden;
   }
 
+  // ── Workspace toolbar search (43:23955) ───────────────────────────────────
+  // 245x36 white pill, r=12, 5%-black hairline, 12px padding, 8px between the
+  // glyph and the field. Built by fileFilterControls from the desk's own
+  // search builder, so it carries the window-folder-topbar__* prefix rather
+  // than the desk's — these rules are the folder-side half of that move.
+  &-topbar__search-container {
+    position: relative;
+    flex: 0 1 245px;
+    min-width: 160px;
+    max-width: 245px;
+  }
+
+  &-topbar__search-bar {
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  &-topbar__search-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: var(--normal-fg);
+  }
+
+  &-topbar__search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      line-height: 17px;
+      color: var(--normal-fg);
+    }
+  }
+
+  // Suggestions hang below the field, over the file grid.
+  &-topbar__search-suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 120;
+    max-height: 60vh;
+    overflow: auto;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+    &[data-state="0"] {
+      display: none !important;
+    }
+  }
+
+  // 43:23955: the workspace toolbar sits on the file card's own WHITE ground
+  // with no divider — the filter tabs and the search/New group are the only
+  // painted things on it. It was a grey band with a bottom rule, which read as
+  // a second chrome strip under the top bar and made the file space look a
+  // different colour from the frame.
   &__filter-bar {
     align-items: center;
     gap: 24px;
-    padding: 8px 24px 8.5px;
-    border-bottom: 1px solid var(--border-default, #d1d1d6);
-    background: var(--normal-bg-90);
+    padding: 12px;
+    border-bottom: none;
+    background: transparent;
   }
 
   &__filter-tab-main {

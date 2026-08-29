@@ -375,7 +375,27 @@ module.exports = function (ui) {
     uiHandler: ui,
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),
-      Skeletons.Note({ className: `${pfx}__time`, content: timeAgo(data.timestamp || data.ctime || preview.ctime) }),
+      // Second line, per Figma 43:29418: an indigo workspace chip followed by
+      // the timestamp — "Folder-name · 2 minutes ago". The chip only renders
+      // when the row actually names a workspace; rows that do not (a plan
+      // change, a contact request) keep the bare timestamp rather than an
+      // empty pill.
+      Skeletons.Box.X({
+        className: `${pfx}__meta`,
+        kidsOpt: { active: 0 },
+        kids: [
+          data.hub_name
+            ? Skeletons.Note({
+                className: `${pfx}__origin`,
+                content: data.hub_name,
+              })
+            : null,
+          Skeletons.Note({
+            className: `${pfx}__time`,
+            content: timeAgo(data.timestamp || data.ctime || preview.ctime),
+          }),
+        ].filter(Boolean),
+      }),
     ],
   });
 

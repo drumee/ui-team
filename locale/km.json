@@ -2685,8 +2685,8 @@
   "CAL_VIEW_WEEK": "សប្តាហ៍",
   "CAL_VIEW_DAY": "ថ្ងៃ",
   "CAL_FILTER_ALL": "ទាំងអស់",
-  "CAL_FILTER_TASK": "កិច្ចការតែប៉ុណ្ណោះ",
-  "CAL_FILTER_MEETING": "ការប្រជុំតែប៉ុណ្ណោះ",
+  "CAL_FILTER_TASK": "កិច្ចការ",
+  "CAL_FILTER_MEETING": "ការប្រជុំ",
   "CAL_NOTHING_SCHEDULED": "គ្មានកម្មវិធីកំណត់",
   "NEW_PERSONAL_TASK": "កិច្ចការផ្ទាល់ខ្លួនថ្មី",
   "EDIT_PERSONAL_TASK": "កែកិច្ចការផ្ទាល់ខ្លួន",
@@ -2700,5 +2700,9 @@
   "CREATE_MEETING_SEND_INVITE": "បង្កើតការប្រជុំ និងផ្ញើការអញ្ជើញ",
   "INVITE_LINK_READY": "តំណអញ្ជើញរួចរាល់",
   "PREVIOUS": "មុន",
-  "CREATE_CHILD_TASK": "បង្កើតកិច្ចការរង"
+  "CREATE_CHILD_TASK": "បង្កើតកិច្ចការរង",
+  "DIRECT_CHAT": "ជជែកផ្ទាល់",
+  "WORKSPACE_CHAT": "ជជែកកន្លែងធ្វើការ",
+  "MEET": "ប្រជុំ",
+  "ACCESS": "ការចូលប្រើ"
 }

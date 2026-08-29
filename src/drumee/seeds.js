@@ -8,6 +8,11 @@ module.exports = {
   panel_activity_item: function () {
     return import("./builtins/panel/activity/item");
   },
+  // Personal Calendar — full-canvas screen, mounted by the desk into
+  // settings-main-slot (the slot Settings / Get help / Billing already share).
+  calendar_main: function () {
+    return import("./builtins/panel/calendar");
+  },
   addressbook_widget_notification: function () {
     return import("./builtins/window/addressbook/widget/notification");
   },

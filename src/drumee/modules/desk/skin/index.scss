@@ -26,10 +26,31 @@ html {
     background-color: var(--normal-bg);
   }
 
+  // 43:23955 lays the desk out as a padded CANVAS of rounded panels, not as
+  // full-bleed columns: the root frame carries 8px padding all round and 8px
+  // gutters between the rail, the workspace and the chat panel (the rail ends
+  // at x=72, the workspace starts at x=80). Each panel is r=8 with a
+  // 5%-black hairline.
+  //
+  // Desktop only — the mobile drawer overlays instead of sitting in the row,
+  // and the phone layout has no gutters.
   &__main {
     background-color: var(--normal-bg);
     max-height: 100vh;
     overflow: auto;
+
+    &:not([data-device="mobile"]) {
+      // Padding only. NO gap here: __main is a Box.Y wrapping a single child
+      // (__body), so a gap on it is vertical and never separated the rail from
+      // the workspace. The horizontal row is __body — see below.
+      padding: 8px;
+      box-sizing: border-box;
+      // A DEFINITE height, not just max-height: the panels inside are sized
+      // height:100% so they fit the padded content box. Without it they fall
+      // back to 100vh and overrun the 8px bottom inset, which pushed the
+      // rail's rounded bottom corners off-screen.
+      height: 100vh;
+    }
   }
 
   &__panel-container {
@@ -59,10 +80,11 @@ html {
     // Belt to the display brace, and the part that does NOT depend on browser
     // support: a fixed 300x180 box at z 20002 pinned to the corner swallows
     // every click landing there, so the CONTAINER must never intercept pointer
-    // input. Only real docked content opts back in (see `> *` below). Without
-    // this, anything that reveals the dock silently kills clicks in that corner
-    // — which is how this surfaced: it took out the task modal's Update button,
-    // and both buttons once that modal was zoomed full-screen.
+    // input at all. Only real docked content opts back in (see `> *` below).
+    // Without this, anything that reveals the dock — an unsupported :has(), a
+    // stray child, a future regression — silently kills clicks in that corner,
+    // which is exactly how this reached us: it took out the task modal's
+    // Update button, and both buttons once the modal was zoomed full-screen.
     pointer-events: none;
     position: fixed;
     right: 24px;
@@ -73,11 +95,14 @@ html {
     height: 180px;
 
     // Shown only while it actually holds the call.
+    //
     // NOT `:not(:empty)`: ui-core renders a `widget-blank` placeholder as the
     // emptyView of every empty collection (addons/marionette/collection-view
     // -> KIND.blank), so this Box.X is NEVER :empty in the DOM even with no
-    // call parked. The reveal rule therefore always matched, un-hiding the box
-    // permanently. Test for a REAL child, not merely any child.
+    // call parked. That made the reveal rule always match, which un-hid the
+    // 300x180 fixed box at z 20002 in the bottom-right corner and swallowed
+    // every click landing there — the exact failure the comment above warns
+    // about. Test for a REAL child instead of merely any child.
     &:has(> :not(.widget-blank)) {
       display: flex !important;
     }
@@ -175,7 +200,19 @@ html {
   }
 
   &__body {
-    height: 100vh;
+    // 100% of the padded canvas, not 100vh — see __main above.
+    height: 100%;
+
+    // The 8px gutter between the rail and the workspace (43:23955: the rail
+    // ends at x=72, the workspace card starts at x=80).
+    //
+    // A margin on __right-side rather than `gap` on this row: __body also
+    // holds the two zero-width __panel-container anchors, and a gap would add
+    // 8px on BOTH sides of each of them — 16px between the rail and the
+    // workspace, plus stray space around the slide-out anchors.
+    &:not([data-device="mobile"]) > .desk-module__right-side {
+      margin-left: 8px;
+    }
     // Right-side slide-out panels (chat-p2p, address-book) park themselves
     // at `right: -880px` / `-720px` while closed. Without clipping here,
     // those off-screen panels widen the document and __main's
@@ -187,6 +224,26 @@ html {
     flex-grow: 1;
     background-color: var(--normal-bg-100);
     overflow: hidden;
+  }
+
+  // Frame 1 stacks top-bar then body with an 8px gap.
+  &__right-side {
+    gap: 8px;
+  }
+
+  // The top bar hosts two dropdowns — the workspace switcher and the avatar
+  // menu — and both hang BELOW its 46px box, over the workspace beneath.
+  // So it must not clip, and it must paint above the window-manager layer:
+  // anything that clips or under-stacks here makes a menu "not open" when it
+  // is in fact open and invisible.
+  //
+  // 10003 sits just above the sidebar (10002) and the slide-out panels
+  // (10001), and well below the full-page slot (20001), which should still
+  // cover the bar.
+  &__topbar {
+    position: relative;
+    z-index: 10003;
+    overflow: visible;
   }
 
   // Desktop top bar is replaced by __mobile-topbar on mobile.
@@ -247,11 +304,14 @@ html {
     transform: translateX(167px);
   }
 
+  // The workspace row: the pane and any docked panel beside it are separate
+  // cards, so they need the same 8px gutter the outer canvas uses.
   &__wm-container {
     width: 100%;
     height: 100%;
     position: relative;
     overflow: visible;
+    gap: 8px;
   }
 
   &__settings-main-slot {

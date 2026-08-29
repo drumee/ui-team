@@ -2685,8 +2685,8 @@
   "CAL_VIEW_WEEK": "周",
   "CAL_VIEW_DAY": "日",
   "CAL_FILTER_ALL": "全部",
-  "CAL_FILTER_TASK": "仅任务",
-  "CAL_FILTER_MEETING": "仅会议",
+  "CAL_FILTER_TASK": "任务",
+  "CAL_FILTER_MEETING": "会议",
   "CAL_NOTHING_SCHEDULED": "暂无安排",
   "NEW_PERSONAL_TASK": "新建个人任务",
   "EDIT_PERSONAL_TASK": "编辑个人任务",
@@ -2700,5 +2700,9 @@
   "CREATE_MEETING_SEND_INVITE": "创建会议并发送邀请",
   "INVITE_LINK_READY": "邀请链接已就绪",
   "PREVIOUS": "上一个",
-  "CREATE_CHILD_TASK": "创建子任务项"
+  "CREATE_CHILD_TASK": "创建子任务项",
+  "DIRECT_CHAT": "私聊",
+  "WORKSPACE_CHAT": "工作区聊天",
+  "MEET": "会议",
+  "ACCESS": "访问权限"
 }

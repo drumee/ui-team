@@ -1,15 +1,26 @@
 @use "mixins/drumee";
 
 .desk-module-topbar {
+  // 43:23955: the top bar is a 30px row, TRANSPARENT, with r=8 and no bottom
+  // border — it floats on the white canvas alongside the other rounded panels
+  // rather than being a filled chrome strip.
+  //
+  // Height matters for more than looks: at 44px with 8px vertical padding the
+  // content box was 28px, while every control in it (icon buttons, avatar,
+  // switcher, New) is 30px. The row had to overflow its own line box, which is
+  // what made the icons look off-line. 46px keeps the 30px content box the
+  // controls actually need, with the 8px inset above and below.
   &__main {
     width: 100%;
-    height: 44px;
+    height: 46px;
+    min-height: 46px;
     box-sizing: border-box;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 24px;
-    background-color: var(--normal-bg-90);
-    border-bottom: 1px solid var(--border-muted);
+    padding: 8px 16px;
+    background-color: transparent;
+    border-bottom: none;
+    border-radius: 8px;
   }
 
   &__logo {
@@ -53,17 +64,36 @@
     gap: 20px;
     min-width: 0;
     flex: 0 1 auto;
-    overflow: hidden;
+    // MUST be visible: the workspace switcher lives in this cluster and its
+    // dropdown is absolutely positioned BELOW the 46px bar, so `hidden` here
+    // clipped the panel away entirely — the menu was opening, there was just
+    // nothing left to see. The clipping was here to stop a long breadcrumb
+    // widening the bar; that job moves to the breadcrumb itself below.
+    overflow: visible;
+    // __main is space-between and now has THREE children (left, actions,
+    // utility). Without this the actions cluster is stranded mid-bar; the auto
+    // margin absorbs the slack so actions and utility pack together on the
+    // right, as in 43:23955.
+    margin-right: auto;
 
+    // Takes over the truncation the cluster's overflow:hidden used to do.
     .desk-breadcrumb__ui {
       flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
     }
   }
 
   // Chrome-style folder tabs — sit immediately right of the home
   // breadcrumb. One tab per open folder window. data-state="1" = visible;
   // data-state="0" = minimized. Empty until at least one folder opens.
+  // Chrome-style folder tabs. The new shell (Figma 43:23955) has no tab strip
+  // — a workspace fills the canvas and subfolders navigate INSIDE it, so a
+  // per-window tab has nothing to represent. Hidden rather than removed: the
+  // desk still renders tabs for any window opened explicitly ("Open in
+  // Window"), and that path is not being deleted in this pass.
   &__folder-tabs {
+    display: none !important;
     align-items: center;
     gap: 4px;
     flex: 0 1 auto;
@@ -980,6 +1010,462 @@
       color: var(--white);
     }
   }
+
+  // ── Utility icon cluster (Figma 43:23955) ─────────────────────────────────
+  // Notifications / Calendar / Inbox / Contacts / Trash / Admin, top-right.
+  // A SIBLING of __actions-cluster, so it survives that cluster's
+  // data-state="0" display:none on the full-canvas screens.
+  // 43:23955: six 30x30 buttons with NO gap (they sit edge to edge at 30px
+  // pitch), then a 4px gap before the 30px avatar.
+  &__utility-cluster {
+    align-items: center;
+    gap: 0;
+    height: 30px;
+    padding-left: 12px;
+    flex: 0 0 auto;
+    // The tooltip hangs outside the bar; a clipped cluster would cut it off.
+    overflow: visible;
+  }
+
+  &__utility-btn {
+    position: relative; // anchor for the absolute tooltip (&__utility-tip)
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    // Box.X is a flex row; without this a 30px-tall button in a taller line
+    // box gets stretched by align-items:stretch and the glyphs stop sharing a
+    // baseline with their neighbours.
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: visible;
+    color: var(--normal-fg-20);
+
+    &:hover {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg);
+    }
+
+    // The radio group marks the open panel's icon.
+    &[data-state="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
+    }
+  }
+
+  &__utility-ico {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    color: currentColor;
+    pointer-events: none;
+  }
+
+  // Unread marker: a 6px dot rather than a number — the design shows presence,
+  // not a count, and the rail badge already carries the figure.
+  // ── Workspace switcher (Figma 48:36522) ───────────────────────────────────
+  // Carries workspace switching now that the rail no longer lists workspaces.
+  // Mirrors the __add-wrapper contract below: Skeletons.Menu renders
+  // .menu-topic > .menu-trigger + .menu-topic-items__wrapper > .menu-topic-items,
+  // and the FED `items:` box is a CHILD of that surface. Styling only the fed
+  // box (as this did) left the wrapper unpositioned and never hidden when
+  // closed — which is why the panel glitched and came up empty.
+  &__ws-wrapper {
+    position: relative;
+    flex: 0 0 auto;
+    align-self: center;
+    overflow: visible;
+
+    .menu-topic,
+    .menu-topic__ui,
+    .menu-trigger {
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items__wrapper {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: auto;
+      width: max-content;
+      min-width: 260px;
+      z-index: 99999;
+    }
+
+    .menu-topic-items__wrapper[data-state="open"] {
+      overflow: visible !important;
+    }
+
+    .menu-topic-items,
+    .menu-items {
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 6px;
+      width: max-content;
+      min-width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: visible;
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    // Without this the panel is always in the DOM flow — the "glitch".
+    .menu-topic-items__wrapper[data-state="closed"],
+    .menu-topic-items__wrapper[data-state="0"],
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      display: none;
+    }
+  }
+
+  // Caret-only trigger, sitting immediately after the workspace crumb so the
+  // crumb's icon + name and this caret read as one chip (43:23955).
+  &__ws-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg);
+    }
+  }
+
+  &__ws-list {
+    gap: 1px;
+  }
+
+  // Group heading — "Workspaces" / "Personal". Small, uppercase and muted so
+  // it labels the list without competing with the rows it introduces.
+  &__ws-section {
+    padding: 10px 10px 4px;
+    font-family: "Geist", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--normal-fg-50);
+
+    // No dead space above the first heading.
+    &:first-child {
+      padding-top: 2px;
+    }
+  }
+
+  // Geometry and colours copied from __new-menu-item — the app's established
+  // dropdown row — so the switcher reads as the same component family as the
+  // "+ New" menu rather than a bespoke panel: 36px min-height, 8/10 padding,
+  // r=4, Geist 13/500 on --normal-fg-10, --normal-bg-90 hover.
+  &__ws-item {
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    box-sizing: border-box;
+    width: 100%;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+
+    // The workspace currently open. Tint AND tick: the tint alone is
+    // indistinguishable from the hover state once the pointer is in the list.
+    &[data-current="1"] {
+      background-color: var(--radio-on-bg);
+
+      .desk-module-topbar__ws-item-name {
+        color: var(--primary-40);
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__ws-item-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+  }
+
+  &__ws-item-check {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--primary-40);
+  }
+
+  &__ws-item-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: "Geist", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-10);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__ws-empty {
+    padding: 10px;
+    font-size: 12px;
+    color: var(--normal-fg-50);
+  }
+
+  // Child of .menu-topic-items, which paints the surface — this only lays out.
+  &__ws-menu {
+    width: 100%;
+    max-height: 60vh;
+    gap: 4px;
+    overflow-y: auto;
+  }
+
+  // Footer action. Separated by a rule and given the full menu width so it
+  // reads as an action on the list rather than another workspace in it.
+  // Footer action. Full-bleed to the surface edges (the menu's own padding is
+  // 6px, hence the negative margin) with a rule above, so it reads as an
+  // action ON the list rather than another workspace IN it.
+  &__ws-new {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    padding: 8px 10px;
+    margin: 6px -6px -6px;
+    border-top: 1px solid var(--border-muted);
+    border-radius: 0 0 5px 5px;
+    cursor: pointer;
+    font-family: "Geist", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-40);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background: var(--radio-on-bg);
+    }
+  }
+
+  // ── Avatar + user menu (Figma 59:55943) ───────────────────────────────────
+  // Same menu shell as the workspace switcher; anchored to the right edge
+  // since the avatar is the last item in the bar.
+  &__account-wrapper {
+    position: relative;
+    flex: 0 0 auto;
+    align-self: center; // share the row's centre line with the icon buttons
+    margin-left: 4px;
+    overflow: visible;
+
+    .menu-topic,
+    .menu-topic__ui,
+    .menu-trigger {
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items__wrapper {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      left: auto;
+      width: max-content;
+      min-width: 240px;
+      z-index: 99999;
+    }
+
+    .menu-topic-items__wrapper[data-state="open"] {
+      overflow: visible !important;
+    }
+
+    .menu-topic-items,
+    .menu-items {
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 6px;
+      width: max-content;
+      min-width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: visible;
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    // Without this the panel is always in the DOM flow — the "glitch".
+    .menu-topic-items__wrapper[data-state="closed"],
+    .menu-topic-items__wrapper[data-state="0"],
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      display: none;
+    }
+  }
+
+  // UserProfile renders its own inner picture/initials box. Pin the whole
+  // subtree to 30px, or its intrinsic height sets the row's line box and the
+  // icon buttons beside it stop sharing a centre line.
+  &__account-avatar {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    cursor: pointer;
+    overflow: hidden;
+
+    .user-profile__ui,
+    .user-profile__icon,
+    .user-profile__picture,
+    img {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+    }
+  }
+
+  // Child of .menu-topic-items, which paints the surface — this only lays out.
+  &__account-menu {
+    width: 100%;
+    gap: 2px;
+  }
+
+  &__account-menu-head {
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px 10px;
+    border-bottom: 1px solid var(--border-muted);
+    margin-bottom: 6px;
+  }
+
+  &__account-menu-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    overflow: hidden;
+  }
+
+  &__account-menu-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  // Presence, so it reads as status rather than a second name line.
+  &__account-menu-status {
+    font-size: 12px;
+    color: var(--signal-success, #3f8f63);
+  }
+
+  &__account-menu-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--normal-fg);
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--radio-on-bg);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__account-menu-item--signout {
+    border-top: 1px solid var(--border-muted);
+    margin-top: 6px;
+    padding-top: 12px;
+  }
+
+  // Hover tooltip for the icon-only utility buttons. Taken OUT OF FLOW — the
+  // framework mounts it as a child of the button, so in normal flow it widens
+  // the 30px button and breaks the row. Dark bubble below the icon, matching
+  // the chat-item action tooltips.
+  &__utility-tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-bg-100, #ffffff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 400;
+
+    // Caret pointing UP at the icon (the bubble hangs below the bar).
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-bottom-color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__utility-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--signal-error, #d74e49);
+    font-size: 0;
+    pointer-events: none;
+
+    &[data-count="0"] {
+      display: none !important;
+    }
+  }
+
 }
 
 // ── Dark mode overrides ─────────────────────────────────────────

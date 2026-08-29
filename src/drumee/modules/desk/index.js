@@ -283,15 +283,25 @@ class desk_module extends LetcBox {
   _syncWorkspaceTopbar() {
     const part = this.getPart("top-bar");
     if (!part || !part.el) return;
-    if (this._openWorkspaces.size || this._hasZoomedFolder()) {
+    // The desk topbar now ALWAYS stays up.
+    //
+    // It used to hide behind an open workspace because the pane rendered its
+    // own window topbar, making the desk one a duplicate. In the new shell
+    // (Figma 43:23955) the pane has no chrome — skeleton/index.js drops the
+    // header for a headless pane — so this bar IS the workspace's header, and
+    // hiding it left the screen with no header at all AND no way to switch
+    // workspace, since the switcher lives in it.
+    //
+    // A ZOOMED floating folder window is a different case: it is still a real
+    // window with its own titlebar, so it keeps the old treatment.
+    if (this._hasZoomedFolder()) {
       part.el.dataset.headless = "1";
-      if (this._openFolders.size > 1) {
-        part.el.dataset.tabstrip = "1";
-      } else {
-        delete part.el.dataset.tabstrip;
-      }
     } else {
       delete part.el.dataset.headless;
+    }
+    if (this._openFolders.size > 1) {
+      part.el.dataset.tabstrip = "1";
+    } else {
       delete part.el.dataset.tabstrip;
     }
     // Zoomed windows are inline-pixel geometry, so they must re-fit whenever
@@ -460,9 +470,17 @@ class desk_module extends LetcBox {
     // mount-time loadHome() fires during the render pass and must know a
     // saved screen / workspace / deep-link is about to be restored (see
     // loadHome) — otherwise Wm.reload() wipes the target we just opened.
-    this._restoreInFlight = !!(
-      this._bootDeepLink || this._savedStateIsRestorable(this._bootSavedState)
-    );
+    // ALWAYS true now, not just for a deep link or a saved screen: the desk
+    // always lands on something — the remembered screen, the deep-link target,
+    // or (new shell) the default workspace. It used to be false on a cold boot
+    // with nothing saved, which let the breadcrumb's mount-time loadHome() run
+    // Wm.reload() and paint the home workspace-tile grid; that then raced the
+    // default-workspace open, and the grid usually won.
+    //
+    // _restoreDeskState clears it on every path, including the one where no
+    // workspace could be opened (a brand-new account with none yet) — which is
+    // the only case that should still land on the home grid.
+    this._restoreInFlight = true;
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     this._restoreDeskState().catch((e) => {
@@ -859,6 +877,7 @@ class desk_module extends LetcBox {
       "toggle-contacts": "sidebar-contacts",
       "toggle-inbox": "sidebar-inbox",
       "toggle-activity": "sidebar-notifications",
+      "toggle-calendar": "sidebar-calendar",
     };
   }
 
@@ -1248,7 +1267,13 @@ class desk_module extends LetcBox {
     const hasSaved = this._savedStateIsRestorable(saved);
 
     if (!deepLink && !hasSaved) {
-      this._clearRestoreInFlight(0);
+      // Nothing to restore — land on a workspace rather than an empty desk.
+      // The new shell's rail (Files / Chat / Task / Meet / Access) all act on
+      // an OPEN workspace, so "no workspace" is not a state it can render.
+      // Keep the restore flag up across the open, or the breadcrumb's
+      // mount-time loadHome() fires Wm.reload() and wipes it.
+      const opened = await this._openDefaultWorkspace();
+      this._clearRestoreInFlight(opened ? 2500 : 0);
       return;
     }
 
@@ -1281,6 +1306,13 @@ class desk_module extends LetcBox {
       }
       if (saved.workspace) {
         await this._restoreWorkspace(saved.workspace);
+      } else {
+        // Restorable state that names a SCREEN but no workspace (the user was
+        // on Contacts / Settings / a floating window last time). The new shell
+        // has no "no workspace" state to fall back to behind that screen, so
+        // seed one underneath it. Runs BEFORE _restoreSidebarService so the
+        // remembered screen still ends up on top.
+        await this._openDefaultWorkspace();
       }
       if (saved.service) {
         await this._restoreSidebarService(saved.service);
@@ -1503,14 +1535,343 @@ class desk_module extends LetcBox {
     });
   }
 
+  /**
+   * Write the unread figure to EVERY badge that shows it.
+   *
+   * There are two since the topbar gained its utility cluster (Figma
+   * 43:23955): the rail row's numeric pill and the bell's dot. They read the
+   * same number, so they are filled from one place — updating only the rail
+   * left the bell permanently unmarked.
+   */
+  _writeActivityCount(unread) {
+    const n = parseInt(unread, 10) || 0;
+    const content = n > 99 ? "99+" : String(n);
+    ["activity-count", "activity-count-top"].forEach((pn) => {
+      this.ensurePart(pn).then((p) => {
+        if (!p || !p.el) return;
+        // Blank at zero, matching the existing badge convention — the skin
+        // hides it on data-count="0" AND on :empty, so both agree.
+        p.el.innerText = n === 0 ? "" : content;
+        p.el.dataset.count = content;
+      });
+    });
+  }
+
+  // ── Workspaces ─────────────────────────────────────────────────────────────
+
+  /**
+   * The workspaces this user can open, newest-ranked first.
+   *
+   * Same `desk.home type=node` payload the sidebar list used, and the same
+   * filter it applied in prepareData: hubs only in a collaborative area, plus
+   * home-root FOLDERS (a Personal workspace is a personal-area folder, not a
+   * hub) which get area=personal stamped because desk.home leaves it null.
+   * Hubs sort above folders, mirroring the list's comparator.
+   *
+   * Cached: both the switcher menu and the boot default read it, and it is a
+   * network call. Refreshed on demand via `force`.
+   */
+  async _fetchWorkspaces(force) {
+    if (this._workspaces && !force) return this._workspaces;
+    let rows = [];
+    try {
+      rows = await this.fetchService(SERVICE.desk.home, {
+        hub_id: Visitor.id,
+        type: "node",
+      });
+    } catch (e) {
+      this.warn && this.warn("[workspaces] desk.home failed", e);
+      return [];
+    }
+    // A list service with exactly one row answers with the object itself, not
+    // a one-element array — normalise before filtering or the switcher empties.
+    if (rows && !_.isArray(rows)) rows = [rows];
+    if (!_.isArray(rows)) rows = [];
+
+    const list = rows
+      .filter((it) => {
+        if (!it) return false;
+        if (it.filetype === _a.folder) return true;
+        if (it.filetype === _a.hub) {
+          return /^(share|private|restricted|public)$/.test(it.area);
+        }
+        return false;
+      })
+      .map((it) =>
+        it.filetype === _a.folder && !it.area ? { ...it, area: _a.personal } : it,
+      );
+    // Stable: hubs (0) before folders (1), server rank preserved within each.
+    this._workspaces = _.sortBy(list, (it) =>
+      it.filetype === _a.folder ? 1 : 0,
+    );
+    return this._workspaces;
+  }
+
+  /**
+   * The payload Wm.loadWorkspace wants for one row. A Personal workspace row
+   * is a home-root folder whose home_id points at the hub's home ROOT, so
+   * loadWorkspace would prefer that over the folder's own nid and open Home
+   * instead of the folder — hence the explicit shape, matching what the
+   * sidebar's own load-workspace case built.
+   */
+  _workspaceTarget(row) {
+    if (!row) return null;
+    if (row.filetype === _a.folder) {
+      return {
+        hub_id: row.hub_id || Visitor.id,
+        nid: row.nid || row.id,
+        filename: row.filename,
+        area: _a.personal,
+      };
+    }
+    return { ...row };
+  }
+
+  /**
+   * Fill the switcher dropdown.
+   *
+   * Takes the part when the caller already has it (onPartReady hands over the
+   * child) — getPart is not reliable at that moment, the part is still being
+   * registered, and returning early there left the menu permanently empty.
+   */
+  async _renderWorkspaceMenu(target) {
+    const part = target || (this.getPart && this.getPart("ws-list"));
+    if (!part || !part.el || (part.isDestroyed && part.isDestroyed())) return;
+    this._wsListPart = part;
+    const rows = await this._fetchWorkspaces();
+    if (!rows.length) {
+      return part.feed([
+        Skeletons.Note({
+          className: "desk-module-topbar__ws-empty",
+          content: LOCALE.NO_CONTENT || "",
+        }),
+      ]);
+    }
+    // window.Wm, NOT a bare `Wm`: this runs from onPartReady during the first
+    // topbar render, which happens BEFORE window/manager.js:53 assigns the
+    // global. A bare identifier throws ReferenceError there; window.Wm is
+    // merely undefined.
+    // window.Wm, NOT a bare `Wm`: this runs from onPartReady during the first
+    // topbar render, which happens BEFORE window/manager.js:53 assigns the
+    // global. A bare identifier throws ReferenceError there.
+    const cur = (window.Wm && window.Wm._curWorkspace) || null;
+
+    // Same area-tinted folder glyph desk_breadcrumb uses for the workspace
+    // crumb, so a row and the crumb it opens read as the same object.
+    const glyph = (row) => {
+      if (row.filetype !== _a.hub) return "raw-drumee-folder-blue";
+      switch (row.kind) {
+        case "window_team":
+          return "raw-drumee-folder-purple";
+        case "window_sharebox":
+          return "raw-drumee-folder-orange";
+        case "window_website":
+          return "raw-drumee-folder-green";
+        default:
+          return "raw-drumee-folder-blue";
+      }
+    };
+
+    const cn = "desk-module-topbar";
+    const rowFor = (row) => {
+      const hubId = row.hub_id || row.id;
+      const isCurrent = cur && cur.hub_id == hubId;
+      return Skeletons.Box.X({
+        className: `${cn}__ws-item`,
+        service: "switch-workspace",
+        uiHandler: [this],
+        wsHubId: hubId,
+        attrOpt: {
+          "data-current": isCurrent ? "1" : "0",
+          "data-area": row.area || "",
+        },
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${cn}__ws-item-icon`,
+            ico: glyph(row),
+          }),
+          Skeletons.Note({
+            className: `${cn}__ws-item-name`,
+            content: row.filename || row.name || "",
+          }),
+          // A tick on the open one — the row highlight alone reads as hover.
+          isCurrent
+            ? Skeletons.Image.Svg({
+                className: `${cn}__ws-item-check`,
+                ico: "desktop_check",
+              })
+            : null,
+        ].filter(Boolean),
+      });
+    };
+
+    // Personal workspaces are home-root FOLDERS, hub workspaces are hubs.
+    // _fetchWorkspaces already sorts hubs first, so a single boundary splits
+    // them and each group gets a heading instead of one undifferentiated list.
+    const hubs = rows.filter((r) => r.filetype !== _a.folder);
+    const personal = rows.filter((r) => r.filetype === _a.folder);
+    const section = (label, list) =>
+      list.length
+        ? [
+            Skeletons.Note({
+              className: `${cn}__ws-section`,
+              content: label,
+            }),
+            ...list.map(rowFor),
+          ]
+        : [];
+
+    part.feed([
+      ...section(LOCALE.WORKSPACES, hubs),
+      ...section(LOCALE.PERSONAL, personal),
+    ]);
+  }
+
+  /**
+   * Show the open workspace's name on the switcher.
+   *
+   * A no-op in the current shell: the trigger is a caret only, because
+   * desk_breadcrumb already renders [folder icon] + workspace name right
+   * beside it and two copies read as a duplicate. Kept (and kept harmless via
+   * the missing-part guard) so a trigger that does carry a label — a narrow
+   * breakpoint, say — needs no new wiring.
+   */
+  _setWorkspaceLabel(name) {
+    const p = this.getPart && this.getPart("ws-current");
+    if (!p || !p.el) return;
+    const el =
+      p.el.querySelector(".note-content .root-node") ||
+      p.el.querySelector(".note-content") ||
+      p.el;
+    el.textContent = name || LOCALE.WORKSPACES;
+  }
+
+  /**
+   * Resolve the open workspace's name from the window manager's context and
+   * show it on the switcher. Falls back to the generic label when none is open.
+   *
+   * window.Wm, never a bare `Wm`: this is reached from the breadcrumb:content
+   * broadcast, which the window manager emits from inside its own initialize —
+   * BEFORE manager.js:53 assigns the global. A bare identifier throws
+   * ReferenceError there.
+   */
+  _syncWorkspaceLabel() {
+    const wm = window.Wm;
+    const cur = wm && wm._curWorkspace;
+    if (!cur || !cur.hub_id) return this._setWorkspaceLabel(null);
+    const row = (this._workspaces || []).find(
+      (r) => (r.hub_id || r.id) == cur.hub_id,
+    );
+    if (row) return this._setWorkspaceLabel(row.filename || row.name);
+    // Not in the cached index (reached by deep link, or created since boot) —
+    // take the name the window manager resolved for it.
+    this._setWorkspaceLabel(
+      _.isFunction(wm.mget) && (wm.mget(_a.hub_name) || wm.mget(_a.filename)),
+    );
+  }
+
+  /** Switcher row -> open that workspace, then refresh the menu's current mark. */
+  async _switchWorkspace(hubId) {
+    if (!hubId) return;
+    const rows = await this._fetchWorkspaces();
+    const row = (rows || []).find((r) => (r.hub_id || r.id) == hubId);
+    if (!row) return;
+    if (!window.Wm || !_.isFunction(window.Wm.loadWorkspace)) return;
+    window.Wm.loadWorkspace(this._workspaceTarget(row));
+    this._setWorkspaceLabel(row.filename || row.name);
+    return this._renderWorkspaceMenu(this._wsListPart);
+  }
+
+  /**
+   * Open a workspace on boot when nothing else claimed the screen.
+   *
+   * The desk used to land on an empty home grid, which the new shell has no
+   * screen for — the rail's Files/Chat/Task/Meet all act on an OPEN workspace.
+   * Only runs when there is no deep link and no restorable saved state, so it
+   * never overrides where the user actually was.
+   */
+  async _openDefaultWorkspace() {
+    try {
+      const rows = await this._fetchWorkspaces();
+      const first = rows && rows[0];
+      if (!first) return false;
+      const wm = await this._waitForWm();
+      if (!wm || !_.isFunction(wm.loadWorkspace)) return false;
+      if (this.isDestroyed && this.isDestroyed()) return false;
+      wm.loadWorkspace(this._workspaceTarget(first));
+      return true;
+    } catch (e) {
+      this.warn && this.warn("[workspaces] default open failed", e);
+      return false;
+    }
+  }
+
+  /**
+   * Current unread figure, read from whichever badge is mounted.
+   *
+   * Which one that is depends on the device: the desktop rail no longer has a
+   * notifications row (it moved to the topbar cluster), so 'activity-count'
+   * exists only in the mobile drawer, and 'activity-count-top' only on
+   * desktop. getPart is used rather than ensurePart deliberately — ensurePart
+   * NEVER resolves for a part that will not mount on this device, which would
+   * hang the caller forever.
+   */
+  _readActivityCount() {
+    for (const pn of ["activity-count-top", "activity-count"]) {
+      const p = this.getPart && this.getPart(pn);
+      if (p && p.el) {
+        return parseInt(p.el.dataset.count || p.el.innerText || "0", 10) || 0;
+      }
+    }
+    return 0;
+  }
+
+  /** Drop the unread figure by `by`, floored at zero, on every badge. */
+  _decrementActivityCount(by = 1) {
+    this._writeActivityCount(Math.max(0, this._readActivityCount() - by));
+  }
+
   _updateActivityBadge(args = {}) {
     if (args.unread_count == null) return;
-    this.ensurePart("activity-count").then((p) => {
-      let content = args.unread_count || 0;
-      if (parseInt(content) > 99) content = "99+";
-      p.el.innerText = content;
-      p.el.dataset.count = content;
-    });
+    this._writeActivityCount(args.unread_count);
+  }
+
+  /**
+   * The workspace window the rail acts on, or null when the desk is showing
+   * its home grid with nothing open.
+   *
+   * Wm.getActiveWindow(1) answers the raised folder/team/sharebox window, and
+   * falls back to returning Wm ITSELF when none is open — hence the
+   * showFolderTab check rather than a truthiness test, which would hand the
+   * rail the window manager and throw on the first click.
+   */
+  _activeWorkspace() {
+    if (typeof Wm === "undefined" || !_.isFunction(Wm.getActiveWindow)) return null;
+    const w = Wm.getActiveWindow(1);
+    if (!w || w === Wm || w.isDestroyed?.()) return null;
+    return _.isFunction(w.showFolderTab) ? w : null;
+  }
+
+  /**
+   * Rail → folder-window tab. With no workspace open there is nothing to show
+   * a tab OF, so fall back to the home grid: that is where the user picks one,
+   * and it beats a click that silently does nothing.
+   */
+  _railTab(tab) {
+    const w = this._activeWorkspace();
+    if (!w) return this.loadHome && this.loadHome();
+    w.showFolderTab(tab);
+    return w.raise && w.raise();
+  }
+
+  /** Rail → the workspace's manage-access panel (the Permission Matrix). */
+  _railAccess() {
+    const w = this._activeWorkspace();
+    if (!w) return this.loadHome && this.loadHome();
+    if (_.isFunction(w.onUiEvent)) {
+      return w.onUiEvent(w, { service: "folder-manage-access" });
+    }
   }
 
   /** Keep the topbar actions enabled when the breadcrumb context changes. */
@@ -1597,6 +1958,23 @@ class desk_module extends LetcBox {
     this.ensurePart("action-cluster").then((p) => {
       p.setState(1);
     });
+    // The switcher trigger names the open workspace, and this broadcast is the
+    // one signal every path to a workspace shares — sidebar row, switcher row,
+    // deep link and reload-restore all end in updateBreadcrumb.
+    //
+    // The try/catch is load-bearing, not habit. The window manager emits this
+    // broadcast from inside its OWN initialize (window/utils.js
+    // __window_mfs.initialize -> updateBreadcrumb), which runs BEFORE
+    // manager.js:53 sets `window.Wm`. Anything thrown here unwinds into that
+    // initialize and aborts it before the global is assigned — after which
+    // every `Wm.` reference in the app throws ReferenceError and the window
+    // manager's own 10s watchdog suppresses it. That is exactly what a missing
+    // method here caused once already.
+    try {
+      this._syncWorkspaceLabel();
+    } catch (e) {
+      this.warn && this.warn("[workspaces] label sync failed", e);
+    }
     // Navigating into (or out of) a workspace can change whether the create /
     // upload rows apply at all. Re-feed the topbar only when the answer actually
     // flips, so ordinary folder-to-folder navigation inside one workspace costs
@@ -1655,6 +2033,14 @@ class desk_module extends LetcBox {
    */
   onPartReady(child, pn) {
     switch (pn) {
+      // Switcher dropdown body. Populated on mount rather than on open: the
+      // menu's items render once, and the desk.home payload is cached, so
+      // filling it here costs one fetch that the boot default shares.
+      case "ws-list":
+        // Pass the child: getPart cannot resolve it yet at part-ready time.
+        this._renderWorkspaceMenu(child);
+        break;
+
       case "ref-avatar":
         /** wait for  $el.droppable*/
         this.ensurePart("desk-content").then(() => {
@@ -3283,6 +3669,18 @@ class desk_module extends LetcBox {
       try {
         localStorage.setItem("drumee.sidebar.pinned", pinnedNext ? "1" : "0");
       } catch (e) {}
+      // The rail's reserved column goes 64px ↔ 231px, which MOVES and resizes
+      // the work area with no browser `resize` event — open windows carry
+      // inline pixel geometry and would keep the old box, hanging their whole
+      // right side past the viewport edge. Wm watches the container itself
+      // (ResizeObserver, see manager.js), so this is only the fallback for a
+      // runtime without one; after the 0.18s width transition so the new box
+      // is the one measured. Harmless when the observer already handled it —
+      // re-fitting to the same area is a no-op.
+      if (window.Wm && _.isFunction(Wm.reflowWorkArea)) {
+        clearTimeout(this._sidebarPinReflow);
+        this._sidebarPinReflow = setTimeout(() => Wm.reflowWorkArea(), 250);
+      }
     });
   }
 
@@ -3327,9 +3725,12 @@ class desk_module extends LetcBox {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
 
-    // Disable actions when the admin console is active
+    // Disable actions when the admin console is active. The Calendar joins the
+    // list because it carries its OWN "+ New" (Task / Meeting) in its toolbar —
+    // leaving the topbar's "New" (add workspace / upload) visible would put two
+    // identically-labelled buttons 24px apart meaning different things.
     this.ensurePart("action-cluster").then((p) => {
-      if (["apps_main", "settings_main"].includes(kind)) {
+      if (["apps_main", "settings_main", "calendar_main"].includes(kind)) {
         p.setState(0);
       } else {
         p.setState(1);
@@ -3779,6 +4180,39 @@ class desk_module extends LetcBox {
         // handles closing.
         return this.togglePanel("settings_main", "settings-main-slot", true);
 
+      // Personal Calendar — full-canvas screen in the same slot as Settings /
+      // Get help / Billing, so it inherits their mutual exclusion, their
+      // reload-restore and their destroy-on-close. Open-only, matching its
+      // sidebar neighbours.
+      case "toggle-calendar":
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.CALENDAR,
+        });
+        return this.togglePanel("calendar_main", "settings-main-slot", true);
+
+      // Switcher row → open that workspace. Same entry point the sidebar list
+      // used, so area handling, panel cleanup and the breadcrumb update are
+      // all unchanged.
+      // onUiEvent is not async, so the lookup is chained rather than awaited.
+      // _fetchWorkspaces is cached, so this resolves immediately in practice.
+      case "switch-workspace":
+        return this._switchWorkspace(cmd.mget("wsHubId"));
+
+      // ── Workspace rail (Figma 43:23955) ────────────────────────────────
+      // Files / Chat / Task / Meet are the folder window's own tabs; Access is
+      // its manage-access panel. The rail is global but these are per-window,
+      // so the target is resolved at click time rather than cached.
+      case "rail-files":
+        return this._railTab("files");
+      case "rail-chat":
+        return this._railTab(_a.chat);
+      case "rail-task":
+        return this._railTab(_a.task);
+      case "rail-meet":
+        return this._railTab("meeting");
+      case "rail-access":
+        return this._railAccess();
+
       case "toggle-help":
         return this._openGetHelp();
 
@@ -4089,12 +4523,7 @@ class desk_module extends LetcBox {
 
       case "activity-update":
         if (args.unread_count == null) return;
-        return this.ensurePart("activity-count").then((p) => {
-          let content = args.unread_count || 0;
-          if (parseInt(content) > 99) content = "99+";
-          p.el.innerText = content;
-          p.el.dataset.count = content;
-        });
+        return this._writeActivityCount(args.unread_count);
 
       // default:
       // Wm.unselect();

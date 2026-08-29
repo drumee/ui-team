@@ -142,6 +142,17 @@ class __panel_activity extends LetcBox {
         unread_only: this._unreadsOnly,
       };
     }
+    // Object-type tabs (files / task / meeting / chat / other, Figma 43:29418)
+    // ride the SAME `filter` param the relationship cut uses. The server
+    // filters the fetched page in JS (server-team service/private/activity.js,
+    // get_feed) and currently only branches on 'mentions' / 'shares', so an
+    // unrecognised value falls through and returns the whole feed.
+    //
+    // Deliberately NOT mirrored client-side: the feed is paged, so filtering
+    // here would return short pages and a wrong "has_more", and it would put a
+    // second copy of the category vocabulary out of step with the server's.
+    // The tabs render and select correctly today; they narrow the feed once
+    // get_feed learns the new values.
     return {
       service: SERVICE.activity.get_feed,
       hub_id: Visitor.id,
@@ -226,8 +237,26 @@ class __panel_activity extends LetcBox {
         });
         return this.ensurePart(_a.list).then((list) => list.restart());
 
+      // Object-type tabs (Figma 43:29418). 'mentions' / 'shares' are kept as
+      // accepted values — the relationship cut still exists server-side and
+      // other callers may still set it — they simply have no tab any more.
       case 'tab-all':
         return this._setTab('all');
+
+      case 'tab-files':
+        return this._setTab('files');
+
+      case 'tab-task':
+        return this._setTab('task');
+
+      case 'tab-meeting':
+        return this._setTab('meeting');
+
+      case 'tab-chat':
+        return this._setTab('chat');
+
+      case 'tab-other':
+        return this._setTab('other');
 
       case 'tab-mentions':
         return this._setTab('mentions');
@@ -541,15 +570,15 @@ class __panel_activity extends LetcBox {
     if (item && item.goodbye) item.goodbye({ duration: 0.3, timeout: 50, now: 1 });
   }
 
+  // Delegated to the desk, which owns every badge showing this number: the
+  // mobile drawer's numeric pill and the topbar bell's dot (Figma 43:23955).
+  // Which of those is mounted depends on the device, so this must NOT await a
+  // specific part — ensurePart('activity-count') never resolves on desktop,
+  // where that row no longer exists, and the decrement would be lost.
   _decrementBadge(by = 1) {
-    Desk.ensurePart('activity-count').then((p) => {
-      if (!p || !p.el) return;
-      const cur = parseInt(p.el.dataset.count || p.el.innerText || '0', 10) || 0;
-      const next = Math.max(0, cur - by);
-      const display = next > 99 ? '99+' : String(next);
-      p.el.innerText = next === 0 ? '' : display;
-      p.el.dataset.count = display;
-    });
+    if (typeof Desk !== 'undefined' && _.isFunction(Desk._decrementActivityCount)) {
+      return Desk._decrementActivityCount(by);
+    }
   }
 
   /**
