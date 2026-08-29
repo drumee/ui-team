@@ -1,58 +1,80 @@
-// Notification tabs — Figma 43:29418.
+// Notification Center tab bar (Round 3 / Sprint 1 — Figma `filter-bar`).
 //
-// The cut changed axis. It used to be a RELATIONSHIP cut (All activity /
-// Mentions / Shares — "how does this row involve me"); the design cuts by
-// OBJECT TYPE (All / Files / Task / Meeting / Chat / Other — "what is this row
-// about"). Every feed row already carries the discriminator: activity.get_feed
-// returns `category` (media, chat, teamchat, meeting, hub_invite,
-// access_request, share_open) or an `event` like "media.remove" / "task_*",
-// which widget/item/getCategory() already normalises the same way.
+// Replaces the old 3 tabs (All activity / Mentions / Shares) with the six the
+// design specifies: All + one per notification bucket. `All` is the default and
+// means "no bucket scope" — the server returns the whole feed for it, which is
+// exactly the pre-existing behaviour.
 //
-// Each tab carries an unread count in the design. The badge element is built
-// here and starts hidden (data-count="0"); nothing populates it yet because the
-// feed has no per-category aggregate — see _setTab in ../index.js.
+// Each tab carries an unread count badge (Figma `number-noti`), fed by
+// activity.unread_counts and refreshed in place via its `tab-count-<bucket>`
+// part, so updating a number never re-renders the bar and never disturbs which
+// tab is selected.
+//
+// The bucket strings are the contract with the server: they must match the
+// values `bucketOf` stamps on every row in service/private/activity.js.
 const TABS = [
-  { key: 'all',     label: LOCALE.ALL,     service: 'tab-all',     pn: 'tab-all'     },
-  { key: 'files',   label: LOCALE.FILES,   service: 'tab-files',   pn: 'tab-files'   },
-  { key: 'task',    label: LOCALE.TASK,    service: 'tab-task',    pn: 'tab-task'    },
-  { key: 'meeting', label: LOCALE.MEETING, service: 'tab-meeting', pn: 'tab-meeting' },
-  { key: 'chat',    label: LOCALE.CHAT,    service: 'tab-chat',    pn: 'tab-chat'    },
-  { key: 'other',   label: LOCALE.OTHER,   service: 'tab-other',   pn: 'tab-other'   },
+  { bucket: 'all', label: 'ALL' },
+  { bucket: 'files', label: 'FILES' },
+  { bucket: 'task', label: 'TASK' },
+  { bucket: 'meeting', label: 'MEETING' },
+  { bucket: 'chat', label: 'CHAT' },
+  { bucket: 'other', label: 'OTHER' },
 ];
+
+const DEFAULT_BUCKET = 'all';
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
-  const active = ui._filter || 'all';
+  const active = ui._filter || DEFAULT_BUCKET;
 
   return Skeletons.Box.X({
     className: `${pfx}__tabbar`,
     kids: TABS.map((tab) =>
       Skeletons.Box.X({
         className: `${pfx}__tab`,
-        service: tab.service,
-        sys_pn: tab.pn,
-        state: tab.key === active ? 1 : 0,
-        uiHandler: [ui],
+        service: `tab-${tab.bucket}`,
+        sys_pn: `tab-${tab.bucket}`,
+        state: tab.bucket === active ? 1 : 0,
+        uiHandler: ui,
+        // No partHandler on purpose: the panel defines no onPartReady, and
+        // `sys_pn` alone is enough for ensurePart() to reach these later.
         radio: `radio-${ui._id}`,
-        kidsOpt: { active: 0 },
         kids: [
+          // `active: 0` is set on EACH kid, not via the parent's `kidsOpt`.
+          // kidsOpt does not work: ui-core's mergeKidsOptions
+          // (letc/addons/letc.js) does `kids.map((item) => { item = {...item,
+          // ...kidsOpt} })`, rebinding the local parameter and discarding the
+          // map result, so it never reaches the child.
+          //
+          // It matters here because an active child binds its own onclick, and
+          // __handleClick calls stopPropagation() BEFORE it discovers it has no
+          // uiHandler — so a click landing on the label or the badge would die
+          // there and the tab's service would never fire. Only the pill's bare
+          // padding would switch tabs. Same fix as 97be5a4e (#510) for the
+          // window Move & Resize presets.
           Skeletons.Note({
             className: `${pfx}__tab-label`,
-            content: tab.label,
+            content: LOCALE[tab.label],
+            active: 0,
           }),
+          // Rendered empty and hidden via data-empty; _renderTabCounts fills it
+          // once the counts arrive. Kept in the tree from the start so the part
+          // exists to be addressed later.
           Skeletons.Note({
             className: `${pfx}__tab-count`,
-            sys_pn: `${tab.pn}-count`,
-            partHandler: ui,
+            sys_pn: `tab-count-${tab.bucket}`,
             content: '',
-            // attrOpt, not dataset — a bare `dataset` is dropped at render, so
-            // the badge would mount with no data-count for the skin to hide on.
-            attrOpt: { 'data-count': 0 },
+            dataset: { empty: '1' },
+            active: 0,
           }),
         ],
-      })
+      }),
     ),
   });
 };
 
+// Exported so the panel iterates one list instead of repeating the buckets —
+// the tab set is defined here only.
 module.exports.TABS = TABS;
+module.exports.BUCKETS = TABS.map((t) => t.bucket);
+module.exports.DEFAULT_BUCKET = DEFAULT_BUCKET;

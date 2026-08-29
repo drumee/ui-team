@@ -157,6 +157,22 @@ class help_main extends LetcBox {
   loadPage(id) {
     if (!id || id === this._page) return;
     this._page = id;
+    // Extended page -> "Opened self-hosted setup". Placed AFTER the early
+    // return above, which is what stops a repeat click on the already-active
+    // nav item from marking twice -- a property inherited free from that
+    // guard, so do not move this line above it.
+    //
+    // Fire-and-forget: the page switch is what the user asked for.
+    //
+    // Ship-ahead guard: `desk` services arrive from the server's ACL via
+    // Platform.get('services') -- lex/services.json has no `desk` key -- so
+    // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
+    // postService is async and its promise rejection is swallowed by .catch,
+    // but without this guard the call POSTs to a path built from `undefined`.
+    if (id === "self-hosting" && SERVICE.desk && SERVICE.desk.cta_click) {
+      this.postService(SERVICE.desk.cta_click, { cta: "selfhosted", hub_id: Visitor.id },
+        { async: 1 }).catch(() => {});
+    }
     this._faqQuery = "";
     this._faqCategory = "*";
     this._openFaq.clear();

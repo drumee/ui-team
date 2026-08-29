@@ -247,6 +247,9 @@ module.exports = {
   migrate_gdrive_popup: function () {
     return import("./builtins/widget/migrate-gdrive-popup");
   },
+  daily_reminder_popup: function () {
+    return import("./builtins/widget/daily-reminder-popup");
+  },
   rating_survey_popup: function () {
     return import("./builtins/widget/rating-survey-popup");
   },
@@ -259,11 +262,17 @@ module.exports = {
   over_limit_banner: function () {
     return import("./builtins/widget/over-limit-banner");
   },
+  nudge_lab: function () {
+    return import("./builtins/widget/nudge-lab");
+  },
   upgrade_nudge_popup: function () {
     return import("./builtins/widget/upgrade-nudge-popup");
   },
   reward_flow: function () {
     return import("./builtins/widget/reward-flow");
+  },
+  activate_workspace: function () {
+    return import("./builtins/widget/activate-workspace");
   },
   module_desk: function () {
     return import("./modules/desk");

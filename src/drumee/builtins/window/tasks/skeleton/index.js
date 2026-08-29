@@ -404,6 +404,45 @@ const make = function (ui) {
             }),
           ),
         }),
+        // "Tasks here are done". is_done is what completion is keyed on
+        // everywhere — completed_at, the subtask done/total badge, the
+        // completion filters — but until this toggle existed only the seeded
+        // built-in `complete` ever carried it, so a board whose columns were
+        // renamed or replaced had no finished column at all. More than one
+        // column may carry it; this is a per-column flag, not a radio.
+        // The click service sits on the ROW, so every descendant in the click
+        // path carries `active: 0` — WITHOUT it ui-core binds an onclick to
+        // each of them (letc.js: `active` defaults to 1 when unset) and
+        // __handleClick calls e.stopPropagation() BEFORE triggerHandlers, so a
+        // click landing on the label or the knob — i.e. almost every real
+        // click — would die there and never reach this row. `active` does not
+        // cascade and `kidsOpt: {active: 0}` is a no-op, so it must be written
+        // on each node.
+        Skeletons.Box.X({
+          className: `${pfx}__col-done-row`,
+          bubble: 0,
+          service: "col-done-toggle",
+          uiHandler: [ui],
+          taskColumn: col.key,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-done-label`,
+              content: LOCALE.COLUMN_MARK_DONE,
+              active: 0,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__col-done-toggle`,
+              dataset: { on: col.is_done ? 1 : 0 },
+              active: 0,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__col-done-knob`,
+                  active: 0,
+                }),
+              ],
+            }),
+          ],
+        }),
         Skeletons.Box.X({
           className: `${pfx}__col-menu-actions`,
           kids: [
@@ -1501,16 +1540,29 @@ const make = function (ui) {
               bubble: 0,
               service: "board-default",
               uiHandler: [ui],
+              // active: 0 on every child. ui-core defaults `active` to 1 when
+              // it is not set (letc.js: `if (a == null) a = 1`), binds an
+              // onclick to each such widget, and __handleClick calls
+              // e.stopPropagation() BEFORE triggerHandlers — so a click on the
+              // label or on the switch itself died there and never reached the
+              // row's "board-default" service. Only the row's padding actually
+              // toggled, which is almost nowhere. `active` does not cascade and
+              // kidsOpt is a no-op for it, so it goes on each node.
               kids: [
                 Skeletons.Note({
                   className: `${pfx}__board-default-label`,
                   content: LOCALE.SET_AS_DEFAULT,
+                  active: 0,
                 }),
                 Skeletons.Box.X({
                   className: `${pfx}__board-toggle`,
                   dataset: { on: st.isDefault ? 1 : 0 },
+                  active: 0,
                   kids: [
-                    Skeletons.Note({ className: `${pfx}__board-toggle-knob` }),
+                    Skeletons.Note({
+                      className: `${pfx}__board-toggle-knob`,
+                      active: 0,
+                    }),
                   ],
                 }),
               ],
@@ -1975,15 +2027,26 @@ const make = function (ui) {
             ? require("./summary")(ui)
             : boardView();
 
+  // Tuple list kept as its own const so the carousel footer below can count
+  // pages from it — the dots must agree with the strip about how many tabs
+  // there are, and deriving both from one array is what keeps them in step.
+  const viewDefs = [
+    ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
+    ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
+    ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
+    ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
+    ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
+  ];
+
+  // The strip is the scroller for the compact carousel (the skin's
+  // `@container tasks-panel-w` block pages it two tabs at a time), so it has to
+  // be reachable from JS — the scroll listener that tracks the current page
+  // lives in tasks/index.js onPartReady("viewbar-tabs").
   const viewTabs = Skeletons.Box.X({
     className: `${pfx}__viewbar-tabs`,
-    kids: [
-      ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
-      ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
-      ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
-      ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
-      ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
-    ].map(([key, label, ico]) => {
+    sys_pn: "viewbar-tabs",
+    partHandler: ui,
+    kids: viewDefs.map(([key, label, ico]) => {
       // Tier gate (libs/billing.isTaskViewAllowed). A locked tab keeps its
       // place AND keeps its click: the click is what opens the upsell, so
       // hiding the tab would make the plan limit invisible and disabling it
@@ -2067,6 +2130,33 @@ const make = function (ui) {
     ],
   });
 
+  // Carousel footer: one dot per page of two tabs, so a phone user can see the
+  // strip continues past the two visible tabs. Built HERE rather than at
+  // runtime because the tab count is settled — viewDefs is a fixed list, and
+  // every view tab stays rendered even when the plan gates it (a locked tab
+  // keeps its place; the click is what opens the upsell).
+  //
+  // `page` is the only state this footer has: the scroll listener writes it and
+  // the skin maps it to the active dot, so nothing per-dot is ever touched as
+  // the strip moves. One page means nothing to page through — data-visible=0
+  // hides the footer, the same convention the folder tab bar uses.
+  const viewPages = Math.ceil(viewDefs.length / 2);
+  const viewDots = Skeletons.Box.X({
+    className: `${pfx}__viewbar-dots`,
+    sys_pn: "viewbar-dots",
+    partHandler: ui,
+    dataset: { page: 0, visible: viewPages > 1 ? 1 : 0 },
+    kids: Array.from({ length: viewPages }, (_, i) =>
+      Skeletons.Box.X({
+        className: `${pfx}__viewbar-dot`,
+        dataset: { page: i },
+        bubble: 0,
+        service: "viewbar-page",
+        uiHandler: [ui],
+      }),
+    ),
+  });
+
   const subHeader = Skeletons.Box.X({
     className: `${pfx}__viewbar`,
     kids: [
@@ -2086,6 +2176,7 @@ const make = function (ui) {
           filterBtn,
         ].filter(Boolean),
       }),
+      viewDots,
     ],
   });
 
@@ -2584,37 +2675,70 @@ function commentAttachments(ui, c, isOwn) {
     const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
     const status = opt.pending ? f.status || "queued" : null;
     const busy = status === "uploading" || status === "downloading";
-    let trailing = null;
-    if (status === "error") {
+    const pendingKey = String(f.localKey || f.nid || "");
+    // Slot contents, in order. Retry is the extra one — only an error state has
+    // two controls, and that state is terminal, so the in-flight → committed
+    // swap the equal-width rule exists for still moves between one and one.
+    const controls = [];
+    if (status === "error" && (f.file || f.nid)) {
       // Suppressed when there is nothing a retry could do: a cross-hub
       // placeholder whose download failed carries neither file nor nid, so the
-      // link has no input and the fetch is never re-run. A stuck card with only
-      // a remove action is honest; a button that does nothing is not.
-      trailing = (f.file || f.nid)
-        ? Skeletons.Button.Svg({
-            className: `${pfx}__comment-attachment-retry`,
-            ico: "refresh-view",
-            bubble: 0,
-            service: "retry-pending-file",
-            uiHandler: [ui],
-            pendingKey: String(f.localKey || f.nid || ""),
-            commentId: c && c.id,
-            tooltips: {
-              content: LOCALE.RETRY || "Retry",
-              className: `${pfx}__tip`,
-            },
-          })
-        : null;
-    } else if (!status && isOwn) {
-      trailing = Skeletons.Button.Svg({
-        className: `${pfx}__comment-attachment-unlink`,
-        ico: "cross",
-        bubble: 0,
-        service: "comment-unlink-attachment",
-        uiHandler: [ui],
-        commentId: c && c.id,
-        fileNid: nid,
-      });
+      // link has no input and the fetch is never re-run. The ✕ below is what
+      // makes that chip disposable instead of merely stuck.
+      controls.push(
+        Skeletons.Button.Svg({
+          className: `${pfx}__comment-attachment-retry`,
+          ico: "refresh-view",
+          bubble: 0,
+          service: "retry-pending-file",
+          uiHandler: [ui],
+          pendingKey,
+          commentId: c && c.id,
+          tooltips: {
+            content: LOCALE.RETRY || "Retry",
+            className: `${pfx}__tip`,
+          },
+        }),
+      );
+    }
+    // ✕ on every chip of a comment you wrote, whatever state it is in — what it
+    // removes is what differs. task.comment_unlink_file is author-checked
+    // server-side, so someone else's attachment gets no ✕ rather than one that
+    // always fails.
+    if (isOwn) {
+      controls.push(
+        status
+          ? Skeletons.Button.Svg({
+              // Same class as the unlink ✕: one control, one look, and it picks
+              // up the data-loading spinner contract below for free.
+              className: `${pfx}__comment-attachment-unlink`,
+              ico: "cross",
+              bubble: 0,
+              service: "discard-row-file",
+              uiHandler: [ui],
+              commentId: c && c.id,
+              pendingKey,
+              // Mid-transfer there is nothing to cancel — no abort path exists
+              // for an upload already on the wire. The glyph gives way to the
+              // spinner and the button goes inert (skin: [data-loading="1"]),
+              // which is also why the slot no longer draws a spinner of its
+              // own: it would double up with this one.
+              attrOpt: { "data-loading": busy ? "1" : "0" },
+              tooltips: {
+                content: LOCALE.REMOVE || LOCALE.DELETE,
+                className: `${pfx}__tip`,
+              },
+            })
+          : Skeletons.Button.Svg({
+              className: `${pfx}__comment-attachment-unlink`,
+              ico: "cross",
+              bubble: 0,
+              service: "comment-unlink-attachment",
+              uiHandler: [ui],
+              commentId: c && c.id,
+              fileNid: nid,
+            }),
+      );
     }
     return Skeletons.Box.X({
       className: `${pfx}__comment-attachment`,
@@ -2623,7 +2747,7 @@ function commentAttachments(ui, c, isOwn) {
       uiHandler: nid && !busy && !status ? [ui] : null,
       fileNid: nid,
       attrOpt: {
-        ...(status ? { "data-status": status, "data-key": String(f.localKey || f.nid || "") } : {}),
+        ...(status ? { "data-status": status, "data-key": pendingKey } : {}),
       },
       kids: [
         Skeletons.Image.Svg({
@@ -2638,10 +2762,11 @@ function commentAttachments(ui, c, isOwn) {
           content: name,
         }),
         // Always rendered, even when empty: reserving the slot keeps every
-        // chip the same width regardless of state or authorship.
+        // chip the same width regardless of state or authorship. It holds one
+        // control in every state but error, which adds retry beside the ✕.
         Skeletons.Box.X({
           className: `${pfx}__comment-attachment-slot`,
-          kids: [trailing].filter(Boolean),
+          kids: controls,
         }),
       ],
     });
@@ -2838,6 +2963,14 @@ function buildCommentListContent(ui) {
         attrOpt: {
           "data-reply": isReply ? "1" : "0",
           "data-comment-id": c.id,
+          // Uploads in flight on this comment: the skin dims the row and takes
+          // its controls out of reach (see _refuseWhileRowBusy for the
+          // matching handler guard).
+          "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
+          // ...except the editor itself. A drop lands on the row even while it
+          // is being edited, and freezing a half-typed comment behind a video
+          // upload would trap the author: Cancel already refuses mid-save.
+          "data-editing": "1",
         },
         kids: [
           avatar,
@@ -2894,6 +3027,10 @@ function buildCommentListContent(ui) {
       attrOpt: {
         "data-reply": isReply ? "1" : "0",
         "data-comment-id": c.id,
+        // See the edit-mode row above. Rendered on every row so the state is
+        // read from one place — the panel's isCommentRowBusy — rather than
+        // written onto the DOM by whoever happens to notice a status change.
+        "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
       },
       kids: [
         avatar,

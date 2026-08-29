@@ -1,5 +1,5 @@
 diff --git a/node_modules/@drumee/ui-core/letc/addons/letc.js b/node_modules/@drumee/ui-core/letc/addons/letc.js
-index be31634..413d616 100644
+index be31634..e3f94f4 100644
 --- a/node_modules/@drumee/ui-core/letc/addons/letc.js
 +++ b/node_modules/@drumee/ui-core/letc/addons/letc.js
 @@ -12,6 +12,9 @@ const { View } = Backbone;
@@ -90,7 +90,37 @@ index be31634..413d616 100644
        const timer = Timer.get(timerId)
        if (timer) {
          clearInterval(timer)
-@@ -1131,7 +1168,16 @@ View.prototype.ensureElement = function (el) {
+@@ -1116,14 +1153,25 @@ View.prototype.ensureElement = function (el) {
+     }
+     var f = function () {
+       i++;
++      // Resolve into a SEPARATE binding. Assigning the lookup back into `el`
++      // destroyed the id on the very first miss: `el` became null, so every
++      // later tick failed `_.isString(el)` and never looked the id up again —
++      // the poll ran out its ticks against a dead handle and rejected. That
++      // was harmless while the first lookup happened a tick late, but the
++      // leading-edge f() below runs while a just-fed element is still
++      // detached, which is the common case for a caller passing an id.
++      let found = el;
+       if (_.isString(el)) {
+-        el = document.getElementById(el);
++        found = document.getElementById(el);
+       } else if (el && el.jquery) {
+-        el = el[0];
++        found = el[0];
+       }
+-      if (el != null) {
++      if (found != null) {
++        // Keep the resolved node so a jQuery handle is unwrapped once, not
++        // per tick; `el` only ever moves from id/handle to the real element.
++        el = found;
+         clearTimer();
+-        resolve(el);
++        resolve(found);
+         return;
+       }
+       if (i > max) {
+@@ -1131,7 +1179,16 @@ View.prototype.ensureElement = function (el) {
          reject()
        }
      };
@@ -165,6 +195,34 @@ index e035048..43c1c6a 100644
      explain: LOCALE.REQUIRE_TEXT
    },
    gender: {
+diff --git a/node_modules/@drumee/ui-core/letc/widgets/list/index.js b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
+index 838406c..74e1bcd 100644
+--- a/node_modules/@drumee/ui-core/letc/widgets/list/index.js
++++ b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
+@@ -218,9 +218,21 @@ class __list extends LetcBox {
+    * 
+    * @returns 
+    */
+-  initContent() {
++  initContent(resolved) {
+     const id = `${this._id}-container`;
+-    const c = document.getElementById(id);
++    // Use the node ensureElement already resolved. Looking the id up again
++    // here can come back null even though ensureElement had just found it --
++    // the container is re-fed while this is queued -- and every line below
++    // dereferences it, so the widget threw partway through initialisation
++    // after having already set __container and fired `ready`. The lookup is
++    // kept as the fallback for a caller that passes nothing.
++    const c = (resolved && resolved.nodeType === 1) ? resolved : document.getElementById(id);
++    if (!c) {
++      // Nothing to bind to. Leave the widget uninitialised rather than half
++      // initialised: onDomRefresh runs again on the next feed.
++      this.warn(`initContent: no container for id=${id}`);
++      return;
++    }
+     this.__container = c;
+     //this.trigger(_e.ready);
+     let kids = this.mget(_a.kids) || [];
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 index 13edb44..e8df4bc 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js

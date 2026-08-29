@@ -3898,13 +3898,36 @@
     // the bar wrapping there is nothing left to scroll — and the hidden
     // scrollbar rules go with it.
     //
-    // Column gap stays at --spacer-5 to keep the underline-pill tabs reading
-    // as distinct chips; the row gap is one step tighter so two rows do not
-    // make the bar tall.
+    // Spacing is set from a measured width budget, not by eye. At a 320px
+    // window — the narrowest this bar is designed for, per the note above —
+    // the five tabs are 185px of content, so the row costs 185 + 4 column gaps
+    // + 2 side paddings and everything left over is slack:
+    //
+    //   column-gap 16px, padding 12px  →  249 + 24 = 273px used, 47px free
+    //   column-gap 24px, padding 12px  →  281 + 24 = 305px used, 15px free
+    //
+    // So the column gap can go up one token step and still clear 320px, which
+    // is what it does here: --spacer-6 (24px) matches the DESKTOP separation,
+    // so the tabs get the same breathing room on a phone that they have on a
+    // wide window, instead of being the one place they crowd together.
+    //
+    // The horizontal padding deliberately stays at --spacer-4. It is the other
+    // claim on the same 320px budget, and spending it twice is what would push
+    // a tab onto a third row; the vertical padding is what opens up instead,
+    // where nothing competes for the space.
+    //
+    // Row gap goes up with it so the controls row and the tab row read as two
+    // groups rather than one block — it is free, since rows cost height and
+    // height is not scarce here.
+    //
+    // Measured wrap point after this change: the five tabs hold one row down to
+    // 310px and split onto a third row below that (280px was checked too). That
+    // is under the 320px floor either way, and the split is graceful — the bar
+    // wraps, it does not clip or scroll.
     &__filter-bar {
       flex-wrap: wrap;
-      gap: var(--spacer-4) var(--spacer-5);
-      padding: var(--spacer-4);
+      gap: var(--spacer-5) var(--spacer-6);
+      padding: var(--spacer-5) var(--spacer-4);
       justify-content: center;
     }
 

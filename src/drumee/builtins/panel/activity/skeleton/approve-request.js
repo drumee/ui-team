@@ -69,16 +69,23 @@ module.exports = function (_ui_, req = {}) {
       level,
       dataset: { level, selected: (!requestedSet.length || requestedSet.includes(level)) ? 'yes' : '' },
       uiHandler: [_ui_],
-      kidsOpt: { active: 0 },
+      // `active: 0` on EVERY descendant, not via `kidsOpt` and not only on the
+      // direct kids: kidsOpt is a no-op in ui-core's mergeKidsOptions, and
+      // `active` is gated per widget (`if (!active) return`) so it does not
+      // cascade. Any active element in the click path binds its own onclick and
+      // __handleClick stops propagation BEFORE triggerHandlers, killing the
+      // click — so picking a level by clicking its icon or its label did
+      // nothing and only the row's bare padding worked. Same as 97be5a4e (#510).
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__level-main`,
+          active: 0,
           kids: [
-            Skeletons.Image.Svg({ className: `${pfx}__level-icon`, ico }),
-            Skeletons.Note({ className: `${pfx}__level-label`, content: label }),
+            Skeletons.Image.Svg({ className: `${pfx}__level-icon`, ico, active: 0 }),
+            Skeletons.Note({ className: `${pfx}__level-label`, content: label, active: 0 }),
           ],
         }),
-        Skeletons.Box.X({ className: `${pfx}__level-check` }),
+        Skeletons.Box.X({ className: `${pfx}__level-check`, active: 0 }),
       ],
     })),
   });

@@ -394,6 +394,45 @@ class drumee_router extends LetcBox {
     let [hostname] = location.host.split(':'); /** In case specific port */
     if (Visitor.isOnline() && hostname != Organization.host()) {
       if (this.changeHost(Organization.host())) {
+        // DROP THIS ORIGIN'S COPY — but only when the URL is carrying the
+        // destination onward, AND only for the account the link names.
+        //
+        // location.host keeps path and hash, so a destination already on the URL
+        // survives to the new origin and is re-armed there by captureFromUrl.
+        // The copy left behind is then pure liability: Butler.logout brings the
+        // visitor straight back to this origin, and a copy sitting here is read
+        // at the NEXT sign-in and reopens checkout for somebody who never
+        // clicked the CTA.
+        //
+        // Both halves of the gate are scar tissue.
+        //
+        // urlIsHandoff(), not urlWantsBilling(): the latter is also true for the
+        // CTA link itself (#/desk/billing?…), which changeHost carries here
+        // under its own steam — INCLUDING for a visitor who was just refused.
+        // Disarming on that took the recipient's only surviving copy with it:
+        // a wrong-account sign-in landed on team-NNNN…/#/desk/billing?…&for=…,
+        // and the recipient's own sign-in a moment later found nothing.
+        //
+        // isForCurrentUser(): signin hands off unconditionally now, because it
+        // cannot read who signed in from anything it can trust — it had been
+        // using data.user.profile.email, a shape that app does not otherwise
+        // use. So the hand-off FORM alone no longer implies the destination
+        // belongs to this session; only `Visitor` says that, and here it is
+        // populated because this branch runs under isOnline().
+        //
+        // ONE identity source, asked once, where it is reliable. The version
+        // before this split the question between signin (the sign-in response)
+        // and here (the restored session); let those two disagree for a single
+        // page load and the destination died in the gap — signin refuses, so
+        // the URL stays clean, while this disarms anyway.
+        //
+        // Only on a switch that actually happened: changeHost answers false for
+        // a loose_host module and in the DMZ, and there this copy is still the
+        // carrier.
+        if (billingDeepLink.urlIsHandoff()
+          && billingDeepLink.isForCurrentUser(billingDeepLink.peek())) {
+          billingDeepLink.disarm();
+        }
         return;
       }
     }

@@ -7,7 +7,11 @@
     // parked absolute panel still adds to its ancestors' scrollWidth and
     // leaves the desk body scrollable sideways onto it.
     position: fixed;
-    width: 450px;
+    // Round 3: 512px per Figma (panel node 58187:81014). Only the width moves —
+    // the right-side docking below is Tobao's 4ee4277b and stays untouched, and
+    // the mobile block further down overrides the width with !important, so the
+    // phone card is unaffected.
+    width: 512px;
     height: 100vh;
     top: 0;
     right: 0;
@@ -156,18 +160,31 @@
         height: 24px;
       }
 
+      // Six segmented pills instead of three underline tabs. `justify-content:
+      // center` is dropped on purpose: once the pills overflow the phone width
+      // the bar scrolls, and centring hides the leading tabs off the left edge
+      // with no way to reach them.
       .panel-activity__tabbar {
-        // Six pills need to wrap and start from the left on a phone; a
-        // centred 20px-gap row assumed the old three text tabs.
-        gap: 4px;
-        padding: 12px 16px;
-        justify-content: flex-start;
+        gap: 6px;
+        padding: 8px 16px 10px;
       }
 
-      // The label holds the type now — sizing __tab does nothing.
+      .panel-activity__tab {
+        padding: 10px 12px;
+      }
+
+      // Font size moved from __tab to __tab-label — the label is its own node in
+      // the new markup, so sizing __tab would silently do nothing.
       .panel-activity__tab-label {
-        font-size: 15px;
-        line-height: 18px;
+        font-size: 14px;
+        line-height: 14px;
+      }
+
+      .panel-activity__tab-count {
+        min-width: 16px;
+        height: 16px;
+        font-size: 10px;
+        line-height: 10px;
       }
 
       .panel-activity__empty {
@@ -284,7 +301,10 @@
     flex-shrink: 0;
     height: 56px;
     justify-content: space-between;
-    padding: 0 20px;
+    // 16px, not 20 — Figma gives the header, the filter bar and the feed the
+    // SAME 16px gutter (58187:81015 / 85045 / 81026). At 20 the title sat 4px
+    // right of the tab pills, which is what read as the tab row being adrift.
+    padding: 0 16px;
   }
 
   &__header {
@@ -302,6 +322,7 @@
       $line: 24px,
       $color: #0b0a21
     );
+    font-weight: 600;
   }
 
   &__unread-toggle {
@@ -352,8 +373,9 @@
     align-items: center;
     gap: 4px;
     svg {
-      width: 14px;
-      height: 14px;
+      // 20px per Figma (58187:81144); the glyph is now the double tick.
+      width: 20px;
+      height: 20px;
       flex-shrink: 0;
       color: #65656c;
     }
@@ -425,74 +447,92 @@
     }
   }
 
-  // Tab row — Figma 43:29418. Six object-type tabs, the active one a filled
-  // indigo pill rather than the old underline. Wraps: six labels plus counts
-  // do not fit the panel width on a narrow desk.
-  // Segmented control, per 43:29418: the six tabs sit in a #F2F2F7 TROUGH
-  // (r=12, 4px padding) rather than floating on the panel — the trough is what
-  // makes them read as one control instead of six loose pills.
+  /* ── Tab bar (Figma `filter-bar`) ─────────────────────────
+     Six segmented pills: All + one per notification bucket. Replaces the old
+     three underline tabs. Hex literals rather than tokens to match the rest of
+     this file, which is written that way throughout. */
   &__tabbar {
     gap: 4px;
-    margin: 0 12px;
-    padding: 4px;
+    // Figma filter-bar (58187:85045): 4px 16px. The feed's own 16px top padding
+    // supplies the rest of the space down to the first item.
+    padding: 4px 16px;
     flex-shrink: 0;
-    flex-wrap: wrap;
-    border-radius: 12px;
-    background-color: var(--normal-bg-90);
+    /* Sits on the panel background, not a tinted strip — the design keeps the
+       bar flush with the header. */
+    background-color: transparent;
+    /* Six pills do not fit 512px on every locale; scroll rather than wrap, so
+       the bar stays one row and the feed keeps its position. */
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__tab {
     align-items: center;
+    // Figma's filter box is `horizontal: fill` + `justifyContent: center`, i.e.
+    // the pills spread across the bar instead of clumping at the left.
+    //
+    // `1 0 auto` — grow to fill, but NEVER shrink:
+    //  * not `1 1 0` (an equal split): 76px per pill leaves ~44px of label after
+    //    padding, and "Meeting" needs ~49px, so equal shares would ellipsis it
+    //    the moment it carries a count badge;
+    //  * not `1 1 auto` either: shrinking is what breaks the 360px mobile panel,
+    //    where the six natural widths do not fit and every label gets clipped.
+    // Growing from the natural width distributes only the SLACK, so at 512px the
+    // row reaches both edges untruncated, and on mobile the pills keep their size
+    // and the bar scrolls instead — the behaviour flex-shrink: 0 used to give.
+    flex: 1 0 auto;
     justify-content: center;
-    gap: 6px;
-    min-height: 33px;
+    gap: 4px;
     padding: 8px;
-    border-radius: 8px;
     cursor: pointer;
-    white-space: nowrap;
+    border-radius: 1111px;
     transition:
-      color 0.15s,
-      background-color 0.15s;
+      background-color 0.15s,
+      color 0.15s;
 
-    &:hover {
-      background: var(--overlay-bg-05);
+    &:hover:not([data-state="1"]) {
+      background-color: rgba(89, 80, 255, 0.1);
     }
 
     &[data-state="1"] {
-      background: var(--primary-40);
-
-      .panel-activity__tab-label {
-        color: var(--gray-white);
-      }
+      background-color: #5950ff;
+      border-radius: 8px;
     }
   }
 
   &__tab-label {
-    @include drumee.typo($color: var(--normal-fg-20), $size: 14px, $line: 17px);
+    @include drumee.typo($color: #65656c, $size: 12px, $weight: 600, $line: 12px);
     font-weight: 600;
+    white-space: nowrap;
+    // Only reachable when a locale's labels genuinely exceed the bar; the pills
+    // grow from their natural width, so normally nothing is clipped.
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    .panel-activity__tab[data-state="1"] & {
+      color: #ffffff;
+    }
   }
 
-  // Per-tab unread count. Built by the skeleton and hidden until something
-  // fills it — get_feed returns no per-category aggregate yet, so today it is
-  // always empty.
+  /* Unread count per tab (Figma `number-noti`). Hidden at zero — the design has
+     no zero state, and a row of 0s reads as noise. */
   &__tab-count {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: 8px;
-    background: var(--signal-error, #d74e49);
-    color: var(--gray-white);
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 16px;
+    @include drumee.typo($color: #ffffff, $size: 8px, $weight: 400, $line: 8px);
+    min-width: 12px;
+    height: 12px;
+    padding: 2px 4px;
     box-sizing: border-box;
+    border-radius: 100px;
+    background-color: #d74e49;
+    text-align: center;
+    flex-shrink: 0;
 
-    &[data-count="0"],
-    &:empty {
-      display: none !important;
+    &[data-empty="1"] {
+      display: none;
     }
   }
 
@@ -503,11 +543,17 @@
     flex: 1;
     overflow-y: auto;
     max-height: calc(100vh - 102px);
-    padding: 0 8px 16px;
+    // Figma "Feed Items List" (58187:81026): padding 16, gap 8. The 8px side
+    // gutter left the white unread cards nearly flush with the panel edge and
+    // out of line with the header and tabs.
+    padding: 16px;
+    gap: 8px;
   }
 
   &__priority {
     width: 100%;
+    // Pinned rows are the same cards, so they need the same 8px separation.
+    gap: 8px;
   }
 
   &__list {
@@ -521,6 +567,11 @@
       display: flex;
       flex-direction: column;
       width: 100%;
+      // The cards live here, not directly under __feed (whose gap only spaces
+      // the pinned box from this list), so the 8px feed gap has to be repeated
+      // on the real item parent — otherwise consecutive unread cards render as
+      // one continuous white slab.
+      gap: 8px;
     }
   }
 
@@ -561,13 +612,14 @@ html[data-theme="dark"] {
       background-color: var(--normal-bg-40);
     }
 
+    // The bar is flush with the header now, in both themes.
     &__tabbar {
-      background-color: var(--overlay-bg-05);
+      background-color: transparent;
     }
 
-    // The label carries the colour now that __tab is the pill, so recolouring
-    // __tab itself would do nothing. The active pill keeps its white label
-    // from the base rule — --primary-40 is legible in both themes.
+    // Targets the label, not the pill: colour lives on __tab-label in the new
+    // markup. The active pill keeps its white text — that rule is more specific
+    // than this one, so it still wins here.
     &__tab-label {
       color: var(--normal-fg-10);
     }
@@ -623,6 +675,7 @@ html[data-theme="dark"] {
 
   &__title {
     @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--default-text-color, #0b0a21));
+    font-weight: 600;
   }
 
   &__close {
@@ -658,6 +711,7 @@ html[data-theme="dark"] {
 
   &__info-email {
     @include drumee.typo($size: 14px, $line: 18px, $weight: 600, $color: var(--default-text-color, #0b0a21));
+    font-weight: 600;
   }
 
   &__info-level {
@@ -671,6 +725,7 @@ html[data-theme="dark"] {
 
   &__grant-label {
     @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--tertiary-grey-70, #65656c));
+    font-weight: 500;
   }
 
   &__levels { gap: 8px; }
@@ -739,6 +794,7 @@ html[data-theme="dark"] {
     border-radius: 8px;
     background: var(--primary-50, #433cc5);
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-weight: 600;
 
     &:hover { filter: brightness(1.08); }
   }
@@ -750,7 +806,347 @@ html[data-theme="dark"] {
     border-radius: 8px;
     background: var(--red-500, #ff5a5f);
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-weight: 600;
 
     &:hover { filter: brightness(1.08); }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Real-time chat toast — Round 3 Phase 2.
+//
+// Figma "folder chat notification - toast": wrapper 58208:83649 at x 1360,
+// y 52 with 24px padding inside a 1920x1080 frame (⇒ 24px from the right edge,
+// 76px from the top), card `call-pop-up` 58208:83650 at 512 wide, padding 24,
+// gap 24, radius 12, white, drop shadow + backdrop blur.
+//
+// It renders into the window layer, NOT inside .panel-activity, so this is a
+// sibling block rather than a nested one — the panel is 512px and right-docked,
+// and nesting would scope the card to a panel that is closed whenever the card
+// is allowed to show.
+//
+// 🚨 Colour tokens are picked deliberately. `--primary-100` is declared TWICE
+// in vars/revamp.scss — #0b0a21 at line 121 and #f4e7ff at line 134 — and the
+// LAST one wins, so it resolves to a near-white. Figma's Primary/100 text
+// colour must therefore come from `--primary-purple-100`, which is declared
+// once. Same reasoning for the brand indigo: `--primary-purple-50`.
+.panel-activity-toast {
+  position: fixed;
+  top: 76px;
+  right: 24px;
+  z-index: 99999; // just under the centred meeting card's 100000
+  box-sizing: border-box;
+  width: 512px;
+  max-width: calc(100vw - 32px);
+  padding: 24px;
+  gap: 24px;
+  border-radius: 12px;
+  background: var(--normal-bg-elevated, #ffffff);
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.15),
+    0 7px 10px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(50px);
+  cursor: default;
+  animation: panel-activity-toast-in 160ms ease-out both;
+
+  // Replacing a card that was already on screen: same box, new content, no
+  // re-entry. Without this a burst of messages strobes.
+  &[data-replace="1"] {
+    animation: none;
+  }
+
+  &__head {
+    position: relative;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  &__avatar-wrap {
+    position: relative;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+  }
+
+  // Figma places the badge at 30,30 inside the 40x40 container, so it overhangs
+  // the avatar's bottom-right corner by 4px.
+  &__badge {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    width: 14px;
+    height: 14px;
+    padding: 2px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--primary-purple-40, #5950ff);
+
+    svg {
+      width: 8px;
+      height: 8px;
+      fill: #ffffff;
+    }
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-width: 0; // let a long message ellipsize instead of widening the card
+    gap: 4px;
+  }
+
+  &__title-row {
+    gap: 8px;
+    align-items: center;
+    // Leave room for the ✕, which Figma parks at the head row's top right.
+    padding-right: 28px;
+  }
+
+  // 🚨 font-weight is written out EXPLICITLY on every rule below. The
+  // drumee.typo mixin does NOT emit font-weight at all — it only maps a weight
+  // onto a font-family, and it has no branch for 600, so `$weight: 600` emits
+  // NOTHING and the text renders at the inherited weight. That is exactly why
+  // the sender name came out non-bold. meeting-toast.scss already works around
+  // it the same way (`@include drumee.typo(...)` then `font-weight: 600;`).
+  &__sender {
+    @include drumee.typo($size: 16px, $line: 1.2em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__chip {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 4px;
+    background: rgba(89, 80, 255, 0.1); // Figma Overlay/brand
+    @include drumee.typo($size: 16px, $line: 1.2em, $color: var(--primary-purple-40, #5950ff));
+    font-weight: 600;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    // The chip is always rendered so its name can be filled in once
+    // media.get_node_attr answers; until then it must take no space.
+    //
+    // 🚨 THIS WAS `&:empty` AND IT NEVER MATCHED. ui-core renders every Note
+    // with an inner `<div class="note-content">`, and `:empty` fails on any
+    // child — verified on the endpoint: `chip.matches(":empty") === false` with
+    // no text, so the chip stayed a 16x0 box holding 24px of the title row.
+    // `:empty` is unusable on ANY ui-core widget for this reason; the emptiness
+    // is flagged in JS instead (chat-toast.js buildCard / resolveChipLater).
+    &[data-empty="1"] {
+      display: none;
+    }
+  }
+
+  &__message {
+    @include drumee.typo($size: 14px, $line: 1.2em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 400;
+    // Two lines, then ellipsis — a long message must not grow the card.
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+
+  &__time {
+    @include drumee.typo($size: 12px, $line: 1.4em, $color: var(--tertiary-grey-80, #65656c));
+    font-weight: 400;
+  }
+
+  &__close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.6;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover { opacity: 1; }
+  }
+
+  &__actions {
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  &__mute,
+  &__open {
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+    // Figma centres the label on both axes. `text-align` alone does NOT do it:
+    // the framework renders these as FLEX containers, so the label is a flex
+    // item and only justify/align-items move it. meeting-toast.scss centres its
+    // two buttons the same way.
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    text-align: center;
+    white-space: nowrap;
+    border-radius: 4px;
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 600;
+
+    &:hover { filter: brightness(0.97); }
+  }
+
+  &__mute {
+    background: var(--tertiary-grey-20, #f2f2f7);
+    color: var(--primary-purple-100, #0b0a21);
+  }
+
+  &__open {
+    background: var(--primary-purple-50, #433cc5);
+    color: #ffffff;
+
+    &:hover { filter: brightness(1.08); }
+  }
+
+  // ── Phase 3: the mute flow, in this same shell ───────────────────────────
+  //
+  // The scope picker reuses the card's own COLUMN shell (Figma 58222:33821),
+  // which is what makes it read as the card changing rather than a second
+  // dialog opening over it. The confirmation is a ROW (58222:34431 /
+  // :34450) — one glyph, one line.
+  //
+  // 🚨 font-weight is written out on every rule here for the same reason as
+  // above: drumee.typo emits none, and has no branch for 600 at all.
+
+  // The picker's question. Sits where the sender name sits on the message
+  // card, so the two states line up rather than jumping.
+  &__prompt {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 16px, $line: 1.2em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 600;
+  }
+
+  // A scope option. Same geometry as the message card's two buttons — Figma
+  // keeps the button shape across both states — so it inherits that rule's
+  // padding, radius and centring by sharing the selector list below.
+  &__scope {
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    text-align: center;
+    border-radius: 4px;
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 600;
+    // A workspace name can be long and is user-controlled; it must ellipsize
+    // rather than widen the card or wrap it to two lines.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover { filter: brightness(0.97); }
+
+    // "this workspace" is the lighter, secondary choice; "all workspaces" is
+    // the emphatic one, matching Mute/Open's own weighting.
+    &--one {
+      background: var(--tertiary-grey-20, #f2f2f7);
+      color: var(--primary-purple-100, #0b0a21);
+    }
+
+    &--all {
+      background: var(--primary-purple-50, #433cc5);
+      color: #ffffff;
+
+      &:hover { filter: brightness(1.08); }
+    }
+  }
+
+  // The confirmation row. Figma gives it the shell's own 24px gap.
+  &__result {
+    gap: 24px;
+    align-items: center;
+  }
+
+  &__result-ico {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+
+    // The sprite glyphs are solid paths; filling via currentColor is the
+    // convention the row badges already use, and it is what keeps a stroked
+    // outline from being traced around a filled shape.
+    svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+  }
+
+  &[data-state="done"] &__result-ico { color: var(--primary-purple-50, #433cc5); }
+  &[data-state="failed"] &__result-ico { color: var(--tertiary-grey-80, #65656c); }
+
+  &__result-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 14px, $line: 1.4em, $color: var(--primary-purple-100, #0b0a21));
+    font-weight: 400;
+  }
+
+  // The 360px phone panel. Figma only specs desktop; the card has to stop
+  // being 512px wide before it reaches the viewport edge. Declared AFTER the
+  // rules it overrides — Sass splits a block around a nested @media, so a
+  // media query placed above them would lose.
+  @media screen and (max-width: 560px) {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    padding: 16px;
+    gap: 16px;
+
+    &__head { gap: 12px; }
+    &__chip { max-width: 120px; }
+    // The two scopes do not fit side by side at 360px — "All workspaces" alone
+    // is 13 characters before translation, and fr/ru run half as long again.
+    // Stacked with wrap + a full-width basis rather than `flex-direction`,
+    // which is owned by the Box.X that renders this row and must not be
+    // overridden in SCSS (framework invariant).
+    &__actions { flex-wrap: wrap; }
+    &__scope { flex-basis: 100%; }
+    &__result { gap: 16px; }
+  }
+}
+
+@keyframes panel-activity-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

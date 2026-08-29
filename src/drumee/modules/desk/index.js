@@ -16,6 +16,21 @@ const { openSupportMail } = require("libs/support");
 // the press. See _closeEscapeModal for why this is an explicit list.
 const ESCAPE_MODAL_KINDS = ["tasks_panel"];
 
+/**
+ * How long the billing chunk may take before a loader is worth showing, in ms.
+ *
+ * The chunk is ~280KB on a cold open and cached on every open after that, so
+ * the usual case resolves in a few milliseconds. Raising a spinner for that
+ * produces a flash — a window that appears and disappears inside a frame or
+ * two, which reads as a glitch rather than as progress and is worse than the
+ * honest nothing it replaced.
+ *
+ * 220ms is under the ~250ms at which a delay starts being felt as a wait, so a
+ * connection fast enough to beat it never sees the loader and never needed one;
+ * anything slower gets told something is happening. See _showBillingLoader.
+ */
+const DESK_BILLING_LOADER_DELAY = 220;
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -522,9 +537,36 @@ class desk_module extends LetcBox {
    * @returns {Boolean} whether the billing screen was opened
    */
   _maybeOpenBillingDeepLink() {
-    const preselect = billingDeepLink.consume();
+    // PEEK, NOT CONSUME. Both gates below can refuse, and a refusal must leave
+    // the destination exactly as it found it: consuming first made every
+    // refusal permanent, so a wrong-account sign-in destroyed a link written
+    // for somebody else, who then signed in and found nothing.
+    const preselect = billingDeepLink.peek();
     if (!preselect) return false;
+    // Addressed to somebody else. A campaign CTA carries an opaque marker for
+    // the recipient it was written for (analytics-server _recipientTag), and a
+    // mail gets forwarded, screenshotted, and opened on machines already signed
+    // in as a colleague. Without this, any of those walks that person into a
+    // discounted checkout with a partner code applied that was never offered to
+    // them.
+    //
+    // A link with no marker passes — see isForCurrentUser, which treats absent
+    // as "not bound" rather than "refuse", so every link written before this
+    // existed still works.
+    // KEPT, not consumed: this session is not the one the link was written for,
+    // so the recipient has not had their chance yet. They may sign in on this
+    // very tab a moment from now — which is the case this whole ordering exists
+    // for.
+    if (!billingDeepLink.isForCurrentUser(preselect)) return false;
+    // KEPT for the same reason, and this one can genuinely change underneath:
+    // ownership, or a payment backend that had not finished loading. Throwing
+    // the destination away on a verdict that is not final is the harsher answer.
     if (!canUpgradePlan()) return false;
+    // Committed. Taking it here — and only here — is what keeps the destination
+    // SINGLE-USE: it must not replay for this account after a later sign-out.
+    // The value is already in hand from the peek above, so the return is
+    // deliberately discarded.
+    billingDeepLink.consume();
     // Don't let desk-state restore pull the screen back to the remembered one.
     this._restoreInFlight = false;
     this.openBillingPage(preselect);
@@ -1397,11 +1439,96 @@ class desk_module extends LetcBox {
     setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
     // PMF rating survey: accumulate active usage; popup fires at 30 min.
     this._initRatingSurveyTimer();
+    // Daily reminder card. Delayed like the migration prompt so the workspace
+    // renders first — the card is a greeting, not a gate.
+    setTimeout(() => this._maybeShowDailyReminder(), 2000);
     // Warm the support-account lookup so screens that need it can answer
     // synchronously: the Get help screen hides Contact Support for the
     // support account itself, and the inbox badges support conversations.
     // Failure is already swallowed into null — nothing here depends on it.
     this.supportContact();
+  }
+
+
+  /**
+   * Daily reminder card — Round 3 / Sprint 1 row 7.
+   *
+   * Fires on the FIRST DESK LOAD OF THE DAY, keyed in localStorage on the
+   * viewer's LOCAL date. Per device on purpose: a two-device user seeing it
+   * twice is accepted, and it costs no schema.
+   *
+   * The day window is computed HERE, from the viewer's own clock, and sent to
+   * the server — "today" is whatever the person in front of the screen calls
+   * today, and the server has no way to know their timezone.
+   *
+   * The day is marked consumed BEFORE the request, not after. Two desk loads
+   * in quick succession would otherwise both pass the check and fan out across
+   * every workspace twice; and a card that failed to load is not worth
+   * retrying all day.
+   *
+   * An all-zero day renders nothing. A card announcing three zeroes is noise,
+   * and the day is still marked so it does not re-query on every load.
+   */
+  async _maybeShowDailyReminder() {
+    let Popup;
+    try {
+      Popup = require("builtins/widget/daily-reminder-popup");
+    } catch (e) {
+      return; // widget not in this build — nothing to show
+    }
+    const key = Popup.dayKey();
+    if (Popup.alreadyShownToday(key)) return;
+    Popup.markShownToday(key);
+
+    // Local midnight → next local midnight. Built from the date parts rather
+    // than by adding 86400s, so the window stays correct across a daylight
+    // saving change.
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    let counts;
+    try {
+      counts = await this.fetchService({
+        // SERVICE.activity is NOT in lex/services.json — it exists only in the
+        // backend map merged in at bootstrap, so the whole namespace can be
+        // undefined and `SERVICE.activity.daily_digest` would throw. The
+        // activity panel already guards its calls this way; same idiom here.
+        service:
+          (SERVICE.activity && SERVICE.activity.daily_digest) ||
+          "activity.daily_digest",
+        hub_id: Visitor.id,
+        day: key,
+        stime: Math.floor(start.getTime() / 1000),
+        etime: Math.floor(end.getTime() / 1000),
+      });
+    } catch (e) {
+      return;
+    }
+    // fetchService resolves undefined (or an error payload) rather than
+    // rejecting when a call does not complete, so a non-object IS the failure
+    // path — see _loadTasks in the task panel for the same shape.
+    if (!counts || typeof counts !== "object" || Array.isArray(counts)) return;
+
+    // A day with nothing due still shows the card, reading "nothing due
+    // today" instead of three zeroes. It used to return here, and the first
+    // consequence was the feature looking BROKEN: you open the desk, see
+    // nothing, and cannot tell "quiet day" apart from "it didn't work". A
+    // morning greeting that is silent exactly when there is nothing to report
+    // is indistinguishable from one that failed, and "you're clear today" is
+    // real information. The card renders nothing only when the request itself
+    // did not come back, which is handled above.
+    await Kind.waitFor("daily_reminder_popup");
+    Wm.launch(
+      {
+        kind: "daily_reminder_popup",
+        hub_id: Visitor.id,
+        nid: Visitor.get(_a.home_id),
+        counts,
+        wm_unique_id: "daily_reminder_popup",
+      },
+      { explicit: 1, singleton: 1 },
+    );
   }
 
   /**
@@ -2274,6 +2401,12 @@ class desk_module extends LetcBox {
         // The tutorial exists and owns the hand-off from here.
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
+        // Was this the onboarding tour, or a user rewatching it from Get help?
+        // Recorded HERE because the flag that answers it is consumed by
+        // _chainHelpReturnAfterTutorial below, and the activation flow that
+        // needs the answer does not run until the tour is destroyed. See
+        // _maybeStartActivateWorkspace.
+        this._tutorialWasAutomatic = !this._tourReturnsToHelp;
         this._chainRewardFlowAfterTutorial(child);
         // Only fires for a tour launched from Get help; the automatic
         // post-signup run leaves the user on the desk as before.
@@ -2680,7 +2813,14 @@ class desk_module extends LetcBox {
    * walking anyone through a reward that no longer exists.
    */
   async _maybeStartRewardFlow() {
-    const forced = !!Visitor.parseModuleArgs().reward;
+    const args = Visitor.parseModuleArgs();
+    const forced = !!args.reward;
+    // `?activate=1` asked for the OTHER walkthrough. Both open by having the
+    // user create a workspace, so this one stands down rather than winning the
+    // race it normally wins and swallowing the flag — a tester on an account
+    // that happens to hold a reward_claim row would otherwise see the reward
+    // flow and conclude activation was broken.
+    if (args.activate) return;
     if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
     // Synchronous in-flight latch: onPartReady("overlay") can fire more than
     // once (e.g. re-navigation re-feeding the same module), and the guard
@@ -2766,6 +2906,135 @@ class desk_module extends LetcBox {
       });
       this._rewardFlowInFlight = false;
     });
+  }
+
+  /**
+   * Anything the create-workspace form should do differently because a guided
+   * flow is on screen.
+   *
+   * Today one thing, for one flow. activate-workspace's Step 2 invites a
+   * teammate, and it needs Step 1 to end on a surface that can do that. For a
+   * team workspace it already does — the members panel opens in the same
+   * wrapper-modal. For an EXTERNAL one the form launches the secure-share dock
+   * instead, which manages links rather than membership, so the walkthrough had
+   * no invite surface to hand over to and the user fell through to the plain
+   * Step 2 card and its popup — the route a brand-new free-solo account cannot
+   * use at all. Overriding the follow-up gives external workspaces the same
+   * panel route team workspaces get.
+   *
+   * Gated on the flow being ON SCREEN rather than on it being in Step 1
+   * specifically. It owns the screen for its whole run, so a workspace created
+   * while it is up belongs to it either way, and tracking the step here would
+   * put a second copy of that state outside the widget that owns it.
+   *
+   * Returns a spreadable object so the call site reads as "plus whatever a flow
+   * asks for", and stays empty — changing nothing — in every ordinary session.
+   */
+  _createFormOverrides() {
+    if (!this._activateFlow || this._activateFlow.isDestroyed()) return {};
+    return { post_override: "permission_restricted" };
+  }
+
+  /**
+   * Workspace activation flow (builtins/widget/activate-workspace) — the
+   * practical half of onboarding: the product tour SHOWS the app on a mock
+   * desk, this walks the user through building the real thing, a workspace
+   * with a file in it.
+   *
+   * WHEN IT RUNS. Only after an AUTOMATIC product tour — the post-signup one,
+   * or `?tutorial=1`. That is the whole gate, and it is what makes the flow
+   * one-shot without a latch to store anywhere: the automatic tour happens once
+   * per signup and nothing else re-triggers this. A user who leaves the flow
+   * half-done does not get it again, which is the accepted cost of not keeping
+   * per-user state for it (see the design doc).
+   *
+   * A tour REPLAYED from Get help is deliberately excluded: handing a
+   * months-old account a "create your first workspace" walkthrough because they
+   * rewatched the tour would be nonsense. `_tutorialWasAutomatic` is what tells
+   * the two apart, and it is recorded when the tour MOUNTS — the flag it reads,
+   * `_tourReturnsToHelp`, is consumed by _chainHelpReturnAfterTutorial in that
+   * same onPartReady, so by the time the tour is destroyed and this runs there
+   * is nothing left to read.
+   *
+   * It stays unset when no tour ran at all — a plain login, or the fallback
+   * that settles home when the tour never mounted — which turns this off for
+   * exactly the sessions that were not onboarding anybody.
+   *
+   * NOT ALONGSIDE THE REWARD FLOW. That flow opens with the same
+   * create-workspace walkthrough, and running both back to back would ask the
+   * user to build two workspaces. Reward-flow is the one that wins: it is
+   * campaign-gated, time-limited and has a prize attached, while this one is
+   * evergreen.
+   *
+   * `?activate=1` forces it for testing, the way `?reward=1` forces the reward
+   * flow — see startActivateWorkspace for why a forced run needs no special
+   * behaviour of its own, unlike a forced reward run.
+   */
+  _maybeStartActivateWorkspace() {
+    // Forced for a test run: skip the onboarding gate, but keep every guard
+    // below that stops two flows fighting over the screen.
+    if (!Visitor.parseModuleArgs().activate) {
+      // No automatic product tour this session — nobody is being onboarded.
+      if (!this._tutorialWasAutomatic) return;
+    }
+    // Reward-flow is on screen or on its way there — see the docblock. It
+    // cannot be both, because a `?activate=1` load makes that flow stand down
+    // (see _maybeStartRewardFlow), but a test run started by hand can land
+    // while it is up.
+    if (this._rewardFlowInFlight) return;
+    if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
+    return this._mountActivateWorkspace();
+  }
+
+  /**
+   * Run the activation walkthrough NOW, whatever the gate would have said.
+   *
+   * The hand-operated entry point, and the counterpart to the reward flow's
+   * `?reward=1`: `window.Desk = this`, so this is callable straight from the
+   * console —
+   *
+   *   Desk.startActivateWorkspace()
+   *
+   * — which is the only way to see the flow without a fresh signup, since its
+   * automatic trigger is the end of a tour that runs once per account. It is
+   * re-callable: the flow keeps no state and latches nothing off, so each call
+   * starts a clean run (and each run creates its own workspace).
+   *
+   * A FORCED RUN IS AN ORDINARY RUN, which is the whole difference from
+   * `?reward=1`. That flag has to be threaded into the reward widget so a test
+   * cannot write to the campaign funnel or burn one of its limited slots. There
+   * is no funnel here, no prize and no latch, so a forced run behaves exactly
+   * like a real one and the widget is never told which it is.
+   *
+   * Bypasses the gate, not the mount latch below: two of these on screen at
+   * once would be a mess whoever asked for it.
+   */
+  startActivateWorkspace() {
+    return this._mountActivateWorkspace();
+  }
+
+  /** Feed the widget into the desk `overlay` part. Shared by the automatic gate
+   *  and the hand-operated entry point above, so both mount it identically. */
+  _mountActivateWorkspace() {
+    if (this._activateFlow && !this._activateFlow.isDestroyed()) return;
+    // Same synchronous latch as the reward flow's: onPartReady("overlay") can
+    // fire more than once, and the guard above cannot see a mount still pending
+    // past the await below.
+    if (this._activateFlowInFlight) return;
+    this._activateFlowInFlight = true;
+    return Kind.waitFor("activate_workspace")
+      .then(() => this.ensurePart("overlay"))
+      .then((p) => {
+        p.feed({ kind: "activate_workspace", uiHandler: [this] });
+        this._activateFlow = p.children.last();
+        this._activateFlow.once(_e.destroy, () => {
+          this._activateFlow = null;
+        });
+        this._activateFlowInFlight = false;
+      })
+      .catch(() => {
+        this._activateFlowInFlight = false;
+      });
   }
 
   /**
@@ -3106,10 +3375,11 @@ class desk_module extends LetcBox {
    * plain login where neither happens — it was written out three times, which
    * is why the guest-join prompt is appended HERE rather than at each site.
    *
-   * Order matters and is the existing one: reward flow, then LAUNCH30, then the
-   * invited-workspace prompt. Both of the first two are full-screen and
-   * self-gating; the prompt is a small dialog and goes last so it never stacks
-   * on top of them.
+   * Order matters: reward flow, then workspace activation, then LAUNCH30, then
+   * the invited-workspace prompt. The first three are full-screen and
+   * self-gating (activation additionally stands down when the reward flow took
+   * the screen — they open with the same walkthrough); the prompt is a small
+   * dialog and goes last so it never stacks on top of them.
    *
    * `immediate` says the screen is KNOWN to be clear because a tutorial just
    * finished on it, which is the one moment the LAUNCH30 offer does not have to
@@ -3154,6 +3424,10 @@ class desk_module extends LetcBox {
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
       .then(() => this._maybeStartRewardFlow())
+      // After the reward flow, and skipped entirely when that one mounted: both
+      // open with the same create-workspace walkthrough (see
+      // _maybeStartActivateWorkspace).
+      .then(() => this._maybeStartActivateWorkspace())
       .then(() => this._maybeShowPromoLaunch30("home", { defer: !opt.immediate }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
@@ -3193,7 +3467,8 @@ class desk_module extends LetcBox {
    *   offered on the next login rather than being stacked on a live overlay.
    */
   /**
-   * Is a full-screen home flow (reward, LAUNCH30) on screen right now?
+   * Is a full-screen home flow (reward, workspace activation, LAUNCH30) on
+   * screen right now?
    *
    * Extracted from _waitForHomePopups' local busy() so the invited-workspace
    * loader can gate itself on the same answer — one definition, so the loader can
@@ -3206,7 +3481,13 @@ class desk_module extends LetcBox {
    */
   _homePopupsBusy() {
     if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
+    if (this._activateFlowInFlight) return true;
     if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
+      return true;
+    }
+    // The activation walkthrough owns the whole screen for as long as it runs,
+    // exactly like the reward flow above it.
+    if (this._activateFlow && !this._activateFlow.isDestroyed?.()) {
       return true;
     }
     try {
@@ -3799,13 +4080,128 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.BILLING_SUBSCRIPTION,
     });
+    // Extended page -> "Opened billing / plans". Marked HERE rather than on the
+    // sidebar item so every route counts: the sidebar entry, the Settings
+    // "Manage subscription" card, the desk storage upsell, the admin-console
+    // upsell and a #/desk/billing deep link all pass through this method.
+    //
+    // Fire-and-forget, and never awaited: the user asked for the billing page
+    // and an analytics row must not be able to delay or block it. A rejection
+    // is swallowed for the same reason.
+    //
+    // Ship-ahead guard: `desk` services arrive from the server's ACL via
+    // Platform.get('services') -- lex/services.json has no `desk` key -- so
+    // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
+    // postService is async and its promise rejection is swallowed by .catch,
+    // but without this guard the call POSTs to a path built from `undefined`.
+    if (SERVICE.desk && SERVICE.desk.cta_click) {
+      this.postService(SERVICE.desk.cta_click, { cta: "upgrade", hub_id: Visitor.id },
+        { async: 1 }).catch(() => {});
+    }
     // `preselect` (plan/cycle/tab) rides in from a #/desk/billing deep link; a
     // plain "Upgrade plan" trigger passes nothing, so the page opens on its
     // default tab exactly as before.
     const opt = Object.assign({ page: 1 }, preselect || {});
-    return Kind.waitFor("settings_billing").then(() =>
-      this.togglePanel("settings_billing", "settings-main-slot", true, opt)
-    );
+    // WHAT THE LOADER COVERS, and it is only this line. Kind.waitFor resolves a
+    // dynamic import: settings_billing is a ~280KB chunk, and until it lands
+    // nothing on screen changes at all — the previous panel simply sits there
+    // while the click appears to have done nothing.
+    //
+    // It does NOT cover the widget's own data load, deliberately. onDomRefresh
+    // paints immediately from Visitor.quota()'s cache and re-renders when the
+    // catalog and subscription land; that was a deliberate fix for this same
+    // screen sitting blank through two round trips, and covering it with a
+    // spinner would put one back over a page that is already readable.
+    this._showBillingLoader();
+    return Kind.waitFor("settings_billing")
+      .then(() => this.togglePanel("settings_billing", "settings-main-slot", true, opt))
+      .finally(() => this._hideBillingLoader());
+  }
+
+  /** The live billing loader window, or null. */
+  _billingLoader() {
+    try {
+      const all = (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("window_info")) || [];
+      for (const w of all) {
+        if (!w || (w.isDestroyed && w.isDestroyed())) continue;
+        if (w.mget && w.mget("billing_loading")) return w;
+      }
+    } catch (e) {
+      /* Wm not answering */
+    }
+    return null;
+  }
+
+  /**
+   * "Loading plans…" while the billing chunk downloads.
+   *
+   * Modelled on _showInvitedWorkspaceLoader, and it shares that one's two
+   * safety properties: a `dismiss_after` backstop, because a loader with no
+   * footer cannot be dismissed by a button and must not outlive its reason even
+   * if a future path forgets; and mode "hb", which keeps the drumee/✕ header so
+   * it can always be closed by hand.
+   *
+   * TWO THINGS DIFFER FROM THAT ONE, and both matter here.
+   *
+   * IT IS DELAYED. The chunk is cached after the first open, so on every visit
+   * after that Kind.waitFor resolves in a few milliseconds — and a spinner that
+   * appears and vanishes inside one frame reads as a glitch, which is worse
+   * than the honest nothing it replaced. The window is only raised if the wait
+   * is still running when the timer fires.
+   *
+   * IT IS NOT ONCE-PER-SESSION. The invited-workspace loader latches on a flag
+   * it never clears, because that intent is consumed once. Billing can be
+   * opened as many times as somebody clicks Upgrade plan, so the latch is
+   * released in _hideBillingLoader — otherwise the second visit, which is
+   * usually the cached one, would be the only one that could show it, and the
+   * first, which is the slow one, would not.
+   */
+  _showBillingLoader() {
+    if (this._billingLoaderPending) return;
+    this._billingLoaderPending = true;
+    this._billingLoaderTimer = setTimeout(() => {
+      this._billingLoaderTimer = null;
+      // The wait ended while we were holding back — this is the cached path,
+      // and nothing should appear.
+      if (!this._billingLoaderPending) return;
+      if (!window.Wm || !Wm.info) return;
+      const fig = "window-info";
+      Wm.info({
+        variant: "notice",
+        mode: "hb",
+        billing_loading: 1,
+        dismiss_after: 30000,
+        message: [
+          Skeletons.Box.X({
+            className: `${fig}__loader`,
+            kids: [
+              Skeletons.Element({ className: `${fig}__loader-spinner` }),
+              Skeletons.Note({
+                className: `${fig}__loader-label`,
+                content: LOCALE.LOADING_BILLING || "Loading plans…",
+              }),
+            ],
+          }),
+        ],
+      });
+    }, DESK_BILLING_LOADER_DELAY);
+  }
+
+  /**
+   * Take it down. Idempotent, and called from `finally` so a failed import —
+   * an offline tab, a chunk 404 after a redeploy — cannot leave a spinner
+   * standing over a desk that has stopped trying.
+   */
+  _hideBillingLoader() {
+    if (this._billingLoaderTimer) {
+      clearTimeout(this._billingLoaderTimer);
+      this._billingLoaderTimer = null;
+    }
+    // Released, not latched: see _showBillingLoader. The next Upgrade plan
+    // click has to be able to raise it again.
+    this._billingLoaderPending = false;
+    const w = this._billingLoader();
+    if (w && w.goodbye) w.goodbye();
   }
 
   /**
@@ -4358,7 +4754,11 @@ class desk_module extends LetcBox {
         // desk.create_hub ever runs (context menu, sidebar, topbar all land
         // here or on Wm's twin case).
         if (require("libs/over-limit").guardWrite("write")) return;
-        return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+        return Wm.onUiEvent(cmd, {
+          ...args,
+          service: "new-workspace",
+          ...this._createFormOverrides(),
+        });
       }
 
       case "new-note": {
@@ -4404,10 +4804,17 @@ class desk_module extends LetcBox {
         return this._openInvitePopup(cmd);
       }
 
-      // Reward-flow Step 1 walkthrough: open/close the topbar Add-new dropdown
-      // on its behalf (the desk owns the `addmenu` part). Used by the guide's
-      // Back to step from the create-modal back to the dropdown, and from the
-      // dropdown back to the Add-new button.
+      // A guided walkthrough (reward-flow's Step 1, activate-workspace's) is
+      // asking the desk to open/close the topbar Add-new dropdown on its behalf
+      // — the desk owns the `addmenu` part. Used by their Back to step from the
+      // create-modal back to the dropdown, and from the dropdown back to the
+      // Add-new button.
+      //
+      // Two names for one case: `reward-*` is the original, kept because
+      // reward-flow still fires it, and `guided-*` is what every flow written
+      // since asks for. Renaming the original would have meant editing a live
+      // campaign widget for cosmetics.
+      case "guided-set-add-menu":
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
           if (!p || !_.isFunction(p.changeState)) return;
@@ -4445,6 +4852,8 @@ class desk_module extends LetcBox {
           setCreateMenuState(_a.open);
         });
 
+      // Same pair of names, same reason as the case above.
+      case "guided-set-new-create-menu":
       case "reward-set-new-create-menu":
         return this.ensurePart("desk-new-create-group").then((p) => {
           if (p && p.el) {
@@ -4452,12 +4861,17 @@ class desk_module extends LetcBox {
           }
         });
 
-      // Relayed to the reward flow: it opened this popup through the
-      // "invite-member" service above, so the popup's uiHandler is the desk,
-      // not the flow.
+      // Relayed to whichever guided flow is running: it opened this popup
+      // through the "invite-member" service above, so the popup's uiHandler is
+      // the desk, not the flow. Both are told — they cannot be on screen
+      // together (activation stands down when the reward flow mounts), so at
+      // most one of these does anything.
       case "invitation-sent":
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitationSent();
+        }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitationSent();
         }
         return;
 
@@ -4586,8 +5000,14 @@ class desk_module extends LetcBox {
       this._invitePopup = Wm.__wrapperModal.children.last();
       this._invitePopup.once(_e.destroy, () => {
         this._invitePopup = null;
+        // Same pair as the "invitation-sent" relay above: whichever guided flow
+        // asked for this popup needs to know it has gone, and only one of them
+        // can be running.
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitePopupClosed();
+        }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitePopupClosed();
         }
       });
     });

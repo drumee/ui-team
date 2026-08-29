@@ -241,6 +241,23 @@ $theme-colors: (
     // Twin of __ui's clamp — keep the column stack from widening the root past
     // its cell so the board's overflow-x engages.
     min-width: 0;
+    // Query container anchor for the compact viewbar at the foot of this file.
+    // Deliberately the PANEL, not the viewport and not the host window: the
+    // task panel shares the folder window's split body with the file list, so
+    // a 900px window can still leave the panel at 400px — a viewport `@media`
+    // misses that entirely, and `@container window-folder-w` would measure the
+    // whole window rather than the strip's actual room. Same reasoning that
+    // put the folder window's own container on the window instead of a media
+    // query, applied one level further in.
+    //
+    // Safe to contain here: __root is already `position: relative`, so it is
+    // the containing block its absolutely-positioned overlays (__detail-wrapper
+    // / __create-wrapper / __board-wrapper, all `position: absolute; inset: 0`)
+    // already resolve against — the implied `contain: layout` changes nothing
+    // for them, and there is no `position: fixed` descendant to trap. It also
+    // implies no PAINT containment, so nothing gets newly clipped.
+    container-type: inline-size;
+    container-name: tasks-panel-w;
   }
 
   // Mount point for the active view (board / list / calendar / gantt / summary),
@@ -1186,6 +1203,57 @@ $theme-colors: (
     &[data-active="1"] {
       border-color: var(--normal-fg-10, #0b0a21);
     }
+  }
+
+  // "Tasks here are done" — the same pill switch as the board modal's
+  // "Set as default" row, at the column-menu's smaller scale.
+  &__col-done-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  &__col-done-label {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    // drumee.typo maps $weight onto a font-FAMILY only and never emits
+    // font-weight, so the weight has to be written out or the label renders
+    // at whatever it inherits.
+    font-weight: 500;
+  }
+
+  &__col-done-toggle {
+    position: relative;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 18px;
+    border-radius: 10px;
+    background: var(--normal-bg-70, #d1d1d6);
+    transition: background 0.15s;
+
+    &[data-on="1"] {
+      background: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__col-done-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.15s;
+  }
+
+  &__col-done-toggle[data-on="1"] &__col-done-knob {
+    left: 18px;
   }
 
   &__col-menu-actions {
@@ -3189,8 +3257,14 @@ $theme-colors: (
   // The two icon buttons have no label to swap, so the glyph itself steps
   // aside and the spinner takes its place — the button keeps its box, so
   // neither the comment footer nor the attachment card reflows mid-request.
+  //
+  // Third case, same recipe: a chip being OPENED (node_info + a kind load) puts
+  // the spinner where its file-type icon sits. The flag is on the chip, not on
+  // the icon, because the chip is the control that was clicked — hence the
+  // descendant selector.
   &__comment-attachment-unlink[data-loading="1"],
-  &__comment-action-ico[data-loading="1"] {
+  &__comment-action-ico[data-loading="1"],
+  &__comment-attachment[data-loading="1"] &__comment-attachment-ico {
     pointer-events: none;
     position: relative;
 
@@ -3210,6 +3284,22 @@ $theme-colors: (
       border-radius: 50%;
       animation: tasks-panel-spin 0.7s linear infinite;
     }
+  }
+
+  // A chip mid-open takes no further clicks: a second one would open a second
+  // window. _isControlBusy refuses it as well — this is the half that stops the
+  // click ever being dispatched.
+  &__comment-attachment[data-loading="1"] {
+    pointer-events: none;
+  }
+
+  // A chip being detached (its ✕ clicked, the unlink in flight) is inert for the
+  // same reason and dimmed a little further than an upload in progress: it is
+  // leaving, not arriving. The spinner stays on the ✕ — the control doing the
+  // work — so this state adds no second one.
+  &__comment-attachment[data-removing="1"] {
+    pointer-events: none;
+    opacity: 0.5;
   }
 
   // ── Pending-file states ───────────────────────────────────────────
@@ -3268,6 +3358,37 @@ $theme-colors: (
   // The spinner and the retry button are positioned against the thumb box.
   &__attachment-thumb-box {
     position: relative;
+  }
+
+  // ── Busy row: attachment uploads in flight on this comment ─────────
+  // The ROW ITSELF keeps its pointer events. It has to stay a hit-test target
+  // or resolveZone's closest(".tasks-panel__comment-row[data-comment-id]")
+  // misses and the row silently stops being a drop zone — a row mid-upload
+  // still accepts more files. So the contents go inert instead, which is what
+  // makes the row read as disabled: body links, reply, reactions, edit, delete,
+  // unlink and opening a committed attachment are all out of reach.
+  //
+  // A row being EDITED is exempt from the inertness (not from the dimming): a
+  // drop resolves to the row even while its editor is open, and freezing a
+  // half-typed comment behind a large upload would trap the author — Cancel
+  // already refuses while files are in flight.
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-avatar,
+  &__comment-row[data-busy="1"]:not([data-editing="1"]) > &__comment-main {
+    pointer-events: none;
+  }
+
+  &__comment-row[data-busy="1"] > &__comment-main > * {
+    opacity: 0.5;
+  }
+
+  // Two exceptions to the dimming, both because they are what the user is
+  // looking at: the strip carrying the spinner and filenames, and the editor
+  // (plus its Save / Cancel) of a row being edited. Declared after the rule
+  // above, which it ties with on specificity.
+  &__comment-row[data-busy="1"] &__comment-attachments,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-field,
+  &__comment-row[data-busy="1"][data-editing="1"] &__comment-actions {
+    opacity: 1;
   }
 
   // Files already attached to a saved comment.
@@ -3338,33 +3459,24 @@ $theme-colors: (
     }
   }
 
-  // The trailing slot is ALWAYS rendered, holding exactly one 12px control or
-  // nothing: unlink when committed and owned, a spinner while uploading, retry
-  // on error, empty on someone else's committed file. Reserving it is what
-  // keeps every chip the same size, so the in-flight → committed swap costs
-  // zero layout — the whole point of rendering both as chips rather than
-  // letting an in-flight fileCard stand 36px taller.
+  // The trailing slot is ALWAYS rendered, and holds one 12px control in every
+  // state but error: the ✕ (unlink when committed, discard while queued or
+  // failed, a spinner in its place mid-transfer) — or nothing at all on someone
+  // else's committed file, which cannot be unlinked from here. Reserving it is
+  // what keeps every chip the same size, so the in-flight → committed swap
+  // costs zero layout: both sides of that swap are one control.
+  //
+  // Error is the exception, carrying retry BESIDE the ✕ so a file that failed
+  // can be either re-sent or thrown away. It is a terminal state — nothing
+  // swaps out of it without a click — and it already reads as different with
+  // its red border, so the extra 16px is not a reflow anyone watches happen.
   &__comment-attachment-slot {
-    flex: 0 0 12px;
-    width: 12px;
+    flex: 0 0 auto;
+    min-width: 12px;
     height: 12px;
+    gap: 4px;
     align-items: center;
     justify-content: center;
-  }
-
-  // Same 12px spinner the unlink button already uses for its own in-flight
-  // state, so the two read as one family.
-  &__comment-attachment[data-status="uploading"] &__comment-attachment-slot,
-  &__comment-attachment[data-status="downloading"] &__comment-attachment-slot {
-    &::after {
-      content: "";
-      width: 12px;
-      height: 12px;
-      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
-      border-top-color: var(--accent, #433cc5);
-      border-radius: 50%;
-      animation: tasks-panel-spin 0.7s linear infinite;
-    }
   }
 
   &__comment-attachment[data-status="uploading"],
@@ -4113,6 +4225,20 @@ $theme-colors: (
   &__viewbar-tabs {
     align-items: center;
     gap: 4px;
+  }
+
+  // Carousel footer, hidden by default: it only means anything in the compact
+  // `@container tasks-panel-w` layout at the foot of this file, which pages the
+  // strip two tabs at a time. Without this it would still be a visible extra
+  // row under the viewbar at every width — the skeleton always renders it.
+  //
+  // !important for the reason webrtc/skin/meeting-shell.scss documents at
+  // length: this footer is a Box.X, so ui-styles/container.css matches it with
+  // `.drumee-box[data-flow="x"] { display: flex }` at specificity 0,2,0. A bare
+  // single-class rule here is 0,1,0 and simply loses — the dots would show on
+  // desktop. Do not "clean this up".
+  &__viewbar-dots {
+    display: none !important;
   }
 
   &__viewbar-new {
@@ -7611,6 +7737,167 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     .tasks-panel__create-form {
       padding-left: 16px;
       padding-right: 16px;
+    }
+  }
+}
+
+// ── Compact viewbar (container query) ────────────────────────────────────────
+// Fires whenever the TASK PANEL's own width drops below 700px, regardless of
+// viewport — so it covers both a real phone and the panel sharing a wide
+// desktop folder window with the file list, which a viewport media query would
+// miss. Container anchor is `tasks-panel__root` (see its rule above).
+//
+// The view-tab strip used to be a plain nowrap flex row: five tabs (Board,
+// Calendar, Gantt, List, Summary) measuring ~500px with their gaps, in a bar
+// that has ~366px of usable width at a 390px phone. List and Summary were
+// simply cut off the right edge with nothing to say they existed. It now pages
+// two tabs at a time with a dot per page underneath (skeleton/index.js builds
+// the footer), mirroring the folder window's own tab-bar carousel.
+@container tasks-panel-w (max-width: 700px) {
+  .tasks-panel {
+    // Row spacing is set per-row (see the `margin-top`s on __viewbar-dots and
+    // __viewbar-right below) rather than by one uniform `row-gap`, because the
+    // three stacked rows are not three peers: the dot footer is the TAB
+    // STRIP's pager and has to read as part of it, while the controls are a
+    // separate group. A single row-gap can only make all three equidistant,
+    // which leaves the dots floating ambiguously between the two and reads as
+    // if they belong to the buttons.
+    //
+    // Vertical padding opens up with them — the bar is three rows tall here
+    // instead of one, and the desktop 6px looked pinched against the panel
+    // edge once it stacked.
+    &__viewbar {
+      row-gap: 0;
+      padding: 10px 12px 12px;
+    }
+
+    &__viewbar-tabs {
+      // Full row so a page is exactly the strip's width — the arithmetic that
+      // the item's flex-basis and the JS `scrollLeft / clientWidth` both rely
+      // on. Also what puts the controls and the footer on their own lines.
+      flex: 1 1 100%;
+      min-width: 0;
+      gap: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      // Hidden, not absent: the dots are the affordance now, and a scrollbar
+      // under a two-item strip reads as a second, competing one.
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    // Two per page. The gap sits BETWEEN the pair, so each item is half of what
+    // is left after it — not half the strip, which would overflow by the gap
+    // and let a sliver of the third tab show at the right edge.
+    &__viewbar-item {
+      flex: 0 0 calc((100% - 8px) / 2);
+      min-width: 0;
+      // REQUIRED, not decorative: the base rule carries `padding: 5px 12px` and
+      // sets no box-sizing, so under content-box the flex-basis above is the
+      // CONTENT width and each tab renders 24px wider than the half it was
+      // asked for. Measured at a 356px strip: 198px per tab, so the pair plus
+      // its gap came to 404px and a sliver of the third tab sat in the gutter
+      // — the exact overflow the halving is meant to prevent.
+      box-sizing: border-box;
+      justify-content: center;
+      scroll-snap-align: start;
+    }
+
+    // Half a narrow strip still clears the longest label ("Calendar"), but the
+    // lock glyph on a gated tab can tip it over — ellipsis rather than a glyph
+    // pushed out of its own pill.
+    &__viewbar-item-label {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    // The locked-tab tip is a HOVER affordance anchored below its tab, so in a
+    // strip that now clips its own vertical overflow it would be sheared off
+    // mid-line. Drop it here: there is no hover on the touch layouts this
+    // fires for, and the tier gate is unaffected — a locked tab still takes
+    // the tap and still opens the upsell (index.js `set-view`).
+    &__viewbar-item-tip {
+      display: none;
+    }
+
+    // ── Right cluster: centred ──────────────────────────────────────────────
+    // The base rule pins this right with `margin-left: auto` so it hugs the
+    // edge on whichever row it lands. On its own full-width row that reads as
+    // the controls having drifted off to one side, so centre them instead —
+    // margin-left must be reset explicitly or `auto` still eats the free space
+    // before `justify-content` ever gets to distribute it.
+    &__viewbar-right {
+      flex: 1 1 100%;
+      margin-left: 0;
+      justify-content: center;
+      // Last of the three rows. The skeleton emits this BEFORE the dot footer
+      // (so the desktop bar can right-align it with margin-left:auto against
+      // the tabs, with the hidden footer contributing nothing) — that source
+      // order is worth leaving alone, so the stack is reordered here instead.
+      // Same move, and the same reasoning, as the folder skin's `order: -1` on
+      // its file-controls row.
+      order: 1;
+      // The clear break in the bar: everything above it belongs to the tab
+      // strip, everything from here down is controls.
+      margin-top: 14px;
+    }
+
+    // ── Carousel footer ─────────────────────────────────────────────────────
+    &__viewbar-dots {
+      // Explicit, and !important to answer the base rule's own !important
+      // above (which is there to beat the framework's 0,2,0 flex rule).
+      // @container contributes no specificity, so this call site can reach
+      // 0,1,0 at best and needs the same lever to win.
+      display: flex !important;
+      flex: 1 1 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      // Deliberately tighter than the gap under it: this pager sits directly
+      // beneath the strip it pages, close enough to read as attached to it.
+      // `order` is left at its default 0 so it lands between the tabs (also 0,
+      // and earlier in source) and the controls (order 1).
+      margin-top: 8px;
+
+      // One page — nothing to page through (set in the skeleton). Five view
+      // tabs always make three pages, so this is dormant today; it is the same
+      // guard the folder tab bar carries and costs nothing to keep correct.
+      &[data-visible="0"] {
+        display: none !important;
+      }
+    }
+
+    &__viewbar-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 6px;
+      border-radius: 50%;
+      background-color: var(--normal-fg-10, #0b0a21);
+      opacity: 0.25;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    // Active dot, driven entirely by the footer's own data-page — so a swipe
+    // only has to update one attribute and no per-dot state exists to drift.
+    // Five view tabs is the fixed set, so three pages is the ceiling and
+    // listing them beats generating a rule per index.
+    &__viewbar-dots[data-page="0"] &__viewbar-dot:nth-child(1),
+    &__viewbar-dots[data-page="1"] &__viewbar-dot:nth-child(2),
+    &__viewbar-dots[data-page="2"] &__viewbar-dot:nth-child(3) {
+      opacity: 1;
+      transform: scale(1.15);
     }
   }
 }

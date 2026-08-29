@@ -32,6 +32,28 @@ const PICK_ATTACHMENT_SCOPES = [
   "comment-reply",
 ];
 
+// Row-scoped services refused while that row has attachment work in flight
+// (see _refuseWhileRowBusy). Every one of them either mutates the comment the
+// files are landing on, or moves the row out from under them. Reply and the
+// reactions are in the list because the whole row reads as disabled while it is
+// busy; a service without a `commentId` cannot be resolved to a row and so can
+// never appear here.
+const ROW_BUSY_SERVICES = [
+  "comment-edit",
+  "comment-delete",
+  "comment-reply",
+  "comment-react-add",
+  "comment-react-remove",
+  "comment-react-toggle",
+  "comment-react-more",
+  "comment-unlink-attachment",
+  "retry-pending-file",
+  // Discarding a queued file while a sibling is still uploading would edit the
+  // list the upload loop is walking. The chip's ✕ is inert while the row is
+  // busy anyway (the skin), and this keeps the handler agreeing with it.
+  "discard-row-file",
+];
+
 // A paperclip inside a comment row carries "comment-row:<id>" — the same key
 // resolveZone produces for a drop there, so picking and dropping in that row
 // land identically and both attach to THAT comment rather than a new one.
@@ -235,6 +257,9 @@ class __tasks_panel extends LetcBox {
     // until they settle; the map is cleared only on destroy — see
     // _dropOnCommentRow.
     this._rowUploads = new Map();
+    // In-flight run count per comment id (see _markRowBusy). Separate from
+    // _rowUploads: that is what is queued, this is what is moving.
+    this._rowBusy = new Map();
     this.bindEvent(_a.live);
   }
 
@@ -268,6 +293,14 @@ class __tasks_panel extends LetcBox {
     if (this._pointerRelease && typeof document !== "undefined") {
       document.removeEventListener("mouseup", this._pointerRelease, true);
       this._pointerRelease = null;
+    }
+    if (this._pasteHandler && typeof document !== "undefined") {
+      document.removeEventListener("paste", this._pasteHandler);
+      this._pasteHandler = null;
+    }
+    if (this._pointerExit && this.el) {
+      this.el.removeEventListener("mouseleave", this._pointerExit);
+      this._pointerExit = null;
     }
     // Release pending-file image-preview blob URLs — the two task forms and
     // the three comment drafts, which carry their own queued files.
@@ -402,6 +435,7 @@ class __tasks_panel extends LetcBox {
     this._installBoardPan();
     this._installMediaDroppable();
     this._trackPointer();
+    this._installPasteAttach();
     this._installFileSearchFocus();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
@@ -534,7 +568,8 @@ class __tasks_panel extends LetcBox {
       "task.delete", "task.link_file", "task.unlink_file", "task.link_label",
       "task.unlink_label", "task.comment_create", "task.comment_update",
       "task.comment_delete", "task.comment_react", "task.column_create",
-      "task.column_update", "task.column_delete", "task.column_reorder",
+      "task.column_update", "task.column_set_done", "task.column_delete",
+      "task.column_reorder",
       // Both comment-file services were missing from this list while being
       // `src: write` server-side. _zoneFor already refuses a viewer without
       // task rights, but that is UX — this is the boundary, and nothing stops
@@ -666,7 +701,11 @@ class __tasks_panel extends LetcBox {
     // forces a document-wide style recalc + layout and made dragging a card
     // between columns stutter. Belt and braces with the _K.internalDragType tag
     // set in dragstart: that covers the drag once it leaves this panel.
-    // A real file drag is left alone: it must still reach Wm for upload.
+    // A file drag is left alone UNTIL it resolves to one of our zones — from
+    // that point it is ours too and is stopped on the same terms (see the
+    // dragover / drop file branches below), because the desk would otherwise
+    // upload the same file into the folder body a second time. A file drag over
+    // panel chrome, resolving to no zone, still reaches Wm for upload.
     const isOurDrag = () => !!(this._dragTaskId || this._dragColKey);
 
     root.addEventListener("dragenter", (e) => {
@@ -703,6 +742,23 @@ class __tasks_panel extends LetcBox {
         // nothing at all. `none` on no zone is what makes a drop on the
         // description or the panel chrome read as a refusal before it happens.
         const s = this._activeUploadScope(e);
+        // Over one of our zones this drag is ours: keep it off Wm.fileDragOver
+        // → capture, which lights the desk's own upload affordance over ours
+        // AND parks Wm._target on the window under the pointer — the target a
+        // bubbled drop uploads into. Off-zone the pass still runs, so a drop on
+        // panel chrome keeps landing in the folder as before.
+        if (s) {
+          e.stopPropagation();
+          // Warm the folder listing while the pointer is still travelling, so
+          // the name resolution _uploadPendingFile now waits on is already
+          // resolved by the time a file lands. Guarded on both cache fields, so
+          // this fires ONCE per panel and not per dragover event — and only for
+          // someone who is actually dragging a file at a zone, unlike a warm-up
+          // on every detail open.
+          if (!this._folderFilenames && !this._folderFilenamesJob) {
+            this._ensureFolderFilenames();
+          }
+        }
         try {
           e.dataTransfer.dropEffect = s ? "copy" : "none";
         } catch (_) {}
@@ -807,10 +863,18 @@ class __tasks_panel extends LetcBox {
       }
       if (this._isFileDrag(e)) {
         e.preventDefault();
-        // Resolve the scope from the drop event BEFORE clearing the overlays —
-        // _onFilesDropped re-resolves from the same event, so the order only
-        // matters for the flags.
-        const dropped = this._onFilesDropped(e);
+        // Resolve the zone ONCE, here, and hand it to _onFilesDropped so the
+        // decision that stops propagation is the same one that picks the draft.
+        const zone = this._activeUploadScope(e);
+        // A drop we accept must not ALSO reach the desk's upload handler
+        // (modules/desk/index.js `{drop: "_upload"}` → Wm.upload →
+        // _bundleDrop), which uploads the dropped file into the folder body
+        // independently of the attach path — a second, collision-renamed copy
+        // of every file attached by drag-and-drop. Only a drop that resolves to
+        // no zone falls through: there the folder-body upload IS the right
+        // outcome.
+        if (zone) e.stopPropagation();
+        const dropped = this._onFilesDropped(e, zone);
         this._setDragAffordance(null);
         return dropped;
       }
@@ -1201,6 +1265,9 @@ class __tasks_panel extends LetcBox {
         depth += 1;
       }
     }
+    // After the service has been resolved (the walk above is what turns a click
+    // on a Note into its ancestor's service), before any case can act on it.
+    if (this._refuseWhileRowBusy(service, trigger)) return;
     switch (service) {
       case "task-input-changed":
         return this._onTaskInputChanged(args, trigger);
@@ -1600,6 +1667,10 @@ class __tasks_panel extends LetcBox {
         return;
       }
 
+      // Compact viewbar carousel footer — page the view-tab strip.
+      case "viewbar-page":
+        return this._showViewbarPage(trigger);
+
       case "set-cal-mode": {
         const m = trigger.mget("calMode") === "week" ? "week" : "month";
         if (m !== this._calMode) {
@@ -1759,6 +1830,9 @@ class __tasks_panel extends LetcBox {
       case "col-theme-set":
         return this._themeColumn(trigger);
 
+      case "col-done-toggle":
+        return this._toggleColumnDone(trigger);
+
       case "col-delete":
         return this._deleteColumn(trigger);
 
@@ -1872,6 +1946,11 @@ class __tasks_panel extends LetcBox {
       case "remove-pending-file":
         return this._removePendingFile(trigger);
 
+      case "discard-row-file":
+        // The row chips' ✕. Its staged-strip counterpart is
+        // "remove-pending-file", which only knows about the drafts.
+        return this._discardRowUpload(trigger);
+
       case "retry-pending-file":
         // Every retry that can still be rendered belongs to a comment row:
         // the staged strips never retain an error entry (failures are handed
@@ -1887,7 +1966,9 @@ class __tasks_panel extends LetcBox {
         return this._unlinkAttachment(trigger);
 
       case "open-attachment":
-        return this._openAttachment(trigger.mget("fileNid"));
+        // The trigger comes along so the clicked chip / card can show that it
+        // is working — opening a node is a fetch plus a kind load.
+        return this._openAttachment(trigger.mget("fileNid"), trigger);
 
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
@@ -1897,6 +1978,18 @@ class __tasks_panel extends LetcBox {
   onPartReady(child, pn) {
     if (pn === "fileselector") {
       child.el.onchange = (e) => this._onAttachmentPicked(e);
+      return;
+    }
+    if (pn === "viewbar-tabs") {
+      this._wireViewbarCarousel(child);
+      return;
+    }
+    if (pn === "viewbar-dots") {
+      this._viewbarDots = child;
+      // The strip may have mounted first, in which case its listener already
+      // ran against no dots. Stamp the current page now so the footer is right
+      // on first paint rather than only after the first scroll.
+      this._syncViewbarPage();
       return;
     }
     // Mention editors register as "<scope>-desc-editor" (create / detail /
@@ -2251,6 +2344,13 @@ class __tasks_panel extends LetcBox {
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
+      // A peer flipped which column means finished. Completion is read from
+      // is_done all over this window (the subtask badge, the completed
+      // filters, where a new task lands), so a stale flag silently
+      // mis-reports — reload the columns exactly like a rename.
+      // SERVICE.task.column_set_done is defined in lex/services.json, so this
+      // is never `case undefined:` even if the backend map lacks it.
+      case SERVICE.task.column_set_done:
         Promise.all([this._loadColumns(), this._loadTasks()]).then(() =>
           this._render(),
         );
@@ -2915,7 +3015,7 @@ class __tasks_panel extends LetcBox {
           let nid = pf.nid;
           if (!nid && pf.file) {
             try {
-              const result = await this._uploadPendingFile(pf);
+              const result = await this._uploadPendingFile(pf, pendingFiles);
               nid = result.nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
@@ -3209,7 +3309,7 @@ class __tasks_panel extends LetcBox {
           let nid = pf.nid;
           if (!nid && pf.file) {
             try {
-              const result = await this._uploadPendingFile(pf);
+              const result = await this._uploadPendingFile(pf, pendingFiles);
               nid = result.nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
@@ -3455,6 +3555,53 @@ class __tasks_panel extends LetcBox {
     } catch (err) {
       console.error("[tasks_panel] column.theme failed:", err);
     }
+    this._render();
+  }
+
+  /**
+   * Flip "tasks in this column are done".
+   *
+   * is_done is what completion is actually keyed on everywhere in this window
+   * (_doneKeys, the subtask badge, the completed filters) — but until now only
+   * the seeded built-in `complete` ever carried it, so a board whose columns
+   * were renamed or replaced had no finished column at all.
+   *
+   * The row is only mutated locally AFTER the server confirms: getColumns()
+   * caches on a signature that includes is_done, so writing it optimistically
+   * would flip every completion read in the window on a call that may not have
+   * landed. postService resolves undefined when a call does not complete (the
+   * write guard above does exactly that for a viewer), so an empty response is
+   * a failure, not a success with no body.
+   */
+  async _toggleColumnDone(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    if (!id) return;
+    const rec = this._customColumns.find((c) => c.id === id);
+    if (!rec) return;
+    const next = Number(rec.is_done) ? 0 : 1;
+    try {
+      const resp = await this.postService({
+        service: SERVICE.task.column_set_done,
+        hub_id: this._hubId,
+        // Folder-scoped — see _renameColumn.
+        nid: this._scopeNid,
+        id,
+        is_done: next,
+      });
+      const row = Array.isArray(resp) ? resp[0] : resp;
+      if (!row || row.id == null) return; // refused or not applied — keep the old value
+      rec.is_done = Number(row.is_done) ? 1 : 0;
+    } catch (err) {
+      console.error("[tasks_panel] column.set_done failed:", err);
+      return;
+    }
+    // The done/total subtask badge is `subtask_done` from task.list, counted
+    // SERVER-side over the columns flagged is_done — so it does not follow
+    // from the local row and is stale the moment the flag moves. Reload the
+    // tasks, exactly as the peer branch of onWsMessage does; without it the
+    // person who flipped the switch is the only one seeing the old counts.
+    // _loadTasks never rejects and keeps the previous rows on failure.
+    await this._loadTasks();
     this._render();
   }
 
@@ -3708,7 +3855,7 @@ class __tasks_panel extends LetcBox {
         let nid = pf.nid;
         if (!nid && pf.file) {
           try {
-            nid = (await this._uploadPendingFile(pf)).nid;
+            nid = (await this._uploadPendingFile(pf, pending)).nid;
           } catch (err) {
             console.error("[tasks_panel] comment file upload failed:", err);
             this._setPendingStatus(scopeKey, pf, "error");
@@ -3785,6 +3932,17 @@ class __tasks_panel extends LetcBox {
     const btn = trigger && trigger.el;
     if (this._isControlBusy(btn)) return;
     this._setControlBusy(btn, true);
+    // The whole chip goes inert with it, not just the button: while the unlink
+    // is in flight the chip was still a live open-attachment target, so a click
+    // beside the ✕ opened the very file being detached. A separate flag from the
+    // data-loading of an OPENING chip — that one puts a spinner where the
+    // file-type icon sits, and here the spinner belongs on the ✕, which is the
+    // control doing the work.
+    const chip =
+      btn && btn.closest
+        ? btn.closest(`.${this.fig.family}__comment-attachment`)
+        : null;
+    if (chip && chip.dataset) chip.dataset.removing = "1";
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -3799,6 +3957,9 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] comment.unlink_file failed:", err);
     } finally {
       this._setControlBusy(btn, false);
+      // A successful unlink takes the chip away with the reload above; this is
+      // for the refusal, which leaves it on screen and clickable again.
+      if (chip && chip.dataset) delete chip.dataset.removing;
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -4318,6 +4479,56 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
+   * Does this comment have file work still in flight?
+   *
+   * Counts RUNS, not entries. Deriving this from the entries' statuses looked
+   * equivalent and was not: _rowUploads is only pruned when a link succeeds, so
+   * every entry a run skipped or abandoned stayed at "queued" for the life of
+   * the panel — and the row stayed inert with it, its own ✕ and retry refused
+   * by the guard that reads this. A counter cannot outlive the run that raised
+   * it: _markRowBusy is called from a `finally` on every path out.
+   *
+   * A leftover entry is therefore a chip you can retry or throw away, which is
+   * what it always should have been.
+   */
+  isCommentRowBusy(commentId) {
+    return (this._rowBusy.get(commentId) || 0) > 0;
+  }
+
+  /**
+   * Raise (+1) or release (-1) one unit of in-flight work for a comment.
+   *
+   * A count rather than a flag because two runs can overlap: dropping a second
+   * file while the first is still uploading starts an independent
+   * _dropOnCommentRow, and the row must stay busy until BOTH have released it.
+   * The key is deleted at zero so the map cannot accumulate idle comments.
+   */
+  _markRowBusy(commentId, delta) {
+    const n = (this._rowBusy.get(commentId) || 0) + delta;
+    if (n > 0) this._rowBusy.set(commentId, n);
+    else this._rowBusy.delete(commentId);
+  }
+
+  /**
+   * Refuse a row-scoped action while that row is busy.
+   *
+   * The skin already makes the row inert, and this is the backstop behind it:
+   * a click that reaches a render the strip has since moved past, or any path
+   * that does not go through the pointer, still lands here. Silent by design —
+   * the spinner beside the filename is the explanation, and inventing a toast
+   * for a state the row is already showing would be noise.
+   *
+   * Only services that carry a `commentId` can be resolved to a row, so this
+   * is the whole set: the composer's own Save / Cancel / Send belong to the
+   * open editor rather than to any one row and are handled by _commentSaving.
+   */
+  _refuseWhileRowBusy(service, trigger) {
+    if (!ROW_BUSY_SERVICES.includes(`${service}`)) return false;
+    const cid = trigger && trigger.mget && trigger.mget("commentId");
+    return !!(cid && this.isCommentRowBusy(cid));
+  }
+
+  /**
    * Queue dropped items onto a comment's in-flight list. Mirrors
    * _stashPendingFiles + attachExistingNodes, but the target is _rowUploads
    * rather than a draft. Returns only the entries actually added.
@@ -4332,15 +4543,25 @@ class __tasks_panel extends LetcBox {
     const nowTs = Date.now();
     const added = [];
     const crossHub = [];
-    await this._ensureFolderFilenames();
+    // NOTHING may be awaited before the entries are pushed. The collision-safe
+    // filename needs the folder listing (_ensureFolderFilenames), and waiting
+    // on that round-trip here is what made the FIRST drop on a cold panel
+    // invisible: the entry did not exist yet, so _refreshCommentList had
+    // nothing to draw and _setPendingStatus had no card to write to. Every
+    // later drop found the cache warm and painted instantly, which is why the
+    // first file only appeared once a second one was dropped.
+    //
+    // The name is provisional until _uploadPendingFile resolves it, just
+    // before it sends — see _finalizePendingName.
     for (const item of items) {
       if (typeof File !== "undefined" && item instanceof File) {
-        const { filename, extension } = this._resolveAvailableName(item.name);
+        const { filename, extension } = this._splitFilename(item.name);
         const entry = {
           localKey: `row:${commentId}:${nowTs}:${added.length}:${item.name}`,
           file: item,
           filename,
           extension,
+          provisional: 1,
           status: "queued",
         };
         if (this._isImageExt(extension)) {
@@ -4392,10 +4613,20 @@ class __tasks_panel extends LetcBox {
       added.push(list[list.length - 1]);
     }
     if (crossHub.length) {
-      await this._queueCrossHubFiles(crossHub, {
-        list,
-        key: `comment-row:${commentId}`,
-      });
+      // The placeholders are already in `list`; paint them before the
+      // downloads, which are seconds of network each. Same rule as above: no
+      // await stands between a staged entry and the chip that shows it. The
+      // download is in-flight work like any other, so the row is busy for it.
+      this._markRowBusy(commentId, 1);
+      this._refreshCommentList();
+      try {
+        await this._queueCrossHubFiles(crossHub, {
+          list,
+          key: `comment-row:${commentId}`,
+        });
+      } finally {
+        this._markRowBusy(commentId, -1);
+      }
     }
     return added;
   }
@@ -4409,46 +4640,88 @@ class __tasks_panel extends LetcBox {
     const taskId = this._detailId;
     const staged = await this._stageRowItems(commentId, items);
     if (!staged.length) return;
+    // Busy for the length of THIS run, not for as long as entries happen to sit
+    // in the list — see _markRowBusy.
+    this._markRowBusy(commentId, 1);
     this._refreshCommentList();
     const key = `comment-row:${commentId}`;
     let consecutiveFailures = 0;
-    for (const pf of staged) {
-      // Cross-hub download failed — _queueCrossHubFiles already marked it.
-      if (pf.crossHubNid && !pf.nid && !pf.file) continue;
-      this._setPendingStatus(key, pf, "uploading");
-      let ok = false;
-      try {
-        let nid = pf.nid;
-        if (!nid && pf.file) nid = (await this._uploadPendingFile(pf)).nid;
-        if (nid) {
-          const res = await this.postService({
-            service: SERVICE.task.comment_link_file,
-            hub_id: this._hubId,
-            comment_id: commentId,
-            task_id: taskId,
-            file_nid: nid,
-          });
-          ok = this._linkSucceeded(res);
-          // Uploaded fine; only the link needs redoing on retry.
-          if (!ok) pf.nid = nid;
+    try {
+      for (const item of staged) {
+        // A cross-hub placeholder is NOT the entry that gets uploaded:
+        // _queueCrossHubFiles fetches the bytes and splices a real entry into
+        // its place, leaving the placeholder out of the list entirely. Follow
+        // that pointer — skipping it, as this loop used to, meant the copied
+        // file was never uploaded and never linked, and simply sat in the strip
+        // looking attached.
+        const pf = item.replacedBy || item;
+        // Nothing to send: a cross-hub placeholder whose download failed, which
+        // _queueCrossHubFiles has already marked.
+        if (pf.crossHubNid && !pf.nid && !pf.file) continue;
+        this._setPendingStatus(key, pf, "uploading");
+        let ok = false;
+        try {
+          let nid = pf.nid;
+          if (!nid && pf.file) {
+            nid = (
+              await this._uploadPendingFile(pf, this.getRowUploads(commentId))
+            ).nid;
+          }
+          if (nid) {
+            const res = await this.postService({
+              service: SERVICE.task.comment_link_file,
+              hub_id: this._hubId,
+              comment_id: commentId,
+              task_id: taskId,
+              file_nid: nid,
+            });
+            ok = this._linkSucceeded(res);
+            // Uploaded fine; only the link needs redoing on retry.
+            if (!ok) pf.nid = nid;
+          }
+        } catch (err) {
+          // Only _uploadPendingFile can land here — it is a hand-rolled Promise
+          // that genuinely rejects. postService never does.
+          console.error("[tasks_panel] comment row attach failed:", err);
         }
-      } catch (err) {
-        // Only _uploadPendingFile can land here — it is a hand-rolled Promise
-        // that genuinely rejects. postService never does.
-        console.error("[tasks_panel] comment row attach failed:", err);
+        if (ok) {
+          this._dropRowUpload(commentId, pf);
+          consecutiveFailures = 0;
+          continue;
+        }
+        this._setPendingStatus(key, pf, "error");
+        // Two in a row is a wall, not bad luck — stop rather than firing the
+        // rest at it. No error taxonomy: the count is the whole rule.
+        if (++consecutiveFailures >= 2) {
+          this._abandonRowQueue(key, staged);
+          break;
+        }
       }
-      if (ok) {
-        this._dropRowUpload(commentId, pf);
-        consecutiveFailures = 0;
-        continue;
-      }
-      this._setPendingStatus(key, pf, "error");
-      // Two in a row is a wall, not bad luck — stop rather than firing the
-      // rest at it. No error taxonomy: the count is the whole rule.
-      if (++consecutiveFailures >= 2) break;
+    } catch (err) {
+      // The loop's own steps are individually guarded, so this is the
+      // unexpected kind. Caught rather than propagated so the reload and
+      // repaint below still run and the row cannot be left looking busy.
+      console.error("[tasks_panel] comment row run failed:", err);
+    } finally {
+      this._markRowBusy(commentId, -1);
     }
     await this._loadComments(taskId);
     if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  /**
+   * Mark what a broken-off run leaves behind.
+   *
+   * The break above stops a run mid-list, and everything past it was abandoned
+   * rather than merely unlucky. Left at "queued" those entries showed a chip
+   * with no spinner, no error and nothing to act on — indistinguishable from an
+   * attached file. "error" is the state that owns them: it offers retry and ✕.
+   */
+  _abandonRowQueue(key, staged) {
+    for (const item of staged) {
+      const pf = item.replacedBy || item;
+      if (pf.status === "queued") this._setPendingStatus(key, pf, "error");
+    }
   }
 
   /**
@@ -4493,6 +4766,35 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  /**
+   * Throw away one row entry from its chip's ✕.
+   *
+   * The staged strips' ✕ goes through _removePendingFile, which filters the
+   * four DRAFTS — it has never known about _rowUploads, so a row chip needed
+   * its own service. The removal itself is _dropRowUpload, the same splice +
+   * revokeObjectURL a successful link already performs; only the trigger is new.
+   *
+   * Nothing is sent to the server: a row entry is either not yet linked (queued
+   * / failed) or already gone from this list, so there is nothing to unlink.
+   */
+  _discardRowUpload(trigger) {
+    const commentId = trigger.mget("commentId");
+    const pendingKey = String(trigger.mget("pendingKey") || "");
+    if (!commentId || !pendingKey) return;
+    const entry = this.getRowUploads(commentId).find(
+      (f) => this._pendingKey(f) === pendingKey,
+    );
+    if (!entry) return;
+    // An upload already on the wire cannot be recalled — _uploadPendingFile
+    // keeps no handle to abort, and dropping the entry would only hide a
+    // transfer that still lands in the folder. The row-level guard refuses this
+    // service while ANY file is in flight; this is the narrower rule that holds
+    // even if that one is ever relaxed.
+    if (entry.status === "uploading" || entry.status === "downloading") return;
+    this._dropRowUpload(commentId, entry);
+    return this._refreshCommentList();
+  }
+
   // Retry one failed row entry. The upload may already have succeeded, in
   // which case pf.nid is set and only the link is redone.
   async _retryRowUpload(trigger) {
@@ -4509,11 +4811,19 @@ class __tasks_panel extends LetcBox {
   async _retryOne(commentId, entry) {
     const taskId = this._detailId;
     const key = `comment-row:${commentId}`;
+    // Same contract as a drop's run: the row is busy while this is moving, and
+    // released on every path out.
+    this._markRowBusy(commentId, 1);
     this._setPendingStatus(key, entry, "uploading");
+    this._refreshCommentList();
     let ok = false;
     try {
       let nid = entry.nid;
-      if (!nid && entry.file) nid = (await this._uploadPendingFile(entry)).nid;
+      if (!nid && entry.file) {
+        nid = (
+          await this._uploadPendingFile(entry, this.getRowUploads(commentId))
+        ).nid;
+      }
       if (nid) {
         const res = await this.postService({
           service: SERVICE.task.comment_link_file,
@@ -4527,6 +4837,8 @@ class __tasks_panel extends LetcBox {
       }
     } catch (err) {
       console.error("[tasks_panel] comment row retry failed:", err);
+    } finally {
+      this._markRowBusy(commentId, -1);
     }
     if (ok) {
       this._dropRowUpload(commentId, entry);
@@ -4672,6 +4984,141 @@ class __tasks_panel extends LetcBox {
     return this._activeUploadScope(e);
   }
 
+  /**
+   * image/* files carried by a paste, in clipboard order.
+   *
+   * `items` is the authoritative list (a screenshot is an item with no entry in
+   * some engines' `files`), with `files` as the fallback for engines that only
+   * populate that. Everything non-image is left alone: the paste then falls
+   * through to whatever the browser would have done with it.
+   */
+  _clipboardImages(e) {
+    const dt =
+      (e && e.clipboardData) ||
+      (e && e.originalEvent && e.originalEvent.clipboardData);
+    if (!dt) return [];
+    const out = [];
+    const items = dt.items || [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (!it || it.kind !== "file" || !/^image\//.test(it.type || "")) continue;
+      const f = it.getAsFile && it.getAsFile();
+      if (f) out.push(f);
+    }
+    if (!out.length) {
+      for (const f of Array.from(dt.files || [])) {
+        if (/^image\//.test((f && f.type) || "")) out.push(f);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * A pasted image usually arrives named ("image.png"), a screenshot sometimes
+   * not at all. Give the nameless ones something to be called, because the name
+   * is what the folder stores and what the chip shows; the collision suffix is
+   * added later, at upload (_finalizePendingName).
+   */
+  _namedPasteFile(file, i) {
+    if (!file || file.name) return file;
+    const ext = String(file.type || "").split("/")[1] || "png";
+    const n = i ? `pasted-image-${i + 1}` : "pasted-image";
+    try {
+      return new File([file], `${n}.${ext}`, { type: file.type });
+    } catch (_) {
+      return file; // no File constructor: staging still copes, unnamed
+    }
+  }
+
+  /**
+   * Where a pasted image lands.
+   *
+   * The same ZONES walk a drop gets, from the pointer rather than from an
+   * event — so ownership (a row must be yours), permissions and "is that
+   * surface even open" all come from _zoneFor and need no rules of their own.
+   *
+   * Two deliberate differences from _pointerScope:
+   *
+   * - No POINTER_TTL. That window exists because a DROP follows a mousemove
+   *   within a frame or two; a paste follows a keystroke, and a pointer that has
+   *   not moved for a minute is not stale — it is simply where the mouse is.
+   *   elementsFromPoint hit-tests live, so a wheel-scroll under a motionless
+   *   cursor resolves to whatever is under it now, exactly as :hover would.
+   * - The panel clears _lastPointer on mouseleave (_installPasteAttach), which
+   *   is what stops a cursor that has left resolving to the row it exited over.
+   */
+  _pasteZone() {
+    const p = this._lastPointer;
+    if (!p) return null;
+    const at = { clientX: p.x, clientY: p.y };
+    // The listener is on document, so EVERY open task panel hears the paste.
+    // Only the one under the cursor may claim it.
+    if (!this._dropPointEl(at)) return null;
+    const zone = this._activeUploadScope(at);
+    if (zone) return zone;
+    // Inside the panel but over no zone — including over another author's
+    // comment, which resolveZone refuses rather than passing through. The
+    // composer is where a paste belongs by default; its draft is allocated on
+    // demand, exactly as a drop on the composer does.
+    if (!this._detailId || !this._mayWriteTasks()) return null;
+    return { scope: "comment", key: "comment" };
+  }
+
+  // Does this element take typed input? Such an element owns any paste that
+  // reaches it — see _onPasteAttach.
+  _isTextEntry(el) {
+    if (!el || !el.closest) return false;
+    return !!el.closest('[contenteditable="true"], input, textarea');
+  }
+
+  /**
+   * Ctrl/Cmd+V with an image in the clipboard, with nothing editable focused →
+   * attach it where the cursor is.
+   *
+   * Refusals come first and cheapest-first, and preventDefault is called ONLY
+   * once we have committed to handling the event, so every paste we decline
+   * behaves exactly as it does today. In particular a paste inside a comment
+   * editor is already handled by _onEditorPaste (inline image at the caret),
+   * which calls preventDefault for an image — focus beats hover, and this sees
+   * nothing.
+   */
+  _onPasteAttach(e) {
+    if (!this.el || !e || e.defaultPrevented) return;
+    const focused =
+      typeof document !== "undefined" ? document.activeElement : null;
+    if (this._isTextEntry(e.target) || this._isTextEntry(focused)) return;
+    if (!this._detailId) return;
+    const files = this._clipboardImages(e);
+    if (!files.length) return;
+    const zone = this._pasteZone();
+    if (!zone) return;
+    e.preventDefault();
+    return this._attachFilesToZone(
+      zone,
+      files.map((f, i) => this._namedPasteFile(f, i)),
+    );
+  }
+
+  /**
+   * Install the paste route.
+   *
+   * On document, because a paste with nothing focused has no target inside the
+   * panel to bubble from. Non-capture, so an editor's own onpaste runs first
+   * and can claim the event (see _onPasteAttach).
+   */
+  _installPasteAttach() {
+    if (this._pasteHandler || typeof document === "undefined") return;
+    this._pasteHandler = (e) => this._onPasteAttach(e);
+    document.addEventListener("paste", this._pasteHandler);
+    if (!this.el) return;
+    // A cursor that has left the panel must not still resolve to a zone: the
+    // remembered position is only "where the mouse is" while the mouse is here.
+    this._pointerExit = () => {
+      this._lastPointer = null;
+    };
+    this.el.addEventListener("mouseleave", this._pointerExit);
+  }
+
   // Last resort: no event, no pointer. A comment being edited owns the drop
   // surface, and with no position there is nothing to say the drop landed on
   // it — so nothing attaches, rather than the file quietly becoming a task
@@ -4716,8 +5163,11 @@ class __tasks_panel extends LetcBox {
     return null;
   }
 
-  async _onFilesDropped(e) {
-    const scope = this._activeUploadScope(e);
+  // `zone` is the descriptor the drop handler already resolved (it needs it to
+  // decide whether the event may bubble to the desk). Re-resolving here would
+  // ask the same question of the same event twice and could answer differently.
+  async _onFilesDropped(e, zone) {
+    const scope = zone || this._activeUploadScope(e);
     if (!scope) {
       if (typeof Butler !== "undefined" && Butler.say) {
         Butler.say(LOCALE.WRONG_DROP_AREA);
@@ -4726,29 +5176,53 @@ class __tasks_panel extends LetcBox {
     }
     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
     if (!files.length) return;
-    // A comment row has no submit, so the drop IS the commit.
-    if (scope.scope === "comment-row") {
-      return this._dropOnCommentRow(scope.commentId, files);
+    return this._attachFilesToZone(scope, files);
+  }
+
+  /**
+   * Send files to whatever a resolved zone means, and nothing else.
+   *
+   * The zone→destination rule, held in one place because there is now more than
+   * one way to arrive with files and a zone: a drop, and a paste. Same reason
+   * resolveZone was factored out for the three drag routes — two entry points
+   * that agree by construction rather than by being written twice.
+   */
+  async _attachFilesToZone(zone, files) {
+    if (!zone || !files || !files.length) return;
+    // A comment row has no submit, so arriving IS the commit.
+    if (zone.scope === "comment-row") {
+      return this._dropOnCommentRow(zone.commentId, files);
     }
-    const draft = this._draftForScope(scope);
+    const draft = this._draftForScope(zone);
     if (!draft) return;
     await this._stashPendingFiles(draft, files);
-    this._refreshPendingList(this._scopeKey(scope));
+    this._refreshPendingList(this._scopeKey(zone));
   }
 
   // Queues File objects onto a draft's pending list (picker + drag-drop),
-  // resolving name collisions and caching an object URL for image previews.
+  // caching an object URL for image previews. Names are provisional here; the
+  // collision-safe one is resolved at upload time (_finalizePendingName).
   async _stashPendingFiles(draft, files) {
-    await this._ensureFolderFilenames();
     draft.pending_files = draft.pending_files || [];
     let i = 0;
+    // Synchronous, exactly as in _stageRowItems: the collision-safe name costs
+    // a folder listing, and blocking the push on it left the caller's
+    // _refreshPendingList with an empty draft to render. The name here is
+    // provisional; _uploadPendingFile finalizes it before sending.
     for (const file of files) {
-      const { filename, extension } = this._resolveAvailableName(file.name);
+      const { filename, extension } = this._splitFilename(file.name);
       const localKey = `local:${Date.now()}:${i++}:${file.name}`;
       // status drives the strip's appearance: queued until save, then
       // uploading, then either gone (linked) or error with a retry. Absent is
       // read as "queued" so older entries render unchanged.
-      const entry = { localKey, file, filename, extension, status: "queued" };
+      const entry = {
+        localKey,
+        file,
+        filename,
+        extension,
+        provisional: 1,
+        status: "queued",
+      };
       if (this._isImageExt(extension)) {
         try {
           entry.previewUrl = URL.createObjectURL(file);
@@ -4773,35 +5247,57 @@ class __tasks_panel extends LetcBox {
 
   // Fetches the folder body's current filenames into a lowercase Set, used
   // by _resolveAvailableName. Cleared whenever the create modal reopens
-  // (see "add-task" handler) so we re-fetch after each session.
+  // (see "add-task" handler) so we re-fetch after each session. Resolves NULL
+  // when the listing could not be read — "unknown", which callers must not
+  // read as "the folder is empty".
   async _ensureFolderFilenames() {
     if (this._folderFilenames) return this._folderFilenames;
-    this._folderFilenames = new Set();
-    try {
-      const rows = await this.fetchService({
-        service: SERVICE.media.show_node_by,
-        hub_id: this._hubId,
-        nid: this._destNid,
-        type: "all",
-        page: 1,
-        order: _K.order.descending,
-      });
-      const list = Array.isArray(rows) ? rows : (rows && rows.rows) || [];
-      for (const r of list) {
-        const base = r.filename || r.name || "";
-        const ext = r.ext || r.extension || "";
-        const full = ext ? `${base}.${ext}` : base;
-        if (full) this._folderFilenames.add(full.toLowerCase());
+    // One fetch, shared by every concurrent caller. The cache used to be
+    // assigned BEFORE the await, so a second caller arriving mid-flight got an
+    // empty Set back instantly and de-duplicated against nothing — and a
+    // failed fetch cached that emptiness for the life of the panel. "Not known
+    // yet" and "the folder is empty" are different answers; only the second
+    // one may be cached.
+    if (this._folderFilenamesJob) return this._folderFilenamesJob;
+    // The four `_folderFilenames = null` resets don't cancel a fetch already in
+    // flight, so a job that outlives a scope change must not install names read
+    // from the folder we have since left.
+    const forNid = this._destNid;
+    this._folderFilenamesJob = (async () => {
+      try {
+        const rows = await this.fetchService({
+          service: SERVICE.media.show_node_by,
+          hub_id: this._hubId,
+          nid: this._destNid,
+          type: "all",
+          page: 1,
+          order: _K.order.descending,
+        });
+        const names = new Set();
+        const list = Array.isArray(rows) ? rows : (rows && rows.rows) || [];
+        for (const r of list) {
+          const base = r.filename || r.name || "";
+          const ext = r.ext || r.extension || "";
+          const full = ext ? `${base}.${ext}` : base;
+          if (full) names.add(full.toLowerCase());
+        }
+        if (this._destNid === forNid) this._folderFilenames = names;
+      } catch (err) {
+        // Leave the cache UNSET so the next attach retries. Callers then see
+        // null and de-duplicate against the in-flight entries alone, rather
+        // than treating a transport failure as an empty folder forever.
+        this.warn && this.warn("folder filename listing failed", err);
+      } finally {
+        this._folderFilenamesJob = null;
       }
-    } catch (err) {
-      // Best-effort: empty cache means we only dedupe against pending entries.
-    }
-    return this._folderFilenames;
+      return this._folderFilenames || null;
+    })();
+    return this._folderFilenamesJob;
   }
 
   // Returns { filename, extension } for the next available name. "a.png" with
   // an existing "a.png" yields { filename: "a(1)", extension: "png" }.
-  _resolveAvailableName(originalName) {
+  _resolveAvailableName(originalName, { siblings, skip } = {}) {
     const { filename: base, extension } = this._splitFilename(originalName);
     const ext = extension ? `.${extension}` : "";
 
@@ -4811,18 +5307,27 @@ class __tasks_panel extends LetcBox {
       const n = `${raw || ""}${dotExt}`.toLowerCase();
       if (n) taken.add(n);
     };
+    // `skip` is the entry BEING named. It now lives in the very list we scan
+    // (the name is resolved at upload time, not before the push), so without
+    // this every file would find its own provisional name taken and rename
+    // itself to "(1)".
+    const add = (f) => {
+      if (f && f !== skip) addName(f.filename, f.extension);
+    };
 
-    // Folder body filenames
+    // Folder body filenames. NULL means "not known yet / the listing failed",
+    // not "empty" — de-duplication against the local lists below still holds.
     if (this._folderFilenames) {
       for (const n of this._folderFilenames) taken.add(n);
     }
+    // The list this entry belongs to: a comment row's in-flight uploads, or a
+    // comment / reply draft. Neither was covered by the two task drafts below,
+    // so two same-named files dropped on one comment row both claimed the
+    // original name and the second overwrote the first in the folder.
+    for (const f of siblings || []) add(f);
     // Pending entries on whichever draft is active
-    for (const f of this._createDefaults?.pending_files || []) {
-      addName(f.filename, f.extension);
-    }
-    for (const f of this._detailDraft?.pending_files || []) {
-      addName(f.filename, f.extension);
-    }
+    for (const f of this._createDefaults?.pending_files || []) add(f);
+    for (const f of this._detailDraft?.pending_files || []) add(f);
     // Already-linked attachments on the open detail task
     if (this._detailId) {
       for (const f of this._attachments[this._detailId] || []) {
@@ -4838,11 +5343,73 @@ class __tasks_panel extends LetcBox {
     return { filename: `${base}(${i})`, extension };
   }
 
+  /**
+   * Give a staged entry its final, collision-safe filename — once, and at
+   * upload time rather than at staging time.
+   *
+   * This is where the folder listing is waited on. By now the chip is on
+   * screen with its spinner, and the wait is hidden behind an upload the user
+   * is already watching, instead of standing between the drop and any feedback
+   * at all.
+   *
+   * `siblings` is the list the entry lives in (a row's uploads, a draft's
+   * pending_files) so the name is resolved against the files it will actually
+   * share a folder with.
+   */
+  async _finalizePendingName(pf, siblings) {
+    if (!pf || !pf.file || !pf.provisional) return;
+    await this._ensureFolderFilenames();
+    // A retry of the same entry can run this twice; the first one owns it.
+    if (!pf.provisional) return;
+    const was = pf.extension ? `${pf.filename}.${pf.extension}` : pf.filename;
+    const { filename, extension } = this._resolveAvailableName(pf.file.name, {
+      siblings,
+      skip: pf,
+    });
+    pf.filename = filename;
+    pf.extension = extension;
+    pf.provisional = 0;
+    const now = extension ? `${filename}.${extension}` : filename;
+    // Renamed by a collision: patch the card already on screen rather than
+    // re-feeding the strip, which would rebuild every sibling mid-upload.
+    if (now !== was) this._patchPendingName(pf, now);
+  }
+
+  /**
+   * Rewrite one pending card's visible filename in place.
+   *
+   * Scope-agnostic on purpose: the same entry shape renders as an
+   * __attachment-row in a staged strip and as a __comment-attachment chip in a
+   * comment row, and _finalizePendingName does not know which. Iterating over
+   * data-key rather than building a selector from it, for the same reason as
+   * _setPendingStatus: the key carries a filename.
+   */
+  _patchPendingName(pf, fullName) {
+    if (!this.el) return;
+    const key = this._pendingKey(pf);
+    if (!key) return;
+    const pfx = this.fig.family;
+    const cards = this.el.querySelectorAll(
+      `.${pfx}__attachment-row, .${pfx}__comment-attachment`,
+    );
+    for (const card of cards) {
+      if (card.dataset.key !== key) continue;
+      const n = card.querySelector(
+        `.${pfx}__attachment-name, .${pfx}__comment-attachment-name`,
+      );
+      if (n) n.textContent = fullName;
+      return;
+    }
+  }
+
   // Promise-wrapped uploadFile used by _commitTask. Tags scope so the global
   // onUploadResponse skips this xhr (we resolve via the xhr readystate listener).
   // Accepts the full pending entry so the resolved name (e.g. "a(1).png") is
-  // sent as the upload filename instead of the original `file.name`.
-  _uploadPendingFile(pf) {
+  // sent as the upload filename instead of the original `file.name` — and, now
+  // that staging no longer waits on the folder listing, it is here that the
+  // entry's provisional name becomes that resolved one.
+  async _uploadPendingFile(pf, siblings) {
+    await this._finalizePendingName(pf, siblings);
     return new Promise((resolve, reject) => {
       this._pendingUploadScope = "_commit";
       const params = { hub_id: this._hubId, nid: this._destNid };
@@ -4924,10 +5491,32 @@ class __tasks_panel extends LetcBox {
     return null;
   }
 
+  /**
+   * Open an attachment, showing the click as busy until the viewer is up.
+   *
+   * node_info plus a Kind load is a visible wait on a cold kind, and until now
+   * the chip gave no sign it had been clicked — so it read as a dead control and
+   * invited a second click, which would open a second window.
+   *
+   * The busy flag is cleared in a `finally` because _openAttachmentNode has
+   * five ways out: two early returns, a web link opened in a tab, an archive
+   * downloaded, and the media window itself (plus its own catch).
+   */
+  async _openAttachment(fileNid, trigger) {
+    const el = trigger && trigger.el;
+    if (this._isControlBusy(el)) return;
+    this._setControlBusy(el, true);
+    try {
+      return await this._openAttachmentNode(fileNid);
+    } finally {
+      this._setControlBusy(el, false);
+    }
+  }
+
   // Open an attachment in its player — mirrors the desk WM's open-by-nid path:
   // node_info → media widget from a Backbone.Model → append the app to the WM
   // pool. (Don't call media.initData() — that throws on an unrendered widget.)
-  async _openAttachment(fileNid) {
+  async _openAttachmentNode(fileNid) {
     if (!fileNid || typeof Wm === "undefined") return;
     const rec = this._findAttachmentRecord(fileNid);
     const hub = (rec && rec.hub_id) || this._hubId;
@@ -5318,7 +5907,17 @@ class __tasks_panel extends LetcBox {
     const strip = this.el.querySelector(`[data-scope="${scopeKey}"]`);
     if (!strip) return;
     const want = this._pendingKey(entry);
-    for (const card of strip.querySelectorAll(`.${pfx}__attachment-row`)) {
+    // Both card shapes: a staged strip renders __attachment-row, a comment row
+    // renders the smaller __comment-attachment chip. Only the first was matched
+    // here, so a row upload's queued → uploading → error transitions never
+    // reached the DOM — the chip only ever showed the status it happened to be
+    // built with. That was survivable while the chip was built AFTER the
+    // status was set; now that it is painted on drop, the spinner depends on
+    // this write.
+    const cards = strip.querySelectorAll(
+      `.${pfx}__attachment-row, .${pfx}__comment-attachment`,
+    );
+    for (const card of cards) {
       if (card.dataset.key === want) {
         card.dataset.status = status;
         return;
@@ -5554,7 +6153,7 @@ class __tasks_panel extends LetcBox {
         const file = new File([blob], name, {
           type: blob.type || attr.mimetype || "",
         });
-        // Stash first (it resolves the filename against the folder), then move
+        // Stash first (the upload step resolves its final name), then move
         // the entry it appended to where the placeholder stood, so the strip
         // keeps its drop order. Located by identity, not by index: the user can
         // drop more files while this download is in flight.
@@ -5562,6 +6161,11 @@ class __tasks_panel extends LetcBox {
         await this._stashPendingFiles(draft, [file]);
         const real = draft.pending_files[before];
         if (real) {
+          // The placeholder is about to leave the list, and a caller holding it
+          // (the row run's `staged` snapshot) has no other way to find what took
+          // its place — which is how a copied cross-hub file used to end up
+          // uploaded but never linked, sitting in the strip at "queued".
+          if (placeholder) placeholder.replacedBy = real;
           const realAt = draft.pending_files.indexOf(real);
           if (realAt >= 0) draft.pending_files.splice(realAt, 1);
           const at = placeholder ? draft.pending_files.indexOf(placeholder) : -1;
@@ -6143,6 +6747,22 @@ class __tasks_panel extends LetcBox {
     }
     if (file) {
       e.preventDefault();
+      // A comment being EDITED attaches instead of inlining. That row is the
+      // same surface a drop and the paperclip beside it already attach to
+      // (comment-row:<id>), and it commits now for the same reason: a row has
+      // no submit of its own for files. Deliberately this scope ONLY — the
+      // composer, the reply box and the two description editors keep the inline
+      // image at the caret.
+      //
+      // Takes every image in the clipboard, not just the first: the attachment
+      // strip holds a list, where the caret could only ever take one.
+      if (scope === "comment-edit" && this._editingCommentId) {
+        const imgs = this._clipboardImages(e);
+        return this._dropOnCommentRow(
+          this._editingCommentId,
+          (imgs.length ? imgs : [file]).map((f, i) => this._namedPasteFile(f, i)),
+        );
+      }
       // Capture the caret now — the async upload would otherwise lose it.
       const sel = window.getSelection();
       let range = null;
@@ -6980,6 +7600,95 @@ class __tasks_panel extends LetcBox {
       this.on(_e.part.ready, onReady);
       (this._partWaiters = this._partWaiters || []).push(onReady);
     });
+  }
+
+  // ── Compact viewbar carousel ─────────────────────────────────────────
+  // The view-tab strip pages two tabs at a time once the panel is narrow (the
+  // skin's `@container tasks-panel-w` block owns the scroll-snap); this only
+  // keeps the footer's `data-page` in step with where the strip actually is,
+  // and the skin maps that one attribute to the active dot.
+  //
+  // Reads scrollLeft rather than tracking taps, so a swipe, a dot press and a
+  // programmatic scroll all converge on the same source of truth.
+  _wireViewbarCarousel(child) {
+    this._viewbarStrip = child;
+    if (!child || !child.el) return;
+    // rAF-throttled: a touch scroll fires this continuously, and all it has to
+    // produce is one attribute write per frame at most.
+    let queued = 0;
+    const onScroll = () => {
+      if (queued) return;
+      queued = 1;
+      requestAnimationFrame(() => {
+        queued = 0;
+        this._syncViewbarPage();
+      });
+    };
+    child.el.addEventListener("scroll", onScroll, { passive: true });
+    // Unlike the folder window's tab bar — which only flips data-state on a tab
+    // press — `set-view` runs a full _render(), so this strip is REBUILT every
+    // time a view is chosen and comes back scrolled to 0. Picking Summary from
+    // page 2 would land the user on a bar showing Board/Calendar with the tab
+    // they just chose off-screen. Restore the page from the active tab instead.
+    this._scrollActiveViewTabIntoView();
+  }
+
+  // Put the page holding the active tab under the viewport, without animating:
+  // this runs on mount, where a smooth scroll from 0 would read as the bar
+  // drifting on its own after every view switch.
+  //
+  // `behavior: "instant"` is load-bearing. The skin sets `scroll-behavior:
+  // smooth` on the strip (so a dot press animates), and that applies to
+  // PROGRAMMATIC scrolls too — both a bare `scrollLeft =` assignment and
+  // `scrollTo({behavior: "auto"})`, since "auto" means "defer to the computed
+  // scroll-behavior". Only "instant" overrides it.
+  _scrollActiveViewTabIntoView() {
+    const strip = this._viewbarStrip;
+    if (!strip || !strip.el) return;
+    const w = strip.el.clientWidth;
+    const active = strip.el.querySelector(
+      `.${this.fig.family}__viewbar-item[data-active="1"]`,
+    );
+    // Nothing to do on the wide layout: clientWidth is the whole strip, so
+    // there is one page and the offset below floors to 0 anyway.
+    if (!active || w <= 0) return this._syncViewbarPage();
+    // Measured off the rects rather than offsetLeft. offsetLeft resolves
+    // against the nearest positioned ancestor, which here is __root (it is
+    // `position: relative`, and the container-type on it would make it the
+    // containing block regardless) — NOT the strip. So it carries the viewbar's
+    // own padding and left-hand chrome, and the page it produced was wrong:
+    // Summary landed on page 0 with the active tab off-screen. Adding back the
+    // live scrollLeft makes this the tab's true offset inside the scroll
+    // content, whatever the offsetParent turns out to be.
+    const x =
+      active.getBoundingClientRect().left -
+      strip.el.getBoundingClientRect().left +
+      strip.el.scrollLeft;
+    strip.el.scrollTo({
+      left: Math.floor(Math.max(0, x) / w) * w,
+      behavior: "instant",
+    });
+    this._syncViewbarPage();
+  }
+
+  _syncViewbarPage() {
+    const strip = this._viewbarStrip;
+    const dots = this._viewbarDots;
+    if (!strip || !strip.el || !dots || !dots.el) return;
+    const w = strip.el.clientWidth;
+    // Wide / one-page: clientWidth is the whole strip and scrollLeft stays 0,
+    // so this lands on page 0 and the skin has the footer hidden anyway.
+    const page = w > 0 ? Math.round(strip.el.scrollLeft / w) : 0;
+    if (`${page}` !== dots.el.dataset.page) dots.el.dataset.page = `${page}`;
+  }
+
+  // Dot press. Scrolls by whole pages; the scroll listener above then updates
+  // data-page, so this deliberately does not write it itself.
+  _showViewbarPage(cmd) {
+    const strip = this._viewbarStrip;
+    if (!strip || !strip.el || !cmd || !cmd.el) return;
+    const page = Number(cmd.el.dataset.page) || 0;
+    strip.el.scrollTo({ left: page * strip.el.clientWidth, behavior: "smooth" });
   }
 
   /**

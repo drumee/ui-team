@@ -220,7 +220,7 @@
 @media (max-width: 650px) {
   .window {
     &__ui:not(.window-manager__ui) {
-      border-radius: 0;
+      border-radius: 6px;
       left: 0 !important;
       margin: 0;
       max-height: calc(100vh - 44px);

@@ -1727,8 +1727,33 @@ class __window_manager extends mfsInteract {
         // own onDomRefresh. confirm() was the one that did not. Set it here so
         // every confirm gets a sized host rather than each caller remembering.
         // The wrapper's own behavior clears it again when it empties.
-        if (w && w.el) w.el.dataset.state = "open";
-        s.ask().then(resolve).catch(reject);
+        if (w && w.el) {
+          w.el.dataset.state = "open";
+          // Backdrop behind the card. "scrim", not the "blur" glass the other
+          // modals through this host use (openRequestAccessModal,
+          // reward-flow, create-folder): the confirm takes the flat
+          // `--overlay-bg` treatment the activity panel puts behind its mobile
+          // card. The skin does the work — wm/skin's `[data-overlay="scrim"]`
+          // includes drumee.scrim-overlay, and --overlay-bg is theme-aware on
+          // its own, so there is no dark-mode branch to keep in step here.
+          w.el.dataset.overlay = "scrim";
+        }
+        // Clear the backdrop when the prompt settles, whichever way it goes.
+        //
+        // Not optional, and not symmetry for its own sake: this host is SHARED,
+        // and wm/index.js documents the failure at both of its own call sites —
+        // an overlay value one dialog leaves behind dims the desk behind the
+        // NEXT card, which never asked for it. data-state is cleared for us
+        // when the wrapper empties; data-overlay is not.
+        //
+        // Two-arg then(), not .then().catch(): a .catch() placed after would
+        // also swallow anything resolve() itself throws, and turn a caller's
+        // bug into a silent rejection of this promise.
+        const settle = (fn) => (v) => {
+          if (w && w.el) w.el.dataset.overlay = "";
+          return fn(v);
+        };
+        s.ask().then(settle(resolve), settle(reject));
       });
     });
   }

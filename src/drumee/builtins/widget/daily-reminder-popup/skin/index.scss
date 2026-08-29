@@ -1,0 +1,250 @@
+@use "mixins/drumee";
+
+// Daily reminder card — Round 3 / Sprint 1 row 7.
+//
+// 📐 EVERY value below is taken from Figma `call-pop-up` **58222:35191**
+// (file MVL1Q9puypsTAJXvx9whCa, section Notification 58187:57778), pulled
+// 2026-08-27 once the API rate limit cleared. It was previously built from a
+// screenshot with sizes borrowed from the sibling cards, which is why it did
+// not match: the tiles were 48/r12 on a solid tint instead of 32/r8 on a 10%
+// wash, the buttons were r8 with the wrong padding, and the card used one
+// even gap instead of 32 / 24 / 12.
+//
+// 🚨 Every drumee.typo include is followed by an explicit font-family AND
+// font-weight. The mixin has no branch for weight 600, so it emits NEITHER for
+// the title, sub-line and buttons — and the card is portaled to document.body
+// by _portalToBody(), so it inherits nothing from the app shell. Together that
+// rendered the whole card in Times New Roman.
+// Figma specifies Geist (window/folder/skin sets the same precedent), but only
+// Armin Grotesk is actually loaded, so the brand face is the fallback rather
+// than a generic sans.
+$font: "Geist", var(--font-main), sans-serif;
+
+// 🚨 Every drumee.typo include is followed by an explicit font-weight.
+// skin/mixins/typo.scss maps $weight onto a font-FAMILY and emits NO
+// font-weight at all, so a rule that passes $weight and stops there renders
+// at whatever it inherits.
+.daily-reminder-popup {
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 10, 33, 0.45);
+    z-index: 99998;
+  }
+
+  &__card {
+    position: relative;
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    padding: 24px;
+    // Figma: VERTICAL, itemSpacing 32 between the two content groups.
+    gap: 32px;
+    border-radius: 12px;
+    background: #fff;
+    // Figma effects: DROP_SHADOW 0/40 blur 80 #000 @30%, DROP_SHADOW 0/7
+    // blur 10 #000 @9%, plus BACKGROUND_BLUR 100.
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.3),
+      0 7px 10px rgba(0, 0, 0, 0.09);
+    backdrop-filter: blur(100px);
+  }
+
+  &__close {
+    position: absolute;
+    // 🚨 WITHOUT z-index THE BUTTON IS UNCLICKABLE. It is absolutely
+    // positioned with z-index auto, and the flex siblings that follow it in
+    // the card paint as though they were z-index 0 — so __head covers it and
+    // every click lands on the title instead. The icon still DRAWS (the
+    // title's background is transparent), which is why this looked correct
+    // until someone actually tried to click it.
+    z-index: 1;
+    // The ICON keeps Figma's 24/24 position and 14x14 size, but the BUTTON is
+    // padded out to a 32px hit area: 15 = 24 - 9. A bare 14px target is very
+    // hard to hit, and this costs nothing visually.
+    top: 15px;
+    right: 15px;
+    box-sizing: content-box;
+    padding: 9px;
+    // Figma: 14x14 icon, Grey/80.
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    color: var(--tertiary-grey-80, #65656c);
+    fill: var(--tertiary-grey-80, #65656c);
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
+  &__title {
+    @include drumee.typo(
+      $size: 20px,
+      $weight: 600,
+      $line: 24px,
+      // Figma Grey/90 #34343a — no token exists for it, same as the meeting
+      // card's title.
+      $color: #34343a
+    );
+    font-weight: 600;
+    font-family: $font;
+    // Note renders a FLEX container, so text-align does nothing on its own —
+    // only align-items / justify-content move the label. That is why the
+    // Phase 2 "Mute"/"Open" labels sat off-centre.
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 32px; // clear of the ✕
+  }
+
+  // Figma lays the three out on a GRID of equal 157px cells inside the 472px
+  // content width; three flex-1 columns are the same thing and survive a
+  // longer translation.
+  &__stats {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0;
+  }
+
+  &__stat {
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  &__stat-tile {
+    align-items: center;
+    justify-content: center;
+    // Figma: 32x32, radius 8, padding 4.
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    box-sizing: border-box;
+    padding: 4px;
+    border-radius: 8px;
+    // Figma fill is Primary/40 #5950ff at 10% OPACITY — a wash, not the solid
+    // --primary-purple-10 tint this used to use.
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  &__stat-ico {
+    width: 24px;
+    height: 24px;
+    // The sprite glyphs are monochrome and inherit currentColor.
+    color: var(--primary-purple-40, #5950ff);
+    fill: var(--primary-purple-40, #5950ff);
+  }
+
+  &__stat-label {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
+    font-weight: 400;
+    font-family: $font;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    // A long translation must wrap rather than push the row wider than the
+    // card — three tiles share the width and each can be narrow.
+    word-break: break-word;
+  }
+
+  // The empty-day line, standing in for the three tiles.
+  &__empty {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 400,
+      $line: 22px,
+      $color: var(--tertiary-grey-80, #65656c)
+    );
+    font-weight: 400;
+    font-family: $font;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  // Figma Frame 1618873181 — title + stats, itemSpacing 24.
+  &__head {
+    gap: 24px;
+  }
+
+  // Figma Frame 1618873180 — sub-line + buttons, itemSpacing 12.
+  &__foot {
+    gap: 12px;
+  }
+
+  &__subline {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 19px,
+      $color: #34343a
+    );
+    font-weight: 600;
+    font-family: $font;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  &__actions {
+    // Figma: two 230px buttons, gap 12, inside the 472px content width.
+    gap: 12px;
+  }
+
+  &__btn {
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+    // Figma: padding 12/24, radius 4, height 48.
+    padding: 12px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    @include drumee.typo($size: 16px, $weight: 600, $line: 24px);
+    font-weight: 600;
+    font-family: $font;
+
+    &--ghost {
+      background: var(--tertiary-grey-20, #f2f2f7);
+      color: var(--primary-purple-100, #0b0a21);
+
+      &:hover {
+        background: #e7e7ef;
+      }
+    }
+
+    // Brand indigo. --primary-purple-50, NOT --primary-500/--primary-400:
+    // revamp.scss declares two --primary-* scales in one :root and the LILAC
+    // one wins, so those resolve to the wrong colour entirely.
+    &--primary {
+      background: var(--primary-purple-50, #433cc5);
+      color: #fff;
+
+      &:hover {
+        background: var(--primary-purple-60, #4642a9);
+      }
+    }
+  }
+}
+
+// The card is a HEIGHT-constrained surface on a 14" laptop (596–740px of
+// viewport), which is the axis that actually bites — every max-width
+// breakpoint in this repo sits above a 14" CSS width. Keep it scrollable
+// rather than clipped, the failure the wallpaper dialog shipped with.
+@media (max-height: 600px) {
+  .daily-reminder-popup__card {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}

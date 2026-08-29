@@ -209,7 +209,19 @@ class settings_billing extends LetcBox {
     const c = opt.cycle != null ? String(opt.cycle).toLowerCase() : "";
     const cycle = /^year/.test(c) ? "yearly" : (/^month/.test(c) ? "monthly" : null);
     const tab = opt.tab != null ? String(opt.tab).toLowerCase() : "";
-    if (!plan && !cycle && !tab) return;
+    // The coupon a campaign CTA carries (analytics-server SEGMENT_COUPON).
+    //
+    // SHAPE-CHECKED HERE because billing-deep-link.js deliberately does not:
+    // that lib runs before a module exists and stays dumb so a malformed param
+    // cannot break the boot. `[A-Za-z0-9_-]` and 64 chars are what
+    // yp.mkt_coupon.code actually stores (ascii, and the dashboard's own
+    // field); anything else is dropped silently, which degrades to "no coupon"
+    // rather than posting junk to preview_coupon.
+    const rawPromo = opt.promo != null ? String(opt.promo).trim() : "";
+    const promo = /^[A-Za-z0-9_-]{1,64}$/.test(rawPromo) ? rawPromo : null;
+    // `promo` joins the guard, or a promo-only link would return here and the
+    // code would be dropped one hop after the lib was taught to carry it.
+    if (!plan && !cycle && !tab && !promo) return;
 
     if (cycle) {
       this.state.plansTab.cycle = cycle;
@@ -229,6 +241,60 @@ class settings_billing extends LetcBox {
       this._deepLinkCheckout = true;
       this.state.currentTab = TAB_CHECKOUT;
     }
+    if (promo) {
+      // SEEDS THE FIELD ONLY. skeleton/checkout.js renders the input from
+      // `promoCode`, so this makes the code appear in the box — and nothing
+      // more.
+      //
+      // `checkout.promo` is deliberately NOT written. That object means
+      // "previewed and accepted by the server", and it is what draws the
+      // Applied chip and the discounted total. Setting it here would show a
+      // reader a discount the server has never seen, and the first they would
+      // learn otherwise is the amount they are charged. Only _applyPromoCode,
+      // via payment.preview_coupon, may write it.
+      this.state.checkout.promoCode = promo;
+      this._deepLinkPromo = promo;
+    }
+  }
+
+  /**
+   * Apply the coupon a campaign CTA arrived with, once the screen has settled.
+   *
+   * SEEDING THE FIELD IS NOT APPLYING THE CODE — see _applyDeepLink. This is
+   * the half that asks the server, and it is separate from the seed because it
+   * can only run once three things are true, none of which hold when the
+   * preselect is read:
+   *
+   *   the plan is known      _applyPromoCode posts checkout.selectedPlan, which
+   *                          _applyDeepLink seeds from plan=team;
+   *   the subscription is    a checkout deep link opens the tab BEFORE
+   *   known                  _loadSubscription answers, and _settleDeepLinkTab
+   *                          then bounces an account that cannot buy back to
+   *                          the plans view — previewing a coupon on that
+   *                          screen offers a discount with nothing to spend it
+   *                          on;
+   *   exactly once           preview_coupon is a POST, and renderContent runs
+   *                          on every tab change, seat tweak and WS
+   *                          plan_updated.
+   *
+   * Called from the END of _settleDeepLinkTab, which is the one moment all
+   * three hold, and which already owns the once-latch for the tab decision.
+   * This keeps its own latch so the two concerns stay separable.
+   *
+   * ARMED ONLY BY A LINK. A user who opens billing normally with a stale
+   * promoCode in state must never have it silently re-applied — the flag is
+   * set in _applyDeepLink and nowhere else.
+   */
+  _autoApplyDeepLinkPromo() {
+    if (!this._deepLinkPromo || this._deepLinkPromoApplied) return;
+    // The tab has settled by now; honour its verdict rather than overriding it.
+    if (this.state.currentTab !== TAB_CHECKOUT) return;
+    this._deepLinkPromoApplied = true;
+    // Reused unchanged: it already reads checkout.promoCode when the input is
+    // not yet bound, already posts plan + hub_id, already maps every server
+    // refusal to a readable message, and already repaints the summary. A second
+    // apply path here would be a second copy of all of that.
+    return this._applyPromoCode();
   }
 
   /**
@@ -246,6 +312,9 @@ class settings_billing extends LetcBox {
       this.state.currentTab = cycle === "yearly" ? TAB_YEARLY : TAB_MONTHLY;
       this.tab = this.state.currentTab;
     }
+    // AFTER the tab decision above, never before: a coupon must not be
+    // previewed onto a screen this method just decided has no checkout on it.
+    this._autoApplyDeepLinkPromo();
   }
 
   // Human-readable consequence list for the cancel-confirm modal.
