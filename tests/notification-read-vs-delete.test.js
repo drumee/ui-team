@@ -216,7 +216,43 @@ test("share-open rows persist the seen state without vanishing", async () => {
   const model = { item_type: "share_open", token_id: "TOK", recipient_email: "a@b.c", item_key: "share_open:1" };
   const r = await act(model, "read");
   assert.equal(r.ctx.posts[0].service, "secure_share.mark_open_seen");
-  assert.equal(r.cmd.goodbyeCalls, 0);
+  assert.equal(r.ctx.posts[0].token_id, "TOK");
+  assert.equal(r.ctx.posts[0].recipient_email, "a@b.c");
+  assert.equal(r.cmd.goodbyeCalls, 0, "reading a share-open row must leave it in place");
+  assert.equal(r.row.rowEl.dataset.unread, "0");
+});
+
+test("trashing a share-open row deletes it permanently", async () => {
+  // Until 2026-08-28 both actions called mark_open_seen, and because the panel
+  // opened unread-only, marking seen LOOKED like deleting. Now that read rows
+  // stay, the trash button needs its own marker or a trashed share-open row
+  // returns as a read row on the next reload.
+  const model = { item_type: "share_open", token_id: "TOK", recipient_email: "a@b.c", item_key: "share_open:1" };
+  const d = await act(model, "delete");
+  assert.equal(d.ctx.posts[0].service, "secure_share.delete_open");
+  assert.equal(d.ctx.posts[0].token_id, "TOK");
+  assert.equal(d.cmd.goodbyeCalls, 1);
+});
+
+test("an anonymous share-open row sends a null recipient, not undefined", async () => {
+  // The procedure collapses '' and NULL to the same "no recipient"; a stray
+  // undefined would be serialised away and match nothing.
+  const model = { item_type: "share_open", token_id: "TOK", item_key: "share_open:2" };
+  const d = await act(model, "delete");
+  assert.equal(d.ctx.posts[0].service, "secure_share.delete_open");
+  assert.equal(d.ctx.posts[0].recipient_email, null);
+});
+
+test("a share-open row with no token still resolves locally", async () => {
+  // Nothing can be addressed on the server, but the row must not be left in a
+  // state that contradicts what the user just did.
+  const noToken = { item_type: "share_open", item_key: "share_open:3" };
+  const r = await act(noToken, "read");
+  assert.equal(r.ctx.posts.length, 0, "no pointless request");
+  assert.equal(r.row.rowEl.dataset.unread, "0", "but it still reads as read");
+  const d = await act(noToken, "delete");
+  assert.equal(d.ctx.posts.length, 0);
+  assert.equal(d.cmd.goodbyeCalls, 1, "and the trash still removes it");
 });
 
 test("the badge only moves for a row that was actually unread", async () => {

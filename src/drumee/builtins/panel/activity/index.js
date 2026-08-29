@@ -1777,27 +1777,39 @@ class __panel_activity extends LetcBox {
     }
 
     if (itemType === 'share_open') {
-      // Persistent dismiss: mark THIS open-notification group (token + recipient)
-      // seen on the server so it stays out of the Unread feed and survives a reload
-      // (still shows under Unread OFF). Scoped server-side to the caller's own
-      // shares. Best-effort: goodbye() the row regardless so the UI feels instant.
+      // Both actions address the same (token + recipient) group, scoped
+      // server-side to the caller's own shares. They differ only in which marker
+      // they write:
+      //   read   -> creator_seen_at    ("I have looked at this"); the row stays
+      //   delete -> creator_deleted_at (the trash button); the row goes for good
+      // Until 2026-08-28 there was only the first, and because the panel opened
+      // unread-only, marking seen LOOKED like deleting. Now that read rows stay,
+      // the two need separate markers.
       const tokenId = args.token_id || (cmd && cmd.mget && cmd.mget('token_id'));
       const recipientEmail = (args.recipient_email != null)
         ? args.recipient_email
         : (cmd && cmd.mget && cmd.mget('recipient_email'));
+      const svc = read
+        ? ((SERVICE.secure_share && SERVICE.secure_share.mark_open_seen) || 'secure_share.mark_open_seen')
+        : ((SERVICE.secure_share && SERVICE.secure_share.delete_open) || 'secure_share.delete_open');
       if (tokenId) {
         try {
           await this.postService({
-            service: (SERVICE.secure_share && SERVICE.secure_share.mark_open_seen) || 'secure_share.mark_open_seen',
+            service: svc,
             hub_id: Visitor.id,
             token_id: tokenId,
             recipient_email: recipientEmail || null,
           });
+          if (read) this._markRowRead(cmd); else if (cmd && cmd.goodbye) cmd.goodbye();
         } catch (e) {
-          this.warn('[activity] mark_open_seen failed', e);
+          this.warn('[activity] share_open ' + mode + ' failed', e);
         }
+      } else {
+        // No token means the row cannot be addressed on the server at all. Fall
+        // back to the local effect only, rather than silently doing nothing.
+        if (read) this._markRowRead(cmd);
+        else if (cmd && cmd.goodbye) cmd.goodbye();
       }
-      if (!read && cmd && cmd.goodbye) cmd.goodbye();
       return;
     }
 
