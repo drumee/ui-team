@@ -202,9 +202,39 @@ module.exports = function (ui) {
     content: LOCALE.ALL_READ || "All read",
   });
 
+  // Conversation search — Figma 43:32209, between the scope tabs and the list:
+  // a 33px pill on 5% black (r=12) with a 16px magnifier and "Search...".
+  //
+  // `watch` rather than a per-keystroke `service`: the Entry's <input> is
+  // created asynchronously, so a listener wired in onPartReady would run
+  // before it exists. watch is the framework's own hook — it attaches once the
+  // field is ready and fires onUiEvent("inbox-search-typed", { value }) on
+  // every change. Same mechanism the folder window's chat search uses.
+  const searchBar = Skeletons.Box.X({
+    className: `${fig}__list-search`,
+    kids: [
+      Skeletons.Image.Svg({
+        className: `${fig}__list-search-icon`,
+        ico: "magnifying-glass",
+      }),
+      Skeletons.Entry({
+        className: `${fig}__list-search-input`,
+        sys_pn: "list-search",
+        partHandler: ui,
+        placeholder: LOCALE.SEARCH || "Search...",
+        require: "any",
+        mode: "interactive",
+        interactive: 1,
+        bubble: 0,
+        watch: "inbox-search-typed",
+        uiHandler: [ui],
+      }),
+    ],
+  });
+
   const sidebar = Skeletons.Box.Y({
     className: `${fig}__sidebar`,
-    kids: [sidebarHeader, filters, contactList, allReadEmpty],
+    kids: [sidebarHeader, filters, searchBar, contactList, allReadEmpty],
   });
 
   // ── Right panel: chat area ───────────────────────────────────────

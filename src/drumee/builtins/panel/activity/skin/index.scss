@@ -12,13 +12,25 @@
     // the mobile block further down overrides the width with !important, so the
     // phone card is unaffected.
     width: 512px;
-    height: 100vh;
-    top: 0;
-    right: 0;
+    // Sits INSIDE the desk canvas, not over the whole viewport.
+    //
+    // The new shell (Figma 43:23955/43:29418) lays the desk out as a padded
+    // canvas of rounded panels: 8px page padding, a 46px top bar, then an 8px
+    // gutter before the body row. A full-height panel covered the top bar —
+    // including the very icon that opens it — so it is inset to the body row
+    // instead and rounded like the panels it sits beside.
+    //
+    // 62px = 8 (page pad) + 46 (top bar) + 8 (gutter); the extra 8 in the
+    // height is the matching bottom inset.
+    top: 62px;
+    right: 8px;
+    height: calc(100vh - 70px);
+    border-radius: 8px;
     background-color: #f2f2f7;
     border: 1px solid var(--border-muted);
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    transform: translateX(100%);
+    // calc so the parked panel clears its own 8px inset as well as its width.
+    transform: translateX(calc(100% + 8px));
     transition: transform 0.25s ease-out;
     will-change: transform;
 
@@ -28,7 +40,7 @@
     }
 
     &[data-state="0"] {
-      transform: translateX(100%);
+      transform: translateX(calc(100% + 8px));
       pointer-events: none;
     }
 
@@ -541,8 +553,13 @@
      paginated list both scroll together and share horizontal padding. */
   &__feed {
     flex: 1;
+    // No viewport-relative cap. The panel is no longer 100vh tall (it is inset
+    // into the canvas — see __ui), so a 100vh-based max-height overshot the
+    // panel by exactly the inset and pushed the last cards under its bottom
+    // edge. min-height:0 lets this flex child shrink so the scroll happens
+    // here rather than on the panel.
+    min-height: 0;
     overflow-y: auto;
-    max-height: calc(100vh - 102px);
     // Figma "Feed Items List" (58187:81026): padding 16, gap 8. The 8px side
     // gutter left the white unread cards nearly flush with the panel edge and
     // out of line with the header and tabs.

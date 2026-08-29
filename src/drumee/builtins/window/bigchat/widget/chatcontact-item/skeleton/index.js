@@ -1,5 +1,8 @@
 
 const { supportAvatar, isSupportEntity } = require("libs/support");
+// The workspace icon — the area-tinted folder shape. Single source, shared
+// with the desk sidebar's workspace_item (via its getFolderIcon wrapper).
+const folderIcon = require("media/grid/template/folder");
 
 const __skl_widget_chatcontactItem = function (ui) {
   let chat_icon, msg, state;
@@ -32,6 +35,27 @@ const __skl_widget_chatcontactItem = function (ui) {
       live_status: 1,
       auto_color: 1,
       sys_pn: _a.profile
+    });
+  } else if (ui.mget('is_workspace')) {
+    // A workspace team-chat row (inbox -> Workspace chat). Draw the WORKSPACE'S
+    // OWN icon — the area-tinted folder shape from media/grid/template/folder —
+    // so a row is recognisably the same object as its desk tile and sidebar
+    // entry, instead of the generic project-room glyph every workspace shared.
+    //
+    // That module is the single source for this icon (workspace-item uses it
+    // through getFolderIcon) and it returns an HTML string, hence Element +
+    // content rather than Image.Svg. `role: desk` + `filetype: hub` is what
+    // selects the workspace shape and its area badge; isAttachment suppresses
+    // the kebab, which has nothing to act on in a chat row.
+    chat_icon = Skeletons.Element({
+      className: `${contentFig}__icon ${contentFig}__icon--workspace ${ui.mget(_a.area) || ''}`,
+      content: folderIcon({
+        area: ui.mget(_a.area),
+        filetype: _a.hub,
+        role: 'desk',
+        widgetId: ui._id || _.uniqueId('ws-chat-icon-'),
+        isAttachment: 1,
+      }),
     });
   } else {
     chat_icon = Skeletons.Button.Svg({

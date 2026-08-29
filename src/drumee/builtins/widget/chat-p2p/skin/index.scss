@@ -1,32 +1,35 @@
 @use "mixins/drumee";
 
 .chat-p2p {
+  // FULL-CANVAS screen, per Figma 43:32209: the Inbox fills the whole centre
+  // column (a 400px conversation list beside the active chat), it is not the
+  // narrow right-hand slide-out it used to be.
+  //
+  // The desk mounts it in settings-main-slot now (desk/index.js INBOX_SLOT),
+  // which is an `position:absolute; inset:0` slot — so the panel simply fills
+  // it. The old geometry (position:fixed, 880px, translateX parking, a
+  // left border and a big left shadow) all belonged to the slide-out and is
+  // gone: fixed positioning would ignore the slot entirely and re-cover the
+  // top bar, which is the bug that treatment was written to avoid elsewhere.
   &__ui {
-    width: 880px;
-    height: 100vh;
-    top: 0px;
-    right: 0;
-    // position:fixed + transform parking keeps the closed panel out of
-    // every ancestor's scroll box. position:absolute (containing block:
-    // the 0-width slot inside __body) still leaks into body.scrollWidth
-    // because layout includes positioned descendants, so __main and
-    // __body remain horizontally scrollable via touchpad gesture even
-    // with overflow:hidden — that's the "scroll ngang vẫn thấy inbox"
-    // bug. Fixed positioning is relative to the viewport and never
-    // contributes to any ancestor scrollWidth.
-    position: fixed;
-    transform: translateX(100%);
+    position: relative;
+    width: 100%;
+    height: 100%;
     background-color: var(--normal-bg);
-    border-left: 1px solid var(--border-muted);
-    transition: transform 0.5s;
-    box-shadow: var(--shadow-left-big);
+    overflow: hidden;
+    // The section outline the frame draws around the whole inbox panel
+    // (stroke #000 @5%, r=8) — the same treatment the workspace and chat
+    // cards carry, which this was missing entirely.
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-sizing: border-box;
 
-    &[data-anim="in"] {
-      transform: translateX(0);
-    }
-
+    // data-anim is still the DESK'S show/hide switch for this slot
+    // (_hidePanel writes anim="out", and the open-screen detection reads
+    // anim !== "out"), so it must still hide — it just does it by leaving the
+    // layout rather than by sliding off the right edge.
     &[data-anim="out"] {
-      transform: translateX(100%);
+      display: none !important;
     }
   }
 
@@ -38,20 +41,24 @@
 
   // ── Left sidebar ────────────────────────────────────────────────
 
+  // 400px white list column; the active-chat section beside it takes the rest
+  // and carries the #F2F2F7 ground (43:32209).
   &__sidebar {
-    background-color: var(--normal-bg-90);
-    border-right: 1px solid var(--border-muted);
+    background-color: var(--normal-bg-elevated, #fff);
+    // 43:32209 strokes both panes at 5% black; the list column's right edge is
+    // the seam between them.
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
-    width: 320px;
+    width: 400px;
   }
 
   &__sidebar-header {
     align-items: center;
     flex-shrink: 0;
     justify-content: space-between;
-    padding: 24px;
+    padding: 16px 16px 0;
   }
 
   &__inbox-title {
@@ -189,23 +196,31 @@
 
   // ── Filter tabs ─────────────────────────────────────────────────
 
+  // Two equal pills filling the column, 8px apart — 43:32209 draws them at
+  // 180px each inside a 367px row.
   &__filters {
     align-items: center;
     flex-shrink: 0;
     gap: 8px;
-    padding: 0 24px 24px;
+    padding: 12px 16px 0;
   }
 
   // Scope tabs — Figma 43:32209: sentence-case pills on a light ground, the
   // active one filled indigo with white text. The old treatment was uppercase
   // 10px mono, which the design drops.
   &__filter-btn {
+    flex: 1 1 0;
+    min-width: 0;
     align-items: center;
-    gap: 6px;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 8px;
+    height: 32px;
+    border-radius: 12px;
     cursor: pointer;
-    padding: 7px 14px;
-    background-color: var(--normal-bg-90);
+    padding: 8px 12px;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.05);
+    transition: background-color 0.14s ease;
 
     &[data-radio="on"],
     &[data-state="1"] {
@@ -222,7 +237,7 @@
   }
 
   &__filter-label {
-    @include drumee.typo($size: 13px, $line: 17px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 12px, $line: 16px, $color: #65656c);
     font-weight: 600;
     white-space: nowrap;
   }
@@ -294,6 +309,188 @@
     transform: translateX(14px);
   }
 
+  // Workspace team-chat icon — the conversation row AND the chat header use
+  // the identical box so the two line up exactly.
+  .widget-chatcontactItem__icon--workspace,
+  &__header-profile--workspace {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    // Sizing recipe copied from desk/workspace-item — the one place that
+    // renders this icon correctly. It is NOT a plain <svg> to stretch: the
+    // template emits a `.folder-shape` path whose AREA CLASS supplies the
+    // fill (the colour is the fill, not a currentColor tint) plus an absolutely
+    // positioned `.badge`. Scaling the container alone drew an unfilled,
+    // clipped fragment.
+    align-items: center;
+    display: flex !important;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: visible;
+    position: relative;
+
+    .media-grid__folder-art {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      position: relative;
+      width: 36px;
+      height: 30px;
+    }
+
+    .folder-shape {
+      width: 36px;
+      height: 30px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public       { fill: var(--area-public); }
+      &.share,
+      &.dmz          { fill: var(--area-share); }
+      &.private      { fill: var(--area-private); }
+    }
+
+    .badge {
+      position: absolute;
+      bottom: -4px;
+      left: -4px;
+      width: 18px !important;
+      height: 18px !important;
+      color: var(--grid-color-folder-badge);
+      fill: currentColor;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+    }
+
+    .media-context-menu__folder-trigger {
+      display: none !important;
+    }
+  }
+
+  // ── Scrollbars ───────────────────────────────────────────────────
+  // The lists render a slimScroll bar from `vendorOpt`, which defaults to
+  // Preset.List.Orange_e: an ALWAYS-VISIBLE 2px ORANGE bar at 1px from the
+  // edge. It floated straight over the message text and had nothing to do
+  // with the theme.
+  //
+  // Restyled with the pattern settings/member and the desk body already use:
+  // a wide transparent hit area with a thin themed thumb drawn in ::after, so
+  // the bar is easy to grab but visually light. !important throughout because
+  // the plugin writes these as inline styles.
+  .slimScrollBarY {
+    width: 14px !important;
+    right: 0 !important;
+    padding: 3px !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+
+    &:after {
+      content: " ";
+      position: absolute;
+      right: 4px;
+      width: 4px;
+      height: calc(100% - 6px);
+      border-radius: 7px;
+      // Neutral, NOT --default-scrollbar-color (rgba(250,133,64,.6) — the old
+      // orange) and NOT --border-strong, which is #c7c7cc in light but
+      // #4642a9 in dark: that is --primary-60, a retired brand purple, and is
+      // where the purple bar came from. A scrollbar is chrome, not a brand
+      // surface, so it stays neutral in both themes.
+      background: rgba(0, 0, 0, 0.22);
+    }
+  }
+
+  // The message area and the list also render NATIVE scrollbars in places
+  // (widget-chat styles its own with --border-strong). Neutralise those inside
+  // the inbox too, so every bar in this panel matches.
+  .slimScrollBarY,
+  &__contact-list,
+  &__chat-panel {
+    scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+  }
+
+  &__contact-list,
+  &__chat-panel {
+    ::-webkit-scrollbar-thumb,
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.22) !important;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-track,
+    &::-webkit-scrollbar-track {
+      background: transparent !important;
+    }
+  }
+
+  // ...and reserve the width so text never runs UNDER the bar. The plugin
+  // overlays rather than taking layout space, which is the actual overlap.
+  &__contact-list .smart-container,
+  &__chat-panel .widget-chat__messages .smart-container {
+    padding-right: 14px;
+    box-sizing: border-box;
+  }
+
+  // ── Conversation swap ────────────────────────────────────────────
+  // Switching conversations does clear() + feed() on these two parts, which
+  // repaints them in one frame and reads as a hard cut. A short fade-and-rise
+  // on the freshly mounted content turns that into a transition without
+  // delaying anything: the animation runs on content that is already there,
+  // so nothing waits on it.
+  //
+  // Keyed on the CHILD, not the container, so it replays on every swap —
+  // animating the container would only run once, when the panel first mounts.
+  &__chat-panel > *,
+  &__chat-header > * {
+    animation: chat-p2p-swap-in 0.18s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__chat-panel > *,
+    &__chat-header > * {
+      animation: none;
+    }
+  }
+
+  // ── Conversation search (43:32209) ───────────────────────────────
+  // 33px pill on 5% black, r=12, 12px side padding, 8px between the glyph and
+  // the field.
+  &__list-search {
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 33px;
+    margin: 12px 16px 0;
+    padding: 0 12px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &__list-search-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: #84848c;
+  }
+
+  &__list-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-10));
+
+      &::placeholder {
+        color: #84848c;
+      }
+    }
+  }
+
   // ── Contact list ─────────────────────────────────────────────────
 
   &__contact-list {
@@ -347,15 +544,21 @@
 
   // ── Chat header ──────────────────────────────────────────────────
 
+  // Figma 43:32209 "Chat Header": 73px tall, WHITE, 16px padding — not the
+  // 80px translucent bar with 32px padding this was. The blurred
+  // --overlay-bg-05 ground came from the slide-out treatment and reads as
+  // chrome floating over content; in the full-canvas screen the header is a
+  // solid white band above the #F2F2F7 message area.
   &__chat-header {
     align-items: center;
-    backdrop-filter: blur(6px);
-    background-color: var(--overlay-bg-05);
-    border-bottom: 1px solid var(--border-muted);
+    background-color: var(--normal-bg-elevated, #fff);
+    border-bottom: 1px solid rgba(71, 69, 84, 0.05);
     flex-shrink: 0;
     justify-content: space-between;
-    height: 80px;
-    padding: 0 32px;
+    height: 73px;
+    min-height: 73px;
+    padding: 0 16px;
+    box-sizing: border-box;
   }
 
   &__header {
@@ -483,31 +686,50 @@
     white-space: nowrap;
   }
 
+  // 20px glyphs, 12px apart, in #84848C (the frame's icon colour). They were
+  // 16px apart and inheriting a heavier tone, which is what made the header
+  // read as oversized next to a 40px avatar.
+  // 4px between 28px buttons = the frame's 32px icon pitch.
   &__header-actions {
     align-items: center;
-    gap: 16px;
+    gap: 4px;
   }
 
   &__header--empty {
     justify-content: flex-end;
   }
 
+  // In 43:32209 the 20x20 is the icon's FRAME, not the glyph: the glyphs
+  // inside it are 13-16px (X is 13, Phone and Search 16, VideoCamera 19x11).
+  // Filling the full 20px drew them ~25% oversized, which is why the row read
+  // as heavy.
+  //
+  // So: a 28px hit target (comfortable to click, and room for a hover
+  // surface) around a 16px glyph. With the container's gap dropped to 4px the
+  // icons keep the frame's 32px pitch, so their centres land exactly where
+  // they are drawn — the row just stops looking oversized.
   &__header-btn {
-    color: var(--normal-fg-50);
+    color: #84848c;
     cursor: pointer;
-    padding: 4px;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 6px;
+    transition: color 0.12s ease, background-color 0.12s ease;
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       display: block;
     }
 
     &:hover {
-      color: var(--normal-fg-20);
+      color: var(--normal-fg-10);
+      background-color: var(--overlay-bg-05);
     }
   }
 
@@ -627,6 +849,35 @@
 
     &__ui[data-mview="chat"] &__sidebar {
       display: none;
+    }
+  }
+}
+
+@keyframes chat-p2p-swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Dark theme keeps the bar neutral too — a light film rather than the brand
+// purple --border-strong resolves to there.
+html[data-theme="dark"] .chat-p2p {
+  .slimScrollBarY:after {
+    background: rgba(255, 255, 255, 0.24);
+  }
+
+  .chat-p2p__contact-list,
+  .chat-p2p__chat-panel {
+    scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+
+    ::-webkit-scrollbar-thumb,
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.24) !important;
     }
   }
 }

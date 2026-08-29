@@ -9,17 +9,22 @@
     padding: 16px;
     border-radius: 8px;
     @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+    // Selection and hover both change this, and clicking down a list of
+    // conversations without it flicks between flat colours.
+    transition: background-color 0.14s ease;
 
     &:hover {
       background-color: var(--overlay-bg-05);
     }
 
+    // Selected row. A brand tint, not a raised white card: the list column is
+    // white in the new inbox (Figma 43:32209), so `--normal-bg` + a heavy drop
+    // shadow was white-on-white with a shadow floating under it — which is
+    // what made switching between conversations look broken.
     &[data-active="active"],
     &[data-radio="on"] {
-      background-color: var(--normal-bg);
-      box-shadow:
-        0px 10px 15px -3px rgba(0, 0, 0, 0.1),
-        0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+      background-color: var(--radio-on-bg);
+      box-shadow: none;
     }
   }
 

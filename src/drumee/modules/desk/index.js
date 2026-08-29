@@ -31,6 +31,15 @@ const ESCAPE_MODAL_KINDS = ["tasks_panel"];
  */
 const DESK_BILLING_LOADER_DELAY = 220;
 
+// The Inbox is a FULL-CANVAS screen in the new shell (Figma 43:32209): it
+// occupies the whole centre column — a 400px conversation list beside the
+// active chat — exactly like Settings / Calendar / Get help, and unlike the
+// narrow right-hand slide-out it used to be. So it mounts in the same slot
+// they share, which also gives it their mutual exclusion for free.
+const folderIcon = require("media/grid/template/folder");
+
+const INBOX_SLOT = "settings-main-slot";
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -957,6 +966,10 @@ class desk_module extends LetcBox {
           return "toggle-help";
         case "settings_billing":
           return "upgrade-plan";
+        // The Inbox is a full-canvas screen now (Figma 43:32209), so it is
+        // detected here with its slot-mates rather than among the slide-outs.
+        case "chat_p2p":
+          return "toggle-inbox";
       }
     }
 
@@ -968,10 +981,12 @@ class desk_module extends LetcBox {
     }
     const chatChild = topChild("chat-panel");
     if (chatChild && chatChild.el.dataset.anim === "in") {
+      // Contacts still slides out from the right; the Inbox moved to the
+      // full-canvas slot and is detected below.
       const kind = childKind(chatChild, "chat-panel");
       if (kind === "address_book") return "toggle-contacts";
-      if (kind === "chat_p2p") return "toggle-inbox";
     }
+
 
     // Notifications side panel (predates the anim pattern, uses data-state).
     const act = this.getPart && this.getPart("activity-panel");
@@ -1378,21 +1393,15 @@ class desk_module extends LetcBox {
    */
   async openP2Pchat(args = {}) {
     const { drumate_id, message_id } = args;
-    let p = await this.ensurePart("chat-panel");
+    let p = await this.ensurePart(INBOX_SLOT);
     let widget = p.children.last();
     if (!widget || widget.isDestroyed()) {
-      this.togglePanel("chat_p2p", "chat-panel");
-    } else if (widget.mget(_a.kind) === "chat_p2p") {
-      if (widget.el.dataset.anim === "in") {
-        return;
-      } else {
-        this.togglePanel("chat_p2p", "chat-panel");
-      }
-    } else {
-      this.togglePanel("chat_p2p", "chat-panel");
+      this.togglePanel("chat_p2p", INBOX_SLOT, true);
+    } else if (widget.mget(_a.kind) !== "chat_p2p") {
+      this.togglePanel("chat_p2p", INBOX_SLOT, true);
     }
     if (!drumate_id) return;
-    p = await this.ensurePart("chat-panel");
+    p = await this.ensurePart(INBOX_SLOT);
     this.debug("AAA:122", this);
     widget = p && p.children && p.children.last && p.children.last();
     if (widget && widget.openChatByPeerId)
@@ -1783,21 +1792,22 @@ class desk_module extends LetcBox {
     // global. A bare identifier throws ReferenceError there.
     const cur = (window.Wm && window.Wm._curWorkspace) || null;
 
-    // Same area-tinted folder glyph desk_breadcrumb uses for the workspace
-    // crumb, so a row and the crumb it opens read as the same object.
-    const glyph = (row) => {
-      if (row.filetype !== _a.hub) return "raw-drumee-folder-blue";
-      switch (row.kind) {
-        case "window_team":
-          return "raw-drumee-folder-purple";
-        case "window_sharebox":
-          return "raw-drumee-folder-orange";
-        case "window_website":
-          return "raw-drumee-folder-green";
-        default:
-          return "raw-drumee-folder-blue";
-      }
-    };
+    // The workspace's OWN icon — the area-tinted folder shape from
+    // media/grid/template/folder, the same module the sidebar's workspace_item
+    // renders through getFolderIcon.
+    //
+    // This previously used raw-drumee-folder-blue/purple/orange/green, copied
+    // from desk_breadcrumb. Those names exist in NEITHER sprite: the breadcrumb
+    // computes them into a `folderIcon` variable it never uses, so the mapping
+    // is dead code there and these rows were drawing nothing at all.
+    const glyph = (row) =>
+      folderIcon({
+        area: row.area,
+        filetype: row.filetype === _a.folder ? _a.folder : _a.hub,
+        role: row.filetype === _a.folder ? "" : "desk",
+        widgetId: _.uniqueId("ws-menu-icon-"),
+        isAttachment: 1,
+      });
 
     const cn = "desk-module-topbar";
     const rowFor = (row) => {
@@ -2779,7 +2789,7 @@ class desk_module extends LetcBox {
       is_support: 1,
     };
 
-    const part = this.getPart && this.getPart("chat-panel");
+    const part = this.getPart && this.getPart(INBOX_SLOT);
     const child =
       part && !part.isEmpty() && part.children && part.children.last();
 
@@ -2789,13 +2799,13 @@ class desk_module extends LetcBox {
     // so an already-open inbox switches to the support conversation instead
     // of revealing whatever was last open — or toggling itself shut.
     if (child && _.isFunction(child.openPeer)) {
-      this.closeOtherSidebarPanels("chat-panel");
+      this.closeOtherSidebarPanels(INBOX_SLOT);
       this._showPanel(part);
       await child.openPeer(peer.entity_id, peer);
       return true;
     }
 
-    await this.togglePanel("chat_p2p", "chat-panel", true, { open_peer: peer });
+    await this.togglePanel("chat_p2p", INBOX_SLOT, true, { open_peer: peer });
     return true;
   }
 
@@ -4555,7 +4565,8 @@ class desk_module extends LetcBox {
 
       case "toggle-inbox":
       case "toggle-chat":
-        return this.togglePanel("chat_p2p", "chat-panel");
+        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.INBOX });
+        return this.togglePanel("chat_p2p", INBOX_SLOT, true);
 
       case "toggle-contacts":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
