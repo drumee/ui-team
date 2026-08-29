@@ -959,6 +959,7 @@ class __player_document extends PlayerInteract {
     const iframe = this.el && this.el.querySelector('iframe');
     if (!iframe || !iframe.src) return;
     try {
+      // eslint-disable-next-line no-self-assign -- reassigning src (even unchanged) forces the iframe to reload
       iframe.src = iframe.src;
     } catch (e) {
       if (this.warn) this.warn('[document] read-only reload failed', e && e.message);
