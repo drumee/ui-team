@@ -18,6 +18,20 @@ html {
 @include meta.load-css("meeting-toast");
 
 .desk-module {
+  // Where the padded canvas actually begins, published once so every
+  // slide-out agrees with it.
+  //
+  // __main is height:100vh with 8px padding, and its first child is the 46px
+  // __topbar — so the content area runs from 54px down to 8px above the
+  // viewport bottom. A `position: fixed` panel is viewport-relative and knows
+  // none of that on its own: sized 100vh at top:0 it covers the top bar and
+  // overruns both gutters, which is exactly what Trash and Contacts were
+  // doing. Custom properties inherit through the DOM regardless of
+  // positioning, so a fixed descendant still reads these.
+  --desk-gutter: 8px;
+  --desk-topbar-h: 46px;
+  --desk-canvas-top: calc(var(--desk-gutter) + var(--desk-topbar-h));
+
   &__ui {
     width: 100%;
     height: 100%;

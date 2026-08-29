@@ -1375,22 +1375,73 @@
   // UserProfile renders its own inner picture/initials box. Pin the whole
   // subtree to 30px, or its intrinsic height sets the row's line box and the
   // icon buttons beside it stop sharing a centre line.
+  // The trigger: a real 30px circle that OWNS the round mask and the centring,
+  // so neither depends on what UserProfile renders inside (a picture, initials,
+  // or an empty placeholder — it was square because the radius sat on an inner
+  // element that did not always exist).
   &__account-avatar {
     width: 30px;
     height: 30px;
     min-width: 30px;
+    // Box.X sets display:flex; these centre whatever lands inside it.
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
     border-radius: 50%;
-    cursor: pointer;
     overflow: hidden;
+    cursor: pointer;
+    box-sizing: border-box;
+    background-color: var(--primary-30);
+    // The ring is drawn OUTSIDE the circle so it never eats into the avatar or
+    // shifts the row: a border would be part of the box and change the layout
+    // width. The 2px inner spread matches the bar, so it reads as a detached
+    // halo rather than a thick outline.
+    box-shadow: 0 0 0 2px var(--normal-bg), 0 0 0 3px var(--border-default);
+    // Room for the ring, or the neighbouring icon clips it.
+    margin-left: 3px;
+    transition: box-shadow 0.15s ease;
 
-    .user-profile__ui,
+    &:hover,
+    &[data-state="1"],
+    &[data-open="1"] {
+      box-shadow: 0 0 0 2px var(--normal-bg), 0 0 0 3px var(--active-border);
+    }
+  }
+
+  // The profile inside the trigger. Inert (active:0 in the skeleton) so it
+  // cannot swallow the click, and stretched edge to edge so the wrapper's round
+  // mask clips it into a circle.
+  &__account-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+
+    &.user-profile__ui {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      border: none;
+    }
+
+    .user-profile__main,
     .user-profile__icon,
     .user-profile__picture,
     img {
-      width: 30px;
-      height: 30px;
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
+      object-fit: cover;
+    }
+
+    // Initials fallback — centred, and sized to fit a 30px circle.
+    .user-profile__main {
+      align-items: center;
+      justify-content: center;
+      @include drumee.typo($size: 12px, $line: 1, $color: var(--gray-white));
+      font-weight: 600;
+      text-transform: uppercase;
     }
   }
 

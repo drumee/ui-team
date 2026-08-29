@@ -1837,9 +1837,14 @@ class desk_module extends LetcBox {
         },
         kidsOpt: { active: 0 },
         kids: [
-          Skeletons.Image.Svg({
-            className: `${cn}__ws-item-icon`,
-            ico: glyph(row),
+          // Element + content, NOT Image.Svg + ico: media/grid/template/folder
+          // returns an HTML STRING, while `ico` names a sprite symbol. Passing
+          // the markup as a name built `<use href="#<markup>">`, which resolves
+          // to nothing and rendered as a broken oversized glyph. Same treatment
+          // the inbox's workspace rows use (chatcontact-item skeleton).
+          Skeletons.Element({
+            className: `${cn}__ws-item-icon ${row.area || ""}`,
+            content: glyph(row),
           }),
           Skeletons.Note({
             className: `${cn}__ws-item-name`,

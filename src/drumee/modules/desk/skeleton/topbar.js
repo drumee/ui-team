@@ -347,6 +347,22 @@ function utilityCluster(pfx, ui) {
  * @param {Object} ui   desk module
  */
 function userMenu(pfx, ui) {
+  // The viewer's own identity. UserProfile renders an avatar from `id` and
+  // falls back to initials from the name fields — given NEITHER it renders an
+  // empty circle, which is what the topbar was showing.
+  const firstname = Visitor.firstname ? Visitor.firstname() : "";
+  const lastname = Visitor.lastname ? Visitor.lastname() : "";
+  const fullname =
+    (Visitor.fullname ? Visitor.fullname() : "") ||
+    `${firstname} ${lastname}`.trim();
+  const identity = {
+    id: Visitor.id,
+    firstname,
+    lastname,
+    fullname,
+    auto_color: 1,
+  };
+
   const row = ({ ico, label, service, on_click, modifier }) =>
     Skeletons.Button.Label({
       ico,
@@ -377,13 +393,36 @@ function userMenu(pfx, ui) {
     // declares itself a ui handler for its descendants (declareHandlers in
     // widgets/menu). The service name is never handled anywhere; it exists
     // solely to make the widget emit.
-    trigger: Skeletons.UserProfile({
+    // A Box that CARRIES the service, wrapping a NON-active UserProfile.
+    //
+    // UserProfile cannot be the trigger itself. Its own skeleton feeds an
+    // inner Box.Y with `active: ui.mget(active)`, and ui-core binds a click to
+    // every widget whose `active` is not 0, whose handler calls
+    // e.stopPropagation() BEFORE triggerHandlers. The inner box therefore ate
+    // the click and the menu never opened. Setting active:0 on the profile
+    // silences the inner box AND the profile's own root, so the service has to
+    // live on a wrapper that is still active.
+    //
+    // The wrapper is also what makes the avatar round and centred: it owns the
+    // 30px box, the radius and the ring, so none of that depends on which
+    // internal element UserProfile happens to render (picture, initials, or an
+    // empty placeholder).
+    trigger: Skeletons.Box.X({
       className: `${pfx}__account-avatar`,
       sys_pn: "topbar-avatar",
       partHandler: ui,
       service: "open-account-menu",
-      auto_color: 0,
-      oneLetter: 1,
+      kids: [
+        Skeletons.UserProfile({
+          ...identity,
+          className: `${pfx}__account-avatar-img`,
+          active: 0,
+          // The frame draws a presence dot on the menu's 40px avatar, not on
+          // the 30px trigger — at that size it would sit on the initials.
+          live_status: 0,
+          oneLetter: 1,
+        }),
+      ],
     }),
     items: Skeletons.Box.Y({
       className: `${pfx}__account-menu`,
@@ -394,8 +433,11 @@ function userMenu(pfx, ui) {
           kidsOpt: { active: 0 },
           kids: [
             Skeletons.UserProfile({
+              ...identity,
               className: `${pfx}__account-menu-avatar`,
-              auto_color: 0,
+              // 40x40 with the 8px online dot, per the frame.
+              online: 1,
+              live_status: 1,
               oneLetter: 1,
             }),
             Skeletons.Box.Y({
