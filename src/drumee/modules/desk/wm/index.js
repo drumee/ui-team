@@ -2215,7 +2215,34 @@ class __window_manager extends push {
           return;
         }
         this._lastOpenNode = { key: nodeKey, at: now };
-        this.openContent(cmd, args);
+        // A WORKSPACE tile loads the full-screen pane — the same thing the
+        // sidebar and the topbar switcher do — instead of opening a floating
+        // window with its own topbar tab.
+        //
+        // DEPRECATED: the window-tab route. The new shell (Figma 43:23955) has
+        // no window-tab model (a workspace fills the canvas and subfolders
+        // navigate inside it), and the home grid was the last entry point that
+        // still reached it.
+        //
+        // Done HERE and not in openContent, even though that is where the hub
+        // branch lives: window/share sets its OWN model to filetype:hub and
+        // calls Wm.openContent(this) to open inbound share content, so
+        // rerouting openContent would have sent shares to loadWorkspace.
+        // `open-node` is unambiguous — it is the home grid's tile click.
+        //
+        // wait(0) releases the tile's spinner latch: media defaultTrigger sets
+        // it before this handler runs and loadWorkspace never touches the tile,
+        // so the tile would keep spinning after the workspace opened.
+        const _isWorkspaceTile =
+          cmd.mget &&
+          cmd.mget(_a.filetype) === _a.hub &&
+          cmd.mget(_a.status) !== _a.deleted;
+        if (_isWorkspaceTile) {
+          if (cmd.wait) cmd.wait(0);
+          this.loadWorkspace(cmd);
+        } else {
+          this.openContent(cmd, args);
+        }
         // Contextual tour: the first workspace or folder a user opens explains
         // what a folder is. Raised AFTER openContent so the navigation the user
         // asked for always happens — the tour never swallows the action — and

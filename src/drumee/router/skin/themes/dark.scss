@@ -40,7 +40,9 @@ html[data-theme="dark"] {
   /* Scrollbar — darker track + thumb so the bar reads on dark surfaces instead
      of the light defaults (consumed by the global override in
      router/skin/index.scss). */
-  --scrollbar-thumb: var(--border-strong);
+  // --border-strong is #4642a9 in dark (--primary-60, a retired brand purple),
+  // so the dark bar had the same problem as light. Light film instead.
+  --scrollbar-thumb: rgba(255, 255, 255, 0.24);
   --scrollbar-track: var(--normal-bg-90);
 
   /* Accent / state */

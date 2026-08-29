@@ -15,7 +15,20 @@ class __chat_p2p extends LetcBox {
     // `mview` drives the single-pane mobile/tablet layout (≤ 1024px):
     // "sidebar" shows the inbox, "chat" shows the conversation. On wider
     // screens both panes show side-by-side and the attribute is ignored.
-    opt.dataset = { ...opt.dataset, anim: "out", mview: "sidebar" };
+    //
+    // anim starts "in", NOT "out". As a slide-out this mounted parked
+    // off-screen and slid in later, so "out" was the right initial state. It
+    // is now a full-canvas screen mounted on demand into settings-main-slot
+    // (desk INBOX_SLOT) — it is created precisely because the user asked to
+    // see it, so it must be visible from the first frame.
+    //
+    // Load-bearing: the skin maps data-anim="out" to display:none, and in
+    // that slot nothing flips it to "in" — _loadKind only feeds the kind.
+    // Mounting "out" left the Inbox rendered but invisible; the only thing
+    // that ever revealed it was the contact list's `eod`, so an empty or slow
+    // list showed a blank screen. "out" now means only one thing: the desk is
+    // closing this screen (_hidePanel / togglePanel's animate-then-destroy).
+    opt.dataset = { ...opt.dataset, anim: "in", mview: "sidebar" };
     super.initialize(opt);
     this.declareHandlers();
     this._radioId = `peer-${this.mget(_a.widgetId)}`;

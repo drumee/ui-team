@@ -36,7 +36,12 @@ html[data-theme="light"],
   /* Scrollbar — consumed by the global .list-smart__container override in
      router/skin/index.scss. Light keeps the current purple thumb on a clear
      track. */
-  --scrollbar-thumb: var(--primary-400);
+  // Neutral, NOT --primary-400 (#c781ff). That lavender came from the vendored
+  // .list-smart__container rule in @drumee/ui-core and was carried over
+  // verbatim when these tokens were introduced — it is not a current brand
+  // colour, and it made every list in the app (inbox, contacts, notifications)
+  // scroll with a purple bar. A scrollbar is chrome; it should recede.
+  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
   --scrollbar-track: transparent;
 
   /* Accent / state */

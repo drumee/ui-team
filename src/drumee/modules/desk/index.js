@@ -354,6 +354,19 @@ class desk_module extends LetcBox {
     this._renderFolderTabs();
   }
 
+  /**
+   * DEPRECATED — the desk topbar's window-tab strip.
+   *
+   * The new shell (Figma 43:23955) has no window-tab model: a workspace fills
+   * the canvas and subfolders navigate inside it, so there is nothing for a
+   * per-window tab to represent. The strip is hidden in the skin
+   * (__folder-tabs, display:none) and workspace tiles no longer open windows
+   * at all (desk/wm openContent -> loadWorkspace).
+   *
+   * Kept, not deleted: "Open in Window" and share/player parents still launch
+   * real floating windows, and this is the only affordance that reaches one
+   * once it is covered. Remove it when that path goes too.
+   */
   _renderFolderTabs() {
     // Tab-count changes flip the strip-only topbar on/off (see
     // _syncWorkspaceTopbar). Sync here so the popup open/close path
