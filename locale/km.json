@@ -2750,5 +2750,9 @@
   "DAILY_REMINDER_TASKS_OTHER": "កិច្ចការដល់កំណត់ {0}",
   "DAILY_REMINDER_MEETINGS_ONE": "កិច្ចប្រជុំ {0}",
   "DAILY_REMINDER_MEETINGS_OTHER": "កិច្ចប្រជុំ {0}",
-  "DAILY_REMINDER_NOTHING": "គ្មានអ្វីត្រូវធ្វើថ្ងៃនេះទេ"
+  "DAILY_REMINDER_NOTHING": "គ្មានអ្វីត្រូវធ្វើថ្ងៃនេះទេ",
+  "ONBOARDING_ORG_NAME_LABEL": "ឈ្មោះអង្គភាពរបស់អ្នក",
+  "ONBOARDING_ORG_NAME_PLACEHOLDER": "វាយបញ្ចូលឈ្មោះ...",
+  "ONBOARDING_CREATE_ORG": "បង្កើតអង្គភាពរបស់អ្នក",
+  "ONBOARDING_ALL_SET_V2": "អ្វីៗរួចរាល់ហើយ {0}"
 }

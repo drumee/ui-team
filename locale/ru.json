@@ -2756,5 +2756,9 @@
   "DAILY_REMINDER_MEETINGS_FEW": "{0} встречи",
   "DAILY_REMINDER_MEETINGS_MANY": "{0} встреч",
   "DAILY_REMINDER_MEETINGS_OTHER": "{0} встреч",
-  "DAILY_REMINDER_NOTHING": "На сегодня ничего нет"
+  "DAILY_REMINDER_NOTHING": "На сегодня ничего нет",
+  "ONBOARDING_ORG_NAME_LABEL": "Название вашей организации",
+  "ONBOARDING_ORG_NAME_PLACEHOLDER": "Введите название...",
+  "ONBOARDING_CREATE_ORG": "Создать организацию",
+  "ONBOARDING_ALL_SET_V2": "Все готово, {0}"
 }
