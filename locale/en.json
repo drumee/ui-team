@@ -2941,5 +2941,9 @@
   "DAILY_REMINDER_TASKS_OTHER": "{0} due tasks",
   "DAILY_REMINDER_MEETINGS_ONE": "{0} meeting",
   "DAILY_REMINDER_MEETINGS_OTHER": "{0} meetings",
-  "DAILY_REMINDER_NOTHING": "Nothing due today"
+  "DAILY_REMINDER_NOTHING": "Nothing due today",
+  "ONBOARDING_ORG_NAME_LABEL": "Your organization name",
+  "ONBOARDING_ORG_NAME_PLACEHOLDER": "Type the name...",
+  "ONBOARDING_CREATE_ORG": "Create your organization",
+  "ONBOARDING_ALL_SET_V2": "You're all set, {0}"
 }
