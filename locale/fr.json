@@ -63,6 +63,7 @@
   "PLAN_ENTERPRISE_DESC": "Tarification personnalisée pour votre équipe",
   "FOOTER_PRO_SEATS": "5 sièges inclus, sièges supplémentaires {0}/mois chacun.",
   "FOOTER_ENTERPRISE_DESC": "Tarification personnalisée selon la taille de votre équipe.",
+  "FOOTER_ENTERPRISE_TITLE": "Offres Enterprise et sur mesure",
   "FEAT_STORAGE": "Storage",
   "FEAT_ADMIN_ROLES": "rôles d'administrateur",
   "FEAT_EDITOR_ACCESS": "accès éditeur",

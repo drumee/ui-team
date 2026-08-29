@@ -54,6 +54,16 @@
     gap: var(--spacer-2);
     // Containing block for __promo-pill's floating position (Box.Z).
     position: relative;
+    // Size container for everything in the page body — the title, the tab bar,
+    // the banner, the promo pill and the redeem box all sit OUTSIDE
+    // __content-container (which only wraps the tab content), so they had no
+    // measure to respond to and stayed desktop-shaped at every width. Naming
+    // the container here rather than reaching for viewport media queries is
+    // what makes the page behave the same in the desk, in the settings panel
+    // and in the popup, whose widths differ by hundreds of pixels at the same
+    // viewport size.
+    container-type: inline-size;
+    container-name: billing-page;
   }
 
   // Measure the space the billing content actually gets, not the window: this
@@ -722,41 +732,10 @@
     &-main {
       margin-top: var(--spacer-5);
       gap: var(--spacer-5);
-      padding: var(--spacer-5);
-    }
-
-    &-title {
-      font-weight: 600;
-      margin-right: var(--spacer-4);
-      color: var(--neutral-900);
-    }
-
-    &.content {
-      color: var(--neutral-700);
-
-      flex-direction: column;
-    }
-
-    &-email-title {
-      margin-left: var(--spacer-3);
-      &[data-device="mobile"] {
-        margin-left: 0;
-      }
-    }
-
-    &-email {
-      cursor: pointer;
-      text-decoration: underline;
-      // --primary-500 is #b251fb, a pink-violet from the revamp scale that
-      // matches nothing else on this page; every other link and CTA here uses
-      // --primary-50 (#433cc5). The single stray digit made the contact
-      // address read as a different kind of link.
-      color: var(--primary-50);
-      margin-left: var(--spacer-3);
-
-      &:hover {
-        color: var(--primary-60);
-      }
+      // No horizontal padding: the footer now holds a card (see the contact
+      // card below), and 16px of inset would have left it sitting narrower
+      // than the plan cards it lines up under.
+      padding: 0;
     }
 
     // "Manage billing" → Stripe portal. 2026-07-29: promoted from a plain
@@ -2081,5 +2060,650 @@
       position: static;
       top: auto;
     }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Motion
+// ═════════════════════════════════════════════════════════════════════════════
+// The page had none: every hover was an instant colour swap, and each render —
+// first paint, a Monthly/Yearly switch, entering Checkout — replaced the whole
+// tree with a hard cut, which read as a flicker rather than a change.
+//
+// Two kinds of motion live here and they are gated differently:
+//
+//  • HOVER / PRESS feedback is plain CSS transitions on state the user is
+//    driving with the pointer. Always on.
+//  • ENTRANCE animations are scoped to `.is-anim`, a class the widget adds for
+//    ONE render (settings_billing._motionClass) — first paint, a cycle switch,
+//    entering Checkout. Every surface here is rebuilt by a full feed(), and
+//    feed() also runs on the catalog landing, a payment.plan_updated WS event
+//    and the visibilitychange re-sync; ungated, the cards would re-animate on
+//    each of those with the user having done nothing.
+//
+// Everything below is opacity/transform only (compositor-friendly) and is
+// switched off wholesale under prefers-reduced-motion at the end of the file.
+
+@keyframes settings-billing-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes settings-billing-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// The price is the one thing a Monthly/Yearly switch actually changes, so it
+// comes in from the opposite direction to the card — the eye lands on it.
+@keyframes settings-billing-price-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes settings-billing-badge-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes settings-billing-tab-in {
+  from {
+    opacity: 0.35;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// One ring pulse on the "Your current plan" pill, so where the user already is
+// announces itself instead of relying on a static border.
+//
+// The pulse rides the PILL, not the card: the cards carry per-position
+// animation-delay rules for the stagger, and a second animation on the card
+// would have to re-declare that delay in its own shorthand — the current card
+// would then jump the queue. The pill has no stagger of its own. Its spread
+// stays well inside the card's 24px padding, so the card's overflow:hidden
+// never clips it.
+@keyframes settings-billing-current-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(89, 80, 255, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(89, 80, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(89, 80, 255, 0);
+  }
+}
+
+// ── Plan cards ───────────────────────────────────────────────────────────────
+.settings-billing__plan-item {
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.26s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-6px);
+    border-color: var(--primary-30);
+    box-shadow: 0 18px 38px -14px rgba(11, 10, 33, 0.28);
+  }
+
+  // The current card already carries a tinted shadow — deepen it rather than
+  // swapping it for the neutral one, or the focused card loses its colour on
+  // hover.
+  &.current:hover {
+    box-shadow: 0 20px 40px -12px rgba(89, 80, 255, 0.36);
+  }
+
+  // Untinted headers pick up a step of grey as the card lifts, so the whole
+  // card responds rather than just its outline.
+  .settings-billing__plan-header {
+    transition: background-color 0.24s ease;
+  }
+
+  &:hover .settings-billing__plan-header:not(.popular):not(.current) {
+    background-color: var(--tertiary-grey-30);
+  }
+}
+
+// Staggered entrance. nth-child rather than an inline --i: the row holds a
+// fixed five cards (Free, Pro, Team, Business, Sovereign) and this keeps the
+// skeleton free of style props.
+.settings-billing__plans-narrow.is-anim > * {
+  animation: settings-billing-card-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.settings-billing__plans-narrow.is-anim {
+  > *:nth-child(1) { animation-delay: 0ms; }
+  > *:nth-child(2) { animation-delay: 45ms; }
+  > *:nth-child(3) { animation-delay: 90ms; }
+  > *:nth-child(4) { animation-delay: 135ms; }
+  > *:nth-child(5) { animation-delay: 180ms; }
+
+  // Prices land after their card has settled — the whole sequence is done in
+  // well under half a second.
+  .settings-billing__plan-price-row,
+  .settings-billing__plan-price-text {
+    animation: settings-billing-price-in 300ms cubic-bezier(0.2, 0.7, 0.2, 1) 120ms both;
+  }
+
+  .settings-billing__plan-badge {
+    animation: settings-billing-badge-in 340ms cubic-bezier(0.2, 0.7, 0.2, 1) 220ms both;
+  }
+
+  // Fires after the stagger has finished (180ms + 320ms), so the pulse reads
+  // as a follow-up to the page settling rather than part of it.
+  .settings-billing__plan-button-main.current {
+    animation: settings-billing-current-pulse 1200ms ease-out 520ms 1;
+  }
+}
+
+// ── CTA pills ────────────────────────────────────────────────────────────────
+.settings-billing__plan-button-main {
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.24s ease,
+    transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  &.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -8px rgba(89, 80, 255, 0.55);
+  }
+
+  &.dark:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -8px rgba(40, 37, 56, 0.5);
+  }
+
+  &.secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px -10px rgba(11, 10, 33, 0.4);
+  }
+
+  // Press feedback — the pill takes the click rather than the page just
+  // changing underneath.
+  &.primary:active,
+  &.dark:active,
+  &.secondary:active {
+    transform: translateY(0) scale(0.985);
+    box-shadow: none;
+  }
+
+  // Markers, not actions: "Your current plan" and the owner/price locks must
+  // not offer any of the above.
+  &.current,
+  &.locked {
+    transition: none;
+
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
+}
+
+// ── Monthly / Yearly / Checkout tabs ─────────────────────────────────────────
+.settings-billing__tabs-trigger-item {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  // The bar sits on --neutral-200, and the active pill is white; a translucent
+  // white on hover reads as the pill arriving early.
+  &:hover:not([data-state="1"]) {
+    background-color: rgba(255, 255, 255, 0.6);
+    color: var(--neutral-900);
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &[data-state="1"] {
+    box-shadow: 0 1px 4px rgba(11, 10, 33, 0.14);
+  }
+
+  .settings-billing__tabs-trigger-discount {
+    transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  &:hover .settings-billing__tabs-trigger-discount {
+    transform: scale(1.06);
+  }
+}
+
+.settings-billing__tabs-trigger-main.is-anim
+  .settings-billing__tabs-trigger-item[data-state="1"] {
+  animation: settings-billing-tab-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+// ── Banner / promo pill / redeem / checkout ──────────────────────────────────
+.settings-billing__sub-banner.is-anim,
+.settings-billing__promo-pill.is-anim,
+.settings-billing__redeem.is-anim,
+.settings-billing__checkout-main.is-anim {
+  animation: settings-billing-rise-in 300ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.settings-billing__sub-banner {
+  &-cancel,
+  &-resume {
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease,
+      box-shadow 0.22s ease,
+      transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  &-resume:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px -8px rgba(67, 60, 197, 0.6);
+  }
+
+  &-cancel:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.settings-billing__promo-pill-cta,
+.settings-billing__footer-manage-billing,
+.settings-billing__redeem-cta {
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.22s ease,
+    transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px -8px rgba(67, 60, 197, 0.6);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.985);
+    box-shadow: none;
+  }
+}
+
+// The redeem form is built on toggle, so its parts animate on arrival — no
+// is-anim gate: they only exist while the box is open.
+.settings-billing__redeem.is-open {
+  .settings-billing__redeem-sub,
+  .settings-billing__redeem-pill-bar,
+  .settings-billing__redeem-row {
+    animation: settings-billing-rise-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .settings-billing__redeem-pill-bar { animation-delay: 40ms; }
+  .settings-billing__redeem-row { animation-delay: 80ms; }
+}
+
+.settings-billing__redeem.is-collapsed {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--normal-bg-90);
+    border-color: var(--primary-30);
+  }
+}
+
+.settings-billing__redeem-pill-item {
+  transition:
+    background 0.18s ease,
+    transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Enterprise / custom-plan contact card
+// ═════════════════════════════════════════════════════════════════════════════
+// Was a run-on sentence at the bottom of the page ("Enterprise: Custom pricing
+// for your team size.  Contact: contact@drumee.org") with an underlined mailto
+// doing duty as the call to action. Everything else on this page is a card
+// with a pill CTA; this is one too.
+.settings-billing__contact {
+  &-card {
+    align-items: center;
+    gap: var(--spacer-5);
+    padding: var(--spacer-5) var(--spacer-6);
+    border-radius: var(--corner-radius-5);
+    // Same primary tint as the popular/current plan headers, so the page's one
+    // sales-led exit belongs to the same family as the cards above it.
+    background-color: rgba(132, 126, 255, 0.08);
+    border: 1px solid rgba(132, 126, 255, 0.28);
+    transition:
+      transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+      box-shadow 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+      border-color 0.2s ease,
+      background-color 0.2s ease;
+
+    &:hover {
+      transform: translateY(-3px);
+      border-color: var(--primary-30);
+      background-color: rgba(132, 126, 255, 0.12);
+      box-shadow: 0 16px 32px -16px rgba(67, 60, 197, 0.45);
+    }
+  }
+
+  &-icon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-max);
+    background-color: rgba(132, 126, 255, 0.18);
+    transition: transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+    svg {
+      width: 20px;
+      height: 20px;
+
+      // The source SVG carries fill="#BBBBBB" as a presentation attribute; a
+      // declaration on the path is what overrides it.
+      path {
+        fill: var(--primary-50);
+      }
+    }
+  }
+
+  &-card:hover &-icon {
+    transform: scale(1.08) rotate(-4deg);
+  }
+
+  &-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &-title {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--tertiary-grey-100);
+  }
+
+  &-desc {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--tertiary-grey-80);
+  }
+
+  // The address stays visible and copyable for anyone who writes from another
+  // client — quiet, one step down from the button beside it.
+  &-mail {
+    align-self: flex-start;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--primary-50);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.18s ease, border-color 0.18s ease;
+
+    &:hover {
+      color: var(--primary-60);
+      border-bottom-color: currentColor;
+    }
+  }
+
+  &-cta {
+    flex: 0 0 auto;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--white);
+    background-color: var(--primary-40);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 22px;
+    padding: 10px 22px;
+    border-radius: var(--corner-radius-max);
+    transition:
+      background-color 0.18s ease,
+      box-shadow 0.22s ease,
+      transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+    &:hover {
+      background-color: var(--primary-50);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -8px rgba(89, 80, 255, 0.55);
+    }
+
+    &:active {
+      transform: translateY(0) scale(0.985);
+      box-shadow: none;
+    }
+  }
+}
+
+// Narrow container (popup mount, mobile): stack the card and let the CTA span
+// the width instead of squeezing the copy into two words per line.
+@container billing-content (max-width: 620px) {
+  // The direction has to out-specify the engine's own `.box[data-flow="x"]`
+  // (lib/container.scss) — a bare class selector ties with it and loses on
+  // source order, which is why the card stayed a row. Widget root + card +
+  // attribute wins outright, without reaching for !important.
+  .settings-billing .settings-billing__contact-card[data-flow="x"] {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacer-4);
+  }
+
+  .settings-billing__contact-cta {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+// ── Reduced motion ───────────────────────────────────────────────────────────
+// Keep every state change, drop the movement.
+@media (prefers-reduced-motion: reduce) {
+  .settings-billing,
+  .settings-billing * {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .settings-billing__plan-item:hover,
+  .settings-billing__contact-card:hover,
+  .settings-billing__plan-button-main:hover,
+  .settings-billing__contact-cta:hover {
+    transform: none;
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Narrow layouts (phones, split panes, the popup mount)
+// ═════════════════════════════════════════════════════════════════════════════
+// Measured against `billing-page` — the widget's own __main — not the viewport,
+// because the same phone width means something different in the desk, the
+// settings panel and the popup. The plan cards already fold on their own
+// container (billing-plans); everything ABOVE them lives outside that wrapper
+// and is handled here.
+//
+// The direction flips have to out-specify the engine's `.box[data-flow="x"]`
+// (skin/lib/container.scss) — a bare class ties with it and loses on source
+// order — hence the widget-root + attribute selectors.
+
+// ── The floating claim pill ──────────────────────────────────────────────────
+// It is anchored top-right of __main and is up to 360px wide, so it only clears
+// the page title and the centred tab bar on a genuinely wide page. Below that
+// it lands squarely on both — measured: at a 720px page it covers the Yearly
+// and Checkout tabs. Put it back in the flow there; it sits between the banner
+// and the redeem box, which is where its DOM order already places it.
+@container billing-page (max-width: 900px) {
+  .settings-billing .settings-billing__promo-pill[data-flow="z"] {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-top: var(--spacer-3);
+  }
+
+  .settings-billing .settings-billing__promo-pill-close {
+    top: 6px;
+    right: 6px;
+  }
+}
+
+@container billing-page (max-width: 560px) {
+  .settings-billing__page-title {
+    font-size: 24px;
+    line-height: 30px;
+    margin-bottom: var(--spacer-5);
+  }
+
+  // The tab bar was a fixed 400px pill with 24px of padding and a 24px gap —
+  // 368px of chrome and labels in a 278px column at 320px, so it overflowed and
+  // clipped its own text. Full width, equal columns, and the Yearly tab wraps
+  // its "Saved 16.5%" under the label instead of pushing the row wider.
+  .settings-billing__tabs-trigger-main {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .settings-billing__tabs-trigger-item {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: var(--spacer-3) var(--spacer-2);
+    gap: var(--spacer-1);
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+
+  .settings-billing__tabs-trigger-discount {
+    font-size: 11px;
+    line-height: 15px;
+  }
+
+  // Banner: the title and the action stop competing for one row. Left as a
+  // column, the 4-line title beside a squeezed button becomes two clean blocks.
+  .settings-billing .settings-billing__sub-banner[data-flow="x"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacer-3);
+    padding: var(--spacer-4);
+  }
+
+  .settings-billing__sub-banner-action {
+    align-self: stretch;
+    text-align: center;
+  }
+
+  // Promo pill and redeem: same treatment — copy above, full-width action.
+  .settings-billing .settings-billing__promo-pill-row[data-flow="x"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacer-3);
+    padding-right: 0;
+  }
+
+  .settings-billing__promo-pill-cta {
+    text-align: center;
+  }
+
+  .settings-billing .settings-billing__redeem-row[data-flow="x"] {
+    flex-direction: column;
+    gap: var(--spacer-3);
+  }
+
+  .settings-billing__redeem-cta {
+    text-align: center;
+  }
+
+  .settings-billing__footer-manage-billing {
+    align-self: stretch;
+    text-align: center;
+  }
+
+  // Checkout: the plan and billing-cycle pill bars are three nowrap labels in
+  // 24px-padded pills — 330px of content in a 299px column at 320px, with the
+  // last pill escaping the page. Trim the padding, and let the bar wrap rather
+  // than overflow if a translation is longer than English.
+  .settings-billing__checkout-pill-bar {
+    flex-wrap: wrap;
+  }
+
+  .settings-billing__checkout-pill-item {
+    padding: var(--spacer-2) var(--spacer-3);
+  }
+
+  .settings-billing__checkout-pill-text {
+    font-size: 14px;
+  }
+
+  .settings-billing__checkout-pill-discount {
+    font-size: 12px;
+  }
+}
+
+// Smallest phones (320–360 CSS px, and any split pane that narrow).
+@container billing-page (max-width: 400px) {
+  .settings-billing__page-title {
+    font-size: 21px;
+    line-height: 27px;
+  }
+
+  .settings-billing__tabs-trigger-item {
+    font-size: 11.5px;
+    padding: var(--spacer-3) var(--spacer-1);
+  }
+
+  .settings-billing__tabs-trigger-discount {
+    font-size: 10.5px;
+  }
+}
+
+// Root padding. The widget root is outside every container above (it IS the
+// element the container measures inside), so this one is device/viewport based:
+// 24px a side costs 15% of a 320px screen.
+.settings-billing[data-page="1"][data-device="mobile"] {
+  padding: var(--spacer-4);
+}
+
+@media screen and (max-width: 640px) {
+  .settings-billing[data-page="1"] {
+    padding: var(--spacer-4);
   }
 }

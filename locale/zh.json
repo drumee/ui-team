@@ -63,6 +63,7 @@
   "PLAN_ENTERPRISE_DESC": "为您的团队量身定制价格",
   "FOOTER_PRO_SEATS": "含 5 个席位，额外席位每个 {0}/月。",
   "FOOTER_ENTERPRISE_DESC": "根据您的团队规模定制价格。",
+  "FOOTER_ENTERPRISE_TITLE": "企业版与定制方案",
   "FEAT_STORAGE": "Storage",
   "FEAT_ADMIN_ROLES": "管理员角色",
   "FEAT_EDITOR_ACCESS": "编辑权限",

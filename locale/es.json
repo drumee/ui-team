@@ -63,6 +63,7 @@
   "PLAN_ENTERPRISE_DESC": "Precio personalizado para tu equipo",
   "FOOTER_PRO_SEATS": "5 puestos incluidos, puestos adicionales {0}/mes cada uno.",
   "FOOTER_ENTERPRISE_DESC": "Precio personalizado según el tamaño de tu equipo.",
+  "FOOTER_ENTERPRISE_TITLE": "Planes Enterprise y personalizados",
   "FEAT_STORAGE": "Storage",
   "FEAT_ADMIN_ROLES": "roles de administrador",
   "FEAT_EDITOR_ACCESS": "acceso de editor",

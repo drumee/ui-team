@@ -761,6 +761,7 @@
   "PLAN_ENTERPRISE_DESC": "Custom pricing for your team",
   "FOOTER_PRO_SEATS": "5 seats included, additional seats {0}/month each.",
   "FOOTER_ENTERPRISE_DESC": "Custom pricing for your team size.",
+  "FOOTER_ENTERPRISE_TITLE": "Enterprise & custom plans",
   "FEAT_STORAGE": "Storage",
   "FEAT_ADMIN_ROLES": "admin roles",
   "FEAT_EDITOR_ACCESS": "editor access",

@@ -63,6 +63,7 @@
   "PLAN_ENTERPRISE_DESC": "Индивидуальная цена для вашей команды",
   "FOOTER_PRO_SEATS": "Включено 5 мест, дополнительные места {0}/месяц за каждое.",
   "FOOTER_ENTERPRISE_DESC": "Индивидуальная цена в зависимости от размера команды.",
+  "FOOTER_ENTERPRISE_TITLE": "Enterprise и индивидуальные тарифы",
   "FEAT_STORAGE": "Storage",
   "FEAT_ADMIN_ROLES": "роли администраторов",
   "FEAT_EDITOR_ACCESS": "доступ редактора",
