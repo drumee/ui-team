@@ -9,9 +9,9 @@
 const { priorityMeta, resolveStatus, startLabel } = require("./helpers");
 
 /**
- * Provenance pill. Returns null only when the row carries no origin at all —
- * an aggregated row always has one, so a missing pill means a malformed row
- * rather than a folder-less item.
+ * Provenance pill — which workspace this item came from, or "Personal".
+ * Returns null only when the row carries no origin at all; an aggregated row
+ * always has one, so a missing pill means a malformed row.
  */
 function provenancePill(pfx, row) {
   const personal = row.scope === "personal";
@@ -20,7 +20,7 @@ function provenancePill(pfx, row) {
   return Skeletons.Note({
     className: `${pfx}__chip-origin`,
     content: text,
-    attrOpt: { "data-scope": personal ? "personal" : "folder" },
+    attrOpt: { "data-scope": personal ? "personal" : "workspace" },
   });
 }
 

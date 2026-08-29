@@ -9,7 +9,7 @@ const { VIEWS, FILTERS, rangeLabel, day } = require("./helpers");
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const view = ui.getView();
-  const filter = ui.getFilter();
+  const filter = ui.getActiveFilter();
 
   // ── ‹ Today › ──────────────────────────────────────────────────────────────
   const nav = Skeletons.Box.X({

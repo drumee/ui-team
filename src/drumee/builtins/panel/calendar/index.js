@@ -93,7 +93,25 @@ class __calendar_main extends LetcBox {
     return this._cursor;
   }
 
-  getFilter() {
+  /**
+   * The All / Task / Meeting toolbar state.
+   *
+   * NOT named getFilter(). Marionette's CollectionView — which LetcBox extends
+   * — already owns that name: `_getFilter()` calls `this.getFilter()` and, when
+   * the result is a STRING, builds a predicate that keeps only child views
+   * whose model has a truthy attribute of that name:
+   *
+   *     if (_.isString(viewFilter))
+   *       return view => view.model && view.model.get(viewFilter);
+   *
+   * Overriding it to return "all" therefore filtered every child of this widget
+   * on `model.get("all")`, which no skeleton node has. The fed tree landed in
+   * the collection and was then filtered straight back out, leaving
+   * `children` empty — so the view reported itself empty and rendered its
+   * emptyView (LetcBlank) instead. The whole screen came up blank, with a
+   * populated collection and no error anywhere.
+   */
+  getActiveFilter() {
     return this._filter;
   }
 

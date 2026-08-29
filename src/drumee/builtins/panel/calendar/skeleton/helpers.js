@@ -10,13 +10,12 @@
 //   id            record id in its OWN store (task id / meeting nid)
 //   hub_id        owning hub — REQUIRED: every write goes back to this hub, and
 //                 "Open in folder" cannot be built without it
-//   nid           owning folder node (tasks) / the meeting node (meetings)
-//   scope         'folder' | 'personal'
-//   origin_name   folder name for a folder task, workspace name for a hub
-//                 meeting, null when personal. Meetings live at the hub's home
-//                 (server room.book → pid: home_id), so a meeting's grey pill is
-//                 a WORKSPACE name while a task's is a FOLDER name — same pill,
-//                 different source field.
+//   nid           the folder a task was created in (provenance only — a task
+//                 belongs to its workspace) / the meeting node (meetings)
+//   scope         'workspace' | 'personal' ('folder' from an older server, read
+//                 as a synonym of 'workspace')
+//   origin_name   workspace name, null when personal. Tasks and meetings are
+//                 both workspace-level, so one pill names one thing.
 //   title         display title
 //   description   agenda / note, may be empty
 //   due_date      'YYYY-MM-DD' — tasks only. Tasks are all-day items.
@@ -26,7 +25,7 @@
 //                 string kept for back-compat and must NOT be parsed.
 //   status        column key: one of STATUSES below, or a custom column id
 //   status_label  resolved label — the server sends it because a custom column
-//                 belongs to a folder this client never loaded
+//                 lives in a workspace database this client never opened
 //   status_theme  resolved palette KEY for a custom column ('purple', 'red', …);
 //                 mapped to a hex by COLUMN_THEMES below, which is the board's
 //                 own palette so a column tints identically in both surfaces
@@ -188,8 +187,12 @@ function normalizeRow(raw, fallbackKind) {
   const id = content.id != null ? content.id : content.nid;
   if (id == null) return null;
 
-  const scope =
-    content.scope || (Number(content.is_personal) ? "personal" : "folder");
+  // 'folder' is what a server predating the workspace-scope migration sends
+  // for exactly the same rows; fold it in rather than letting those rows fall
+  // through every `scope === "workspace"` test as an unknown third value.
+  const rawScope =
+    content.scope || (Number(content.is_personal) ? "personal" : "workspace");
+  const scope = rawScope === "folder" ? "workspace" : rawScope;
 
   const row = {
     kind,

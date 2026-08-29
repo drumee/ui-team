@@ -1910,7 +1910,8 @@ class __window_folder extends mfsInteract {
         return this._toggleThreadMenu();
 
       case "thread-menu-general":
-        // "# General" → folder-wide chat, scoped IN PLACE (no tab switch).
+        // "# General" → leave the file thread for the team chat, IN PLACE
+        // (no tab switch).
         this._closeThreadMenu();
         this.scopeChatToFile(null);
         return this.scopeChatToFolder(this.mget(_a.nid));
@@ -4226,6 +4227,13 @@ class __window_folder extends mfsInteract {
     this._updateChatHeader(null, "", false);
   }
 
+  // Tell the team chat which folder we moved into.
+  //
+  // The name is historical: in a workspace this no longer switches
+  // conversations — there is one team chat per workspace — it only re-points
+  // where a post's uploads land. On a DMZ share, where the folder is an access
+  // boundary, it still selects the conversation. Either way the chat widget
+  // decides; see setScopedFolderNid there.
   scopeChatToFolder(folderNid) {
     return this.ensurePart("folder-chat").then((chat) => {
       if (chat && _.isFunction(chat.setScopedFolderNid))
@@ -4400,11 +4408,14 @@ class __window_folder extends mfsInteract {
     }
   }
 
-  // Canonical task-scoping args for the *current* folder. A hub/workspace ROOT
-  // window's active dir is actual_home_id (hub-wide, so `actual_home_id || nid`
-  // would wrongly collapse every subfolder onto the root); a subfolder window
-  // uses its own nid. `isRoot` also lets the panel surface legacy (nid-less)
-  // tasks at the root only. Mirrors the breadcrumb's curNid resolution.
+  // Which folder a NEW task is filed under — not what the board lists. The
+  // board is workspace-wide now (tasks/index.js), so these args only travel
+  // with a create.
+  //
+  // A hub/workspace ROOT window's active dir is actual_home_id (hub-wide, so
+  // `actual_home_id || nid` would wrongly collapse every subfolder onto the
+  // root); a subfolder window uses its own nid. Mirrors the breadcrumb's curNid
+  // resolution.
   _taskScopeArgs() {
     const nid = this.mget(_a.nid);
     const homeId = this.mget(_a.actual_home_id);
@@ -4430,8 +4441,9 @@ class __window_folder extends mfsInteract {
     };
   }
 
-  // Keep the embedded task panel scoped to the navigated folder, mirroring
-  // scopeChatToFolder. No-op until the Task tab has been opened once.
+  // Tell the embedded task panel which folder we moved into, mirroring
+  // scopeChatToFolder — the destination for new tasks, not a board filter.
+  // No-op until the Task tab has been opened once.
   scopeTasksToFolder() {
     if (!this._taskPanelMounted) return;
     const apply = (p) => {
@@ -4611,7 +4623,8 @@ class __window_folder extends mfsInteract {
               // Upload/destination nid: for a hub-level window the working nid
               // is actual_home_id, not the hub_id itself (else media.upload 403).
               nid: destNid,
-              // Folder-scope identity for the task list/create.
+              // Which folder a new task is filed under. Not a list filter —
+              // the board shows the whole workspace (see _taskScopeArgs).
               scope_nid: scopeNid,
               scope_is_root: isRoot,
               // Deep-link from a task mention/assignment notification: the tasks

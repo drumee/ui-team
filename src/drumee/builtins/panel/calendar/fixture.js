@@ -23,7 +23,7 @@ module.exports = function fixtureRows() {
     // Two meetings that overlap — the column-packing case.
     {
       kind: "meeting", id: "fx-m1", hub_id: "fx-hub-1", nid: "fx-n1",
-      scope: "folder", origin_name: "Product",
+      scope: "workspace", origin_name: "Product",
       title: "Sprint review", description: "Walk through sprint 1 deliverables",
       stime: at(0, 9), etime: at(0, 10), status: "todo", priority: "medium",
       can_write: 0, recur: null,
@@ -37,7 +37,7 @@ module.exports = function fixtureRows() {
     },
     {
       kind: "meeting", id: "fx-m3", hub_id: "fx-hub-2", nid: "fx-n3",
-      scope: "folder", origin_name: "Design System",
+      scope: "workspace", origin_name: "Design System",
       title: "Design review", description: "Present concepts and rationale",
       stime: at(1, 13, 30), etime: at(1, 14, 30), status: "todo", priority: "medium",
       can_write: 0, recur: null,
@@ -45,7 +45,7 @@ module.exports = function fixtureRows() {
     // All-day tasks — one per status, so the pills and dots are all visible.
     {
       kind: "task", id: "fx-t1", hub_id: "fx-hub-1", nid: "fx-n10",
-      scope: "folder", origin_name: "Product",
+      scope: "workspace", origin_name: "Product",
       title: "Ship the icon sprite", description: "Rebuild and verify",
       due_date: on(0), status: "in_progress", priority: "urgent", can_write: 0, recur: null,
     },
@@ -57,7 +57,7 @@ module.exports = function fixtureRows() {
     },
     {
       kind: "task", id: "fx-t3", hub_id: "fx-hub-3", nid: "fx-n11",
-      scope: "folder", origin_name: "Marketing Website Redesign",
+      scope: "workspace", origin_name: "Marketing Website Redesign",
       title: "Review the launch copy for the pricing page and the FAQ",
       description: "Long title on purpose — the pill must survive it",
       due_date: on(2), status: "to_review", priority: "high", can_write: 0, recur: null,
@@ -73,7 +73,7 @@ module.exports = function fixtureRows() {
     },
     {
       kind: "task", id: "fx-t5", hub_id: "fx-hub-2", nid: "fx-n12",
-      scope: "folder", origin_name: "Design System",
+      scope: "workspace", origin_name: "Design System",
       title: "Audit dark theme tokens", description: "",
       due_date: on(4), status: "todo", priority: "medium", can_write: 0, recur: null,
     },

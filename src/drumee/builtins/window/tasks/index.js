@@ -154,10 +154,15 @@ class __tasks_panel extends LetcBox {
     // Upload destination — must be a real folder/home node, not the hub_id.
     // The folder window passes `actual_home_id || nid` when launching us.
     this._destNid = this.mget(_a.actual_home_id) || this.mget(_a.nid) || 0;
-    // Folder scope for the task list/create. `scope_nid` is the canonical
-    // current-directory node (root window → actual_home_id, subfolder → own
-    // nid); `scope_is_root` makes the root view also show legacy nid-less
-    // tasks. Falls back to _destNid for safety if not supplied.
+    // The board is WORKSPACE-level: it lists every task in the workspace no
+    // matter which folder each was created in (Figma 43:23955 — Task is a
+    // workspace rail item, not a per-folder tab), and there is one set of
+    // columns per workspace.
+    //
+    // `scope_nid` therefore no longer selects what is LISTED. It survives as
+    // the folder a NEW task records as its origin — `scope_is_root` alongside
+    // it — so navigating into a subfolder still files new tasks under it and
+    // the Personal Calendar can still say where a task came from.
     this._scopeNid = this.mget("scope_nid") || this._destNid || null;
     this._scopeIsRoot = this.mget("scope_is_root") ? 1 : 0;
     // Deep-link target from a task mention/assignment notification (forwarded by
@@ -384,42 +389,30 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  // Re-point the panel at a different folder when the host window navigates
-  // (breadcrumb / into a child). Mirrors the chat panel's setScopedFolderNid.
+  // Follow the host window as it navigates (breadcrumb / into a child).
+  //
+  // The BOARD does not change: it shows the whole workspace from whichever
+  // folder you are standing in. All this updates is where a new task and its
+  // uploads are filed. So — unlike the folder-scoped version this replaces —
+  // it does NOT drop the loaded rows, close an open draft, or refetch on
+  // navigation; doing that would tear the board down and rebuild it identical
+  // every time the user clicked into a subfolder.
   setScope({ scopeNid = null, isRoot = 0, destNid } = {}) {
-    const nextScope = scopeNid != null ? scopeNid : null;
-    const nextRoot = isRoot ? 1 : 0;
-    const nextDest = destNid != null ? destNid : this._destNid;
-    const sameScope =
-      this._scopeNid === nextScope &&
-      this._scopeIsRoot === nextRoot &&
-      this._destNid === nextDest;
-    // Same scope and the last fetch succeeded: nothing to do. When the last
-    // list fetch failed silently, fall through to refetch — otherwise
-    // reopening the Tasks tab (which re-calls setScope with identical args)
-    // would latch the empty board until page reload.
-    if (sameScope && !this._loadFailed) {
-      return;
-    }
-    this._scopeNid = nextScope;
-    this._scopeIsRoot = nextRoot;
-    this._destNid = nextDest;
-    if (!sameScope) {
-      // The create/detail popups, pending file search AND the loaded rows
-      // belong to the folder we just left — close/drop them so nothing
-      // commits into (or renders on) the new scope. On a failed-load RETRY
-      // of the SAME scope, keep all of it: wiping here would discard the
-      // user's open draft just because the board needed a refetch.
-      this._creating = false;
-      this._createDefaults = null;
-      this._detailId = null;
-      this._detailDraft = null;
-      this._detailReturnTo = null;
-      this._pickerOpen = null;
-      this._tasks = [];
-      if (typeof this._resetFileSearch === "function") this._resetFileSearch();
+    this._scopeNid = scopeNid != null ? scopeNid : null;
+    this._scopeIsRoot = isRoot ? 1 : 0;
+    if (destNid != null && `${destNid}` !== `${this._destNid}`) {
+      this._destNid = destNid;
+      // _folderFilenames caches the DESTINATION folder's names, for the
+      // a → a(1) collision preview on an attachment. It is the one piece of
+      // per-folder state the board keeps, so it has to follow the move even
+      // though nothing else here does.
+      this._folderFilenames = null;
     }
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
+    // The one case that still needs a fetch: the previous load failed
+    // silently, and reopening the Tasks tab re-calls setScope. Without this
+    // the board would latch empty until a page reload.
+    if (!this._loadFailed) return;
     Promise.all([
       this._loadTasks(),
       this._loadColumns(),
@@ -2529,6 +2522,13 @@ class __tasks_panel extends LetcBox {
       const rows = await this.fetchService({
         service: SERVICE.task.list,
         hub_id: this._hubId,
+        // Whole workspace, every folder. See _scopeNid in initialize.
+        workspace: 1,
+        // Deliberate redundancy for a staggered deploy. A server that predates
+        // the workspace flag ignores it and reads these instead, so the board
+        // falls back to the old folder-scoped list rather than coming back
+        // EMPTY — which is what "workspace only" would look like there. A
+        // current server ignores them.
         nid: this._scopeNid,
         include_unscoped: this._scopeIsRoot,
       });
@@ -2550,15 +2550,17 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  // Custom Kanban columns for the current folder scope. Best-effort — a
-  // failure (e.g. server without the task_column procs yet) just leaves the
-  // four built-in columns.
+  // The workspace's Kanban columns — one set per workspace, shared by every
+  // folder in it. Best-effort: a failure (e.g. a server without the
+  // task_column procs yet) just leaves the four built-in columns.
+  //
+  // No nid: the column procs resolve the workspace scope themselves. Sending
+  // one would only suggest it still selects something.
   async _loadColumns() {
     try {
       const rows = await this.fetchService({
         service: SERVICE.task.column_list,
         hub_id: this._hubId,
-        nid: this._scopeNid,
       });
       this._customColumns = Array.isArray(rows) ? rows : [];
     } catch (err) {
@@ -2566,13 +2568,13 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  // Load which columns the user has the bell on for, in this folder scope.
+  // Which columns the user has the bell on for. Workspace-wide, like the
+  // columns themselves.
   async _loadColumnWatches() {
     try {
       const rows = await this.fetchService({
         service: SERVICE.task.column_watch_list,
         hub_id: this._hubId,
-        nid: this._scopeNid,
       });
       this._columnWatches = new Set((Array.isArray(rows) ? rows : []).map(String));
     } catch (err) {
@@ -2600,7 +2602,6 @@ class __tasks_panel extends LetcBox {
           ? SERVICE.task.column_watch_set
           : SERVICE.task.column_watch_unset,
         hub_id: this._hubId,
-        nid: this._scopeNid,
         column_key: k,
       });
     } catch (err) {
@@ -2618,6 +2619,8 @@ class __tasks_panel extends LetcBox {
       const rows = await this.fetchService({
         service: SERVICE.task.activity,
         hub_id: this._hubId,
+        workspace: 1,
+        // Same deploy-skew fallback as _loadTasks.
         nid: this._scopeNid,
         include_unscoped: this._scopeIsRoot,
         limit: 30,
@@ -3458,6 +3461,7 @@ class __tasks_panel extends LetcBox {
       const rows = await this.fetchService({
         service: SERVICE.task.activity,
         hub_id: this._hubId,
+        workspace: 1,
         nid: this._scopeNid,
         include_unscoped: this._scopeIsRoot,
         limit: HISTORY_SCAN,
@@ -3485,7 +3489,6 @@ class __tasks_panel extends LetcBox {
       const row = await this.postService({
         service: SERVICE.task.column_create,
         hub_id: this._hubId,
-        nid: this._scopeNid,
         name,
         theme: this._boardTheme || "default",
         // "Set as default" — sent for forward-compat; the server ignores it
@@ -3520,10 +3523,9 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_update,
         hub_id: this._hubId,
-        // Column ids are folder-scoped: the built-ins share their status keys
-        // across boards, so without nid the server would rename this column on
-        // every board in the workspace.
-        nid: this._scopeNid,
+        // No nid: there is one board per workspace now, so a rename applying
+        // workspace-wide is the intended effect rather than the accident it
+        // would have been while columns were per-folder.
         id,
         name,
       });
@@ -3545,8 +3547,7 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_update,
         hub_id: this._hubId,
-        // Folder-scoped — see _renameColumn.
-        nid: this._scopeNid,
+        // Workspace-wide — see _renameColumn.
         id,
         theme,
       });
@@ -3583,8 +3584,7 @@ class __tasks_panel extends LetcBox {
       const resp = await this.postService({
         service: SERVICE.task.column_set_done,
         hub_id: this._hubId,
-        // Folder-scoped — see _renameColumn.
-        nid: this._scopeNid,
+        // Workspace-wide — see _renameColumn.
         id,
         is_done: next,
       });
@@ -3612,9 +3612,7 @@ class __tasks_panel extends LetcBox {
       const resp = await this.postService({
         service: SERVICE.task.column_delete,
         hub_id: this._hubId,
-        // Folder-scoped — without nid the server would delete this column from
-        // every board in the workspace (see _renameColumn).
-        nid: this._scopeNid,
+        // Workspace-wide — see _renameColumn.
         id,
       });
       const row = Array.isArray(resp) ? resp[0] : resp;
@@ -3655,7 +3653,6 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_reorder,
         hub_id: this._hubId,
-        nid: this._scopeNid,
         order: (this._customColumns || []).map((c) => c.id).join(","),
       });
     } catch (err) {

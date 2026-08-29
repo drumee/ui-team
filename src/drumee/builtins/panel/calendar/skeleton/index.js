@@ -47,7 +47,7 @@ module.exports = function (ui) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__page`,
-    attrOpt: { "data-view": view, "data-filter": ui.getFilter() },
+    attrOpt: { "data-view": view, "data-filter": ui.getActiveFilter() },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__header`,

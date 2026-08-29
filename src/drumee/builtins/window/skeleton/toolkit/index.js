@@ -735,13 +735,22 @@ export function chatPanel(ui) {
     sys_pn: "folder-chat",
   };
 
-  // Folder-scoped chat: scope the conversation to the current folder (nid) so
-  // only that folder's messages load. Applies to the authenticated folder window
-  // AND the DMZ share view — without scope=folder the chat widget omits `nid`
-  // from channel.messages (see chat/index.js getScopedNid) and loads the whole
-  // hub, pulling in messages from other scopes.
+  // Two scopes, and the difference is who is reading.
+  //
+  // `workspace` — the team chat of a workspace the viewer is a member of. ONE
+  // conversation for the whole workspace: Chat is a workspace rail item now
+  // (Figma 43:23955), not a per-folder tab, so walking into a subfolder must
+  // not switch conversations. The widget still receives `nid` — that is where
+  // a post's uploads land (chat/index.js: scopedNid vs postNid).
+  //
+  // `folder` — a DMZ share. Here the scope is an ACCESS boundary, not a view
+  // preference: the recipient was given one folder and must read that folder's
+  // messages only, never the hub's. A window/folder opened FROM a share
+  // carries the pinned token and belongs on this side too.
   if (ui.fig.family === "window-folder" || ui.fig.family === "dmz-sharebox") {
-    chat.scope = _a.folder;
+    const sharedView =
+      ui.fig.family === "dmz-sharebox" || !!ui.mget(_a.token);
+    chat.scope = sharedView ? _a.folder : "workspace";
     chat.type = _a.share;
     chat.area = _a.share;
     chat.hub_id = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
@@ -1132,7 +1141,11 @@ function fileThreadChatConfig(ui, fileNid, label, replyData) {
     type: ui.mget(_a.area),
     area: ui.mget(_a.area),
     view: "quickChat",
-    scope: _a.folder,
+    // Same split as chatPanel — see the comment there. This panel is
+    // file-scoped in practice (scoped_file_nid wins in getCurrentApi and
+    // matchesScopedChannel), but it falls back to this when the file scope is
+    // cleared, and it must land on the same conversation the middle chat shows.
+    scope: ui.mget(_a.token) ? _a.folder : "workspace",
     hub_id: ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id),
     nid: ui.mget(_a.nid),
     home_id: ui.mget(_a.home_id),

@@ -546,6 +546,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 
+    // "folder" kept alongside it: a server predating the workspace-scope
+    // migration still stamps that value, and losing the pill's background
+    // would be the visible symptom.
+    &[data-scope="workspace"],
     &[data-scope="folder"] {
       background: var(--normal-bg-80);
       color: var(--normal-fg-20);

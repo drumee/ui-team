@@ -116,7 +116,21 @@ class __widget_chat extends LetcBox {
       this.hubId = this.mget(_a.hub_id);
       this.peerId = "";
       const nid = this.mget(_a.nid) || "";
-      this.scopedNid = this.mget("scope") === _a.folder ? nid : "";
+      // Two different nids, because reading and writing no longer share a
+      // scope.
+      //
+      // `scopedNid` FILTERS what is read. It is set only on a genuinely
+      // folder-scoped surface — a DMZ share, where a recipient must see that
+      // folder's conversation and nothing else. The workspace team chat is one
+      // conversation for the whole workspace (Figma 43:23955 makes Chat a
+      // workspace rail item), so it leaves this empty and reads the hub.
+      //
+      // `postNid` is where a post's staged uploads LAND. Both scopes set it:
+      // the conversation being workspace-wide does not change the fact that a
+      // file dropped into it belongs in the folder you are standing in.
+      const scope = this.mget("scope");
+      this.scopedNid = scope === _a.folder ? nid : "";
+      this.postNid = scope === _a.folder || scope === "workspace" ? nid : "";
       // Optional initial file scope: lets a second chat instance mount already
       // scoped to a file thread (the full Chat-tab side panel) so its first
       // list load is the thread itself — no General-then-thread flash.
@@ -1561,12 +1575,22 @@ class __widget_chat extends LetcBox {
       .catch(() => {});
   }
 
-  // Update the folder scope so messages are filtered to a specific sub-folder.
+  // Follow the host window into another folder.
+  //
+  // Under workspace scope this only re-points where a post's uploads land —
+  // the conversation is the same one and must NOT be reloaded, or every step
+  // into a subfolder would tear the message list down and rebuild it identical.
+  // A folder-scoped surface (DMZ share) still switches conversations here.
   setScopedFolderNid(folderNid) {
     const next = folderNid ? `${folderNid}` : "";
+    if (this.mget("scope") === "workspace") {
+      this.postNid = next;
+      return;
+    }
     if (this.scopedNid === next) return;
     this._closeMentionDropdown();
     this.scopedNid = next;
+    this.postNid = next;
     this._unfreezeIfScopeChanged();
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
@@ -1708,8 +1732,12 @@ class __widget_chat extends LetcBox {
     );
   }
 
+  // Does this message land in the folder currently on screen? Keyed on the
+  // WRITE destination, not the read scope: the workspace chat reads every
+  // folder's messages, but only an attachment landing in the folder the user
+  // is looking at should make its file grid reload.
   _matchesScopedFolder(data = {}) {
-    const nid = this.getScopedNid();
+    const nid = this.getPostNid();
     if (!nid) return false;
     const messageData = this._messageData(data);
     const messageNid =
@@ -1718,7 +1746,8 @@ class __widget_chat extends LetcBox {
   }
 
   _syncScopedFolderContent(data = {}, fallback = {}) {
-    if (this.mget("scope") !== _a.folder) return;
+    const scope = this.mget("scope");
+    if (scope !== _a.folder && scope !== "workspace") return;
     const messageData = this._messageData(data);
     const hasFolderAttachmentFallback =
       fallback && Object.prototype.hasOwnProperty.call(fallback, "folder_attachment");
@@ -1742,14 +1771,14 @@ class __widget_chat extends LetcBox {
       (folderWindow.isDestroyed && folderWindow.isDestroyed())
     )
       return;
-    const scopedNid = `${this.getScopedNid()}`;
+    const scopedNid = `${this.getPostNid()}`;
     if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid)
       return;
 
     clearTimeout(this._folderContentSyncTimer);
     this._folderContentSyncTimer = setTimeout(() => {
       if (folderWindow.isDestroyed && folderWindow.isDestroyed()) return;
-      if (this.getScopedNid && `${this.getScopedNid()}` !== scopedNid) return;
+      if (this.getPostNid && `${this.getPostNid()}` !== scopedNid) return;
       if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid)
         return;
       if (
@@ -1802,6 +1831,13 @@ class __widget_chat extends LetcBox {
    */
   getScopedNid() {
     return this.scopedNid || "";
+  }
+
+  // The folder a post writes into — see the scopedNid/postNid split in
+  // initialize. Falls back to the read scope so any surface that sets only
+  // that one (a plain folder scope) is unaffected.
+  getPostNid() {
+    return this.postNid || this.scopedNid || "";
   }
 
   // Scope identity used by the SCOPE_GONE freeze machinery: a file-thread
@@ -2146,8 +2182,8 @@ class __widget_chat extends LetcBox {
           attachment: attachments,
           hub_id: this.hubId,
         };
-        if (this.getScopedNid()) {
-          api.nid = this.getScopedNid();
+        if (this.getPostNid()) {
+          api.nid = this.getPostNid();
           // Staged device uploads the server should move into the folder
           // at send time (everything else stays link-only in the sbox).
           const folderAttachment = this.getPromotableDeviceAttachmentIds(list);
@@ -3249,7 +3285,7 @@ class __widget_chat extends LetcBox {
     const home = this.mget(_a.home);
     let hubId = this.hubId || this.mget(_a.hub_id) || "";
     let nid =
-      (this.getScopedNid && this.getScopedNid()) ||
+      (this.getPostNid && this.getPostNid()) ||
       this.scopedNid ||
       this.mget(_a.nid) ||
       "";
