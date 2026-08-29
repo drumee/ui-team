@@ -959,6 +959,7 @@ class __player_document extends PlayerInteract {
     const iframe = this.el && this.el.querySelector('iframe');
     if (!iframe || !iframe.src) return;
     try {
+      // eslint-disable-next-line no-self-assign -- reassigning src (even unchanged) forces the iframe to reload
       iframe.src = iframe.src;
     } catch (e) {
       if (this.warn) this.warn('[document] read-only reload failed', e && e.message);
@@ -1285,7 +1286,9 @@ class __player_document extends PlayerInteract {
 
       case 'download-pdf':
         if (this._dmzGateDownload()) return;
-        url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
+        // Relative svc path: serviceUrl is pinned to main_domain, which is a
+        // cross-origin fetch (blocked) when the page runs on an org vhost.
+        url = `${bootstrap().svc}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
         let f = filename.split('.')
         f.pop()
         filename = f.join() + '.pdf'
@@ -1312,7 +1315,7 @@ class __player_document extends PlayerInteract {
             }
           });
         })
-        url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`
+        url = `${bootstrap().svc}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`
         this.fetchFile({ url })
         break;
 
