@@ -3679,6 +3679,24 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.BILLING_SUBSCRIPTION,
     });
+    // Extended page -> "Opened billing / plans". Marked HERE rather than on the
+    // sidebar item so every route counts: the sidebar entry, the Settings
+    // "Manage subscription" card, the desk storage upsell, the admin-console
+    // upsell and a #/desk/billing deep link all pass through this method.
+    //
+    // Fire-and-forget, and never awaited: the user asked for the billing page
+    // and an analytics row must not be able to delay or block it. A rejection
+    // is swallowed for the same reason.
+    //
+    // Ship-ahead guard: `desk` services arrive from the server's ACL via
+    // Platform.get('services') -- lex/services.json has no `desk` key -- so
+    // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
+    // postService is async and its promise rejection is swallowed by .catch,
+    // but without this guard the call POSTs to a path built from `undefined`.
+    if (SERVICE.desk && SERVICE.desk.cta_click) {
+      this.postService(SERVICE.desk.cta_click, { cta: "upgrade", hub_id: Visitor.id },
+        { async: 1 }).catch(() => {});
+    }
     // `preselect` (plan/cycle/tab) rides in from a #/desk/billing deep link; a
     // plain "Upgrade plan" trigger passes nothing, so the page opens on its
     // default tab exactly as before.
