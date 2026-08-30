@@ -1,0 +1,209 @@
+@use "mixins/drumee";
+
+// A workspace's Files pane with things in it (tutorial__fg-*).
+// Figma 148:41197 onward — the scenery the share flow sits on.
+//
+// Keyed on ui.fig.group, not a step family: more than one step sits on it, and
+// a family-scoped selector would silently stop applying for all but the first.
+
+.tutorial {
+  &__fg-pane {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    overflow: hidden;
+  }
+
+  // ── Toolbar ───────────────────────────────────────────────────────────────
+  &__fg-toolbar {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  &__fg-filters {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__fg-filter {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 500;
+    color: var(--normal-fg-20);
+    padding: 7px 14px;
+    border-radius: 8px;
+
+    &[data-active="1"] {
+      font-weight: 600;
+      color: var(--primary-purple-50);
+      background: var(--primary-purple-10);
+    }
+  }
+
+  &__fg-search {
+    flex: 0 1 300px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-default);
+  }
+
+  &__fg-search-ico {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__fg-search-text {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 400;
+    color: var(--placeholder-fg);
+  }
+
+  &__fg-tools {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fg-new {
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: var(--primary-purple-50);
+  }
+
+  &__fg-new-ico {
+    width: 14px;
+    height: 14px;
+    color: var(--gray-white, #fff);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__fg-new-label {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+  }
+
+  &__fg-view {
+    width: 30px;
+    height: 30px;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; }
+
+    &[data-active="1"] {
+      background: var(--primary-purple-50);
+      color: var(--gray-white, #fff);
+    }
+  }
+
+  // ── Body ──────────────────────────────────────────────────────────────────
+  &__fg-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 10px;
+    padding: 8px 20px 20px;
+    overflow: hidden;
+  }
+
+  &__fg-label {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg);
+    margin-top: 6px;
+  }
+
+  &__fg-folders,
+  &__fg-files {
+    flex: 0 0 auto;
+    gap: 22px;
+  }
+
+  &__fg-folder {
+    width: 118px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  // folderArt is authored at 105x86 and paints at that size unless pinned —
+  // the same explicit box the desk breadcrumb uses.
+  &__fg-folder-art {
+    width: 96px;
+    height: 78px;
+    min-width: 96px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    .media-grid__folder-art { width: 96px; height: 78px; }
+    svg { width: 96px; height: 78px; }
+  }
+
+  &__fg-folder-name {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  &__fg-file {
+    width: 118px;
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  &__fg-file-art {
+    width: 118px;
+    height: 96px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+
+    // The one image tile the frames show, as a gradient rather than a bitmap.
+    &[data-art="1"] {
+      background: linear-gradient(135deg, #6d2f8f 0%, #c85cf0 45%, #7a4a9e 100%);
+    }
+  }
+
+  &__fg-file-ico {
+    width: 34px;
+    height: 34px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__fg-file-name {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    font-weight: 500;
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__fg-file-date {
+    @include drumee.typo($size: 11px, $line: 1.2);
+    font-weight: 400;
+    color: var(--normal-fg-50);
+  }
+}

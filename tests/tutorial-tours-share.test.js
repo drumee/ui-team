@@ -34,9 +34,8 @@ const TOOLKIT = read("src/drumee/builtins/window/skeleton/toolkit/index.js");
 const Tours = require(join(REPO_ROOT, "src/drumee/libs/tutorial-tours.js"));
 const {
   TOURS,
-  stepBadge,
+  stepProgress,
   isLastScreen,
-  BADGE_BY_FLOW,
 } = require(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/tours.js"));
 
 // ── stubs ────────────────────────────────────────────────────────────────────
@@ -184,35 +183,61 @@ test("a fire raised from builtins reaches the desk's channel listener", () => {
 
 // ── badges (§8 48) ───────────────────────────────────────────────────────────
 
-test("folder_task badges as one flow: 1/9 through 9/9", () => {
+test("folder_task counts straight through the tracker carousel", () => {
   const t = TOURS.folder_task;
-  assert.deepEqual(t.steps.map((s) => s.screens), [3, 5, 1]);
-  const folder = widget({ badge_mode: "flow", screen_offset: 0, tour_screens: 9 });
-  assert.deepEqual([0, 1, 2].map((i) => stepBadge(folder, i)),
-    ["STEP 1/9", "STEP 2/9", "STEP 3/9"]);
-  // The tracker continues the count rather than restarting it.
-  const task = widget({ badge_mode: "flow", screen_offset: 3, tour_screens: 9 });
-  assert.deepEqual([0, 1, 2, 3, 4].map((i) => stepBadge(task, i)),
-    ["STEP 4/9", "STEP 5/9", "STEP 6/9", "STEP 7/9", "STEP 8/9"]);
-  // The scheduler closes it. Figma 5:75093 badges this exact screen "STEP 9/9",
-  // so this assertion is what ties the registry to the design.
-  const sched = widget({ badge_mode: "flow", screen_offset: 8, tour_screens: 9 });
-  assert.deepEqual([0].map((i) => stepBadge(sched, i)), ["STEP 9/9"]);
-});
-
-test("share badges 1/3 .. 3/3 standing alone, never 1/1", () => {
-  const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_offset: 0, tour_screens: 3 });
+  // The folder step left when 2.0 promoted its screens to `chat`, and the
+  // scheduler left for the Meet flow — so this is the tracker's six screens.
+  assert.deepEqual(t.steps.map((s) => s.screens), [6]);
+  const task = widget({ screen_offset: 0, tour_screens: 6 });
   assert.deepEqual(
-    [0, 1, 2].map((i) => stepBadge(ui, i)),
-    ["STEP 1/3", "STEP 2/3", "STEP 3/3"],
+    [0, 1, 2, 3, 4, 5].map((i) => stepProgress(task, i).step),
+    [0, 1, 2, 3, 4, 5],
   );
 });
 
-test("inside full, the tracker's five views all read 4/6 and share's three read 5/6", () => {
-  const task = widget({ badge_mode: "steps", badge_text: "STEP 4/6" });
-  assert.deepEqual([0, 1, 2, 3, 4].map((i) => stepBadge(task, i)), Array(5).fill("STEP 4/6"));
-  const share = widget({ badge_mode: "steps", badge_text: "STEP 5/6" });
-  assert.deepEqual([0, 1, 2].map((i) => stepBadge(share, i)), Array(3).fill("STEP 5/6"));
+test("share counts six standing alone, and badges them as a pill", () => {
+  // Figma 148:41197 -> 148:44198 badge these "STEP 1/6" .. "STEP 6/6" in a
+  // pill, not the dash bar the chat flow uses — the design draws both forms
+  // and the callout supports both, so the step has to ask for the right one.
+  assert.equal(TOURS.share.steps[0].screens, 6);
+  const ui = widget({ screen_offset: 0, tour_screens: 6 });
+  assert.deepEqual(
+    [0, 1, 2, 3, 4, 5].map((i) => stepProgress(ui, i)),
+    [0, 1, 2, 3, 4, 5].map((i) => ({ step: i, steps: 6 })),
+  );
+  // The pill is the callout's DEFAULT now, so share asks for nothing — but it
+  // still has to pass the numbers, or there is nothing to render.
+  const step = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/share/index.js"), "utf8",
+  );
+  assert.match(step, /\.\.\.stepProgress\(this, this\._screenIndex\)/);
+  const tip = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/tooltip.js"), "utf8",
+  );
+  assert.match(tip, /progressStyle = "pill"/, "the pill is the default");
+  const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
+  assert.equal((table.match(/^  \{/gm) || []).length, 6, "one entry per screen");
+});
+
+test("inside full, every screen keeps its own number", () => {
+  // Screens, not steps: full's tracker is its 13th screen and share's six run
+  // 14..19. Every one has its own number, which is the point.
+  const total = TOURS.full.steps.reduce((n, s) => n + s.screens, 0);
+  const at = (kind) => {
+    let o = 0;
+    for (const s of TOURS.full.steps) { if (s.kind === kind) return o; o += s.screens; }
+    return -1;
+  };
+  const task = widget({ screen_offset: at("tutorial_task"), tour_screens: total });
+  assert.deepEqual(stepProgress(task, 0), { step: at("tutorial_task"), steps: total });
+  const share = widget({ screen_offset: at("tutorial_share"), tour_screens: total });
+  assert.deepEqual(
+    [0, 1, 2, 3, 4, 5].map((i) => stepProgress(share, i).step),
+    [0, 1, 2, 3, 4, 5].map((i) => at("tutorial_share") + i),
+  );
+  // …and those indices are the ones the registry actually assigns.
+  assert.equal(TOURS.full.steps[3].kind, "tutorial_task");
+  assert.equal(TOURS.full.steps[4].kind, "tutorial_share");
 });
 
 test("Done lands on the last view of the tracker and the last screen of share", () => {

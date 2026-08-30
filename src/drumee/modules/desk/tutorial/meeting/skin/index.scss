@@ -1,616 +1,234 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
-// BEM root: .tutorial-meeting
-// Step 3 — the meeting room (Figma 5:75093). Rewritten from the previous
-// folder-window-with-a-meeting-pane layout; the design is a full-bleed room.
+// The Meet step: the shared empty-state carousel (skin/empty-state.scss) for
+// screens 1-2, and the Schedule-a-meeting dialog over a week view for screen 3.
 //
-//   __topbar / __tb-*   → title bar, device pills, Leave Meeting
-//   __stage / __tile-*  → 2x2 participant grid
-//   __chat / __msg-*    → right rail (tabs, transcript, composer)
-//   __qs-*              → "Quick sync" card
+// The 1.x meeting room this file used to style went with the body that drew it.
 
 .tutorial-meeting {
-
-  // ── Root ────────────────────────────────────────────────────────────────────
-  // The room is wider than the folder mock: the design gives it nearly the
-  // whole content area (1242x658 measured off the render).
   &__ui {
-    position: absolute;
-    flex: 1;
-    min-height: 0;
     width: 100%;
     height: 100%;
-    max-width: 1242px;
-    max-height: 658px;
-    transform: translate(-50%, -50%);
-    top: 50%;
-    left: 50%;
-
-    &[data-aspect="faded"] {
-      opacity: .45;
-    }
+    min-height: 0;
   }
 
-  &__room {
+  &__sc-stage {
     position: relative;
-    flex: 1;
-    min-height: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden;
-    border-radius: 6px;
-    background: var(--normal-bg);
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    min-height: 0;
+    background: var(--normal-bg-elevated);
   }
 
-  // ── Top bar ─────────────────────────────────────────────────────────────────
-  &__topbar {
-    height: 66px;
-    flex-shrink: 0;
+  // ── The week behind the dialog ───────────────────────────────────────────
+  &__sc-week {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__sc-days {
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  &__sc-gutter {
+    flex: 0 0 84px;
+  }
+
+  &__sc-day {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 2px;
+    padding: 16px 0 16px 16px;
+    border-left: 1px solid var(--border-default);
+  }
+
+  &__sc-day-num {
+    @include drumee.typo($size: 19px, $line: 1.1);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__sc-day-name {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  &__sc-row {
+    flex: 0 0 auto;
+    height: 88px;
+  }
+
+  &__sc-hour {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    flex: 0 0 84px;
+    font-weight: 400;
+    color: var(--normal-fg-50);
+    padding: 8px 0 0 16px;
+  }
+
+  &__sc-cell {
+    flex: 1 1 0;
+    min-width: 0;
+    border-left: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  // ── The dialog ───────────────────────────────────────────────────────────
+  &__sc-backdrop {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // 156:19597 — 600 wide, 24px radius.
+  &__sc-dialog {
+    width: 600px;
+    max-width: calc(100% - 80px);
+    box-sizing: border-box;
+    padding: 30px;
+    gap: 22px;
+    border-radius: 24px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  &__sc-header {
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  &__sc-heading {
+    @include drumee.typo($size: 24px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__sc-close {
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-20);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__sc-cols {
+    width: 100%;
+    gap: 28px;
+    align-items: flex-start;
+  }
+
+  &__sc-col {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 20px;
+  }
+
+  &__sc-field {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__sc-label {
+    @include drumee.typo($size: 14px, $line: 1.3);
+    font-weight: 500;
+    color: var(--normal-fg);
+  }
+
+  &__sc-entry {
+    width: 100%;
     box-sizing: border-box;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
-    background: var(--normal-bg);
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  &__topbar-left {
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  &__app-icon {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
+    height: 42px;
+    padding: 0 12px;
     border-radius: 8px;
-    background: #efeeff;
-  }
+    background: var(--normal-bg-90);
 
-  &__app-icon-svg {
-    width: 18px;
-    height: 18px;
-    color: #847eff;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
+    // Invitees is an underlined field in the frame, not a filled one.
+    &[data-underline="1"] {
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      border-bottom: 1px solid var(--border-strong);
     }
   }
 
-  &__room-title {
-    font-family: var(--font-main);
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--normal-fg);
-    white-space: nowrap;
+  &__sc-entry-text {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 400;
+    color: var(--placeholder-fg);
   }
 
-  &__topbar-right {
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-
-  &__tb-icon {
-    width: 30px;
-    height: 30px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    flex-shrink: 0;
+  &__sc-entry-ico {
+    width: 15px;
+    height: 15px;
     color: var(--normal-fg-50);
 
-    &.boxed {
-      background: #f2f2f2;
-    }
-
-    &.round {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: rgba(11, 10, 33, 0.45);
-      color: #fff;
-    }
+    svg { width: 100%; height: 100%; }
   }
 
-  &__tb-icon-svg {
-    width: 17px;
-    height: 17px;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  &__tb-divider {
-    width: 1px;
-    height: 22px;
-    flex-shrink: 0;
-    background: var(--border-default, rgba(0, 0, 0, .12));
-  }
-
-  // Camera / mic: state pill + device-picker caret.
-  &__tb-pill {
-    height: 34px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 6px;
-    padding: 0 10px;
-    border-radius: 8px;
-    flex-shrink: 0;
-    background: #f2f2f2;
-    color: var(--normal-fg-50);
-
-    // Off / muted, which is the state the design shows.
-    &.off {
-      background: #ffe9e8;
-      color: var(--restricted, #d65f59);
-    }
-  }
-
-  &__tb-pill-icon {
-    width: 17px;
-    height: 17px;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  &__tb-pill-caret {
-    width: 11px;
-    height: 11px;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  &__leave-btn {
-    height: 36px;
-    box-sizing: border-box;
+  &__sc-time {
     align-items: center;
     gap: 8px;
-    padding: 0 16px;
-    border-radius: 8px;
-    flex-shrink: 0;
-    background: #d74e49;
-    cursor: pointer;
-
-    &:hover {
-      background: #c44540;
-    }
   }
 
-  &__leave-icon {
-    width: 18px;
-    height: 18px;
-    color: #fff;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  &__leave-label {
-    font-family: var(--font-main);
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
-    white-space: nowrap;
-  }
-
-  // ── Body split ──────────────────────────────────────────────────────────────
-  &__body {
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    background: #f2f2f2;
-  }
-
-  // ── Tile stage ──────────────────────────────────────────────────────────────
-  &__stage {
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-    gap: 12px;
-    padding: 12px;
+  &__sc-unit {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    width: 62px;
     box-sizing: border-box;
-  }
-
-  &__stage-row {
-    flex: 1;
-    min-height: 0;
-    gap: 12px;
-  }
-
-  // No photography in the tour: the tiles carry a tinted wash and initials —
-  // the treatment the mock already used — with the design's chrome on top.
-  &__tile {
-    position: relative;
-    flex: 1;
-    min-width: 0;
+    padding: 10px 0;
+    text-align: center;
     align-items: center;
     justify-content: center;
-    border-radius: 12px;
-    overflow: hidden;
-    background: linear-gradient(140deg, #d9d5f2 0%, #efe7e4 100%);
-
-    &[data-tone="sand"] { background: linear-gradient(140deg, #d8d3ef 0%, #efe4dd 100%); }
-    &[data-tone="clay"] { background: linear-gradient(140deg, #e3cfc4 0%, #cfd8e6 100%); }
-    &[data-tone="rose"] { background: linear-gradient(140deg, #e9d7dc 0%, #dfe3ef 100%); }
-    &[data-tone="plum"] { background: linear-gradient(140deg, #c8b6c8 0%, #e6d2d8 100%); }
+    font-weight: 500;
+    color: var(--normal-fg);
+    border-radius: 8px;
+    background: var(--normal-bg-90);
   }
 
-  &__tile-controls {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    gap: 6px;
-    z-index: 2;
-  }
-
-  &__tile-avatar {
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.55);
-  }
-
-  &__tile-initials {
-    font-family: var(--font-main);
-    font-size: 26px;
+  &__sc-colon {
+    @include drumee.typo($size: 15px, $line: 1.2);
     font-weight: 600;
     color: var(--normal-fg);
   }
 
-  &__tile-footer {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
-    align-items: center;
-    gap: 6px;
-  }
-
-  &__chip {
-    height: 28px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 6px;
-    padding: 0 12px;
-    border-radius: 99px;
-    background: rgba(11, 10, 33, 0.45);
-
-    &.muted {
-      width: 28px;
-      padding: 0;
-      justify-content: center;
-    }
-  }
-
-  &__chip-name {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    color: #fff;
-    white-space: nowrap;
-  }
-
-  &__chip-hand {
-    font-size: 13px;
-    line-height: 1;
-  }
-
-  &__chip-mic {
-    width: 14px;
-    height: 14px;
-    color: #fff;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  // ── Chat rail ───────────────────────────────────────────────────────────────
-  &__chat {
-    width: 415px;
-    min-width: 415px;
-    flex-shrink: 0;
-    background: var(--normal-bg-90);
-    border-left: 1px solid var(--border-muted);
-  }
-
-  &__chat-tabs {
-    height: 66px;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 24px;
-    padding: 0 20px;
-    background: var(--normal-bg);
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  &__chat-tab {
-    font-family: var(--font-main);
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--normal-fg-50);
-    padding: 4px 0;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-
-    &.active {
-      font-weight: 600;
-      color: var(--normal-fg);
-      border-bottom-color: var(--primary-50, #5950ff);
-    }
-  }
-
-  &__chat-close {
-    width: 16px;
-    height: 16px;
-    margin-left: auto;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  &__chat-body {
-    flex: 1;
-    min-height: 0;
-    padding: 16px;
-    gap: 16px;
-  }
-
-  // Scrolls; the Quick sync card below it stays pinned.
-  &__chat-msgs {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    gap: 16px;
-    justify-content: flex-end;
-  }
-
-  &__msg {
-    gap: 10px;
-    align-items: flex-start;
-    flex-shrink: 0;
-  }
-
-  &__msg-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    background: #e5e5ea;
-  }
-
-  &__msg-initials {
-    font-family: var(--font-main);
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--normal-fg-50);
-  }
-
-  &__msg-body {
-    flex: 1;
-    min-width: 0;
+  &__sc-meridiem {
     gap: 4px;
   }
 
-  &__msg-sender {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--normal-fg);
+  &__sc-mer {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    padding: 5px 14px;
+    text-align: center;
+    font-weight: 500;
+    color: var(--normal-fg-20);
+    border-radius: 6px;
+    border: 1px solid transparent;
+
+    &[data-on="1"] {
+      color: var(--primary-purple-50);
+      border-color: var(--primary-purple-40);
+      background: var(--primary-purple-10);
+    }
   }
 
-  &__msg-bubble {
+  &__sc-submit {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    width: 100%;
     box-sizing: border-box;
-    padding: 12px;
-    border-radius: 4px 12px 12px 12px;
-    background: var(--normal-bg);
-    font-family: var(--font-main);
-    font-size: 13px;
-    line-height: 1.45;
-    color: var(--normal-fg);
-  }
-
-  &__msg-time {
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: var(--normal-fg-50);
-  }
-
-  // ── Quick sync card ─────────────────────────────────────────────────────────
-  &__qs {
-    flex-shrink: 0;
-    gap: 8px;
-    padding: 16px;
-    border-radius: 12px;
-    background: var(--normal-bg);
-  }
-
-  &__qs-head {
-    align-items: center;
-    gap: 10px;
-  }
-
-  &__qs-icon {
-    width: 28px;
-    height: 28px;
-    flex-shrink: 0;
+    padding: 14px 0;
+    border-radius: 10px;
+    text-align: center;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    background: #efeeff;
-  }
-
-  &__qs-icon-svg {
-    width: 15px;
-    height: 15px;
-    color: #847eff;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  &__qs-title {
-    font-family: var(--font-main);
-    font-size: 16px;
     font-weight: 600;
-    color: var(--normal-fg);
+    color: var(--gray-white, #fff);
+    background: var(--primary-purple-50);
   }
-
-  &__qs-live {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: #847eff;
-    box-shadow: 0 0 0 3px rgba(132, 126, 255, 0.25);
-  }
-
-  &__qs-sub {
-    font-family: var(--font-main);
-    font-size: 13px;
-    color: var(--normal-fg-50);
-  }
-
-  &__qs-foot {
-    align-items: center;
-    gap: 10px;
-    margin-top: 4px;
-  }
-
-  &__qs-avatars {
-    align-items: center;
-    flex-shrink: 0;
-  }
-
-  &__qs-avatar {
-    width: 26px;
-    height: 26px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    background: #e5e5ea;
-    border: 2px solid var(--normal-bg);
-    margin-right: -8px;
-  }
-
-  &__qs-avatar-initials {
-    font-family: var(--font-main);
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--normal-fg-50);
-  }
-
-  &__qs-more {
-    width: 26px;
-    height: 26px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    border: 2px solid var(--normal-bg);
-    background: #efeeff;
-    font-family: var(--font-main);
-    font-size: 10px;
-    font-weight: 600;
-    color: #5950ff;
-    text-align: center;
-    line-height: 22px;
-  }
-
-  &__qs-joined {
-    font-family: var(--font-main);
-    font-size: 13px;
-    color: #5950ff;
-    white-space: nowrap;
-  }
-
-  // Reads as a state, not an action — the user is already in the call.
-  &__qs-state {
-    flex: 1;
-    box-sizing: border-box;
-    padding: 9px 12px;
-    border-radius: 8px;
-    background: #f2f2f2;
-    font-family: var(--font-main);
-    font-size: 13px;
-    color: var(--normal-fg-50);
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  // ── Composer ────────────────────────────────────────────────────────────────
-  &__chat-input {
-    flex-shrink: 0;
-    align-items: center;
-    gap: 10px;
-    margin: 0 16px 16px;
-    padding: 12px;
-    border-radius: 8px;
-    background: var(--normal-bg);
-  }
-
-  &__chat-placeholder {
-    flex: 1;
-    font-family: var(--font-main);
-    font-size: 13px;
-    color: var(--normal-fg-50);
-  }
-
-  &__chat-input-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    &.send {
-      color: #5950ff;
-    }
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-  }
-
-  // ── tooltip anchor ──────────────────────────────────────────────────────────
-  &__tooltip-anchor {
-    top: 26px;
-    left: -300px;
-  }
-
 }

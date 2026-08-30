@@ -1,5 +1,5 @@
 const skeleton = require('./skeleton');
-const { stepBadge, isLastScreen } = require('../tours');
+const { stepProgress, isLastScreen } = require('../tours');
 
 const BADGE = {
   title: 'Meet in your folder',
@@ -40,16 +40,14 @@ class __tutorial_schedule extends LetcBox {
       anchor: day.el,
       tooltip: {
         ...BADGE,
-        badge_text: stepBadge(this, 0),
+        ...stepProgress(this, 0),
         hide_back: !!this.mget('is_first'),
-        variant: 'figma',
         done: isLastScreen(this, 0, 1),
       },
       direction: 'east',
       // Our hole is circular and clear to 55% of the radius, so ~620 puts the
       // grid inside the clear core and leaves the fade past the window edge —
       // the horizontal reach of the design's own ellipse.
-      radius: 620,
       owner: this,
     });
   }
@@ -65,7 +63,7 @@ class __tutorial_schedule extends LetcBox {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        return this.triggerHandlers();
+        return this.triggerHandlers({ service: 'next-step' });
       case 'back-step':
         return this.triggerHandlers({ service: 'back-step' });
     }

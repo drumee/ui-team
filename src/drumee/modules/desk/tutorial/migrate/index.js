@@ -1,49 +1,68 @@
-const { menuScreen, dialogScreen, verifyScreen } = require('./skeleton');
-const { stepBadge, isLastScreen, entryScreen } = require('../tours');
+const skeleton = require('./skeleton');
+const { stepProgress, isLastScreen, entryScreen } = require('../tours');
 
 /**
- * Step 6 — importing from Google Drive. Three internal screens behind ONE
- * parent step, the same shape as steps 2, 4 and 5: navigation stays inside this
- * widget until the last screen, and only then does it hand back to
- * tutorial_main, which ends the tour.
+ * The `migrate` tour — importing from Google Drive, five screens.
  *
- * Figma 3314:86172 (the + New menu), 3314:86343 (the import dialog),
- * 3314:86542 (Verify & import). The badge reads 6/6 there and the tour now has
- * six steps, so it says the same here.
+ * Figma, in the flow's own order: 142:34981 (the Files empty state and its
+ * Migrate CTA), 142:35805 (the + New menu open), then 176:47527, 180:49109 and
+ * 180:49990 (the import dialog at three points in the form).
  *
- * Directions follow the design: the menu drops from the topbar so its card sits
- * BELOW it (north); the dialog is centred so its card sits to the RIGHT (west).
+ * This was built as three screens — the dialog only — which started the tour
+ * mid-task, on a dialog the user had not been shown how to open. The two Files
+ * screens are where the flow actually begins.
+ *
+ * Those first two frames carry no callout of their own, so their copy is ours;
+ * the three dialog frames' copy is the design's, verbatim.
+ *
+ * `direction: 'west'` on the dialog screens puts the card to the RIGHT of the
+ * dialog, where the frames put it.
  */
 const SCREENS = [
   {
-    skeleton: menuScreen,
-    target: 'menu',
+    // The Files empty state. The Migrate CTA is what the flow leaves from.
+    target: 'fp-migrate',
+    anchor: 'fp-migrate',
     direction: 'north',
-    badge: {
-      title: 'Google Migrate',
-      desc: 'Import folders or files from Google Drive',
-    },
+    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
+    desc: () => LOCALE.TUTORIAL_MIGRATE_START_DESC,
   },
   {
-    skeleton: dialogScreen,
-    target: 'address',
+    // The + New menu, open over the same pane.
+    menu: true,
+    target: 'fp-new-menu',
+    anchor: 'fp-new-menu',
     direction: 'west',
-    // The address row is a thin strip; light the dialog around it.
-    radius: 420,
-    badge: {
-      title: 'Google Migrate',
-      desc: 'Copy this email and share the folder in google drive that you want to migrate',
-    },
+    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
+    desc: () => LOCALE.TUTORIAL_MIGRATE_NEW_DESC,
   },
   {
-    skeleton: verifyScreen,
-    target: 'verify',
+    dialog: true,
+    target: 'mg-dialog',
+    anchor: 'mg-address',
     direction: 'west',
-    radius: 420,
-    badge: {
-      title: 'Google Migrate',
-      desc: 'Migrate now',
-    },
+    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
+    desc: () => LOCALE.TUTORIAL_MIGRATE_COPY_DESC,
+  },
+  {
+    // The address has been copied; the link is still empty.
+    dialog: true,
+    copied: true,
+    target: 'mg-dialog',
+    anchor: 'mg-link',
+    direction: 'west',
+    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
+    desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
+  },
+  {
+    dialog: true,
+    copied: true,
+    linked: true,
+    target: 'mg-dialog',
+    anchor: 'mg-verify',
+    direction: 'west',
+    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
+    desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
   },
 ];
 
@@ -57,55 +76,21 @@ class __tutorial_migrate extends LetcBox {
   }
 
   async onDomRefresh() {
-    // Re-entered via Back from a later step: resume where we left off. Step 6
-    // is last today, so nothing exercises this — it is here so appending a step
-    // cannot regress the behaviour.
+    // Re-entered via Back from a later step: resume where we left off.
     this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 
   onPartReady(child, pn) {
-    switch (pn) {
-      default:
-        if (super.onPartReady) super.onPartReady(child, pn);
-    }
+    if (super.onPartReady) super.onPartReady(child, pn);
   }
 
   /**
-   * Drop the menu under the topbar's Add-new button.
+   * Render the current screen and move the callout onto its target.
    *
-   * The button belongs to the tutorial shell (tutorial/skeleton/topbar.js), not
-   * to this widget, so there is no CSS relationship to lean on and a fixed
-   * offset would drift with the topbar. Measure it instead: left edges aligned,
-   * hanging just below, the way a real menu opens from its trigger.
-   *
-   * No-ops when the button cannot be found, leaving the fallback position in
-   * the stylesheet.
-   */
-  _placeMenu() {
-    const GAP = 8;
-    if (!this.el || typeof this.el.querySelector !== 'function') return;
-    const menu = this.el.querySelector(`.${this.fig.family}__menu`);
-    if (!menu) return;
-    const scope = (this.el.closest && this.el.closest('.tutorial-main__layout')) || document;
-    const btn = scope.querySelector('.tutorial-main__tb-new-workspace-btn');
-    const box = menu.offsetParent || menu.parentElement;
-    if (!btn || !box) return;
-    const b = btn.getBoundingClientRect();
-    const s = box.getBoundingClientRect();
-    if (!b.width) return;
-    menu.style.left = `${b.left - s.left}px`;
-    menu.style.top = `${b.bottom - s.top + GAP}px`;
-    menu.style.right = 'auto';
-  }
-
-  /**
-   * Render the current screen and move the spotlight onto its target.
-   *
-   * The part is awaited rather than read straight after `feed`, because the
+   * The parts are awaited rather than read straight after `feed`, because the
    * body is rebuilt on every screen change and only answers once the new DOM
-   * has landed. The menu is placed BEFORE the spotlight is told about it, so
-   * the badge measures it where it has come to rest.
+   * has landed.
    */
   async _showScreen() {
     const s = SCREENS[this._screenIndex];
@@ -113,29 +98,27 @@ class __tutorial_migrate extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(s.skeleton(this));
-    const target = await this.ensurePart(s.target);
-    this._placeMenu();
+    this.feed(skeleton(this, s));
+    const [target, anchor] = await Promise.all([
+      this.ensurePart(s.target),
+      this.ensurePart(s.anchor),
+    ]);
+
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
-      // badge_text, hide_back and done all come from the tour, not from this widget: the
-      // same three screens read "STEP 1/3 … 3/3" as their own tour and
-      // "STEP 6/6" throughout as the last step of the full one, and only end
-      // the tour ("Done") when this step is the tour's last.
+      anchor: anchor && anchor.el,
       tooltip: {
-        ...s.badge,
-        badge_text: stepBadge(this, this._screenIndex),
-        // Back walks out to the previous step when there is one. As the first
-        // step of its own tour there is nothing behind screen 1, so the button
-        // is hidden rather than left to raise back-step at a host with nowhere
-        // to go.
+        title: s.title(),
+        desc: s.desc(),
+        // 1/5 … 5/5 standing alone, and this step's number inside `full`.
+        ...stepProgress(this, this._screenIndex),
+        // Live whenever a previous screen exists; hidden on screen 1 of its
+        // own tour, where back-step would reach the host with nowhere to go.
         hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-        variant: 'figma',
         done: isLastScreen(this, this._screenIndex, SCREENS.length),
       },
       direction: s.direction,
-      radius: s.radius,
       owner: this,
     });
   }
@@ -144,17 +127,18 @@ class __tutorial_migrate extends LetcBox {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        // Only the last screen hands the tour back to tutorial_main; the bare
-        // triggerHandlers() lets it read this widget's own service attribute.
-        // Step 6 is last, so that completes the tutorial.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers();
+        // Only the last screen hands the tour back to tutorial_main, and it
+        // NAMES the service. The step widget carries no `service` of its own
+        // any more — see _buildWidgets in ../index.js.
+        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':
-        // Back off the first screen leaves Step 6 entirely (→ Step 5).
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });
         this._screenIndex = this._screenIndex - 1;
         return this._showScreen();
+      default:
+        if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
   }
 }

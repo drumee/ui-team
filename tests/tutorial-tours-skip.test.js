@@ -155,14 +155,12 @@ function buildBadge(opts) {
   };
   const LOCALE = { SKIP_TOUR: "Skip tour", BACK: "Back", NEXT: "Next", DONE: "Done" };
 
-  const src = TOOLTIP_SRC
-    .replace(/^const \{ fileItem \} = require\("\.\/folder"\)\s*$/m, "")
-    .replace(/^export function/gm, "function");
+  const src = TOOLTIP_SRC.replace(/^export function/gm, "function");
   // eslint-disable-next-line no-new-func
-  const badge = new Function("Skeletons", "LOCALE", `${src}\n;return tooltipBadge;`)(Skeletons, LOCALE);
+  const bubble = new Function("Skeletons", "LOCALE", `${src}\n;return tooltipBubble;`)(Skeletons, LOCALE);
 
   const ui = { fig: { family: "tutorial-migrate", group: "tutorial" } };
-  const tree = badge(ui, opts);
+  const tree = bubble(ui, opts);
   return { tree, nodes };
 }
 
@@ -170,9 +168,9 @@ const skipNodes = (nodes) => nodes.filter((n) => n.service === "end-tour");
 
 test("the skip control is on every screen, first and last alike", () => {
   for (const opts of [
-    { badge_text: "STEP 1/3", hide_back: true },                 // first screen
-    { badge_text: "STEP 2/3" },                                  // middle
-    { badge_text: "STEP 3/3", done: true },                      // last
+    { step: 0, steps: 3, hide_back: true },                      // first screen
+    { step: 1, steps: 3 },                                       // middle
+    { step: 2, steps: 3, done: true },                           // last
   ]) {
     const { nodes } = buildBadge({ title: "t", desc: "d", ...opts });
     assert.equal(skipNodes(nodes).length, 1, JSON.stringify(opts));
@@ -180,7 +178,7 @@ test("the skip control is on every screen, first and last alike", () => {
 });
 
 test("hide_back removes Back but never the skip control", () => {
-  const { nodes } = buildBadge({ title: "t", desc: "d", badge_text: "STEP 1/3", hide_back: true });
+  const { nodes } = buildBadge({ title: "t", desc: "d", step: 0, steps: 3, hide_back: true });
   assert.equal(nodes.filter((n) => n.service === "back-step").length, 0, "Back is hidden");
   assert.equal(skipNodes(nodes).length, 1, "skip stays");
   assert.equal(nodes.filter((n) => n.service === "next-step").length, 1);
@@ -195,11 +193,9 @@ test("skip is routed at the host, while Back and Next stay on the step", () => {
   const Skeletons = { Box: { X: mk("Box.X"), Y: mk("Box.Y") }, Note: mk("Note"),
     Button: { Svg: mk("Button.Svg"), Label: mk("Button.Label") } };
   const LOCALE = { SKIP_TOUR: "Skip tour", BACK: "Back", NEXT: "Next", DONE: "Done" };
-  const src = TOOLTIP_SRC
-    .replace(/^const \{ fileItem \} = require\("\.\/folder"\)\s*$/m, "")
-    .replace(/^export function/gm, "function");
+  const src = TOOLTIP_SRC.replace(/^export function/gm, "function");
   // eslint-disable-next-line no-new-func
-  const badge = new Function("Skeletons", "LOCALE", `${src}\n;return tooltipBadge;`)(Skeletons, LOCALE);
+  const badge = new Function("Skeletons", "LOCALE", `${src}\n;return tooltipBubble;`)(Skeletons, LOCALE);
   badge({ ...ui, id: "step" }, { title: "t", desc: "d", badge_text: "1/3", host });
 
   const skip = nodes.find((n) => n.service === "end-tour");
@@ -325,8 +321,8 @@ test("skip stays instant — it writes nothing, so it has nothing to wait for", 
 test("only the last screen's button can enter the pending state", () => {
   // `is-done` is what spotlight.busy() looks for. If it were on every screen,
   // Back/Next on an ordinary screen could be left spinning by a stray call.
-  const last = buildBadge({ title: "t", desc: "d", badge_text: "STEP 3/3", done: true });
-  const mid = buildBadge({ title: "t", desc: "d", badge_text: "STEP 2/3" });
+  const last = buildBadge({ title: "t", desc: "d", done: true });
+  const mid = buildBadge({ title: "t", desc: "d" });
   const nextOf = (r) => r.nodes.find((n) => n.service === "next-step");
   assert.match(nextOf(last).className, /\bis-done\b/);
   assert.ok(!/\bis-done\b/.test(nextOf(mid).className));
@@ -334,12 +330,12 @@ test("only the last screen's button can enter the pending state", () => {
   assert.equal(nextOf(last).service, "next-step");
 });
 
-test("the spinner is defined once, on the shared badge rule", () => {
-  // Both card looks (default and variant:'figma') share .tutorial__s1-next, and
-  // the figma block deliberately does not restyle the buttons — so one rule
-  // covers every tour. A second definition would mean one of them drifting.
+test("the spinner is defined once, on the shared callout rule", () => {
+  // One card look now, so .tutorial__bubble-next is the only forward button
+  // there is and one rule covers every tour. A second definition would mean
+  // two of them drifting.
   const tip = read("src/drumee/modules/desk/tutorial/skin/tooltip.scss");
-  assert.match(tip, /&__s1-next\s*\{[\s\S]*?&\.loading\s*\{/);
+  assert.match(tip, /&__bubble-next\s*\{[\s\S]*?&\.loading\s*\{/);
   assert.match(tip, /@keyframes tutorial-spin/);
   // Taken out of the event stream, not merely dimmed.
   assert.match(tip, /&\.loading\s*\{[\s\S]*?pointer-events: none/);

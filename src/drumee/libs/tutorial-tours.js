@@ -44,7 +44,7 @@ const CHANNEL = "tutorial:trigger";
 // A mismatch fails as a silently rejected write with NO client-side symptom:
 // the tour runs, the mirror suppresses it locally, the server never records
 // it, and it returns on the user's next device.
-const TOUR_IDS = ["workspace", "folder_task", "share", "migrate"];
+const TOUR_IDS = ["workspace", "folder_task", "chat", "share", "migrate"];
 
 // The mirror belongs to an ACCOUNT, not to a browser.
 //

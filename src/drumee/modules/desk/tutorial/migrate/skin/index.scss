@@ -1,196 +1,176 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
-// BEM root: .tutorial-migrate
-// Step 6 — importing from Google Drive (Figma 3314:86172 / 3314:86343 /
-// 3314:86542). Real vector frames, so these are the design's own metrics: a
-// 195x96 menu of 24px rows dropped from the topbar's + New, and a centred
-// import dialog with a full-width primary button.
+// "Import a folder or file" — Figma 176:47527. 512px card, 32px insets,
+// 24px radius, over the Files pane the step's backdrop supplies.
 //
-// The desk behind them is the step's faded workspace backdrop, so this step
-// styles only the menu and the dialog.
+// Stacking: prefer no stacking context between the pane and the dialog. The
+// spotlight lifts context-opening ancestors on its way up (spotlight/index.js
+// _light), so one here is survivable but not free.
 
 .tutorial-migrate {
-
   &__ui {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-
-    &[data-aspect="faded"] {
-      opacity: .45;
-    }
+    width: 100%;
+    height: 100%;
+    min-height: 0;
   }
 
-  // Full-bleed layer the menu and dialog are placed on.
+  // The step draws the pane AND, on the last three screens, a dialog over it.
   &__stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  &__overlay {
     position: absolute;
     inset: 0;
   }
 
-  // ── "+ New" menu ────────────────────────────────────────────────────────────
-  // Dropped from the topbar's Add-new button. The widget measures that button
-  // and sets left/top at render time (_placeMenu); these are only the fallback
-  // for when it cannot be found.
-  &__menu {
-    position: absolute;
-    top: 60px;
-    right: 40px;
-    width: 195px;
-    box-sizing: border-box;
-    padding: 8px;
-    gap: 4px;
-    border-radius: 8px;
-    background: var(--normal-bg);
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-  }
-
-  &__menu-item {
-    height: 24px;
-    box-sizing: border-box;
+  &__backdrop {
+    width: 100%;
+    height: 100%;
     align-items: center;
-    gap: 8px;
-    padding: 0 4px;
-    border-radius: 4px;
-
-    // The row the tour is about; the design shows the cursor resting on it.
-    &.on { background: var(--normal-bg-90); }
+    justify-content: center;
   }
 
-  &__menu-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__menu-label {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg);
-    white-space: nowrap;
-  }
-
-  // ── Import dialog ───────────────────────────────────────────────────────────
+  // Measured off 176:47527: 513 wide, 16px radius, and a tighter rhythm than
+  // the create-workspace dialog's — its two numbered steps sit close together
+  // because they read as one instruction.
   &__dialog {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 528px;
+    width: 513px;
     box-sizing: border-box;
-    border-radius: 12px;
-    background: var(--normal-bg);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
-    overflow: hidden;
+    padding: 28px;
+    gap: 20px;
+    border-radius: 16px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05);
   }
 
-  &__dialog-head {
-    height: 56px;
-    flex-shrink: 0;
-    box-sizing: border-box;
+  &__header {
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
-    border-bottom: 1px solid var(--border-muted);
+    width: 100%;
   }
 
-  &__dialog-title {
-    font-family: var(--font-main);
-    font-size: 16px;
+  &__heading {
+    @include drumee.typo($size: 22px, $line: 1.2);
     font-weight: 600;
     color: var(--normal-fg);
   }
 
-  &__dialog-close {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
+  &__close {
+    width: 20px;
+    height: 20px;
 
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__dialog-body {
-    box-sizing: border-box;
-    padding: 20px 24px 24px;
-    gap: 10px;
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
   }
 
   &__step {
-    font-family: var(--font-main);
-    font-size: 13px;
-    line-height: 1.45;
+    width: 100%;
+    gap: 10px;
+  }
+
+  &__submit {
+    margin-top: 4px;
+  }
+
+  &__step-label {
+    @include drumee.typo($size: 14px, $line: 1.4);
+    font-weight: 600;
     color: var(--normal-fg);
   }
 
-  // The service account the user has to share their Drive folder with.
   &__address {
-    height: 36px;
+    width: 100%;
     box-sizing: border-box;
+    height: 44px;
     align-items: center;
-    gap: 12px;
-    padding: 0 12px;
-    border-radius: 6px;
-    background: var(--normal-bg-90);
+    justify-content: space-between;
+    padding: 0 6px 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-default);
   }
 
-  &__address-value {
-    flex: 1;
-    min-width: 0;
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg);
+  &__address-text {
+    @include drumee.typo($size: 13px, $line: 1.3);
+    font-weight: 400;
+    color: var(--normal-fg-20);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  &__address-copy {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--primary-40, #5950ff);
-    flex-shrink: 0;
-    cursor: pointer;
-  }
-
-  &__input {
-    height: 34px;
-    box-sizing: border-box;
-    align-self: flex-start;
-    min-width: 200px;
-    padding: 0 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border-muted);
-    font-family: var(--font-main);
-    font-size: 12px;
-    line-height: 32px;
-    color: var(--normal-fg-50);
-  }
-
-  &__verify {
-    height: 48px;
-    box-sizing: border-box;
-    margin-top: 6px;
+  // Neutral until copied, then the design's green confirmation.
+  &__copy {
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+    padding: 7px 14px;
     border-radius: 8px;
-    background: var(--primary-40, #5950ff);
-    cursor: pointer;
+    background: var(--normal-bg-90);
+    flex: 0 0 auto;
 
-    // The third frame rings the button to show it is the next thing to press.
-    &.focused {
-      box-shadow: 0 0 0 2px var(--normal-bg), 0 0 0 4px var(--primary-40, #5950ff);
+    &[data-done="1"] {
+      background: var(--success-bg, #cdf0dd);
     }
   }
 
-  &__verify-label {
-    font-family: var(--font-main);
-    font-size: 15px;
-    font-weight: 600;
-    color: #fff;
+  &__copy-ico {
+    width: 14px;
+    height: 14px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--success-fg, #1f8a52);
   }
 
+  &__copy-label {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 500;
+    color: var(--normal-fg);
+  }
+
+  &__entry {
+    width: 100%;
+    box-sizing: border-box;
+    height: 44px;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-default);
+  }
+
+  &__entry-text {
+    @include drumee.typo($size: 14px, $line: 1.3);
+    font-weight: 400;
+    color: var(--placeholder-fg);
+
+    &[data-filled="1"] {
+      color: var(--normal-fg);
+    }
+  }
+
+  // Pale until a link is in the box, which is the state the first two screens
+  // show.
+  &__submit {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 0;
+    border-radius: 12px;
+    // See the note on __wsd-submit.
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--normal-fg-50);
+    background: var(--normal-bg-90);
+    transition: background-color 220ms ease, color 220ms ease;
+
+    &[data-ready="1"] {
+      color: var(--reverse-fg);
+      background: var(--primary-purple-50);
+    }
+  }
 }

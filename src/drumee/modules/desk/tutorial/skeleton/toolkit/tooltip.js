@@ -1,148 +1,210 @@
-const { fileItem } = require("./folder")
-
-
 /**
- * Shared tutorial badge skeleton.
+ * The tutorial callout — Drumee 2.0 (Figma canvas 129:13815).
  *
- * @param {Object} ui          - desk_tutorial widget instance
- * @param {Object} opts
- * @param {string} opts.title
- * @param {string} opts.desc
- * @param {string} opts.badge_text
- * @param {Object} opts.style
- * @param {string} [opts.direction='north'] - which way the connector extends from the card:
- *   north = connector above card (dot at top, points to target above)
- *   south = connector below card (dot at bottom, points to target below)
- *   east  = connector right of card (dot at right, points to target right)
- *   west  = connector left of card (dot at left, points to target left)
- * @param {string} [opts.variant] - card look. Unset keeps the card every step
- *   has always rendered. "figma" is the measured callout card from the Step 2
- *   designs (320px surface, Geist Mono badge); it is opt-in so the steps that
- *   were not part of that redesign stay pixel-identical. Back and Next are
- *   shared by both looks — the buttons are the same on every step.
- * @param {Object} [opts.host] - who receives `end-tour` from the skip control.
- *   Back/Next go to the step widget (`ui`); ending the tour goes to the tour
- *   host, so the six step widgets need no forwarding case of their own.
- * @param {boolean} [opts.done=false] - label the forward button "Done" instead
- *   of "Next →". For the last screen of the last step, where pressing it ends
- *   the tour rather than advancing it; the arrow goes too, as there is nothing
- *   ahead to point at. The service stays `next-step` — only the wording differs.
+ * The 2.0 design replaces the badge card with a speech BUBBLE: a white
+ * rounded card with a beak pointing at what it is talking about. What went
+ * away with it is not cosmetic —
+ *
+ *   the dot + line connector → a beak drawn on the card's own edge
+ *   the formatted badge string → `step`/`steps`, rendered by the callout
+ *
+ * 2.0 draws progress two ways — a dash bar in the chat flow, a "STEP n/m" pill
+ * in the share flow. Both are supported; the pill is the default, because it
+ * is the only one that lets a screen be named. See `progressStyle`.
+ *
+ * The ✕ skip control is the one thing the frames drop that is KEPT here — see
+ * the header below for why.
+ *
+ * Shapes, chosen by what the caller supplies rather than by a `variant` flag:
+ *
+ *   text                 a bare bubble — one bold line, tight insets.
+ *                        "Type your workspace name here".
+ *   title + desc         the standard card.
+ *   + steps              adds the progress indicator.
+ *   + done               the forward button reads Done and ends the tour.
+ *
+ * Every shape carries the Back/Next footer, including the bare one. The frames
+ * draw those two workspace callouts with no control at all, because in the
+ * real product the user advances by typing a name or picking a type — in a
+ * mock there is nothing to type into, so a callout without a footer is a dead
+ * end. That is the one deliberate deviation from the design here.
  */
-export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north', hide_back = false, variant = null, done = false, host = null }) {
-  const fig = ui.fig.family;
-  const p = `${ui.fig.group}__s1`;
 
-  const isHorizontal = direction === 'east' || direction === 'west';
-  // south/east: card comes first, connector (with dot at far end) comes second
-  const isReversed = direction === 'south' || direction === 'east';
-
-  const BoxContainer = isHorizontal ? Skeletons.Box.X : Skeletons.Box.Y;
-  const BoxConnector = isHorizontal ? Skeletons.Box.X : Skeletons.Box.Y;
-
-  // For reversed: line touches the card, dot is at the far end toward the target.
-  // For default:  dot is at the near end (toward the target), line connects to the card.
-  const connectorKids = isReversed
-    ? [
-      Skeletons.Box.Y({ className: `${p}-connector-line`, dataset: { direction } }),
-      Skeletons.Box.Y({ className: `${p}-connector-dot` }),
-    ]
-    : [
-      Skeletons.Box.Y({ className: `${p}-connector-dot` }),
-      Skeletons.Box.Y({ className: `${p}-connector-line`, dataset: { direction } }),
-    ];
-
-  const connector = BoxConnector({
-    className: `${p}-connector`,
-    kids: connectorKids,
-  });
-
-  const card = Skeletons.Box.Y({
-    className: `${p}-card`,
-    kids: [
-      // Header: the step pill on the left, the skip control on the right.
-      //
-      // `end-tour` is deliberately routed at `host` — tutorial_main — and not at
-      // `ui`. Back and Next go to the STEP widget, because only the step knows
-      // whether it has another screen; ending the tour is the tour's business,
-      // and routing it at the step would mean the same forwarding case copied
-      // into all six step files. The spotlight supplies `host` because it is
-      // the one object holding a reference to both (see spotlight/index.js).
-      // Falls back to `ui` so a caller that supplies no host still gets a
-      // control that raises something rather than one that silently does
-      // nothing.
-      Skeletons.Box.X({
-        className: `${p}-header`,
-        kids: [
-          Skeletons.Box.X({
-            className: `${p}-badge`,
-            kids: [
-              Skeletons.Box.Y({ className: `${p}-badge-dot` }),
-              Skeletons.Note({ className: `${p}-badge-text`, content: badge_text }),
-            ],
-          }),
-          // Present on EVERY screen, including the first — `hide_back` removes
-          // Back where there is nothing behind it, but there is always
-          // something to leave.
-          Skeletons.Button.Svg({
-            ico: 'cross',
-            className: `${p}-skip`,
-            tooltips: LOCALE.SKIP_TOUR || 'Skip tour',
-            service: 'end-tour',
-            uiHandler: [host || ui],
-          }),
-        ],
-      }),
-      Skeletons.Note({ className: `${p}-title`, content: title }),
-      Skeletons.Note({ className: `${p}-desc`, content: desc }),
-      Skeletons.Box.X({
-        className: `${p}-footer`,
-        kids: [
-          // On the very first step there is nothing to go back to: render an
-          // empty spacer so `justify-content: space-between` still pushes Next
-          // to the right edge.
-          hide_back
-            ? Skeletons.Box.Y({ className: `${p}-back-spacer` })
-            : Skeletons.Note({
-              className: `${p}-back`,
-              content: `← ${LOCALE.BACK || 'Back'}`,
-              service: 'back-step',
-              uiHandler: [ui],
-            }),
-          // `is-done` is not decoration: it is how the spotlight finds this
-          // button to mark it pending while the tour's closing write is in
-          // flight (see spotlight/index.js busy()). Only the last screen's
-          // button ends the tour, so only that one can ever wait on anything.
-          Skeletons.Note({
-            className: `${p}-next${done ? ' is-done' : ''}`,
-            content: done ? (LOCALE.DONE || 'Done') : `${LOCALE.NEXT || 'Next'} →`,
-            service: 'next-step',
-            uiHandler: [ui],
-          }),
-        ],
-      }),
-    ],
-  });
-
-  return BoxContainer({
-    className: `${p}-tooltip`,
-    sys_pn: 'badge-tooltip',
-    partHandler: [ui],
-    style,
-    dataset: variant ? { direction, variant } : { direction },
-    kids: isReversed ? [card, connector] : [connector, card],
-  });
-};
+const BEAK_OFFSETS = ["start", "center", "end"];
 
 /**
- * Badge anchor: zero-size absolute element; badge overflows to the left
+ * How far through, drawn two ways — because the design uses both.
+ *
+ *   'dashes'  a bar per screen, filled up to the current one. The chat frames
+ *             (142:39178 and the rest of that flow).
+ *   'pill'    a dot and "STEP n/m" in a tinted pill. The share frames
+ *             (148:41197 -> 148:44198).
+ *
+ * Neither is rendered for a single-screen run: one dash, or "STEP 1/1", is not
+ * progress — it is a decoration saying the tour is one screen long, which the
+ * design does not put on its one-screen callouts either.
  */
-export function tooltip(ui, opt) {
-  // 
-  return Skeletons.Box.Y({
-    className: `${ui.fig.group}__tooltip-anchor ${ui.fig.family}__tooltip-anchor`,
-    partHandler: ui,
-    kids: [tooltipBadge(ui, opt)],
-  })
+function progress(p, step, steps, style) {
+  const total = ~~steps;
+  if (total < 2) return null;
+  const at = Math.max(0, Math.min(total - 1, ~~step));
+
+  if (style === "pill") {
+    return Skeletons.Box.X({ active: 0,
+      className: `${p}-pill`,
+      kids: [
+        Skeletons.Box.Y({ active: 0, className: `${p}-pill-dot` }),
+        Skeletons.Note({ active: 0,
+          className: `${p}-pill-text`,
+          // Substituted here rather than through String.prototype.format: that
+          // is a bootstrap extension (drumee.js), and the pill is now on the
+          // hot path of EVERY callout in every tour. A hidden dependency on a
+          // prototype patch is not worth it for two placeholders.
+          content: String(LOCALE.TUTORIAL_STEP || "STEP {0}/{1}")
+            .replace("{0}", at + 1)
+            .replace("{1}", total),
+        }),
+      ],
+    });
+  }
+
+  const kids = [];
+  for (let i = 0; i < total; i++) {
+    kids.push(
+      Skeletons.Box.Y({ active: 0,
+        className: `${p}-dash`,
+        dataset: { on: i <= at ? 1 : 0 },
+        attrOpt: { "data-on": i <= at ? 1 : 0 },
+      }),
+    );
+  }
+  return Skeletons.Box.X({ active: 0, className: `${p}-dashes`, kids });
 }
 
+/**
+ * @param {Object} ui             the STEP widget — Back/Next are its business
+ * @param {Object} opt
+ * @param {String} [opt.text]     bare-bubble copy; replaces title/desc
+ * @param {String} [opt.title]
+ * @param {String} [opt.desc]
+ * @param {Number} [opt.step]     0-based screen index, for the dashes
+ * @param {Number} [opt.steps]    how many screens this run has
+ * @param {String} [opt.progressStyle='pill'] 'pill' or 'dashes'. The design
+ *   draws both — a dash bar in the chat flow, a "STEP n/m" pill in the share
+ *   flow — and the pill is the default because it NAMES the screen. A dash bar
+ *   shows how far along you are; only the pill lets someone say "step 4 is
+ *   wrong", which is what reviewing a tour actually needs.
+ * @param {Object} [opt.style]    absolute placement, from spotlight.anchorFor
+ * @param {String} [opt.direction='north'] which edge the beak sits on — same
+ *   four names, and the same meaning, as before: the direction the callout
+ *   REACHES OUT in. 'west' puts the card to the right of its target.
+ * @param {String} [opt.beak='center'] where the beak sits along that edge
+ * @param {Boolean} [opt.hide_back]
+ * @param {Boolean} [opt.done]    forward button ends the tour
+ * @param {Object} [opt.host]     who receives `end-tour` from the skip control.
+ *   Back/Next go to the step widget (`ui`); ending the tour goes to the tour
+ *   host, so no step widget needs a forwarding case of its own.
+ */
+export function tooltipBubble(ui, opt = {}) {
+  const {
+    text,
+    title,
+    desc,
+    step,
+    steps,
+    progressStyle = "pill",
+    style,
+    direction = "north",
+    beak = "center",
+    hide_back = false,
+    done = false,
+    host = null,
+  } = opt;
 
+  const p = `${ui.fig.group}__bubble`;
+  const side = BEAK_OFFSETS.includes(beak) ? beak : "center";
+
+  // Back / Next. Every callout gets these, including the "bare" ones.
+  //
+  // The frames draw two of the workspace callouts as a line of copy and
+  // nothing else — because in the real product those screens advance when the
+  // user TYPES a name or PICKS a type. The tour is a mock: there is nothing to
+  // type into, so a callout with no control is a dead end. Making the whole
+  // card clickable was the first attempt and it is worse than a button —
+  // nothing on screen says the card is a control, so it reads as stuck either
+  // way. The footer is the deviation from the frames that makes the tour
+  // usable, and it is the same footer on every screen.
+  const footer = () =>
+    Skeletons.Box.X({ active: 0,
+      className: `${p}-footer`,
+      kids: [
+        hide_back
+          ? null
+          : Skeletons.Note({
+              className: `${p}-back`,
+              content: LOCALE.BACK,
+              service: "back-step",
+              uiHandler: [ui],
+            }),
+        // `is-done` is load-bearing, not decoration: spotlight.busy() queries
+        // it to mark the button pending while the tour's closing write is in
+        // flight. Only the last screen can wait on anything.
+        Skeletons.Note({
+          className: `${p}-next${done ? " is-done" : ""}`,
+          content: done ? LOCALE.DONE : `${LOCALE.NEXT} →`,
+          service: "next-step",
+          uiHandler: [ui],
+        }),
+      ].filter(Boolean),
+    });
+
+  // Dashes/pill on the left, skip on the right. Shared by both shapes so every
+  // screen in every tour is numbered — a callout that cannot be named cannot be
+  // reported.
+  const header = () =>
+    Skeletons.Box.X({ active: 0,
+      className: `${p}-header`,
+      kids: [
+        progress(p, step, steps, progressStyle) ||
+          Skeletons.Box.Y({ active: 0, className: `${p}-dashes-spacer` }),
+        Skeletons.Button.Svg({
+          ico: 'cross',
+          className: `${p}-skip`,
+          tooltips: LOCALE.SKIP_TOUR,
+          service: 'end-tour',
+          uiHandler: [host || ui],
+        }),
+      ],
+    });
+
+  // A bare bubble keeps the design's look — one bold line, tighter insets —
+  // and gains the header and footer so it can be numbered and left.
+  const kids = text
+    ? [
+        header(),
+        Skeletons.Note({ active: 0, className: `${p}-text`, content: text }),
+        footer(),
+      ]
+    : [
+        header(),
+        Skeletons.Note({ active: 0, className: `${p}-title`, content: title }),
+        desc ? Skeletons.Note({ active: 0, className: `${p}-desc`, content: desc }) : null,
+        footer(),
+      ].filter(Boolean);
+
+  return Skeletons.Box.Y({
+    className: `${p}-card${text ? ` ${p}-card--bare` : ""}`,
+    sys_pn: "badge-tooltip",
+    partHandler: [ui],
+    style,
+    // dataset alone is dropped at render unless an attribute map rides along —
+    // the beak is drawn off these two, so they have to actually land.
+    dataset: { direction, beak: side },
+    attrOpt: { "data-direction": direction, "data-beak": side },
+    // Inert. Every shape of this card now carries a real Back/Next footer, so
+    // the card itself is never the control — which also means a stray click on
+    // its padding cannot advance the tour by accident.
+    active: 0,
+    kids,
+  });
+}

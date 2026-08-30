@@ -1,0 +1,514 @@
+@use "mixins/drumee";
+
+// The workspace Files pane the tour draws (tutorial__fp-*).
+// Figma 176:42043 / 142:35805: a filter bar over an empty-state hero, with the
+// Team Chat panel docked on the right.
+//
+// Keyed on ui.fig.group ("tutorial"), not on a step family — the migrate,
+// task, share and meet steps all sit on this pane, and a family-scoped
+// selector would silently stop applying for all but the first of them.
+
+.tutorial {
+  &__fp-pane {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: 8px;
+    background: var(--normal-bg-90);
+  }
+
+  &__fp-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    overflow: hidden;
+  }
+
+  // ── Toolbar ───────────────────────────────────────────────────────────────
+  &__fp-toolbar {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  &__fp-filters {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__fp-filter {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 500;
+    color: var(--normal-fg-20);
+    padding: 7px 14px;
+    border-radius: 8px;
+
+    &[data-active="1"] {
+      font-weight: 600;
+      color: var(--primary-purple-50);
+      background: var(--primary-purple-10);
+    }
+  }
+
+  &__fp-search {
+    flex: 0 1 300px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-default);
+  }
+
+  &__fp-search-ico {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-50);
+  }
+
+  &__fp-search-text {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 400;
+    color: var(--placeholder-fg);
+  }
+
+  &__fp-tools {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fp-new-btn {
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: var(--primary-purple-50);
+  }
+
+  &__fp-new-ico {
+    width: 14px;
+    height: 14px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--gray-white, #fff);
+  }
+
+  &__fp-new-label {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+  }
+
+  &__fp-view {
+    width: 30px;
+    height: 30px;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 8px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-50);
+
+    &[data-active="1"] {
+      background: var(--primary-purple-50);
+
+      color: var(--gray-white, #fff);
+    }
+  }
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  // `position: relative` (no z-index) so the + New dropdown can hang off it
+  // without opening a stacking context the spotlight would then be trapped by.
+  &__fp-body {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    justify-content: center;
+    padding: 0 56px;
+  }
+
+  &__fp-hero {
+    // The frame breaks the headline after "files." That break is the design
+    // font's, not a hard one — pinning a width narrow enough to force it here
+    // would break the phrase somewhere else under a different font, and a
+    // hard-coded line break does not survive translation. Left to wrap.
+    max-width: 560px;
+    gap: 20px;
+  }
+
+  &__fp-hero-title {
+    @include drumee.typo($size: 46px, $line: 1.1);
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__fp-hero-desc {
+    @include drumee.typo($size: 15px, $line: 1.5);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  &__fp-hero-actions {
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  &__fp-cta {
+    align-items: center;
+    height: 44px;
+    padding: 0 22px;
+    border-radius: 10px;
+    background: var(--primary-purple-50);
+  }
+
+  &__fp-cta-label {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+  }
+
+  &__fp-ghost {
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 10px;
+    background: var(--normal-bg-90);
+  }
+
+  &__fp-ghost-ico {
+    width: 16px;
+    height: 16px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg);
+  }
+
+  &__fp-ghost-label {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 500;
+    color: var(--normal-fg);
+  }
+
+  // ── + New dropdown ────────────────────────────────────────────────────────
+  // Anchored under the hero's New button, which is the second action in the
+  // row — measured off the frame rather than hung on the button, because the
+  // button is a flex sibling and has no positioned box of its own.
+  &__fp-new-menu {
+    position: absolute;
+    left: 318px;
+    bottom: 168px;
+    width: 161px;
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 4px;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__fp-new-item {
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 8px;
+
+    &[data-active="1"] {
+      background: var(--normal-bg-90);
+    }
+  }
+
+  &__fp-new-item-ico {
+    width: 16px;
+    height: 16px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__fp-new-item-label {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 500;
+    color: var(--normal-fg);
+  }
+
+  // ── Docked Team Chat ──────────────────────────────────────────────────────
+  // Placeholder bars, not copy: the frames use the panel to say "there is a
+  // conversation here" without putting a second thing to read on a screen
+  // that is teaching files.
+  &__fp-chat {
+    flex: 0 0 505px;
+    width: 505px;
+    box-sizing: border-box;
+    min-height: 0;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    overflow: hidden;
+  }
+
+  &__fp-chat-head {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+  }
+
+  &__fp-chat-title {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__fp-chat-ico {
+    width: 16px;
+    height: 16px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-50);
+  }
+
+  &__fp-chat-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 22px;
+    padding: 12px 20px;
+    overflow: hidden;
+  }
+
+  &__fp-chat-row {
+    width: 100%;
+    align-items: flex-start;
+
+    &[data-own="1"] {
+      align-items: flex-end;
+    }
+  }
+
+  &__fp-chat-bubble {
+    width: 68%;
+    gap: 8px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--normal-bg-90);
+  }
+
+  &__fp-chat-row[data-own="1"] &__fp-chat-bubble {
+    background: var(--chat-bubble-private);
+  }
+
+  &__fp-chat-line {
+    height: 8px;
+    border-radius: 4px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.85);
+
+    &[data-short="1"] {
+      width: 45%;
+    }
+  }
+
+  &__fp-chat-row:not([data-own="1"]) &__fp-chat-line {
+    background: var(--normal-bg-elevated);
+  }
+
+  &__fp-chat-composer {
+    flex: 0 0 auto;
+    align-items: center;
+    height: 44px;
+    margin: 12px 20px 20px;
+    padding: 0 16px;
+    border-radius: 10px;
+    background: var(--normal-bg-90);
+  }
+
+  &__fp-chat-composer-text {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 400;
+    color: var(--placeholder-fg);
+  }
+}
+
+// ── The home empty state (tutorial__home-*) ───────────────────────────────
+// Figma 140:22684 — the frame the create-workspace flow opens on: a hero on
+// the left and a preview of a populated workspace on the right.
+//
+// Keyed on fig.group like the Files pane, for the same reason: more than one
+// step may sit on it.
+.tutorial {
+  &__home-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-items: center;
+    gap: 40px;
+    padding: 0 0 0 92px;
+    border-radius: 12px;
+    overflow: hidden;
+    // The frame's soft lilac wash, left to right.
+    background: linear-gradient(115deg, #eeecfb 0%, #f7f6fd 42%, var(--normal-bg-elevated) 100%);
+  }
+
+  &__home-hero {
+    flex: 0 0 auto;
+    width: 520px;
+    gap: 18px;
+  }
+
+  &__home-title {
+    @include drumee.typo($size: 54px, $line: 1.08);
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__home-desc {
+    @include drumee.typo($size: 16px, $line: 1.5);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+    max-width: 440px;
+  }
+
+  &__home-cta {
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    height: 48px;
+    margin-top: 10px;
+    padding: 0 26px;
+    border-radius: 10px;
+    background: var(--primary-purple-50);
+  }
+
+  &__home-cta-label {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+    align-items: center;
+    justify-content: center;
+  }
+
+  // ── Preview card ────────────────────────────────────────────────────────
+  // A gradient plate with an app window on it, clipped at the right edge the
+  // way the frame lets the window run off. The window inside is composed at
+  // the app's real width and scaled down, so what it shows is the SAME tree
+  // the full screens render rather than a second miniature that can drift.
+  &__home-preview {
+    flex: 0 0 auto;
+    width: 705px;
+    max-width: 46%;
+    align-self: center;
+    height: 475px;
+    margin-right: 46px;
+    padding: 22px 0 0 30px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(150deg, #b9b4ff 0%, #5950ff 100%);
+  }
+
+  &__home-pv-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+    border-radius: 10px 0 0 0;
+    overflow: hidden;
+    background: var(--normal-bg-elevated);
+  }
+
+  // transform-origin top-left plus a fixed viewport above: the window keeps its
+  // real proportions and the viewport crops it, which is what the frame shows.
+  // A stacking context is opened here, which is safe — nothing inside the
+  // preview is ever the spotlight's target (the callout points at the CTA).
+  &__home-pv-scale {
+    flex: 0 0 auto;
+    // Sized so the window FILLS the card and is cropped by it, which is how
+    // the frame shows it — a smaller scale leaves white margins the design
+    // does not have.
+    transform: scale(0.62);
+    transform-origin: top left;
+  }
+
+  &__home-pv-topbar {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 18px;
+    height: 52px;
+    padding: 0 22px;
+  }
+
+  &__home-pv-topbar-chip {
+    width: 190px;
+    height: 26px;
+    border-radius: 99px;
+    background: var(--normal-bg-90);
+  }
+
+  &__home-pv-topbar-crumb {
+    width: 300px;
+    height: 20px;
+    border-radius: 6px;
+    background: var(--normal-bg-90);
+  }
+
+  &__home-pv-app {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 10px;
+    padding: 0 0 0 10px;
+  }
+
+  &__home-pv-rail {
+    flex: 0 0 92px;
+    width: 92px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 0;
+    border-radius: 14px;
+    background: var(--primary-purple-70);
+    color: var(--gray-white, #fff);
+  }
+
+  &__home-pv-rail-logo {
+    width: 34px;
+    height: 34px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__home-pv-rail-item {
+    align-items: center;
+    gap: 5px;
+  }
+
+  &__home-pv-rail-tile {
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+  }
+
+  &__home-pv-rail-item[data-active="1"] &__home-pv-rail-tile {
+    background: var(--primary-purple-40);
+  }
+
+  &__home-pv-rail-ico {
+    width: 22px;
+    height: 22px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__home-pv-rail-text {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+  }
+}

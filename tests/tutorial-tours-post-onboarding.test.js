@@ -30,7 +30,7 @@ const DESK_RAW = readFileSync(join(REPO_ROOT, "src/drumee/modules/desk/index.js"
 const DESK = stripComments(DESK_RAW);
 
 const Tours = require(join(REPO_ROOT, "src/drumee/libs/tutorial-tours.js"));
-const { TOURS, stepBadge, isLastScreen, BADGE_BY_FLOW } =
+const { TOURS, stepProgress, isLastScreen } =
   require(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/tours.js"));
 
 if (!String.prototype.format) {
@@ -305,19 +305,42 @@ test("markSeen on that path is the real one, and is kill-switch gated", () => {
 
 const widget = (attrs) => ({ mget: (k) => attrs[k] });
 
-test("workspace badges 1/3 .. 3/3 as its own tour, never 1/1", () => {
-  assert.equal(TOURS.workspace.steps[0].screens, 3);
-  assert.equal(TOURS.workspace.badge, BADGE_BY_FLOW);
-  const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_count: 3 });
+test("workspace opens on the home canvas, then walks the dialog", () => {
+  // Six screens: the home empty state the flow starts on (Figma 140:22684) —
+  // a hero and the "Create your first workspace" CTA — then
+  // the dialog field by field — the name, the three types, then Create
+  // (176:40762 -> 176:41391). Opening straight onto the dialog skipped how
+  // the user got there.
+  assert.equal(TOURS.workspace.steps[0].screens, 6);
+  const ui = widget({ tour_screens: 6 });
   assert.deepEqual(
-    [0, 1, 2].map((i) => stepBadge(ui, i)),
-    ["STEP 1/3", "STEP 2/3", "STEP 3/3"],
+    [0, 1, 2, 3, 4, 5].map((i) => stepProgress(ui, i)),
+    [0, 1, 2, 3, 4, 5].map((i) => ({ step: i, steps: 6 })),
   );
+
+  // The first screen is the only one that is NOT the dialog, and it is the
+  // one that names the button which opens it.
+  const step = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
+  );
+  const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
+  const rows = table.split(/^  \{/m).slice(1);
+  assert.equal(rows.length, 6, "the SCREENS table must match the registry");
+  assert.match(rows[0], /home: true/);
+  assert.match(rows[0], /target: 'home-cta'/);
+  assert.ok(!/home: true/.test(rows.slice(1).join("")), "only the first screen is the home canvas");
 });
 
-test("workspace reads 1/6 on all three sub-badges inside full", () => {
-  const ui = widget({ badge_mode: "steps", badge_text: "STEP 1/6" });
-  assert.deepEqual([0, 1, 2].map((i) => stepBadge(ui, i)), Array(3).fill("STEP 1/6"));
+test("workspace opens full's count, and its six screens each get a number", () => {
+  // It is the first step, so its screens are 1..6 of the whole tour. They used
+  // to share one number, which made them impossible to point at.
+  const total = TOURS.full.steps.reduce((n, s) => n + s.screens, 0);
+  const ui = widget({ screen_offset: 0, tour_screens: total });
+  assert.deepEqual(
+    [0, 1, 2, 3, 4, 5].map((i) => stepProgress(ui, i).step),
+    [0, 1, 2, 3, 4, 5],
+  );
+  assert.equal(stepProgress(ui, 0).steps, total);
 });
 
 test("workspace ends its own tour but not the full one", () => {

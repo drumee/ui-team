@@ -1,0 +1,365 @@
+@use "mixins/drumee";
+
+// The workspace empty-state hero (tutorial__es-*).
+// Figma 146:40534 (Task) and 148:44759 (Meet) — the same shape with different
+// copy and a different right-hand preview.
+//
+// Keyed on ui.fig.group: both steps use it, and a family-scoped selector would
+// silently stop applying for the second.
+
+.tutorial {
+  &__es-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-items: center;
+    gap: 40px;
+    padding: 0 0 0 92px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(115deg, #eeecfb 0%, #f7f6fd 44%, var(--normal-bg-elevated) 100%);
+  }
+
+  &__es-hero {
+    flex: 0 0 auto;
+    width: 500px;
+    gap: 16px;
+
+    // Task's headline is three short sentences and needs the narrower column
+    // to break at them; Meet's is three longer lines.
+    &[data-hero="narrow"] { width: 360px; }
+  }
+
+  &__es-title {
+    gap: 0;
+  }
+
+  // One line per Note — the design breaks these by hand, and each translation
+  // gets to break where its own words need to.
+  &__es-title-line {
+    @include drumee.typo($size: 50px, $line: 1.12);
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  // Only a hand-broken headline is pinned to its own lines; see the composer.
+  &__es-title[data-broken="1"] &__es-title-line {
+    white-space: nowrap;
+  }
+
+  &__es-desc {
+    @include drumee.typo($size: 16px, $line: 1.5);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+    max-width: 420px;
+  }
+
+  &__es-cta {
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    height: 48px;
+    margin-top: 12px;
+    padding: 0 24px;
+    border-radius: 10px;
+    background: var(--primary-purple-50);
+  }
+
+  &__es-cta-label {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+    align-items: center;
+    justify-content: center;
+  }
+
+  // ── Carousel ─────────────────────────────────────────────────────────────
+  // Measured off 146:40658: five 425-wide cards on a 457 pitch (425 + 32
+  // gutter), each holding a 391x381 plate and a 391x26 caption. The viewport
+  // clips at the canvas edge, so card 2 is half-visible — which is what the
+  // frame shows and what makes the slide legible as a slide.
+  &__es-right {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: center;
+    gap: 22px;
+  }
+
+  &__es-viewport {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  // --es-pitch is how far one screen slides: the card plus the gutter. It is
+  // declared here rather than in the composer so it can change with the card
+  // (see the size tiers at the end of this file) without the JS knowing;
+  // the composer only says how many pitches to travel.
+  &__es-track {
+    --es-pitch: 457px;
+    gap: 32px;
+    flex: 0 0 auto;
+    // The slide itself. `transform` is set inline per screen by the composer.
+    transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    &[data-card="wide"] { --es-pitch: 792px; }
+  }
+
+  &__es-card {
+    width: 425px;
+    flex: 0 0 auto;
+    gap: 22px;
+    padding: 17px;
+    box-sizing: border-box;
+    border-radius: 16px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.08);
+
+    // Meet and Chat: the export is a full landscape screenshot that already
+    // carries its own frame, so the card is the artwork — no white surround to
+    // double it up, and no title, because the caption row does that job.
+    &[data-card="wide"] {
+      width: 760px;
+      gap: 0;
+      padding: 0;
+    }
+  }
+
+  // The plate holds the view's artwork, exported from its own frame. It keeps
+  // the frame's box and the image is cover-fit inside it, so an export whose
+  // aspect is off by a hair still fills its plate rather than letterboxing.
+  &__es-card-art {
+    width: 391px;
+    height: 381px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--normal-bg-90);
+
+    // 148:44759 — the same 760px the caption under it spans.
+    &[data-card="wide"] {
+      width: 760px;
+      height: 515px;
+      border-radius: 16px;
+    }
+  }
+
+  &__es-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top left;
+    display: block;
+  }
+
+  &__es-card-title {
+    @include drumee.typo($size: 17px, $line: 1.5);
+    height: 26px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ── Caption under a single preview (Meet) ────────────────────────────────
+  &__es-caption {
+    align-items: center;
+    gap: 16px;
+    width: 760px;
+    max-width: calc(100% - 46px);
+  }
+
+  &__es-caption-ico {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--primary-purple-10);
+    color: var(--primary-purple-50);
+  }
+
+  &__es-caption-glyph {
+    width: 22px;
+    height: 22px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__es-caption-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  &__es-caption-title {
+    @include drumee.typo($size: 20px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__es-caption-desc {
+    @include drumee.typo($size: 15px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  &__es-arrows {
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+  }
+
+  &__es-arrow {
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+    color: var(--normal-fg);
+  }
+
+  &__es-arrow-glyph {
+    width: 15px;
+    height: 15px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  // ── Carousel dots (Task) ─────────────────────────────────────────────────
+  // 146:40669 — the active dot is a 41x12 pill, the rest 12x12 squares on a
+  // 20px pitch. Centred under the first card, which is the one fully in view.
+  &__es-dots {
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    align-self: flex-start;
+    width: 425px;
+  }
+
+  &__es-dot {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    background: var(--normal-bg-40);
+    transition: width 320ms cubic-bezier(0.4, 0, 0.2, 1), background-color 220ms ease;
+
+    &[data-on="1"] {
+      width: 41px;
+      background: var(--primary-purple-50);
+    }
+  }
+}
+
+// ── Size tiers ───────────────────────────────────────────────────────────────
+//
+// Stamped on the tour root by tutorial/index.js _applySize. Everything above is
+// the WIDE composition, measured off the frames; each tier below is a different
+// arrangement of it rather than the same one squeezed.
+//
+// Written as top-level selectors, not nested inside `.tutorial`, because the
+// attribute lives on an ANCESTOR (.tutorial-main) and `&` here resolves to
+// `.tutorial` — nesting them would silently produce a descendant selector in
+// the wrong order and match nothing.
+
+// COMPACT (1024–1365): the hero and the carousel still share a row, but the
+// hero gives up the width the headline was sized for, so the headline comes
+// down with it. The cards keep their own size — they are artwork, and scaling
+// them is what makes a screenshot look cheap — and the viewport simply shows
+// less of the next one.
+.tutorial-main[data-size="compact"] {
+  .tutorial__es-canvas { padding-left: 48px; gap: 28px; }
+  .tutorial__es-hero { width: 400px; &[data-hero="narrow"] { width: 330px; } }
+  .tutorial__es-title-line { font-size: 40px; }
+  .tutorial__es-desc { font-size: 15px; }
+}
+
+// NARROW (760–1023): they stop fitting side by side. The canvas is allowed to
+// WRAP rather than being told to stack — Box.X owns its flex-direction and a
+// skin must not override it (see CLAUDE.md) — so the hero takes the full row
+// and the carousel falls underneath it, which is the same result by a route the
+// framework permits.
+.tutorial-main[data-size="narrow"] {
+  .tutorial__es-canvas {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    padding: 32px 0 0 32px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .tutorial__es-hero {
+    width: 100%;
+    &[data-hero="narrow"] { width: 100%; }
+  }
+
+  .tutorial__es-title-line { font-size: 34px; }
+  .tutorial__es-desc { font-size: 14px; max-width: 100%; }
+  .tutorial__es-right { width: 100%; flex: 1 1 100%; }
+  .tutorial__es-cta { height: 42px; margin-top: 4px; }
+  .tutorial__es-caption { width: auto; max-width: 100%; }
+}
+
+// MOBILE (<760): the artwork is the first thing to go. A 760px screenshot of a
+// desktop app shrunk onto a phone teaches nothing — it is unreadable at that
+// size, and it would push the copy and its button off the screen, which is the
+// part the user actually has to act on. So the carousel is dropped and the hero
+// becomes the whole screen; the dots stay, because they are the only remaining
+// sign that a step has more than one screen.
+.tutorial-main[data-size="mobile"] {
+  .tutorial__es-canvas {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    padding: 24px 16px 16px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .tutorial__es-hero {
+    width: 100%;
+    &[data-hero="narrow"] { width: 100%; }
+  }
+
+  // The hand-broken headline is allowed to re-break here: the break was
+  // composed for a 500px hero, and at 358px "Zero rework." would sit alone on
+  // a line that has room for more. Only the nowrap is lifted — the lines stay
+  // separate Notes in a Box.Y, because a skin does not get to change a Box's
+  // direction (CLAUDE.md). !important, because the rule it overrides
+  // ([data-broken="1"], above) has the same specificity and this file's order
+  // is not something a future @use should be able to flip.
+  .tutorial__es-title-line {
+    font-size: 27px;
+    white-space: normal !important;
+  }
+
+  .tutorial__es-desc { font-size: 14px; max-width: 100%; }
+  .tutorial__es-cta { height: 44px; width: 100%; margin-top: 4px; }
+  .tutorial__es-cta-label { font-size: 14px; }
+
+  .tutorial__es-viewport,
+  .tutorial__es-caption { display: none; }
+
+  .tutorial__es-right { width: 100%; flex: 0 0 auto; gap: 12px; }
+  .tutorial__es-dots { width: 100%; justify-content: center; }
+}
+
+// SHORT (<720 tall): an axis of its own, because it is what a wide-but-short
+// window and a rotated phone have in common. Only vertical air is taken — the
+// composition is whatever the width tier already chose.
+.tutorial-main[data-short="1"] {
+  .tutorial__es-canvas { padding-top: 16px; padding-bottom: 16px; }
+  .tutorial__es-hero { gap: 10px; }
+  .tutorial__es-title-line { font-size: 34px; }
+  .tutorial__es-cta { margin-top: 4px; }
+}
+
+.tutorial-main[data-short="1"][data-size="mobile"] {
+  .tutorial__es-title-line { font-size: 24px; }
+}

@@ -1,186 +1,192 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
+
+// The Create-new-workspace dialog, as the `workspace` tour draws it.
+// Figma 176:40762 (component 85:42209): 460px card, 32px insets, 24px radius,
+// 1px hairline over a heavy ambient shadow.
+//
+// Stacking: prefer no stacking context between the pane and the dialog. The
+// spotlight lifts context-opening ancestors on its way up (spotlight/index.js
+// _light), so one here is survivable — but every extra one is another node
+// whose inline z-index has to be put back.
 
 .tutorial-workspace {
   &__ui {
-    position: relative;
-    flex: 1;
-    min-height: 0;
     width: 100%;
     height: 100%;
+    min-height: 0;
   }
 
-  &__main {
-    position: relative;
-    flex: 1;
-    min-height: 0;
+  &__wsd-backdrop {
     width: 100%;
     height: 100%;
+    align-items: center;
+    justify-content: center;
   }
 
-  // ── Workspace grid ────────────────────────────────────────────────────────
-  &__wg-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px 24px;
-  }
-
-  &__wg-grid {
-    flex-wrap: wrap;
+  &__wsd-dialog {
+    width: 460px;
+    box-sizing: border-box;
+    padding: 32px;
     gap: 24px;
-    pointer-events: none;
+    border-radius: 24px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05);
   }
 
-  &__wg-card {
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-
-    &[data-state="0"] {
-      opacity: 0.45;
-    }
-  }
-
-  &__wg-label {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--normal-fg);
-    max-width: 140px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-  }
-
-  // ── Overlay ───────────────────────────────────────────────────────────────
-  &__overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    overflow: visible;
-  }
-
-  // ── Step tooltip ──────────────────────────────────────────────────────────
-  &__s1-tooltip {
-    position: absolute;
-    transform: translateX(-50%);
-    align-items: center;
-    pointer-events: all;
-    z-index: 51;
-
-    &[data-direction="east"],
-    &[data-direction="west"] {
-      transform: translateY(-50%);
-    }
-  }
-
-  &__s1-connector {
-    align-items: center;
-  }
-
-  &__s1-connector-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #7b6ef0;
-    flex-shrink: 0;
-  }
-
-  &__s1-connector-line {
-    width: 2px;
-    height: 22px;
-    background: #7b6ef0;
-    flex-shrink: 0;
-
-    &[data-direction="east"],
-    &[data-direction="west"] {
-      width: 22px;
-      height: 2px;
-    }
-  }
-
-  &__s1-card {
-    width: 284px;
-    background: #f4f4f8;
-    border-radius: 16px;
-    padding: 24px;
-    gap: 14px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
-  }
-
-  &__s1-badge {
-    align-items: center;
-    gap: 6px;
-    background: #e8e5fa;
-    border-radius: 99px;
-    padding: 4px 10px 4px 8px;
-    align-self: flex-start;
-  }
-
-  &__s1-badge-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #7b6ef0;
-    flex-shrink: 0;
-  }
-
-  &__s1-badge-text {
-    font-family: var(--font-main);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #7b6ef0;
-  }
-
-  &__s1-title {
-    font-family: var(--font-main);
-    font-size: 20px;
-    font-weight: 700;
-    color: #1a1a2e;
-    line-height: 1.25;
-  }
-
-  &__s1-desc {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 400;
-    color: #5a5a72;
-    line-height: 1.55;
-  }
-
-  &__s1-footer {
+  &__wsd-header {
     align-items: center;
     justify-content: space-between;
-    margin-top: 8px;
+    width: 100%;
   }
 
-  &__s1-back {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    color: #5a5a72;
-    cursor: pointer;
+  &__wsd-heading {
+    @include drumee.typo($size: 24px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
 
-    &:hover {
-      color: #1a1a2e;
+  &__wsd-close {
+    width: 20px;
+    height: 20px;
+    cursor: default;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
+  }
+
+  // ── Name ──────────────────────────────────────────────────────────────────
+  &__wsd-field,
+  &__wsd-types {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__wsd-label {
+    @include drumee.typo($size: 14px, $line: 1.3);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__wsd-entry {
+    width: 100%;
+    box-sizing: border-box;
+    height: 44px;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-default);
+    background: var(--normal-bg-elevated);
+  }
+
+  &__wsd-placeholder {
+    @include drumee.typo($size: 14px, $line: 1.3);
+    font-weight: 400;
+    color: var(--placeholder-fg);
+  }
+
+  // ── Type rows ─────────────────────────────────────────────────────────────
+  &__wsd-type-row {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-default);
+    background: var(--normal-bg-elevated);
+  }
+
+  // folderArt returns markup whose root is .media-grid__folder-art, authored
+  // at 105x86 — it has to be given an EXPLICIT box or it paints at that
+  // intrinsic size. Percentages are not enough inside a flex container, which
+  // is why the desk breadcrumb pins px here too (breadcrumb/item/skin __icon).
+  // The `!important` is that same rule's: the widget sets its own display.
+  &__wsd-type-icon {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 21px;
+    }
+
+    svg { width: 26px; height: 21px; }
+  }
+
+  &__wsd-type-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__wsd-type-title {
+    @include drumee.typo($size: 14px, $line: 1.3);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__wsd-type-desc {
+    @include drumee.typo($size: 12px, $line: 1.3);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  &__wsd-radio {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    align-items: center;
+    justify-content: center;
+
+    &[data-on="1"] {
+      border-color: var(--primary-purple-40);
+
+      &::after {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--primary-purple-40);
+      }
     }
   }
 
-  &__s1-next {
-    font-family: var(--font-main);
-    font-size: 13px;
+  // ── Create ────────────────────────────────────────────────────────────────
+  // Pale until a name has been typed, which is the state every screen but the
+  // last one shows.
+  // text-align is not enough on its own: a Note renders its copy inside an
+  // `.inner.note-content` block, and when the widget root lays out as flex
+  // that inner box is content-width — so the label sits at the left edge with
+  // the text centred inside itself. Centre the box as well as the text.
+  &__wsd-submit {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 0;
+    border-radius: 12px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
     font-weight: 600;
-    color: #fff;
-    background: #7b6ef0;
-    border-radius: 8px;
-    padding: 8px 18px;
-    cursor: pointer;
-    transition: background 0.15s ease;
+    color: var(--reverse-fg);
+    background: var(--primary-purple-20);
+    transition: background-color 220ms ease;
 
-    &:hover {
-      background: #6558d6;
+    &[data-ready="1"] {
+      background: var(--primary-purple-50);
     }
   }
 }

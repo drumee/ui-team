@@ -64,54 +64,54 @@ const SLOT = 35;
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 function toolbar(pfx) {
   const btn = (label, ico, extra = '') =>
-    Skeletons.Box.X({
+    Skeletons.Box.X({ active: 0,
       className: `${pfx}__btn ${extra}`.trim(),
       kids: [
-        Skeletons.Image.Svg({ ico, className: `${pfx}__btn-icon` }),
-        Skeletons.Note({ className: `${pfx}__btn-label`, content: label }),
+        Skeletons.Image.Svg({ active: 0, ico, className: `${pfx}__btn-icon` }),
+        Skeletons.Note({ active: 0, className: `${pfx}__btn-label`, content: label }),
       ],
     });
 
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__bar`,
     kids: [
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__bar-left`,
         kids: [
-          Skeletons.Box.X({
+          Skeletons.Box.X({ active: 0,
             className: `${pfx}__nav`,
             kids: [
-              Skeletons.Image.Svg({ ico: 'arrow-left', className: `${pfx}__nav-icon` }),
-              Skeletons.Note({ className: `${pfx}__nav-label`, content: LOCALE.TODAY || 'Today' }),
-              Skeletons.Image.Svg({ ico: 'arrow-right', className: `${pfx}__nav-icon` }),
+              Skeletons.Image.Svg({ active: 0, ico: 'arrow-left', className: `${pfx}__nav-icon` }),
+              Skeletons.Note({ active: 0, className: `${pfx}__nav-label`, content: LOCALE.TODAY || 'Today' }),
+              Skeletons.Image.Svg({ active: 0, ico: 'arrow-right', className: `${pfx}__nav-icon` }),
             ],
           }),
-          Skeletons.Box.X({
+          Skeletons.Box.X({ active: 0,
             className: `${pfx}__range`,
             kids: [
-              Skeletons.Note({ className: `${pfx}__range-label`, content: 'June 07-13, 2026' }),
-              Skeletons.Image.Svg({ ico: 'meet-caret-down', className: `${pfx}__range-caret` }),
+              Skeletons.Note({ active: 0, className: `${pfx}__range-label`, content: 'June 07-13, 2026' }),
+              Skeletons.Image.Svg({ active: 0, ico: 'meet-caret-down', className: `${pfx}__range-caret` }),
             ],
           }),
         ],
       }),
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__bar-right`,
         kids: [
           // Weekly is the live side, so the knob sits right and the track is
           // filled — the same switch the tracker's Calendar view carries.
-          Skeletons.Box.X({
+          Skeletons.Box.X({ active: 0,
             className: `${pfx}__toggle`,
             kids: [
-              Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.WEEKLY || 'Weekly' }),
-              Skeletons.Box.Y({
+              Skeletons.Note({ active: 0, className: `${pfx}__toggle-label`, content: LOCALE.WEEKLY || 'Weekly' }),
+              Skeletons.Box.Y({ active: 0,
                 className: `${pfx}__toggle-switch`,
-                kids: [Skeletons.Box.Y({ className: `${pfx}__toggle-knob` })],
+                kids: [Skeletons.Box.Y({ active: 0, className: `${pfx}__toggle-knob` })],
               }),
-              Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.MONTHLY || 'Monthly' }),
+              Skeletons.Note({ active: 0, className: `${pfx}__toggle-label`, content: LOCALE.MONTHLY || 'Monthly' }),
             ],
           }),
-          Skeletons.Box.Y({ className: `${pfx}__bar-divider` }),
+          Skeletons.Box.Y({ active: 0, className: `${pfx}__bar-divider` }),
           btn(LOCALE.START_A_MEETING || 'Start a Meeting', 'meeting-video'),
           btn(LOCALE.SCHEDULE || 'Schedule', 'calendar', 'primary'),
         ],
@@ -122,37 +122,37 @@ function toolbar(pfx) {
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 function dayHead(ui, pfx, day) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__day-head`,
     ...(day.date === FOCUS_DATE ? { sys_pn: 'sched-day', partHandler: ui } : {}),
     kids: [
-      Skeletons.Note({ className: `${pfx}__day-num`, content: day.date }),
-      Skeletons.Note({ className: `${pfx}__day-name`, content: day.name }),
+      Skeletons.Note({ active: 0, className: `${pfx}__day-num`, content: day.date }),
+      Skeletons.Note({ active: 0, className: `${pfx}__day-name`, content: day.name }),
     ],
   });
 }
 
 function meeting(pfx, m) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ev`,
     styleOpt: { top: `${m.at * SLOT}px`, height: `${m.span * SLOT}px` },
     kids: [
-      Skeletons.Note({ className: `${pfx}__ev-title`, content: m.title }),
-      Skeletons.Note({ className: `${pfx}__ev-desc`, content: m.desc }),
+      Skeletons.Note({ active: 0, className: `${pfx}__ev-title`, content: m.title }),
+      Skeletons.Note({ active: 0, className: `${pfx}__ev-desc`, content: m.desc }),
     ],
   });
 }
 
 /** One day column: the hour rules, then the meetings placed over them. */
 function dayColumn(pfx, day) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__col`,
     kids: [
       ...HOURS.map(() =>
-        Skeletons.Box.Y({
+        Skeletons.Box.Y({ active: 0,
           className: `${pfx}__hour`,
           // The dashed half-hour rule the design splits every row with.
-          kids: [Skeletons.Box.Y({ className: `${pfx}__half` })],
+          kids: [Skeletons.Box.Y({ active: 0, className: `${pfx}__half` })],
         }),
       ),
       ...MEETINGS.filter((m) => m.date === day.date).map((m) => meeting(pfx, m)),
@@ -161,27 +161,27 @@ function dayColumn(pfx, day) {
 }
 
 function calendar(ui, pfx) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__cal`,
     sys_pn: 'sched-cal',
     partHandler: ui,
     kids: [
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__cal-head`,
         kids: [
-          Skeletons.Box.Y({ className: `${pfx}__gutter-head` }),
+          Skeletons.Box.Y({ active: 0, className: `${pfx}__gutter-head` }),
           ...DAYS.map((d) => dayHead(ui, pfx, d)),
         ],
       }),
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__cal-body`,
         kids: [
-          Skeletons.Box.Y({
+          Skeletons.Box.Y({ active: 0,
             className: `${pfx}__gutter`,
             kids: HOURS.map((h) =>
-              Skeletons.Box.Y({
+              Skeletons.Box.Y({ active: 0,
                 className: `${pfx}__gutter-hour`,
-                kids: [Skeletons.Note({ className: `${pfx}__gutter-label`, content: h })],
+                kids: [Skeletons.Note({ active: 0, className: `${pfx}__gutter-label`, content: h })],
               }),
             ),
           }),
@@ -195,7 +195,7 @@ function calendar(ui, pfx) {
 // ── Window ────────────────────────────────────────────────────────────────────
 module.exports = function (ui) {
   const pfx = ui.fig.family;
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__main`,
     dataset: { aspect: ui.mget('aspect') || 'normal' },
     kids: [

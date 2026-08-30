@@ -1,42 +1,24 @@
 /**
- * Step 5 bodies — the folder window with the secure-share panel slid in from
- * the right, one builder per internal screen.
+ * Step body for the `share` tour — Figma 148:41197 → 148:44198.
  *
- * The window chrome and the file grid come from the shared toolkit, so the
- * folder looks the same as it does in Step 2; the panel overlays the chat rail,
- * which is where the design puts it (Permission Panel at x=894, exactly where
- * the chat panel starts).
+ * The populated Files grid on the left (shared scenery) with the Secure Share
+ * panel docked on the right. The six screens differ only in which block of the
+ * panel carries the focus ring, so this takes `lit` and hands it straight down.
  */
 
-const { folder, chatPanel } = require('../../skeleton/toolkit');
+const { filesGrid } = require('../../skeleton/toolkit/files-grid');
 const panel = require('./panel');
 
-function window(ui, state) {
+module.exports = function (ui, screen = {}) {
   const pfx = ui.fig.family;
-  const aspect = ui.mget('aspect') || 'normal';
-  return Skeletons.Box.Y({
-    className: `${pfx}__main`,
-    // The share step's folder is a shared one — pink folder, EXTERNAL badge.
-    dataset: { aspect, access: 'shared' },
+  return Skeletons.Box.X({ active: 0,
+    className: `${pfx}__pane`,
     kids: [
-      folder(ui, chatPanel, {
-        badge: LOCALE.EXTERNAL || 'EXTERNAL',
-        // Shared folder, so the sub-folder tiles take the share fill rather
-        // than Step 2's private red.
-        area: _a.share,
-      }),
-      panel(ui, pfx, state),
+      // The frames share from an external workspace, so its folders are pink.
+      filesGrid(ui, { area: _a.share }),
+      panel(ui, { lit: screen.lit }),
     ],
   });
-}
+};
 
-/** Screen 1 — recipient mode; neither access mode expanded yet. */
-const modeScreen = (ui) => window(ui, {});
-
-/** Screen 2 — Secure Share picked, its email and password controls open. */
-const secureScreen = (ui) => window(ui, { secure: true });
-
-/** Screen 3 — the link has been issued and can be copied or revoked. */
-const linkScreen = (ui) => window(ui, { secure: true, link: true });
-
-module.exports = { modeScreen, secureScreen, linkScreen };
+module.exports.BLOCKS = panel.BLOCKS;

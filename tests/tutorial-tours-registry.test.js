@@ -35,78 +35,96 @@ if (!String.prototype.format) {
 }
 
 const Tours = require(TOURS_PATH);
-const { TOURS, tour, flaggedIds, stepBadge, isLastScreen, BADGE_BY_FLOW, BADGE_BY_STEPS } = Tours;
+const { TOURS, tour, flaggedIds, stepProgress, isLastScreen } = Tours;
 
 /** Minimal stand-in for a step widget: only mget is read. */
 const widget = (attrs) => ({ mget: (k) => attrs[k] });
 
 // ── registry invariants ──────────────────────────────────────────────────────
 
-test("every flagged tour badges as one continuous flow", () => {
-  // A contextual tour is one thing to the person being shown it, however many
-  // step widgets it is built from — so the counter runs straight through.
-  // `full` and `meeting` keep step numbering, which is what they have always
-  // shown.
-  for (const id of flaggedIds()) {
-    assert.equal(TOURS[id].badge, BADGE_BY_FLOW, `${id} should badge by flow`);
+test("there is one way to count, and it counts screens", () => {
+  // A second mode used to count STEPS, so every screen of a multi-step step
+  // carried the same number — `full`'s four chat screens all read "STEP 2/6"
+  // and none of them could be named. One mode now.
+  const src = readFileSync(TOURS_PATH, "utf8");
+  assert.ok(!/BY_STEPS|progress:/.test(src), "no per-tour counting mode remains");
+  assert.equal(Tours.BY_STEPS, undefined);
+  assert.equal(Tours.BY_FLOW, undefined);
+
+  // Every screen of every tour gets a distinct number.
+  for (const id of Object.keys(TOURS)) {
+    const t = TOURS[id];
+    const total = t.steps.reduce((n, s) => n + s.screens, 0);
+    const seen = new Set();
+    let offset = 0;
+    for (const step of t.steps) {
+      for (let k = 0; k < step.screens; k++) {
+        const { step: at, steps } = stepProgress(
+          { mget: (x) => ({ screen_offset: offset, tour_screens: total }[x]) }, k,
+        );
+        assert.equal(steps, total, `${id} total`);
+        assert.ok(!seen.has(at), `${id} numbers two screens the same`);
+        seen.add(at);
+      }
+      offset += step.screens;
+    }
+    assert.equal(seen.size, total, `${id} numbers every screen`);
   }
-  assert.equal(TOURS.full.badge, BADGE_BY_STEPS);
-  assert.equal(TOURS.meeting.badge, BADGE_BY_STEPS);
 });
 
-test("flow badging counts screens cumulatively across steps", () => {
-  const t = TOURS.folder_task;
+test("counting runs cumulatively across steps", () => {
+  const t = TOURS.full;
   const total = t.steps.reduce((n, s) => n + s.screens, 0);
-  assert.equal(total, 9, "3 folder screens + 5 tracker views + the scheduler");
+  assert.ok(total > 6, "full is the multi-step tour now");
 
   const seen = [];
   let offset = 0;
   for (const step of t.steps) {
     for (let k = 0; k < step.screens; k++) {
-      seen.push(stepBadge(
-        { mget: (x) => ({ badge_mode: "flow", screen_offset: offset, tour_screens: total }[x]) },
+      seen.push(stepProgress(
+        { mget: (x) => ({ screen_offset: offset, tour_screens: total }[x]) },
         k,
       ));
     }
     offset += step.screens;
   }
-  // The counter must NOT restart at the step boundary — that is the whole point.
-  assert.deepEqual(seen, [
-    "STEP 1/9", "STEP 2/9", "STEP 3/9",
-    "STEP 4/9", "STEP 5/9", "STEP 6/9", "STEP 7/9", "STEP 8/9",
-    // The scheduler, which Figma 5:75093 badges "STEP 9/9" — the design and
-    // the registry have to agree on this number.
-    "STEP 9/9",
-  ]);
+  // The count must NOT restart at the step boundary — that is the whole point.
+  assert.deepEqual(seen.map((x) => x.step), seen.map((_x, i) => i));
+  assert.ok(seen.every((x) => x.steps === total));
 });
 
-test("a single-step tour's flow numbering is just its own screens", () => {
-  for (const id of ["workspace", "share", "migrate"]) {
+test("a single-step tour's flow count is just its own screens", () => {
+  for (const id of ["workspace", "chat", "share", "migrate"]) {
     const n = TOURS[id].steps[0].screens;
-    const ui = { mget: (x) => ({ badge_mode: "flow", screen_offset: 0, tour_screens: n }[x]) };
+    const ui = { mget: (x) => ({ screen_offset: 0, tour_screens: n }[x]) };
     assert.deepEqual(
-      Array.from({ length: n }, (_, i) => stepBadge(ui, i)),
-      Array.from({ length: n }, (_, i) => `STEP ${i + 1}/${n}`),
+      Array.from({ length: n }, (_, i) => stepProgress(ui, i)),
+      Array.from({ length: n }, (_, i) => ({ step: i, steps: n })),
       id,
     );
   }
 });
 
 test("the host stamps screen_offset and tour_screens per step", () => {
-  const out = build(TOURS.folder_task).map((e) => (Array.isArray(e) ? e[e.length - 1] : e));
-  assert.deepEqual(out.map((w) => w.screen_offset), [0, 3, 8]);
-  assert.deepEqual(out.map((w) => w.tour_screens), [9, 9, 9]);
-  assert.deepEqual(out.map((w) => w.badge_mode), ["flow", "flow", "flow"]);
+  const out = build(TOURS.full);
+  let running = 0;
+  for (let i = 0; i < out.length; i++) {
+    assert.equal(out[i].screen_offset, running, `step ${i} offset`);
+    running += TOURS.full.steps[i].screens;
+  }
+  assert.ok(out.every((w) => w.tour_screens === running));
 });
 
-test("full keeps the original six steps, in order, and is never suppressed", () => {
+test("full walks every step in product order, and is never suppressed", () => {
   assert.equal(TOURS.full.flag, null);
-  assert.equal(TOURS.full.badge, BADGE_BY_STEPS);
+  // `tutorial_folder` left this list when 2.0 promoted its screens to the
+  // `chat` tour. Anything added to the registry that a user can reach only
+  // through `full` (meeting) has to stay here or it becomes dead code.
   assert.deepEqual(
     TOURS.full.steps.map((s) => s.kind),
     [
       "tutorial_workspace",
-      "tutorial_folder",
+      "tutorial_chat",
       "tutorial_meeting",
       "tutorial_task",
       "tutorial_share",
@@ -132,37 +150,47 @@ test("a tour's flag matches its id, since both are posted as one wire value", ()
 
 // ── test 48 / 49 — badge derivation ──────────────────────────────────────────
 
-test("48 a single-step tour numbers SCREENS, never 1/1", () => {
+test("48 a single-step tour counts SCREENS, never 1 of 1", () => {
   for (const id of flaggedIds()) {
     const t = TOURS[id];
+    if (t.steps.length !== 1) continue; // folder_task is multi-step
     const n = t.steps[0].screens;
-    const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_count: n });
+    const ui = widget({ tour_screens: n });
     const seen = [];
-    for (let i = 0; i < n; i++) seen.push(stepBadge(ui, i));
+    for (let i = 0; i < n; i++) seen.push(stepProgress(ui, i));
     assert.deepEqual(
       seen,
-      Array.from({ length: n }, (_, i) => `STEP ${i + 1}/${n}`),
-      `${id} badges`,
+      Array.from({ length: n }, (_, i) => ({ step: i, steps: n })),
+      `${id} progress`,
     );
-    assert.ok(!seen.includes("STEP 1/1") || n === 1, `${id} must not read 1/1`);
+    assert.ok(n > 1, `${id} must have more than one screen to count`);
   }
 });
 
-test("48 migrate and folder read 1/3 -> 3/3 standing alone", () => {
-  const ui = widget({ badge_mode: BADGE_BY_FLOW, screen_count: 3 });
+test("48 each single-step tour counts its own screens", () => {
+  // The counts come from the flows themselves: migrate walks the Files empty
+  // state, its + New menu and three dialog states; share has six panel blocks;
+  // chat has four thread screens.
+  assert.equal(TOURS.migrate.steps[0].screens, 5);
+  assert.equal(TOURS.share.steps[0].screens, 6);
+  assert.equal(TOURS.chat.steps[0].screens, 5);
+  const five = widget({ tour_screens: 5 });
   assert.deepEqual(
-    [0, 1, 2].map((i) => stepBadge(ui, i)),
-    ["STEP 1/3", "STEP 2/3", "STEP 3/3"],
+    [0, 1, 2, 3, 4].map((i) => stepProgress(five, i)),
+    [0, 1, 2, 3, 4].map((i) => ({ step: i, steps: 5 })),
   );
 });
 
-test("49 inside full, every screen of a step carries that STEP's number", () => {
-  // tutorial_folder is step 2 of 6 and runs three screens; all three read 2/6,
-  // which is what the six-step tour has always shown.
-  const ui = widget({ badge_mode: BADGE_BY_STEPS, badge_text: "STEP 2/6", screen_count: 3 });
+test("49 inside full, a step's screens continue the tour's count", () => {
+  // tutorial_chat is full's second step and runs five screens. They pick up
+  // where the workspace step left off rather than all sharing one number —
+  // which is what made them impossible to point at.
+  const total = TOURS.full.steps.reduce((n, s) => n + s.screens, 0);
+  const offset = TOURS.full.steps[0].screens;
+  const ui = widget({ screen_offset: offset, tour_screens: total });
   assert.deepEqual(
-    [0, 1, 2].map((i) => stepBadge(ui, i)),
-    ["STEP 2/6", "STEP 2/6", "STEP 2/6"],
+    [0, 1, 2, 3, 4].map((i) => stepProgress(ui, i).step),
+    [0, 1, 2, 3, 4].map((i) => offset + i),
   );
 });
 
@@ -204,76 +232,98 @@ function buildWidgetsFn() {
   const end = src.indexOf("\n  }\n", start);
   assert.notEqual(end, -1, "_buildWidgets has no closing brace");
   const body = src.slice(start + "  _buildWidgets(t) {".length, end);
-  return new Function("BACKDROPS", "BADGE_BY_FLOW", `return function (t) {${body}};`);
+  return new Function("BACKDROPS", `return function (t) {${body}};`);
 }
 
 const BACKDROP_STUB = {
-  workspaceFaded: () => ({ backdrop: "faded" }),
-  workspaceGrid: () => ({ backdrop: "grid" }),
+  filesPane: () => ({ backdrop: "files" }),
 };
 
 function build(tourDef) {
-  const fn = buildWidgetsFn()(BACKDROP_STUB, BADGE_BY_FLOW);
+  const fn = buildWidgetsFn()(BACKDROP_STUB);
   return fn.call({ warn: () => {} }, tourDef);
 }
 
-test("a step with a backdrop feeds [backdrop, widget], interactive LAST", () => {
-  const out = build(TOURS.folder_task);
-  assert.equal(out.length, 3);
-  assert.ok(Array.isArray(out[0]));
-  assert.deepEqual(out[0][0], { backdrop: "faded" });
-  // _widgetAt merges enter_at_last onto the LAST entry, so the interactive
-  // widget must stay there.
-  assert.equal(out[0][out[0].length - 1].kind, "tutorial_folder");
-});
 
-test("a step with no backdrop feeds the bare widget", () => {
-  const out = build(TOURS.workspace);
-  assert.equal(Array.isArray(out[0]), false);
-  assert.equal(out[0].kind, "tutorial_workspace");
-});
 
-test("migrate's backdrop is the un-faded grid — its own subject matter", () => {
-  const out = build(TOURS.migrate);
-  assert.deepEqual(out[0][0], { backdrop: "grid" });
+test("no step takes a backdrop; every step draws its own pane", () => {
+  // Steps used to be able to be an ARRAY — inert scenery followed by the
+  // interactive widget — so several could share one drawing of the Files pane.
+  // 2.0 removed the need: each step's pane is part of what that step teaches
+  // (migrate points at the Files CTA, share at the grid it shares from), so
+  // nothing is inert scenery any more and the mechanism went with it.
+  for (const t of Object.values(TOURS)) {
+    for (const step of t.steps) {
+      assert.equal(step.backdrop, undefined, `${t.id} still declares a backdrop`);
+    }
+  }
+  for (const t of Object.values(TOURS)) {
+    for (const w of build(t)) {
+      assert.equal(Array.isArray(w), false, `${t.id} feeds an array`);
+    }
+  }
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.ok(!/BACKDROPS/.test(host), "the host no longer resolves backdrops");
+  assert.ok(
+    !existsSync(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/backdrops.js")),
+    "the composer file is gone too",
+  );
 });
 
 test("is_first / is_last / screen_count are stamped per step", () => {
-  const out = build(TOURS.full).map((e) => (Array.isArray(e) ? e[e.length - 1] : e));
+  const out = build(TOURS.full);
   assert.equal(out.length, 6);
   assert.equal(out[0].is_first, true);
   assert.equal(out[0].is_last, false);
   assert.equal(out[5].is_first, false);
   assert.equal(out[5].is_last, true);
-  assert.deepEqual(out.map((w) => w.screen_count), [3, 3, 1, 5, 3, 3]);
-  assert.deepEqual(out.map((w) => w.badge_mode), Array(6).fill("steps"));
-  assert.deepEqual(out.map((w) => w.badge_text), [
-    "STEP 1/6", "STEP 2/6", "STEP 3/6", "STEP 4/6", "STEP 5/6", "STEP 6/6",
-  ]);
+  assert.deepEqual(out.map((w) => w.screen_count), [6, 5, 3, 6, 6, 5]);
+  // The numbers are drawn from the screen offsets, not from a pre-formatted
+  // string and not from a step index.
+  assert.deepEqual(out.map((w) => w.screen_offset), [0, 6, 11, 14, 20, 26]);
+  assert.ok(out.every((w) => w.tour_screens === 31));
+  assert.ok(out.every((w) => w.badge_text === undefined), "badge_text is retired");
+  assert.ok(out.every((w) => w.progress_mode === undefined), "the mode is retired");
 });
 
-test("a single-step tour is stamped first AND last, and badges by screens", () => {
-  const w = build(TOURS.migrate)[0].slice(-1)[0];
+test("a single-step tour is stamped first AND last, and counts by screens", () => {
+  // Bare, not an array: migrate draws its own Files pane now — two of its five
+  // screens are ABOUT that pane — so it takes no backdrop.
+  const w = build(TOURS.migrate)[0];
+  assert.equal(Array.isArray(w), false);
   assert.equal(w.is_first, true);
   assert.equal(w.is_last, true);
-  assert.equal(w.badge_mode, BADGE_BY_FLOW);
-  assert.equal(w.screen_count, 3);
-  assert.equal(w.service, "next-step");
+  assert.equal(w.screen_count, 5);
 });
 
-test("an unknown badge mode warns and falls back to step numbering", () => {
-  const warnings = [];
-  const fn = buildWidgetsFn()(BACKDROP_STUB, BADGE_BY_FLOW);
-  const bad = {
-    id: "bogus",
-    badge: "screens",
-    steps: [{ kind: "a", screens: 2 }, { kind: "b", screens: 3 }],
-  };
-  const out = fn.call({ warn: (m) => warnings.push(m) }, bad);
-  assert.equal(warnings.length, 1);
-  assert.match(warnings[0], /unknown badge mode/);
-  assert.deepEqual(out.map((w) => w.badge_mode), ["steps", "steps"]);
-  assert.deepEqual(out.map((w) => w.badge_text), ["STEP 1/2", "STEP 2/2"]);
+// Regression: the full tour used to jump from step 8 to step 12.
+//
+// ui-core binds an onclick to every widget that is not `active: 0` and
+// dispatches that widget's own `service` to its uiHandler. The step widget's
+// element IS the step's whole pane, and the scenery inside it is all
+// `active: 0` — so it has no handler of its own and every click bubbles up to
+// the step wrapper. While the wrapper named `next-step`, one stray click
+// anywhere on a pane advanced the whole STEP rather than the screen: clicking
+// the chat pane on screen 2 of 5 skipped straight to the meeting step, and
+// screens 3, 4 and 5 (steps 9, 10 and 11) never rendered.
+//
+// The handoff is explicit now — triggerHandlers({ service: 'next-step' }) from
+// the step's last screen — so the wrapper must stay service-less.
+test("a step widget names no service, so its pane is not a giant Next button", () => {
+  const every = [...build(TOURS.full), ...build(TOURS.migrate), ...build(TOURS.chat)];
+  for (const w of every.flat()) {
+    assert.equal(w.service, undefined, `${w.kind} must not carry a clickable service`);
+    // It still has to be able to reach the host when it does hand off.
+    assert.ok(Array.isArray(w.uiHandler) && w.uiHandler.length === 1);
+  }
+});
+
+test("offsets carry the count across a step boundary", () => {
+  const fn = buildWidgetsFn()(BACKDROP_STUB);
+  const t = { id: "bogus", steps: [{ kind: "a", screens: 2 }, { kind: "b", screens: 3 }] };
+  const out = fn.call({ warn: () => {} }, t);
+  assert.deepEqual(out.map((w) => w.screen_offset), [0, 2]);
+  assert.deepEqual(out.map((w) => w.tour_screens), [5, 5]);
 });
 
 // ── the four-site allow-list (§4 S2 / M2) ────────────────────────────────────
@@ -349,7 +399,8 @@ test("every tour's step one is its OWN first step, not the workspace step", () =
   for (const id of Object.keys(TOURS)) first[id] = TOURS[id].steps[0].kind;
   assert.deepEqual(first, {
     workspace: "tutorial_workspace",
-    folder_task: "tutorial_folder",
+    folder_task: "tutorial_task",
+    chat: "tutorial_chat",
     share: "tutorial_share",
     migrate: "tutorial_migrate",
     meeting: "tutorial_meeting",
@@ -384,7 +435,7 @@ test("every step widget resolves its entry screen through the shared helper", ()
   // Five widgets used to each carry `if (mget('enter_at_last')) …`. Screen
   // targeting has to work in all of them or it works in none.
   const dir = join(REPO_ROOT, "src/drumee/modules/desk/tutorial");
-  for (const step of ["workspace", "folder", "task", "share", "migrate"]) {
+  for (const step of ["workspace", "chat", "task", "share", "migrate"]) {
     const src = readFileSync(join(dir, step, "index.js"), "utf8");
     assert.match(src, /entryScreen\(this, \w+\.length\)/, `${step} must use entryScreen`);
     assert.ok(
@@ -408,41 +459,46 @@ test("a forced tour is a PREVIEW — it must not burn the flag", () => {
 
 // ── the chat-feature screen (Figma 3202:3732) ────────────────────────────────
 
-test("the folder step runs three screens, and the flow totals eight", () => {
-  assert.equal(TOURS.folder_task.steps[0].screens, 3);
-  assert.equal(TOURS.folder_task.steps.reduce((n, s) => n + s.screens, 0), 9);
-  // The same step inside `full` gained the screen too — they render the same
-  // widget, so a mismatch would mis-number one of the two tours.
-  assert.equal(TOURS.full.steps[1].kind, "tutorial_folder");
-  assert.equal(TOURS.full.steps[1].screens, 3);
+test("chat runs five screens, in its own tour and inside full alike", () => {
+  // Five: the Chat empty state (142:38674) that opens the flow, then the four
+  // thread screens. The empty state was missing.
+  assert.equal(TOURS.chat.steps[0].screens, 5);
+  // The same widget renders both, so a count that differs between them
+  // mis-numbers one of the two tours.
+  assert.equal(TOURS.full.steps[1].kind, "tutorial_chat");
+  assert.equal(TOURS.full.steps[1].screens, 5);
 });
 
-test("the folder step's SCREENS table matches the registry count", () => {
+test("each step widget's SCREENS table matches the registry count", () => {
   // The registry says how many screens a step has; the widget owns the table.
   // They are declared in different files and nothing links them at runtime, so
-  // a screen added to one and not the other mis-numbers every badge after it.
-  const src = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/index.js"), "utf8",
-  );
-  assert.equal(
-    (src.match(/^\s{4}skeleton: \w+,/gm) || []).length,
-    TOURS.folder_task.steps[0].screens,
-  );
+  // a screen added to one and not the other mis-counts every dash after it.
+  const declared = {};
+  for (const t of Object.values(TOURS)) {
+    for (const step of t.steps) {
+      const dir = step.kind.replace(/^tutorial_/, "");
+      if (declared[dir] !== undefined) {
+        assert.equal(declared[dir], step.screens,
+          `${step.kind} is declared with two different screen counts`);
+      }
+      declared[dir] = step.screens;
+    }
+  }
+  for (const [dir, screens] of Object.entries(declared)) {
+    const src = readFileSync(
+      join(REPO_ROOT, `src/drumee/modules/desk/tutorial/${dir}/index.js`), "utf8",
+    );
+    const table = src.slice(src.indexOf("const SCREENS = ["));
+    if (!table) continue;
+    const body = table.slice(0, table.indexOf("\n];"));
+    // One entry per screen. Every table names a target, an anchor or a lit
+    // block on each row, so the row count is what the depth-1 `{` count gives.
+    const rows = (body.match(/^ {2}\{/gm) || []).length;
+    if (rows === 0) continue; // single-screen steps (meeting, schedule)
+    assert.equal(rows, screens, `${dir}'s SCREENS table is out of step`);
+  }
 });
 
-test("reply-in-thread leads the bar, and carries the tooltip and cursor", () => {
-  const threads = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
-  );
-  const list = threads.slice(threads.indexOf("const CHAT_ACTIONS = ["));
-  const order = [...list.slice(0, list.indexOf("];")).matchAll(/ico: "([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(order[0], "ctxmenu-chat-thread", "the thread icon must lead");
-  assert.equal(order[1], "chat-action-reply", "the divider sits between them");
-  // The cursor and the brand tint hang off the same `mark`, so they cannot
-  // drift onto different icons.
-  assert.match(threads, /ico: "ctxmenu-chat-thread", mark: "thread"/);
-  assert.match(threads, /a\.mark === "thread"[\s\S]{0,200}ico: "tutorial-cursor"/);
-});
 
 test("the cursor icon exists in the sprite", () => {
   // It is not a hand-drawn path: it is the design's own vector, added to the
@@ -455,60 +511,262 @@ test("the cursor icon exists in the sprite", () => {
   );
 });
 
-test("the hole is measured from the panel, the callout from the card", () => {
-  // These are deliberately different elements. The panel decides how much is
-  // lit; the Drumee_Strategy_Q2 card decides where the callout sits, which is
-  // ~220px higher than the panel's mid-height and is where the design puts it.
-  const folder = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/index.js"), "utf8",
-  );
-  const screen = folder.slice(folder.indexOf("skeleton: threadHintScreen"));
-  const block = screen.slice(0, screen.indexOf("},"));
-  assert.match(block, /target: 'thread-panel'/);
-  assert.match(block, /anchor: 'thread-card'/);
 
-  const threads = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
-  );
-  // Both parts have to exist on THIS screen, or the spotlight silently falls
-  // back to measuring one element for both jobs.
-  assert.match(threads, /__th-panel`[\s\S]{0,200}sys_pn: "thread-panel"/);
-  assert.match(threads, /__th-card`[\s\S]{0,300}sys_pn: "thread-card"/);
+
+
+
+// ── the two failures that render as "nothing happens" ───────────────────────
+
+test("every decorative node in the mock is inert", () => {
+  // ui-core binds an onclick to EVERY widget that does not say `active: 0`,
+  // and __handleClick stopPropagation()s before dispatching. A decorative node
+  // therefore swallows the click meant for whatever is under it — which is how
+  // the tour shipped stuck on screen one: the bare bubble's only control is the
+  // card itself, and its one child ate every press.
+  //
+  // Two halves of one rule, and the second is the trap: a node either declares
+  // a service or is inert, AND a node that declares a service must not also be
+  // inert — ui-core only binds the click when `active` is truthy, so
+  // `active: 0` beside a service is a control that silently does nothing.
+  //
+  // Both are judged on the node's OWN keys. A container whose descendant has a
+  // service is still decorative, and a descendant's `dataset: { active: 1 }`
+  // says nothing about the container.
+  const files = [
+    "skeleton/toolkit/tooltip.js",
+    "skeleton/toolkit/files.js",
+    "skeleton/toolkit/workspace-dialog.js",
+    "skeleton/sidebar.js",
+    "skeleton/topbar.js",
+    "chat/skeleton/index.js",
+    "migrate/skeleton/index.js",
+    "meeting/skeleton/index.js",
+    "schedule/skeleton/index.js",
+    "task/skeleton/index.js",
+    "task/skeleton/board.js",
+    "share/skeleton/panel.js",
+  ];
+  const CALL = /Skeletons\.(?:Box\.[XYGZ]|Note|Image\.Svg|Element|Button\.Svg|Button\.Label)\(\{/g;
+
+  /** Values of the object literal's depth-1 keys, keyed by name. */
+  const ownKeys = (body) => {
+    const out = {};
+    let depth = 0;
+    for (let i = 0; i < body.length; i++) {
+      const c = body[i];
+      if (c === "{" || c === "[" || c === "(") depth++;
+      else if (c === "}" || c === "]" || c === ")") depth--;
+      else if (depth === 1 && /[,{\s]/.test(body[i - 1] || "{")) {
+        const m = /^([A-Za-z_$][\w$]*)\s*:\s*([^,\n]*)/.exec(body.slice(i));
+        if (m) { out[m[1]] = m[2].trim(); i += m[1].length; }
+      }
+    }
+    return out;
+  };
+
+  for (const rel of files) {
+    const src = readFileSync(
+      join(REPO_ROOT, "src/drumee/modules/desk/tutorial", rel), "utf8",
+    );
+    let m;
+    while ((m = CALL.exec(src))) {
+      let depth = 0;
+      let i = m.index + m[0].length - 1;
+      for (; i < src.length; i++) {
+        if (src[i] === "{") depth++;
+        else if (src[i] === "}" && --depth === 0) break;
+      }
+      const body = src.slice(m.index + m[0].length - 1, i + 1);
+      const keys = ownKeys(body);
+      const head = body.slice(0, 180);
+      const hasService = "service" in keys;
+      const spreadsControl = /\.\.\.\(/.test(body) && /service:/.test(body);
+      assert.ok(
+        hasService || spreadsControl || keys.active === "0",
+        `${rel}: a node with no service must carry active: 0 —\n${head}`,
+      );
+      if (hasService && !spreadsControl) {
+        assert.notEqual(
+          keys.active, "0",
+          `${rel}: a node with a service must not be inert —\n${head}`,
+        );
+      }
+    }
+  }
 });
 
-test("the hole is wide enough to hold the panel AND the hover hint", () => {
-  const folder = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/index.js"), "utf8",
+test("the callout's beak hangs outside the card, not inside it", () => {
+  // The tail is a rotated square positioned against one edge. At `0` its whole
+  // box sits inside the card and the callout renders with no tail at all —
+  // which is not an error, just a bubble that points at nothing. It has to be
+  // pulled out by half the square, and sit BEHIND the card so the inner half is
+  // covered and the outer half carries the card's own shadow.
+  const tip = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/tooltip.scss"), "utf8",
   );
-  const screen = folder.slice(folder.indexOf("skeleton: threadHintScreen"));
-  const block = screen.slice(0, screen.indexOf("},"));
-  assert.match(block, /target: 'thread-panel'/);
-  const radius = Number((block.match(/radius: (\d+)/) || [])[1]);
-
-  // Geometry, measured off the 1:1 design render. The hole is centred on the
-  // panel and is clear to 55% of its radius (spotlight/skin), so the hover
-  // hint 368px away has to fall inside that core — otherwise this screen
-  // lights the panel and leaves its actual subject in the fade.
-  const PANEL = { x: 1255, y: 547 };
-  const HINT = { x: 920, y: 700 };
-  const dist = Math.hypot(HINT.x - PANEL.x, HINT.y - PANEL.y);
-  assert.ok(dist < radius * 0.55,
-    `hover hint is ${dist.toFixed(0)}px out but the clear core is only ${(radius * 0.55).toFixed(0)}px`);
-
-  // And it should not wildly exceed the design's own vignette (729 across).
-  assert.ok(radius <= 900, "wider than the design lights, which dims nothing");
-
-  const threads = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
-  );
-  // chat-hint still groups the tooltip with the bar for layout, even though the
-  // hole is no longer measured from it.
-  assert.match(threads, /sys_pn: "chat-hint"[\s\S]{0,200}replyInThreadTip\(pfx\), chatActionBar/);
+  for (const [dir, side] of [
+    ["north", "top"], ["south", "bottom"], ["east", "right"], ["west", "left"],
+  ]) {
+    const re = new RegExp(
+      `data-direction="${dir}"\\]::after \\{ ${side}: -\\$beak; \\}`,
+    );
+    assert.match(tip, re, `${dir}'s beak must be offset by -$beak on ${side}`);
+  }
+  assert.match(tip, /&::after \{[\s\S]*?z-index: -1;[\s\S]*?box-shadow: inherit;/);
 });
 
-test("the chat action bar mirrors the real one, icon for icon", () => {
-  const threads = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/threads.js"), "utf8",
+test("a step swap clears the spotlight BEFORE feeding the next step", () => {
+  // These were two independent promise chains, and clear() ends in a second
+  // async hop of its own. A step that mounted quickly raised spotlight:focus,
+  // got its callout rendered, and then the PREVIOUS step's stale clear landed
+  // and wiped it — a scrim with no callout, i.e. a tour with no way forward.
+  // The meeting step hit it every time: one screen, one part to await, and
+  // preloaded, so it had the shortest path from mount to callout.
+  const host = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/index.js"), "utf8",
+  );
+  const body = host.slice(host.indexOf("  async _showStep("));
+  const fn = body.slice(0, body.indexOf("\n  }\n"));
+  assert.ok(
+    fn.indexOf("clear()") < fn.indexOf("content.feed("),
+    "the spotlight must be put down before the next step is fed",
+  );
+  assert.match(fn, /await\s+spotlight\.clear\(\)/, "and the clear must be awaited");
+  // Both entry points go through it, so neither can drift back to the old shape.
+  assert.match(host, /_nextStep\(\)[\s\S]{0,400}this\._showStep\(/);
+  assert.match(host, /_prevStep\(\)[\s\S]{0,600}this\._showStep\(/);
+
+  // …and the spotlight refuses a stale clear on its own side, so a late one
+  // from anywhere else cannot wipe a newer callout either.
+  const spot = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/spotlight/index.js"), "utf8",
+  );
+  assert.match(spot, /async clear\(\) \{[\s\S]*?\+\+this\._seq/);
+  assert.match(spot, /if \(this\._stale\(ticket\)\) return;/);
+  // A target with no box must not end the screen in silence. Between two
+  // SCREENS of one step nothing else clears the callout — _showStep only runs
+  // on step boundaries — so bailing used to leave the PREVIOUS screen's card
+  // up with a live Next on it, and the tour walked forward on a control that
+  // belonged to a screen the user had already passed.
+  assert.match(spot, /const usable = \(r\) => !!\(r && r\.width && r\.height\)/);
+  assert.match(spot, /if \(!usable\(box\)\) \{/);
+  // Prefer the anchor while it still measures: pointing at the row instead of
+  // the panel it sits in beats showing no callout.
+  assert.match(spot, /usable\(measuredAnchor\)[\s\S]{0,200}box = measuredAnchor/);
+  // Failing that, the step's own root, and failing THAT, the middle of the
+  // tour with nothing lit — but a callout, always. A missing one strands the
+  // user on a screen with no way out.
+  assert.match(spot, /usable\(rootRect\)[\s\S]{0,120}box = rootRect/);
+  // Inside focus(), the only callout-less answer left is an explicit focus with
+  // no tooltip at all — clear() is the other, and it is meant to empty it. A
+  // screen that HAS a tooltip always gets it drawn.
+  const focusBody = spot.slice(spot.indexOf("async focus("), spot.indexOf("async clear("));
+  assert.equal(focusBody.split("callout.feed(null)").length - 1, 1);
+  assert.match(focusBody, /if \(!tooltip\) \{\s*\n\s*callout\.feed\(null\);/);
+  // And a part handed over from the previous render is re-resolved to the live
+  // element before anything is measured, since a detached node measures 0x0.
+  assert.match(spot, /function live\(el\)[\s\S]{0,500}data-partname/);
+  assert.match(spot, /const el = live\(elementOf\(target\)\)/);
+});
+
+test("the callout outranks the lit surface it may overlap", () => {
+  // The three layers interleave with something the spotlight does not contain:
+  // the lit surface, which _light promotes to 10004 out in the pane. The order
+  // has to be scrim 10003 < lit 10004 < callout 10010, and that only holds
+  // while the scrim and the callout share a stacking context with the lit
+  // element.
+  //
+  // A z-index (or an opacity below 1) on the spotlight ROOT opens a context of
+  // its own and flattens everything inside it to that single level, so the lit
+  // element wins every overlap. The callout was still painted — just under a
+  // transparent box that swallowed the clicks. Verified by hit-testing: with a
+  // z-index on the root, elementFromPoint at the centre of Next answers the lit
+  // element; without it, Next. On step 8 the lit `stream` is 1315x961 and the
+  // card sits inside it, so Back and Next were visible and dead.
+  const skin = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/spotlight/skin/index.scss"), "utf8",
+  );
+  const root = skin.slice(skin.indexOf("&__ui {"), skin.indexOf("&__scrim,"));
+  assert.ok(root.indexOf("z-index") === -1, "the spotlight root must open no stacking context");
+  assert.ok(root.indexOf("opacity") === -1, "…and an opacity below 1 opens one too");
+  // The layers that DO carry a level, and their order.
+  // lastIndexOf: `&__callout {` also appears in the shared fade block above,
+  // which carries no level of its own.
+  const zOf = (sel) => {
+    const at = skin.lastIndexOf(sel);
+    const m = /z-index:\s*(\d+)/.exec(skin.slice(at));
+    return m ? Number(m[1]) : null;
+  };
+  const scrim = zOf("&__scrim {");
+  const callout = zOf("&__callout {");
+  assert.ok(scrim < 10004, `scrim (${scrim}) must sit under the lit surface`);
+  assert.ok(callout > 10004, `callout (${callout}) must sit over it`);
+});
+
+test("the callout is kept inside the tour, tail still on its anchor", () => {
+  // anchorFor places the card from the ANCHOR's centre and bounds nothing, and
+  // __layout is overflow:hidden — so a block near an edge put part of the card
+  // outside and the clip took its buttons with it. Share's step 5 rings Link
+  // Expiration near the bottom of the panel and lost its Next exactly that way:
+  // the callout was on screen, its control was not.
+  const spot = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/spotlight/index.js"), "utf8",
+  );
+  assert.match(spot, /_keepInView\(/, "focus must bound the callout");
+  assert.match(spot, /await this\._keepInView\(callout, ticket\)/,
+    "and do it under the same staleness ticket");
+  // Measured after it SETTLES, not next-frame: feed() mounts the card's
+  // children over several frames, and a short measurement under-nudges.
+  const body = spot.slice(spot.indexOf("async _keepInView("));
+  const fn = body.slice(0, body.indexOf("\n  }\n"));
+  assert.match(fn, /await waitForStableRect\(card\)/);
+  assert.match(fn, /BEAK_INSET/, "the nudge is capped so the tail stays on the card");
+  assert.match(fn, /--bubble-nudge-x/);
+  assert.match(fn, /--bubble-nudge-y/);
+
+  // The skin has to COMPOSE the nudge with each placement transform rather
+  // than replace it, and subtract it from the beak so the tail holds its
+  // place on the anchor while the card moves.
+  const tip = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/tooltip.scss"), "utf8",
+  );
+  const placements = tip.match(/transform: translate[XY]\([^;]*;/g) || [];
+  assert.ok(placements.length >= 6, "six placements: 3 beak offsets x 2 axes");
+  for (const rule of placements) {
+    assert.match(rule, /\$nudge|--bubble-nudge/,
+      `a placement transform drops the nudge: ${rule}`);
+  }
+  assert.match(tip, /margin-left: calc\(-1 \* #\{\$beak\} - var\(--bubble-nudge-x/);
+  assert.match(tip, /margin-top: calc\(-1 \* #\{\$beak\} - var\(--bubble-nudge-y/);
+  // The cap is shared with the JS; they have to agree or the tail can leave.
+  assert.match(tip, /\$beak-inset: 26px;/);
+  assert.match(spot, /const BEAK_INSET = 26;/);
+});
+
+test("every step numbers its screens", () => {
+  // Only the share flow showed a step counter, so a reviewer could point at
+  // "share step 4" and nothing else. Every step passes stepProgress now, and
+  // the callout's default indicator is the pill, because a dash bar shows how
+  // far along you are without letting anyone NAME the screen.
+  const dir = join(REPO_ROOT, "src/drumee/modules/desk/tutorial");
+  for (const step of ["workspace", "chat", "task", "meeting", "share", "migrate", "schedule"]) {
+    const src = readFileSync(join(dir, step, "index.js"), "utf8");
+    assert.match(src, /\.\.\.stepProgress\(/, `${step} must number its screens`);
+  }
+  const tip = readFileSync(join(dir, "skeleton/toolkit/tooltip.js"), "utf8");
+  assert.match(tip, /progressStyle = "pill"/);
+  // Both shapes of the card carry the header, so a bare bubble is numbered too.
+  assert.equal((tip.match(/header\(\),/g) || []).length, 2);
+  // …and the pill must not depend on String.prototype.format, which is a
+  // bootstrap patch and now on the hot path of every callout.
+  assert.ok(!/TUTORIAL_STEP \|\| "STEP \{0\}\/\{1\}"\)\.format/.test(tip));
+});
+
+// ── the chat tour (Figma 142:39178 / 169:39799 / 142:39530 / 169:40101) ─────
+
+test("the action bar mirrors the real one, icon for icon", () => {
+  const fixture = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/chat/fixture.js"), "utf8",
   );
   const real = readFileSync(
     join(REPO_ROOT, "src/drumee/builtins/widget/chat-item/skeleton/menu.js"), "utf8",
@@ -520,35 +778,90 @@ test("the chat action bar mirrors the real one, icon for icon", () => {
     "chat-action-forward", "chat-action-trash", "chat-action-check",
     "chat-action-smiley",
   ]) {
-    assert.ok(threads.includes(ico), `tour is missing ${ico}`);
+    assert.ok(fixture.includes(ico), `tour is missing ${ico}`);
     assert.ok(real.includes(ico), `${ico} is not in the real toolbar any more`);
   }
 });
 
-test("the hover bar shows on screen 2 only", () => {
-  const skel = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/folder/skeleton/index.js"), "utf8",
+test("reply-in-thread leads the bar and carries the cursor", () => {
+  const fixture = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/chat/fixture.js"), "utf8",
   );
-  assert.match(skel, /threadHintScreen[\s\S]*?threadsView\(ui, \{ hint: true \}\)/);
-  // The bar-less variant is gone: it duplicated this screen's copy word for
-  // word, so the screen that shows the bar is the only one left.
-  assert.ok(!/threadsScreen/.test(skel));
+  const list = fixture.slice(fixture.indexOf("const ACTIONS = ["));
+  const order = [...list.slice(0, list.indexOf("];")).matchAll(/ico: "([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(order[0], "ctxmenu-chat-thread", "the thread control must lead");
+  // The cursor and the brand tint hang off the same `mark`, so they cannot
+  // drift onto different icons.
+  assert.match(fixture, /ico: "ctxmenu-chat-thread", mark: "thread"/);
+  const skel = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/chat/skeleton/index.js"), "utf8",
+  );
+  assert.match(skel, /a\.mark === 'thread'[\s\S]{0,800}ico: 'tutorial-cursor'/);
+});
+
+test("the cursor icon exists in the sprite", () => {
+  // It is not a hand-drawn path: it is the design's own vector, added to the
+  // icon pipeline. Without the sprite entry the glyph renders empty.
+  const sprite = readFileSync(join(REPO_ROOT, "icons/sprites/normalized.sprite.svg"), "utf8");
+  assert.ok(sprite.includes('id="--icon-tutorial-cursor"'), "run npm run build:icons");
+  assert.ok(
+    existsSync(join(REPO_ROOT, "icons/src/normalized/tutorial-cursor.svg")),
+    "the source svg must be committed, not just the built sprite",
+  );
+});
+
+test("the lit surface and the callout's anchor are separate elements", () => {
+  // Deliberately different: the panel decides how much comes out of the scrim,
+  // one row inside it decides where the beak lands. target/anchor exist for
+  // exactly this, and collapsing them is what makes a callout point at the
+  // middle of a panel instead of at the thing it names.
+  const chat = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/chat/index.js"), "utf8",
+  );
+  const table = chat.slice(chat.indexOf("const SCREENS = ["), chat.indexOf("\n];"));
+  const rows = table.split(/^ {2}\{/m).slice(1);
+  assert.equal(rows.length, 5);
+  for (const row of rows) {
+    assert.match(row, /target: '/, "every screen names what is lit");
+    assert.match(row, /anchor: '/, "every screen names what the beak points at");
+  }
+  // Screen 2 marks the reply-in-thread control specifically, not the bar.
+  assert.match(rows[2], /anchor: 'hint-thread'/);
+
+  const skel = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/chat/skeleton/index.js"), "utf8",
+  );
+  // Both parts have to exist, or the spotlight silently falls back to
+  // measuring one element for both jobs.
+  for (const pn of ["stream", "composer", "hint-thread", "thread", "thread-file", "thread-composer", "msg-"]) {
+    assert.ok(skel.includes(pn), `the pane never names ${pn}`);
+  }
+});
+
+test("the hover bar shows on screen 2 only", () => {
+  const chat = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/chat/index.js"), "utf8",
+  );
+  assert.equal((chat.match(/pane: \{ hint: true \}/g) || []).length, 1);
 });
 
 // ── the scheduler, folder_task's closing screen ──────────────────────────────
 
-test("folder_task ends on the scheduler, and it is the only new step", () => {
-  const kinds = TOURS.folder_task.steps.map((s) => s.kind);
-  assert.deepEqual(kinds, ["tutorial_folder", "tutorial_task", "tutorial_schedule"]);
-  // One screen: the design is a single frame, and the flow badge on it
-  // ("STEP 9/9") only comes out right if this stays 1.
-  assert.equal(TOURS.folder_task.steps[2].screens, 1);
-  // Faded like its neighbours — the workspace grid behind is not this step's
-  // subject, unlike migrate's.
-  assert.deepEqual(TOURS.folder_task.steps[2].backdrop, ["workspaceFaded"]);
+test("folder_task is the tracker, and the scheduler left it", () => {
+  // The scheduler used to be a step of its own here. 2.0 puts it at the end of
+  // the MEET flow (156:19597), which is where anyone would reach it — so this
+  // tour is the tracker's own six screens and nothing else.
+  assert.deepEqual(TOURS.folder_task.steps.map((s) => s.kind), ["tutorial_task"]);
+  assert.equal(TOURS.folder_task.steps[0].screens, 6);
+  for (const t of Object.values(TOURS)) {
+    assert.ok(
+      !t.steps.some((s) => s.kind === "tutorial_schedule"),
+      `${t.id} still runs the retired scheduler step`,
+    );
+  }
 });
 
-test("full is untouched by the scheduler — still the original six steps", () => {
+test("full is untouched by the scheduler", () => {
   // tutorial_meeting is the call itself and stays full's third step; the
   // scheduler is where a call is started from and belongs to folder_task. If
   // these ever merge, `full` is where the regression will show first.

@@ -1,56 +1,63 @@
 @use 'mixins/drumee';
 
-// Animatable CSS variables for the spotlight center + radius.
-@property --spot-x {
-  syntax: '<length-percentage>';
-  inherits: true;
-  initial-value: 50%;
-}
-
-@property --spot-y {
-  syntax: '<length-percentage>';
-  inherits: true;
-  initial-value: 50%;
-}
-
-@property --spot-radius {
-  syntax: '<length>';
-  inherits: true;
-  initial-value: 230px;
-}
-
 .tutorial-spotlight {
+  // NO z-index here, and no opacity — deliberately, and it is load-bearing.
+  //
+  // The three layers have to interleave with something this element does not
+  // contain: the lit surface, which _light promotes to 10004 out in the pane.
+  // The intended order is scrim 10003 < lit 10004 < callout 10010. That only
+  // works while the scrim and the callout sit in the SAME stacking context as
+  // the lit element.
+  //
+  // Giving this node a z-index (or an opacity below 1) opens a context of its
+  // own and caps everything inside it at that one level, so the lit element
+  // won every overlap. The callout was still painted — it was just painted
+  // underneath a transparent box that took the clicks: on step 8 the lit
+  // `stream` is 1315x961, and the card sits inside it just above the composer,
+  // so Back and Next were visible and dead.
+  //
+  // The fade therefore lives on the two children, which carry their own
+  // z-index and so keep their place in the parent's context while animating.
   &__ui {
     position: absolute;
     inset: 0;
-    z-index: 10003;
     pointer-events: none;
     overflow: visible;
-    opacity: 0;
     visibility: hidden;
-    --spot-x: 50%;
-    --spot-y: 50%;
-    --spot-radius: 230px;
-    transition: opacity 220ms ease, visibility 0s linear 220ms;
+    transition: visibility 0s linear 220ms;
 
     &[data-state="1"] {
-      opacity: 1;
       visibility: visible;
-      transition: opacity 220ms ease, visibility 0s linear 0s;
+      transition: visibility 0s linear 0s;
     }
   }
 
-  &__vignette {
+  &__scrim,
+  &__callout {
+    opacity: 0;
+    transition: opacity 220ms ease;
+  }
+
+  &[data-state="1"] &__scrim,
+  &[data-state="1"] &__callout {
+    opacity: 1;
+  }
+
+  // The design's dim: the mock desk reads at 40% under a white film. Done as
+  // a scrim rather than `opacity` on the content, because opacity on an
+  // ancestor cannot be undone by a descendant — and undoing it for one
+  // element is the whole mechanism.
+  &__scrim {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(
-      circle var(--spot-radius) at var(--spot-x) var(--spot-y),
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0) 55%,
-      rgba(255, 255, 255, 0.85) 100%
-    );
-    transition: --spot-x 280ms ease, --spot-y 280ms ease, --spot-radius 280ms ease;
+    // Below the lit surface, which is the whole point of the scrim.
+    z-index: 10003;
+    background: rgba(255, 255, 255, 0.6);
+
+    html[data-theme="dark"] & {
+      background: rgba(11, 10, 33, 0.6);
+    }
   }
 
   &__callout {
@@ -58,6 +65,9 @@
     inset: 0;
     pointer-events: none;
     overflow: visible;
+    // Above the lit surface, so a callout that overlaps what it is describing
+    // still reads on top of it.
+    z-index: 10010;
 
     > * {
       pointer-events: auto;

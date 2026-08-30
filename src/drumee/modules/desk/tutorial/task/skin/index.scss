@@ -1,1281 +1,220 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
-// BEM root: .tutorial-task
-// Step 4 — the project tracker's five views (Figma 5:75112, 3202:123320,
-// 3202:185373, 3202:185461, 3202:185481). The app behind the callout is a flat
-// bitmap in those frames, so geometry is measured off the 1:1 renders.
+// The Task step: the shared empty-state carousel (skin/empty-state.scss) for
+// screens 1-5, and the New task dialog over an empty Board for screen 6.
 //
-//   __bar / __switcher / __view / __ctl  → view switcher + per-view controls
-//   __pill / __chip / __avatar*          → shared task chrome
-//   __board / __col / __card             → screen 1, kanban
-//   __cal-*                              → screen 2, week calendar
-//   __gt-*                               → screen 3, gantt
-//   __ls-*                               → screen 4, list table
-//   __ph-*                               → screen 5, project health
-//
-// Folder header + tab strip come from toolkit/folder.js with pfx =
-// tutorial-task, so the header rules below mirror the folder step's.
+// The 1.x tracker views this file used to style (~1300 lines) went with the
+// body that drew them; their builders are still under ./skeleton if the
+// populated frames come back.
 
 .tutorial-task {
-
-  // ── Root ────────────────────────────────────────────────────────────────────
   &__ui {
-    position: absolute;
-    flex: 1;
-    min-height: 0;
     width: 100%;
     height: 100%;
-    max-width: 1242px;
-    max-height: 700px;
-    transform: translate(-50%, -50%);
-    top: 50%;
-    left: 50%;
-    border: 1px solid var(--neutral-300);
-    border-radius: var(--corner-radius-2);
-    overflow: hidden;
-
-    &[data-aspect="faded"] {
-      opacity: .45;
-    }
+    min-height: 0;
   }
 
-  // The tracker window is the bottom layer of the step: it must stay under the
-  // tutorial callout (.tutorial__s1-tooltip, z-index 10010), which is the thing
-  // the user is actually reading.
-  &__main {
+  // ── The board behind the dialog ──────────────────────────────────────────
+  &__nt-stage {
     position: relative;
-    z-index: 1;
-    flex: 1;
-    min-height: 0;
     width: 100%;
     height: 100%;
-    background: var(--normal-bg);
+    min-height: 0;
   }
 
-  // ── Folder header (toolkit) ─────────────────────────────────────────────────
-  &__header {
+  &__nt-board {
     width: 100%;
+    height: 100%;
+    gap: 12px;
+    padding: 12px;
     box-sizing: border-box;
+    background: var(--normal-bg-elevated);
+  }
+
+  &__nt-col {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: space-between;
+    padding: 14px;
+    border-radius: 10px;
+    background: var(--normal-bg-90);
+
+    &[data-status="progress"] { background: #eeecff; }
+    &[data-status="review"]   { background: #fdf1e3; }
+    &[data-status="done"]     { background: #e6f6ee; }
+  }
+
+  &__nt-col-head {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__nt-col-name {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg);
+    padding: 5px 12px;
+    border-radius: 99px;
+    background: var(--normal-bg-elevated);
+  }
+
+  &__nt-col-count {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg-20);
+  }
+
+  &__nt-col-add {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    font-weight: 500;
+    color: var(--normal-fg-50);
+    padding: 10px 0;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px dashed var(--border-strong);
+  }
+
+  // ── The dialog ───────────────────────────────────────────────────────────
+  &__nt-backdrop {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // 162:20161 — two columns, 985 wide, 24px radius.
+  &__nt-dialog {
+    width: 985px;
+    max-width: calc(100% - 80px);
+    box-sizing: border-box;
+    padding: 30px;
+    gap: 22px;
+    border-radius: 24px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  &__nt-header {
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacer-4) var(--spacer-6);
-    background: var(--normal-bg-90);
-    border-bottom: 1px solid var(--border-muted);
-    flex-shrink: 0;
+    width: 100%;
   }
 
-  &__header-left { align-items: center; gap: 8px; }
-
-  // The tracker's folder is a SHARED one in the design, so it takes the share
-  // pink rather than the folder step's restricted red.
-  &__header-icon {
-    width: 22px;
-    height: 22px;
-    color: var(--area-share, #ffa8dc);
-    flex-shrink: 0;
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__header-name {
-    font-family: var(--font-main);
-    font-size: 15px;
+  &__nt-heading {
+    @include drumee.typo($size: 24px, $line: 1.2);
     font-weight: 600;
     color: var(--normal-fg);
   }
 
-  // EXTERNAL, in the same pink family. The text is a deeper shade than
-  // --area-share so 10px stays legible on the tint.
-  &__header-restricted {
-    font-family: var(--font-main);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #d6479c;
-    background: rgba(255, 168, 220, 0.18);
-    border: 1px solid rgba(255, 168, 220, 0.45);
-    border-radius: 4px;
-    padding: 2px 7px;
-  }
-
-  &__header-actions { align-items: center; gap: 8px; }
-
-  &__header-upload,
-  &__header-add {
-    display: inline-flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    height: 28px;
-    padding: 0 12px;
-    gap: 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    flex-shrink: 0;
-
-    svg { width: 13px; height: 13px; }
-
-    span.label,
-    section.label {
-      font-size: 13px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-  }
-
-  &__header-upload {
-    background: var(--normal-bg);
-    border: 1px solid var(--border-muted);
-
-    svg { fill: var(--normal-fg); }
-    span.label, section.label { color: var(--normal-fg); }
-  }
-
-  &__header-add {
-    background: #b1adff;
-
-    svg { fill: #0b0a21; }
-    span.label, section.label { color: #0b0a21; }
-  }
-
-  &__header-settings,
-  &__header-close {
-    width: 28px;
-    height: 28px;
-    padding: 6px;
-    border-radius: 4px;
-    color: var(--normal-fg-50);
-    flex-shrink: 0;
+  &__nt-close {
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-20);
 
     svg { width: 100%; height: 100%; }
   }
 
-  // ── Tab strip (toolkit) ─────────────────────────────────────────────────────
-  &__tabs {
+  &__nt-cols {
     width: 100%;
-    height: 44px;
-    align-items: center;
-    padding: 0 16px;
-    gap: 8px;
-    border-bottom: 1px solid var(--border-muted);
-    flex-shrink: 0;
-    background: var(--normal-bg);
+    gap: 32px;
+    align-items: flex-start;
   }
 
-  &__tab {
-    display: inline-flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    height: 30px;
-    padding: 0 12px;
-    gap: 6px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--normal-fg-50);
-    background: var(--normal-bg-90);
-    cursor: pointer;
-    box-sizing: border-box;
-    // Transparent by default so the active tab's outline does not resize it.
-    border: 1px solid transparent;
-
-    svg { width: 14px; height: 14px; fill: currentColor; }
-
-    span.label, section.label { font-size: 13px; font-weight: 500; color: inherit; }
-
-    // The tracker tab is the live one on every screen. The design marks it with
-    // a pink outline — the shared folder's colour — keeping the same grey fill
-    // and dark label as its neighbours, not a pink wash.
-    &.active {
-      color: var(--normal-fg);
-      background: var(--normal-bg-90);
-      border-color: var(--area-share, #ffa8dc);
-      font-weight: 600;
-
-      span.label, section.label { font-weight: 600; color: var(--normal-fg); }
-    }
-  }
-
-  // ── View switcher + controls ────────────────────────────────────────────────
-  &__bar {
-    width: 100%;
-    height: 52px;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    background: var(--normal-bg);
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  &__switcher { align-items: center; gap: 4px; }
-
-  &__view {
-    height: 34px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 7px;
-    padding: 0 12px;
-    border-radius: 99px;
-    color: var(--normal-fg-50);
-    cursor: pointer;
-
-    &.active {
-     color: var(--white);
-    background: var(--primary-40);
-    }
-  }
-
-  &__view-icon {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__view-label {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: inherit;
-    color: inherit;
-    white-space: nowrap;
-  }
-
-  &__controls { align-items: center; gap: 10px; }
-
-  &__ctl {
-    height: 34px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 7px;
-    padding: 0 14px;
-    border-radius: 8px;
-    background: var(--normal-bg-90);
-    cursor: pointer;
-
-    &.nav { gap: 10px; }
-  }
-
-  &__ctl-icon {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__ctl-label {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--normal-fg);
-    white-space: nowrap;
-  }
-
-  &__toggle { align-items: center; gap: 8px; }
-
-  &__toggle-label {
-    font-family: var(--font-main);
-    font-size: 13px;
-    color: var(--normal-fg-50);
-  }
-
-  &__toggle-switch {
-    width: 34px;
-    height: 20px;
-    border-radius: 99px;
-    background: var(--normal-bg-80, #e5e5ea);
-    padding: 2px;
-    box-sizing: border-box;
-    flex-shrink: 0;
-  }
-
-  &__toggle-knob {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--normal-bg);
-  }
-
-  &__view-body {
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    background: var(--normal-bg-90);
-  }
-
-  // ── Shared task chrome ──────────────────────────────────────────────────────
-  &__pill {
-    height: 26px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 6px;
-    padding: 0 10px;
-    border-radius: 99px;
-    flex-shrink: 0;
-
-    &.status {
-      background: var(--normal-bg-90);
-
-      &[data-status="progress"] { background: #e1dfff; }
-      &[data-status="review"]   { background: #f7e3c7; }
-      &[data-status="done"]     { background: #d0f7e4; }
-    }
-
-    // In the list and calendar the status reads as plain text on the surface.
-    &.status.plain { background: none; padding: 0; }
-
-    &.priority {
-      background: #93b8f0;
-
-      &[data-priority="urgent"] { background: #ef8f8b; }
-      &[data-priority="high"]   { background: #edb565; }
-      &[data-priority="medium"] { background: #93b8f0; }
-      &[data-priority="low"]    { background: #54b684; }
-
-      .tutorial-task__pill-label { color: #fff; font-weight: 600; }
-    }
-
-    &.priority.unset {
-      background: none;
-
-      .tutorial-task__pill-label { color: var(--normal-fg-50); font-weight: 500; }
-    }
-  }
-
-  &__pill-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: #b0b0b8;
-  }
-
-  &__pill[data-status="progress"] &__pill-dot { background: #5950ff; }
-  &__pill[data-status="review"] &__pill-dot { background: #e8a13b; }
-  &__pill[data-status="done"] &__pill-dot { background: #34c77b; }
-
-  &__pill-label {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--normal-fg);
-    white-space: nowrap;
-  }
-
-  &__pill-caret {
-    width: 10px;
-    height: 10px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__chip {
-    height: 26px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 6px;
-    padding: 0 10px;
-    border-radius: 8px;
-    background: var(--normal-bg-90);
-    flex-shrink: 0;
-
-    &.date.unset { background: none; }
-
-    &.file.more {
-      justify-content: center;
-      min-width: 34px;
-    }
-  }
-
-  &__chip-icon {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__chip-label {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-    white-space: nowrap;
-  }
-
-  &__avatars { align-items: center; flex-shrink: 0; }
-
-  &__avatar {
-    width: 26px;
-    height: 26px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    border: 2px solid var(--normal-bg);
-    margin-right: -8px;
-    flex-shrink: 0;
-    background: linear-gradient(140deg, #d9d5f2, #efe7e4);
-
-    &[data-tone="1"] { background: linear-gradient(140deg, #e3cfc4, #cfd8e6); }
-    &[data-tone="2"] { background: linear-gradient(140deg, #e9d7dc, #dfe3ef); }
-
-    &.more {
-      margin-right: 0;
-      background: #efeeff;
-      font-family: var(--font-main);
-      font-size: 10px;
-      font-weight: 600;
-      color: #5950ff;
-      text-align: center;
-      line-height: 22px;
-    }
-  }
-
-  &__unassigned { align-items: center; gap: 6px; }
-
-  &__unassigned-icon {
-    width: 13px;
-    height: 13px;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__unassigned-label {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-  }
-
-  &__icon-btn {
-    width: 28px;
-    height: 28px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    &.mute { background: var(--normal-bg-90); }
-  }
-
-  &__icon-btn-svg {
-    width: 15px;
-    height: 15px;
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  // ══ Screen 1 — Board ═══════════════════════════════════════════════════════
-  &__board {
-    flex: 1;
-    min-height: 0;
-    gap: 14px;
-    padding: 16px;
-    box-sizing: border-box;
-    align-items: stretch;
-  }
-
-  // Each column sits on a wash of its own status colour, as the design does —
-  // the same hues as the header pills, at a fraction of the strength so the
-  // white cards still read as raised.
-  &__col {
-    flex: 1;
+  &__nt-left,
+  &__nt-right {
+    flex: 1 1 0;
     min-width: 0;
-    min-height: 0;
-    gap: 12px;
-    box-sizing: border-box;
-    padding: 12px;
-    border-radius: 12px;
-    background: #f7f7f8;
-
-    &[data-status="progress"] { background: #f6f5ff; }
-    &[data-status="review"]   { background: #fff9f2; }
-    &[data-status="done"]     { background: #f4fdf8; }
-  }
-
-  &__col-head { align-items: center; gap: 10px; flex-shrink: 0; }
-
-  &__col-count {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--normal-fg-50);
-  }
-
-  &__col-head &__icon-btn { margin-left: auto; }
-
-  &__col-body {
-    flex: 1;
-    min-height: 0;
-    gap: 12px;
-    overflow: hidden;
-  }
-
-  &__card {
-    flex-shrink: 0;
-    box-sizing: border-box;
-    gap: 8px;
-    padding: 14px;
-    border-radius: 12px;
-    background: var(--normal-bg);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  }
-
-  &__card-title {
-    font-family: var(--font-main);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--normal-fg);
-    line-height: 1.3;
-  }
-
-  &__card-desc {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-    line-height: 1.4;
-  }
-
-  // Chips hug their filename and wrap, which is what puts two per row and
-  // leaves the trailing "+n" on the second row, as the design shows. They are
-  // allowed to SHRINK though — the shared __chip rule sets flex-shrink: 0, and
-  // a long name would then push the row past the card edge instead of wrapping.
-  // A strict two-up grid: every cell is half the card minus the gutter, so each
-  // row holds exactly two items whatever the filenames are. The last cell may
-  // be a wrapper holding the last chip plus the "+n" (see board.js).
-  &__card-files {
-    flex-wrap: wrap;
-    gap: 4px;
-    width: 100%;
-
-    > * {
-      flex: 0 0 calc(50% - 2px);
-      max-width: calc(50% - 2px);
-      min-width: 0;
-    }
-
-    // The cell that carries the trailing "+n": chip shrinks, "+n" never does.
-    &-cell {
-      align-items: center;
-      gap: 4px;
-
-      > .tutorial-task__chip.file { flex: 0 1 auto; min-width: 0; }
-      > .tutorial-task__chip.file.more { flex: 0 0 auto; }
-    }
-
-    .tutorial-task__chip.file {
-      // Tighter than the shared chip: two have to fit half a 240px card.
-      gap: 5px;
-      padding: 0 7px;
-      max-width: 100%;
-
-      .tutorial-task__chip-label {
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      &.more {
-        min-width: 0;
-        padding: 0 6px;
-      }
-    }
-  }
-
-  &__card-progress {
-    height: 4px;
-    border-radius: 99px;
-    background: var(--normal-bg-90);
-    overflow: hidden;
-  }
-
-  &__card-progress-fill {
-    height: 100%;
-    border-radius: 99px;
-    background: #7c74ff;
-  }
-
-  &__card-footer {
-    align-items: center;
-    gap: 8px;
-    margin-top: 2px;
-
-    .tutorial-task__avatars { margin-left: auto; }
-  }
-
-  &__col-add {
-    flex-shrink: 0;
-    box-sizing: border-box;
-    padding: 10px 14px;
-    border-radius: 8px;
-    background: var(--normal-bg);
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-  }
-
-  // ══ Screen 2 — Calendar ════════════════════════════════════════════════════
-  &__cal {
-    flex: 1;
-    min-height: 0;
-    background: var(--normal-bg);
-  }
-
-  &__cal-head {
-    flex-shrink: 0;
-    height: 36px;
-    align-items: center;
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  &__cal-head-day {
-    flex: 1;
-    text-align: center;
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-  }
-
-  &__cal-grid {
-    flex: 1;
-    min-height: 0;
-    align-items: stretch;
-  }
-
-  &__cal-day {
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-    box-sizing: border-box;
-    padding: 8px;
-    gap: 8px;
-    border-right: 1px solid var(--border-muted);
-
-    &:last-child { border-right: none; }
-  }
-
-  &__cal-date {
-    align-self: flex-end;
-    font-family: var(--font-main);
-    font-size: 13px;
-    color: var(--normal-fg-50);
-    flex-shrink: 0;
-  }
-
-  &__cal-entries {
-    flex: 1;
-    min-height: 0;
-    gap: 8px;
-    overflow: hidden;
-  }
-
-  &__cal-entry {
-    flex-shrink: 0;
-    box-sizing: border-box;
-    gap: 6px;
-    padding: 10px;
-    border-radius: 8px;
-    background: var(--normal-bg);
-    border: 1px solid var(--border-strong);
-  }
-
-  &__cal-entry-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #b0b0b8;
-
-    &[data-status="progress"] { background: #5950ff; }
-    &[data-status="review"]   { background: #e8a13b; }
-    &[data-status="done"]     { background: #34c77b; }
-  }
-
-  &__cal-entry-title {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--normal-fg);
-    line-height: 1.3;
-  }
-
-  &__cal-entry-desc {
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: var(--normal-fg-50);
-    line-height: 1.35;
-  }
-
-  // ══ Screen 3 — Gantt ═══════════════════════════════════════════════════════
-  &__gt {
-    flex: 1;
-    min-height: 0;
-    background: var(--normal-bg);
-  }
-
-  &__gt-list {
-    width: 300px;
-    min-width: 300px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border-muted);
-  }
-
-  &__gt-list-head {
-    height: 40px;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 14px;
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  &__gt-add,
-  &__gt-delete {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--normal-fg-50);
-  }
-
-  &__gt-delete { color: var(--error, #ff453a); }
-
-  &__gt-rows,
-  &__gt-lanes {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  &__gt-row {
-    height: 34px;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 8px;
-    padding: 0 14px;
-
-    &.selected { background: var(--normal-bg-90); }
-  }
-
-  &__gt-check {
-    width: 13px;
-    height: 13px;
-    border-radius: 3px;
-    border: 1px solid var(--neutral-300);
-    flex-shrink: 0;
-  }
-
-  &__gt-caret {
-    width: 11px;
-    height: 11px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__gt-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: #93b8f0;
-
-    &[data-priority="urgent"] { background: #ef8f8b; }
-    &[data-priority="high"]   { background: #edb565; }
-    &[data-priority="low"]    { background: #54b684; }
-  }
-
-  &__gt-name {
-    flex: 1;
-    min-width: 0;
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__gt-plus {
-    font-family: var(--font-main);
-    font-size: 14px;
-    color: var(--normal-fg-50);
-    flex-shrink: 0;
-  }
-
-  &__gt-remove {
-    width: 10px;
-    height: 10px;
-    flex-shrink: 0;
-    color: var(--error, #ff453a);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__gt-chart {
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-  }
-
-  &__gt-ruler {
-    height: 40px;
-    flex-shrink: 0;
-    align-items: stretch;
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  &__gt-tick {
-    flex: 1;
-    min-width: 0;
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-    border-right: 1px solid var(--border-muted);
-  }
-
-  &__gt-month {
-    font-family: var(--font-main);
-    font-size: 10px;
-    color: var(--normal-fg-50);
-  }
-
-  &__gt-tick-day {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg);
-  }
-
-  &__gt-lanes { position: relative; }
-
-  &__gt-today {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #6058fe;
-    z-index: 2;
-  }
-
-  &__gt-lane {
-    position: relative;
-    height: 34px;
-    flex-shrink: 0;
-
-    &.selected { background: #f5f4ff; }
-  }
-
-  // The bar washes in from a pale lavender on its start date and saturates
-  // toward the end date, capped on the right only — measured off the design:
-  // #e3e1ff → #6b63ff, 20px tall in a 34px lane.
-  &__gt-bar {
-    position: absolute;
-    top: 7px;
-    height: 20px;
-    box-sizing: border-box;
-    border-radius: 2px 8px 8px 2px;
-    background: linear-gradient(90deg, #e3e1ff 0%, #6b63ff 100%);
-    z-index: 1;
-  }
-
-  // Overdue: a tinted band from the bar's end to the today line, badge at the
-  // far end. Sits under the bar so a stub band cannot cover it.
-  &__gt-late {
-    position: absolute;
-    top: 7px;
-    height: 20px;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 5px;
-    border-radius: 0 4px 4px 0;
-    background: #f4dedd;
-  }
-
-  &__gt-late-badge {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    background: #d74e49;
-    flex-shrink: 0;
-  }
-
-  &__gt-late-icon {
-    width: 9px;
-    height: 9px;
-    color: #fff;
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__gt-range {
-    position: absolute;
-    top: 6px;
-    margin-left: 8px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    background: #3c3989;
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: #fff;
-    white-space: nowrap;
-    z-index: 3;
-  }
-
-  // ══ Screen 4 — List ════════════════════════════════════════════════════════
-  &__ls {
-    flex: 1;
-    min-height: 0;
-    background: var(--normal-bg);
-  }
-
-  &__ls-body {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  &__ls-row {
-    height: 54px;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 12px;
-    padding: 0 16px;
-    border-bottom: 1px solid var(--border-muted);
-
-    &.head { height: 44px; }
-  }
-
-  &__ls-check {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    border: 1px solid var(--neutral-300);
-    flex-shrink: 0;
-  }
-
-  &__ls-cell {
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-
-    // Column widths, measured off the design's header positions.
-    &[data-col="task"]     { flex: 0 0 300px; }
-    &[data-col="priority"] { flex: 0 0 150px; }
-    &[data-col="status"]   { flex: 0 0 150px; }
-    &[data-col="date"]     { flex: 0 0 130px; }
-    &[data-col="files"]    { flex: 1 1 auto; overflow: hidden; }
-    &[data-col="assignee"] { flex: 0 0 130px; justify-content: flex-end; }
-
-    &.head {
-      display: flex !important;
-      font-family: var(--font-main);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--normal-fg-50);
-    }
-  }
-
-  &__ls-name {
-    font-family: var(--font-main);
-    font-size: 13px;
-    color: var(--normal-fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  // ══ Screen 5 — Project Health ══════════════════════════════════════════════
-  &__ph {
-    flex: 1;
-    min-height: 0;
-    gap: 14px;
-    padding: 16px;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-
-  &__ph-tiles { gap: 14px; flex-shrink: 0; }
-
-  &__ph-tile {
-    flex: 1;
-    min-width: 0;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    border-radius: 10px;
-    background: var(--normal-bg);
-    border: 1px solid var(--border-muted);
-  }
-
-  &__ph-tile-icon {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: var(--normal-bg-90);
-  }
-
-  &__ph-tile-svg {
-    width: 17px;
-    height: 17px;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__ph-tile-body { min-width: 0; gap: 2px; }
-
-  &__ph-tile-value {
-    font-family: var(--font-main);
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--normal-fg);
-    white-space: nowrap;
-  }
-
-  &__ph-tile-sub {
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: var(--normal-fg-50);
-    white-space: nowrap;
-  }
-
-  &__ph-cols {
-    flex: 1;
-    min-height: 0;
-    gap: 14px;
-  }
-
-  &__ph-main,
-  &__ph-side {
-    min-width: 0;
-    min-height: 0;
-    gap: 14px;
-  }
-
-  &__ph-main { flex: 1.4; }
-  &__ph-side { flex: 1; }
-
-  &__ph-panel {
-    flex: 1;
-    min-height: 0;
-    box-sizing: border-box;
-    gap: 12px;
-    padding: 16px;
-    border-radius: 10px;
-    background: var(--normal-bg);
-    border: 1px solid var(--border-muted);
-    overflow: hidden;
-  }
-
-  &__ph-head { gap: 3px; flex-shrink: 0; }
-
-  &__ph-title {
-    font-family: var(--font-main);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--normal-fg);
-  }
-
-  &__ph-sub { gap: 5px; flex-wrap: wrap; }
-
-  &__ph-sub-text,
-  &__ph-link {
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: var(--normal-fg-50);
-  }
-
-  &__ph-link { color: #5950ff; text-decoration: underline; }
-
-  &__ph-donut-row {
-    flex: 1;
-    min-height: 0;
-    align-items: center;
-    gap: 20px;
-  }
-
-  &__ph-donut {
-    position: relative;
-    width: 132px;
-    height: 132px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &__ph-donut-hole {
-    width: 96px;
-    height: 96px;
-    border-radius: 50%;
-    background: var(--normal-bg);
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-  }
-
-  &__ph-donut-value {
-    font-family: var(--font-main);
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--normal-fg);
-  }
-
-  &__ph-donut-label {
-    font-family: var(--font-main);
-    font-size: 10px;
-    color: var(--normal-fg-50);
-    text-align: center;
-  }
-
-  &__ph-legend { flex: 1; min-width: 0; gap: 10px; }
-
-  &__ph-legend-row { align-items: center; gap: 8px; }
-
-  &__ph-legend-swatch {
-    width: 11px;
-    height: 11px;
-    border-radius: 3px;
-    flex-shrink: 0;
-  }
-
-  &__ph-legend-label {
-    flex: 1;
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg);
-  }
-
-  &__ph-legend-pct {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-  }
-
-  &__ph-bars {
-    flex: 1;
-    min-height: 0;
-    align-items: flex-end;
     gap: 18px;
-    padding-top: 6px;
   }
 
-  &__ph-bar-col {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    justify-content: flex-end;
-    align-items: center;
+  &__nt-field {
+    width: 100%;
     gap: 8px;
   }
 
-  &__ph-bar {
+  &__nt-label {
+    @include drumee.typo($size: 14px, $line: 1.3);
+    font-weight: 500;
+    color: var(--normal-fg);
+  }
+
+  &__nt-hint {
+    @include drumee.typo($size: 12px, $line: 1.3);
+    font-weight: 400;
+    color: var(--normal-fg-50);
+  }
+
+  &__nt-entry {
     width: 100%;
-    border-radius: 6px 6px 0 0;
-    background: #e9e8ff;
-    flex-shrink: 0;
-  }
-
-  &__ph-bar-label { align-items: center; gap: 5px; flex-shrink: 0; }
-
-  &__ph-bar-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #93b8f0;
-
-    &[data-priority="urgent"] { background: #ef8f8b; }
-    &[data-priority="high"]   { background: #edb565; }
-    &[data-priority="low"]    { background: #54b684; }
-  }
-
-  &__ph-bar-name {
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: var(--normal-fg-50);
-  }
-
-  &__ph-workload,
-  &__ph-activity {
-    flex: 1;
-    min-height: 0;
-    gap: 10px;
-    overflow: hidden;
-  }
-
-  &__ph-member { align-items: center; gap: 10px; flex-shrink: 0; }
-
-  &__ph-member-name {
-    width: 74px;
-    flex-shrink: 0;
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg);
-  }
-
-  &__ph-member-track {
-    flex: 1;
-    height: 14px;
-    border-radius: 4px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 8px 0 14px;
+    border-radius: 10px;
     background: var(--normal-bg-90);
-    overflow: hidden;
   }
 
-  &__ph-member-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: #e0dfff;
+  &__nt-entry-text {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 400;
+    color: var(--placeholder-fg);
   }
 
-  &__ph-act-row { align-items: flex-start; gap: 10px; flex-shrink: 0; }
+  &__nt-upload {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--primary-purple-50);
+  }
 
-  &__ph-act-body { min-width: 0; gap: 2px; }
+  &__nt-upload-ico {
+    width: 14px;
+    height: 14px;
+    color: var(--gray-white, #fff);
 
-  &__ph-act-line { align-items: center; gap: 5px; flex-wrap: wrap; }
+    svg { width: 100%; height: 100%; }
+  }
 
-  &__ph-act-who {
-    font-family: var(--font-main);
-    font-size: 12px;
+  &__nt-upload-label {
+    @include drumee.typo($size: 13px, $line: 1.2);
     font-weight: 600;
+    color: var(--gray-white, #fff);
+  }
+
+  &__nt-chips {
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__nt-chip {
+    @include drumee.typo($size: 13px, $line: 1.2);
+    font-weight: 500;
     color: var(--normal-fg);
+    padding: 8px 14px;
+    border-radius: 99px;
+    border: 1px solid var(--border-default);
+
+    &[data-on="1"] {
+      border-color: var(--primary-purple-40);
+      color: var(--primary-purple-50);
+    }
   }
 
-  &__ph-act-what {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
+  &__nt-submit {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 8px;
+    padding: 14px 0;
+    border-radius: 10px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+    background: var(--primary-purple-50);
   }
-
-  &__ph-act-task {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: #5950ff;
-  }
-
-  &__ph-act-when {
-    font-family: var(--font-main);
-    font-size: 10px;
-    color: var(--normal-fg-50);
-  }
-
-  // ── tooltip anchor ──────────────────────────────────────────────────────────
-  &__tooltip-anchor {
-    top: 26px;
-    left: -300px;
-  }
-
 }

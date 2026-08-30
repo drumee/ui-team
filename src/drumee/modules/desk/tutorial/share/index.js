@@ -1,49 +1,26 @@
-const { modeScreen, secureScreen, linkScreen } = require('./skeleton');
-const { stepBadge, isLastScreen, entryScreen } = require('../tours');
+const skeleton = require('./skeleton');
+const { BLOCKS } = require('./skeleton/panel');
+const { stepProgress, isLastScreen, entryScreen } = require('../tours');
 
 /**
- * Step 5 — secure share. Three internal screens behind ONE parent step, the
- * same shape as tutorial_folder and tutorial_task: navigation stays inside this
- * widget until the last screen, and only then does it hand back to
- * tutorial_main, which ends the tour.
+ * The `share` tour — six screens of the Secure Share panel.
+ * Figma 148:41197, 148:41957, 148:42521, 148:43080, 148:43639, 148:44198.
  *
- * Figma 3314:86712 (recipient mode), 3314:86722 (secure share set up),
- * 3314:140345 (link issued).
+ * Every screen is the same panel with one block ringed; the callout says what
+ * that block is for. The frames badge them "STEP 1/6" … "STEP 6/6" in a pill —
+ * which is now the callout's default for every tour, so nothing is asked for
+ * here.
  *
- * `direction: 'east'` throughout — the design puts the card to the LEFT of the
- * panel with the connector on the card's right edge.
+ * `direction: 'east'` throughout: the design puts the card to the LEFT of the
+ * panel with the beak on its right edge, which is what reaching east produces.
  */
 const SCREENS = [
-  {
-    skeleton: modeScreen,
-    // The recipient-mode block, where the design's connector lands.
-    target: 'recipient',
-    direction: 'east',
-    badge: {
-      title: 'Secure share',
-      desc: 'Click share and choose recipient mode.',
-    },
-  },
-  {
-    skeleton: secureScreen,
-    // Secure Share and everything it unfolds: email restriction and password.
-    target: 'secure',
-    direction: 'east',
-    badge: {
-      title: 'Secure share',
-      desc: 'Choose secure share then set up restricted email and password',
-    },
-  },
-  {
-    skeleton: linkScreen,
-    // Expiry, Get link, and the issued link with its Revoke control.
-    target: 'link',
-    direction: 'east',
-    badge: {
-      title: 'Secure share',
-      desc: 'Share to external guest and control the access list',
-    },
-  },
+  { lit: BLOCKS.RECIPIENT, desc: () => LOCALE.TUTORIAL_SHARE_RECIPIENT },
+  { lit: BLOCKS.ACCESS, desc: () => LOCALE.TUTORIAL_SHARE_ACCESS },
+  { lit: BLOCKS.EMAIL, desc: () => LOCALE.TUTORIAL_SHARE_EMAIL },
+  { lit: BLOCKS.PASSWORD, desc: () => LOCALE.TUTORIAL_SHARE_PASSWORD },
+  { lit: BLOCKS.EXPIRY, desc: () => LOCALE.TUTORIAL_SHARE_EXPIRY },
+  { lit: BLOCKS.NOTIFY, desc: () => LOCALE.TUTORIAL_SHARE_NOTIFY },
 ];
 
 class __tutorial_share extends LetcBox {
@@ -56,83 +33,46 @@ class __tutorial_share extends LetcBox {
   }
 
   async onDomRefresh() {
-    // Re-entered via Back from Step 6: resume on the screen we left off on.
+    // Re-entered via Back from a later step: resume where we left off.
     this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 
   onPartReady(child, pn) {
-    switch (pn) {
-      default:
-        if (super.onPartReady) super.onPartReady(child, pn);
-    }
-  }
-
-  /** @returns {Element|null} the panel's scrolling body, when it is in the DOM */
-  _panelBody() {
-    if (!this.el || typeof this.el.querySelector !== 'function') return null;
-    return this.el.querySelector(`.${this.fig.family}__panel-body`);
+    if (super.onPartReady) super.onPartReady(child, pn);
   }
 
   /**
-   * Scroll the panel so the screen's block sits at the top, which is what the
-   * design shows: the panel is taller than the window, and each screen brings
-   * its own section into view rather than pointing at something half off the
-   * bottom.
+   * Scroll the panel so the ringed block is in view.
    *
-   * Done by measuring rather than by tabulated offsets, so it stays right as
-   * the panel's contents change between screens.
+   * The panel is taller than the window and the last two screens ring blocks
+   * below the fold — the design shows it scrolled for exactly those. Measured
+   * rather than tabulated per screen, so it stays right as the panel's
+   * contents change.
    *
-   * @param {Element} el the block to bring up
+   * @param {Element} el the block to bring into view
    */
-  _scrollPanelTo(el) {
-    const body = this._panelBody();
-    if (!body || !el || typeof el.getBoundingClientRect !== 'function') return;
-    const b = body.getBoundingClientRect();
+  async _scrollTo(el) {
+    const body = await this.ensurePart('sp-body');
+    const box = body && body.el;
+    if (!box || !el || typeof el.getBoundingClientRect !== 'function') return;
+    const b = box.getBoundingClientRect();
     const t = el.getBoundingClientRect();
     if (!b.height || !t.height) return;
-    body.scrollTop += t.top - b.top;
+    // Leave a margin above the block rather than pinning it to the very top,
+    // so the ring does not sit flush against the panel's edge.
+    const MARGIN = 24;
+    const delta = t.top - b.top - MARGIN;
+    if (delta > 0 || t.bottom > b.bottom) box.scrollTop += delta;
   }
 
   /**
-   * Radius that keeps the whole share panel inside the lit area.
+   * Render the current screen and move the callout onto its block.
    *
-   * The hole is centred on the screen's block and is fully clear out to 55% of
-   * its radius (see spotlight/skin). COVERAGE puts the panel's furthest corner
-   * at 72% of the radius instead — the panel reads top to bottom while the rest
-   * of the window still fades. Same treatment the tracker step gives its view
-   * switcher.
-   *
-   * @param {Element} el the spotlight target
-   * @returns {Number|null} null when the panel cannot be measured
-   */
-  _holeRadius(el) {
-    const COVERAGE = 0.72;
-    if (!el || typeof el.getBoundingClientRect !== 'function') return null;
-    if (!this.el || typeof this.el.querySelector !== 'function') return null;
-    const p = this.el.querySelector(`.${this.fig.family}__panel`);
-    if (!p) return null;
-    const t = el.getBoundingClientRect();
-    const r = p.getBoundingClientRect();
-    if (!t.width || !r.width) return null;
-    const cx = t.left + t.width / 2;
-    const cy = t.top + t.height / 2;
-    const far = Math.max(
-      Math.hypot(r.left - cx, r.top - cy),
-      Math.hypot(r.right - cx, r.top - cy),
-      Math.hypot(r.left - cx, r.bottom - cy),
-      Math.hypot(r.right - cx, r.bottom - cy),
-    );
-    return Math.round(far / COVERAGE);
-  }
-
-  /**
-   * Render the current screen and move the spotlight onto its target.
-   *
-   * The part is awaited rather than read straight after `feed`, because the
-   * body is rebuilt on every screen change and only answers once the new DOM
-   * has landed. The panel is scrolled BEFORE the spotlight is told about the
-   * target, so it measures the block where it has come to rest.
+   * The parts are awaited rather than read straight after `feed`, because the
+   * panel is rebuilt on every screen change (the ring is baked into the tree)
+   * and only answers once the new DOM has landed. The scroll happens BEFORE
+   * the callout is told about the block, so it measures where it came to rest.
    */
   async _showScreen() {
     const s = SCREENS[this._screenIndex];
@@ -140,24 +80,29 @@ class __tutorial_share extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(s.skeleton(this));
-    const target = await this.ensurePart(s.target);
-    this._scrollPanelTo(target.el);
+    this.feed(skeleton(this, s));
+    const [panel, block] = await Promise.all([
+      this.ensurePart('sp-panel'),
+      this.ensurePart(s.lit),
+    ]);
+    await this._scrollTo(block && block.el);
+
     this.triggerHandlers({
       service: 'spotlight:focus',
-      target: target.el,
-      // Numbering, Back and Done all come from the tour: "STEP 1/3 … 3/3"
-      // standing alone, "STEP 5/6" throughout as step five of the full one.
+      // The whole panel comes out of the scrim; the ring and the beak mark the
+      // block inside it.
+      target: panel.el,
+      anchor: block && block.el,
       tooltip: {
-        ...s.badge,
-        badge_text: stepBadge(this, this._screenIndex),
-        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-        variant: 'figma',
+        title: LOCALE.SECURE_SHARE,
+        desc: s.desc(),
+        ...stepProgress(this, this._screenIndex),
+        // The frames show no Back on any of the six — the pill carries the
+        // position and the panel is the thing being read.
+        hide_back: true,
         done: isLastScreen(this, this._screenIndex, SCREENS.length),
       },
-      direction: s.direction,
-      // Sized so the whole panel stays lit; s.radius is the fallback.
-      radius: this._holeRadius(target.el) || s.radius,
+      direction: 'east',
       owner: this,
     });
   }
@@ -166,16 +111,18 @@ class __tutorial_share extends LetcBox {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        // Only the last screen hands the tour back to tutorial_main; the bare
-        // triggerHandlers() lets it read this widget's own service attribute.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers();
+        // Only the last screen hands the tour back to tutorial_main, and it
+        // NAMES the service. The step widget carries no `service` of its own
+        // any more — see _buildWidgets in ../index.js.
+        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':
-        // Back off the first screen leaves Step 5 entirely (→ Step 4).
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });
         this._screenIndex = this._screenIndex - 1;
         return this._showScreen();
+      default:
+        if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
   }
 }

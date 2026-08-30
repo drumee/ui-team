@@ -1,77 +1,150 @@
+@use 'mixins/drumee';
 
-// ── Shared tutorial badge (tutorial__s1-*) ────────────────────────────────
-// The toolkit uses ui.fig.group ("tutorial") as the BEM root for badge
-// elements so all tutorial widgets share these rules.
+// ── The tutorial callout (tutorial__bubble-*) ─────────────────────────────
+// Drumee 2.0, Figma canvas 129:13815. A white speech bubble with a beak on
+// the edge facing its target. The toolkit uses ui.fig.group ("tutorial") as
+// the BEM root so every step widget shares these rules.
+//
+// Metrics measured off the 1:1 frames: card 296px wide, 24px insets, 12px
+// radius, the 1px/11px ambient shadow the design applies to every floating
+// surface. Dashes 24x4. Back/Next are equal halves of the footer.
+
+// Half-diagonal of the rotated square that forms the tail.
+$beak: 9px;
+// Also in spotlight/index.js as BEAK_INSET — it caps how far the card may be
+// nudged before the tail would leave it.
+$beak-inset: 26px;
+
+// How far the card has been pushed back inside the tour, set by the spotlight
+// when the anchor put it over an edge (spotlight/index.js _keepInView). It is
+// composed into the placement transform below rather than replacing it, and
+// the beak is offset by the SAME amount in the opposite direction so the tail
+// stays on the anchor while the card moves.
+$nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
+
 .tutorial {
-  // ── Step tooltip ──────────────────────────────────────────────────────────
-  &__s1-tooltip {
+  &__bubble-card {
     position: absolute;
-    transform: translateX(-50%);
-    align-items: center;
+    box-sizing: border-box;
+    width: 296px;
+    padding: 24px;
+    gap: 12px;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     pointer-events: all;
-    // Above any step's content, not merely above the vignette it sits on. The
-    // callout used to win only because the spotlight layer happens to be the
-    // last child of the tutorial layout; a step that declares a stacking order
-    // of its own (the tracker window does — see task/skin __main) would
-    // otherwise be able to draw over the card the user is reading.
+    // Above any step's own content, not merely above the scrim it sits on.
     z-index: 10010;
 
-    &[data-direction="east"],
-    &[data-direction="west"] {
-      transform: translateY(-50%);
+    // ── Beak ──────────────────────────────────────────────────────────────
+    // A square rotated 45deg rather than a border triangle: it inherits the
+    // card's background, so it reads as part of the bubble in both themes
+    // instead of a flat wedge that has to be recoloured per theme.
+    //
+    // Behind the card, not in front of it. A white tail on a pale background
+    // with no shadow of its own is invisible — which is exactly how this first
+    // rendered. Sent behind, it can carry the card's shadow: the inner half is
+    // covered by the card's own background and only the outer half shows, with
+    // the edge the rest of the bubble has. The card opens a stacking context
+    // (z-index above), so `z-index: -1` stays inside it and cannot fall behind
+    // the scrim.
+    &::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      width: $beak * 2;
+      height: $beak * 2;
+      background: inherit;
+      box-shadow: inherit;
+      transform: rotate(45deg);
+      border-radius: 2px;
     }
   }
 
-  &__s1-connector {
-    align-items: center;
+  // Bare bubble: the design's one bold line, with the shared footer under it.
+  // Same width as the standard card — the footer is two equal buttons, and a
+  // hug-to-content width would size those off the length of the sentence.
+  &__bubble-card--bare {
+    padding: 20px 24px;
+    gap: 16px;
   }
 
-  &__s1-connector-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #7b6ef0;
-    flex-shrink: 0;
+  &__bubble-text {
+    @include drumee.typo($size: 18px, $line: 1.35);
+    font-weight: 600;
+    color: var(--normal-fg);
   }
 
-  &__s1-connector-line {
-    width: 2px;
-    height: 22px;
-    background: #7b6ef0;
-    flex-shrink: 0;
+  // A card that had to travel further than its own tail could follow — see
+  // _keepInView. The beak would be pointing somewhere the card no longer is.
+  &[data-tail="off"]::after { display: none; }
 
-    &[data-direction="east"],
-    &[data-direction="west"] {
-      width: 22px;
-      height: 2px;
-    }
+  // ── Placement + beak side ────────────────────────────────────────────────
+  // `direction` is the way the callout REACHES OUT, so the beak sits on the
+  // opposite edge to the travel: reaching north (card below the target) puts
+  // the beak on the card's top edge.
+  //
+  // `beak` slides the tail along that edge — and the card slides with it, so
+  // the tail stays on the anchor point rather than drifting off it.
+  &__bubble-card[data-direction="north"],
+  &__bubble-card[data-direction="south"] {
+    &[data-beak="center"] { transform: translateX(-50%) $nudge; }
+    &[data-beak="start"]  { transform: translateX(-#{$beak-inset}) $nudge; }
+    &[data-beak="end"]    { transform: translateX(calc(-100% + #{$beak-inset})) $nudge; }
+
+    // Half the rotated square pokes out; the other half hides behind the card.
+    // The nudge is subtracted so the tail holds its place on the anchor.
+    &::after { margin-left: calc(-1 * #{$beak} - var(--bubble-nudge-x, 0px)); }
+
+    &[data-beak="center"]::after { left: 50%; }
+    &[data-beak="start"]::after  { left: $beak-inset; }
+    &[data-beak="end"]::after    { left: auto; right: $beak-inset - $beak; }
   }
 
-  &__s1-card {
-    width: 284px;
-    background: #f4f4f8;
-    border-radius: 16px;
-    padding: 24px;
-    gap: 14px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
-    border: 1px solid var(--border-muted);
+  &__bubble-card[data-direction="east"],
+  &__bubble-card[data-direction="west"] {
+    &[data-beak="center"] { transform: translateY(-50%) $nudge; }
+    &[data-beak="start"]  { transform: translateY(-#{$beak-inset}) $nudge; }
+    &[data-beak="end"]    { transform: translateY(calc(-100% + #{$beak-inset})) $nudge; }
+
+    &::after { margin-top: calc(-1 * #{$beak} - var(--bubble-nudge-y, 0px)); }
+
+    &[data-beak="center"]::after { top: 50%; }
+    &[data-beak="start"]::after  { top: $beak-inset; }
+    &[data-beak="end"]::after    { top: auto; bottom: $beak-inset - $beak; }
   }
 
-  // Header: step pill left, skip right. The pill keeps align-self:flex-start so
-  // it stays pill-shaped; the row is what spans the card.
-  &__s1-header {
+  // Pulled out by half the square so exactly half of it shows and the other
+  // half hides behind the card. `0` here — which is what this had — parks the
+  // whole square inside the card and the callout renders with no tail at all.
+  &__bubble-card[data-direction="north"]::after { top: -$beak; }
+  &__bubble-card[data-direction="south"]::after { bottom: -$beak; }
+  // Reaching east = the card is to the target's LEFT, so the tail is on its
+  // right edge.
+  &__bubble-card[data-direction="east"]::after { right: -$beak; }
+  &__bubble-card[data-direction="west"]::after { left: -$beak; }
+
+  // ── Header: dashes left, skip right ──────────────────────────────────────
+  &__bubble-header {
     align-items: center;
     justify-content: space-between;
     width: 100%;
     gap: 8px;
   }
 
-  &__s1-skip {
+  // Holds the row open when a screen shows no dashes, so the skip control
+  // stays pinned to the right edge instead of sliding to the left one.
+  &__bubble-dashes-spacer {
+    flex: 1 1 auto;
+    height: 4px;
+  }
+
+  &__bubble-skip {
     width: 20px;
     height: 20px;
     flex: 0 0 auto;
     cursor: pointer;
-    opacity: 0.45;
+    opacity: 0.4;
     transition: opacity 0.15s ease;
 
     &:hover,
@@ -80,98 +153,120 @@
     }
 
     svg {
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
       fill: var(--normal-fg);
     }
   }
 
-  &__s1-badge {
+  // ── Progress: the "STEP n/m" pill ────────────────────────────────────────
+  // The share flow's form (148:41197 onward): a dot and an uppercase count in
+  // a tinted pill, sitting at the card's top-left.
+  &__bubble-pill {
     align-items: center;
-    gap: 6px;
-    background: #e8e5fa;
+    gap: 8px;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 4px 10px;
     border-radius: 99px;
-    padding: 4px 10px 4px 8px;
+    background: var(--primary-purple-10);
     align-self: flex-start;
   }
 
-  &__s1-badge-dot {
+  &__bubble-pill-dot {
     width: 7px;
     height: 7px;
+    flex: 0 0 auto;
     border-radius: 50%;
-    background: #7b6ef0;
-    flex-shrink: 0;
+    background: var(--primary-purple-50);
   }
 
-  &__s1-badge-text {
-    font-family: var(--font-main);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #7b6ef0;
+  &__bubble-pill-text {
+    @include drumee.typo($size: 11px, $line: 1.2, $letter: 0.04em);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-purple-50);
   }
 
-  &__s1-title {
-    font-family: var(--font-main);
-    font-size: 20px;
-    font-weight: 700;
-    color: #1a1a2e;
-    line-height: 1.25;
-  }
-
-  &__s1-desc {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 400;
-    color: #5a5a72;
-    line-height: 1.55;
-  }
-
-  &__s1-footer {
+  // ── Progress: dashes ─────────────────────────────────────────────────────
+  &__bubble-dashes {
     align-items: center;
-    justify-content: space-between;
+    gap: 6px;
+  }
+
+  &__bubble-dash {
+    width: 24px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--normal-bg-80);
+    flex: 0 0 auto;
+
+    &[data-on="1"] {
+      background: var(--primary-purple-50);
+    }
+  }
+
+  &__bubble-title {
+    @include drumee.typo($size: 20px, $line: 1.2);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__bubble-desc {
+    @include drumee.typo($size: 14px, $line: 1.45);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  &__bubble-footer {
+    align-items: center;
+    gap: 12px;
     margin-top: 8px;
   }
 
-  &__s1-back {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    color: #5a5a72;
+  // Back and Next are equal halves. A lone Next (the migrate screens) spans
+  // the footer, which is what the design shows there.
+  &__bubble-back,
+  &__bubble-next {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    flex: 1 1 0;
+    box-sizing: border-box;
+    padding: 11px 16px;
+    border-radius: 8px;
+    // See the note on __wsd-submit: a Note's copy sits in an inner block, so
+    // the box needs centring too, not just the text.
+    text-align: center;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-
-    &:hover {
-      color: #1a1a2e;
-    }
+    transition: background-color 0.15s ease;
   }
 
-  &__s1-next {
-    font-family: var(--font-main);
-    font-size: 13px;
+  &__bubble-back {
+    font-weight: 500;
+    color: var(--normal-fg);
+    background: var(--normal-bg-90);
+
+    &:hover { background: var(--normal-bg-80); }
+  }
+
+  &__bubble-next {
     font-weight: 600;
-    color: #fff;
-    background: #7b6ef0;
-    border-radius: 8px;
-    padding: 8px 18px;
-    cursor: pointer;
-    transition: background 0.15s ease;
+    color: var(--reverse-fg);
+    background: var(--primary-purple-50);
     // The spinner below is centred on this box.
     position: relative;
 
-    &:hover {
-      background: #6558d6;
-    }
+    &:hover { background: var(--primary-purple-40); }
 
     // Set by spotlight.busy() while the tour's closing write is in flight.
-    // Only the last screen's button can reach this state — it is the only one
-    // that waits on anything.
+    // Only the last screen's button can reach this state.
     &.loading {
-      // Not just cosmetic: the host also guards re-entry, but taking the
-      // button out of the event stream is what stops the press registering at
-      // all rather than being swallowed one frame later.
+      // Not just cosmetic: taking the button out of the event stream is what
+      // stops a second press registering at all.
       pointer-events: none;
-      // The label is hidden rather than replaced so the button keeps its width
-      // and the footer does not reflow under the user's cursor.
+      // The label is hidden rather than replaced so the button keeps its
+      // width and the footer does not reflow under the user's cursor.
       color: transparent;
 
       &::after {
@@ -188,120 +283,79 @@
         animation: tutorial-spin 0.6s linear infinite;
       }
 
-      // A spinner that cannot spin still has to read as "working", so it stays
-      // as a static ring rather than disappearing.
+      // A spinner that cannot spin still has to read as "working", so it
+      // stays as a static ring rather than disappearing.
       @media (prefers-reduced-motion: reduce) {
         &::after { animation: none; }
       }
     }
   }
 
-  &__tooltip-anchor {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    overflow: visible;
-    width: 0;
-    height: 0;
+  // ── Dimming inside a lit surface ─────────────────────────────────────────
+  // The design does not only dim the desk behind the callout — inside the lit
+  // surface it holds back the rows the screen is not about (the create-
+  // workspace dialog lights the name field, then the type rows, then Create).
+  // Steps mark those with data-dim, so the rule lives here once rather than
+  // in each step's skin.
+  [data-dim="1"] {
+    opacity: 0.35;
+    transition: opacity 220ms ease;
   }
-
-  // ── Redesigned callout card (opt-in: tooltipBadge({variant:'figma'})) ──────
-  // Measured from the Step 2 designs (Figma 5:75074 / 3202:3732 / 3202:76934):
-  // card 320×291 with 24px insets, badge at y24, title at y64, footer pinned
-  // at y227, connector 40px from the card edge to the target.
-  //
-  // Scoped to the variant so the steps that were not part of that redesign
-  // keep rendering the card above, unchanged.
-  &__s1-tooltip[data-variant="figma"] {
-
-    .tutorial__s1-card {
-      width: 320px;
-      box-sizing: border-box;
-      min-height: 291px;
-      background: #f2f2f7;
-      border: none;
-      border-radius: 16px;
-      padding: 24px 24px 28px;
-      gap: 16px;
-      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    }
-
-    .tutorial__s1-badge {
-      height: 24px;
-      box-sizing: border-box;
-      gap: 8px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: rgba(89, 80, 255, 0.1);
-    }
-
-    .tutorial__s1-badge-dot {
-      width: 8px;
-      height: 8px;
-      background: #433cc5;
-    }
-
-    .tutorial__s1-badge-text {
-      font-family: "Geist Mono", monospace;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.48px;
-      line-height: 1.4;
-      text-transform: uppercase;
-      color: #433cc5;
-    }
-
-    .tutorial__s1-title {
-      font-size: 20px;
-      font-weight: 600;
-      line-height: 1.1;
-      color: #0b0a21;
-    }
-
-    .tutorial__s1-desc {
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 1.4;
-      color: #65656c;
-    }
-
-    // Only the bottom-pinning is variant-specific — the card is a fixed 291px
-    // and the footer sits on its bottom inset. Back and Next themselves are
-    // deliberately NOT restyled here: they inherit the shared rules above so
-    // the buttons read the same on every step of the tour.
-    .tutorial__s1-footer {
-      margin-top: auto;
-    }
-
-    // 40px from the card edge to the target: 12px GAP (spotlight anchorFor)
-    // + 20px line + 8px dot.
-    .tutorial__s1-connector-dot {
-      width: 8px;
-      height: 8px;
-      background: #b1adff;
-    }
-
-    .tutorial__s1-connector-line {
-      background: #b1adff;
-
-      &[data-direction="east"],
-      &[data-direction="west"] {
-        width: 20px;
-        height: 2px;
-      }
-
-      &[data-direction="north"],
-      &[data-direction="south"] {
-        width: 2px;
-        height: 20px;
-      }
-    }
-  }
-
 }
+
 // Outside .tutorial: @keyframes is not scoped by the selector it sits under,
 // so nesting it there would only make the name harder to find.
 @keyframes tutorial-spin {
   to { transform: rotate(360deg); }
+}
+
+// ── Size tiers ───────────────────────────────────────────────────────────────
+//
+// Stamped on the tour root by _applySize (tutorial/index.js).
+
+// NARROW: the card keeps its anchored placement — there is still room to point
+// at things — but stops being wider than the space it has to fit in.
+.tutorial-main[data-size="narrow"] .tutorial__bubble-card {
+  width: 268px;
+  padding: 18px;
+}
+
+// MOBILE: a bottom sheet, not a pointer.
+//
+// 296px of card anchored to a target on a 390px screen has nowhere to go: it
+// covers the thing it is describing, and _keepInView can only push it back
+// inside by moving it over something else. A sheet pinned to the bottom is the
+// pattern the platform already uses for this, and it keeps Back and Next in the
+// one place a thumb reaches — which is what the last two rounds of this bug
+// were about.
+//
+// !important because anchorFor writes left/top/right/bottom inline, per screen,
+// as the whole mechanism of pointing at something. There is no specificity that
+// beats an inline style, and the alternative — teaching the JS about tiers and
+// branching the placement there — would put the same decision in two places and
+// let them disagree. The card is the one element in the tour whose position is
+// worth overriding this way.
+.tutorial-main[data-size="mobile"] .tutorial__bubble-card {
+  left: 12px !important;
+  right: 12px !important;
+  top: auto !important;
+  bottom: 12px !important;
+  width: auto !important;
+  max-width: none !important;
+  // Placement transforms carry the beak offset and the keep-in-view nudge; a
+  // sheet is where it is put.
+  transform: none !important;
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.18);
+
+  // The tail pointed at an anchor the sheet no longer sits beside.
+  &::after { display: none; }
+}
+
+// SHORT: the card is competing with the pane for height, so it gives up padding
+// before it gives up its buttons.
+.tutorial-main[data-short="1"] .tutorial__bubble-card {
+  padding: 16px;
+  gap: 8px;
 }

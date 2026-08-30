@@ -1,9 +1,44 @@
 require('./skin');
 const Tours = require('libs/tutorial-tours');
-const { tour, flaggedIds, BADGE_BY_FLOW } = require('./tours');
-const BACKDROPS = require('./skeleton/toolkit/backdrops');
+const { tour, flaggedIds, stepChrome } = require('./tours');
 
 const SVC_OPT = { async: 1 };
+
+// ── Responsive tiers ─────────────────────────────────────────────────────────
+//
+// The tour draws a MOCK of the product, so it cannot simply reflow the way a
+// document would: at 1440 it has to read as the real desk, and at 390 it has to
+// read as something a thumb can drive. Four tiers rather than a continuum,
+// because each one is a different composition, not the same one squeezed.
+//
+// Stamped as an attribute on the widget root instead of being answered by media
+// queries in each skin, for three reasons: the skins are keyed on fig.family
+// and fig.group and would each need the same breakpoints repeated; the JS needs
+// the same answer the CSS has (the carousel's slide distance, below); and a
+// tour opened in a narrow WINDOW on a big screen is the same problem as a phone
+// — a media query on the device would miss it.
+//
+// Widths are the viewport's. The boundaries are where this particular layout
+// breaks, measured against the mock rather than borrowed from a framework:
+// below 1366 the empty-state hero and its carousel stop both fitting at full
+// size, below 1024 they stop sharing a row at all, and below 760 the rail and
+// the panes have to give up their fixed widths.
+const SIZE_TIERS = [
+  { id: 'mobile', max: 759 },
+  { id: 'narrow', max: 1023 },
+  { id: 'compact', max: 1365 },
+  { id: 'wide', max: Infinity },
+];
+
+// Height is its own axis, and the one that aspect ratio actually moves: a 21:9
+// window and a rotated phone are both SHORT, and shortness is what pushes a
+// callout off the bottom of the tour. Kept separate from the width tier so the
+// two compose instead of multiplying into eight cases.
+const SHORT_HEIGHT = 720;
+
+// Resize settles before anything is re-measured. Long enough to sit out a drag
+// of the window edge, short enough that a rotation feels immediate.
+const REFLOW_MS = 160;
 
 // Every step widget is a bare `import()` in seeds.js, so each one is its own
 // webpack chunk with no prefetch hint. Left alone, pressing Next is the moment
@@ -47,12 +82,6 @@ class tutorial_main extends LetcBox {
   /**
    * Turn a registry entry into the feed payloads _widgetAt hands out.
    *
-   * A step is either one widget, or an array whose LAST entry is the
-   * interactive widget and whose earlier entries are inert backdrop. That shape
-   * is load-bearing: _widgetAt merges `enter_at_last` onto the last entry, and
-   * steps that run several internal screens read it to resume where the user
-   * left off.
-   *
    * Everything a step needs to know about its position in the tour is stamped
    * here as model attributes, so the step widgets stay ignorant of which tour
    * they are in.
@@ -62,40 +91,42 @@ class tutorial_main extends LetcBox {
    */
   _buildWidgets(t) {
     const steps = t.steps || [];
-    // 'flow' counts every screen in the tour, so the host has to know the total
-    // and where each step starts — a step widget can see its own screens and
-    // nothing else. Computed once here rather than derived per screen.
+    // Progress counts every screen in the tour, so the host has to know the
+    // total and where each step starts — a step widget can see its own screens
+    // and nothing else. Computed once here rather than derived per screen.
     const total = steps.reduce((n, s) => n + (~~s.screens || 1), 0);
     const offsets = [];
     steps.reduce((n, s) => (offsets.push(n), n + (~~s.screens || 1)), 0);
 
-    const mode = t.badge === BADGE_BY_FLOW ? BADGE_BY_FLOW : 'steps';
-    if (t.badge && t.badge !== BADGE_BY_FLOW && t.badge !== 'steps') {
-      this.warn && this.warn(
-        `[tutorial] tour "${t.id}" has an unknown badge mode "${t.badge}"; ` +
-        `falling back to step numbering`
-      );
-    }
-
     return steps.map((step, i) => {
       const widget = {
         kind: step.kind,
-        service: 'next-step',
+        // NO `service` here, deliberately. ui-core binds an onclick to every
+        // widget that is not `active: 0` and dispatches its own `service` to
+        // its uiHandler (letc.js __handleClick -> triggerHandlers), and the
+        // step widget's element is the whole pane. With `service: 'next-step'`
+        // on it, every part of a step's scenery was a button that advanced the
+        // WHOLE STEP: one stray click on the chat pane at screen 2 of 5 jumped
+        // the tour to the meeting step, so screens 3, 4 and 5 — steps 9, 10
+        // and 11 of the full tour — never appeared.
+        //
+        // The inner scenery is all `active: 0`, which means it has no click
+        // handler of its own and the click bubbles up to here, so making the
+        // pane inert is not enough on its own; the wrapper must not name a
+        // service. `active: 0` is not the fix either — it would gag
+        // triggerHandlers (letc.js:843) and with it the step's own handoff.
+        //
+        // The handoff is explicit instead: each step's last screen calls
+        // triggerHandlers({ service: 'next-step' }). A stray click now reaches
+        // onUiEvent with no service at all and falls through to `default`.
         uiHandler: [this],
-        badge_mode: mode,
-        // Used by 'steps' mode, and as the fallback if a step somehow renders
-        // before its flow numbers land.
-        badge_text: (LOCALE.TUTORIAL_STEP || 'STEP {0}/{1}').format(i + 1, steps.length),
         screen_count: step.screens || 1,
         screen_offset: offsets[i],
         tour_screens: total,
         is_first: i === 0,
         is_last: i === steps.length - 1,
       };
-      const backdrop = (step.backdrop || [])
-        .map((name) => (BACKDROPS[name] ? BACKDROPS[name](this) : null))
-        .filter(Boolean);
-      return backdrop.length ? [...backdrop, widget] : widget;
+      return widget;
     });
   }
 
@@ -122,6 +153,8 @@ class tutorial_main extends LetcBox {
       Tours.markSeen(this._tour.flag, this);
     }
     this._bindEscape();
+    this._applySize();
+    this._bindResize();
     this.feed(require('./skeleton')(this));
     // Feed the FIRST step from the registry, exactly as _nextStep feeds every
     // later one. The shell used to hardcode `tutorial_workspace` into its step
@@ -129,6 +162,7 @@ class tutorial_main extends LetcBox {
     // tour had been asked for — the registry decided steps 2..n and the
     // skeleton silently decided step 1.
     const entry = this.mget('enter_at_screen');
+    this._applyChrome();
     this.ensurePart(_a.content).then((p) =>
       p.feed(this._widgetAt(this._stepIndex, entry ? { enter_at_screen: entry } : {})),
     );
@@ -153,27 +187,102 @@ class tutorial_main extends LetcBox {
   }
 
   /**
-   * The feed payload for a step, optionally with extra attributes merged into
-   * the widget that OWNS the step.
+   * The feed payload for a step, with extra attributes merged in.
    *
-   * A step is either a single widget or an array whose LAST entry is the
-   * interactive widget and whose earlier entries are inert faded backdrop
-   * (see `_widgets`). `enter_at_last` therefore has to land on the last entry,
-   * not on the array — steps that run several internal screens (workspace,
-   * folder) read it to resume where they left off.
+   * A step used to be able to be an ARRAY — inert backdrop entries followed by
+   * the interactive widget — so that several steps could share one drawing of
+   * the Files pane. 2.0 removed the need: every step's pane is part of what
+   * that step teaches (migrate points at the Files CTA, share at the grid it
+   * shares from), so each draws its own and nothing is inert scenery any more.
    *
    * @param {Number} i
-   * @param {Object} opt attributes merged into the interactive widget
-   * @returns {Object|Array} feed payload, or undefined past the last step
+   * @param {Object} opt attributes merged into the widget
+   * @returns {Object} feed payload, or undefined past the last step
    */
   _widgetAt(i, opt = {}) {
     const w = this._widgets[i];
-    if (!w) return w;
-    if (_.isArray(w)) {
-      const last = w.length - 1;
-      return w.map((k, n) => (n === last ? { ...k, ...opt } : k));
-    }
-    return { ...w, ...opt };
+    return w ? { ...w, ...opt } : w;
+  }
+
+  /**
+   * Put the shell into the context the current step is teaching.
+   *
+   * The rail and the breadcrumb are NOT constant across a tour: `full` opens on
+   * the create-workspace dialog, where no workspace exists — so the rail has no
+   * workspace tabs and the topbar names nothing — and then spends every later
+   * step inside one. Rendering the shell once at mount left five workspace tabs
+   * and a workspace name over a dialog whose whole point is that the user has
+   * not made a workspace yet.
+   *
+   * Both are `sys_pn` slots, re-fed here rather than rebuilt: the rail's logo
+   * and footer do not change, and neither does the utility cluster. What is fed
+   * is the slot's CONTENTS — feeding the container itself back in would nest a
+   * second __sb-nav inside the first.
+   */
+  _applyChrome() {
+    const step = (this._tour.steps || [])[this._stepIndex];
+    const { rail, crumb } = stepChrome(step);
+    const sidebar = require('./skeleton/sidebar');
+    const topbar = require('./skeleton/topbar');
+    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.railItems(this, rail)));
+    this.ensurePart('crumb').then((p) => p.feed(crumb ? topbar.workspaceCrumb(this) : null));
+  }
+
+  /**
+   * Stamp the size tier on the root, where every skin can see it.
+   *
+   * Two attributes rather than one combined class: width and height break the
+   * layout independently, and a short WIDE window wants the wide composition
+   * with less vertical padding, not the narrow one.
+   *
+   * @returns {Boolean} whether either value changed
+   */
+  _applySize() {
+    if (!this.el || !this.el.dataset || typeof window === 'undefined') return false;
+    const w = window.innerWidth || 0;
+    const h = window.innerHeight || 0;
+    const tier = SIZE_TIERS.find((t) => w <= t.max) || SIZE_TIERS[SIZE_TIERS.length - 1];
+    const short = h > 0 && h < SHORT_HEIGHT ? '1' : '0';
+    const changed = this.el.dataset.size !== tier.id || this.el.dataset.short !== short;
+    this.el.dataset.size = tier.id;
+    this.el.dataset.short = short;
+    return changed;
+  }
+
+  /**
+   * Re-measure the tour when the window changes shape.
+   *
+   * The callout is placed from the rect of the thing it points at, read once
+   * when the screen was raised. Resize the window — or rotate a tablet, which
+   * is the same event — and that rect is stale: the card stays where the old
+   * layout put it, which at worst is off the edge with its buttons out of
+   * reach. So the current screen is re-focused rather than merely restyled.
+   *
+   * Unconditionally, not only when the TIER changed: a resize within one tier
+   * still moves everything the callout was measured against.
+   */
+  _bindResize() {
+    if (typeof window === 'undefined') return;
+    this._onResize = () => {
+      clearTimeout(this._resizeTimer);
+      this._resizeTimer = setTimeout(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        this._applySize();
+        this.ensurePart('spotlight').then((s) => s && s.reflow && s.reflow());
+      }, REFLOW_MS);
+    };
+    window.addEventListener('resize', this._onResize);
+    // Rotation on iOS reports the new size a beat after `resize`; the debounce
+    // above absorbs that, and this catches the browsers that fire only this.
+    window.addEventListener('orientationchange', this._onResize);
+  }
+
+  _unbindResize() {
+    if (typeof window === 'undefined' || !this._onResize) return;
+    clearTimeout(this._resizeTimer);
+    window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('orientationchange', this._onResize);
+    this._onResize = null;
   }
 
   /**
@@ -182,13 +291,36 @@ class tutorial_main extends LetcBox {
   _nextStep() {
     this._stepIndex++;
     if (this._widgets[this._stepIndex]) {
-      this.ensurePart('spotlight').then((s) => s.clear && s.clear());
-      this.ensurePart(_a.content).then((p) => {
-        p.feed(this._widgetAt(this._stepIndex))
-      })
+      this._showStep(this._widgetAt(this._stepIndex));
     } else {
       this._enterWorkspace();
     }
+  }
+
+  /**
+   * Swap the step on screen: put the spotlight down, then bring the next one up.
+   *
+   * Ordered, and that ordering is the whole point. These used to be two
+   * independent promise chains — clear the spotlight, feed the content — and
+   * `clear()` ends in a SECOND async hop of its own (ensurePart('callout')
+   * then feed(null)). A step that mounted quickly raised `spotlight:focus`,
+   * had its callout rendered, and then the previous step's stale clear landed
+   * and wiped it. The screen kept its scrim and lost its callout, which reads
+   * as a tour with no way forward.
+   *
+   * The meeting step hit it every time: one screen, one part to await, and
+   * preloaded — the shortest path from mount to callout in the tour. The
+   * spotlight also guards this on its own side with a sequence token, so a
+   * late clear from anywhere loses; this just keeps the visible order right.
+   *
+   * @param {Object|Array} payload from _widgetAt
+   */
+  async _showStep(payload) {
+    this._applyChrome();
+    const spotlight = await this.ensurePart('spotlight');
+    if (spotlight && spotlight.clear) await spotlight.clear();
+    const content = await this.ensurePart(_a.content);
+    content.feed(payload);
   }
 
   /**
@@ -202,11 +334,7 @@ class tutorial_main extends LetcBox {
     // screens) must land on their LAST screen when re-entered via Back — where
     // the user left off, not back at the start. Steps without internal screens
     // ignore the flag.
-    const widget = this._widgetAt(this._stepIndex, { enter_at_last: true });
-    this.ensurePart('spotlight').then((s) => s.clear && s.clear());
-    this.ensurePart(_a.content).then((p) => {
-      p.feed(widget)
-    })
+    this._showStep(this._widgetAt(this._stepIndex, { enter_at_last: true }));
   }
 
   /**
@@ -304,6 +432,7 @@ class tutorial_main extends LetcBox {
   }
 
   onBeforeDestroy() {
+    this._unbindResize();
     if (this._escapeHotkey) {
       require('libs/hotkeys').unregister(this._escapeHotkey);
       this._escapeHotkey = null;
