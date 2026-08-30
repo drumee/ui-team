@@ -367,7 +367,7 @@ module.exports.inviteLink = function (ui, link) {
             bubble: 0,
             service: "cal-copy-link",
             uiHandler: [ui],
-            tooltips: LOCALE.COPY_LINK,
+            attrOpt: { "aria-label": LOCALE.COPY_LINK },
           }),
         ],
       }),

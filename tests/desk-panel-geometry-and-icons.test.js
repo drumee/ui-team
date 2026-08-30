@@ -192,3 +192,58 @@ test("every crumb renders a real workspace icon", () => {
   assert.match(skin.slice(i, i + 400), /width:\s*20px/, "the icon must be sized");
   assert.match(skin, /\.folder-shape\s*\{[\s\S]{0,120}width:/, ".folder-shape must be sized");
 });
+
+// ── Personal Calendar toolbar (Figma 43:31159) ───────────────────────────────
+test("the calendar toolbar paints no unstyled tooltip", () => {
+  // ui-core's `tooltips` builds a bare <div class="tooltips"> and shows it on
+  // hover. That class is styled ONLY in the editor skins, so anywhere else it
+  // renders as unstyled floating text over the UI.
+  const dir = join(SRC, "builtins/panel/calendar/skeleton");
+  const offenders = [];
+  for (const f of readdirSync(dir)) {
+    if (!f.endsWith(".js")) continue;
+    if (stripComments(readFileSync(join(dir, f), "utf8")).includes("tooltips:")) {
+      offenders.push(f);
+    }
+  }
+  assert.deepEqual(
+    offenders, [],
+    "`tooltips` renders unstyled here — use attrOpt aria-label:\n  " + offenders.join("\n  "),
+  );
+
+  // The icon-only arrows must still be labelled for assistive tech.
+  const bar = stripComments(readFileSync(join(dir, "toolbar.js"), "utf8"));
+  assert.match(bar, /"aria-label": LOCALE\.PREVIOUS/);
+  assert.match(bar, /"aria-label": LOCALE\.NEXT/);
+});
+
+test("‹ Today › matches the frame and its neighbours", () => {
+  const skin = stripComments(
+    readFileSync(join(SRC, "builtins/panel/calendar/skin/index.scss"), "utf8"),
+  );
+  const rule = (sel) => {
+    const i = skin.indexOf(sel);
+    assert.ok(i > 0, `${sel} not found`);
+    return skin.slice(i, skin.indexOf("\n  }", i));
+  };
+
+  // 43:31159 gives the nav group `fills: []` and no radius — it is a bare
+  // group, not the filled capsule this used to be.
+  const nav = rule("&__nav {");
+  assert.doesNotMatch(nav, /background:/, "the nav group carries no fill in the frame");
+  assert.doesNotMatch(nav, /border-radius:\s*999px/, "and no capsule radius");
+
+  // Today and the range label are both 16px/w600 in the frame and sit on the
+  // same row, so their ramps must be identical or they land on different
+  // baselines.
+  const ramp = (sel) => {
+    const r = rule(sel);
+    return [
+      (r.match(/\$size:\s*([\w.]+)/) || [])[1],
+      (r.match(/\$line:\s*([\w.]+)/) || [])[1],
+      (r.match(/font-weight:\s*(\d+)/) || [])[1],
+    ];
+  };
+  assert.deepEqual(ramp("&__nav-today {"), ramp("&__range-label {"));
+  assert.deepEqual(ramp("&__nav-today {"), ["16px", "20px", "600"]);
+});

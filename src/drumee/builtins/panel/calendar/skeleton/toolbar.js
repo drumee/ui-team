@@ -21,7 +21,7 @@ module.exports = function (ui) {
         bubble: 0,
         service: "cal-prev",
         uiHandler: [ui],
-        tooltips: LOCALE.PREVIOUS,
+        attrOpt: { "aria-label": LOCALE.PREVIOUS },
       }),
       Skeletons.Note({
         className: `${pfx}__nav-today`,
@@ -36,7 +36,7 @@ module.exports = function (ui) {
         bubble: 0,
         service: "cal-next",
         uiHandler: [ui],
-        tooltips: LOCALE.NEXT,
+        attrOpt: { "aria-label": LOCALE.NEXT },
       }),
     ],
   });
@@ -62,7 +62,7 @@ module.exports = function (ui) {
                 service: "cal-set-year",
                 uiHandler: [ui],
                 calYear: -1,
-                tooltips: LOCALE.PREVIOUS,
+                attrOpt: { "aria-label": LOCALE.PREVIOUS },
               }),
               Skeletons.Note({
                 className: `${pfx}__range-year-label`,
@@ -75,7 +75,7 @@ module.exports = function (ui) {
                 service: "cal-set-year",
                 uiHandler: [ui],
                 calYear: 1,
-                tooltips: LOCALE.NEXT,
+                attrOpt: { "aria-label": LOCALE.NEXT },
               }),
             ],
           }),
