@@ -2732,6 +2732,7 @@
   "MEETING_INVITE_TITLE": "Вас пригласили на встречу",
   "X_INVITED_YOU_JOIN_MEETING_IN": "{0} пригласил вас присоединиться к встрече в {1}",
   "MUTE_NOTIFICATION_FROM": "Отключить уведомления от",
+  "MUTE_NOTIFICATIONS": "Отключить уведомления",
   "MUTE_THIS_WORKSPACE": "Это рабочее пространство",
   "MUTE_ALL_WORKSPACES": "Все рабочие пространства",
   "MUTE_DONE_WORKSPACE": "Уведомления отключены для этого рабочего пространства",

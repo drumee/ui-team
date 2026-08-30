@@ -1269,6 +1269,28 @@
     white-space: nowrap;
   }
 
+  // The tick on the OPEN workspace. It had no rule at all, and an <svg> with
+  // no width/height falls back to its intrinsic size — which rendered as a
+  // huge glyph swallowing the row.
+  //
+  // It only appears on the row whose hub_id matches Wm._curWorkspace, which is
+  // normally the first one and is only set once a workspace has actually been
+  // opened. That is why it looked intermittent and first-row-only: on a fresh
+  // desk no row is current, so nothing drew the tick at all.
+  &__ws-item-check {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--primary-40);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
   &__ws-empty {
     padding: 10px;
     font-size: 12px;

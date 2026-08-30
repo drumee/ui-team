@@ -4,6 +4,10 @@
  */
 
 const { createEntries } = require("./create-items");
+// The mute cache and endpoint probe both live with the notification panel that
+// owns this state; importing them keeps one source of truth for what "muted"
+// means rather than a second copy that can disagree.
+const { muteState, muteService } = require("builtins/panel/activity/mute");
 
 const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
   Skeletons.Button.Label({
@@ -338,10 +342,19 @@ function utilityCluster(pfx, ui) {
  * this menu carries them. Every row fires a service the desk already handles,
  * so nothing here is new behaviour.
  *
- * "Mute notifications" is in the frame but deliberately NOT built: there is no
- * mute concept anywhere in the app (no service, no setting, no server field),
- * so it would be a control that does nothing. Worth designing properly rather
- * than shipping dead.
+ * "Mute notifications" mutes popup cards for EVERY workspace — an empty
+ * hub_id is what activity/mute.js calls the global scope. It suppresses the
+ * interrupting card and nothing else: a muted user keeps every row in the
+ * Notification Center, keeps the unread badge and keeps the tab counts. Muting
+ * is "stop talking to me", not "stop recording".
+ *
+ * The row reflects state, so it reads Unmute once muted. State comes from the
+ * cache activity/mute.js already keeps (loaded at panel boot and refreshed
+ * from the return value of every write), so opening this menu costs no
+ * request. Before the schema is applied, or against a server with no such
+ * endpoint, muteState() reports nothing muted and the row is simply hidden —
+ * the same fail-open the popup path takes, because a control that silently
+ * does nothing is worse than one that is absent.
  *
  * @param {String} pfx  topbar BEM prefix
  * @param {Object} ui   desk module
@@ -362,6 +375,10 @@ function userMenu(pfx, ui) {
     fullname,
     auto_color: 1,
   };
+
+  // Cached, never fetched here: activity/mute.js loads it at panel boot and
+  // refreshes it from every write, so rendering this menu costs no round trip.
+  const muted = !!(muteState() || {}).global;
 
   const row = ({ ico, label, service, on_click, modifier }) =>
     Skeletons.Button.Label({
@@ -458,6 +475,15 @@ function userMenu(pfx, ui) {
             }),
           ],
         }),
+        // Hidden when the endpoint is absent — see the note above.
+        muteService("mute_set")
+          ? row({
+              ico: muted ? "bell-simple" : "bell-simple-slash",
+              label: muted ? LOCALE.UNMUTE : LOCALE.MUTE_NOTIFICATIONS,
+              service: "toggle-mute-all",
+              modifier: muted ? "muted" : null,
+            })
+          : null,
         row({
           ico: "sidebar_settings",
           label: LOCALE.SETTINGS,
@@ -475,7 +501,7 @@ function userMenu(pfx, ui) {
           on_click: Butler.logout,
           modifier: "signout",
         }),
-      ],
+      ].filter(Boolean),
     }),
   });
 }

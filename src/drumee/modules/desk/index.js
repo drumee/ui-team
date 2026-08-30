@@ -4638,6 +4638,27 @@ class desk_module extends LetcBox {
       case "rail-access":
         return this._railAccess();
 
+      // Mute popup CARDS for every workspace — an empty hub_id is the global
+      // scope in activity/mute.js. It suppresses the interrupting card only:
+      // the Notification Center keeps every row, the badge and the counts.
+      //
+      // The cache is refreshed from the server's own response inside setMute,
+      // never from what we asked for, so it cannot drift from the database.
+      // Nothing is written optimistically and the menu is only re-rendered on
+      // success — a failed write must not leave a row claiming "Unmute" when
+      // nothing is muted.
+      case "toggle-mute-all": {
+        const { setMute, muteState } = require("builtins/panel/activity/mute");
+        const next = !(muteState() || {}).global;
+        return setMute(this, "", next).then(({ ok }) => {
+          if (!ok) return Wm.alert(LOCALE.MUTE_FAILED);
+          // Rebuild the topbar so the row reflects the new state; the menu has
+          // already closed itself (persistence: once) by the time this lands.
+          if (_.isFunction(this._syncWorkspaceTopbar)) this._syncWorkspaceTopbar();
+          return RADIO_BROADCAST.trigger("breadcrumb:content");
+        });
+      }
+
       case "toggle-help":
         return this._openGetHelp();
 

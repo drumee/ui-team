@@ -2923,6 +2923,7 @@
   "MEETING_INVITE_TITLE": "You have been invited to a Meeting",
   "X_INVITED_YOU_JOIN_MEETING_IN": "{0} invited you to join the meeting in {1}",
   "MUTE_NOTIFICATION_FROM": "Mute notifications from",
+  "MUTE_NOTIFICATIONS": "Mute notifications",
   "MUTE_THIS_WORKSPACE": "This workspace",
   "MUTE_ALL_WORKSPACES": "All workspaces",
   "MUTE_DONE_WORKSPACE": "Notifications muted for this workspace",

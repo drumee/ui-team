@@ -2733,6 +2733,7 @@
   "MEETING_INVITE_TITLE": "Vous avez été invité à une réunion",
   "X_INVITED_YOU_JOIN_MEETING_IN": "{0} vous a invité à rejoindre la réunion dans {1}",
   "MUTE_NOTIFICATION_FROM": "Mettre en sourdine les notifications de",
+  "MUTE_NOTIFICATIONS": "Couper les notifications",
   "MUTE_THIS_WORKSPACE": "Cet espace de travail",
   "MUTE_ALL_WORKSPACES": "Tous les espaces de travail",
   "MUTE_DONE_WORKSPACE": "Notifications désactivées pour cet espace de travail",

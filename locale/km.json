@@ -2732,6 +2732,7 @@
   "MEETING_INVITE_TITLE": "អ្នកត្រូវបានអញ្ជើញឱ្យចូលរួមកិច្ចប្រជុំ",
   "X_INVITED_YOU_JOIN_MEETING_IN": "{0} បានអញ្ជើញអ្នកឱ្យចូលរួមកិច្ចប្រជុំនៅក្នុង {1}",
   "MUTE_NOTIFICATION_FROM": "បិទការជូនដំណឹងពី",
+  "MUTE_NOTIFICATIONS": "បិទការជូនដំណឹង",
   "MUTE_THIS_WORKSPACE": "កន្លែងធ្វើការនេះ",
   "MUTE_ALL_WORKSPACES": "កន្លែងធ្វើការទាំងអស់",
   "MUTE_DONE_WORKSPACE": "បានបិទការជូនដំណឹងសម្រាប់កន្លែងធ្វើការនេះ",

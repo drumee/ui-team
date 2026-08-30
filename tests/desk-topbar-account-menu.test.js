@@ -123,3 +123,44 @@ test("every menu row resolves to something that exists", () => {
     assert.match(menu, new RegExp(`LOCALE\\.${key}`), `${key} must come from LOCALE`);
   }
 });
+
+test("the mute row is wired end to end", () => {
+  // A control that silently does nothing is worse than one that is absent, so
+  // the row is hidden when the endpoint is missing rather than rendered dead.
+  assert.match(menu, /muteService\("mute_set"\)\s*\n?\s*\?/, "must be gated on the endpoint");
+
+  // Reflects state: it reads Unmute once muted.
+  assert.match(menu, /muted \? LOCALE\.UNMUTE : LOCALE\.MUTE_NOTIFICATIONS/);
+  assert.match(menu, /muted \? "bell-simple" : "bell-simple-slash"/);
+
+  // State comes from the cache the notification panel already keeps, not from
+  // a fetch on menu open.
+  assert.match(menu, /muteState\(\) \|\| \{\}\)\.global/);
+  assert.doesNotMatch(menu, /loadMuteState/, "must not fetch while building the menu");
+
+  // The handler exists, writes the GLOBAL scope (empty hub_id), and does not
+  // update anything optimistically — a failed write must not leave the row
+  // claiming "Unmute" while nothing is muted.
+  assert.match(deskSrc, /case "toggle-mute-all":/);
+  assert.match(deskSrc, /setMute\(this, "", next\)/, "empty hub_id is the global scope");
+  assert.match(deskSrc, /if \(!ok\) return Wm\.alert\(LOCALE\.MUTE_FAILED\)/);
+});
+
+test("both bell icons exist in the sprite", () => {
+  // `ico` names a sprite symbol; a missing one renders nothing at all.
+  const sprite = readFileSync(join(ROOT, "icons/sprites/normalized.sprite.svg"), "utf8");
+  for (const ico of ["bell-simple", "bell-simple-slash"]) {
+    assert.ok(sprite.includes(`id="--icon-${ico}"`), `${ico} missing from the sprite`);
+  }
+});
+
+test("the mute label is translated in every language", () => {
+  // A missing key renders blank with no error (createSafeObject), so an
+  // untranslated language shows an empty row rather than an obvious fallback.
+  for (const lang of ["en", "fr", "es", "km", "ru", "zh"]) {
+    const d = JSON.parse(readFileSync(join(ROOT, `locale/${lang}.json`), "utf8"));
+    for (const key of ["MUTE_NOTIFICATIONS", "UNMUTE", "MUTE_FAILED"]) {
+      assert.ok(d[key], `${lang}.json is missing ${key}`);
+    }
+  }
+});
