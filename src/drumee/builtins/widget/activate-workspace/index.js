@@ -269,6 +269,26 @@ class __activate_workspace extends LetcBox {
 
   onBeforeDestroy() {
     this._unbind();
+    // Last thing, on EVERY teardown path — not just _finish's.
+    //
+    // _finish closes what it opened, but it is only one of the ways this widget
+    // goes away: the desk can tear it down, a route change can, a throw
+    // mid-step can. Any of those used to leave a host emptied and still open,
+    // which is a full-viewport transparent blocker: the popup is gone, the desk
+    // is greyed, and nothing is clickable. Reported after the tutorial, where
+    // the flow mounts on the tour's destroy and the two teardowns overlap.
+    this._releaseEmptyHosts();
+  }
+
+  /** Close any shared host left open with nothing in it — see ./hosts. */
+  _releaseEmptyHosts() {
+    const { releaseIfEmpty } = require("./hosts");
+    // Queried, not read off `this._host`: _restoreHost runs first (via _unbind)
+    // and nulls that reference, and _captureHost may never have run at all.
+    const desk = typeof document !== "undefined"
+      ? document.querySelector(".desk-module__overlay") : null;
+    releaseIfEmpty(typeof Wm !== "undefined" && Wm.__wrapperModal ? Wm.__wrapperModal.el : null);
+    releaseIfEmpty(desk);
   }
 
   _unbind() {
@@ -440,6 +460,17 @@ class __activate_workspace extends LetcBox {
     if (typeof Wm === "undefined" || typeof Wm.ensurePart !== "function") return;
     Wm.ensurePart("wrapper-modal").then((p) => {
       if (typeof p?.clear === "function") p.clear();
+      // …and mark it closed, for the same reason clearWrapperModal does:
+      // emptying alone leaves a full-viewport host still carrying
+      // `data-state="open"`, which is an invisible blocker over the desk. This
+      // was the one emptying path that skipped it, and it is why the flow could
+      // end with the popup gone and the screen greyed out and dead.
+      const el = p?.el;
+      if (el?.dataset) {
+        el.dataset.state = "closed";
+        delete el.dataset.overlay;
+        delete el.dataset.guidedOverlay;
+      }
     });
   }
 
