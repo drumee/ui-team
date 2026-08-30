@@ -76,6 +76,8 @@ function toggleRow(ui, opt) {
     bubble: 0,
     service: opt.service,
     uiHandler: [ui],
+    // active:0 or a child eats the click before triggerHandlers runs.
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Image.Svg({ ico: opt.ico, className: `${pfx}__toggle-ico` }),
       Skeletons.Box.Y({
@@ -184,6 +186,8 @@ module.exports = function (ui) {
                     bubble: 0,
                     service: "cal-toggle-restrict",
                     uiHandler: [ui],
+                    // active:0 or the label/switch eats the click.
+                    kidsOpt: { active: 0 },
                     kids: [
                       Skeletons.Note({
                         className: `${pfx}__switch-label`,
@@ -357,6 +361,8 @@ module.exports.inviteLink = function (ui, link) {
         bubble: 0,
         service: "cal-copy-link",
         uiHandler: [ui],
+        // active:0 or the link text / copy icon eats the click.
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Note({ className: `${pfx}__link-text`, content: link }),
           // `copylink` is the sprite the rest of the product uses for this

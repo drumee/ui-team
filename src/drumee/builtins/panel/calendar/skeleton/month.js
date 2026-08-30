@@ -85,6 +85,9 @@ module.exports = function (ui) {
               service: "cal-day-add",
               uiHandler: [ui],
               calDay: key,
+              // Without this the "+" glyph swallows the click and the day
+              // quick-add does nothing at all.
+              kidsOpt: { active: 0 },
               kids: [
                 Skeletons.Note({
                   className: `${pfx}__day-add-ico`,

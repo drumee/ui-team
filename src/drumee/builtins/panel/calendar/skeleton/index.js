@@ -59,7 +59,7 @@ module.exports = function (ui) {
         ],
       }),
 
-      toolbar(ui),
+      toolbar.row(ui),
 
       Skeletons.Box.Y({
         className: `${pfx}__body`,

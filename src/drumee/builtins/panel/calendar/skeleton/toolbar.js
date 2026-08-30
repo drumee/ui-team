@@ -17,7 +17,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Button.Svg({
         className: `${pfx}__nav-arrow`,
-        ico: "arrow-left",
+        ico: "caret-left",
         bubble: 0,
         service: "cal-prev",
         uiHandler: [ui],
@@ -32,7 +32,7 @@ module.exports = function (ui) {
       }),
       Skeletons.Button.Svg({
         className: `${pfx}__nav-arrow`,
-        ico: "arrow-right",
+        ico: "caret-right",
         bubble: 0,
         service: "cal-next",
         uiHandler: [ui],
@@ -57,7 +57,7 @@ module.exports = function (ui) {
             kids: [
               Skeletons.Button.Svg({
                 className: `${pfx}__nav-arrow`,
-                ico: "arrow-left",
+                ico: "caret-left",
                 bubble: 0,
                 service: "cal-set-year",
                 uiHandler: [ui],
@@ -70,7 +70,7 @@ module.exports = function (ui) {
               }),
               Skeletons.Button.Svg({
                 className: `${pfx}__nav-arrow`,
-                ico: "arrow-right",
+                ico: "caret-right",
                 bubble: 0,
                 service: "cal-set-year",
                 uiHandler: [ui],
@@ -106,6 +106,11 @@ module.exports = function (ui) {
         bubble: 0,
         service: "cal-toggle-range-menu",
         uiHandler: [ui],
+        // ui-core binds a click to EVERY widget that does not set active:0,
+        // and its handler calls e.stopPropagation() BEFORE triggerHandlers —
+        // so a child left at the default eats the click and this service never
+        // fires. Clicking the label did nothing; only the padding worked.
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Note({
             className: `${pfx}__range-label`,
@@ -150,6 +155,8 @@ module.exports = function (ui) {
         bubble: 0,
         service: "cal-toggle-view-menu",
         uiHandler: [ui],
+        // See __range above — a child without active:0 swallows the click.
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Image.Svg({
             ico: "sidebar_calendar",
@@ -221,6 +228,9 @@ module.exports = function (ui) {
         bubble: 0,
         service: "cal-toggle-new-menu",
         uiHandler: [ui],
+        // See __range above. This is why clicking the "+" or the word "New"
+        // did nothing while a click on the button's padding opened the menu.
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Note({ className: `${pfx}__new-plus`, content: "+" }),
           Skeletons.Note({ className: `${pfx}__new-label`, content: LOCALE.NEW }),
@@ -230,17 +240,30 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 
+  // The two halves, WITHOUT the row that holds them. Opening a dropdown has
+  // to repaint the toolbar and nothing else — see `sys_pn: "toolbar"` below
+  // and _renderToolbar() in ../index.js — so the kids have to be reachable
+  // separately from the row, because feed() replaces a part's CHILDREN.
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}__toolbar-left`,
+      kids: [nav, label],
+    }),
+    Skeletons.Box.X({
+      className: `${pfx}__toolbar-right`,
+      kids: [viewPicker, filterBar, newButton],
+    }),
+  ];
+};
+
+/**
+ * The toolbar row itself. Carries the part name the panel re-feeds.
+ */
+module.exports.row = function (ui) {
   return Skeletons.Box.X({
-    className: `${pfx}__toolbar`,
-    kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__toolbar-left`,
-        kids: [nav, label],
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__toolbar-right`,
-        kids: [viewPicker, filterBar, newButton],
-      }),
-    ],
+    className: `${ui.fig.family}__toolbar`,
+    sys_pn: "toolbar",
+    partHandler: ui,
+    kids: module.exports(ui),
   });
 };

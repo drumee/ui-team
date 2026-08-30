@@ -185,6 +185,8 @@ module.exports = function (ui, days, view) {
           service: "cal-day-add",
           uiHandler: [ui],
           calDay: k,
+          // active:0 or a child eats the click before triggerHandlers runs.
+          kidsOpt: { active: 0 },
           kids: [
             Skeletons.Note({
               className: `${pfx}__hours-head-num`,

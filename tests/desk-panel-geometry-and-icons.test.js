@@ -246,4 +246,136 @@ test("‹ Today › matches the frame and its neighbours", () => {
   };
   assert.deepEqual(ramp("&__nav-today {"), ramp("&__range-label {"));
   assert.deepEqual(ramp("&__nav-today {"), ["16px", "20px", "600"]);
+
+  // Sizing the button is only half of it: the <svg> inside carries the glyph
+  // and needs its own box, or it fills the button. Same defect as the
+  // workspace tick.
+  const arrow = rule("&__nav-arrow {");
+  assert.match(arrow, /svg\s*\{[\s\S]{0,80}width:/, "the inner svg must be sized");
+
+  // And the glyph must be SQUARE. `arrow-left`'s symbol is viewBox 40x22, so
+  // xMidYMid meet fits it to the full width at half the height and draws a
+  // long horizontal arrow beside a 16px label. caret-left/right are 256x256.
+  const bar = stripComments(
+    readFileSync(join(SRC, "builtins/panel/calendar/skeleton/toolbar.js"), "utf8"),
+  );
+  assert.doesNotMatch(bar, /ico:\s*"arrow-(left|right)"/, "arrow-* is a 40x22 glyph here");
+  assert.match(bar, /ico:\s*"caret-left"/);
+  assert.match(bar, /ico:\s*"caret-right"/);
+
+  const sprite = readFileSync(join(ROOT, "icons/sprites/normalized.sprite.svg"), "utf8");
+  for (const ico of ["caret-left", "caret-right"]) {
+    // viewBox and id sit in the same <symbol ...> tag.
+    const sym = sprite.match(new RegExp(`<symbol[^>]*id="--icon-${ico}"[^>]*>`));
+    assert.ok(sym, `${ico} missing from the sprite`);
+    const vb = sym[0].match(/viewBox="0 0 (\d+) (\d+)"/);
+    assert.ok(vb, `${ico} has no viewBox`);
+    assert.equal(vb[1], vb[2], `${ico} must be square — a wide glyph fits to the box`);
+  }
+});
+
+test("opening a calendar dropdown repaints only the toolbar", () => {
+  // Every menu toggle used to call _render(), which re-feeds the WHOLE page --
+  // header, toolbar and the entire month grid with every chip -- to show a
+  // two-item dropdown. Rebuilding the grid reflows the row above it, so the
+  // button visibly jumped as its own menu opened.
+  const panel = stripComments(
+    readFileSync(join(SRC, "builtins/panel/calendar/index.js"), "utf8"),
+  );
+
+  for (const svc of [
+    "cal-toggle-view-menu",
+    "cal-toggle-range-menu",
+    "cal-toggle-new-menu",
+  ]) {
+    const i = panel.indexOf(`case "${svc}":`);
+    assert.ok(i > 0, `${svc} not handled`);
+    const body = panel.slice(i, panel.indexOf("\n\n", i));
+    assert.match(body, /_renderToolbar\(\)/, `${svc} must repaint only the toolbar`);
+    assert.doesNotMatch(
+      body, /return this\._render\(\)/,
+      `${svc} must not repaint the grid`,
+    );
+  }
+
+  // The part name the panel re-feeds has to be the one the skeleton declares.
+  assert.match(panel, /getPart\("toolbar"\)/);
+
+  // And the repaint must be SYNCHRONOUS with a fallback, never a promise whose
+  // rejection is swallowed. The first cut used
+  // ensurePart(...).then(...).catch(() => {}) — when that never resolved, the
+  // dropdown silently refused to open. A dropdown that does nothing is worse
+  // than one that reflows.
+  const rt = panel.slice(panel.indexOf("_renderToolbar() {"));
+  const body = rt.slice(0, rt.indexOf("\n  }"));
+  assert.doesNotMatch(body, /catch\(\s*\(\)\s*=>\s*\{\s*\}\s*\)/,
+    "no silent catch — it turns a failure into a dead control");
+  assert.doesNotMatch(body, /ensurePart/, "use the synchronous lookup");
+  assert.match(body, /return this\._render\(\)/,
+    "must fall back to a full render when the part is missing");
+  const bar = stripComments(
+    readFileSync(join(SRC, "builtins/panel/calendar/skeleton/toolbar.js"), "utf8"),
+  );
+  assert.match(bar, /sys_pn:\s*"toolbar"/);
+
+  // feed() accepts an array, an object with .kind, or a function -- nothing
+  // else, silently. The default export must stay the ARRAY of halves so the
+  // array branch applies; the row is a separate export.
+  assert.match(bar, /^\s*return \[/m, "the default export must return an array");
+  assert.match(bar, /module\.exports\.row = function/);
+
+  // Anything the GRID reads still needs a full render.
+  for (const svc of ["cal-set-view", "cal-set-filter"]) {
+    const i = panel.indexOf(`case "${svc}"`);
+    if (i < 0) continue;
+    // Bound to THIS handler: a fixed window runs past the closing brace into
+    // the next case, which is how this first read a neighbour's call.
+    const rest = panel.slice(i + 6);
+    const end = rest.indexOf("\n      case ");
+    const body = end === -1 ? rest : rest.slice(0, end);
+    assert.doesNotMatch(
+      body, /_renderToolbar\(\)/,
+      `${svc} changes the grid — it must do a full render`,
+    );
+  }
+});
+
+test("no calendar control lets a child swallow its click", () => {
+  // ui-core binds a click to EVERY widget that does not set active:0, and its
+  // handler calls e.stopPropagation() BEFORE triggerHandlers. So a Box that
+  // carries a `service` and has children must opt those children out, or the
+  // child eats the click and the service never fires. Clicking the "+" or the
+  // word "New" did nothing while a click on the button's padding worked.
+  //
+  // The suite already documents this as a repeat offender; this pins the
+  // calendar so it cannot come back a fourth time.
+  const dir = join(SRC, "builtins/panel/calendar/skeleton");
+  const offenders = [];
+
+  for (const f of readdirSync(dir).filter((n) => n.endsWith(".js"))) {
+    const src = readFileSync(join(dir, f), "utf8");
+    for (const m of src.matchAll(/Skeletons\.Box\.[XYZG]\(\{/g)) {
+      // Balance braces to get this Box's own block.
+      let i = m.index + m[0].length;
+      let depth = 1;
+      while (i < src.length && depth) {
+        if (src[i] === "{") depth++;
+        else if (src[i] === "}") depth--;
+        i++;
+      }
+      const block = src.slice(m.index + m[0].length, i);
+      // Props declared before `kids:` are this Box's own, not a child's.
+      const head = block.split("kids:")[0];
+      if (head.includes("service:") && block.includes("kids:") &&
+          !head.includes("active: 0")) {
+        offenders.push(`${f}:${src.slice(0, m.index).split("\n").length}`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    offenders, [],
+    "These Boxes carry a service but let their children eat the click — add " +
+      "`kidsOpt: { active: 0 }`:\n  " + offenders.join("\n  "),
+  );
 });

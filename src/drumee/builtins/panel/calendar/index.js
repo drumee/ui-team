@@ -241,6 +241,38 @@ class __calendar_main extends LetcBox {
     this.feed(require("./skeleton")(this));
   }
 
+  /**
+   * Repaint ONLY the toolbar row.
+   *
+   * Opening a dropdown used to call _render(), which re-feeds the whole page —
+   * header, toolbar AND the entire month grid with every chip in it — to show
+   * a two-item menu. Rebuilding the grid reflows the row above it, so the
+   * button visibly jumped as its own menu opened, and a 40-cell month paid for
+   * a click that changed nothing below the toolbar.
+   *
+   * Only state the toolbar draws (which menu is open) may use this. Anything
+   * the GRID reads — the view, the cursor, the filter — still needs _render().
+   */
+  _renderToolbar() {
+    // SYNCHRONOUS, and it falls back rather than failing.
+    //
+    // The first cut used ensurePart(...).then(...).catch(() => {}). ensurePart
+    // returns a PROMISE that only resolves once the part exists — and if it
+    // never resolves, or the feed throws, the catch ate it and the click did
+    // nothing at all. A dropdown that silently refuses to open is exactly the
+    // failure mode the blank-Calendar bug had, and it is not worth the repaint
+    // it was buying.
+    //
+    // getPart is a plain lookup in _branches. If the part is missing for any
+    // reason, fall back to the full render: slower and it reflows the grid,
+    // but it always works.
+    const part = _.isFunction(this.getPart) ? this.getPart("toolbar") : null;
+    if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+      return this._render();
+    }
+    part.feed(require("./skeleton/toolbar")(this));
+  }
+
   async _reload() {
     await this._loadItems();
     this._render();
@@ -630,17 +662,18 @@ class __calendar_main extends LetcBox {
         this._closeMenus();
         return this._reload();
 
+      // Menu open/close is toolbar-only state — never repaint the grid for it.
       case "cal-toggle-view-menu":
         this._viewMenuOpen = !this._viewMenuOpen;
         this._newMenuOpen = false;
         this._rangeMenuOpen = false;
-        return this._render();
+        return this._renderToolbar();
 
       case "cal-toggle-range-menu":
         this._rangeMenuOpen = !this._rangeMenuOpen;
         this._viewMenuOpen = false;
         this._newMenuOpen = false;
-        return this._render();
+        return this._renderToolbar();
 
       // Jump the cursor to a month of the year it is already in, keeping the
       // day-of-month so week/day views land somewhere meaningful rather than
@@ -688,7 +721,7 @@ class __calendar_main extends LetcBox {
       case "cal-toggle-new-menu":
         this._newMenuOpen = !this._newMenuOpen;
         this._viewMenuOpen = false;
-        return this._render();
+        return this._renderToolbar();
 
       case "cal-new-task":
         return this._openTaskForm(null);

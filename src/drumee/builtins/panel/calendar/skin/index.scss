@@ -85,8 +85,22 @@
     width: 20px;
     height: 20px;
     flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     color: var(--normal-fg-20);
+
+    // Sizing the BUTTON is only half of it — the <svg> inside carries the
+    // glyph and needs its own box, exactly like the workspace tick did.
+    //
+    // This also has to be a CARET, not `arrow-left`: that symbol's viewBox is
+    // 40x22, so `xMidYMid meet` fitted it to the full 20px width at 11px tall
+    // and drew a long horizontal arrow that dwarfed the 16px label beside it.
+    // caret-left/right are 256x256 — square, so they scale honestly.
+    svg {
+      width: 14px;
+      height: 14px;
+    }
     // Same hover affordance as __range — r=8 and the same wash, rather than a
     // circle. The arrows carry no tooltip now (ui-core's `tooltips` paints an
     // unstyled div here; the class is only styled in the editor skins), so
