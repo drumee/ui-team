@@ -1,89 +1,123 @@
 /* ==================================================================== *
- * desk_breadcrumb styles
+ * desk_breadcrumb styles — the top-bar address track (Figma 59:55943).
+ *
+ * The frame draws the track as a row of identical "address-tab" pills:
+ * icon + name, 4px padding, 4px gap, r=8, separated by a "/" — and the
+ * ACTIVE tab additionally carries the #F2F2F7 ground.
+ *
+ * Home and the crumbs after it must therefore share ONE type ramp and ONE
+ * box. They did not: Home was a bare Note at #65656c while each crumb was a
+ * widget whose label used var(--normal-fg-10), so the two sat in different
+ * colours and — because one was a plain inline Note and the other a nested
+ * flex child — on different baselines. The shared values live in
+ * --crumb-* below so neither side can drift from the other again.
  * ==================================================================== */
 @use "mixins/drumee";
 
 .desk-breadcrumb {
+  // One source for the tab ramp. Both this file and breadcrumb/item read
+  // them, which is what keeps Home and the crumbs identical.
+  --crumb-font-size: 13px;
+  --crumb-line: 18px;
+  --crumb-height: 30px;
+  --crumb-radius: 8px;
+  --crumb-pad-x: 6px;
+  --crumb-gap: 6px;
+  --crumb-icon: 20px;
+
   &__ui {
     flex: 1;
     justify-content: flex-start;
     display: flex;
-    color: #65656c;
-    min-width: 60px;  
+    align-items: center;
+    color: var(--normal-fg-20);
+    min-width: 60px;
   }
 
   &__main {
     background-color: inherit;
     display: flex;
     flex-direction: row;
+    // Every tab is the same height and centred on the same axis — this is
+    // what puts Home and the workspace names on one line.
     align-items: center;
-    gap: 0;
-    overflow: auto;
+    gap: 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
     flex: 1;
-    height: 35px;
-    padding-left: 8px;
-    &::-webkit-scrollbar { width: 4px; };
-     &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); };
-      &::-webkit-scrollbar-thumb { background: var(--primary-40); border-radius: 4px; }
+    height: var(--crumb-height);
+    padding-left: 4px;
+
+    // A visible scrollbar inside a 30px bar would eat the text, so the track
+    // scrolls without one; a long path is reachable by drag/wheel.
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
+  // ── Home, drawn as a tab like every crumb ──────────────────────────────
   &__context {
-    @include drumee.typo($color: #65656c, $size: 13px, $line: 18px);
-    cursor: pointer;
+    align-items: center;
+    gap: var(--crumb-gap);
     flex-shrink: 0;
+    height: calc(var(--crumb-height) - 6px);
+    padding: 0 var(--crumb-pad-x);
+    border-radius: var(--crumb-radius);
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 0.12s ease;
 
     &:hover {
-      text-decoration: underline;
+      background-color: var(--overlay-bg-05);
     }
 
+    // The frame's active ground. Set when Home IS the current location.
     &[data-current="1"] {
-      color: #000000;
-      font-weight: 700;
+      background-color: var(--normal-bg-90);
+
+      .desk-breadcrumb__context-label {
+        color: var(--normal-fg);
+        font-weight: 600;
+      }
     }
   }
+
+  &__context-icon {
+    width: var(--crumb-icon);
+    height: var(--crumb-icon);
+    min-width: var(--crumb-icon);
+    flex: 0 0 auto;
+    color: var(--normal-fg-20);
+  }
+
+  &__context-label {
+    // Identical to .breadcrumb-item__filename. drumee.typo() emits no
+    // font-weight at all ($weight is a no-op), so the weight is written out
+    // explicitly here and there — relying on the mixin left both sides
+    // inheriting whatever the bar happened to set.
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 13px,
+      $line: 18px
+    );
+    font-weight: 400;
+    white-space: nowrap;
+  }
 }
 
-// Breadcrumb items scoped to desk context
-.desk-breadcrumb .window-breadcrumbs__item {
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
-
-  &--filename {
-    @include drumee.typo($size: 13px, $line: 24px);
-  }
-
-  &:last-child .window-breadcrumbs__item--filename {
-    font-weight: 600;
-  }
-
-  &:hover .window-breadcrumbs__item--filename {
-    text-decoration: underline;
-  }
-}
-
-// ── Dark mode overrides ─────────────────────────────────────────
+// ── Dark mode ───────────────────────────────────────────────────────────
 html[data-theme="dark"] {
   .desk-breadcrumb {
     &__ui {
       color: var(--normal-fg-20);
     }
 
-    &__context {
+    &__context-label {
       color: var(--normal-fg-20);
-
-      &[data-current="1"] {
-        color: var(--normal-fg);
-      }
     }
-  }
 
-  .desk-breadcrumb .window-breadcrumbs__item {
-    color: var(--normal-fg-20);
-
-    &:last-child .window-breadcrumbs__item--filename {
+    &__context[data-current="1"] .desk-breadcrumb__context-label {
       color: var(--normal-fg);
     }
   }

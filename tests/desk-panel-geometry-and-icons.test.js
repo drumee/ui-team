@@ -124,3 +124,71 @@ test("slide-out panels sit inside the canvas, not over the whole viewport", () =
     );
   }
 });
+
+// ── the top-bar address track (Figma 59:55943) ───────────────────────────────
+//
+// The frame draws every crumb as the same icon+name pill. Home was a bare Note
+// at a hardcoded #65656c while each crumb was a widget on var(--normal-fg-10),
+// so the two rendered in different greys on different baselines. Nothing but a
+// side-by-side check catches that, because each rule is defensible alone.
+test("Home and the crumbs share one type ramp", () => {
+  // Comment-stripped: the prose in these files quotes the very values it
+  // warns about (the old #65656c), which a raw match reads as the declaration.
+  const bc = stripComments(
+    readFileSync(join(SRC, "modules/desk/breadcrumb/skin/index.scss"), "utf8"),
+  );
+  const item = stripComments(
+    readFileSync(join(SRC, "modules/desk/breadcrumb/item/skin/index.scss"), "utf8"),
+  );
+
+  const ramp = (src, sel) => {
+    const i = src.indexOf(sel);
+    assert.ok(i > 0, `${sel} not found`);
+    const rule = src.slice(i, src.indexOf("\n  }", i));
+    return {
+      size: (rule.match(/\$size:\s*([\w.]+)/) || [])[1],
+      line: (rule.match(/\$line:\s*([\w.]+)/) || [])[1],
+      color: (rule.match(/\$color:\s*([^,)]+)/) || [])[1],
+      weight: (rule.match(/font-weight:\s*(\d+)/) || [])[1],
+    };
+  };
+
+  const home = ramp(bc, "&__context-label {");
+  const crumb = ramp(item, "&__filename {");
+  assert.deepEqual(home, crumb, "Home and crumb labels must match exactly");
+
+  // No hardcoded grey: that literal is what made Home a different colour.
+  assert.doesNotMatch(bc, /#65656c/i, "use a token, not a hardcoded grey");
+
+  // drumee.typo() emits no font-weight, so passing $weight to it is a silent
+  // no-op — the weight must be written out.
+  assert.ok(home.weight, "the weight must be an explicit font-weight");
+  assert.doesNotMatch(bc, /typo\([^)]*\$weight/, "$weight in typo() does nothing");
+  assert.doesNotMatch(item, /typo\([^)]*\$weight/, "$weight in typo() does nothing");
+});
+
+test("every crumb renders a real workspace icon", () => {
+  const skel = stripComments(
+    readFileSync(join(SRC, "modules/desk/breadcrumb/item/skeleton/index.js"), "utf8"),
+  );
+
+  // The four raw-drumee-folder-* names exist in NEITHER sprite; they were
+  // computed into a variable the skeleton never used, so the breadcrumb drew
+  // no icon at all.
+  assert.doesNotMatch(skel, /raw-drumee-folder-/, "those sprite names do not exist");
+  assert.match(skel, /require\("media\/grid\/template\/folder"\)/);
+  assert.match(
+    skel,
+    /Skeletons\.Element\(\{[\s\S]*?content:\s*folderArt\(/,
+    "the template returns markup — Element + content, not Image.Svg + ico",
+  );
+
+  // And it must be sized, or the 105x86 source renders at intrinsic size.
+  const skin = stripComments(
+    readFileSync(join(SRC, "modules/desk/breadcrumb/item/skin/index.scss"), "utf8"),
+  );
+  const i = skin.indexOf("&__icon {");
+  assert.ok(i > 0, "__icon rule missing");
+  assert.match(skin.slice(i, i + 400), /width:\s*20px/, "the icon must be sized");
+  assert.match(skin, /\.folder-shape\s*\{[\s\S]{0,120}width:/, ".folder-shape must be sized");
+});

@@ -9,25 +9,22 @@
  * @returns 
  */
 
+// The workspace/folder icon — the area-tinted shape from
+// media/grid/template/folder, the single source this app renders it from (the
+// desk sidebar and the workspace switcher both go through it).
+//
+// This replaces four raw-drumee-folder-{blue,purple,orange,green} names that
+// exist in NEITHER sprite: they were computed into a variable the skeleton
+// never used, so the breadcrumb has always drawn a bare name with no icon at
+// all. The template returns an HTML STRING, hence Element + content rather
+// than Image.Svg + ico — passing markup as an icon NAME builds
+// `<use href="#<markup>">` and renders nothing.
+const folderArt = require("media/grid/template/folder");
+
 module.exports = function (ui) {
   const filename = ui.mget(_a.filename);
-
-  let folderIcon = 'raw-drumee-folder-blue';
-  let iconColor = 'blue';
-  if (ui.mget(_a.filetype) == _a.hub) {
-    iconColor = ui.mget(_a.area);
-    switch (ui.mget(_a.kind)) {
-      case 'window_team':
-        folderIcon = 'raw-drumee-folder-purple';
-        break;
-      case 'window_sharebox':
-        folderIcon = 'raw-drumee-folder-orange';
-        break;
-      case 'window_website':
-        folderIcon = 'raw-drumee-folder-green';
-        break;
-    }
-  }
+  const filetype = ui.mget(_a.filetype);
+  const isHub = filetype == _a.hub;
 
   let nid = ui.mget(_a.nid);
   let pid = ui.mget(_a.pid);
@@ -54,14 +51,32 @@ module.exports = function (ui) {
       active: 0
     },
     kids: [
+      // "/" per the frame (59:55943), not the old "›".
       Skeletons.Note({
-        content: "›",
+        content: "/",
         className: `${pfx}__separator`,
       }),
-      Skeletons.Note({
-        content: filename,
-        className: `${pfx}__filename`
-      })
+      Skeletons.Box.X({
+        className: `${pfx}__tab`,
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Element({
+            className: `${pfx}__icon ${ui.mget(_a.area) || ""}`,
+            content: folderArt({
+              area: ui.mget(_a.area),
+              filetype: isHub ? _a.hub : _a.folder,
+              role: isHub ? "desk" : "",
+              widgetId: _.uniqueId("crumb-icon-"),
+              // No kebab in a breadcrumb: there is nothing for it to act on.
+              isAttachment: 1,
+            }),
+          }),
+          Skeletons.Note({
+            content: filename,
+            className: `${pfx}__filename`,
+          }),
+        ],
+      }),
     ]
   });
 }

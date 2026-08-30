@@ -17,13 +17,32 @@ module.exports = function (ui, data = []) {
     className: `${pfx}__main`,
     debug: __filename,
     kids: [
-      Skeletons.Note({
+      // Home is a TAB, exactly like every crumb after it (59:55943 draws each
+      // one as an icon + name pill). It used to be a bare Note, which is why
+      // its label sat on a different baseline and in a different colour from
+      // the workspace names beside it: two unrelated elements cannot share a
+      // type ramp by accident.
+      //
+      // kidsOpt active:0 — ui-core binds a click to every widget that does not
+      // opt out and stops propagation before triggerHandlers, so a child left
+      // at the default would eat the click and "load-home" would never fire.
+      Skeletons.Box.X({
         className: `${pfx}__context`,
         sys_pn: _a.context,
         partHandler: ui,
         uiHandler: [ui],
         service: "load-home",
-        content: LOCALE.HOME,
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${pfx}__context-icon`,
+            ico: "sidebar_home",
+          }),
+          Skeletons.Note({
+            className: `${pfx}__context-label`,
+            content: LOCALE.HOME,
+          }),
+        ],
       }),
       Skeletons.Box.X({ className: `${pfx}__content`, sys_pn: _a.content, kids: items })
     ],

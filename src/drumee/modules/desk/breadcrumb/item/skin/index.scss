@@ -1,7 +1,12 @@
 /* ==================================================================== *
-* Widget style automatically generated on 2026-04-01T14:02:19.133Z
-* npm run add-widget -- --fig=breadcrumb.item --dest=src/drumee/modules/desk/breadcrumb/item
-* ==================================================================== */
+ * breadcrumb-item — one address tab in the desk top bar (Figma 59:55943).
+ *
+ * Shares the --crumb-* ramp published by .desk-breadcrumb, so this tab and
+ * the Home tab beside it cannot drift apart in size, colour or baseline.
+ * That drift is exactly what this file was fixed for: Home was a bare Note
+ * at a hardcoded #65656c and this was a nested widget on a token colour, so
+ * the two rendered in different greys on different baselines.
+ * ==================================================================== */
 @use 'mixins/drumee';
 
 .breadcrumb-item {
@@ -9,35 +14,140 @@
     background-color: inherit;
     cursor: pointer;
     user-select: none;
+    display: flex;
+    align-items: center;
+    min-width: 0;
   }
 
   &__main {
     align-items: center;
     min-width: 0;
+    // Same axis as .desk-breadcrumb__main, so the separator, the icon and the
+    // name all sit on one line.
+    height: 100%;
+  }
+
+  // The "/" between tabs. Fixed width so a long path does not make the gaps
+  // jitter as names change.
+  &__separator {
+    @include drumee.typo($color: var(--normal-fg-30), $size: 13px, $line: 18px);
+    font-weight: 400;
+    flex: 0 0 auto;
+    text-align: center;
+    width: 14px;
+  }
+
+  // The tab itself: icon + name, matching .desk-breadcrumb__context.
+  &__tab {
+    align-items: center;
+    gap: var(--crumb-gap, 6px);
+    min-width: 0;
+    height: calc(var(--crumb-height, 30px) - 6px);
+    padding: 0 var(--crumb-pad-x, 6px);
+    border-radius: var(--crumb-radius, 8px);
+    box-sizing: border-box;
+    transition: background-color 0.12s ease;
+  }
+
+  &__ui:hover .breadcrumb-item__tab {
+    background-color: var(--overlay-bg-05);
+  }
+
+  // The area-tinted folder shape. It is NOT a plain <svg> to stretch: the
+  // template emits a `.folder-shape` path whose AREA CLASS supplies the fill
+  // (the colour IS the fill, not a currentColor tint) plus an absolutely
+  // positioned `.badge`. The SVG is authored at 105x86, so without explicit
+  // sizing here it renders at that intrinsic size — a giant glyph.
+  &__icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    flex: 0 0 auto;
+    align-items: center;
+    display: flex !important;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
+
+    .media-grid__folder-art {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      position: relative;
+      width: 20px;
+      height: 16px;
+    }
+
+    .folder-shape {
+      width: 20px;
+      height: 16px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder {
+        fill: var(--area-personal);
+      }
+      &.public {
+        fill: var(--area-public);
+      }
+      &.share,
+      &.dmz {
+        fill: var(--area-share);
+      }
+      &.private {
+        fill: var(--area-private);
+      }
+    }
+
+    // The area badge rides the folder body; at 20px it would otherwise sit
+    // outside the shape.
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      color: var(--grid-color-folder-badge);
+    }
   }
 
   &__filename {
-    @include drumee.typo($color: var(--normal-fg-10), $size: 13px, $line: 18px, $weight: 400);
+    // Byte-identical ramp to .desk-breadcrumb__context-label. drumee.typo()
+    // emits no font-weight ($weight is a no-op), so it is written out here
+    // rather than passed to the mixin.
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 13px,
+      $line: 18px
+    );
+    font-weight: 400;
     max-width: 180px;
     overflow: hidden;
-    padding-left: 8px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  &__separator {
-    @include drumee.typo($color: var(--normal-fg-20), $size: 13px, $line: 18px);
-    height: 18px;
-    padding-left: 8px;
-    width: 13px;
-  }
-
+  // The current location carries the frame's ground and a heavier name.
   &__main[data-current="1"] {
+    .breadcrumb-item__tab {
+      background-color: var(--normal-bg-90);
+    }
+
     .breadcrumb-item__filename {
       color: var(--normal-fg);
-      font-weight: 700;
+      font-weight: 600;
     }
   }
+}
 
+html[data-theme="dark"] {
+  .breadcrumb-item {
+    &__filename {
+      color: var(--normal-fg-20);
+    }
 
+    &__main[data-current="1"] .breadcrumb-item__filename {
+      color: var(--normal-fg);
+    }
+  }
 }
