@@ -1360,6 +1360,23 @@ class __tasks_panel extends LetcBox {
         return this._applyReporterChange(scope);
       }
 
+      // The reporter chip's ✕. Not a clear — a task always reads as reported by
+      // somebody — but an undo: it puts the field back to the task's creator
+      // (the current user in the create modal), which is what the field shows
+      // before anybody reassigns it.
+      case "reset-reporter": {
+        const scope =
+          trigger.mget("assigneeScope") === "create-reporter"
+            ? "create-reporter"
+            : "detail-reporter";
+        const draft = this._pickerDraft(scope);
+        if (!draft) return;
+        const back = this._reporterFallback(scope);
+        if (!back) return;
+        draft.reporter_uid = String(back);
+        return this._applyReporterChange(scope);
+      }
+
       case "toggle-assignee-list": {
         // The caret names its own scope. Pass it through instead of collapsing
         // to create|detail: there are four pickers now (assignee + reporter, in
@@ -2151,23 +2168,40 @@ class __tasks_panel extends LetcBox {
   // current open state is preserved — a chip removal must re-feed the rows
   // without popping a list the user had closed.
   _filterAssignees(scope, query, opt = {}) {
+    const single = this._isSinglePicker(scope);
     const rows = require("./skeleton").buildAssigneeSuggestions(
       this,
       query,
       this._assigneeSelection(scope),
       this._assigneeScopeService(scope),
+      // A reporter is one person, so the current one stays listed (ticked)
+      // rather than being hidden — see buildAssigneeSuggestions.
+      { keepSelected: single },
     );
     const list = this._assigneeListEl(scope);
     const open =
       opt.open != null ? !!opt.open : !!(list && list.dataset.open === "1");
+    // No match is an ANSWER, not a reason to swallow the dropdown. Forcing it
+    // shut on an empty result set is what made a picker read as broken: the
+    // caret did nothing, and there was no way to tell "nobody matches that"
+    // from "this control is dead".
+    const content = rows.length
+      ? rows
+      : [
+          Skeletons.Note({
+            className: `${this.fig.family}__assignee-empty`,
+            content: LOCALE.NO_MEMBERS_FOUND,
+            bubble: 0,
+          }),
+        ];
     this._withPart(`${scope}-assignee-suggestions`)
       .then((part) => {
         if (!part || part.isDestroyed?.()) return;
-        part.feed(rows);
+        part.feed(content);
         // A press on a row must not blur the search field, or the 200 ms
         // focusout teardown below fires mid-click and the pick is lost.
         keepListThroughClick(part.el, `.${this.fig.family}__assignee-option`);
-        if (part.el) part.el.dataset.open = open && rows.length ? "1" : "0";
+        if (part.el) part.el.dataset.open = open ? "1" : "0";
       })
       .catch(() => {
         /* not mounted yet */
@@ -2360,10 +2394,20 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.comment_create:
       case SERVICE.task.comment_update:
       case SERVICE.task.comment_delete:
-      case SERVICE.task.comment_react:
+      case SERVICE.task.comment_react: {
+        // Our OWN comment comes back on the socket too, and the row it names is
+        // already in the feed (the create response put it there). Re-reading
+        // the whole thread for it costs a second round trip per comment sent
+        // and repaints the feed a beat after the row landed, which reads as a
+        // flicker. A peer's change still refreshes, below.
+        const echoOfOurs =
+          service === SERVICE.task.comment_create &&
+          data &&
+          data.id &&
+          (this._comments || []).some((c) => String(c.id) === String(data.id));
         // A peer changed a comment. Surgically refresh the open task's feed so
         // an in-progress composer/edit isn't disturbed.
-        if (this._detailId) {
+        if (this._detailId && !echoOfOurs) {
           this._loadComments(this._detailId).then(() => {
             if (this._detailId) this._refreshCommentList();
           });
@@ -2373,6 +2417,7 @@ class __tasks_panel extends LetcBox {
           this._loadActivity().then(() => this._render());
         }
         return;
+      }
       default:
         if (super.onWsMessage) super.onWsMessage(svc, data, options);
     }
@@ -3727,11 +3772,20 @@ class __tasks_panel extends LetcBox {
         }
         return Array.isArray(out) ? out : [];
       };
-      this._comments = (Array.isArray(rows) ? rows : []).map((r) => ({
+      const fresh = (Array.isArray(rows) ? rows : []).map((r) => ({
         ...r,
         reactions: jsonList(r.reactions),
         attachments: jsonList(r.attachments),
       }));
+      // Carry over any optimistic row still awaiting its create response. A
+      // peer's comment lands on the socket and re-reads the whole thread; if
+      // that read overtakes our own create, a wholesale replace would drop the
+      // row the user is looking at — and the create's own reconciliation would
+      // then find nothing to replace.
+      const stillPending = (this._comments || []).filter(
+        (c) => c && c._pending && !fresh.some((f) => String(f.id) === String(c.id)),
+      );
+      this._comments = fresh.concat(stillPending);
     } catch (err) {
       // Don't silently blank an already-populated feed on a transient failure —
       // that reads to the user as "others' comments disappeared". Log so the
@@ -3741,22 +3795,124 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  /**
+   * Swap one comment row for another (or drop it, with `next` omitted) and
+   * repaint the feed. Used to reconcile an optimistic row with the server's.
+   */
+  _replaceComment(id, next) {
+    const list = this._comments || [];
+    const i = list.findIndex((c) => String(c.id) === String(id));
+    if (i === -1) {
+      // The row we meant to replace is gone (a concurrent _loadComments), so
+      // there is nothing to swap — but the comment itself is real and must not
+      // disappear. Append it unless that read already brought it back.
+      if (!next) return false;
+      if (list.some((c) => String(c.id) === String(next.id))) return false;
+      list.push(next);
+      this._comments = list;
+      return true;
+    }
+    if (next) list[i] = next;
+    else list.splice(i, 1);
+    return true;
+  }
+
+  /**
+   * Post the composer's comment.
+   *
+   * A plain text comment is rendered OPTIMISTICALLY: the composer empties and
+   * the row appears on the same tick as the Enter key, then the server's row
+   * replaces it. The round trip behind it is not short — comment_create writes
+   * the row, logs the activity and fans out mention / reply / assignee
+   * notifications before it answers — and the old flow waited for all of that
+   * AND a full comment_list re-read before the typed text left the box, which
+   * is what made Enter feel like it had not registered.
+   *
+   * A comment carrying attachments keeps the blocking flow: its staged strip is
+   * the upload progress UI, so the composer cannot be torn down under it, and
+   * the attachment rows only exist once the links are written.
+   */
   async _submitComment() {
     if (!this._detailId) return;
     const draft = this._commentDraft;
     const body = String((draft && draft.body) || "").trim();
     // Files queued on the composer count as content, exactly as in a reply — a
     // comment that is only an attachment is still worth posting.
-    if (!body && !((draft && draft.pending_files) || []).length) return;
+    const pending = (draft && draft.pending_files) || [];
+    if (!body && !pending.length) return;
     const taskId = this._detailId;
-    try {
-      const created = await this.postService({
+    const mention_uids = Array.isArray(draft.mention_uids)
+      ? draft.mention_uids
+      : [];
+    const post = () =>
+      this.postService({
         service: SERVICE.task.comment_create,
         hub_id: this._hubId,
         task_id: taskId,
         body,
-        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+        mention_uids,
       });
+
+    if (!pending.length) {
+      const tempId = `pending-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+      const now = Math.floor(Date.now() / 1000);
+      this._comments = (this._comments || []).concat({
+        id: tempId,
+        task_id: taskId,
+        author_uid: Visitor.id,
+        parent_id: null,
+        body,
+        edited: 0,
+        ctime: now,
+        mtime: now,
+        reactions: [],
+        attachments: [],
+        // The skin dims the row and the actions are withheld: reacting to or
+        // deleting a comment the server has not acknowledged has no id to act
+        // on yet.
+        _pending: 1,
+      });
+      this._commentDraft = null;
+      this._refreshCommentList();
+      this._refreshPendingList("comment");
+      const ed = this._descEditorEl("comment");
+      if (ed) this._renderEditorContent(ed, "");
+
+      let row = null;
+      try {
+        const created = await post();
+        row = Array.isArray(created) ? created[0] : created;
+      } catch (err) {
+        console.error("[tasks_panel] comment.create failed:", err);
+      }
+      const newId = row && (row.id || row.comment_id);
+      if (newId) {
+        // A fresh comment has no reactions and no attachments — comment_create
+        // returns the row without those columns, so fill the shapes the
+        // renderer expects rather than re-reading the whole feed.
+        this._replaceComment(tempId, {
+          ...row,
+          reactions: [],
+          attachments: [],
+        });
+      } else {
+        // Failed (postService resolves rather than rejects on a refusal): take
+        // the row back out and hand the text back to the composer instead of
+        // losing what was typed.
+        this._replaceComment(tempId, null);
+        this._commentDraft = draft;
+        this._refreshPendingList("comment");
+        const back = this._descEditorEl("comment");
+        if (back) this._renderEditorContent(back, body);
+      }
+      if (this._detailId === taskId) this._refreshCommentList();
+      return;
+    }
+
+    try {
+      const created = await post();
       // The row doesn't exist until now — its id comes back on the create, and
       // only then can the queued files be attached to it.
       const row = Array.isArray(created) ? created[0] : created;
@@ -4635,6 +4791,17 @@ class __tasks_panel extends LetcBox {
    */
   async _dropOnCommentRow(commentId, items) {
     const taskId = this._detailId;
+    // An optimistic row carries a local id the server has never seen, so
+    // comment_link_file would have nothing to attach to. Every row is a drop
+    // target, including the one still in flight — refuse this one until its
+    // create answers and the real row takes its place.
+    if (
+      (this._comments || []).some(
+        (c) => c && c._pending && String(c.id) === String(commentId),
+      )
+    ) {
+      return;
+    }
     const staged = await this._stageRowItems(commentId, items);
     if (!staged.length) return;
     // Busy for the length of THIS run, not for as long as entries happen to sit
@@ -6320,6 +6487,22 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
+   * Who the reporter falls back to in one picker scope: the task's creator in
+   * the detail panel, the current user in the create modal — the person the
+   * field names until somebody reassigns it, and what the chip's ✕ restores.
+   *
+   * Answers "" for a task with no creator recorded, rather than falling back to
+   * the current user: the skeleton passes detail.created_by verbatim, so both
+   * places must resolve the same way — otherwise the ✕ would be absent on the
+   * first render and appear after a pick, offering a reset to the wrong person.
+   */
+  _reporterFallback(scope) {
+    if (/^create/.test(String(scope || ""))) return Visitor.id;
+    const task = this.getDetailTask();
+    return (task && task.created_by) || "";
+  }
+
+  /**
    * Repaint one reporter picker in place after a pick.
    *
    * Mirrors _applyAssigneeChange, with the two single-select differences: the
@@ -6330,10 +6513,13 @@ class __tasks_panel extends LetcBox {
     if (!this.el) return;
     const draft = this._pickerDraft(scope);
     const uid = draft && draft.reporter_uid;
+    const resetTo = this._reporterFallback(scope);
     this._withPart(`${scope}-assignee-chips`)
       .then((chips) => {
         if (!chips || chips.isDestroyed?.()) return;
-        chips.feed(require("./skeleton").buildReporterChip(this, uid));
+        chips.feed(
+          require("./skeleton").buildReporterChip(this, uid, { scope, resetTo }),
+        );
       })
       .catch(() => {
         /* not mounted yet */

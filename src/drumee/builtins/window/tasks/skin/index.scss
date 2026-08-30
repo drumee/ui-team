@@ -2602,6 +2602,29 @@ $theme-colors: (
     > * {
       pointer-events: none;
     }
+
+    // Single-select (Reporter) keeps the current pick in the list so the
+    // dropdown is never empty; tick it so re-picking it reads as a no-op.
+    &[data-selected="1"] {
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.08));
+
+      .tasks-panel__assignee-option-name {
+        color: var(--accent, #433cc5);
+      }
+    }
+  }
+
+  // "No members found." — shown INSIDE the open dropdown instead of silently
+  // refusing to open it, so an empty result reads as an answer rather than as a
+  // dead control.
+  &__assignee-empty {
+    padding: 8px 10px;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-40, #84848c)
+    );
   }
 
   &__assignee-option-avatar {
@@ -2631,6 +2654,16 @@ $theme-colors: (
     padding: 4px 8px;
     border-radius: 4px;
     background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
+  }
+
+  // The Reporter chip opens the picker (the field has no room for an input
+  // beside a long name), so it has to look pressable.
+  &__assignee-chip[data-role="reporter"] {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.18));
+    }
   }
 
   &__assignee-chip-avatar {
@@ -3518,6 +3551,13 @@ $theme-colors: (
     border-radius: 12px;
     // Anchors __comment-drop-overlay to this row while it is being edited.
     position: relative;
+
+    // Optimistic row — on screen from the keystroke until the server's own row
+    // replaces it. Dimmed so "sending" is legible without a spinner that would
+    // outlive the send on a fast connection.
+    &[data-pending="1"] {
+      opacity: 0.55;
+    }
   }
 
   &__comment-avatar {

@@ -675,10 +675,12 @@ const make = function (ui) {
   // Reporter control — the assignee picker in single-select mode. Same shell
   // (chips row + combobox + suggestions part), so it inherits the delegated
   // focus/blur handling, the caret and the live member filter for free; the
-  // differences are that picking REPLACES instead of appending, and the chip
-  // has no ✕ because a task always reads as reported by somebody (it falls back
-  // to created_by). `scope` is "create-reporter" | "detail-reporter".
-  const reporterPicker = (uid, scope) =>
+  // differences are that picking REPLACES instead of appending, and the chip's
+  // ✕ resets rather than clears — a task always reads as reported by somebody
+  // (it falls back to created_by). `scope` is "create-reporter" |
+  // "detail-reporter".
+  // `resetTo` is the uid the chip's ✕ restores (task creator / current user).
+  const reporterPicker = (uid, scope, resetTo) =>
     Skeletons.Box.Y({
       // Same classes as the multi-select picker on purpose: it is the same
       // control, and the single-select difference is behavioural (replace, not
@@ -692,7 +694,7 @@ const make = function (ui) {
               className: `${pfx}__assignee-chips`,
               sys_pn: `${scope}-assignee-chips`,
               partHandler: ui,
-              kids: buildReporterChip(ui, uid),
+              kids: buildReporterChip(ui, uid, { scope, resetTo }),
             }),
             Skeletons.Entry({
               className: `${pfx}__assignee-search`,
@@ -1072,7 +1074,7 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.REPORTER,
         }),
-        reporterPicker(dReporter, "detail-reporter"),
+        reporterPicker(dReporter, "detail-reporter", detail.created_by),
         originParts.length
           ? Skeletons.Note({
               className: `${pfx}__detail-reporter-time`,
@@ -1690,7 +1692,11 @@ const make = function (ui) {
           className: `${pfx}__create-label`,
           content: LOCALE.REPORTER,
         }),
-        reporterPicker(draft?.reporter_uid || Visitor.id, "create-reporter"),
+        reporterPicker(
+          draft?.reporter_uid || Visitor.id,
+          "create-reporter",
+          Visitor.id,
+        ),
       ],
     });
 
@@ -2248,8 +2254,9 @@ const memberLabel = (m) =>
   "";
 
 /**
- * The reporter as a single, non-removable chip. Exported so the panel can
- * re-feed just the chips row after a pick.
+ * The reporter as a single chip — the whole chip opens the picker, and its ✕
+ * resets the field to the task's creator rather than clearing it. Exported so
+ * the panel can re-feed just the chips row after a pick.
  *
  * Deliberately NOT buildAssigneeChips: that one runs the uids through
  * getKnownAssignees, which drops anybody who has left the workspace. That is
@@ -2261,9 +2268,16 @@ const memberLabel = (m) =>
  * Returns [] only when there is genuinely no uid, which the SPs make impossible
  * for a live task (reporter_uid falls back to created_by).
  */
-function buildReporterChip(ui, uid) {
+function buildReporterChip(ui, uid, opt = {}) {
   const pfx = ui.fig.family;
   if (!uid) return [];
+  // Scope of the picker this chip belongs to ("create-reporter" |
+  // "detail-reporter") and the uid the ✕ resets to (the task's creator, or the
+  // current user on a create). Both are optional so an older call site still
+  // renders a plain, inert chip.
+  const scope = opt.scope || "";
+  const resetTo = opt.resetTo ? String(opt.resetTo) : "";
+  const resettable = !!(scope && resetTo && resetTo !== String(uid));
   // Visitor fallback: the member list loads asynchronously, and until it lands
   // getMember answers null for everybody — including the current user, who is
   // the default reporter on every create. Without this the field would open
@@ -2279,7 +2293,19 @@ function buildReporterChip(ui, uid) {
   return [
     Skeletons.Box.X({
       className: `${pfx}__assignee-chip`,
-      attrOpt: { "data-uid": uid },
+      attrOpt: { "data-uid": uid, "data-role": "reporter" },
+      // ui-core only stops a click when bubble is 0 — without this the chip's
+      // click would keep travelling up through every ancestor widget after it
+      // has already opened the list.
+      bubble: 0,
+      // The chip itself opens the member list. Without this the ONLY way into
+      // the picker was the caret or the sliver of input beside the chip, which
+      // on a wide name is a few pixels — the field read as a static label.
+      // A click on the avatar/name has no service of its own and walks up to
+      // this node (see onUiEvent's parent walk).
+      service: scope ? "toggle-assignee-list" : null,
+      uiHandler: scope ? [ui] : null,
+      assigneeScope: scope,
       kids: [
         Skeletons.UserProfile({
           className: `${pfx}__assignee-chip-avatar`,
@@ -2293,7 +2319,23 @@ function buildReporterChip(ui, uid) {
           className: `${pfx}__assignee-chip-name`,
           content: authorName(m),
         }),
-      ],
+        // ✕ — "undo my reassignment": puts the reporter back to the task's
+        // creator (the current user in the create modal). It is NOT a clear:
+        // a task always reads as reported by somebody, so there is nothing to
+        // reset to while the reporter already IS the creator, and the button is
+        // then omitted rather than rendered as a dead control.
+        resettable
+          ? Skeletons.Button.Svg({
+              className: `${pfx}__assignee-chip-remove`,
+              ico: "cross",
+              bubble: 0,
+              service: "reset-reporter",
+              uiHandler: [ui],
+              assigneeScope: scope,
+              tooltips: LOCALE.RESET,
+            })
+          : null,
+      ].filter(Boolean),
     }),
   ];
 }
@@ -2339,19 +2381,27 @@ function buildAssigneeChips(ui, assignees, service) {
   });
 }
 
-// Members matching `query`, minus the already-selected ones. An empty query
-// lists every remaining member (the dropdown half of the combobox) — the
-// container scrolls, so no result cap is needed.
-function buildAssigneeSuggestions(ui, query, selected, service) {
+// Members matching `query`. An empty query lists every member (the dropdown
+// half of the combobox) — the container scrolls, so no result cap is needed.
+//
+// `opt.keepSelected` keeps the already-selected member(s) in the list instead of
+// hiding them. Multi-select (assignees) hides them, because a chip with a ✕ is
+// already the "you have this one" affordance. SINGLE-select (reporter) must NOT:
+// hiding the only other member of a two-person workspace leaves an empty list,
+// and an empty list is force-closed below — which is what made the Reporter
+// field look like a dead control that could not be changed at all.
+function buildAssigneeSuggestions(ui, query, selected, service, opt = {}) {
   const pfx = ui.fig.family;
   const q = String(query || "")
     .trim()
     .toLowerCase();
   const chosen = new Set((selected || []).map(String));
+  const keepSelected = !!opt.keepSelected;
   return (ui.getMembers() || [])
     .filter((m) => {
       const uid = String(m.id || m.uid || "");
-      if (!uid || chosen.has(uid)) return false;
+      if (!uid) return false;
+      if (!keepSelected && chosen.has(uid)) return false;
       if (!q) return true;
       return (
         memberLabel(m).toLowerCase().includes(q) ||
@@ -2364,7 +2414,10 @@ function buildAssigneeSuggestions(ui, query, selected, service) {
       const uid = String(m.id || m.uid);
       return Skeletons.Box.X({
         className: `${pfx}__assignee-option`,
-        attrOpt: { "data-uid": uid },
+        // data-selected marks the row that is already picked (single-select
+        // keeps it listed) so the skin can tick it — re-picking it is a no-op,
+        // never a silent clear.
+        attrOpt: { "data-uid": uid, "data-selected": chosen.has(uid) ? "1" : "0" },
         bubble: 0,
         service,
         uiHandler: [ui],
@@ -3031,6 +3084,9 @@ function buildCommentListContent(ui) {
         // read from one place — the panel's isCommentRowBusy — rather than
         // written onto the DOM by whoever happens to notice a status change.
         "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
+        // Optimistic row: shown the instant Enter is pressed, replaced by the
+        // server's row when the create answers. The skin dims it.
+        "data-pending": c._pending ? "1" : "0",
       },
       kids: [
         avatar,
@@ -3051,12 +3107,17 @@ function buildCommentListContent(ui) {
             // Files attached to this comment, between the body and the footer.
             commentAttachments(ui, c, isOwn),
             // Reaction chips + action icons share one horizontal footer row.
-            Skeletons.Box.X({
-              className: `${pfx}__comment-footer`,
-              kids: [reactBar(c), commentActions(c, isOwn)].filter(Boolean),
-            }),
+            // An optimistic row gets none of them: react / reply / edit /
+            // delete all address the comment by id, and it has no server id
+            // yet — the footer comes back with the real row a moment later.
+            c._pending
+              ? null
+              : Skeletons.Box.X({
+                  className: `${pfx}__comment-footer`,
+                  kids: [reactBar(c), commentActions(c, isOwn)].filter(Boolean),
+                }),
             // Emoji palette opens on its own row below the icons.
-            pickerRow(c),
+            c._pending ? null : pickerRow(c),
           ].filter(Boolean),
         }),
         // Every row is a drop target now, not just the one being edited, so
