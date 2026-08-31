@@ -10,37 +10,41 @@
  * unchanged — a second, congratulatory copy of the Files pane would be the same
  * drift this toolkit exists to avoid.
  *
- * The confetti is the frame's own bitmap, committed rather than redrawn: it is
- * ~90 scattered marks at a dozen angles and colours, and a CSS approximation
- * would be both bigger and wrong. `mix-blend-mode: darken` is the frame's, and
- * it is what keeps the marks from washing out the white pane under them.
+ * THE CONFETTI IS THROWN, not painted. It was the frame's bitmap at first,
+ * which is what a static mockup can show and not what the moment is: the marks
+ * sat there, identical every run, and read as a texture over the pane rather
+ * than as something that just happened. canvas-confetti animates it, and the
+ * step fires it when the screen comes up (workspace/index.js _celebrate).
+ *
+ * The canvas is a sibling of the pane rather than a child: it covers the whole
+ * stage, must not be clipped by the pane's own overflow, and must never take a
+ * click meant for anything under it.
  */
 
 const { filesPane } = require("./files");
-
-const CONFETTI = require("assets/tutorial/confetti.png").default;
 
 const pfx = (ui) => `${ui.fig.group}__congrats`;
 
 /**
  * @param {Object} ui the step widget
- * @returns {Object} the finished workspace, celebrating
+ * @returns {Object} the finished workspace, ready to celebrate
  */
 function congratsScreen(ui) {
   const p = pfx(ui);
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-stage`,
-    // The spotlight lights this, and the callout hangs off it.
+    // The spotlight lights this; nothing else hangs off it any more.
     sys_pn: "congrats-stage",
     partHandler: ui,
     kids: [
       filesPane(ui),
-      // A sibling, not a child of the pane: it covers the whole stage and must
-      // not be clipped by the pane's own overflow, nor take a click meant for
-      // anything under it.
+      // A raw <canvas>, not a widget: canvas-confetti wants the element itself,
+      // and there is nothing here for the framework to manage.
       Skeletons.Element({ active: 0,
         className: `${p}-confetti`,
-        content: `<img src="${CONFETTI}" alt="">`,
+        sys_pn: "congrats-canvas",
+        partHandler: ui,
+        content: "<canvas></canvas>",
       }),
     ],
   });

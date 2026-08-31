@@ -125,15 +125,17 @@ const SCREENS = [
     text: () => LOCALE.TUTORIAL_INVITE_CALLOUT,
   },
   {
-    // The workspace, open, with confetti over it (176:42043). Not `live`: there
-    // is nothing to fill in, so this one keeps the ordinary footer — and being
-    // the last screen, its forward button is Done, which is how the tour ends.
+    // The workspace, open, with confetti thrown over it (176:42043).
+    //
+    // No callout at all — the frame has none, and by this point there is
+    // nothing left to say: the user is looking at the thing they made. Which
+    // leaves the tour with no Done to press, so the screen ends ITSELF: the
+    // confetti plays out and the tour comes down behind it, or a click takes it
+    // down sooner. See _celebrate.
     congrats: true,
     target: 'congrats-stage',
     anchor: 'congrats-stage',
-    direction: 'north',
-    title: () => LOCALE.TUTORIAL_CONGRATS_TITLE,
-    desc: () => LOCALE.TUTORIAL_CONGRATS_DESC,
+    bare: true,
   },
 ];
 
@@ -240,6 +242,7 @@ class __tutorial_workspace extends LetcBox {
       : s.text
         ? { text: s.text(), ...chrome }
         : { title: s.title(), desc: s.desc(), ...chrome };
+    if (s.congrats) this._celebrate();
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
@@ -380,6 +383,89 @@ class __tutorial_workspace extends LetcBox {
     }
     this._pending = 0;
     return this._advance();
+  }
+
+  /**
+   * Throw the confetti, then take the tour down behind it.
+   *
+   * The finish screen has no control of its own — the frame has no callout and
+   * there is nothing left to ask — so this is what ends the tour. Two ways out,
+   * because a celebration nobody can cut short is a celebration in the way:
+   *
+   *   the bursts finish   ~2.5s of confetti, then the tour dismisses itself and
+   *                       the user is left in the workspace it was thrown over.
+   *   a click             anywhere on the stage, for someone who has seen it.
+   *
+   * canvas-confetti is scoped to OUR canvas via create(), not the module-level
+   * confetti() — that one appends a fixed-position canvas to <body> and spawns
+   * a worker, which would outlive this widget and paint over the desk after the
+   * tour is gone.
+   *
+   * Guarded on having run: _showScreen re-renders for reasons of its own, and
+   * the confetti should be thrown once per arrival, not once per render.
+   */
+  _celebrate() {
+    if (this._celebrated) return;
+    this._celebrated = true;
+
+    const part = this.getPart && this.getPart('congrats-canvas');
+    const stage = this.getPart && this.getPart('congrats-stage');
+    const canvas = part && part.el && part.el.querySelector('canvas');
+
+    // Nothing to end the tour with if the click never lands, so it is bound
+    // whether or not the canvas came up.
+    const finish = () => {
+      if (this._finished) return;
+      this._finished = true;
+      clearTimeout(this._celebrateTimer);
+      if (this._onStageClick && stage && stage.el) {
+        stage.el.removeEventListener('click', this._onStageClick);
+        this._onStageClick = null;
+      }
+      try {
+        if (this._confetti && this._confetti.reset) this._confetti.reset();
+      } catch (e) { /* the canvas is already gone */ }
+      this._advance();
+    };
+
+    if (stage && stage.el) {
+      this._onStageClick = () => finish();
+      stage.el.addEventListener('click', this._onStageClick);
+    }
+
+    if (canvas) {
+      try {
+        const create = require('canvas-confetti').create;
+        // `resize` keeps it right through a window change; the worker is
+        // deliberately off — see above.
+        this._confetti = create(canvas, { resize: true, useWorker: false });
+        // Two bursts from the lower corners, the way the frame scatters them
+        // across the whole pane rather than out of one point.
+        const burst = (x, angle) => this._confetti({
+          particleCount: 90,
+          spread: 70,
+          startVelocity: 55,
+          origin: { x, y: 0.9 },
+          angle,
+          scalar: 0.9,
+        });
+        burst(0.15, 60);
+        burst(0.85, 120);
+      } catch (e) {
+        this.warn && this.warn('[tutorial] confetti failed', e);
+      }
+    }
+
+    // Long enough for the bursts to land and settle.
+    this._celebrateTimer = setTimeout(finish, 2600);
+  }
+
+  onBeforeDestroy() {
+    clearTimeout(this._celebrateTimer);
+    try {
+      if (this._confetti && this._confetti.reset) this._confetti.reset();
+    } catch (e) { /* nothing to stop */ }
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**

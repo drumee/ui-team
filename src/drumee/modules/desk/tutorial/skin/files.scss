@@ -707,20 +707,25 @@ $home-preview-h: 475px;
     overflow: hidden;
   }
 
-  // Over the pane, and inert. `mix-blend-mode: darken` is the frame's own — it
-  // is what stops the marks washing out the white pane beneath them, and it is
-  // why this is an overlay rather than a background on the pane itself.
+  // Over the pane, and inert. canvas-confetti sizes the canvas' backing store
+  // itself (`resize: true`) off the element's own box, so the box has to be a
+  // real one — an unsized canvas defaults to 300x150 and the confetti lands in
+  // a small rectangle in the corner.
+  //
+  // No blend mode any more. The bitmap needed `darken` to stop its marks
+  // washing out the white pane; drawn confetti is opaque on transparent and
+  // wants to be exactly the colour it is.
   &__congrats-confetti {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    mix-blend-mode: darken;
+    z-index: 2;
     display: block !important;
 
-    img {
+    canvas {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      display: block;
     }
   }
 }
