@@ -2,6 +2,10 @@ const skeleton = require('./skeleton');
 const { BLOCKS } = require('../skeleton/toolkit/workspace-dialog');
 const { stepProgress, isLastScreen, entryScreen } = require('../tours');
 
+// The type keys the dialog uses are the design's; the create service's are the
+// product's, and they are not the same three words. One map, at the boundary.
+const SERVICE_TYPE = { internal: 'team', external: 'share', personal: 'personal' };
+
 /**
  * The `workspace` tour — five screens of the Create-new-workspace dialog
  * (Figma 176:40762 → 176:41391).
@@ -25,6 +29,18 @@ const { stepProgress, isLastScreen, entryScreen } = require('../tours');
  * home screen reaches north instead, so its card hangs under the `+ New`
  * button it names.
  */
+// Card-edge to dialog-edge on the dialog screens, against the shared default of
+// 32 (spotlight/index.js GAP). That default is an average taken across the
+// import, share and chat frames, and it puts this card closer to the dialog
+// than it wants to be — the dialog is the widest surface any tour lights, and
+// the callout reads as stuck to it. 40 gives it room without letting the tail
+// point at nothing: the beak juts 14px, so the tip still clears the dialog by
+// only ~26.
+//
+// One number, here, because every screen of this step sits beside the same
+// dialog. Screen 1 raises no callout at all, so it is unaffected.
+const DIALOG_GAP = 40;
+
 const SCREENS = [
   {
     // Figma 140:22684 — the home EMPTY STATE the flow starts on: the
@@ -77,6 +93,31 @@ const SCREENS = [
     ready: true,
     text: () => LOCALE.TUTORIAL_WS_CREATE,
   },
+
+  // ── from here it is not a tour any more ────────────────────────────────────
+  //
+  // These two run ONLY on the post-signup pass — the host slices the table to
+  // `screen_count`, and _screensFor drops them for a preview or for the full
+  // tour (see ../index.js). Five screens of being shown the dialog, and then
+  // the dialog.
+  {
+    // Every section at full strength, because there is no longer one being
+    // taught: the user is filling it in.
+    live: true,
+    target: 'wsd-dialog',
+    anchor: 'wsd-dialog',
+    direction: 'west',
+    text: () => LOCALE.TUTORIAL_WS_NOW_CREATE,
+  },
+  {
+    // The card is the whole screen and it is centred, so nothing is lit and no
+    // callout is raised — a beak pointing at a dialog in the middle of an empty
+    // pane has nothing to say.
+    invite: true,
+    target: 'inv-card',
+    anchor: 'inv-card',
+    bare: true,
+  },
 ];
 
 class __tutorial_workspace extends LetcBox {
@@ -86,11 +127,27 @@ class __tutorial_workspace extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._screenIndex = 0;
+    // Which type the live dialog has selected. Starts on the design's default,
+    // and the five mock screens before it show the same one selected.
+    this._type = 'internal';
+  }
+
+  /**
+   * The screens this run actually has.
+   *
+   * The table holds all eight; `screen_count` is what the host worked out for
+   * this run, and on a preview or inside the full tour that is six. Sliced
+   * rather than branched on, so every `SCREENS.length` below keeps meaning
+   * "the end of this run".
+   */
+  get _screens() {
+    const n = ~~this.mget('screen_count') || SCREENS.length;
+    return SCREENS.slice(0, Math.min(n, SCREENS.length));
   }
 
   async onDomRefresh() {
     // Re-entered via Back from a later step: resume where we left off.
-    this._screenIndex = entryScreen(this, SCREENS.length);
+    this._screenIndex = entryScreen(this, this._screens.length);
     this._showScreen();
   }
 
@@ -106,12 +163,16 @@ class __tutorial_workspace extends LetcBox {
    * tree) and only answers once the new DOM has landed.
    */
   async _showScreen() {
-    const s = SCREENS[this._screenIndex];
+    const s = this._screens[this._screenIndex];
     if (!s) {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(skeleton(this, s));
+    this.feed(skeleton(this, s, {
+      selected: this._type,
+      pending: !!this._pending,
+      created: this._created,
+    }));
     // The dialog screens light the whole dialog and point the beak at one row
     // inside it; the home screen lights the button and points at the same
     // thing, so the target is named per screen rather than assumed.
@@ -131,7 +192,7 @@ class __tutorial_workspace extends LetcBox {
       // — see the note on progressStyle in toolkit/tooltip.js.
       ...stepProgress(this, this._screenIndex),
       hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-      done: isLastScreen(this, this._screenIndex, SCREENS.length),
+      done: isLastScreen(this, this._screenIndex, this._screens.length),
     };
     // `bare` raises the screen with no tooltip at all: focus() feeds the
     // callout null and returns, so nothing is drawn and nothing is left over
@@ -148,18 +209,168 @@ class __tutorial_workspace extends LetcBox {
       tooltip,
       direction: s.direction || 'west',
       beak: s.beak,
+      gap: DIALOG_GAP,
       owner: this,
     });
+  }
+
+  // ── the live screens ───────────────────────────────────────────────────────
+
+  /** Show or clear the message under the name field. */
+  _setNameError(msg) {
+    const err = this.getPart && this.getPart('wsd-name-error');
+    if (!err || !err.el) {
+      if (msg) Wm.alert(msg);
+      return;
+    }
+    if (_.isFunction(err.set)) err.set({ content: msg || '' });
+    else err.el.textContent = msg || '';
+    err.el.dataset.state = msg ? 1 : 0;
+  }
+
+  /** Show or clear the message under the invite field. */
+  _setInviteError(msg) {
+    const err = this.getPart && this.getPart('inv-error');
+    if (!err || !err.el) return;
+    if (_.isFunction(err.set)) err.set({ content: msg || '' });
+    else err.el.textContent = msg || '';
+    err.el.dataset.state = msg ? 1 : 0;
+  }
+
+  /**
+   * Create the workspace.
+   *
+   * The create, the analytics row and the workspace:refresh broadcast are
+   * libs/create-workspace's — the same code the desk's own create form runs, so
+   * a workspace made here is indistinguishable from one made any other way.
+   * What is this step's is the validation copy, where the error goes, and what
+   * happens next.
+   */
+  async _create() {
+    if (this._pending) return;
+    const entry = this.getPart && this.getPart('wsd-name-input');
+    const name = String((entry && entry.getValue && entry.getValue()) || '').trim();
+    this._setNameError(null);
+    if (!name) {
+      return this._setNameError(LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME);
+    }
+
+    // Re-render so the button shows it is waiting. `_pending` is also the
+    // re-entrancy guard above — Create is the one control in this tour that
+    // waits on the network, so it is the one that can be pressed twice.
+    this._pending = 1;
+    await this._showScreen();
+
+    const type = SERVICE_TYPE[this._type] || 'team';
+    const res = await require('libs/create-workspace')
+      .createWorkspace(this, type, name);
+
+    this._pending = 0;
+    if (!res.ok) {
+      await this._showScreen();
+      // The personal path reports its own failures before resolving.
+      if (res.handled) return;
+      const msg = res.quota
+        ? (LOCALE.QUOTA_EXCEEDED || LOCALE.TRY_AGAIN)
+        : (res.message || LOCALE.TRY_AGAIN);
+      return this._setNameError(msg);
+    }
+
+    // Carried to the next screen, which needs the type to pick its card and the
+    // hub_id to invite anyone to.
+    this._created = { type, ...res.workspace };
+    this._screenIndex = this._screenIndex + 1;
+    return this._showScreen();
+  }
+
+  /**
+   * Invite one person to the workspace that was just made.
+   *
+   * Same call and same guards as the members panel
+   * (builtins/permission/restricted), because it is the same act — this screen
+   * is just the first time it is offered.
+   */
+  async _invite() {
+    if (this._pending) return;
+    const entry = this.getPart && this.getPart('inv-email');
+    const email = String((entry && entry.getValue && entry.getValue()) || '').trim();
+    this._setInviteError(null);
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return this._setInviteError(LOCALE.ENTER_VALID_EMAIL || LOCALE.INVALID_EMAIL);
+    }
+    const hub_id = this._created && this._created.hub_id;
+    if (!hub_id) return this._endTour();
+
+    const btn = this.getPart && this.getPart('inv-send');
+    if (btn && btn.el) btn.el.dataset.pending = 1;
+    this._pending = 1;
+    try {
+      const res = await this.postService(SERVICE.hub.invite, {
+        hub_id,
+        invitees: [email],
+        privilege: _K.privilege.write,
+      });
+      const r = (res && res.results && res.results[0]) || {};
+      if ((res && (res.error || res.error_code)) || r.status === 'failed') {
+        this._pending = 0;
+        if (btn && btn.el) btn.el.dataset.pending = 0;
+        return this._setInviteError(r.reason || (res && res.reason) || LOCALE.TRY_AGAIN);
+      }
+      // Flows that only observe the desk use this — the reward flow's Step 1
+      // walkthrough skips its own invite step on it.
+      RADIO_BROADCAST.trigger('invitation:sent', { hub_id });
+    } catch (e) {
+      this._pending = 0;
+      if (btn && btn.el) btn.el.dataset.pending = 0;
+      this.warn('invite failed', e);
+      return this._setInviteError(LOCALE.TRY_AGAIN);
+    }
+    this._pending = 0;
+    return this._endTour();
+  }
+
+  /**
+   * Done with the live screens: hand back to the host, which ends the tour.
+   *
+   * The workspace has already announced itself (workspace:refresh, from the
+   * create), so the desk opens it as the tour comes down — the user lands in
+   * the thing they just made rather than back where they started.
+   */
+  _endTour() {
+    return this.triggerHandlers({ service: 'next-step' });
+  }
+
+  /** Is the screen on show one the user is filling in rather than watching? */
+  isLive() {
+    const s = this._screens[this._screenIndex];
+    return !!(s && (s.live || s.invite));
   }
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
+      case 'wsd-select-type': {
+        const key = (trigger.el && trigger.el.dataset && trigger.el.dataset.type)
+          || trigger.mget(_a.type);
+        if (!key || key === this._type) return;
+        this._type = key;
+        return this._showScreen();
+      }
+
+      case 'wsd-create':
+        return this._create();
+
+      case 'inv-send':
+        return this._invite();
+
+      case 'inv-skip':
+        return this._endTour();
+
       case 'next-step':
         // Only the last screen hands the tour back to tutorial_main, and it
         // NAMES the service. The step widget carries no `service` of its own
         // any more — see _buildWidgets in ../index.js.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
+        if (this._screenIndex >= this._screens.length - 1) return this.triggerHandlers({ service: 'next-step' });
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':

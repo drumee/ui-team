@@ -11,8 +11,14 @@
  * full strength and marks the rest `data-dim`, which is the design's own
  * treatment (skin/tooltip.scss owns that rule once, for every step).
  *
- * Visual only — no services. `wsd-dialog` is the spotlight target; each block
- * carries a `sys_pn` so a screen can anchor the callout's beak on it.
+ * `wsd-dialog` is the spotlight target; each block carries a `sys_pn` so a
+ * screen can anchor the callout's beak on it.
+ *
+ * Visual only — no services — EXCEPT in `live` mode, which the tour's last
+ * screen uses to render the same dialog as a working form. That screen is the
+ * one place in any tour where the user is doing something rather than being
+ * shown it, and it is deliberately the same composer: a create form that
+ * drifted from the five screens teaching it would be worse than no tour.
  */
 
 // The area-tinted workspace shape, from the single source the desk renders it
@@ -83,7 +89,20 @@ function rowIsDim(lit, key) {
 
 function typeRow(ui, pfx, type, opt) {
   const selected = opt.selected === type.key;
-  return Skeletons.Box.X({ active: 0,
+  // Live, the row is how the type is chosen, so it takes a click. Mock, it is
+  // scenery and must stay inert — `active: 0` is what keeps a stray click from
+  // bubbling to the step wrapper (see _buildWidgets in ../../index.js).
+  return Skeletons.Box.X({
+    // Inline, like the submit below, so the inert-node guard can see both
+    // halves of the choice on the node itself.
+    ...(opt.live
+      ? {
+          service: "wsd-select-type",
+          uiHandler: [ui],
+          dataset: { type: type.key, on: selected ? 1 : 0 },
+          attrOpt: { "data-type": type.key, "data-on": selected ? 1 : 0 },
+        }
+      : { active: 0 }),
     className: `${pfx}__wsd-type-row`,
     sys_pn: BLOCKS.type(type.key),
     partHandler: ui,
@@ -132,7 +151,7 @@ function typeRow(ui, pfx, type, opt) {
  */
 function workspaceDialog(ui, opt = {}) {
   const pfx = ui.fig.family;
-  const { lit, selected = "internal", ready = false } = opt;
+  const { lit, selected = "internal", ready = false, live = false, pending = false } = opt;
   const held = (block) => dim(lit && lit !== block);
   // Create is at full strength on its own screen and held back on every
   // screen that is teaching one of the fields above it.
@@ -167,16 +186,40 @@ function workspaceDialog(ui, opt = {}) {
                 className: `${pfx}__wsd-label`,
                 content: LOCALE.WORKSPACE_NAME,
               }),
-              Skeletons.Box.X({ active: 0,
-                className: `${pfx}__wsd-entry`,
-                kids: [
-                  Skeletons.Note({ active: 0,
-                    className: `${pfx}__wsd-placeholder`,
-                    content: LOCALE.TYPE_THE_NAME,
+              live
+                ? Skeletons.Entry({
+                    className: `${pfx}__wsd-input`,
+                    sys_pn: "wsd-name-input",
+                    partHandler: ui,
+                    formItem: _a.filename,
+                    placeholder: LOCALE.TYPE_THE_NAME,
+                    // The step validates on submit and writes its own message
+                    // into the slot below; `bubble` would put a second one in a
+                    // tooltip saying the same thing somewhere else.
+                    bubble: 0,
+                  })
+                : Skeletons.Box.X({ active: 0,
+                    className: `${pfx}__wsd-entry`,
+                    kids: [
+                      Skeletons.Note({ active: 0,
+                        className: `${pfx}__wsd-placeholder`,
+                        content: LOCALE.TYPE_THE_NAME,
+                      }),
+                    ],
                   }),
-                ],
-              }),
-            ],
+              // Under the field, where the error belongs — not in a modal the
+              // user has to dismiss before they can fix the name.
+              live
+                ? Skeletons.Note({ active: 0,
+                    className: `${pfx}__wsd-error`,
+                    sys_pn: "wsd-name-error",
+                    partHandler: ui,
+                    dataset: { state: 0 },
+                    attrOpt: { "data-state": 0 },
+                    content: "",
+                  })
+                : null,
+            ].filter(Boolean),
           }),
 
           Skeletons.Box.Y({ active: 0,
@@ -189,16 +232,32 @@ function workspaceDialog(ui, opt = {}) {
                 className: `${pfx}__wsd-label`,
                 content: LOCALE.WORKSPACE_TYPE,
               }),
-              ...TYPES.map((t) => typeRow(ui, pfx, t, { lit, selected })),
+              ...TYPES.map((t) => typeRow(ui, pfx, t, { lit, selected, live })),
             ],
           }),
 
-          Skeletons.Note({ active: 0,
+          Skeletons.Note({
+            // Live it is the one control on the screen; mock it is a picture of
+            // one, and inert for the same reason the rows are.
+            ...(live
+              ? { service: "wsd-create", uiHandler: [ui] }
+              : { active: 0 }),
             className: `${pfx}__wsd-submit`,
             sys_pn: BLOCKS.CREATE,
             partHandler: ui,
-            dataset: { ready: ready ? 1 : 0, dim: submitIsDim ? 1 : 0 },
-            attrOpt: { "data-ready": ready ? 1 : 0, "data-dim": submitIsDim ? 1 : 0 },
+            // Live, Create is always solid — there is no screen walking up to
+            // it any more, and a pale button on the screen you are meant to
+            // press reads as disabled.
+            dataset: {
+              ready: live || ready ? 1 : 0,
+              dim: submitIsDim ? 1 : 0,
+              pending: pending ? 1 : 0,
+            },
+            attrOpt: {
+              "data-ready": live || ready ? 1 : 0,
+              "data-dim": submitIsDim ? 1 : 0,
+              "data-pending": pending ? 1 : 0,
+            },
             content: LOCALE.CREATE,
           }),
         ],

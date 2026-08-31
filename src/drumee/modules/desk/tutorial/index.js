@@ -80,6 +80,46 @@ class tutorial_main extends LetcBox {
   }
 
   /**
+   * How many screens of a step actually run.
+   *
+   * A step may declare a `live_screens` tail — screens that stop being a mock
+   * and do something real. Today that is the workspace step's create form and
+   * the invite screen after it, and they run on ONE of the three ways this tour
+   * reaches the screen:
+   *
+   *   post-signup `workspace`   the run this is for. A brand-new account with
+   *                             no workspace, being walked into making its
+   *                             first one. Live.
+   *   `?tutorial=workspace`     a preview. Deliberately exempt from the
+   *                             seen-set so the same URL works twice — which
+   *                             with a live form means twice the workspaces.
+   *                             Mock.
+   *   step 1 of `full`          Get help -> Product Tour, run by someone who
+   *                             already has workspaces and asked to see the
+   *                             product. Mock. (Also gated in the registry,
+   *                             which declares no live_screens there; this is
+   *                             belt as well as braces.)
+   *
+   * Gated HERE rather than in the registry because `preview` is not a registry
+   * concept — it is a per-run attribute the launcher stamps — and splitting the
+   * decision across two files is how one of them ends up forgotten.
+   *
+   * @param {Object} step a TOURS step
+   * @returns {Number}
+   */
+  _screensFor(step) {
+    const declared = ~~step.screens || 1;
+    const live = ~~step.live_screens;
+    if (!live) return declared;
+    return this._canCreate() ? declared : Math.max(1, declared - live);
+  }
+
+  /** Is this the run that is allowed to create a real workspace? */
+  _canCreate() {
+    return this._tour.id === 'workspace' && !this.mget('preview');
+  }
+
+  /**
    * Turn a registry entry into the feed payloads _widgetAt hands out.
    *
    * Everything a step needs to know about its position in the tour is stamped
@@ -94,9 +134,14 @@ class tutorial_main extends LetcBox {
     // Progress counts every screen in the tour, so the host has to know the
     // total and where each step starts — a step widget can see its own screens
     // and nothing else. Computed once here rather than derived per screen.
-    const total = steps.reduce((n, s) => n + (~~s.screens || 1), 0);
+    //
+    // Through _screensFor, so a step whose tail is gated off is short by those
+    // screens in the TOTAL as well as in its own count. Miss that and the last
+    // callout of a six-screen run reads "STEP 6/8".
+    const count = (s) => this._screensFor(s);
+    const total = steps.reduce((n, s) => n + count(s), 0);
     const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + (~~s.screens || 1)), 0);
+    steps.reduce((n, s) => (offsets.push(n), n + count(s)), 0);
 
     return steps.map((step, i) => {
       const widget = {
@@ -120,7 +165,7 @@ class tutorial_main extends LetcBox {
         // triggerHandlers({ service: 'next-step' }). A stray click now reaches
         // onUiEvent with no service at all and falls through to `default`.
         uiHandler: [this],
-        screen_count: step.screens || 1,
+        screen_count: count(step),
         screen_offset: offsets[i],
         tour_screens: total,
         is_first: i === 0,
@@ -433,10 +478,31 @@ class tutorial_main extends LetcBox {
       match: (e) => e.key === 'Escape' && !e.defaultPrevented,
       run: () => {
         if (this.isDestroyed && this.isDestroyed()) return false;
+        // Not while a live screen is up. Everything before those is a mock, so
+        // Escape costs the user a walkthrough they can reload into; on the
+        // create form it would throw away a name they typed, and on the invite
+        // screen it would dismiss the workspace they just made without ever
+        // showing them it exists. Both of those screens carry their own way
+        // out — Create, Skip this step, Invite later — and those are the ones
+        // that hand the tour back deliberately.
+        if (this._liveStepRunning()) return false;
         this._skipTour();
         return true;
       },
     });
+  }
+
+  /**
+   * Is the step on screen showing something the user is filling in?
+   *
+   * Asked of the step rather than tracked here: the host knows which STEP is
+   * running and nothing about which of its screens is, and the step already has
+   * to know (it is the thing rendering them).
+   */
+  _liveStepRunning() {
+    const part = this.getPart && this.getPart(_a.content);
+    const step = part && part.children && part.children.last();
+    return !!(step && _.isFunction(step.isLive) && step.isLive());
   }
 
   onBeforeDestroy() {

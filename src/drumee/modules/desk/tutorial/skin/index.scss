@@ -4,6 +4,7 @@
 @use "./files-grid.scss";
 @use "./empty-state.scss";
 @use "./media.scss";
+@use "./invite.scss";
 
 // BEM root: .tutorial-main — Drumee 2.0 shell (Figma canvas 129:13815).
 // Prefix shorthands used in the skeletons:
@@ -420,6 +421,97 @@ $topbar-height: 46px;
 
   &__wg-grid {
     gap: 24px;
+  }
+}
+
+// ── Folder art ───────────────────────────────────────────────────────────────
+//
+// Why the tour's folders were INVISIBLE: media/grid/template/folder emits
+// `<svg class="folder-shape <area>" fill="none">` with a path that carries no
+// fill of its own, so the colour is CSS's job — and the rules that do it live
+// under `.media-grid__container` (builtins/media/grid/skin/container.scss).
+// The tour draws its own grid with its own classes, so nothing matched, the
+// path inherited the svg's `fill="none"`, and every folder rendered as empty
+// space: the workspace breadcrumb's icon, the create-dialog's three type rows
+// and the preview's Folders row alike.
+//
+// Ported here rather than reached for by widening the grid's own selector: the
+// tour is a MOCK of the grid, not an instance of it, and a `.media-grid`
+// selector that also has to cover a fake one is a worse thing to own than four
+// lines of fill.
+//
+// Same values as the real thing, so a private folder in the tour is the same
+// coral as a private folder in window-manager__icons-list.
+.tutorial-main {
+  .folder-shape {
+    fill: #885eff;
+
+    &.personal { fill: var(--area-personal); }
+    &.public { fill: var(--area-public); }
+    &.share { fill: var(--area-share); }
+    &.private { fill: var(--area-private); }
+  }
+
+  // The emblem is absolutely placed, so the art has to be its containing
+  // block — the real grid says so too. Without it the emblem anchors to
+  // whatever positioned ancestor it finds and floats off across the topbar,
+  // which is what a small folder icon did here.
+  .media-grid__folder-art {
+    position: relative;
+  }
+
+  // `fill: currentColor` is doing real work: the template paints the glyph
+  // white and then lays a gradient-filled copy over it whose stops
+  // (`gradient-start-<area>`) no stylesheet in this repo defines — so without
+  // this the gradient resolves to black and the emblem reads as a hole. CSS
+  // beats the presentation attribute, which is what flattens both layers to
+  // the one colour.
+  //
+  // Placed in PERCENTAGES, unlike the grid's fixed 28px at bottom 24 / left 8.
+  // Those are the same numbers — 28/116 wide, 24/93 up, 8/116 in, on the cell
+  // the grid pins — but the tour draws this art at four sizes, from a 96px
+  // folder in the preview grid down to a 24px one in a breadcrumb, and a fixed
+  // offset is either right for one of them or right for none.
+  .badge {
+    position: absolute;
+    width: 24%;
+    height: 30%;
+    bottom: 26%;
+    left: 7%;
+    color: var(--grid-color-folder-badge);
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.32));
+  }
+
+  // …except on the small art, where a proportional emblem is a smudge. The
+  // product hit this first and answered it in the desk breadcrumb
+  // (modules/desk/breadcrumb/item/skin): oversize the emblem relative to the
+  // shape and let it overhang the corner, rather than shrink it to nothing.
+  // Same treatment, same -2/-2, scaled to each box — 13px on the 20px
+  // breadcrumb is the real one's number exactly.
+  //
+  // Written out at full length so they beat the percentage default whatever
+  // order the skins are @use'd in: nested here, each is one class more
+  // specific than the rule above.
+  .tutorial-main__tb-crumb-icon .badge {
+    width: 13px;
+    height: 13px;
+    bottom: -2px;
+    left: -2px;
+  }
+
+  .tutorial__home-pv-tb-crumb-icon .badge {
+    width: 15px;
+    height: 15px;
+    bottom: -2px;
+    left: -2px;
+  }
+
+  .tutorial-workspace__wsd-type-icon .badge {
+    width: 16px;
+    height: 16px;
+    bottom: -2px;
+    left: -2px;
   }
 }
 

@@ -166,64 +166,68 @@ function buildBadge(opts) {
 
 const skipNodes = (nodes) => nodes.filter((n) => n.service === "end-tour");
 
-test("the skip control is on every screen, first and last alike", () => {
+// The ✕ is GONE — the frames never drew one, and it was the one thing this
+// stack kept that they dropped. What replaces it is Escape, which the host
+// binds in capture phase and routes to the same _skipTour(); the tests below
+// the fold still guard that path, because it is now the only one.
+//
+// These assertions are inverted rather than deleted. A callout that raises
+// `end-tour` again is not a small regression: the service still routes to
+// _skipTour on the host, so a re-added control would work, and nobody would
+// notice it had come back except by looking at the card.
+
+test("no callout raises end-tour any more, on any screen", () => {
   for (const opts of [
     { step: 0, steps: 3, hide_back: true },                      // first screen
     { step: 1, steps: 3 },                                       // middle
     { step: 2, steps: 3, done: true },                           // last
+    { step: 0, steps: 1 },                                       // single-screen run
   ]) {
     const { nodes } = buildBadge({ title: "t", desc: "d", ...opts });
-    assert.equal(skipNodes(nodes).length, 1, JSON.stringify(opts));
+    assert.equal(skipNodes(nodes).length, 0, JSON.stringify(opts));
   }
+  const bare = buildBadge({ text: "one line", step: 1, steps: 3 });
+  assert.equal(skipNodes(bare.nodes).length, 0, "nor the bare bubble");
 });
 
-test("hide_back removes Back but never the skip control", () => {
+test("hide_back removes Back and leaves the card with Next alone", () => {
   const { nodes } = buildBadge({ title: "t", desc: "d", step: 0, steps: 3, hide_back: true });
   assert.equal(nodes.filter((n) => n.service === "back-step").length, 0, "Back is hidden");
-  assert.equal(skipNodes(nodes).length, 1, "skip stays");
   assert.equal(nodes.filter((n) => n.service === "next-step").length, 1);
 });
 
-test("skip is routed at the host, while Back and Next stay on the step", () => {
-  const step = { id: "step" };
-  const host = { id: "host" };
+test("Back and Next stay on the step, which is now the only routing the card does", () => {
   const ui = { fig: { family: "tutorial-migrate", group: "tutorial" } };
   const nodes = [];
   const mk = (kind) => (o = {}) => { const n = { kind, ...o }; nodes.push(n); return n; };
   const Skeletons = { Box: { X: mk("Box.X"), Y: mk("Box.Y") }, Note: mk("Note"),
     Button: { Svg: mk("Button.Svg"), Label: mk("Button.Label") } };
-  const LOCALE = { SKIP_TOUR: "Skip tour", BACK: "Back", NEXT: "Next", DONE: "Done" };
+  const LOCALE = { BACK: "Back", NEXT: "Next", DONE: "Done" };
   const src = TOOLTIP_SRC.replace(/^export function/gm, "function");
   // eslint-disable-next-line no-new-func
   const badge = new Function("Skeletons", "LOCALE", `${src}\n;return tooltipBubble;`)(Skeletons, LOCALE);
-  badge({ ...ui, id: "step" }, { title: "t", desc: "d", badge_text: "1/3", host });
+  badge({ ...ui, id: "step" }, { title: "t", desc: "d", step: 1, steps: 3 });
 
-  const skip = nodes.find((n) => n.service === "end-tour");
   const next = nodes.find((n) => n.service === "next-step");
   const back = nodes.find((n) => n.service === "back-step");
-  assert.deepEqual(skip.uiHandler, [host], "end-tour goes to the tour host");
   assert.equal(next.uiHandler[0].id, "step", "next stays on the step");
   assert.equal(back.uiHandler[0].id, "step", "back stays on the step");
-  void step;
 });
 
-test("with no host supplied the control still raises something", () => {
-  const { nodes } = buildBadge({ title: "t", desc: "d", badge_text: "1/3" });
-  const skip = skipNodes(nodes)[0];
-  assert.equal(skip.uiHandler.length, 1);
-  assert.ok(skip.uiHandler[0], "falls back to ui rather than an undefined handler");
-});
-
-test("the skip control carries the localised label", () => {
-  const { nodes } = buildBadge({ title: "t", desc: "d", badge_text: "1/3" });
-  assert.equal(skipNodes(nodes)[0].tooltips, "Skip tour");
+test("the card no longer needs a host, so the spotlight stops supplying one", () => {
+  // `host` existed for exactly one reason: Back/Next belong to the step, and
+  // ending the tour belonged to the tour, so the spotlight — holding both
+  // references — separated them. With no control raising end-tour there is
+  // nothing to separate, and a dangling _tourHost() would be dead code that
+  // reads as though the card still routes somewhere.
+  assert.doesNotMatch(SPOT_SRC, /host: this\._tourHost\(\)/);
+  assert.doesNotMatch(SPOT_SRC, /_tourHost\(/);
+  assert.doesNotMatch(TOOLTIP_SRC, /opt\.host|host \|\| ui/);
 });
 
 // ── routing and Esc, in the sources ──────────────────────────────────────────
 
-test("the spotlight supplies the host, so no step file forwards end-tour", () => {
-  assert.match(SPOT_SRC, /host: this\._tourHost\(\)/);
-  assert.match(SPOT_SRC, /_tourHost\(\)\s*\{[\s\S]*?partHandler/);
+test("no step file forwards end-tour", () => {
   const dir = "src/drumee/modules/desk/tutorial";
   for (const step of ["workspace", "folder", "meeting", "task", "share", "migrate"]) {
     assert.ok(

@@ -17,12 +17,18 @@
 const FOLDERS = 4;
 
 // Two rows of the same six, which is what the frames show.
+//
+// `kind` is the icon's TINT, not its glyph: the frames colour each file type
+// (skin/files-grid.scss keys on it), and the sprite symbols are single-colour —
+// four of them are authored fill="currentColor" and the rest inherit `fill` —
+// so the colour has to come from the outside. The image tile has none: it draws
+// artwork instead of an icon.
 const FILES = [
-  { ico: "app-doc-file", name: "spec_v2.docx" },
-  { ico: "app-pdf-file", name: "spec_v2.pdf" },
-  { ico: "addmenu-note", name: "note" },
-  { ico: "addmenu-spreadsheet", name: "Spreadsheet" },
-  { ico: "addmenu-presentation", name: "Presentation" },
+  { ico: "app-doc-file", name: "spec_v2.docx", kind: "document" },
+  { ico: "app-pdf-file", name: "spec_v2.pdf", kind: "pdf" },
+  { ico: "addmenu-note", name: "note", kind: "note" },
+  { ico: "addmenu-spreadsheet", name: "Spreadsheet", kind: "spreadsheet" },
+  { ico: "addmenu-presentation", name: "Presentation", kind: "presentation" },
   { ico: "image", name: "bg_concept.png", art: true },
 ];
 
@@ -109,7 +115,16 @@ function filesGrid(ui, opt = {}) {
           attrOpt: { "data-art": f.art ? 1 : 0 },
           kids: f.art
             ? []
-            : [Skeletons.Image.Svg({ active: 0, ico: f.ico, className: `${p}-file-ico` })],
+            : [
+                Skeletons.Image.Svg({ active: 0,
+                  ico: f.ico,
+                  className: `${p}-file-ico`,
+                  // dataset alone is dropped at render unless an attribute map
+                  // rides along — the same pairing the rail's tiles need.
+                  dataset: { kind: f.kind },
+                  attrOpt: { "data-kind": f.kind },
+                }),
+              ],
         }),
         Skeletons.Note({ active: 0, className: `${p}-file-name`, content: f.name }),
         Skeletons.Note({ active: 0, className: `${p}-file-date`, content: DATE }),
@@ -132,9 +147,21 @@ function filesGrid(ui, opt = {}) {
                 kids: [
                   Skeletons.Element({ active: 0,
                     className: `${p}-folder-art`,
+                    // `hub`, not `folder`, and that is what the reference
+                    // shows: the frames' Folders row is coral WITH the area
+                    // emblem on it, which the template only draws for a hub —
+                    // the same shape window-manager__icons-list gives a private
+                    // workspace. A plain folder gets the shape and nothing on
+                    // it, which is a different picture from the one the design
+                    // is a render of.
+                    //
+                    // `isAttachment` still holds the kebab back. The frames
+                    // show one; it is a context-menu trigger, and this grid is
+                    // scenery with no menu behind it.
                     content: folderArt({
                       area,
-                      filetype: _a.folder,
+                      filetype: _a.hub,
+                      role: "desk",
                       widgetId: _.uniqueId(`tutorial-fg-${i}-`),
                       isAttachment: 1,
                     }),

@@ -474,26 +474,168 @@ $home-preview-h: 475px;
     transform-origin: top left;
   }
 
+  // ── The window's own topbar (tutorial__home-pv-tb-*) ────────────────────
+  // The base image on the plate (176:40744): org pill / department / workspace
+  // crumb on the left, utility cluster on the right. Same numbers as the tour's
+  // own bar in skin/index.scss — this is a picture of that product, and the
+  // 0.62 scale on the wrapper is what makes it a miniature.
   &__home-pv-topbar {
     flex: 0 0 auto;
     align-items: center;
-    gap: 18px;
+    gap: 12px;
     height: 52px;
     padding: 0 22px;
   }
 
-  &__home-pv-topbar-chip {
-    width: 190px;
-    height: 26px;
-    border-radius: 99px;
+  // Both pills: the grey lozenge with 4px around its leading icon.
+  &__home-pv-tb-org,
+  &__home-pv-tb-crumb {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 8px;
     background: var(--normal-bg-90);
   }
 
-  &__home-pv-topbar-crumb {
-    width: 300px;
-    height: 20px;
+  &__home-pv-tb-org-avatar {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--primary-purple-40);
+  }
+
+  &__home-pv-tb-org-avatar-text {
+    @include drumee.typo($size: 12px, $line: 1);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+    text-transform: uppercase;
+  }
+
+  &__home-pv-tb-org-name,
+  &__home-pv-tb-crumb-name {
+    @include drumee.typo($size: 14px, $line: 20px);
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__home-pv-tb-org-plan {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--primary-purple-40);
+    padding: 4px 8px;
+    border-radius: 52px;
+    background: rgba(89, 80, 255, 0.1);
+    white-space: nowrap;
+  }
+
+  &__home-pv-tb-caret {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg);
+  }
+
+  // The department segment sits BETWEEN the two pills, on the bare bar — a
+  // tinted tile, the name, and the slash that leads into the workspace.
+  &__home-pv-tb-dept {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__home-pv-tb-dept-tile {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
     border-radius: 6px;
-    background: var(--normal-bg-90);
+    background: var(--primary-purple-10);
+  }
+
+  &__home-pv-tb-dept-ico {
+    width: 16px;
+    height: 16px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--primary-purple-40);
+  }
+
+  &__home-pv-tb-dept-name {
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 400;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__home-pv-tb-dept-sep {
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  // folderArt paints at its authored 105x86 unless pinned — the same explicit
+  // box the tour's own breadcrumb gives it.
+  &__home-pv-tb-crumb-icon {
+    position: relative;
+    width: 24px;
+    height: 20px;
+    min-width: 24px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 20px;
+    }
+
+    svg.folder-shape { width: 24px; height: 20px; }
+  }
+
+  // Pushed to the far edge, as the frames place it.
+  &__home-pv-tb-utils {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  &__home-pv-tb-util {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
+  }
+
+  &__home-pv-tb-avatar {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    margin-left: 4px;
+    border-radius: 50%;
+    background: var(--normal-bg-80);
   }
 
   &__home-pv-app {

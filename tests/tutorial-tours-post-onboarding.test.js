@@ -311,7 +311,11 @@ test("workspace opens on the home canvas, then walks the dialog", () => {
   // the dialog field by field — the name, the three types, then Create
   // (176:40762 -> 176:41391). Opening straight onto the dialog skipped how
   // the user got there.
-  assert.equal(TOURS.workspace.steps[0].screens, 6);
+  // Eight in the registry, of which the last two are the live tail that only
+  // the post-signup run gets (see _screensFor in the host). Six is what the
+  // tour SHOWS everyone, and what the badge counts everywhere else.
+  const reg = TOURS.workspace.steps[0];
+  assert.equal(reg.screens - ~~reg.live_screens, 6);
   const ui = widget({ tour_screens: 6 });
   assert.deepEqual(
     [0, 1, 2, 3, 4, 5].map((i) => stepProgress(ui, i)),
@@ -325,7 +329,20 @@ test("workspace opens on the home canvas, then walks the dialog", () => {
   );
   const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
   const rows = table.split(/^  \{/m).slice(1);
-  assert.equal(rows.length, 6, "the SCREENS table must match the registry");
+  assert.equal(
+    rows.length, reg.screens,
+    "the SCREENS table holds every screen; the host slices it per run",
+  );
+  // The live tail is the END of the table, so the mock screens keep their
+  // indices whether or not this run gets them.
+  const live = rows.slice(rows.length - ~~reg.live_screens);
+  assert.equal(live.length, 2);
+  assert.match(live[0], /live: true/, "the create form is the seventh screen");
+  assert.match(live[1], /invite: true/, "the invite card is the eighth");
+  assert.ok(
+    !/live: true|invite: true/.test(rows.slice(0, 6).join("")),
+    "and nothing before them is live",
+  );
   assert.match(rows[0], /home: true/);
   assert.match(rows[0], /target: 'home-cta'/);
   assert.ok(!/home: true/.test(rows.slice(1).join("")), "only the first screen is the home canvas");
