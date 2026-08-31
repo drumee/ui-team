@@ -23,6 +23,8 @@
   "THIS_WEEK": "Esta semana",
   "THIS_MONTH": "Este mes",
   "NO_DATE": "Sin fecha",
+  "TUTORIAL_CONGRATS_DESC": "Tu espacio está listo. Sube un archivo y la conversación empieza con él.",
+  "TUTORIAL_CONGRATS_TITLE": "Todo listo",
   "TUTORIAL_INVITE_BLURB": "No trabajes solo: colabora con tu equipo y avanza 3 veces más rápido.",
   "TUTORIAL_INVITE_BLURB_NAMED": "No trabajes solo en {0}: colabora con tu equipo y avanza 3 veces más rápido.",
   "TUTORIAL_INVITE_CALLOUT": "Trae a alguien",

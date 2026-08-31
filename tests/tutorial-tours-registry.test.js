@@ -301,13 +301,13 @@ test("no step takes a backdrop; every step draws its own pane", () => {
 // Get help (by someone who already has workspaces). Both would create real
 // workspaces, silently, every time.
 
-test("the post-signup workspace run is eight screens, badge included", () => {
+test("the post-signup workspace run is nine screens, badge included", () => {
   // The live tail is counted. It was briefly left out on the argument that a
   // form is not a step of a walkthrough — true of the form, false of the user,
   // who is still being led somewhere and wants to know how far along that is.
   const [step] = build(TOURS.workspace);
-  assert.equal(step.screen_count, 8, "the form and the invite card run");
-  assert.equal(step.tour_screens, 8, "and the pill counts them");
+  assert.equal(step.screen_count, 9, "the form, the invite card and the finish");
+  assert.equal(step.tour_screens, 9, "and the pill counts them");
 });
 
 test("the preview URL reaches the create form too", () => {
@@ -317,8 +317,8 @@ test("the preview URL reaches the create form too", () => {
   // presses Create. Gating it only made the feature unreachable for anyone who
   // is not a fresh signup, which is everyone testing it.
   const [step] = build(TOURS.workspace, { preview: 1 });
-  assert.equal(step.screen_count, 8);
-  assert.equal(step.tour_screens, 8);
+  assert.equal(step.screen_count, 9);
+  assert.equal(step.tour_screens, 9);
 });
 
 test("the workspace step inside `full` is mock-only", () => {
@@ -338,7 +338,7 @@ test("the workspace step inside `full` is mock-only", () => {
 });
 
 test("the registry declares live screens on the standalone tour only", () => {
-  assert.equal(TOURS.workspace.steps[0].live_screens, 2);
+  assert.equal(TOURS.workspace.steps[0].live_screens, 3);
   for (const [id, t] of Object.entries(TOURS)) {
     if (id === "workspace") continue;
     for (const step of t.steps) {

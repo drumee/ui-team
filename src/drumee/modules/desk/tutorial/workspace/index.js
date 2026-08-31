@@ -113,11 +113,27 @@ const SCREENS = [
     // Its own sentence. It used to raise no callout at all, which — with
     // feed(null) being a no-op in ui-core — meant it inherited the create
     // screen's card and told the user to make a workspace they had just made.
+    //
+    // Except on the personal card, which says "You can't invite member to
+    // personal workspace!" and needs nothing beside it saying otherwise. The
+    // type is not known when this table is written, so the callout is dropped
+    // in _showScreen where `_created` is.
     invite: true,
     target: 'inv-card',
     anchor: 'inv-card',
     direction: 'west',
     text: () => LOCALE.TUTORIAL_INVITE_CALLOUT,
+  },
+  {
+    // The workspace, open, with confetti over it (176:42043). Not `live`: there
+    // is nothing to fill in, so this one keeps the ordinary footer — and being
+    // the last screen, its forward button is Done, which is how the tour ends.
+    congrats: true,
+    target: 'congrats-stage',
+    anchor: 'congrats-stage',
+    direction: 'north',
+    title: () => LOCALE.TUTORIAL_CONGRATS_TITLE,
+    desc: () => LOCALE.TUTORIAL_CONGRATS_DESC,
   },
 ];
 
@@ -197,6 +213,10 @@ class __tutorial_workspace extends LetcBox {
     // Next beside either is a second way forward that skips what is being
     // asked for. Back is the one thing those screens do not offer themselves.
     const live = !!(s.live || s.invite);
+    // The personal card is already a full sentence explaining itself, and a
+    // callout beside it would be a second one. Only that variant: the invite
+    // card has room for a caption and wants one.
+    const mute = !!(s.invite && this._created && this._created.type === 'personal');
     const chrome = {
       hide_next: live,
       // Numbered like every other tour. The frames leave these callouts
@@ -211,7 +231,7 @@ class __tutorial_workspace extends LetcBox {
     // `bare` raises the screen with no tooltip at all: focus() feeds the
     // callout null and returns, so nothing is drawn and nothing is left over
     // from the previous screen either.
-    const tooltip = s.bare
+    const tooltip = s.bare || mute
       ? null
       : s.text
         ? { text: s.text(), ...chrome }

@@ -336,11 +336,12 @@ test("workspace opens on the home canvas, then walks the dialog", () => {
   // The live tail is the END of the table, so the mock screens keep their
   // indices whether or not this run gets them.
   const live = rows.slice(rows.length - ~~reg.live_screens);
-  assert.equal(live.length, 2);
+  assert.equal(live.length, 3);
   assert.match(live[0], /live: true/, "the create form is the seventh screen");
   assert.match(live[1], /invite: true/, "the invite card is the eighth");
+  assert.match(live[2], /congrats: true/, "and the finish is the ninth");
   assert.ok(
-    !/live: true|invite: true/.test(rows.slice(0, 6).join("")),
+    !/live: true|invite: true|congrats: true/.test(rows.slice(0, 6).join("")),
     "and nothing before them is live",
   );
   assert.match(rows[0], /home: true/);

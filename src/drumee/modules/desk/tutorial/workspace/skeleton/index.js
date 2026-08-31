@@ -1,6 +1,7 @@
 const { workspaceDialog, BLOCKS } = require('../../skeleton/toolkit/workspace-dialog');
 const { orgHome } = require('../../skeleton/toolkit/home');
 const { inviteScreen } = require('../../skeleton/toolkit/invite');
+const { congratsScreen } = require('../../skeleton/toolkit/congrats');
 
 /**
  * Step body for the `workspace` tour.
@@ -22,6 +23,7 @@ const { inviteScreen } = require('../../skeleton/toolkit/invite');
 module.exports = function (ui, screen, state = {}) {
   if (screen.home) return orgHome(ui);
   if (screen.invite) return inviteScreen(ui, state.created || {});
+  if (screen.congrats) return congratsScreen(ui);
   return workspaceDialog(ui, {
     lit: screen.lit,
     ready: !!screen.ready,

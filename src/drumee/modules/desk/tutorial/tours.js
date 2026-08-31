@@ -60,8 +60,8 @@ const TOURS = {
     // host subtracts rather than the step guessing.
     steps: [{
       kind: "tutorial_workspace",
-      screens: 8,
-      live_screens: 2,
+      screens: 9,
+      live_screens: 3,
       chrome: { rail: null, crumb: false },
     }],
   },

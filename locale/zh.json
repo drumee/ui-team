@@ -23,6 +23,8 @@
   "THIS_WEEK": "本周",
   "THIS_MONTH": "本月",
   "NO_DATE": "无日期",
+  "TUTORIAL_CONGRATS_DESC": "工作区已就绪。上传一个文件，讨论就从它开始。",
+  "TUTORIAL_CONGRATS_TITLE": "一切就绪",
   "TUTORIAL_INVITE_BLURB": "别独自工作，与团队协作，效率提升 3 倍！",
   "TUTORIAL_INVITE_BLURB_NAMED": "别在 {0} 里独自工作，与团队协作，效率提升 3 倍！",
   "TUTORIAL_INVITE_CALLOUT": "邀请伙伴加入",
