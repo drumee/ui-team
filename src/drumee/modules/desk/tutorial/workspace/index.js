@@ -223,7 +223,11 @@ class __tutorial_workspace extends LetcBox {
       // uncounted, but a screen nobody can name is a screen nobody can report
       // — see the note on progressStyle in toolkit/tooltip.js.
       ...stepProgress(this, this._screenIndex),
-      hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+      // No way back off the finish screen. Behind it are the invite card, which
+      // may already have sent one, and the create form, which would happily
+      // make a second workspace — neither is somewhere to return to once this
+      // one exists.
+      hide_back: (!!this.mget('is_first') && this._screenIndex === 0) || !!s.congrats,
       // Done belongs to the last screen with a Next on it. The live tail has
       // its own controls, so it never wears one.
       done: !live && isLastScreen(this, this._screenIndex, this._screens.length),
@@ -348,7 +352,7 @@ class __tutorial_workspace extends LetcBox {
       return this._setInviteError(LOCALE.ENTER_VALID_EMAIL || LOCALE.INVALID_EMAIL);
     }
     const hub_id = this._created && this._created.hub_id;
-    if (!hub_id) return this._endTour();
+    if (!hub_id) return this._advance();
 
     const btn = this.getPart && this.getPart('inv-send');
     if (btn && btn.el) btn.el.dataset.pending = 1;
@@ -375,18 +379,30 @@ class __tutorial_workspace extends LetcBox {
       return this._setInviteError(LOCALE.TRY_AGAIN);
     }
     this._pending = 0;
-    return this._endTour();
+    return this._advance();
   }
 
   /**
-   * Done with the live screens: hand back to the host, which ends the tour.
+   * Move to the next screen, or hand the tour back when there is none.
    *
-   * The workspace has already announced itself (workspace:refresh, from the
-   * create), so the desk opens it as the tour comes down — the user lands in
-   * the thing they just made rather than back where they started.
+   * ONE way forward, and that is the point. There used to be two: the callout's
+   * Next walked the screen list, while the live screens' own controls called an
+   * `_endTour` that went straight to the host. That was true while the invite
+   * card was the last screen and silently wrong the moment a screen was added
+   * after it — Send, Skip, Invite later and the ✕ all ended the tour, and the
+   * finish screen could not be reached by any route.
+   *
+   * When there IS nothing after, handing back is still the right answer: the
+   * workspace announced itself when it was created (workspace:refresh), so the
+   * desk opens it as the tour comes down and the user lands in the thing they
+   * just made rather than back where they started.
    */
-  _endTour() {
-    return this.triggerHandlers({ service: 'next-step' });
+  _advance() {
+    if (this._screenIndex >= this._screens.length - 1) {
+      return this.triggerHandlers({ service: 'next-step' });
+    }
+    this._screenIndex = this._screenIndex + 1;
+    return this._showScreen();
   }
 
   /** Is the screen on show one the user is filling in rather than watching? */
@@ -413,15 +429,14 @@ class __tutorial_workspace extends LetcBox {
         return this._invite();
 
       case 'inv-skip':
-        return this._endTour();
+        return this._advance();
 
       case 'next-step':
-        // Only the last screen hands the tour back to tutorial_main, and it
-        // NAMES the service. The step widget carries no `service` of its own
-        // any more — see _buildWidgets in ../index.js.
-        if (this._screenIndex >= this._screens.length - 1) return this.triggerHandlers({ service: 'next-step' });
-        this._screenIndex = this._screenIndex + 1;
-        return this._showScreen();
+        // Through _advance, like every other way forward. Only the last screen
+        // hands the tour back to tutorial_main, and it NAMES the service — the
+        // step widget carries no `service` of its own (see _buildWidgets in
+        // ../index.js).
+        return this._advance();
       case 'back-step':
         // Back off the first screen leaves this step entirely.
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });

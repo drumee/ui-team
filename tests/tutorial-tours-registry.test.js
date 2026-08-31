@@ -517,6 +517,48 @@ test("entryScreen: default 0, enter_at_last, and a 1-based screen target", () =>
   assert.equal(entryScreen(ui({ enter_at_last: true, enter_at_screen: "2" }), 5), 1);
 });
 
+test("the workspace step has ONE way forward, so a new screen cannot be orphaned", () => {
+  // There used to be two. The callout's Next walked the screen list; the live
+  // screens' own controls — Send, Skip, Invite later, the ✕ — called an
+  // `_endTour` that went straight to the host and ended the tour. That was true
+  // while the invite card was the last screen, and silently wrong the moment a
+  // screen was added after it: the finish screen could not be reached by any
+  // route, and nothing failed to say so.
+  //
+  // So: exactly one place hands the tour back, and it is the one that checks
+  // whether there is a screen left first.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
+  );
+  const handbacks = src.match(/triggerHandlers\(\{\s*service:\s*'next-step'\s*\}\)/g) || [];
+  assert.equal(
+    handbacks.length, 1,
+    "only _advance may hand the tour back to the host",
+  );
+  assert.match(
+    src,
+    /_advance\(\)\s*\{[\s\S]{0,200}this\._screens\.length - 1[\s\S]{0,200}triggerHandlers/,
+    "and it must check for a remaining screen before doing so",
+  );
+  // Every live control goes through it rather than round it.
+  for (const control of ["inv-send", "inv-skip"]) {
+    assert.ok(src.includes(control), `${control} is still wired`);
+  }
+  // The CALL, not the word — the comment above _advance names the old method
+  // deliberately, because "why is there only one of these" is the whole point.
+  assert.doesNotMatch(src, /this\._endTour\(/, "the second path is gone, not renamed");
+});
+
+test("the finish screen has no way back", () => {
+  // Behind it are the invite card, which may already have sent one, and the
+  // create form, which would happily make a second workspace. Neither is
+  // somewhere to return to once this one exists.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
+  );
+  assert.match(src, /hide_back:[\s\S]{0,160}s\.congrats/);
+});
+
 test("every step widget resolves its entry screen through the shared helper", () => {
   // Five widgets used to each carry `if (mget('enter_at_last')) …`. Screen
   // targeting has to work in all of them or it works in none.
