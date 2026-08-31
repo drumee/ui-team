@@ -501,7 +501,13 @@ class __push_manager extends winman {
    */
   _showMeetingToast(data = {}, opt = {}) {
     try {
-      const layer = Wm && Wm.windowsLayer;
+      // NOT windowsLayer. While a workspace pane is open the headless layer
+      // takes the active-window lift (wm/skin __layer, z 50001) and both
+      // layers are siblings, so a card in windowsLayer was painted UNDER the
+      // pane — and the card's own z-index (100000) cannot cross a sibling
+      // stacking context to escape it. getMeetingToastPool() returns the
+      // dedicated layer that sits above both, falling back to windowsLayer.
+      const layer = Wm && Wm.getMeetingToastPool && Wm.getMeetingToastPool();
       if (!layer || !layer.append) return;
       // Minutes-ahead comes from the worker; anything > 0 is the heads-up.
       const leadMin = Number(data.lead_min) || 0;
@@ -943,24 +949,45 @@ class __push_manager extends winman {
       if (this._joiningRooms.has(busyKey)) return;
       this._joiningRooms.add(busyKey);
       setTimeout(() => this._joiningRooms.delete(busyKey), 5000);
-      const room_id = data.room_id || data.nid;
-      const folderNid = data.nid || room_id;
       const open = ((Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) || [])
         .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
       if (open && typeof open._launchMeetingInPanel === "function") {
         if (open.raise) open.raise();
         open._launchMeetingInPanel();
-      } else if (Wm.addWindow) {
-        Wm.addWindow({
-          kind: "window_folder",
-          hub_id,
-          nid: folderNid,
-          filename: data.title || "",
-          activeTab: "meeting",
-          room_id,
-          room_type: "meeting",
-        });
+        return;
       }
+      // No workspace window open yet. This used to call addWindow with
+      // `nid: data.nid` — the SCHEDULE NODE — which is what split the call in
+      // two. The meeting room is per WORKSPACE, not per meeting: yp.room is
+      // `UNIQUE (hub_id, type)`, and conference_join resolves a null room_id
+      // to "the active conference of this hub" (schemas
+      // yellow_page/procedures/conference/conference_join.sql). But the folder
+      // window derives the room from its OWN nid (_launchMeetingStandalone),
+      // so opening it on the schedule node produced a second, private room —
+      // the creator joining from this card and a member joining from the chat
+      // card ended up in different calls. Opening it on the schedule node is
+      // also what rendered a blank folder named after the meeting.
+      //
+      // Open the workspace the way everything else does and then join on it,
+      // so this path and the Join inside the scheduled card land on the same
+      // room by construction. loadWorkspace resolves the root nid itself
+      // (media.attributes fetch when the caller knows only the hub).
+      if (typeof this.loadWorkspace !== "function") return;
+      this.loadWorkspace({ hub_id });
+      // The pane appears after that fetch, so poll briefly rather than
+      // assuming it is mounted. Give up quietly: showing nothing is better
+      // than the blank folder window this replaced.
+      let tries = 0;
+      const joinWhenReady = () => {
+        const pane =
+          this._findWorkspaceWindow && this._findWorkspaceWindow(hub_id);
+        if (pane && typeof pane._launchMeetingInPanel === "function") {
+          if (pane.raise) pane.raise();
+          return pane._launchMeetingInPanel();
+        }
+        if (tries++ < 40) setTimeout(joinWhenReady, 50);
+      };
+      joinWhenReady();
     } catch (e) {
       this.warn && this.warn("_joinMeetingFromData failed", e);
     }

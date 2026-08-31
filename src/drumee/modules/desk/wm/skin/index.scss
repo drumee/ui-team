@@ -557,7 +557,7 @@
     // !important to out-cascade the global [data-state="open"] lift;
     // upload-progress is excluded because it carries its own fixed z-index,
     // set ABOVE this one so the floater stays visible over any raised window.
-    &:not(.upload-progress-layer):has(> [data-state="1"]) {
+    &:not(.upload-progress-layer):not(.meeting-toast-layer):has(> [data-state="1"]) {
       z-index: 50001 !important;
     }
 
@@ -609,6 +609,24 @@
       .window-upload-progress__ui {
         pointer-events: auto;
       }
+    }
+
+    // Meeting popup layer. Above every window layer INCLUDING the
+    // active-window lift (50001), so a card can never be buried by the
+    // workspace pane again — that is the whole bug this layer exists for.
+    //
+    // `!important` for the same reason upload-progress needs it: this is a
+    // Wrapper, so `data-state="open"` is stamped on it the moment it holds a
+    // card, and skin/lib/utils.scss carries a global
+    // `[data-state="open"] { z-index: var(--z-index-context) !important }`
+    // (50000). A plain declaration loses to that and the layer would sit at
+    // 50000 — below the lift, i.e. exactly where it started.
+    //
+    // The card itself is `position: fixed` and centres on the viewport
+    // (skin/meeting-toast.scss), so this layer stays a 0x0 anchor and never
+    // covers or blocks anything beneath it.
+    &.meeting-toast-layer {
+      z-index: calc(var(--z-index-upload-progress, 50002) + 2) !important;
     }
 
     &.creating-hub {

@@ -840,6 +840,14 @@ class __window_manager extends mfsInteract {
           this.trigger("top-level-ready");
         });
         return this.buildIconsList(child, pn);
+      // Deliberately NOT one of the window layers below: that case installs
+      // onAddKid, which is window bookkeeping (overlap-avoidance shifting, a
+      // dmz host-redirect on destroy, and clearing the layer's inline size).
+      // A meeting card is a fixed-position toast, not a window — running any
+      // of that against it would move the card off centre.
+      case "meeting-toast-layer":
+        this.meetingToastLayer = child;
+        break;
       case "windows-layer":
       case "headless-layer":
       case "upload-progress-layer":
@@ -1323,6 +1331,16 @@ class __window_manager extends mfsInteract {
    */
   getUploadProgressPool() {
     return this.uploadProgressLayer || this.windowsLayer;
+  }
+
+  /**
+   * Container for the meeting popup — above every window layer, and outside
+   * the two layers the active-window lift moves. Falls back to windowsLayer
+   * so an older skeleton (no such part) still shows the card rather than
+   * silently dropping it; that fallback is the pre-fix behaviour.
+   */
+  getMeetingToastPool() {
+    return this.meetingToastLayer || this.windowsLayer;
   }
 
   /**
