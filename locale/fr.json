@@ -24,6 +24,8 @@
   "THIS_MONTH": "Ce mois-ci",
   "NO_DATE": "Sans date",
   "TUTORIAL_INVITE_BLURB": "Ne travaillez pas seul : collaborez avec votre équipe et avancez 3 fois plus vite.",
+  "TUTORIAL_INVITE_BLURB_NAMED": "Ne travaillez pas seul dans {0} : collaborez avec votre équipe et avancez 3 fois plus vite.",
+  "TUTORIAL_INVITE_CALLOUT": "Invitez quelqu'un",
   "TUTORIAL_INVITE_LABEL": "Inviter par e-mail",
   "TUTORIAL_INVITE_LATER": "Inviter plus tard",
   "TUTORIAL_INVITE_PERSONAL": "Impossible d'inviter quelqu'un dans un espace personnel.",

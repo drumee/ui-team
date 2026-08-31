@@ -36,8 +36,15 @@ const button = (p, cls, opt) =>
  * 460 wide, 33px insets, the heading and the ✕ on one row, then the blurb, the
  * email field, and the two buttons.
  */
-function inviteCard(ui) {
+function inviteCard(ui, created) {
   const p = pfx(ui);
+  // The blurb names the workspace that was just made. Without it the card is a
+  // generic pitch arriving straight after a create, and the user has no
+  // confirmation the thing they typed a name for actually exists.
+  const name = (created && created.filename) || "";
+  const blurb = name
+    ? String(LOCALE.TUTORIAL_INVITE_BLURB_NAMED).replace("{0}", name)
+    : LOCALE.TUTORIAL_INVITE_BLURB;
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-card`,
     sys_pn: "inv-card",
@@ -63,7 +70,7 @@ function inviteCard(ui) {
 
       Skeletons.Note({ active: 0,
         className: `${p}-blurb`,
-        content: LOCALE.TUTORIAL_INVITE_BLURB,
+        content: blurb,
       }),
 
       Skeletons.Box.Y({ active: 0,
@@ -147,17 +154,19 @@ function personalCard(ui) {
 }
 
 /**
- * @param {Object} ui    the step widget
- * @param {String} type  the type that was just created — "team" | "share" |
- *   "personal". Anything but personal gets the invite field, because anything
- *   but personal is a hub.
+ * @param {Object} ui       the step widget
+ * @param {Object} created   the workspace step 7 just made — `type` picks the
+ *   card ("personal" has no hub to invite to), `filename` names it in the
+ *   blurb, and `hub_id` is what the step invites against.
  * @returns {Object} the card, centred on the pane
  */
-function inviteScreen(ui, type) {
+function inviteScreen(ui, created = {}) {
   const p = pfx(ui);
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-backdrop`,
-    kids: [type === "personal" ? personalCard(ui) : inviteCard(ui)],
+    kids: [
+      created.type === "personal" ? personalCard(ui) : inviteCard(ui, created),
+    ],
   });
 }
 

@@ -102,6 +102,11 @@ function progress(p, step, steps, style) {
  * @param {String} [opt.beak='center'] where the beak sits along that edge
  * @param {Boolean} [opt.hide_back]
  * @param {Boolean} [opt.done]    forward button ends the tour
+ * @param {Boolean} [opt.hide_footer] no Back/Next at all. For the screens the
+ *   user is FILLING IN rather than being walked through: the form has its own
+ *   Create and the invite card its own Send and Skip, and a Next beside them
+ *   is a second, contradictory way forward that skips the thing being asked
+ *   for. On those screens the callout is a caption, not a control.
  */
 export function tooltipBubble(ui, opt = {}) {
   const {
@@ -116,6 +121,7 @@ export function tooltipBubble(ui, opt = {}) {
     beak = "center",
     hide_back = false,
     done = false,
+    hide_footer = false,
   } = opt;
 
   const p = `${ui.fig.group}__bubble`;
@@ -170,17 +176,18 @@ export function tooltipBubble(ui, opt = {}) {
 
   // A bare bubble keeps the design's look — one bold line, tighter insets —
   // and gains the header and footer so it can be numbered and left.
+  const foot = () => (hide_footer ? null : footer());
   const kids = text
     ? [
         header(),
         Skeletons.Note({ active: 0, className: `${p}-text`, content: text }),
-        footer(),
+        foot(),
       ].filter(Boolean)
     : [
         header(),
         Skeletons.Note({ active: 0, className: `${p}-title`, content: title }),
         desc ? Skeletons.Note({ active: 0, className: `${p}-desc`, content: desc }) : null,
-        footer(),
+        foot(),
       ].filter(Boolean);
 
   return Skeletons.Box.Y({

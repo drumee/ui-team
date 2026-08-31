@@ -300,7 +300,11 @@ class tutorial_main extends LetcBox {
     // entry has to come back with the workspace tabs or the org-home rail —
     // which has no tabs at all — is fed an empty list and renders bare.
     this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
-    this.ensurePart('crumb').then((p) => p.feed(crumb ? topbar.workspaceCrumb(this) : null));
+    // Same trap as the callout: feed(null) is a no-op, so a step that wants NO
+    // crumb has to clear the slot rather than feed nothing into it.
+    this.ensurePart('crumb').then((p) => (
+      crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
+    ));
   }
 
   /**

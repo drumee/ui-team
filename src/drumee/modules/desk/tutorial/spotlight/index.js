@@ -246,7 +246,11 @@ class __tutorial_spotlight extends LetcBox {
     this.setState(1);
 
     if (!tooltip) {
-      callout.feed(null);
+      // clear(), not feed(null). `feed` treats a falsy payload as "nothing to
+      // do" and returns the last child untouched (ui-core widgets/box), so
+      // feeding null left the PREVIOUS screen's card on screen — which is how
+      // the invite screen came up wearing the create screen's callout.
+      callout.clear();
       return;
     }
     if (this._stale(ticket)) return;
@@ -436,7 +440,10 @@ class __tutorial_spotlight extends LetcBox {
     this.setState(0);
     const callout = await this.ensurePart('callout');
     if (this._stale(ticket)) return;
-    callout.feed(null);
+    // See focus(): feed(null) is a no-op, so this never cleared anything. Every
+    // step boundary has fed a new card immediately afterwards, which is the
+    // only reason it went unnoticed.
+    callout.clear();
   }
 
   onBeforeDestroy() {

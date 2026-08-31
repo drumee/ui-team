@@ -3455,7 +3455,7 @@ class desk_module extends LetcBox {
       // After the reward flow, and skipped entirely when that one mounted: both
       // open with the same create-workspace walkthrough (see
       // _maybeStartActivateWorkspace).
-      .then(() => this._maybeStartActivateWorkspace())
+      // .then(() => this._maybeStartActivateWorkspace())
       .then(() => this._maybeShowPromoLaunch30("home", { defer: !opt.immediate }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>

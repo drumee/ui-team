@@ -21,7 +21,7 @@ const { inviteScreen } = require('../../skeleton/toolkit/invite');
  */
 module.exports = function (ui, screen, state = {}) {
   if (screen.home) return orgHome(ui);
-  if (screen.invite) return inviteScreen(ui, state.created && state.created.type);
+  if (screen.invite) return inviteScreen(ui, state.created || {});
   return workspaceDialog(ui, {
     lit: screen.lit,
     ready: !!screen.ready,

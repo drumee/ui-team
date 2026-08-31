@@ -802,9 +802,17 @@ test("a step swap clears the spotlight BEFORE feeding the next step", () => {
   // Inside focus(), the only callout-less answer left is an explicit focus with
   // no tooltip at all — clear() is the other, and it is meant to empty it. A
   // screen that HAS a tooltip always gets it drawn.
+  //
+  // `clear()`, never `feed(null)`. ui-core's feed treats a falsy payload as
+  // "nothing to do" and returns the last child untouched (widgets/box), so
+  // feeding null emptied nothing and left the PREVIOUS screen's card up — which
+  // is exactly how the invite screen came to wear the create screen's callout.
+  // Every step boundary happens to feed a new card straight afterwards, which
+  // is the only reason it went unnoticed for so long.
   const focusBody = spot.slice(spot.indexOf("async focus("), spot.indexOf("async clear("));
-  assert.equal(focusBody.split("callout.feed(null)").length - 1, 1);
-  assert.match(focusBody, /if \(!tooltip\) \{\s*\n\s*callout\.feed\(null\);/);
+  assert.equal(focusBody.split("callout.clear()").length - 1, 1);
+  assert.match(focusBody, /if \(!tooltip\) \{[\s\S]{0,400}callout\.clear\(\);/);
+  assert.doesNotMatch(spot, /callout\.feed\(null\)/, "feed(null) clears nothing");
   // And a part handed over from the previous render is re-resolved to the live
   // element before anything is measured, since a detached node measures 0x0.
   assert.match(spot, /function live\(el\)[\s\S]{0,500}data-partname/);

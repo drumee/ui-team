@@ -110,13 +110,14 @@ const SCREENS = [
     text: () => LOCALE.TUTORIAL_WS_NOW_CREATE,
   },
   {
-    // The card is the whole screen and it is centred, so nothing is lit and no
-    // callout is raised — a beak pointing at a dialog in the middle of an empty
-    // pane has nothing to say.
+    // Its own sentence. It used to raise no callout at all, which — with
+    // feed(null) being a no-op in ui-core — meant it inherited the create
+    // screen's card and told the user to make a workspace they had just made.
     invite: true,
     target: 'inv-card',
     anchor: 'inv-card',
-    bare: true,
+    direction: 'west',
+    text: () => LOCALE.TUTORIAL_INVITE_CALLOUT,
   },
 ];
 
@@ -192,6 +193,10 @@ class __tutorial_workspace extends LetcBox {
     // is the thing the tour was walking towards.
     const counted = !(s.live || s.invite);
     const chrome = {
+      // A screen the user is filling in gets a caption, not a control: the
+      // form has Create, the invite card has Send and Skip, and a Next beside
+      // either is a second way forward that skips what is being asked for.
+      hide_footer: !counted,
       // Numbered like every other tour. The frames leave these callouts
       // uncounted, but a screen nobody can name is a screen nobody can report
       // — see the note on progressStyle in toolkit/tooltip.js.
@@ -262,19 +267,28 @@ class __tutorial_workspace extends LetcBox {
       return this._setNameError(LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME);
     }
 
-    // Re-render so the button shows it is waiting. `_pending` is also the
-    // re-entrancy guard above — Create is the one control in this tour that
-    // waits on the network, so it is the one that can be pressed twice.
-    this._pending = 1;
-    await this._showScreen();
+    // Mark the button, DO NOT re-render. _showScreen() rebuilds the whole
+    // dialog, which destroys the name Entry and takes the user's typed name
+    // with it — so a failed create would hand back an empty form and ask them
+    // to type it again. The attribute goes straight onto the node, the way the
+    // invite button below does it.
+    //
+    // `_pending` is also the re-entrancy guard above: Create is the one control
+    // in this tour that waits on the network, so it is the one that can be
+    // pressed twice.
+    const btn = this.getPart && this.getPart(BLOCKS.CREATE);
+    const setPending = (on) => {
+      this._pending = on ? 1 : 0;
+      if (btn && btn.el) btn.el.dataset.pending = on ? 1 : 0;
+    };
+    setPending(true);
 
     const type = SERVICE_TYPE[this._type] || 'team';
     const res = await require('libs/create-workspace')
       .createWorkspace(this, type, name);
 
-    this._pending = 0;
+    setPending(false);
     if (!res.ok) {
-      await this._showScreen();
       // The personal path reports its own failures before resolving.
       if (res.handled) return;
       const msg = res.quota

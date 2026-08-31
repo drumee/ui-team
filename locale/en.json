@@ -24,6 +24,8 @@
   "THIS_MONTH": "This month",
   "NO_DATE": "No date",
   "TUTORIAL_INVITE_BLURB": "Don't work alone, collaborate with your team to work 3X faster now!",
+  "TUTORIAL_INVITE_BLURB_NAMED": "Don't work alone in {0} — collaborate with your team to work 3X faster now!",
+  "TUTORIAL_INVITE_CALLOUT": "Bring someone in",
   "TUTORIAL_INVITE_LABEL": "Invite member via email",
   "TUTORIAL_INVITE_LATER": "Invite later",
   "TUTORIAL_INVITE_PERSONAL": "You can't invite member to personal workspace!",

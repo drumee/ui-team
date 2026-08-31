@@ -24,6 +24,8 @@
   "THIS_MONTH": "本月",
   "NO_DATE": "无日期",
   "TUTORIAL_INVITE_BLURB": "别独自工作，与团队协作，效率提升 3 倍！",
+  "TUTORIAL_INVITE_BLURB_NAMED": "别在 {0} 里独自工作，与团队协作，效率提升 3 倍！",
+  "TUTORIAL_INVITE_CALLOUT": "邀请伙伴加入",
   "TUTORIAL_INVITE_LABEL": "通过邮箱邀请成员",
   "TUTORIAL_INVITE_LATER": "稍后邀请",
   "TUTORIAL_INVITE_PERSONAL": "个人工作区无法邀请成员！",

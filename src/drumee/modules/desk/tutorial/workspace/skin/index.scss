@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "../../skin/spinner";
 
 // The Create-new-workspace dialog, as the `workspace` tour draws it.
 // Figma 176:40762 (component 85:42209): 460px card, 32px insets, 24px radius,
@@ -277,7 +278,10 @@
     &[data-pending="1"] {
       cursor: default;
       pointer-events: none;
-      opacity: 0.7;
+      // The spinner is absolutely placed against this box.
+      position: relative;
+
+      &::after { @include spinner.pending-spinner(16px); }
     }
   }
 }
