@@ -28,7 +28,14 @@ const pfx = (ui) => `${ui.fig.family}__sb`;
  */
 const railItem = (ui, ico, label, opt = {}) => {
   const p = pfx(ui);
-  return Skeletons.Box.Y({ active: 0,
+  return Skeletons.Box.Y({
+    // Inert scenery for eight of the nine screens. On the last one a workspace
+    // exists and the rail is the real one, so its entries take a click and
+    // raise the DESK'S OWN service names — the tour is not inventing a second
+    // vocabulary for the same five tabs.
+    ...(opt.service
+      ? { service: opt.service, uiHandler: [ui] }
+      : { active: 0 }),
     className: `${p}-item`,
     dataset: { active: opt.active ? 1 : 0 },
     attrOpt: { "data-active": opt.active ? 1 : 0 },
@@ -67,14 +74,17 @@ const logo = (ui) => {
  *   is teaching ('chat', 'task', …). `null` means no workspace is open, and
  *   the section renders empty.
  */
-const railItems = (ui, active) => {
+const railItems = (ui, active, opt = {}) => {
+  // The desk's own service names (modules/desk/index.js "rail-files" …), so a
+  // live entry here means what the same entry means there.
+  const tab = (key) => (opt.live ? `rail-${key}` : null);
   return active
     ? [
-        railItem(ui, "rail-files", LOCALE.FILES, { active: active === "files" }),
-        railItem(ui, "rail-chat", LOCALE.CHAT, { active: active === "chat" }),
-        railItem(ui, "rail-task", LOCALE.TASK, { active: active === "task" }),
-        railItem(ui, "rail-meet", LOCALE.MEET, { active: active === "meet" }),
-        railItem(ui, "rail-access", LOCALE.ACCESS, { active: active === "access" }),
+        railItem(ui, "rail-files", LOCALE.FILES, { active: active === "files", service: tab("files") }),
+        railItem(ui, "rail-chat", LOCALE.CHAT, { active: active === "chat", service: tab("chat") }),
+        railItem(ui, "rail-task", LOCALE.TASK, { active: active === "task", service: tab("task") }),
+        railItem(ui, "rail-meet", LOCALE.MEET, { active: active === "meet", service: tab("meet") }),
+        railItem(ui, "rail-access", LOCALE.ACCESS, { active: active === "access", service: tab("access") }),
       ]
     : [];
 };
@@ -102,12 +112,17 @@ const railItems = (ui, active) => {
  * @param {String|null} active
  * @returns {Array}
  */
-const navItems = (ui, active) =>
+const navItems = (ui, active, opt = {}) =>
   [
-    orgOnly(() =>
-      railItem(ui, "rail-department", LOCALE.DEPARTMENT, { active: !active }),
+    // ORG-HOME ONLY. Dept. is the org's rail entry and the only one those
+    // frames show; the workspace rail does not have it — the desk's own
+    // createRailNav is Files/Chat/Task/Meet/Access and nothing else, and
+    // 176:42043 shows the same five. It used to be rendered always and merely
+    // unlit, which put a sixth entry on a rail the product has five of.
+    active ? null : orgOnly(() =>
+      railItem(ui, "rail-department", LOCALE.DEPARTMENT, { active: true }),
     ),
-    ...railItems(ui, active),
+    ...railItems(ui, active, opt),
   ].filter(Boolean);
 
 const nav = (ui, active) => {

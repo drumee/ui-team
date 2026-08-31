@@ -287,13 +287,13 @@ class tutorial_main extends LetcBox {
    */
   _applyChrome(override) {
     const step = (this._tour.steps || [])[this._stepIndex];
-    const { rail, crumb } = override || stepChrome(step);
+    const { rail, crumb, live } = override || stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
     const topbar = require('./skeleton/topbar');
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
     // entry has to come back with the workspace tabs or the org-home rail —
     // which has no tabs at all — is fed an empty list and renders bare.
-    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
+    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail, { live })));
     // Same trap as the callout: feed(null) is a no-op, so a step that wants NO
     // crumb has to clear the slot rather than feed nothing into it.
     this.ensurePart('crumb').then((p) => (
@@ -371,7 +371,10 @@ class tutorial_main extends LetcBox {
     if (this._widgets[this._stepIndex]) {
       this._showStep(this._widgetAt(this._stepIndex));
     } else {
-      this._enterWorkspace();
+      // Through _enterCreated, which opens the workspace the tour made before
+      // taking the tour down. With none — every other tour — it is exactly
+      // _enterWorkspace.
+      this._enterCreated();
     }
   }
 
@@ -421,7 +424,8 @@ class tutorial_main extends LetcBox {
    */
   _enterWorkspace() {
     // Done is the one control in the tour that waits on the network, so it is
-    // the one that can be pressed twice. Without this the second press runs
+    // the one that can be pressed twice.
+    // Without this the second press runs
     // the whole exit again — a second update_settings write, and for `full` a
     // second round of markSeen posts.
     if (this._exiting) return;
@@ -540,7 +544,54 @@ class tutorial_main extends LetcBox {
   }
 
   _skipTour() {
+    // Leaving early still lands the user in the workspace, if one was made.
+    // Escape means "I am done with the tour", not "undo what I just built" —
+    // and the alternative is the desk home with a new row in the sidebar and
+    // no sign of where it went.
+    if (this._createdWorkspace && this._createdWorkspace.hub_id) {
+      try {
+        if (typeof Wm !== 'undefined') Wm.loadWorkspace(this._createdWorkspace);
+      } catch (e) { /* the tour still comes down */ }
+    }
     this.softDestroy();
+  }
+
+  /**
+   * Open the workspace the tour just made, and come down over it.
+   *
+   * NOTHING ELSE OPENS IT. The create broadcasts `workspace:refresh`, and the
+   * only listeners are the sidebar's workspace list and the activate-workspace
+   * flow — neither of which navigates. So a tour that ended here left the user
+   * on the desk home looking at a list with a new row in it, rather than inside
+   * the thing they had just been walked through making.
+   *
+   * Ordered deliberately: the workspace is opened FIRST and the tour torn down
+   * after, so the fade reveals a workspace that is already there instead of a
+   * blank desk that fills in afterwards.
+   *
+   * @param {String} [tab] a rail tab to select once the window exists —
+   *   `showFolderTab` needs the window, and loadWorkspace builds it, so this
+   *   waits on it rather than racing it.
+   */
+  _enterCreated(tab) {
+    const ws = this._createdWorkspace;
+    if (!ws || !ws.hub_id || typeof Wm === 'undefined') return this._enterWorkspace();
+    let opened;
+    try {
+      opened = Wm.loadWorkspace(ws);
+    } catch (e) {
+      this.warn && this.warn('[tutorial] could not open the new workspace', e);
+    }
+    if (tab) {
+      const showTab = () => {
+        try {
+          const w = Wm.getActiveWindow && Wm.getActiveWindow(1);
+          if (w && _.isFunction(w.showFolderTab)) w.showFolderTab(tab);
+        } catch (e) { /* the window went away — the workspace is still open */ }
+      };
+      Promise.resolve(opened).then(showTab, showTab);
+    }
+    return this._enterWorkspace();
   }
 
   onUiEvent(trigger, args = {}) {
@@ -565,9 +616,27 @@ class tutorial_main extends LetcBox {
         const ws = args.workspace || {};
         if (ws.filename) this.model.set('mock_workspace', ws.filename);
         if (ws.area) this.model.set('mock_area', ws.area);
-        this._applyChrome({ rail: args.rail, crumb: !!args.crumb });
+        // Kept for the exit: this is the workspace the tour is about to leave
+        // the user in, and the only object that knows it is the step.
+        if (ws.hub_id) this._createdWorkspace = ws;
+        this._applyChrome({ rail: args.rail, crumb: !!args.crumb, live: !!args.live });
         break;
       }
+
+      // The rail's five tabs, live on the finish screen. Same service names the
+      // desk uses for the same five entries, so this is the product's rail
+      // behaving as the product's rail — it just has to open the workspace
+      // first, because at this moment the tour is still covering it.
+      case 'rail-files':
+        return this._enterCreated('files');
+      case 'rail-chat':
+        return this._enterCreated(_a.chat);
+      case 'rail-task':
+        return this._enterCreated(_a.task);
+      case 'rail-meet':
+        return this._enterCreated('meeting');
+      case 'rail-access':
+        return this._enterCreated('access');
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));
         break;

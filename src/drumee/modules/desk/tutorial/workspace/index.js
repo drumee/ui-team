@@ -141,7 +141,11 @@ const SCREENS = [
     // 7 creates one. 176:42043 shows the full rail with Files lit and the new
     // workspace in the breadcrumb, which is what the user is about to be left
     // looking at.
-    chrome: { rail: 'files', crumb: true },
+    // `live` makes the five tabs real: they carry the desk's own service names
+    // and, clicked, open the workspace on that tab. This is the one screen
+    // where that is meaningful — the workspace exists and the tour is done
+    // teaching.
+    chrome: { rail: 'files', crumb: true, live: true },
   },
 ];
 

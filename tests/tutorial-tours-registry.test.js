@@ -562,8 +562,8 @@ test("the finish screen asks for the chrome of a workspace that now exists", () 
   const rows = table.split(/^  \{/m).slice(1);
   assert.match(
     rows[rows.length - 1],
-    /chrome:\s*\{\s*rail:\s*'files',\s*crumb:\s*true\s*\}/,
-    "the finish screen must ask for the workspace rail",
+    /chrome:\s*\{\s*rail:\s*'files',\s*crumb:\s*true,\s*live:\s*true\s*\}/,
+    "the finish screen must ask for the workspace rail, and a live one",
   );
   assert.ok(
     !rows.slice(0, -1).some((r) => /chrome:/.test(r)),
@@ -578,6 +578,39 @@ test("the finish screen asks for the chrome of a workspace that now exists", () 
     /_applyChrome\(override\)[\s\S]{0,220}override \|\| stepChrome\(step\)/,
     "a screen's answer must win over its step's",
   );
+});
+
+test("Dept. belongs to the org-home rail, not the workspace one", () => {
+  // The desk's own createRailNav is Files/Chat/Task/Meet/Access and nothing
+  // else, and 176:42043 shows the same five. Dept. is org chrome — it used to
+  // be rendered on every rail and merely left unlit, which put a sixth entry on
+  // a rail the product has five of.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/sidebar.js"), "utf8",
+  );
+  assert.match(
+    src, /active \? null : orgOnly\(/,
+    "the Dept. entry must be dropped whenever a workspace rail is shown",
+  );
+});
+
+test("the tour leaves the user IN the workspace it made", () => {
+  // Nothing else opens it. The create broadcasts workspace:refresh, and the
+  // only listeners are the sidebar's workspace list and the activate-workspace
+  // flow — neither navigates. Every exit therefore goes through _enterCreated:
+  // finishing, clicking a live rail tab, and leaving early alike.
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.match(host, /_enterCreated\(tab\)[\s\S]{0,400}Wm\.loadWorkspace/);
+  assert.match(
+    host, /_nextStep\(\)[\s\S]{0,400}this\._enterCreated\(\)/,
+    "finishing the last step opens it",
+  );
+  assert.match(
+    host, /_skipTour\(\)[\s\S]{0,400}Wm\.loadWorkspace/,
+    "and so does leaving early, once one exists",
+  );
+  // The tab is applied after the window exists, not alongside it.
+  assert.match(host, /Promise\.resolve\(opened\)\.then\(showTab, showTab\)/);
 });
 
 test("the finish screen has no way back", () => {
