@@ -257,6 +257,7 @@ function hostStub(opt = {}) {
     // methodFn returns a FACTORY taking BACKDROPS; these two do not use it.
     _canCreate: methodFn("_canCreate()", "")(),
     _screensFor: methodFn("_screensFor(step)", "step")(),
+    _countedScreensFor: methodFn("_countedScreensFor(step)", "step")(),
     _buildWidgets: methodFn("_buildWidgets(t)", "t")(BACKDROP_STUB),
   };
 }
@@ -301,22 +302,31 @@ test("no step takes a backdrop; every step draws its own pane", () => {
 // Get help (by someone who already has workspaces). Both would create real
 // workspaces, silently, every time.
 
-test("the post-signup workspace run gets its live screens", () => {
+test("the workspace tour runs eight screens and calls itself six", () => {
+  // Not a mistake: `screen_count` is how many the step RUNS, the total is what
+  // the badge COUNTS, and the live tail is deliberately absent from the second.
+  // The create form is not a step of a walkthrough — it is what the walkthrough
+  // was walking towards — and "STEP 7/6" is what numbering it would produce.
   const [step] = build(TOURS.workspace);
-  assert.equal(step.screen_count, 8);
-  assert.equal(step.tour_screens, 8, "the total counts them too");
+  assert.equal(step.screen_count, 8, "the form and the invite card run");
+  assert.equal(step.tour_screens, 6, "the badge counts the walkthrough only");
 });
 
-test("a preview of the workspace tour is mock-only", () => {
+test("the preview URL reaches the create form too", () => {
+  // It was gated off at first, on the grounds that ?tutorial=workspace is
+  // exempt from the seen-set and so runs twice. But loading it twice does not
+  // create two workspaces — nothing is created until someone types a name and
+  // presses Create. Gating it only made the feature unreachable for anyone who
+  // is not a fresh signup, which is everyone testing it.
   const [step] = build(TOURS.workspace, { preview: 1 });
-  assert.equal(step.screen_count, 6, "the create form is not reachable");
-  assert.equal(
-    step.tour_screens, 6,
-    "and the badge counts six, or the last callout reads STEP 6/8",
-  );
+  assert.equal(step.screen_count, 8);
+  assert.equal(step.tour_screens, 6);
 });
 
 test("the workspace step inside `full` is mock-only", () => {
+  // The one gate that still protects a user: someone re-watching the tour from
+  // Get help already has workspaces and asked to SEE the product. `full`
+  // declares no live tail, so there is nothing to run.
   const out = build(TOURS.full);
   assert.equal(out[0].kind, "tutorial_workspace");
   assert.equal(out[0].screen_count, 6);
@@ -883,7 +893,14 @@ test("every step numbers its screens", () => {
   const dir = join(REPO_ROOT, "src/drumee/modules/desk/tutorial");
   for (const step of ["workspace", "chat", "task", "meeting", "share", "migrate", "schedule"]) {
     const src = readFileSync(join(dir, step, "index.js"), "utf8");
-    assert.match(src, /\.\.\.stepProgress\(/, `${step} must number its screens`);
+    // Spread directly, or spread through a condition — the workspace step
+    // numbers its six walkthrough screens and deliberately leaves the live
+    // tail after them unnumbered, because "STEP 7/6" is what numbering the
+    // create form would print.
+    assert.match(
+      src, /\.\.\.\(?[\w\s?]*stepProgress\(/,
+      `${step} must number its screens`,
+    );
   }
   const tip = readFileSync(join(dir, "skeleton/toolkit/tooltip.js"), "utf8");
   assert.match(tip, /progressStyle = "pill"/);

@@ -90,19 +90,21 @@ class tutorial_main extends LetcBox {
    *   post-signup `workspace`   the run this is for. A brand-new account with
    *                             no workspace, being walked into making its
    *                             first one. Live.
-   *   `?tutorial=workspace`     a preview. Deliberately exempt from the
-   *                             seen-set so the same URL works twice — which
-   *                             with a live form means twice the workspaces.
-   *                             Mock.
+   *   `?tutorial=workspace`     also live. This was mock at first, on the
+   *                             grounds that the preview URL is exempt from the
+   *                             seen-set and so runs twice — but loading it
+   *                             twice does not create two workspaces. Nothing
+   *                             is created until someone types a name and
+   *                             presses Create, which is the same deliberate
+   *                             act as opening the real dialog. Gating it only
+   *                             made the feature unreachable: this URL is the
+   *                             one way anybody who is not a fresh signup can
+   *                             see it at all.
    *   step 1 of `full`          Get help -> Product Tour, run by someone who
-   *                             already has workspaces and asked to see the
-   *                             product. Mock. (Also gated in the registry,
-   *                             which declares no live_screens there; this is
-   *                             belt as well as braces.)
-   *
-   * Gated HERE rather than in the registry because `preview` is not a registry
-   * concept — it is a per-run attribute the launcher stamps — and splitting the
-   * decision across two files is how one of them ends up forgotten.
+   *                             already has workspaces and asked to SEE the
+   *                             product, not to make another one. Mock — and
+   *                             gated in the registry, which declares no
+   *                             live_screens there.
    *
    * @param {Object} step a TOURS step
    * @returns {Number}
@@ -114,9 +116,31 @@ class tutorial_main extends LetcBox {
     return this._canCreate() ? declared : Math.max(1, declared - live);
   }
 
-  /** Is this the run that is allowed to create a real workspace? */
+  /**
+   * Is this the run that is allowed to create a real workspace?
+   *
+   * The standalone tour, however it was reached. `full` is excluded by the
+   * registry rather than here — it simply declares no live tail.
+   */
   _canCreate() {
-    return this._tour.id === 'workspace' && !this.mget('preview');
+    return this._tour.id === 'workspace';
+  }
+
+  /**
+   * How many screens of a step the BADGE counts.
+   *
+   * Never the live tail, even when it runs. Those screens are not steps of a
+   * walkthrough — they are what the walkthrough leads to, and numbering the
+   * create form "STEP 7/8" tells the user they are still being shown something
+   * when they have started doing it. The tour is six screens; then it gets out
+   * of the way.
+   *
+   * @param {Object} step a TOURS step
+   * @returns {Number}
+   */
+  _countedScreensFor(step) {
+    const declared = ~~step.screens || 1;
+    return Math.max(1, declared - ~~step.live_screens);
   }
 
   /**
@@ -135,13 +159,16 @@ class tutorial_main extends LetcBox {
     // total and where each step starts — a step widget can see its own screens
     // and nothing else. Computed once here rather than derived per screen.
     //
-    // Through _screensFor, so a step whose tail is gated off is short by those
-    // screens in the TOTAL as well as in its own count. Miss that and the last
-    // callout of a six-screen run reads "STEP 6/8".
-    const count = (s) => this._screensFor(s);
-    const total = steps.reduce((n, s) => n + count(s), 0);
+    // TWO counts, and they are different on purpose. `screen_count` is how many
+    // screens a step RUNS, live tail included; the offsets and the total are
+    // what the badge COUNTS, which never includes it. A tour that runs eight
+    // screens and calls itself six is not a mistake here — the last two are the
+    // form, not the tour.
+    const runs = (s) => this._screensFor(s);
+    const counted = (s) => this._countedScreensFor(s);
+    const total = steps.reduce((n, s) => n + counted(s), 0);
     const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + count(s)), 0);
+    steps.reduce((n, s) => (offsets.push(n), n + counted(s)), 0);
 
     return steps.map((step, i) => {
       const widget = {
@@ -165,7 +192,7 @@ class tutorial_main extends LetcBox {
         // triggerHandlers({ service: 'next-step' }). A stray click now reaches
         // onUiEvent with no service at all and falls through to `default`.
         uiHandler: [this],
-        screen_count: count(step),
+        screen_count: runs(step),
         screen_offset: offsets[i],
         tour_screens: total,
         is_first: i === 0,

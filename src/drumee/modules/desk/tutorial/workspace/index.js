@@ -186,13 +186,20 @@ class __tutorial_workspace extends LetcBox {
     // Deliberately no dashes anywhere here: the design leaves this tour
     // uncounted. `hide_back` comes from the tour, so it reads correctly both
     // standing alone and as step one of `full`.
+    // The live tail carries no number. The badge counts the six screens of the
+    // walkthrough (see _countedScreensFor in ../index.js), so a seventh would
+    // read "STEP 7/6" — and the create form is not a step of a tour anyway. It
+    // is the thing the tour was walking towards.
+    const counted = !(s.live || s.invite);
     const chrome = {
       // Numbered like every other tour. The frames leave these callouts
       // uncounted, but a screen nobody can name is a screen nobody can report
       // — see the note on progressStyle in toolkit/tooltip.js.
-      ...stepProgress(this, this._screenIndex),
+      ...(counted ? stepProgress(this, this._screenIndex) : {}),
       hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-      done: isLastScreen(this, this._screenIndex, this._screens.length),
+      // Done belongs to the last screen the user is SHOWN. Once the form is up
+      // it has its own Create, and the invite card its own way out.
+      done: counted && isLastScreen(this, this._screenIndex, this._screens.length),
     };
     // `bare` raises the screen with no tooltip at all: focus() feeds the
     // callout null and returns, so nothing is drawn and nothing is left over
