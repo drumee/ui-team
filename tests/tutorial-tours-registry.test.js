@@ -257,7 +257,6 @@ function hostStub(opt = {}) {
     // methodFn returns a FACTORY taking BACKDROPS; these two do not use it.
     _canCreate: methodFn("_canCreate()", "")(),
     _screensFor: methodFn("_screensFor(step)", "step")(),
-    _countedScreensFor: methodFn("_countedScreensFor(step)", "step")(),
     _buildWidgets: methodFn("_buildWidgets(t)", "t")(BACKDROP_STUB),
   };
 }
@@ -302,14 +301,13 @@ test("no step takes a backdrop; every step draws its own pane", () => {
 // Get help (by someone who already has workspaces). Both would create real
 // workspaces, silently, every time.
 
-test("the workspace tour runs eight screens and calls itself six", () => {
-  // Not a mistake: `screen_count` is how many the step RUNS, the total is what
-  // the badge COUNTS, and the live tail is deliberately absent from the second.
-  // The create form is not a step of a walkthrough — it is what the walkthrough
-  // was walking towards — and "STEP 7/6" is what numbering it would produce.
+test("the post-signup workspace run is eight screens, badge included", () => {
+  // The live tail is counted. It was briefly left out on the argument that a
+  // form is not a step of a walkthrough — true of the form, false of the user,
+  // who is still being led somewhere and wants to know how far along that is.
   const [step] = build(TOURS.workspace);
   assert.equal(step.screen_count, 8, "the form and the invite card run");
-  assert.equal(step.tour_screens, 6, "the badge counts the walkthrough only");
+  assert.equal(step.tour_screens, 8, "and the pill counts them");
 });
 
 test("the preview URL reaches the create form too", () => {
@@ -320,7 +318,7 @@ test("the preview URL reaches the create form too", () => {
   // is not a fresh signup, which is everyone testing it.
   const [step] = build(TOURS.workspace, { preview: 1 });
   assert.equal(step.screen_count, 8);
-  assert.equal(step.tour_screens, 6);
+  assert.equal(step.tour_screens, 8);
 });
 
 test("the workspace step inside `full` is mock-only", () => {

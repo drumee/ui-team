@@ -127,23 +127,6 @@ class tutorial_main extends LetcBox {
   }
 
   /**
-   * How many screens of a step the BADGE counts.
-   *
-   * Never the live tail, even when it runs. Those screens are not steps of a
-   * walkthrough — they are what the walkthrough leads to, and numbering the
-   * create form "STEP 7/8" tells the user they are still being shown something
-   * when they have started doing it. The tour is six screens; then it gets out
-   * of the way.
-   *
-   * @param {Object} step a TOURS step
-   * @returns {Number}
-   */
-  _countedScreensFor(step) {
-    const declared = ~~step.screens || 1;
-    return Math.max(1, declared - ~~step.live_screens);
-  }
-
-  /**
    * Turn a registry entry into the feed payloads _widgetAt hands out.
    *
    * Everything a step needs to know about its position in the tour is stamped
@@ -159,16 +142,19 @@ class tutorial_main extends LetcBox {
     // total and where each step starts — a step widget can see its own screens
     // and nothing else. Computed once here rather than derived per screen.
     //
-    // TWO counts, and they are different on purpose. `screen_count` is how many
-    // screens a step RUNS, live tail included; the offsets and the total are
-    // what the badge COUNTS, which never includes it. A tour that runs eight
-    // screens and calls itself six is not a mistake here — the last two are the
-    // form, not the tour.
-    const runs = (s) => this._screensFor(s);
-    const counted = (s) => this._countedScreensFor(s);
-    const total = steps.reduce((n, s) => n + counted(s), 0);
+    // Through _screensFor, so a step whose tail is gated off is short by those
+    // screens in the TOTAL as well as in its own count. Miss that and the last
+    // callout of a six-screen run reads "STEP 6/8".
+    //
+    // The live tail IS counted when it runs: the create form and the invite
+    // card are screens 7 and 8 of an eight-screen tour, numbered like the rest.
+    // They were briefly left out on the argument that a form is not a step —
+    // true of the form, false of the user, who is still being led somewhere and
+    // wants to know how far along that is.
+    const count = (s) => this._screensFor(s);
+    const total = steps.reduce((n, s) => n + count(s), 0);
     const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + counted(s)), 0);
+    steps.reduce((n, s) => (offsets.push(n), n + count(s)), 0);
 
     return steps.map((step, i) => {
       const widget = {
@@ -192,7 +178,7 @@ class tutorial_main extends LetcBox {
         // triggerHandlers({ service: 'next-step' }). A stray click now reaches
         // onUiEvent with no service at all and falls through to `default`.
         uiHandler: [this],
-        screen_count: runs(step),
+        screen_count: count(step),
         screen_offset: offsets[i],
         tour_screens: total,
         is_first: i === 0,

@@ -169,10 +169,15 @@ class __tutorial_workspace extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
+    // The name survives a re-render. Picking a type rebuilds this dialog, and
+    // a rebuilt Entry is an empty one — so read what is in the field first and
+    // hand it back through the composer.
+    this._name = this._readName() || this._name || '';
     this.feed(skeleton(this, s, {
       selected: this._type,
       pending: !!this._pending,
       created: this._created,
+      name: this._name,
     }));
     // The dialog screens light the whole dialog and point the beak at one row
     // inside it; the home screen lights the button and points at the same
@@ -187,24 +192,21 @@ class __tutorial_workspace extends LetcBox {
     // Deliberately no dashes anywhere here: the design leaves this tour
     // uncounted. `hide_back` comes from the tour, so it reads correctly both
     // standing alone and as step one of `full`.
-    // The live tail carries no number. The badge counts the six screens of the
-    // walkthrough (see _countedScreensFor in ../index.js), so a seventh would
-    // read "STEP 7/6" — and the create form is not a step of a tour anyway. It
-    // is the thing the tour was walking towards.
-    const counted = !(s.live || s.invite);
+    // A screen the user FILLS IN keeps its number and its Back, and loses only
+    // Next: the form has Create and the invite card has Send and Skip, so a
+    // Next beside either is a second way forward that skips what is being
+    // asked for. Back is the one thing those screens do not offer themselves.
+    const live = !!(s.live || s.invite);
     const chrome = {
-      // A screen the user is filling in gets a caption, not a control: the
-      // form has Create, the invite card has Send and Skip, and a Next beside
-      // either is a second way forward that skips what is being asked for.
-      hide_footer: !counted,
+      hide_next: live,
       // Numbered like every other tour. The frames leave these callouts
       // uncounted, but a screen nobody can name is a screen nobody can report
       // — see the note on progressStyle in toolkit/tooltip.js.
-      ...(counted ? stepProgress(this, this._screenIndex) : {}),
+      ...stepProgress(this, this._screenIndex),
       hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-      // Done belongs to the last screen the user is SHOWN. Once the form is up
-      // it has its own Create, and the invite card its own way out.
-      done: counted && isLastScreen(this, this._screenIndex, this._screens.length),
+      // Done belongs to the last screen with a Next on it. The live tail has
+      // its own controls, so it never wears one.
+      done: !live && isLastScreen(this, this._screenIndex, this._screens.length),
     };
     // `bare` raises the screen with no tooltip at all: focus() feeds the
     // callout null and returns, so nothing is drawn and nothing is left over
@@ -227,6 +229,12 @@ class __tutorial_workspace extends LetcBox {
   }
 
   // ── the live screens ───────────────────────────────────────────────────────
+
+  /** Whatever the live dialog's name field currently holds. */
+  _readName() {
+    const entry = this.getPart && this.getPart('wsd-name-input');
+    return String((entry && entry.getValue && entry.getValue()) || '').trim();
+  }
 
   /** Show or clear the message under the name field. */
   _setNameError(msg) {
@@ -260,8 +268,8 @@ class __tutorial_workspace extends LetcBox {
    */
   async _create() {
     if (this._pending) return;
-    const entry = this.getPart && this.getPart('wsd-name-input');
-    const name = String((entry && entry.getValue && entry.getValue()) || '').trim();
+    const name = this._readName();
+    this._name = name;
     this._setNameError(null);
     if (!name) {
       return this._setNameError(LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME);

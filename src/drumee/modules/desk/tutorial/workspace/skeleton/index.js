@@ -28,6 +28,7 @@ module.exports = function (ui, screen, state = {}) {
     live: !!screen.live,
     selected: state.selected,
     pending: !!state.pending,
+    name: state.name,
   });
 };
 

@@ -92,21 +92,36 @@ function typeRow(ui, pfx, type, opt) {
   // Live, the row is how the type is chosen, so it takes a click. Mock, it is
   // scenery and must stay inert — `active: 0` is what keeps a stray click from
   // bubbling to the step wrapper (see _buildWidgets in ../../index.js).
+  // ONE dataset for the row, built here rather than spread in from two places.
+  //
+  // It used to be two: the live props carried `data-type`, and `...dim()` came
+  // AFTER them carrying `data-dim` — and a later spread REPLACES an earlier key
+  // rather than merging into it, so `dataset` and `attrOpt` were overwritten
+  // wholesale and `data-type` never reached the DOM. The click handler reads
+  // the type off that attribute, found undefined, and returned without doing
+  // anything: every row was clickable and none of them selected.
+  const isDim = rowIsDim(opt.lit, type.key);
+  const data = { dim: isDim ? 1 : 0 };
+  if (opt.live) {
+    data.type = type.key;
+    data.on = selected ? 1 : 0;
+  }
+  const attrs = Object.keys(data).reduce((o, k) => {
+    o[`data-${k}`] = data[k];
+    return o;
+  }, {});
+
   return Skeletons.Box.X({
     // Inline, like the submit below, so the inert-node guard can see both
     // halves of the choice on the node itself.
     ...(opt.live
-      ? {
-          service: "wsd-select-type",
-          uiHandler: [ui],
-          dataset: { type: type.key, on: selected ? 1 : 0 },
-          attrOpt: { "data-type": type.key, "data-on": selected ? 1 : 0 },
-        }
+      ? { service: "wsd-select-type", uiHandler: [ui] }
       : { active: 0 }),
     className: `${pfx}__wsd-type-row`,
     sys_pn: BLOCKS.type(type.key),
     partHandler: ui,
-    ...dim(rowIsDim(opt.lit, type.key)),
+    dataset: data,
+    attrOpt: attrs,
     kids: [
       Skeletons.Element({ active: 0,
         className: `${pfx}__wsd-type-icon ${type.area}`,
@@ -147,11 +162,20 @@ function typeRow(ui, pfx, type, opt) {
  *   is held back. Omit to render the dialog undimmed.
  * @param {String} [opt.selected='internal'] which type carries the radio
  * @param {Boolean} [opt.ready]   Create is enabled (solid rather than pale)
+ * @param {Boolean} [opt.live]    the dialog WORKS — a real name field, rows
+ *   that take a click, a Create that submits. Nothing dims: no screen is
+ *   teaching one block any more, the whole thing is in use.
+ * @param {Boolean} [opt.pending] the submit is waiting on the network
+ * @param {String} [opt.name]     what the name field already holds. Picking a
+ *   type re-renders this dialog, so the typing has to be handed back in or
+ *   choosing a type silently empties the field above it.
  * @returns {Object} the dialog, centred on the pane
  */
 function workspaceDialog(ui, opt = {}) {
   const pfx = ui.fig.family;
-  const { lit, selected = "internal", ready = false, live = false, pending = false } = opt;
+  const {
+    lit, selected = "internal", ready = false, live = false, pending = false, name = "",
+  } = opt;
   const held = (block) => dim(lit && lit !== block);
   // Create is at full strength on its own screen and held back on every
   // screen that is teaching one of the fields above it.
@@ -193,6 +217,7 @@ function workspaceDialog(ui, opt = {}) {
                     partHandler: ui,
                     formItem: _a.filename,
                     placeholder: LOCALE.TYPE_THE_NAME,
+                    value: name || "",
                     // The step validates on submit and writes its own message
                     // into the slot below; `bubble` would put a second one in a
                     // tooltip saying the same thing somewhere else.
