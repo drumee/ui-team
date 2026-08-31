@@ -13,9 +13,12 @@ const { stepProgress, isLastScreen, entryScreen } = require('../tours');
  *
  * The dialog is the lit surface throughout; what changes per screen is which
  * block inside it is at full strength (`lit`) and where the callout's beak
- * lands (`anchor`). Two of the five screens are bare bubbles — a line of copy
+ * lands (`anchor`). Two of the dialog screens are bare bubbles — a line of copy
  * and nothing else — which is what the design shows, so they carry `text`
- * rather than title/desc and advance on click.
+ * rather than title/desc.
+ *
+ * Screen 1 has no callout at all (`bare`), because the frame it is drawn from
+ * has none; its CTA carries the tour forward instead.
  *
  * `direction: 'west'` on the dialog screens: the design puts the callout to
  * the RIGHT of the dialog, which is what reaching west produces. The opening
@@ -28,16 +31,20 @@ const SCREENS = [
     // "Your workspace starts here." hero and the CTA that opens the dialog.
     // The tour used to open straight onto an already-open dialog, which
     // skipped how the user got there.
-    //
-    // The frame carries no callout of its own (it is the entry state the flow
-    // arrow leaves from), so unlike every other screen in this file the
-    // sentence here is ours, not the design's.
     home: true,
     target: 'home-cta',
     anchor: 'home-cta',
     direction: 'north',
     beak: 'end',
-    text: () => LOCALE.TUTORIAL_WS_START,
+    // NO callout. 140:22684 is the entry state the flow arrow leaves from and
+    // it carries none — the CTA is the whole instruction, and a card floating
+    // beside it was ours.
+    //
+    // Which leaves the screen with nothing to press Next on, so the CTA
+    // becomes the control: it is already the lit surface, it is already what
+    // the frame's arrow leaves from, and in the product it is what opens the
+    // dialog that screen 2 draws. See `home-cta` in skeleton/toolkit/home.js.
+    bare: true,
   },
   {
     lit: BLOCKS.NAME,
@@ -126,13 +133,19 @@ class __tutorial_workspace extends LetcBox {
       hide_back: !!this.mget('is_first') && this._screenIndex === 0,
       done: isLastScreen(this, this._screenIndex, SCREENS.length),
     };
+    // `bare` raises the screen with no tooltip at all: focus() feeds the
+    // callout null and returns, so nothing is drawn and nothing is left over
+    // from the previous screen either.
+    const tooltip = s.bare
+      ? null
+      : s.text
+        ? { text: s.text(), ...chrome }
+        : { title: s.title(), desc: s.desc(), ...chrome };
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
       anchor: anchor && anchor.el,
-      tooltip: s.text
-        ? { text: s.text(), ...chrome }
-        : { title: s.title(), desc: s.desc(), ...chrome },
+      tooltip,
       direction: s.direction || 'west',
       beak: s.beak,
       owner: this,

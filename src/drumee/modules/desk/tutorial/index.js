@@ -224,7 +224,10 @@ class tutorial_main extends LetcBox {
     const { rail, crumb } = stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
     const topbar = require('./skeleton/topbar');
-    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.railItems(this, rail)));
+    // navItems, not railItems: the slot is replaced whole, so the org's Dept.
+    // entry has to come back with the workspace tabs or the org-home rail —
+    // which has no tabs at all — is fed an empty list and renders bare.
+    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
     this.ensurePart('crumb').then((p) => p.feed(crumb ? topbar.workspaceCrumb(this) : null));
   }
 
@@ -239,6 +242,11 @@ class tutorial_main extends LetcBox {
    */
   _applySize() {
     if (!this.el || !this.el.dataset || typeof window === 'undefined') return false;
+    // Which tour is running, for the skins. Stamped here rather than in a
+    // second method because this is already the one place that writes to the
+    // root's dataset, and it runs before the shell is fed. The workspace tour
+    // is the one that reads it (skin: it drops the scrim).
+    this.el.dataset.tour = this._tour.id;
     const w = window.innerWidth || 0;
     const h = window.innerHeight || 0;
     const tier = SIZE_TIERS.find((t) => w <= t.max) || SIZE_TIERS[SIZE_TIERS.length - 1];

@@ -85,18 +85,38 @@ const railItems = (ui, active) => {
  * `railItems` returns what goes in it — handing the container back from both
  * would feed an __sb-nav into the __sb-nav slot and nest a duplicate.
  */
+/**
+ * Everything that goes IN the rail's middle slot: the org's Dept. entry, then
+ * the workspace tabs.
+ *
+ * This, not `railItems`, is what the host re-feeds per step — the slot is
+ * replaced wholesale, so a composer that returned only the tabs dropped Dept.
+ * on the first _applyChrome and the org-home rail rendered empty.
+ *
+ * 140:22688 draws Dept. LIT, because on those screens it is where the user is:
+ * no workspace exists, so nothing else can be. It gives that up the moment a
+ * workspace tab is active, or the rail would show two lit tiles and neither
+ * would mean anything.
+ *
+ * @param {Object} ui
+ * @param {String|null} active
+ * @returns {Array}
+ */
+const navItems = (ui, active) =>
+  [
+    orgOnly(() =>
+      railItem(ui, "rail-department", LOCALE.DEPARTMENT, { active: !active }),
+    ),
+    ...railItems(ui, active),
+  ].filter(Boolean);
+
 const nav = (ui, active) => {
   const p = pfx(ui);
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-nav`,
     sys_pn: "rail-nav",
     partHandler: ui,
-    kids: [
-      // Departments are the org's own rail entry, and the only one the
-      // org-home frames show. Gated off until org ships — see ./org.js.
-      orgOnly(() => railItem(ui, "rail-department", LOCALE.DEPARTMENT)),
-      ...railItems(ui, active),
-    ].filter(Boolean),
+    kids: navItems(ui, active),
   });
 };
 
@@ -132,3 +152,4 @@ module.exports = function (ui, opt = {}) {
 };
 
 module.exports.railItems = railItems;
+module.exports.navItems = navItems;

@@ -11,26 +11,53 @@
 //   __tb-*  → the topbar (breadcrumb + utility cluster + avatar)
 //   __wg-*  → the workspace grid a step may use as scenery
 
-$rail-width: 72px;
+// 64px, hard, from the frame: 40px of content between 12px gutters. The label
+// under a tile is allowed to be wider than that 40px column and overhang it —
+// "Access" is ~47px at 14px SemiBold and the design lets it, which is why the
+// rail is not `overflow: hidden`.
+$rail-width: 64px;
+$rail-gutter: 12px;
 $topbar-height: 46px;
 
 .tutorial-main {
   // ── Frame ─────────────────────────────────────────────────────────────────
+  //
+  // The widget's own root (ui-core stamps `<family>__ui` on it — addons/letc.js
+  // registerPart). Pinned to its container rather than left at auto height,
+  // because the layout below sizes against it.
+  //
+  // This is what put the rail's bottom off the screen. The tour mounts in the
+  // desk's `overlay` part, which is `position: absolute; height: 100%` of the
+  // desk BODY — a box that starts BELOW the desk topbar. A layout of `100vh`
+  // inside it is therefore a topbar's-worth taller than the space it has, so
+  // its last ~60px — the 8px bottom inset and, with it, the rail's rounded
+  // bottom corners — hung under the fold. The header corners were round and the
+  // footer corners were not, because the footer corners were not on screen.
+  //
+  // `inset: 0` cannot collapse: with no positioned ancestor it falls back to
+  // the viewport, which is the old behaviour minus the overhang.
+  &__ui {
+    position: absolute;
+    inset: 0;
+  }
+
   // The 2.0 canvas is inset from the window and rounded; the topbar sits in
   // that inset, above both the rail and the pane.
   &__layout {
     position: relative;
     width: 100%;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
     background: var(--normal-bg);
   }
 
+  // 8px between the rail and the pane, as the frame spaces them: the left bar
+  // ends at x64 and the content starts at x72 (140:22687).
   &__body {
     flex: 1 1 auto;
     min-height: 0;
     padding: 0 8px 8px;
-    gap: 0;
+    gap: 8px;
   }
 
   // Relative, because a step may feed a backdrop and its own overlay as two
@@ -60,9 +87,21 @@ $topbar-height: 46px;
     height: 100%;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0 20px;
-    border-radius: 12px;
+    padding: 16px $rail-gutter;
+    border-radius: 8px;
     background: var(--primary-purple-70);
+    // The frame's right-hand hairline. An inset shadow rather than a border:
+    // a border eats a pixel of the 64px box, which leaves 39px of content and
+    // a tile that is 39x40 instead of square. Figma's stroke does not take
+    // layout space, and neither does this.
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.05);
+    // Clip to that radius. Restored after being dropped to let a wide label
+    // overhang the 40px tile column — which it does not need: "Access", the
+    // longest entry, is ~47px at 14px SemiBold and the rail is 64px, so the
+    // overhang lands inside the rail either way and nothing is cut. What the
+    // clip buys back is the corner: without it the footer's last entry paints
+    // over the rounded bottom, and the rail reads square there against a frame
+    // that is round on all four (140:22688, an 8px arc top and bottom).
     overflow: hidden;
     // Set once, on the rail itself. Every sprite symbol is authored
     // fill="currentColor", and `color` is inherited — including across the
@@ -73,53 +112,86 @@ $topbar-height: 46px;
     color: var(--gray-white, #fff);
   }
 
+  // Logo, rule and nav are one 24-gap column in the frame (I140:22688;52:43855),
+  // split across two wrappers here — so both carry the same 24.
+  //
+  // `min(24px, 2.4vh)` rather than a flat 24: at the frame's own 1080 this is
+  // 24 exactly, and it gives way on a shorter window. It has to, because 14px
+  // labels and 40px tiles make each entry 61px tall — a `full`-tour rail is
+  // Dept. plus five tabs plus two footer entries, 591px of content, and at a
+  // 720-tall window (the first height the short tier does NOT catch, since it
+  // triggers BELOW 720) a flat 24 overflowed by 12px and put Plan through the
+  // bottom of the rail.
+  $rail-air: min(24px, 2.4vh);
+
   &__sb-top {
     width: 100%;
     align-items: center;
-    gap: 12px;
+    gap: $rail-air;
   }
 
   &__sb-logo {
     width: 100%;
     align-items: center;
-    gap: 12px;
+    gap: $rail-air;
   }
 
+  // 32x27 is the symbol's own viewBox; it was drawn at 30x30 and squashed.
   &__sb-logo-icon {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 27px;
 
-    svg { width: 100%; height: 100%; }
-    // The mark is authored in the brand colour; on the dark rail it is white.
+    // `fill`, not just `color`. The rail sets `color` for the whole column and
+    // every other sprite symbol is authored fill="currentColor", so they pick
+    // it up — but rail-logo's path carries NO fill attribute at all, which
+    // means it inherits `fill` and defaults to black. It has been a black mark
+    // on the purple rail ever since; the frames draw it white. `fill` is
+    // inherited and inheritance crosses the <use> shadow boundary, which is
+    // the only way to reach that path.
+    svg { width: 100%; height: 100%; fill: currentColor; }
     color: var(--gray-white, #fff);
   }
 
+  // Full gutter-to-gutter, not a centred stub: the frame's rule spans the
+  // rail's content width.
   &__sb-logo-rule {
-    width: 32px;
+    width: 100%;
     height: 1px;
     background: rgba(255, 255, 255, 0.2);
   }
 
-  &__sb-nav,
+  // No gap between nav entries — a tile and its label are one block and the
+  // blocks stack flush, which is what the frame shows. The footer is the one
+  // group that is spaced (12).
+  &__sb-nav {
+    width: 100%;
+    align-items: center;
+    gap: 0;
+  }
+
   &__sb-footer {
     width: 100%;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
   }
 
   &__sb-item {
     width: 100%;
     align-items: center;
     gap: 4px;
-    padding: 4px 0;
   }
 
+  // Square, and as wide as the rail's content box — 40px between the 12px
+  // gutters. Sized from the container rather than pinned at 40 so the narrow
+  // tier only has to move the gutter.
   &__sb-item-tile {
-    width: 36px;
-    height: 36px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    box-sizing: border-box;
+    padding: 6px;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: 8px;
     background: transparent;
     transition: background-color 0.15s ease;
   }
@@ -128,23 +200,32 @@ $topbar-height: 46px;
     background: var(--primary-purple-40);
   }
 
+  // 28 = the 40px tile less its 6px insets, and pinned rather than derived.
+  // `width: 100%; aspect-ratio: 1/1` looks like the better expression of that
+  // and is not: as a flex item in a column the icon's HEIGHT is content-based,
+  // the ratio yields to the content, and the content is an <svg> with no
+  // intrinsic size — which falls back to the SVG default of 150px and blew the
+  // tile out to 40x167. Both tiers that touch the rail leave the content box at
+  // 40, so one number covers them.
   &__sb-item-icon {
-    width: 20px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
 
     svg { width: 100%; height: 100%; }
     color: var(--gray-white, #fff);
   }
 
+  // 14px SemiBold, and wider than the 40px column it is centred in — the frame
+  // lets the label overhang the tile rather than shrinking the type.
   &__sb-item-text {
-    @include drumee.typo($size: 11px, $line: 1.2);
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 600;
+    color: var(--tertiary-grey-40);
     text-align: center;
+    white-space: nowrap;
   }
 
   &__sb-item[data-active="1"] &__sb-item-text {
-    font-weight: 600;
     color: var(--gray-white, #fff);
   }
 
@@ -166,24 +247,82 @@ $topbar-height: 46px;
     min-width: 0;
   }
 
+  // ── Org chip ──────────────────────────────────────────────────────────────
+  // Figma component 43:27965, as 140:22684 places it: a grey pill, 4px around
+  // the avatar and 12px of air before the chevron.
+  //
+  // --normal-bg-90 and --normal-fg are the frame's own #F2F2F7 and #0B0A21 in
+  // the light theme, so this is the design's palette rather than an
+  // approximation of it — and it still turns over in dark, which a hex could
+  // not do.
   &__tb-org {
     align-items: center;
     gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
   }
 
+  // The frame shows a photograph here; Organization has no logo to serve one
+  // from, so this is the org's initial on a brand tile — same box, same
+  // radius, nothing invented.
+  // 24 square, the component's own number (43:24457). Not `aspect-ratio` off a
+  // stretched height: as a flex item with `flex: 0 0 auto` this box is sized
+  // from its content — the single initial inside it — and the ratio never gets
+  // to apply, which collapsed it to an 8px sliver.
+  &__tb-org-avatar {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--primary-purple-40);
+  }
+
+  &__tb-org-avatar-text {
+    @include drumee.typo($size: 12px, $line: 1);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+    text-transform: uppercase;
+  }
+
+  // A stretched pill means every child is full height, so the copy is centred
+  // in its own box rather than sitting at the top of it.
   &__tb-org-name {
-    @include drumee.typo($size: 14px, $line: 1.2);
+    @include drumee.typo($size: 14px, $line: 20px);
+    display: flex;
+    align-items: center;
     font-weight: 600;
     color: var(--normal-fg);
+    white-space: nowrap;
   }
 
+  // A 52px radius on a 20px-tall tag is the frame's way of saying "fully
+  // round"; kept literal so it reads as the same token it is there.
   &__tb-org-plan {
-    @include drumee.typo($size: 11px, $line: 1.2);
+    @include drumee.typo($size: 12px, $line: 1.2);
     font-weight: 600;
     color: var(--primary-purple-40);
-    padding: 3px 8px;
-    border-radius: 6px;
-    background: var(--primary-purple-10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 52px;
+    background: rgba(89, 80, 255, 0.1);
+    white-space: nowrap;
+  }
+
+  &__tb-org-caret {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    align-self: center;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg);
   }
 
   &__tb-crumb {
@@ -300,12 +439,14 @@ $topbar-height: 46px;
 // real rail makes when it is collapsed, so the tour still teaches the shape the
 // user will meet.
 .tutorial-main[data-size="narrow"] {
-  .tutorial-main__sb-main { flex: 0 0 56px; width: 56px; }
+  // Narrower gutters rather than a narrower tile: the tile is sized from the
+  // rail's content box, so moving the gutter is the whole adjustment.
+  .tutorial-main__sb-main { flex: 0 0 56px; width: 56px; padding: 16px 8px; }
   .tutorial-main__sb-item-text { display: none; }
-  .tutorial-main__sb-item-tile { width: 32px; height: 32px; }
-  .tutorial-main__sb-logo-rule { width: 24px; }
   .tutorial-main__tb-org-plan,
   .tutorial-main__tb-org-name { display: none; }
+  // With the name gone the pill is an avatar and a chevron; even the padding out.
+  .tutorial-main__tb-org { padding: 4px; }
   .tutorial-main__body { padding: 0 6px 6px; }
 }
 
@@ -332,10 +473,15 @@ $topbar-height: 46px;
 
 // SHORT: only vertical air, whatever the width tier decided.
 .tutorial-main[data-short="1"] {
-  .tutorial-main__sb-main { padding: 10px 0 12px; }
-  .tutorial-main__sb-nav,
-  .tutorial-main__sb-footer { gap: 4px; }
-  .tutorial-main__sb-item { padding: 2px 0; }
+  // Vertical only, so this composes with whatever gutter the WIDTH tier set
+  // rather than overriding it — the two selectors have equal specificity and
+  // this one is later, so a shorthand here would silently win the gutter too.
+  .tutorial-main__sb-main { padding-top: 10px; padding-bottom: 12px; }
+  // The rail's vertical air is the 24 between logo, rule and nav; that is what
+  // gives way on a short window, not the entries themselves.
+  .tutorial-main__sb-top,
+  .tutorial-main__sb-logo { gap: 12px; }
+  .tutorial-main__sb-footer { gap: 6px; }
 }
 
 // ── Fitting the dense mock panes ─────────────────────────────────────────────

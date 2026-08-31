@@ -1,16 +1,20 @@
 /**
- * Organisations and departments are not implemented yet.
+ * Organisation chrome — the topbar's "Org-name / Business" chip and the rail's
+ * "Dept." entry.
  *
- * The 2.0 frames draw three org affordances the tour would otherwise have to
- * teach — the topbar's "Org-name / Business" chip, the "Department-name /"
- * breadcrumb segment, and the rail's "Dept." entry. Showing them would teach a
- * UI that does not exist; deleting them would make the tour hard to restore
- * when org lands.
+ * ON, because the frames the workspace tour is drawn from lead with it: the
+ * org chip is the first thing at the top left of 140:22684, and the rail beside
+ * it carries Dept. and nothing else (no workspace exists yet on that screen).
+ * A tour that opened on a bare topbar was not the screen the design describes.
  *
- * So they are composed, and gated on one flag. Flip this to true and the three
- * sites come back together.
+ * Still a flag, and still one flag, because org is not implemented as a
+ * PRODUCT: the chip names Organization.name() — which the boot payload does
+ * supply — and the plan tag reads the real billing plan, but there is nothing
+ * behind either of them to open. That is correct for a tour, whose whole
+ * content is a mock, and wrong for anything else. Flip this to false and both
+ * sites go together.
  */
-const ORG_ENABLED = false;
+const ORG_ENABLED = true;
 
 /** @returns {Boolean} whether org/department chrome should be rendered */
 function orgEnabled() {

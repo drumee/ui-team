@@ -19,7 +19,6 @@
  * Visual only — no services. `home-cta` is what the callout points at.
  */
 
-const { orgOnly } = require("../org");
 // The preview shows a real workspace, so it draws the REAL Files grid rather
 // than a second, hand-made approximation of one. Keeping a separate miniature
 // meant two mocks of the same screen drifting apart — and the frame's preview
@@ -58,10 +57,25 @@ function hero(ui) {
         className: `${p}-desc`,
         content: LOCALE.HOME_HERO_DESC,
       }),
-      Skeletons.Box.X({ active: 0,
+      // The one live control on this screen, and the only one in the tour that
+      // is not on a callout.
+      //
+      // 140:22684 carries no callout — it is the state the flow arrow leaves
+      // FROM — so the step raises it bare (`bare` in ../../workspace/index.js)
+      // and this button carries the tour forward instead. That is also what it
+      // does in the product: it opens the create dialog, which is the very
+      // thing screen 2 draws.
+      //
+      // NOT `active: 0`, unlike everything else in this file: ui-core binds an
+      // onclick only to a widget that is not inert, and the click has to reach
+      // the STEP (`uiHandler`), whose onUiEvent already knows `next-step`. The
+      // label inside stays inert so the click lands on this box.
+      Skeletons.Box.X({
         className: `${p}-cta`,
         sys_pn: "home-cta",
         partHandler: ui,
+        service: "next-step",
+        uiHandler: [ui],
         kids: [
           Skeletons.Note({ active: 0,
             className: `${p}-cta-label`,
@@ -154,18 +168,12 @@ function orgHome(ui) {
   const p = pfx(ui);
   return Skeletons.Box.X({ active: 0,
     className: `${p}-canvas`,
-    kids: [
-      hero(ui),
-      preview(ui),
-      // The design titles the canvas with the organisation's name above the
-      // hero. Gated off with the rest of the org chrome — see ../org.js.
-      orgOnly(() =>
-        Skeletons.Note({ active: 0,
-          className: `${p}-org`,
-          content: Organization.name(),
-        }),
-      ),
-    ].filter(Boolean),
+    // The organisation is named ONCE, in the topbar chip the frame puts at the
+    // top left (skeleton/topbar.js). This canvas used to repeat it above the
+    // hero, which 140:22684 does not do — the frame goes straight from the rail
+    // to the headline — and which had no skin behind it, so turning the org
+    // chrome on rendered a bare unstyled line over the hero.
+    kids: [hero(ui), preview(ui)],
   });
 }
 

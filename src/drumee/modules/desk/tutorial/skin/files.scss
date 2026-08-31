@@ -338,6 +338,11 @@
 }
 
 // ── The home empty state (tutorial__home-*) ───────────────────────────────
+//
+// The plate's height, shared with the hero beside it so the two share a top
+// edge the way 140:22945 lays them out.
+$home-preview-h: 475px;
+
 // Figma 140:22684 — the frame the create-workspace flow opens on: a hero on
 // the left and a preview of a populated workspace on the right.
 //
@@ -357,9 +362,22 @@
     background: linear-gradient(115deg, #eeecfb 0%, #f7f6fd 42%, var(--normal-bg-elevated) 100%);
   }
 
+  // The hero starts where the PLATE starts, not halfway down the canvas.
+  //
+  // 140:22945 lays the two out `items-start` inside a `py-[200px]` row, so the
+  // headline's top edge and the plate's top edge are the same line. Centring
+  // each child independently — which is what `align-items: center` on the
+  // canvas does — floated the hero down to the middle of a card it is supposed
+  // to head.
+  //
+  // Given the plate's height and told to pack from the top, the hero lines up
+  // with it exactly while the PAIR stays centred in the canvas, which is what
+  // keeps this working on a viewport shorter than the frame's 1080.
   &__home-hero {
     flex: 0 0 auto;
     width: 520px;
+    height: $home-preview-h;
+    justify-content: flex-start;
     gap: 18px;
   }
 
@@ -376,6 +394,7 @@
     max-width: 440px;
   }
 
+  // The live control on screen 1 (see ./toolkit/home.js) — so it says so.
   &__home-cta {
     align-items: center;
     justify-content: center;
@@ -385,6 +404,12 @@
     padding: 0 26px;
     border-radius: 10px;
     background: var(--primary-purple-50);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background: var(--primary-purple-40);
+    }
   }
 
   &__home-cta-label {
@@ -405,12 +430,27 @@
     width: 705px;
     max-width: 46%;
     align-self: center;
-    height: 475px;
+    // The frame's 705x476 is the OUTER card — the window's 70/66 offset is
+    // measured inside it. Without this the insets were added to the height and
+    // the plate stood 543 tall against a 475 hero, so the two stopped sharing
+    // the top edge they are aligned on.
+    box-sizing: border-box;
+    height: $home-preview-h;
     margin-right: 46px;
-    padding: 22px 0 0 30px;
-    border-radius: 16px;
+    // Where the window actually sits on the plate: `image 1` (140:23218) is
+    // absolutely placed at left 70 / top 66 inside the 705x476 card. 30/22 sat
+    // it almost in the corner and left barely a sliver of the gradient to read.
+    padding: 66px 0 0 70px;
+    // 140:23220, verbatim: a 20px card with a 1px brand hairline, and a
+    // gradient that runs top to BOTTOM — not the 150deg diagonal this had —
+    // from a near-transparent brand tint to solid #5950ff. The old top stop
+    // was an opaque #b9b4ff, which painted a lilac band across the head of the
+    // card; the real one is 5% ink, so the canvas wash behind it shows through
+    // and the plate only gains weight towards the bottom.
+    border: 1px;
+    border-radius: 20px;
     overflow: hidden;
-    background: linear-gradient(150deg, #b9b4ff 0%, #5950ff 100%);
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100.03%);
   }
 
   &__home-pv-viewport {

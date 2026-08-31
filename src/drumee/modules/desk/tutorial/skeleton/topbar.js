@@ -7,9 +7,11 @@
  * (modules/desk/skeleton/topbar.js), where those utilities landed after they
  * left the sidebar.
  *
- * The design also puts an org chip ("Org-name" + plan badge + chevron) at the
- * far left and a "Department-name /" segment ahead of the workspace. Both are
- * gated off — see ./org.js.
+ * The far left is the org chip — avatar, "Org-name", the plan tag and a
+ * chevron, on a grey pill (Figma 140:22684, component 43:27965). It is the
+ * first thing on the org-home frames, and on those frames it is the ONLY thing
+ * on the left: no workspace exists yet, so the crumb slot beside it is fed
+ * empty (see tutorial/index.js _applyChrome).
  *
  * What is NOT here, deliberately: Add new, Upload, Search and Invite. The old
  * tutorial topbar carried them because the old desk topbar did; in 2.0 search
@@ -72,6 +74,52 @@ const workspaceCrumb = (ui, p) => {
 };
 
 /**
+ * The org chip — Figma component 43:27965, as 140:22684 draws it at the top
+ * left: a grey pill holding the org avatar, the org name, the plan tag and a
+ * chevron.
+ *
+ * The avatar is the org's INITIAL on a brand tile, not a picture. The frame
+ * shows a photograph, and Organization has no logo to serve one from
+ * (ui-core letc/organization.js `logo()` is an empty stub) — so the shape and
+ * the box are the design's and the content is the only thing that is true.
+ * Inventing a placeholder photograph would put a face on an organisation that
+ * has not chosen one.
+ *
+ * Inert like everything else in this bar: the chevron says the real chip opens
+ * a menu; nothing here opens anything.
+ */
+const orgTab = (p) => {
+  const name = Organization.name();
+  return Skeletons.Box.X({ active: 0,
+    className: `${p}-org`,
+    kids: [
+      Skeletons.Box.Y({ active: 0,
+        className: `${p}-org-avatar`,
+        kids: [
+          Skeletons.Note({ active: 0,
+            className: `${p}-org-avatar-text`,
+            // `name` comes back ucFirst()'d from Organization, and may be ""
+            // on a deployment that names nothing — an empty tile is the right
+            // answer there, not a stray character.
+            content: (name || "").charAt(0),
+          }),
+        ],
+      }),
+      Skeletons.Note({ active: 0, className: `${p}-org-name`, content: name }),
+      Skeletons.Note({ active: 0,
+        className: `${p}-org-plan`,
+        content: require("libs/billing").planLabel(),
+      }),
+      Skeletons.Image.Svg({ active: 0,
+        // The frame's CaretDown is Phosphor's, and so is this symbol.
+        ico: "ph-caret-down",
+        className: `${p}-org-caret`,
+      }),
+    ],
+  });
+};
+
+/**
  * The viewer's own identity, in the shape UserProfile wants.
  *
  * Same defensive read as the real topbar (skeleton/topbar.js userMenu):
@@ -102,21 +150,7 @@ module.exports = function (ui) {
       Skeletons.Box.X({ active: 0,
         className: `${p}-left-cluster`,
         kids: [
-          orgOnly(() =>
-            Skeletons.Box.X({ active: 0,
-              className: `${p}-org`,
-              kids: [
-                Skeletons.Note({ active: 0,
-                  className: `${p}-org-name`,
-                  content: Organization.name(),
-                }),
-                Skeletons.Note({ active: 0,
-                  className: `${p}-org-plan`,
-                  content: require("libs/billing").planLabel(),
-                }),
-              ],
-            }),
-          ),
+          orgOnly(() => orgTab(p)),
           // Fed per step: absent on the org-home screens, the workspace crumb
           // everywhere else.
           Skeletons.Box.X({ active: 0,
