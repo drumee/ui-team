@@ -18,7 +18,6 @@
 // "Access" is ~47px at 14px SemiBold and the design lets it, which is why the
 // rail is not `overflow: hidden`.
 $rail-width: 64px;
-$rail-gutter: 12px;
 $topbar-height: 46px;
 
 .tutorial-main {
@@ -89,7 +88,13 @@ $topbar-height: 46px;
     height: 100%;
     justify-content: space-between;
     align-items: center;
-    padding: 16px $rail-gutter;
+    // 16px top and bottom, and NO horizontal padding. The desk's own rail
+    // (modules/desk/skin/sidebar.scss, "Static workspace rail") learned this
+    // the hard way: `overflow: hidden` clips to the PADDING box, so a 12px
+    // gutter leaves a 40px strip, and "Access" at 14/600 is ~50px — five pixels
+    // of it were being cut off each side. The 40px icon column is preserved
+    // where it matters instead, on the tile and the divider.
+    padding: 16px 0;
     border-radius: 8px;
     background: var(--primary-purple-70);
     // The frame's right-hand hairline. An inset shadow rather than a border:
@@ -154,50 +159,55 @@ $topbar-height: 46px;
     color: var(--gray-white, #fff);
   }
 
-  // Full gutter-to-gutter, not a centred stub: the frame's rule spans the
-  // rail's content width.
+  // The rule spans the 40px ICON COLUMN, not the full 64px rail — which is
+  // what the desk rail does, and what 43:23955 measures. With the horizontal
+  // padding gone it has to say 40 itself.
   &__sb-logo-rule {
-    width: 100%;
+    width: 40px;
     height: 1px;
     background: rgba(255, 255, 255, 0.2);
   }
 
-  // No gap between nav entries — a tile and its label are one block and the
-  // blocks stack flush, which is what the frame shows. The footer is the one
-  // group that is spaced (12).
-  &__sb-nav {
-    width: 100%;
-    align-items: center;
-    gap: 0;
-  }
-
+  // 12px between entries, in both groups — the desk rail's own spacing.
+  &__sb-nav,
   &__sb-footer {
     width: 100%;
     align-items: center;
     gap: 12px;
   }
 
+  // A 40x61 stack: the 40px icon box over a 4px gap over the label. The ROW is
+  // the full 64px so the label can use it; only the tile is 40.
+  //
+  // The colour lives here rather than on the icon and the label separately: the
+  // desk rail carries it on the item and lets both inherit through
+  // `currentColor`, so an inactive entry is one colour rather than two that
+  // have to be kept in step.
   &__sb-item {
     width: 100%;
+    min-height: 61px;
     align-items: center;
+    justify-content: flex-start;
     gap: 4px;
+    color: var(--tertiary-grey-40);
+    transition: color 0.12s ease;
   }
 
-  // Square, and as wide as the rail's content box — 40px between the 12px
-  // gutters. Sized from the container rather than pinned at 40 so the narrow
-  // tier only has to move the gutter.
   &__sb-item-tile {
-    width: 100%;
-    aspect-ratio: 1 / 1;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
     box-sizing: border-box;
     padding: 6px;
     align-items: center;
     justify-content: center;
     border-radius: 8px;
     background: transparent;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.12s ease;
   }
 
+  // The pill is on the ICON BOX, never the whole row — the label sits outside
+  // it and only changes colour.
   &__sb-item[data-active="1"] &__sb-item-tile {
     background: var(--primary-purple-40);
   }
@@ -214,21 +224,49 @@ $topbar-height: 46px;
     height: 28px;
 
     svg { width: 100%; height: 100%; }
-    color: var(--gray-white, #fff);
+    // Inherited from the item, so icon and label move together.
+    color: currentColor;
   }
 
-  // 14px SemiBold, and wider than the 40px column it is centred in — the frame
-  // lets the label overhang the tile rather than shrinking the type.
+  // The full 64px column, so the longest label fits outright rather than
+  // overflowing and being clipped. 14/17 SemiBold, as the desk rail sets it.
+  //
+  // A Note is a FLEX box wrapping an inner `.note-content` div, and the base
+  // rule makes that inner element a flex container too — so `text-align` alone
+  // never moves the text. Centring has to happen at every level between the
+  // item and the glyph.
   &__sb-item-text {
-    @include drumee.typo($size: 14px, $line: 1.2);
+    @include drumee.typo($size: 14px, $line: 17px);
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 2px;
     font-weight: 600;
-    color: var(--tertiary-grey-40);
+    color: currentColor;
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+
+    .inner,
+    .note-content {
+      width: 100%;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+    }
   }
 
-  &__sb-item[data-active="1"] &__sb-item-text {
+  &__sb-item[data-active="1"],
+  &__sb-item:hover {
     color: var(--gray-white, #fff);
+  }
+
+  // A hint of the pill on hover, the way the desk rail answers a pointer.
+  &__sb-item:hover &__sb-item-tile {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &__sb-item[data-active="1"]:hover &__sb-item-tile {
+    background: var(--primary-purple-40);
   }
 
   // ── Topbar ────────────────────────────────────────────────────────────────
@@ -534,7 +572,7 @@ $topbar-height: 46px;
 .tutorial-main[data-size="narrow"] {
   // Narrower gutters rather than a narrower tile: the tile is sized from the
   // rail's content box, so moving the gutter is the whole adjustment.
-  .tutorial-main__sb-main { flex: 0 0 56px; width: 56px; padding: 16px 8px; }
+  .tutorial-main__sb-main { flex: 0 0 56px; width: 56px; }
   .tutorial-main__sb-item-text { display: none; }
   .tutorial-main__tb-org-plan,
   .tutorial-main__tb-org-name { display: none; }

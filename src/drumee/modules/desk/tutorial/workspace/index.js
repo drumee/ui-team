@@ -129,9 +129,8 @@ const SCREENS = [
     //
     // No callout at all — the frame has none, and by this point there is
     // nothing left to say: the user is looking at the thing they made. Which
-    // leaves the tour with no Done to press, so the screen ends ITSELF: the
-    // confetti plays out and the tour comes down behind it, or a click takes it
-    // down sooner. See _celebrate.
+    // leaves the tour with no Done to press, so a click anywhere on the stage
+    // ends it. It does NOT end on a timer. See _celebrate.
     congrats: true,
     target: 'congrats-stage',
     anchor: 'congrats-stage',
@@ -225,11 +224,13 @@ class __tutorial_workspace extends LetcBox {
       // uncounted, but a screen nobody can name is a screen nobody can report
       // — see the note on progressStyle in toolkit/tooltip.js.
       ...stepProgress(this, this._screenIndex),
-      // No way back off the finish screen. Behind it are the invite card, which
-      // may already have sent one, and the create form, which would happily
-      // make a second workspace — neither is somewhere to return to once this
-      // one exists.
-      hide_back: (!!this.mget('is_first') && this._screenIndex === 0) || !!s.congrats,
+      // No way back once the workspace exists. The create form would happily
+      // make a second one with no sign the first happened, and the invite card
+      // may already have sent an invitation — neither is somewhere to return
+      // to. That covers the invite screen and the finish screen alike.
+      hide_back: (!!this.mget('is_first') && this._screenIndex === 0)
+        || !!s.invite
+        || !!s.congrats,
       // Done belongs to the last screen with a Next on it. The live tail has
       // its own controls, so it never wears one.
       done: !live && isLastScreen(this, this._screenIndex, this._screens.length),
@@ -389,12 +390,13 @@ class __tutorial_workspace extends LetcBox {
    * Throw the confetti, then take the tour down behind it.
    *
    * The finish screen has no control of its own — the frame has no callout and
-   * there is nothing left to ask — so this is what ends the tour. Two ways out,
-   * because a celebration nobody can cut short is a celebration in the way:
+   * there is nothing left to ask — so a click anywhere on the stage is what
+   * ends the tour, and Escape still does too.
    *
-   *   the bursts finish   ~2.5s of confetti, then the tour dismisses itself and
-   *                       the user is left in the workspace it was thrown over.
-   *   a click             anywhere on the stage, for someone who has seen it.
+   * It does NOT end on its own. A timer was the first answer and it was the
+   * wrong one: the last thing the tour did was take the screen away from
+   * someone who might still be reading it. Arriving somewhere is not a thing to
+   * be hurried off.
    *
    * canvas-confetti is scoped to OUR canvas via create(), not the module-level
    * confetti() — that one appends a fixed-position canvas to <body> and spawns
@@ -417,7 +419,6 @@ class __tutorial_workspace extends LetcBox {
     const finish = () => {
       if (this._finished) return;
       this._finished = true;
-      clearTimeout(this._celebrateTimer);
       if (this._onStageClick && stage && stage.el) {
         stage.el.removeEventListener('click', this._onStageClick);
         this._onStageClick = null;
@@ -456,12 +457,14 @@ class __tutorial_workspace extends LetcBox {
       }
     }
 
-    // Long enough for the bursts to land and settle.
-    this._celebrateTimer = setTimeout(finish, 2600);
+    // Deliberately NO timer. The tour used to dismiss itself once the bursts
+    // settled, which meant the last thing it did was take the screen away from
+    // someone who might still be reading it. The user leaves when they are
+    // ready — a click anywhere on the stage, or Escape.
+
   }
 
   onBeforeDestroy() {
-    clearTimeout(this._celebrateTimer);
     try {
       if (this._confetti && this._confetti.reset) this._confetti.reset();
     } catch (e) { /* nothing to stop */ }
