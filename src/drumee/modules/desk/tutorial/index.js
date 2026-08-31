@@ -265,6 +265,14 @@ class tutorial_main extends LetcBox {
   /**
    * Put the shell into the context the current step is teaching.
    *
+   * A SCREEN may override the step's answer, and one does: the workspace tour
+   * declares the org-home chrome — no workspace tabs, nothing named in the
+   * topbar — because for eight of its nine screens no workspace exists. On the
+   * ninth one does, and the frame shows the full rail with Files lit and the
+   * new workspace in the breadcrumb. The registry cannot express that: it is
+   * per-STEP, and this tour is one step whose context changes half way
+   * through.
+   *
    * The rail and the breadcrumb are NOT constant across a tour: `full` opens on
    * the create-workspace dialog, where no workspace exists — so the rail has no
    * workspace tabs and the topbar names nothing — and then spends every later
@@ -277,9 +285,9 @@ class tutorial_main extends LetcBox {
    * is the slot's CONTENTS — feeding the container itself back in would nest a
    * second __sb-nav inside the first.
    */
-  _applyChrome() {
+  _applyChrome(override) {
     const step = (this._tour.steps || [])[this._stepIndex];
-    const { rail, crumb } = stepChrome(step);
+    const { rail, crumb } = override || stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
     const topbar = require('./skeleton/topbar');
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
@@ -550,6 +558,16 @@ class tutorial_main extends LetcBox {
       case 'end-tour':
         this._skipTour();
         break;
+      // A screen asking for different chrome than its step declared — see
+      // _applyChrome. The workspace it names is the one just created, so the
+      // breadcrumb can show it rather than the placeholder.
+      case 'chrome': {
+        const ws = args.workspace || {};
+        if (ws.filename) this.model.set('mock_workspace', ws.filename);
+        if (ws.area) this.model.set('mock_area', ws.area);
+        this._applyChrome({ rail: args.rail, crumb: !!args.crumb });
+        break;
+      }
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));
         break;

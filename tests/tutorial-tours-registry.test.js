@@ -549,6 +549,37 @@ test("the workspace step has ONE way forward, so a new screen cannot be orphaned
   assert.doesNotMatch(src, /this\._endTour\(/, "the second path is gone, not renamed");
 });
 
+test("the finish screen asks for the chrome of a workspace that now exists", () => {
+  // The registry decides chrome per STEP, and this tour is ONE step declaring
+  // the org-home shell: no workspace tabs, nothing named in the topbar. True
+  // for eight of its nine screens, and stale on the ninth — by then screen 7
+  // has made a workspace and the user is looking at it. 176:42043 shows the
+  // full rail with Files lit and the new workspace in the breadcrumb.
+  const step = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
+  );
+  const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
+  const rows = table.split(/^  \{/m).slice(1);
+  assert.match(
+    rows[rows.length - 1],
+    /chrome:\s*\{\s*rail:\s*'files',\s*crumb:\s*true\s*\}/,
+    "the finish screen must ask for the workspace rail",
+  );
+  assert.ok(
+    !rows.slice(0, -1).some((r) => /chrome:/.test(r)),
+    "and it is the only screen that overrides — the rest have no workspace yet",
+  );
+  // The override has to reach the host, and the host has to honour it.
+  assert.match(step, /service:\s*'chrome'/);
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.match(host, /case 'chrome':/);
+  assert.match(
+    host,
+    /_applyChrome\(override\)[\s\S]{0,220}override \|\| stepChrome\(step\)/,
+    "a screen's answer must win over its step's",
+  );
+});
+
 test("the finish screen has no way back", () => {
   // Behind it are the invite card, which may already have sent one, and the
   // create form, which would happily make a second workspace. Neither is

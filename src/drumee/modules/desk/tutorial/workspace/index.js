@@ -135,6 +135,13 @@ const SCREENS = [
     target: 'congrats-stage',
     anchor: 'congrats-stage',
     bare: true,
+    // The one screen of this tour where a workspace EXISTS. Everything before
+    // it runs on the org-home chrome the registry declares — no workspace tabs,
+    // nothing named in the topbar — because that is true right up until screen
+    // 7 creates one. 176:42043 shows the full rail with Files lit and the new
+    // workspace in the breadcrumb, which is what the user is about to be left
+    // looking at.
+    chrome: { rail: 'files', crumb: true },
   },
 ];
 
@@ -243,6 +250,15 @@ class __tutorial_workspace extends LetcBox {
       : s.text
         ? { text: s.text(), ...chrome }
         : { title: s.title(), desc: s.desc(), ...chrome };
+    // Ask the host for this screen's chrome before anything is measured — the
+    // rail and the breadcrumb are part of what the spotlight lights.
+    if (s.chrome) {
+      this.triggerHandlers({
+        service: 'chrome',
+        ...s.chrome,
+        workspace: this._created,
+      });
+    }
     if (s.congrats) this._celebrate();
     this.triggerHandlers({
       service: 'spotlight:focus',
