@@ -587,17 +587,30 @@ test("the tour leaves the user IN the workspace it made, with confetti", () => {
     "finishing the last screen opens it",
   );
   assert.match(
-    host, /_skipTour\(\)\s*\{[\s\S]{0,400}this\._openCreated\(\)/,
+    host, /_skipTour\(\)\s*\{[\s\S]{0,400}this\._openCreatedAndCelebrate\(\)/,
     "and so does leaving early, once one exists",
   );
   // The host celebrates, not the step: the step is destroyed with the tour, and
-  // what is being celebrated is arriving somewhere the tour is not.
+  // what is being celebrated is arriving somewhere the tour is not. BOTH exits
+  // go through the one helper, so neither can drift back into firing blind.
   for (const exit of ["_enterCreated", "_skipTour"]) {
     assert.match(
-      host, new RegExp(`${exit}\\(\\)\\s*\\{[\\s\\S]{0,400}this\\._celebrate\\(\\)`),
-      `${exit} throws the confetti`,
+      host,
+      new RegExp(`${exit}\\(\\)\\s*\\{[\\s\\S]{0,400}this\\._openCreatedAndCelebrate\\(\\)`),
+      `${exit} opens and celebrates through the shared helper`,
     );
   }
+  // The confetti waits for the PANE, not for the call. loadWorkspace returns
+  // undefined and mounts from inside a fetch, so calling these back to back
+  // fires over an empty desk on any link slower than instant.
+  assert.doesNotMatch(
+    host, /this\._openCreated\(\);\s*\n\s*this\._celebrate\(\);/,
+    "open-then-celebrate in sequence is the bug this helper exists to prevent",
+  );
+  assert.match(
+    host, /_openCreatedAndCelebrate\(\)\s*\{[\s\S]{0,400}\.then\(\(pane\) => \{\s*\n\s*if \(pane\) this\._celebrate\(\)/,
+    "celebration is conditional on the pane actually arriving",
+  );
   // The MODULE-level confetti, which appends its own fixed canvas to <body> and
   // removes it when the animation ends. `create()` would bind it to a canvas
   // this widget owns and take it down mid-flight.

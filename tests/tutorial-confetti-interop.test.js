@@ -105,3 +105,102 @@ test("the failure is reported, not swallowed into silence", () => {
   const body = src.slice(src.indexOf("_celebrate() {"), src.indexOf("_openCreated() {"));
   assert.match(body, /catch \(e\) \{[\s\S]{0,200}this\.warn/, "a swallowed catch hides the next one");
 });
+
+
+// ── waiting for the workspace to actually be there ──────────────────────────
+//
+// The confetti used to go up the moment Wm.loadWorkspace was CALLED, which is a
+// different event from the workspace opening. loadWorkspace returns undefined
+// and mounts its pane from inside a media.attributes fetch, so the celebration
+// raced the network: on a slow link it played over an empty desk, and on a
+// failed open ("cannot resolve workspace root") it played over a workspace that
+// never arrived.
+//
+// There is no event to hook. `workspace:focus` is the closest thing and is
+// suppressed on exactly this path — apply() sets _curWorkspace BEFORE feeding
+// the pane, so onWorkspaceRaised sees sameContext and stays quiet. So the host
+// watches for the pane through Wm._findWorkspaceWindow, which is the same
+// accessor loadWorkspace itself uses to ask "is this hub already open".
+
+/** Bind one real method off the host source, with its globals injected. */
+function bindHost(sig, host, globals) {
+  const src = readFileSync(HOST_PATH, "utf8");
+  const start = src.indexOf(`  ${sig} {`);
+  assert.notEqual(start, -1, `${sig} not found — the test is out of date`);
+  const body = src.slice(src.indexOf("{", start) + 1, src.indexOf("\n  }\n", start));
+  const names = Object.keys(globals);
+  const args = sig.slice(sig.indexOf("(") + 1, sig.lastIndexOf(")"));
+  // eslint-disable-next-line no-new-func
+  return new Function(...names, `return function (${args}) {${body}};`)(
+    ...names.map((n) => globals[n]),
+  ).bind(host);
+}
+
+const BUDGET = (() => {
+  const src = readFileSync(HOST_PATH, "utf8");
+  return {
+    wait: Number(/const OPEN_WAIT_MS = (\d+);/.exec(src)[1]),
+    poll: Number(/const OPEN_POLL_MS = (\d+);/.exec(src)[1]),
+  };
+})();
+
+test("the wait resolves as soon as the pane is there", async () => {
+  const host = {};
+  let looks = 0;
+  const Wm = {
+    _findWorkspaceWindow: (hub_id) => (++looks >= 3 ? { hub_id } : null),
+  };
+  const wait = bindHost("_workspaceOnScreen(hub_id)", host, {
+    Wm, _: { isFunction: (f) => typeof f === "function" },
+    OPEN_WAIT_MS: BUDGET.wait, OPEN_POLL_MS: 1,
+  });
+  const pane = await wait("h_1");
+  assert.deepEqual(pane, { hub_id: "h_1" }, "it resolves with the pane it found");
+  assert.equal(looks, 3, "and it kept looking until the pane appeared");
+});
+
+test("a pane that is already open resolves immediately, on the first look", async () => {
+  // Re-running the tour against a workspace that exists still ends in a
+  // celebration — loadWorkspace early-returns there, so nothing new mounts and
+  // a wait that insisted on a CHANGE would hang until the budget ran out.
+  const host = {};
+  let looks = 0;
+  const wait = bindHost("_workspaceOnScreen(hub_id)", host, {
+    Wm: { _findWorkspaceWindow: (hub_id) => (looks++, { hub_id }) },
+    _: { isFunction: (f) => typeof f === "function" },
+    OPEN_WAIT_MS: BUDGET.wait, OPEN_POLL_MS: 1,
+  });
+  assert.ok(await wait("h_1"));
+  assert.equal(looks, 1, "no polling at all when it is already up");
+});
+
+test("a workspace that never opens resolves null, and is reported", async () => {
+  // The whole point of waiting. No pane means the open failed, and a failed
+  // open is not something to throw confetti at.
+  const host = { warn: (...a) => host.__warned = a.join(" ") };
+  const wait = bindHost("_workspaceOnScreen(hub_id)", host, {
+    Wm: { _findWorkspaceWindow: () => null },
+    _: { isFunction: (f) => typeof f === "function" },
+    OPEN_WAIT_MS: 20, OPEN_POLL_MS: 1,     // the real budget is 8s; this is the shape
+  });
+  assert.equal(await wait("h_1"), null);
+  assert.match(host.__warned || "", /never opened/, "silence would hide a broken open");
+});
+
+test("the budget is long enough for a slow link and short enough to give up", () => {
+  assert.ok(BUDGET.wait >= 5000, "a cold media.attributes on a bad link needs seconds");
+  assert.ok(BUDGET.wait <= 15000, "past this the open has failed, not slowed");
+  assert.ok(BUDGET.poll <= 250, "the confetti must feel like it belongs to the reveal");
+});
+
+test("_openCreated hands back a promise on every path, including its refusals", () => {
+  // The caller does .then() on it unconditionally. An early `return null` for a
+  // missing workspace or a throwing Wm would be a TypeError at the exit of
+  // every tour that never created anything — which is most of them.
+  const src = readFileSync(HOST_PATH, "utf8");
+  const body = src.slice(src.indexOf("_openCreated() {"), src.indexOf("_workspaceOnScreen(hub_id) {"));
+  const bareNulls = body.match(/return null;/g) || [];
+  assert.equal(bareNulls.length, 0, "every exit must be a promise, not a bare null");
+  assert.equal((body.match(/return Promise\.resolve\(null\)/g) || []).length, 2,
+    "the no-workspace guard and the throwing-Wm catch");
+});

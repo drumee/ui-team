@@ -40,6 +40,17 @@ const SHORT_HEIGHT = 720;
 // of the window edge, short enough that a rotation feels immediate.
 const REFLOW_MS = 160;
 
+// How long the confetti waits for the new workspace to actually appear, and how
+// often it looks.
+//
+// Wm.loadWorkspace is fire-and-forget — it returns undefined and mounts the
+// pane from inside a media.attributes fetch — so the only honest answer to "did
+// it open" is to watch for the pane. The budget covers a slow link; past it the
+// open has failed (loadWorkspace has its own 'cannot resolve workspace root'
+// path) and there is nothing to celebrate.
+const OPEN_WAIT_MS = 8000;
+const OPEN_POLL_MS = 60;
+
 // Every step widget is a bare `import()` in seeds.js, so each one is its own
 // webpack chunk with no prefetch hint. Left alone, pressing Next is the moment
 // the chunk is requested: Kind.get() hands back the lazy loader placeholder,
@@ -539,8 +550,7 @@ class tutorial_main extends LetcBox {
     // Escape means "I am done with the tour", not "undo what I just built" —
     // and the alternative is the desk home with a new row in the sidebar and
     // no sign of where it went.
-    this._openCreated();
-    this._celebrate();
+    this._openCreatedAndCelebrate();
     this.softDestroy();
   }
 
@@ -559,9 +569,29 @@ class tutorial_main extends LetcBox {
    *
    */
   _enterCreated() {
-    this._openCreated();
-    this._celebrate();
+    this._openCreatedAndCelebrate();
     return this._enterWorkspace();
+  }
+
+  /**
+   * Open the workspace, and celebrate only once it is actually on screen.
+   *
+   * Not fire-and-hope. The confetti used to go up the instant loadWorkspace was
+   * CALLED, which is a different event from the workspace opening: that call
+   * returns immediately and mounts the pane from inside a media.attributes
+   * fetch, so on a slow link the confetti played over an empty desk, and on a
+   * failed open it played over a workspace that never arrived.
+   *
+   * Deliberately NOT awaited by the caller. The tour comes down on its own
+   * schedule — the fade is what reveals the workspace underneath — so making
+   * the teardown wait on the network would hold a dead tour on screen. This
+   * runs alongside it and lands whenever the pane does.
+   */
+  _openCreatedAndCelebrate() {
+    return this._openCreated().then((pane) => {
+      if (pane) this._celebrate();
+      return pane;
+    });
   }
 
   /**
@@ -585,9 +615,10 @@ class tutorial_main extends LetcBox {
    * `confetti is not a function`, caught below, warned, and the tour ended with
    * no confetti and no explanation. See tests/tutorial-confetti-interop.test.js.
    *
-   * Fired BEFORE the teardown: softDestroy fades for half a second, so the
-   * confetti starts over the tour and carries on over the workspace it reveals
-   * rather than beginning on an empty desk once everything has settled.
+   * Fired when the workspace is ON SCREEN, not when its open was requested —
+   * see _workspaceOnScreen. That usually lands during the tour's own fade, so
+   * the confetti still carries over the reveal; on a slow link it waits, which
+   * is the point. Confetti over an empty desk celebrates nothing.
    *
    * Two bursts from the lower corners, the way the frame scatters them across
    * the whole pane rather than out of one point.
@@ -618,23 +649,74 @@ class tutorial_main extends LetcBox {
   }
 
   /**
-   * Open the workspace the tour made, if it made one.
+   * Open the workspace the tour made, and resolve with its pane once it is up.
    *
    * The descriptor is whatever libs/create-workspace normalised, and it is
    * already in the shape loadWorkspace wants for BOTH kinds: a hub is
    * `{hub_id, ...}`, and a personal workspace is the home-root folder row
    * (`{hub_id: Visitor.id, nid, area: personal}`) — the same explicit shape
    * desk's _workspaceTarget builds, so the folder opens rather than Home.
+   *
+   * @returns {Promise<Object|null>} the workspace pane, or null if it never
+   *   arrived — the caller uses that to decide whether to celebrate.
    */
   _openCreated() {
     const ws = this._createdWorkspace;
-    if (!ws || !ws.hub_id || typeof Wm === 'undefined') return null;
+    if (!ws || !ws.hub_id || typeof Wm === 'undefined') return Promise.resolve(null);
     try {
-      return Wm.loadWorkspace(ws);
+      Wm.loadWorkspace(ws);
     } catch (e) {
       this.warn && this.warn('[tutorial] could not open the new workspace', e);
-      return null;
+      return Promise.resolve(null);
     }
+    return this._workspaceOnScreen(ws.hub_id);
+  }
+
+  /**
+   * Resolve once the workspace's pane is mounted — or with null if it is not.
+   *
+   * WATCHED, not awaited, because there is nothing to await: loadWorkspace
+   * returns undefined and does its real work inside a media.attributes fetch,
+   * calling an internal apply() that feeds the pane into headlessLayer. It has
+   * no promise, no callback and no broadcast that means "this workspace is
+   * open" — `workspace:focus` comes closest and is suppressed on exactly this
+   * path, because apply() sets _curWorkspace BEFORE the pane mounts and
+   * onWorkspaceRaised then sees sameContext and stays quiet.
+   *
+   * So the condition IS the evidence: Wm._findWorkspaceWindow is the accessor
+   * loadWorkspace itself uses to decide whether a hub's pane already exists,
+   * and it answers non-null only once apply() has fed it. Polled rather than
+   * hooked so a failed open simply times out instead of leaving a listener
+   * behind on a destroyed widget.
+   *
+   * Resolves immediately when the pane is already there — re-running the tour
+   * against an existing workspace still ends in a celebration.
+   *
+   * @param {String|Number} hub_id
+   * @returns {Promise<Object|null>}
+   */
+  _workspaceOnScreen(hub_id) {
+    if (typeof Wm === 'undefined' || !_.isFunction(Wm._findWorkspaceWindow)) {
+      return Promise.resolve(null);
+    }
+    const deadline = Date.now() + OPEN_WAIT_MS;
+    return new Promise((resolve) => {
+      const look = () => {
+        let pane = null;
+        try {
+          pane = Wm._findWorkspaceWindow(hub_id);
+        } catch (e) {
+          return resolve(null);
+        }
+        if (pane) return resolve(pane);
+        if (Date.now() >= deadline) {
+          this.warn && this.warn('[tutorial] the new workspace never opened');
+          return resolve(null);
+        }
+        setTimeout(look, OPEN_POLL_MS);
+      };
+      look();
+    });
   }
 
   onUiEvent(trigger, args = {}) {

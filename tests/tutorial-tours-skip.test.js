@@ -71,10 +71,23 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
   const deps = {
     Tours: { markSeen: (id) => log.push(`markSeen:${id}`) },
     // Skip lands the user in the workspace the tour made, if it made one, and
-    // throws the confetti over it. Both are real here rather than stubbed, so
-    // the no-workspace case below proves the GUARDS hold rather than proving a
-    // stand-in does nothing.
-    Wm: { loadWorkspace: (ws) => log.push(`loadWorkspace:${ws.hub_id}`) },
+    // throws the confetti over it once the pane is actually up. All three
+    // methods are real here rather than stubbed, so the no-workspace case below
+    // proves the GUARDS hold rather than proving a stand-in does nothing.
+    //
+    // _findWorkspaceWindow answers immediately: the wait itself is covered in
+    // tutorial-confetti-interop.test.js, and what these tests are about is that
+    // skip WRITES nothing, which must hold whether or not the pane arrives.
+    Wm: {
+      loadWorkspace: (ws) => log.push(`loadWorkspace:${ws.hub_id}`),
+      // `__noPane` is how a test says "the open never landed".
+      _findWorkspaceWindow: (hub_id) => (host.__noPane ? null : { hub_id }),
+    },
+    // _workspaceOnScreen guards on _.isFunction before touching Wm.
+    _: { isFunction: (f) => typeof f === "function" },
+    // Read from the source so the budget cannot drift away from the tests.
+    OPEN_WAIT_MS: Number(/const OPEN_WAIT_MS = (\d+);/.exec(HOST_SRC)[1]),
+    OPEN_POLL_MS: Number(/const OPEN_POLL_MS = (\d+);/.exec(HOST_SRC)[1]),
     require: (mod) => {
       assert.equal(mod, "canvas-confetti");
       return () => log.push("confetti");
@@ -93,15 +106,18 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
     // eslint-disable-next-line no-new-func
     new Function(
       "Tours", "flaggedIds", "SERVICE", "Visitor", "SVC_OPT", "localStorage",
-      "Wm", "require", "assert",
-      `return function () {${methodBody(HOST_SRC, sig)}};`,
+      "Wm", "require", "assert", "_", "OPEN_WAIT_MS", "OPEN_POLL_MS",
+      `return function (${sig.slice(sig.indexOf("(") + 1, sig.lastIndexOf(")"))}) {${methodBody(HOST_SRC, sig)}};`,
     )(
       deps.Tours, deps.flaggedIds, deps.SERVICE, deps.Visitor, deps.SVC_OPT,
-      deps.localStorage, deps.Wm, deps.require, assert,
+      deps.localStorage, deps.Wm, deps.require, assert, deps._,
+      deps.OPEN_WAIT_MS, deps.OPEN_POLL_MS,
     ).bind(host);
 
   host._openCreated = bind("_openCreated()");
+  host._workspaceOnScreen = bind("_workspaceOnScreen(hub_id)");
   host._celebrate = bind("_celebrate()");
+  host._openCreatedAndCelebrate = bind("_openCreatedAndCelebrate()");
   return { host, log, store, skip: bind("_skipTour()"), done: bind("_enterWorkspace()") };
 }
 
@@ -143,17 +159,33 @@ test("Done on `full` still marks every flagged tour — S7 regression cover", ()
   assert.ok(log.some((l) => l.includes("tutorial_done")));
 });
 
-test("skip still lands the user in the workspace the tour made", () => {
+test("skip still lands the user in the workspace the tour made", async () => {
   // Escape means "I am done with the tour", not "undo what I just built". The
   // alternative is the desk home with a new row in the sidebar and no sign of
   // where it went — the same ending the tour has when it runs to the end.
   const { host, log, skip } = makeHost({ tourId: "workspace" });
   host._createdWorkspace = { hub_id: "h_1", filename: "Design" };
   skip();
-  assert.deepEqual(log, ["loadWorkspace:h_1", "confetti", "confetti", "softDestroy"]);
-  // Opened BEFORE the teardown, so the fade reveals a workspace already there
-  // rather than a blank desk that fills in afterwards.
-  assert.ok(log.indexOf("loadWorkspace:h_1") < log.indexOf("softDestroy"));
+  // The teardown does NOT wait on the open: holding a dead tour on screen for
+  // the length of a network round trip is worse than letting it go.
+  assert.deepEqual(log, ["loadWorkspace:h_1", "softDestroy"]);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(
+    log, ["loadWorkspace:h_1", "softDestroy", "confetti", "confetti"],
+    "and the confetti lands once the pane is up",
+  );
+});
+
+test("skip celebrates nothing when the workspace never opens", async () => {
+  // A create that succeeded and an open that did not is not a celebration. The
+  // pane is the evidence; with none, the tour just leaves.
+  const { host, log, skip } = makeHost({ tourId: "workspace" });
+  host._createdWorkspace = { hub_id: "h_1" };
+  host.__noPane = true;
+  skip();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(log, ["loadWorkspace:h_1", "softDestroy"], "it is still polling");
+  assert.ok(!log.includes("confetti"), "no pane, no confetti");
 });
 
 test("skip and Done are different code paths, not one calling the other", () => {
