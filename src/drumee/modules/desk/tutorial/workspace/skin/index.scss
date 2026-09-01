@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "../../skin/spinner";
 
 // The Create-new-workspace dialog, as the `workspace` tour draws it.
 // Figma 176:40762 (component 85:42209): 460px card, 32px insets, 24px radius,
@@ -187,6 +188,100 @@
 
     &[data-ready="1"] {
       background: var(--primary-purple-50);
+    }
+  }
+
+  // ── Live mode ─────────────────────────────────────────────────────────────
+  //
+  // The last two screens are not a mock, and the difference has to be legible:
+  // a field that takes a caret, rows that answer a click, a button that says it
+  // is working. Everything above stays exactly as it was — the five screens
+  // teaching this dialog must keep looking like the dialog they teach.
+
+  // The real input, in the same box the mock draws as a placeholder.
+  &__wsd-input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-default);
+    background: var(--normal-bg-elevated);
+    @include drumee.typo($size: 14px, $line: 1.3);
+    color: var(--normal-fg);
+
+    input {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: none;
+      background: transparent;
+      font: inherit;
+      color: inherit;
+    }
+
+    &:focus-within {
+      border-color: var(--primary-purple-40);
+    }
+  }
+
+  // Under the field, never over the form. `data-state` rather than :empty —
+  // a Note renders its copy inside an inner div, so it is never CSS-empty.
+  &__wsd-error {
+    @include drumee.typo($size: 12px, $line: 1.3);
+    font-weight: 400;
+    color: var(--signal-error, #d74e49);
+    display: none;
+
+    &[data-state="1"] {
+      display: block;
+    }
+  }
+
+  // A row you can choose. The mock rows are inert and take neither.
+  &__wsd-type-row[data-type] {
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+
+    &:hover {
+      border-color: var(--border-strong);
+    }
+
+    &[data-on="1"] {
+      border-color: var(--primary-purple-40);
+      background: var(--primary-purple-05, rgba(89, 80, 255, 0.04));
+    }
+  }
+
+  // The radio follows the ROW's own selection in live mode; in the mock it
+  // follows `selected`, which the screen table sets on the radio directly.
+  &__wsd-type-row[data-type][data-on="1"] &__wsd-radio {
+    border-color: var(--primary-purple-40);
+
+    &::after {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--primary-purple-40);
+    }
+  }
+
+  &__wsd-submit {
+    &[data-ready="1"] {
+      cursor: pointer;
+    }
+
+    // Waiting on the network. The label stays — a spinner that replaces the
+    // word leaves the user unsure what they pressed — and the button stops
+    // taking clicks.
+    &[data-pending="1"] {
+      cursor: default;
+      pointer-events: none;
+      // The spinner is absolutely placed against this box.
+      position: relative;
+
+      &::after { @include spinner.pending-spinner(16px); }
     }
   }
 }

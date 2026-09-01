@@ -1029,7 +1029,14 @@ export function filesContainer(ui) {
     type: _a.type,
   };
   if (ui.fig.family === "window-folder") {
-    opt.kids = [fileTypeFilterBar(ui), gridFilesBrowser(ui)];
+    // The empty state is a following SIBLING of the list — the skin reads the
+    // list's own `data-empty` across `~` (see _syncGridEmpty in ../../utils.js),
+    // so order matters here.
+    opt.kids = [
+      fileTypeFilterBar(ui),
+      gridFilesBrowser(ui),
+      require("../content/grid/empty")(ui),
+    ];
   }
   return Skeletons.Box.Y(opt);
 }

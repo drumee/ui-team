@@ -107,19 +107,19 @@ function opensStackingContext(node) {
  * reaches out in, NOT the side of the target it lands on. 'west' reaches west,
  * so the card sits to the target's right.
  */
-function anchorFor(rect, direction) {
+function anchorFor(rect, direction, gap = GAP) {
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
   switch (direction) {
     case 'south':
-      return { left: `${cx}px`, bottom: `${window.innerHeight - rect.top + GAP}px` };
+      return { left: `${cx}px`, bottom: `${window.innerHeight - rect.top + gap}px` };
     case 'east':
-      return { right: `${window.innerWidth - rect.left + GAP}px`, top: `${cy}px` };
+      return { right: `${window.innerWidth - rect.left + gap}px`, top: `${cy}px` };
     case 'west':
-      return { left: `${rect.right + GAP}px`, top: `${cy}px` };
+      return { left: `${rect.right + gap}px`, top: `${cy}px` };
     case 'north':
     default:
-      return { left: `${cx}px`, top: `${rect.bottom + GAP}px` };
+      return { left: `${cx}px`, top: `${rect.bottom + gap}px` };
   }
 }
 
@@ -166,11 +166,14 @@ class __tutorial_spotlight extends LetcBox {
    *   Defaults to `target`.
    * @param {Object} [args.tooltip] see tooltipBubble
    * @param {String} [args.direction]
+   * @param {Number} [args.gap] card-edge to target-edge, overriding GAP. One
+   *   number for every callout is an average, and a step that sits beside a
+   *   surface the average was not measured on can say so.
    * @param {String} [args.beak]
    * @param {Object} [args.owner] the step widget; Back/Next are routed at it
    */
   async focus(args = {}) {
-    const { target, anchor, tooltip, direction = 'north', beak, owner } = args;
+    const { target, anchor, tooltip, direction = 'north', beak, owner, gap } = args;
     if (!target) return this.clear();
     // Kept so the screen can be laid out again without the step having to
     // re-raise it — see reflow(). The step is the only object that knows what
@@ -243,7 +246,11 @@ class __tutorial_spotlight extends LetcBox {
     this.setState(1);
 
     if (!tooltip) {
-      callout.feed(null);
+      // clear(), not feed(null). `feed` treats a falsy payload as "nothing to
+      // do" and returns the last child untouched (ui-core widgets/box), so
+      // feeding null left the PREVIOUS screen's card on screen — which is how
+      // the invite screen came up wearing the create screen's callout.
+      callout.clear();
       return;
     }
     if (this._stale(ticket)) return;
@@ -252,12 +259,7 @@ class __tutorial_spotlight extends LetcBox {
       ...tooltip,
       direction,
       beak,
-      style: anchorFor(anchorRect, direction),
-      // Back/Next belong to the step that owns the screen; ending the tour
-      // belongs to the tour. This widget is the only object holding both
-      // references — `owner` is the step, and its own partHandler is
-      // tutorial_main — so it is where the two are separated.
-      host: this._tourHost(),
+      style: anchorFor(anchorRect, direction, gap),
     }));
     await this._keepInView(callout, ticket);
   }
@@ -324,13 +326,6 @@ class __tutorial_spotlight extends LetcBox {
 
     card.style.setProperty('--bubble-nudge-x', `${Math.round(dx)}px`);
     card.style.setProperty('--bubble-nudge-y', `${Math.round(dy)}px`);
-  }
-
-  /** tutorial_main, from the partHandler the shell fed us. */
-  _tourHost() {
-    const h = this.mget(_a.partHandler);
-    if (!h) return null;
-    return _.isArray(h) ? h[0] : h;
   }
 
   /**
@@ -445,7 +440,10 @@ class __tutorial_spotlight extends LetcBox {
     this.setState(0);
     const callout = await this.ensurePart('callout');
     if (this._stale(ticket)) return;
-    callout.feed(null);
+    // See focus(): feed(null) is a no-op, so this never cleared anything. Every
+    // step boundary has fed a new card immediately afterwards, which is the
+    // only reason it went unnoticed.
+    callout.clear();
   }
 
   onBeforeDestroy() {

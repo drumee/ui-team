@@ -51,7 +51,19 @@ const TOURS = {
     flag: "workspace",
     // No workspace exists yet on these screens, so the rail has no tabs and
     // the topbar names nothing — which is what the org-home frames show.
-    steps: [{ kind: "tutorial_workspace", screens: 6, chrome: { rail: null, crumb: false } }],
+    //
+    // `live_screens` is the tail of this step that stops being a mock: a real
+    // create-workspace form and the invite screen after it. They run ONLY on
+    // the post-signup run of this tour — see _liveScreens in tutorial/index.js
+    // for the gate and why it is there rather than here. Declared as a COUNT
+    // off the end so the registry still says what the whole step is, and the
+    // host subtracts rather than the step guessing.
+    steps: [{
+      kind: "tutorial_workspace",
+      screens: 8,
+      live_screens: 2,
+      chrome: { rail: null, crumb: false },
+    }],
   },
 
   // The tracker inside a workspace, reached by opening one.
@@ -120,6 +132,9 @@ const TOURS = {
     id: "full",
     flag: null,
     steps: [
+      // Six, not eight: no `live_screens`, so the create form is not part of
+      // the full tour. Someone re-watching the tour from Get help already has
+      // workspaces and asked to see the product, not to make another one.
       { kind: "tutorial_workspace", screens: 6, chrome: { rail: null, crumb: false } },
       { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat", crumb: true } },
       { kind: "tutorial_meeting", screens: 3, chrome: { rail: "meet", crumb: true } },

@@ -224,24 +224,46 @@ test("Done shows only on the last screen of the LAST step", () => {
 
 // ── host: step payloads ──────────────────────────────────────────────────────
 
-/** Lift _buildWidgets out of the host so it can run without ui-core. */
-function buildWidgetsFn() {
+/** Lift one method out of the host so it can run without ui-core. */
+function methodFn(signature, args) {
   const src = readFileSync(HOST_PATH, "utf8");
-  const start = src.indexOf("  _buildWidgets(t) {");
-  assert.notEqual(start, -1, "_buildWidgets not found in production source");
+  const start = src.indexOf(`  ${signature} {`);
+  assert.notEqual(start, -1, `${signature} not found in production source`);
   const end = src.indexOf("\n  }\n", start);
-  assert.notEqual(end, -1, "_buildWidgets has no closing brace");
-  const body = src.slice(start + "  _buildWidgets(t) {".length, end);
-  return new Function("BACKDROPS", `return function (t) {${body}};`);
+  assert.notEqual(end, -1, `${signature} has no closing brace`);
+  const body = src.slice(start + `  ${signature} {`.length, end);
+  // eslint-disable-next-line no-new-func
+  return new Function("BACKDROPS", `return function (${args}) {${body}};`);
 }
 
 const BACKDROP_STUB = {
   filesPane: () => ({ backdrop: "files" }),
 };
 
-function build(tourDef) {
-  const fn = buildWidgetsFn()(BACKDROP_STUB);
-  return fn.call({ warn: () => {} }, tourDef);
+/**
+ * A host stand-in carrying the methods that decide a step's payload, so
+ * the gate is exercised through the real source rather than a restatement.
+ *
+ * @param {Object} [opt]
+ * @param {String} [opt.tourId]  which tour is running
+ * @param {Number} [opt.preview] the `preview` model attribute
+ */
+function hostStub(opt = {}) {
+  const { tourId = "workspace", preview = 0 } = opt;
+  return {
+    warn: () => {},
+    _tour: { id: tourId },
+    mget: (k) => (k === "preview" ? preview : undefined),
+    // methodFn returns a FACTORY taking BACKDROPS; these two do not use it.
+    _canCreate: methodFn("_canCreate()", "")(),
+    _screensFor: methodFn("_screensFor(step)", "step")(),
+    _buildWidgets: methodFn("_buildWidgets(t)", "t")(BACKDROP_STUB),
+  };
+}
+
+function build(tourDef, opt) {
+  const host = hostStub({ tourId: tourDef && tourDef.id, ...opt });
+  return host._buildWidgets(tourDef);
 }
 
 
@@ -268,6 +290,78 @@ test("no step takes a backdrop; every step draws its own pane", () => {
     !existsSync(join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/backdrops.js")),
     "the composer file is gone too",
   );
+});
+
+// ── the live-screen gate ─────────────────────────────────────────────────────
+//
+// The workspace step's last two screens stop being a mock: a real create form
+// and the invite screen after it. They must run on the post-signup run and
+// NOWHERE else, because the other two ways into this tour are a QA preview
+// (exempt from the seen-set, so the same URL works twice) and a re-watch from
+// Get help (by someone who already has workspaces). Both would create real
+// workspaces, silently, every time.
+
+test("the workspace run is eight screens, and the badge counts all eight", () => {
+  // The create form and the invite card ARE counted — screens 7 and 8. They
+  // were briefly left out on the argument that a form is not a step, which is
+  // true of the form and false of the user, who is still being led somewhere.
+  //
+  // There was also a ninth, deliberately UNCOUNTED finish screen. It is gone:
+  // the tour now ends on the invite card and lands the user in the workspace it
+  // made. So run and counted are the same number again, and nothing in the
+  // registry may reintroduce the split silently.
+  const [step] = build(TOURS.workspace);
+  assert.equal(step.screen_count, 8, "six mock screens, the form, the invite card");
+  assert.equal(step.tour_screens, 8, "and every one of them is numbered");
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.doesNotMatch(host, /uncounted_screens/, "the uncounted mechanism is gone, not dormant");
+});
+
+test("the preview URL reaches the create form too", () => {
+  // It was gated off at first, on the grounds that ?tutorial=workspace is
+  // exempt from the seen-set and so runs twice. But loading it twice does not
+  // create two workspaces — nothing is created until someone types a name and
+  // presses Create. Gating it only made the feature unreachable for anyone who
+  // is not a fresh signup, which is everyone testing it.
+  const [step] = build(TOURS.workspace, { preview: 1 });
+  assert.equal(step.screen_count, 8);
+  assert.equal(step.tour_screens, 8);
+});
+
+test("the workspace step inside `full` is mock-only", () => {
+  // The one gate that still protects a user: someone re-watching the tour from
+  // Get help already has workspaces and asked to SEE the product. `full`
+  // declares no live tail, so there is nothing to run.
+  const out = build(TOURS.full);
+  assert.equal(out[0].kind, "tutorial_workspace");
+  assert.equal(out[0].screen_count, 6);
+  // Every later step's offset shifts if this one is miscounted.
+  assert.equal(out[1].screen_offset, 6, "chat starts after six workspace screens");
+  assert.equal(
+    out[out.length - 1].tour_screens,
+    TOURS.full.steps.reduce((n, s) => n + s.screens, 0),
+    "the full tour's own total is unchanged",
+  );
+});
+
+test("the registry declares live screens on the standalone tour only", () => {
+  assert.equal(TOURS.workspace.steps[0].live_screens, 2);
+  for (const [id, t] of Object.entries(TOURS)) {
+    if (id === "workspace") continue;
+    for (const step of t.steps) {
+      assert.ok(
+        !step.live_screens,
+        `${id} must not declare live screens — only the post-signup run creates`,
+      );
+    }
+  }
+});
+
+test("a step with no live_screens is untouched by the gate", () => {
+  for (const opt of [{}, { preview: 1 }]) {
+    const out = build(TOURS.share, opt);
+    assert.equal(out[0].screen_count, TOURS.share.steps[0].screens);
+  }
 });
 
 test("is_first / is_last / screen_count are stamped per step", () => {
@@ -319,9 +413,8 @@ test("a step widget names no service, so its pane is not a giant Next button", (
 });
 
 test("offsets carry the count across a step boundary", () => {
-  const fn = buildWidgetsFn()(BACKDROP_STUB);
   const t = { id: "bogus", steps: [{ kind: "a", screens: 2 }, { kind: "b", screens: 3 }] };
-  const out = fn.call({ warn: () => {} }, t);
+  const out = build(t);
   assert.deepEqual(out.map((w) => w.screen_offset), [0, 2]);
   assert.deepEqual(out.map((w) => w.tour_screens), [5, 5]);
 });
@@ -431,13 +524,150 @@ test("entryScreen: default 0, enter_at_last, and a 1-based screen target", () =>
   assert.equal(entryScreen(ui({ enter_at_last: true, enter_at_screen: "2" }), 5), 1);
 });
 
+test("the workspace step has ONE way forward, so a new screen cannot be orphaned", () => {
+  // There used to be two. The callout's Next walked the screen list; the live
+  // screens' own controls — Send, Skip, Invite later, the ✕ — called an
+  // `_endTour` that went straight to the host and ended the tour. That was true
+  // while the invite card was the last screen, and silently wrong the moment a
+  // screen was added after it — one was, and it could not be reached by any
+  // route, and nothing failed to say so. The invite card is the last screen
+  // again; this stays, because that is exactly the state the trap was set in.
+  //
+  // So: exactly one place hands the tour back, and it is the one that checks
+  // whether there is a screen left first.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
+  );
+  const handbacks = src.match(/triggerHandlers\(\{\s*service:\s*'next-step'\s*\}\)/g) || [];
+  assert.equal(
+    handbacks.length, 1,
+    "only _advance may hand the tour back to the host",
+  );
+  assert.match(
+    src,
+    /_advance\(\)\s*\{[\s\S]{0,200}this\._screens\.length - 1[\s\S]{0,200}triggerHandlers/,
+    "and it must check for a remaining screen before doing so",
+  );
+  // Every live control goes through it rather than round it.
+  for (const control of ["inv-send", "inv-skip"]) {
+    assert.ok(src.includes(control), `${control} is still wired`);
+  }
+  // The CALL, not the word — the comment above _advance names the old method
+  // deliberately, because "why is there only one of these" is the whole point.
+  assert.doesNotMatch(src, /this\._endTour\(/, "the second path is gone, not renamed");
+});
+
+test("Dept. belongs to the org-home rail, not the workspace one", () => {
+  // The desk's own createRailNav is Files/Chat/Task/Meet/Access and nothing
+  // else, and 176:42043 shows the same five. Dept. is org chrome — it used to
+  // be rendered on every rail and merely left unlit, which put a sixth entry on
+  // a rail the product has five of.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/sidebar.js"), "utf8",
+  );
+  assert.match(
+    src, /active \? null : orgOnly\(/,
+    "the Dept. entry must be dropped whenever a workspace rail is shown",
+  );
+});
+
+test("the tour leaves the user IN the workspace it made, with confetti", () => {
+  // This is the ENDING now — there is no finish screen announcing it. Coming
+  // off the invite card (sent, skipped, closed, or the personal card's "Invite
+  // later") has to put the user inside the workspace, or the tour ends on the
+  // desk home with a new row in a list and no sign of where it went.
+  //
+  // Nothing else opens it: the create broadcasts workspace:refresh, and the
+  // only listeners are the sidebar's workspace list and the activate-workspace
+  // flow — neither navigates.
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.match(host, /_openCreated\(\)\s*\{[\s\S]{0,600}Wm\.loadWorkspace/);
+  assert.match(
+    host, /_nextStep\(\)[\s\S]{0,400}this\._enterCreated\(\)/,
+    "finishing the last screen opens it",
+  );
+  assert.match(
+    host, /_skipTour\(\)\s*\{[\s\S]{0,400}this\._openCreatedAndCelebrate\(\)/,
+    "and so does leaving early, once one exists",
+  );
+  // The host celebrates, not the step: the step is destroyed with the tour, and
+  // what is being celebrated is arriving somewhere the tour is not. BOTH exits
+  // go through the one helper, so neither can drift back into firing blind.
+  for (const exit of ["_enterCreated", "_skipTour"]) {
+    assert.match(
+      host,
+      new RegExp(`${exit}\\(\\)\\s*\\{[\\s\\S]{0,400}this\\._openCreatedAndCelebrate\\(\\)`),
+      `${exit} opens and celebrates through the shared helper`,
+    );
+  }
+  // The confetti waits for the PANE, not for the call. loadWorkspace returns
+  // undefined and mounts from inside a fetch, so calling these back to back
+  // fires over an empty desk on any link slower than instant.
+  assert.doesNotMatch(
+    host, /this\._openCreated\(\);\s*\n\s*this\._celebrate\(\);/,
+    "open-then-celebrate in sequence is the bug this helper exists to prevent",
+  );
+  assert.match(
+    host, /_openCreatedAndCelebrate\(\)\s*\{[\s\S]{0,400}\.then\(\(pane\) => \{\s*\n\s*if \(pane\) this\._celebrate\(\)/,
+    "celebration is conditional on the pane actually arriving",
+  );
+  // The MODULE-level confetti, which appends its own fixed canvas to <body> and
+  // removes it when the animation ends. `create()` would bind it to a canvas
+  // this widget owns and take it down mid-flight.
+  assert.match(host, /require\('canvas-confetti'\)/);
+  assert.doesNotMatch(host, /confetti\.create\(/, "a scoped canvas dies with the tour");
+  // Guarded on a workspace existing: every other tour ends here too, and none of
+  // them made anything to celebrate.
+  assert.match(host, /_celebrate\(\)\s*\{\s*\n\s*if \(this\._celebrated \|\| !this\._createdWorkspace\) return;/);
+
+  // The step tells the host what it made, and that is all it does with it.
+  const step = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
+  );
+  assert.match(step, /service:\s*'workspace-created'/);
+  assert.match(host, /case 'workspace-created':/);
+});
+
+test("there is no way back once the workspace exists", () => {
+  // Behind the invite card are the create form, which would happily make a
+  // second workspace with no sign the first happened, and — on the way through
+  // — an invitation that may already have been sent. Neither is somewhere to
+  // return to.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
+  );
+  assert.match(src, /hide_back:[\s\S]{0,160}s\.invite/);
+});
+
+test("the tour's own chrome never pretends to work", () => {
+  // It briefly did: the rail's five tabs and the topbar's six utilities carried
+  // the desk's service names on the last screen. A half-working mock is worse
+  // than a plain one: every screen of this tour is a drawing, and a drawing
+  // whose rail navigates is a trap.
+  for (const rel of ["skeleton/sidebar.js", "skeleton/topbar.js"]) {
+    const src = readFileSync(
+      join(REPO_ROOT, "src/drumee/modules/desk/tutorial", rel), "utf8",
+    );
+    assert.doesNotMatch(src, /service:\s*["'`](?:rail-|toggle-)/, `${rel} still wires a desk service`);
+  }
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.doesNotMatch(host, /case 'toggle-activity':/);
+  assert.doesNotMatch(host, /_raiseOnDesk/);
+});
+
 test("every step widget resolves its entry screen through the shared helper", () => {
   // Five widgets used to each carry `if (mget('enter_at_last')) …`. Screen
   // targeting has to work in all of them or it works in none.
   const dir = join(REPO_ROOT, "src/drumee/modules/desk/tutorial");
   for (const step of ["workspace", "chat", "task", "share", "migrate"]) {
     const src = readFileSync(join(dir, step, "index.js"), "utf8");
-    assert.match(src, /entryScreen\(this, \w+\.length\)/, `${step} must use entryScreen`);
+    // `\w+.length` or `this._screens.length` — the workspace step slices its
+    // table per run (the live tail is post-signup only), so the length it
+    // resolves against is a getter rather than the module constant.
+    assert.match(
+      src, /entryScreen\(this, (?:this\.)?[\w.]+\.length\)/,
+      `${step} must use entryScreen`,
+    );
     assert.ok(
       !/mget\(['"]enter_at_last['"]\)/.test(src),
       `${step} must not hand-roll the entry rule any more`,
@@ -469,19 +699,44 @@ test("chat runs five screens, in its own tour and inside full alike", () => {
   assert.equal(TOURS.full.steps[1].screens, 5);
 });
 
+/** Every registry step that names this kind, across all tours. */
+function allSteps(kind) {
+  const out = [];
+  for (const t of Object.values(TOURS)) {
+    for (const step of t.steps) if (step.kind === kind) out.push(step);
+  }
+  return out;
+}
+
 test("each step widget's SCREENS table matches the registry count", () => {
   // The registry says how many screens a step has; the widget owns the table.
   // They are declared in different files and nothing links them at runtime, so
   // a screen added to one and not the other mis-counts every dash after it.
+  //
+  // A kind MAY be declared at two counts, but only one way: the larger
+  // declaration carries a `live_screens` tail that the smaller one leaves off,
+  // and the difference is exactly that tail. Any other disagreement is the bug
+  // this test was written for. The widget's table holds the larger count and
+  // the host slices it per run (_screensFor).
   const declared = {};
   for (const t of Object.values(TOURS)) {
     for (const step of t.steps) {
       const dir = step.kind.replace(/^tutorial_/, "");
-      if (declared[dir] !== undefined) {
-        assert.equal(declared[dir], step.screens,
-          `${step.kind} is declared with two different screen counts`);
+      const prev = declared[dir];
+      if (prev !== undefined && prev !== step.screens) {
+        const [big, small] = prev > step.screens
+          ? [{ ...t.steps.find((x) => x.kind === step.kind), screens: prev }, step]
+          : [step, { screens: prev }];
+        const live = ~~allSteps(step.kind)
+          .map((x) => ~~x.live_screens)
+          .reduce((a, b) => Math.max(a, b), 0);
+        assert.ok(live > 0, `${step.kind} differs with no live_screens to explain it`);
+        assert.equal(
+          big.screens - live, small.screens,
+          `${step.kind}: the gap between declarations must be exactly the live tail`,
+        );
       }
-      declared[dir] = step.screens;
+      declared[dir] = Math.max(prev || 0, step.screens);
     }
   }
   for (const [dir, screens] of Object.entries(declared)) {
@@ -598,9 +853,17 @@ test("every decorative node in the mock is inert", () => {
 test("the callout's beak hangs outside the card, not inside it", () => {
   // The tail is a rotated square positioned against one edge. At `0` its whole
   // box sits inside the card and the callout renders with no tail at all —
-  // which is not an error, just a bubble that points at nothing. It has to be
-  // pulled out by half the square, and sit BEHIND the card so the inner half is
-  // covered and the outer half carries the card's own shadow.
+  // which is not an error, just a bubble that points at nothing. Its CENTRE has
+  // to land on the card's edge, which is what puts the kept half outside.
+  //
+  // It used to be a whole square at `z-index: -1`, on the understanding that
+  // the inner half was covered by the card. It never was: a negative z-index
+  // child paints in its parent's stacking context AFTER the parent's background
+  // (CSS 2.1 Appendix E — step 2 follows step 1), so the inner half sat ON the
+  // card. Invisible while both were white, but its inherited box-shadow drew a
+  // grey seam across the card's face beside the tail. Only the outer half is
+  // drawn now, so what is asserted here is the clip and the shadow that follows
+  // it — a box-shadow would be clipped away with everything else.
   const tip = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/tooltip.scss"), "utf8",
   );
@@ -608,11 +871,26 @@ test("the callout's beak hangs outside the card, not inside it", () => {
     ["north", "top"], ["south", "bottom"], ["east", "right"], ["west", "left"],
   ]) {
     const re = new RegExp(
-      `data-direction="${dir}"\\]::after \\{ ${side}: -\\$beak; \\}`,
+      `data-direction="${dir}"\\]::after \\{ ${side}: -\\$beak \\+ 1px; \\}`,
     );
-    assert.match(tip, re, `${dir}'s beak must be offset by -$beak on ${side}`);
+    assert.match(tip, re, `${dir}'s beak must be offset outward on ${side}`);
+    // One clip per direction, or a card would show the whole square again.
+    assert.match(
+      tip,
+      new RegExp(`\\[data-direction="${dir}"\\]::after \\{ clip-path: polygon\\(`),
+      `${dir}'s beak must be clipped to its outer wedge`,
+    );
   }
-  assert.match(tip, /&::after \{[\s\S]*?z-index: -1;[\s\S]*?box-shadow: inherit;/);
+  assert.match(
+    tip,
+    /&::after \{[\s\S]*?background: inherit;[\s\S]*?filter: drop-shadow\(/,
+    "the beak takes the card's surface and carries its own clipped shadow",
+  );
+  assert.doesNotMatch(
+    tip,
+    /&::after \{[\s\S]*?box-shadow: inherit;/,
+    "a box-shadow on the beak is clipped away by clip-path — use the filter",
+  );
 });
 
 test("a step swap clears the spotlight BEFORE feeding the next step", () => {
@@ -660,9 +938,17 @@ test("a step swap clears the spotlight BEFORE feeding the next step", () => {
   // Inside focus(), the only callout-less answer left is an explicit focus with
   // no tooltip at all — clear() is the other, and it is meant to empty it. A
   // screen that HAS a tooltip always gets it drawn.
+  //
+  // `clear()`, never `feed(null)`. ui-core's feed treats a falsy payload as
+  // "nothing to do" and returns the last child untouched (widgets/box), so
+  // feeding null emptied nothing and left the PREVIOUS screen's card up — which
+  // is exactly how the invite screen came to wear the create screen's callout.
+  // Every step boundary happens to feed a new card straight afterwards, which
+  // is the only reason it went unnoticed for so long.
   const focusBody = spot.slice(spot.indexOf("async focus("), spot.indexOf("async clear("));
-  assert.equal(focusBody.split("callout.feed(null)").length - 1, 1);
-  assert.match(focusBody, /if \(!tooltip\) \{\s*\n\s*callout\.feed\(null\);/);
+  assert.equal(focusBody.split("callout.clear()").length - 1, 1);
+  assert.match(focusBody, /if \(!tooltip\) \{[\s\S]{0,400}callout\.clear\(\);/);
+  assert.doesNotMatch(spot, /callout\.feed\(null\)/, "feed(null) clears nothing");
   // And a part handed over from the previous render is re-resolved to the live
   // element before anything is measured, since a detached node measures 0x0.
   assert.match(spot, /function live\(el\)[\s\S]{0,500}data-partname/);
@@ -751,7 +1037,14 @@ test("every step numbers its screens", () => {
   const dir = join(REPO_ROOT, "src/drumee/modules/desk/tutorial");
   for (const step of ["workspace", "chat", "task", "meeting", "share", "migrate", "schedule"]) {
     const src = readFileSync(join(dir, step, "index.js"), "utf8");
-    assert.match(src, /\.\.\.stepProgress\(/, `${step} must number its screens`);
+    // Spread directly, or spread through a condition — the workspace step
+    // numbers its six walkthrough screens and deliberately leaves the live
+    // tail after them unnumbered, because "STEP 7/6" is what numbering the
+    // create form would print.
+    assert.match(
+      src, /\.\.\.\(?[\w\s?]*stepProgress\(/,
+      `${step} must number its screens`,
+    );
   }
   const tip = readFileSync(join(dir, "skeleton/toolkit/tooltip.js"), "utf8");
   assert.match(tip, /progressStyle = "pill"/);

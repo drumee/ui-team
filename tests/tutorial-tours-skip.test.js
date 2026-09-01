@@ -70,6 +70,29 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
   };
   const deps = {
     Tours: { markSeen: (id) => log.push(`markSeen:${id}`) },
+    // Skip lands the user in the workspace the tour made, if it made one, and
+    // throws the confetti over it once the pane is actually up. All three
+    // methods are real here rather than stubbed, so the no-workspace case below
+    // proves the GUARDS hold rather than proving a stand-in does nothing.
+    //
+    // _findWorkspaceWindow answers immediately: the wait itself is covered in
+    // tutorial-confetti-interop.test.js, and what these tests are about is that
+    // skip WRITES nothing, which must hold whether or not the pane arrives.
+    Wm: {
+      loadWorkspace: (ws) => log.push(`loadWorkspace:${ws.hub_id}`),
+      // `__noPane` is how a test says "the open never landed".
+      _findWorkspaceWindow: (hub_id) => (host.__noPane ? null : { hub_id }),
+    },
+    // _workspaceOnScreen guards on _.isFunction before touching Wm.
+    _: { isFunction: (f) => typeof f === "function" },
+    _a: { content: "content" },
+    // Read from the source so the budget cannot drift away from the tests.
+    OPEN_WAIT_MS: Number(/const OPEN_WAIT_MS = (\d+);/.exec(HOST_SRC)[1]),
+    OPEN_POLL_MS: Number(/const OPEN_POLL_MS = (\d+);/.exec(HOST_SRC)[1]),
+    require: (mod) => {
+      assert.equal(mod, "canvas-confetti");
+      return () => log.push("confetti");
+    },
     flaggedIds: () => flagged,
     SERVICE: { drumate: { update_settings: "drumate.update_settings" } },
     Visitor: { id: "u_test" },
@@ -84,10 +107,24 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
     // eslint-disable-next-line no-new-func
     new Function(
       "Tours", "flaggedIds", "SERVICE", "Visitor", "SVC_OPT", "localStorage",
-      `return function () {${methodBody(HOST_SRC, sig)}};`,
-    )(deps.Tours, deps.flaggedIds, deps.SERVICE, deps.Visitor, deps.SVC_OPT, deps.localStorage)
-      .bind(host);
+      "Wm", "require", "assert", "_", "_a", "OPEN_WAIT_MS", "OPEN_POLL_MS",
+      `return function (${sig.slice(sig.indexOf("(") + 1, sig.lastIndexOf(")"))}) {${methodBody(HOST_SRC, sig)}};`,
+    )(
+      deps.Tours, deps.flaggedIds, deps.SERVICE, deps.Visitor, deps.SVC_OPT,
+      deps.localStorage, deps.Wm, deps.require, assert, deps._, deps._a,
+      deps.OPEN_WAIT_MS, deps.OPEN_POLL_MS,
+    ).bind(host);
 
+  // _openCreated reads the workspace off the live step when the step's own
+  // `workspace-created` raise was dropped by ui-core's click gate. No step is
+  // mounted in these tests, so the read finds nothing and the pushed value —
+  // set by the tests that care — is what decides.
+  host.getPart = () => null;
+  host._createdFromStep = bind("_createdFromStep()");
+  host._openCreated = bind("_openCreated()");
+  host._workspaceOnScreen = bind("_workspaceOnScreen(hub_id)");
+  host._celebrate = bind("_celebrate()");
+  host._openCreatedAndCelebrate = bind("_openCreatedAndCelebrate()");
   return { host, log, store, skip: bind("_skipTour()"), done: bind("_enterWorkspace()") };
 }
 
@@ -129,6 +166,35 @@ test("Done on `full` still marks every flagged tour — S7 regression cover", ()
   assert.ok(log.some((l) => l.includes("tutorial_done")));
 });
 
+test("skip still lands the user in the workspace the tour made", async () => {
+  // Escape means "I am done with the tour", not "undo what I just built". The
+  // alternative is the desk home with a new row in the sidebar and no sign of
+  // where it went — the same ending the tour has when it runs to the end.
+  const { host, log, skip } = makeHost({ tourId: "workspace" });
+  host._createdWorkspace = { hub_id: "h_1", filename: "Design" };
+  skip();
+  // The teardown does NOT wait on the open: holding a dead tour on screen for
+  // the length of a network round trip is worse than letting it go.
+  assert.deepEqual(log, ["loadWorkspace:h_1", "softDestroy"]);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(
+    log, ["loadWorkspace:h_1", "softDestroy", "confetti", "confetti"],
+    "and the confetti lands once the pane is up",
+  );
+});
+
+test("skip celebrates nothing when the workspace never opens", async () => {
+  // A create that succeeded and an open that did not is not a celebration. The
+  // pane is the evidence; with none, the tour just leaves.
+  const { host, log, skip } = makeHost({ tourId: "workspace" });
+  host._createdWorkspace = { hub_id: "h_1" };
+  host.__noPane = true;
+  skip();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(log, ["loadWorkspace:h_1", "softDestroy"], "it is still polling");
+  assert.ok(!log.includes("confetti"), "no pane, no confetti");
+});
+
 test("skip and Done are different code paths, not one calling the other", () => {
   const body = methodBody(HOST_SRC, "_skipTour()");
   assert.ok(!/_enterWorkspace/.test(body), "skip must never route through Done");
@@ -166,64 +232,68 @@ function buildBadge(opts) {
 
 const skipNodes = (nodes) => nodes.filter((n) => n.service === "end-tour");
 
-test("the skip control is on every screen, first and last alike", () => {
+// The ✕ is GONE — the frames never drew one, and it was the one thing this
+// stack kept that they dropped. What replaces it is Escape, which the host
+// binds in capture phase and routes to the same _skipTour(); the tests below
+// the fold still guard that path, because it is now the only one.
+//
+// These assertions are inverted rather than deleted. A callout that raises
+// `end-tour` again is not a small regression: the service still routes to
+// _skipTour on the host, so a re-added control would work, and nobody would
+// notice it had come back except by looking at the card.
+
+test("no callout raises end-tour any more, on any screen", () => {
   for (const opts of [
     { step: 0, steps: 3, hide_back: true },                      // first screen
     { step: 1, steps: 3 },                                       // middle
     { step: 2, steps: 3, done: true },                           // last
+    { step: 0, steps: 1 },                                       // single-screen run
   ]) {
     const { nodes } = buildBadge({ title: "t", desc: "d", ...opts });
-    assert.equal(skipNodes(nodes).length, 1, JSON.stringify(opts));
+    assert.equal(skipNodes(nodes).length, 0, JSON.stringify(opts));
   }
+  const bare = buildBadge({ text: "one line", step: 1, steps: 3 });
+  assert.equal(skipNodes(bare.nodes).length, 0, "nor the bare bubble");
 });
 
-test("hide_back removes Back but never the skip control", () => {
+test("hide_back removes Back and leaves the card with Next alone", () => {
   const { nodes } = buildBadge({ title: "t", desc: "d", step: 0, steps: 3, hide_back: true });
   assert.equal(nodes.filter((n) => n.service === "back-step").length, 0, "Back is hidden");
-  assert.equal(skipNodes(nodes).length, 1, "skip stays");
   assert.equal(nodes.filter((n) => n.service === "next-step").length, 1);
 });
 
-test("skip is routed at the host, while Back and Next stay on the step", () => {
-  const step = { id: "step" };
-  const host = { id: "host" };
+test("Back and Next stay on the step, which is now the only routing the card does", () => {
   const ui = { fig: { family: "tutorial-migrate", group: "tutorial" } };
   const nodes = [];
   const mk = (kind) => (o = {}) => { const n = { kind, ...o }; nodes.push(n); return n; };
   const Skeletons = { Box: { X: mk("Box.X"), Y: mk("Box.Y") }, Note: mk("Note"),
     Button: { Svg: mk("Button.Svg"), Label: mk("Button.Label") } };
-  const LOCALE = { SKIP_TOUR: "Skip tour", BACK: "Back", NEXT: "Next", DONE: "Done" };
+  const LOCALE = { BACK: "Back", NEXT: "Next", DONE: "Done" };
   const src = TOOLTIP_SRC.replace(/^export function/gm, "function");
   // eslint-disable-next-line no-new-func
   const badge = new Function("Skeletons", "LOCALE", `${src}\n;return tooltipBubble;`)(Skeletons, LOCALE);
-  badge({ ...ui, id: "step" }, { title: "t", desc: "d", badge_text: "1/3", host });
+  badge({ ...ui, id: "step" }, { title: "t", desc: "d", step: 1, steps: 3 });
 
-  const skip = nodes.find((n) => n.service === "end-tour");
   const next = nodes.find((n) => n.service === "next-step");
   const back = nodes.find((n) => n.service === "back-step");
-  assert.deepEqual(skip.uiHandler, [host], "end-tour goes to the tour host");
   assert.equal(next.uiHandler[0].id, "step", "next stays on the step");
   assert.equal(back.uiHandler[0].id, "step", "back stays on the step");
-  void step;
 });
 
-test("with no host supplied the control still raises something", () => {
-  const { nodes } = buildBadge({ title: "t", desc: "d", badge_text: "1/3" });
-  const skip = skipNodes(nodes)[0];
-  assert.equal(skip.uiHandler.length, 1);
-  assert.ok(skip.uiHandler[0], "falls back to ui rather than an undefined handler");
-});
-
-test("the skip control carries the localised label", () => {
-  const { nodes } = buildBadge({ title: "t", desc: "d", badge_text: "1/3" });
-  assert.equal(skipNodes(nodes)[0].tooltips, "Skip tour");
+test("the card no longer needs a host, so the spotlight stops supplying one", () => {
+  // `host` existed for exactly one reason: Back/Next belong to the step, and
+  // ending the tour belonged to the tour, so the spotlight — holding both
+  // references — separated them. With no control raising end-tour there is
+  // nothing to separate, and a dangling _tourHost() would be dead code that
+  // reads as though the card still routes somewhere.
+  assert.doesNotMatch(SPOT_SRC, /host: this\._tourHost\(\)/);
+  assert.doesNotMatch(SPOT_SRC, /_tourHost\(/);
+  assert.doesNotMatch(TOOLTIP_SRC, /opt\.host|host \|\| ui/);
 });
 
 // ── routing and Esc, in the sources ──────────────────────────────────────────
 
-test("the spotlight supplies the host, so no step file forwards end-tour", () => {
-  assert.match(SPOT_SRC, /host: this\._tourHost\(\)/);
-  assert.match(SPOT_SRC, /_tourHost\(\)\s*\{[\s\S]*?partHandler/);
+test("no step file forwards end-tour", () => {
   const dir = "src/drumee/modules/desk/tutorial";
   for (const step of ["workspace", "folder", "meeting", "task", "share", "migrate"]) {
     assert.ok(

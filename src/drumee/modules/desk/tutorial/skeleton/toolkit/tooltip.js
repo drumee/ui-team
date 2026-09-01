@@ -12,8 +12,9 @@
  * in the share flow. Both are supported; the pill is the default, because it
  * is the only one that lets a screen be named. See `progressStyle`.
  *
- * The ✕ skip control is the one thing the frames drop that is KEPT here — see
- * the header below for why.
+ * The ✕ skip control the frames drop is dropped here too. Escape leaves a tour
+ * (tutorial/index.js _bindEscape), and a tour is recorded the moment it mounts,
+ * so leaving one early costs nothing that reloading the page did not already.
  *
  * Shapes, chosen by what the caller supplies rather than by a `variant` flag:
  *
@@ -101,9 +102,12 @@ function progress(p, step, steps, style) {
  * @param {String} [opt.beak='center'] where the beak sits along that edge
  * @param {Boolean} [opt.hide_back]
  * @param {Boolean} [opt.done]    forward button ends the tour
- * @param {Object} [opt.host]     who receives `end-tour` from the skip control.
- *   Back/Next go to the step widget (`ui`); ending the tour goes to the tour
- *   host, so no step widget needs a forwarding case of its own.
+ * @param {Boolean} [opt.hide_next] Back only. For the screens the user is
+ *   FILLING IN rather than being walked through: the form has its own Create
+ *   and the invite card its own Send and Skip, and a Next beside either is a
+ *   second, contradictory way forward that skips the thing being asked for.
+ *   Back stays, because going back is the one thing those screens do not offer
+ *   themselves.
  */
 export function tooltipBubble(ui, opt = {}) {
   const {
@@ -118,7 +122,7 @@ export function tooltipBubble(ui, opt = {}) {
     beak = "center",
     hide_back = false,
     done = false,
-    host = null,
+    hide_next = false,
   } = opt;
 
   const p = `${ui.fig.group}__bubble`;
@@ -149,47 +153,44 @@ export function tooltipBubble(ui, opt = {}) {
         // `is-done` is load-bearing, not decoration: spotlight.busy() queries
         // it to mark the button pending while the tour's closing write is in
         // flight. Only the last screen can wait on anything.
-        Skeletons.Note({
-          className: `${p}-next${done ? " is-done" : ""}`,
-          content: done ? LOCALE.DONE : `${LOCALE.NEXT} →`,
-          service: "next-step",
-          uiHandler: [ui],
-        }),
+        hide_next
+          ? null
+          : Skeletons.Note({
+              className: `${p}-next${done ? " is-done" : ""}`,
+              content: done ? LOCALE.DONE : `${LOCALE.NEXT} →`,
+              service: "next-step",
+              uiHandler: [ui],
+            }),
       ].filter(Boolean),
     });
 
-  // Dashes/pill on the left, skip on the right. Shared by both shapes so every
-  // screen in every tour is numbered — a callout that cannot be named cannot be
-  // reported.
-  const header = () =>
-    Skeletons.Box.X({ active: 0,
-      className: `${p}-header`,
-      kids: [
-        progress(p, step, steps, progressStyle) ||
-          Skeletons.Box.Y({ active: 0, className: `${p}-dashes-spacer` }),
-        Skeletons.Button.Svg({
-          ico: 'cross',
-          className: `${p}-skip`,
-          tooltips: LOCALE.SKIP_TOUR,
-          service: 'end-tour',
-          uiHandler: [host || ui],
-        }),
-      ],
-    });
+  // Just the progress now — the ✕ that used to sit opposite it is gone, and the
+  // frames never had one.
+  //
+  // Which makes the row optional: it existed as a ROW because two things had to
+  // sit at opposite ends of it, and the spacer existed to hold the ✕ against the
+  // right edge on a screen with no dashes. With one child and nothing to push
+  // against, a screen that shows no progress (a single-screen run) now draws no
+  // header at all rather than an empty 20px band above the copy.
+  //
+  // Escape is what leaves a tour now. It is bound in capture phase by the host
+  // (tutorial/index.js _bindEscape) and goes to the same _skipTour().
+  const header = () => progress(p, step, steps, progressStyle);
 
   // A bare bubble keeps the design's look — one bold line, tighter insets —
   // and gains the header and footer so it can be numbered and left.
+  const foot = () => footer();
   const kids = text
     ? [
         header(),
         Skeletons.Note({ active: 0, className: `${p}-text`, content: text }),
-        footer(),
-      ]
+        foot(),
+      ].filter(Boolean)
     : [
         header(),
         Skeletons.Note({ active: 0, className: `${p}-title`, content: title }),
         desc ? Skeletons.Note({ active: 0, className: `${p}-desc`, content: desc }) : null,
-        footer(),
+        foot(),
       ].filter(Boolean);
 
   return Skeletons.Box.Y({

@@ -40,6 +40,17 @@ const SHORT_HEIGHT = 720;
 // of the window edge, short enough that a rotation feels immediate.
 const REFLOW_MS = 160;
 
+// How long the confetti waits for the new workspace to actually appear, and how
+// often it looks.
+//
+// Wm.loadWorkspace is fire-and-forget — it returns undefined and mounts the
+// pane from inside a media.attributes fetch — so the only honest answer to "did
+// it open" is to watch for the pane. The budget covers a slow link; past it the
+// open has failed (loadWorkspace has its own 'cannot resolve workspace root'
+// path) and there is nothing to celebrate.
+const OPEN_WAIT_MS = 8000;
+const OPEN_POLL_MS = 60;
+
 // Every step widget is a bare `import()` in seeds.js, so each one is its own
 // webpack chunk with no prefetch hint. Left alone, pressing Next is the moment
 // the chunk is requested: Kind.get() hands back the lazy loader placeholder,
@@ -80,6 +91,53 @@ class tutorial_main extends LetcBox {
   }
 
   /**
+   * How many screens of a step actually run.
+   *
+   * A step may declare a `live_screens` tail — screens that stop being a mock
+   * and do something real. Today that is the workspace step's create form and
+   * the invite screen after it, and they run on ONE of the three ways this tour
+   * reaches the screen:
+   *
+   *   post-signup `workspace`   the run this is for. A brand-new account with
+   *                             no workspace, being walked into making its
+   *                             first one. Live.
+   *   `?tutorial=workspace`     also live. This was mock at first, on the
+   *                             grounds that the preview URL is exempt from the
+   *                             seen-set and so runs twice — but loading it
+   *                             twice does not create two workspaces. Nothing
+   *                             is created until someone types a name and
+   *                             presses Create, which is the same deliberate
+   *                             act as opening the real dialog. Gating it only
+   *                             made the feature unreachable: this URL is the
+   *                             one way anybody who is not a fresh signup can
+   *                             see it at all.
+   *   step 1 of `full`          Get help -> Product Tour, run by someone who
+   *                             already has workspaces and asked to SEE the
+   *                             product, not to make another one. Mock — and
+   *                             gated in the registry, which declares no
+   *                             live_screens there.
+   *
+   * @param {Object} step a TOURS step
+   * @returns {Number}
+   */
+  _screensFor(step) {
+    const declared = ~~step.screens || 1;
+    const live = ~~step.live_screens;
+    if (!live) return declared;
+    return this._canCreate() ? declared : Math.max(1, declared - live);
+  }
+
+  /**
+   * Is this the run that is allowed to create a real workspace?
+   *
+   * The standalone tour, however it was reached. `full` is excluded by the
+   * registry rather than here — it simply declares no live tail.
+   */
+  _canCreate() {
+    return this._tour.id === 'workspace';
+  }
+
+  /**
    * Turn a registry entry into the feed payloads _widgetAt hands out.
    *
    * Everything a step needs to know about its position in the tour is stamped
@@ -94,9 +152,18 @@ class tutorial_main extends LetcBox {
     // Progress counts every screen in the tour, so the host has to know the
     // total and where each step starts — a step widget can see its own screens
     // and nothing else. Computed once here rather than derived per screen.
-    const total = steps.reduce((n, s) => n + (~~s.screens || 1), 0);
+    //
+    // Every screen a step RUNS is a screen the badge counts — including the
+    // create form and the invite card, screens 7 and 8 of an eight-screen tour.
+    // Those were briefly left out on the argument that a form is not a step,
+    // which is true of the form and false of the user, who is still being led
+    // somewhere and wants to know how far along that is. (There was also a
+    // ninth, uncounted finish screen; it is gone — the tour now ends by opening
+    // the workspace it made rather than by announcing that it did.)
+    const runs = (s) => this._screensFor(s);
+    const total = steps.reduce((n, s) => n + runs(s), 0);
     const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + (~~s.screens || 1)), 0);
+    steps.reduce((n, s) => (offsets.push(n), n + runs(s)), 0);
 
     return steps.map((step, i) => {
       const widget = {
@@ -120,7 +187,7 @@ class tutorial_main extends LetcBox {
         // triggerHandlers({ service: 'next-step' }). A stray click now reaches
         // onUiEvent with no service at all and falls through to `default`.
         uiHandler: [this],
-        screen_count: step.screens || 1,
+        screen_count: runs(step),
         screen_offset: offsets[i],
         tour_screens: total,
         is_first: i === 0,
@@ -224,8 +291,16 @@ class tutorial_main extends LetcBox {
     const { rail, crumb } = stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
     const topbar = require('./skeleton/topbar');
-    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.railItems(this, rail)));
-    this.ensurePart('crumb').then((p) => p.feed(crumb ? topbar.workspaceCrumb(this) : null));
+    // navItems, not railItems: the slot is replaced whole, so the org's Dept.
+    // entry has to come back with the workspace tabs or the org-home rail —
+    // which has no tabs at all — is fed an empty list and renders bare.
+    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
+    // Same trap as the callout: feed(null) is a no-op, so a step that wants NO
+    // crumb has to clear the slot rather than feed nothing into it.
+    this.ensurePart('crumb').then((p) => (
+      crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
+    ));
+    this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this)));
   }
 
   /**
@@ -239,6 +314,11 @@ class tutorial_main extends LetcBox {
    */
   _applySize() {
     if (!this.el || !this.el.dataset || typeof window === 'undefined') return false;
+    // Which tour is running, for the skins. Stamped here rather than in a
+    // second method because this is already the one place that writes to the
+    // root's dataset, and it runs before the shell is fed. The workspace tour
+    // is the one that reads it (skin: it drops the scrim).
+    this.el.dataset.tour = this._tour.id;
     const w = window.innerWidth || 0;
     const h = window.innerHeight || 0;
     const tier = SIZE_TIERS.find((t) => w <= t.max) || SIZE_TIERS[SIZE_TIERS.length - 1];
@@ -293,7 +373,10 @@ class tutorial_main extends LetcBox {
     if (this._widgets[this._stepIndex]) {
       this._showStep(this._widgetAt(this._stepIndex));
     } else {
-      this._enterWorkspace();
+      // Through _enterCreated, which opens the workspace the tour made before
+      // taking the tour down. With none — every other tour — it is exactly
+      // _enterWorkspace.
+      this._enterCreated();
     }
   }
 
@@ -343,7 +426,8 @@ class tutorial_main extends LetcBox {
    */
   _enterWorkspace() {
     // Done is the one control in the tour that waits on the network, so it is
-    // the one that can be pressed twice. Without this the second press runs
+    // the one that can be pressed twice.
+    // Without this the second press runs
     // the whole exit again — a second update_settings write, and for `full` a
     // second round of markSeen posts.
     if (this._exiting) return;
@@ -425,10 +509,31 @@ class tutorial_main extends LetcBox {
       match: (e) => e.key === 'Escape' && !e.defaultPrevented,
       run: () => {
         if (this.isDestroyed && this.isDestroyed()) return false;
+        // Not while a live screen is up. Everything before those is a mock, so
+        // Escape costs the user a walkthrough they can reload into; on the
+        // create form it would throw away a name they typed, and on the invite
+        // screen it would dismiss the workspace they just made without ever
+        // showing them it exists. Both of those screens carry their own way
+        // out — Create, Skip this step, Invite later — and those are the ones
+        // that hand the tour back deliberately.
+        if (this._liveStepRunning()) return false;
         this._skipTour();
         return true;
       },
     });
+  }
+
+  /**
+   * Is the step on screen showing something the user is filling in?
+   *
+   * Asked of the step rather than tracked here: the host knows which STEP is
+   * running and nothing about which of its screens is, and the step already has
+   * to know (it is the thing rendering them).
+   */
+  _liveStepRunning() {
+    const part = this.getPart && this.getPart(_a.content);
+    const step = part && part.children && part.children.last();
+    return !!(step && _.isFunction(step.isLive) && step.isLive());
   }
 
   onBeforeDestroy() {
@@ -441,7 +546,210 @@ class tutorial_main extends LetcBox {
   }
 
   _skipTour() {
+    // Leaving early still lands the user in the workspace, if one was made.
+    // Escape means "I am done with the tour", not "undo what I just built" —
+    // and the alternative is the desk home with a new row in the sidebar and
+    // no sign of where it went.
+    this._openCreatedAndCelebrate();
     this.softDestroy();
+  }
+
+  /**
+   * Open the workspace the tour just made, and come down over it.
+   *
+   * NOTHING ELSE OPENS IT. The create broadcasts `workspace:refresh`, and the
+   * only listeners are the sidebar's workspace list and the activate-workspace
+   * flow — neither of which navigates. So a tour that ended here left the user
+   * on the desk home looking at a list with a new row in it, rather than inside
+   * the thing they had just been walked through making.
+   *
+   * Ordered deliberately: the workspace is opened FIRST and the tour torn down
+   * after, so the fade reveals a workspace that is already there instead of a
+   * blank desk that fills in afterwards.
+   *
+   */
+  _enterCreated() {
+    this._openCreatedAndCelebrate();
+    return this._enterWorkspace();
+  }
+
+  /**
+   * Open the workspace, and celebrate only once it is actually on screen.
+   *
+   * Not fire-and-hope. The confetti used to go up the instant loadWorkspace was
+   * CALLED, which is a different event from the workspace opening: that call
+   * returns immediately and mounts the pane from inside a media.attributes
+   * fetch, so on a slow link the confetti played over an empty desk, and on a
+   * failed open it played over a workspace that never arrived.
+   *
+   * Deliberately NOT awaited by the caller. The tour comes down on its own
+   * schedule — the fade is what reveals the workspace underneath — so making
+   * the teardown wait on the network would hold a dead tour on screen. This
+   * runs alongside it and lands whenever the pane does.
+   */
+  _openCreatedAndCelebrate() {
+    return this._openCreated().then((pane) => {
+      if (pane) this._celebrate();
+      return pane;
+    });
+  }
+
+  /**
+   * Throw the confetti over the workspace the tour just made.
+   *
+   * The MODULE-LEVEL confetti(), not create() — and that is the whole point.
+   * create() binds to a canvas this widget owns, and this widget is about to be
+   * destroyed; the celebration has to outlive it, because what it is
+   * celebrating is arriving somewhere the tour is not. The global one appends
+   * its own fixed, pointer-events:none canvas to <body> and removes it again
+   * when the animation finishes (canvas-confetti src/confetti.js `done`), so
+   * there is nothing to clean up and nothing left behind.
+   *
+   * `.default || mod` is NOT defensive noise. canvas-confetti ships two builds
+   * and declares both — "main" is CommonJS (module.exports = fn) and "module"
+   * is ESM (export default fn). Webpack targets the web, where mainFields
+   * defaults to ['browser', 'module', 'main'], so it bundles the ESM build and
+   * hands this require a module NAMESPACE OBJECT: { create, default }. Calling
+   * that throws. Node's require() reads "main" and hands back a function, so
+   * the bare call worked in every test and in nothing the user could see —
+   * `confetti is not a function`, caught below, warned, and the tour ended with
+   * no confetti and no explanation. See tests/tutorial-confetti-interop.test.js.
+   *
+   * Fired when the workspace is ON SCREEN, not when its open was requested —
+   * see _workspaceOnScreen. That usually lands during the tour's own fade, so
+   * the confetti still carries over the reveal; on a slow link it waits, which
+   * is the point. Confetti over an empty desk celebrates nothing.
+   *
+   * Two bursts from the lower corners, the way the frame scatters them across
+   * the whole pane rather than out of one point.
+   */
+  _celebrate() {
+    if (this._celebrated || !this._createdWorkspace) return;
+    this._celebrated = true;
+    try {
+      const mod = require('canvas-confetti');
+      const confetti = mod.default || mod;
+      const burst = (x, angle) => confetti({
+        particleCount: 90,
+        spread: 70,
+        startVelocity: 55,
+        origin: { x, y: 0.9 },
+        angle,
+        scalar: 0.9,
+        // Over the tour while it fades, and over the desk after. The overlay
+        // the tour lives in sits at 10010; the default 100 would spend the
+        // fade behind it.
+        zIndex: 10020,
+      });
+      burst(0.15, 60);
+      burst(0.85, 120);
+    } catch (e) {
+      this.warn && this.warn('[tutorial] confetti failed', e);
+    }
+  }
+
+  /**
+   * Open the workspace the tour made, and resolve with its pane once it is up.
+   *
+   * The descriptor is whatever libs/create-workspace normalised, and it is
+   * already in the shape loadWorkspace wants for BOTH kinds: a hub is
+   * `{hub_id, ...}`, and a personal workspace is the home-root folder row
+   * (`{hub_id: Visitor.id, nid, area: personal}`) — the same explicit shape
+   * desk's _workspaceTarget builds, so the folder opens rather than Home.
+   *
+   * @returns {Promise<Object|null>} the workspace pane, or null if it never
+   *   arrived — the caller uses that to decide whether to celebrate.
+   */
+  _openCreated() {
+    const ws = this._createdWorkspace || this._createdFromStep();
+    if (!ws || !ws.hub_id || typeof Wm === 'undefined') return Promise.resolve(null);
+    // Remember it either way, so _celebrate's own guard sees it too.
+    this._createdWorkspace = ws;
+    try {
+      Wm.loadWorkspace(ws);
+    } catch (e) {
+      this.warn && this.warn('[tutorial] could not open the new workspace', e);
+      return Promise.resolve(null);
+    }
+    return this._workspaceOnScreen(ws.hub_id);
+  }
+
+  /**
+   * Ask the running step what it created, rather than waiting to be told.
+   *
+   * The step DOES tell us — it raises `workspace-created` the moment the create
+   * resolves — and when that lands this is never called. But that raise goes
+   * through ui-core's triggerHandlers, which is the CLICK dispatcher: it
+   * returns without dispatching when `window.pointerDragged` is set
+   * (letc/addons/letc.js), a flag the resize handler raises
+   * (letc/addons/dom/events-handler.js, before its own `srcElement != window`
+   * guard) and which nothing clears but a pointerup or a keyup.
+   *
+   * A raise straight out of a click is safe — the pointerup that delivered it
+   * just cleared the flag. The create's raise is not: it happens after an
+   * await on the network, and a resize anywhere in that round trip sets the
+   * flag with nothing left to clear it. The raise is then dropped in silence,
+   * and the tour ends having built a workspace it never opens.
+   *
+   * So the value is READ at the moment it is needed instead of being relied on
+   * to have arrived. Both callers run while the step is still mounted —
+   * _nextStep is reached from the step's own hand-back, and _skipTour from a
+   * hotkey over a live tour — so `_created` is there to be read.
+   *
+   * @returns {Object|null} the workspace the step made, if it made one
+   */
+  _createdFromStep() {
+    const part = this.getPart && this.getPart(_a.content);
+    const step = part && part.children && part.children.last();
+    const ws = step && !(step.isDestroyed && step.isDestroyed()) && step._created;
+    return ws && ws.hub_id ? ws : null;
+  }
+
+  /**
+   * Resolve once the workspace's pane is mounted — or with null if it is not.
+   *
+   * WATCHED, not awaited, because there is nothing to await: loadWorkspace
+   * returns undefined and does its real work inside a media.attributes fetch,
+   * calling an internal apply() that feeds the pane into headlessLayer. It has
+   * no promise, no callback and no broadcast that means "this workspace is
+   * open" — `workspace:focus` comes closest and is suppressed on exactly this
+   * path, because apply() sets _curWorkspace BEFORE the pane mounts and
+   * onWorkspaceRaised then sees sameContext and stays quiet.
+   *
+   * So the condition IS the evidence: Wm._findWorkspaceWindow is the accessor
+   * loadWorkspace itself uses to decide whether a hub's pane already exists,
+   * and it answers non-null only once apply() has fed it. Polled rather than
+   * hooked so a failed open simply times out instead of leaving a listener
+   * behind on a destroyed widget.
+   *
+   * Resolves immediately when the pane is already there — re-running the tour
+   * against an existing workspace still ends in a celebration.
+   *
+   * @param {String|Number} hub_id
+   * @returns {Promise<Object|null>}
+   */
+  _workspaceOnScreen(hub_id) {
+    if (typeof Wm === 'undefined' || !_.isFunction(Wm._findWorkspaceWindow)) {
+      return Promise.resolve(null);
+    }
+    const deadline = Date.now() + OPEN_WAIT_MS;
+    return new Promise((resolve) => {
+      const look = () => {
+        let pane = null;
+        try {
+          pane = Wm._findWorkspaceWindow(hub_id);
+        } catch (e) {
+          return resolve(null);
+        }
+        if (pane) return resolve(pane);
+        if (Date.now() >= deadline) {
+          this.warn && this.warn('[tutorial] the new workspace never opened');
+          return resolve(null);
+        }
+        setTimeout(look, OPEN_POLL_MS);
+      };
+      look();
+    });
   }
 
   onUiEvent(trigger, args = {}) {
@@ -459,6 +767,14 @@ class tutorial_main extends LetcBox {
       case 'end-tour':
         this._skipTour();
         break;
+      // The step made a workspace. The host is what opens it and celebrates,
+      // because both outlive the step — the tour is coming down around them.
+      case 'workspace-created': {
+        const ws = args.workspace || {};
+        if (ws.hub_id) this._createdWorkspace = ws;
+        break;
+      }
+
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));
         break;

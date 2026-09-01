@@ -1,3 +1,4 @@
+@use 'sass:math';
 @use 'mixins/drumee';
 
 // ── The tutorial callout (tutorial__bubble-*) ─────────────────────────────
@@ -11,6 +12,28 @@
 
 // Half-diagonal of the rotated square that forms the tail.
 $beak: 9px;
+
+// The tail's real shape — Polygon 1 (Figma 200:9166), measured where it counts:
+// 14px deep out from the card, and 15.5px across at the card's edge. That is a
+// 58 degree wedge. A square rotated 45deg can only ever give 90, which is what
+// this drew — a blunt diamond corner rather than the narrow tail the frames
+// point with.
+//
+// Corrected by SCALING after the rotation instead of swapping in a clip-path or
+// a mask: the square keeps `background: inherit` and `box-shadow: inherit`, so
+// the tail still takes the card's own surface and edge in either theme, and the
+// scale is symmetric about the element's centre — which already sits on the
+// card's edge, so every offset and inset below goes on meaning what it meant.
+// These are the wedge BEFORE its tip is rounded off and before the 1px it is
+// pushed back into the card — both of which eat into the silhouette, by about
+// 3px of depth and 3px of spread between them. 17/9.5 measures out at the
+// frame's 14 deep and ~15.5 across once they have.
+$beak-out: 17px;
+$beak-half: 9.5px;
+// Half-extent of the 45deg-rotated square, before scaling: side / sqrt(2).
+$beak-diag: $beak * 1.41421356;
+$beak-scale-out: math.div($beak-out, $beak-diag);
+$beak-scale-across: math.div($beak-half, $beak-diag);
 // Also in spotlight/index.js as BEAK_INSET — it caps how far the card may be
 // nudged before the tail would leave it.
 $beak-inset: 26px;
@@ -37,40 +60,74 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
     z-index: 10010;
 
     // ── Beak ──────────────────────────────────────────────────────────────
-    // A square rotated 45deg rather than a border triangle: it inherits the
-    // card's background, so it reads as part of the bubble in both themes
-    // instead of a flat wedge that has to be recoloured per theme.
+    // Still a rotated square, and still `background: inherit`, so the tail
+    // takes the card's own surface in either theme instead of being a wedge
+    // that has to be recoloured per theme. What it is NOT any more is a whole
+    // square with half of it "behind" the card.
     //
-    // Behind the card, not in front of it. A white tail on a pale background
-    // with no shadow of its own is invisible — which is exactly how this first
-    // rendered. Sent behind, it can carry the card's shadow: the inner half is
-    // covered by the card's own background and only the outer half shows, with
-    // the edge the rest of the bubble has. The card opens a stacking context
-    // (z-index above), so `z-index: -1` stays inside it and cannot fall behind
-    // the scrim.
+    // That half was never behind anything. A negative z-index child paints in
+    // its parent's stacking context AFTER the parent's background (CSS 2.1
+    // Appendix E, step 2 follows step 1), so the inner half sat ON the card —
+    // invisible while both were white, but its inherited box-shadow was not,
+    // and it drew a grey seam straight across the card's face beside the tail.
+    // Widening the wedge to the frame's 58 degrees is what made that seam
+    // impossible to miss.
+    //
+    // So only the half that shows is drawn. `clip-path` cuts the square along
+    // the diagonal that separates the outward corner from the other three, in
+    // the element's own coordinates — before the transform, which is why one
+    // polygon per direction is enough and the rotation still does the work.
+    // The rounded corner survives the cut and becomes the tail's rounded tip.
+    //
+    // `filter: drop-shadow`, not `box-shadow`: clip-path clips a box-shadow
+    // away with everything else, and a filter shadow follows the clipped
+    // silhouette — which is the tail's edge and nothing else.
     &::after {
       content: "";
       position: absolute;
-      z-index: -1;
       width: $beak * 2;
       height: $beak * 2;
       background: inherit;
-      box-shadow: inherit;
+      filter: drop-shadow(0 1px 5.5px rgba(0, 0, 0, 0.13));
+      // Overridden per direction below, which is where the wedge gets its
+      // angle; this is the shared 45deg the scale is applied on top of.
       transform: rotate(45deg);
-      border-radius: 2px;
+      // ~4px on the frame's polygon. It lands elliptical once the scale is on,
+      // which is what a tapered tail's tip looks like anyway.
+      border-radius: 3px;
     }
+
+    // rotate(45deg) sends the square's top-left corner to the top, top-right to
+    // the right, bottom-right to the bottom and bottom-left to the left. The
+    // kept half is the triangle holding whichever corner points away from the
+    // card.
+    &[data-direction="north"]::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
+    &[data-direction="south"]::after { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+    &[data-direction="east"]::after { clip-path: polygon(0 0, 100% 0, 100% 100%); }
+    &[data-direction="west"]::after { clip-path: polygon(0 0, 0 100%, 100% 100%); }
   }
 
-  // Bare bubble: the design's one bold line, with the shared footer under it.
-  // Same width as the standard card — the footer is two equal buttons, and a
-  // hug-to-content width would size those off the length of the sentence.
+  // Bare bubble — 200:9167, the callout on the create-workspace frames.
+  //
+  // It HUGS its sentence: the frame's card is a flex column of one nowrap line
+  // at 24px insets, and it is 343px wide because that is how wide "Type your
+  // workspace name here" is at 20px SemiBold. Pinned to the standard 296 it
+  // wrapped to two lines and stopped being the shape the design draws.
+  //
+  // Capped so the hug cannot run off a narrow tour; past the cap it wraps,
+  // which is the right failure — the alternative is a card wider than the
+  // screen with its tail pointing at nothing.
   &__bubble-card--bare {
-    padding: 20px 24px;
+    width: max-content;
+    max-width: min(420px, 60vw);
+    padding: 24px;
     gap: 16px;
   }
 
+  // 20/1.1 SemiBold, from the frame's `Body/Sub tittle` style. The card's own
+  // hug is measured off this, so the two move together.
   &__bubble-text {
-    @include drumee.typo($size: 18px, $line: 1.35);
+    @include drumee.typo($size: 20px, $line: 1.1);
     font-weight: 600;
     color: var(--normal-fg);
   }
@@ -88,6 +145,10 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   // the tail stays on the anchor point rather than drifting off it.
   &__bubble-card[data-direction="north"],
   &__bubble-card[data-direction="south"] {
+    // Deep on the vertical axis, narrow on the horizontal: the tail runs out
+    // of the card's top or bottom edge.
+    &::after { transform: scale($beak-scale-across, $beak-scale-out) rotate(45deg); }
+
     &[data-beak="center"] { transform: translateX(-50%) $nudge; }
     &[data-beak="start"]  { transform: translateX(-#{$beak-inset}) $nudge; }
     &[data-beak="end"]    { transform: translateX(calc(-100% + #{$beak-inset})) $nudge; }
@@ -103,6 +164,9 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
 
   &__bubble-card[data-direction="east"],
   &__bubble-card[data-direction="west"] {
+    // The same wedge, turned a quarter: out of the left or right edge.
+    &::after { transform: scale($beak-scale-out, $beak-scale-across) rotate(45deg); }
+
     &[data-beak="center"] { transform: translateY(-50%) $nudge; }
     &[data-beak="start"]  { transform: translateY(-#{$beak-inset}) $nudge; }
     &[data-beak="end"]    { transform: translateY(calc(-100% + #{$beak-inset})) $nudge; }
@@ -114,50 +178,15 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
     &[data-beak="end"]::after    { top: auto; bottom: $beak-inset - $beak; }
   }
 
-  // Pulled out by half the square so exactly half of it shows and the other
-  // half hides behind the card. `0` here — which is what this had — parks the
-  // whole square inside the card and the callout renders with no tail at all.
-  &__bubble-card[data-direction="north"]::after { top: -$beak; }
-  &__bubble-card[data-direction="south"]::after { bottom: -$beak; }
+  // The element's CENTRE lands on the card's edge, which is what puts the kept
+  // half wholly outside it — and then 1px back in, so the cut edge and the
+  // card's own edge cannot leave a hairline between them at fractional zooms.
+  &__bubble-card[data-direction="north"]::after { top: -$beak + 1px; }
+  &__bubble-card[data-direction="south"]::after { bottom: -$beak + 1px; }
   // Reaching east = the card is to the target's LEFT, so the tail is on its
   // right edge.
-  &__bubble-card[data-direction="east"]::after { right: -$beak; }
-  &__bubble-card[data-direction="west"]::after { left: -$beak; }
-
-  // ── Header: dashes left, skip right ──────────────────────────────────────
-  &__bubble-header {
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 8px;
-  }
-
-  // Holds the row open when a screen shows no dashes, so the skip control
-  // stays pinned to the right edge instead of sliding to the left one.
-  &__bubble-dashes-spacer {
-    flex: 1 1 auto;
-    height: 4px;
-  }
-
-  &__bubble-skip {
-    width: 20px;
-    height: 20px;
-    flex: 0 0 auto;
-    cursor: pointer;
-    opacity: 0.4;
-    transition: opacity 0.15s ease;
-
-    &:hover,
-    &:focus-visible {
-      opacity: 1;
-    }
-
-    svg {
-      width: 11px;
-      height: 11px;
-      fill: var(--normal-fg);
-    }
-  }
+  &__bubble-card[data-direction="east"]::after { right: -$beak + 1px; }
+  &__bubble-card[data-direction="west"]::after { left: -$beak + 1px; }
 
   // ── Progress: the "STEP n/m" pill ────────────────────────────────────────
   // The share flow's form (148:41197 onward): a dot and an uppercase count in

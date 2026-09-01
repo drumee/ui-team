@@ -161,6 +161,23 @@
     align-items: center;
     gap: 12px;
     margin-top: 8px;
+
+    // Scenery that answers a pointer. The pane is a mock and these three do
+    // nothing, but a row of buttons that stays perfectly still under the cursor
+    // reads as a picture rather than as the product — and this pane is the last
+    // thing the tour shows before handing the real one over.
+    > * {
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+  }
+
+  &__fp-cta:hover {
+    background: var(--primary-purple-40);
+  }
+
+  &__fp-ghost:hover {
+    background: var(--normal-bg-80);
   }
 
   &__fp-cta {
@@ -301,6 +318,14 @@
     background: var(--normal-bg-90);
   }
 
+  // The viewer's OWN messages, tinted by the workspace's type.
+  //
+  // --chat-bubble-* is the product's own set, one per area, and the tour's mock
+  // chat had picked `private` and kept it whatever workspace the user made. The
+  // host stamps the area on the root once one exists (see the `chrome` case in
+  // ../index.js), so the pane the tour finishes on is the colour the real one
+  // will be. `private` stays the default: it is what an internal workspace gets
+  // and what every tour without a created workspace has always shown.
   &__fp-chat-row[data-own="1"] &__fp-chat-bubble {
     background: var(--chat-bubble-private);
   }
@@ -338,6 +363,11 @@
 }
 
 // ── The home empty state (tutorial__home-*) ───────────────────────────────
+//
+// The plate's height, shared with the hero beside it so the two share a top
+// edge the way 140:22945 lays them out.
+$home-preview-h: 475px;
+
 // Figma 140:22684 — the frame the create-workspace flow opens on: a hero on
 // the left and a preview of a populated workspace on the right.
 //
@@ -357,9 +387,22 @@
     background: linear-gradient(115deg, #eeecfb 0%, #f7f6fd 42%, var(--normal-bg-elevated) 100%);
   }
 
+  // The hero starts where the PLATE starts, not halfway down the canvas.
+  //
+  // 140:22945 lays the two out `items-start` inside a `py-[200px]` row, so the
+  // headline's top edge and the plate's top edge are the same line. Centring
+  // each child independently — which is what `align-items: center` on the
+  // canvas does — floated the hero down to the middle of a card it is supposed
+  // to head.
+  //
+  // Given the plate's height and told to pack from the top, the hero lines up
+  // with it exactly while the PAIR stays centred in the canvas, which is what
+  // keeps this working on a viewport shorter than the frame's 1080.
   &__home-hero {
     flex: 0 0 auto;
     width: 520px;
+    height: $home-preview-h;
+    justify-content: flex-start;
     gap: 18px;
   }
 
@@ -376,6 +419,7 @@
     max-width: 440px;
   }
 
+  // The live control on screen 1 (see ./toolkit/home.js) — so it says so.
   &__home-cta {
     align-items: center;
     justify-content: center;
@@ -385,6 +429,12 @@
     padding: 0 26px;
     border-radius: 10px;
     background: var(--primary-purple-50);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background: var(--primary-purple-40);
+    }
   }
 
   &__home-cta-label {
@@ -405,12 +455,27 @@
     width: 705px;
     max-width: 46%;
     align-self: center;
-    height: 475px;
+    // The frame's 705x476 is the OUTER card — the window's 70/66 offset is
+    // measured inside it. Without this the insets were added to the height and
+    // the plate stood 543 tall against a 475 hero, so the two stopped sharing
+    // the top edge they are aligned on.
+    box-sizing: border-box;
+    height: $home-preview-h;
     margin-right: 46px;
-    padding: 22px 0 0 30px;
-    border-radius: 16px;
+    // Where the window actually sits on the plate: `image 1` (140:23218) is
+    // absolutely placed at left 70 / top 66 inside the 705x476 card. 30/22 sat
+    // it almost in the corner and left barely a sliver of the gradient to read.
+    padding: 66px 0 0 70px;
+    // 140:23220, verbatim: a 20px card with a 1px brand hairline, and a
+    // gradient that runs top to BOTTOM — not the 150deg diagonal this had —
+    // from a near-transparent brand tint to solid #5950ff. The old top stop
+    // was an opaque #b9b4ff, which painted a lilac band across the head of the
+    // card; the real one is 5% ink, so the canvas wash behind it shows through
+    // and the plate only gains weight towards the bottom.
+    border: 1px;
+    border-radius: 20px;
     overflow: hidden;
-    background: linear-gradient(150deg, #b9b4ff 0%, #5950ff 100%);
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100.03%);
   }
 
   &__home-pv-viewport {
@@ -434,26 +499,168 @@
     transform-origin: top left;
   }
 
+  // ── The window's own topbar (tutorial__home-pv-tb-*) ────────────────────
+  // The base image on the plate (176:40744): org pill / department / workspace
+  // crumb on the left, utility cluster on the right. Same numbers as the tour's
+  // own bar in skin/index.scss — this is a picture of that product, and the
+  // 0.62 scale on the wrapper is what makes it a miniature.
   &__home-pv-topbar {
     flex: 0 0 auto;
     align-items: center;
-    gap: 18px;
+    gap: 12px;
     height: 52px;
     padding: 0 22px;
   }
 
-  &__home-pv-topbar-chip {
-    width: 190px;
-    height: 26px;
-    border-radius: 99px;
+  // Both pills: the grey lozenge with 4px around its leading icon.
+  &__home-pv-tb-org,
+  &__home-pv-tb-crumb {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 8px;
     background: var(--normal-bg-90);
   }
 
-  &__home-pv-topbar-crumb {
-    width: 300px;
-    height: 20px;
+  &__home-pv-tb-org-avatar {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--primary-purple-40);
+  }
+
+  &__home-pv-tb-org-avatar-text {
+    @include drumee.typo($size: 12px, $line: 1);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+    text-transform: uppercase;
+  }
+
+  &__home-pv-tb-org-name,
+  &__home-pv-tb-crumb-name {
+    @include drumee.typo($size: 14px, $line: 20px);
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__home-pv-tb-org-plan {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--primary-purple-40);
+    padding: 4px 8px;
+    border-radius: 52px;
+    background: rgba(89, 80, 255, 0.1);
+    white-space: nowrap;
+  }
+
+  &__home-pv-tb-caret {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg);
+  }
+
+  // The department segment sits BETWEEN the two pills, on the bare bar — a
+  // tinted tile, the name, and the slash that leads into the workspace.
+  &__home-pv-tb-dept {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__home-pv-tb-dept-tile {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
     border-radius: 6px;
-    background: var(--normal-bg-90);
+    background: var(--primary-purple-10);
+  }
+
+  &__home-pv-tb-dept-ico {
+    width: 16px;
+    height: 16px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--primary-purple-40);
+  }
+
+  &__home-pv-tb-dept-name {
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 400;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__home-pv-tb-dept-sep {
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  // folderArt paints at its authored 105x86 unless pinned — the same explicit
+  // box the tour's own breadcrumb gives it.
+  &__home-pv-tb-crumb-icon {
+    position: relative;
+    width: 24px;
+    height: 20px;
+    min-width: 24px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 20px;
+    }
+
+    svg.folder-shape { width: 24px; height: 20px; }
+  }
+
+  // Pushed to the far edge, as the frames place it.
+  &__home-pv-tb-utils {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  &__home-pv-tb-util {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
+  }
+
+  &__home-pv-tb-avatar {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    margin-left: 4px;
+    border-radius: 50%;
+    background: var(--normal-bg-80);
   }
 
   &__home-pv-app {
@@ -512,3 +719,17 @@
     color: rgba(255, 255, 255, 0.9);
   }
 }
+
+// ── The chat's own bubbles follow the workspace's type ───────────────────────
+//
+// `data-area` is stamped on the tour's root by the host the moment a workspace
+// exists. Top-level rather than nested, because the attribute is on the ROOT and
+// the bubbles are several levels inside the pane.
+@each $area in (personal, private, public, share) {
+  .tutorial-main[data-area="#{$area}"] {
+    .tutorial__fp-chat-row[data-own="1"] .tutorial__fp-chat-bubble {
+      background: var(--chat-bubble-#{$area});
+    }
+  }
+}
+

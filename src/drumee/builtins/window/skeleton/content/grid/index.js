@@ -1,4 +1,5 @@
 const { button } = require("../../../../skeleton/toolkit/buttons");
+const emptyState = require("./empty");
 const __media_skl_grid = function (ui) {
   const type = ui.mget(_a.type);
 
@@ -74,6 +75,9 @@ const __media_skl_grid = function (ui) {
     kids: [
       filterBar,
       list,
+      // A following sibling of the list, which is how the skin reaches it —
+      // the flag lives on the list itself (window/utils.js _syncGridEmpty).
+      emptyState(ui),
     ]
   })
 };

@@ -185,11 +185,33 @@
     }
   }
 
+  // One colour per file type, and they are the PRODUCT's colours, not the
+  // frame's alone: the same five hexes the desk's "+ New" menu tints its
+  // entries with (modules/desk/skin/topbar.scss `.ico-note`, `.ico-document`,
+  // `.ico-spreadsheet`, `.ico-presentation`). Sampled off the frame's render
+  // and they agree exactly, which is the point — the tour is teaching a grid
+  // the user is about to meet, and a docx has to be the same violet in both.
+  // Written as hexes because that is how the product holds them; there is no
+  // token for "the colour of a spreadsheet", and the nearest ones by value
+  // (--warning, --area-share) mean something else entirely.
+  //
+  // `fill: currentColor` is what carries it. Two of these symbols are authored
+  // fill="currentColor" and follow `color` on their own; app-doc-file,
+  // app-pdf-file and image carry no fill at all, so they inherit `fill` and
+  // default to BLACK — which is what every one of them rendered as, one flat
+  // colour where the frame has five. Inheritance crosses the <use> shadow
+  // boundary, which is the only way to reach that content.
   &__fg-file-ico {
     width: 34px;
     height: 34px;
 
-    svg { width: 100%; height: 100%; }
+    svg { width: 100%; height: 100%; fill: currentColor; }
+
+    &[data-kind="document"] { color: #847eff; }
+    &[data-kind="pdf"] { color: #65d0ea; }
+    &[data-kind="note"] { color: #e8a13b; }
+    &[data-kind="spreadsheet"] { color: #54b684; }
+    &[data-kind="presentation"] { color: #ffa8dc; }
   }
 
   &__fg-file-name {

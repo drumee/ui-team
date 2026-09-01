@@ -528,3 +528,116 @@
     width: 24px;
   }
 }
+// ── The Files grid with nothing in it (window__fe-*) ──────────────────────
+// Figma 176:42043, frame 176:42052. A workspace whose Files tab is empty used
+// to show a filter bar over blank space; this names what makes files here
+// different and puts the three ways of adding one under the sentence.
+//
+// Keyed off the LIST's own `data-empty`, read across `~`. Not a container: the
+// folder window's Files view is the filter bar and the bare list fed straight
+// into the content part, and `.window__icons-container` — which only exists in
+// skeleton/content/grid — is never rendered there at all. That is why the first
+// version of this never appeared: the flag was written to an element that was
+// not on the page, by a closest() that answered null.
+//
+// The flag is written from the list's COLLECTION after EOD, never from the DOM:
+// .smart-container is not reliably CSS-`:empty` (partitioning leaves section
+// elements in place, and a spinner sits there mid-fetch), and an empty state
+// flashed over a fetch that is about to return files is worse than a blank pane
+// for the same half-second.
+//
+// `!important` on both display rules, deliberately. The framework gives every
+// Box `.drumee-widget[data-flow="y"] { display: flex }` at 0,2,0 — a bare
+// `.window__fe-hero { display: none }` is 0,1,0 and loses to it, so the hero
+// would sit under every populated grid. The same reason the rest of this
+// codebase reaches for it against that rule.
+.window__fe-hero {
+  display: none !important;
+}
+
+.window__icons-list[data-empty="1"] {
+  display: none !important;
+}
+
+.window__icons-list[data-empty="1"] ~ .window__fe-hero {
+  display: flex !important;
+}
+
+.window__fe-hero {
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 120px 80px;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.window__fe-title {
+  font-size: 64px;
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--normal-fg-800, #34343a);
+  max-width: 615px;
+}
+
+.window__fe-desc {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 400;
+  color: var(--normal-fg-800, #34343a);
+  max-width: 486px;
+}
+
+.window__fe-actions {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.window__fe-btn {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.window__fe-btn--primary {
+  background: var(--primary-purple-50, #433cc5);
+  color: var(--gray-white, #fff);
+
+  &:hover {
+    background: var(--primary-purple-40, #5950ff);
+  }
+}
+
+// The frame's ghost is a 5% black wash, not a grey token — it has to sit on
+// whatever the pane's ground is.
+.window__fe-btn--ghost {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--normal-fg-10, #0b0a21);
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.09);
+  }
+}
+
+.window__fe-btn-ico {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+
+  svg { width: 100%; height: 100%; }
+  color: currentColor;
+}
+
+.window__fe-btn-label {
+  color: currentColor;
+  white-space: nowrap;
+}

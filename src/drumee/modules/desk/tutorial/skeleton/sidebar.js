@@ -67,8 +67,8 @@ const logo = (ui) => {
  *   is teaching ('chat', 'task', …). `null` means no workspace is open, and
  *   the section renders empty.
  */
-const railItems = (ui, active) => {
-  return active
+const railItems = (ui, active) =>
+  (active
     ? [
         railItem(ui, "rail-files", LOCALE.FILES, { active: active === "files" }),
         railItem(ui, "rail-chat", LOCALE.CHAT, { active: active === "chat" }),
@@ -76,8 +76,7 @@ const railItems = (ui, active) => {
         railItem(ui, "rail-meet", LOCALE.MEET, { active: active === "meet" }),
         railItem(ui, "rail-access", LOCALE.ACCESS, { active: active === "access" }),
       ]
-    : [];
-};
+    : []);
 
 /**
  * The rail's middle SLOT. The items inside it are re-fed per step by the host
@@ -85,18 +84,43 @@ const railItems = (ui, active) => {
  * `railItems` returns what goes in it — handing the container back from both
  * would feed an __sb-nav into the __sb-nav slot and nest a duplicate.
  */
+/**
+ * Everything that goes IN the rail's middle slot: the org's Dept. entry, then
+ * the workspace tabs.
+ *
+ * This, not `railItems`, is what the host re-feeds per step — the slot is
+ * replaced wholesale, so a composer that returned only the tabs dropped Dept.
+ * on the first _applyChrome and the org-home rail rendered empty.
+ *
+ * 140:22688 draws Dept. LIT, because on those screens it is where the user is:
+ * no workspace exists, so nothing else can be. It gives that up the moment a
+ * workspace tab is active, or the rail would show two lit tiles and neither
+ * would mean anything.
+ *
+ * @param {Object} ui
+ * @param {String|null} active
+ * @returns {Array}
+ */
+const navItems = (ui, active) =>
+  [
+    // ORG-HOME ONLY. Dept. is the org's rail entry and the only one those
+    // frames show; the workspace rail does not have it — the desk's own
+    // createRailNav is Files/Chat/Task/Meet/Access and nothing else, and
+    // 176:42043 shows the same five. It used to be rendered always and merely
+    // unlit, which put a sixth entry on a rail the product has five of.
+    active ? null : orgOnly(() =>
+      railItem(ui, "rail-department", LOCALE.DEPARTMENT, { active: true }),
+    ),
+    ...railItems(ui, active),
+  ].filter(Boolean);
+
 const nav = (ui, active) => {
   const p = pfx(ui);
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-nav`,
     sys_pn: "rail-nav",
     partHandler: ui,
-    kids: [
-      // Departments are the org's own rail entry, and the only one the
-      // org-home frames show. Gated off until org ships — see ./org.js.
-      orgOnly(() => railItem(ui, "rail-department", LOCALE.DEPARTMENT)),
-      ...railItems(ui, active),
-    ].filter(Boolean),
+    kids: navItems(ui, active),
   });
 };
 
@@ -132,3 +156,4 @@ module.exports = function (ui, opt = {}) {
 };
 
 module.exports.railItems = railItems;
+module.exports.navItems = navItems;

@@ -75,3 +75,31 @@
     }
   }
 }
+
+// ── The workspace tour paints no dim ─────────────────────────────────────────
+//
+// Its frames do not have one. 140:22684 (the home canvas the tour opens on) and
+// the create-workspace screens after it are drawn at full strength — the flow
+// is a walk through a dialog the user is about to fill in, and the callout beak
+// is what points at the block being described. The film over the rest was ours,
+// not the design's.
+//
+// The scrim ELEMENT stays, transparent, rather than being skipped in the
+// skeleton. It carries z-index 10003, which is the floor the lit surface
+// (10004) and the callout (10010) are placed against; removing the node would
+// leave that ordering asserted by two values with nothing between them, and
+// `_light` still promotes its target either way. Transparent costs one
+// composited layer that paints nothing.
+//
+// Scoped on the tour, which the host stamps on its own root (tutorial/index.js
+// _applySize). Every other tour lights one surface out of a busy mock and needs
+// the dim to do it.
+.tutorial-main[data-tour="workspace"] {
+  .tutorial-spotlight__scrim {
+    background: transparent;
+
+    html[data-theme="dark"] & {
+      background: transparent;
+    }
+  }
+}
