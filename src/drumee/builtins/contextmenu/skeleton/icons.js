@@ -54,6 +54,14 @@ const __icon = function (_ui_) {
     unlock: "protected-unlock",
     update: "editbox_pencil",
     upload: "desktop_upload",
+
+    // Workspace rows (topbar switcher ⋯). Same ctxmenu-* glyphs the folder
+    // menu uses for the equivalent action, so the two panels read alike.
+    workspaceAccess: "ctxmenu-share",
+    workspaceRename: "ctxmenu-rename",
+    workspaceDuplicate: "ctxmenu-copy",
+    workspaceOrganize: "ctxmenu-organize",
+    workspaceDelete: "ctxmenu-delete",
   };
   if (localStorage.getItem("showHidden")) {
     a.showHidden = "backoffice_preview";

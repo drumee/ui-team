@@ -31,6 +31,9 @@ const __classname = function(_ui_, trigger, k){
     separator: 'separator',
     settings:'editbox_cog',
     trash:'trash',
+    // `trash` is the class the shared skin paints --red-500; the workspace
+    // delete is the same destructive action and reads the same way.
+    workspaceDelete:'trash',
     unlock:'unlock',
     upload:'upload',
     directUrl:'backoffice_public'

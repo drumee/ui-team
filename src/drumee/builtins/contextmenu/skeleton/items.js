@@ -298,7 +298,24 @@ const __button = function (ui, trigger, k) {
 
     update: button({ content: LOCALE.UPDATE, service: _e.update }),
 
-    upload: button({ content: LOCALE.UPLOAD, service: _e.upload })
+    upload: button({ content: LOCALE.UPLOAD, service: _e.upload }),
+
+    // ── Workspace-scoped rows (topbar switcher ⋯) ────────────────────────
+    //
+    // Separate keys from `manageAccess` / `rename` / `duplicate` / `organize` /
+    // `trash` above, which raise the generic media services. These raise the
+    // `folder-*` ones, which act on the WORKSPACE rather than on a selection
+    // inside it, and which window_folder already implements — so a menu built
+    // from these needs no new handler anywhere.
+    workspaceAccess: button({ content: LOCALE.MANAGE_ACCESS, service: 'folder-manage-access' }),
+
+    workspaceRename: button({ content: LOCALE.RENAME, service: 'folder-rename' }),
+
+    workspaceDuplicate: button({ content: LOCALE.DUPLICATE, service: 'folder-duplicate' }),
+
+    workspaceOrganize: button({ content: LOCALE.ORGANIZE, service: 'folder-organize' }),
+
+    workspaceDelete: button({ content: LOCALE.DELETE, service: 'folder-delete' })
 
   };
 

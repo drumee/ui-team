@@ -1338,7 +1338,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 4px 12px;
-    border: 1px solid var(--border-muted);
+    border: 1px solid var(--border-default);
     border-radius: 8px;
   }
 
@@ -1390,8 +1390,21 @@
       height: 16px;
     }
 
+    // The ⋯ opens the workspace menu, so unlike its inert neighbour it says
+    // so. The grey fill is the Figma component's own resting style, not a
+    // hover — hence a DARKER step on hover rather than introducing one.
     &--more {
       background: var(--overlay-bg-05);
+      cursor: pointer;
+
+      &:hover {
+        background: var(--normal-bg-80);
+      }
+
+      // NO styling for the open state on purpose. setState still writes
+      // data-state="1" while the menu is up, and the menu's own destroy still
+      // clears it — so the hook is there if a lit look is wanted later. It is
+      // simply not drawn.
     }
   }
 

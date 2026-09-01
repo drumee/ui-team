@@ -542,7 +542,18 @@ function workspaceSwitcher(pfx, ui) {
     // 0.01 matches deskNewMenu, the one menu here that already passed it.
     duration: 0.01,
     opening: _e.click,
-    persistence: _a.once,
+    // Clicking a row does NOT close the panel. menu_topic closes on an item
+    // click only through _onItemClicked, whose switch falls to
+    // `default: this._closeItems()` for every persistence it does not name —
+    // `once` among them. `always` is the sole value that returns early, so it
+    // is what disables the auto-close. The "+ New" menu above already does
+    // this.
+    //
+    // The two other ways out are untouched, because neither reads persistence:
+    // a click outside (_onOutsideClick, bound to RADIO_CLICK in the widget's
+    // initialize) and the caret (onUiEvent -> _onTriggerClicked ->
+    // _triggerToggle -> _closeItems). So the panel cannot strand open.
+    persistence: _a.always,
     sys_pn: "wsmenu",
     // NO `service` here. The menu opens itself from its own onUiEvent when a
     // widget inside its trigger part raises an event — that is how
