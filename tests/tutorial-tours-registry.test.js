@@ -640,6 +640,38 @@ test("the finish screen hands the chrome back to the desk", () => {
   assert.match(skin, /__content \{\s*\n\s*pointer-events: auto/, "only the content pane takes one");
 });
 
+test("the finish screen's layout is pinned to the desk's own pane", () => {
+  // With the tour's rail and topbar hidden, its content pane starts at the LEFT
+  // EDGE of __body — which is where the real sidebar is. It sat over the rail it
+  // had just uncovered and ran off the bottom-right, because the box it fills is
+  // the whole desk body and the box it should fill is the part the workspace
+  // occupies.
+  //
+  // Measured, never reproduced: the desk's pane geometry depends on the rail's
+  // collapsed-or-pinned width, the topbar's height and the panel containers
+  // either side, and `.desk-module__wm-container` is already the answer to all
+  // of them. Copied numbers would drift the first time someone pins the rail.
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.match(host, /_fitToPane\(on = true\)/);
+  assert.match(
+    host, /querySelector\('\.desk-module__wm-container'\)/,
+    "the desk's own pane is the source of truth for the box",
+  );
+  // Offsets are relative to the tour root, which is what the layout resolves
+  // against — subtracting the wrong origin is a silent 64px error.
+  assert.match(host, /p\.left - host\.left/);
+  assert.match(host, /p\.top - host\.top/);
+  // Taken when the chrome is handed over, and retaken when the window moves.
+  assert.match(host, /if \(desk\) \{[\s\S]{0,300}this\._fitToPane\(\)/);
+  assert.match(host, /dataset\.chrome === 'desk'\) \{\s*\n\s*this\._fitToPane\(\)/);
+
+  const skin = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/index.scss"), "utf8",
+  );
+  // Absolute, or those four measurements are not the whole answer.
+  assert.match(skin, /\[data-chrome="desk"\][\s\S]{0,900}__layout \{\s*\n\s*position: absolute;/);
+});
+
 test("the tour's own chrome never pretends to work", () => {
   // It briefly did: the rail's five tabs and the topbar's six utilities carried
   // the desk's service names on the last screen. Handing the real chrome back

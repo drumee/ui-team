@@ -582,10 +582,24 @@ $topbar-height: 46px;
     pointer-events: none;
   }
 
-  // The body keeps its gutters so the content pane still lines up with the
-  // workspace pane underneath it.
+  // Pinned over the desk's own workspace pane, from measurements _fitToPane
+  // takes off `.desk-module__wm-container`. Absolute so those four numbers are
+  // the whole answer — with the rail hidden, `width: 100%` of __body starts at
+  // the left edge of the desk, which is where the real sidebar is.
+  .tutorial-main__layout {
+    position: absolute;
+  }
+
+  // The gutters belonged to the tour's own rail and topbar. With the pin taking
+  // the layout to exactly the pane's box, they would inset it from itself.
+  .tutorial-main__body {
+    padding: 0;
+    gap: 0;
+  }
+
   .tutorial-main__content {
     pointer-events: auto;
+    border-radius: 0;
   }
 }
 

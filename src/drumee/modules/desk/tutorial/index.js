@@ -308,8 +308,10 @@ class tutorial_main extends LetcBox {
       // open, so this is where it opens — behind the tour, before the chrome it
       // drives is revealed.
       this._openCreated();
+      this._fitToPane();
       return;
     }
+    this._fitToPane(false);
 
     const sidebar = require('./skeleton/sidebar');
     const topbar = require('./skeleton/topbar');
@@ -323,6 +325,49 @@ class tutorial_main extends LetcBox {
       crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
     ));
     this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this)));
+  }
+
+  /**
+   * Pin the layout over the desk's own workspace pane.
+   *
+   * With the tour's rail and topbar hidden, its content pane starts at the left
+   * edge of __body — which is where the REAL sidebar is. It sat over the rail it
+   * had just uncovered and ran off the bottom-right, because the box it was
+   * filling is the whole desk body and the box it should fill is the part of it
+   * the workspace occupies.
+   *
+   * Measured rather than reproduced. The desk's pane geometry depends on things
+   * this widget has no business tracking — the rail's collapsed or pinned width,
+   * the topbar's height, the panel containers either side — and
+   * `.desk-module__wm-container` already is the answer to all of them. Copying
+   * the numbers would be a second source of truth that drifts the first time
+   * someone pins the rail.
+   *
+   * Offsets are relative to the tour's own root, which is the positioned
+   * ancestor the layout resolves against.
+   *
+   * @param {Boolean} [on=true] false clears the pin and hands the layout back
+   *   to its own `inset: 0`.
+   */
+  _fitToPane(on = true) {
+    const layout = this.el && this.el.querySelector('.tutorial-main__layout');
+    if (!layout) return;
+    if (!on) {
+      layout.style.left = '';
+      layout.style.top = '';
+      layout.style.width = '';
+      layout.style.height = '';
+      return;
+    }
+    const pane = document.querySelector('.desk-module__wm-container');
+    if (!pane || !this.el) return;
+    const p = pane.getBoundingClientRect();
+    const host = this.el.getBoundingClientRect();
+    if (!p.width || !p.height) return;
+    layout.style.left = `${Math.round(p.left - host.left)}px`;
+    layout.style.top = `${Math.round(p.top - host.top)}px`;
+    layout.style.width = `${Math.round(p.width)}px`;
+    layout.style.height = `${Math.round(p.height)}px`;
   }
 
   /**
@@ -370,6 +415,11 @@ class tutorial_main extends LetcBox {
       this._resizeTimer = setTimeout(() => {
         if (this.isDestroyed && this.isDestroyed()) return;
         this._applySize();
+        // The desk's pane moved with the window, so the pin has to be retaken
+        // before anything is measured against it.
+        if (this.el && this.el.dataset && this.el.dataset.chrome === 'desk') {
+          this._fitToPane();
+        }
         this.ensurePart('spotlight').then((s) => s && s.reflow && s.reflow());
       }, REFLOW_MS);
     };
