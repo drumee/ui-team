@@ -425,6 +425,56 @@ $topbar-height: 46px;
     color: var(--normal-fg-20);
   }
 
+  // The hover label, live only on the finish screen. Mirrors the desk bar's own
+  // (modules/desk/skin/topbar.scss __utility-tip) — and it MUST be positioned:
+  // the framework mounts the tooltip as a real child of the button, so an
+  // unstyled one renders as plain text inside a 28px box and pushes the row
+  // apart. The button below is its containing block.
+  &__tb-utility-btn {
+    overflow: visible;
+  }
+
+  &__tb-utility-tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-bg-100, #fff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    @include drumee.typo($size: 12px, $line: 14px);
+    font-weight: 400;
+
+    // Caret pointing UP at the icon — the bubble hangs below the bar.
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-bottom-color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  // A live utility answers a pointer, the way the desk bar's does.
+  &__tb-utility-btn[data-live="1"] {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--default-bg-hover, rgba(0, 0, 0, 0.06));
+    }
+  }
+
+  &__tb-avatar[data-live="1"] {
+    cursor: pointer;
+  }
+
   &__tb-utility-dot {
     position: absolute;
     top: 5px;

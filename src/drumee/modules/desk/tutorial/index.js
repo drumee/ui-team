@@ -299,6 +299,9 @@ class tutorial_main extends LetcBox {
     this.ensurePart('crumb').then((p) => (
       crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
     ));
+    // The utility cluster goes live on the same screen the rail does: the desk
+    // behind the tour is real by then, and these are its own six panels.
+    this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this, { live })));
   }
 
   /**
@@ -557,6 +560,29 @@ class tutorial_main extends LetcBox {
   }
 
   /**
+   * Hand a service to the desk.
+   *
+   * The tour is fed with the desk as its partHandler (desk _showTutorial), and
+   * that is the only reference it has to it — triggerHandlers walks uiHandler,
+   * which for this widget ends here. So the desk's own onUiEvent is called
+   * directly, the way permission/restricted calls a window's.
+   *
+   * Raised BEFORE the teardown rather than after: softDestroy fades for half a
+   * second, and the panel opening underneath is revealed by that fade instead
+   * of appearing on a bare desk once it has finished.
+   */
+  _raiseOnDesk(service) {
+    const h = this.mget(_a.partHandler);
+    const desk = _.isArray(h) ? h[0] : h;
+    if (!desk || !_.isFunction(desk.onUiEvent)) return;
+    try {
+      desk.onUiEvent(desk, { service });
+    } catch (e) {
+      this.warn && this.warn(`[tutorial] desk refused ${service}`, e);
+    }
+  }
+
+  /**
    * Open the workspace the tour just made, and come down over it.
    *
    * NOTHING ELSE OPENS IT. The create broadcasts `workspace:refresh`, and the
@@ -572,8 +598,11 @@ class tutorial_main extends LetcBox {
    * @param {String} [tab] a rail tab to select once the window exists —
    *   `showFolderTab` needs the window, and loadWorkspace builds it, so this
    *   waits on it rather than racing it.
+   * @param {String} [service] a DESK service to raise on the way out — one of
+   *   the topbar's panels. Raised on the desk itself rather than bubbled,
+   *   because the tour's own handler chain ends at the tour.
    */
-  _enterCreated(tab) {
+  _enterCreated(tab, service) {
     const ws = this._createdWorkspace;
     if (!ws || !ws.hub_id || typeof Wm === 'undefined') return this._enterWorkspace();
     let opened;
@@ -591,6 +620,7 @@ class tutorial_main extends LetcBox {
       };
       Promise.resolve(opened).then(showTab, showTab);
     }
+    if (service) this._raiseOnDesk(service);
     return this._enterWorkspace();
   }
 
@@ -627,6 +657,24 @@ class tutorial_main extends LetcBox {
       // desk uses for the same five entries, so this is the product's rail
       // behaving as the product's rail — it just has to open the workspace
       // first, because at this moment the tour is still covering it.
+      // The topbar's six utilities and its avatar, live on the finish screen.
+      // Each ends the tour and raises the DESK'S own service, because these are
+      // desk panels — they belong to the thing underneath, and the tour has to
+      // get out of the way before one can open over it.
+      case 'toggle-activity':
+      case 'toggle-calendar':
+      case 'toggle-inbox':
+      case 'toggle-contacts':
+      case 'toggle-trash':
+      case 'toggle-apps':
+        return this._enterCreated(null, service);
+
+      // The avatar's menu belongs to the DESK's avatar, not this one — a copy
+      // anchored here would open over a bar that is about to disappear. So it
+      // just leaves, and the real avatar is a click away.
+      case 'tb-avatar':
+        return this._enterCreated();
+
       case 'rail-files':
         return this._enterCreated('files');
       case 'rail-chat':

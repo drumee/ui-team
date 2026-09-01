@@ -600,7 +600,7 @@ test("the tour leaves the user IN the workspace it made", () => {
   // flow — neither navigates. Every exit therefore goes through _enterCreated:
   // finishing, clicking a live rail tab, and leaving early alike.
   const host = readFileSync(HOST_PATH, "utf8");
-  assert.match(host, /_enterCreated\(tab\)[\s\S]{0,400}Wm\.loadWorkspace/);
+  assert.match(host, /_enterCreated\(tab, service\)[\s\S]{0,400}Wm\.loadWorkspace/);
   assert.match(
     host, /_nextStep\(\)[\s\S]{0,400}this\._enterCreated\(\)/,
     "finishing the last step opens it",
@@ -611,6 +611,47 @@ test("the tour leaves the user IN the workspace it made", () => {
   );
   // The tab is applied after the window exists, not alongside it.
   assert.match(host, /Promise\.resolve\(opened\)\.then\(showTab, showTab\)/);
+});
+
+test("the topbar's utilities are the desk's own six, and they reach it", () => {
+  // Same six entries meaning the same six things, so the tour does not invent a
+  // second vocabulary for them. They are desk PANELS — they belong to the thing
+  // underneath — so the tour has to get out of the way before one can open.
+  const bar = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/topbar.js"), "utf8",
+  );
+  const real = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/skeleton/topbar.js"), "utf8",
+  );
+  for (const service of [
+    "toggle-activity", "toggle-calendar", "toggle-inbox",
+    "toggle-contacts", "toggle-trash", "toggle-apps",
+  ]) {
+    assert.ok(bar.includes(service), `the tour is missing ${service}`);
+    assert.ok(real.includes(service), `the desk no longer raises ${service}`);
+  }
+  // A bare string tooltip renders inside the 28px button and breaks the row —
+  // the real bar carries the same warning.
+  assert.match(bar, /tooltips:\s*\{\s*content:/);
+  // The cluster is a re-fed slot, so the icons can be scenery until the last
+  // screen and controls on it.
+  assert.match(bar, /sys_pn:\s*"utility-cluster"/);
+  // A live control is flagged EXPLICITLY. ui-core does not stamp `data-service`,
+  // so a skin selector on it matches nothing — which is how a cursor and a
+  // hover state get written and never appear.
+  assert.match(bar, /attrOpt:\s*\{\s*"data-live":\s*1\s*\}/);
+  const skin = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/index.scss"), "utf8",
+  );
+  assert.match(skin, /__tb-utility-btn\[data-live="1"\]/);
+  assert.doesNotMatch(skin, /\[data-service\]/, "nothing may select on an attribute ui-core never writes");
+
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.match(host, /case 'toggle-activity':/);
+  assert.match(
+    host, /_raiseOnDesk\(service\)[\s\S]{0,400}desk\.onUiEvent\(desk, \{ service \}\)/,
+    "and the desk is called directly — the tour's handler chain ends at itself",
+  );
 });
 
 test("the finish screen has no way back", () => {
