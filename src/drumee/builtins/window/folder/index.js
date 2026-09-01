@@ -1704,6 +1704,16 @@ class __window_folder extends mfsInteract {
 
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
+      // The empty state's "+ New" (skeleton/content/grid/empty.js). The topbar's
+      // own New is a Menu TRIGGER and opens itself; this button is not one, so
+      // it opens the same menu part by hand rather than growing a second copy
+      // of the create list beside it.
+      case "open-new-menu": {
+        const menu = this.getPart && this.getPart("new-menu");
+        if (menu && _.isFunction(menu.changeState)) menu.changeState(1);
+        return;
+      }
+
       case "close-new-menu":
         return this.closeNewMenu(cmd);
 

@@ -479,14 +479,47 @@ class __window_mfs extends DrumeeMFS {
       listPart.collection.on(_e.add, f)
     }
 
+    // Whether the grid has anything in it, for the empty state beside it
+    // (skeleton/content/grid/empty.js). Driven off the list's own collection
+    // rather than the DOM: `.smart-container` is not reliably CSS-`:empty` —
+    // _doPartition re-appends every tile into section elements that stay in
+    // place, and a spinner lives there while the fetch is in flight.
+    //
+    // Armed only from EOD onward. Before that the grid is loading, and an
+    // empty state flashed over a fetch that is about to return files is worse
+    // than a blank pane for the same half-second.
+    // Backbone's own three, plus the list's custom `item:add` — `_e.add` is
+    // 'item:add', not 'add', so binding the lexicon alone would miss every
+    // native mutation and binding the natives alone would miss the widget's.
+    this._syncGridEmpty(listPart);
+    const onGridChange = () => this._syncGridEmpty(listPart);
+    listPart.collection.on("add remove reset", onGridChange);
+    if (_e.add && _e.add !== "add") listPart.collection.on(_e.add, onGridChange);
+
     listPart.once(EOD, () => {
       listPart.el.dataset.wait = 0;
       listPart.$el.removeClass("drumee-sprinner");
       this._partitionFoldersAndFiles(listPart);
       this.syncContent(EOD);
       this._dataReady = true;
+      this._gridLoaded = true;
+      this._syncGridEmpty(listPart);
       this.trigger(EOD);
     });
+  }
+
+  /**
+   * Write `data-empty` on the grid's container.
+   *
+   * @param {Object} listPart the smart list
+   */
+  _syncGridEmpty(listPart) {
+    if (!this._gridLoaded) return;
+    const el = listPart && listPart.el
+      && listPart.el.closest(".window__icons-container");
+    if (!el) return;
+    const n = (listPart.collection && listPart.collection.length) || 0;
+    el.dataset.empty = n ? 0 : 1;
   }
 
   /**
