@@ -401,7 +401,7 @@ test("a single-step tour is stamped first AND last, and counts by screens", () =
 // the chat pane on screen 2 of 5 skipped straight to the meeting step, and
 // screens 3, 4 and 5 (steps 9, 10 and 11) never rendered.
 //
-// The handoff is explicit now — _raise({ service: 'next-step' }) from
+// The handoff is explicit now — triggerHandlers({ service: 'next-step' }) from
 // the step's last screen — so the wrapper must stay service-less.
 test("a step widget names no service, so its pane is not a giant Next button", () => {
   const every = [...build(TOURS.full), ...build(TOURS.migrate), ...build(TOURS.chat)];
@@ -538,14 +538,14 @@ test("the workspace step has ONE way forward, so a new screen cannot be orphaned
   const src = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
   );
-  const handbacks = src.match(/_raise\(\{\s*service:\s*'next-step'\s*\}\)/g) || [];
+  const handbacks = src.match(/triggerHandlers\(\{\s*service:\s*'next-step'\s*\}\)/g) || [];
   assert.equal(
     handbacks.length, 1,
     "only _advance may hand the tour back to the host",
   );
   assert.match(
     src,
-    /_advance\(\)\s*\{[\s\S]{0,200}this\._screens\.length - 1[\s\S]{0,200}_raise/,
+    /_advance\(\)\s*\{[\s\S]{0,200}this\._screens\.length - 1[\s\S]{0,200}triggerHandlers/,
     "and it must check for a remaining screen before doing so",
   );
   // Every live control goes through it rather than round it.

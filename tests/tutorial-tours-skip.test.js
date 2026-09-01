@@ -85,6 +85,7 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
     },
     // _workspaceOnScreen guards on _.isFunction before touching Wm.
     _: { isFunction: (f) => typeof f === "function" },
+    _a: { content: "content" },
     // Read from the source so the budget cannot drift away from the tests.
     OPEN_WAIT_MS: Number(/const OPEN_WAIT_MS = (\d+);/.exec(HOST_SRC)[1]),
     OPEN_POLL_MS: Number(/const OPEN_POLL_MS = (\d+);/.exec(HOST_SRC)[1]),
@@ -106,14 +107,20 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
     // eslint-disable-next-line no-new-func
     new Function(
       "Tours", "flaggedIds", "SERVICE", "Visitor", "SVC_OPT", "localStorage",
-      "Wm", "require", "assert", "_", "OPEN_WAIT_MS", "OPEN_POLL_MS",
+      "Wm", "require", "assert", "_", "_a", "OPEN_WAIT_MS", "OPEN_POLL_MS",
       `return function (${sig.slice(sig.indexOf("(") + 1, sig.lastIndexOf(")"))}) {${methodBody(HOST_SRC, sig)}};`,
     )(
       deps.Tours, deps.flaggedIds, deps.SERVICE, deps.Visitor, deps.SVC_OPT,
-      deps.localStorage, deps.Wm, deps.require, assert, deps._,
+      deps.localStorage, deps.Wm, deps.require, assert, deps._, deps._a,
       deps.OPEN_WAIT_MS, deps.OPEN_POLL_MS,
     ).bind(host);
 
+  // _openCreated reads the workspace off the live step when the step's own
+  // `workspace-created` raise was dropped by ui-core's click gate. No step is
+  // mounted in these tests, so the read finds nothing and the pushed value —
+  // set by the tests that care — is what decides.
+  host.getPart = () => null;
+  host._createdFromStep = bind("_createdFromStep()");
   host._openCreated = bind("_openCreated()");
   host._workspaceOnScreen = bind("_workspaceOnScreen(hub_id)");
   host._celebrate = bind("_celebrate()");

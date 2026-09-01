@@ -661,8 +661,10 @@ class tutorial_main extends LetcBox {
    *   arrived — the caller uses that to decide whether to celebrate.
    */
   _openCreated() {
-    const ws = this._createdWorkspace;
+    const ws = this._createdWorkspace || this._createdFromStep();
     if (!ws || !ws.hub_id || typeof Wm === 'undefined') return Promise.resolve(null);
+    // Remember it either way, so _celebrate's own guard sees it too.
+    this._createdWorkspace = ws;
     try {
       Wm.loadWorkspace(ws);
     } catch (e) {
@@ -670,6 +672,37 @@ class tutorial_main extends LetcBox {
       return Promise.resolve(null);
     }
     return this._workspaceOnScreen(ws.hub_id);
+  }
+
+  /**
+   * Ask the running step what it created, rather than waiting to be told.
+   *
+   * The step DOES tell us — it raises `workspace-created` the moment the create
+   * resolves — and when that lands this is never called. But that raise goes
+   * through ui-core's triggerHandlers, which is the CLICK dispatcher: it
+   * returns without dispatching when `window.pointerDragged` is set
+   * (letc/addons/letc.js), a flag the resize handler raises
+   * (letc/addons/dom/events-handler.js, before its own `srcElement != window`
+   * guard) and which nothing clears but a pointerup or a keyup.
+   *
+   * A raise straight out of a click is safe — the pointerup that delivered it
+   * just cleared the flag. The create's raise is not: it happens after an
+   * await on the network, and a resize anywhere in that round trip sets the
+   * flag with nothing left to clear it. The raise is then dropped in silence,
+   * and the tour ends having built a workspace it never opens.
+   *
+   * So the value is READ at the moment it is needed instead of being relied on
+   * to have arrived. Both callers run while the step is still mounted —
+   * _nextStep is reached from the step's own hand-back, and _skipTour from a
+   * hotkey over a live tour — so `_created` is there to be read.
+   *
+   * @returns {Object|null} the workspace the step made, if it made one
+   */
+  _createdFromStep() {
+    const part = this.getPart && this.getPart(_a.content);
+    const step = part && part.children && part.children.last();
+    const ws = step && !(step.isDestroyed && step.isDestroyed()) && step._created;
+    return ws && ws.hub_id ? ws : null;
   }
 
   /**
