@@ -62,6 +62,11 @@ const TOURS = {
       kind: "tutorial_workspace",
       screens: 9,
       live_screens: 3,
+      // The last of those three RUNS but is not NUMBERED. It is the finish
+      // screen — the workspace, open, with confetti on it — and it is where the
+      // tour stops teaching rather than one more thing being taught. The badge
+      // counts eight because eight is how many the user is walked through.
+      uncounted_screens: 1,
       chrome: { rail: null, crumb: false },
     }],
   },

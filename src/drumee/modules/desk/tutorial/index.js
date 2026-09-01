@@ -117,6 +117,24 @@ class tutorial_main extends LetcBox {
   }
 
   /**
+   * How many of a step's screens the BADGE counts.
+   *
+   * Every screen it RUNS, less any tail the registry marks uncounted — today
+   * the finish screen, which is where the tour stops teaching rather than one
+   * more thing being taught. Only meaningful when the live tail runs at all: a
+   * preview or the full tour never reaches those screens, so there is nothing
+   * to leave out.
+   *
+   * @param {Object} step a TOURS step
+   * @returns {Number}
+   */
+  _countedScreensFor(step) {
+    const runs = this._screensFor(step);
+    const uncounted = this._canCreate() ? ~~step.uncounted_screens : 0;
+    return Math.max(1, runs - uncounted);
+  }
+
+  /**
    * Is this the run that is allowed to create a real workspace?
    *
    * The standalone tour, however it was reached. `full` is excluded by the
@@ -142,19 +160,20 @@ class tutorial_main extends LetcBox {
     // total and where each step starts — a step widget can see its own screens
     // and nothing else. Computed once here rather than derived per screen.
     //
-    // Through _screensFor, so a step whose tail is gated off is short by those
-    // screens in the TOTAL as well as in its own count. Miss that and the last
-    // callout of a six-screen run reads "STEP 6/8".
+    // TWO counts. `screen_count` is how many screens a step RUNS; the offsets
+    // and the total are what the badge COUNTS, and those differ by whatever the
+    // registry marks uncounted.
     //
-    // The live tail IS counted when it runs: the create form and the invite
-    // card are screens 7 and 8 of an eight-screen tour, numbered like the rest.
-    // They were briefly left out on the argument that a form is not a step —
-    // true of the form, false of the user, who is still being led somewhere and
-    // wants to know how far along that is.
-    const count = (s) => this._screensFor(s);
-    const total = steps.reduce((n, s) => n + count(s), 0);
+    // The create form and the invite card ARE counted — screens 7 and 8 of an
+    // eight-screen tour. They were briefly left out on the argument that a form
+    // is not a step, which is true of the form and false of the user, who is
+    // still being led somewhere and wants to know how far along that is. The
+    // finish screen is genuinely not one: nothing is being taught on it.
+    const runs = (s) => this._screensFor(s);
+    const counted = (s) => this._countedScreensFor(s);
+    const total = steps.reduce((n, s) => n + counted(s), 0);
     const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + count(s)), 0);
+    steps.reduce((n, s) => (offsets.push(n), n + counted(s)), 0);
 
     return steps.map((step, i) => {
       const widget = {
@@ -178,7 +197,7 @@ class tutorial_main extends LetcBox {
         // triggerHandlers({ service: 'next-step' }). A stray click now reaches
         // onUiEvent with no service at all and falls through to `default`.
         uiHandler: [this],
-        screen_count: count(step),
+        screen_count: runs(step),
         screen_offset: offsets[i],
         tour_screens: total,
         is_first: i === 0,
@@ -692,6 +711,10 @@ class tutorial_main extends LetcBox {
         // Kept for the exit: this is the workspace the tour is about to leave
         // the user in, and the only object that knows it is the step.
         if (ws.hub_id) this._createdWorkspace = ws;
+        // For the skins: the mock chat's own bubbles take the tint the product
+        // gives a workspace of this type (--chat-bubble-*), so the pane the tour
+        // finishes on is the colour the real one will be.
+        if (ws.area && this.el && this.el.dataset) this.el.dataset.area = ws.area;
         this._applyChrome({ rail: args.rail, crumb: !!args.crumb, desk: !!args.desk });
         break;
       }

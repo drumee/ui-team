@@ -161,6 +161,23 @@
     align-items: center;
     gap: 12px;
     margin-top: 8px;
+
+    // Scenery that answers a pointer. The pane is a mock and these three do
+    // nothing, but a row of buttons that stays perfectly still under the cursor
+    // reads as a picture rather than as the product — and this pane is the last
+    // thing the tour shows before handing the real one over.
+    > * {
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+  }
+
+  &__fp-cta:hover {
+    background: var(--primary-purple-40);
+  }
+
+  &__fp-ghost:hover {
+    background: var(--normal-bg-80);
   }
 
   &__fp-cta {
@@ -301,6 +318,14 @@
     background: var(--normal-bg-90);
   }
 
+  // The viewer's OWN messages, tinted by the workspace's type.
+  //
+  // --chat-bubble-* is the product's own set, one per area, and the tour's mock
+  // chat had picked `private` and kept it whatever workspace the user made. The
+  // host stamps the area on the root once one exists (see the `chrome` case in
+  // ../index.js), so the pane the tour finishes on is the colour the real one
+  // will be. `private` stays the default: it is what an internal workspace gets
+  // and what every tour without a created workspace has always shown.
   &__fp-chat-row[data-own="1"] &__fp-chat-bubble {
     background: var(--chat-bubble-private);
   }
@@ -692,6 +717,19 @@ $home-preview-h: 475px;
     @include drumee.typo($size: 13px, $line: 1.2);
     font-weight: 500;
     color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+// ── The chat's own bubbles follow the workspace's type ───────────────────────
+//
+// `data-area` is stamped on the tour's root by the host the moment a workspace
+// exists. Top-level rather than nested, because the attribute is on the ROOT and
+// the bubbles are several levels inside the pane.
+@each $area in (personal, private, public, share) {
+  .tutorial-main[data-area="#{$area}"] {
+    .tutorial__fp-chat-row[data-own="1"] .tutorial__fp-chat-bubble {
+      background: var(--chat-bubble-#{$area});
+    }
   }
 }
 

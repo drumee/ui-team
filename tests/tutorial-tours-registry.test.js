@@ -257,6 +257,7 @@ function hostStub(opt = {}) {
     // methodFn returns a FACTORY taking BACKDROPS; these two do not use it.
     _canCreate: methodFn("_canCreate()", "")(),
     _screensFor: methodFn("_screensFor(step)", "step")(),
+    _countedScreensFor: methodFn("_countedScreensFor(step)", "step")(),
     _buildWidgets: methodFn("_buildWidgets(t)", "t")(BACKDROP_STUB),
   };
 }
@@ -301,13 +302,16 @@ test("no step takes a backdrop; every step draws its own pane", () => {
 // Get help (by someone who already has workspaces). Both would create real
 // workspaces, silently, every time.
 
-test("the post-signup workspace run is nine screens, badge included", () => {
-  // The live tail is counted. It was briefly left out on the argument that a
-  // form is not a step of a walkthrough — true of the form, false of the user,
-  // who is still being led somewhere and wants to know how far along that is.
+test("the workspace run is nine screens and the badge counts eight", () => {
+  // The create form and the invite card ARE counted — screens 7 and 8. They
+  // were briefly left out on the argument that a form is not a step, which is
+  // true of the form and false of the user, who is still being led somewhere.
+  // The finish screen is genuinely not one: nothing is taught on it, so it runs
+  // without being numbered.
   const [step] = build(TOURS.workspace);
   assert.equal(step.screen_count, 9, "the form, the invite card and the finish");
-  assert.equal(step.tour_screens, 9, "and the pill counts them");
+  assert.equal(step.tour_screens, 8, "the finish screen is not a step");
+  assert.equal(TOURS.workspace.steps[0].uncounted_screens, 1);
 });
 
 test("the preview URL reaches the create form too", () => {
@@ -318,7 +322,7 @@ test("the preview URL reaches the create form too", () => {
   // is not a fresh signup, which is everyone testing it.
   const [step] = build(TOURS.workspace, { preview: 1 });
   assert.equal(step.screen_count, 9);
-  assert.equal(step.tour_screens, 9);
+  assert.equal(step.tour_screens, 8);
 });
 
 test("the workspace step inside `full` is mock-only", () => {
@@ -348,6 +352,22 @@ test("the registry declares live screens on the standalone tour only", () => {
       );
     }
   }
+});
+
+test("an uncounted tail only exists where a live one runs", () => {
+  // The finish screen runs but is not numbered. On a run that never reaches the
+  // live tail — a preview of `full`, any other tour — there is nothing to leave
+  // out, so counted and run must agree.
+  for (const [id, t] of Object.entries(TOURS)) {
+    if (id === "workspace") continue;
+    for (const step of t.steps) {
+      assert.ok(!step.uncounted_screens, `${id} marks screens uncounted with no live tail`);
+    }
+  }
+  const [inFull] = build(TOURS.full);
+  assert.equal(inFull.screen_count, inFull.tour_screens - build(TOURS.full)
+    .slice(1).reduce((n, w) => n + w.screen_count, 0),
+    "the workspace step inside full counts every screen it runs");
 });
 
 test("a step with no live_screens is untouched by the gate", () => {
