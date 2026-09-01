@@ -575,6 +575,16 @@ class tutorial_main extends LetcBox {
    * when the animation finishes (canvas-confetti src/confetti.js `done`), so
    * there is nothing to clean up and nothing left behind.
    *
+   * `.default || mod` is NOT defensive noise. canvas-confetti ships two builds
+   * and declares both — "main" is CommonJS (module.exports = fn) and "module"
+   * is ESM (export default fn). Webpack targets the web, where mainFields
+   * defaults to ['browser', 'module', 'main'], so it bundles the ESM build and
+   * hands this require a module NAMESPACE OBJECT: { create, default }. Calling
+   * that throws. Node's require() reads "main" and hands back a function, so
+   * the bare call worked in every test and in nothing the user could see —
+   * `confetti is not a function`, caught below, warned, and the tour ended with
+   * no confetti and no explanation. See tests/tutorial-confetti-interop.test.js.
+   *
    * Fired BEFORE the teardown: softDestroy fades for half a second, so the
    * confetti starts over the tour and carries on over the workspace it reveals
    * rather than beginning on an empty desk once everything has settled.
@@ -586,7 +596,8 @@ class tutorial_main extends LetcBox {
     if (this._celebrated || !this._createdWorkspace) return;
     this._celebrated = true;
     try {
-      const confetti = require('canvas-confetti');
+      const mod = require('canvas-confetti');
+      const confetti = mod.default || mod;
       const burst = (x, angle) => confetti({
         particleCount: 90,
         spread: 70,
