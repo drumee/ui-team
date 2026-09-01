@@ -542,7 +542,18 @@ function workspaceSwitcher(pfx, ui) {
     // 0.01 matches deskNewMenu, the one menu here that already passed it.
     duration: 0.01,
     opening: _e.click,
-    persistence: _a.once,
+    // Clicking a row does NOT close the panel. menu_topic closes on an item
+    // click only through _onItemClicked, whose switch falls to
+    // `default: this._closeItems()` for every persistence it does not name —
+    // `once` among them. `always` is the sole value that returns early, so it
+    // is what disables the auto-close. The "+ New" menu above already does
+    // this.
+    //
+    // The two other ways out are untouched, because neither reads persistence:
+    // a click outside (_onOutsideClick, bound to RADIO_CLICK in the widget's
+    // initialize) and the caret (onUiEvent -> _onTriggerClicked ->
+    // _triggerToggle -> _closeItems). So the panel cannot strand open.
+    persistence: _a.always,
     sys_pn: "wsmenu",
     // NO `service` here. The menu opens itself from its own onUiEvent when a
     // widget inside its trigger part raises an event — that is how
@@ -570,9 +581,25 @@ function workspaceSwitcher(pfx, ui) {
         className: `${pfx}__utility-tip`,
       },
     }),
+    // Figma 48:36991. Three stacked blocks, 12px apart: the current-workspace
+    // header, the scrolling list, and the pinned "New workspaces" button.
+    //
+    // The button is a SIBLING of the list, not a child of it — the frame lists
+    // it outside the 191px overflow-clip box, so it stays put while the list
+    // scrolls. That is why __ws-list, not __ws-menu, carries the max-height and
+    // the overflow (see the skin): a scroller wrapping both would carry the
+    // button off the bottom with the rows.
     items: Skeletons.Box.Y({
       className: `${pfx}__ws-menu`,
       kids: [
+        // Current workspace: icon + name + rename, then link / overflow.
+        // Fed by desk._renderWorkspaceMenu, which already resolves the open
+        // workspace and builds the area-tinted folder glyph for the rows.
+        Skeletons.Box.X({
+          className: `${pfx}__ws-head`,
+          sys_pn: "ws-head",
+          partHandler: ui,
+        }),
         // Fed by desk._renderWorkspaceMenu once desk.home resolves.
         Skeletons.Box.Y({
           className: `${pfx}__ws-list`,
@@ -580,7 +607,7 @@ function workspaceSwitcher(pfx, ui) {
           partHandler: ui,
         }),
         Skeletons.Button.Label({
-          ico: "addmenu-folder",
+          ico: "ph-plus",
           className: `${pfx}__ws-new`,
           label: LOCALE.NEW_WORKSPACE,
           service: "new-workspace",

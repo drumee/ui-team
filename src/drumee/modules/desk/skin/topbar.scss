@@ -1,5 +1,73 @@
 @use "mixins/drumee";
 
+// The workspace folder glyph, at whatever box size the caller needs.
+//
+// Recipe from desk/workspace-item — the one place that renders this icon
+// correctly. It is NOT a plain <svg> to stretch: media/grid/template/folder
+// emits a `.folder-shape` path whose AREA CLASS supplies the fill (the colour
+// is the fill, not a currentColor tint), an absolutely positioned `.badge`, and
+// a context-menu trigger. Every line below is load-bearing:
+//   - scaling the container alone drew an unfilled, clipped fragment;
+//   - an unsized `.badge` is an <svg> with no width/height, so it falls back to
+//     its INTRINSIC size and swallows the row — a failure this codebase has
+//     shipped before;
+//   - the trigger is a hover affordance for the file grid and has no business
+//     in a menu row.
+//
+// A mixin rather than a second copy: the switcher draws this glyph at two sizes
+// now (22px rows, 27px header), and the previous copy silently dropped the
+// badge and trigger rules — which is exactly the drift this prevents.
+//
+// $size is the square box; $art-h is the folder art's height inside it (the
+// source art is wider than it is tall, so it is not square).
+@mixin ws-folder-icon($size, $art-h) {
+  width: $size;
+  height: $size;
+  align-items: center;
+  display: flex !important;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: visible;
+  position: relative;
+
+  .media-grid__folder-art {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    width: $size;
+    height: $art-h;
+  }
+
+  .folder-shape {
+    width: $size;
+    height: $art-h;
+    fill: #885eff;
+
+    &.personal,
+    &.inner-folder { fill: var(--area-personal); }
+    &.public       { fill: var(--area-public); }
+    &.share,
+    &.dmz          { fill: var(--area-share); }
+    &.private      { fill: var(--area-private); }
+  }
+
+  .badge {
+    position: absolute;
+    bottom: -3px;
+    left: -3px;
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--grid-color-folder-badge);
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+  }
+
+  .media-context-menu__folder-trigger {
+    display: none !important;
+  }
+}
+
 .desk-module-topbar {
   // 43:23955: the top bar is a 30px row, TRANSPARENT, with r=8 and no bottom
   // border — it floats on the white canvas alongside the other rounded panels
@@ -1102,6 +1170,9 @@
       overflow: visible !important;
     }
 
+    // Chrome only — NOT a scroll container. The scrolling happens one level in,
+    // on the fed __ws-menu box, which owns the max-height. Bounding this card
+    // as well only clips __ws-menu below its own limit and buys nothing.
     .menu-topic-items,
     .menu-items {
       background-color: var(--normal-bg-elevated, #fff);
@@ -1151,9 +1222,6 @@
     }
   }
 
-  &__ws-list {
-    gap: 1px;
-  }
 
   // Group heading — "Workspaces" / "Personal". Small, uppercase and muted so
   // it labels the list without competing with the rows it introduces.
@@ -1204,57 +1272,7 @@
   }
 
   &__ws-item-icon {
-    width: 22px;
-    height: 22px;
-    // Sizing recipe copied from desk/workspace-item — the one place that
-    // renders this icon correctly. It is NOT a plain <svg> to stretch: the
-    // template emits a `.folder-shape` path whose AREA CLASS supplies the
-    // fill (the colour is the fill, not a currentColor tint) plus an absolutely
-    // positioned `.badge`. Scaling the container alone drew an unfilled,
-    // clipped fragment.
-    align-items: center;
-    display: flex !important;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: visible;
-    position: relative;
-
-    .media-grid__folder-art {
-      align-items: center;
-      display: flex;
-      justify-content: center;
-      position: relative;
-      width: 22px;
-      height: 18px;
-    }
-
-    .folder-shape {
-      width: 22px;
-      height: 18px;
-      fill: #885eff;
-
-      &.personal,
-      &.inner-folder { fill: var(--area-personal); }
-      &.public       { fill: var(--area-public); }
-      &.share,
-      &.dmz          { fill: var(--area-share); }
-      &.private      { fill: var(--area-private); }
-    }
-
-    .badge {
-      position: absolute;
-      bottom: -3px;
-      left: -3px;
-      width: 16px !important;
-      height: 16px !important;
-      color: var(--grid-color-folder-badge);
-      fill: currentColor;
-      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
-    }
-
-    .media-context-menu__folder-trigger {
-      display: none !important;
-    }
+    @include ws-folder-icon(22px, 18px);
   }
 
   &__ws-item-name {
@@ -1269,28 +1287,6 @@
     white-space: nowrap;
   }
 
-  // The tick on the OPEN workspace. It had no rule at all, and an <svg> with
-  // no width/height falls back to its intrinsic size — which rendered as a
-  // huge glyph swallowing the row.
-  //
-  // It only appears on the row whose hub_id matches Wm._curWorkspace, which is
-  // normally the first one and is only set once a workspace has actually been
-  // opened. That is why it looked intermittent and first-row-only: on a fresh
-  // desk no row is current, so nothing drew the tick at all.
-  &__ws-item-check {
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    flex: 0 0 auto;
-    margin-left: auto;
-    color: var(--primary-40);
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
   &__ws-empty {
     padding: 10px;
     font-size: 12px;
@@ -1298,11 +1294,141 @@
   }
 
   // Child of .menu-topic-items, which paints the surface — this only lays out.
+  // Header / list / button, 12px apart (Figma 48:36991). NOT the scroller: the
+  // button is pinned, so only the list between them moves — see __ws-list.
   &__ws-menu {
     width: 100%;
-    max-height: 60vh;
+    gap: 12px;
+  }
+
+  // ── Header: the open workspace (Figma 48:37074, 270x27) ───────────────
+  // No height here on purpose. The row is 27px because its children are, and
+  // the 12px below is padding — pinning the row to 27px instead makes that
+  // padding eat the CONTENT box, so a child asking for `height: 100%` gets 15px.
+  &__ws-head {
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    // The 12px below the row is the divider's own clearance: 12px, rule, 12px,
+    // and __ws-menu's gap supplies the second half.
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-muted);
+
+    // Empty until _renderWorkspaceMenu fills it (and cleared when there is no
+    // open workspace). Without this the border and the 39px of box would still
+    // be drawn over nothing.
+    &:empty {
+      display: none !important;
+    }
+  }
+
+  // The same glyph as the rows, at the header's 27px (Figma 48:37069 is a
+  // 27x27 box). 22px keeps the rows' 22:18 art ratio.
+  &__ws-head-icon {
+    @include ws-folder-icon(27px, 22px);
+  }
+
+  // Name in a bordered field with the rename pencil at its right edge.
+  &__ws-head-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 27px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 12px;
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+  }
+
+  &__ws-head-name-text {
+    min-width: 0;
+    font-family: "Geist", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--normal-fg-10);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__ws-head-edit {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-10);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__ws-head-actions {
+    align-items: center;
     gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  // 27px chips. The ⋯ one carries the grey fill in the Figma component itself
+  // (a rx=8 rect at black/5%), so it is a resting style here, not a hover.
+  // Inert for now — no service, hence no pointer and no hover.
+  &__ws-head-action {
+    width: 27px;
+    height: 27px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--normal-fg-10);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    // The ⋯ opens the workspace menu, so unlike its inert neighbour it says
+    // so. The grey fill is the Figma component's own resting style, not a
+    // hover — hence a DARKER step on hover rather than introducing one.
+    &--more {
+      background: var(--overlay-bg-05);
+      cursor: pointer;
+
+      &:hover {
+        background: var(--normal-bg-80);
+      }
+
+      // NO styling for the open state on purpose. setState still writes
+      // data-state="1" while the menu is up, and the menu's own destroy still
+      // clears it — so the hook is there if a lit look is wanted later. It is
+      // simply not drawn.
+    }
+  }
+
+  // THE scroll container for the switcher: _renderWorkspaceMenu feeds every
+  // workspace with no cap and the rows are 36px, so past ~13 workspaces the
+  // list is taller than 60vh and this is what moves. The card outside it stays
+  // `overflow: visible` — bounding that too would just clip this box below its
+  // own max-height, and would scroll the card's border out of view with it.
+  //
+  // The scroll sits HERE rather than on __ws-menu so the pinned "New
+  // workspaces" button, a sibling below, does not travel with the rows.
+  &__ws-list {
+    gap: 1px;
+    max-height: 60vh;
     overflow-y: auto;
+    // Scrollable, but with no scrollbar drawn. The three properties are one
+    // idiom (Firefox / old Edge / WebKit-Blink) — dropping any one of them
+    // puts the bar back in that engine. Same form as __user-menu-items.
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   // Footer action. Separated by a rule and given the full menu width so it
@@ -1310,29 +1436,40 @@
   // Footer action. Full-bleed to the surface edges (the menu's own padding is
   // 6px, hence the negative margin) with a rule above, so it reads as an
   // action ON the list rather than another workspace IN it.
+  // Figma 48:37026 "Button Lightmode", 270x36. A SOLID primary button now, not
+  // the old bottom-rule text link — so it no longer bleeds past the card's
+  // padding (the negative margins and the 0 0 5px 5px radius are gone with it)
+  // and it no longer scrolls, being a sibling of __ws-list rather than a row
+  // inside it.
   &__ws-new {
     display: flex !important;
     flex-direction: row !important;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
     min-height: 36px;
-    padding: 8px 10px;
-    margin: 6px -6px -6px;
-    border-top: 1px solid var(--border-muted);
-    border-radius: 0 0 5px 5px;
+    padding: 8px 24px;
+    border-radius: 8px;
     cursor: pointer;
     font-family: "Geist", sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--primary-40);
+    line-height: 20px;
+    background: var(--primary-50);
+    color: var(--white, #fff);
 
     svg {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
     }
 
+    // The frame draws no hover. --primary-40 is the token's own brighter
+    // sibling (#5950ff over #433cc5), which keeps the state inside the ramp
+    // instead of inventing a shade.
     &:hover {
-      background: var(--radio-on-bg);
+      background: var(--primary-40);
     }
   }
 

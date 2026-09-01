@@ -302,6 +302,11 @@ function runManageAccess({ isShowSettings }) {
   const ctx = {
     isShowSettings,
     canUpload: () => true,
+    // External workspace. The tour teaches secure-share LINKS, so the handler
+    // fires it on that branch only — an internal (private) workspace opens the
+    // members panel, which has no links in it. See rail-access-panel.test.js
+    // for the branch itself; this suite stays about the open/close asymmetry.
+    _manageAccessIsInternal: () => false,
     openManageAccess() { calls.open++; },
   };
   const fakeRequire = () => ({ fire: (id) => calls.fire.push(id) });
