@@ -1826,10 +1826,16 @@ class desk_module extends LetcBox {
           // Rendering it everywhere offered a link that does not exist for most
           // workspaces. The ⋯ beside it is NOT gated — rename, duplicate and
           // delete apply to every workspace.
+          //
+          // A Button, not an Image.Svg: image_svg views raise no ui event, so a
+          // service on one would never reach a handler — the same reason the ⋯
+          // beside it had to become one.
           [_a.share, _a.dmz].includes(curRow.area)
-            ? Skeletons.Image.Svg({
+            ? Skeletons.Button.Svg({
                 className: `${cn}__ws-head-action`,
                 ico: "apps-link-simple",
+                service: "workspace-access",
+                uiHandler: [this],
               })
             : null,
           // A real Button: an Image.Svg raises no ui event, so the ⋯ could
@@ -4904,7 +4910,14 @@ class desk_module extends LetcBox {
         return this._railTab(_a.task);
       case "rail-meet":
         return this._railTab("meeting");
+      // The rail's Access and the switcher header's link icon do the identical
+      // thing — hand `folder-manage-access` to the active workspace window,
+      // which routes an external workspace to the secure-share panel. Two
+      // service names, one implementation: the header's icon is shown only for
+      // share/dmz, so it always lands on the link panel, while the rail is
+      // global and can also reach the members panel.
       case "rail-access":
+      case "workspace-access":
         return this._railAccess();
 
       // Mute popup CARDS for every workspace — an empty hub_id is the global

@@ -1384,18 +1384,24 @@
     justify-content: center;
     border-radius: 8px;
     color: var(--normal-fg-10);
+    // Both actions open something now — the link opens Manage access, the ⋯
+    // the workspace menu — so the affordance belongs on the shared rule.
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
 
     svg {
       width: 16px;
       height: 16px;
     }
 
-    // The ⋯ opens the workspace menu, so unlike its inert neighbour it says
-    // so. The grey fill is the Figma component's own resting style, not a
-    // hover — hence a DARKER step on hover rather than introducing one.
+    // The ⋯ carries the Figma component's own resting grey — that fill is its
+    // normal state, not a hover — so its hover has to be a DARKER step rather
+    // than the one introduced above.
     &--more {
       background: var(--overlay-bg-05);
-      cursor: pointer;
 
       &:hover {
         background: var(--normal-bg-80);

@@ -200,16 +200,16 @@ test("an admin sees the whole set", () => {
 
 // ── the trigger ─────────────────────────────────────────────────────────────
 
-test("the ⋯ is a real button carrying the service; the link icon stays inert", () => {
-  const head = slice(DESK, "  _feedWorkspaceHead(head, rows, cur) {");
-  const more = head.match(/ws-head-action--more[\s\S]{0,260}/);
-  assert.ok(more, "--more row not found");
-  assert.match(more[0], /service:\s*"workspace-menu"/);
-  assert.match(head, /Skeletons\.Button\.Svg\(\{\s*className: `\$\{cn\}__ws-head-action \$\{cn\}__ws-head-action--more`/,
-    "must be a Button.Svg — an Image.Svg raises no ui event");
-  // The link icon has no behaviour agreed yet, so it must NOT have become one.
-  const link = head.match(/__ws-head-action`[\s\S]{0,200}/);
-  assert.ok(link && !/service:/.test(link[0]), "the link icon stays inert");
+test("both header actions are real Buttons carrying their service", () => {
+  // Neither can be an Image.Svg: image_svg views raise no ui event, so a
+  // service on one would never reach a handler.
+  const body = slice(DESK, "  _feedWorkspaceHead(head, rows, cur) {");
+  const more = body.slice(body.indexOf("ph-dots-three") - 400, body.indexOf("ph-dots-three") + 200);
+  assert.match(more, /Skeletons\.Button\.Svg/);
+  assert.match(more, /service:\s*"workspace-menu"/);
+  const link = body.slice(body.indexOf("apps-link-simple") - 500, body.indexOf("apps-link-simple") + 200);
+  assert.match(link, /Skeletons\.Button\.Svg/);
+  assert.match(link, /service:\s*"workspace-access"/);
 });
 
 test("the desk routes workspace-menu to the builder", () => {
@@ -218,9 +218,14 @@ test("the desk routes workspace-menu to the builder", () => {
   assert.match(c.slice(0, 200), /_toggleWorkspaceMenu\(cmd\)/);
 });
 
-test("the ⋯ now looks clickable", () => {
+test("the ⋯ keeps its resting fill and a DARKER hover", () => {
+  // Its grey is the Figma component's normal state, not a hover — so it cannot
+  // use the shared hover introduced on the base rule, or hovering would look
+  // identical to resting. The pointer itself now comes from that shared rule
+  // (asserted separately), which is why it is not expected here.
   const rule = slice(SCSS, "    &--more {");
-  assert.match(rule, /cursor:\s*pointer/, "it does something now, so it must say so");
+  assert.match(rule, /background:\s*var\(--overlay-bg-05\)/, "resting fill lost");
+  assert.match(rule, /&:hover[\s\S]*--normal-bg-80/, "hover must differ from resting");
 });
 
 // ── toggle + active state ───────────────────────────────────────────────────
@@ -364,4 +369,45 @@ for (const area of ["private", "public", "personal", "", undefined]) {
 test("a personal workspace (home-root folder) hides it too", () => {
   const a = head({ area: "personal", filetype: "folder" });
   assert.ok(!a.some(isLink));
+});
+
+// ── the link opens Manage access ────────────────────────────────────────────
+
+test("the link is a Button carrying a service — an Image.Svg raises nothing", () => {
+  // Same reason the ⋯ had to become a Button: image_svg views raise no ui
+  // event, so a service on one would never reach a handler.
+  const body = slice(DESK, "  _feedWorkspaceHead(head, rows, cur) {");
+  const link = body.slice(body.indexOf("apps-link-simple") - 400,
+                          body.indexOf("apps-link-simple") + 200);
+  assert.match(link, /Skeletons\.Button\.Svg/, "still an inert Image.Svg");
+  assert.match(link, /service:\s*"workspace-access"/);
+  assert.match(link, /uiHandler:\s*\[this\]/, "must reach the desk");
+});
+
+test("workspace-access shares the rail's handler, not a second copy", () => {
+  // The rail's Access and this icon do the identical thing: hand
+  // folder-manage-access to the active workspace window. One method, two
+  // service names — a second implementation is what drifts.
+  const c = DESK.slice(DESK.indexOf('case "workspace-access":'));
+  assert.match(c.slice(0, 200), /_railAccess\(\)/);
+  const rail = DESK.slice(DESK.indexOf('case "rail-access":'));
+  assert.match(rail.slice(0, 200), /_railAccess\(\)/);
+});
+
+test("the affordance is on the SHARED rule, not just the ⋯", () => {
+  // The first version of this test sliced the whole __ws-head-action block,
+  // which contains the nested &--more — so it passed on --more's cursor while
+  // the link, the thing under test, had none.
+  const rule = slice(SCSS, "  &__ws-head-action {");
+  const base = rule.slice(0, rule.indexOf("&--more"));
+  assert.match(base, /cursor:\s*pointer/, "the link has no pointer cursor");
+  assert.match(base, /&:hover/, "and no hover feedback");
+});
+
+test("it is still external-only, so it cannot open a link panel that has none", () => {
+  // The panel it opens mints secure-share links. An internal workspace has no
+  // such link — and folder/index.js routes `private` to the members panel
+  // instead — so the icon must stay off there.
+  assert.ok(!head({ area: "private" }).some(isLink));
+  assert.ok(head({ area: "share" }).some(isLink));
 });
