@@ -29,10 +29,11 @@ const folderArt = require("media/grid/template/folder");
 /**
  * One utility icon. `dot` paints the unread pip the design shows on the bell.
  *
- * Inert, always. The last screen does not make these work — it hands the whole
- * bar back to the desk, whose own topbar is mounted underneath and does all of
- * this for real (see _applyChrome). A mock that half-works is worse than one
- * that plainly does not.
+ * Inert, always, on every screen. This bar is a DRAWING of the real one, which
+ * is mounted underneath it — the tour lives in the desk's `overlay` part, a
+ * sibling of desk-module-topbar__main — and the tour ends by coming down off it
+ * rather than by making the drawing work. A mock that half-works is worse than
+ * one that plainly does not.
  */
 const utility = (p, ico, opt = {}) =>
   Skeletons.Box.Y({ active: 0,

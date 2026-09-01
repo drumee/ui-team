@@ -70,6 +70,15 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
   };
   const deps = {
     Tours: { markSeen: (id) => log.push(`markSeen:${id}`) },
+    // Skip lands the user in the workspace the tour made, if it made one, and
+    // throws the confetti over it. Both are real here rather than stubbed, so
+    // the no-workspace case below proves the GUARDS hold rather than proving a
+    // stand-in does nothing.
+    Wm: { loadWorkspace: (ws) => log.push(`loadWorkspace:${ws.hub_id}`) },
+    require: (mod) => {
+      assert.equal(mod, "canvas-confetti");
+      return () => log.push("confetti");
+    },
     flaggedIds: () => flagged,
     SERVICE: { drumate: { update_settings: "drumate.update_settings" } },
     Visitor: { id: "u_test" },
@@ -84,10 +93,15 @@ function makeHost({ tourId = "migrate", flagged = ["workspace", "folder_task", "
     // eslint-disable-next-line no-new-func
     new Function(
       "Tours", "flaggedIds", "SERVICE", "Visitor", "SVC_OPT", "localStorage",
+      "Wm", "require", "assert",
       `return function () {${methodBody(HOST_SRC, sig)}};`,
-    )(deps.Tours, deps.flaggedIds, deps.SERVICE, deps.Visitor, deps.SVC_OPT, deps.localStorage)
-      .bind(host);
+    )(
+      deps.Tours, deps.flaggedIds, deps.SERVICE, deps.Visitor, deps.SVC_OPT,
+      deps.localStorage, deps.Wm, deps.require, assert,
+    ).bind(host);
 
+  host._openCreated = bind("_openCreated()");
+  host._celebrate = bind("_celebrate()");
   return { host, log, store, skip: bind("_skipTour()"), done: bind("_enterWorkspace()") };
 }
 
@@ -127,6 +141,19 @@ test("Done on `full` still marks every flagged tour — S7 regression cover", ()
     ["markSeen:workspace", "markSeen:folder_task", "markSeen:share", "markSeen:migrate"],
   );
   assert.ok(log.some((l) => l.includes("tutorial_done")));
+});
+
+test("skip still lands the user in the workspace the tour made", () => {
+  // Escape means "I am done with the tour", not "undo what I just built". The
+  // alternative is the desk home with a new row in the sidebar and no sign of
+  // where it went — the same ending the tour has when it runs to the end.
+  const { host, log, skip } = makeHost({ tourId: "workspace" });
+  host._createdWorkspace = { hub_id: "h_1", filename: "Design" };
+  skip();
+  assert.deepEqual(log, ["loadWorkspace:h_1", "confetti", "confetti", "softDestroy"]);
+  // Opened BEFORE the teardown, so the fade reveals a workspace already there
+  // rather than a blank desk that fills in afterwards.
+  assert.ok(log.indexOf("loadWorkspace:h_1") < log.indexOf("softDestroy"));
 });
 
 test("skip and Done are different code paths, not one calling the other", () => {

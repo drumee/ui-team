@@ -117,24 +117,6 @@ class tutorial_main extends LetcBox {
   }
 
   /**
-   * How many of a step's screens the BADGE counts.
-   *
-   * Every screen it RUNS, less any tail the registry marks uncounted — today
-   * the finish screen, which is where the tour stops teaching rather than one
-   * more thing being taught. Only meaningful when the live tail runs at all: a
-   * preview or the full tour never reaches those screens, so there is nothing
-   * to leave out.
-   *
-   * @param {Object} step a TOURS step
-   * @returns {Number}
-   */
-  _countedScreensFor(step) {
-    const runs = this._screensFor(step);
-    const uncounted = this._canCreate() ? ~~step.uncounted_screens : 0;
-    return Math.max(1, runs - uncounted);
-  }
-
-  /**
    * Is this the run that is allowed to create a real workspace?
    *
    * The standalone tour, however it was reached. `full` is excluded by the
@@ -160,20 +142,17 @@ class tutorial_main extends LetcBox {
     // total and where each step starts — a step widget can see its own screens
     // and nothing else. Computed once here rather than derived per screen.
     //
-    // TWO counts. `screen_count` is how many screens a step RUNS; the offsets
-    // and the total are what the badge COUNTS, and those differ by whatever the
-    // registry marks uncounted.
-    //
-    // The create form and the invite card ARE counted — screens 7 and 8 of an
-    // eight-screen tour. They were briefly left out on the argument that a form
-    // is not a step, which is true of the form and false of the user, who is
-    // still being led somewhere and wants to know how far along that is. The
-    // finish screen is genuinely not one: nothing is being taught on it.
+    // Every screen a step RUNS is a screen the badge counts — including the
+    // create form and the invite card, screens 7 and 8 of an eight-screen tour.
+    // Those were briefly left out on the argument that a form is not a step,
+    // which is true of the form and false of the user, who is still being led
+    // somewhere and wants to know how far along that is. (There was also a
+    // ninth, uncounted finish screen; it is gone — the tour now ends by opening
+    // the workspace it made rather than by announcing that it did.)
     const runs = (s) => this._screensFor(s);
-    const counted = (s) => this._countedScreensFor(s);
-    const total = steps.reduce((n, s) => n + counted(s), 0);
+    const total = steps.reduce((n, s) => n + runs(s), 0);
     const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + counted(s)), 0);
+    steps.reduce((n, s) => (offsets.push(n), n + runs(s)), 0);
 
     return steps.map((step, i) => {
       const widget = {
@@ -284,14 +263,6 @@ class tutorial_main extends LetcBox {
   /**
    * Put the shell into the context the current step is teaching.
    *
-   * A SCREEN may override the step's answer, and one does: the workspace tour
-   * declares the org-home chrome — no workspace tabs, nothing named in the
-   * topbar — because for eight of its nine screens no workspace exists. On the
-   * ninth one does, and the frame shows the full rail with Files lit and the
-   * new workspace in the breadcrumb. The registry cannot express that: it is
-   * per-STEP, and this tour is one step whose context changes half way
-   * through.
-   *
    * The rail and the breadcrumb are NOT constant across a tour: `full` opens on
    * the create-workspace dialog, where no workspace exists — so the rail has no
    * workspace tabs and the topbar names nothing — and then spends every later
@@ -304,34 +275,9 @@ class tutorial_main extends LetcBox {
    * is the slot's CONTENTS — feeding the container itself back in would nest a
    * second __sb-nav inside the first.
    */
-  _applyChrome(override) {
+  _applyChrome() {
     const step = (this._tour.steps || [])[this._stepIndex];
-    const { rail, crumb, desk } = override || stepChrome(step);
-
-    // THE DESK'S OWN CHROME, not a drawing of it.
-    //
-    // The tour mounts in the desk's `overlay` part, which is a SIBLING of the
-    // real sidebar and topbar inside __body and covers them. So the last screen
-    // does not render a copy of that chrome — it gets out of its way: the
-    // tour's rail and topbar are hidden, the layout goes transparent and
-    // click-through, and what shows is the actual desk-module-sidebar__main and
-    // desk-module-topbar__main, already mounted and already working.
-    //
-    // Rendering a copy was the alternative and it is a trap: those composers
-    // declare sys_pn parts (utility-cluster, activity-count-top, sidebar-avatar)
-    // against the desk, so a second copy would hijack the desk's own references
-    // and then destroy them with the tour.
-    if (this.el && this.el.dataset) this.el.dataset.chrome = desk ? 'desk' : '';
-    if (desk) {
-      // The real rail can only show the workspace's tabs if the workspace is
-      // open, so this is where it opens — behind the tour, before the chrome it
-      // drives is revealed.
-      this._openCreated();
-      this._fitToPane();
-      return;
-    }
-    this._fitToPane(false);
-
+    const { rail, crumb } = stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
     const topbar = require('./skeleton/topbar');
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
@@ -344,49 +290,6 @@ class tutorial_main extends LetcBox {
       crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
     ));
     this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this)));
-  }
-
-  /**
-   * Pin the layout over the desk's own workspace pane.
-   *
-   * With the tour's rail and topbar hidden, its content pane starts at the left
-   * edge of __body — which is where the REAL sidebar is. It sat over the rail it
-   * had just uncovered and ran off the bottom-right, because the box it was
-   * filling is the whole desk body and the box it should fill is the part of it
-   * the workspace occupies.
-   *
-   * Measured rather than reproduced. The desk's pane geometry depends on things
-   * this widget has no business tracking — the rail's collapsed or pinned width,
-   * the topbar's height, the panel containers either side — and
-   * `.desk-module__wm-container` already is the answer to all of them. Copying
-   * the numbers would be a second source of truth that drifts the first time
-   * someone pins the rail.
-   *
-   * Offsets are relative to the tour's own root, which is the positioned
-   * ancestor the layout resolves against.
-   *
-   * @param {Boolean} [on=true] false clears the pin and hands the layout back
-   *   to its own `inset: 0`.
-   */
-  _fitToPane(on = true) {
-    const layout = this.el && this.el.querySelector('.tutorial-main__layout');
-    if (!layout) return;
-    if (!on) {
-      layout.style.left = '';
-      layout.style.top = '';
-      layout.style.width = '';
-      layout.style.height = '';
-      return;
-    }
-    const pane = document.querySelector('.desk-module__wm-container');
-    if (!pane || !this.el) return;
-    const p = pane.getBoundingClientRect();
-    const host = this.el.getBoundingClientRect();
-    if (!p.width || !p.height) return;
-    layout.style.left = `${Math.round(p.left - host.left)}px`;
-    layout.style.top = `${Math.round(p.top - host.top)}px`;
-    layout.style.width = `${Math.round(p.width)}px`;
-    layout.style.height = `${Math.round(p.height)}px`;
   }
 
   /**
@@ -434,11 +337,6 @@ class tutorial_main extends LetcBox {
       this._resizeTimer = setTimeout(() => {
         if (this.isDestroyed && this.isDestroyed()) return;
         this._applySize();
-        // The desk's pane moved with the window, so the pin has to be retaken
-        // before anything is measured against it.
-        if (this.el && this.el.dataset && this.el.dataset.chrome === 'desk') {
-          this._fitToPane();
-        }
         this.ensurePart('spotlight').then((s) => s && s.reflow && s.reflow());
       }, REFLOW_MS);
     };
@@ -641,11 +539,8 @@ class tutorial_main extends LetcBox {
     // Escape means "I am done with the tour", not "undo what I just built" —
     // and the alternative is the desk home with a new row in the sidebar and
     // no sign of where it went.
-    if (this._createdWorkspace && this._createdWorkspace.hub_id) {
-      try {
-        if (typeof Wm !== 'undefined') Wm.loadWorkspace(this._createdWorkspace);
-      } catch (e) { /* the tour still comes down */ }
-    }
+    this._openCreated();
+    this._celebrate();
     this.softDestroy();
   }
 
@@ -665,15 +560,60 @@ class tutorial_main extends LetcBox {
    */
   _enterCreated() {
     this._openCreated();
+    this._celebrate();
     return this._enterWorkspace();
   }
 
   /**
-   * Open the workspace the tour made, if it has not been opened already.
+   * Throw the confetti over the workspace the tour just made.
    *
-   * loadWorkspace early-returns when the descriptor is already the current
-   * workspace, so calling this on the finish screen AND again on the way out
-   * costs nothing the second time.
+   * The MODULE-LEVEL confetti(), not create() — and that is the whole point.
+   * create() binds to a canvas this widget owns, and this widget is about to be
+   * destroyed; the celebration has to outlive it, because what it is
+   * celebrating is arriving somewhere the tour is not. The global one appends
+   * its own fixed, pointer-events:none canvas to <body> and removes it again
+   * when the animation finishes (canvas-confetti src/confetti.js `done`), so
+   * there is nothing to clean up and nothing left behind.
+   *
+   * Fired BEFORE the teardown: softDestroy fades for half a second, so the
+   * confetti starts over the tour and carries on over the workspace it reveals
+   * rather than beginning on an empty desk once everything has settled.
+   *
+   * Two bursts from the lower corners, the way the frame scatters them across
+   * the whole pane rather than out of one point.
+   */
+  _celebrate() {
+    if (this._celebrated || !this._createdWorkspace) return;
+    this._celebrated = true;
+    try {
+      const confetti = require('canvas-confetti');
+      const burst = (x, angle) => confetti({
+        particleCount: 90,
+        spread: 70,
+        startVelocity: 55,
+        origin: { x, y: 0.9 },
+        angle,
+        scalar: 0.9,
+        // Over the tour while it fades, and over the desk after. The overlay
+        // the tour lives in sits at 10010; the default 100 would spend the
+        // fade behind it.
+        zIndex: 10020,
+      });
+      burst(0.15, 60);
+      burst(0.85, 120);
+    } catch (e) {
+      this.warn && this.warn('[tutorial] confetti failed', e);
+    }
+  }
+
+  /**
+   * Open the workspace the tour made, if it made one.
+   *
+   * The descriptor is whatever libs/create-workspace normalised, and it is
+   * already in the shape loadWorkspace wants for BOTH kinds: a hub is
+   * `{hub_id, ...}`, and a personal workspace is the home-root folder row
+   * (`{hub_id: Visitor.id, nid, area: personal}`) — the same explicit shape
+   * desk's _workspaceTarget builds, so the folder opens rather than Home.
    */
   _openCreated() {
     const ws = this._createdWorkspace;
@@ -701,28 +641,14 @@ class tutorial_main extends LetcBox {
       case 'end-tour':
         this._skipTour();
         break;
-      // A screen asking for different chrome than its step declared — see
-      // _applyChrome. The workspace it names is the one just created, so the
-      // breadcrumb can show it rather than the placeholder.
-      case 'chrome': {
+      // The step made a workspace. The host is what opens it and celebrates,
+      // because both outlive the step — the tour is coming down around them.
+      case 'workspace-created': {
         const ws = args.workspace || {};
-        if (ws.filename) this.model.set('mock_workspace', ws.filename);
-        if (ws.area) this.model.set('mock_area', ws.area);
-        // Kept for the exit: this is the workspace the tour is about to leave
-        // the user in, and the only object that knows it is the step.
         if (ws.hub_id) this._createdWorkspace = ws;
-        // For the skins: the mock chat's own bubbles take the tint the product
-        // gives a workspace of this type (--chat-bubble-*), so the pane the tour
-        // finishes on is the colour the real one will be.
-        if (ws.area && this.el && this.el.dataset) this.el.dataset.area = ws.area;
-        this._applyChrome({ rail: args.rail, crumb: !!args.crumb, desk: !!args.desk });
         break;
       }
 
-      // The rail's five tabs, live on the finish screen. Same service names the
-      // desk uses for the same five entries, so this is the product's rail
-      // behaving as the product's rail — it just has to open the workspace
-      // first, because at this moment the tour is still covering it.
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));
         break;

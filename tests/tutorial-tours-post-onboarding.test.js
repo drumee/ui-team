@@ -314,6 +314,8 @@ test("workspace opens on the home canvas, then walks the dialog", () => {
   // Eight in the registry, of which the last two are the live tail that only
   // the post-signup run gets (see _screensFor in the host). Six is what the
   // tour SHOWS everyone, and what the badge counts everywhere else.
+  // (The tail was briefly three, the last being a finish screen. That is gone:
+  // the tour ends on the invite card and opens the workspace it made.)
   const reg = TOURS.workspace.steps[0];
   assert.equal(reg.screens - ~~reg.live_screens, 6);
   const ui = widget({ tour_screens: 6 });
@@ -336,12 +338,11 @@ test("workspace opens on the home canvas, then walks the dialog", () => {
   // The live tail is the END of the table, so the mock screens keep their
   // indices whether or not this run gets them.
   const live = rows.slice(rows.length - ~~reg.live_screens);
-  assert.equal(live.length, 3);
+  assert.equal(live.length, 2);
   assert.match(live[0], /live: true/, "the create form is the seventh screen");
-  assert.match(live[1], /invite: true/, "the invite card is the eighth");
-  assert.match(live[2], /congrats: true/, "and the finish is the ninth");
+  assert.match(live[1], /invite: true/, "the invite card is the eighth and last");
   assert.ok(
-    !/live: true|invite: true|congrats: true/.test(rows.slice(0, 6).join("")),
+    !/live: true|invite: true/.test(rows.slice(0, 6).join("")),
     "and nothing before them is live",
   );
   assert.match(rows[0], /home: true/);

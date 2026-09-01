@@ -241,7 +241,7 @@ const BACKDROP_STUB = {
 };
 
 /**
- * A host stand-in carrying the three methods that decide a step's payload, so
+ * A host stand-in carrying the methods that decide a step's payload, so
  * the gate is exercised through the real source rather than a restatement.
  *
  * @param {Object} [opt]
@@ -257,7 +257,6 @@ function hostStub(opt = {}) {
     // methodFn returns a FACTORY taking BACKDROPS; these two do not use it.
     _canCreate: methodFn("_canCreate()", "")(),
     _screensFor: methodFn("_screensFor(step)", "step")(),
-    _countedScreensFor: methodFn("_countedScreensFor(step)", "step")(),
     _buildWidgets: methodFn("_buildWidgets(t)", "t")(BACKDROP_STUB),
   };
 }
@@ -302,16 +301,20 @@ test("no step takes a backdrop; every step draws its own pane", () => {
 // Get help (by someone who already has workspaces). Both would create real
 // workspaces, silently, every time.
 
-test("the workspace run is nine screens and the badge counts eight", () => {
+test("the workspace run is eight screens, and the badge counts all eight", () => {
   // The create form and the invite card ARE counted — screens 7 and 8. They
   // were briefly left out on the argument that a form is not a step, which is
   // true of the form and false of the user, who is still being led somewhere.
-  // The finish screen is genuinely not one: nothing is taught on it, so it runs
-  // without being numbered.
+  //
+  // There was also a ninth, deliberately UNCOUNTED finish screen. It is gone:
+  // the tour now ends on the invite card and lands the user in the workspace it
+  // made. So run and counted are the same number again, and nothing in the
+  // registry may reintroduce the split silently.
   const [step] = build(TOURS.workspace);
-  assert.equal(step.screen_count, 9, "the form, the invite card and the finish");
-  assert.equal(step.tour_screens, 8, "the finish screen is not a step");
-  assert.equal(TOURS.workspace.steps[0].uncounted_screens, 1);
+  assert.equal(step.screen_count, 8, "six mock screens, the form, the invite card");
+  assert.equal(step.tour_screens, 8, "and every one of them is numbered");
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.doesNotMatch(host, /uncounted_screens/, "the uncounted mechanism is gone, not dormant");
 });
 
 test("the preview URL reaches the create form too", () => {
@@ -321,7 +324,7 @@ test("the preview URL reaches the create form too", () => {
   // presses Create. Gating it only made the feature unreachable for anyone who
   // is not a fresh signup, which is everyone testing it.
   const [step] = build(TOURS.workspace, { preview: 1 });
-  assert.equal(step.screen_count, 9);
+  assert.equal(step.screen_count, 8);
   assert.equal(step.tour_screens, 8);
 });
 
@@ -342,7 +345,7 @@ test("the workspace step inside `full` is mock-only", () => {
 });
 
 test("the registry declares live screens on the standalone tour only", () => {
-  assert.equal(TOURS.workspace.steps[0].live_screens, 3);
+  assert.equal(TOURS.workspace.steps[0].live_screens, 2);
   for (const [id, t] of Object.entries(TOURS)) {
     if (id === "workspace") continue;
     for (const step of t.steps) {
@@ -352,22 +355,6 @@ test("the registry declares live screens on the standalone tour only", () => {
       );
     }
   }
-});
-
-test("an uncounted tail only exists where a live one runs", () => {
-  // The finish screen runs but is not numbered. On a run that never reaches the
-  // live tail — a preview of `full`, any other tour — there is nothing to leave
-  // out, so counted and run must agree.
-  for (const [id, t] of Object.entries(TOURS)) {
-    if (id === "workspace") continue;
-    for (const step of t.steps) {
-      assert.ok(!step.uncounted_screens, `${id} marks screens uncounted with no live tail`);
-    }
-  }
-  const [inFull] = build(TOURS.full);
-  assert.equal(inFull.screen_count, inFull.tour_screens - build(TOURS.full)
-    .slice(1).reduce((n, w) => n + w.screen_count, 0),
-    "the workspace step inside full counts every screen it runs");
 });
 
 test("a step with no live_screens is untouched by the gate", () => {
@@ -542,8 +529,9 @@ test("the workspace step has ONE way forward, so a new screen cannot be orphaned
   // screens' own controls — Send, Skip, Invite later, the ✕ — called an
   // `_endTour` that went straight to the host and ended the tour. That was true
   // while the invite card was the last screen, and silently wrong the moment a
-  // screen was added after it: the finish screen could not be reached by any
-  // route, and nothing failed to say so.
+  // screen was added after it — one was, and it could not be reached by any
+  // route, and nothing failed to say so. The invite card is the last screen
+  // again; this stays, because that is exactly the state the trap was set in.
   //
   // So: exactly one place hands the tour back, and it is the one that checks
   // whether there is a screen left first.
@@ -569,30 +557,6 @@ test("the workspace step has ONE way forward, so a new screen cannot be orphaned
   assert.doesNotMatch(src, /this\._endTour\(/, "the second path is gone, not renamed");
 });
 
-test("a screen may override its step's chrome, and one does", () => {
-  // The registry decides chrome per STEP, and this tour is ONE step declaring
-  // the org-home shell: no workspace tabs, nothing named in the topbar. True
-  // for eight of its nine screens, and stale on the ninth — by then screen 7
-  // has made a workspace and the user is looking at it.
-  const step = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
-  );
-  const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
-  const rows = table.split(/^  \{/m).slice(1);
-  assert.ok(
-    !rows.slice(0, -1).some((r) => /chrome:/.test(r)),
-    "only the finish screen overrides — the rest have no workspace yet",
-  );
-  assert.match(step, /service:\s*'chrome'/);
-  const host = readFileSync(HOST_PATH, "utf8");
-  assert.match(host, /case 'chrome':/);
-  assert.match(
-    host,
-    /_applyChrome\(override\)[\s\S]{0,220}override \|\| stepChrome\(step\)/,
-    "a screen's answer must win over its step's",
-  );
-});
-
 test("Dept. belongs to the org-home rail, not the workspace one", () => {
   // The desk's own createRailNav is Files/Chat/Task/Meet/Access and nothing
   // else, and 176:42043 shows the same five. Dept. is org chrome — it used to
@@ -607,97 +571,66 @@ test("Dept. belongs to the org-home rail, not the workspace one", () => {
   );
 });
 
-test("the tour leaves the user IN the workspace it made", () => {
-  // Nothing else opens it. The create broadcasts workspace:refresh, and the
+test("the tour leaves the user IN the workspace it made, with confetti", () => {
+  // This is the ENDING now — there is no finish screen announcing it. Coming
+  // off the invite card (sent, skipped, closed, or the personal card's "Invite
+  // later") has to put the user inside the workspace, or the tour ends on the
+  // desk home with a new row in a list and no sign of where it went.
+  //
+  // Nothing else opens it: the create broadcasts workspace:refresh, and the
   // only listeners are the sidebar's workspace list and the activate-workspace
-  // flow — neither navigates. Every exit therefore goes through _enterCreated:
-  // finishing, clicking a live rail tab, and leaving early alike.
+  // flow — neither navigates.
   const host = readFileSync(HOST_PATH, "utf8");
-  assert.match(host, /_openCreated\(\)[\s\S]{0,400}Wm\.loadWorkspace/);
+  assert.match(host, /_openCreated\(\)\s*\{[\s\S]{0,600}Wm\.loadWorkspace/);
   assert.match(
     host, /_nextStep\(\)[\s\S]{0,400}this\._enterCreated\(\)/,
-    "finishing the last step opens it",
+    "finishing the last screen opens it",
   );
   assert.match(
-    host, /_skipTour\(\)[\s\S]{0,400}Wm\.loadWorkspace/,
+    host, /_skipTour\(\)\s*\{[\s\S]{0,400}this\._openCreated\(\)/,
     "and so does leaving early, once one exists",
   );
-  // And it opens on the finish SCREEN, not only on the way out — the real rail
-  // can only show the workspace's tabs if the workspace is open behind it.
-  assert.match(host, /if \(desk\) \{[\s\S]{0,200}this\._openCreated\(\)/);
-});
+  // The host celebrates, not the step: the step is destroyed with the tour, and
+  // what is being celebrated is arriving somewhere the tour is not.
+  for (const exit of ["_enterCreated", "_skipTour"]) {
+    assert.match(
+      host, new RegExp(`${exit}\\(\\)\\s*\\{[\\s\\S]{0,400}this\\._celebrate\\(\\)`),
+      `${exit} throws the confetti`,
+    );
+  }
+  // The MODULE-level confetti, which appends its own fixed canvas to <body> and
+  // removes it when the animation ends. `create()` would bind it to a canvas
+  // this widget owns and take it down mid-flight.
+  assert.match(host, /require\('canvas-confetti'\)/);
+  assert.doesNotMatch(host, /confetti\.create\(/, "a scoped canvas dies with the tour");
+  // Guarded on a workspace existing: every other tour ends here too, and none of
+  // them made anything to celebrate.
+  assert.match(host, /_celebrate\(\)\s*\{\s*\n\s*if \(this\._celebrated \|\| !this\._createdWorkspace\) return;/);
 
-test("the finish screen hands the chrome back to the desk", () => {
-  // Not a copy of the desk's bar and rail — the desk's OWN. The tour mounts in
-  // the desk's `overlay` part, a SIBLING of desk-module-sidebar__main and
-  // desk-module-topbar__main inside __body, and covers them. So the last screen
-  // takes the tour's copies away and stops the layout intercepting anything,
-  // and what shows is the real chrome: mounted, live, driving the real desk.
-  //
-  // Rendering a copy was the alternative and it is a trap. Those composers
-  // declare sys_pn parts against the desk (utility-cluster, activity-count-top,
-  // sidebar-avatar), so a second copy would hijack the desk's own references
-  // and then destroy them along with the tour.
+  // The step tells the host what it made, and that is all it does with it.
   const step = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
   );
-  const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
-  const rows = table.split(/^  \{/m).slice(1);
-  assert.match(rows[rows.length - 1], /chrome:\s*\{\s*desk:\s*true\s*\}/);
-
-  const host = readFileSync(HOST_PATH, "utf8");
-  assert.match(host, /dataset\.chrome = desk \? 'desk' : ''/);
-  // It must RETURN before feeding the tour's own rail and topbar — feeding them
-  // and hiding them is two answers to one question.
-  assert.match(host, /if \(desk\) \{[\s\S]{0,300}return;\s*\}/);
-
-  const skin = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/index.scss"), "utf8",
-  );
-  assert.match(skin, /\[data-chrome="desk"\]/);
-  assert.match(skin, /__tb-topbar,\s*\n\s*\.tutorial-main__sb-main \{\s*\n\s*display: none/);
-  assert.match(skin, /pointer-events: none/, "the layout must stop intercepting clicks");
-  assert.match(skin, /__content \{\s*\n\s*pointer-events: auto/, "only the content pane takes one");
+  assert.match(step, /service:\s*'workspace-created'/);
+  assert.match(host, /case 'workspace-created':/);
 });
 
-test("the finish screen's layout is pinned to the desk's own pane", () => {
-  // With the tour's rail and topbar hidden, its content pane starts at the LEFT
-  // EDGE of __body — which is where the real sidebar is. It sat over the rail it
-  // had just uncovered and ran off the bottom-right, because the box it fills is
-  // the whole desk body and the box it should fill is the part the workspace
-  // occupies.
-  //
-  // Measured, never reproduced: the desk's pane geometry depends on the rail's
-  // collapsed-or-pinned width, the topbar's height and the panel containers
-  // either side, and `.desk-module__wm-container` is already the answer to all
-  // of them. Copied numbers would drift the first time someone pins the rail.
-  const host = readFileSync(HOST_PATH, "utf8");
-  assert.match(host, /_fitToPane\(on = true\)/);
-  assert.match(
-    host, /querySelector\('\.desk-module__wm-container'\)/,
-    "the desk's own pane is the source of truth for the box",
+test("there is no way back once the workspace exists", () => {
+  // Behind the invite card are the create form, which would happily make a
+  // second workspace with no sign the first happened, and — on the way through
+  // — an invitation that may already have been sent. Neither is somewhere to
+  // return to.
+  const src = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
   );
-  // Offsets are relative to the tour root, which is what the layout resolves
-  // against — subtracting the wrong origin is a silent 64px error.
-  assert.match(host, /p\.left - host\.left/);
-  assert.match(host, /p\.top - host\.top/);
-  // Taken when the chrome is handed over, and retaken when the window moves.
-  assert.match(host, /if \(desk\) \{[\s\S]{0,300}this\._fitToPane\(\)/);
-  assert.match(host, /dataset\.chrome === 'desk'\) \{\s*\n\s*this\._fitToPane\(\)/);
-
-  const skin = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/index.scss"), "utf8",
-  );
-  // Absolute, or those four measurements are not the whole answer.
-  assert.match(skin, /\[data-chrome="desk"\][\s\S]{0,900}__layout \{\s*\n\s*position: absolute;/);
+  assert.match(src, /hide_back:[\s\S]{0,160}s\.invite/);
 });
 
 test("the tour's own chrome never pretends to work", () => {
   // It briefly did: the rail's five tabs and the topbar's six utilities carried
-  // the desk's service names on the last screen. Handing the real chrome back
-  // makes that redundant, and a half-working mock is worse than a plain one —
-  // eight of the nine screens are a drawing, and a drawing whose rail navigates
-  // is a trap.
+  // the desk's service names on the last screen. A half-working mock is worse
+  // than a plain one: every screen of this tour is a drawing, and a drawing
+  // whose rail navigates is a trap.
   for (const rel of ["skeleton/sidebar.js", "skeleton/topbar.js"]) {
     const src = readFileSync(
       join(REPO_ROOT, "src/drumee/modules/desk/tutorial", rel), "utf8",
@@ -707,16 +640,6 @@ test("the tour's own chrome never pretends to work", () => {
   const host = readFileSync(HOST_PATH, "utf8");
   assert.doesNotMatch(host, /case 'toggle-activity':/);
   assert.doesNotMatch(host, /_raiseOnDesk/);
-});
-
-test("the finish screen has no way back", () => {
-  // Behind it are the invite card, which may already have sent one, and the
-  // create form, which would happily make a second workspace. Neither is
-  // somewhere to return to once this one exists.
-  const src = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
-  );
-  assert.match(src, /hide_back:[\s\S]{0,160}s\.congrats/);
 });
 
 test("every step widget resolves its entry screen through the shared helper", () => {

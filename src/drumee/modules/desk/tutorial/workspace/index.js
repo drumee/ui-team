@@ -124,30 +124,6 @@ const SCREENS = [
     direction: 'west',
     text: () => LOCALE.TUTORIAL_INVITE_CALLOUT,
   },
-  {
-    // The workspace, open, with confetti thrown over it (176:42043).
-    //
-    // No callout at all — the frame has none, and by this point there is
-    // nothing left to say: the user is looking at the thing they made. Which
-    // leaves the tour with no Done to press, so a click anywhere on the stage
-    // ends it. It does NOT end on a timer. See _celebrate.
-    congrats: true,
-    target: 'congrats-stage',
-    anchor: 'congrats-stage',
-    bare: true,
-    // The one screen of this tour where a workspace EXISTS. Everything before
-    // it runs on the org-home chrome the registry declares — no workspace tabs,
-    // nothing named in the topbar — because that is true right up until screen
-    // 7 creates one. 176:42043 shows the full rail with Files lit and the new
-    // workspace in the breadcrumb, which is what the user is about to be left
-    // looking at.
-    // The DESK'S own chrome, not the tour's drawing of it. The tour steps out
-    // of the way and what shows is desk-module-sidebar__main and
-    // desk-module-topbar__main — already mounted underneath, already live, with
-    // every badge, menu and hover the product has. Only this step's content
-    // pane stays the tour's.
-    chrome: { desk: true },
-  },
 ];
 
 class __tutorial_workspace extends LetcBox {
@@ -239,10 +215,9 @@ class __tutorial_workspace extends LetcBox {
       // No way back once the workspace exists. The create form would happily
       // make a second one with no sign the first happened, and the invite card
       // may already have sent an invitation — neither is somewhere to return
-      // to. That covers the invite screen and the finish screen alike.
+      // to.
       hide_back: (!!this.mget('is_first') && this._screenIndex === 0)
-        || !!s.invite
-        || !!s.congrats,
+        || !!s.invite,
       // Done belongs to the last screen with a Next on it. The live tail has
       // its own controls, so it never wears one.
       done: !live && isLastScreen(this, this._screenIndex, this._screens.length),
@@ -255,16 +230,6 @@ class __tutorial_workspace extends LetcBox {
       : s.text
         ? { text: s.text(), ...chrome }
         : { title: s.title(), desc: s.desc(), ...chrome };
-    // Ask the host for this screen's chrome before anything is measured — the
-    // rail and the breadcrumb are part of what the spotlight lights.
-    if (s.chrome) {
-      this.triggerHandlers({
-        service: 'chrome',
-        ...s.chrome,
-        workspace: this._created,
-      });
-    }
-    if (s.congrats) this._celebrate();
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
@@ -355,8 +320,10 @@ class __tutorial_workspace extends LetcBox {
     }
 
     // Carried to the next screen, which needs the type to pick its card and the
-    // hub_id to invite anyone to.
+    // hub_id to invite anyone to — and to the HOST, which is what opens it and
+    // throws the confetti once the tour is done.
     this._created = { type, ...res.workspace };
+    this.triggerHandlers({ service: 'workspace-created', workspace: this._created });
     this._screenIndex = this._screenIndex + 1;
     return this._showScreen();
   }
@@ -408,104 +375,20 @@ class __tutorial_workspace extends LetcBox {
   }
 
   /**
-   * Throw the confetti, then take the tour down behind it.
-   *
-   * The finish screen has no control of its own — the frame has no callout and
-   * there is nothing left to ask — so a click anywhere on the stage is what
-   * ends the tour, and Escape still does too.
-   *
-   * It does NOT end on its own. A timer was the first answer and it was the
-   * wrong one: the last thing the tour did was take the screen away from
-   * someone who might still be reading it. Arriving somewhere is not a thing to
-   * be hurried off.
-   *
-   * canvas-confetti is scoped to OUR canvas via create(), not the module-level
-   * confetti() — that one appends a fixed-position canvas to <body> and spawns
-   * a worker, which would outlive this widget and paint over the desk after the
-   * tour is gone.
-   *
-   * Guarded on having run: _showScreen re-renders for reasons of its own, and
-   * the confetti should be thrown once per arrival, not once per render.
-   */
-  _celebrate() {
-    if (this._celebrated) return;
-    this._celebrated = true;
-
-    const part = this.getPart && this.getPart('congrats-canvas');
-    const stage = this.getPart && this.getPart('congrats-stage');
-    const canvas = part && part.el && part.el.querySelector('canvas');
-
-    // Nothing to end the tour with if the click never lands, so it is bound
-    // whether or not the canvas came up.
-    const finish = () => {
-      if (this._finished) return;
-      this._finished = true;
-      if (this._onStageClick && stage && stage.el) {
-        stage.el.removeEventListener('click', this._onStageClick);
-        this._onStageClick = null;
-      }
-      try {
-        if (this._confetti && this._confetti.reset) this._confetti.reset();
-      } catch (e) { /* the canvas is already gone */ }
-      this._advance();
-    };
-
-    if (stage && stage.el) {
-      this._onStageClick = () => finish();
-      stage.el.addEventListener('click', this._onStageClick);
-    }
-
-    if (canvas) {
-      try {
-        const create = require('canvas-confetti').create;
-        // `resize` keeps it right through a window change; the worker is
-        // deliberately off — see above.
-        this._confetti = create(canvas, { resize: true, useWorker: false });
-        // Two bursts from the lower corners, the way the frame scatters them
-        // across the whole pane rather than out of one point.
-        const burst = (x, angle) => this._confetti({
-          particleCount: 90,
-          spread: 70,
-          startVelocity: 55,
-          origin: { x, y: 0.9 },
-          angle,
-          scalar: 0.9,
-        });
-        burst(0.15, 60);
-        burst(0.85, 120);
-      } catch (e) {
-        this.warn && this.warn('[tutorial] confetti failed', e);
-      }
-    }
-
-    // Deliberately NO timer. The tour used to dismiss itself once the bursts
-    // settled, which meant the last thing it did was take the screen away from
-    // someone who might still be reading it. The user leaves when they are
-    // ready — a click anywhere on the stage, or Escape.
-
-  }
-
-  onBeforeDestroy() {
-    try {
-      if (this._confetti && this._confetti.reset) this._confetti.reset();
-    } catch (e) { /* nothing to stop */ }
-    if (super.onBeforeDestroy) super.onBeforeDestroy();
-  }
-
-  /**
    * Move to the next screen, or hand the tour back when there is none.
    *
    * ONE way forward, and that is the point. There used to be two: the callout's
    * Next walked the screen list, while the live screens' own controls called an
-   * `_endTour` that went straight to the host. That was true while the invite
-   * card was the last screen and silently wrong the moment a screen was added
-   * after it — Send, Skip, Invite later and the ✕ all ended the tour, and the
-   * finish screen could not be reached by any route.
+   * `_endTour` that went straight to the host — so Send, Skip, Invite later and
+   * the ✕ each ended the tour by their own route, and any screen added after
+   * the invite card was unreachable.
    *
-   * When there IS nothing after, handing back is still the right answer: the
-   * workspace announced itself when it was created (workspace:refresh), so the
-   * desk opens it as the tour comes down and the user lands in the thing they
-   * just made rather than back where they started.
+   * Every exit off the invite card — sent, skipped, closed, or the personal
+   * card's "Invite later" — therefore lands on the same `next-step`, which is
+   * what the tour ends on. The host takes it from there: it opens the workspace
+   * that was made and throws the confetti over it (see _enterCreated in
+   * ../index.js). Nothing else would — `workspace:refresh` is heard only by the
+   * sidebar list and the activate-workspace flow, and neither navigates.
    */
   _advance() {
     if (this._screenIndex >= this._screens.length - 1) {

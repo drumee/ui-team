@@ -733,37 +733,3 @@ $home-preview-h: 475px;
   }
 }
 
-// ── The congratulations screen (tutorial__congrats-*) ─────────────────────
-// Figma 176:42043: the workspace the user just made, open on its Files pane,
-// with the frame's confetti bitmap thrown over the whole thing.
-.tutorial {
-  &__congrats-stage {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  // Over the pane, and inert. canvas-confetti sizes the canvas' backing store
-  // itself (`resize: true`) off the element's own box, so the box has to be a
-  // real one — an unsized canvas defaults to 300x150 and the confetti lands in
-  // a small rectangle in the corner.
-  //
-  // No blend mode any more. The bitmap needed `darken` to stop its marks
-  // washing out the white pane; drawn confetti is opaque on transparent and
-  // wants to be exactly the colour it is.
-  &__congrats-confetti {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 2;
-    display: block !important;
-
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-  }
-}

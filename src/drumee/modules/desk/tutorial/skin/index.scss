@@ -556,52 +556,6 @@ $topbar-height: 46px;
 
 // ── The last screen hands the chrome back ────────────────────────────────────
 //
-// `data-chrome="desk"` is stamped on the root by _applyChrome when a screen
-// asks for the desk's own bar and rail instead of the tour's drawing of them.
-//
-// The tour mounts in the desk's `overlay` part, which is a SIBLING of
-// desk-module-sidebar__main and desk-module-topbar__main inside __body and
-// covers them. So this does not swap one set of markup for another: it takes
-// the tour's copies away and stops the layout intercepting anything, and what
-// is revealed is the real chrome — mounted, live, with every badge, menu,
-// tooltip and hover the product has, driving the real desk because it IS the
-// real desk.
-//
-// Only __content stays the tour's, and only it takes a click.
-.tutorial-main[data-chrome="desk"] {
-  .tutorial-main__tb-topbar,
-  .tutorial-main__sb-main {
-    display: none !important;
-  }
-
-  // Transparent, or the tour paints its own ground over the chrome it just
-  // uncovered.
-  .tutorial-main__layout,
-  .tutorial-main__body {
-    background: transparent;
-    pointer-events: none;
-  }
-
-  // Pinned over the desk's own workspace pane, from measurements _fitToPane
-  // takes off `.desk-module__wm-container`. Absolute so those four numbers are
-  // the whole answer — with the rail hidden, `width: 100%` of __body starts at
-  // the left edge of the desk, which is where the real sidebar is.
-  .tutorial-main__layout {
-    position: absolute;
-  }
-
-  // The gutters belonged to the tour's own rail and topbar. With the pin taking
-  // the layout to exactly the pane's box, they would inset it from itself.
-  .tutorial-main__body {
-    padding: 0;
-    gap: 0;
-  }
-
-  .tutorial-main__content {
-    pointer-events: auto;
-    border-radius: 0;
-  }
-}
 
 // ── Size tiers ───────────────────────────────────────────────────────────────
 //
