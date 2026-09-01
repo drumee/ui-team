@@ -1757,23 +1757,76 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * The payload Wm.loadWorkspace wants for one row. A Personal workspace row
-   * is a home-root folder whose home_id points at the hub's home ROOT, so
-   * loadWorkspace would prefer that over the folder's own nid and open Home
-   * instead of the folder — hence the explicit shape, matching what the
-   * sidebar's own load-workspace case built.
+   * The payload Wm.loadWorkspace wants for one row.
+   *
+   * The rules moved to libs/workspace-target so the home grid's tile click
+   * resolves rows exactly as this does — a tile and its switcher row are the
+   * same workspace, fed from the same desk.home payload.
    */
   _workspaceTarget(row) {
-    if (!row) return null;
-    if (row.filetype === _a.folder) {
-      return {
-        hub_id: row.hub_id || Visitor.id,
-        nid: row.nid || row.id,
-        filename: row.filename,
-        area: _a.personal,
-      };
-    }
-    return { ...row };
+    return require("libs/workspace-target").workspaceTarget(row);
+  }
+
+  /**
+   * Fill the switcher's header: the open workspace's glyph, its name in a
+   * bordered field with a rename pencil, then link and overflow.
+   *
+   * Its own method because the highlight sync needs JUST this — the header
+   * NAMES the current workspace, so it has to change when the workspace does,
+   * while the rows below only need an attribute flipped. Re-feeding the whole
+   * menu to repaint one row would rebuild every row on every navigation.
+   *
+   * The pencil, link and ⋯ carry NO service on purpose — their behaviours are
+   * not settled. They are Image.Svg rather than Button.Svg so nothing about
+   * them claims to be clickable, and the skin gives them no pointer cursor.
+   *
+   * `cur` carries only what Wm tracks, so the name and the area come from the
+   * matching row in the payload the list is built from — the row is what knows
+   * the area the glyph is tinted by.
+   */
+  _feedWorkspaceHead(head, rows, cur) {
+    const cn = "desk-module-topbar";
+    const curRow =
+      (cur && (rows || []).find((r) => (r.hub_id || r.id) == cur.hub_id)) || null;
+    if (!curRow) return head.feed([]);
+    return head.feed([
+      Skeletons.Element({
+        className: `${cn}__ws-head-icon ${curRow.area || ""}`,
+        content: folderIcon({
+          area: curRow.area,
+          filetype: curRow.filetype === _a.folder ? _a.folder : _a.hub,
+          role: curRow.filetype === _a.folder ? "" : "desk",
+          widgetId: _.uniqueId("ws-head-icon-"),
+          isAttachment: 1,
+        }),
+      }),
+      Skeletons.Box.X({
+        className: `${cn}__ws-head-name`,
+        kids: [
+          Skeletons.Note({
+            className: `${cn}__ws-head-name-text`,
+            content: curRow.filename || curRow.name || "",
+          }),
+          Skeletons.Image.Svg({
+            className: `${cn}__ws-head-edit`,
+            ico: "ph-pencil-simple-line",
+          }),
+        ],
+      }),
+      Skeletons.Box.X({
+        className: `${cn}__ws-head-actions`,
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${cn}__ws-head-action`,
+            ico: "apps-link-simple",
+          }),
+          Skeletons.Image.Svg({
+            className: `${cn}__ws-head-action ${cn}__ws-head-action--more`,
+            ico: "ph-dots-three",
+          }),
+        ],
+      }),
+    ]);
   }
 
   /**
@@ -1785,16 +1838,27 @@ class desk_module extends LetcBox {
    */
   async _renderWorkspaceMenu(target) {
     const part = target || (this.getPart && this.getPart("ws-list"));
-    if (!part || !part.el || (part.isDestroyed && part.isDestroyed())) return;
-    this._wsListPart = part;
+    // Two parts are filled from here now (the list and the header), and they
+    // become ready in no fixed order, so each caches itself on arrival and this
+    // runs once per arrival. Re-checking `alive` rather than trusting the cache
+    // matters because the menu is rebuilt on every topbar render — a stale part
+    // from the previous tree is destroyed but still referenced.
+    const alive = (p) => !!(p && p.el && !(p.isDestroyed && p.isDestroyed()));
+    if (alive(part)) this._wsListPart = part;
+    const list = alive(this._wsListPart) ? this._wsListPart : null;
+    const head = alive(this._wsHeadPart) ? this._wsHeadPart : null;
+    if (!list && !head) return;
     const rows = await this._fetchWorkspaces();
     if (!rows.length) {
-      return part.feed([
-        Skeletons.Note({
-          className: "desk-module-topbar__ws-empty",
-          content: LOCALE.NO_CONTENT || "",
-        }),
-      ]);
+      if (head) head.clear();
+      return list
+        ? list.feed([
+            Skeletons.Note({
+              className: "desk-module-topbar__ws-empty",
+              content: LOCALE.NO_CONTENT || "",
+            }),
+          ])
+        : undefined;
     }
     // window.Wm, NOT a bare `Wm`: this runs from onPartReady during the first
     // topbar render, which happens BEFORE window/manager.js:53 assigns the
@@ -1850,14 +1914,7 @@ class desk_module extends LetcBox {
             className: `${cn}__ws-item-name`,
             content: row.filename || row.name || "",
           }),
-          // A tick on the open one — the row highlight alone reads as hover.
-          isCurrent
-            ? Skeletons.Image.Svg({
-                className: `${cn}__ws-item-check`,
-                ico: "desktop_check",
-              })
-            : null,
-        ].filter(Boolean),
+        ],
       });
     };
 
@@ -1866,21 +1923,28 @@ class desk_module extends LetcBox {
     // them and each group gets a heading instead of one undifferentiated list.
     const hubs = rows.filter((r) => r.filetype !== _a.folder);
     const personal = rows.filter((r) => r.filetype === _a.folder);
-    const section = (label, list) =>
-      list.length
+    // `group`, not `list` — the outer `list` is the part being fed, and
+    // shadowing it here would read as though the section fed itself.
+    const section = (label, group) =>
+      group.length
         ? [
             Skeletons.Note({
               className: `${cn}__ws-section`,
               content: label,
             }),
-            ...list.map(rowFor),
+            ...group.map(rowFor),
           ]
         : [];
 
-    part.feed([
-      ...section(LOCALE.WORKSPACES, hubs),
-      ...section(LOCALE.PERSONAL, personal),
-    ]);
+    if (list) {
+      list.feed([
+        ...section(LOCALE.WORKSPACES, hubs),
+        ...section(LOCALE.PERSONAL, personal),
+      ]);
+    }
+
+    // ── Header (Figma 48:36991) ──────────────────────────────────────────
+    if (head) this._feedWorkspaceHead(head, rows, cur);
   }
 
   /**
@@ -1911,6 +1975,46 @@ class desk_module extends LetcBox {
    * BEFORE manager.js:53 assigns the global. A bare identifier throws
    * ReferenceError there.
    */
+  /**
+   * Move the switcher's tick to whichever workspace is now open.
+   *
+   * `data-current` is computed in rowFor at FEED time, so it only ever reflects
+   * the workspace that was open when the list was last built. Every entry point
+   * other than the switcher itself — a home-grid tile, a sidebar row, a deep
+   * link, reload-restore — changes the workspace without re-feeding, and the
+   * tick stayed on the previous one.
+   *
+   * In place, not a re-feed: rebuilding the list destroys and recreates every
+   * row plus the header on each navigation, and would yank the ground out from
+   * under an open menu. Only the header is re-fed — it NAMES the current
+   * workspace, so it genuinely has to change.
+   *
+   * `==`, not `===`: hub ids arrive as strings from desk.home and as numbers
+   * from some deep links, exactly as rowFor's own isCurrent test allows for.
+   */
+  _syncWorkspaceHighlight() {
+    const list = this._wsListPart;
+    if (!list || !list.el || (list.isDestroyed && list.isDestroyed())) return;
+    const cur = (window.Wm && window.Wm._curWorkspace) || null;
+    const hubId = cur && cur.hub_id;
+    if (list.children && _.isFunction(list.children.each)) {
+      list.children.each((row) => {
+        // Section headings are children too and carry no wsHubId.
+        if (!row || !row.el || !row.el.dataset || !row.mget) return;
+        const rowHub = row.mget("wsHubId");
+        if (rowHub == null) return;
+        row.el.dataset.current = hubId && rowHub == hubId ? "1" : "0";
+      });
+    }
+    // The header alone — NOT _renderWorkspaceMenu, which re-feeds the rows too
+    // and would undo the point of the in-place pass above. _workspaces is the
+    // cache _fetchWorkspaces fills, so this needs no request.
+    const head = this._wsHeadPart;
+    if (head && head.el && !(head.isDestroyed && head.isDestroyed())) {
+      this._feedWorkspaceHead(head, this._workspaces || [], cur);
+    }
+  }
+
   _syncWorkspaceLabel() {
     const wm = window.Wm;
     const cur = wm && wm._curWorkspace;
@@ -2127,6 +2231,9 @@ class desk_module extends LetcBox {
     // method here caused once already.
     try {
       this._syncWorkspaceLabel();
+      // Same broadcast, same guard: this is the one signal every path to a
+      // workspace shares, and a throw here would unwind the same initialize.
+      this._syncWorkspaceHighlight();
     } catch (e) {
       this.warn && this.warn("[workspaces] label sync failed", e);
     }
@@ -2194,6 +2301,17 @@ class desk_module extends LetcBox {
       case "ws-list":
         // Pass the child: getPart cannot resolve it yet at part-ready time.
         this._renderWorkspaceMenu(child);
+        break;
+
+      // The switcher's header (Figma 48:36991) names the CURRENT workspace, so
+      // it is filled by the same pass that builds the rows — that pass already
+      // resolves Wm._curWorkspace and the area-tinted folder glyph, and doing
+      // it here would be a second copy of both. Which part arrives first is not
+      // fixed, so each one caches itself and re-runs the fill; whichever lands
+      // second finds the other already stored.
+      case "ws-head":
+        this._wsHeadPart = child;
+        this._renderWorkspaceMenu(this._wsListPart);
         break;
 
       case "ref-avatar":

@@ -1791,32 +1791,48 @@ class __window_folder extends mfsInteract {
       case "open-advanced-settings":
         return this.openAdvancedSettings(cmd);
 
-      case "folder-manage-access":
-        // Belt for the two hidden entry points (topbar icon + overflow menu):
-        // the panel mints secure-share links that can grant can_edit, and
-        // secure_share.create now refuses without the write bit. Refuse here so
-        // a stale DOM or a deep link cannot open a panel that can only fail.
-        if (this.canUpload && !this.canUpload()) {
-          if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
-          return;
-        }
-        // Contextual tour, raised BEFORE openManageAccess because that call
-        // TOGGLES: with a drawer already open it clears it and returns, so the
-        // flag read after the call means the opposite of what it means here.
-        // `!isShowSettings` is precisely "this click is going to OPEN the
-        // panel" — a closing click, and a click that dismisses the folder
-        // settings drawer (which shares the flag), are both correctly not
-        // treated as reaching Manage access for the first time.
-        //
-        // Placed in the handler rather than at either call site on purpose:
-        // the topbar icon and the overflow menu both raise this service with
-        // uiHandler: [ui] (folder/skeleton/topbar.js:96, window/skeleton/
-        // toolkit/index.js:1666), so one line covers both without going near
-        // their duplicated visibility gate.
-        if (!this.isShowSettings) {
-          require("libs/tutorial-tours").fire("share", this);
+      // Both the belt and the tour below are about SECURE-SHARE LINKS, so both
+      // are scoped to the branch that opens the link panel. An internal
+      // workspace opens the members panel instead (see _manageAccessIsInternal
+      // and openManageAccess) and neither applies to it.
+      case "folder-manage-access": {
+        if (!this._manageAccessIsInternal()) {
+          // Belt for the two hidden entry points (topbar icon + overflow menu):
+          // the panel mints secure-share links that can grant can_edit, and
+          // secure_share.create now refuses without the write bit. Refuse here so
+          // a stale DOM or a deep link cannot open a panel that can only fail.
+          //
+          // NOT applied to the internal branch: nothing there mints a link, and
+          // the members matrix it opens is the one folder Settings already shows
+          // to every member. Gating it would make the rail's Access a dead
+          // control for a view-only member of their own team workspace.
+          if (this.canUpload && !this.canUpload()) {
+            if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+            return;
+          }
+          // Contextual tour, raised BEFORE openManageAccess because that call
+          // TOGGLES: with a drawer already open it clears it and returns, so the
+          // flag read after the call means the opposite of what it means here.
+          // `!isShowSettings` is precisely "this click is going to OPEN the
+          // panel" — a closing click, and a click that dismisses the folder
+          // settings drawer (which shares the flag), are both correctly not
+          // treated as reaching Manage access for the first time.
+          //
+          // Placed in the handler rather than at either call site on purpose:
+          // the topbar icon and the overflow menu both raise this service with
+          // uiHandler: [ui] (folder/skeleton/topbar.js:96, window/skeleton/
+          // toolkit/index.js:1666), so one line covers both without going near
+          // their duplicated visibility gate.
+          //
+          // Internal is excluded because the tour teaches secure sharing —
+          // six screens of link options (modules/desk/tutorial/share,
+          // LOCALE.SECURE_SHARE) — over a panel that has no links in it.
+          if (!this.isShowSettings) {
+            require("libs/tutorial-tours").fire("share", this);
+          }
         }
         return this.openManageAccess();
+      }
 
       case "folder-rename":
         return this.openFolderRenameDialog();
@@ -5552,9 +5568,34 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * Open the "Manage Access" (permission_shared) panel — triggered by the
-   * topbar share icon, which the skeleton renders only for share-area
-   * folders. Separate from Folder Settings (the gear icon).
+   * Is this an INTERNAL (team) workspace rather than an external one?
+   *
+   * `area` is how the stack has always spelled that distinction — "private"
+   * for internal/team, "share" (and its dmz variant) for external — and it is
+   * the same switch window/hub.js openSettings makes to pick between these two
+   * very panels. Only "private" is internal: public areas, the user's own
+   * space and a token/sharebox window all keep the secure-share panel, which is
+   * what they have today.
+   */
+  _manageAccessIsInternal() {
+    return this.mget(_a.area) === _a.private;
+  }
+
+  /**
+   * Open the "Manage access" drawer — WHICH drawer depends on the workspace.
+   *
+   * An external workspace is reached through links, so it gets the secure-share
+   * panel. An internal one is reached by being a member, so it gets the members
+   * panel (permission_restricted) — the invite row plus the permissions matrix.
+   * Asking to manage access to a team workspace and being handed a link builder
+   * is the mismatch this branch exists to fix.
+   *
+   * Three callers, but only one can reach the internal branch: the topbar share
+   * icon and the overflow entry are both gated on `area === _a.share` in their
+   * own skeletons (folder/skeleton/topbar.js, window/skeleton/toolkit/index.js),
+   * while the desk rail's Access item is global — it is shown for whatever
+   * workspace is open (desk/index.js _railAccess). Separate from Folder Settings
+   * (the gear icon), which keeps its own panel.
    */
   openManageAccess() {
     if (this.isShowSettings) {
@@ -5562,20 +5603,67 @@ class __window_folder extends mfsInteract {
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;
-    // Converge the workspace "Manage access" onto secure-share v2 — the SAME panel
-    // files/subfolders use (window_secure_share) — so the workspace link gets
-    // editable permissions + logged-in-recipient recognition. The old external-room
-    // panel (permission_shared) supported neither (permission was hard-clamped to
-    // view; recipients were always guest-bound). Share the workspace ROOT node: for
-    // a hub/workspace-root window the real node id is actual_home_id (nid is the
-    // hub/0) — mirrors this window's own curNid logic; a share-area subfolder shares
-    // its own node. Rendered embedded in the same dialog drawer, matching the media
-    // 'secure-share' launch.
+    this.dialogWrapper.feed(
+      this._manageAccessIsInternal()
+        ? this._internalAccessPanel()
+        : this._secureSharePanel(),
+    );
+    const c = this.dialogWrapper.children.last();
+    if (c) {
+      c.once(_e.destroy, () => {
+        this.isShowSettings = false;
+        return this.unselect();
+      });
+    }
+  }
+
+  /**
+   * INTERNAL branch — the workspace-members panel (invite row + permissions
+   * matrix), the same widget window/hub.js openSettings feeds for a private
+   * area and the same one the activate-workspace guide ends its team branch on.
+   *
+   * `media` mirrors that call site: the window's bound media is what the panel
+   * copies its node properties from, and `hub_id` is what it actually fetches
+   * members with (hub.get_members_by_type). The panel is a 360px right dock
+   * that slides itself in once that fetch settles, so it needs no `embedded`
+   * flag — unlike the secure-share window below, it was never a floating
+   * window to begin with.
+   *
+   * hub.js also passes `label` and `source`; neither is trimmed here by
+   * oversight — the widget and its skeleton read neither (it draws its own
+   * "Who has access" header), so they are left out rather than copied forward.
+   * `className: ""` IS kept, because that one clears a default the base would
+   * otherwise put on the dock's root.
+   */
+  _internalAccessPanel() {
+    return {
+      kind      : "permission_restricted",
+      className : "",
+      media     : this.mget(_a.media) || this.media,
+      hub_id    : this.mget(_a.hub_id),
+      uiHandler : [this],
+    };
+  }
+
+  /**
+   * EXTERNAL branch — unchanged.
+   *
+   * Converge the workspace "Manage access" onto secure-share v2 — the SAME panel
+   * files/subfolders use (window_secure_share) — so the workspace link gets
+   * editable permissions + logged-in-recipient recognition. The old external-room
+   * panel (permission_shared) supported neither (permission was hard-clamped to
+   * view; recipients were always guest-bound). Share the workspace ROOT node: for
+   * a hub/workspace-root window the real node id is actual_home_id (nid is the
+   * hub/0) — mirrors this window's own curNid logic; a share-area subfolder shares
+   * its own node. Rendered embedded in the same dialog drawer, matching the media
+   * 'secure-share' launch.
+   */
+  _secureSharePanel() {
     let shareNid = this.mget(_a.nid);
     if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
       shareNid = this.mget(_a.actual_home_id);
     }
-    this.dialogWrapper.feed({
+    return {
       kind     : "window_secure_share",
       embedded : 1,
       dataset  : { embedded: "yes" },
@@ -5587,14 +5675,7 @@ class __window_folder extends mfsInteract {
       // launch sets the flag, so subfolder/file share panels keep their title.
       manage_access: 1,
       uiHandler: [this],
-    });
-    const c = this.dialogWrapper.children.last();
-    if (c) {
-      c.once(_e.destroy, () => {
-        this.isShowSettings = false;
-        return this.unselect();
-      });
-    }
+    };
   }
 
   showInfo() {

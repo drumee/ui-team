@@ -570,9 +570,25 @@ function workspaceSwitcher(pfx, ui) {
         className: `${pfx}__utility-tip`,
       },
     }),
+    // Figma 48:36991. Three stacked blocks, 12px apart: the current-workspace
+    // header, the scrolling list, and the pinned "New workspaces" button.
+    //
+    // The button is a SIBLING of the list, not a child of it — the frame lists
+    // it outside the 191px overflow-clip box, so it stays put while the list
+    // scrolls. That is why __ws-list, not __ws-menu, carries the max-height and
+    // the overflow (see the skin): a scroller wrapping both would carry the
+    // button off the bottom with the rows.
     items: Skeletons.Box.Y({
       className: `${pfx}__ws-menu`,
       kids: [
+        // Current workspace: icon + name + rename, then link / overflow.
+        // Fed by desk._renderWorkspaceMenu, which already resolves the open
+        // workspace and builds the area-tinted folder glyph for the rows.
+        Skeletons.Box.X({
+          className: `${pfx}__ws-head`,
+          sys_pn: "ws-head",
+          partHandler: ui,
+        }),
         // Fed by desk._renderWorkspaceMenu once desk.home resolves.
         Skeletons.Box.Y({
           className: `${pfx}__ws-list`,
@@ -580,7 +596,7 @@ function workspaceSwitcher(pfx, ui) {
           partHandler: ui,
         }),
         Skeletons.Button.Label({
-          ico: "addmenu-folder",
+          ico: "ph-plus",
           className: `${pfx}__ws-new`,
           label: LOCALE.NEW_WORKSPACE,
           service: "new-workspace",

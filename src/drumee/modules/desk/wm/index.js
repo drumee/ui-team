@@ -2233,13 +2233,29 @@ class __window_manager extends push {
         // wait(0) releases the tile's spinner latch: media defaultTrigger sets
         // it before this handler runs and loadWorkspace never touches the tile,
         // so the tile would keep spinning after the workspace opened.
+        //
+        // FOLDER tiles count too. Everything the home grid lists is a
+        // workspace: the grid and the switcher are fed from the same
+        // SERVICE.desk.home payload (server-side mfs_show_node_by on the user's
+        // home root), so a hub tile is a hub workspace and a folder tile is a
+        // PERSONAL one — and clicking that folder's row in the switcher already
+        // opened it as a pane. The grid disagreeing with the switcher about the
+        // same item was the inconsistency; both now go through loadWorkspace.
+        //
+        // The target is SHAPED, never the raw tile: a home-root folder carries
+        // a home_id pointing at the user's home, and loadWorkspace prefers
+        // home_id over nid — so passing the model straight through opens Home
+        // instead of the folder. libs/workspace-target owns that rule and the
+        // switcher resolves rows through the same helper.
+        const _ftile = cmd.mget && cmd.mget(_a.filetype);
         const _isWorkspaceTile =
           cmd.mget &&
-          cmd.mget(_a.filetype) === _a.hub &&
+          (_ftile === _a.hub || _ftile === _a.folder) &&
           cmd.mget(_a.status) !== _a.deleted;
         if (_isWorkspaceTile) {
           if (cmd.wait) cmd.wait(0);
-          this.loadWorkspace(cmd);
+          const { workspaceTarget } = require("libs/workspace-target");
+          this.loadWorkspace(workspaceTarget(cmd.model.toJSON()));
         } else {
           this.openContent(cmd, args);
         }
