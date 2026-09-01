@@ -230,7 +230,7 @@ class __tutorial_workspace extends LetcBox {
       : s.text
         ? { text: s.text(), ...chrome }
         : { title: s.title(), desc: s.desc(), ...chrome };
-    this.triggerHandlers({
+    this._raise({
       service: 'spotlight:focus',
       target: target.el,
       anchor: anchor && anchor.el,
@@ -323,9 +323,44 @@ class __tutorial_workspace extends LetcBox {
     // hub_id to invite anyone to — and to the HOST, which is what opens it and
     // throws the confetti once the tour is done.
     this._created = { type, ...res.workspace };
-    this.triggerHandlers({ service: 'workspace-created', workspace: this._created });
+    this._raise({ service: 'workspace-created', workspace: this._created });
     this._screenIndex = this._screenIndex + 1;
     return this._showScreen();
+  }
+
+  /**
+   * Hand something to the host — from code, not from a click.
+   *
+   * NOT triggerHandlers. That is ui-core's CLICK dispatcher, and it carries the
+   * click's gating: it returns without dispatching when `window.pointerDragged`
+   * is set (letc/addons/letc.js), a flag the RESIZE handler raises
+   * (letc/addons/dom/events-handler.js sets it before its own
+   * `srcElement != window` guard, so any element's resize counts) and which
+   * nothing clears but a pointerup or a keyup.
+   *
+   * Harmless for a raise made straight out of a click — the pointerup that
+   * delivered the click has just cleared the flag. NOT harmless for a raise
+   * made after an `await`, and both of this step's network calls end in one:
+   * _create tells the host what it built, _invite hands the tour back. A resize
+   * anywhere in that round trip sets the flag, nothing clears it before the
+   * raise, and the raise is dropped in silence — the workspace exists on the
+   * server, the host never hears about it, and the tour ends on a desk that
+   * never opens it.
+   *
+   * So: dispatch the way ui-core dispatches, straight to the ui handlers,
+   * without the click gate in front. Same signal, same (source, payload)
+   * arguments, so the host's onUiEvent cannot tell the difference.
+   *
+   * @param {Object} payload `{ service, ...}` — what onUiEvent receives as args
+   */
+  _raise(payload) {
+    const handlers = (this.getHandlers && this.getHandlers(_a.ui)) || [];
+    for (const ui of handlers) {
+      // ui-core skips the source itself; so must this, or a step that handles
+      // its own service re-enters here.
+      if (!ui || ui === this || !_.isFunction(ui.triggerMethod)) continue;
+      ui.triggerMethod(_e.ui.event, this, payload);
+    }
   }
 
   /**
@@ -392,7 +427,7 @@ class __tutorial_workspace extends LetcBox {
    */
   _advance() {
     if (this._screenIndex >= this._screens.length - 1) {
-      return this.triggerHandlers({ service: 'next-step' });
+      return this._raise({ service: 'next-step' });
     }
     this._screenIndex = this._screenIndex + 1;
     return this._showScreen();
@@ -432,7 +467,7 @@ class __tutorial_workspace extends LetcBox {
         return this._advance();
       case 'back-step':
         // Back off the first screen leaves this step entirely.
-        if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });
+        if (this._screenIndex <= 0) return this._raise({ service: 'back-step' });
         this._screenIndex = this._screenIndex - 1;
         return this._showScreen();
       default:
