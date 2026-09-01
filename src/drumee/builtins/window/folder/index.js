@@ -1585,7 +1585,13 @@ class __window_folder extends mfsInteract {
         ]);
         return;
       }
-      content.feed([fileTypeFilterBar(this), gridFilesBrowser(this)]);
+      content.feed([
+        fileTypeFilterBar(this),
+        gridFilesBrowser(this),
+        // Same three as filesContainer's initial render, in the same order —
+        // the empty state must follow the list for the skin's `~` to reach it.
+        require("../skeleton/content/grid/empty")(this),
+      ]);
     });
   }
 

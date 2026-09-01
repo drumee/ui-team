@@ -72,15 +72,11 @@ const __media_skl_grid = function (ui) {
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__icons-container ${ui.fig.family}__icons-container`,
-    // `data-empty` is written by the window once the grid has finished loading
-    // and whenever its collection changes — see _prepareListPartition in
-    // window/utils.js. Starts at 0 so an empty state cannot flash over a grid
-    // that is merely still fetching.
-    dataset: { empty: 0 },
-    attrOpt: { "data-empty": 0 },
     kids: [
       filterBar,
       list,
+      // A following sibling of the list, which is how the skin reaches it —
+      // the flag lives on the list itself (window/utils.js _syncGridEmpty).
       emptyState(ui),
     ]
   })

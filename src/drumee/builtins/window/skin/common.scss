@@ -533,28 +533,34 @@
 // to show a filter bar over blank space; this names what makes files here
 // different and puts the three ways of adding one under the sentence.
 //
-// Shown only once the grid has SAID it is empty — `data-empty` is written from
-// the list's collection after EOD (window/utils.js _syncGridEmpty), never from
-// the DOM: .smart-container is not reliably CSS-`:empty` (partitioning leaves
-// section elements in place, and a spinner sits there mid-fetch), and an empty
-// state flashed over a fetch that is about to return files is worse than a
-// blank pane for the same half-second.
-.window__icons-container {
-  position: relative;
+// Keyed off the LIST's own `data-empty`, read across `~`. Not a container: the
+// folder window's Files view is the filter bar and the bare list fed straight
+// into the content part, and `.window__icons-container` — which only exists in
+// skeleton/content/grid — is never rendered there at all. That is why the first
+// version of this never appeared: the flag was written to an element that was
+// not on the page, by a closest() that answered null.
+//
+// The flag is written from the list's COLLECTION after EOD, never from the DOM:
+// .smart-container is not reliably CSS-`:empty` (partitioning leaves section
+// elements in place, and a spinner sits there mid-fetch), and an empty state
+// flashed over a fetch that is about to return files is worse than a blank pane
+// for the same half-second.
+//
+// `!important` on both display rules, deliberately. The framework gives every
+// Box `.drumee-widget[data-flow="y"] { display: flex }` at 0,2,0 — a bare
+// `.window__fe-hero { display: none }` is 0,1,0 and loses to it, so the hero
+// would sit under every populated grid. The same reason the rest of this
+// codebase reaches for it against that rule.
+.window__fe-hero {
+  display: none !important;
+}
 
-  .window__fe-hero {
-    display: none;
-  }
+.window__icons-list[data-empty="1"] {
+  display: none !important;
+}
 
-  &[data-empty="1"] {
-    .window__icons-list {
-      display: none;
-    }
-
-    .window__fe-hero {
-      display: flex;
-    }
-  }
+.window__icons-list[data-empty="1"] ~ .window__fe-hero {
+  display: flex !important;
 }
 
 .window__fe-hero {

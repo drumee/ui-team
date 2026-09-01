@@ -509,15 +509,24 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
-   * Write `data-empty` on the grid's container.
+   * Write `data-empty` on the grid LIST itself.
+   *
+   * On the list, not on a container around it. There isn't one: the folder
+   * window's Files view is `[fileTypeFilterBar, gridFilesBrowser]` fed straight
+   * into the content part, and gridFilesBrowser returns the bare list —
+   * `.window__icons-container` only exists in skeleton/content/grid, which the
+   * folder window never renders. Anchoring there meant closest() answered null
+   * and the flag was never written at all.
+   *
+   * The empty state is a following SIBLING of the list in every path that draws
+   * one, so the skin reads the flag across `~`.
    *
    * @param {Object} listPart the smart list
    */
   _syncGridEmpty(listPart) {
     if (!this._gridLoaded) return;
-    const el = listPart && listPart.el
-      && listPart.el.closest(".window__icons-container");
-    if (!el) return;
+    const el = listPart && listPart.el;
+    if (!el || !el.dataset) return;
     const n = (listPart.collection && listPart.collection.length) || 0;
     el.dataset.empty = n ? 0 : 1;
   }
