@@ -141,11 +141,12 @@ const SCREENS = [
     // 7 creates one. 176:42043 shows the full rail with Files lit and the new
     // workspace in the breadcrumb, which is what the user is about to be left
     // looking at.
-    // `live` makes the five tabs real: they carry the desk's own service names
-    // and, clicked, open the workspace on that tab. This is the one screen
-    // where that is meaningful — the workspace exists and the tour is done
-    // teaching.
-    chrome: { rail: 'files', crumb: true, live: true },
+    // The DESK'S own chrome, not the tour's drawing of it. The tour steps out
+    // of the way and what shows is desk-module-sidebar__main and
+    // desk-module-topbar__main — already mounted underneath, already live, with
+    // every badge, menu and hover the product has. Only this step's content
+    // pane stays the tour's.
+    chrome: { desk: true },
   },
 ];
 

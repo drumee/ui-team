@@ -287,21 +287,42 @@ class tutorial_main extends LetcBox {
    */
   _applyChrome(override) {
     const step = (this._tour.steps || [])[this._stepIndex];
-    const { rail, crumb, live } = override || stepChrome(step);
+    const { rail, crumb, desk } = override || stepChrome(step);
+
+    // THE DESK'S OWN CHROME, not a drawing of it.
+    //
+    // The tour mounts in the desk's `overlay` part, which is a SIBLING of the
+    // real sidebar and topbar inside __body and covers them. So the last screen
+    // does not render a copy of that chrome — it gets out of its way: the
+    // tour's rail and topbar are hidden, the layout goes transparent and
+    // click-through, and what shows is the actual desk-module-sidebar__main and
+    // desk-module-topbar__main, already mounted and already working.
+    //
+    // Rendering a copy was the alternative and it is a trap: those composers
+    // declare sys_pn parts (utility-cluster, activity-count-top, sidebar-avatar)
+    // against the desk, so a second copy would hijack the desk's own references
+    // and then destroy them with the tour.
+    if (this.el && this.el.dataset) this.el.dataset.chrome = desk ? 'desk' : '';
+    if (desk) {
+      // The real rail can only show the workspace's tabs if the workspace is
+      // open, so this is where it opens — behind the tour, before the chrome it
+      // drives is revealed.
+      this._openCreated();
+      return;
+    }
+
     const sidebar = require('./skeleton/sidebar');
     const topbar = require('./skeleton/topbar');
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
     // entry has to come back with the workspace tabs or the org-home rail —
     // which has no tabs at all — is fed an empty list and renders bare.
-    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail, { live })));
+    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
     // Same trap as the callout: feed(null) is a no-op, so a step that wants NO
     // crumb has to clear the slot rather than feed nothing into it.
     this.ensurePart('crumb').then((p) => (
       crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
     ));
-    // The utility cluster goes live on the same screen the rail does: the desk
-    // behind the tour is real by then, and these are its own six panels.
-    this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this, { live })));
+    this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this)));
   }
 
   /**
@@ -560,29 +581,6 @@ class tutorial_main extends LetcBox {
   }
 
   /**
-   * Hand a service to the desk.
-   *
-   * The tour is fed with the desk as its partHandler (desk _showTutorial), and
-   * that is the only reference it has to it — triggerHandlers walks uiHandler,
-   * which for this widget ends here. So the desk's own onUiEvent is called
-   * directly, the way permission/restricted calls a window's.
-   *
-   * Raised BEFORE the teardown rather than after: softDestroy fades for half a
-   * second, and the panel opening underneath is revealed by that fade instead
-   * of appearing on a bare desk once it has finished.
-   */
-  _raiseOnDesk(service) {
-    const h = this.mget(_a.partHandler);
-    const desk = _.isArray(h) ? h[0] : h;
-    if (!desk || !_.isFunction(desk.onUiEvent)) return;
-    try {
-      desk.onUiEvent(desk, { service });
-    } catch (e) {
-      this.warn && this.warn(`[tutorial] desk refused ${service}`, e);
-    }
-  }
-
-  /**
    * Open the workspace the tour just made, and come down over it.
    *
    * NOTHING ELSE OPENS IT. The create broadcasts `workspace:refresh`, and the
@@ -595,33 +593,28 @@ class tutorial_main extends LetcBox {
    * after, so the fade reveals a workspace that is already there instead of a
    * blank desk that fills in afterwards.
    *
-   * @param {String} [tab] a rail tab to select once the window exists —
-   *   `showFolderTab` needs the window, and loadWorkspace builds it, so this
-   *   waits on it rather than racing it.
-   * @param {String} [service] a DESK service to raise on the way out — one of
-   *   the topbar's panels. Raised on the desk itself rather than bubbled,
-   *   because the tour's own handler chain ends at the tour.
    */
-  _enterCreated(tab, service) {
+  _enterCreated() {
+    this._openCreated();
+    return this._enterWorkspace();
+  }
+
+  /**
+   * Open the workspace the tour made, if it has not been opened already.
+   *
+   * loadWorkspace early-returns when the descriptor is already the current
+   * workspace, so calling this on the finish screen AND again on the way out
+   * costs nothing the second time.
+   */
+  _openCreated() {
     const ws = this._createdWorkspace;
-    if (!ws || !ws.hub_id || typeof Wm === 'undefined') return this._enterWorkspace();
-    let opened;
+    if (!ws || !ws.hub_id || typeof Wm === 'undefined') return null;
     try {
-      opened = Wm.loadWorkspace(ws);
+      return Wm.loadWorkspace(ws);
     } catch (e) {
       this.warn && this.warn('[tutorial] could not open the new workspace', e);
+      return null;
     }
-    if (tab) {
-      const showTab = () => {
-        try {
-          const w = Wm.getActiveWindow && Wm.getActiveWindow(1);
-          if (w && _.isFunction(w.showFolderTab)) w.showFolderTab(tab);
-        } catch (e) { /* the window went away — the workspace is still open */ }
-      };
-      Promise.resolve(opened).then(showTab, showTab);
-    }
-    if (service) this._raiseOnDesk(service);
-    return this._enterWorkspace();
   }
 
   onUiEvent(trigger, args = {}) {
@@ -649,7 +642,7 @@ class tutorial_main extends LetcBox {
         // Kept for the exit: this is the workspace the tour is about to leave
         // the user in, and the only object that knows it is the step.
         if (ws.hub_id) this._createdWorkspace = ws;
-        this._applyChrome({ rail: args.rail, crumb: !!args.crumb, live: !!args.live });
+        this._applyChrome({ rail: args.rail, crumb: !!args.crumb, desk: !!args.desk });
         break;
       }
 
@@ -657,34 +650,6 @@ class tutorial_main extends LetcBox {
       // desk uses for the same five entries, so this is the product's rail
       // behaving as the product's rail — it just has to open the workspace
       // first, because at this moment the tour is still covering it.
-      // The topbar's six utilities and its avatar, live on the finish screen.
-      // Each ends the tour and raises the DESK'S own service, because these are
-      // desk panels — they belong to the thing underneath, and the tour has to
-      // get out of the way before one can open over it.
-      case 'toggle-activity':
-      case 'toggle-calendar':
-      case 'toggle-inbox':
-      case 'toggle-contacts':
-      case 'toggle-trash':
-      case 'toggle-apps':
-        return this._enterCreated(null, service);
-
-      // The avatar's menu belongs to the DESK's avatar, not this one — a copy
-      // anchored here would open over a bar that is about to disappear. So it
-      // just leaves, and the real avatar is a click away.
-      case 'tb-avatar':
-        return this._enterCreated();
-
-      case 'rail-files':
-        return this._enterCreated('files');
-      case 'rail-chat':
-        return this._enterCreated(_a.chat);
-      case 'rail-task':
-        return this._enterCreated(_a.task);
-      case 'rail-meet':
-        return this._enterCreated('meeting');
-      case 'rail-access':
-        return this._enterCreated('access');
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));
         break;

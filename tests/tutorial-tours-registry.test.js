@@ -549,27 +549,20 @@ test("the workspace step has ONE way forward, so a new screen cannot be orphaned
   assert.doesNotMatch(src, /this\._endTour\(/, "the second path is gone, not renamed");
 });
 
-test("the finish screen asks for the chrome of a workspace that now exists", () => {
+test("a screen may override its step's chrome, and one does", () => {
   // The registry decides chrome per STEP, and this tour is ONE step declaring
   // the org-home shell: no workspace tabs, nothing named in the topbar. True
   // for eight of its nine screens, and stale on the ninth — by then screen 7
-  // has made a workspace and the user is looking at it. 176:42043 shows the
-  // full rail with Files lit and the new workspace in the breadcrumb.
+  // has made a workspace and the user is looking at it.
   const step = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
   );
   const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
   const rows = table.split(/^  \{/m).slice(1);
-  assert.match(
-    rows[rows.length - 1],
-    /chrome:\s*\{\s*rail:\s*'files',\s*crumb:\s*true,\s*live:\s*true\s*\}/,
-    "the finish screen must ask for the workspace rail, and a live one",
-  );
   assert.ok(
     !rows.slice(0, -1).some((r) => /chrome:/.test(r)),
-    "and it is the only screen that overrides — the rest have no workspace yet",
+    "only the finish screen overrides — the rest have no workspace yet",
   );
-  // The override has to reach the host, and the host has to honour it.
   assert.match(step, /service:\s*'chrome'/);
   const host = readFileSync(HOST_PATH, "utf8");
   assert.match(host, /case 'chrome':/);
@@ -600,7 +593,7 @@ test("the tour leaves the user IN the workspace it made", () => {
   // flow — neither navigates. Every exit therefore goes through _enterCreated:
   // finishing, clicking a live rail tab, and leaving early alike.
   const host = readFileSync(HOST_PATH, "utf8");
-  assert.match(host, /_enterCreated\(tab, service\)[\s\S]{0,400}Wm\.loadWorkspace/);
+  assert.match(host, /_openCreated\(\)[\s\S]{0,400}Wm\.loadWorkspace/);
   assert.match(
     host, /_nextStep\(\)[\s\S]{0,400}this\._enterCreated\(\)/,
     "finishing the last step opens it",
@@ -609,49 +602,59 @@ test("the tour leaves the user IN the workspace it made", () => {
     host, /_skipTour\(\)[\s\S]{0,400}Wm\.loadWorkspace/,
     "and so does leaving early, once one exists",
   );
-  // The tab is applied after the window exists, not alongside it.
-  assert.match(host, /Promise\.resolve\(opened\)\.then\(showTab, showTab\)/);
+  // And it opens on the finish SCREEN, not only on the way out — the real rail
+  // can only show the workspace's tabs if the workspace is open behind it.
+  assert.match(host, /if \(desk\) \{[\s\S]{0,200}this\._openCreated\(\)/);
 });
 
-test("the topbar's utilities are the desk's own six, and they reach it", () => {
-  // Same six entries meaning the same six things, so the tour does not invent a
-  // second vocabulary for them. They are desk PANELS — they belong to the thing
-  // underneath — so the tour has to get out of the way before one can open.
-  const bar = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skeleton/topbar.js"), "utf8",
+test("the finish screen hands the chrome back to the desk", () => {
+  // Not a copy of the desk's bar and rail — the desk's OWN. The tour mounts in
+  // the desk's `overlay` part, a SIBLING of desk-module-sidebar__main and
+  // desk-module-topbar__main inside __body, and covers them. So the last screen
+  // takes the tour's copies away and stops the layout intercepting anything,
+  // and what shows is the real chrome: mounted, live, driving the real desk.
+  //
+  // Rendering a copy was the alternative and it is a trap. Those composers
+  // declare sys_pn parts against the desk (utility-cluster, activity-count-top,
+  // sidebar-avatar), so a second copy would hijack the desk's own references
+  // and then destroy them along with the tour.
+  const step = readFileSync(
+    join(REPO_ROOT, "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8",
   );
-  const real = readFileSync(
-    join(REPO_ROOT, "src/drumee/modules/desk/skeleton/topbar.js"), "utf8",
-  );
-  for (const service of [
-    "toggle-activity", "toggle-calendar", "toggle-inbox",
-    "toggle-contacts", "toggle-trash", "toggle-apps",
-  ]) {
-    assert.ok(bar.includes(service), `the tour is missing ${service}`);
-    assert.ok(real.includes(service), `the desk no longer raises ${service}`);
-  }
-  // A bare string tooltip renders inside the 28px button and breaks the row —
-  // the real bar carries the same warning.
-  assert.match(bar, /tooltips:\s*\{\s*content:/);
-  // The cluster is a re-fed slot, so the icons can be scenery until the last
-  // screen and controls on it.
-  assert.match(bar, /sys_pn:\s*"utility-cluster"/);
-  // A live control is flagged EXPLICITLY. ui-core does not stamp `data-service`,
-  // so a skin selector on it matches nothing — which is how a cursor and a
-  // hover state get written and never appear.
-  assert.match(bar, /attrOpt:\s*\{\s*"data-live":\s*1\s*\}/);
+  const table = step.slice(step.indexOf("const SCREENS = ["), step.indexOf("\n];"));
+  const rows = table.split(/^  \{/m).slice(1);
+  assert.match(rows[rows.length - 1], /chrome:\s*\{\s*desk:\s*true\s*\}/);
+
+  const host = readFileSync(HOST_PATH, "utf8");
+  assert.match(host, /dataset\.chrome = desk \? 'desk' : ''/);
+  // It must RETURN before feeding the tour's own rail and topbar — feeding them
+  // and hiding them is two answers to one question.
+  assert.match(host, /if \(desk\) \{[\s\S]{0,300}return;\s*\}/);
+
   const skin = readFileSync(
     join(REPO_ROOT, "src/drumee/modules/desk/tutorial/skin/index.scss"), "utf8",
   );
-  assert.match(skin, /__tb-utility-btn\[data-live="1"\]/);
-  assert.doesNotMatch(skin, /\[data-service\]/, "nothing may select on an attribute ui-core never writes");
+  assert.match(skin, /\[data-chrome="desk"\]/);
+  assert.match(skin, /__tb-topbar,\s*\n\s*\.tutorial-main__sb-main \{\s*\n\s*display: none/);
+  assert.match(skin, /pointer-events: none/, "the layout must stop intercepting clicks");
+  assert.match(skin, /__content \{\s*\n\s*pointer-events: auto/, "only the content pane takes one");
+});
 
+test("the tour's own chrome never pretends to work", () => {
+  // It briefly did: the rail's five tabs and the topbar's six utilities carried
+  // the desk's service names on the last screen. Handing the real chrome back
+  // makes that redundant, and a half-working mock is worse than a plain one —
+  // eight of the nine screens are a drawing, and a drawing whose rail navigates
+  // is a trap.
+  for (const rel of ["skeleton/sidebar.js", "skeleton/topbar.js"]) {
+    const src = readFileSync(
+      join(REPO_ROOT, "src/drumee/modules/desk/tutorial", rel), "utf8",
+    );
+    assert.doesNotMatch(src, /service:\s*["'`](?:rail-|toggle-)/, `${rel} still wires a desk service`);
+  }
   const host = readFileSync(HOST_PATH, "utf8");
-  assert.match(host, /case 'toggle-activity':/);
-  assert.match(
-    host, /_raiseOnDesk\(service\)[\s\S]{0,400}desk\.onUiEvent\(desk, \{ service \}\)/,
-    "and the desk is called directly — the tour's handler chain ends at itself",
-  );
+  assert.doesNotMatch(host, /case 'toggle-activity':/);
+  assert.doesNotMatch(host, /_raiseOnDesk/);
 });
 
 test("the finish screen has no way back", () => {
