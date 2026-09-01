@@ -114,9 +114,48 @@ function createHub(host, type, filename, opt) {
     })
     .then((res) => {
       const hub = _.isArray(res) ? res[0] : res;
-      // desk.create_hub can resolve with an in-band error payload instead of
-      // rejecting.
-      if (hub && (hub.error || hub.error_code)) {
+
+      // desk_create_hub reports a refusal in its OWN shape, and it is not the
+      // one below. The proc ends:
+      //
+      //   SELECT *, 0 as failed, ... FROM yp.entity WHERE db_name=_hub_db;
+      //   IF _rollback THEN
+      //     ROLLBACK;
+      //     SELECT 1 as failed, IFNULL(_reason, @full_error) AS reason;
+      //
+      // so a refusal carries `failed: 1` and `reason` — never `error` or
+      // `error_code`. And that first SELECT runs even on the rollback path,
+      // where _hub_db is NULL and it therefore matches NO ROWS, so the caller
+      // can equally well receive nothing at all.
+      //
+      // Both used to read as success. `hub_id` then came out undefined, the
+      // caller advanced as though a workspace existed, and nothing was ever
+      // shown to say otherwise — the tutorial reached its invite screen with
+      // nothing to invite to and a host that quietly declined to open
+      // anything. Personal workspaces were unaffected because they never call
+      // this proc, which is exactly how it presented: personal fine, internal
+      // and external silently dead.
+      //
+      // The live cause on stage was an exhausted hub pool — pickupEntity found
+      // no entity with pool_state='clean', so EVERY internal and external
+      // create took the rollback branch.
+      const reason = (hub && hub.reason) || "";
+      if (!hub || ~~hub.failed === 1) {
+        if (host && host.warn) {
+          host.warn(`create_hub refused: ${reason || "(no reason given)"}`);
+        }
+        // The legacy quota answer arrives as a reason naming the area, and it
+        // arrives on THIS branch — so the check has to live here too.
+        if (/_hub_limit_reached$/.test(reason)) return { ok: false, quota: true };
+        // `reason` is a server diagnostic ("Pool private is empty. Considerer
+        // runing factory"), not something to put in a name field. It is warned
+        // above for whoever debugs this next; the user gets prose.
+        return { ok: false, message: LOCALE.TRY_AGAIN };
+      }
+
+      // desk.create_hub can also resolve with an in-band error payload instead
+      // of rejecting.
+      if (hub.error || hub.error_code) {
         // LEGACY PATH. There is no workspace-count limit: the server's
         // check_quota preproc was removed on 2026-08-08 because it read the
         // plan's per-area capability flags as counts and refused a second
@@ -130,8 +169,17 @@ function createHub(host, type, filename, opt) {
         }
         return { ok: false, message: LOCALE[hub.error] || hub.reason || hub.error };
       }
+      const hub_id = hub.hub_id || hub.id;
+      // Nothing downstream survives a missing hub_id: it cannot be opened,
+      // invited to, or reported to analytics. Refusing here is the difference
+      // between an error the user sees and a workspace that silently is not
+      // one.
+      if (!hub_id) {
+        if (host && host.warn) host.warn("create_hub returned no hub id", hub);
+        return { ok: false, message: LOCALE.TRY_AGAIN };
+      }
       const workspace = {
-        hub_id: hub.hub_id || hub.id,
+        hub_id,
         nid: hub.actual_home_id || hub.home_id,
         area: hub.area || area,
         filename,
