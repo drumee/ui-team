@@ -199,7 +199,9 @@ function fileFilterControls(ui) {
       fileViewToggle(ui, {
         namedState: true,
         modes: [
-          { mode: "group", ico: "view-group" },
+          // app-tree-view, not view-group: Figma 85:36284 draws this position
+          // as TreeView — a hierarchy, not a stack of groups.
+          { mode: "group", ico: "app-tree-view" },
           { mode: "list", ico: "view-list" },
           { mode: "grid", ico: "view-grid" },
         ],
