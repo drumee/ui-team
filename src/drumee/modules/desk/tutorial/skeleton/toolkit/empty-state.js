@@ -14,7 +14,9 @@
  * Shared scenery, so it is keyed on `ui.fig.group` and styled once in
  * skin/empty-state.scss.
  *
- * Visual only — no services. `es-cta` is what the callout points at.
+ * Visual only — no services, with one opt-in exception: `cta_service` turns
+ * `es-cta` into a control (see the param note below). Otherwise `es-cta` is
+ * just what the callout points at.
  */
 
 // Card geometry, per variant, with a 32px gutter between cards. The track is
@@ -94,6 +96,9 @@ const card = (p, item, variant) =>
  * @param {String} opt.title   headline; newlines become separate lines
  * @param {String} opt.desc
  * @param {String} opt.cta     the primary button's label
+ * @param {String} [opt.cta_service] makes the CTA a control that raises this
+ *   service at `ui` instead of inert scenery. Omit and it stays a drawing —
+ *   which is what the tours that merely POINT at it want.
  * @param {Array}  [opt.items] carousel cards
  * @param {Number} [opt.index=0] which card the track is scrolled to
  * @param {Boolean} [opt.dots]   draw the dot row under the track (Task)
@@ -131,7 +136,33 @@ function emptyState(ui, opt = {}) {
             ),
           }),
           Skeletons.Note({ active: 0, className: `${p}-desc`, content: opt.desc }),
-          Skeletons.Box.X({ active: 0,
+          // The CTA is scenery by default and a CONTROL when a caller names a
+          // service. Task and Meet only point their callout at it, so it stays
+          // inert there; the chat tour's first screen carries no callout at all
+          // and this button is its only way forward.
+          //
+          // `active: 0` and a service are mutually exclusive, not merely
+          // different: ui-core binds an onclick to a widget only while it is
+          // not inert, so the two cannot both be set — hence the branch rather
+          // than an extra flag. The label inside stays inert either way, so the
+          // click lands on this box and not on the text. Same shape as
+          // `home-cta` in ./home.js, which is the workspace tour's equivalent.
+          Skeletons.Box.X({
+            ...(opt.cta_service
+              ? {
+                  service: opt.cta_service,
+                  uiHandler: [ui],
+                  // So the skin can say it is a control — pointer cursor and a
+                  // hover, the way `home-cta` does. Stamped from the same flag
+                  // that makes it clickable rather than keyed on the tour, so
+                  // the two cannot disagree and it still reads as a button when
+                  // these screens run inside `full` (where `data-tour` is
+                  // "full", not "chat"). dataset alone is dropped at render
+                  // unless an attribute map rides along.
+                  dataset: { live: 1 },
+                  attrOpt: { "data-live": 1 },
+                }
+              : { active: 0 }),
             className: `${p}-cta`,
             sys_pn: "es-cta",
             partHandler: ui,

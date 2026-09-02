@@ -1,6 +1,6 @@
 const skeleton = require('./skeleton');
 const { BLOCKS } = require('../skeleton/toolkit/workspace-dialog');
-const { stepProgress, isLastScreen, entryScreen } = require('../tours');
+const { isLastScreen, entryScreen } = require('../tours');
 
 // The type keys the dialog uses are the design's; the create service's are the
 // product's, and they are not the same three words. One map, at the boundary.
@@ -208,10 +208,20 @@ class __tutorial_workspace extends LetcBox {
     const mute = !!(s.invite && this._created && this._created.type === 'personal');
     const chrome = {
       hide_next: live,
-      // Numbered like every other tour. The frames leave these callouts
-      // uncounted, but a screen nobody can name is a screen nobody can report
-      // — see the note on progressStyle in toolkit/tooltip.js.
-      ...stepProgress(this, this._screenIndex),
+      // NO progress indicator on any screen of this tour. No `step`/`steps` are
+      // passed, so tooltipBubble's `progress()` returns null on its `total < 2`
+      // guard and the card draws no header row at all — not an empty band above
+      // the copy.
+      //
+      // This is what the frames show: the create-workspace callouts are
+      // uncounted, and the pill was ours. It briefly carried one on the argument
+      // that a screen nobody can name is a screen nobody can report — true of a
+      // long tour, and not worth a counter the design does not have on a flow
+      // whose screens are each named by the block they point at ("Type your
+      // workspace name here", the three type rows, Create).
+      //
+      // Other tours are untouched: `chat` asks for dashes, the rest take the
+      // pill by default (see progressStyle in toolkit/tooltip.js).
       // No way back once the workspace exists. The create form would happily
       // make a second one with no sign the first happened, and the invite card
       // may already have sent an invitation — neither is somewhere to return
@@ -238,6 +248,17 @@ class __tutorial_workspace extends LetcBox {
       direction: s.direction || 'west',
       beak: s.beak,
       gap: DIALOG_GAP,
+      // No film, on every screen of this tour. 140:22684 and the
+      // create-workspace frames after it are drawn at full strength: the flow
+      // is a walk through a dialog the user is about to fill in, and the beak
+      // is what points at the block being described.
+      //
+      // Said here rather than in the skin, which is where it used to live as
+      // `.tutorial-main[data-tour="workspace"]`. A tour attribute could not
+      // give the chat flow one undimmed screen out of five, and it stopped
+      // applying inside `full`, where the stamped id is "full" — so the rule
+      // moved onto the focus call and this is its other caller.
+      dim: false,
       owner: this,
     });
   }

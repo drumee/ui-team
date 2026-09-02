@@ -6,30 +6,50 @@
 // the edge facing its target. The toolkit uses ui.fig.group ("tutorial") as
 // the BEM root so every step widget shares these rules.
 //
-// Metrics measured off the 1:1 frames: card 296px wide, 24px insets, 12px
-// radius, the 1px/11px ambient shadow the design applies to every floating
-// surface. Dashes 24x4. Back/Next are equal halves of the footer.
+// Metrics read off the frame's own node geometry (142:40285, via Figma
+// metadata — not eyeballed): card 297x230.875, 24px insets, 12px radius,
+// content column 249 wide. The card is a column of TWO at 24px (body, footer);
+// the body a column of three at 17px (dashes, title, desc). Dashes are 24x6 at
+// 4px, radius 12. Back/Next are 118.5 each at 12px — equal halves of the 249.
+//
+// The shadow stays 0 1px 11px: the frame's effect style is
+// `DROP_SHADOW radius 11`, and Figma's radius is the box-shadow blur. (The
+// design-context export writes it as `drop-shadow(... 5.5px)` because a CSS
+// FILTER shadow is stdDeviation-based, i.e. half the radius — which is exactly
+// what the beak below uses, since a filter is what follows its clipped
+// silhouette. Same shadow, two correct spellings.)
 
 // Half-diagonal of the rotated square that forms the tail.
 $beak: 9px;
 
-// The tail's real shape — Polygon 1 (Figma 200:9166), measured where it counts:
-// 14px deep out from the card, and 15.5px across at the card's edge. That is a
-// 58 degree wedge. A square rotated 45deg can only ever give 90, which is what
-// this drew — a blunt diamond corner rather than the narrow tail the frames
-// point with.
+// The tail's real shape, measured where it counts: how far it reaches out from
+// the card, and how wide it sits at the card's edge.
 //
-// Corrected by SCALING after the rotation instead of swapping in a clip-path or
-// a mask: the square keeps `background: inherit` and `box-shadow: inherit`, so
+// Sized off the CHAT callout's own nodes, which is the card these numbers were
+// last checked against (Figma 142:40283/84/85, read via metadata rather than
+// eyeballed):
+//
+//   depth   the outer frame 142:40283 is 248.875 tall and the card 142:40285 is
+//           230.875 — the tail accounts for the 18px difference.
+//   across  the tail is Polygon 1 (142:40284), a 40x40 regular polygon centred
+//           on the card, whose visible triangle sits at 14% insets — ~29px.
+//
+// The older polygon 200:9166 measures ~14 deep and ~15.5 across, and 17/9.5
+// was set from it. The two frames disagree; this follows the chat frame, whose
+// card every other metric in this file is also matched against.
+//
+// Shaped by SCALING after the rotation instead of swapping in a clip-path or a
+// mask: the square keeps `background: inherit` and `box-shadow: inherit`, so
 // the tail still takes the card's own surface and edge in either theme, and the
 // scale is symmetric about the element's centre — which already sits on the
 // card's edge, so every offset and inset below goes on meaning what it meant.
+//
 // These are the wedge BEFORE its tip is rounded off and before the 1px it is
-// pushed back into the card — both of which eat into the silhouette, by about
-// 3px of depth and 3px of spread between them. 17/9.5 measures out at the
-// frame's 14 deep and ~15.5 across once they have.
-$beak-out: 17px;
-$beak-half: 9.5px;
+// pushed back into the card — both of which eat into the silhouette, so the
+// declared numbers run larger than the rendered ones. Picked by measuring the
+// render: 21/16.25 comes out at ~17 deep x ~28 across.
+$beak-out: 21px;
+$beak-half: 16.25px;
 // Half-extent of the 45deg-rotated square, before scaling: side / sqrt(2).
 $beak-diag: $beak * 1.41421356;
 $beak-scale-out: math.div($beak-out, $beak-diag);
@@ -37,6 +57,11 @@ $beak-scale-across: math.div($beak-half, $beak-diag);
 // Also in spotlight/index.js as BEAK_INSET — it caps how far the card may be
 // nudged before the tail would leave it.
 $beak-inset: 26px;
+
+// The floating-surface shadow, declared once and used by BOTH the card and its
+// tail — which is what "the beak has the same shadow as the card" has to mean
+// structurally, rather than the same numbers typed twice.
+$card-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
 
 // How far the card has been pushed back inside the tour, set by the spotlight
 // when the anchor put it over an edge (spotlight/index.js _keepInView). It is
@@ -49,12 +74,12 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   &__bubble-card {
     position: absolute;
     box-sizing: border-box;
-    width: 296px;
+    width: 297px;
     padding: 24px;
-    gap: 12px;
+    gap: 24px;
     border-radius: 12px;
     background: var(--normal-bg-elevated);
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    box-shadow: $card-shadow;
     pointer-events: all;
     // Above any step's own content, not merely above the scrim it sits on.
     z-index: 10010;
@@ -79,16 +104,29 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
     // polygon per direction is enough and the rotation still does the work.
     // The rounded corner survives the cut and becomes the tail's rounded tip.
     //
-    // `filter: drop-shadow`, not `box-shadow`: clip-path clips a box-shadow
-    // away with everything else, and a filter shadow follows the clipped
-    // silhouette — which is the tail's edge and nothing else.
+    // The tail carries the CARD'S OWN `box-shadow`, from the shared
+    // $card-shadow above — not a `filter: drop-shadow` equivalent of it.
+    //
+    // A box-shadow paints outside the border box, so the clip below would
+    // normally delete it: measured, the same declaration reaches 9px past the
+    // tip unclipped and 1px clipped. The clip is therefore WIDENED rather than
+    // dropped — a `clip-path` polygon may sit outside the element's box, so
+    // each one below keeps its cut line exactly where it was and pushes the
+    // other three vertices out to ±100/200%. The half-plane that is kept is
+    // unchanged, so the inner half and any shadow on that side are still cut
+    // and the card's face stays clean; the shadow simply has room to land on
+    // the outward side.
+    //
+    // Dropping the clip instead is what the note above describes: the whole
+    // square draws, its shadow with it, and a grey seam appears across the
+    // card beside the tail.
     &::after {
       content: "";
       position: absolute;
       width: $beak * 2;
       height: $beak * 2;
       background: inherit;
-      filter: drop-shadow(0 1px 5.5px rgba(0, 0, 0, 0.13));
+      box-shadow: $card-shadow;
       // Overridden per direction below, which is where the wedge gets its
       // angle; this is the shared 45deg the scale is applied on top of.
       transform: rotate(45deg);
@@ -97,14 +135,27 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
       border-radius: 3px;
     }
 
+    // Each polygon's HYPOTENUSE is the cut line and is unchanged: north/south
+    // both run along x + y = 100%, east/west along y = x. Only the far vertices
+    // moved, from the box's corners out to ±100/200%, which is what gives the
+    // box-shadow somewhere to paint. Verify by substitution — (200%,-100%) and
+    // (-100%,200%) both satisfy x + y = 100%, as (100%,0) and (0,100%) did.
+    //
     // rotate(45deg) sends the square's top-left corner to the top, top-right to
     // the right, bottom-right to the bottom and bottom-left to the left. The
     // kept half is the triangle holding whichever corner points away from the
     // card.
-    &[data-direction="north"]::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
-    &[data-direction="south"]::after { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
-    &[data-direction="east"]::after { clip-path: polygon(0 0, 100% 0, 100% 100%); }
-    &[data-direction="west"]::after { clip-path: polygon(0 0, 0 100%, 100% 100%); }
+    &[data-direction="north"]::after { clip-path: polygon(-100% -100%, 200% -100%, -100% 200%); }
+    &[data-direction="south"]::after { clip-path: polygon(200% -100%, 200% 200%, -100% 200%); }
+    &[data-direction="east"]::after { clip-path: polygon(-100% -100%, 200% -100%, 200% 200%); }
+    &[data-direction="west"]::after { clip-path: polygon(-100% -100%, -100% 200%, 200% 200%); }
+  }
+
+  // Progress + copy. 17px apart, which is the frame's own spacing between the
+  // dash row, the heading and the paragraph — see the note above on why this is
+  // a box of its own rather than three more children of the card.
+  &__bubble-body {
+    gap: 17px;
   }
 
   // Bare bubble — 200:9167, the callout on the create-workspace frames.
@@ -220,47 +271,61 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   // ── Progress: dashes ─────────────────────────────────────────────────────
   &__bubble-dashes {
     align-items: center;
-    gap: 6px;
+    // 4px, from the dash x-positions in 169:39401: 0, 28, 56, 84 at 24 wide.
+    gap: 4px;
   }
 
   &__bubble-dash {
     width: 24px;
-    height: 4px;
-    border-radius: 2px;
+    // 6px tall and fully rounded — a 24x6 stadium, not the 24x4 hairline this
+    // drew. radius 12 is the frame's value and exceeds half the height, which
+    // is what makes the ends semicircular.
+    height: 6px;
+    border-radius: 12px;
+    // Grey/30.
     background: var(--normal-bg-80);
     flex: 0 0 auto;
 
     &[data-on="1"] {
-      background: var(--primary-purple-50);
+      // Primary/40 #5950ff, NOT Primary/50 #433cc5 — which is the Next
+      // button's fill and is what this used. The two are a visibly different
+      // purple side by side in the same card.
+      background: var(--primary-purple-40);
     }
   }
 
+  // Body/Sub tittle: Geist SemiBold 20/1.1.
   &__bubble-title {
-    @include drumee.typo($size: 20px, $line: 1.2);
+    @include drumee.typo($size: 20px, $line: 1.1);
     font-weight: 600;
     color: var(--normal-fg);
   }
 
+  // Body/Small Body: Geist Regular 14/1.4, Grey/80.
   &__bubble-desc {
-    @include drumee.typo($size: 14px, $line: 1.45);
+    @include drumee.typo($size: 14px, $line: 1.4);
     font-weight: 400;
     color: var(--normal-fg-20);
   }
 
+  // No margin-top: the card's own 24px gap is the space the frame puts between
+  // the copy and the buttons. The 8px here used to be added ON TOP of a 12px
+  // gap, which came to 20 rather than 24.
   &__bubble-footer {
     align-items: center;
     gap: 12px;
-    margin-top: 8px;
   }
 
   // Back and Next are equal halves. A lone Next (the migrate screens) spans
   // the footer, which is what the design shows there.
+  // Buttons/Small Button: Geist SemiBold 14 on a 20px line, 8/24 insets — a
+  // 36px box, which is the height the frame's instances measure.
   &__bubble-back,
   &__bubble-next {
-    @include drumee.typo($size: 14px, $line: 1.2);
+    @include drumee.typo($size: 14px, $line: 20px);
     flex: 1 1 0;
     box-sizing: border-box;
-    padding: 11px 16px;
+    padding: 8px 24px;
     border-radius: 8px;
     // See the note on __wsd-submit: a Note's copy sits in an inner block, so
     // the box needs centring too, not just the text.
@@ -272,8 +337,11 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   }
 
   &__bubble-back {
-    font-weight: 500;
-    color: var(--normal-fg);
+    // SemiBold like its neighbour, and Grey/70 rather than the near-black this
+    // had: the frame's Back reads as the quieter of the pair through COLOUR,
+    // with both buttons at the same weight.
+    font-weight: 600;
+    color: var(--normal-fg-50);
     background: var(--normal-bg-90);
 
     &:hover { background: var(--normal-bg-80); }
