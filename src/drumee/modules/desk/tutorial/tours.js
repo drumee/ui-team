@@ -75,15 +75,18 @@ const TOURS = {
   // 142:35805) whose callout-bearing frames were not captured in this pass, and
   // that is where a Files step would come back.
   //
-  // The tracker walks its own carousel: five cards, one per view, then the
-  // New task dialog (146:40534, 162:20161).
+  // TWO screens: the tracker's empty state, whose carousel walks five cards on
+  // a timer without being a step each, then the New task dialog (146:40534,
+  // 162:20161). It declared six while the cards were steps — which made the
+  // pill count to six through one screen, and cost four presses of a CTA
+  // labelled "Create your first task" before it created anything.
   folder_task: {
     id: "folder_task",
     flag: "folder_task",
     // The scheduler is no longer a step of its own: 2.0 puts it at the end of
     // the MEET flow (156:19597), which is where anyone would reach it.
     // `tutorial_schedule` stays on disk but is out of every tour.
-    steps: [{ kind: "tutorial_task", screens: 6, chrome: { rail: "task", crumb: true } }],
+    steps: [{ kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } }],
   },
 
   // Chat was three screens INSIDE the folder step. 2.0 pulls it out: four
@@ -139,7 +142,7 @@ const TOURS = {
       { kind: "tutorial_workspace", screens: 6, chrome: { rail: null, crumb: false } },
       { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat", crumb: true } },
       { kind: "tutorial_meeting", screens: 3, chrome: { rail: "meet", crumb: true } },
-      { kind: "tutorial_task", screens: 6, chrome: { rail: "task", crumb: true } },
+      { kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } },
       { kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } },
       { kind: "tutorial_migrate", screens: 3, chrome: { rail: "files", crumb: true } },
     ],

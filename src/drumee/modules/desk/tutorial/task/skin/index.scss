@@ -68,24 +68,48 @@
     @include drumee.typo($size: 12px, $line: 1.2);
     font-weight: 500;
     color: var(--normal-fg-50);
-    padding: 10px 0;
+    padding: 10px;
     text-align: center;
     border-radius: 8px;
     border: 1px dashed var(--border-strong);
   }
 
   // ── The dialog ───────────────────────────────────────────────────────────
+  //
+  // The band down the right of the stage that belongs to the CALLOUT, not the
+  // dialog. This screen's card sits east of the submit button (`direction:
+  // 'west'`, `anchor: 'nt-submit'` in ../index.js), so the two compete for the
+  // same strip — and the dialog was winning it: at 985 wide, centred in a
+  // 1315-wide pane, its right edge ran to 1150 while spotlight's _keepInView
+  // pulled the card back to 1006 to keep it inside the tour. The card landed
+  // on top of the form, over the "Add new task" button.
+  //
+  // Reserving the band here rather than shrinking the dialog by a flat number
+  // means the dialog gives up only the width it has to, and cannot overlap by
+  // construction however wide the pane is. The terms are spotlight's own
+  // placement constants: 297 card (skin/tooltip.scss) + 12 EDGE + 24 of clear
+  // space between card and dialog = 333, rounded up for slack.
+  $nt-callout-col: 340px;
+  // What was `max-width: calc(100% - 80px)` — 40 a side. The right 40 is now
+  // inside the callout band, so only the left one is stated.
+  $nt-gutter: 40px;
+
   &__nt-backdrop {
     position: absolute;
     inset: 0;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    padding-left: $nt-gutter;
+    padding-right: $nt-callout-col;
   }
 
-  // 162:20161 — two columns, 985 wide, 24px radius.
+  // 162:20161 — two columns, 985 wide, 24px radius. 985 is still the target;
+  // it is now a ceiling the backdrop's own width can hold it under, which is
+  // what happens on any pane narrower than 985 + 340 + 40.
   &__nt-dialog {
     width: 985px;
-    max-width: calc(100% - 80px);
+    max-width: 100%;
     box-sizing: border-box;
     padding: 30px;
     gap: 22px;

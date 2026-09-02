@@ -114,8 +114,30 @@
     --es-pitch: 457px;
     gap: 32px;
     flex: 0 0 auto;
-    // The slide itself. `transform` is set inline per screen by the composer.
-    transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+    // The slide itself. `transform` is set inline per screen by the composer,
+    // and per tick by the task step's auto-slide.
+    //
+    // 520ms on a decelerating curve, up from 320ms on a symmetric one. 320 is
+    // right for a slide the user asked for by pressing something; on a carousel
+    // that moves BY ITSELF it reads as a flick, because nothing preceded it to
+    // explain the motion. The long tail lets the card settle rather than stop.
+    transition: transform 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
+
+    // The track is draggable, so it says so, and its own text must not select
+    // under the drag. `touch-action: pan-y` keeps a vertical scroll gesture the
+    // page's while claiming the horizontal one for the carousel — without it a
+    // touch drag would fight the scroller.
+    cursor: grab;
+    user-select: none;
+    touch-action: pan-y;
+
+    // While a finger or pointer is down the track follows it 1:1, so the
+    // transition has to be out of the way — with it on, every pointermove
+    // would start a new 520ms animation toward the finger and lag behind it.
+    &[data-dragging="1"] {
+      cursor: grabbing;
+      transition: none;
+    }
 
     &[data-card="wide"] { --es-pitch: 792px; }
   }
@@ -165,6 +187,13 @@
     object-fit: cover;
     object-position: top left;
     display: block;
+    // The pointer belongs to the track. Browsers give an <img> a native drag of
+    // its own, which would hijack the gesture and trail a ghost image; and with
+    // the image transparent to the pointer, every pointerdown lands on the
+    // track whatever it hits.
+    pointer-events: none;
+    -webkit-user-drag: none;
+    user-select: none;
   }
 
   &__es-card-title {
@@ -248,6 +277,13 @@
   // ── Carousel dots (Task) ─────────────────────────────────────────────────
   // 146:40669 — the active dot is a 41x12 pill, the rest 12x12 squares on a
   // 20px pitch. Centred under the first card, which is the one fully in view.
+  // Someone who has asked for less motion gets the position without the travel.
+  // The task step already declines to auto-slide under this preference; this
+  // covers the slides they drive themselves.
+  @media (prefers-reduced-motion: reduce) {
+    &__es-track { transition: none; }
+  }
+
   &__es-dots {
     align-items: center;
     justify-content: center;

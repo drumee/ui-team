@@ -1,8 +1,10 @@
 /**
  * Step bodies for the `task` tour — Figma 146:40534 and 162:20161.
  *
- * Screens 1-5 are the Task empty state with its carousel scrolled to each of
- * the five views in turn; screen 6 is the Board with the New task dialog open.
+ * Screen 1 is the Task empty state, whose carousel walks the five views on a
+ * timer; screen 2 is the Board with the New task dialog open. `screen.index`
+ * says which card the track starts on — it is a CARD number, not a step (see
+ * `_card` in ../index.js).
  *
  * The five 1.x tracker view builders (./board, ./calendar, ./gantt, ./list,
  * ./health) are left on disk — they are the only drawings of those views the
@@ -35,6 +37,11 @@ module.exports = function (ui, screen = {}) {
     items: VIEWS.map((v) => ({ ...v, title: v.title() })),
     index: screen.index || 0,
     dots: true,
+    // The carousel screen carries no callout (see ../index.js), so this button
+    // is its only way forward — and it goes where its label says, straight to
+    // the New task dialog. The dot row above is inert scenery, as it is in the
+    // frames: the track moves on a timer and under a drag, not by being poked.
+    cta_service: 'next-step',
   });
 };
 

@@ -185,6 +185,13 @@ function emptyState(ui, opt = {}) {
             kids: [
               Skeletons.Box.X({ active: 0,
                 className: `${p}-track`,
+                // Named so a step can move the track IN PLACE. Re-feeding the
+                // empty state rebuilds this element, and a freshly mounted node
+                // has no previous transform to transition from — so the skin's
+                // `transition: transform 320ms` only ever runs when the
+                // transform changes on the node that is already there.
+                sys_pn: "es-track",
+                partHandler: ui,
                 dataset: { card: variant },
                 attrOpt: { "data-card": variant },
                 // One pitch per screen, in the units CSS is currently using.
@@ -227,6 +234,11 @@ function emptyState(ui, opt = {}) {
           dots
             ? Skeletons.Box.X({ active: 0,
                 className: `${p}-dots`,
+                // Named for the same reason as the track: the lit dot is baked
+                // in from `index` at build time, so a step moving the track in
+                // place has to move the dot with it.
+                sys_pn: "es-dots",
+                partHandler: ui,
                 kids: items.map((_it, i) =>
                   Skeletons.Box.Y({ active: 0,
                     className: `${p}-dot`,
