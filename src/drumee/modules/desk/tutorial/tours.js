@@ -105,16 +105,17 @@ const TOURS = {
     steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } }],
   },
 
-  // Importing from Google Drive. The flow starts on the Files empty state and
-  // its + New menu (142:34981, 142:35805) before the dialog opens — this used
-  // to start on the dialog, which began the tour mid-task.
+  // Importing from Google Drive — the import dialog itself.
+  //
+  // It opened on two Files-pane screens before this (the Migrate CTA and the
+  // + New menu, 142:34981 / 142:35805) so the tour showed how the dialog was
+  // reached. Those were dropped; the tour starts on the dialog.
   migrate: {
     id: "migrate",
     flag: "migrate",
-    // Five: the Files empty state and its + New menu, then the import dialog
-    // at three points in the form. The first two are ABOUT the pane, so the
-    // step draws it itself.
-    steps: [{ kind: "tutorial_migrate", screens: 5, chrome: { rail: "files", crumb: true } }],
+    // Three: the import dialog at three points in the form. The step still
+    // draws the Files pane, but only as the ground the dialog sits on.
+    steps: [{ kind: "tutorial_migrate", screens: 3, chrome: { rail: "files", crumb: true } }],
   },
 
   // Reachable only from the `full` tour: no contextual trigger, no flag, and
@@ -140,7 +141,7 @@ const TOURS = {
       { kind: "tutorial_meeting", screens: 3, chrome: { rail: "meet", crumb: true } },
       { kind: "tutorial_task", screens: 6, chrome: { rail: "task", crumb: true } },
       { kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } },
-      { kind: "tutorial_migrate", screens: 5, chrome: { rail: "files", crumb: true } },
+      { kind: "tutorial_migrate", screens: 3, chrome: { rail: "files", crumb: true } },
     ],
   },
 };

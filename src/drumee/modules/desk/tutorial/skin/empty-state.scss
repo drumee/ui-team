@@ -65,6 +65,21 @@
     background: var(--primary-purple-50);
   }
 
+  // A drawing on most screens, a real control on the chat tour's first one —
+  // which raises `next-step` and is that screen's only way forward, since it
+  // carries no callout. Keyed on the flag the builder stamps alongside the
+  // service (toolkit/empty-state.js), not on the tour, so it cannot disagree
+  // with what is actually clickable. Same treatment as `home-cta` in
+  // skin/files.scss, the workspace tour's equivalent.
+  &__es-cta[data-live="1"] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background: var(--primary-purple-40);
+    }
+  }
+
   &__es-cta-label {
     @include drumee.typo($size: 15px, $line: 1.2);
     font-weight: 600;

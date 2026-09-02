@@ -15,31 +15,63 @@ const { stepProgress, isLastScreen, entryScreen } = require('../tours');
  */
 const SCREENS = [
   {
-    // Figma 142:38674 — the Chat empty state the flow opens on. Like the other
-    // empty states it carries no callout of its own, so the sentence is ours
-    // and it points at the CTA the flow leaves from.
+    // Figma 142:38674 — the Chat empty state the flow opens on.
+    //
+    // NO callout: the frame carries none, and the hero already says what this
+    // screen is for in its own headline and paragraph. The card that used to
+    // float beside the CTA was ours, and it repeated the hero in miniature.
+    //
+    // Which leaves the screen with nothing to press Next on, so the CTA becomes
+    // the control — "Start discovering now" raises `next-step` itself (see
+    // `cta_service` in skeleton/index.js). Exactly the arrangement the
+    // workspace tour's opening screen uses for `home-cta`.
+    //
+    // `LOCALE.CHAT_HERO_TITLE_SHORT` and `LOCALE.TUTORIAL_CHAT_START` were this
+    // callout's copy and now have no reader; the keys are left in the locale
+    // files rather than pruned across all seven.
     pane: { empty: true },
     target: 'es-cta',
     anchor: 'es-cta',
     direction: 'north',
-    title: () => LOCALE.CHAT_HERO_TITLE_SHORT,
-    desc: () => LOCALE.TUTORIAL_CHAT_START,
+    bare: true,
   },
   {
-    // The stream as it stands, callout over the composer: "drop a file here".
-    target: 'stream',
-    anchor: 'composer',
+    // Figma 142:39178 — "Drag and drop a file".
+    //
+    // The COMPOSER is what this screen is about, so the composer is what is
+    // lit. That is the frame's own treatment: every other surface on it is
+    // drawn at 40% — the chat panel, the stream's header, all six bubbles —
+    // and the Chat Input alone is at full strength. Lighting `stream` (what
+    // this did) held the whole message area out of the scrim instead, so the
+    // one thing the screen is teaching was the only part of the pane that
+    // looked no different from the rest.
+    //
+    // The beak lands on the PAPERCLIP, not on the composer's mid-point. The
+    // frame puts the card over the left end of the input, which is where the
+    // attach control is — and it is the control the sentence is about, since
+    // dragging a file in is the same act as attaching one. target and anchor
+    // exist precisely so the lit area and the beak can be measured off
+    // different elements.
+    target: 'composer',
+    anchor: 'composer-attach',
     direction: 'south',
     title: () => LOCALE.TUTORIAL_CHAT_DROP_TITLE,
     desc: () => LOCALE.TUTORIAL_CHAT_DROP_DESC,
   },
   {
-    // The hover toolbar on the file message. The design lands the beak on the
-    // reply-in-thread control specifically, not on the bar.
+    // Figma 169:39799. The design lands the beak on the reply-in-thread control
+    // specifically, not on the bar: the card's beak is centred at x 1280.5 and
+    // that control's centre is ~1278.
+    //
+    // 46, not the shared default of 32 (spotlight/index.js GAP). The frame puts
+    // the card's bottom at y 806 and the toolbar's top at 852 — the extra 14
+    // is the "Reply in thread" tip, which stands between the two and which the
+    // average default was never measured against.
     pane: { hint: true },
     target: 'msg-file-message',
     anchor: 'hint-thread',
     direction: 'south',
+    gap: 46,
     title: () => LOCALE.TUTORIAL_CHAT_HASH_TITLE,
     desc: () => LOCALE.TUTORIAL_CHAT_HASH_DESC,
   },
@@ -101,22 +133,53 @@ class __tutorial_chat extends LetcBox {
       this.ensurePart(s.anchor),
     ]);
 
+    // `bare` raises the screen with no tooltip at all: focus() clears the
+    // callout and returns, so nothing is drawn and nothing is left over from
+    // the previous screen either (feed(null) would be a no-op — see the note
+    // in spotlight/index.js).
+    // How far through, the way 142:39178 draws it: a row of four dashes with
+    // the first filled. FOUR, not five — the design counts only the screens
+    // that carry a callout, and the empty-state hero is not one of them.
+    //
+    // Dashes and local numbering only while this step IS the whole tour.
+    // Inside `full` the host's cumulative count is what the badge shows, and
+    // 29 dashes would be a ruler rather than a progress bar — which is the
+    // reason tours.js settled on one counting mode in the first place.
+    const solo = !!this.mget('is_first') && !!this.mget('is_last');
+    const carded = SCREENS.filter((x) => !x.bare).length;
+    const firstCarded = SCREENS.findIndex((x) => !x.bare);
+    const progress = solo
+      ? {
+          step: this._screenIndex - firstCarded,
+          steps: carded,
+          progressStyle: 'dashes',
+        }
+      : stepProgress(this, this._screenIndex);
+
+    const tooltip = s.bare
+      ? null
+      : {
+          title: s.title(),
+          desc: s.desc(),
+          ...progress,
+          // Live whenever a previous step exists; hidden on screen 1 of its own
+          // tour, where back-step would reach the host with nowhere to go.
+          hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+          done: isLastScreen(this, this._screenIndex, SCREENS.length),
+        };
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
       anchor: anchor && anchor.el,
-      tooltip: {
-        title: s.title(),
-        desc: s.desc(),
-        // Numbered: 1/4 … 4/4 standing alone, and this step's number inside
-        // `full`, where the mode switches to step counting.
-        ...stepProgress(this, this._screenIndex),
-        // Live whenever a previous step exists; hidden on screen 1 of its own
-        // tour, where back-step would reach the host with nowhere to go.
-        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-        done: isLastScreen(this, this._screenIndex, SCREENS.length),
-      },
+      tooltip,
       direction: s.direction,
+      // Per screen where the frame asks for it; undefined everywhere else,
+      // which anchorFor's default parameter reads as the shared 32.
+      gap: s.gap,
+      // The hero screen's frame carries no film; the four that follow light one
+      // surface out of a busy mock and need it. `bare` already marks exactly
+      // that screen, so the two cannot drift apart.
+      dim: !s.bare,
       owner: this,
     });
   }

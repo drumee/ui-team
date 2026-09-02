@@ -1,5 +1,6 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
+const { menuRow, createRows } = require("./new-menu-rows");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.
@@ -1015,12 +1016,31 @@ export function fileTypeFilterBar(ui) {
       dataset: { area: ui.mget(_a.area) },
     }),
   );
+  // The five tabs live on a TRACK of their own — the segmented control's grey
+  // ground (Figma base) — because this bar also carries search, "+ New" and the
+  // view toggle, and painting the bar itself would put all three on the track.
+  //
+  // `sys_pn` rides on the TRACK, not the bar, deliberately: the part it names
+  // is what _resetFileTypeFilter reaches for, and that walks
+  // `bar.children.find(c => c.mget(value) === "all")` — DIRECT children
+  // (folder/index.js). Left on the bar, the tabs became grandchildren, the
+  // lookup answered undefined and navigating into a folder silently stopped
+  // clearing a "Docs" filter — which hides every sub-folder and reads as an
+  // empty folder. Naming the track keeps that walk pointed at the tabs and
+  // needs no change on the JS side.
   return Skeletons.Box.X({
     className: `${ui.fig.family}__filter-bar`,
-    sys_pn: "file-type-filter",
-    partHandler: ui,
     dataset: { area: ui.mget(_a.area) },
-    kids: [...filterTabs, fileFilterControls(ui)],
+    kids: [
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__filter-track`,
+        sys_pn: "file-type-filter",
+        partHandler: ui,
+        dataset: { area: ui.mget(_a.area) },
+        kids: filterTabs,
+      }),
+      fileFilterControls(ui),
+    ],
   });
 }
 
@@ -1392,34 +1412,9 @@ export function newMenu(ui, opt = {}) {
   const cnDropdown = `${cnWindowButton}__dropdown-menu`;
   const cnItem = `${cnDropdown}__item`;
 
-  // Build one menu row (icon + label) that carries a `service`. Mirrors the row
-  // shape used by dropdownMenuButton: active:0 on the row's kids so a click on
-  // the icon/label bubbles to the row (which owns the service) rather than being
-  // swallowed by the interactive Button.Svg / Note.
-  const row = ({ service, ico, content, area, name, className }) =>
-    Skeletons.Box.X({
-      className: className ? `${cnItem} ${className}` : cnItem,
-      uiHandler: [ui],
-      service,
-      // `name` rides along so new-document rows carry their filename
-      // (document.docx / spreadsheet.xlsx / presentation.pptx) — newDocument()
-      // reads cmd.mget(_a.name).
-      name,
-      kidsOpt: { active: 0 },
-      kids: [
-        Skeletons.Button.Svg({
-          ico,
-          active: 0,
-          className: `${cnDropdown}__icon`,
-          dataset: area ? { area } : undefined,
-        }),
-        Skeletons.Note({
-          content,
-          active: 0,
-          className: `${cnDropdown}__name`,
-        }),
-      ],
-    });
+  // Row shape lives in ./new-menu-rows, shared with the Files empty-state
+  // hero's ghost "New" (../content/grid/empty.js) so the two cannot diverge.
+  const row = (spec) => menuRow(ui, spec);
 
   const importRows = [
     row({
@@ -1436,47 +1431,9 @@ export function newMenu(ui, opt = {}) {
     }),
   ];
 
-  // Create rows keep the historical folder services and filenames. Only their
-  // presentation moves into the right-side flyout.
-  const createRows = [
-    row({
-      service: "add-folder",
-      ico: "addmenu-folder",
-      content: LOCALE.FOLDER,
-      area: ui.mget(_a.area) || _a.personal,
-      className: `${cnItem}--add-folder ${cnDropdown}__submenu-item`,
-    }),
-    // Note is temporarily hidden from this create flyout (2026-08). The
-    // add-note handler (window/core.js) and editor_markdown stay wired —
-    // uncomment this row to restore the option.
-    // row({
-    //   service: "add-note",
-    //   ico: "addmenu-note",
-    //   content: LOCALE.NOTE,
-    //   className: `${cnItem}--add-note ${cnDropdown}__submenu-item`,
-    // }),
-    row({
-      service: "new-document",
-      name: "document.docx",
-      ico: "addmenu-document",
-      content: LOCALE.DOCUMENT,
-      className: `${cnItem}--document ${cnDropdown}__submenu-item`,
-    }),
-    row({
-      service: "new-document",
-      name: "spreadsheet.xlsx",
-      ico: "addmenu-spreadsheet",
-      content: LOCALE.SPREADSHEET,
-      className: `${cnItem}--spreadsheet ${cnDropdown}__submenu-item`,
-    }),
-    row({
-      service: "new-document",
-      name: "presentation.pptx",
-      ico: "addmenu-presentation",
-      content: LOCALE.PRESENTATION,
-      className: `${cnItem}--presentation ${cnDropdown}__submenu-item`,
-    }),
-  ];
+  // The four create rows, shared with the empty-state hero. `submenu: 1` adds
+  // the flyout-item class this surface's nested presentation indents on.
+  const createItems = createRows(ui, { submenu: 1 });
 
   const createGroup = Skeletons.Box.X({
     className: `${cnItem} ${cnItem}--create-group`,
@@ -1500,7 +1457,7 @@ export function newMenu(ui, opt = {}) {
       Skeletons.Box.Y({
         active: 0,
         className: `${cnDropdown}__create-submenu`,
-        kids: createRows,
+        kids: createItems,
       }),
     ],
   });

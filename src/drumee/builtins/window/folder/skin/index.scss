@@ -799,30 +799,9 @@
         min-height: 34px;
       }
 
-      .window-button__dropdown-menu__item--add-folder svg {
-        fill: #5950ff;
-        color: #5950ff;
-      }
-
-      .window-button__dropdown-menu__item--add-note svg {
-        fill: #e8a13b;
-        color: #e8a13b;
-      }
-
-      .window-button__dropdown-menu__item--document svg {
-        fill: #847eff;
-        color: #847eff;
-      }
-
-      .window-button__dropdown-menu__item--spreadsheet svg {
-        fill: #54b684;
-        color: #54b684;
-      }
-
-      .window-button__dropdown-menu__item--presentation svg {
-        fill: #ffa8dc;
-        color: #ffa8dc;
-      }
+      // Shared with the Files empty-state hero's copy of these rows, which is
+      // scoped where this block cannot reach it (window/skin/common.scss).
+      @include drumee.new-menu-icon-tints;
 
       // ── Mobile: centred card instead of an anchored dropdown ────────
       // Both flags, for the reason spelled out on the mixin.
@@ -2686,6 +2665,11 @@
   // painted things on it. It was a grey band with a bottom rule, which read as
   // a second chrome strip under the top bar and made the file space look a
   // different colour from the frame.
+  //
+  // The gap is the TRACK's now, not the bar's: with a painted segmented control
+  // on one side and the search/New/view group on the other, 24px between those
+  // two groups is right and 24px between the five tabs would stretch the track
+  // across the toolbar.
   &__filter-bar {
     align-items: center;
     gap: 24px;
@@ -2694,86 +2678,120 @@
     background: transparent;
   }
 
-  &__filter-tab-main {
+  // The segmented control's ground — a grey pill holding the five tabs, with
+  // the active one filled (base image).
+  //
+  // The workspace toolbar wraps its tabs in `__filter-track` (skeleton/toolkit
+  // fileTypeFilterBar) rather than painting the bar, because the bar also holds
+  // search, "+ New" and the view toggle, and those must not sit on the track.
+  //
+  // The segment rules are NESTED in here, not left as a bare
+  // `&__filter-tab-main`, and that scoping is load-bearing. The other producer
+  // of these tabs — the plain grid bar in skeleton/content/grid — names them
+  // `window-filter__tab window-folder__filter-tab` and `button()` builds the
+  // root by suffixing the LAST class only, so its segments come out carrying
+  // `window-folder__filter-tab-main` too. That surface is not an unstyled
+  // orphan: `.window-filter__*` is a whole design of its own in
+  // window/skin/common.scss (grey bar, bottom divider, underline tabs), and a
+  // bare `&__filter-tab-main` here would land on it at EQUAL specificity to
+  // its own `.window-filter__tab` rules — leaving which look wins to
+  // stylesheet order, and painting pills inside a bar that still has a
+  // divider. Anchoring to the track keeps this change to the surface it is
+  // for.
+  //
+  // `flex: 0 0 auto` is what makes the track hug its five tabs — stretched, it
+  // would run the full width of the toolbar and stop reading as a group. Not
+  // the `display` below, which ui-core wins anyway: its own
+  // `.box[data-flow=x]` (container.css) is a class+attribute selector and
+  // beats a bare class, so the track computes to `flex`. Harmless — as a flex
+  // item of the bar, the basis decides the width either way.
+  &__filter-track {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    // #f2f2f7 in the light theme, which is the base image's track; the token
+    // carries the dark theme's #282538 with it.
+    background-color: var(--normal-bg-90);
+    box-sizing: border-box;
+  }
+
+  // One segment. Was an underline tab — 2px bottom border, area-tinted when
+  // active, 700/800 weight. The base image replaces the whole treatment with a
+  // filled pill, so the border, the weight jump and the four area tints are
+  // gone: the active segment is brand purple in every area, the way the "+ New"
+  // button beside it already is. (`--area-private` was the default underline
+  // colour, so an internal workspace's active tab used to be coral.)
+  &__filter-track &__filter-tab-main {
     align-items: center;
     justify-content: center;
-    min-height: 24px;
-    padding: 0 0 4px;
-    border-bottom: 2px solid transparent;
+    min-height: 32px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
     background: transparent;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+    // `font-weight` is declared here, NOT through typo()'s `$weight`: that
+    // argument only picks a `font-family` branch and emits no weight at all
+    // (skin/mixins/typo.scss). The underline tabs this replaces asked it for
+    // 700, and 800 when active, and rendered 400 both times. 500 is passed
+    // only because it is a branch the mixin recognises, so the family still
+    // lands.
+    font-weight: 500;
     @include drumee.typo(
       $size: 13px,
       $line: 1,
-      $weight: 700,
+      $weight: 500,
       $color: var(--normal-fg-10)
     );
 
     .window-folder__filter-tab,
     .note-content {
+      font-weight: 500;
       @include drumee.typo(
         $size: 13px,
         $line: 1,
-        $weight: 700,
+        $weight: 500,
         $color: var(--normal-fg-10)
       );
       cursor: pointer;
     }
 
-    &:hover[data-area="personal"] {
-      border-bottom-color: var(--area-personal);
-    }
-
-    &:hover[data-area="share"] {
-      border-bottom-color: var(--area-share);
-    }
-
-    &:hover[data-area="private"] {
-      border-bottom-color: var(--area-private);
-    }
-
-    &:hover[data-area="public"] {
-      border-bottom-color: var(--area-public);
+    // Hover only where it means something. On the active segment it would
+    // darken a filled pill for no reason, and the selector has to exclude BOTH
+    // active flags because the radiotoggle drives one and the initial render
+    // the other.
+    &:hover:not([data-state="1"]):not([data-radiotoggle="on"]) {
+      background-color: rgba(0, 0, 0, 0.04);
     }
 
     &[data-state="1"],
     &[data-radiotoggle="on"] {
-      padding-bottom: 6px;
-      border-bottom-color: var(--area-private);
+      background-color: var(--primary-40, #5950ff);
+      font-weight: 600;
       @include drumee.typo(
         $size: 13px,
         $line: 1,
-        $weight: 800,
-        $color: var(--normal-fg-10)
+        $weight: 500,
+        $color: var(--white)
       );
 
       .window-folder__filter-tab,
       .note-content {
+        font-weight: 600;
         @include drumee.typo(
           $size: 13px,
           $line: 1,
-          $weight: 800,
-          $color: var(--normal-fg-10)
+          $weight: 500,
+          $color: var(--white)
         );
       }
     }
-  }
-
-  &__filter-bar[data-area="personal"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="personal"]
-    &__filter-tab-main[data-radiotoggle="on"] {
-    border-bottom-color: var(--area-personal);
-  }
-
-  &__filter-bar[data-area="share"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="share"] &__filter-tab-main[data-radiotoggle="on"],
-  &__filter-bar[data-area="dmz"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="dmz"] &__filter-tab-main[data-radiotoggle="on"] {
-    border-bottom-color: var(--area-share);
-  }
-
-  &__filter-bar[data-area="public"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="public"] &__filter-tab-main[data-radiotoggle="on"] {
-    border-bottom-color: var(--area-public);
   }
 
   .window__icons-list {

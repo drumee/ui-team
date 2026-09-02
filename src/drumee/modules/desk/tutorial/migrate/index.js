@@ -2,40 +2,24 @@ const skeleton = require('./skeleton');
 const { stepProgress, isLastScreen, entryScreen } = require('../tours');
 
 /**
- * The `migrate` tour — importing from Google Drive, five screens.
+ * The `migrate` tour — importing from Google Drive, three screens.
  *
- * Figma, in the flow's own order: 142:34981 (the Files empty state and its
- * Migrate CTA), 142:35805 (the + New menu open), then 176:47527, 180:49109 and
- * 180:49990 (the import dialog at three points in the form).
+ * Figma 176:47527, 180:49109 and 180:49990: the import dialog at three points
+ * in the form. Their copy is the design's, verbatim.
  *
- * This was built as three screens — the dialog only — which started the tour
- * mid-task, on a dialog the user had not been shown how to open. The two Files
- * screens are where the flow actually begins.
+ * The tour used to open on two Files-pane screens ahead of these — the Migrate
+ * CTA (142:34981) and the + New menu (142:35805) — so that it showed how the
+ * dialog was reached rather than starting mid-task. Those are gone; the tour
+ * now opens on the dialog itself. The pane is still drawn BEHIND the dialog
+ * (the frames hold it back there), so the removal is of the two screens, not of
+ * the pane. `filesPane`'s `menu` option and its `fp-new-menu` part are
+ * consequently unused — left in skeleton/toolkit/files.js, which is where a
+ * Files flow would pick them up again.
  *
- * Those first two frames carry no callout of their own, so their copy is ours;
- * the three dialog frames' copy is the design's, verbatim.
- *
- * `direction: 'west'` on the dialog screens puts the card to the RIGHT of the
- * dialog, where the frames put it.
+ * `direction: 'west'` puts the card to the RIGHT of the dialog, where the
+ * frames put it.
  */
 const SCREENS = [
-  {
-    // The Files empty state. The Migrate CTA is what the flow leaves from.
-    target: 'fp-migrate',
-    anchor: 'fp-migrate',
-    direction: 'north',
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_START_DESC,
-  },
-  {
-    // The + New menu, open over the same pane.
-    menu: true,
-    target: 'fp-new-menu',
-    anchor: 'fp-new-menu',
-    direction: 'west',
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_NEW_DESC,
-  },
   {
     dialog: true,
     target: 'mg-dialog',

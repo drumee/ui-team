@@ -130,41 +130,57 @@
     color: var(--normal-fg-50);
   }
 
+  // 186:73693: 16px padding, 16px between messages, bottom-aligned. It was
+  // 20/24 and 18. `align-items: center` is the frame's own value — inert while
+  // every row is full width, which they are, but it is what the node says.
   &__stream {
     flex: 1 1 auto;
     min-height: 0;
-    gap: 18px;
-    padding: 20px 24px;
+    gap: 16px;
+    padding: 16px;
     overflow: hidden;
     justify-content: flex-end;
+    align-items: center;
   }
 
+  // A ROW now: [avatar | stack]. The frame hangs the avatar outside the
+  // message's own column (186:73694) so the bubble is indented past it; this
+  // was a column whose first child was an avatar+name head row, which left the
+  // bubble flush with the avatar.
+  //
+  // Full width, with the cap moved onto the bubble where the frame puts it
+  // (max-w-[320px]) — a cap on the row cannot right-align an own message and
+  // bound its bubble at the same time.
   &__msg {
-    // Relative so the hover toolbar can hang off the message it acts on.
-    // No z-index: this is the element the spotlight promotes, and leaving it
-    // context-free means the promotion touches one node instead of two.
-    position: relative;
-    // Measured off the frames: a bubble wraps at ~320px there. A percentage of
-    // the pane (this was 62%) gives ~730px on a 1600px stage, which renders
-    // every message as one long line and reads nothing like the design.
-    max-width: 360px;
+    width: 100%;
     align-items: flex-start;
-    gap: 5px;
+    gap: 8px;
 
     &[data-own="1"] {
-      align-self: flex-end;
-      align-items: flex-end;
+      justify-content: flex-end;
     }
   }
 
-  &__msg-head {
-    align-items: center;
-    gap: 8px;
+  // The message's own column: name, bubble, timestamp, 4px apart.
+  //
+  // Relative so the hover toolbar can hang off the message it acts on — off
+  // the BODY rather than the row, so `right: 0` does not measure from beyond
+  // the avatar. No z-index: the bubble is what the spotlight promotes, and
+  // leaving this context-free means the promotion touches one node.
+  &__msg-col {
+    position: relative;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__msg[data-own="1"] &__msg-col {
+    align-items: flex-end;
   }
 
   &__avatar {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     align-items: center;
     justify-content: center;
@@ -178,56 +194,94 @@
     color: var(--primary-purple-50);
   }
 
+  // Geist Bold 10/1.4 on Primary/100 — a small hard label above the bubble,
+  // not the 12px semibold grey caption this was.
   &__msg-from {
-    @include drumee.typo($size: 12px, $line: 1.2);
-    font-weight: 600;
-    color: var(--normal-fg-20);
+    @include drumee.typo($size: 10px, $line: 1.4);
+    font-weight: 700;
+    color: var(--normal-fg);
   }
 
+  // 12px insets, 8px gap, and a 320px cap — the frame's own values. The radius
+  // is 16 on three corners and SQUARE on the one facing the speaker: top-left
+  // for an incoming message (186:73694), top-right for your own (186:73696).
+  // That squared corner is the bubble's tail; it was 12px all round.
   &__bubble {
     box-sizing: border-box;
-    gap: 10px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    background: var(--normal-bg-90);
+    max-width: 320px;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 0 16px 16px 16px;
+    background: var(--normal-bg-elevated);
   }
 
+  // Signal/Restricted #d65f59, with white copy on it. The light
+  // `--chat-bubble-*` tints carry PINNED DARK text, which is why the rule
+  // below used to force near-black — on this saturated fill that reads as mud,
+  // and the frame sets both together.
   &__msg[data-own="1"] &__bubble {
-    background: var(--chat-bubble-private);
+    border-radius: 16px 0 16px 16px;
+    background: var(--grid-color-folder-restricted, #d65f59);
   }
 
+  // Body/Small Body at the frame's tighter 1.2 leading.
   &__msg-text {
-    @include drumee.typo($size: 13px, $line: 1.45);
+    @include drumee.typo($size: 14px, $line: 1.2);
     font-weight: 400;
     color: var(--normal-fg);
   }
 
-  // Near-black, not white. --chat-bubble-* are deliberately light fills that
-  // carry pinned dark text in both themes — see the token block in
-  // skin/vars/revamp.scss and the real folder/team chat that uses them. White
-  // here would be unreadable on the very tint the product chose to avoid that.
+  // White, on the saturated fill above. This was near-black, and correctly so
+  // while the bubble was a light `--chat-bubble-*` tint — those tints exist to
+  // carry pinned dark text. The frame uses the saturated Signal/Restricted with
+  // white copy instead, so the pair changed together.
   &__msg[data-own="1"] &__msg-text {
-    color: var(--normal-fg);
+    color: var(--reverse-fg);
   }
 
+  // Body/Tiny Body 10/1.4 on Grey/70, with the frame's 4px above it.
   &__msg-time {
-    @include drumee.typo($size: 11px, $line: 1.2);
+    @include drumee.typo($size: 10px, $line: 1.4);
     font-weight: 400;
+    padding-top: 4px;
     color: var(--normal-fg-50);
   }
 
-  &__attach {
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.45);
+  // The filename inside a sentence: 12px, underlined, on the frame's #b43481.
+  // No token carries that plum — it appears once, on this run, so the frame's
+  // own value is the honest thing to write. `from-font` + `skip-ink: none` are
+  // the frame's underline, which sits under the descenders rather than hopping
+  // them.
+  &__msg-link {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #b43481;
+    text-decoration: underline;
+    text-decoration-skip-ink: none;
+    text-underline-position: from-font;
   }
 
+  // The chip is [plate][gap][two lines] directly on the bubble — NOT a padded
+  // translucent panel around all three, which is what this drew. In
+  // 169:39822 the chip frame is 190.28x34 with no fill of its own: only the
+  // 34x34 icon plate is filled, and the text sits straight on the bubble.
+  // 9px between them (the text block starts at x 43.28 against a 34 plate).
+  &__attach {
+    align-items: center;
+    gap: 9px;
+  }
+
+  // The plate: 34x34 at radius 8 on white, holding a 22x22 glyph — the 6px
+  // inset is the frame's (`file icon` at 6,6 in a 34 box). border-box, so the
+  // padding takes its bite out of the 34 rather than adding to it.
   &__attach-ico {
-    width: 26px;
-    height: 26px;
+    width: 34px;
+    height: 34px;
     flex: 0 0 auto;
+    box-sizing: border-box;
+    padding: 6px;
+    border-radius: 8px;
+    background: var(--reverse-fg);
 
     svg { width: 100%; height: 100%; }
   }
@@ -244,13 +298,58 @@
     color: var(--normal-fg-20);
   }
 
+  // The chip only ever appears inside an OWN bubble, which is now the
+  // saturated Signal/Restricted rather than the light tint it was — so its
+  // copy had to come with it. Near-black on #d65f59 is what the bubble change
+  // left behind, and 169:39799 draws both lines light.
+  &__msg[data-own="1"] &__attach-name {
+    color: var(--reverse-fg);
+  }
+
+  &__msg[data-own="1"] &__attach-meta {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
   // ── Hover toolbar ─────────────────────────────────────────────────────────
+  // Placed off the BUBBLE, from 169:39799's own node boxes: the bubble is at
+  // x 1255 y 868 (320x100) and the toolbar at x 1265 y 852 (184x24). So the bar
+  // starts 10px in from the bubble's left edge and its bottom sits 8px BELOW
+  // the bubble's top — it overlaps the bubble rather than floating clear above
+  // it, which is what `top: -46px; right: 0` drew.
+  //
+  // `bottom: calc(100% - 8px)` puts this group's bottom edge 8px below the
+  // column's top, and the column's top IS the bubble's top on an own message
+  // (no name row). Measured from the bottom rather than the top because the
+  // group's own height varies with the tip's wrapping.
   &__hint {
     position: absolute;
-    top: -46px;
-    right: 0;
-    align-items: flex-end;
-    gap: 5px;
+    left: 10px;
+    bottom: calc(100% - 8px);
+    align-items: flex-start;
+    // 3px, the frame's gap between the tip's bottom (849) and the bar's top.
+    gap: 3px;
+    // ── Above the scrim AND above the bubble ────────────────────────────────
+    //
+    // Two problems, one number. The spotlight lights `msg-file-message`, which
+    // is the BUBBLE, and _light promotes exactly that node to 10004
+    // (spotlight/index.js LIT_Z). This group is the bubble's SIBLING, so it was
+    // left at `auto`:
+    //
+    //   under the scrim   the film sits at 10003, so the tip rendered as grey
+    //                     instead of Primary/90 and the toolbar's glyphs came
+    //                     up washed out — dimmed, while the thing they belong
+    //                     to was not.
+    //   under the bubble  the toolbar overlaps the bubble's top edge by 8px by
+    //                     design, and DOM order alone had it painting on top —
+    //                     until the promotion put the bubble at 10004 and took
+    //                     that 8px strip with it.
+    //
+    // 10005 clears both and still passes under the callout at 10010, which has
+    // to stay the topmost thing in the tour. It holds at every size tier: the
+    // narrow/mobile pane-fit transform opens a stacking context that _light
+    // promotes on its way up (skin/index.scss), and inside that context this
+    // still outranks the bubble.
+    z-index: 10005;
   }
 
   &__hint-tip {
@@ -260,50 +359,73 @@
     background: var(--primary-purple-90);
     border-radius: 6px;
     padding: 4px 8px;
-    align-self: flex-start;
+    // Centred on the `#` control, not flush with the bar's left edge. That
+    // control's centre is 16px into the bar — 8px of bar padding plus half of
+    // the 16px mark — and the frame centres the tip on it: 169:40074 spans
+    // 1238..1324, centre 1281, against the Hash's centre at 1273. The
+    // translate keeps it centred whatever the label's width.
+    transform: translateX(calc(16px - 50%));
   }
 
+  // 169:40073 is 184x24: 4/8 insets, every control 16x16, 8px apart. The Hash
+  // sits at x 8, a rule at 32, then icons every 24 (40, 64 … 160). Ours was
+  // 14px glyphs 4px apart with no rule, which came to ~146 — narrow enough that
+  // the whole group sat differently against the bubble.
   &__hint-bar {
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     padding: 4px 8px;
     border-radius: 48px;
     background: var(--normal-bg-elevated);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
+  // The rule between the reply-in-thread control and the rest. Figma draws it
+  // as a zero-width vector 16 tall, so it takes the item height and no width
+  // of its own beyond the hairline.
+  &__hint-rule {
+    width: 1px;
+    align-self: stretch;
+    flex: 0 0 1px;
+    background: var(--border-default);
+  }
+
   // The reply-in-thread control, tinted so it reads as the subject of the
   // screen, with the design's cursor parked on it.
+  // 16x16 like every other control in the bar — the tint is the glyph's own
+  // box, not a pill around it. It was 22x18 (a 14px icon in 2/4 padding),
+  // which made the first control wider than the six beside it.
   &__hint-mark {
-    position: relative;
     align-items: center;
-    padding: 2px 4px;
-    border-radius: 6px;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    box-sizing: border-box;
+    border-radius: 4px;
     background: var(--primary-purple-10);
 
     color: var(--primary-purple-50);
   }
 
-  &__hint-cursor {
-    position: absolute;
-    right: -13px;
-    bottom: -15px;
-    width: 17px;
-    height: 17px;
-
-    svg { width: 100%; height: 100%; }
-  }
-
   &__hint-ico {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
     color: var(--normal-fg-20);
   }
 
   // ── Thread summary ────────────────────────────────────────────────────────
+  // `align-self: stretch` is not decoration. The stream now carries the frame's
+  // own `align-items: center`, which is inert there because every child of
+  // 186:73693 is full width — and this one is not, so without it the summary
+  // would shrink to its content and sit centred instead of spanning the stream
+  // the way it did. Stated on the child rather than dropped from the parent,
+  // since full-width IS what the frame's rows are.
   &__summary {
+    align-self: stretch;
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
@@ -351,22 +473,56 @@
   }
 
   // ── Composer ──────────────────────────────────────────────────────────────
+  // The frame's "Chat Input" (186:73701): a Grey/20 bar with 16px padding, and
+  // inside it a white field at radius 8 (186:73703, 37px tall). Both numbers
+  // are the nodes' own, read from Figma metadata.
+  //
+  // The bar has no radius and no margins of its own — its padding IS the inset
+  // the margins used to fake, and screen 2 lights this box, so a rounded pill
+  // floating clear of the pane's edges would light the wrong silhouette.
   &__composer {
     flex: 0 0 auto;
     align-items: center;
-    gap: 12px;
-    height: 44px;
-    margin: 0 24px 20px;
-    padding: 0 16px;
-    border-radius: 10px;
+    padding: 16px;
     background: var(--normal-bg-90);
   }
 
+  &__composer-field {
+    flex: 1 1 auto;
+    align-items: center;
+    // 8px, which is the frame's gap between the paperclip and the placeholder.
+    gap: 8px;
+    min-width: 0;
+    height: 37px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-elevated);
+  }
+
+  // The smiley and send sit together at the right, 12 apart.
+  &__composer-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  // Wrapper that carries the `-attach` part — see the note in
+  // skeleton/index.js on why the icon cannot hold it itself. It hugs the icon
+  // so the callout's beak lands on the paperclip.
+  &__composer-attach {
+    flex: 0 0 auto;
+    align-items: center;
+  }
+
+  // Body/Mini Body: Geist Regular 12/1.4 on Grey/70. It was 13/1.2 on
+  // --placeholder-fg (#c7c7cc), which is two steps lighter than the frame's
+  // #84848c and read as disabled rather than as a placeholder.
   &__composer-text {
-    @include drumee.typo($size: 13px, $line: 1.2);
+    @include drumee.typo($size: 12px, $line: 1.4);
     flex: 1 1 auto;
     font-weight: 400;
-    color: var(--placeholder-fg);
+    color: var(--normal-fg-50);
   }
 
   &__composer-ico {
@@ -441,8 +597,12 @@
     overflow: hidden;
   }
 
+  // The thread column is narrower, so its bar takes a tighter inset. Was
+  // `margin: 0 20px 20px` on a pill; the bar has no margins now, and its
+  // frames (142:39530 / 169:40101) were not measured in this pass — this keeps
+  // the thread composer looking as it did rather than inventing a number.
   &__thread &__composer {
-    margin: 0 20px 20px;
+    padding: 12px 16px 16px;
   }
 }
 
@@ -469,5 +629,5 @@
   .tutorial-chat__rail,
   .tutorial-chat__thread { display: none; }
   .tutorial-chat__main { min-width: 0; }
-  .tutorial-chat__msg { max-width: 82%; }
+  .tutorial-chat__bubble { max-width: 82%; }
 }

@@ -76,13 +76,25 @@
   }
 }
 
-// ── The workspace tour paints no dim ─────────────────────────────────────────
+// ── Screens that paint no dim ────────────────────────────────────────────────
 //
-// Its frames do not have one. 140:22684 (the home canvas the tour opens on) and
-// the create-workspace screens after it are drawn at full strength — the flow
-// is a walk through a dialog the user is about to fill in, and the callout beak
-// is what points at the block being described. The film over the rest was ours,
-// not the design's.
+// Set per screen by the step, through `dim: false` on its spotlight:focus (see
+// focus() in ../index.js). Two callers today:
+//
+//   workspace — every screen. Its frames do not have one: 140:22684 (the home
+//               canvas it opens on) and the create-workspace screens after it
+//               are drawn at full strength, because the flow is a walk through
+//               a dialog the user is about to fill in and the callout beak is
+//               what points at the block being described. The film over the
+//               rest was ours, not the design's.
+//   chat      — its FIRST screen only. That one is the empty-state hero, which
+//               carries no callout either; the four screens after it light one
+//               surface out of a busy mock and keep the dim to do it.
+//
+// This replaced a `.tutorial-main[data-tour="..."]` rule, which could only
+// speak per tour: it could not give the chat flow one undimmed screen out of
+// five, and it stopped applying to those same screens inside `full`, where the
+// stamped tour id is "full".
 //
 // The scrim ELEMENT stays, transparent, rather than being skipped in the
 // skeleton. It carries z-index 10003, which is the floor the lit surface
@@ -91,10 +103,10 @@
 // `_light` still promotes its target either way. Transparent costs one
 // composited layer that paints nothing.
 //
-// Scoped on the tour, which the host stamps on its own root (tutorial/index.js
-// _applySize). Every other tour lights one surface out of a busy mock and needs
-// the dim to do it.
-.tutorial-main[data-tour="workspace"] {
+// Safe because the dim is the scrim's ONLY job: the tour's own root is opaque
+// (`__layout` carries `background: var(--normal-bg)` in ../../skin), so
+// dropping the film cannot let the real desk show through the mock.
+.tutorial-spotlight[data-scrim="0"] {
   .tutorial-spotlight__scrim {
     background: transparent;
 

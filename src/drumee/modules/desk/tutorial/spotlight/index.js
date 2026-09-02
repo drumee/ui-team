@@ -171,10 +171,25 @@ class __tutorial_spotlight extends LetcBox {
    *   surface the average was not measured on can say so.
    * @param {String} [args.beak]
    * @param {Object} [args.owner] the step widget; Back/Next are routed at it
+   * @param {Boolean} [args.dim=true] paint the scrim behind the lit surface.
+   *   PER SCREEN, not per tour: the chat flow opens on an empty state whose
+   *   frame has no dim and then dims the four screens that follow, and a tour
+   *   attribute cannot say that. It also keeps working when those same screens
+   *   run inside `full`, where the tour id is "full" — which is exactly what a
+   *   `[data-tour]` rule got wrong.
    */
   async focus(args = {}) {
-    const { target, anchor, tooltip, direction = 'north', beak, owner, gap } = args;
+    const { target, anchor, tooltip, direction = 'north', beak, owner, gap, dim = true } = args;
     if (!target) return this.clear();
+    // Written before anything is awaited, so the scrim is already right for
+    // this screen by the time it fades in with the callout.
+    //
+    // `data-scrim`, not `data-dim`: the latter is already taken inside a step,
+    // where a row the screen is not about carries it to hold itself back
+    // (skin/tooltip.scss `[data-dim="1"] { opacity: .35 }`). That rule is a
+    // descendant selector under `.tutorial`, so reusing the name here risks
+    // fading the scrim and the callout themselves.
+    if (this.el && this.el.dataset) this.el.dataset.scrim = dim ? '1' : '0';
     // Kept so the screen can be laid out again without the step having to
     // re-raise it — see reflow(). The step is the only object that knows what
     // its current screen points at, and it is not watching the window.

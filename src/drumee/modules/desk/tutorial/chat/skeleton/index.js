@@ -31,22 +31,38 @@ const avatar = (pfx, name) =>
 /**
  * One message. `msg.own` is the viewer's own side — right-aligned, salmon, and
  * without the name row, exactly as the frames draw it.
+ *
+ * Shaped the way 142:39178 shapes it: the row is [avatar | stack], with the
+ * avatar OUTSIDE the message's own column and the name, bubble and timestamp
+ * inside it (186:73694 -> "Incoming Message"). It used to be one column with
+ * the avatar and the name sharing a head row above the bubble, which put the
+ * bubble flush with the avatar instead of indented past it.
+ *
+ * The hover toolbar goes in the STACK rather than beside it, so its
+ * `top: -46px; right: 0` hangs off the message body and not over the avatar.
  */
 function message(ui, pfx, msg, opt = {}) {
-  const kids = [];
-  if (!msg.own) {
-    kids.push(
-      Skeletons.Box.X({ active: 0,
-        className: `${pfx}__msg-head`,
-        kids: [avatar(pfx, msg.from), Skeletons.Note({ active: 0,
-          className: `${pfx}__msg-from`,
-          content: msg.from,
-        })],
-      }),
-    );
-  }
-
-  const body = [Skeletons.Note({ active: 0, className: `${pfx}__msg-text`, content: msg.text })];
+  // `link` names a run INSIDE the sentence that the frame draws differently:
+  // the first message's text node is three spans, and the middle one — the
+  // filename — is 12px underlined plum against the 14px sentence around it
+  // (142:39178). The field has been in the fixture all along with nothing
+  // reading it, so the name rendered as plain body copy.
+  //
+  // Built as markup on an Element rather than three sibling Notes, because the
+  // run has to sit INLINE in the flowing sentence; three block children would
+  // stack. Safe to interpolate: these strings are literals in ../fixture.js,
+  // not anything a user can reach.
+  const linked = msg.link && msg.text.includes(msg.link);
+  const body = [
+    linked
+      ? Skeletons.Element({ active: 0,
+          className: `${pfx}__msg-text`,
+          content: msg.text
+            .split(msg.link)
+            .join(`<span class="${pfx}__msg-link">${msg.link}</span>`),
+        })
+      : Skeletons.Note({ active: 0, className: `${pfx}__msg-text`, content: msg.text }),
+  ];
   if (msg.attachment) {
     body.push(
       Skeletons.Box.X({ active: 0,
@@ -71,7 +87,16 @@ function message(ui, pfx, msg, opt = {}) {
     );
   }
 
-  kids.push(
+  const stack = [];
+  // The name sits directly above the bubble, inside the message's own column —
+  // the avatar is the row's first child and does not share a line with it.
+  if (!msg.own) {
+    stack.push(Skeletons.Note({ active: 0,
+      className: `${pfx}__msg-from`,
+      content: msg.from,
+    }));
+  }
+  stack.push(
     Skeletons.Box.Y({ active: 0,
       className: `${pfx}__bubble`,
       // The one message the tour acts on gets a name, so a screen can light it
@@ -81,20 +106,23 @@ function message(ui, pfx, msg, opt = {}) {
       kids: body,
     }),
   );
-
   // The hover toolbar belongs to the message it acts on, so it travels with it
   // rather than being positioned against the panel.
   if (opt.hint && msg.id === 'file-message') {
-    kids.push(actionBar(ui, pfx));
+    stack.push(actionBar(ui, pfx));
   }
+  stack.push(Skeletons.Note({ active: 0, className: `${pfx}__msg-time`, content: TIME }));
 
-  kids.push(Skeletons.Note({ active: 0, className: `${pfx}__msg-time`, content: TIME }));
+  const col = Skeletons.Box.Y({ active: 0,
+    className: `${pfx}__msg-col`,
+    kids: stack,
+  });
 
-  return Skeletons.Box.Y({ active: 0,
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__msg`,
     dataset: { own: msg.own ? 1 : 0 },
     attrOpt: { 'data-own': msg.own ? 1 : 0 },
-    kids,
+    kids: msg.own ? [col] : [avatar(pfx, msg.from), col],
   });
 }
 
@@ -117,25 +145,36 @@ function actionBar(ui, pfx) {
       }),
       Skeletons.Box.X({ active: 0,
         className: `${pfx}__hint-bar`,
-        kids: ACTIONS.map((a) =>
+        // A divider follows the reply-in-thread control, ruling it off from the
+        // rest of the bar — 169:40073 draws a 1px vector at x 32, between the
+        // Hash (8..24) and the first icon (40..56), with 8px either side.
+        kids: ACTIONS.flatMap((a) => (
           a.mark === 'thread'
-            ? // The reply-in-thread control: the one the callout points at, so
-              // it is named, tinted, and carries the design's cursor.
-              Skeletons.Box.X({ active: 0,
-                className: `${pfx}__hint-mark`,
-                sys_pn: 'hint-thread',
-                partHandler: ui,
-                kids: [
-                  Skeletons.Image.Svg({ active: 0, ico: a.ico, className: `${pfx}__hint-ico` }),
-                  Skeletons.Image.Svg({ active: 0,
-                    ico: 'tutorial-cursor',
-                    className: `${pfx}__hint-cursor`,
-                  }),
-                ],
-              })
-            : Skeletons.Image.Svg({ active: 0, ico: a.ico, className: `${pfx}__hint-ico` }),
-        ),
+            ? [barItem(ui, pfx, a), Skeletons.Box.Y({ active: 0, className: `${pfx}__hint-rule` })]
+            : [barItem(ui, pfx, a)]
+        )),
       }),
+    ],
+  });
+}
+
+/**
+ * One control in the hover toolbar. The reply-in-thread mark is the one the
+ * callout points at, so it is named and tinted; the rest are plain 16px
+ * glyphs. It used to park a `tutorial-cursor` glyph on the mark as well —
+ * 169:39799 draws no pointer, and the callout's beak already says which control
+ * the screen is about.
+ */
+function barItem(ui, pfx, a) {
+  if (a.mark !== 'thread') {
+    return Skeletons.Image.Svg({ active: 0, ico: a.ico, className: `${pfx}__hint-ico` });
+  }
+  return Skeletons.Box.X({ active: 0,
+    className: `${pfx}__hint-mark`,
+    sys_pn: 'hint-thread',
+    partHandler: ui,
+    kids: [
+      Skeletons.Image.Svg({ active: 0, ico: a.ico, className: `${pfx}__hint-ico` }),
     ],
   });
 }
@@ -183,19 +222,59 @@ function rail(ui, pfx) {
   });
 }
 
+/**
+ * The composer — a white FIELD inset in a grey BAR, which is what the frame
+ * draws: 186:73701 "Chat Input" is 1232x69 on Grey/20 with 16px padding, and
+ * it holds one 1200x37 Textarea on white at radius 8 (186:73703). This was a
+ * single flat grey pill, 44 tall at radius 10 with margins of its own.
+ *
+ * Two part names, because a screen needs both halves:
+ *   `<pn>`         the BAR — what screen 2 lights, since the composer is what
+ *                  that screen is about
+ *   `<pn>-attach`  the paperclip inside it — what the callout's beak lands on
+ *
+ * The paperclip is wrapped in a Box rather than carrying `sys_pn` itself:
+ * Image.Svg goes through a builder that never mentions sys_pn, and a part that
+ * fails to register is not a cosmetic bug — ensurePart has no timeout
+ * (ui-core collection-view), so the step would await it forever and the screen
+ * would come up with no callout at all. The wrapper hugs the icon, so the beak
+ * lands in the same place either way.
+ */
 const composer = (ui, pfx, pn) =>
   Skeletons.Box.X({ active: 0,
     className: `${pfx}__composer`,
     sys_pn: pn,
     partHandler: pn ? ui : null,
     kids: [
-      Skeletons.Image.Svg({ active: 0, ico: 'app-attachment', className: `${pfx}__composer-ico` }),
-      Skeletons.Note({ active: 0,
-        className: `${pfx}__composer-text`,
-        content: LOCALE.TYPE_MESSAGE,
+      Skeletons.Box.X({ active: 0,
+        className: `${pfx}__composer-field`,
+        kids: [
+          Skeletons.Box.X({ active: 0,
+            className: `${pfx}__composer-attach`,
+            sys_pn: pn ? `${pn}-attach` : null,
+            partHandler: pn ? ui : null,
+            kids: [
+              Skeletons.Image.Svg({ active: 0,
+                ico: 'app-attachment',
+                className: `${pfx}__composer-ico`,
+              }),
+            ],
+          }),
+          Skeletons.Note({ active: 0,
+            className: `${pfx}__composer-text`,
+            content: LOCALE.TYPE_MESSAGE,
+          }),
+          // The frame groups the smiley and send at the field's right edge, 12
+          // apart, against the 8 between the paperclip and the placeholder.
+          Skeletons.Box.X({ active: 0,
+            className: `${pfx}__composer-actions`,
+            kids: [
+              Skeletons.Image.Svg({ active: 0, ico: 'chat-action-smiley', className: `${pfx}__composer-ico` }),
+              Skeletons.Image.Svg({ active: 0, ico: 'send', className: `${pfx}__composer-ico` }),
+            ],
+          }),
+        ],
       }),
-      Skeletons.Image.Svg({ active: 0, ico: 'chat-action-smiley', className: `${pfx}__composer-ico` }),
-      Skeletons.Image.Svg({ active: 0, ico: 'send', className: `${pfx}__composer-ico` }),
     ],
   });
 
@@ -292,6 +371,11 @@ module.exports = function (ui, opt = {}) {
       cta: LOCALE.START_DISCOVERING,
       items: [{ src: require('assets/tutorial/chat-threads.png').default }],
       card: 'wide',
+      // "Start discovering now" carries the tour forward. This screen raises no
+      // callout (see `bare` on screen 1 in ../index.js), so without a live CTA
+      // it would have no control at all — the same reason the workspace tour's
+      // opening screen hands its flow to `home-cta`.
+      cta_service: 'next-step',
     });
   }
 
@@ -316,7 +400,19 @@ module.exports = function (ui, opt = {}) {
             sys_pn: 'stream',
             partHandler: ui,
             kids: [
-              ...STREAM.map((m) => message(ui, pfx, m, { hint: opt.hint })),
+              // The file message arrives WITH the gesture screen 2 teaches, so it
+              // is not on screen 2. 142:39178 holds six messages and no file;
+              // 169:39799 — the very next frame — adds this seventh at full
+              // strength with the hover toolbar over it and the thread tip
+              // above that. Showing it on screen 2 put the result of the
+              // instruction above the instruction.
+              //
+              // Kept in the fixture rather than moved out of it: the same entry
+              // is what screens 3 to 5 light (`msg-file-message`) and what the
+              // thread panel hangs off.
+              ...STREAM
+                .filter((m) => m.id !== 'file-message' || opt.hint || opt.thread)
+                .map((m) => message(ui, pfx, m, { hint: opt.hint })),
               opt.thread ? threadSummary(ui, pfx) : null,
             ].filter(Boolean),
           }),
