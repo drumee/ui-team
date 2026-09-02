@@ -68,6 +68,19 @@
   }
 }
 
+// Spin for the switcher header's action icons while their panel's chunk loads.
+// At the top level: keyframes are not scoped by nesting, and declaring them
+// inside the block would read as though they were.
+@keyframes ws-head-action-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-module-topbar__ws-head-action[data-loading="1"] svg {
+    animation: none;
+  }
+}
+
 .desk-module-topbar {
   // 43:23955: the top bar is a 30px row, TRANSPARENT, with r=8 and no bottom
   // border — it floats on the white canvas alongside the other rounded panels
@@ -1328,7 +1341,9 @@
     @include ws-folder-icon(27px, 22px);
   }
 
-  // Name in a bordered field with the rename pencil at its right edge.
+  // The open workspace's name. Borderless — the field reads as a label, not
+  // an input; the radius and padding are kept so the row's metrics do not
+  // shift.
   &__ws-head-name {
     flex: 1 1 auto;
     min-width: 0;
@@ -1338,7 +1353,6 @@
     justify-content: space-between;
     gap: 8px;
     padding: 4px 12px;
-    border: 1px solid var(--border-default);
     border-radius: 8px;
   }
 
@@ -1352,18 +1366,6 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-  }
-
-  &__ws-head-edit {
-    width: 16px;
-    height: 16px;
-    flex: 0 0 auto;
-    color: var(--normal-fg-10);
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
   }
 
   &__ws-head-actions {
@@ -1395,6 +1397,19 @@
     svg {
       width: 16px;
       height: 16px;
+    }
+
+    // Working. The panel behind this icon is a lazy chunk, so the first click
+    // has a real wait — the glyph dims and spins in place rather than injecting
+    // the framework's five-dot loader, which does not fit a 27px button.
+    &[data-loading="1"] {
+      cursor: progress;
+      pointer-events: none;
+
+      svg {
+        opacity: 0.45;
+        animation: ws-head-action-spin 0.7s linear infinite;
+      }
     }
 
     // The ⋯ carries the Figma component's own resting grey — that fill is its

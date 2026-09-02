@@ -5600,6 +5600,28 @@ class __window_folder extends mfsInteract {
   openManageAccess() {
     if (this.isShowSettings) {
       this.isShowSettings = false;
+      // Let the secure-share drawer slide out rather than vanish: clear()
+      // destroys its children on the spot, so the panel's close animation never
+      // gets a frame.
+      //
+      // Through its own `close` service, NOT goodbye() directly — a bare
+      // goodbye() takes the framework defaults (opacity 0, scale 0.2), which is
+      // the floating-window shrink. The slide lives in that handler, and asking
+      // for it here keeps one definition of it.
+      //
+      // ONLY this panel: permission_restricted has its own close animation (a
+      // data-position slide), and the toggle leaves it on clear() so nothing
+      // changes for it.
+      const open = this.dialogWrapper.children && this.dialogWrapper.children.last();
+      if (
+        open &&
+        !(open.isDestroyed && open.isDestroyed()) &&
+        open.mget &&
+        open.mget(_a.kind) === "window_secure_share" &&
+        _.isFunction(open.onUiEvent)
+      ) {
+        return open.onUiEvent(open, { service: _e.close });
+      }
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;

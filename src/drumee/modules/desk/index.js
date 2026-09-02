@@ -1768,17 +1768,17 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * Fill the switcher's header: the open workspace's glyph, its name in a
-   * bordered field with a rename pencil, then link and overflow.
+   * Fill the switcher's header: the open workspace's glyph, its name, then
+   * the link and overflow actions.
    *
    * Its own method because the highlight sync needs JUST this — the header
    * NAMES the current workspace, so it has to change when the workspace does,
    * while the rows below only need an attribute flipped. Re-feeding the whole
    * menu to repaint one row would rebuild every row on every navigation.
    *
-   * The pencil, link and ⋯ carry NO service on purpose — their behaviours are
-   * not settled. They are Image.Svg rather than Button.Svg so nothing about
-   * them claims to be clickable, and the skin gives them no pointer cursor.
+   * The link opens Manage access and the ⋯ opens the workspace menu; both are
+   * Buttons, since image_svg views raise no ui event. The link is rendered
+   * only for external workspaces — see below.
    *
    * `cur` carries only what Wm tracks, so the name and the area come from the
    * matching row in the payload the list is built from — the row is what knows
@@ -1806,10 +1806,6 @@ class desk_module extends LetcBox {
           Skeletons.Note({
             className: `${cn}__ws-head-name-text`,
             content: curRow.filename || curRow.name || "",
-          }),
-          Skeletons.Image.Svg({
-            className: `${cn}__ws-head-edit`,
-            ico: "ph-pencil-simple-line",
           }),
         ],
       }),
@@ -2274,6 +2270,39 @@ class desk_module extends LetcBox {
     if (!w) return this.loadHome && this.loadHome();
     w.showFolderTab(tab);
     return w.raise && w.raise();
+  }
+
+  /**
+   * The switcher header's link icon → Manage access, with a loading state.
+   *
+   * The wait is real and specific: `window_secure_share` is a LAZY dynamic
+   * import (seeds.js), so the first click pays a chunk fetch and parse before
+   * anything appears on screen. Awaiting Kind.waitFor covers exactly that span
+   * — the same handle wm/index.js onPartReady uses to warm the tutorial kinds.
+   *
+   * Cleared in `finally`, and the whole thing is guarded: a dropped chunk must
+   * leave the button usable rather than spinning for the rest of the session,
+   * and a desk that boots before `Kind` exists must still open the panel.
+   *
+   * The flag is still up when _railAccess runs, which is the point — clearing
+   * it first would cover nothing.
+   */
+  _workspaceAccessFromHeader(cmd) {
+    const el = cmd && cmd.el;
+    const set = (v) => {
+      if (!el || !el.dataset) return;
+      if (v) el.dataset.loading = "1";
+      else delete el.dataset.loading;
+    };
+    set(1);
+    const warm =
+      typeof Kind !== "undefined" && Kind && _.isFunction(Kind.waitFor)
+        ? Promise.resolve(Kind.waitFor("window_secure_share")).catch(() => {})
+        : Promise.resolve();
+    return warm.then(() => {
+      this._railAccess();
+      set(0);
+    });
   }
 
   /** Rail → the workspace's manage-access panel (the Permission Matrix). */
@@ -4917,8 +4946,14 @@ class desk_module extends LetcBox {
       // share/dmz, so it always lands on the link panel, while the rail is
       // global and can also reach the members panel.
       case "rail-access":
-      case "workspace-access":
         return this._railAccess();
+
+      // Same destination, but wrapped so the header's icon can show it is
+      // working — see _workspaceAccessFromHeader. The rail is deliberately NOT
+      // wrapped: it is global, so it can also land on permission_restricted,
+      // which is not a lazy kind and has nothing to wait for.
+      case "workspace-access":
+        return this._workspaceAccessFromHeader(cmd);
 
       // Mute popup CARDS for every workspace — an empty hub_id is the global
       // scope in activity/mute.js. It suppresses the interrupting card only:
@@ -5079,6 +5114,25 @@ class desk_module extends LetcBox {
         this.closeAllPanels();
         Wm.loadWorkspace(cmd);
         return;
+
+      // The switcher's "New workspaces" button. Same preamble as the shared
+      // case below — close the menu behind the modal, refuse while over limit —
+      // but tells Wm to open the WORKSPACE form regardless of what is open.
+      //
+      // Delegating rather than feeding media_form here on purpose: Wm's case
+      // owns the wrapper-modal plumbing (the data-state / data-overlay stamps
+      // and the _closeWhenEmpty hook that waits for the whole media_form ->
+      // permission_* chain to empty). A second copy of that is what drifts.
+      case "new-workspace-form": {
+        this.closeDeskNewMenu(cmd);
+        if (require("libs/over-limit").guardWrite("write")) return;
+        return Wm.onUiEvent(cmd, {
+          ...args,
+          service: "new-workspace",
+          force_workspace: 1,
+          ...this._createFormOverrides(),
+        });
+      }
 
       case "new-workspace": {
         this.closeDeskNewMenu(cmd);

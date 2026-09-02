@@ -34,10 +34,17 @@ const DESK = read("src/drumee/modules/desk/index.js");
 const ITEMS = read("src/drumee/builtins/contextmenu/skeleton/items.js");
 const SCSS = read("src/drumee/modules/desk/skin/topbar.scss");
 
+/** Strip comments — assertions must read code, not the prose explaining it. */
+const strip = (t) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+
 function slice(src, header) {
   const start = src.indexOf(header);
   assert.notEqual(start, -1, `${header} not found`);
-  const open = src.indexOf("{", start);
+  // From the END of the header: a signature like `onUiEvent(cmd, args = {})`
+  // contains braces of its own, and matching from `start` would lock onto the
+  // `{}` in the default value and return a two-character body.
+  const open = src.indexOf("{", start + header.length - 1);
   let depth = 0;
   for (let j = open; j < src.length; j++) {
     if (src[j] === "{") depth++;
@@ -386,10 +393,13 @@ test("the link is a Button carrying a service — an Image.Svg raises nothing", 
 
 test("workspace-access shares the rail's handler, not a second copy", () => {
   // The rail's Access and this icon do the identical thing: hand
-  // folder-manage-access to the active workspace window. One method, two
-  // service names — a second implementation is what drifts.
+  // folder-manage-access to the active workspace window. The header goes
+  // through a loading wrapper, but that wrapper DELEGATES — a second copy of
+  // the hop is what would drift.
   const c = DESK.slice(DESK.indexOf('case "workspace-access":'));
-  assert.match(c.slice(0, 200), /_railAccess\(\)/);
+  assert.match(c.slice(0, 200), /_workspaceAccessFromHeader\(cmd\)/);
+  assert.match(slice(DESK, "  _workspaceAccessFromHeader(cmd) {"), /this\._railAccess\(\)/,
+    "the wrapper must delegate, not reimplement");
   const rail = DESK.slice(DESK.indexOf('case "rail-access":'));
   assert.match(rail.slice(0, 200), /_railAccess\(\)/);
 });
@@ -410,4 +420,165 @@ test("it is still external-only, so it cannot open a link panel that has none", 
   // instead — so the icon must stay off there.
   assert.ok(!head({ area: "private" }).some(isLink));
   assert.ok(head({ area: "share" }).some(isLink));
+});
+
+// ── loading while the panel's kind is imported ──────────────────────────────
+
+/** Run the real _workspaceAccessFromHeader; report the button's dataset over time. */
+async function loadRun({ kindResolves = true, hasKind = true } = {}) {
+  const body = slice(DESK, "  _workspaceAccessFromHeader(cmd) {");
+  const dataset = {};
+  const seen = [];
+  const cmd = { el: { dataset }, isDestroyed: () => false };
+  const calls = { rail: 0 };
+  const ctx = {
+    _railAccess() {
+      // Snapshot at dispatch time: the flag must still be up here, or it
+      // covered nothing.
+      seen.push(dataset.loading);
+      calls.rail++;
+    },
+  };
+  const globals = {
+    _: { isFunction: (f) => typeof f === "function" },
+    Kind: hasKind
+      ? { waitFor: () => (kindResolves ? Promise.resolve() : Promise.reject(new Error("chunk failed"))) }
+      : undefined,
+  };
+  const keys = Object.keys(globals);
+  // eslint-disable-next-line no-new-func
+  const fn = new Function(...keys, `return function (cmd) {${slice(body, "{").slice(1, -1)}};`)(
+    ...keys.map((k) => globals[k]));
+  await fn.call(ctx, cmd);
+  return { dataset, seen, ...calls };
+}
+
+test("the flag is up while the chunk loads and gone once it is open", async () => {
+  const r = await loadRun();
+  assert.deepEqual(r.seen, ["1"], "the flag was not up when the panel was dispatched");
+  assert.equal(r.dataset.loading, undefined, "still spinning after the panel opened");
+  assert.equal(r.rail, 1);
+});
+
+test("a FAILED import clears the flag instead of stranding it", async () => {
+  // window_secure_share is a dynamic import; a dropped chunk must not leave the
+  // button spinning forever.
+  const r = await loadRun({ kindResolves: false });
+  assert.equal(r.dataset.loading, undefined, "stuck spinning after a failed import");
+});
+
+test("it still opens the panel when Kind is unavailable", async () => {
+  // The desk boots before some globals exist; no Kind must not mean no panel.
+  const r = await loadRun({ hasKind: false });
+  assert.equal(r.rail, 1);
+  assert.equal(r.dataset.loading, undefined);
+});
+
+test("the rail's own Access is NOT wrapped in this", () => {
+  // It shares _railAccess but can open permission_restricted, which is not a
+  // lazy kind — there is nothing to wait for, so no spinner.
+  // Its OWN case body only — the next `case` starts the header's, and a slice
+  // wide enough to swallow that would assert nothing.
+  // Comments stripped first: the comment BELOW this case explains why the rail
+  // is not wrapped, and naming the wrapper there is not the same as calling it.
+  const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  const from = DESK.indexOf('case "rail-access":');
+  const body = strip(DESK.slice(from, DESK.indexOf("case ", from + 20)));
+  assert.match(body, /_railAccess\(\)/);
+  assert.ok(!/_workspaceAccessFromHeader/.test(body),
+    "rail-access must not route through the header's loading wrapper");
+});
+
+test("the loading state is styled", () => {
+  const rule = slice(SCSS, "  &__ws-head-action {");
+  assert.match(rule, /\[data-loading="1"\]/, "no visible loading state");
+});
+
+// ── closing the panel ───────────────────────────────────────────────────────
+
+const SS = read("src/drumee/builtins/window/secure-share/index.js");
+const SS_SCSS = read("src/drumee/builtins/window/secure-share/skin/index.scss");
+
+test("the embedded drawer slides out; the floating window keeps the shrink", () => {
+  // selfDestroy already tweens {opacity:0, scale:0.2} — the floating-window
+  // shrink. A right-docked drawer has to slide instead, and the defaults must
+  // be cancelled explicitly or it would do both at once.
+  const body = strip(slice(SS, "  onUiEvent(cmd, args = {}) {"));
+  const at = body.indexOf("case _e.close:");
+  assert.notEqual(at, -1, "close is not overridden");
+  const c = body.slice(at, at + 420);
+  assert.match(c, /_embedded/, "the override must not touch the floating window");
+  assert.match(c, /xPercent:\s*100/, "not a slide");
+  assert.match(c, /opacity:\s*1/, "the inherited opacity:0 must be cancelled");
+  assert.match(c, /scale:\s*1/, "the inherited scale:0.2 must be cancelled");
+});
+
+test("the open animation must not persist a transform", () => {
+  // `fill: both` keeps the last keyframe forever, and a running/filling CSS
+  // animation outranks inline styles — so gsap's close transform would be
+  // silently overridden. `backwards` still applies the from-state before start,
+  // and after the end the element reverts to its untransformed normal state,
+  // which IS translateX(0).
+  const rule = SS_SCSS.slice(SS_SCSS.indexOf('&[data-embedded="yes"]'));
+  const anim = rule.match(/animation:\s*window-secure-share-slide-in[^;]*/);
+  assert.ok(anim, "the open animation is gone");
+  assert.ok(!/\bboth\b/.test(anim[0]), "fill:both would override the close tween");
+  assert.match(anim[0], /\bbackwards\b/);
+});
+
+test("the toggle animates the child out instead of clearing it outright", () => {
+  // dialogWrapper.clear() destroys children immediately — no animation at all.
+  // Only the secure-share child is routed through goodbye(); permission_
+  // restricted keeps clear(), since goodbye would give it the framework shrink
+  // rather than its own data-position slide.
+  const FOLDER = read("src/drumee/builtins/window/folder/index.js");
+  const body = slice(FOLDER, "  openManageAccess() {");
+  const close = strip(body.slice(0, body.indexOf("this.isShowSettings = true")));
+  assert.match(close, /service:\s*_e\.close/,
+    "must go through the panel's own close handler, where the slide is defined");
+  assert.ok(!/goodbye\(\)/.test(close),
+    "a bare goodbye() takes the framework shrink, not the slide");
+  assert.match(close, /window_secure_share/, "must not reroute the other panel");
+  assert.match(close, /clear\(\)/, "no fallback when there is nothing to animate");
+});
+
+// ── the close must START on the click ───────────────────────────────────────
+
+/**
+ * selfDestroy's own timeout resolution, copied from
+ * @drumee/ui-core letc/addons/backbone/view/utils.js:
+ *
+ *   selfDestroy(o)  ->  o = { duration: 0.5, timeout: 2000, ...o }
+ *                       const timeout = o.timeout || Visitor.timeout()   // 2000
+ *                       _.delay(go, timeout)
+ *
+ * goodbye's `timeout: 2` lives in a PARAMETER DEFAULT — it applies only when
+ * goodbye is called with no argument at all. Pass anything and it is gone, and
+ * selfDestroy's own 2000 takes over.
+ */
+const resolveDelay = (args) => {
+  const o = { duration: 0.5, timeout: 2000, ...args };
+  return o.timeout || 2000; // `|| Visitor.timeout()`, which defaults to 2000
+};
+
+test("the framework really does delay a goodbye that was passed options", () => {
+  // Pins the trap itself, so the fix below cannot be read as superstition.
+  assert.equal(resolveDelay(undefined), 2000);
+  assert.equal(resolveDelay({ duration: 0.28 }), 2000, "the omitted timeout is 2000");
+  assert.equal(resolveDelay({ duration: 0.28, timeout: 0 }), 2000,
+    "0 is FALSY, so it falls through to Visitor.timeout() — not a fix");
+  assert.equal(resolveDelay({ duration: 0.28, timeout: 2 }), 2);
+});
+
+test("the drawer's close starts on the click, not two seconds later", () => {
+  const body = strip(slice(SS, "  onUiEvent(cmd, args = {}) {"));
+  const at = body.indexOf("case _e.close:");
+  const call = body.slice(at, at + 420);
+  const opts = call.match(/goodbye\(\s*(\{[^}]*\})/);
+  assert.ok(opts, "no goodbye options object to inspect");
+  // eslint-disable-next-line no-eval
+  const parsed = eval(`(${opts[1]})`);
+  assert.ok(parsed.timeout, "timeout must be set — and truthy, or 0 falls back to 2000");
+  assert.ok(resolveDelay(parsed) <= 16,
+    `close is delayed ${resolveDelay(parsed)}ms; it must start within a frame`);
 });
