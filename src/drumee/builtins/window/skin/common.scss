@@ -619,11 +619,11 @@
 }
 
 .window__fe-btn--primary {
-  background: var(--primary-purple-50, #433cc5);
+  background: var(--primary-40);
   color: var(--gray-white, #fff);
 
   &:hover {
-    background: var(--primary-purple-40, #5950ff);
+    background: var(--primary-50);
   }
 }
 

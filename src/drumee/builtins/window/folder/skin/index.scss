@@ -612,7 +612,7 @@
         }
 
         &:hover {
-          background-color: #a7a2f0;
+          background-color: var(--primary-50);
         }
 
         &:active {
@@ -860,7 +860,6 @@
       display: inline-flex;
       align-items: stretch;
       width: 108px;
-      height: 36px;
       flex: 0 0 108px;
       // rgba(0, 0, 0, 0.05) in the frame — which is exactly --border-muted in
       // the light theme, so the token keeps dark mode working.
@@ -951,7 +950,7 @@
       .window-folder-topbar__view-toggle-seg--list:hover,
     &__view-toggle[data-state="grid"]
       .window-folder-topbar__view-toggle-seg--grid:hover {
-      background-color: #a7a2f0;
+      background-color: var(--primary-50);
     }
 
     &__view-toggle[data-state="group"]
