@@ -576,7 +576,7 @@
         min-height: 30px;
         min-width: 82px;
         padding: 0 14px;
-        background-color: #b2adfa;
+        background-color: var(--primary-40);
         border: 0;
         border-radius: 8px;
         box-shadow: none;
@@ -584,7 +584,7 @@
         font-weight: 500;
         font-size: 14px;
         line-height: 16px;
-        color: #0b0a20;
+        color: var(--white);
         cursor: pointer;
         white-space: nowrap;
         display: flex;
@@ -874,14 +874,19 @@
     }
 
     // File view toggle — compact segmented control (group | list | grid).
+    // Figma 85:36284 "filter-bar": a white pill, hairline border, r=12, holding
+    // three 36px squares. 108 = 3 x 36; the segments are square in the frame so
+    // the container's width follows from their count.
     &__view-toggle {
       display: inline-flex;
       align-items: stretch;
-      width: 90px;
-      height: 30px;
-      flex: 0 0 90px;
-      border: 0;
-      border-radius: 8px;
+      width: 108px;
+      height: 36px;
+      flex: 0 0 108px;
+      // rgba(0, 0, 0, 0.05) in the frame — which is exactly --border-muted in
+      // the light theme, so the token keeps dark mode working.
+      border: 1px solid var(--border-muted);
+      border-radius: 12px;
       background-color: #fff;
       box-shadow: none;
       overflow: hidden;
@@ -898,9 +903,12 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 30px;
-      height: 30px;
-      flex: 0 0 30px;
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+      // The frame's own value. The ACTIVE segment overrides this to 12px so its
+      // corners meet the container's — see the [data-state] rules below.
+      border-radius: 5.833px;
       gap: 0;
       padding: 0;
       border: 0;
@@ -925,10 +933,18 @@
       }
     }
 
+    // List and SquaresFour are 17.5px in the frame; TreeView is 17px, half a
+    // pixel smaller, and gets its own rule below rather than being rounded to
+    // match — the ask was the frame's icon sizes.
     &__view-toggle-glyph {
-      width: 14px;
-      height: 14px;
+      width: 17.5px;
+      height: 17.5px;
       flex-shrink: 0;
+    }
+
+    &__view-toggle-seg--group .window-folder-topbar__view-toggle-glyph {
+      width: 17px;
+      height: 17px;
     }
 
     // The shared Skeleton retains this glyph for DMZ; the folder presentation
@@ -943,8 +959,11 @@
       .window-folder-topbar__view-toggle-seg--list,
     &__view-toggle[data-state="grid"]
       .window-folder-topbar__view-toggle-seg--grid {
-      background-color: #b2adfa;
-      color: #65656c;
+      background-color: var(--primary-40);
+      color: var(--white);
+      // 12px, not the inactive 5.833px: in the frame the selected square's
+      // corners line up with the container's own radius.
+      border-radius: 12px;
     }
 
     &__view-toggle[data-state="group"]
