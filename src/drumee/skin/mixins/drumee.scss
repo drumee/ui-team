@@ -53,3 +53,60 @@
     content: none;
   }
 }
+
+// =====================================================================
+// Brand tints for the "+ New" create rows — Folder / Note / Document /
+// Spreadsheet / Presentation.
+//
+// The glyphs are `fill="currentColor"` (icons/sprites), so the tint IS the
+// `color` on the icon, and a row that inherits its label colour instead
+// renders a near-black outline where the design has a coloured one.
+//
+// A mixin because two surfaces render these rows under these class names, and
+// each is scoped somewhere the other cannot reach:
+//   - the folder topbar's "+ New" flyout   window/folder/skin/index.scss,
+//                                          under `__new-ctrl`
+//   - the Files empty-state hero's "New"   window/skin/common.scss,
+//                                          under `.window__fe-menu`
+// The hero's copy was added without them and its glyphs came out near-black,
+// which is what this exists to stop happening again.
+//
+// The same five values appear twice more against a DIFFERENT class vocabulary
+// — `.ico-workspace` / `.ico-note` / `.ico-document` / `.ico-spreadsheet` /
+// `.ico-presentation`, in desk/skin/topbar.scss (the desk's Add-new menu) and
+// builtins/contextmenu/skin (its Add-new submenu). Those selectors do not
+// match this mixin and are deliberately left alone; unifying the palette
+// across both vocabularies is a bigger change than the one this serves.
+//
+// Keyed on the row's modifier class, so it tints whatever row is present and
+// nothing else. Deliberately on `svg` rather than the icon wrapper: the
+// wrapper is what the folder row's `data-area` accent lands on, and this
+// overrides that on purpose — inside the create list a folder is brand purple
+// regardless of which area it will be made in.
+// =====================================================================
+@mixin new-menu-icon-tints {
+  .window-button__dropdown-menu__item--add-folder svg {
+    fill: #5950ff;
+    color: #5950ff;
+  }
+
+  .window-button__dropdown-menu__item--add-note svg {
+    fill: #e8a13b;
+    color: #e8a13b;
+  }
+
+  .window-button__dropdown-menu__item--document svg {
+    fill: #847eff;
+    color: #847eff;
+  }
+
+  .window-button__dropdown-menu__item--spreadsheet svg {
+    fill: #54b684;
+    color: #54b684;
+  }
+
+  .window-button__dropdown-menu__item--presentation svg {
+    fill: #ffa8dc;
+    color: #ffa8dc;
+  }
+}

@@ -569,9 +569,19 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 32px;
-  padding: 120px 80px;
+  padding: 40px 80px 120px;
   box-sizing: border-box;
   overflow: auto;
+}
+
+// The hero SCROLLS, so it also clips — which a dropdown opened inside it
+// cannot afford: on a short pane the create menu became a sliver at the bottom
+// of a scroll region instead of a popup. Released only while the menu is OPEN,
+// so a short pane keeps its scrolling the rest of the time. Same conditional
+// release, on the same signal, that the files column uses one level up
+// (folder/skin/index.scss `&__files-panel:has(…__wrapper[data-state="1"])`).
+.window__fe-hero:has(.window-button__dropdown-menu__wrapper[data-state="1"]) {
+  overflow: visible;
 }
 
 .window__fe-title {
@@ -640,4 +650,137 @@
 .window__fe-btn-label {
   color: currentColor;
   white-space: nowrap;
+}
+
+// The hero's ghost "New" opens the create list under itself
+// (skeleton/content/grid/empty.js). The topbar renders the same rows, but every
+// visual rule for that menu is scoped to `.window-folder-topbar__new-ctrl`
+// (folder/skin/index.scss) and cannot reach a menu mounted in the grid — so
+// this surface carries its own copy, deliberately under the same class names
+// so the two read as one control.
+.window__fe-menu {
+  // ui-core nests the topic menu as a list; flatten the chain so the panel can
+  // be positioned against the button rather than against a collapsed <li>.
+  &,
+  .menu-topic,
+  .menu-topic__ui {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .menu-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // The framework leaves the popup wrapper unpositioned. Anchor it under the
+  // trigger, aligned to its LEFT edge: this button sits mid-pane with room on
+  // both sides, unlike the topbar's, which is pinned right.
+  .menu-topic-items__wrapper {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: auto;
+    z-index: 1000;
+    width: max-content;
+    min-width: 200px;
+  }
+
+  // ui-core writes overflow:hidden inline on the wrapper; let the panel escape
+  // only while this menu is open.
+  .menu-topic-items__wrapper[data-state="open"] {
+    overflow: visible !important;
+  }
+
+  // The wrapper is stamped data-state="open" by _openItems and is NEVER reset
+  // (ui-core widgets/menu/index.js resets the inner items and the menu root,
+  // not the wrapper), so keying the closed case on the wrapper alone stops
+  // matching after the first open and leaves an empty panel intercepting
+  // clicks over the grid. The menu ROOT is reset to 0 by _onClosed — the same
+  // source of truth the folder topbar's rules settled on.
+  &:not([data-state="1"]) .menu-topic-items__wrapper {
+    display: none;
+  }
+
+  .menu-topic-items,
+  .menu-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: max-content;
+    min-width: 200px;
+    padding: 6px;
+    border-radius: 6px;
+    background-color: var(--normal-bg-elevated, #fff);
+    box-shadow:
+      0 4px 6px -4px rgba(0, 0, 0, 0.1),
+      0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+  }
+
+  // Here the create list IS the menu's panel, not a flyout hanging off a parent
+  // row as it is in the topbar — so it lays out in flow and leaves the chrome
+  // above to .menu-items.
+  .window-button__dropdown-menu__create-submenu {
+    display: flex;
+    flex-direction: column;
+    position: static;
+    inset: auto;
+    width: 100%;
+    gap: 2px;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .window-button__dropdown-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: "Geist", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-10);
+    white-space: nowrap;
+    box-sizing: border-box;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+  }
+
+  .window-button__dropdown-menu__name {
+    flex: 1;
+  }
+
+  .window-button__dropdown-menu__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+  }
+
+  // The same brand tints the topbar's copy of these rows carries. Without them
+  // the glyphs — all `fill="currentColor"` — inherit the label's near-black
+  // --normal-fg-10 and the two menus read as different controls.
+  @include drumee.new-menu-icon-tints;
 }
