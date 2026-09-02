@@ -4978,8 +4978,29 @@ class desk_module extends LetcBox {
         return this._railTab("files");
       case "rail-chat":
         return this._railTab(_a.chat);
-      case "rail-task":
-        return this._railTab(_a.task);
+      case "rail-task": {
+        // Resolved BEFORE the tab is shown, because the tour is only right if
+        // the click had somewhere to land: _railTab falls back to loadHome()
+        // when no workspace is open, and a tracker tour over the home grid
+        // explains a screen the user is not looking at.
+        const _hasWs = !!this._activeWorkspace();
+        const _res = this._railTab(_a.task);
+        // Contextual tour, on the first press of Task in the rail.
+        //
+        // This is the gesture the tour is actually about — five tracker views
+        // and the New task dialog. Its other trigger surfaces (wm/index.js on
+        // a workspace/folder tile, workspace-list/index.js on a sidebar row)
+        // only infer an interest in tasks from having opened a folder, so a
+        // user who went straight to the rail would never have seen it.
+        //
+        // Raised AFTER showFolderTab so the tour can never swallow the
+        // navigation the user asked for — the same ordering those two use.
+        // Nothing is remembered here: the kill switch, the mobile check, the
+        // once-ever seen-set and single-flight all live in libs/tutorial-tours,
+        // so a fourth entry point can neither duplicate nor lose the gate.
+        if (_hasWs) require("libs/tutorial-tours").fire("folder_task", this);
+        return _res;
+      }
       case "rail-meet":
         return this._railTab("meeting");
       // The rail's Access and the switcher header's link icon do the identical
