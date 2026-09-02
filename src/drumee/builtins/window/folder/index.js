@@ -1214,25 +1214,24 @@ class __window_folder extends mfsInteract {
       this.syncNewCtrlVisibility();
       return;
     }
-    // Second entry point for the migrate tour, alongside the desk topbar's
-    // + New (desk/index.js, case "addmenu"). Both are the same gesture — "I
-    // want to bring something in" — so they share the `migrate` flag: whichever
-    // is pressed first runs the tour, and the other then finds it seen. This is
-    // the shape the share tour already uses across its own two entry points.
+    // The topbar's "+ New" no longer OPENS the migrate tour.
     //
-    // `open` is the signal rather than a click on the wrapper: it fires only on
-    // opening, never on closing, so re-opening the menu cannot re-trigger, and
-    // a click that lands on the control's padding is not mistaken for the
-    // gesture. Nothing is remembered here — every gate lives in
-    // libs/tutorial-tours — so a topbar rebuild can neither lose nor duplicate
-    // the trigger.
+    // It used to: the menu's `open` event fired `Tours.fire("migrate")`, so the
+    // first press of this button in a folder window put a full-screen tour over
+    // whatever the user was trying to do. Unwired — pressing + New now just
+    // opens + New.
+    //
+    // The tour is still reachable, from the two surfaces where it is the thing
+    // being asked for rather than a side effect of opening a menu:
+    //   - "Migrate from Google Drive" in this menu, and the same button on the
+    //     Files empty-state hero — both land on onUiEvent
+    //     "launch-gdrive-migration", which fires it there.
+    //   - the desk topbar's own + New (desk/index.js, case "addmenu"), which
+    //     still fires on open and is untouched by this.
+    //
+    // The chunk warm stays: opening this menu is still one click from the
+    // gdrive row that does fire the tour, so it is worth having in memory.
     if (pn === "new-menu") {
-      const Tours = require("libs/tutorial-tours");
-      if (_.isFunction(child.on)) {
-        child.on(_e.open, () => Tours.fire("migrate", this));
-      }
-      // Warm the chunk while the surface that triggers it is on screen, so
-      // pressing the button renders from memory rather than from the network.
       if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
         Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
       }
