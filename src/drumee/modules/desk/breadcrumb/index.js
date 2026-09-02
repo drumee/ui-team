@@ -128,7 +128,22 @@ class __desk_breadcrumb extends LetcBox {
         filepath: "/",
         service: "load-home",
       });
-      p.set({ content: LOCALE.HOME });
+      // NO p.set() here. `set({content})` belongs to the text widget
+      // (widgets/text/index.js), and the context part is no longer one: the
+      // skeleton draws Home as a Box.X pill — an icon plus a `__context-label`
+      // Note — so that its label shares the crumb type ramp with the workspace
+      // names beside it. Box has no `set` (only `mset`, which Backbone.View
+      // carries for every widget), so the call threw inside this promise —
+      // "Uncaught (in promise) TypeError: p.set is not a function", on every
+      // reset to Home: first render, the `breadcrumb:context` home event, and
+      // the load-home click.
+      //
+      // It aborted the rest of this callback too, though the highlight
+      // survived that: _buildContent() above sets `data-current` from its own
+      // ensurePart promise, and that one runs first.
+      //
+      // Nothing is lost: the label is a child Note the skeleton already renders
+      // with `content: LOCALE.HOME`, and this only ever wrote that same value.
       p.el.dataset.current = 1;
     });
     if (reload) Desk.loadHome()
