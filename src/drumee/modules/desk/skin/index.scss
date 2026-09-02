@@ -450,6 +450,32 @@ html {
   }
 }
 
+// The workspace switcher must stay reachable OVER a wrapper-modal — the create
+// form (.form-folder__main) is fed into that modal, and switching workspace
+// from the panel above it has to keep working.
+//
+// This is a stacking-CONTEXT problem, not a z-index value one: the switcher
+// already asks for 99999 and the modal only for 20000. But opening a modal
+// makes the block above dissolve `.window-manager__ui` and lift the modal to
+// --z-index-modal (100000) at the DOCUMENT ROOT, while `.desk-module__topbar`
+// is its own context at z 10003 — so the switcher's 99999 is trapped inside it
+// and the whole bar competes at 10003. 10003 < 100000.
+//
+// LIFTED, not dissolved. Dissolving the topbar's context (the trick used for
+// the WM above) would drop the bar below the sidebar (10002) and the slide-out
+// panels (10001), which its 10003 is there to clear.
+//
+// Gated on the switcher being OPEN as well as the modal: the rest of the time
+// the bar has no business above a dialog, where its controls would invite
+// clicks on things the modal is meant to block.
+.desk-module:has(.window-manager__wrapper-modal[data-state="open"]):has(
+    .desk-module-topbar__ws-wrapper .menu-topic-items__wrapper[data-state="open"]
+  ) {
+  .desk-module__topbar {
+    z-index: 100001;
+  }
+}
+
 @media (max-width: 650px) {
   html,
   body {

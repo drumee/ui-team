@@ -2301,8 +2301,15 @@ class __window_manager extends push {
           p.clear();
           p.el.dataset.state = "open";
           p.el.dataset.overlay = "none";
+          // `force_workspace` is how a caller says "I mean a WORKSPACE",
+          // whatever is open — the switcher's "New workspaces" button. Absent
+          // for every other caller, so the context rule below is unchanged:
+          // the topbar's "+ New → Folder" inside a workspace still means a
+          // subfolder.
           const skel =
-            this._curWorkspace && this._curWorkspace.hub_id
+            !args.force_workspace &&
+            this._curWorkspace &&
+            this._curWorkspace.hub_id
               ? {
                 kind: "folder_form",
                 hub_id: this._curWorkspace.hub_id,

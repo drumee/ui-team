@@ -14,15 +14,31 @@ class __form_folder extends LetcBox {
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.get(_a.service);
     switch (service) {
-      case _e.close:
-        // Clear the parent wrapper synchronously instead of goodbye().
-        // goodbye() removes silently, leaving the wrapper's data-state
-        // stuck and breaking subsequent open clicks. clear() resets the
-        // collection cleanly so the wrapper can re-render next time.
-        if (this.parent && _.isFunction(this.parent.clear)) {
-          return this.parent.clear();
-        }
-        return this.goodbye();
+      case _e.close: {
+        // Still clear() and not goodbye(): goodbye removes silently, leaving
+        // the wrapper's data-state stuck and breaking subsequent open clicks.
+        // clear() resets the collection so the wrapper can re-render.
+        //
+        // What changed is only WHEN. Clearing synchronously destroyed the
+        // element on the spot, so the exit animation never got a frame. The
+        // element is marked instead, and the same clear() runs once the
+        // animation has had its 160ms.
+        if (this._closing) return;
+        this._closing = 1;
+        const done = () => {
+          if (this.parent && _.isFunction(this.parent.clear)) {
+            return this.parent.clear();
+          }
+          return this.goodbye();
+        };
+        if (!this.el || !this.el.dataset) return done();
+        this.el.dataset.closing = "1";
+        // Matches form-folder-out in the skin. A timer rather than
+        // animationend: reduced-motion disables the animation entirely, and
+        // that event would then never fire — leaving the dialog open forever.
+        setTimeout(done, 160);
+        return;
+      }
 
       case "select-status":
         // The skeleton stores the status name in `dataset.type` (DOM)

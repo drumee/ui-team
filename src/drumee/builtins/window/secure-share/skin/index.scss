@@ -4,6 +4,19 @@
 // Right-docked 450px panel. Brand purple = --primary-40 (#5950FF) /
 // --primary-50 (#433CC5); surfaces/text use theme tokens so dark mode is kept.
 
+// Embedded drawer entrance. Top level: keyframes are not scoped by nesting, so
+// declaring this inside .window-secure-share would only read as though it were.
+@keyframes window-secure-share-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window-secure-share[data-embedded="yes"] .window-secure-share__main.drive-popup {
+    animation: none;
+  }
+}
+
 .window-secure-share {
   // ── Panel chrome — full-height right dock ─────────────────
   &__main.drive-popup {
@@ -38,6 +51,23 @@
     .window-secure-share__main.drive-popup {
       width: 100%;
       height: 100%;
+      // The slide the Figma node is named for ("Permission Panel (Slide in
+      // from right)"). Until now the drawer simply appeared.
+      //
+      // A KEYFRAME on mount, not the data-position transition its sibling
+      // permission_restricted uses: that one is flipped by a _reveal() call
+      // after the panel's fetch settles, so a fetch that throws first leaves
+      // the panel parked off-screen. An animation cannot get stuck.
+      //
+      // Scoped to [data-embedded] — the standalone floating window positions
+      // itself in JS (_applyRightDock, re-applied in onDomRefresh), and an
+      // animation would fight it.
+      // `backwards`, NOT `both`: a filling CSS animation outranks inline
+      // styles, so a persisted final keyframe would silently override the
+      // gsap transform the close tween sets. backwards still applies the
+      // from-state before start, and after the end the element reverts to
+      // its untransformed normal state — which is translateX(0).
+      animation: window-secure-share-slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     }
   }
 

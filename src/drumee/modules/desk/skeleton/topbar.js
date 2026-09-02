@@ -606,11 +606,15 @@ function workspaceSwitcher(pfx, ui) {
           sys_pn: "ws-list",
           partHandler: ui,
         }),
+        // Its OWN service, not the shared `new-workspace`. Wm picks that one's
+        // form from context — with a workspace open it feeds folder_form, a
+        // SUBFOLDER form — which is right for the topbar's "+ New" but wrong
+        // for a button labelled "New workspaces" in a panel listing workspaces.
         Skeletons.Button.Label({
           ico: "ph-plus",
           className: `${pfx}__ws-new`,
           label: LOCALE.NEW_WORKSPACE,
-          service: "new-workspace",
+          service: "new-workspace-form",
           uiHandler: [ui],
         }),
       ],
