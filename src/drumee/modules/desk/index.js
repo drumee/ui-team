@@ -1768,6 +1768,52 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Split the switcher's rows into the types the user chose when creating them.
+   *
+   * The vocabulary is the CREATE DIALOG's, not a new one invented here —
+   * tutorial/skeleton/toolkit/workspace-dialog TYPES maps internal -> private,
+   * external -> share, personal -> a home-root folder. Listing a workspace
+   * under the type it was created as is the whole point; a second, different
+   * taxonomy would be worse than none.
+   *
+   * `dmz` joins External because it is the share area's variant — window/hub.js
+   * openSettings already treats the two as one case. `restricted` joins
+   * Internal: wm/index.js calls {share, private, restricted, public} the
+   * collaborative set, and restricted is the one that is not outward-facing.
+   *
+   * FOLDERS are personal whatever their area says: _fetchWorkspaces only
+   * defaults a missing area to `personal`, so filetype is the reliable test.
+   *
+   * Nothing is ever dropped. A row matching no rule keeps the generic
+   * "Workspaces" heading at the end rather than vanishing — this menu is the
+   * only global way to change workspace, so an unlisted one is unreachable,
+   * not merely unlabelled. That is what makes a new area on the server a
+   * cosmetic problem here instead of a functional one.
+   *
+   * @param {Array} rows desk.home workspaces, already ordered
+   * @returns {Array} [{ label, rows }] — empty groups omitted
+   */
+  _groupWorkspaces(rows) {
+    const isFolder = (r) => r.filetype === _a.folder;
+    const inArea = (...areas) => (r) => !isFolder(r) && areas.includes(r.area);
+    const defs = [
+      { label: LOCALE.INTERNAL, match: inArea(_a.private, _a.restricted) },
+      { label: LOCALE.EXTERNAL, match: inArea(_a.share, _a.dmz) },
+      { label: LOCALE.PUBLIC, match: inArea(_a.public) },
+      { label: LOCALE.PERSONAL, match: isFolder },
+    ];
+    const groups = defs.map((d) => ({ label: d.label, rows: [] }));
+    const rest = [];
+    for (const r of rows || []) {
+      const i = defs.findIndex((d) => d.match(r));
+      if (i === -1) rest.push(r);
+      else groups[i].rows.push(r);
+    }
+    if (rest.length) groups.push({ label: LOCALE.WORKSPACES, rows: rest });
+    return groups.filter((g) => g.rows.length);
+  }
+
+  /**
    * Fill the switcher's header: the open workspace's glyph, its name, then
    * the link and overflow actions.
    *
@@ -1942,8 +1988,6 @@ class desk_module extends LetcBox {
     // Personal workspaces are home-root FOLDERS, hub workspaces are hubs.
     // _fetchWorkspaces already sorts hubs first, so a single boundary splits
     // them and each group gets a heading instead of one undifferentiated list.
-    const hubs = rows.filter((r) => r.filetype !== _a.folder);
-    const personal = rows.filter((r) => r.filetype === _a.folder);
     // `group`, not `list` — the outer `list` is the part being fed, and
     // shadowing it here would read as though the section fed itself.
     const section = (label, group) =>
@@ -1958,10 +2002,9 @@ class desk_module extends LetcBox {
         : [];
 
     if (list) {
-      list.feed([
-        ...section(LOCALE.WORKSPACES, hubs),
-        ...section(LOCALE.PERSONAL, personal),
-      ]);
+      list.feed(
+        this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows)),
+      );
     }
 
     // ── Header (Figma 48:36991) ──────────────────────────────────────────
