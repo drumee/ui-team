@@ -2,13 +2,20 @@
  * The Secure Share panel — Figma 148:41197 → 148:44198.
  *
  * Six blocks, and the tour rings one per screen. The ring is the design's own
- * focus treatment here: a 2px brand outline on the block, not the opacity dip
- * the create-workspace dialog uses. Both live in skin/tooltip.scss so a step
- * only has to name which block is `lit`.
+ * focus treatment here: a brand outline on the block, not the opacity dip the
+ * create-workspace dialog uses.
+ *
+ * The panel is 512 wide with a 13px gutter, and the frame's own grouping is
+ * load-bearing rather than decorative: "Secure Share" is not a row beside the
+ * email and password blocks, it is a CONTAINER holding them as white cards
+ * (148:41786). Screen 3's ring proves it — 148:42637 sits at x25..487,
+ * y520..687, which is exactly the nested email card's box, not a sibling's.
+ * Drawn as three flat blocks, the panel said the three settings were peers when
+ * two of them are conditions of the third.
  *
  * The panel is taller than the window, so screens 5 and 6 show it scrolled —
  * the step scrolls the lit block into view before the callout measures it
- * (share/index.js _scrollPanelTo).
+ * (share/index.js _scrollTo).
  *
  * Visual only — no services. `sp-panel` is the spotlight target; each block
  * carries a `sys_pn` so a screen can ring it and anchor the callout on it.
@@ -24,8 +31,21 @@ const BLOCKS = {
   NOTIFY: "sp-notify",
 };
 
-// Sample data — the file being shared, and the members already on the list.
+// The area-tinted folder shape, from the single source the desk renders it
+// through — the same call the tour's own Files grid makes
+// (../../skeleton/toolkit/files-grid.js), so the workspace in the panel header
+// is the same picture as the workspaces behind it.
+const folderArt = require("media/grid/template/folder");
+
+// Sample data — what is being shared, and the members already on the list.
+//
+// Two subjects. The first frames drew a file (148:41930); 180:51964 draws a
+// workspace, which is what every contextual trigger of this tour is actually
+// about. Mock copy in both cases, like the rest of the panel: the frame's own
+// placeholder rather than the real workspace's name, so nothing real leaks
+// into a drawing.
 const FILE = { name: "spec_v2.docx", meta: "Update 2 hour ago • 1.2MB" };
+const WORKSPACE = { name: "Folders-name", meta: "Update 2 hour ago • 1.2MB" };
 const MEMBERS = ["member@drumee.com", "member@drumee.com"];
 const PASSWORD = "123456";
 const LINK = "drumee.com/s/pink-fo…";
@@ -35,7 +55,52 @@ const lit = (on) => ({
   attrOpt: { "data-lit": on ? 1 : 0 },
 });
 
-/** A permission row: icon, label, checkbox. */
+/**
+ * The focus state of one TOP-LEVEL block: is it the one being rung, and should
+ * it be filmed back?
+ *
+ * Filmed unless it IS the lit block — the access block included, on the two
+ * screens whose subject is a card nested inside it. Its label, the Public
+ * Share choice and the Secure Share head all describe a choice already made by
+ * then, so they go under the film with everything else and the one card being
+ * described is lifted out of it (`__card[data-lit="1"]` in ../skin/index.scss).
+ *
+ * That lift is only possible because the treatment is an OVERLAY. It used to be
+ * `filter: blur()`, which an ancestor imposes on its whole subtree with no way
+ * for a descendant to escape — so the block holding the lit card had to be
+ * exempted wholesale, and the exemption dragged the label and the public row
+ * along with it. A film is just a layer, and z-index decides who is above it.
+ *
+ * Stamped only on the four blocks directly under `__body`; anything nested
+ * sits under its container's single film rather than gaining a second.
+ */
+const focus = (block, lit) => {
+  const on = block === lit ? 1 : 0;
+  return {
+    dataset: { lit: on, blur: on ? 0 : 1 },
+    attrOpt: { "data-lit": on, "data-blur": on ? 0 : 1 },
+  };
+};
+
+/**
+ * A checkbox. 20px in the permission rows, 16px inside the white cards.
+ *
+ * The tick is a glyph rather than a CSS shape, and it has to be a BARE check.
+ * `app-check` was tried first and is a check inside a RING, which drew a circle
+ * on top of the square and read as two controls stacked; `desktop_check` is the
+ * mark on its own, on a 10x8 viewBox with nothing around it.
+ */
+const check = (p, on, size) =>
+  Skeletons.Box.Y({ active: 0,
+    className: size === "sm" ? `${p}__check ${p}__check--sm` : `${p}__check`,
+    dataset: { on: on ? 1 : 0 },
+    attrOpt: { "data-on": on ? 1 : 0 },
+    kids: [
+      Skeletons.Image.Svg({ active: 0, ico: "desktop_check", className: `${p}__check-tick` }),
+    ],
+  });
+
+/** A permission row: icon, label, checkbox — 148:41781. */
 const permission = (p, ico, label, on) =>
   Skeletons.Box.X({ active: 0,
     className: `${p}__perm`,
@@ -44,35 +109,42 @@ const permission = (p, ico, label, on) =>
     kids: [
       Skeletons.Image.Svg({ active: 0, ico, className: `${p}__perm-ico` }),
       Skeletons.Note({ active: 0, className: `${p}__perm-label`, content: label }),
-      Skeletons.Box.Y({ active: 0,
-        className: `${p}__check`,
-        dataset: { on: on ? 1 : 0 },
-        attrOpt: { "data-on": on ? 1 : 0 },
-      }),
+      check(p, on),
     ],
   });
 
-/** A radio row: icon, title + subtitle, radio. */
-const choice = (p, ico, title, desc, on) =>
+/**
+ * The head of a setting: icon, title over subtitle, and one control on the
+ * right. Shared by the two access choices (radio) and the two white cards
+ * inside Secure Share (checkbox) — one shape in the frame, one here.
+ */
+const settingHead = (p, ico, title, desc, control, pn) =>
   Skeletons.Box.X({ active: 0,
-    className: `${p}__choice`,
-    dataset: { on: on ? 1 : 0 },
-    attrOpt: { "data-on": on ? 1 : 0 },
+    className: `${p}__setting`,
+    ...(pn ? { sys_pn: pn.pn, partHandler: pn.ui } : {}),
     kids: [
-      Skeletons.Image.Svg({ active: 0, ico, className: `${p}__choice-ico` }),
-      Skeletons.Box.Y({ active: 0,
-        className: `${p}__choice-text`,
+      Skeletons.Box.X({ active: 0,
+        className: `${p}__setting-main`,
         kids: [
-          Skeletons.Note({ active: 0, className: `${p}__choice-title`, content: title }),
-          Skeletons.Note({ active: 0, className: `${p}__choice-desc`, content: desc }),
+          Skeletons.Image.Svg({ active: 0, ico, className: `${p}__setting-ico` }),
+          Skeletons.Box.Y({ active: 0,
+            className: `${p}__setting-text`,
+            kids: [
+              Skeletons.Note({ active: 0, className: `${p}__setting-title`, content: title }),
+              Skeletons.Note({ active: 0, className: `${p}__setting-desc`, content: desc }),
+            ],
+          }),
         ],
       }),
-      Skeletons.Box.Y({ active: 0,
-        className: `${p}__radio`,
-        dataset: { on: on ? 1 : 0 },
-        attrOpt: { "data-on": on ? 1 : 0 },
-      }),
+      control,
     ],
+  });
+
+const radio = (p, on) =>
+  Skeletons.Box.Y({ active: 0,
+    className: `${p}__radio`,
+    dataset: { on: on ? 1 : 0 },
+    attrOpt: { "data-on": on ? 1 : 0 },
   });
 
 const toggle = (p, on) =>
@@ -84,9 +156,64 @@ const toggle = (p, on) =>
   });
 
 /**
+ * The header row: what is being shared.
+ *
+ * Same row either way — 148:41930 and 180:52030 are the identical box, 8/12
+ * padding on an 8px radius over the frame's 5% black, with a 14/20 semibold
+ * name over a 12/1.4 grey meta line. Only the icon differs, and it differs in
+ * kind rather than in glyph: a file gets a tinted 32-box with a document mark
+ * inside it, a workspace gets the folder SHAPE itself, area-tinted and badged,
+ * with no box around it.
+ *
+ * @param {String} p
+ * @param {String} [kind] "workspace", or anything else for the file
+ */
+const subject = (p, kind) => {
+  const ws = kind === "workspace";
+  const data = ws ? WORKSPACE : FILE;
+  return Skeletons.Box.X({ active: 0,
+    className: `${p}__file`,
+    dataset: { subject: ws ? "workspace" : "file" },
+    attrOpt: { "data-subject": ws ? "workspace" : "file" },
+    kids: [
+      ws
+        ? Skeletons.Element({ active: 0,
+            className: `${p}__file-art`,
+            // `hub`, not `folder`: the template only draws the area emblem for
+            // a hub, and the emblem is what makes this read as a workspace
+            // rather than a folder inside one. `isAttachment` holds back the
+            // kebab — this row is scenery with no menu behind it. Same
+            // arguments the Files grid passes, for the same reasons.
+            content: folderArt({
+              area: _a.share,
+              filetype: _a.hub,
+              role: "desk",
+              widgetId: _.uniqueId("tutorial-sp-ws-"),
+              isAttachment: 1,
+            }),
+          })
+        : Skeletons.Box.Y({ active: 0,
+            className: `${p}__file-ico`,
+            kids: [
+              Skeletons.Image.Svg({ active: 0, ico: "app-doc-file", className: `${p}__file-glyph` }),
+            ],
+          }),
+      Skeletons.Box.Y({ active: 0,
+        className: `${p}__file-text`,
+        kids: [
+          Skeletons.Note({ active: 0, className: `${p}__file-name`, content: data.name }),
+          Skeletons.Note({ active: 0, className: `${p}__file-meta`, content: data.meta }),
+        ],
+      }),
+    ],
+  });
+};
+
+/**
  * @param {Object} ui
  * @param {Object} [opt]
  * @param {String} [opt.lit] which block carries the focus ring
+ * @param {String} [opt.subject] "workspace" to draw a workspace in the header
  * @returns {Object} the panel
  */
 module.exports = function (ui, opt = {}) {
@@ -98,11 +225,18 @@ module.exports = function (ui, opt = {}) {
     sys_pn: "sp-panel",
     partHandler: ui,
     kids: [
-      Skeletons.Box.X({ active: 0,
+      // 148:41940 — heading row and the file, one group at 12.
+      Skeletons.Box.Y({ active: 0,
         className: `${p}__head`,
         kids: [
-          Skeletons.Note({ active: 0, className: `${p}__title`, content: LOCALE.SECURE_SHARE }),
-          Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${p}__close` }),
+          Skeletons.Box.X({ active: 0,
+            className: `${p}__head-row`,
+            kids: [
+              Skeletons.Note({ active: 0, className: `${p}__title`, content: LOCALE.SECURE_SHARE }),
+              Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${p}__close` }),
+            ],
+          }),
+          subject(p, opt.subject),
         ],
       }),
 
@@ -111,172 +245,217 @@ module.exports = function (ui, opt = {}) {
         sys_pn: "sp-body",
         partHandler: ui,
         kids: [
-          // The file being shared.
-          Skeletons.Box.X({ active: 0,
-            className: `${p}__file`,
-            kids: [
-              Skeletons.Image.Svg({ active: 0, ico: "app-doc-file", className: `${p}__file-ico` }),
-              Skeletons.Box.Y({ active: 0,
-                className: `${p}__file-text`,
-                kids: [
-                  Skeletons.Note({ active: 0, className: `${p}__file-name`, content: FILE.name }),
-                  Skeletons.Note({ active: 0, className: `${p}__file-meta`, content: FILE.meta }),
-                ],
-              }),
-            ],
-          }),
-
-          // 1/6 — what a recipient may do.
+          // 1/6 — what a recipient may do. 148:41781.
+          //
+          // Three nested groups rather than five flat children, because the
+          // frame uses three different gaps: 4 between the label and its hint,
+          // 16 from the hint down to the rows, 8 between the rows. One `gap` on
+          // the block can only say one of those.
           Skeletons.Box.Y({ active: 0,
-            className: `${p}__block`,
+            className: `${p}__block ${p}__block--recipient`,
             sys_pn: BLOCKS.RECIPIENT,
             partHandler: ui,
-            ...on(BLOCKS.RECIPIENT),
+            ...focus(BLOCKS.RECIPIENT, opt.lit),
             kids: [
-              Skeletons.Note({ active: 0, className: `${p}__label`, content: LOCALE.RECIPIENT_MODE }),
-              Skeletons.Note({ active: 0, className: `${p}__hint`, content: LOCALE.RECIPIENT_MODE_HINT }),
-              permission(p, "download", LOCALE.CAN_DOWNLOAD, true),
-              permission(p, "chat-teardrop-dots", LOCALE.CAN_CHAT, false),
-              permission(p, "ctxmenu-rename", LOCALE.CAN_EDIT, false),
+              Skeletons.Box.Y({ active: 0,
+                className: `${p}__block-head`,
+                kids: [
+                  Skeletons.Note({ active: 0, className: `${p}__label`, content: LOCALE.RECIPIENT_MODE }),
+                  Skeletons.Note({ active: 0, className: `${p}__hint`, content: LOCALE.RECIPIENT_MODE_HINT }),
+                ],
+              }),
+              Skeletons.Box.Y({ active: 0,
+                className: `${p}__perms`,
+                kids: [
+                  permission(p, "download", LOCALE.CAN_DOWNLOAD, true),
+                  permission(p, "chat-teardrop-dots", LOCALE.CAN_CHAT, false),
+                  permission(p, "ctxmenu-rename", LOCALE.CAN_EDIT, false),
+                ],
+              }),
             ],
           }),
 
-          // 2/6 — public vs secure.
+          // 2/6 — public vs secure. 148:41782.
           Skeletons.Box.Y({ active: 0,
-            className: `${p}__block`,
+            className: `${p}__block ${p}__block--access`,
             sys_pn: BLOCKS.ACCESS,
             partHandler: ui,
-            ...on(BLOCKS.ACCESS),
+            ...focus(BLOCKS.ACCESS, opt.lit),
             kids: [
               Skeletons.Note({ active: 0, className: `${p}__label`, content: LOCALE.ACCESS_MANAGEMENT }),
-              choice(p, "apps-eye", LOCALE.PUBLIC_SHARE, LOCALE.PUBLIC_SHARE_HINT, false),
-              choice(p, "shield", LOCALE.SECURE_SHARE, LOCALE.SECURE_SHARE_HINT, true),
-            ],
-          }),
-
-          // 3/6 — email gating, nested under Secure Share.
-          Skeletons.Box.Y({ active: 0,
-            className: `${p}__block ${p}__block--nested`,
-            sys_pn: BLOCKS.EMAIL,
-            partHandler: ui,
-            ...on(BLOCKS.EMAIL),
-            kids: [
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__row`,
+              Skeletons.Box.Y({ active: 0,
+                className: `${p}__choices`,
                 kids: [
-                  Skeletons.Image.Svg({ active: 0, ico: "ab_address", className: `${p}__row-ico` }),
                   Skeletons.Box.Y({ active: 0,
-                    className: `${p}__row-text`,
+                    className: `${p}__choice`,
+                    dataset: { on: 0 },
+                    attrOpt: { "data-on": 0 },
                     kids: [
-                      Skeletons.Note({ active: 0, className: `${p}__row-title`, content: LOCALE.SHARE_REQUIRE_EMAIL }),
-                      Skeletons.Note({ active: 0, className: `${p}__row-desc`, content: LOCALE.REQUIRE_EMAIL_HINT }),
+                      settingHead(p, "apps-globe", LOCALE.PUBLIC_SHARE, LOCALE.PUBLIC_SHARE_HINT, radio(p, false)),
                     ],
                   }),
-                  Skeletons.Box.Y({ active: 0, className: `${p}__check`, dataset: { on: 1 }, attrOpt: { "data-on": 1 } }),
-                ],
-              }),
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__row`,
-                kids: [
-                  Skeletons.Note({ active: 0, className: `${p}__row-title`, content: LOCALE.RESTRICT_TO_DOMAINS }),
-                  toggle(p, true),
-                ],
-              }),
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__chips`,
-                kids: [
-                  ...MEMBERS.map((m) =>
-                    Skeletons.Box.X({ active: 0,
-                      className: `${p}__chip`,
-                      kids: [
-                        Skeletons.Note({ active: 0, className: `${p}__chip-text`, content: m }),
-                        Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${p}__chip-x` }),
-                      ],
-                    }),
-                  ),
-                  Skeletons.Note({ active: 0, className: `${p}__chip-more`, content: "+3" }),
-                ],
-              }),
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__entry`,
-                kids: [
-                  Skeletons.Note({ active: 0, className: `${p}__entry-text`, content: LOCALE.ENTER_EMAIL_OR_DOMAIN }),
-                ],
-              }),
-            ],
-          }),
 
-          // 4/6 — password.
-          Skeletons.Box.Y({ active: 0,
-            className: `${p}__block ${p}__block--nested`,
-            sys_pn: BLOCKS.PASSWORD,
-            partHandler: ui,
-            ...on(BLOCKS.PASSWORD),
-            kids: [
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__row`,
-                kids: [
-                  Skeletons.Image.Svg({ active: 0, ico: "lock", className: `${p}__row-ico` }),
+                  // The selected choice, and the two settings it governs.
                   Skeletons.Box.Y({ active: 0,
-                    className: `${p}__row-text`,
+                    className: `${p}__choice`,
+                    dataset: { on: 1 },
+                    attrOpt: { "data-on": 1 },
                     kids: [
-                      Skeletons.Note({ active: 0, className: `${p}__row-title`, content: LOCALE.ADD_PASSWORD }),
-                      Skeletons.Note({ active: 0, className: `${p}__row-desc`, content: LOCALE.ADD_PASSWORD_HINT }),
+                      // Named so step 2 can measure where its ring stops: the
+                      // ring covers the label and the two choice HEADS, not
+                      // the settings nested below this one (see _sizeRing in
+                      // ../index.js).
+                      settingHead(p, "shield", LOCALE.SECURE_SHARE, LOCALE.SECURE_SHARE_HINT, radio(p, true),
+                        { pn: "sp-secure-head", ui }),
+
+                      // 3/6 — email gating.
+                      Skeletons.Box.Y({ active: 0,
+                        className: `${p}__card`,
+                        sys_pn: BLOCKS.EMAIL,
+                        partHandler: ui,
+                        ...on(BLOCKS.EMAIL),
+                        kids: [
+                          settingHead(p, "ph-envelope-simple", LOCALE.SHARE_REQUIRE_EMAIL, LOCALE.REQUIRE_EMAIL_HINT, check(p, true, "sm")),
+                          Skeletons.Box.Y({ active: 0,
+                            className: `${p}__restrict`,
+                            kids: [
+                              Skeletons.Box.Y({ active: 0,
+                                className: `${p}__restrict-top`,
+                                kids: [
+                                  Skeletons.Box.X({ active: 0,
+                                    className: `${p}__restrict-row`,
+                                    kids: [
+                                      Skeletons.Box.X({ active: 0,
+                                        className: `${p}__restrict-label`,
+                                        kids: [
+                                          Skeletons.Note({ active: 0, className: `${p}__restrict-text`, content: LOCALE.RESTRICT_TO_DOMAINS }),
+                                          Skeletons.Image.Svg({ active: 0, ico: "info", className: `${p}__restrict-info` }),
+                                        ],
+                                      }),
+                                      toggle(p, true),
+                                    ],
+                                  }),
+                                  Skeletons.Box.X({ active: 0,
+                                    className: `${p}__chips`,
+                                    kids: [
+                                      ...MEMBERS.map((m) =>
+                                        Skeletons.Box.X({ active: 0,
+                                          className: `${p}__chip`,
+                                          kids: [
+                                            Skeletons.Note({ active: 0, className: `${p}__chip-text`, content: m }),
+                                            Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${p}__chip-x` }),
+                                          ],
+                                        }),
+                                      ),
+                                      Skeletons.Box.Y({ active: 0,
+                                        className: `${p}__chip ${p}__chip--more`,
+                                        kids: [
+                                          Skeletons.Note({ active: 0, className: `${p}__chip-text`, content: "+3" }),
+                                        ],
+                                      }),
+                                    ],
+                                  }),
+                                ],
+                              }),
+                              Skeletons.Box.X({ active: 0,
+                                className: `${p}__entry`,
+                                kids: [
+                                  Skeletons.Note({ active: 0, className: `${p}__entry-text`, content: LOCALE.ENTER_EMAIL_OR_DOMAIN }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+
+                      // 4/6 — password.
+                      Skeletons.Box.Y({ active: 0,
+                        className: `${p}__card`,
+                        sys_pn: BLOCKS.PASSWORD,
+                        partHandler: ui,
+                        ...on(BLOCKS.PASSWORD),
+                        kids: [
+                          settingHead(p, "lock", LOCALE.ADD_PASSWORD, LOCALE.ADD_PASSWORD_HINT, check(p, true, "sm")),
+                          Skeletons.Box.X({ active: 0,
+                            className: `${p}__pass`,
+                            kids: [
+                              Skeletons.Note({ active: 0, className: `${p}__pass-text`, content: PASSWORD }),
+                              Skeletons.Image.Svg({ active: 0, ico: "ctxmenu-rename", className: `${p}__pass-ico` }),
+                            ],
+                          }),
+                        ],
+                      }),
                     ],
                   }),
-                  Skeletons.Box.Y({ active: 0, className: `${p}__check`, dataset: { on: 1 }, attrOpt: { "data-on": 1 } }),
-                ],
-              }),
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__entry`,
-                kids: [
-                  Skeletons.Note({ active: 0, className: `${p}__entry-text`, dataset: { filled: 1 }, attrOpt: { "data-filled": 1 }, content: PASSWORD }),
-                  Skeletons.Image.Svg({ active: 0, ico: "ctxmenu-rename", className: `${p}__entry-ico` }),
                 ],
               }),
             ],
           }),
 
-          // 5/6 — expiry.
+          // 5/6 — expiry, and the link controls the frame groups with it
+          // (148:41787: one block, 16 between its two halves).
           Skeletons.Box.Y({ active: 0,
-            className: `${p}__block`,
+            className: `${p}__block ${p}__block--expiry`,
             sys_pn: BLOCKS.EXPIRY,
             partHandler: ui,
-            ...on(BLOCKS.EXPIRY),
+            ...focus(BLOCKS.EXPIRY, opt.lit),
             kids: [
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__row`,
+              Skeletons.Box.Y({ active: 0,
+                className: `${p}__expiry`,
                 kids: [
-                  Skeletons.Note({ active: 0, className: `${p}__label`, content: LOCALE.LINK_EXPIRATION }),
-                  toggle(p, true),
+                  Skeletons.Box.X({ active: 0,
+                    className: `${p}__row`,
+                    kids: [
+                      Skeletons.Note({ active: 0, className: `${p}__label`, content: LOCALE.LINK_EXPIRATION }),
+                      toggle(p, true),
+                    ],
+                  }),
+                  Skeletons.Box.X({ active: 0,
+                    className: `${p}__segments`,
+                    kids: [LOCALE.ONE_HOUR, LOCALE.ONE_DAY, LOCALE.SEVEN_DAYS, LOCALE.CUSTOM].map((t, i) =>
+                      Skeletons.Box.X({ active: 0,
+                        className: `${p}__segment`,
+                        dataset: { on: i === 3 ? 1 : 0 },
+                        attrOpt: { "data-on": i === 3 ? 1 : 0 },
+                        kids: [
+                          Skeletons.Note({ active: 0, className: `${p}__segment-label`, content: t }),
+                        ],
+                      }),
+                    ),
+                  }),
                 ],
               }),
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__segments`,
-                kids: [LOCALE.ONE_HOUR, LOCALE.ONE_DAY, LOCALE.SEVEN_DAYS, LOCALE.CUSTOM].map((t) =>
-                  Skeletons.Note({ active: 0, className: `${p}__segment`, content: t }),
-                ),
-              }),
-            ],
-          }),
 
-          Skeletons.Box.X({ active: 0,
-            className: `${p}__cta`,
-            kids: [
-              Skeletons.Image.Svg({ active: 0, ico: "copylink", className: `${p}__cta-ico` }),
-              Skeletons.Note({ active: 0, className: `${p}__cta-label`, content: LOCALE.GET_LINK }),
-            ],
-          }),
-
-          Skeletons.Box.X({ active: 0,
-            className: `${p}__link`,
-            kids: [
-              Skeletons.Image.Svg({ active: 0, ico: "copylink", className: `${p}__link-ico` }),
-              Skeletons.Note({ active: 0, className: `${p}__link-text`, content: LINK }),
-              Skeletons.Box.X({ active: 0,
-                className: `${p}__revoke`,
+              Skeletons.Box.Y({ active: 0,
+                className: `${p}__linkgroup`,
                 kids: [
-                  Skeletons.Note({ active: 0, className: `${p}__revoke-label`, content: LOCALE.REVOKE }),
+                  Skeletons.Box.X({ active: 0,
+                    className: `${p}__cta`,
+                    kids: [
+                      Skeletons.Image.Svg({ active: 0, ico: "apps-link-simple", className: `${p}__cta-ico` }),
+                      Skeletons.Note({ active: 0, className: `${p}__cta-label`, content: LOCALE.GET_LINK }),
+                    ],
+                  }),
+                  Skeletons.Box.X({ active: 0,
+                    className: `${p}__linkrow`,
+                    kids: [
+                      Skeletons.Box.X({ active: 0,
+                        className: `${p}__link`,
+                        kids: [
+                          Skeletons.Image.Svg({ active: 0, ico: "apps-link-simple", className: `${p}__link-ico` }),
+                          Skeletons.Note({ active: 0, className: `${p}__link-text`, content: LINK }),
+                          Skeletons.Image.Svg({ active: 0, ico: "ctxmenu-copy", className: `${p}__link-copy` }),
+                        ],
+                      }),
+                      Skeletons.Box.X({ active: 0,
+                        className: `${p}__revoke`,
+                        kids: [
+                          Skeletons.Image.Svg({ active: 0, ico: "app-ban", className: `${p}__revoke-ico` }),
+                          Skeletons.Note({ active: 0, className: `${p}__revoke-label`, content: LOCALE.REVOKE }),
+                        ],
+                      }),
+                    ],
+                  }),
                 ],
               }),
             ],
@@ -287,7 +466,7 @@ module.exports = function (ui, opt = {}) {
             className: `${p}__block ${p}__block--row`,
             sys_pn: BLOCKS.NOTIFY,
             partHandler: ui,
-            ...on(BLOCKS.NOTIFY),
+            ...focus(BLOCKS.NOTIFY, opt.lit),
             kids: [
               Skeletons.Note({ active: 0, className: `${p}__label`, content: LOCALE.NOTIFY_ON_OPEN }),
               toggle(p, true),

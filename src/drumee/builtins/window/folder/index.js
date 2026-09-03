@@ -1858,7 +1858,17 @@ class __window_folder extends mfsInteract {
           // six screens of link options (modules/desk/tutorial/share,
           // LOCALE.SECURE_SHARE) — over a panel that has no links in it.
           if (!this.isShowSettings) {
-            require("libs/tutorial-tours").fire("share", this);
+            // What this panel is about, told to the tour because the tour
+            // cannot work it out: openManageAccess() opens a WORKSPACE's
+            // access, never a single file's, from every one of the four
+            // surfaces that reach this line — the folder topbar icon, the
+            // overflow menu, the rail's Access and the desk topbar's workspace
+            // head. So the mock panel shows a workspace in its header
+            // (180:51964) rather than the file the first frames drew.
+            //
+            // Absent for the `full` tour and for ?tutorial=share, which have no
+            // trigger and no subject; those keep the file header.
+            require("libs/tutorial-tours").fire("share", this, { subject: "workspace" });
           }
         }
         return this.openManageAccess();
