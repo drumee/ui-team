@@ -1769,23 +1769,20 @@ class __window_folder extends mfsInteract {
         // reason: what follows is asynchronous (Kind.waitFor then Wm.launch),
         // so there is no "after the popup is up" to raise it from.
         //
-        // The action is NOT swallowed. The popup still launches; the tour mounts
-        // in the desk's `overlay` (z 10010) and the popup lands in Wm's window
-        // layer beneath it, so the user is walked through the mock dialog and
-        // the real one is waiting underneath when the tour comes down.
-        //
         // Two surfaces reach this case — the Files empty-state hero's primary
         // "Migrate from Google Drive" (skeleton/content/grid/empty.js) and the
-        // "+ New" menu's gdrive row. The menu already triggers this tour when it
-        // OPENS (see onPartReady "new-menu"), so this adds the hero, which had
-        // no trigger at all; the overlap costs nothing, since single-flight and
-        // the seen-set both live in libs/tutorial-tours.
+        // "+ New" menu's gdrive row (skeleton/toolkit/index.js newMenu, class
+        // window-button__dropdown-menu__item--gdrive). Both ASK FOR THE IMPORT
+        // DIALOG, and the tour is what teaches it — so on the run where the tour
+        // fires, the dialog is handed over when the tour comes down rather than
+        // opened underneath it (see the launch below).
         //
         // "First click, new account" needs no gate of its own: the seen-set is
         // once-ever per user and server-recorded, and a pre-existing user who
         // finished the old monolithic tour is already covered by the
         // `tutorial_done` inference in serverState().
-        require("libs/tutorial-tours").fire("migrate", this);
+        const Tours = require("libs/tutorial-tours");
+        Tours.fire("migrate", this);
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
         // full migration popup; the widget + google_drive.* backend already
         // exist. singleton + wm_unique_id (per the multi-folder-windows fix)
@@ -1810,8 +1807,16 @@ class __window_folder extends mfsInteract {
         const destName = this.mget(_a.hub_name) || this.mget(_a.filename) || "";
         const destHub = this.mget(_a.hub_id) || Visitor.id;
         const destNidFinal = destNid || Visitor.get(_a.home_id);
-        return Kind.waitFor("migrate_gdrive_popup").then(() => {
-          Wm.launch(
+        // Warmed NOW even when the launch waits for the tour, so the dialog is
+        // rendered from memory the instant the tour comes down rather than
+        // starting a chunk fetch at the moment it is finally wanted.
+        const ready = Kind.waitFor("migrate_gdrive_popup");
+        const launch = () => {
+          // The window can be gone by the time a tour comes down — the popup's
+          // destination was read off it, so there is nothing to import into.
+          if (this.isDestroyed && this.isDestroyed()) return;
+          if (typeof Wm === "undefined" || !_.isFunction(Wm.launch)) return;
+          return ready.then(() => Wm.launch(
             {
               kind: "migrate_gdrive_popup",
               hub_id: destHub,
@@ -1828,8 +1833,24 @@ class __window_folder extends mfsInteract {
               wm_unique_id: `migrate_gdrive_popup-${destHub}-${destNidFinal}`,
             },
             { explicit: 1, singleton: 1 },
-          );
-        });
+          ));
+        };
+        // The dialog waits for the tour, when there is one.
+        //
+        // It used to launch immediately and rely on stacking: the tour mounts in
+        // the desk's `overlay` (z 10010) and the popup lands in Wm's window layer
+        // beneath it, so on a new account's first click the real dialog opened
+        // unseen, spent the whole walkthrough behind a full-screen mock of
+        // itself, and had to still be there — in its starting state — when the
+        // tour finally came down. Now the destination is captured HERE (the
+        // folder the user was standing in) and the launch is handed to
+        // Tours.whenDone, which runs it the moment the migrate tour is gone.
+        //
+        // Every other click is unchanged: with no migrate tour in flight —
+        // already seen, kill switch off, mobile, or another tour holding
+        // single-flight — whenDone runs `launch` synchronously, exactly where
+        // the old call sat.
+        return Tours.whenDone("migrate", launch);
       }
 
       case "new-document":
@@ -1899,11 +1920,11 @@ class __window_folder extends mfsInteract {
           if (!this.isShowSettings) {
             // What this panel is about, told to the tour because the tour
             // cannot work it out: openManageAccess() opens a WORKSPACE's
-            // access, never a single file's, from every one of the four
-            // surfaces that reach this line — the folder topbar icon, the
-            // overflow menu, the rail's Access and the desk topbar's workspace
-            // head. So the mock panel shows a workspace in its header
-            // (180:51964) rather than the file the first frames drew.
+            // access, never a single file's, from every one of the three
+            // surfaces that still reach this line — the folder topbar icon,
+            // the overflow menu and the desk topbar's workspace head. So the
+            // mock panel shows a workspace in its header (180:51964) rather
+            // than the file the first frames drew.
             //
             // Absent for the `full` tour and for ?tutorial=share, which have no
             // trigger and no subject; those keep the file header.

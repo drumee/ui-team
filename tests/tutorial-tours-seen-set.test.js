@@ -432,3 +432,90 @@ test("with no account identified the mirror is inert, never a shared bucket", ()
     "nothing may be written without an account to write it against",
   );
 });
+
+// ── whenDone: a real destination waiting behind a tour ───────────────────────
+//
+// The migrate popup is the case. Both surfaces that raise
+// "launch-gdrive-migration" (the folder topbar's + New gdrive row and the Files
+// hero's primary button) are asking for the import dialog, and the tour is what
+// teaches it — so the dialog is handed over when the tour comes down instead of
+// being opened underneath a full-screen mock of itself.
+
+test("whenDone defers while that tour is in flight and runs on release", () => {
+  const { Tours, host } = fresh({ settings: {} });
+  const ran = [];
+
+  assert.equal(Tours.fire("migrate", host), true);
+  assert.equal(Tours.whenDone("migrate", () => ran.push("popup")), true, "must defer");
+  assert.deepEqual(ran, [], "the dialog must not open under the tour");
+
+  Tours.release("migrate");
+  assert.deepEqual(ran, ["popup"], "and must open when the tour is gone");
+});
+
+test("whenDone runs NOW when the tour it names is not running", () => {
+  const { Tours, host } = fresh({ settings: {} });
+  const ran = [];
+
+  // Already seen — fire() refuses, so there is no tour to wait for and the
+  // click must behave exactly as it did before the deferral existed.
+  Tours.markSeen("migrate", host);
+  assert.equal(Tours.fire("migrate", host), false);
+  assert.equal(Tours.whenDone("migrate", () => ran.push("popup")), false);
+  assert.deepEqual(ran, ["popup"], "synchronously, where the old launch sat");
+
+  // Another tour holding single-flight is the same situation: the migrate tour
+  // is NOT being shown, so nothing is waiting for it.
+  const b = fresh({ settings: {} });
+  const ranB = [];
+  assert.equal(b.Tours.fire("chat", b.host), true);
+  assert.equal(b.Tours.whenDone("migrate", () => ranB.push("popup")), false);
+  assert.deepEqual(ranB, ["popup"]);
+  b.Tours.release("chat");
+});
+
+test("a deferred launch is settled exactly once", () => {
+  const { Tours, host } = fresh({ settings: {} });
+  const ran = [];
+  Tours.fire("migrate", host);
+  Tours.whenDone("migrate", () => ran.push("popup"));
+
+  Tours.release("migrate");
+  Tours.release("migrate"); // a late second destroy must not re-open the dialog
+  assert.deepEqual(ran, ["popup"]);
+
+  // And a stale release for a DIFFERENT tour cannot settle this one early.
+  const b = fresh({ settings: {} });
+  const ranB = [];
+  b.Tours.fire("migrate", b.host);
+  b.Tours.whenDone("migrate", () => ranB.push("popup"));
+  b.Tours.release("folder_task");
+  assert.deepEqual(ranB, [], "not this tour's ending");
+  b.Tours.release("migrate");
+  assert.deepEqual(ranB, ["popup"]);
+});
+
+test("a tour whose chunk never arrives still hands over the destination", (t) => {
+  // The guard timeout is the other ending a tour has. Dropping the user's
+  // request because the tour failed to load is the one outcome that has no
+  // defence — they pressed Migrate.
+  const { Tours, host } = fresh({ settings: {} });
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const ran = [];
+  Tours.fire("migrate", host);
+  Tours.whenDone("migrate", () => ran.push("popup"));
+  t.mock.timers.tick(Tours.GUARD_TIMEOUT_MS + 20);
+  assert.deepEqual(ran, ["popup"]);
+});
+
+test("a throwing continuation cannot wedge the guard or its neighbours", () => {
+  const { Tours, host } = fresh({ settings: {} });
+  const ran = [];
+  Tours.fire("migrate", host);
+  Tours.whenDone("migrate", () => { throw new Error("Wm exploded"); });
+  Tours.whenDone("migrate", () => ran.push("second"));
+
+  Tours.release("migrate");
+  assert.deepEqual(ran, ["second"]);
+  assert.equal(Tours.inFlight(), null, "single-flight must still be released");
+});
