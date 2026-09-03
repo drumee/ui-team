@@ -68,6 +68,12 @@ const createNavItem = (
       : cls(fig, "item"),
     uiHandler: [ui],
     radio: `sidebar-radio`,
+    // Which row is lit before the first click. ui-core's radio behavior reads
+    // `initialState` at render (addons/backbone/view/behavior/radio.js
+    // onRender) and stamps data-radio, and restores it on a "clear:radio" —
+    // so this is the group's resting selection, not a one-shot paint.
+    // undefined for every other row, exactly like `name` below.
+    initialState: opts.initialState,
     service,
     // Template filename for the office create services — Wm.newDocument reads
     // it back with cmd.mget(_a.name), so it has to be a model field on the row
@@ -197,7 +203,11 @@ const createRailNav = (ui) => {
       Skeletons.Box.Y({
         className: `${fig}__nav-main`,
         kids: [
-          createNavItem(ui, "rail-files", LOCALE.FILES, "rail-files", "", null, "sidebar-files"),
+          // Files is the group's default selection: the desk boots into a
+          // workspace on its files tab (_railTab's "no stamp reads as files",
+          // and _openDefaultWorkspace opens on the default tab), so an unlit
+          // rail was disagreeing with the screen behind it.
+          createNavItem(ui, "rail-files", LOCALE.FILES, "rail-files", "", null, "sidebar-files", null, { initialState: 1 }),
           createNavItem(ui, "rail-chat", LOCALE.CHAT, "rail-chat", "", null, "sidebar-chat"),
           createNavItem(ui, "rail-task", LOCALE.TASK, "rail-task", "", null, "sidebar-task"),
           createNavItem(ui, "rail-meet", LOCALE.MEET, "rail-meet", "", null, "sidebar-meet"),
