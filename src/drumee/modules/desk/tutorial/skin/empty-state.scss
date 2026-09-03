@@ -214,6 +214,22 @@
     max-width: calc(100% - 46px);
   }
 
+  // Every card's caption is built; the active one is shown. `display: none`
+  // rather than opacity, so the row takes the height of the caption on show
+  // instead of the tallest of them and the arrows stay centred on it.
+  &__es-caption-deck {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__es-caption-item {
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+
+    &[data-on="0"] { display: none; }
+  }
+
   &__es-caption-ico {
     width: 52px;
     height: 52px;
@@ -265,11 +281,31 @@
     background: var(--normal-bg-elevated);
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
     color: var(--normal-fg);
+
+    // Only when something is actually bound to it. The stamp comes from the
+    // same flag that binds the service (`arrow_service` in
+    // ../skeleton/toolkit/empty-state.js), so a step that draws these as
+    // scenery cannot end up with a button that does nothing on hover.
+    &[data-live="1"] {
+      cursor: pointer;
+      transition: background-color 120ms ease, box-shadow 120ms ease;
+
+      &:hover {
+        background: var(--normal-bg-90);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+      }
+
+      &:active {
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+      }
+    }
   }
 
+  // The chevron's own 9x16, so it renders 1:1 instead of being letterboxed
+  // inside a square box and coming out 8.4px wide.
   &__es-arrow-glyph {
-    width: 15px;
-    height: 15px;
+    width: 9px;
+    height: 16px;
 
     svg { width: 100%; height: 100%; }
   }
