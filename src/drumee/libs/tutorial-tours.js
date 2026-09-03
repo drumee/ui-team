@@ -293,9 +293,16 @@ function isSeen(tourId, host) {
  * Writes nothing to the seen-set — that is markSeen()'s job, once the tour has
  * proved it can mount.
  *
+ * @param {String} tourId
+ * @param {Object} host  the widget asking, for the seen-set lookup
+ * @param {Object} [opt] extra model attributes for the tour widget, for a
+ *   trigger that knows something the tour cannot work out for itself. The
+ *   share panel's header is the case that needs it: opened over a workspace it
+ *   should show a workspace, and only the trigger knows that. Rides in the
+ *   broadcast under its own key so it can never collide with `tour`.
  * @returns {Boolean} whether the tour was broadcast
  */
-function fire(tourId, host) {
+function fire(tourId, host, opt) {
   if (!enabled()) return false;
   if (isMobile()) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
@@ -308,7 +315,7 @@ function fire(tourId, host) {
 
   try {
     if (typeof RADIO_BROADCAST !== "undefined") {
-      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId });
+      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId, opt: opt || null });
     }
   } catch (e) {
     // A listener that throws must not leave the guard latched for the session.

@@ -2916,6 +2916,8 @@ class desk_module extends LetcBox {
    *
    *   #/desk?tutorial=share                 the share tour, from screen 1
    *   #/desk?tutorial=share&screen=3        straight to its third screen
+   *   #/desk?tutorial=share&subject=workspace   its panel headed by a
+   *                                         workspace instead of a file
    *   #/desk?tutorial=folder_task&step=2    straight to the tracker step
    *   #/desk?tutorial=folder_task&step=2&screen=4   ...and its fourth view
    *   #/desk?tutorial=1                     the whole six-step tour
@@ -2937,6 +2939,14 @@ class desk_module extends LetcBox {
     const opt = { preview: 1 };
     if (args.step) opt.enter_at_step = args.step;
     if (args.screen) opt.enter_at_screen = args.screen;
+    // What the tour is about, when only the trigger would normally know.
+    //
+    // The share panel's header is the case: opened over a workspace it shows a
+    // workspace (180:51964), and the trigger says so through fire()'s third
+    // argument (libs/tutorial-tours). A preview URL has no trigger, so without
+    // this the workspace header could not be looked at from a URL at all — it
+    // would need a fresh account and a real click on Manage access.
+    if (args.subject) opt.subject = args.subject;
     return opt;
   }
 
@@ -2983,7 +2993,10 @@ class desk_module extends LetcBox {
    */
   _onTourTrigger(args = {}) {
     if (!args.tour) return;
-    this._showTutorial(args.tour);
+    // `opt` is whatever the trigger knew and the tour could not — see fire()
+    // in libs/tutorial-tours. _showTutorial spreads it onto the widget, so it
+    // arrives as model attributes.
+    this._showTutorial(args.tour, args.opt || {});
   }
 
   /**

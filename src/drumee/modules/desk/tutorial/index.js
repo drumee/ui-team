@@ -192,6 +192,12 @@ class tutorial_main extends LetcBox {
         tour_screens: total,
         is_first: i === 0,
         is_last: i === steps.length - 1,
+        // What the tour is ABOUT, when the trigger knew and said so (fire()'s
+        // third argument). Only the share step reads it today — its panel
+        // header shows a workspace instead of a file — but it is stamped on
+        // every step rather than special-cased, because a step is not supposed
+        // to know which tour it is in.
+        subject: this.mget('subject') || null,
       };
       return widget;
     });
