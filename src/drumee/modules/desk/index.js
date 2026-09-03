@@ -2108,6 +2108,7 @@ class desk_module extends LetcBox {
 
     const mayWrite = this._curWorkspaceCanWrite();
     const mayManage = this._curWorkspaceCanManage();
+    const mayDownload = this._curWorkspaceCanDownload();
     // Sectioned like the folder menu it sits beside (media/core
     // contextmenuItemsForFolder): content actions, then organize, then access,
     // and the destructive one last on its own. Built as a list of sections so a
@@ -2115,6 +2116,12 @@ class desk_module extends LetcBox {
     // it — the reason this is not just a flat array with "separator" in it.
     const item = require("builtins/contextmenu/skeleton/items");
     const sections = [
+      // Download leads, and in a section of its own — not folded in with
+      // Rename/Duplicate — because it is the one row here gated on the DOWNLOAD
+      // bit rather than on write/admin. Sharing their section would silently
+      // re-gate it on `mayManage` and hide it from a view-only member, who is
+      // precisely the person for whom taking a copy is the only useful action.
+      mayDownload ? ["workspaceDownload"] : [],
       mayManage ? ["workspaceRename", "workspaceDuplicate"] : [],
       mayWrite ? ["workspaceOrganize"] : [],
       mayWrite ? ["workspaceAccess"] : [],
@@ -2360,13 +2367,31 @@ class desk_module extends LetcBox {
   }
 
   /** Rail → the workspace's manage-access panel (the Permission Matrix). */
-  _railAccess() {
+  /**
+   * @param {Object} [opt]
+   * @param {boolean} [opt.members] force the workspace-MEMBERS panel (invite row
+   *   + permissions matrix) regardless of the workspace's area.
+   *
+   * The rail's Access passes it: Natrix' ruling is that Access always means
+   * "who can get in", so an EXTERNAL workspace must show the same matrix an
+   * internal one does rather than the secure-share link builder.
+   *
+   * The header's chain icon (_workspaceAccessFromHeader) calls this WITHOUT it
+   * on purpose — that control is the Manage Access link button, it is rendered
+   * only for external workspaces, and the link builder is exactly what it is
+   * for. Sharing this method is why the flag is a parameter and not a change
+   * inside openManageAccess, which four other surfaces also reach.
+   */
+  _railAccess(opt) {
     if (this.el) this.el.dataset.mtab = "access";
     const w = this._activeWorkspace();
     // Same as _railTab: open a workspace rather than the retired home grid.
     if (!w) return this._openDefaultWorkspace();
     if (_.isFunction(w.onUiEvent)) {
-      return w.onUiEvent(w, { service: "folder-manage-access" });
+      return w.onUiEvent(w, {
+        service: "folder-manage-access",
+        members: opt && opt.members ? 1 : 0,
+      });
     }
   }
 
@@ -2414,6 +2439,29 @@ class desk_module extends LetcBox {
       const win = Wm._findWorkspaceWindow && Wm._findWorkspaceWindow(ws.hub_id);
       if (!win || typeof win.canAdmin !== "function") return true;
       return !!win.canAdmin();
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
+   * May the viewer download the workspace they are currently in?
+   *
+   * Same resolution and same fail-open posture as the two above. It asks
+   * canDownload() rather than canUpload()/canAdmin() deliberately: downloading
+   * is granted by the DOWNLOAD bit, which a view-only member can hold. Gating
+   * the row on write would hide it from exactly the people whose only useful
+   * action on a workspace is taking a copy of it — and it is the same test the
+   * folder Settings panel used for its own Download row (allowedActions in
+   * window/folder/skeleton/settings-action-panel.js).
+   */
+  _curWorkspaceCanDownload() {
+    try {
+      const ws = (window.Wm && Wm._curWorkspace) || null;
+      if (!ws || !ws.hub_id) return true;
+      const win = Wm._findWorkspaceWindow && Wm._findWorkspaceWindow(ws.hub_id);
+      if (!win || typeof win.canDownload !== "function") return true;
+      return !!win.canDownload();
     } catch (e) {
       return true;
     }
@@ -5048,7 +5096,10 @@ class desk_module extends LetcBox {
       // share/dmz, so it always lands on the link panel, while the rail is
       // global and can also reach the members panel.
       case "rail-access":
-        return this._railAccess();
+        // members: the rail's Access is the "who has access" control, so it
+        // shows the permissions matrix for every workspace — external ones
+        // included, which used to get the link builder instead.
+        return this._railAccess({ members: 1 });
 
       // Same destination, but wrapped so the header's icon can show it is
       // working — see _workspaceAccessFromHeader. The rail is deliberately NOT

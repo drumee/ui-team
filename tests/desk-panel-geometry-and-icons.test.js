@@ -154,7 +154,7 @@ test("the Home crumb is gone, and nothing can still summon the home grid", () =>
   // The rail is the other way in, and it is the one that reaches the phone:
   // with no workspace open its tabs used to fall back to the same grid.
   const desk = stripComments(readFileSync(join(SRC, "modules/desk/index.js"), "utf8"));
-  for (const fn of ["_railTab(tab) {", "_railAccess() {"]) {
+  for (const fn of ["_railTab(tab) {", "_railAccess(opt) {"]) {
     const i = desk.indexOf(fn);
     assert.ok(i > -1, `${fn} exists`);
     const body = desk.slice(i, i + 500);

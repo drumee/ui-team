@@ -263,7 +263,7 @@ function caseSlice(src, label, quote = '"') {
 test("share A fires BEFORE openManageAccess, which toggles", () => {
   const block = caseSlice(FOLDER, "folder-manage-access");
   const fire = block.indexOf('fire("share"');
-  const open = block.indexOf("this.openManageAccess()");
+  const open = block.indexOf("this.openManageAccess(");
   assert.notEqual(fire, -1);
   assert.notEqual(open, -1);
   assert.ok(fire < open, "reading isShowSettings after the toggle inverts it");
@@ -316,8 +316,12 @@ function runManageAccess({ isShowSettings }) {
   // collision harness-hygiene.test.js exists to catch. It resolves to the
   // global, and only inside the canUpload()-false branch this never takes.
   // eslint-disable-next-line no-new-func
-  const fn = new Function("require", `return function () {${body}};`);
-  fn(fakeRequire).call(ctx);
+  // `args` is the third input the case reads now: the rail's Access passes
+  // { members: 1 } to ask for the permissions matrix. This suite is about the
+  // LINK tour, which only exists on the no-flag branch, so it stays empty.
+  // eslint-disable-next-line no-new-func
+  const fn = new Function("require", "args", `return function () {${body}};`);
+  fn(fakeRequire, {}).call(ctx);
   return calls;
 }
 

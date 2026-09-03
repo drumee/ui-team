@@ -57,6 +57,12 @@ function slice(src, header) {
 
 const WS_ITEMS = {
   workspaceAccess: "folder-manage-access",
+  // Raised as `_e.download`, not as a quoted string, because that is how
+  // window_folder writes the case it already handles (`case _e.download:` →
+  // runFolderMediaAction → target.download()). The two forms are the same
+  // service at runtime — `_e` is a createSafeObject proxy, so an undefined key
+  // returns its own name — so both spellings are accepted below.
+  workspaceDownload: "download",
   workspaceRename: "folder-rename",
   workspaceDuplicate: "folder-duplicate",
   workspaceOrganize: "folder-organize",
@@ -68,9 +74,9 @@ test("each workspace row raises the service the window already handles", () => {
   for (const [key, service] of Object.entries(WS_ITEMS)) {
     const row = ITEMS.match(new RegExp(`${key}\\s*:\\s*button\\(\\{[^}]*\\}\\)`));
     assert.ok(row, `items.js has no \`${key}\``);
-    assert.match(row[0], new RegExp(`service:\\s*['"]${service}['"]`),
+    assert.match(row[0], new RegExp(`service:\\s*(?:['"]${service}['"]|_e\\.${service})`),
       `${key} must raise ${service}`);
-    assert.match(FOLDER, new RegExp(`case "${service}"`),
+    assert.match(FOLDER, new RegExp(`case\\s+(?:"${service}"|_e\\.${service})\\s*:`),
       `window_folder does not handle ${service} — the row would be inert`);
   }
 });
@@ -78,7 +84,7 @@ test("each workspace row raises the service the window already handles", () => {
 // ── the menu builder ────────────────────────────────────────────────────────
 
 /** Run the real _openWorkspaceMenu against fakes; report what it fed. */
-function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, mayWrite = true, mayManage = true, alreadyOpen = false }) {
+function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, mayWrite = true, mayManage = true, mayDownload = true, alreadyOpen = false }) {
   const body = slice(DESK, "  _toggleWorkspaceMenu(cmd) {");
   const fed = [];
   const dlg = dialog
@@ -104,6 +110,7 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, mayWrite =
     _closeWorkspaceMenu: null,
     _curWorkspaceCanWrite: () => mayWrite,
     _curWorkspaceCanManage: () => mayManage,
+    _curWorkspaceCanDownload: () => mayDownload,
   };
   const states = [];
   const cmd = {
@@ -191,6 +198,25 @@ test("a read-only member gets neither Manage access nor the write actions", () =
   const s = labels(box);
   assert.ok(!s.includes("folder-manage-access"), "minting links needs write");
   assert.ok(!s.includes("folder-organize"), "organize moves things");
+  // ...but Download stays. It is granted by the DOWNLOAD bit, which a view-only
+  // member holds, and taking a copy is the one useful thing they can do with a
+  // workspace. This is the row's whole reason for being in this menu: the
+  // folder Settings panel that used to carry it is no longer the workspace's
+  // entry point, so gating it on write would leave them no way to download.
+  assert.ok(s.includes("download"), "a view-only member lost Download");
+});
+
+test("Download leads the menu, and is gated on the download bit alone", () => {
+  // Position: Duy's requirement is that it sits ABOVE Rename.
+  const r = rows(run({ win: fakeWin(), mayWrite: true, mayManage: true }));
+  assert.equal(r[0], "workspaceDownload", "Download must be the first row");
+  assert.ok(r.indexOf("workspaceDownload") < r.indexOf("workspaceRename"),
+    "Download must come before Rename");
+
+  // Gate: write and admin must NOT be what decides it, in either direction.
+  const noDl = labels(run({ win: fakeWin(), mayWrite: true, mayManage: true, mayDownload: false }));
+  assert.ok(!noDl.includes("download"),
+    "the row ignored canDownload() — it is riding on write/admin instead");
 });
 
 test("a non-admin keeps write actions but loses rename and delete", () => {
@@ -287,6 +313,7 @@ test("every workspace row carries an icon and the delete row reads destructive",
   const CLASSES = read("src/drumee/builtins/contextmenu/skeleton/classes.js");
   const expect = {
     workspaceAccess: "ctxmenu-share",
+    workspaceDownload: "ctxmenu-download",
     workspaceRename: "ctxmenu-rename",
     workspaceDuplicate: "ctxmenu-copy",
     workspaceOrganize: "ctxmenu-organize",
@@ -315,10 +342,20 @@ test("sections are separated, and a separator never dangles", () => {
 test("a gate emptying a section removes its separator too", () => {
   // Write-only: the rename/duplicate and delete sections vanish. What is left
   // must still be cleanly divided, not fringed with orphan rules.
+  // Download survives — it is gated on the DOWNLOAD bit, not on write/admin —
+  // so three sections remain: download | organize | access.
   const r = rows(run({ win: fakeWin(), mayWrite: true, mayManage: false }));
   assert.notEqual(r[0], "separator");
   assert.notEqual(r[r.length - 1], "separator");
-  assert.equal(r.filter((k) => k === "separator").length, 1,
+  assert.equal(r.filter((k) => k === "separator").length, 2,
+    "three remaining sections need exactly two dividers");
+
+  // And the same must hold when it is the DOWNLOAD section that empties: its
+  // divider has to go with it, or the menu opens with a rule against its top.
+  const nd = rows(run({ win: fakeWin(), mayWrite: true, mayManage: false, mayDownload: false }));
+  assert.ok(!nd.includes("workspaceDownload"), "download row survived its own gate");
+  assert.notEqual(nd[0], "separator", "the emptied download section left its rule behind");
+  assert.equal(nd.filter((k) => k === "separator").length, 1,
     "two remaining sections need exactly one divider");
 });
 
@@ -401,7 +438,11 @@ test("workspace-access shares the rail's handler, not a second copy", () => {
   assert.match(slice(DESK, "  _workspaceAccessFromHeader(cmd) {"), /this\._railAccess\(\)/,
     "the wrapper must delegate, not reimplement");
   const rail = DESK.slice(DESK.indexOf('case "rail-access":'));
-  assert.match(rail.slice(0, 200), /_railAccess\(\)/);
+  // `_railAccess(` — the rail now passes { members: 1 } to force the
+  // permissions matrix. The header's delegation above is asserted as `()` on
+  // purpose: it must NOT pass that flag, or the chain icon loses the link
+  // builder it exists for.
+  assert.match(rail.slice(0, 300), /_railAccess\(/);
 });
 
 test("the affordance is on the SHARED rule, not just the ⋯", () => {
@@ -484,7 +525,7 @@ test("the rail's own Access is NOT wrapped in this", () => {
   const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
   const from = DESK.indexOf('case "rail-access":');
   const body = strip(DESK.slice(from, DESK.indexOf("case ", from + 20)));
-  assert.match(body, /_railAccess\(\)/);
+  assert.match(body, /_railAccess\(/);
   assert.ok(!/_workspaceAccessFromHeader/.test(body),
     "rail-access must not route through the header's loading wrapper");
 });
@@ -532,7 +573,7 @@ test("the toggle animates the child out instead of clearing it outright", () => 
   // restricted keeps clear(), since goodbye would give it the framework shrink
   // rather than its own data-position slide.
   const FOLDER = read("src/drumee/builtins/window/folder/index.js");
-  const body = slice(FOLDER, "  openManageAccess() {");
+  const body = slice(FOLDER, "  openManageAccess(opt) {");
   const close = strip(body.slice(0, body.indexOf("this.isShowSettings = true")));
   assert.match(close, /service:\s*_e\.close/,
     "must go through the panel's own close handler, where the slide is defined");

@@ -309,6 +309,14 @@ const __button = function (ui, trigger, k) {
     // from these needs no new handler anywhere.
     workspaceAccess: button({ content: LOCALE.MANAGE_ACCESS, service: 'folder-manage-access' }),
 
+    // `_e.download`, not a `folder-*` service: window_folder already routes it
+    // through runFolderMediaAction → target.download(), which is the very row
+    // the folder Settings panel used to carry. That panel is no longer the
+    // workspace's entry point (the rail's Access opens the members matrix now),
+    // so without this row a whole workspace could not be downloaded from
+    // anywhere.
+    workspaceDownload: button({ content: LOCALE.DOWNLOAD, service: _e.download }),
+
     workspaceRename: button({ content: LOCALE.RENAME, service: 'folder-rename' }),
 
     workspaceDuplicate: button({ content: LOCALE.DUPLICATE, service: 'folder-duplicate' }),

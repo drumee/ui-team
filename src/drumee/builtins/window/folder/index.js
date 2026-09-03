@@ -1826,7 +1826,14 @@ class __window_folder extends mfsInteract {
       // workspace opens the members panel instead (see _manageAccessIsInternal
       // and openManageAccess) and neither applies to it.
       case "folder-manage-access": {
-        if (!this._manageAccessIsInternal()) {
+        // `args.members` is the rail's Access asking for the members matrix on
+        // an EXTERNAL workspace too (desk/index.js _railAccess). It has to gate
+        // the belt and the tour as well as the panel: both below are about the
+        // secure-share LINK builder, and neither applies once this click is
+        // going to open the matrix instead.
+        const membersOnly =
+          !!(args && args.members) || this._manageAccessIsInternal();
+        if (!membersOnly) {
           // Belt for the two hidden entry points (topbar icon + overflow menu):
           // the panel mints secure-share links that can grant can_edit, and
           // secure_share.create now refuses without the write bit. Refuse here so
@@ -1871,7 +1878,7 @@ class __window_folder extends mfsInteract {
             require("libs/tutorial-tours").fire("share", this, { subject: "workspace" });
           }
         }
-        return this.openManageAccess();
+        return this.openManageAccess({ members: membersOnly });
       }
 
       case "folder-rename":
@@ -5637,7 +5644,12 @@ class __window_folder extends mfsInteract {
    * workspace is open (desk/index.js _railAccess). Separate from Folder Settings
    * (the gear icon), which keeps its own panel.
    */
-  openManageAccess() {
+  openManageAccess(opt) {
+    // `opt`, not a destructured parameter: tests/rail-access-panel.js slices
+    // this method out of the source by finding the first `{` after the name,
+    // and a `{ members }` in the signature would hand it the parameter's brace
+    // instead of the body's.
+    const members = !!(opt && opt.members);
     if (this.isShowSettings) {
       this.isShowSettings = false;
       // Let the secure-share drawer slide out rather than vanish: clear()
@@ -5666,7 +5678,7 @@ class __window_folder extends mfsInteract {
     }
     this.isShowSettings = true;
     this.dialogWrapper.feed(
-      this._manageAccessIsInternal()
+      members || this._manageAccessIsInternal()
         ? this._internalAccessPanel()
         : this._secureSharePanel(),
     );

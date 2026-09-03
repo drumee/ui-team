@@ -58,6 +58,7 @@ const __icon = function (_ui_) {
     // Workspace rows (topbar switcher ⋯). Same ctxmenu-* glyphs the folder
     // menu uses for the equivalent action, so the two panels read alike.
     workspaceAccess: "ctxmenu-share",
+    workspaceDownload: "ctxmenu-download",
     workspaceRename: "ctxmenu-rename",
     workspaceDuplicate: "ctxmenu-copy",
     workspaceOrganize: "ctxmenu-organize",

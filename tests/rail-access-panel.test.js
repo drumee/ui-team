@@ -76,14 +76,14 @@ const ATTRS = {
 /** Turn a real method body into a callable, with `_a` bound to the map above. */
 const asMethod = (name) =>
   // eslint-disable-next-line no-new-func
-  new Function("_a", `return function () {${methodSlice(FOLDER, name)}};`)(ATTRS);
+  new Function("_a", `return function (opt) {${methodSlice(FOLDER, name)}};`)(ATTRS);
 
 /**
  * Run the real openManageAccess() — and the real payload builders it delegates
  * to — against a fake window. The payloads are the point of the branch, so they
  * are extracted rather than stubbed.
  */
-function runOpenManageAccess({ internal, isShowSettings = false, area }) {
+function runOpenManageAccess({ internal, isShowSettings = false, area, members = false }) {
   const calls = { fed: [], cleared: 0 };
   const model = {
     nid: 77, hub_id: 42, area, filetype: "hub", actual_home_id: 99,
@@ -102,7 +102,7 @@ function runOpenManageAccess({ internal, isShowSettings = false, area }) {
       children: { last: () => null },
     },
   };
-  asMethod("openManageAccess").call(ctx);
+  asMethod("openManageAccess").call(ctx, { members });
   return calls;
 }
 
@@ -134,7 +134,7 @@ test("both branches keep the toggle: a second click closes and feeds nothing", (
 // ── the belt and the tour, scoped to the secure-share branch ─────────────────
 
 /** Run the real `folder-manage-access` case body against a fake window. */
-function runManageAccess({ internal, isShowSettings = false, canUpload = true }) {
+function runManageAccess({ internal, isShowSettings = false, canUpload = true, args = {} }) {
   const body = caseSlice(FOLDER, "folder-manage-access")
     .replace(/^case "folder-manage-access":/, "");
   const calls = { fire: [], open: 0, say: [] };
@@ -142,13 +142,13 @@ function runManageAccess({ internal, isShowSettings = false, canUpload = true })
     isShowSettings,
     canUpload: () => canUpload,
     _manageAccessIsInternal: () => internal,
-    openManageAccess() { calls.open++; },
+    openManageAccess(o) { calls.open++; calls.openedWith = o; },
   };
   const fakeRequire = () => ({ fire: (id) => calls.fire.push(id) });
   const win = { Butler: { say: (m) => calls.say.push(m) } };
   // eslint-disable-next-line no-new-func
-  const fn = new Function("require", "window", "Butler", `return function () {${body}};`);
-  fn(fakeRequire, win, win.Butler).call(ctx);
+  const fn = new Function("require", "window", "Butler", "args", `return function () {${body}};`);
+  fn(fakeRequire, win, win.Butler, args).call(ctx);
   return calls;
 }
 
@@ -197,4 +197,54 @@ test("the two skeleton entry points stay share-only, so only the rail branches",
     const gate = src.slice(Math.max(0, at - 600), at);
     assert.match(gate, /area === _a\.share/, `${name}: gate is no longer share-only`);
   }
+});
+
+// ── the rail forces the members matrix, external included (Natrix, 2026-09-03) ──
+//
+// Access means "who can get in", so the rail shows the permissions matrix for
+// EVERY workspace. The link builder keeps its own entry points — the header's
+// chain icon and the ⋯ row — which is why the flag rides on the call rather
+// than changing openManageAccess's own branch.
+
+test("the rail's flag forces the members panel on an EXTERNAL workspace", () => {
+  const { fed } = runOpenManageAccess({ internal: false, area: "share", members: true });
+  assert.equal(fed.length, 1, "exactly one panel is fed");
+  assert.equal(fed[0].kind, "permission_restricted",
+    "external + members must show the matrix, not the link builder");
+});
+
+test("without the flag an EXTERNAL workspace is untouched", () => {
+  // The header chain icon and the ⋯ row both reach openManageAccess with no
+  // flag, and they must keep minting links.
+  const { fed } = runOpenManageAccess({ internal: false, area: "share" });
+  assert.equal(fed[0].kind, "window_secure_share");
+});
+
+test("the members flag skips the write belt and the secure-share tour", () => {
+  // A view-only member of an EXTERNAL workspace may still ask who has access:
+  // nothing on the matrix mints a link, so the belt must not refuse them.
+  const r = runManageAccess({ internal: false, canUpload: false, args: { members: 1 } });
+  assert.equal(r.say.length, 0, "a members-only open must not be refused");
+  assert.equal(r.open, 1, "the panel never opened");
+  assert.equal(r.openedWith && r.openedWith.members, true,
+    "openManageAccess was not told this is a members open");
+  assert.deepEqual(r.fire, [], "the link tour fired over a panel with no links");
+});
+
+test("the belt still guards the LINK builder when the flag is absent", () => {
+  const r = runManageAccess({ internal: false, canUpload: false });
+  assert.equal(r.open, 0, "a view-only member reached the link builder");
+  assert.deepEqual(r.say, ["weak"]);
+});
+
+test("the rail passes the flag and the header's chain icon does not", () => {
+  // Both go through _railAccess, so the difference has to be visible at the
+  // two call sites or the chain icon silently loses the link builder.
+  const railCase = DESK.slice(DESK.indexOf('case "rail-access":'));
+  assert.match(railCase.slice(0, 200), /_railAccess\(\s*\{\s*members:\s*1\s*\}\s*\)/,
+    "the rail no longer asks for the members matrix");
+  const header = DESK.slice(DESK.indexOf("_workspaceAccessFromHeader("));
+  const call = header.slice(0, header.indexOf("\n  }"));
+  assert.match(call, /this\._railAccess\(\)/,
+    "the header must call _railAccess with NO flag — it is the link button");
 });
