@@ -1325,11 +1325,24 @@
   }
 
   // Child of .menu-topic-items, which paints the surface — this only lays out.
-  // Header / list / button, 12px apart (Figma 48:36991). NOT the scroller: the
-  // button is pinned, so only the list between them moves — see __ws-list.
+  // Header / list / button, 12px apart (Figma 48:36991).
+  //
+  // IT OWNS THE CAP, AND IT IS NOT THE SCROLLER. Those are two different jobs
+  // and they sit one level apart on purpose: 300px bounds the WHOLE dropdown
+  // here, while the overflow lives on __ws-list so the header above and the
+  // pinned "New workspaces" button below stay put and only the rows move.
+  // Putting `overflow` on this box instead would scroll all three, which sends
+  // the create button off the bottom edge — it is the only way to make a
+  // workspace from this panel, so it must never need scrolling to reach.
   &__ws-menu {
     width: 100%;
+    box-sizing: border-box;
     gap: 12px;
+    max-height: 300px;
+    // Load-bearing. A flex item's default `min-height` is `auto`, i.e. its
+    // content height, so __ws-list would refuse to shrink, this column would
+    // grow past 300px, and the max-height would quietly do nothing.
+    min-height: 0;
   }
 
   // ── Header: the open workspace (Figma 48:37074, 270x27) ───────────────
@@ -1340,6 +1353,11 @@
     width: 100%;
     align-items: center;
     gap: 8px;
+    // Chrome, not content: inside __ws-menu's 300px cap the list is the only
+    // thing that may shrink. Without this the header would give up height too
+    // (a flex item shrinks by default) and the workspace name would be squeezed
+    // before the rows ever started scrolling.
+    flex-shrink: 0;
     // The 12px below the row is the divider's own clearance: 12px, rule, 12px,
     // and __ws-menu's gap supplies the second half.
     padding-bottom: 12px;
@@ -1448,25 +1466,48 @@
   }
 
   // THE scroll container for the switcher: _renderWorkspaceMenu feeds every
-  // workspace with no cap and the rows are 36px, so past ~13 workspaces the
-  // list is taller than 60vh and this is what moves. The card outside it stays
+  // workspace with no cap and the rows are 36px, so past a handful of
+  // workspaces this is what moves. The card outside it stays
   // `overflow: visible` — bounding that too would just clip this box below its
-  // own max-height, and would scroll the card's border out of view with it.
+  // own height, and would scroll the card's border out of view with it.
   //
   // The scroll sits HERE rather than on __ws-menu so the pinned "New
   // workspaces" button, a sibling below, does not travel with the rows.
+  //
+  // NO max-height of its own any more. It used to carry `60vh`, which is a
+  // second, competing cap: on a tall screen 60vh is ~650px and __ws-menu's
+  // 300px decided the height, while on a short one 60vh decided it and the
+  // 300px never applied — so the panel's size depended on the viewport for no
+  // reason anyone asked for. `flex: 1 1 auto` + `min-height: 0` makes it take
+  // exactly what the header and the button leave inside the 300px instead.
   &__ws-list {
     gap: 1px;
-    max-height: 60vh;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    // Scrollable, but with no scrollbar drawn. The three properties are one
-    // idiom (Firefox / old Edge / WebKit-Blink) — dropping any one of them
-    // puts the bar back in that engine. Same form as __user-menu-items.
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    // A VISIBLE bar — this used to be the hide-the-scrollbar idiom
+    // (`scrollbar-width: none` + `-ms-overflow-style` + a `display: none`
+    // pseudo), so a capped list gave no sign there was more below it.
+    //
+    // Same shape the sidebar nav and the folder-tab strip already use: 4px,
+    // faint track, rounded thumb. `scrollbar-color` is the addition — those two
+    // set only `scrollbar-width: thin`, which leaves Firefox drawing its
+    // DEFAULT grey while Chrome gets the brand colour. Both halves are needed
+    // for the thumb to be --primary-70 in both engines.
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-70) rgba(0, 0, 0, 0.05);
 
     &::-webkit-scrollbar {
-      display: none;
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--primary-70);
+      border-radius: 4px;
     }
   }
 
@@ -1489,6 +1530,10 @@
     box-sizing: border-box;
     width: 100%;
     min-height: 36px;
+    // Same reason as __ws-head: only the list shrinks inside the 300px cap.
+    // `min-height` already stops it collapsing, but shrink:0 is what keeps it
+    // at its full 36 rather than letting flex take the padding first.
+    flex-shrink: 0;
     padding: 8px 24px;
     border-radius: 8px;
     cursor: pointer;

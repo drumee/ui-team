@@ -154,6 +154,9 @@ module.exports = {
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");
   },
+  desk_home_empty: function () {
+    return import("./modules/desk/home-empty");
+  },
   desk_breadcrumb_item: function () {
     return import("./modules/desk/breadcrumb/item");
   },

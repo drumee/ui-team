@@ -113,7 +113,31 @@ function createHub(host, type, filename, opt) {
       pid: target ? target.getCurrentNid() : Visitor.id,
     })
     .then((res) => {
-      const hub = _.isArray(res) ? res[0] : res;
+      // TAKE THE REFUSAL ROW, NOT THE FIRST ROW.
+      //
+      // desk_create_hub emits TWO result sets when it rolls back, in this
+      // order:
+      //
+      //   SELECT *, 0 as failed, ... FROM yp.entity WHERE db_name=_hub_db;
+      //   IF _rollback THEN
+      //     ROLLBACK;
+      //     SELECT 1 as failed, IFNULL(_reason, @full_error) AS reason;
+      //
+      // That first SELECT runs on the rollback path too (the note below has
+      // said so all along), and it describes the pool entity that was picked up
+      // and is about to be released — complete with a real `hub_id`. So `res[0]`
+      // is success-shaped even when the create failed, and every guard after
+      // this line passes: `failed` is 0, there is no `error`, and `hub_id` is
+      // present. The client then tracked the workspace and announced it, and
+      // the workspace did not exist. Observed on stage 2026-09-03: an account
+      // whose create_hub and track_workspace both logged, with no hub row to
+      // show for it.
+      //
+      // So scan for a refusal anywhere in the array rather than trusting the
+      // position. A `failed: 1` row is the proc's verdict on the whole call.
+      const rows = _.isArray(res) ? res.filter((r) => r) : [];
+      const refusal = rows.find((r) => ~~r.failed === 1);
+      const hub = refusal || (rows.length ? rows[0] : res);
 
       // desk_create_hub reports a refusal in its OWN shape, and it is not the
       // one below. The proc ends:

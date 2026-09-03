@@ -5069,6 +5069,73 @@ class __window_folder extends mfsInteract {
     return this.mget(_a.trigger) || this.mget(_a.media) || this;
   }
 
+  /**
+   * The media view to TRASH when this window's workspace is deleted.
+   *
+   * WHY THIS IS NOT getFolderActionTarget(). That one ends in `|| this`, and a
+   * window is not a media view: `trash()` and `delete()` are defined on
+   * builtins/media/core, and nothing in this window's chain (folder → interact
+   * → core → utils → ui-core DrumeeMFS) has either. So on `|| this`,
+   * confirmFolderDelete's `if (target?.trash)` / `if (target?.delete)` both
+   * missed and the whole action became a silent no-op — the user confirmed the
+   * dialog and nothing happened, with no request and no error.
+   *
+   * It only ever worked by accident of HOW the workspace was opened. `media`
+   * and `trigger` are set on exactly one launch path — opening a node from its
+   * grid tile (desk/wm passes `media` and `trigger: media`) — while
+   * Wm.loadWorkspace, which is the switcher row, the sidebar row and the boot
+   * default, sets neither. Delete worked from a Home tile and silently failed
+   * from the switcher.
+   *
+   * So find the workspace's OWN tile in Wm's tree and trash that. It is the
+   * same media view the Home grid would have handed over, so the audited path
+   * runs unchanged — canRemove(), makeTrashOptions() and its `isHub` branch
+   * that swaps in `holder_id`. Rebuilding that request shape here instead would
+   * be a second copy of it, and it would get the node wrong: this window's
+   * `nid` is the workspace ROOT node inside the hub, not the hub placeholder
+   * that desk.home lists and that trashing a workspace must target.
+   *
+   * WHICH ID TO LOOK UP DIFFERS BY TYPE, and getting it wrong is not harmless:
+   *
+   *   hub workspace   the tile's nid IS the hub id (desk.home lists the hub
+   *                   placeholder, where nid === hub_id).
+   *   personal        a home-root FOLDER. Its tile nid is the folder's own nid,
+   *                   and its `hub_id` is the USER's id — so looking that up
+   *                   would match some other node entirely, or nothing.
+   *
+   * @returns {Object|null} a media view with trash(), or null
+   */
+  _workspaceTrashTarget() {
+    // An explicitly passed media view still wins — that is the Home-tile path,
+    // and it is already the right object.
+    const explicit = this.mget(_a.trigger) || this.mget(_a.media);
+    if (explicit && _.isFunction(explicit.trash)) return explicit;
+
+    if (typeof Wm === "undefined" || !_.isFunction(Wm.getItemsByAttr)) {
+      return null;
+    }
+    const hubId = this.mget(_a.hub_id);
+    const personal = !hubId || `${hubId}` === `${Visitor.id}`;
+    const id = personal ? this.mget(_a.nid) : hubId;
+    if (id == null || id === "") return null;
+
+    let found;
+    try {
+      // Via the same string/number-tolerant lookup the notification deep link
+      // uses: getItemsByAttr compares with ===, and ids reach the client as
+      // strings from some payloads and numbers from others.
+      found = this._findMediaByNid(id);
+    } catch (e) {
+      if (this.warn) this.warn("[workspace-delete] tile lookup failed", e);
+      return null;
+    }
+    if (!found || !_.isFunction(found.trash)) return null;
+    // Confirm it is the workspace and not a same-id coincidence deeper in the
+    // tree. A hub workspace's tile is a hub; a personal one is a folder.
+    if (personal ? !found.isFolder : !found.isHub) return null;
+    return found;
+  }
+
   closeFolderSettings() {
     this.isShowSettings = false;
     return this.dialogWrapper.clear();
@@ -5184,13 +5251,52 @@ class __window_folder extends mfsInteract {
   }
 
   confirmFolderDelete() {
-    const target = this.getFolderActionTarget();
-    const filename =
-      target?.mget?.(_a.filename) || this.mget(_a.filename) || "";
+    // WHICH WORKSPACE, not which tile. That is the whole correction here.
+    //
+    // This used to resolve a media VIEW and refuse when it could not find one,
+    // which put "Could not delete the workspace" in front of a workspace that
+    // was perfectly deletable. The switcher's ⋯ menu acts on the workspace the
+    // user has OPEN, and while one is open the home grid that owns the tiles is
+    // `display: none` (wm _syncHomeGrid), so a tile is simply not something
+    // this path can count on.
+    //
+    // The window itself knows its hub_id, and that is all a workspace delete
+    // needs — see Wm.confirmRemoveWorkspace.
+    const hubId = this.mget(_a.hub_id);
+    const filename = this.mget(_a.filename) || this.mget("hub_name") || "";
+    // A tile, if one happens to be around, only buys the trash animation.
+    const tile = this._workspaceTrashTarget();
+
+    // A PERSONAL workspace is a home-root FOLDER, not a hub: it has no
+    // delete_hub to run, so it keeps the tile path and its own confirm (that
+    // path's own delete asks nothing — removeMediaSelection files a plain
+    // folder in `allowed` and trashes it immediately).
+    const isHubWorkspace = !!hubId && `${hubId}` !== `${Visitor.id}`;
+
+    if (isHubWorkspace) {
+      this.closeFolderSettings();
+      // Nothing is deleted out of the current selection — this acts on one
+      // named hub and never reads getGlobalSelection.
+      return Wm.confirmRemoveWorkspace(hubId, filename, tile);
+    }
+
+    if (!tile) {
+      if (this.warn) {
+        this.warn(
+          `[workspace-delete] no media view for the personal workspace at`
+            + ` nid=${this.mget(_a.nid)}; refusing rather than no-op`,
+        );
+      }
+      Wm.alert(LOCALE.DELETE_WORKSPACE_FAILED);
+      return;
+    }
+
     this.dialogWrapper.feed({
       kind: "window_confirm",
       title: LOCALE.DELETE,
-      message: `${LOCALE.CONFIRM_DELETE} ${filename}?`,
+      message: `${LOCALE.CONFIRM_DELETE} ${
+        tile.mget?.(_a.filename) || filename
+      }?`,
       confirm: LOCALE.DELETE,
       confirm_type: "danger",
     });
@@ -5199,8 +5305,14 @@ class __window_folder extends mfsInteract {
       .ask()
       .then(() => {
         this.closeFolderSettings();
-        if (target?.trash) return target.trash();
-        if (target?.delete) return target.delete();
+        if (_.isFunction(Wm.unselect)) Wm.unselect();
+        // Re-checked: the confirm is asynchronous and the tile can be destroyed
+        // under it. Still never silent.
+        if (!_.isFunction(tile.trash) || tile.isDestroyed?.()) {
+          Wm.alert(LOCALE.DELETE_WORKSPACE_FAILED);
+          return;
+        }
+        return tile.trash();
       })
       .catch(() => {});
   }

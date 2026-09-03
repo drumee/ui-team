@@ -166,6 +166,26 @@ class desk_module extends LetcBox {
       this.ensurePart("action-cluster").then((p) => p && p.setState(1));
     };
     RADIO_BROADCAST.on("workspace:focus", this._restoreTopbarActions);
+
+    // A WORKSPACE WAS CREATED — resync the topbar switcher.
+    //
+    // Both create surfaces already announce this: the desk's own dialog
+    // (builtins/media/form, `.form-folder__main`) and the post-signup tour's
+    // live create screen (desk/tutorial/workspace, `.tutorial-workspace__wsd-dialog`)
+    // both go through libs/create-workspace, which fires `workspace:refresh`
+    // with the new workspace on every one of its three types. The signal was
+    // there; the desk simply never subscribed, so `.desk-module-topbar__ws-menu`
+    // kept listing whatever existed at boot and a workspace you had just made
+    // was missing from the only global way to switch to one.
+    //
+    // Subscribed HERE rather than in either dialog, and that is the point: the
+    // switcher belongs to the desk, neither form has any business reaching into
+    // the topbar, and a third create surface gets this for free.
+    //
+    // The sidebar (desk/workspace-list) already listened, which is why the row
+    // appeared THERE and made the switcher look selectively broken.
+    this._onWorkspaceCreated = this._onWorkspaceCreated.bind(this);
+    RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceCreated);
     setTimeout(this.lazyClasses, 5000);
 
     // Chrome-style folder tabs in the desk topbar. One tab per open
@@ -187,6 +207,8 @@ class desk_module extends LetcBox {
     // workspace pane does — including the header row.
     this._onFolderZoom = this._onFolderZoom.bind(this);
     this._bindFolderTabs();
+    this._onWorkspaceWsEvent = this._onWorkspaceWsEvent.bind(this);
+    this._bindWorkspaceWsSync();
 
     // [Reload] Persist desk UI (sidebar screen + workspace + floating
     // folder windows) so a browser reload lands back where the user was.
@@ -194,6 +216,137 @@ class desk_module extends LetcBox {
     // a reload. See _restoreDeskState, called from loadDefault.
     this._persistDeskState = this._persistDeskState.bind(this);
     window.addEventListener("pagehide", this._persistDeskState);
+  }
+
+  /**
+   * Keep the topbar switcher honest about REMOVALS (and renames).
+   *
+   * `workspace:refresh` covers creation, but nothing broadcasts it when a
+   * workspace goes away, so a deleted one sat in
+   * `.desk-module-topbar__ws-menu` until a reload — reported as "some items
+   * have been removed but still display".
+   *
+   * The signal that does exist is Wm's `ws:event`. Wm emits it for remote
+   * changes from the websocket dispatcher AND echoes it locally the moment a
+   * delete is confirmed (see the delete_hub flow in desk/wm), so one
+   * subscription covers both "I deleted it" and "someone else did". The
+   * sidebar workspace list has listened to it all along, which is exactly why
+   * removals corrected THERE and not here.
+   *
+   * Same wait-for-Wm shape as _bindFolderTabs below: this runs from initialize,
+   * which is before window/manager.js assigns the global.
+   */
+  _bindWorkspaceWsSync() {
+    if (this._workspaceWsBound) return;
+    if (!window.Wm || !_.isFunction(Wm.on)) {
+      _.delay(() => this._bindWorkspaceWsSync(), 100);
+      return;
+    }
+    Wm.on("ws:event", this._onWorkspaceWsEvent);
+    this._workspaceWsBound = 1;
+  }
+
+  /**
+   * One `ws:event`. Resync the switcher if — and only if — it was about a
+   * workspace.
+   *
+   * A FULL FORCED RE-RENDER, not the surgical add/remove/rename the sidebar
+   * does. The two lists are not alike: the sidebar's rows own expandable file
+   * trees and a selection highlight, so it has to patch in place, while this
+   * menu is a flat list rebuilt from scratch every time anyway. Mirroring three
+   * delta paths here would be three more things to keep in step with the
+   * sidebar for no gain.
+   *
+   * THE `media.*` GATE IS THE POINT OF THIS FUNCTION. Those services fire for
+   * EVERY node — every file created, renamed or deleted inside any workspace —
+   * so resyncing on all of them would put a `desk.home` request behind ordinary
+   * file activity. Only two media shapes are workspace rows: a hub, and a
+   * FOLDER SITTING AT THE HOME ROOT (that is what a Personal workspace is).
+   * Same test, and same reason, as the sidebar's handleWsEvent.
+   */
+  /**
+   * Does this websocket payload name a workspace the switcher is showing?
+   *
+   * WHY THIS EXISTS. A trash broadcast carries almost nothing. The server sends
+   * it with `keys: [Attr.nid, Attr.hub_id]` (service/private/media.js `trash`),
+   * so `filetype` and `pid` — the two fields the gate above would rather use —
+   * are simply not in the payload. Judged on those alone, trashing a workspace
+   * looks exactly like deleting a file, and the switcher kept showing the
+   * workspace: the reported bug.
+   *
+   * `nid` IS always there, and it is enough, because the cache already holds
+   * the rows on screen. If the removed node is one of them, it is a workspace
+   * by definition — no request needed to decide, and no guessing.
+   *
+   * MATCHED ON `nid`, NEVER ON `hub_id`. For a hub row the two are the same
+   * value, so nothing is lost; for a PERSONAL workspace row `hub_id` is the
+   * user's own id, shared by every personal row and by every file in the user's
+   * home — matching on it would resync on ordinary file activity, which is the
+   * exact cost the gate exists to avoid.
+   */
+  _namesAWorkspace(d) {
+    const rows = this._workspaces;
+    if (!d || !rows || !rows.length) return false;
+    // `nid` can arrive as a scalar (the broadcast) or as a list of
+    // {nid, hub_id} (the request shape) — accept both rather than trusting one.
+    const raw = _.isArray(d.nid) ? d.nid : [d.nid, d.id, d.node_id];
+    const ids = raw
+      .map((v) => (v && v.nid != null ? v.nid : v))
+      .filter((v) => v != null && v !== "")
+      .map((v) => `${v}`);
+    if (!ids.length) return false;
+    return rows.some((r) => {
+      if (!r) return false;
+      if (r.nid != null && ids.includes(`${r.nid}`)) return true;
+      return r.id != null && ids.includes(`${r.id}`);
+    });
+  }
+
+  _onWorkspaceWsEvent(args = {}) {
+    const { data, options } = args || {};
+    const service = (options && options.service) || "";
+    if (!service) return;
+
+    // Adds, removes and renames all change what this menu should show.
+    // `hub.invite_received` is an ADD from the other direction — someone put
+    // the user in a workspace — and the sidebar full-refreshes on it too.
+    //
+    // TRASHING ARRIVES AS `media.remove`, not as `media.trash`. The context
+    // menu's "Move to trash" row and the switcher ⋯ menu's Delete both end at
+    // media/core `trash()` → `putIntoTrash` → `SERVICE.media.trash`, but the
+    // server answers that request by BROADCASTING `media.remove`
+    // (service/private/media.js `trash()`), so that is the name that reaches a
+    // client. `media.trash` is deliberately absent from this list: it is the
+    // request name and never appears on the wire.
+    if (
+      !/^(hub\.(delete_hub|update_name|add_contributors|invite_received)|desk\.(create_hub|leave_hub)|media\.(new|remove|rename))$/.test(
+        service,
+      )
+    ) {
+      return;
+    }
+
+    if (/^media\./.test(service)) {
+      const d = data || {};
+      const filetype = args.filetype || d.filetype;
+      // Not a hub, and the payload does not name a row this menu is showing →
+      // fall back to "is it a folder at the home root", which is what a
+      // Personal workspace is. A file or a nested folder fails all three.
+      if (filetype !== _a.hub && !this._namesAWorkspace(d)) {
+        const pid = `${d.pid || d.parent_id || ""}`;
+        const homeId = `${Visitor.get(_a.home_id) || ""}`;
+        if (!pid || !homeId || pid !== homeId) return;
+      }
+    }
+
+    // Coalesced. Deleting a workspace emits more than one of these (the local
+    // echo, then the server's), and each would otherwise cost its own
+    // cache-busted request.
+    if (this._wsSyncTimer) clearTimeout(this._wsSyncTimer);
+    this._wsSyncTimer = setTimeout(() => {
+      this._wsSyncTimer = null;
+      this._onWorkspaceCreated();
+    }, 250);
   }
 
   _bindFolderTabs() {
@@ -455,6 +608,31 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
+    RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceCreated);
+    // A pending "open the workspace once the access panel closes" listener
+    // lives on Wm's collection, which outlives this desk — leaving it attached
+    // would fire a loadWorkspace into a destroyed desk on the next dialog that
+    // empties that wrapper.
+    if (this._onAccessPanelClosed && window.Wm && _.isFunction(Wm.getPart)) {
+      const wrap = Wm.getPart("wrapper-modal");
+      if (wrap && wrap.collection) {
+        wrap.collection.off("update reset", this._onAccessPanelClosed);
+      }
+      this._onAccessPanelClosed = null;
+      this._awaitingAccessClose = 0;
+    }
+    if (this._accessPanelTimer) {
+      clearTimeout(this._accessPanelTimer);
+      this._accessPanelTimer = null;
+    }
+    if (this._wsSyncTimer) {
+      clearTimeout(this._wsSyncTimer);
+      this._wsSyncTimer = null;
+    }
+    if (this._workspaceWsBound && window.Wm && _.isFunction(Wm.off)) {
+      Wm.off("ws:event", this._onWorkspaceWsEvent);
+      this._workspaceWsBound = 0;
+    }
     RADIO_BROADCAST.off(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchHotkey || this._escHotkey) {
@@ -1257,10 +1435,48 @@ class desk_module extends LetcBox {
 
   async _restoreWorkspace(workspace) {
     if (!workspace || !workspace.hub_id || !workspace.nid || !window.Wm) {
-      return;
+      return false;
     }
+
+    // DOES IT STILL EXIST? The snapshot is taken on `pagehide` from whatever
+    // pane was mounted, and a workspace can be gone by the time it is read
+    // back — deleted in this tab (which is the bug this was reported with) or
+    // in another one, or access revoked while the tab was closed.
+    //
+    // Without this, loadWorkspace is called for a dead hub: media.attributes
+    // resolves nothing, it warns "cannot resolve workspace root", releases the
+    // context — and the desk is left on NO workspace, because _restoreDeskState
+    // already spent its one restore attempt here instead of falling back to
+    // _openDefaultWorkspace. Which is exactly "on refresh it tries to open
+    // test(1)".
+    //
+    // _fetchWorkspaces is the switcher's own cached list, so on a warm cache
+    // this costs nothing; on a cold boot it is one request the boot default
+    // shares anyway. A FAILED fetch returns [] — do not treat that as "the
+    // workspace is gone" and throw the user's place away over a network blip.
+    try {
+      const rows = await this._fetchWorkspaces();
+      if (rows && rows.length) {
+        const alive = rows.some(
+          (r) => `${r.hub_id || r.id}` === `${workspace.hub_id}`,
+        );
+        if (!alive) {
+          this.warn &&
+            this.warn(
+              `[restore] workspace ${workspace.hub_id} no longer exists;`
+                + " opening the default instead",
+            );
+          this._forgetSavedWorkspace();
+          return false;
+        }
+      }
+    } catch (e) {
+      // Fall through and try: an unreachable list is not evidence of deletion.
+      this.warn && this.warn("[restore] could not verify workspace", e);
+    }
+
     await Kind.waitFor("window_folder");
-    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this.isDestroyed && this.isDestroyed()) return false;
     // loadWorkspace accepts any nid (root or subfolder) and mounts a
     // headless window_folder at that node — enough to restore both a
     // workspace root and an in-workspace folder navigation. Server-side
@@ -1276,7 +1492,7 @@ class desk_module extends LetcBox {
     // Wait until the headless pane is actually mounted before returning so
     // a subsequent sidebar restore (Settings over workspace) doesn't race.
     for (let i = 0; i < 40; i++) {
-      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.isDestroyed && this.isDestroyed()) return false;
       const ready =
         Wm.headlessLayer &&
         Wm.headlessLayer.children &&
@@ -1287,8 +1503,40 @@ class desk_module extends LetcBox {
             v.mget(_a.headless) &&
             v.mget(_a.hub_id) === workspace.hub_id,
         );
-      if (ready) break;
+      if (ready) return true;
       await new Promise((r) => setTimeout(r, 100));
+    }
+    // Timed out waiting for the pane. Report it so the caller can fall back
+    // rather than leave the desk on nothing.
+    return false;
+  }
+
+  /**
+   * Drop the saved workspace from the persisted desk state.
+   *
+   * Called when a restore is refused because the workspace is gone: without
+   * this the same dead hub_id is re-read on every subsequent reload, and each
+   * one pays the verification before falling back. The rest of the state (the
+   * remembered screen, floating windows) is deliberately kept.
+   */
+  _forgetSavedWorkspace() {
+    if (this._bootSavedState) delete this._bootSavedState.workspace;
+    try {
+      const raw = sessionStorage.getItem(desk_module._DESK_STATE_KEY);
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      if (!state || !state.workspace) return;
+      delete state.workspace;
+      if (Object.keys(state).length) {
+        sessionStorage.setItem(
+          desk_module._DESK_STATE_KEY,
+          JSON.stringify(state),
+        );
+      } else {
+        sessionStorage.removeItem(desk_module._DESK_STATE_KEY);
+      }
+    } catch (e) {
+      /* private mode / quota — the guard above already did the useful half */
     }
   }
 
@@ -1375,7 +1623,11 @@ class desk_module extends LetcBox {
         await this._restoreFloatingWindows(saved.windows);
       }
       if (saved.workspace) {
-        await this._restoreWorkspace(saved.workspace);
+        // `false` means it could not be restored — gone, or the pane never
+        // mounted. Falling through to the default is the whole point of
+        // verifying: this used to leave the desk on no workspace at all.
+        const restored = await this._restoreWorkspace(saved.workspace);
+        if (!restored) await this._openDefaultWorkspace();
       } else {
         // Restorable state that names a SCREEN but no workspace (the user was
         // on Contacts / Settings / a floating window last time). The new shell
@@ -1731,6 +1983,19 @@ class desk_module extends LetcBox {
       rows = await this.fetchService(SERVICE.desk.home, {
         hub_id: Visitor.id,
         type: "node",
+        // Cache-buster, on the FORCED path only.
+        //
+        // `fetchService` is a GET and ui-essentials builds it with
+        // `cache: "default"` (socket/utils.js), so a repeat of this exact URL
+        // can be answered from the browser's HTTP cache. Every forced refetch
+        // here is a read-after-WRITE — a workspace was just created — which is
+        // precisely the case that gets served the pre-create response and
+        // leaves the new workspace missing from the switcher until a reload.
+        // A scalar param makes the URL unique and forces the miss.
+        //
+        // Only when forced: the boot read wants the cache, and busting it there
+        // would cost a request on every desk mount for nothing.
+        ...(force ? { _ts: Date.now() } : {}),
       });
     } catch (e) {
       this.warn && this.warn("[workspaces] desk.home failed", e);
@@ -1744,6 +2009,36 @@ class desk_module extends LetcBox {
     const list = rows
       .filter((it) => {
         if (!it) return false;
+        // GONE, BUT STILL SENT. `desk.home` can answer with a row whose
+        // workspace no longer exists, and nothing here used to drop it — which
+        // is why deleted workspaces stayed in the switcher until a reload.
+        //
+        // It is a server-side asymmetry in mfs_show_node_by (common/procedures/
+        // mfs), the proc `desk.home` runs. For a hub it FILTERS on the media
+        // placeholder's status:
+        //
+        //   WHERE ... m.`status` NOT IN ('hidden', 'deleted')
+        //
+        // but RETURNS the entity's:
+        //
+        //   COALESCE(he.status, m.status) AS status
+        //
+        // A hub whose entity is deleted or frozen keeps an `active` placeholder
+        // row under the user's home, so it passes the filter and comes back
+        // carrying `status: "deleted"`. Verified against the deployed proc, not
+        // just the repo copy.
+        //
+        // So trust the status field the server does send. Allow-list rather
+        // than deny-list on `deleted`: the same asymmetry leaks `frozen` and
+        // `system` (the "System" public hub is one, and it was being listed as
+        // a user workspace), and there is no reason to enumerate every value
+        // the entity table may hold.
+        //
+        // A MISSING status still passes. Every row the proc emits carries one
+        // — `m.status` is NOT NULL and the COALESCE always resolves — but if a
+        // server ever stops sending it, an allow-list read strictly would blank
+        // the entire switcher, and an over-full menu beats an empty one.
+        if (it.status && it.status !== "active") return false;
         if (it.filetype === _a.folder) return true;
         if (it.filetype === _a.hub) {
           return /^(share|private|restricted|public)$/.test(it.area);
@@ -1906,8 +2201,13 @@ class desk_module extends LetcBox {
    * Takes the part when the caller already has it (onPartReady hands over the
    * child) — getPart is not reliable at that moment, the part is still being
    * registered, and returning early there left the menu permanently empty.
+   *
+   * @param {Object} [target] the ws-list part, when the caller holds it
+   * @param {Boolean} [force] refetch instead of serving the cached rows. Set by
+   *   the workspace:refresh handler, where the cache is known to be one
+   *   workspace out of date.
    */
-  async _renderWorkspaceMenu(target) {
+  async _renderWorkspaceMenu(target, force) {
     const part = target || (this.getPart && this.getPart("ws-list"));
     // Two parts are filled from here now (the list and the header), and they
     // become ready in no fixed order, so each caches itself on arrival and this
@@ -1919,7 +2219,7 @@ class desk_module extends LetcBox {
     const list = alive(this._wsListPart) ? this._wsListPart : null;
     const head = alive(this._wsHeadPart) ? this._wsHeadPart : null;
     if (!list && !head) return;
-    const rows = await this._fetchWorkspaces();
+    const rows = await this._fetchWorkspaces(force);
     if (!rows.length) {
       if (head) head.clear();
       return list
@@ -2261,6 +2561,75 @@ class desk_module extends LetcBox {
     }
   }
 
+  /**
+   * `workspace:refresh` — a workspace was created; rebuild the switcher.
+   *
+   * Fired by libs/create-workspace for all three types, so this is the one
+   * place that has to know a workspace list went stale. See the subscription in
+   * initialize for why it lives on the desk and not in the two dialogs.
+   *
+   * FORCED, and that word is the whole fix. `_fetchWorkspaces` caches, and the
+   * two existing callers are mount-time — so without `force` this would re-feed
+   * the rows from the same pre-create array and change nothing visible. Forcing
+   * also REPLACES `this._workspaces`, which is what makes a later unforced
+   * render correct too: the topbar is rebuilt when a workspace opens, and its
+   * `onPartReady` render reads the cache.
+   *
+   * `_syncWorkspaceLabel` after, because its "not in the cached index (…created
+   * since boot)" fallback is now answerable from the index itself.
+   *
+   * Deliberately does NOT switch to the new workspace. Who opens it differs per
+   * surface — the dialog chains to the members panel, the tour's host opens it
+   * once the walkthrough is done — and a switcher that navigated on a broadcast
+   * would fight both.
+   */
+  async _onWorkspaceCreated(payload = {}) {
+    // Was the desk on the no-workspace screen? Read the stamp BEFORE anything
+    // refetches, because that is what decides whether the user needs taking
+    // into the workspace they just made.
+    const wasEmpty = !!(
+      this.el && this.el.dataset && this.el.dataset.noWorkspace === "1"
+    );
+
+    // No part yet (created before the topbar mounted, or during a rebuild):
+    // dropping the cache is still the right move, so the mount-time render
+    // that follows fetches fresh instead of serving the stale array.
+    const alive = (p) => !!(p && p.el && !(p.isDestroyed && p.isDestroyed()));
+    if (!alive(this._wsListPart) && !alive(this._wsHeadPart)) {
+      this._workspaces = null;
+    } else {
+      await this._renderWorkspaceMenu(this._wsListPart, true);
+      this._syncWorkspaceLabel();
+    }
+
+    // CREATED FROM THE EMPTY SCREEN → open it. Forced, because the create
+    // happened after the cache was read and step 1 must see the new workspace
+    // rather than the empty list it was built from.
+    //
+    // Only from empty. Every other create surface decides its own follow-up —
+    // the dialog chains to the members panel, the tour's host opens it once the
+    // walkthrough ends — and opening one here would fight both.
+    if (wasEmpty) {
+      // A PERSONAL workspace raises no follow-up panel — it is a home-root
+      // folder, not a hub, so media/form finishes as soon as it exists. Nothing
+      // to wait for, so open it now.
+      if (payload.personal) {
+        await this._openWorkspaceOrEmptyScreen({ force: true });
+        return;
+      }
+      // INTERNAL / EXTERNAL: wait for "Who has access" to be dismissed first.
+      // See _openWorkspaceAfterAccessPanel for why it cannot be done now.
+      this._openWorkspaceAfterAccessPanel();
+      return;
+    }
+
+    // Otherwise just keep the screen honest: a create cannot make the desk
+    // empty, but a REMOVAL reaches this same handler (ws:event) and can.
+    await this._showEmptyWorkspaceScreen(
+      !((await this._fetchWorkspaces()) || []).length,
+    );
+  }
+
   _syncWorkspaceLabel() {
     const wm = window.Wm;
     const cur = wm && wm._curWorkspace;
@@ -2296,11 +2665,52 @@ class desk_module extends LetcBox {
    * Only runs when there is no deep link and no restorable saved state, so it
    * never overrides where the user actually was.
    */
-  async _openDefaultWorkspace() {
+  /**
+   * OPEN A WORKSPACE, OR PUT UP THE SCREEN THAT SAYS THERE ARE NONE.
+   *
+   * Two steps, in this order:
+   *
+   *   1. is there any workspace left? The list is the same one the topbar
+   *      switcher (`.desk-module-topbar__ws-menu`) is fed from — so "what the
+   *      switcher would show" and "what this opens" cannot disagree. If there
+   *      is one, open it.
+   *   2. if there is not, show desk/home-empty: logo, title, and the button
+   *      that opens the create dialog.
+   *
+   * With 1, 2 and 3, deleting 1 lands on 2 and deleting 3 lands on 2 — step 1
+   * all the way. Delete 2 as well and step 2 is the only answer left; before
+   * this it returned false into six callers that all ignored it, leaving the
+   * desk on a shape its own chrome cannot draw.
+   *
+   * REVERSIBLE, both ways. A workspace can appear without this tab doing
+   * anything (someone adds you to one), so the screen has to come down again
+   * without a reload — hence the state is keyed on the COUNT every time rather
+   * than on "did a delete just happen".
+   *
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.force] refetch instead of serving the cached list.
+   *   Set by the removal path: the cache still holds the workspace that was
+   *   just deleted, and step 1 must not "find" and reopen it.
+   * @returns {Promise<Boolean>} whether a workspace was opened
+   */
+  async _openWorkspaceOrEmptyScreen(opt = {}) {
+    let rows;
     try {
-      const rows = await this._fetchWorkspaces();
-      const first = rows && rows[0];
-      if (!first) return false;
+      rows = await this._fetchWorkspaces(opt.force);
+    } catch (e) {
+      // An unreachable list is not evidence of an empty account. Leave the
+      // screen as it is rather than throwing "create your first workspace" at
+      // someone who has ten.
+      this.warn && this.warn("[workspaces] default open failed", e);
+      return false;
+    }
+    if (this.isDestroyed && this.isDestroyed()) return false;
+
+    const first = rows && rows[0];
+    await this._showEmptyWorkspaceScreen(!first);
+    if (!first) return false;
+
+    try {
       const wm = await this._waitForWm();
       if (!wm || !_.isFunction(wm.loadWorkspace)) return false;
       if (this.isDestroyed && this.isDestroyed()) return false;
@@ -2310,6 +2720,161 @@ class desk_module extends LetcBox {
       this.warn && this.warn("[workspaces] default open failed", e);
       return false;
     }
+  }
+
+  /**
+   * Show or hide the no-workspace screen.
+   *
+   * The stamp is what the skin reads — one rule instead of reaching into the
+   * rail's five parts — and it is also how _onWorkspaceCreated learns that the
+   * desk was empty before a create.
+   *
+   * @param {Boolean} empty
+   */
+  async _showEmptyWorkspaceScreen(empty) {
+    if (this.el && this.el.dataset) {
+      this.el.dataset.noWorkspace = empty ? "1" : "0";
+    }
+
+    // CLEAR THE TOPBAR TRACK. `.desk-module-topbar__left-cluster` holds the
+    // breadcrumb, and with a workspace to fall back to it repaints itself —
+    // opening one calls updateBreadcrumb. With NONE, nothing repaints it, so it
+    // was left naming the workspace that had just been deleted.
+    //
+    // Called on the part directly, not through the `breadcrumb:content`
+    // broadcast. That route reads `data.event` and compares it against
+    // `_a.home`, while the desk's own existing caller sends `_e.home` — two
+    // ambient lexicons, and whether they resolve to the same string is not
+    // something this should be betting the clear on. `loadDefault()` is the
+    // method the breadcrumb uses for this case anyway (it calls _buildContent
+    // with no data, which empties the track).
+    if (empty) {
+      const crumb = this.getPart && this.getPart("breadcrumb");
+      if (crumb && !(crumb.isDestroyed && crumb.isDestroyed())
+        && _.isFunction(crumb.loadDefault)) {
+        crumb.loadDefault();
+      }
+    }
+    const slot = await this.ensurePart("home-empty-slot");
+    if (!slot || !slot.el) return;
+    const mounted = !!(slot.collection && slot.collection.length);
+    if (empty) {
+      // Guarded so re-running this while already empty cannot stack a second
+      // copy.
+      if (mounted) return;
+      await Kind.waitFor("desk_home_empty");
+      if (this.isDestroyed && this.isDestroyed()) return;
+      slot.feed({ kind: "desk_home_empty", persistence: _a.once });
+      return;
+    }
+    if (mounted) slot.clear();
+  }
+
+  /**
+   * OPEN THE NEW WORKSPACE ONCE THE ACCESS PANEL IS CLOSED.
+   *
+   * Creating an internal or external workspace from the empty screen ends on
+   * `.permission-restricted__main` — media/form chains to it on success, into
+   * Wm's wrapper-modal. Opening the workspace cannot happen alongside that,
+   * because loadWorkspace CLEARS the wrapper-modal on its way in
+   * (wm/index.js): open first and the panel the user was about to invite people
+   * from is destroyed under them. So the order is the user's — panel, then
+   * dismiss, then the workspace.
+   *
+   * THE SIGNAL is the wrapper-modal's collection emptying, which is the same
+   * one Wm's own `_closeWhenEmpty` waits for and for the same stated reason:
+   * media_form chains to permission_* via parent.feed(), and "update" fires
+   * once after that swap so the length reflects the FINAL state. Watching a
+   * child destroy instead would fire mid-swap, i.e. the moment the form is
+   * replaced by the panel — which is precisely not what "closed" means here.
+   *
+   * Note on ordering: libs/create-workspace announces `workspace:refresh` from
+   * inside createWorkspace, BEFORE media/form's `.then` feeds the panel. So at
+   * the moment this runs the wrapper still holds the FORM, and the transition
+   * being waited for is the one after the panel goes.
+   *
+   * Already empty is treated as "there is nothing to wait for" rather than as
+   * an error: a create that raised no panel at all (no hub in the response, or
+   * a caller whose post_override is falsy) still ends with a workspace that
+   * wants opening.
+   */
+  _openWorkspaceAfterAccessPanel() {
+    const openNow = () => this._openWorkspaceOrEmptyScreen({ force: true });
+    if (!window.Wm || !_.isFunction(Wm.ensurePart)) return openNow();
+    if (this._awaitingAccessClose) return;
+    this._awaitingAccessClose = 1;
+
+    Wm.ensurePart("wrapper-modal").then((p) => {
+      if (!p || !p.collection) {
+        this._awaitingAccessClose = 0;
+        return openNow();
+      }
+
+      // TWO STAGES: SEE THE PANEL, THEN SEE IT GO.
+      //
+      // Deciding on the collection's state at arm time is what let the
+      // workspace open while the panel was still up. This runs from
+      // `workspace:refresh`, which libs/create-workspace fires from INSIDE
+      // createWorkspace — before media/form's `.then` has fed the panel. So at
+      // arm time the wrapper holds whatever the create left there, and reading
+      // "empty" as "no panel to wait for" is a guess about a state that has not
+      // happened yet. Any moment where it reads empty — the form having closed
+      // itself, a swap observed between events — opened the workspace
+      // immediately and destroyed the panel a beat later (loadWorkspace clears
+      // this very wrapper).
+      //
+      // So track it as a state machine instead: nothing opens until a panel has
+      // been SEEN, and then gone. `seen` only ever goes false→true, so no later
+      // empty reading can be mistaken for the panel's departure.
+      let seen = !!p.collection.length;
+
+      const stop = () => {
+        p.collection.off("update reset", this._onAccessPanelClosed);
+        if (this._accessPanelTimer) {
+          clearTimeout(this._accessPanelTimer);
+          this._accessPanelTimer = null;
+        }
+        this._onAccessPanelClosed = null;
+        this._awaitingAccessClose = 0;
+      };
+
+      this._onAccessPanelClosed = () => {
+        // A desk torn down while the panel was up must not open a workspace
+        // into it, and must not leave a listener on Wm's collection either.
+        if (this.isDestroyed && this.isDestroyed()) return stop();
+        if (p.collection.length) {
+          // The panel arrived (or the form was swapped for it). Now there is
+          // something to wait for.
+          seen = true;
+          return;
+        }
+        // Empty. Only a departure if something was there to depart.
+        if (!seen) return;
+        stop();
+        openNow();
+      };
+      p.collection.on("update reset", this._onAccessPanelClosed);
+
+      // BOUNDED. If no panel ever appears — a create that raised none, or one
+      // whose chain never reached this wrapper — the workspace still has to
+      // open. Long enough to cover the create round-trip that feeds the panel,
+      // and it is cancelled the moment a panel is seen.
+      this._accessPanelTimer = setTimeout(() => {
+        this._accessPanelTimer = null;
+        if (this.isDestroyed && this.isDestroyed()) return stop();
+        if (seen) return; // a panel is up; wait for it properly
+        stop();
+        openNow();
+      }, 4000);
+    });
+  }
+
+  /**
+   * Kept as the name six call sites already use. Step 1 + step 2 both live in
+   * _openWorkspaceOrEmptyScreen; this is the plain entry point.
+   */
+  async _openDefaultWorkspace(opt = {}) {
+    return this._openWorkspaceOrEmptyScreen(opt);
   }
 
   /**

@@ -297,3 +297,98 @@ test("a quota refusal delivered as `failed` is still a quota refusal", async () 
   assert.equal(res.ok, false);
   assert.equal(res.quota, true, "flagged, so the caller shows the quota block");
 });
+
+// ── the rollback emits TWO result sets ─────────────────────────────────────
+//
+// THE BUG THIS COVERS. desk_create_hub ends:
+//
+//   SELECT *, 0 as failed, ... FROM yp.entity WHERE db_name=_hub_db;
+//   IF _rollback THEN
+//     ROLLBACK;
+//     SELECT 1 as failed, IFNULL(_reason, @full_error) AS reason;
+//
+// That first SELECT runs on the rollback path too. The comment in the lib long
+// said so — but only reasoned about the POOL-EMPTY rollback, where
+// pickupEntity found nothing, `_hub_db` is NULL and the SELECT matches no rows.
+//
+// The proc has two OTHER rollbacks ("Unproper environment …" and "Area … is not
+// allowed") that happen AFTER pickupEntity succeeded. There `_hub_db` is set,
+// so the first SELECT returns a full entity row — success-shaped, `failed: 0`,
+// with a real hub id — and `res[0]` picked it. Every guard passed, the client
+// tracked and announced a workspace that had just been rolled back, and the
+// user saw nothing happen.
+//
+// Observed on stage 2026-09-03: desk.create_hub and desk.track_workspace both
+// logged for one account, with no hub row anywhere to show for it.
+
+test("a refusal is found even when a success row comes FIRST", async () => {
+  const { createWorkspace, host, calls } = load({
+    hub: [
+      // The pool entity that was picked up and is about to be released.
+      { failed: 0, id: "pool9", hub_id: "pool9", actual_home_id: "root9", area: "private" },
+      { failed: 1, reason: "Unproper environment  _userFilename " },
+    ],
+  });
+  const res = await createWorkspace(host, "team", "Internal Workspace");
+  assert.equal(res.ok, false, "res[0] made this read as success");
+  assert.deepEqual(calls.tracked, [], "a rolled-back workspace must not be tracked");
+  assert.deepEqual(calls.broadcasts, [], "nor announced");
+});
+
+test("the same, for an area refusal", async () => {
+  const { createWorkspace, host, calls } = load({
+    hub: [
+      { failed: 0, hub_id: "pool9", actual_home_id: "root9" },
+      { failed: 1, reason: "Area private is not allowed" },
+    ],
+  });
+  assert.equal((await createWorkspace(host, "team", "x")).ok, false);
+  assert.deepEqual(calls.tracked, []);
+});
+
+test("a genuine success in an array is still a success", async () => {
+  const { createWorkspace, host, calls } = load({
+    hub: [{ failed: 0, hub_id: "h1", actual_home_id: "root1", area: "private" }],
+  });
+  const res = await createWorkspace(host, "team", "Real one");
+  assert.equal(res.ok, true);
+  assert.equal(res.workspace.hub_id, "h1");
+  assert.equal(calls.tracked.length, 1, "and it IS tracked");
+  assert.equal(calls.broadcasts.length, 1);
+});
+
+test("a bare (non-array) response is unchanged", async () => {
+  const ok = load({ hub: { failed: 0, hub_id: "h2", actual_home_id: "r2" } });
+  assert.equal((await ok.createWorkspace(ok.host, "team", "x")).ok, true);
+  const no = load({ hub: { failed: 1, reason: "nope" } });
+  assert.equal((await no.createWorkspace(no.host, "team", "x")).ok, false);
+});
+
+test("the refusal's reason is surfaced for diagnosis", async () => {
+  // The reason is the only thing that makes the next report actionable — it is
+  // a server diagnostic, so it is logged rather than shown.
+  const { createWorkspace, host } = load({
+    hub: [
+      { failed: 0, hub_id: "pool9", actual_home_id: "root9" },
+      { failed: 1, reason: "Unproper environment  _userFilename " },
+    ],
+  });
+  // The harness's default host.warn is a no-op; capture it the way the
+  // pool-empty test above does.
+  const warned = [];
+  host.warn = (...a) => warned.push(a.join(" "));
+  await createWorkspace(host, "team", "x");
+  assert.match(
+    warned.join(" "),
+    /Unproper environment/,
+    "the reason is the only thing that makes the next report actionable",
+  );
+});
+
+test("an empty array is still a refusal, not a success", async () => {
+  // The pool-empty rollback: _hub_db is NULL so the first SELECT matches
+  // nothing at all.
+  const { createWorkspace, host, calls } = load({ hub: [] });
+  assert.equal((await createWorkspace(host, "team", "x")).ok, false);
+  assert.deepEqual(calls.tracked, []);
+});

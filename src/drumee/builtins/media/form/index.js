@@ -94,6 +94,25 @@ class __form_folder extends LetcBox {
     }
   }
 
+  /**
+   * Mark the submit as waiting on the network.
+   *
+   * The attribute goes straight onto the node — NOT through a re-render. The
+   * name lives in an Entry, and rebuilding the skeleton destroys it and takes
+   * the user's typed name with it, so a failed create would hand back an empty
+   * form and ask them to type the name again. Same reason the tour's own create
+   * screen stamps its button in place (desk/tutorial/workspace _create).
+   *
+   * `_pending` is also the re-entrancy guard in _submit: create is the one
+   * control here that waits on the network, so it is the one that can be
+   * pressed twice.
+   */
+  _setPending(on) {
+    this._pending = on ? 1 : 0;
+    const btn = this.getPart && this.getPart("submit");
+    if (btn && btn.el) btn.el.dataset.pending = on ? 1 : 0;
+  }
+
   _submit() {
     if (this._pending) return;
     const data = this.getData(_a.formItem) || {};
@@ -105,7 +124,7 @@ class __form_folder extends LetcBox {
     }
 
     const status = this._status || "team";
-    this._pending = 1;
+    this._setPending(1);
 
     // The create, the analytics row and the workspace:refresh broadcast all
     // live in libs/create-workspace — the tutorial's own create screen needs
@@ -116,7 +135,7 @@ class __form_folder extends LetcBox {
       .createWorkspace(this, status, filename, { target: Wm.getActiveWindow(1) })
       .then((res) => {
         if (!res.ok) {
-          this._pending = 0;
+          this._setPending(0);
           // The personal path reports its own failures through Wm before
           // resolving, so there is nothing left to say.
           if (res.handled) return;
@@ -139,7 +158,7 @@ class __form_folder extends LetcBox {
         // Personal is a folder, not a hub: it has no membership panel to open,
         // so creating one finishes here.
         if (res.personal) {
-          this._pending = 0;
+          this._setPending(0);
           return;
         }
 

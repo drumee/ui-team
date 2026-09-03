@@ -389,6 +389,17 @@ const _desk_main = function (ui) {
               sys_pn: "settings-main-slot",
               className: `${ui.fig.family}__settings-main-slot`,
             }),
+            // Host for the no-workspace screen (desk/home-empty), fed by
+            // _openWorkspaceOrEmptyScreen when no workspace exists.
+            //
+            // A SIBLING of window_manager rather than something inside it: the
+            // WM owns the window pools, and the state this covers is precisely
+            // "there is no window to show". Feeding it here also means the WM
+            // never has to be torn down and rebuilt to leave the state.
+            Skeletons.Box.Y({
+              sys_pn: "home-empty-slot",
+              className: `${ui.fig.family}__home-empty-slot`,
+            }),
           ],
         }),
       ],

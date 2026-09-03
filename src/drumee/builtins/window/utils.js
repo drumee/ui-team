@@ -1036,6 +1036,65 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
+   * Is `path` the node at `ancestor`, or something inside it?
+   *
+   * REPLACES `new RegExp("^" + filepath)`, which was wrong three ways:
+   *
+   *   - UNESCAPED. A workspace named "test(1)" built /^\/test(1)/, which
+   *     matches "/test1" and not "/test(1)" — so deleting it closed nothing.
+   *     Any of ( ) [ ] { } + * ? . ^ $ | \ in a filename did something like
+   *     this, silently.
+   *   - THROWING. An unbalanced bracket ("test)") made the RegExp constructor
+   *     raise SyntaxError, which escaped removeContent and aborted the echo for
+   *     every OTHER open window too.
+   *   - TOO BROAD. "^/a" also matches "/abc", so deleting /a closed a window
+   *     sitting in the unrelated /abc.
+   *
+   * Compared by SEGMENT, which is what "inside" actually means: equal, or
+   * prefixed by the ancestor plus a separator. No pattern is compiled, so no
+   * filename can be read as syntax.
+   *
+   * @param {String} path      where this window is
+   * @param {String} ancestor  what was deleted
+   * @returns {Boolean}
+   */
+  _pathIsUnder(path, ancestor) {
+    if (path == null || ancestor == null) return false;
+    // Trailing slashes are noise: the same node is written "/a" and "/a/"
+    // depending on which proc produced it. The root stays "/".
+    const trim = (v) => {
+      const s = `${v}`;
+      if (!s) return "";
+      const t = s.replace(/\/+$/, "");
+      return t === "" ? "/" : t;
+    };
+    const p = trim(path);
+    const a = trim(ancestor);
+    if (!p || !a) return false;
+    if (p === a) return true;
+    if (a === "/") return p.startsWith("/");
+    return p.startsWith(`${a}/`);
+  }
+
+  /**
+   * Where this window is, whatever named the field.
+   *
+   * `filepath` is mfs_show_node_by's column, so grid TILES have it. A headless
+   * workspace pane is fed from media.attributes → mfs_node_attr, which emits
+   * `file_path` and no `filepath` at all — so `mget(_a.filepath)` was undefined
+   * on exactly the view that had to close itself when its hub was deleted.
+   * `ownpath` is the third spelling, set by loadWorkspace.
+   */
+  _ownPath() {
+    return (
+      this.mget(_a.filepath) ||
+      this.mget(_a.file_path) ||
+      this.mget(_a.ownpath) ||
+      null
+    );
+  }
+
+  /**
    *
    */
   removeContent(args) {
@@ -1084,9 +1143,39 @@ class __window_mfs extends DrumeeMFS {
      * item's tile from the grid, which is what that pass does.
      */
     if (typeof Wm !== "undefined" && this === Wm) return;
-    let re = new RegExp("^" + filepath);
-    let path = this.mget(_a.filepath);
-    if (this.mget(_a.hub_id) == hub_id && re.test(path) && path != "/") {
+
+    const sameHub = this.mget(_a.hub_id) == hub_id;
+
+    // A DELETED HUB TAKES ITS WHOLE WINDOW, path be damned.
+    //
+    // This case cannot be decided by the path test below and never could. The
+    // echo's filepath is the hub's placeholder row in the user's HOME
+    // ("/test(1)"), while a window showing that workspace is at the root
+    // INSIDE the hub, whose own path is "/" — two unrelated strings. So the
+    // prefix test could not match, and `path != "/"` would have vetoed it even
+    // if it had.
+    //
+    // hub_id plus `filetype: hub` on the echo is already unambiguous: the hub
+    // this window belongs to no longer exists, so nothing it is showing does
+    // either. That echo shape is what confirmRemoveHub and confirmLeaveHub
+    // both send (desk/wm), and what the server broadcasts for delete_hub.
+    //
+    // This is the fix for the reported bug: after deleting a workspace its
+    // headless pane stayed mounted, which left Wm._curWorkspace set (it is
+    // cleared only by that pane's destroy handler), the topbar breadcrumb
+    // naming the dead workspace, and _snapshotWorkspace persisting it for the
+    // next page load to reopen.
+    if (sameHub && args.filetype === _a.hub) {
+      this.goodbye();
+      return;
+    }
+
+    // Otherwise: close only if this window is sitting AT or INSIDE the node
+    // that was deleted. `_ownPath` because the field has three spellings and a
+    // pane only has one of them; `_pathIsUnder` because the old
+    // `new RegExp("^" + filepath)` mis-parsed any name with regex syntax in it.
+    const path = this._ownPath();
+    if (sameHub && path && path !== "/" && this._pathIsUnder(path, filepath)) {
       this.goodbye();
       return;
     }
