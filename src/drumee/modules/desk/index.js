@@ -2130,11 +2130,34 @@ class desk_module extends LetcBox {
     // rows duplicated items that already existed and raised services the pane
     // could not answer.
     const item = require("builtins/contextmenu/skeleton/items");
+
+    // Removing a row can leave the divider that framed it, so the list is
+    // tidied rather than trusted: no leading rule, no trailing rule, never two
+    // in a row. The builder's own sectioning is otherwise passed through.
+    const tidy = (list) => {
+      const out = [];
+      for (const k of list) {
+        if (k === "separator" && (!out.length || out[out.length - 1] === "separator")) continue;
+        out.push(k);
+      }
+      while (out.length && out[out.length - 1] === "separator") out.pop();
+      return out;
+    };
+
     const keys = media && _.isFunction(media.contextmenuItemsForFolder)
-      // Lexis' menu (Figma wd3) shows Move as a FLAT row. `organize` is the
-      // submenu that wraps Move + "Link to task tracker" (items.js). Swapped
-      // here only — the grid's own menu keeps its submenu untouched.
-      ? media.contextmenuItemsForFolder().map((k) => (k === "organize" ? "move" : k))
+      ? tidy(
+          media
+            .contextmenuItemsForFolder()
+            // Lexis' menu (Figma wd3) shows Move as a FLAT row. `organize` is
+            // the submenu wrapping Move + "Link to task tracker" (items.js).
+            // Swapped here only — the grid's own menu keeps its submenu.
+            .map((k) => (k === "organize" ? "move" : k))
+            // Not in Lexis' menu. The builder adds a secure-share row on a
+            // `share` workspace, but sharing already has two doors — the
+            // header's chain icon and the rail's Access — and a third one here
+            // is the duplication this menu was just cleared of.
+            .filter((k) => k !== "secureShare" && k !== _a.share),
+        )
       : [];
 
     // No media item resolved (the home grid has not been fed yet). Every row

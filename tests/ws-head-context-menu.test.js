@@ -292,6 +292,36 @@ test("the grid's own menu keeps its organize submenu", () => {
     "the canonical builder no longer offers organize — the grid lost its submenu");
 });
 
+test("a share workspace does NOT get the secure-share row", () => {
+  // The builder adds it for `area === share`; Lexis' menu has no Share, and
+  // sharing already has the header chain icon and the rail's Access.
+  const r = rows(run({
+    win: fakeWin(),
+    menuKeys: ["download", "makeACopy", "rename", "separator", "organize",
+               "separator", "info", "separator", "secureShare", "separator", "trash"],
+  }));
+  assert.ok(!r.includes("secureShare"), "Share came back into the menu");
+  // ...and dropping it must not leave the rule that framed it.
+  assert.notEqual(r[0], "separator");
+  assert.notEqual(r[r.length - 1], "separator");
+  for (let i = 1; i < r.length; i++) {
+    assert.ok(!(r[i] === "separator" && r[i - 1] === "separator"),
+      "removing Share left a doubled divider");
+  }
+  assert.deepEqual(r, ["download", "makeACopy", "rename", "separator", "move",
+                       "separator", "info", "separator", "trash"]);
+});
+
+test("the flat Move row has an icon", () => {
+  // It had none: `organize` carried the glyph, and swapping to `move` left the
+  // row blank because nothing had ever rendered that key.
+  const ICONS = read("src/drumee/builtins/contextmenu/skeleton/icons.js");
+  const m = ICONS.match(/\bmove:\s*"([a-z0-9-]+)"/);
+  assert.ok(m, "icons.js has no `move`");
+  assert.match(read("icons/sprites/normalized.sprite.svg"),
+    new RegExp(`id="--icon-${m[1]}"`), `${m[1]} is not in the sprite`);
+});
+
 test("Manage access is not in this menu", () => {
   // Two better homes: the header chain icon (external → link builder) and the
   // rail's Access (every workspace → permissions matrix). The canonical builder

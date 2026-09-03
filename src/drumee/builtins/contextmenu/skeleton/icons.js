@@ -28,6 +28,11 @@ const __icon = function (_ui_) {
     modify: "editbox_pencil",
     newFolder: "ctxmenu-new-folder",
     organize: "ctxmenu-organize",
+    // Flat Move row (Lexis' workspace menu). The `organize` submenu keeps its
+    // own glyph above; this key had none because nothing rendered it before.
+    // PLACEHOLDER: the design's arrow-leaving-a-corner is not in the sprite.
+    // Export it from Figma into icons/src/normalized/ and rebuild the sprites.
+    move: "apps-arrow-down-right",
     openFileLocation: "desktop_drumeefolders",
     openInWindow: "ctxmenu-open-window",
     paste: "desktop_paste",
