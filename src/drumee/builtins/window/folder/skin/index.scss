@@ -2659,6 +2659,61 @@
     }
   }
 
+  // The hit rows. workspace_item is a SIDEBAR row by default — 32px tall, with
+  // tree indentation and a 14px label — so as a search hit it gets the same
+  // compact treatment the desk's own dropdown gives it (desk/skin/topbar.scss
+  // __suggestions-list). Without this the dropdown reads as a nested sidebar.
+  &-topbar__search-results {
+    width: 100%;
+    gap: 2px;
+
+    .workspace-item {
+      padding: 4px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+
+      &__row {
+        min-height: auto;
+        gap: 8px;
+        padding: 0;
+        font-size: 13px;
+
+        // Every hit is a flat result, never a level in a tree: kill the
+        // depth-indexed padding the sidebar rows carry.
+        &[data-level="0"],
+        &[data-radio="on"][data-level="0"] {
+          padding-left: 0;
+        }
+      }
+
+      // Icons keep the item skin's own sizing (22px box, folder art at its
+      // real 22x18 aspect, file glyphs at 18px) — overriding it here squashed
+      // the folder shape, which carries fixed SVG dimensions.
+      //
+      // A Note is a flex row, so the ellipsis has to go on the inner content
+      // element; `__name` itself only has to stop growing past the dropdown.
+      &__name {
+        min-width: 0;
+
+        .note-content {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      &:hover {
+        background: var(--hover-bg-40);
+      }
+    }
+  }
+
+  &-topbar__search-empty {
+    padding: 8px 6px;
+    color: var(--normal-fg-20);
+    font-size: 13px;
+  }
+
   // 43:23955: the workspace toolbar sits on the file card's own WHITE ground
   // with no divider — the filter tabs and the search/New group are the only
   // painted things on it. It was a grey band with a bottom rule, which read as

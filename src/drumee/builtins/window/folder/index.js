@@ -31,6 +31,15 @@ require("./skin");
 // own compact threshold, and the one meeting-schedule.scss already uses.
 const SCHED_NARROW_PX = 700;
 
+// Workspace file search: one short page of hits, which is all a dropdown over
+// the file grid can show.
+const WS_SEARCH_LIMIT = 20;
+// What to ASK for when the hits still have to pass a subtree fence on this side
+// (a personal workspace — see _wsSearchScope): the service applies its limit
+// before that fence, so asking for exactly 20 could hand back 20 rows from a
+// sibling workspace and leave the dropdown empty. 100 is the service's own cap.
+const WS_SEARCH_FETCH_MAX = 100;
+
 class __window_folder extends mfsInteract {
   constructor(...args) {
     super(...args);
@@ -615,6 +624,8 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
+    // Drops the search dropdown's timer and document-level dismisser.
+    this._teardownWorkspaceSearch();
     if (this._mmInviteeBlurTimer) {
       clearTimeout(this._mmInviteeBlurTimer);
       this._mmInviteeBlurTimer = null;
@@ -1271,6 +1282,27 @@ class __window_folder extends mfsInteract {
     }
     if (pn === "search-results") {
       this._searchResultsPart = child;
+      return;
+    }
+    // ── Workspace file search (toolbar "Search…") ──
+    // The window owns these parts; before this they were the DESK's
+    // ("search-container" / "search-box" / "search-suggestions"), which is why
+    // the field ran a global, cross-workspace search — and why two open
+    // workspaces fought over the desk's single set of refs.
+    if (pn === "ws-search-container") {
+      this._wsSearchContainer = child;
+      return;
+    }
+    if (pn === "ws-search-box") {
+      this._wsSearchBox = child;
+      return;
+    }
+    if (pn === "ws-search-suggestions") {
+      this._wsSearchPanel = child;
+      return;
+    }
+    if (pn === "ws-search-results") {
+      this._wsSearchResults = child;
       return;
     }
     if (pn === "chat-search-input") {
@@ -1965,6 +1997,15 @@ class __window_folder extends mfsInteract {
           filetype: this._ftFiletype || undefined,
         });
       }
+
+      // ── Workspace file search (toolbar "Search…") ──
+      // Fired by the search Entry's `watch` on every keystroke (args.value).
+      case "ws-search-typed":
+        return this._runWorkspaceSearch((args && args.value) || "");
+
+      // A result row → open that file/folder of THIS workspace.
+      case "ws-search-hit":
+        return this._openWorkspaceSearchHit(cmd);
 
       // ── Team-chat header message search ──
       // Magnifying glass → swap the header for a search bar; back arrow restores
@@ -3877,6 +3918,263 @@ class __window_folder extends mfsInteract {
         }),
       );
       if (fileNid) this._hydrateChatHeaderFile(bar, `${fileNid}`);
+    });
+  }
+
+  // ── Workspace file search (toolbar "Search…", Figma 43:23955) ──────────
+  // The field is built by window/skeleton/toolkit workspaceSearchBox and is
+  // answered HERE, which is the whole point: it sits above one workspace's
+  // files, so it searches that workspace and nothing else.
+  //
+  // `media.search_all` is a scope=hub service — it resolves its DB from the
+  // request hub_id and matches filenames, extensions and indexed content under
+  // that hub only. Before this the same field was the desk's global box: it
+  // asked `desk.search` (every hub the user owns + chat messages across all of
+  // them) and listed the user's WORKSPACES for an empty query.
+  //
+  // hub_id is required and must be the same one the rest of the window uses —
+  // a scope=hub service falls back to the HOST hub when it is missing, which
+  // reads the wrong database and answers nothing (see _runChatSearch).
+  _wsSearchHubId() {
+    return this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+  }
+
+  // Hub scope is not always workspace scope. A collaborative workspace IS a hub,
+  // so `media.search_all` already fences it exactly — but a PERSONAL workspace
+  // is a folder at the personal hub's root, and that one hub holds every one of
+  // them (see the home-grid listing in wm/index.js). Hub-scoped alone, a search
+  // in one personal workspace would answer with files from its siblings.
+  //
+  // So for those, fence the hits to the workspace's own subtree by path. The
+  // scope is the WORKSPACE, not the folder currently on screen: a search from
+  // three levels deep must still find the workspace's other files. The window
+  // opens AT its workspace and pushes the state it leaves on every forward
+  // navigation (updateTopbar), so the bottom of the nav stack is that root —
+  // and walking back to it empties the stack again, leaving the model as the
+  // root. A window opened straight onto a subfolder (a deep link) scopes to
+  // that subfolder, which is the root it was given.
+  //
+  // Returns "" when there is nothing to fence on, which degrades to the hub —
+  // never to anything wider than it.
+  _wsSearchScope() {
+    const root = (this._navStack && this._navStack[0]) || {
+      filetype: this.mget(_a.filetype),
+      ownpath: this.mget(_a.ownpath),
+    };
+    if (root.filetype === _a.hub) return "";
+    const p = this._wsNormalizePath(root.ownpath);
+    return p && p !== "/" ? p : "";
+  }
+
+  // media.file_path is a name path from the hub root ("/Docs/report.pdf"), and
+  // the procs that expose it as `ownpath` do not all collapse repeated slashes.
+  _wsNormalizePath(v) {
+    return `${v || ""}`.replace(/\/+/g, "/").replace(/\/$/, "");
+  }
+
+  // Ctrl/Cmd+Shift+F lands here (desk _focusSearch → _focusWorkspaceSearch):
+  // on desktop this field IS the file search, the desk owns no box of its own.
+  // The Entry builds its <input> asynchronously, so a press arriving before the
+  // field is ready simply does nothing rather than throwing.
+  focusWorkspaceSearch() {
+    const box = this._wsSearchBox;
+    if (!box || (box.isDestroyed && box.isDestroyed()) || !box.el) return false;
+    const input = box.el.querySelector("input");
+    if (!input) return false;
+    input.focus();
+    return true;
+  }
+
+  // Every keystroke (Entry `watch`). Debounced, and a monotonic token drops
+  // stale answers so a slower earlier query cannot overwrite a newer one.
+  _runWorkspaceSearch(text) {
+    const q = `${text || ""}`.trim().replace(/\s+/g, " ");
+    if (this._wsSearchTimer) clearTimeout(this._wsSearchTimer);
+    // seo_search_unified drops terms shorter than 2 chars and answers an empty
+    // list, so close the dropdown instead of asking. An empty field is NOT a
+    // request for "everything" — that is exactly what used to list every
+    // workspace here.
+    if (q.length < 2) {
+      this._wsSearchToken = (this._wsSearchToken || 0) + 1; // cancel in-flight
+      return this._hideWorkspaceSearch();
+    }
+    // The row widget is a lazily imported kind; warm it while the query is in
+    // flight so the first hits render as rows rather than as placeholders that
+    // fill in a hop later. Fire-and-forget — the rows resolve either way.
+    if (Kind && _.isFunction(Kind.waitFor)) {
+      Kind.waitFor("workspace_item").catch(() => {});
+    }
+    this._wsSearchTimer = setTimeout(() => {
+      this._wsSearchTimer = null;
+      const hub_id = this._wsSearchHubId();
+      if (!hub_id) return;
+      const token = (this._wsSearchToken = (this._wsSearchToken || 0) + 1);
+      const scope = this._wsSearchScope();
+      this.fetchService(
+        {
+          service:
+            (SERVICE.media && SERVICE.media.search_all) || "media.search_all",
+          hub_id,
+          string: q,
+          page: 1,
+          limit: scope ? WS_SEARCH_FETCH_MAX : WS_SEARCH_LIMIT,
+        },
+        { async: 1 },
+      )
+        .then((res) => {
+          if (token !== this._wsSearchToken) return;
+          this._showWorkspaceSearch(this._wsSearchRows(res, hub_id, scope));
+        })
+        .catch(() => {
+          if (token !== this._wsSearchToken) return;
+          this._showWorkspaceSearch([]);
+        });
+    }, 250);
+  }
+
+  // Normalize the response and fence it to this workspace.
+  //  - a single hit comes back as a bare object, not a one-element array;
+  //  - hub_id is re-checked even though the service is hub-scoped, so a row
+  //    from anywhere else can never be rendered as a hit of this workspace;
+  //  - `scope` fences a personal workspace to its own subtree (_wsSearchScope);
+  //  - the proc computes each row's privilege (user_permission) but does not
+  //    filter on it, so drop rows that explicitly report no read right. Rows
+  //    with no privilege field at all are kept: the viewer has this workspace
+  //    open, so "unknown" means the proc told us nothing, not "denied".
+  _wsSearchRows(res, hub_id, scope) {
+    let rows = res;
+    if (!_.isArray(rows)) {
+      rows = (res && (res.data || res.rows)) || (res && res.nid ? [res] : []);
+    }
+    if (!_.isArray(rows)) rows = [];
+    const READ = _K.permission.read;
+    return rows
+      .filter((r) => r && (r.nid || r.id))
+      .filter((r) => r.hub_id == null || `${r.hub_id}` === `${hub_id}`)
+      .filter((r) => {
+        if (!scope) return true;
+        // Fail CLOSED: a row whose path cannot be read cannot be shown to be
+        // inside this workspace, and "this workspace only" is the promise the
+        // field makes. `ownpath` alone — `file_path` carries the hub's own name
+        // as a prefix, so it does not compare against a within-hub scope.
+        const path = this._wsNormalizePath(r.ownpath);
+        if (!path) return false;
+        return path === scope || path.indexOf(`${scope}/`) === 0;
+      })
+      .filter((r) => {
+        if (r.privilege == null) return true;
+        const p = Number(r.privilege);
+        return !Number.isFinite(p) || (p & READ) === READ;
+      })
+      .slice(0, WS_SEARCH_LIMIT);
+  }
+
+  _showWorkspaceSearch(rows) {
+    const pfx = `${this.fig.family}-topbar`;
+    // `result_type` is what makes workspace_item render a RESULT row (icon +
+    // name) instead of a sidebar workspace row with a folder-tree chevron.
+    const items = rows.map((r) => ({
+      ...r,
+      kind: "workspace_item",
+      nid: r.nid || r.id,
+      hub_id: r.hub_id || this._wsSearchHubId(),
+      result_type: "file",
+      nodeRole: "result",
+      service: "ws-search-hit",
+      uiHandler: [this],
+    }));
+    return this.ensurePart("ws-search-results").then((p) => {
+      if (!p || (p.isDestroyed && p.isDestroyed())) return;
+      p.feed(
+        items.length
+          ? items
+          : [
+              Skeletons.Note({
+                className: `${pfx}__search-empty`,
+                content: LOCALE.NO_RESULTS,
+              }),
+            ],
+      );
+      this._openWorkspaceSearchPanel();
+    });
+  }
+
+  _openWorkspaceSearchPanel() {
+    const panel = this._wsSearchPanel;
+    if (!panel || (panel.isDestroyed && panel.isDestroyed())) return;
+    if (panel.el && panel.el.dataset.state !== "1") panel.setState(1);
+    if (this._wsSearchDismiss) return;
+    // Click anywhere outside the field + dropdown closes it. mousedown, so the
+    // dropdown is gone before the click lands on whatever is underneath.
+    this._wsSearchDismiss = (e) => {
+      const box = this._wsSearchContainer;
+      if (box && box.el && box.el.contains(e.target)) return;
+      this._hideWorkspaceSearch();
+    };
+    document.addEventListener("mousedown", this._wsSearchDismiss);
+    // Escape closes it too, and only while it is open. Nothing is
+    // preventDefault-ed: the desk's own Escape hotkey ignores keys pressed
+    // inside a text entry, so this is the only handler that can answer here,
+    // but a press from elsewhere must still reach whatever else wants it.
+    this._wsSearchEsc = (e) => {
+      if (e.key === "Escape") this._hideWorkspaceSearch();
+    };
+    document.addEventListener("keydown", this._wsSearchEsc);
+  }
+
+  // Timer + the document-level listener only. Split out so teardown can drop
+  // them without touching parts that are already being destroyed.
+  _teardownWorkspaceSearch() {
+    if (this._wsSearchTimer) {
+      clearTimeout(this._wsSearchTimer);
+      this._wsSearchTimer = null;
+    }
+    this._wsSearchToken = (this._wsSearchToken || 0) + 1; // cancel in-flight
+    if (this._wsSearchDismiss) {
+      document.removeEventListener("mousedown", this._wsSearchDismiss);
+      this._wsSearchDismiss = null;
+    }
+    if (this._wsSearchEsc) {
+      document.removeEventListener("keydown", this._wsSearchEsc);
+      this._wsSearchEsc = null;
+    }
+  }
+
+  _hideWorkspaceSearch() {
+    this._teardownWorkspaceSearch();
+    const panel = this._wsSearchPanel;
+    if (panel && !(panel.isDestroyed && panel.isDestroyed())) {
+      panel.setState(0);
+      const results = this._wsSearchResults;
+      if (results && !(results.isDestroyed && results.isDestroyed())) {
+        results.feed([]);
+      }
+    }
+  }
+
+  // A result row was clicked: open the hit. openFileLocation resolves what that
+  // means — a file whose tile is already on screen opens through the tile, an
+  // unrendered one opens in its viewer, and a folder opens as a folder window
+  // (its own tile navigates this window in place, as a double-click does). Same
+  // path the notification deep links and the desk's own search hits use, so
+  // there is one answer to "open this node" in the product.
+  _openWorkspaceSearchHit(cmd) {
+    const hit = cmd && cmd.model ? cmd.model.toJSON() : {};
+    const nid = hit.nid || hit.id;
+    if (!nid) return;
+    this._hideWorkspaceSearch();
+    const box = this._wsSearchBox;
+    if (box && box._input && _.isFunction(box.setValue)) box.setValue("");
+    // Only the node fields, never the row's own widget options: `kind`
+    // ("workspace_item"), uiHandler and service ride on the model too, and two
+    // of application()'s branches spread the caller's object OVER their own
+    // kind — which would try to launch a sidebar row as a window.
+    return this.openFileLocation({
+      nid,
+      hub_id: hit.hub_id || this._wsSearchHubId(),
+      pid: hit.pid || hit.parent_id || 0,
+      filetype: hit.filetype || hit.ftype || hit.category,
+      area: hit.area || this.mget(_a.area),
     });
   }
 

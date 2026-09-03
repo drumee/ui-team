@@ -264,15 +264,19 @@ const _build_mobile_rail = (ui) => {
   });
 };
 
-// Mobile search card. The desktop topbar — and with it the search cluster —
-// is display:none at mobile widths, so search gets its own centered card here.
+// Mobile search card, and the desk's ONLY search field: this is the global,
+// cross-workspace search (desk.search — every hub the user owns, plus chat
+// messages, and the list of workspaces for an empty query). Desktop has no
+// counterpart any more; the workspace toolbar's field there searches ONE
+// workspace's files and is owned by the folder window (window/skeleton/toolkit
+// workspaceSearchBox).
 //
-// It deliberately reuses the topbar's part names ("search-box",
-// "search-suggestions", "suggestions-list") rather than declaring its own:
-// every handler in desk/index.js (the 300ms debounce, _updateSearchSuggestions,
-// the personal-hub filter on the list, open-search-hit) then drives this card
-// with no branching. skeleton/topbar.js drops its own cluster on mobile so
-// only one node ever claims each name.
+// It keeps the desk's part names ("search-box", "search-suggestions",
+// "suggestions-list") because every handler in desk/index.js (the 300ms
+// debounce, _updateSearchSuggestions, the personal-hub filter on the list,
+// open-search-hit) drives it through them with no branching. Nothing else
+// claims those names now, so the "exactly one mounted" rule holds by
+// construction rather than by the desktop topbar being display:none.
 //
 // Mounted at state 0 on every mobile desk rather than lazily, so ensurePart()
 // resolves immediately on the first tap instead of racing a mount.

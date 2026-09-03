@@ -622,74 +622,11 @@ function workspaceSwitcher(pfx, ui) {
   });
 }
 
-/**
- * Desk file-search box + suggestions dropdown.
- *
- * 43:23955 puts search in the WORKSPACE toolbar (between the file-type filter
- * tabs and "+ New"), not in the top bar — so this is exported and built by
- * `fileFilterControls` (window/skeleton/toolkit) instead of here.
- *
- * The desk stays the handler: the sys_pn names ("search-container",
- * "search-box", "search-suggestions", "suggestions-list") and the
- * search-files / open-search-hit services are unchanged, so desk/index.js
- * drives it exactly as before wherever it is mounted. That only holds while
- * EXACTLY ONE copy exists — the mobile card in skeleton/index.js reuses the
- * same names, and the desk topbar is display:none on mobile, so desktop gets
- * this one and mobile gets the card.
- *
- * @param {Object} ui   desk module (the handler)
- * @param {String} pfx  BEM prefix to build the classes under
- */
-function deskSearchBox(ui, pfx) {
-  return Skeletons.Box.Y({
-    className: `${pfx}__search-container`,
-    sys_pn: "search-container",
-    partHandler: ui,
-    kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__search-bar`,
-        kids: [
-          Skeletons.Image.Svg({
-            ico: "magnifying-glass",
-            className: `${pfx}__search-icon`,
-          }),
-          Skeletons.Entry({
-            className: `${pfx}__search-input`,
-            sys_pn: "search-box",
-            uiHandler: [ui],
-            partHandler: ui,
-            placeholder: LOCALE.SEARCH || "Search...",
-            service: "search-files",
-            type: _a.text,
-            autocomplete: _a.off,
-            interactive: 1,
-          }),
-        ],
-      }),
-      Skeletons.Box.Y({
-        className: `${pfx}__search-suggestions`,
-        sys_pn: "search-suggestions",
-        partHandler: ui,
-        state: 0,
-        kids: [
-          Skeletons.List.Smart({
-            className: `${pfx}__suggestions-list`,
-            sys_pn: "suggestions-list",
-            partHandler: ui,
-            flow: _a.none,
-            spinner: true,
-            spinnerWait: 300,
-            vendorOpt: Preset.List.Orange_e,
-            itemsOpt: {
-              kind: "workspace_item",
-              uiHandler: [ui],
-              service: "open-search-hit",
-            },
-          }),
-        ],
-      }),
-    ],
-  });
-}
+// The desk's own file-search box used to be built here (`deskSearchBox`) and
+// mounted by the workspace toolbar, which made that field the GLOBAL search —
+// `desk.search` across every hub, and the list of workspaces for an empty query.
+// The workspace toolbar owns a workspace-scoped field now
+// (window/skeleton/toolkit workspaceSearchBox), so this builder is gone. The
+// desk still owns the MOBILE search card, which is global on purpose and builds
+// its own field in skeleton/index.js.
 
-module.exports.deskSearchBox = deskSearchBox;

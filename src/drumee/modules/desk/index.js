@@ -5724,12 +5724,47 @@ class desk_module extends LetcBox {
   _focusSearch(e) {
     const chat = this._bigchatFor(e && e.target);
     if (chat) return this._openChatSearch(chat);
+    // On desktop the file search is the WORKSPACE toolbar's field, owned by the
+    // folder window (window/skeleton/toolkit workspaceSearchBox) — it searches
+    // that one workspace, and the desk holds no box of its own there. The desk's
+    // own `_searchBoxInner` is the mobile search card, which is global.
+    if (this._focusWorkspaceSearch()) return true;
     if (!this._searchBoxInner || !_.isFunction(this._searchBoxInner.focus)) {
       return false;
     }
     // focusin on the box already opens the suggestions list (see onPartReady).
     this._searchBoxInner.focus();
     return true;
+  }
+
+  // Focus the search field of the workspace window the user is looking at: the
+  // one containing focus, else the last-opened popup, else the workspace pane
+  // itself (`headless`, the full-area window behind any popup). False when no
+  // folder window is open or its <input> has not been built yet, so the key
+  // falls through to whatever else can answer it.
+  _focusWorkspaceSearch() {
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.getItemsByKind)) return false;
+    let open;
+    try {
+      open = wm.getItemsByKind("window_folder") || [];
+    } catch (err) {
+      return false;
+    }
+    const live = open.filter(
+      (w) =>
+        w &&
+        !(_.isFunction(w.isDestroyed) && w.isDestroyed()) &&
+        _.isFunction(w.focusWorkspaceSearch),
+    );
+    if (!live.length) return false;
+    const node = document.activeElement;
+    const focused = node
+      ? live.find((w) => w.el && _.isFunction(w.el.contains) && w.el.contains(node))
+      : null;
+    const popups = live.filter((w) => !w.mget(_a.headless));
+    const target = focused || popups[popups.length - 1] || live[0];
+    return !!target.focusWorkspaceSearch();
   }
 
   // The chat window containing `target`, or null. Keyed on focus rather than on

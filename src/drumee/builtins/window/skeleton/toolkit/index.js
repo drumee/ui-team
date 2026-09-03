@@ -174,22 +174,103 @@ function fileNewControl(ui) {
   });
 }
 
+// ── Workspace file search (43:23955) ──────────────────────────────────────
+// The "Search…" field in a workspace toolbar, owned by the folder window that
+// draws it.
+//
+// It used to be the DESK's own box (desk/skeleton/topbar deskSearchBox, with the
+// desk as uiHandler), i.e. the GLOBAL search simply mounted inside a workspace:
+// it queried `desk.search` — every hub the user owns, plus chat messages across
+// all of them — and answered an empty query with the LIST OF WORKSPACES. Sitting
+// above one workspace's files, that is the wrong question; the field must search
+// the files of THAT workspace.
+//
+// So the box belongs to the window now:
+//   - the window answers the keystrokes (onUiEvent "ws-search-typed") and runs
+//     `media.search_all`, a scope=hub service: filenames, extensions and indexed
+//     content under this window's own hub_id, so nothing outside the workspace
+//     can match;
+//   - the part names are the window's own (`ws-search-*`). That also ends a
+//     latent collision: the desk claimed "search-box" / "search-suggestions" /
+//     "suggestions-list" for whichever copy mounted LAST, so with two workspace
+//     windows open, typing in one drove the other one's dropdown.
+//
+// Keystrokes arrive through the Entry's `watch` hook, which fires
+// onUiEvent("ws-search-typed", { value }) once the field is ready — the <input>
+// is built asynchronously (waitElement), so a listener wired at part-ready time
+// would run before it exists. Same hook the chat search bar above uses.
+//
+// The classes are unchanged (`…-topbar__search-*`), so the folder skin's pill +
+// dropdown (skin/index.scss, "Workspace toolbar search") still dresses it.
+function workspaceSearchBox(ui, pfx) {
+  return Skeletons.Box.Y({
+    className: `${pfx}__search-container`,
+    sys_pn: "ws-search-container",
+    partHandler: ui,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__search-bar`,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "magnifying-glass",
+            className: `${pfx}__search-icon`,
+          }),
+          Skeletons.Entry({
+            className: `${pfx}__search-input`,
+            sys_pn: "ws-search-box",
+            partHandler: ui,
+            uiHandler: [ui],
+            placeholder: LOCALE.SEARCH_FILES,
+            require: "any",
+            mode: "interactive",
+            interactive: 1,
+            bubble: 0,
+            watch: "ws-search-typed",
+            // Kept from the box this replaces: the Entry template interpolates
+            // both straight into the tag, so unset they render
+            // type="undefined" and autocomplete="undefined" — and the browser's
+            // autofill list then covers the result dropdown.
+            type: _a.text,
+            autocomplete: _a.off,
+          }),
+        ],
+      }),
+      // Result dropdown. Hidden at data-state 0 by the skin; the window flips it
+      // through setState() as answers arrive. Rows are fed by the window rather
+      // than fetched by a List.Smart: the result set is one short page, and the
+      // window has to normalize the response first (a single hit comes back as a
+      // bare object, which list/index.js drops as "not an array").
+      Skeletons.Box.Y({
+        className: `${pfx}__search-suggestions`,
+        sys_pn: "ws-search-suggestions",
+        partHandler: ui,
+        state: 0,
+        kids: [
+          Skeletons.Box.Y({
+            className: `${pfx}__search-results`,
+            sys_pn: "ws-search-results",
+            partHandler: ui,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function fileFilterControls(ui) {
   const cnTopbar = `${ui.fig.family}-topbar`;
   // 43:23955's workspace toolbar right group is: Search... | + New | the three
-  // view toggles. Search used to live in the desk topbar; it is built here now
-  // from the desk's own builder, so the desk stays the handler and the
-  // search-files / open-search-hit wiring is untouched.
+  // view toggles. Search used to live in the desk topbar; it is built here now,
+  // scoped to the workspace the window is showing (see workspaceSearchBox).
   //
-  // Folder windows on a real desk only: a DMZ sharebox has no Desk, and a
-  // second copy anywhere would break the "exactly one mounted" rule the
-  // sys_pn-based wiring depends on.
+  // Folder windows only, and never a share: `media.search_all` searches the
+  // WHOLE hub, while a DMZ recipient was given one folder and must not see past
+  // it (same boundary the chat gates above defend). Skipped on mobile too — the
+  // phone shell has its own search card (desk/skeleton/index.js), which is the
+  // global one on purpose.
   const search =
-    ui.fig.family === "window-folder" &&
-    typeof Desk !== "undefined" &&
-    Desk &&
-    !Visitor.isMobile()
-      ? require("desk/skeleton/topbar").deskSearchBox(Desk, cnTopbar)
+    ui.fig.family === "window-folder" && !_inDmzShare(ui) && !Visitor.isMobile()
+      ? workspaceSearchBox(ui, cnTopbar)
       : "";
 
   return Skeletons.Box.X({
