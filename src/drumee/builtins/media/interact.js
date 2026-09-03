@@ -1347,6 +1347,86 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Move on a WORKSPACE: its content becomes a folder inside another
+   * workspace, through media.merge_workspace.
+   *
+   * hub_id is the workspace ITSELF here, not holder_id. That differs from
+   * Move to trash, which scopes a hub node by holder_id because it acts on the
+   * card sitting on your desk. This acts on the workspace, and the service is
+   * scope:hub on the SOURCE, so it needs the workspace as its scope to check
+   * `owner` there.
+   *
+   * The source workspace SURVIVES, emptied - nothing is deleted here.
+   *
+   * Every outcome is spoken. A merge that moved nothing used to be
+   * indistinguishable from one that worked, which is the whole reason this row
+   * sat dead for so long, so SOURCE_EMPTY and a partial move each get their
+   * own message rather than a silent success.
+   */
+  async _mergeWorkspaceInto(targetDestinations = []) {
+    const workspaceId = this.mget(_a.hub_id);
+    const sourceName = this.mget(_a.filename) || LOCALE.WORKSPACE;
+
+    if (targetDestinations.length !== 1) {
+      return Wm.alert(LOCALE.MERGE_WORKSPACE_ONE_DESTINATION);
+    }
+    const dest = targetDestinations[0];
+    if (!dest || !dest.hub_id || !dest.nid) {
+      return Wm.alert(LOCALE.MOVE_FAILED);
+    }
+    if (String(dest.hub_id) === String(workspaceId)) {
+      return Wm.alert(LOCALE.MERGE_WORKSPACE_SAME);
+    }
+    const destName = dest.wsName || dest.filename || LOCALE.WORKSPACE;
+
+    try {
+      await Wm.confirm({
+        title: LOCALE.MERGE_WORKSPACE_TITLE.format(sourceName, destName),
+        message: LOCALE.MERGE_WORKSPACE_CONFIRM.format(sourceName, destName),
+        submessage: LOCALE.MERGE_WORKSPACE_KEEPS.format(sourceName),
+        confirm: LOCALE.MOVE,
+      });
+    } catch (e) {
+      // cancelled or closed - not a failure, and nothing to say about it
+      return;
+    }
+
+    // Same defensive shape workspace_move uses: SERVICE is merged at bootstrap
+    // from what the server actually exposes, so the key is only there once the
+    // backend advertises the service.
+    const service = (SERVICE.media && SERVICE.media.merge_workspace)
+      || "media.merge_workspace";
+
+    try {
+      const data = await this.postService({
+        service,
+        hub_id: workspaceId,
+        nid: "0",
+        recipient_id: dest.hub_id,
+        pid: dest.nid,
+      });
+      if (!data || data.error) {
+        const message = (data && (data.reason || data.error)) || LOCALE.MOVE_FAILED;
+        return Wm.alert(message);
+      }
+      if (data.status === "SOURCE_EMPTY") {
+        return Wm.alert(LOCALE.MERGE_WORKSPACE_EMPTY.format(sourceName));
+      }
+      if (data.remaining) {
+        return Wm.alert(
+          LOCALE.MERGE_WORKSPACE_PARTIAL.format(sourceName, data.remaining)
+        );
+      }
+      if (typeof Butler !== "undefined" && Butler.say) {
+        Butler.say(LOCALE.MERGE_WORKSPACE_DONE.format(sourceName, destName));
+      }
+    } catch (e) {
+      this.warn("Workspace merge failed", e);
+      return Wm.alert((e && (e.reason || e.error)) || LOCALE.MOVE_FAILED);
+    }
+  }
+
+  /**
    * Open move popup, execute move, then refresh grid
    */
   move() {
@@ -1365,6 +1445,14 @@ class __media_interact extends media_core {
     }).then((result) => {
       const { destination, destinations, items } = result;
       const targetDestinations = destinations || [destination];
+      // A WORKSPACE is not a node, so Move on one is not a node move. It has
+      // its own service, and none of the node machinery below applies: a hub
+      // root is exactly what mfs_move_all refuses, returning an empty plan,
+      // which is why this menu row did nothing at all before that service
+      // existed. Branch out here so the file/folder path stays untouched.
+      if (this.isHub) {
+        return this._mergeWorkspaceInto(targetDestinations);
+      }
       // A true cross-workspace move needs one destination. The move dialog can
       // intentionally select several destinations, which is a copy-to-many
       // operation followed by source removal; keep that legacy flow unchanged.
