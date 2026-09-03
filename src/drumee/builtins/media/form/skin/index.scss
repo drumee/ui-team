@@ -41,245 +41,365 @@
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// THE CARD IS THE TOUR'S CARD.
+//
+// Every metric below is desk/tutorial/workspace/skin's `__wsd-*` ramp (Figma
+// 176:40762, component 85:42209): 460px, 32px insets, 24px radius, 24px stack,
+// a 1px hairline over a heavy ambient shadow. The `workspace` tour spends five
+// screens teaching that card and then hands the user a working copy of it, so
+// this one has to BE it — a create form that drifted from the screens teaching
+// it would be worse than no tour.
+//
+// The classes stay this widget's own (`.form-folder__*`, generated from
+// `class __form_folder`), so nothing here is shared with the tour: the tour is
+// a mock and cannot host the quota block, the radio behaviour, or the enter /
+// exit animation above. Only the ramp is common, and it is written out rather
+// than reached for across modules — webpack injects a widget's stylesheet only
+// when that widget loads, so a shared partial would have to be @use'd on both
+// sides anyway and the tour's is full of tour-only rules (`data-dim`).
+//
+// A side effect worth naming: the ramp is token-only. What it replaces was
+// half hardcoded `rgba(0, 0, 0, 0.05)` — a border and a row background that
+// were invisible on a dark theme.
+// ─────────────────────────────────────────────────────────────────────────────
 
 .form-folder {
   &__ui {
-    width: 360px;
-    border-radius: var(--corner-radius-3);
-    background-color: var(--normal-bg-90);
-    box-shadow: 0px 1px 11px 0px rgba(0, 0, 0, 0.13);
+    // 460px is the design's. `max-width` is this dialog's own problem and not
+    // the tour's: the tour draws inside a desktop-shaped mock canvas, while
+    // this opens over a real viewport that can be 390px wide. The mobile
+    // scrim at the bottom of this file is the other half of that.
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    border-radius: 24px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.15),
+      0 7px 10px rgba(0, 0, 0, 0.05);
     overflow: hidden;
-    border: 1px solid var(--border-default);
   }
 
   &__main {
     width: 100%;
-    gap: 20px;
-    padding: 24px;
+    box-sizing: border-box;
+    gap: 24px;
+    padding: 32px;
   }
 
   /* ── Header ──────────────────────────────────────────────── */
+  // One line and a cross. No subtitle, and no rule under it — see the
+  // skeleton's header comment for why both went.
   &__header {
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding-bottom: 25px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  }
-
-  &__header-text {
-    gap: 4px;
-    flex: 1;
+    gap: 12px;
   }
 
   &__title {
-    @include drumee.typo(
-      $size: 18px,
-      $weight: 600,
-      $line: 24px,
-      $color: var(--normal-fg-10)
-    );
-  }
-
-  &__subtitle {
-    @include drumee.typo(
-      $color: var(--neutral-500),
-      $size: 12px,
-      $weight: 400,
-      $line: 17px
-    );
+    // drumee.typo() emits no font-weight ($weight only picks a family), so the
+    // weight is written out — same as the tour's __wsd-heading.
+    @include drumee.typo($size: 24px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 600;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__close {
-    width: 28px;
-    height: 28px;
-    padding: 4px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
-    margin-left: 8px;
     cursor: pointer;
-    color: var(--normal-fg-10);
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
 
     &:hover {
-      color: var(--normal-fg-20);
+      color: var(--normal-fg);
     }
   }
 
   /* ── Field groups ────────────────────────────────────────── */
   &__field-group {
     width: 100%;
-    gap: 10px;
+    gap: 8px;
   }
 
   &__field-label {
-    @include drumee.typo(
-      $color: var(--normal-fg-10),
-      $size: 12px,
-      $weight: 600,
-      $line: normal
-    );
+    @include drumee.typo($size: 14px, $line: 1.3, $color: var(--normal-fg));
+    font-weight: 600;
   }
 
   /* ── Text input ──────────────────────────────────────────── */
   &__input {
     width: 100%;
-    background-color: var(--normal-bg-elevated);
-    border-radius: var(--corner-radius-2);
-    padding: 12px;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 17px);
+    box-sizing: border-box;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-default);
+    background: var(--normal-bg-elevated);
+    @include drumee.typo($size: 14px, $line: 1.3, $color: var(--normal-fg));
     transition: border-color 0.15s;
 
     input {
-      background: transparent;
-      border: none;
-      outline: none;
       width: 100%;
-      color: var(--normal-fg-10);
-      @include drumee.typo($size: 12px, $line: 17px);
+      height: 100%;
+      background: transparent;
+      border: 0;
+      outline: none;
+      font: inherit;
+      color: inherit;
 
       &::placeholder {
-        color: var(--neutral-500);
-        opacity: 0.6;
+        color: var(--placeholder-fg);
       }
     }
 
+    // `border-color`, not the `outline` this used to grow: an outline is drawn
+    // outside the box and overlapped the row below at this radius.
     &:focus-within {
-      outline: 1px solid var(--primary-400, #7b6ef6);
+      border-color: var(--primary-purple-40);
     }
   }
 
   /* ── Inline validation message (below the input) ─────────── */
+  // `data-state` rather than `:empty` — a Note renders its copy inside an
+  // `.inner.note-content` div, so it is never CSS-empty.
   &__input-error {
     display: none;
-    @include drumee.typo(
-      $size: 11px,
-      $weight: 400,
-      $line: 15px,
-      $color: var(--restricted, #d65f59)
-    );
+    @include drumee.typo($size: 12px, $line: 1.3, $color: var(--signal-error));
+    font-weight: 400;
 
     &[data-state="1"] {
       display: block;
     }
   }
 
-  /* ── Status options container ────────────────────────────── */
+  /* ── Status options ──────────────────────────────────────── */
+  // Just a stack. The grey inset panel this used to sit in is gone: the design
+  // puts the three rows straight on the card, each carrying its own border, and
+  // a tinted tray behind bordered rows read as a fourth box.
   &__options {
     width: 100%;
     gap: 8px;
-    background-color: var(--normal-bg-90);
-    border-radius: 4px;
-    padding: 8px 0;
   }
 
-  /* ── Per-type signal color tokens ───────────────────────── */
   &__option {
-    &[data-type="personal"] {
-      --opt-signal: var(--private, #884eff);
-      --opt-tint: rgba(136, 78, 255, 0.1);
-      --opt-border: rgba(136, 78, 255, 0.2);
-    }
-
-    &[data-type="team"] {
-      --opt-signal: var(--restricted, #d65f59);
-      --opt-tint: rgba(214, 95, 89, 0.1);
-      --opt-border: rgba(214, 95, 89, 0.2);
-    }
-
-    &[data-type="share"] {
-      --opt-signal: var(--link-share, #ffa8dc);
-      --opt-tint: rgba(255, 168, 220, 0.1);
-      --opt-border: rgba(255, 168, 220, 0.2);
-    }
-
+    width: 100%;
+    box-sizing: border-box;
     align-items: center;
     justify-content: space-between;
-    padding: 9px;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    background-color: rgba(0, 0, 0, 0.05);
-    opacity: 0.5;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-default);
+    background: var(--normal-bg-elevated);
     cursor: pointer;
     transition:
-      border-color 0.15s,
-      background-color 0.15s,
-      opacity 0.15s;
+      border-color 0.15s ease,
+      background-color 0.15s ease;
 
-    &[data-state="1"] {
-      border-color: var(--opt-border);
-      background-color: var(--opt-tint);
-      opacity: 1;
-
-      .form-folder__option-circle {
-        border-color: var(--opt-signal);
-
-        &::after {
-          background-color: var(--opt-signal);
-        }
-      }
+    // Every row is at full strength. The unselected rows used to be held at
+    // `opacity: .5`, which made two of the three types hard to READ on the
+    // screen whose whole job is choosing between them.
+    &:hover {
+      border-color: var(--border-strong);
     }
 
-    &:hover {
-      border-color: var(--opt-border);
-      opacity: 1;
+    // `data-state` is the radio behaviour's attribute (ui-core setState stamps
+    // data-state / data-radio off the `radio:` channel in the skeleton) — NOT
+    // the tour's hand-managed `data-on`. Same treatment, different driver.
+    &[data-state="1"] {
+      border-color: var(--primary-purple-40);
+      background: var(--primary-purple-05, rgba(89, 80, 255, 0.04));
+
+      .form-folder__option-circle {
+        border-color: var(--primary-purple-40);
+
+        &::after {
+          background: var(--primary-purple-40);
+        }
+      }
     }
   }
 
   &__option-left {
     align-items: center;
-    gap: 8px;
-    flex: 1;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
-  /* ── Icon — color follows signal per type ────────────────── */
+  /* ── Icon — the area-tinted workspace shape ──────────────── */
+  // folderArt returns markup whose root is `.media-grid__folder-art`, authored
+  // at 105x86 — it has to be given an EXPLICIT box or it paints at that
+  // intrinsic size. Percentages are not enough inside a flex container, which
+  // is why the desk breadcrumb pins px too (breadcrumb/item/skin __icon). The
+  // `!important` is that same rule's: the widget sets its own display.
   &__option-ico {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    color: var(--neutral-400);
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
 
-    &.personal {
-      color: var(--private, #884eff);
+    .media-grid__folder-art {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 21px;
     }
 
-    &.team {
-      color: var(--restricted, #d65f59);
+    // WHY THE FILL IS HERE. The template emits
+    // `<svg class="folder-shape <area>" fill="none">` over a path with no fill
+    // of its own, so the colour is CSS's job — and the rules that do it are
+    // nested under `.media-grid__container`
+    // (builtins/media/grid/skin/container.scss). Outside the grid nothing
+    // matches, the path inherits `fill="none"`, and the folder renders as empty
+    // space. The tour hit this too and answered it the same way, scoped to its
+    // own root (desk/tutorial/skin/index.scss "Folder art"); the desk
+    // breadcrumb is a third copy. Ported rather than widening the grid's
+    // selector: this is not an instance of the grid, and a `.media-grid`
+    // selector that also has to cover three non-grids is a worse thing to own
+    // than four lines of fill.
+    .folder-shape {
+      width: 26px;
+      height: 21px;
+      fill: #885eff;
+
+      &.personal { fill: var(--area-personal); }
+      &.public { fill: var(--area-public); }
+      &.share, &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
     }
 
-    &.share {
-      color: var(--link-share, #ffa8dc);
+    // The area emblem, and WHY IT NEEDS STOP COLOURS.
+    //
+    // The template draws it in two layers: white glyph detail underneath, then
+    // one path over the top filled `url(#paint-<id>)` — a gradient whose stops
+    // carry classes `gradient-start-<area>` / `gradient-end-<area>` and NO
+    // colour of their own. No stylesheet in this repo defines those two
+    // classes, so the stops fall back to the SVG default of black and the
+    // emblem paints as a black blob over its own glyph.
+    //
+    // The tour and the grid both answer this with `fill: currentColor` on the
+    // `<svg class="badge">` root, which does not reach it: `fill` inherits, and
+    // an inherited value loses to the presentation attribute sitting on the
+    // path itself. Flattening the path instead (`.badge path { fill: … }`)
+    // does reach it, but paints the body the same white as the detail beneath
+    // and the emblem becomes a featureless silhouette.
+    //
+    // So colour the stops, which is what the rest of the app does for its own
+    // badges (window/choice/skin, window/info/skin, both on the brand ramp).
+    // White glyph on a saturated body, inside the white outline ring the
+    // template already draws.
+    //
+    // THE BODY IS PER AREA:
+    //
+    //   private   coral folder  #eb6159  → ORANGE badge, --orange-400/600
+    //   share     pink folder   #ffa8dc  → the folder's OWN pink, flat
+    //   personal  indigo folder #433cc5  → purple badge (the default below)
+    //
+    // Orange takes the 400 → 600 step of its ramp rather than a darker pair:
+    // 500 → 700 and 600 → 800 both go brown at the dark stop, and at 15px the
+    // gradient's lower half is most of what you see.
+    //
+    // `share` IS ITS FOLDER'S COLOUR, and flat — both stops the same, so there
+    // is no gradient on this one. That is the point rather than an oversight:
+    // the emblem reads as part of the same object instead of a mark stuck onto
+    // it, and what defines it is the white outline ring the template draws plus
+    // the white glyph inside. The trade is real and worth knowing — white on
+    // #ffa8dc is about 1.6:1, so the glyph is soft. Acceptable here because it
+    // is decoration, not information: the row states its type in words, twice
+    // ("External Workspace" and "Anyone with the unique link").
+    //
+    // Written as the TOKEN with that hex as the fallback, the idiom the tour's
+    // skins use (tutorial/folder, tutorial/schedule). `--area-share` is #ffa8dc
+    // today, so this renders exactly the requested colour — and if the share
+    // tint is ever retuned the badge follows it, which is the whole intent of
+    // matching the folder. Pin the literal instead if the two should be free to
+    // diverge.
+    //
+    // Sized and overhung rather than scaled proportionally. The tour places
+    // this emblem in percentages, which at a 26px folder is a ~6px smudge; the
+    // product's own answer for small art is the breadcrumb's — oversize it and
+    // let it hang off the corner (breadcrumb/item/skin, 13px on a 20px box).
+    // Same treatment, scaled to 26.
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 15px !important;
+      height: 15px !important;
+      color: var(--grid-color-folder-badge);
+      filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.32));
+
+      // Default, for any area with no pair of its own — personal today, and
+      // public / dmz if this dialog ever offers them.
+      [class^="gradient-start-"] {
+        stop-color: var(--primary-purple-40);
+      }
+
+      [class^="gradient-end-"] {
+        stop-color: var(--primary-purple-50);
+      }
+
+      // The `stop.` prefix is load-bearing: it makes these (0,1,1) against the
+      // two defaults' (0,1,0), so they win on specificity rather than on being
+      // written second.
+      stop.gradient-start-private {
+        stop-color: var(--orange-400);
+      }
+
+      stop.gradient-end-private {
+        stop-color: var(--orange-600);
+      }
+
+      stop.gradient-start-share,
+      stop.gradient-end-share {
+        stop-color: var(--area-share, #ffa8dc);
+      }
     }
   }
 
   &__option-info {
     gap: 2px;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__option-label {
-    @include drumee.typo(
-      $size: 10px,
-      $weight: 700,
-      $line: 14px,
-      $color: var(--normal-fg-10)
-    );
+    @include drumee.typo($size: 14px, $line: 1.3, $color: var(--normal-fg));
+    font-weight: 600;
   }
 
   &__option-desc {
-    @include drumee.typo(
-      $color: var(--neutral-500),
-      $size: 8px,
-      $weight: 400,
-      $line: 11px
-    );
+    @include drumee.typo($size: 12px, $line: 1.3, $color: var(--normal-fg-20));
+    font-weight: 400;
   }
 
   /* ── Radio circle ────────────────────────────────────────── */
   &__option-circle {
     position: relative;
     flex-shrink: 0;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
     border-radius: 50%;
-    border: 2px solid rgba(0, 0, 0, 0.2);
+    border: 1.5px solid var(--border-strong);
     transition: border-color 0.15s;
 
     &::after {
@@ -288,36 +408,52 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 10px;
-      height: 10px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
-      background-color: transparent;
+      background: transparent;
       transition: background-color 0.15s;
     }
   }
 
-  /* ── Footer / submit ─────────────────────────────────────── */
-  &__footer {
-    width: 100%;
-    padding-top: 4px;
-  }
-
+  /* ── Submit ──────────────────────────────────────────────── */
+  // Full width, last row of the 24px stack — the `__footer` box it used to sit
+  // in is gone with its 4px.
+  //
+  // Always solid, never pale. The tour dims Create on the screens walking up
+  // to it; here there is nothing to walk up to and a pale button on the one
+  // control of the dialog reads as disabled. Validation is on press
+  // (_setNameError), which is why it can be.
+  //
+  // text-align alone is not enough: a Button.Label renders its copy in an
+  // inner block, and when the root lays out as flex that inner box is
+  // content-width — so the label would sit at the left edge with its text
+  // centred inside itself. Centre the box as well as the text.
+  //
+  // The label is a FIXED white, NOT `--reverse-fg` as the tour's copy of this
+  // button has it. `--reverse-fg` flips with the theme (#ffffff light,
+  // #282538 dark) and the background does not — `--primary-purple-50` is the
+  // same #433cc5 in both — so on a dark theme that token puts near-black text
+  // on brand purple at about 1.9:1. The colour has to follow the BACKGROUND,
+  // and this background is theme-invariant.
   &__submit {
     width: 100%;
-    height: 36px;
-    padding: 8px 24px;
-    border-radius: 4px;
-    @include drumee.typo($color: #fff, $size: 14px, $weight: 600, $line: 20px);
-    cursor: pointer;
-    transition: background-color 0.15s;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
+    box-sizing: border-box;
+    padding: 14px 0;
+    border-radius: 12px;
+    @include drumee.typo($size: 15px, $line: 1.2, $color: #fff);
+    font-weight: 600;
+    text-align: center;
     display: flex;
     flex-direction: row;
-    background: var(--primary-50, #433cc5);
-    align-self: stretch;
-    flex-grow: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    background: var(--primary-purple-50);
+    transition: background-color 220ms ease;
+    // Containing block for the pending spinner below.
+    position: relative;
 
     svg {
       width: 16px;
@@ -325,9 +461,47 @@
     }
 
     &:hover {
-      background-color: var(--primary-40, #5950ff);
+      background: var(--primary-purple-40);
+    }
+
+    // Waiting on the network (form/index.js stamps this while the create is in
+    // flight). The label STAYS — a spinner that replaces the word leaves the
+    // user unsure what they pressed — and the button stops taking clicks, which
+    // is the visible half of the `_pending` re-entry guard.
+    //
+    // Drawn on ::after rather than an added node, and absolutely placed rather
+    // than seated as a flex item: the pseudo-element is `display: inline` by
+    // default, where width and height simply do not apply. Pinned to the right
+    // edge so the centred label does not shift when it appears.
+    &[data-pending="1"] {
+      cursor: default;
+      pointer-events: none;
+
+      &::after {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 50%;
+        right: 18px;
+        margin-top: -8px;
+        width: 16px;
+        height: 16px;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        animation: form-folder-spin 0.7s linear infinite;
+      }
     }
   }
+}
+
+// Local, not the tour's `tutorial-spin`: @keyframes is global, and this widget's
+// stylesheet is injected only when the widget loads — borrowing a name defined
+// in another module's skin would leave the spinner unanimated on any page where
+// that skin never loaded.
+@keyframes form-folder-spin {
+  to { transform: rotate(360deg); }
 }
 
 // ── Mobile backdrop ─────────────────────────────────────────────────────

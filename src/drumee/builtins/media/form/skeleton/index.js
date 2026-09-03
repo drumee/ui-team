@@ -1,22 +1,65 @@
+/**
+ * The real Create-new-workspace dialog.
+ *
+ * Its LOOK is the tour's, deliberately. The `workspace` tour spends five
+ * screens teaching this dialog block by block
+ * (desk/tutorial/skeleton/toolkit/workspace-dialog, Figma 176:40762 →
+ * 176:41391, component 85:42209) and its last screen renders a WORKING copy of
+ * it — so a user who has just been walked through that card and then opens
+ * "+ New → Workspace" must land on the same card. It used to be a different,
+ * smaller, denser dialog: a 360px panel with a subtitle and a rule under the
+ * header, 8px type descriptions, and per-type selection tints. Every one of
+ * those differences read as a second, unrelated form.
+ *
+ * What is NOT copied from the tour is anything the tour cannot have, because
+ * it is a mock: the inline quota block, the `data-state` selection the radio
+ * behaviour drives, and the enter/exit animation (skin).
+ */
+
+// The area-tinted workspace shape — the same art the desk draws a workspace
+// with, and the same art the tour draws these three rows with. It returns an
+// HTML STRING, hence Element + content rather than Image.Svg + ico.
+//
+// It replaces three unrelated glyphs (desktop_group / desktop_sharing /
+// account_padlock) that named the three types by picture rather than showing
+// what a workspace of that type LOOKS like once it exists — which is what the
+// user will actually go looking for in the sidebar afterwards.
+const folderArt = require("media/grid/template/folder");
+
+/**
+ * The three types, in the design's order.
+ *
+ * `area` is the real area token, so each row is tinted the colour the product
+ * would give that workspace rather than one picked to match a screenshot.
+ * `name` stays the SERVICE's word for the type (team / share / personal) —
+ * libs/create-workspace branches on it and the tour keeps its own map at its
+ * own boundary.
+ *
+ * The descriptions are WS_TYPE_*_HINT, not the *_WORKSPACE_HINT keys this used
+ * to render: those hold the TOUR's callout sentences ("Restricted to only
+ * internal team"), so printing them inside the dialog says the same sentence
+ * twice on the screen where the callout is up. Same reasoning, same keys, as
+ * the tour's own rows.
+ */
 const STATUS_OPTIONS = [
   {
-    ico: "desktop_group",
+    area: _a.private,
     label: LOCALE.INTERNAL_WORKSPACE,
-    desc: LOCALE.INTERNAL_WORKSPACE_HINT,
+    desc: LOCALE.WS_TYPE_INTERNAL_HINT,
     initial: 1,
     name: "team",
   },
   {
-    ico: "desktop_sharing",
+    area: _a.share,
     label: LOCALE.EXTERNAL_WORKSPACE,
-    desc: LOCALE.EXTERNAL_WORKSPACE_HINT,
+    desc: LOCALE.WS_TYPE_EXTERNAL_HINT,
     initial: 0,
     name: "share",
   },
   {
-    ico: "account_padlock",
+    area: _a.personal,
     label: LOCALE.PERSONAL_WORKSPACE,
-    desc: LOCALE.PERSONAL_WORKSPACE_HINT,
+    desc: LOCALE.WS_TYPE_PERSONAL_HINT,
     initial: 0,
     name: "personal",
   },
@@ -39,9 +82,18 @@ function statusOption(ui, opt) {
         active: 0,
         kidsOpt: { active: 0 },
         kids: [
-          Skeletons.Image.Svg({
-            ico: opt.ico,
-            className: `${pfx}__option-ico ${opt.name}`,
+          // `isAttachment: 1` suppresses the kebab the grid puts on a real
+          // tile; `filetype: hub` is what earns the area emblem.
+          Skeletons.Element({
+            active: 0,
+            className: `${pfx}__option-ico ${opt.area}`,
+            content: folderArt({
+              area: opt.area,
+              filetype: _a.hub,
+              role: "desk",
+              widgetId: _.uniqueId("form-folder-opt-"),
+              isAttachment: 1,
+            }),
           }),
           Skeletons.Box.Y({
             className: `${pfx}__option-info`,
@@ -68,21 +120,20 @@ function statusOption(ui, opt) {
 module.exports = function (ui) {
   const pfx = ui.fig.family;
 
+  // Heading and close, nothing else.
+  //
+  // The subtitle ("Specify a name for your new organization unit.") and the
+  // hairline under it are gone: the design's header is a 24px heading and a
+  // 20px cross, and the sentence was explaining a field that is already
+  // labelled "Workspace name" one line below it. The rule mattered when the
+  // header carried two lines of copy; with one line the 24px stack gap does
+  // that job.
   const header = Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
-      Skeletons.Box.Y({
-        className: `${pfx}__header-text`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__title`,
-            content: LOCALE.CREATE_NEW_WORKSPACE,
-          }),
-          Skeletons.Note({
-            className: `${pfx}__subtitle`,
-            content: LOCALE.CREATE_NEW_WORKSPACE_HINT,
-          }),
-        ],
+      Skeletons.Note({
+        className: `${pfx}__title`,
+        content: LOCALE.CREATE_NEW_WORKSPACE,
       }),
       Skeletons.Button.Svg({
         className: `${pfx}__close`,
@@ -145,21 +196,24 @@ module.exports = function (ui) {
     ],
   });
 
-  const footer = Skeletons.Box.Y({
-    className: `${pfx}__footer`,
-    kids: [
-      Skeletons.Button.Label({
-        className: `${pfx}__submit`,
-        label: LOCALE.CREATE,
-        service: "create-folder",
-        uiHandler: [ui],
-      }),
-    ],
+  // Full-width, directly in the stack — no footer box.
+  //
+  // The wrapper existed to add 4px over the 20px stack gap; the design's gap
+  // is 24 and the button is simply the last row of it. `sys_pn` is new: the
+  // submit has to be reachable so _submit can stamp `data-pending` on it while
+  // the create is in flight (skin draws the spinner off that).
+  const submit = Skeletons.Button.Label({
+    className: `${pfx}__submit`,
+    sys_pn: "submit",
+    label: LOCALE.CREATE,
+    service: "create-folder",
+    uiHandler: [ui],
+    dataset: { pending: 0 },
   });
 
   return Skeletons.Box.Y({
     className: `${pfx}__main`,
     debug: __filename,
-    kids: [header, nameField, statusField, footer],
+    kids: [header, nameField, statusField, submit],
   });
 };

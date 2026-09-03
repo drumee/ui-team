@@ -113,7 +113,10 @@ test("row order inside a group follows the payload", () => {
 });
 
 test("the feed uses the grouper rather than its own inline split", () => {
-  const body = slice(DESK, "  async _renderWorkspaceMenu(target) {");
+  // Anchored on the name, not the full parameter list: the signature gained a
+  // `force` flag when the switcher started resyncing on workspace:refresh, and
+  // pinning the exact arguments here made an unrelated change fail this test.
+  const body = slice(DESK, "  async _renderWorkspaceMenu(");
   assert.match(body, /_groupWorkspaces\(rows\)/);
   assert.ok(!/LOCALE\.WORKSPACES,\s*hubs/.test(body), "the old two-way split is still there");
 });

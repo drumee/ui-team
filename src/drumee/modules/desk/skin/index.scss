@@ -330,6 +330,27 @@ html {
     gap: 8px;
   }
 
+  // The no-workspace screen (desk/home-empty). One layer BELOW
+  // __settings-main-slot beside it: Settings opened from an empty desk must
+  // still cover this, and the slide-out panels at 10001 stay above both.
+  //
+  // HIDDEN BY DEFAULT and revealed only by the desk root's
+  // `data-no-workspace` stamp. Deliberately NOT `:empty`: a Skeletons.Box is a
+  // Marionette CollectionView whose emptyView is LetcBlank, and LetcBlank
+  // renders its own element — so an unfed box still holds one child and is
+  // NEVER CSS-empty. Written that way it stays laid out, and with a background
+  // and a z-index that means an opaque overlay covering the open workspace.
+  // (__settings-main-slot carries exactly that rule and gets away with it only
+  // because it paints nothing and is pointer-events: none. Same trap as
+  // Skeletons.Note never being :empty because of its inner .note-content div,
+  // and as the parked-call slot earlier in this file.)
+  //
+  // Failing CLOSED is deliberate: with no stamp the worst case is no screen on
+  // an empty desk, not a desk that cannot be used.
+  &__home-empty-slot {
+    display: none;
+  }
+
   &__settings-main-slot {
     position: absolute;
     inset: 0;
@@ -676,5 +697,39 @@ html {
     // now (panel/trash skin), so 50% resolves against the viewport and the
     // wrapper can stay zero-width like every other inner — which also means
     // it no longer swallows clicks meant for the window manager.
+  }
+}
+
+// ── No workspace ─────────────────────────────────────────────────────────────
+//
+// `data-no-workspace="1"` is stamped on the desk root by
+// _openWorkspaceOrEmptyScreen. The paint and the stacking live only here, so a
+// mistake in the base rule above is cosmetic rather than a blank desk.
+.desk-module[data-no-workspace="1"] {
+  .desk-module__home-empty-slot {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    z-index: 1400;
+    isolation: isolate;
+    background: var(--normal-bg-90);
+  }
+
+  // Files / Chat / Task / Meet / Access all act on an OPEN workspace, so with
+  // none they have nothing to do. A control that looks live and does nothing is
+  // worse than one that plainly cannot.
+  //
+  // The rail's own handlers already route through _openDefaultWorkspace, which
+  // now raises this screen rather than returning false into silence — so this
+  // is the visual half of a guard that already holds.
+  .desk-module-sidebar__nav-main .desk-module-sidebar__item {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
+  }
+
+  .desk-module-topbar__actions-cluster {
+    opacity: 0.4;
+    pointer-events: none;
   }
 }

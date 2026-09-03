@@ -538,6 +538,23 @@ class __window_manager extends push {
       if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;
     }
+    // WAIT FOR THE ACCESS PANEL. Nothing below this line runs while
+    // `.permission-restricted__main` for THIS workspace is up.
+    //
+    // Guarded here, at the choke point, and not at the callers. Creating a
+    // workspace from the empty screen chains to that panel (media/form ->
+    // parent.feed) and the desk defers its own open until it closes — but the
+    // panel kept being torn out anyway, so something else calls this method
+    // after a create. The live bundle has seven call sites and inspection did
+    // not identify which; every one of them ends up here, so this is the one
+    // place a wait cannot be bypassed.
+    //
+    // Deferring the WHOLE method, not just the wrapper clear: opening the
+    // workspace also re-feeds headlessLayer, stamps the home grid away and
+    // closes the desk's panels, all of which are visible next to a panel the
+    // user is still working in.
+    if (this._deferForAccessPanel(workspace, hub_id)) return;
+
     // Hide the home grid for the WHOLE switch, starting now.
     //
     // __icons-list (the home workspace tiles) lives in a sibling layer BELOW
@@ -584,7 +601,27 @@ class __window_manager extends push {
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
         wm_unique_id: `window_folder-${hub_id}`,
       });
-      this.ensurePart("wrapper-modal").then((p) => p.clear());
+      // KEEP THIS WORKSPACE'S OWN ACCESS PANEL.
+      //
+      // This clear is what dismisses the create dialog when a workspace opens,
+      // and it is right for that. It is wrong for one case: media/form chains
+      // to `permission_restricted` in this very wrapper on a successful create,
+      // so whatever opens the new workspace next destroys the panel the user
+      // was about to invite people from. Reported as the access panel appearing
+      // and then vanishing as the workspace opened.
+      //
+      // Guarding HERE rather than at the callers because there are seven of
+      // them and the damage is the same whichever one ran — the desk defers its
+      // own open until the panel closes, and this covers every other route.
+      //
+      // Scoped to the SAME hub, deliberately: a panel bound to the workspace
+      // being opened is still about that workspace, so keeping it is coherent.
+      // Switching to a DIFFERENT workspace still clears, or the panel would be
+      // left describing a workspace nobody is looking at any more.
+      this.ensurePart("wrapper-modal").then((p) => {
+        if (this._modalHoldsAccessPanelFor(p, hub_id)) return;
+        p.clear();
+      });
       // By KIND, not by position: headlessLayer also receives every explicitly
       // launched window (a player, the Drive popup...), so children.last() is
       // whatever the user opened most recently — see Wm.folderWindowIn.
@@ -704,6 +741,208 @@ class __window_manager extends push {
    */
   _rootNid(nid) {
     return nid == null || nid === "" ? 0 : nid;
+  }
+
+  /**
+   * Hold a workspace open until this workspace's access panel is dismissed.
+   *
+   * Returns TRUE when the open was postponed, in which case the caller's
+   * loadWorkspace is a no-op and this re-invokes it once the panel goes.
+   *
+   * SCOPED TO THE SAME HUB. A panel belonging to another workspace is not a
+   * reason to hold this one back — switching away from it is a deliberate act
+   * and the existing clear handles it.
+   *
+   * BOUNDED, and only ever once per hub. `_accessHold` is what stops a
+   * re-invocation from being deferred again by the same panel and looping; the
+   * timer is what stops a panel that is never dismissed (a tab left open,
+   * a widget that fails to suppress) from stranding the desk on the empty
+   * screen forever.
+   *
+   * @param {Object} workspace the original argument, replayed verbatim
+   * @param {String} hub_id
+   * @returns {Boolean} whether the open was deferred
+   */
+  _deferForAccessPanel(workspace, hub_id) {
+    if (!hub_id) return false;
+    this._accessHold = this._accessHold || {};
+    const held = this._accessHold[hub_id];
+
+    // TWO KINDS OF REPEAT CALL, and they must not be treated alike.
+    //
+    // `replaying` is this hold's OWN re-invocation, fired once the panel has
+    // gone — it has to be let through or nothing would ever open.
+    //
+    // Anything else arriving while a hold is active is another caller racing to
+    // open the same workspace, and it must be DROPPED, not let through. Getting
+    // this wrong is the whole bug: a single ambiguous latch returned "don't
+    // defer" to that second caller, so the desk sat politely waiting for the
+    // panel while some other path opened the workspace underneath it.
+    if (held) return !held.replaying;
+
+    const p = _.isFunction(this.getPart) ? this.getPart("wrapper-modal") : null;
+    if (!this._modalHoldsAccessPanelFor(p, hub_id)) return false;
+
+    const entry = { replaying: 0 };
+    this._accessHold[hub_id] = entry;
+
+    const cleanup = () => {
+      p.collection.off("update reset", onChange);
+      if (timer) clearTimeout(timer);
+    };
+    const release = () => {
+      if (this._accessHold[hub_id] !== entry) return;
+      cleanup();
+      if (this.isDestroyed && this.isDestroyed()) {
+        delete this._accessHold[hub_id];
+        return;
+      }
+      // Marked BEFORE the replay and cleared after, so the re-entrant call
+      // this makes is recognised as the replay and every other caller in that
+      // window is still dropped.
+      entry.replaying = 1;
+      try {
+        this.loadWorkspace(workspace);
+      } finally {
+        delete this._accessHold[hub_id];
+      }
+    };
+    const onChange = () => {
+      if (this.isDestroyed && this.isDestroyed()) {
+        cleanup();
+        delete this._accessHold[hub_id];
+        return;
+      }
+      // Still showing this workspace's panel — keep waiting. Anything else in
+      // the wrapper (or an empty one) means the panel is gone.
+      if (this._modalHoldsAccessPanelFor(p, hub_id)) return;
+      release();
+    };
+    const timer = setTimeout(() => {
+      this.warn(
+        `loadWorkspace held ${hub_id} for the access panel; opening anyway`,
+      );
+      release();
+    }, 120000);
+
+    // No teardown hook to unregister in: Wm is session-lifetime and defines
+    // neither onDestroy nor onBeforeDestroy. The isDestroyed() checks in both
+    // callbacks are what covers a torn-down manager, and the timer is bounded.
+    p.collection.on("update reset", onChange);
+    return true;
+  }
+
+  /**
+   * Does the wrapper-modal currently hold the access panel for THIS hub?
+   *
+   * `permission_restricted` is what media/form chains to on a successful
+   * create, fed with the new workspace's `hub_id`. Matching on both the kind
+   * and the hub keeps the guard narrow: anything else in the wrapper (the
+   * create form itself, window_info, the invite popup) still gets cleared, and
+   * so does a panel belonging to some other workspace.
+   *
+   * @param {Object} p the wrapper-modal part
+   * @param {String} hub_id the workspace being opened
+   * @returns {Boolean}
+   */
+  _modalHoldsAccessPanelFor(p, hub_id) {
+    if (!p || !p.collection || !hub_id) return false;
+    try {
+      return p.collection.some((m) => {
+        if (!m || !_.isFunction(m.get)) return false;
+        if (m.get(_a.kind) !== "permission_restricted") return false;
+        return `${m.get(_a.hub_id)}` === `${hub_id}`;
+      });
+    } catch (e) {
+      // Never let a bookkeeping question stop a workspace from opening.
+      this.warn && this.warn("[loadWorkspace] modal inspect failed", e);
+      return false;
+    }
+  }
+
+  /**
+   * THE OPEN WORKSPACE JUST STOPPED EXISTING.
+   *
+   * Handled here, explicitly, rather than left to fall out of the pane's
+   * `once(destroy)` handler in loadWorkspace. That handler does clear
+   * `_curWorkspace`, but only if something destroys the pane — and for a long
+   * time nothing did (see removeContent in window/utils), which is how deleting
+   * a workspace left the topbar breadcrumb naming it, the wm-container showing
+   * its content, and the next page load trying to reopen it. Depending on a
+   * destroy side effect means every future way of losing a pane has to remember
+   * to trigger one; saying it outright does not.
+   *
+   * Both removals qualify: a workspace you deleted (hub.delete_hub) and one you
+   * left or were removed from (desk.leave_hub). Either way it is gone for you.
+   *
+   * WM'S OWN MODEL IS RESET TOO, and that is not housekeeping. loadWorkspace
+   * does `this.mset({hub_id, nid, ownpath, home_id, ...})`, so Wm keeps
+   * claiming to be inside a workspace after it is gone — the exact stale state
+   * that once made Wm's own removeContent match itself and call goodbye() on
+   * the desk's whole work area (its docblock records the incident). The
+   * `this === Wm` guard stops the symptom; clearing the model removes the lie.
+   *
+   * @param {String} hub_id the workspace that was removed
+   */
+  onCurrentWorkspaceRemoved(hub_id) {
+    if (!hub_id) return;
+    const cur = this._curWorkspace;
+    if (!cur || cur.hub_id != hub_id) return;
+
+    this._curWorkspace = null;
+    // A new generation invalidates any loadWorkspace still in flight for the
+    // dead hub, so its `apply()` cannot put the context back.
+    this._wsGeneration = (this._wsGeneration || 0) + 1;
+    try {
+      this.mset({
+        hub_id: null,
+        nid: null,
+        nodeId: null,
+        area: null,
+        ownpath: null,
+        home_id: null,
+        filepath: null,
+      });
+    } catch (e) {
+      this.warn && this.warn("[workspace-removed] could not reset model", e);
+    }
+
+    // Land somewhere renderable. The shell's rail (Files / Chat / Task / Meet /
+    // Access) all act on an OPEN workspace, so "no workspace" is not a state it
+    // can draw — the same reason _restoreDeskState opens a default when it has
+    // nothing to restore. Opening one also repaints the topbar breadcrumb,
+    // which is what clears the dead workspace's name from the left cluster.
+    const desk = window.Desk;
+    if (desk && _.isFunction(desk._openDefaultWorkspace)) {
+      // Deferred: the pane for the dead hub is being torn down on this same
+      // echo, and opening the next one first would have the old pane's destroy
+      // handler clear the NEW context on its way out.
+      _.defer(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this._curWorkspace) return; // something already opened one
+        // FORCED. The desk's cached workspace list still contains the hub that
+        // was just deleted, so an unforced step 1 would "find" it and try to
+        // reopen the very thing being removed.
+        desk._openDefaultWorkspace({ force: true });
+      });
+    }
+  }
+
+  /**
+   * Wm's own WS hook: notice when the workspace it is pointing at is removed,
+   * then hand on to the base handler (which drops the tile from the grid).
+   */
+  handleWsEvent(args = {}) {
+    const { data, options } = args || {};
+    const service = (options && options.service) || "";
+    if (
+      /^(hub\.delete_hub|desk\.leave_hub)$/.test(service) &&
+      data &&
+      data.hub_id
+    ) {
+      this.onCurrentWorkspaceRemoved(data.hub_id);
+    }
+    if (super.handleWsEvent) return super.handleWsEvent(args);
   }
 
   // Clear _curWorkspace only if it still points at the given workspace —
@@ -1738,6 +1977,108 @@ class __window_manager extends push {
    * NOT unselect. select() is `setState(1)` followed by `mset(opt)`, so it sets
    * state to 1 whatever it is passed. The scoped undo is `media.unselect()`.
    */
+  /**
+   * DELETE A WORKSPACE KNOWING ONLY ITS ID.
+   *
+   * confirmRemoveHub beside this needs a media VIEW — the workspace's tile in
+   * the home grid — for its filename, its attributes, its suppress() and its
+   * trash animation. That is fine when the delete starts from the grid, and it
+   * is the wrong requirement everywhere else: the switcher's ⋯ menu deletes the
+   * workspace the user currently has OPEN, and in the 2.0 shell that grid is
+   * `display: none` for the whole time a workspace is open
+   * (_syncHomeGrid → the [data-workspace="1"] rule in wm/skin), so whether its
+   * children have loaded at all is a timing question nobody should have to win.
+   *
+   * Depending on the tile is what produced "Could not delete the workspace" on
+   * a workspace that was perfectly deletable: the lookup found nothing and the
+   * caller refused rather than doing the wrong thing.
+   *
+   * SO THE TILE IS OPTIONAL HERE. `hub_id` is all the request needs, and — since
+   * removeContent now closes a window on `hub_id` + `filetype: hub` rather than
+   * on a path prefix — all the echo needs either. A tile, when there is one,
+   * only buys the animation and the optimistic removal.
+   *
+   * Everything else is confirmRemoveHub's, deliberately: the same confirm copy,
+   * the same optimistic ordering (fire the request in PARALLEL with the
+   * animation, because dropping a big workspace's database holds the response
+   * for seconds), the same local echo, and the same reload-and-explain on
+   * failure.
+   *
+   * @param {String} hub_id
+   * @param {String} [filename] for the confirm copy
+   * @param {Object} [media] the tile, when the caller has one
+   * @returns {Promise}
+   */
+  confirmRemoveWorkspace(hub_id, filename, media) {
+    return new Promise((resolve) => {
+      if (!hub_id) {
+        this.warn("confirmRemoveWorkspace: no hub_id");
+        return resolve({ error: "no hub_id" });
+      }
+      const tile =
+        media && !(media.isDestroyed && media.isDestroyed()) ? media : null;
+      this.ensurePart("wrapper-modal").then(async (p) => {
+        await Kind.waitFor("window_confirm");
+        p.feed({
+          kind: "window_confirm",
+          maxsize: 2,
+          title: LOCALE.DELETE,
+          message: LOCALE.MSG_DELETE_HUB.format(
+            filename || (tile && tile.mget(_a.filename)) || "",
+          ),
+          confirm: LOCALE.DELETE,
+        })
+          .ask()
+          .then(() => {
+            // Full node attrs when a tile can supply them, so any window
+            // matching on filepath still recognises itself. Without one the
+            // four fields below are enough — see removeContent's hub branch.
+            const echoData = {
+              ...(tile ? tile.getAttr() : {}),
+              hub_id,
+              home_id: hub_id,
+              nid: hub_id,
+              filetype: _a.hub,
+            };
+            const request = this.postService({
+              service: SERVICE.hub.delete_hub,
+              hub_id,
+            });
+            // No tile, no animation to wait for — but the echo must still be
+            // deferred the same way, so resolve immediately instead.
+            const animation = tile
+              ? this.animateMediaToTrash(tile).catch(() => { })
+              : Promise.resolve();
+            animation.then(() => {
+              if (tile && _.isFunction(tile.suppress)) tile.suppress();
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "hub.delete_hub" },
+              });
+            });
+            request
+              .then((data) => {
+                // A failed request resolves UNDEFINED (doRequest swallows the
+                // throw via onServerComplain) — treat no-data as failure too.
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                await animation;
+                this.warn(`delete_hub failed for ${hub_id}`, e);
+                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
+            p.clear();
+          })
+          .catch(() => resolve({}));
+      });
+    });
+  }
+
   confirmRemoveHub(media) {
     return new Promise((resolve, reject) => {
       this.ensurePart("wrapper-modal").then(async (p) => {
