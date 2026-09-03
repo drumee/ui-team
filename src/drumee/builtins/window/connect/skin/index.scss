@@ -471,6 +471,37 @@
     padding: var(--spacer-4);
   }
 
+  // ── Self-view while a screen is shared ──────────────────────────────────
+  // The shared shell docks the participant tiles into __float-tiles and pins
+  // that overlay to the bottom-right of __body (right/bottom: 16px). In the
+  // team meeting the controls live in the TOP bar, so that corner is free —
+  // but the 1:1 call keeps its controls in a ~166px bar at the bottom of the
+  // very same __body, so the 248px tile's box landed entirely INSIDE that bar,
+  // right over the hang-up button (Lexis' screenshot, 2026-09-03).
+  //
+  // Take the tile out of the absolute layer and let it FLOW between the stage
+  // and the control bar, pulled back up over the stage by its own height. It
+  // then sits bottom-right of the VIDEO STAGE whatever the control bar ends up
+  // measuring — no bar-height constant to keep in sync — and it is shrunk to a
+  // 176px thumbnail so it also covers less of the shared screen.
+  //
+  // Margins: -(height + 16) on top and +16 on the bottom, so the tile adds
+  // nothing to the column's height and its bottom edge stops 16px above the
+  // control bar. The height is written out rather than left to the inherited
+  // `aspect-ratio` so that arithmetic stays readable (176x99 is exactly 16:9).
+  // z-index (99999, inherited) still lifts it over the shared screen.
+  &__main--call &__float-tiles {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    align-self: flex-end;
+    flex: none;
+    width: 176px;
+    height: 99px;
+    max-height: none;
+    margin: -115px var(--spacer-5) var(--spacer-5) 0;
+  }
+
   .participants-manager__ui {
     background-color: #ffffff;
 
@@ -604,6 +635,14 @@
     .window-connect__commands-container[data-mode="in-call"] {
       padding: var(--spacer-4) var(--spacer-5) var(--spacer-6);
       gap: var(--spacer-6);
+    }
+
+    // Keep the shrunk self-view proportional on a small window (see the base
+    // rule above for the margin arithmetic: -(height + 12) / +12).
+    .window-connect__float-tiles {
+      width: 144px;
+      height: 81px;
+      margin: -93px var(--spacer-4) var(--spacer-4) 0;
     }
   }
 
