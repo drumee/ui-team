@@ -121,12 +121,17 @@ const TOURS = {
     steps: [{ kind: "tutorial_migrate", screens: 3, chrome: { rail: "files", crumb: true } }],
   },
 
-  // Reachable only from the `full` tour: no contextual trigger, no flag, and
-  // therefore never suppressed and never recorded.
+  // Contextual, on the first press of Meet in the rail (desk/index.js,
+  // case "rail-meet"). It was reachable only from `full`, which meant the one
+  // tour about meetings never ran for anyone who did not ask for the whole
+  // product tour.
+  //
+  // Flagged, so it is suppressed once seen and recorded server-side — which is
+  // why the WIRE CONTRACT at the top of this file has four sites and not two.
   meeting: {
     id: "meeting",
-    flag: null,
-    steps: [{ kind: "tutorial_meeting", screens: 3, chrome: { rail: "meet", crumb: true } }],
+    flag: "meeting",
+    steps: [{ kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet", crumb: true } }],
   },
 
   // Everything, in product order. Run by ?tutorial=1 and by Get help ->
@@ -141,7 +146,7 @@ const TOURS = {
       // workspaces and asked to see the product, not to make another one.
       { kind: "tutorial_workspace", screens: 6, chrome: { rail: null, crumb: false } },
       { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat", crumb: true } },
-      { kind: "tutorial_meeting", screens: 3, chrome: { rail: "meet", crumb: true } },
+      { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet", crumb: true } },
       { kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } },
       { kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } },
       { kind: "tutorial_migrate", screens: 3, chrome: { rail: "files", crumb: true } },

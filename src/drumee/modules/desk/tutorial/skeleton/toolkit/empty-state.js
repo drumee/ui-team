@@ -96,14 +96,21 @@ const card = (p, item, variant) =>
  * @param {String} opt.title   headline; newlines become separate lines
  * @param {String} opt.desc
  * @param {String} opt.cta     the primary button's label
+ * @param {Object} [opt.arrow_service] `{prev, next}` — makes the two caption
+ *   arrows controls raising these services at `ui`, so they drive the track the
+ *   way the timer does. Omit and they stay the drawing the frames show.
  * @param {String} [opt.cta_service] makes the CTA a control that raises this
  *   service at `ui` instead of inert scenery. Omit and it stays a drawing —
  *   which is what the tours that merely POINT at it want.
  * @param {Array}  [opt.items] carousel cards
  * @param {Number} [opt.index=0] which card the track is scrolled to
  * @param {Boolean} [opt.dots]   draw the dot row under the track (Task)
- * @param {Object} [opt.caption] `{ico, title, desc}` under the track (Meet),
- *   taken from the CURRENT item so it changes as the track slides
+ * @param {Object|Array} [opt.caption] `{ico, title, desc}` under the track
+ *   (Meet). Pass an ARRAY, one per item, when the track moves on its own: the
+ *   caption names the card, so it has to change with it, and a step that slides
+ *   the track in place cannot rebuild a single caption without rebuilding the
+ *   track too. All of them are rendered and the active one is shown, the same
+ *   way the dot row marks its position — see `es-captions` below.
  * @param {String} [opt.hero='wide'] headline column width
  * @param {String} [opt.card='view'] card geometry: 'view' (square plate under
  *   a title) or 'wide' (a landscape screenshot, captioned outside the track)
@@ -112,6 +119,10 @@ function emptyState(ui, opt = {}) {
   const p = pfx(ui);
   const { items = [], index = 0, dots = false, caption, hero = "wide", card: variant = "view" } = opt;
   const at = Math.max(0, Math.min(items.length - 1, ~~index));
+  // One caller passes a single caption, one passes the whole set. Normalised
+  // here so the render below has one shape to draw.
+  const captions = caption ? (Array.isArray(caption) ? caption : [caption]) : null;
+  const arrowService = opt.arrow_service;
   const pitch = PITCH[variant] || PITCH.view;
   const lines = titleLines(opt.title);
 
@@ -201,27 +212,73 @@ function emptyState(ui, opt = {}) {
             ],
           }),
 
-          caption
+          captions
             ? Skeletons.Box.X({ active: 0,
                 className: `${p}-caption`,
                 kids: [
+                  // One row per card, all built, only the active one shown.
+                  //
+                  // Not one row whose text is rewritten: the icon is an
+                  // Image.Svg, and changing its glyph means rebuilding that
+                  // widget — which is a re-render, which rebuilds the track and
+                  // loses the slide. Flipping an attribute costs nothing and
+                  // cannot fight the transition.
                   Skeletons.Box.Y({ active: 0,
-                    className: `${p}-caption-ico`,
-                    kids: [
-                      Skeletons.Image.Svg({ active: 0, ico: caption.ico, className: `${p}-caption-glyph` }),
-                    ],
+                    className: `${p}-caption-deck`,
+                    sys_pn: "es-captions",
+                    partHandler: ui,
+                    kids: captions.map((c, i) =>
+                      Skeletons.Box.X({ active: 0,
+                        className: `${p}-caption-item`,
+                        dataset: { on: i === at ? 1 : 0 },
+                        attrOpt: { "data-on": i === at ? 1 : 0 },
+                        kids: [
+                          Skeletons.Box.Y({ active: 0,
+                            className: `${p}-caption-ico`,
+                            kids: [
+                              Skeletons.Image.Svg({ active: 0, ico: c.ico, className: `${p}-caption-glyph` }),
+                            ],
+                          }),
+                          Skeletons.Box.Y({ active: 0,
+                            className: `${p}-caption-text`,
+                            kids: [
+                              Skeletons.Note({ active: 0, className: `${p}-caption-title`, content: c.title }),
+                              Skeletons.Note({ active: 0, className: `${p}-caption-desc`, content: c.desc }),
+                            ],
+                          }),
+                        ],
+                      }),
+                    ),
                   }),
-                  Skeletons.Box.Y({ active: 0,
-                    className: `${p}-caption-text`,
-                    kids: [
-                      Skeletons.Note({ active: 0, className: `${p}-caption-title`, content: caption.title }),
-                      Skeletons.Note({ active: 0, className: `${p}-caption-desc`, content: caption.desc }),
-                    ],
-                  }),
+                  // The arrows drive the same track the timer does, so they
+                  // are opt-in the way the CTA is: a step that only POINTS at
+                  // this row wants them inert, and one that runs the carousel
+                  // wants them working. `active: 0` and a service are mutually
+                  // exclusive — ui-core binds an onclick only to a widget that
+                  // is not inert — hence the branch rather than an extra flag.
+                  // The glyph inside stays inert either way, so the click lands
+                  // on the button and not on the icon.
                   Skeletons.Box.X({ active: 0,
                     className: `${p}-arrows`,
-                    kids: ["arrow-left", "arrow-right"].map((ico) =>
-                      Skeletons.Box.Y({ active: 0,
+                    // Chevrons despite the name — 9x16, no circle of their own,
+                    // so they sit inside the button's circle rather than
+                    // drawing a second one. They also replace a mismatched
+                    // pair: `arrow-left` was a 40x22 long arrow and
+                    // `arrow-right` a 16x14 one, so the two sides of the same
+                    // control rendered at different weights in a square box.
+                    kids: [["app-circle-arrow-left", "prev"], ["app-circle-arrow-right", "next"]].map(([ico, way]) =>
+                      Skeletons.Box.Y({
+                        ...(arrowService && arrowService[way]
+                          ? {
+                              service: arrowService[way],
+                              uiHandler: [ui],
+                              // Same stamp the CTA carries, from the same flag
+                              // that makes it clickable, so the skin cannot
+                              // disagree with what is actually bound.
+                              dataset: { live: 1 },
+                              attrOpt: { "data-live": 1 },
+                            }
+                          : { active: 0 }),
                         className: `${p}-arrow`,
                         kids: [Skeletons.Image.Svg({ active: 0, ico, className: `${p}-arrow-glyph` })],
                       }),

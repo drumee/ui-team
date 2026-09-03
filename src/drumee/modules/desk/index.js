@@ -5001,8 +5001,26 @@ class desk_module extends LetcBox {
         if (_hasWs) require("libs/tutorial-tours").fire("folder_task", this);
         return _res;
       }
-      case "rail-meet":
-        return this._railTab("meeting");
+      case "rail-meet": {
+        // Resolved BEFORE the tab is shown, for the same reason as rail-task:
+        // _railTab falls back to loadHome() with no workspace open, and a
+        // meeting tour over the home grid explains a screen the user is not on.
+        const _hasWs = !!this._activeWorkspace();
+        const _res = this._railTab("meeting");
+        // Contextual tour, on the first press of Meet in the rail.
+        //
+        // Until now `meeting` had no contextual trigger at all — it was
+        // reachable only from the full product tour, so the one tour about
+        // meetings never ran for anyone who did not ask for that. This is the
+        // gesture it is about.
+        //
+        // Raised AFTER showFolderTab so the tour can never swallow the
+        // navigation. Nothing is remembered here: the kill switch, the mobile
+        // check, the account-scoped once-ever seen-set and single-flight all
+        // live in libs/tutorial-tours.
+        if (_hasWs) require("libs/tutorial-tours").fire("meeting", this);
+        return _res;
+      }
       // The rail's Access and the switcher header's link icon do the identical
       // thing — hand `folder-manage-access` to the active workspace window,
       // which routes an external workspace to the secure-share panel. Two
