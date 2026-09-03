@@ -153,6 +153,25 @@ function createHub(host, type, filename, opt) {
         return { ok: false, message: LOCALE.TRY_AGAIN };
       }
 
+      // A THIRD refusal shape, and the one that reaches the browser when the
+      // hubs factory has fallen over: `desk.create_hub` answers a bare
+      // `{status: "CREATION_FAILED"}` whenever its `_createHub` came back
+      // without a hub id. It carries no `failed`, no `reason` and no `error`,
+      // so it used to land in the "no hub id" branch below and be reported as
+      // a malformed success. The server-side reason is in the endpoint log —
+      // "Pool <area> is empty. Considerer runing factory" means no prebuilt
+      // entity was left in the pool for this area, which no retry and no
+      // different name will fix.
+      if (hub.status === "CREATION_FAILED") {
+        if (host && host.warn) {
+          host.warn(
+            "create_hub answered CREATION_FAILED — the server could not " +
+            "allocate a hub (check the hubs factory and the entity pool)",
+          );
+        }
+        return { ok: false, message: LOCALE.TRY_AGAIN };
+      }
+
       // desk.create_hub can also resolve with an in-band error payload instead
       // of rejecting.
       if (hub.error || hub.error_code) {
