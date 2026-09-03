@@ -55,17 +55,23 @@ function slice(src, header) {
 
 // ── the vocabulary ──────────────────────────────────────────────────────────
 
+// In the order Lexis' menu shows them (Figma). `workspaceAccess` is gone: the
+// header's chain icon and the rail's Access already cover managing access, so a
+// third entry point here only duplicated one of them.
+//
+// Some rows raise a lex constant rather than a quoted string, because that is
+// how window_folder writes the case it already handles — `case _e.download:`
+// and `case _a.info:`. Both are the same service at runtime (`_a`/`_e` are
+// createSafeObject proxies, so an undefined key returns its own name), so both
+// spellings are accepted below.
 const WS_ITEMS = {
-  workspaceAccess: "folder-manage-access",
-  // Raised as `_e.download`, not as a quoted string, because that is how
-  // window_folder writes the case it already handles (`case _e.download:` →
-  // runFolderMediaAction → target.download()). The two forms are the same
-  // service at runtime — `_e` is a createSafeObject proxy, so an undefined key
-  // returns its own name — so both spellings are accepted below.
   workspaceDownload: "download",
-  workspaceRename: "folder-rename",
   workspaceDuplicate: "folder-duplicate",
-  workspaceOrganize: "folder-organize",
+  workspaceRename: "folder-rename",
+  // Still `folder-organize`: only the LABEL changed to Move. The behaviour was
+  // always prepareFolderMove → target.move().
+  workspaceMove: "folder-organize",
+  workspaceGetInfo: "info",
   workspaceDelete: "folder-delete",
 };
 
@@ -74,9 +80,9 @@ test("each workspace row raises the service the window already handles", () => {
   for (const [key, service] of Object.entries(WS_ITEMS)) {
     const row = ITEMS.match(new RegExp(`${key}\\s*:\\s*button\\(\\{[^}]*\\}\\)`));
     assert.ok(row, `items.js has no \`${key}\``);
-    assert.match(row[0], new RegExp(`service:\\s*(?:['"]${service}['"]|_e\\.${service})`),
+    assert.match(row[0], new RegExp(`service:\\s*(?:['"]${service}['"]|_[ae]\\.${service})`),
       `${key} must raise ${service}`);
-    assert.match(FOLDER, new RegExp(`case\\s+(?:"${service}"|_e\\.${service})\\s*:`),
+    assert.match(FOLDER, new RegExp(`case\\s+(?:"${service}"|_[ae]\\.${service})\\s*:`),
       `window_folder does not handle ${service} — the row would be inert`);
   }
 });
@@ -223,7 +229,55 @@ test("a non-admin keeps write actions but loses rename and delete", () => {
   const s = labels(run({ win: fakeWin(), mayWrite: true, mayManage: false }));
   assert.ok(!s.includes("folder-rename"));
   assert.ok(!s.includes("folder-delete"));
-  assert.ok(s.includes("folder-manage-access"), "write is enough to manage access");
+  // Move is the write action left to them — Manage access is no longer in this
+  // menu at all, so this used to be the row that proved write was enough.
+  assert.ok(s.includes("folder-organize"), "write is enough to move the workspace");
+});
+
+// ── Lexis' menu, as designed (Figma wd3) ────────────────────────────────────
+
+test("the rows are in the order the design shows, in three groups", () => {
+  const r = rows(run({ win: fakeWin(), mayWrite: true, mayManage: true }));
+  assert.deepEqual(r, [
+    "workspaceDownload",
+    "workspaceDuplicate",
+    "workspaceRename",
+    "separator",
+    "workspaceMove",
+    "separator",
+    "workspaceGetInfo",
+    "workspaceDelete",
+  ], "the menu no longer matches Lexis' Figma");
+});
+
+test("Manage access is gone from this menu", () => {
+  // It has two better homes: the header's chain icon (external → link builder)
+  // and the rail's Access (every workspace → permissions matrix). A third copy
+  // here duplicated one of them, and for an internal workspace it opened the
+  // panel the rail already opens.
+  for (const gates of [
+    { mayWrite: true, mayManage: true },
+    { mayWrite: true, mayManage: false },
+    { mayWrite: false, mayManage: false },
+  ]) {
+    const s = labels(run({ win: fakeWin(), ...gates }));
+    assert.ok(!s.includes("folder-manage-access"),
+      `manage access came back at ${JSON.stringify(gates)}`);
+  }
+  assert.doesNotMatch(ITEMS, /workspaceAccess\s*:/,
+    "the unused row should go with it, not linger as dead vocabulary");
+});
+
+test("Get info is ungated, and reads the workspace's own info", () => {
+  // media.info on the open window's hub_id/nid — no privilege beyond seeing the
+  // workspace, so every role keeps it.
+  for (const gates of [
+    { mayWrite: true, mayManage: true },
+    { mayWrite: false, mayManage: false, mayDownload: false },
+  ]) {
+    const s = labels(run({ win: fakeWin(), ...gates }));
+    assert.ok(s.includes("info"), `Get info vanished at ${JSON.stringify(gates)}`);
+  }
 });
 
 test("an admin sees the whole set", () => {
@@ -312,11 +366,11 @@ test("every workspace row carries an icon and the delete row reads destructive",
   const ICONS = read("src/drumee/builtins/contextmenu/skeleton/icons.js");
   const CLASSES = read("src/drumee/builtins/contextmenu/skeleton/classes.js");
   const expect = {
-    workspaceAccess: "ctxmenu-share",
     workspaceDownload: "ctxmenu-download",
-    workspaceRename: "ctxmenu-rename",
     workspaceDuplicate: "ctxmenu-copy",
-    workspaceOrganize: "ctxmenu-organize",
+    workspaceRename: "ctxmenu-rename",
+    workspaceMove: "apps-arrow-down-right",
+    workspaceGetInfo: "ctxmenu-info",
     workspaceDelete: "ctxmenu-delete",
   };
   const SPRITE = read("icons/sprites/normalized.sprite.svg");

@@ -2116,16 +2116,31 @@ class desk_module extends LetcBox {
     // it — the reason this is not just a flat array with "separator" in it.
     const item = require("builtins/contextmenu/skeleton/items");
     const sections = [
-      // Download leads, and in a section of its own — not folded in with
-      // Rename/Duplicate — because it is the one row here gated on the DOWNLOAD
-      // bit rather than on write/admin. Sharing their section would silently
-      // re-gate it on `mayManage` and hide it from a view-only member, who is
-      // precisely the person for whom taking a copy is the only useful action.
-      mayDownload ? ["workspaceDownload"] : [],
-      mayManage ? ["workspaceRename", "workspaceDuplicate"] : [],
-      mayWrite ? ["workspaceOrganize"] : [],
-      mayWrite ? ["workspaceAccess"] : [],
-      mayManage ? ["workspaceDelete"] : [],
+      // Lexis' menu (Figma): Download / Make a copy / Rename, then Move, then
+      // Get info + Move to trash.
+      //
+      // Each row keeps its OWN gate even where the design groups them: the
+      // section is concatenated from what each gate allows, so a member who may
+      // only download still gets a one-row group rather than an empty one, and
+      // Download is never silently re-gated on `mayManage` by sharing a section
+      // with Rename — it answers the DOWNLOAD bit, which a view-only member
+      // holds and for whom taking a copy is the only useful action.
+      [
+        ...(mayDownload ? ["workspaceDownload"] : []),
+        ...(mayManage ? ["workspaceDuplicate", "workspaceRename"] : []),
+      ],
+      mayWrite ? ["workspaceMove"] : [],
+      // Manage access is deliberately NOT here any more: the workspace header's
+      // chain icon opens the link builder for an external workspace, and the
+      // rail's Access opens the permissions matrix for every workspace, so a
+      // third entry point in this menu only duplicated one of them.
+      //
+      // Get info is ungated — it reads media.info for the workspace the viewer
+      // already has open, so anyone who can see this menu may see it.
+      [
+        "workspaceGetInfo",
+        ...(mayManage ? ["workspaceDelete"] : []),
+      ],
     ].filter((s) => s.length);
 
     const keys = [];

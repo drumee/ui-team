@@ -307,8 +307,6 @@ const __button = function (ui, trigger, k) {
     // `folder-*` ones, which act on the WORKSPACE rather than on a selection
     // inside it, and which window_folder already implements — so a menu built
     // from these needs no new handler anywhere.
-    workspaceAccess: button({ content: LOCALE.MANAGE_ACCESS, service: 'folder-manage-access' }),
-
     // `_e.download`, not a `folder-*` service: window_folder already routes it
     // through runFolderMediaAction → target.download(), which is the very row
     // the folder Settings panel used to carry. That panel is no longer the
@@ -317,13 +315,25 @@ const __button = function (ui, trigger, k) {
     // anywhere.
     workspaceDownload: button({ content: LOCALE.DOWNLOAD, service: _e.download }),
 
+    workspaceDuplicate: button({ content: LOCALE.MAKE_A_COPY, service: 'folder-duplicate' }),
+
     workspaceRename: button({ content: LOCALE.RENAME, service: 'folder-rename' }),
 
-    workspaceDuplicate: button({ content: LOCALE.DUPLICATE, service: 'folder-duplicate' }),
+    // "Move", not "Organize" — the label was the odd one out, never the
+    // behaviour: `folder-organize` has always ended in prepareFolderMove →
+    // target.move(). Lexis' menu (Figma) names it what it does. The service is
+    // unchanged because it is the WORKSPACE-scoped move; the generic `move`
+    // item beside it raises 'move', which window_folder does not handle — that
+    // one acts on a selection inside a folder, not on the folder itself.
+    workspaceMove: button({ content: LOCALE.MOVE, service: 'folder-organize' }),
 
-    workspaceOrganize: button({ content: LOCALE.ORGANIZE, service: 'folder-organize' }),
+    // `_a.info` — window_folder already answers it with showInfo(), which
+    // fetches media.info for THIS window's hub_id/nid, i.e. the workspace.
+    // Not the generic `info` row beside it: that one raises `_e.settings` with
+    // `type: _a.info`, which on a workspace window opens folder Settings.
+    workspaceGetInfo: button({ content: LOCALE.GET_INFO, service: _a.info }),
 
-    workspaceDelete: button({ content: LOCALE.DELETE, service: 'folder-delete' })
+    workspaceDelete: button({ content: LOCALE.MOVE_TO_TRASH, service: 'folder-delete' })
 
   };
 
