@@ -2106,49 +2106,44 @@ class desk_module extends LetcBox {
     const dialog = window.drumeeDialog;
     if (!dialog || (dialog.isDestroyed && dialog.isDestroyed())) return;
 
-    const mayWrite = this._curWorkspaceCanWrite();
-    const mayManage = this._curWorkspaceCanManage();
-    const mayDownload = this._curWorkspaceCanDownload();
-    // Sectioned like the folder menu it sits beside (media/core
-    // contextmenuItemsForFolder): content actions, then organize, then access,
-    // and the destructive one last on its own. Built as a list of sections so a
-    // gate emptying one cannot leave a separator with nothing on one side of
-    // it — the reason this is not just a flat array with "separator" in it.
-    const item = require("builtins/contextmenu/skeleton/items");
-    const sections = [
-      // Lexis' menu (Figma): Download / Make a copy / Rename, then Move, then
-      // Get info + Move to trash.
-      //
-      // Each row keeps its OWN gate even where the design groups them: the
-      // section is concatenated from what each gate allows, so a member who may
-      // only download still gets a one-row group rather than an empty one, and
-      // Download is never silently re-gated on `mayManage` by sharing a section
-      // with Rename — it answers the DOWNLOAD bit, which a view-only member
-      // holds and for whom taking a copy is the only useful action.
-      [
-        ...(mayDownload ? ["workspaceDownload"] : []),
-        ...(mayManage ? ["workspaceDuplicate", "workspaceRename"] : []),
-      ],
-      mayWrite ? ["workspaceMove"] : [],
-      // Manage access is deliberately NOT here any more: the workspace header's
-      // chain icon opens the link builder for an external workspace, and the
-      // rail's Access opens the permissions matrix for every workspace, so a
-      // third entry point in this menu only duplicated one of them.
-      //
-      // Get info is ungated — it reads media.info for the workspace the viewer
-      // already has open, so anyone who can see this menu may see it.
-      [
-        "workspaceGetInfo",
-        ...(mayManage ? ["workspaceDelete"] : []),
-      ],
-    ].filter((s) => s.length);
+    // Act on the workspace's MEDIA item, never on the pane.
+    //
+    // loadWorkspace() feeds window_folder with no `media` and no `trigger`, so
+    // getFolderActionTarget() falls back to the window — which is scoped to the
+    // workspace's ROOT FOLDER (its own nid, pid "0", no filename) and is not a
+    // media widget at all: no move(), no trash(), no delete(). Every row of this
+    // menu was inert for that reason, and Download threw outright because
+    // ui-core's download() calls filename.replace() unguarded.
+    //
+    // The media widget is the object the folder context menu has always acted
+    // on, and it carries the HUB node: real nid, real pid, real filename.
+    const media = this._workspaceMediaItem(w.mget && w.mget(_a.hub_id));
+    const target = media || w;
 
-    const keys = [];
-    sections.forEach((s, i) => {
-      if (i) keys.push("separator");
-      keys.push(...s);
-    });
-    const kids = keys.map((k) => item(w, cmd, k)).filter(Boolean);
+    // Rows come from the canonical builder (media/core.js
+    // contextmenuItemsForFolder, "Sectioned Folder menu spec 2026-06-10") —
+    // the same list the grid's right-click menu renders, already privilege-
+    // gated and already carrying the labels Lexis asked for: makeACopy is
+    // "Make a copy", trash is "Move to trash", info is "Get info".
+    //
+    // Building a parallel vocabulary here is what broke this menu once: those
+    // rows duplicated items that already existed and raised services the pane
+    // could not answer.
+    const item = require("builtins/contextmenu/skeleton/items");
+    const keys = media && _.isFunction(media.contextmenuItemsForFolder)
+      // Lexis' menu (Figma wd3) shows Move as a FLAT row. `organize` is the
+      // submenu that wraps Move + "Link to task tracker" (items.js). Swapped
+      // here only — the grid's own menu keeps its submenu untouched.
+      ? media.contextmenuItemsForFolder().map((k) => (k === "organize" ? "move" : k))
+      : [];
+
+    // No media item resolved (the home grid has not been fed yet). Every row
+    // would be inert, and a menu whose rows do nothing is the bug this replaced
+    // — so show nothing and let the next click, by which time the grid is up,
+    // open a working one.
+    if (!keys.length) return;
+
+    const kids = keys.map((k) => item(target, cmd, k)).filter(Boolean);
     if (_.isEmpty(kids)) return;
 
     const rect = cmd && cmd.el && _.isFunction(cmd.el.getBoundingClientRect)
@@ -2158,7 +2153,7 @@ class desk_module extends LetcBox {
       Skeletons.Box.Y({
         volatility: 4,
         className: "drumee-contextmenu desk-module-topbar",
-        uiHandler: [w],
+        uiHandler: [target],
         kids,
         style: {
           left: rect.right + (window.scrollX || 0),
@@ -2460,25 +2455,35 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * May the viewer download the workspace they are currently in?
+   * The MEDIA widget for a workspace — the object the folder context menu has
+   * always acted on, and the one that carries the HUB node (real nid, real pid,
+   * real filename) plus move() / trash() / delete() / download().
    *
-   * Same resolution and same fail-open posture as the two above. It asks
-   * canDownload() rather than canUpload()/canAdmin() deliberately: downloading
-   * is granted by the DOWNLOAD bit, which a view-only member can hold. Gating
-   * the row on write would hide it from exactly the people whose only useful
-   * action on a workspace is taking a copy of it — and it is the same test the
-   * folder Settings panel used for its own Download row (allowedActions in
-   * window/folder/skeleton/settings-action-panel.js).
+   * Read from the home grid (`__icons-list`, wm/skeleton/index.js), which is fed
+   * `kind: "media"` rows from desk.home and stays mounted BELOW the headless
+   * layer — so it still resolves while a workspace pane is open.
+   *
+   * Deliberately NOT the pane: loadWorkspace() feeds window_folder without
+   * `media`/`trigger`, so the pane answers for the workspace's root FOLDER and
+   * implements none of those methods. Returns null rather than throwing; the
+   * caller shows no menu in that case, because every row would be inert.
    */
-  _curWorkspaceCanDownload() {
+  _workspaceMediaItem(hub_id) {
     try {
-      const ws = (window.Wm && Wm._curWorkspace) || null;
-      if (!ws || !ws.hub_id) return true;
-      const win = Wm._findWorkspaceWindow && Wm._findWorkspaceWindow(ws.hub_id);
-      if (!win || typeof win.canDownload !== "function") return true;
-      return !!win.canDownload();
+      if (!hub_id || typeof Wm === "undefined") return null;
+      const list = Wm.getPart && Wm.getPart(_a.list);
+      const kids = list && list.children ? list.children.toArray() : [];
+      return (
+        kids.find(
+          (k) =>
+            k &&
+            !(k.isDestroyed && k.isDestroyed()) &&
+            _.isFunction(k.mget) &&
+            String(k.mget(_a.hub_id)) === String(hub_id),
+        ) || null
+      );
     } catch (e) {
-      return true;
+      return null;
     }
   }
 

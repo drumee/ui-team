@@ -57,18 +57,6 @@ const __icon = function (_ui_) {
 
     // Workspace rows (topbar switcher ⋯). Same ctxmenu-* glyphs the folder
     // menu uses for the equivalent action, so the two panels read alike.
-    // Listed in the order Lexis' menu shows them.
-    workspaceDownload: "ctxmenu-download",
-    workspaceDuplicate: "ctxmenu-copy",
-    workspaceRename: "ctxmenu-rename",
-    // ⚠️ PLACEHOLDER GLYPH. The design's Move icon is an arrow leaving a corner
-    // bracket, which the sprite does not have — the nearest it holds is this
-    // bare diagonal arrow (unused elsewhere, so nothing else changes meaning).
-    // Export the real one from Lexis' Figma into icons/src/normalized/ and run
-    // `npm run build:icons` to finish it.
-    workspaceMove: "apps-arrow-down-right",
-    workspaceGetInfo: "ctxmenu-info",
-    workspaceDelete: "ctxmenu-delete",
   };
   if (localStorage.getItem("showHidden")) {
     a.showHidden = "backoffice_preview";

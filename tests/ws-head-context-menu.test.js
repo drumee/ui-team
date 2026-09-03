@@ -55,42 +55,62 @@ function slice(src, header) {
 
 // ── the vocabulary ──────────────────────────────────────────────────────────
 
-// In the order Lexis' menu shows them (Figma). `workspaceAccess` is gone: the
-// header's chain icon and the rail's Access already cover managing access, so a
-// third entry point here only duplicated one of them.
+// The rows are the CANONICAL folder-menu vocabulary (items.js) — the same keys
+// media/core.js contextmenuItemsForFolder() returns for the grid's right-click
+// menu. This menu no longer carries a parallel `workspace*` set: those rows
+// duplicated these, and raised `folder-*` services at the workspace PANE, which
+// implements none of the actions.
 //
-// Some rows raise a lex constant rather than a quoted string, because that is
-// how window_folder writes the case it already handles — `case _e.download:`
-// and `case _a.info:`. Both are the same service at runtime (`_a`/`_e` are
-// createSafeObject proxies, so an undefined key returns its own name), so both
-// spellings are accepted below.
+// `_e`/`_a` are createSafeObject proxies at runtime (an undefined key returns
+// its own name), so `_e.download === "download"`; both spellings are accepted.
 const WS_ITEMS = {
-  workspaceDownload: "download",
-  workspaceDuplicate: "folder-duplicate",
-  workspaceRename: "folder-rename",
-  // Still `folder-organize`: only the LABEL changed to Move. The behaviour was
-  // always prepareFolderMove → target.move().
-  workspaceMove: "folder-organize",
-  workspaceGetInfo: "info",
-  workspaceDelete: "folder-delete",
+  download: "download",
+  makeACopy: "duplicate",
+  rename: "direct-rename",
+  move: "move",
+  info: "settings",
+  trash: "remove",
 };
 
-test("each workspace row raises the service the window already handles", () => {
-  const FOLDER = read("src/drumee/builtins/window/folder/index.js");
+test("every row is a real item, and something implements it", () => {
+  // The MEDIA item is the handler now, not window_folder — that swap is the
+  // whole fix, so the implementations are asserted where they actually live.
+  const MEDIA = read("src/drumee/builtins/media/core.js")
+    + read("src/drumee/builtins/media/interact.js");
   for (const [key, service] of Object.entries(WS_ITEMS)) {
-    const row = ITEMS.match(new RegExp(`${key}\\s*:\\s*button\\(\\{[^}]*\\}\\)`));
+    const row = ITEMS.match(new RegExp(`\\b${key}\\s*:\\s*(button\\(|Skeletons\\.)`));
     assert.ok(row, `items.js has no \`${key}\``);
-    assert.match(row[0], new RegExp(`service:\\s*(?:['"]${service}['"]|_[ae]\\.${service})`),
-      `${key} must raise ${service}`);
-    assert.match(FOLDER, new RegExp(`case\\s+(?:"${service}"|_[ae]\\.${service})\\s*:`),
-      `window_folder does not handle ${service} — the row would be inert`);
+    assert.match(
+      MEDIA,
+      new RegExp(`(case\\s+(?:['"]${service}['"]|_[ae]\\.${service})\\s*:)|(^\\s{2}${service}\\s*\\()`, "m"),
+      `the media item does not handle ${service} — the row would be inert`,
+    );
   }
+});
+
+test("the parallel workspace* vocabulary is gone", () => {
+  // It shipped once and every row of it was inert. Re-adding one is the
+  // regression this guards: the canonical items already carry Lexis' labels.
+  assert.doesNotMatch(ITEMS, /workspace(Download|Duplicate|Rename|Move|GetInfo|Delete|Access)\s*:/);
+  assert.doesNotMatch(read("src/drumee/builtins/contextmenu/skeleton/icons.js"),
+    /workspace(Download|Duplicate|Rename|Move|GetInfo|Delete|Access)\s*:/);
+});
+
+test("the canonical items carry the labels Lexis asked for", () => {
+  // No new LOCALE keys were needed — these already existed.
+  assert.match(ITEMS, /makeACopy:\s*button\(\{\s*content:\s*LOCALE\.MAKE_A_COPY/);
+  assert.match(ITEMS, /trash:\s*button\(\{\s*content:\s*LOCALE\.MOVE_TO_TRASH/);
+  assert.match(ITEMS, /info:\s*button\(\{\s*content:\s*LOCALE\.GET_INFO/);
+  assert.match(ITEMS, /move:\s*button\(\{\s*content:\s*LOCALE\.MOVE/);
 });
 
 // ── the menu builder ────────────────────────────────────────────────────────
 
 /** Run the real _openWorkspaceMenu against fakes; report what it fed. */
-function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, mayWrite = true, mayManage = true, mayDownload = true, alreadyOpen = false }) {
+function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, alreadyOpen = false,
+  // What the workspace's MEDIA item is and what its canonical builder
+  // returns. `media: null` is the grid not yet fed.
+  media = {}, menuKeys = ["download", "makeACopy", "rename", "separator", "organize", "separator", "info", "separator", "trash"] }) {
   const body = slice(DESK, "  _toggleWorkspaceMenu(cmd) {");
   const fed = [];
   const dlg = dialog
@@ -114,9 +134,9 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, mayWrite =
     // The REAL close, not a stub: the toggle and the destroy hook both go
     // through it, and its clearing of the active mark is the thing under test.
     _closeWorkspaceMenu: null,
-    _curWorkspaceCanWrite: () => mayWrite,
-    _curWorkspaceCanManage: () => mayManage,
-    _curWorkspaceCanDownload: () => mayDownload,
+    // The REAL resolver, sliced from source: whether it finds the media item is
+    // exactly what this suite is about.
+    _workspaceMediaItem: null,
   };
   const states = [];
   const cmd = {
@@ -129,16 +149,34 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, mayWrite =
   // the REAL key -> service table asserted by the first test, so these tests
   // check which keys the builder picks and how it wires them, while that test
   // checks the vocabulary itself.
+  // The workspace's media item, as it sits in the home grid. `media: null`
+  // models the grid not being fed yet.
+  const hubId = (win && win.mget && win.mget("hub_id")) || "H1";
+  const mediaItem = media
+    ? {
+        __isMedia: 1,
+        isDestroyed: () => false,
+        mget: (k) => ({ hub_id: hubId, filename: "sc2", nid: "HUBNODE", ...media }[k]),
+        contextmenuItemsForFolder: () => menuKeys.slice(),
+      }
+    : null;
   const globals = {
-    // `_e` is a createSafeObject proxy in the app: any key it does not define
-    // comes back as its own name, so _e.destroy === "destroy".
+    // `_e`/`_a` are createSafeObject proxies in the app: any key they do not
+    // define comes back as its own name, so _e.destroy === "destroy".
     _e: new Proxy({}, { get: (_t, k) => String(k) }),
+    _a: new Proxy({}, { get: (_t, k) => String(k) }),
+    // Only getPart is reached — the resolver reads the home grid through it.
+    Wm: {
+      getPart: (pn) => (pn === "list" && mediaItem
+        ? { children: { toArray: () => [mediaItem] } }
+        : { children: { toArray: () => [] } }),
+    },
     require: (m) => {
       assert.equal(m, "builtins/contextmenu/skeleton/items", `unexpected require(${m})`);
       return (ui, trigger, k) => {
-        if (k === "separator") return { __row: k };
+        if (k === "separator") return { __row: k, __ui: ui };
         assert.ok(WS_ITEMS[k], `builder asked for an unknown item key: ${k}`);
-        return { __row: k, service: WS_ITEMS[k] };
+        return { __row: k, service: WS_ITEMS[k], __ui: ui };
       };
     },
     _,
@@ -150,18 +188,19 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, mayWrite =
     },
   };
   const keys = Object.keys(globals);
-  const mk = (src) =>
+  const mk = (src, param = "cmd") =>
     // eslint-disable-next-line no-new-func
-    new Function(...keys, `return function (cmd) {${slice(src, "{").slice(1, -1)}};`)(
+    new Function(...keys, `return function (${param}) {${slice(src, "{").slice(1, -1)}};`)(
       ...keys.map((k) => globals[k]));
   ctx._closeWorkspaceMenu = mk(slice(DESK, "  _closeWorkspaceMenu() {"));
+  ctx._workspaceMediaItem = mk(slice(DESK, "  _workspaceMediaItem(hub_id) {"), "hub_id");
   const fn = mk(body);
   fn.call(ctx, cmd);
   return Object.assign(fed[0] || {}, { __fed: fed.length, __states: states, __ctx: ctx });
 }
 
 const fakeWin = (over = {}) => ({
-  mget: (k) => ({ filetype: "hub", area: "private" }[k]),
+  mget: (k) => ({ filetype: "hub", area: "private", hub_id: "H1" }[k]),
   isDestroyed: () => false,
   ...over,
 });
@@ -174,11 +213,25 @@ test("with a workspace open it feeds a .drumee-contextmenu into drumeeDialog", (
   assert.ok(Array.isArray(box.kids) && box.kids.length, "no rows");
 });
 
-test("rows dispatch to the OPEN WINDOW, not to the desk", () => {
-  const win = fakeWin();
-  const box = run({ win });
-  assert.deepEqual(box.uiHandler, [win],
-    "uiHandler must be the window that implements the folder-* services");
+test("rows dispatch to the workspace's MEDIA item, not to the pane", () => {
+  // This is the fix. The pane is scoped to the workspace's root FOLDER and is
+  // not a media widget: no move(), no trash(), no delete(), no filename — so a
+  // menu wired to it had every row inert and Download threw outright.
+  const box = run({ win: fakeWin() });
+  assert.equal(box.uiHandler.length, 1);
+  assert.equal(box.uiHandler[0].__isMedia, 1,
+    "uiHandler must be the media item that implements these actions");
+  // ...and the rows themselves must be built against the same object.
+  const rowUis = (box.kids || []).map((k) => k && k.__ui).filter(Boolean);
+  assert.ok(rowUis.length && rowUis.every((u) => u.__isMedia === 1),
+    "every row must be built against the media item too");
+});
+
+test("with no media item resolved, no menu is shown", () => {
+  // The home grid has not been fed. Every row would be inert, and a menu whose
+  // rows do nothing is exactly the bug this replaced.
+  const box = run({ win: fakeWin(), media: null });
+  assert.equal(box.__fed, 0, "a dead menu was shown anyway");
 });
 
 test("it is positioned from the button's rect", () => {
@@ -199,91 +252,54 @@ test("a missing drumeeDialog is survived, not thrown through", () => {
 
 const labels = (box) => ((box && box.kids) ? box.kids.map((k) => k && k.service).filter(Boolean) : []);
 
-test("a read-only member gets neither Manage access nor the write actions", () => {
-  const box = run({ win: fakeWin(), mayWrite: false, mayManage: false });
-  const s = labels(box);
-  assert.ok(!s.includes("folder-manage-access"), "minting links needs write");
-  assert.ok(!s.includes("folder-organize"), "organize moves things");
-  // ...but Download stays. It is granted by the DOWNLOAD bit, which a view-only
-  // member holds, and taking a copy is the one useful thing they can do with a
-  // workspace. This is the row's whole reason for being in this menu: the
-  // folder Settings panel that used to carry it is no longer the workspace's
-  // entry point, so gating it on write would leave them no way to download.
-  assert.ok(s.includes("download"), "a view-only member lost Download");
+test("the rows come from the canonical folder menu, verbatim", () => {
+  // media/core.js contextmenuItemsForFolder() — "Sectioned Folder menu spec
+  // 2026-06-10", the same list the grid's right-click menu renders. It already
+  // gates by privilege, so this menu does no gating of its own; re-deriving it
+  // here is what produced a second, wrong vocabulary last time.
+  const r = rows(run({
+    win: fakeWin(),
+    menuKeys: ["download", "makeACopy", "rename", "separator", "info", "separator", "trash"],
+  }));
+  assert.deepEqual(r, ["download", "makeACopy", "rename", "separator", "info", "separator", "trash"]);
 });
 
-test("Download leads the menu, and is gated on the download bit alone", () => {
-  // Position: Duy's requirement is that it sits ABOVE Rename.
-  const r = rows(run({ win: fakeWin(), mayWrite: true, mayManage: true }));
-  assert.equal(r[0], "workspaceDownload", "Download must be the first row");
-  assert.ok(r.indexOf("workspaceDownload") < r.indexOf("workspaceRename"),
-    "Download must come before Rename");
-
-  // Gate: write and admin must NOT be what decides it, in either direction.
-  const noDl = labels(run({ win: fakeWin(), mayWrite: true, mayManage: true, mayDownload: false }));
-  assert.ok(!noDl.includes("download"),
-    "the row ignored canDownload() — it is riding on write/admin instead");
+test("a restricted viewer gets exactly what the builder allows", () => {
+  // Download-only is what contextmenuItemsForFolder returns for a recipient who
+  // cannot organize. The menu must not add rows back on top of that.
+  const r = rows(run({
+    win: fakeWin(),
+    menuKeys: ["download", "separator", "info"],
+  }));
+  assert.deepEqual(r, ["download", "separator", "info"]);
+  assert.ok(!r.includes("trash"), "a restricted viewer was handed Move to trash");
 });
 
-test("a non-admin keeps write actions but loses rename and delete", () => {
-  const s = labels(run({ win: fakeWin(), mayWrite: true, mayManage: false }));
-  assert.ok(!s.includes("folder-rename"));
-  assert.ok(!s.includes("folder-delete"));
-  // Move is the write action left to them — Manage access is no longer in this
-  // menu at all, so this used to be the row that proved write was enough.
-  assert.ok(s.includes("folder-organize"), "write is enough to move the workspace");
+test("organize is flattened to a plain Move row, per Lexis' Figma", () => {
+  // `organize` is the SUBMENU wrapping Move + "Link to task tracker"
+  // (items.js). Lexis' menu shows Move as one flat row — swapped here only.
+  const r = rows(run({ win: fakeWin() }));
+  assert.ok(!r.includes("organize"), "the submenu leaked into the flat menu");
+  assert.ok(r.includes("move"), "Move is missing");
+  assert.equal(r.indexOf("move"), 4, "Move must keep the slot organize held");
 });
 
-// ── Lexis' menu, as designed (Figma wd3) ────────────────────────────────────
-
-test("the rows are in the order the design shows, in three groups", () => {
-  const r = rows(run({ win: fakeWin(), mayWrite: true, mayManage: true }));
-  assert.deepEqual(r, [
-    "workspaceDownload",
-    "workspaceDuplicate",
-    "workspaceRename",
-    "separator",
-    "workspaceMove",
-    "separator",
-    "workspaceGetInfo",
-    "workspaceDelete",
-  ], "the menu no longer matches Lexis' Figma");
+test("the grid's own menu keeps its organize submenu", () => {
+  // The swap must live at THIS call site. Changing the shared builder would
+  // take the submenu (and Link to task tracker with it) off every folder.
+  const CORE = read("src/drumee/builtins/media/core.js");
+  assert.match(CORE, /sections\.push\(\['organize'\]\)/,
+    "the canonical builder no longer offers organize — the grid lost its submenu");
 });
 
-test("Manage access is gone from this menu", () => {
-  // It has two better homes: the header's chain icon (external → link builder)
-  // and the rail's Access (every workspace → permissions matrix). A third copy
-  // here duplicated one of them, and for an internal workspace it opened the
-  // panel the rail already opens.
-  for (const gates of [
-    { mayWrite: true, mayManage: true },
-    { mayWrite: true, mayManage: false },
-    { mayWrite: false, mayManage: false },
-  ]) {
-    const s = labels(run({ win: fakeWin(), ...gates }));
-    assert.ok(!s.includes("folder-manage-access"),
-      `manage access came back at ${JSON.stringify(gates)}`);
-  }
-  assert.doesNotMatch(ITEMS, /workspaceAccess\s*:/,
-    "the unused row should go with it, not linger as dead vocabulary");
+test("Manage access is not in this menu", () => {
+  // Two better homes: the header chain icon (external → link builder) and the
+  // rail's Access (every workspace → permissions matrix). The canonical builder
+  // does not return it either — `_a.share` is commented out there.
+  const r = rows(run({ win: fakeWin() }));
+  assert.ok(!r.includes("manageAccess") && !r.includes("share"));
 });
 
-test("Get info is ungated, and reads the workspace's own info", () => {
-  // media.info on the open window's hub_id/nid — no privilege beyond seeing the
-  // workspace, so every role keeps it.
-  for (const gates of [
-    { mayWrite: true, mayManage: true },
-    { mayWrite: false, mayManage: false, mayDownload: false },
-  ]) {
-    const s = labels(run({ win: fakeWin(), ...gates }));
-    assert.ok(s.includes("info"), `Get info vanished at ${JSON.stringify(gates)}`);
-  }
-});
-
-test("an admin sees the whole set", () => {
-  const s = labels(run({ win: fakeWin(), mayWrite: true, mayManage: true }));
-  for (const svc of Object.values(WS_ITEMS)) assert.ok(s.includes(svc), `missing ${svc}`);
-});
 
 // ── the trigger ─────────────────────────────────────────────────────────────
 
@@ -359,58 +375,40 @@ test("the open state is tracked but deliberately not drawn", () => {
 
 const rows = (box) => ((box && box.kids) ? box.kids.map((k) => k.__row) : []);
 
-test("every workspace row carries an icon and the delete row reads destructive", () => {
-  // The shared skin already draws the panel, the 20px icon slot and
-  // `.trash { color: --red-500 }`. These rows only had to opt in — via the
-  // icons and classes maps, which is where the omission was.
+test("every row carries an icon, and the trash row reads destructive", () => {
   const ICONS = read("src/drumee/builtins/contextmenu/skeleton/icons.js");
   const CLASSES = read("src/drumee/builtins/contextmenu/skeleton/classes.js");
   const expect = {
-    workspaceDownload: "ctxmenu-download",
-    workspaceDuplicate: "ctxmenu-copy",
-    workspaceRename: "ctxmenu-rename",
-    workspaceMove: "apps-arrow-down-right",
-    workspaceGetInfo: "ctxmenu-info",
-    workspaceDelete: "ctxmenu-delete",
+    download: "ctxmenu-download",
+    makeACopy: "ctxmenu-copy",
+    rename: "ctxmenu-rename",
+    info: "ctxmenu-info",
+    trash: "ctxmenu-delete",
   };
   const SPRITE = read("icons/sprites/normalized.sprite.svg");
   for (const [key, ico] of Object.entries(expect)) {
-    assert.match(ICONS, new RegExp(`${key}:\\s*"${ico}"`), `${key} has no icon`);
+    assert.match(ICONS, new RegExp(`\\b${key}:\\s*"${ico}"`), `${key} has no icon`);
     assert.match(SPRITE, new RegExp(`id="--icon-${ico}"`), `${ico} is not in the sprite`);
   }
-  assert.match(CLASSES, /workspaceDelete:\s*'trash'/,
-    "`trash` is the class the skin paints red");
+  assert.match(CLASSES, /trash:\s*'trash'/, "`trash` is the class the skin paints red");
 });
 
-test("sections are separated, and a separator never dangles", () => {
-  const admin = rows(run({ win: fakeWin(), mayWrite: true, mayManage: true }));
-  assert.ok(admin.includes("separator"), "no grouping at all");
-  assert.notEqual(admin[0], "separator", "leading separator");
-  assert.notEqual(admin[admin.length - 1], "separator", "trailing separator");
-  for (let i = 1; i < admin.length; i++) {
-    assert.ok(!(admin[i] === "separator" && admin[i - 1] === "separator"),
-      "two separators in a row — a gate emptied a section");
+test("separators come through untouched from the builder", () => {
+  // Sectioning is the canonical builder's job now. This menu must neither add
+  // nor drop dividers — only swap organize→move — so a leading, trailing or
+  // doubled rule means it started rewriting the list again.
+  const r = rows(run({ win: fakeWin() }));
+  assert.notEqual(r[0], "separator", "leading separator");
+  assert.notEqual(r[r.length - 1], "separator", "trailing separator");
+  for (let i = 1; i < r.length; i++) {
+    assert.ok(!(r[i] === "separator" && r[i - 1] === "separator"), "two separators in a row");
   }
-});
-
-test("a gate emptying a section removes its separator too", () => {
-  // Write-only: the rename/duplicate and delete sections vanish. What is left
-  // must still be cleanly divided, not fringed with orphan rules.
-  // Download survives — it is gated on the DOWNLOAD bit, not on write/admin —
-  // so three sections remain: download | organize | access.
-  const r = rows(run({ win: fakeWin(), mayWrite: true, mayManage: false }));
-  assert.notEqual(r[0], "separator");
-  assert.notEqual(r[r.length - 1], "separator");
-  assert.equal(r.filter((k) => k === "separator").length, 2,
-    "three remaining sections need exactly two dividers");
-
-  // And the same must hold when it is the DOWNLOAD section that empties: its
-  // divider has to go with it, or the menu opens with a rule against its top.
-  const nd = rows(run({ win: fakeWin(), mayWrite: true, mayManage: false, mayDownload: false }));
-  assert.ok(!nd.includes("workspaceDownload"), "download row survived its own gate");
-  assert.notEqual(nd[0], "separator", "the emptied download section left its rule behind");
-  assert.equal(nd.filter((k) => k === "separator").length, 1,
-    "two remaining sections need exactly one divider");
+  // and a shorter list keeps exactly the dividers the builder put in it
+  const short = rows(run({
+    win: fakeWin(),
+    menuKeys: ["download", "separator", "info"],
+  }));
+  assert.equal(short.filter((k) => k === "separator").length, 1);
 });
 
 // ── the link icon is external-only ──────────────────────────────────────────

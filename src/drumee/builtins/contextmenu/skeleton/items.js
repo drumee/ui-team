@@ -300,40 +300,6 @@ const __button = function (ui, trigger, k) {
 
     upload: button({ content: LOCALE.UPLOAD, service: _e.upload }),
 
-    // ── Workspace-scoped rows (topbar switcher ⋯) ────────────────────────
-    //
-    // Separate keys from `manageAccess` / `rename` / `duplicate` / `organize` /
-    // `trash` above, which raise the generic media services. These raise the
-    // `folder-*` ones, which act on the WORKSPACE rather than on a selection
-    // inside it, and which window_folder already implements — so a menu built
-    // from these needs no new handler anywhere.
-    // `_e.download`, not a `folder-*` service: window_folder already routes it
-    // through runFolderMediaAction → target.download(), which is the very row
-    // the folder Settings panel used to carry. That panel is no longer the
-    // workspace's entry point (the rail's Access opens the members matrix now),
-    // so without this row a whole workspace could not be downloaded from
-    // anywhere.
-    workspaceDownload: button({ content: LOCALE.DOWNLOAD, service: _e.download }),
-
-    workspaceDuplicate: button({ content: LOCALE.MAKE_A_COPY, service: 'folder-duplicate' }),
-
-    workspaceRename: button({ content: LOCALE.RENAME, service: 'folder-rename' }),
-
-    // "Move", not "Organize" — the label was the odd one out, never the
-    // behaviour: `folder-organize` has always ended in prepareFolderMove →
-    // target.move(). Lexis' menu (Figma) names it what it does. The service is
-    // unchanged because it is the WORKSPACE-scoped move; the generic `move`
-    // item beside it raises 'move', which window_folder does not handle — that
-    // one acts on a selection inside a folder, not on the folder itself.
-    workspaceMove: button({ content: LOCALE.MOVE, service: 'folder-organize' }),
-
-    // `_a.info` — window_folder already answers it with showInfo(), which
-    // fetches media.info for THIS window's hub_id/nid, i.e. the workspace.
-    // Not the generic `info` row beside it: that one raises `_e.settings` with
-    // `type: _a.info`, which on a workspace window opens folder Settings.
-    workspaceGetInfo: button({ content: LOCALE.GET_INFO, service: _a.info }),
-
-    workspaceDelete: button({ content: LOCALE.MOVE_TO_TRASH, service: 'folder-delete' })
 
   };
 
