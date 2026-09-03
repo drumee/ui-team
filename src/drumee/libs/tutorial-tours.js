@@ -93,6 +93,10 @@ let _inFlight = null;
 let _guardTimer = null;
 let _seen = null; // Set, lazily built
 let _reconciled = false;
+// Continuations waiting on a running tour — tour id -> [fn]. Drained by
+// release(), which the desk wires to the tour widget's destroy for EVERY tour
+// (modules/desk/index.js, onPartReady "desk-tutorial"). See whenDone().
+const _done = new Map();
 
 // ── environment ──────────────────────────────────────────────────────────────
 
@@ -340,9 +344,59 @@ function armed() {
  */
 function release(tourId) {
   if (tourId && _inFlight && _inFlight !== tourId) return;
+  // Whose continuations this release settles. Read BEFORE _inFlight is
+  // cleared, so a bare release() still names the tour it just ended.
+  const id = tourId || _inFlight;
   clearTimeout(_guardTimer);
   _guardTimer = null;
   _inFlight = null;
+  const waiting = id && _done.get(id);
+  if (!waiting) return;
+  // Dropped before running: a callback that throws must not be retried on the
+  // next release, and one that fires the same tour again must not re-enter
+  // this list while it is being walked.
+  _done.delete(id);
+  for (const cb of waiting) {
+    try {
+      cb();
+    } catch (e) { /* a continuation is never load-bearing for the tour */ }
+  }
+}
+
+/**
+ * Do something once a tour is out of the way — or right now, if it is not
+ * running.
+ *
+ * For a trigger whose gesture has a REAL destination behind the tour: the
+ * migrate popup is the case (the folder window's "+ New" gdrive row and the
+ * Files hero button both ask for the import dialog, and the tour is what
+ * teaches it). Launching that dialog underneath a full-screen tour meant it
+ * arrived unseen and had to survive the whole walkthrough; deferring it to the
+ * tour's teardown hands it over at the moment the user is looking for it.
+ *
+ * The wait is only for THIS tour. A migrate click while some other tour is on
+ * screen runs now, which is right: single-flight means the migrate tour is not
+ * being shown, so there is nothing to wait for.
+ *
+ * Settled by release(), so it covers both endings a tour has — the widget's
+ * destroy (Done, Escape, the callout's skip) and the fetch guard when the
+ * chunk never loads at all. That second path is the 30s worst case, and it is
+ * the right answer over dropping the user's request entirely.
+ *
+ * @param {String} tourId
+ * @param {Function} cb
+ * @returns {Boolean} true when the call was deferred, false when cb ran now
+ */
+function whenDone(tourId, cb) {
+  if (typeof cb !== "function") return false;
+  if (_inFlight !== tourId) {
+    cb();
+    return false;
+  }
+  const waiting = _done.get(tourId);
+  if (waiting) waiting.push(cb);
+  else _done.set(tourId, [cb]);
+  return true;
 }
 
 /** Which tour is currently held, if any. */
@@ -397,6 +451,7 @@ function __resetModuleState() {
   _guardTimer = null;
   _seen = null;
   _reconciled = false;
+  _done.clear();
 }
 
 module.exports = {
@@ -412,6 +467,7 @@ module.exports = {
   armed,
   release,
   inFlight,
+  whenDone,
   markSeen,
   reconcile,
   reset,

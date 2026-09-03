@@ -5044,8 +5044,31 @@ class desk_module extends LetcBox {
       // so the target is resolved at click time rather than cached.
       case "rail-files":
         return this._railTab("files");
-      case "rail-chat":
-        return this._railTab(_a.chat);
+      case "rail-chat": {
+        // Resolved BEFORE the tab is shown, for the same reason as rail-task
+        // and rail-meet below: _railTab falls back to _openDefaultWorkspace()
+        // when nothing is open, and a chat tour over the home grid explains a
+        // screen the user is not looking at.
+        const _hasWs = !!this._activeWorkspace();
+        const _res = this._railTab(_a.chat);
+        // Contextual tour, on the first press of Chat in the rail.
+        //
+        // `chat` has described itself as "fired the first time someone opens a
+        // workspace's Chat" since 2.0 pulled its five screens out of the folder
+        // step (tutorial/tours.js), but no trigger site was ever written: the
+        // tour was reachable only from `full` or ?tutorial=chat, so the one tour
+        // about threads never ran for anyone who did not ask for the whole
+        // product tour — exactly the gap rail-meet was added to close.
+        //
+        // Raised AFTER showFolderTab so the tour can never swallow the
+        // navigation the user asked for — the same ordering rail-task and
+        // rail-meet use. Nothing is remembered here: the kill switch, the
+        // mobile check, the once-ever seen-set and single-flight all live in
+        // libs/tutorial-tours, so a fourth trigger surface can neither
+        // duplicate nor lose the gate.
+        if (_hasWs) require("libs/tutorial-tours").fire("chat", this);
+        return _res;
+      }
       case "rail-task": {
         // Resolved BEFORE the tab is shown, because the tour is only right if
         // the click had somewhere to land: _railTab falls back to loadHome()
