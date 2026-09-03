@@ -53,6 +53,19 @@
     background-color: var(--overlay-bg-05);
   }
 
+  // A section label (Settings / Get help / Plan / Trash…) is text, not a
+  // destination — the skeleton gives it no service, so a pointer cursor and a
+  // hover ground would both promise a click that does nothing. Written as a
+  // descendant of __ui:hover on purpose: that is what the rule above matches,
+  // so anything shorter loses to it on specificity.
+  &__main--section {
+    cursor: default;
+  }
+
+  &__ui:hover .breadcrumb-item__main--section .breadcrumb-item__tab {
+    background-color: transparent;
+  }
+
   // The area-tinted folder shape. It is NOT a plain <svg> to stretch: the
   // template emits a `.folder-shape` path whose AREA CLASS supplies the fill
   // (the colour IS the fill, not a currentColor tint) plus an absolutely

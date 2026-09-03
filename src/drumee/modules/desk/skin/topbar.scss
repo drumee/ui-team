@@ -163,6 +163,24 @@
       min-width: 0;
       overflow: hidden;
     }
+
+    // The switcher's caret belongs to the WORKSPACE crumb: it reads as one
+    // chip with the crumb's glyph and name (see workspaceSwitcher). While the
+    // bar is showing a section label instead — Settings, Get help, Plan,
+    // Calendar, Inbox, Contacts, Trash, Admin console — there is no workspace
+    // in the bar to hang it off, so a caret there offered a workspace dropdown
+    // attached to the word "Get help".
+    //
+    // `+`, because the switcher is authored as the breadcrumb's next sibling
+    // in this cluster (desk/skeleton/topbar.js), and the section flag is
+    // stamped on the breadcrumb's own root (desk_breadcrumb._setSectionMode) —
+    // the only handle it has on the caret from there.
+    //
+    // !important: Box children are forced display:flex inline by the
+    // framework, the same reason __actions-cluster[data-state="0"] needs it.
+    .desk-breadcrumb__ui[data-section="1"] + .desk-module-topbar__ws-wrapper {
+      display: none !important;
+    }
   }
 
   // Chrome-style folder tabs — sit immediately right of the home

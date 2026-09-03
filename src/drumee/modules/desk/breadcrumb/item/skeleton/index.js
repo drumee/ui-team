@@ -25,6 +25,14 @@ module.exports = function (ui) {
   const filename = ui.mget(_a.filename);
   const filetype = ui.mget(_a.filetype);
   const isHub = filetype == _a.hub;
+  // A SECTION crumb — Settings, Get help, Plan, Calendar, Inbox, Contacts,
+  // Trash, Admin console — is a LABEL, not a node: desk_breadcrumb is fed a
+  // bare {filename} for it (_updateContext), there is no folder behind it to
+  // draw and nothing to navigate to. So it renders as text alone: no workspace
+  // glyph, no leading "/" (it is always the only crumb in the track) and no
+  // click target. The workspace switcher's caret beside it hides too — see
+  // desk/skin/topbar.scss.
+  const isSection = !!ui.mget("isSection");
 
   let nid = ui.mget(_a.nid);
   let pid = ui.mget(_a.pid);
@@ -34,11 +42,56 @@ module.exports = function (ui) {
   }
   const pfx = ui.fig.family;
   let index = ui.getIndex()
+
+  // The tab's contents: the glyph only for a real node, then the name.
+  const tabKids = [];
+  if (!isSection) {
+    tabKids.push(
+      Skeletons.Element({
+        className: `${pfx}__icon ${ui.mget(_a.area) || ""}`,
+        content: folderArt({
+          area: ui.mget(_a.area),
+          filetype: isHub ? _a.hub : _a.folder,
+          role: isHub ? "desk" : "",
+          widgetId: _.uniqueId("crumb-icon-"),
+          // No kebab in a breadcrumb: there is nothing for it to act on.
+          isAttachment: 1,
+        }),
+      }),
+    );
+  }
+  tabKids.push(
+    Skeletons.Note({
+      content: filename,
+      className: `${pfx}__filename`,
+    }),
+  );
+
+  const kids = [];
+  // "/" per the frame (59:55943), not the old "›".
+  if (!isSection) {
+    kids.push(
+      Skeletons.Note({
+        content: "/",
+        className: `${pfx}__separator`,
+      }),
+    );
+  }
+  kids.push(
+    Skeletons.Box.X({
+      className: `${pfx}__tab`,
+      kidsOpt: { active: 0 },
+      kids: tabKids,
+    }),
+  );
+
   return Skeletons.Box.X({
     debug: __filename,
-    className: `${pfx}__main`,
+    className: `${pfx}__main${isSection ? ` ${pfx}__main--section` : ""}`,
     dataset: { current: ui.mget("isCurrent") ? 1 : 0 },
-    uiHandler: [ui],
+    // Inert for a section label: nothing to browse to, so it carries neither
+    // the service nor a handler for one.
+    uiHandler: isSection ? undefined : [ui],
     filetype: ui.mget(_a.filetype),
     home_id: ui.mget(_a.home_id),
     filename,
@@ -46,37 +99,10 @@ module.exports = function (ui) {
     nid,
     hub_id: ui.mget(_a.hub_id),
     pid,
-    service: _a.browse,
+    service: isSection ? undefined : _a.browse,
     kidsOpt: {
       active: 0
     },
-    kids: [
-      // "/" per the frame (59:55943), not the old "›".
-      Skeletons.Note({
-        content: "/",
-        className: `${pfx}__separator`,
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__tab`,
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Element({
-            className: `${pfx}__icon ${ui.mget(_a.area) || ""}`,
-            content: folderArt({
-              area: ui.mget(_a.area),
-              filetype: isHub ? _a.hub : _a.folder,
-              role: isHub ? "desk" : "",
-              widgetId: _.uniqueId("crumb-icon-"),
-              // No kebab in a breadcrumb: there is nothing for it to act on.
-              isAttachment: 1,
-            }),
-          }),
-          Skeletons.Note({
-            content: filename,
-            className: `${pfx}__filename`,
-          }),
-        ],
-      }),
-    ]
+    kids,
   });
 }

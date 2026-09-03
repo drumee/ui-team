@@ -62,8 +62,14 @@ class __desk_breadcrumb extends LetcBox {
    * rendered, and ensurePart NEVER resolves for a part that will not mount —
    * the callback (and everything after it) would hang silently.
    * @param {*} data
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.section] the track is a SECTION LABEL (Settings /
+   *   Get help / Plan / Trash / Inbox…), not a filesystem path — see
+   *   _setSectionMode. Every path caller leaves it off.
    */
-  _buildContent(data) {
+  _buildContent(data, opt = {}) {
+    const section = !!opt.section;
+    this._setSectionMode(section);
     if (_.isEmpty(data)) {
       this._data = [];
       this.ensurePart(_a.content).then((p) => {
@@ -94,6 +100,11 @@ class __desk_breadcrumb extends LetcBox {
             kind: "desk_breadcrumb_item",
             service: "breadcrum-jump",
             isCurrent: i === normalized.length - 1,
+            // Read by the crumb's own skeleton, which drops the folder glyph,
+            // the "/" and the click target for a section label. It cannot be
+            // derived there from the absence of a filetype: a workspace root
+            // reached through get_path can arrive without one too.
+            isSection: section ? 1 : 0,
           });
         }
       });
@@ -101,6 +112,39 @@ class __desk_breadcrumb extends LetcBox {
     })
   }
 
+
+  /**
+   * Stamp the track as a SECTION LABEL rather than a filesystem path.
+   *
+   * Two skins read it. The crumb itself renders as text alone — no workspace
+   * glyph, no "/" and no click target (breadcrumb/item/skeleton) — because a
+   * section screen's label is not a node: there is no folder to draw and
+   * nothing to jump to. And the topbar hides the workspace switcher's caret
+   * that sits next to the track (desk/skin/topbar.scss), because a section
+   * label is not a workspace to switch away from.
+   *
+   * The flag lives on THIS widget's root element, not on the crumb, because
+   * that caret is authored as this widget's next sibling in the topbar's
+   * left cluster (desk/skeleton/topbar.js) — which is the only handle CSS has
+   * on it from here.
+   *
+   * @param {Boolean} section
+   */
+  _setSectionMode(section) {
+    this._section = !!section;
+    if (this.el) this.el.dataset.section = section ? 1 : 0;
+  }
+
+  /**
+   * Is the track currently a section label rather than a path? Read by the
+   * desk before rail navigation, which has to rebuild the workspace path only
+   * when the bar is actually showing a section (Desk._leaveSectionScreen) —
+   * every rail click would otherwise pay a get_path round trip for a
+   * breadcrumb that is already correct.
+   */
+  isSectionMode() {
+    return !!this._section;
+  }
 
   /**
    * Clear the track (no path items).
@@ -224,7 +268,12 @@ class __desk_breadcrumb extends LetcBox {
     this._context = this._normalizeData(data)[0];
     const filename = this._context && (this._context.filename || this._context.name);
     if (!filename) return this.loadDefault();
-    this._buildContent([{ ...this._context, filename }]);
+    // A context crumb that carries node identity IS a workspace — the
+    // switcher's `change-workspace` row hands its whole model in — so it keeps
+    // the folder glyph and the caret. Only a bare label is a section screen;
+    // every desk trigger of "breadcrumb:context" sends exactly {filename}.
+    const section = !this._context.filetype && !this._context.nid;
+    this._buildContent([{ ...this._context, filename }], { section });
   }
 
   /**

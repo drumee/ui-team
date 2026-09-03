@@ -2372,9 +2372,70 @@ class desk_module extends LetcBox {
     // files, which is also the boot view.
     if (this.el) this.el.dataset.mtab = tab === "files" ? "files" : `${tab}`;
     const w = this._activeWorkspace();
+    // BEFORE the tab is shown, and on both branches — see _leaveSectionScreen.
+    this._leaveSectionScreen(w);
     if (!w) return this._openDefaultWorkspace();
     w.showFolderTab(tab);
     return w.raise && w.raise();
+  }
+
+  /**
+   * Rail navigation is about to show workspace content — get whatever SECTION
+   * SCREEN is in front of the workspace out of the way, and put the breadcrumb
+   * back on the workspace it is navigating in.
+   *
+   * This is what made Files / Task / Meet read as dead clicks. Settings, Get
+   * help, Plan, Calendar, Inbox and the Admin console all mount in
+   * `settings-main-slot`, which is `position:absolute; inset:0; z-index:1500`
+   * (skin/index.scss) — it FULLY covers the workspace pane. _railTab only
+   * talks to the workspace window underneath it, so the tab really did switch,
+   * invisibly, behind the panel: nothing on screen moved, the breadcrumb kept
+   * reading "Get help", and the rail highlight jumped to the row that appeared
+   * to do nothing (the rail's own Plan row shares its radio group with
+   * Files…Access, which is why the lit row and the screen could disagree).
+   *
+   * closeMainPanels(), not closeAllPanels(): the three main slots are exactly
+   * the screens that occlude the pane AND the ones that retitle the breadcrumb
+   * (`breadcrumb:context`), while the activity/notification side panels do
+   * neither — closing those too would be an unrelated change. It is the same
+   * cleanup Wm.loadWorkspace already runs when opening a workspace, and it is
+   * a no-op when no such panel is up.
+   *
+   * Called even when there is NO workspace window: Wm.loadWorkspace returns
+   * early when the requested workspace is already the current one, so leaving
+   * the close to _openDefaultWorkspace() would strand the panel on exactly the
+   * path that has nothing else to show.
+   *
+   * @param {Object} [w]  the workspace window the rail is about to act on
+   */
+  _leaveSectionScreen(w) {
+    // Asked BEFORE the close, and getPart rather than ensurePart: this answers
+    // synchronously with what is mounted right now, which is what a rail click
+    // needs. A breadcrumb that has not mounted yet reads as "no section to
+    // leave", which is correct — it has nothing on it to be stale.
+    const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+    const wasSection = !!(crumb && _.isFunction(crumb.isSectionMode) && crumb.isSectionMode());
+    this.closeMainPanels();
+    // Closing the panel does not un-stamp the crumbs — they still read
+    // "Get help". Only a fresh `breadcrumb:content` whose SOURCE is Wm rebuilds
+    // the workspace path (desk_breadcrumb._updateContent ignores every other
+    // source), which is the same broadcast Wm makes on a workspace switch.
+    //
+    // Only when the bar really was on a section: that broadcast costs a
+    // get_path round trip, and folder-to-folder rail clicks inside one
+    // workspace already have the right crumbs.
+    if (!wasSection) return;
+    if (!w || !w.model || !window.Wm || !_.isFunction(Wm.updateBreadcrumb)) return;
+    // Exactly the four keys _onBrowse reads, not the whole window model: that
+    // model accumulates whatever every mset() along the window's life put on
+    // it, and _updateContent SWITCHES on a payload's `event` (closed → ignore,
+    // home → clear the track). Handing it a filtered payload is what keeps an
+    // unrelated key on the window from clearing the crumbs.
+    const { nid, hub_id, actual_home_id, filetype } = w.model.toJSON();
+    Wm.updateBreadcrumb(
+      { nid, hub_id, actual_home_id, filetype, service: "change-workspace" },
+      Wm,
+    );
   }
 
   /**
@@ -2429,6 +2490,9 @@ class desk_module extends LetcBox {
   _railAccess(opt) {
     if (this.el) this.el.dataset.mtab = "access";
     const w = this._activeWorkspace();
+    // Same as _railTab: Access is workspace content, so it cannot be reached
+    // from behind a section screen either.
+    this._leaveSectionScreen(w);
     // Same as _railTab: open a workspace rather than the retired home grid.
     if (!w) return this._openDefaultWorkspace();
     if (_.isFunction(w.onUiEvent)) {
