@@ -1,23 +1,31 @@
-// The mobile drawer's "Add new" row leads to a `create` sub-screen holding the
-// same five things the desktop "+ New" group offers. Three things have to hold
-// or the screen is unreachable, empty, or offers rows the desktop refuses:
+// The phone's create surface — once the drawer's `create` sub-screen, now the
+// "+ New" bottom sheet (Option A of the approved mobile shell). The contract
+// it inherits is unchanged; only the surface moved:
 //
-//   1. the create slot exists and the row that reaches it points at the mode
-//   2. its rows carry the SAME services the topbar's group carries, since
-//      Desk.onUiEvent is what handles them
-//   3. the current-workspace write privilege drops the four file rows, exactly
-//      as it does in the topbar
+//   1. the sheet mirrors the desktop "+ New" menu row for row — the two import
+//      rows, then the five create entries, then Invite — since Desk.onUiEvent
+//      is what handles all of them
+//   2. the current-workspace privileges gate exactly as they do in the topbar:
+//      write drops the imports and the four file rows, manage drops Invite
+//   3. an over-limit org gets nothing actionable, and the "+ New" button that
+//      opens the sheet is not rendered at all
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const { join } = require("node:path");
 const {
   render,
   find,
   findAll,
-  servicesIn,
+  goTargetsIn,
   labelsIn,
-} = require("./helpers/render-desk-sidebar");
+} = require("./helpers/render-mobile-sheets");
 
-const S = "desk-module-sidebar";
+const SRC = join(__dirname, "..", "src", "drumee");
+const stripComments = (s) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+const S = "desk-module";
 // `_e.upload` — the harness's _e proxy echoes keys back as their own name.
 const _e_upload = "upload";
 const CREATE_SERVICES = [
@@ -27,151 +35,111 @@ const CREATE_SERVICES = [
   "new-spreadsheet",
   "new-presentation",
 ];
+const ALL = { mayWrite: true, mayManage: true, locked: false };
 
-test("the drawer renders a create slot alongside nav and actions", () => {
-  const tree = render();
-  for (const slot of ["nav-slot", "actions-slot", "create-slot"]) {
-    assert.ok(find(tree, `${S}__${slot}`), `${slot} is rendered on mobile`);
-  }
-});
-
-test('the "Add new" row leads to the create mode instead of creating a workspace', () => {
-  const tree = render();
-  const actions = find(tree, `${S}__actions-slot`);
-  const services = servicesIn(actions);
-  assert.ok(
-    services.includes("mobile-show-create"),
-    'the actions list offers "mobile-show-create"',
-  );
-  // The whole point of the change: it used to fire this directly, offering one
-  // of the five options and hiding the other four.
-  assert.ok(
-    !services.includes("new-workspace"),
-    "the actions list no longer creates a workspace directly",
-  );
-});
-
-test("the create screen carries every service the topbar group carries", () => {
-  const slot = find(render(), `${S}__create-slot`);
-  const services = servicesIn(slot);
+test("the create sheet carries every service the topbar group carries", () => {
+  const targets = goTargetsIn(render("newSheet", ALL));
   for (const s of CREATE_SERVICES) {
-    assert.ok(services.includes(s), `the create screen offers "${s}"`);
+    assert.ok(targets.includes(s), `the sheet offers "${s}"`);
   }
   // Order matters: Workspace leads on every surface.
   assert.deepEqual(
-    services.filter((s) => CREATE_SERVICES.includes(s)),
+    targets.filter((s) => CREATE_SERVICES.includes(s)),
     CREATE_SERVICES,
   );
 });
 
-test("the create screen's header goes back to the actions list", () => {
-  const slot = find(render(), `${S}__create-slot`);
-  const back = find(slot, `${S}__logo-back-btn`);
-  assert.ok(back, "the sub-screen renders a back button");
-  assert.equal(back.service, "mobile-show-add");
-  const title = find(slot, `${S}__logo-title`);
-  assert.ok(title, "the sub-screen renders a title in the wordmark's place");
-  assert.equal(title.content, "ADD_NEW");
-  // The desktop-only pin toggle has no business here, and rendering a second
-  // one would register its part twice.
-  assert.equal(find(slot, `${S}__logo-pin-btn`), null);
+test("the import rows precede the create group, as they do on desktop", () => {
+  const targets = goTargetsIn(render("newSheet", ALL));
+  assert.deepEqual(targets.slice(0, 2), [_e_upload, "launch-gdrive-migration"]);
 });
 
-test("the nav and actions headers are untouched", () => {
-  const tree = render();
-  for (const slot of ["nav-slot", "actions-slot"]) {
-    const n = find(tree, `${S}__${slot}`);
-    assert.ok(find(n, `${S}__logo-pin-btn`), `${slot} keeps its pin toggle`);
-    assert.ok(find(n, `${S}__logo-icon`), `${slot} keeps the wordmark`);
-    assert.equal(find(n, `${S}__logo-back-btn`), null, `${slot} has no back arrow`);
+test("every row re-dispatches through mobile-sheet-go", () => {
+  // The whole point of the sheet design: rows reuse the desktop handlers via
+  // one re-dispatching service, so none may fire a real service directly.
+  const tree = render("newSheet", ALL);
+  const rows = findAll(tree, `${S}__msheet-row`);
+  assert.ok(rows.length >= 8, "the full sheet renders its rows");
+  for (const r of rows) {
+    assert.equal(r.service, "mobile-sheet-go");
+    assert.ok(r.goTarget, "each row names its real target");
+    // ui-core binds a click that stops propagation on any child that does not
+    // opt out — without this the icon or label eats the tap.
+    assert.deepEqual(r.kidsOpt, { active: 0 });
   }
 });
 
 test("a viewer without write in the current workspace is offered Workspace alone", () => {
-  const slot = find(
-    render({ _curWorkspaceCanWrite: () => false }),
-    `${S}__create-slot`,
+  const targets = goTargetsIn(
+    render("newSheet", { mayWrite: false, mayManage: true, locked: false }),
   );
-  const services = servicesIn(slot).filter((s) => CREATE_SERVICES.includes(s));
   assert.deepEqual(
-    services,
+    targets.filter((s) => CREATE_SERVICES.includes(s)),
     ["new-workspace"],
     "creating a workspace is account-level and stays; the file rows go",
   );
+  // The imports land on the upload path, so they follow the same privilege.
+  assert.ok(!targets.includes(_e_upload), "no device upload without write");
+  assert.ok(!targets.includes("launch-gdrive-migration"), "no Drive import without write");
+});
+
+test("Invite follows the manage privilege, not the write privilege", () => {
+  const can = goTargetsIn(render("newSheet", ALL));
+  assert.ok(can.includes("invite-member"), "a manager is offered Invite");
+  const cannot = goTargetsIn(
+    render("newSheet", { mayWrite: true, mayManage: false, locked: false }),
+  );
+  assert.ok(!cannot.includes("invite-member"), "a non-manager is not");
 });
 
 test("the office rows carry the template filename Wm.newDocument reads back", () => {
-  const slot = find(render(), `${S}__create-slot`);
-  const byService = {};
-  for (const n of findAll(slot, `${S}__item`)) byService[n.service] = n;
-  assert.equal(byService["new-document"].name, "document.docx");
-  assert.equal(byService["new-spreadsheet"].name, "spreadsheet.xlsx");
-  assert.equal(byService["new-presentation"].name, "presentation.pptx");
-  // A row with no template must not send a blank one.
-  assert.equal(byService["new-workspace"].name, undefined);
+  const byTarget = {};
+  for (const n of findAll(render("newSheet", ALL), `${S}__msheet-row`)) {
+    byTarget[n.goTarget] = n;
+  }
+  assert.equal(byTarget["new-document"].name, "document.docx");
+  assert.equal(byTarget["new-spreadsheet"].name, "spreadsheet.xlsx");
+  assert.equal(byTarget["new-presentation"].name, "presentation.pptx");
+  // undefined, not "": a row with no template must not send a blank one.
+  assert.equal(byTarget["new-workspace"].name, undefined);
 });
 
-test('the "Add new" row is marked as leading somewhere', () => {
-  const tree = render();
-  const row = findAll(find(tree, `${S}__actions-slot`), `${S}__item`).find(
-    (n) => n.service === "mobile-show-create",
+test("the Drive row carries the topbar's label", () => {
+  const row = findAll(render("newSheet", ALL), `${S}__msheet-row`).find(
+    (r) => r.goTarget === "launch-gdrive-migration",
   );
-  assert.ok(row, "the row is a sidebar item");
-  assert.ok(
-    find(row, `${S}__item-affordance`),
-    "it carries a trailing arrow, so it does not read as an action",
-  );
-  assert.deepEqual(labelsIn(row), ["ADD_NEW"]);
-});
-
-// ---- The Google Drive import row -------------------------------------------
-// It is the topbar dropdown's --gdrive row brought into the drawer. Same
-// service, same privilege question; only the position is the drawer's own.
-test("the actions list offers the Drive import right after Add new", () => {
-  const rows = findAll(find(render(), `${S}__actions-slot`), `${S}__item`);
-  const services = rows.map((r) => r.service);
-  assert.deepEqual(
-    services,
-    ["mobile-show-create", "launch-gdrive-migration", _e_upload, "open-mobile-search", "invite-member"],
-    "Drive sits between Add new and Upload",
-  );
-});
-
-test("the Drive row carries its BEM hook and the topbar's label", () => {
-  const row = findAll(find(render(), `${S}__actions-slot`), `${S}__item`).find(
-    (r) => r.service === "launch-gdrive-migration",
-  );
-  assert.ok(row, "the row is a sidebar item");
-  assert.ok(
-    row.className.split(/\s+/).includes(`${S}__item--gdrive`),
-    "it is reachable on its own, like the topbar's --gdrive",
-  );
+  assert.ok(row, "the row is a sheet row");
   assert.deepEqual(labelsIn(row), ["MIGRATE_GDRIVE_TITLE"]);
 });
 
-test("a viewer without write in the current workspace is offered no Drive import", () => {
-  // The import lands on the upload path, so it follows the same privilege the
-  // topbar's copy follows — `locked` alone would let it through.
-  const actions = find(
-    render({ _curWorkspaceCanWrite: () => false }),
-    `${S}__actions-slot`,
+test("an over-limit org gets nothing actionable", () => {
+  const tree = render("newSheet", { mayWrite: true, mayManage: true, locked: true });
+  assert.equal(goTargetsIn(tree).length, 0, "no row survives the lock");
+});
+
+test('an over-limit org is not offered the "+ New" button at all', () => {
+  // Same move the drawer made by dropping its "Add new" row: the surface that
+  // opens the create sheet is gated at render, not just emptied on open.
+  const skel = stripComments(
+    readFileSync(join(SRC, "modules/desk/skeleton/index.js"), "utf8"),
   );
-  assert.ok(!servicesIn(actions).includes("launch-gdrive-migration"));
-  // The rows that do NOT depend on it must survive.
-  assert.ok(servicesIn(actions).includes("mobile-show-create"));
-  assert.ok(servicesIn(actions).includes("open-mobile-search"));
-});
-
-test("an over-limit org is offered no Drive import", () => {
-  const actions = find(render({}, { locked: true }), `${S}__actions-slot`);
-  assert.ok(!servicesIn(actions).includes("launch-gdrive-migration"));
-});
-
-test("an over-limit org cannot reach the create screen", () => {
-  const tree = render({}, { locked: true });
-  const actions = find(tree, `${S}__actions-slot`);
+  const btn = skel.indexOf("__mobile-new-btn");
+  assert.ok(btn > -1, "the + New button is rendered on the action row");
+  const gate = skel.lastIndexOf('require("libs/over-limit").isLocked() ? ""', btn);
   assert.ok(
-    !servicesIn(actions).includes("mobile-show-create"),
-    'the "Add new" row is absent while locked, so the screen is unreachable',
+    btn - gate > 0 && btn - gate < 200,
+    "and the over-limit gate sits directly on it",
   );
+});
+
+test("the desk resolves the sheet's privileges the way the topbar does", () => {
+  const desk = stripComments(
+    readFileSync(join(SRC, "modules/desk/index.js"), "utf8"),
+  );
+  const call = desk.indexOf('.newSheet(this, {');
+  assert.ok(call > -1, "the desk builds the sheet with an options object");
+  const slice = desk.slice(call, call + 400);
+  assert.match(slice, /mayWrite: this\._curWorkspaceCanWrite\(\)/);
+  assert.match(slice, /mayManage: this\._curWorkspaceCanManage\(\)/);
+  assert.match(slice, /locked: require\("libs\/over-limit"\)\.isLocked\(\)/);
 });

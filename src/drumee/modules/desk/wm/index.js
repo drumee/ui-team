@@ -1612,9 +1612,11 @@ class __window_manager extends push {
    * the user's home, leaving the layers themselves — and the live call inside
    * the call layer — standing.
    *
-   * The grid reset is the same sequence the breadcrumb's "load-home" uses
-   * (desk/breadcrumb/index.js), which exists for the same reason: navigate the
-   * main container without taking the open windows down with it. The upload
+   * The grid reset is the same sequence the breadcrumb's retired "load-home"
+   * used, and exists for the same reason: navigate the main container without
+   * taking the open windows down with it. (That crumb is gone — the only way
+   * back here now is Desk.loadHome via the over-limit popup's "free up space"
+   * destination.) The upload
    * floater is spared too; it lives in its own layer and an upload in flight is
    * no more disposable than a call.
    */

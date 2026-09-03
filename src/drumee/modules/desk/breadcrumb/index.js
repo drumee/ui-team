@@ -55,27 +55,15 @@ class __desk_breadcrumb extends LetcBox {
   }
 
   /**
+   * Render the track as: <Workspace> › <Folder> › … There is no longer a Home
+   * anchor in front of it — see the skeleton. Empty data clears the track.
    *
-   */
-  onPartReady(child, pn) {
-    if (pn === _a.context) {
-      this.__context = child;
-      return;
-    }
-    if (super.onPartReady) super.onPartReady(child, pn);
-  }
-
-  /**
-   * Always render as: Home › <path items>. The first crumb is the permanent
-   * "Home" anchor (rendered in the __context slot). The rest are appended into
-   * the __content slot from the supplied data.
+   * NOTE: nothing here may ensurePart(_a.context) any more. That part is not
+   * rendered, and ensurePart NEVER resolves for a part that will not mount —
+   * the callback (and everything after it) would hang silently.
    * @param {*} data
    */
   _buildContent(data) {
-    this.ensurePart(_a.context).then((p) => {
-      p.el.dataset.current = _.isEmpty(data) ? 1 : 0;
-      p.el.style.display = "";
-    });
     if (_.isEmpty(data)) {
       this._data = [];
       this.ensurePart(_a.content).then((p) => {
@@ -87,7 +75,7 @@ class __desk_breadcrumb extends LetcBox {
     this.ensurePart(_a.content).then((p) => {
       // mfs_get_path returns the workspace's root with filename "/" (or empty).
       // Substitute the workspace's display name (hub_name) so the breadcrumb
-      // reads Home › <Workspace> › <Folder> instead of Home › / › <Folder>.
+      // reads <Workspace> › <Folder> instead of / › <Folder>.
       const hubName = (data[0] && (data[0].hub_name || data[0].name)) || null;
       const normalized = this._normalizeData(data);
       const items = [];
@@ -115,38 +103,17 @@ class __desk_breadcrumb extends LetcBox {
 
 
   /**
-   * Reset to the Home anchor (no path items, context highlighted).
+   * Clear the track (no path items).
+   *
+   * This used to ALSO reset the whole desk back to the legacy all-workspaces
+   * grid via `Desk.loadHome()`. That screen is retired, so this is now purely
+   * a breadcrumb concern: it empties the crumbs and touches nothing else.
+   * Boot no longer needs the side effect either — Desk._restoreDeskState
+   * opens a workspace (restored, deep-linked, or _openDefaultWorkspace).
+   *
    */
-  loadDefault(reload = 1) {
+  loadDefault() {
     this._buildContent();
-    this.ensurePart(_a.context).then((p) => {
-      p.mset({
-        filename: LOCALE.HOME,
-        hub_id: Wm.mget(_a.hub_id),
-        nid: Wm.mget(_a.home_id),
-        pid: Wm.mget(_a.home_id),
-        filepath: "/",
-        service: "load-home",
-      });
-      // NO p.set() here. `set({content})` belongs to the text widget
-      // (widgets/text/index.js), and the context part is no longer one: the
-      // skeleton draws Home as a Box.X pill — an icon plus a `__context-label`
-      // Note — so that its label shares the crumb type ramp with the workspace
-      // names beside it. Box has no `set` (only `mset`, which Backbone.View
-      // carries for every widget), so the call threw inside this promise —
-      // "Uncaught (in promise) TypeError: p.set is not a function", on every
-      // reset to Home: first render, the `breadcrumb:context` home event, and
-      // the load-home click.
-      //
-      // It aborted the rest of this callback too, though the highlight
-      // survived that: _buildContent() above sets `data-current` from its own
-      // ensurePart promise, and that one runs first.
-      //
-      // Nothing is lost: the label is a child Note the skeleton already renders
-      // with `content: LOCALE.HOME`, and this only ever wrote that same value.
-      p.el.dataset.current = 1;
-    });
-    if (reload) Desk.loadHome()
   }
 
   /**
@@ -158,8 +125,8 @@ class __desk_breadcrumb extends LetcBox {
   }
 
   /**
-   * Resolve a node's full path (workspace → folders) and render it after Home.
-   * Home stays anchored as the leftmost crumb.
+   * Resolve a node's full path (workspace → folders) and render it. The
+   * workspace is the leftmost crumb — there is no Home anchor in front of it.
    */
   _updatePath(nid, hub_id) {
     if (!nid || !hub_id) {
@@ -205,7 +172,7 @@ class __desk_breadcrumb extends LetcBox {
    * active folder window. So:
    *  - `event: _e.closed` (a folder window was closed): IGNORE — the desk
    *    container did not change.
-   *  - `event: _e.home`: reset to Home.
+   *  - `event: _e.home`: clear the track.
    *  - any other navigation: only update if the source IS the desk container
    *    (Wm itself or its grid). Folder window navigation is private to that
    *    window and must not retitle the breadcrumb.
@@ -250,8 +217,7 @@ class __desk_breadcrumb extends LetcBox {
 
   /**
    * Called when "breadcrumb:context" is broadcast (Apps / Settings / Contacts /
-   * Trash labels). Render as a single section after the permanent Home anchor
-   * so the user always sees Home › <Section>.
+   * Trash labels). Renders as a single crumb: <Section>.
    * @param {Object} context data
    */
   _updateContext(data) {
@@ -315,35 +281,6 @@ class __desk_breadcrumb extends LetcBox {
     switch (service) {
       case "breadcrum-jump":
         return this._loadActiveWindow(cmd);
-      case "load-home":
-        // In-place reset: reload Wm's main grid back to the user's home
-        // workspace WITHOUT rebuilding the skeleton, so any open folder
-        // windows are preserved per breadcrumb spec.
-        this.loadDefault();
-        if (Wm) {
-          const hub_id = Visitor.id;
-          const nid = Visitor.get(_a.home_id);
-          Wm._curWorkspace = null;
-          Wm.mset({ hub_id, nid, nodeId: nid, area: _a.personal });
-          if (typeof Wm.ensurePart === "function") {
-            Wm.ensurePart(_a.list).then((l) => {
-              if (!l || (l.isDestroyed && l.isDestroyed())) return;
-              l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
-              if (l.collection) l.collection.reset();
-              l.el.style.visibility = "hidden";
-              const scrollEl = l.el.querySelector(".smart-container");
-              if (scrollEl) {
-                scrollEl.dataset.partitioning = 1;
-                scrollEl.style.visibility = "hidden";
-              }
-              l.restart();
-              if (typeof Wm._prepareListPartition === "function") {
-                Wm._prepareListPartition(l);
-              }
-            });
-          }
-        }
-        return;
       case "change-workspace":
         this._loadActiveWindow(cmd);
         return this._updateContext(cmd.model.toJSON());

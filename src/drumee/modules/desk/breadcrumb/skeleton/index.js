@@ -17,33 +17,14 @@ module.exports = function (ui, data = []) {
     className: `${pfx}__main`,
     debug: __filename,
     kids: [
-      // Home is a TAB, exactly like every crumb after it (59:55943 draws each
-      // one as an icon + name pill). It used to be a bare Note, which is why
-      // its label sat on a different baseline and in a different colour from
-      // the workspace names beside it: two unrelated elements cannot share a
-      // type ramp by accident.
-      //
-      // kidsOpt active:0 — ui-core binds a click to every widget that does not
-      // opt out and stops propagation before triggerHandlers, so a child left
-      // at the default would eat the click and "load-home" would never fire.
-      Skeletons.Box.X({
-        className: `${pfx}__context`,
-        sys_pn: _a.context,
-        partHandler: ui,
-        uiHandler: [ui],
-        service: "load-home",
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Image.Svg({
-            className: `${pfx}__context-icon`,
-            ico: "sidebar_home",
-          }),
-          Skeletons.Note({
-            className: `${pfx}__context-label`,
-            content: LOCALE.HOME,
-          }),
-        ],
-      }),
+      // NO Home crumb. It existed only to reach the legacy all-workspaces
+      // grid (`load-home` → Wm.reload()), and that screen is retired: the 2.0
+      // shell is always INSIDE a workspace — its rail (Files / Chat / Task /
+      // Meet / Access) all act on an open one, so "no workspace" is not a
+      // state it can render (see Desk._restoreDeskState, which lands on a
+      // workspace rather than an empty desk). A crumb whose only destination
+      // is a retired screen is worse than no crumb, so the track now starts
+      // at the workspace: <Workspace> › <Folder> › …
       Skeletons.Box.X({ className: `${pfx}__content`, sys_pn: _a.content, kids: items })
     ],
   });

@@ -1695,7 +1695,11 @@ class desk_module extends LetcBox {
   _writeActivityCount(unread) {
     const n = parseInt(unread, 10) || 0;
     const content = n > 99 ? "99+" : String(n);
-    ["activity-count", "activity-count-top"].forEach((pn) => {
+    // Three surfaces: the desktop cluster's bell, the phone bar's bell, and
+    // the go-to sheet's notifications tile. (The old drawer's 'activity-count'
+    // is gone with the drawer.) They read the same number, so they are filled
+    // from one place — updating only some left the others permanently unmarked.
+    ["activity-count-top", "activity-count-mobile", "activity-count-sheet"].forEach((pn) => {
       this.ensurePart(pn).then((p) => {
         if (!p || !p.el) return;
         // Blank at zero, matching the existing badge convention — the skin
@@ -2268,7 +2272,7 @@ class desk_module extends LetcBox {
    * hang the caller forever.
    */
   _readActivityCount() {
-    for (const pn of ["activity-count-top", "activity-count"]) {
+    for (const pn of ["activity-count-top", "activity-count-mobile", "activity-count-sheet"]) {
       const p = this.getPart && this.getPart(pn);
       if (p && p.el) {
         return parseInt(p.el.dataset.count || p.el.innerText || "0", 10) || 0;
@@ -2305,12 +2309,19 @@ class desk_module extends LetcBox {
 
   /**
    * Rail → folder-window tab. With no workspace open there is nothing to show
-   * a tab OF, so fall back to the home grid: that is where the user picks one,
-   * and it beats a click that silently does nothing.
+   * a tab OF, so OPEN one — the legacy all-workspaces grid this used to fall
+   * back to is retired (it is the same screen the Home crumb reached, and the
+   * rail cannot render a "no workspace" state anyway). The workspace opens on
+   * its own default tab, which beats landing on a screen we no longer ship.
    */
   _railTab(tab) {
+    // The active tab, stamped for the skin: the phone's Files action row
+    // (search + "+ New") shows only while the files view is up — Chat has its
+    // composer and Task its own "+ New". No stamp (first paint) reads as
+    // files, which is also the boot view.
+    if (this.el) this.el.dataset.mtab = tab === "files" ? "files" : `${tab}`;
     const w = this._activeWorkspace();
-    if (!w) return this.loadHome && this.loadHome();
+    if (!w) return this._openDefaultWorkspace();
     w.showFolderTab(tab);
     return w.raise && w.raise();
   }
@@ -2350,8 +2361,10 @@ class desk_module extends LetcBox {
 
   /** Rail → the workspace's manage-access panel (the Permission Matrix). */
   _railAccess() {
+    if (this.el) this.el.dataset.mtab = "access";
     const w = this._activeWorkspace();
-    if (!w) return this.loadHome && this.loadHome();
+    // Same as _railTab: open a workspace rather than the retired home grid.
+    if (!w) return this._openDefaultWorkspace();
     if (_.isFunction(w.onUiEvent)) {
       return w.onUiEvent(w, { service: "folder-manage-access" });
     }
@@ -2478,11 +2491,10 @@ class desk_module extends LetcBox {
   }
 
   closeDeskNewMenu(cmd) {
-    // On mobile the same five services are reached from the drawer's `create`
-    // screen instead of a menu, so there is no menu to close — the DRAWER is
-    // what has to go, or the user is left staring at the screen they just left.
-    // Every new-* case calls this first, so one branch covers all of them.
-    if (Visitor.isMobile()) this._closeMobileDrawer();
+    // On mobile the same five services are reached from the create SHEET
+    // instead of a menu, and mobile-sheet-go already closes it before the
+    // re-dispatch — this is the belt for any path that lands here directly.
+    if (Visitor.isMobile()) this._closeMobileSheet();
     const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
     if (!menu) return;
     const group = menu.el?.querySelector(
@@ -4203,69 +4215,29 @@ class desk_module extends LetcBox {
    * drawer closes only via the in-drawer close button or by tapping the
    * overlay backdrop. No-op on non-mobile.
    */
-  openMobileDrawer(mode) {
-    return this.ensurePart("sidebar-main").then((p) => {
-      if (!p || !p.el) return;
-      const el = p.el;
-      el.dataset.mode = mode;
-      el.dataset.state = "open";
-      this._setMobileBackdrop(true);
-      this._setMobileTopbarActive(mode);
-    });
-  }
-
   /**
-   * Mirror the drawer state on the two mobile-topbar buttons so the
-   * currently-displayed mode shows as active. Pass null to clear both.
+   * Open one of the phone's bottom sheets (the approved Option A: workspace
+   * switcher / go-to grid / account / create). One host, one sheet at a time —
+   * feed() replaces the content wholesale and data-kind lets the skin size
+   * each shape.
    */
-  _setMobileTopbarActive(activeMode) {
-    const map = {
-      // "create" is a sub-screen of the add flow, not a sibling of it — the
-      // user reached it through this button, so it stays lit rather than
-      // going dark under a screen it owns.
-      "mobile-add-btn": activeMode === "actions" || activeMode === "create",
-      "mobile-menu-btn": activeMode === "nav",
-    };
-    Object.entries(map).forEach(([pn, isActive]) => {
-      this.ensurePart(pn).then((p) => {
-        if (!p || !p.el) return;
-        if (isActive) {
-          p.el.dataset.state = "active";
-        } else {
-          delete p.el.dataset.state;
-        }
+  _openMobileSheet(kind, content) {
+    return this.ensurePart("mobile-sheet-content").then((c) => {
+      if (!c) return;
+      c.feed(content);
+      return this.ensurePart("mobile-sheet-host").then((host) => {
+        if (!host || !host.el) return;
+        host.el.dataset.kind = kind;
+        host.el.dataset.state = "open";
       });
     });
   }
 
-  /**
-   * Show/hide the shared __overlay as a tap-to-close backdrop for the
-   * mobile drawer. The click listener that actually closes the drawer
-   * is bound once in _bindMobileBackdropListener at mount time.
-   */
-  _setMobileBackdrop(visible) {
-    this.ensurePart("overlay").then((p) => {
-      if (!p || !p.el) return;
-      p.el.dataset.state = visible ? "open" : "closed";
+  _closeMobileSheet() {
+    this.ensurePart("mobile-sheet-host").then((host) => {
+      if (!host || !host.el) return;
+      host.el.dataset.state = "closed";
     });
-  }
-
-  /**
-   * `keepBackdrop` is for the drawer → search-card handoff. _setMobileBackdrop
-   * writes inside ensurePart().then(), so two callers racing false-then-true
-   * would be ordered only by promise resolution, not by program order — correct
-   * today merely because "overlay" is already mounted and resolves eagerly, and
-   * silently wrong the day ensurePart goes cold. The handoff therefore suppresses
-   * this closer's write entirely and lets _openMobileSearch issue the single
-   * one, so the backdrop's final state does not depend on ordering at all.
-   */
-  _closeMobileDrawer(keepBackdrop) {
-    this.ensurePart("sidebar-main").then((p) => {
-      if (!p || !p.el) return;
-      p.el.dataset.state = "closed";
-    });
-    if (!keepBackdrop) this._setMobileBackdrop(false);
-    this._setMobileTopbarActive(null);
   }
 
   /**
@@ -4374,7 +4346,7 @@ class desk_module extends LetcBox {
       ]);
     }
     if (this._drawerDismissServices.has(service)) {
-      this._closeMobileDrawer();
+      this._closeMobileSheet();
     }
   }
 
@@ -4885,32 +4857,67 @@ class desk_module extends LetcBox {
           { explicit: 1, singleton: 1 },
         );
 
-      // Also the create sub-screen's back arrow — returning to the actions
-      // list is the same thing as opening it.
+      // ── The phone's bottom sheets (Option A) ────────────────────────────
+      // Every sheet row fires mobile-sheet-go with its REAL service as
+      // goTarget: close the sheet, then re-dispatch so the row lands on the
+      // exact handler the desktop surface already has. `args.service` wins
+      // over cmd.get(service) in this switch, which is what makes the
+      // re-dispatch land on the target instead of back here; the cmd rides
+      // along so per-row fields (wsHubId, the office template name) still
+      // read with mget.
+      case "mobile-sheet-go": {
+        const target = cmd.mget("goTarget");
+        this._closeMobileSheet();
+        if (!target) return;
+        if (target === "do-logout") return Butler.logout();
+        return this.onUiEvent(cmd, { ...args, service: target });
+      }
+
+      case "mobile-sheet-close":
+        return this._closeMobileSheet();
+
+      case "mobile-workspace-sheet":
+        return this._fetchWorkspaces().then((rows) => {
+          const cur = (window.Wm && window.Wm._curWorkspace) || null;
+          return this._openMobileSheet(
+            "workspace",
+            require("./skeleton/mobile-sheets").workspaceSheet(
+              this,
+              rows || [],
+              cur && cur.hub_id,
+            ),
+          );
+        });
+
+      case "mobile-goto-sheet":
+        return this._openMobileSheet(
+          "goto",
+          require("./skeleton/mobile-sheets").gotoSheet(this),
+        );
+
+      case "mobile-account-sheet":
+        return this._openMobileSheet(
+          "account",
+          require("./skeleton/mobile-sheets").accountSheet(this),
+        );
+
+      // Kept as an alias: anything still emitting the old drawer's
+      // "mobile-show-add" lands on the create sheet.
       case "mobile-show-add":
-        return this.openMobileDrawer("actions");
+      case "mobile-new-sheet":
+        return this._openMobileSheet(
+          "new",
+          require("./skeleton/mobile-sheets").newSheet(this, {
+            mayWrite: this._curWorkspaceCanWrite(),
+            mayManage: this._curWorkspaceCanManage(),
+            locked: require("libs/over-limit").isLocked(),
+          }),
+        );
 
-      // The "Add new" row's destination: the five create options as their own
-      // drawer screen (skeleton/sidebar.js createCreateNav). A screen swap, not
-      // a write, so it takes no guard of its own — every row inside it lands on
-      // a case that carries one.
-      case "mobile-show-create":
-        return this.openMobileDrawer("create");
-
-      case "mobile-show-menu":
-        return this.openMobileDrawer("nav");
-
-      // The backdrop is shared between the drawer and the search card, so one
-      // tap has to dismiss whichever layer is actually up. Both closers are
-      // no-ops when their layer is already closed.
-      case "mobile-close-drawer":
-        this._closeMobileSearch();
-        return this._closeMobileDrawer();
-
-      // Hand off to the card without touching the backdrop — it stays lit
-      // across the swap, and _openMobileSearch performs the only write.
+      // The search card lights the shared backdrop itself; the sheet has its
+      // own dim, so the only handoff left is closing the sheet first.
       case "open-mobile-search":
-        this._closeMobileDrawer(1);
+        this._closeMobileSheet();
         return this._openMobileSearch();
 
       case "close-mobile-search":

@@ -1,0 +1,347 @@
+@use "mixins/drumee";
+
+// The phone's bottom sheets — Option A of the approved mobile shell (design
+// canvas "Drumee 2.0 Mobile Shell"). One host serves all four sheets; the
+// desk feeds the content and stamps data-kind / data-state.
+//
+// The sheet wears the 2.0 menu treatment (59:55943): white, r=12+ card,
+// 0 1px 11px rgba(0,0,0,.13) shadow, 16/400 rows with 22px icons, headings in
+// the 11/600 uppercase ramp the workspace switcher uses.
+.desk-module {
+  &__msheet-host {
+    position: fixed;
+    inset: 0;
+    // Above the bottom rail (10000) and the slide-out panels (10001), below
+    // the toast layer.
+    z-index: 10005;
+
+    &[data-state="closed"] {
+      display: none !important;
+    }
+  }
+
+  &__msheet-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 10, 33, 0.42);
+  }
+
+  &__msheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 78vh;
+    background: var(--normal-bg);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  &__msheet-grabber {
+    width: 36px;
+    height: 4px;
+    min-height: 4px;
+    border-radius: 999px;
+    background: var(--normal-bg-80);
+    margin: 4px auto 10px;
+    align-self: center;
+    flex: 0 0 auto;
+  }
+
+  &__msheet-content {
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  &__msheet-title {
+    @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 600;
+    padding: 2px 6px 10px;
+  }
+
+  &__msheet-heading {
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-50));
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 10px 6px 4px;
+  }
+
+  &__msheet-divider {
+    height: 1px;
+    min-height: 1px;
+    background: rgba(0, 0, 0, 0.05);
+    margin: 6px 0;
+  }
+
+  // ── rows ──────────────────────────────────────────────────────────────────
+  &__msheet-row {
+    align-items: center;
+    gap: 12px;
+    min-height: 44px; // a real touch target
+    padding: 0 6px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:active {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__msheet-row--accent .desk-module__msheet-label {
+    color: var(--primary-40);
+    font-weight: 600;
+  }
+
+  // The ellipsis lives on the inner .note-content: a Note is a flex row
+  // around that inner div, so truncation set on the wrapper clips without
+  // ever showing the "…".
+  &__msheet-label {
+    @include drumee.typo($size: 16px, $line: 22px, $color: var(--normal-fg-10));
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__msheet-ico {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-10);
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    &--accent {
+      color: var(--primary-40);
+    }
+  }
+
+  &__msheet-check {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    flex: 0 0 auto;
+    color: var(--primary-40);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  // The workspace rows' area-tinted folder shape. The template's SVG is
+  // authored at 105x86 — without explicit sizing it paints at that intrinsic
+  // size (the giant-glyph defect, third sighting).
+  &__msheet-ws-ico {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    flex: 0 0 auto;
+    align-items: center;
+    display: flex !important;
+    justify-content: center;
+    position: relative;
+    pointer-events: none;
+
+    .media-grid__folder-art {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      position: relative;
+      width: 22px;
+      height: 18px;
+    }
+
+    .folder-shape {
+      width: 22px;
+      height: 18px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public       { fill: var(--area-public); }
+      &.share,
+      &.dmz          { fill: var(--area-share); }
+      &.private      { fill: var(--area-private); }
+    }
+
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 14px !important;
+      height: 14px !important;
+      color: var(--grid-color-folder-badge);
+    }
+  }
+
+  // ── identity header (account sheet) ──────────────────────────────────────
+  &__msheet-identity {
+    align-items: center;
+    gap: 12px;
+    padding: 4px 6px 12px;
+  }
+
+  &__msheet-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    position: relative;
+
+    &.user-profile__ui {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      border: none;
+    }
+
+    .user-profile__main,
+    img {
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      object-fit: cover;
+      overflow: hidden;
+    }
+  }
+
+  &__msheet-identity-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 1px;
+  }
+
+  &__msheet-identity-name {
+    @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 600;
+    overflow: hidden;
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__msheet-identity-org {
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-50));
+    overflow: hidden;
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // ── the go-to grid ────────────────────────────────────────────────────────
+  // Box.G is a REAL CSS grid (lib/container.scss: [data-flow="g"] sets
+  // display: grid), so the columns are grid tracks — flex-basis on the tiles
+  // is silently ignored there and the tiles stack one per row.
+  &__msheet-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 2px 0 4px;
+  }
+
+  &__msheet-tile {
+    position: relative;
+    min-width: 0;
+    min-height: 84px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 6px;
+    border-radius: 12px;
+    background: var(--normal-bg-90);
+    cursor: pointer;
+    box-sizing: border-box;
+
+    &:active {
+      background: var(--normal-bg-80);
+    }
+  }
+
+  &__msheet-tile-ico {
+    width: 24px;
+    height: 24px;
+    color: var(--normal-fg-10);
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  &__msheet-tile-label {
+    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg-10));
+    font-weight: 600;
+    max-width: 100%;
+    overflow: hidden;
+    // Centre the note's inner flex child, not just the text (see the rail
+    // label note in mobile-rail.scss — a Note is a flex row).
+    justify-content: center;
+
+    .note-content {
+      max-width: 100%;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Unread dot on the notifications tile — value written by
+  // _writeActivityCount; :empty means nothing unread.
+  &__msheet-tile-dot {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d74e49;
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+    pointer-events: none;
+
+    &:empty {
+      display: none;
+    }
+  }
+}
+
+// ── Dark mode ───────────────────────────────────────────────────────────────
+html[data-theme="dark"] .desk-module {
+  &__msheet {
+    background: var(--normal-bg);
+  }
+
+  &__msheet-divider {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &__msheet-tile {
+    background: var(--normal-bg-80);
+  }
+}

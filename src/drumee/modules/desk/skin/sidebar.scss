@@ -260,27 +260,9 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     overflow: hidden;
   }
 
-  &__main[data-device="mobile"] {
-
-    .desk-module-sidebar__nav-slot,
-    .desk-module-sidebar__actions-slot,
-    .desk-module-sidebar__create-slot {
-      display: none;
-    }
-
-    &[data-mode="nav"] .desk-module-sidebar__nav-slot {
-      display: flex;
-    }
-
-    &[data-mode="actions"] .desk-module-sidebar__actions-slot {
-      display: flex;
-    }
-
-    // The "Add new" sub-screen, reached from the actions list.
-    &[data-mode="create"] .desk-module-sidebar__create-slot {
-      display: flex;
-    }
-  }
+  // The mobile drawer is gone (the phone shell lives in desk/skeleton —
+  // top bar, bottom rail and the bottom sheets), so the mode-slot and
+  // slide-in rules that used to live here went with it.
 
   // Force SVG fills inside the actions- and create-slots to inherit the
   // sidebar's text color the same way sidebar_* icons do. The reused icons

@@ -127,11 +127,46 @@ test("slide-out panels sit inside the canvas, not over the whole viewport", () =
 
 // ── the top-bar address track (Figma 59:55943) ───────────────────────────────
 //
-// The frame draws every crumb as the same icon+name pill. Home was a bare Note
-// at a hardcoded #65656c while each crumb was a widget on var(--normal-fg-10),
-// so the two rendered in different greys on different baselines. Nothing but a
-// side-by-side check catches that, because each rule is defensible alone.
-test("Home and the crumbs share one type ramp", () => {
+// The track no longer opens with a Home tab: Home's only destination was the
+// legacy all-workspaces grid, which is retired (the 2.0 shell is always inside
+// a workspace — Desk._restoreDeskState opens one rather than showing an empty
+// desk). The track now starts at the workspace crumb.
+test("the Home crumb is gone, and nothing can still summon the home grid", () => {
+  const skel = stripComments(
+    readFileSync(join(SRC, "modules/desk/breadcrumb/skeleton/index.js"), "utf8"),
+  );
+  assert.doesNotMatch(skel, /load-home/, "the Home crumb must not be rendered");
+  assert.doesNotMatch(skel, /__context/, "…nor its slot");
+
+  const bc = stripComments(
+    readFileSync(join(SRC, "modules/desk/breadcrumb/index.js"), "utf8"),
+  );
+  assert.doesNotMatch(bc, /case "load-home"/, "…nor handled");
+  // ensurePart NEVER resolves for a part that will not mount, so a leftover
+  // wait on the removed context slot would hang its caller silently forever.
+  assert.doesNotMatch(
+    bc,
+    /ensurePart\(_a\.context\)/,
+    "no ensurePart on the removed context slot",
+  );
+  assert.doesNotMatch(bc, /Desk\.loadHome\(\)/, "loadDefault must not reset the desk");
+
+  // The rail is the other way in, and it is the one that reaches the phone:
+  // with no workspace open its tabs used to fall back to the same grid.
+  const desk = stripComments(readFileSync(join(SRC, "modules/desk/index.js"), "utf8"));
+  for (const fn of ["_railTab(tab) {", "_railAccess() {"]) {
+    const i = desk.indexOf(fn);
+    assert.ok(i > -1, `${fn} exists`);
+    const body = desk.slice(i, i + 500);
+    assert.match(
+      body,
+      /if \(!w\) return this\._openDefaultWorkspace\(\)/,
+      `${fn} must open a workspace, not the retired home grid`,
+    );
+  }
+});
+
+test("the crumbs share one type ramp", () => {
   // Comment-stripped: the prose in these files quotes the very values it
   // warns about (the old #65656c), which a raw match reads as the declaration.
   const bc = stripComments(
@@ -153,16 +188,16 @@ test("Home and the crumbs share one type ramp", () => {
     };
   };
 
-  const home = ramp(bc, "&__context-label {");
   const crumb = ramp(item, "&__filename {");
-  assert.deepEqual(home, crumb, "Home and crumb labels must match exactly");
+  assert.ok(crumb.size && crumb.line && crumb.color, "the crumb ramp is fully specified");
 
-  // No hardcoded grey: that literal is what made Home a different colour.
+  // No hardcoded grey: that literal is what made Home a different colour, and
+  // the same trap is open to any crumb rule added later.
   assert.doesNotMatch(bc, /#65656c/i, "use a token, not a hardcoded grey");
 
   // drumee.typo() emits no font-weight, so passing $weight to it is a silent
   // no-op — the weight must be written out.
-  assert.ok(home.weight, "the weight must be an explicit font-weight");
+  assert.ok(crumb.weight, "the weight must be an explicit font-weight");
   assert.doesNotMatch(bc, /typo\([^)]*\$weight/, "$weight in typo() does nothing");
   assert.doesNotMatch(item, /typo\([^)]*\$weight/, "$weight in typo() does nothing");
 });
@@ -377,5 +412,219 @@ test("no calendar control lets a child swallow its click", () => {
     offenders, [],
     "These Boxes carry a service but let their children eat the click — add " +
       "`kidsOpt: { active: 0 }`:\n  " + offenders.join("\n  "),
+  );
+});
+
+test("the mobile top bar carries workspace identity, not a wordmark", () => {
+  // The Figma file has NO mobile frames — every top-level frame is desktop —
+  // so this bar is derived from the desktop shell (43:23955 / 59:55943)
+  // rather than copied. What it must not do is what it replaced: spend its
+  // whole left half on a 101px wordmark and never name the workspace, which
+  // left a phone user with no way to tell where they were.
+  const skel = stripComments(
+    readFileSync(join(SRC, "modules/desk/skeleton/index.js"), "utf8"),
+  );
+
+  assert.doesNotMatch(skel, /raw-logo-drumee-full/,
+    "the wordmark belongs in the drawer header, not the bar");
+
+  // Identity: the area-tinted folder shape + the name + a caret, mirroring the
+  // desktop org-tab.
+  assert.match(skel, /__mobile-workspace/);
+  assert.match(skel, /require\("media\/grid\/template\/folder"\)/);
+  assert.match(skel, /Skeletons\.Element\(\{[\s\S]{0,200}content:\s*require\("media\/grid\/template\/folder"\)/,
+    "the folder template returns markup — Element + content, not ico");
+
+  // `ws-current` is the part _setWorkspaceLabel already writes, so the name
+  // tracks a switch with no new wiring.
+  assert.match(skel, /sys_pn:\s*"ws-current"/);
+  const desk = stripComments(readFileSync(join(SRC, "modules/desk/index.js"), "utf8"));
+  assert.match(desk, /getPart\("ws-current"\)/, "the desk must still write that part");
+
+  // The bell has its own registered part — see the duplicate-part test below
+  // for why it cannot reuse either existing name.
+  assert.match(skel, /sys_pn: "activity-count-mobile"/);
+
+  // Every control is a Box carrying the service with its children opted out —
+  // otherwise a child eats the tap.
+  const bar = skel.slice(skel.indexOf("_build_mobile_topbar"));
+  const body = bar.slice(0, bar.indexOf("\n};"));
+  // Counting `service:` would overcount: the chip() helper declares it once
+  // and each call site passes it again as an option. What matters is that both
+  // things that BUILD a Box with a service opt their children out — the shared
+  // chip helper, and the workspace pill which builds its own.
+  const chipHelper = body.slice(body.indexOf("const chip ="), body.indexOf("return Skeletons.Box.X"));
+  assert.match(chipHelper, /kidsOpt: \{ active: 0 \}/,
+    "the shared chip helper must opt its children out");
+
+  const pill = body.slice(body.indexOf("__mobile-workspace`"));
+  assert.match(pill.slice(0, 400), /kidsOpt: \{ active: 0 \}/,
+    "the workspace pill must opt its children out");
+});
+
+test("the drawer is gone: the phone's chrome is the sheets", () => {
+  // The approved mobile shell (Option A) replaces the legacy drawer with
+  // three bottom sheets — the desktop shell's own three surfaces (org-tab
+  // dropdown, utility cluster, avatar menu) translated. Nothing may quietly
+  // remount the drawer.
+  const sidebar = stripComments(
+    readFileSync(join(SRC, "modules/desk/skeleton/sidebar.js"), "utf8"),
+  );
+  // Word-bounded: createNavItem is the rail's own row builder and stays.
+  for (const gone of ["createNav", "createActionsNav", "createCreateNav",
+                      "createFooter", "createDrawerIdentity", "sidebar-main"]) {
+    assert.doesNotMatch(
+      sidebar,
+      new RegExp(`\\b${gone}\\b(?!Item)`),
+      `${gone} should be deleted with the drawer`,
+    );
+  }
+
+  const skel = stripComments(
+    readFileSync(join(SRC, "modules/desk/skeleton/index.js"), "utf8"),
+  );
+  assert.match(skel, /isMobile \? "" : require\("\.\/sidebar"\)\(ui\)/,
+    "the sidebar module must not mount on mobile");
+  assert.match(skel, /_build_mobile_sheet_host/, "the sheet host must mount instead");
+
+  // Every sheet row re-dispatches its REAL service through mobile-sheet-go,
+  // so the sheets reuse the desktop handlers rather than growing a second
+  // implementation of switching / navigation / creation.
+  const sheets = stripComments(
+    readFileSync(join(SRC, "modules/desk/skeleton/mobile-sheets.js"), "utf8"),
+  );
+  assert.match(sheets, /service: "mobile-sheet-go"/);
+  const desk = stripComments(readFileSync(join(SRC, "modules/desk/index.js"), "utf8"));
+  assert.match(desk, /case "mobile-sheet-go":/);
+  assert.match(desk, /this\.onUiEvent\(cmd, \{ \.\.\.args, service: target \}\)/,
+    "the re-dispatch is what lands rows on the existing handlers");
+
+  // The four sheets exist and lead somewhere real.
+  for (const svc of ["mobile-workspace-sheet", "mobile-goto-sheet",
+                     "mobile-account-sheet", "mobile-new-sheet"]) {
+    assert.match(desk, new RegExp(`case "${svc}":`), `${svc} has no handler`);
+  }
+});
+
+test("mobile gets the rail as a bottom bar, not a re-themed drawer", () => {
+  // The Figma file has NO mobile frames, so this is the desktop rail
+  // translated. What it must not be is the five workspace destinations hidden
+  // behind a menu: on desktop they are one click from anywhere, and a drawer
+  // (or the pane's two-at-a-time tab carousel) makes every view change a trip.
+  const skel = stripComments(
+    readFileSync(join(SRC, "modules/desk/skeleton/index.js"), "utf8"),
+  );
+
+  assert.match(skel, /_build_mobile_rail/, "the bottom bar must exist");
+  assert.match(skel, /mainKids\.push\(_build_mobile_rail\(ui\)\)/,
+    "and be mounted for mobile");
+
+  // The SAME services as the rail, so _railTab / _railAccess drive both with
+  // no second implementation to keep in step.
+  const bar = skel.slice(skel.indexOf("_build_mobile_rail"));
+  const body = bar.slice(0, bar.indexOf("\n};"));
+  for (const svc of ["rail-files", "rail-chat", "rail-task", "rail-meet", "rail-access"]) {
+    assert.match(body, new RegExp(`service: "${svc}"`), `${svc} missing from the bar`);
+  }
+  const desk = stripComments(readFileSync(join(SRC, "modules/desk/index.js"), "utf8"));
+  for (const svc of ["rail-files", "rail-chat", "rail-task", "rail-meet", "rail-access"]) {
+    assert.match(desk, new RegExp(`case "${svc}":`), `${svc} has no handler`);
+  }
+
+  // Its own radio group: the drawer is rendered at the same time, so sharing
+  // "sidebar-radio" would let a drawer row and a bar item mark each other.
+  assert.match(body, /radio: "mobile-rail-radio"/);
+  assert.doesNotMatch(body, /sidebar-radio/);
+});
+
+test("the bottom bar keeps the rail's treatment and clears the home indicator", () => {
+  const skin = stripComments(
+    readFileSync(join(SRC, "modules/desk/skin/mobile-rail.scss"), "utf8"),
+  );
+
+  // The rail's own colours, not a new palette.
+  assert.match(skin, /background-color:\s*var\(--primary-70\)/, "the navy ground — #3C3989, the token the desktop rail column wears");
+  assert.match(skin, /background-color:\s*var\(--primary-40\)/, "the active tile fill");
+  assert.match(skin, /border-radius:\s*8px/, "r=8 tiles");
+  assert.match(skin, /font-weight:\s*600/, "typo() emits no weight — it must be explicit");
+
+  // A fixed bar over a notched phone must clear the gesture strip, and the
+  // scroll box must reserve its height or it covers the last row of content.
+  assert.match(skin, /env\(safe-area-inset-bottom/, "must clear the home indicator");
+  assert.match(skin, /&__body\[data-device="mobile"\][\s\S]{0,160}padding-bottom/,
+    "the body must reserve the bar's height");
+});
+
+test("the go-to grid is a real CSS grid, not flex", () => {
+  // Box.G renders display: grid (lib/container.scss [data-flow="g"]), so the
+  // three columns MUST be grid tracks. flex-basis on the tiles is silently
+  // ignored in grid layout — that bug shipped once: the six tiles stacked one
+  // per row, full width.
+  const skin = stripComments(
+    readFileSync(join(SRC, "modules/desk/skin/mobile-sheets.scss"), "utf8"),
+  );
+  const grid = skin.slice(skin.indexOf("&__msheet-grid"), skin.indexOf("&__msheet-tile"));
+  assert.match(grid, /grid-template-columns:\s*repeat\(3, 1fr\)/, "3 grid tracks");
+  assert.doesNotMatch(skin, /flex:\s*0 0 calc/, "no flex-basis column sizing");
+});
+
+test("mobile labels centre and truncate the note's INNER flex child", () => {
+  // A Note is a flex ROW around .note-content (its model defaults flow "wrap"
+  // → data-flow → lib/container.scss flex-direction: row). text-align or
+  // text-overflow on the wrapper therefore never reaches the text: the label
+  // sat packed LEFT of its icon on the rail, and long names clipped without
+  // an ellipsis. Same trap the desktop rail hit (sidebar.scss __item-text).
+  const block = (src, name) => {
+    const i = src.indexOf(name);
+    assert.ok(i > -1, `${name} exists`);
+    const j = src.indexOf("&__", i + name.length);
+    return src.slice(i, j > -1 ? j : undefined);
+  };
+
+  const rail = stripComments(
+    readFileSync(join(SRC, "modules/desk/skin/mobile-rail.scss"), "utf8"),
+  );
+  const railLabel = block(rail, "&__mrail-label");
+  assert.match(railLabel, /justify-content:\s*center/, "rail label centres the flex child");
+  assert.match(railLabel, /\.note-content\s*\{/, "…and styles the inner text box");
+
+  const sheets = stripComments(
+    readFileSync(join(SRC, "modules/desk/skin/mobile-sheets.scss"), "utf8"),
+  );
+  const tileLabel = block(sheets, "&__msheet-tile-label");
+  assert.match(tileLabel, /justify-content:\s*center/, "tile label centres the flex child");
+  assert.match(tileLabel, /\.note-content\s*\{/, "…and styles the inner text box");
+  for (const name of ["&__msheet-label", "&__msheet-identity-name"]) {
+    const b = block(sheets, name);
+    assert.match(b, /\.note-content\s*\{[^}]*text-overflow:\s*ellipsis/,
+      `${name} truncates on the inner .note-content`);
+  }
+
+  const topbar = stripComments(
+    readFileSync(join(SRC, "modules/desk/skin/mobile-topbar.scss"), "utf8"),
+  );
+  const wsName = block(topbar, "&__mobile-workspace-name");
+  assert.match(wsName, /\.note-content\s*\{[^}]*text-overflow:\s*ellipsis/,
+    "the workspace pill name truncates on the inner .note-content");
+});
+
+test("no duplicate part names on the mobile tree", () => {
+  // registerPart is a plain `_branches[name] = child`, so a duplicate silently
+  // replaces the first and one of the two never updates again. The phone bell
+  // hit this twice: 'activity-count' is the drawer's row, and
+  // 'activity-count-top' is the desktop cluster's — which is still RENDERED on
+  // mobile (display:none, not absent).
+  const skel = stripComments(
+    readFileSync(join(SRC, "modules/desk/skeleton/index.js"), "utf8"),
+  );
+  const desk = stripComments(readFileSync(join(SRC, "modules/desk/index.js"), "utf8"));
+
+  assert.match(skel, /sys_pn: "activity-count-mobile"/, "the phone bell needs its own name");
+  // Three surfaces since the drawer left: the desktop cluster, the phone bar,
+  // and the go-to sheet's notifications tile.
+  assert.match(
+    desk,
+    /\["activity-count-top", "activity-count-mobile", "activity-count-sheet"\]/,
+    "and the writer must fill all three, or it never shows a count",
   );
 });
