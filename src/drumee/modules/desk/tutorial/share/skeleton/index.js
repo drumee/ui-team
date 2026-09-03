@@ -16,7 +16,7 @@ module.exports = function (ui, screen = {}) {
     kids: [
       // The frames share from an external workspace, so its folders are pink.
       filesGrid(ui, { area: _a.share }),
-      panel(ui, { lit: screen.lit }),
+      panel(ui, { lit: screen.lit, subject: screen.subject }),
     ],
   });
 };

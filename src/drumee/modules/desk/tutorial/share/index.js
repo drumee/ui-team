@@ -20,8 +20,22 @@ const SCREENS = [
   { lit: BLOCKS.EMAIL, desc: () => LOCALE.TUTORIAL_SHARE_EMAIL },
   { lit: BLOCKS.PASSWORD, desc: () => LOCALE.TUTORIAL_SHARE_PASSWORD },
   { lit: BLOCKS.EXPIRY, desc: () => LOCALE.TUTORIAL_SHARE_EXPIRY },
-  { lit: BLOCKS.NOTIFY, desc: () => LOCALE.TUTORIAL_SHARE_NOTIFY },
+  // The last block sits at the very bottom of the panel, and 148:44198 does
+  // not put its callout beside the panel like the other five: the card goes
+  // ON the panel, above the notify row, with the tail pointing down at it
+  // (the frame's beak is on the card's bottom edge at y226.875).
+  //
+  // `south` is that placement — the name is the direction the callout REACHES
+  // (spotlight/index.js anchorFor), so reaching south puts the card above the
+  // target. A card beside the panel would have had to sit almost off the
+  // bottom of the tour to line up with a row 13px from the panel's floor.
+  { lit: BLOCKS.NOTIFY, direction: 'south', desc: () => LOCALE.TUTORIAL_SHARE_NOTIFY },
 ];
+
+// Where the callout sits when a screen does not say otherwise: to the LEFT of
+// the panel with the tail on its right edge, which is what the frames show for
+// the first five (148:41197 onward).
+const DIRECTION = 'east';
 
 class __tutorial_share extends LetcBox {
 
@@ -67,6 +81,37 @@ class __tutorial_share extends LetcBox {
   }
 
   /**
+   * Size the ring for a screen whose ring stops short of its block.
+   *
+   * Step 2 rings the choice — the "Access Management" label, the Public Share
+   * row and the Secure Share HEAD — and leaves the email and password cards
+   * nested under Secure Share outside it (Figma 148:42515). The block itself
+   * runs to the bottom of those cards, so the ring cannot simply trace it.
+   *
+   * Measured rather than tabulated: the label and the two descriptions all
+   * wrap under a longer translation, and a height written down here would then
+   * cut through a line of text. Every other screen leaves `--lit-h` unset and
+   * the ring falls back to the block's own height (skin/index.scss).
+   *
+   * @param {Object} block the lit block's part
+   */
+  async _sizeRing(block) {
+    const head = await this.ensurePart('sp-secure-head');
+    if (!block || !block.el || !head || !head.el) return;
+    const b = block.el.getBoundingClientRect();
+    const h = head.el.getBoundingClientRect();
+    if (!b.height || !h.height) return;
+    // Scroll-invariant: both rects move together.
+    //
+    // 12 above, the outset every ring uses. Only 6 below, because the gap
+    // between the Secure Share head and the email card under it is also 12 —
+    // so a symmetric ring would put its bottom edge exactly on the card's top
+    // edge and read as the card being underlined. Half the gap leaves the ring
+    // visibly ending in the space between them.
+    block.el.style.setProperty('--lit-h', `${Math.round(h.bottom - b.top) + 12 + 6}px`);
+  }
+
+  /**
    * Render the current screen and move the callout onto its block.
    *
    * The parts are awaited rather than read straight after `feed`, because the
@@ -80,11 +125,17 @@ class __tutorial_share extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(skeleton(this, s));
+    // `subject` says what the panel is about — a workspace when the tour was
+    // triggered over one (see fire() in libs/tutorial-tours and the share
+    // trigger in window/folder), absent for the full tour and previews.
+    this.feed(skeleton(this, { ...s, subject: this.mget('subject') }));
     const [panel, block] = await Promise.all([
       this.ensurePart('sp-panel'),
       this.ensurePart(s.lit),
     ]);
+    // Before the scroll and before the callout measures anything: the ring is
+    // what the callout's beak points at.
+    if (s.lit === BLOCKS.ACCESS) await this._sizeRing(block);
     await this._scrollTo(block && block.el);
 
     this.triggerHandlers({
@@ -97,12 +148,18 @@ class __tutorial_share extends LetcBox {
         title: LOCALE.SECURE_SHARE,
         desc: s.desc(),
         ...stepProgress(this, this._screenIndex),
-        // The frames show no Back on any of the six — the pill carries the
-        // position and the panel is the thing being read.
-        hide_back: true,
+        // Back on every screen but the one with nothing behind it. Six screens
+        // of a form with only a forward button meant a misread was a misread
+        // for the rest of the tour; the pill says where you are but does not
+        // get you back there.
+        //
+        // `is_first` is the HOST's flag for the tour's first STEP, so inside
+        // `full` — where share is the fifth step — screen 0 keeps its Back and
+        // hands off to the step before it (see back-step in onUiEvent).
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
         done: isLastScreen(this, this._screenIndex, SCREENS.length),
       },
-      direction: 'east',
+      direction: s.direction || DIRECTION,
       owner: this,
     });
   }
