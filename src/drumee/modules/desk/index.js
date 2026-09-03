@@ -2120,6 +2120,17 @@ class desk_module extends LetcBox {
     const media = this._workspaceMediaItem(w.mget && w.mget(_a.hub_id));
     const target = media || w;
 
+    // Trashing a workspace removes its tile from the grid (media/core.js
+    // answers the media.trash broadcast with `_e.deleted` + suppress), but the
+    // switcher reads its OWN cached list and the pane keeps showing a workspace
+    // that no longer exists — a blank screen until a reload. Listen for that
+    // signal here. Attached at most once per tile: the menu can be opened any
+    // number of times before a delete ever happens.
+    if (media && !media.__wsDeleteHooked && _.isFunction(media.once)) {
+      media.__wsDeleteHooked = 1;
+      media.once(_e.deleted, () => this._onWorkspaceDeleted(media));
+    }
+
     // Rows come from the canonical builder (media/core.js
     // contextmenuItemsForFolder, "Sectioned Folder menu spec 2026-06-10") —
     // the same list the grid's right-click menu renders, already privilege-
@@ -2491,6 +2502,40 @@ class desk_module extends LetcBox {
    * implements none of those methods. Returns null rather than throwing; the
    * caller shows no menu in that case, because every row would be inert.
    */
+  /**
+   * A workspace was trashed — put the desk back into a valid state.
+   *
+   * Three things go stale at once and none of them fix themselves:
+   *   - `_workspaces` is a cache nothing ever invalidates, so the switcher
+   *     keeps offering the deleted workspace until the page is reloaded;
+   *   - the headless pane is still rendering it, which reads as a blank screen;
+   *   - `Wm._curWorkspace` still names it, and loadWorkspace() no-ops when the
+   *     hub_id it is given matches — so opening a replacement would do nothing
+   *     unless that context is cleared first.
+   */
+  async _onWorkspaceDeleted(media) {
+    try {
+      const gone = media && media.mget && media.mget(_a.hub_id);
+      // Force past the cache — this is the one moment it is known to be wrong.
+      this._workspaces = null;
+      await this._fetchWorkspaces(true);
+      if (this._wsListPart) this._renderWorkspaceMenu(this._wsListPart);
+
+      const cur = (window.Wm && Wm._curWorkspace) || null;
+      if (!gone || !cur || String(cur.hub_id) !== String(gone)) return;
+
+      // The open pane is the one that just went. Clear it and the context it
+      // set, then fall back the same way boot does.
+      if (Wm.headlessLayer && _.isFunction(Wm.headlessLayer.clear)) {
+        Wm.headlessLayer.clear();
+      }
+      Wm._curWorkspace = null;
+      await this._openDefaultWorkspace();
+    } catch (e) {
+      this.warn && this.warn("[workspaces] post-delete recovery failed", e);
+    }
+  }
+
   _workspaceMediaItem(hub_id) {
     try {
       if (!hub_id || typeof Wm === "undefined") return null;

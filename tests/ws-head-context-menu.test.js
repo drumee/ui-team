@@ -705,3 +705,33 @@ test("the drawer's close starts on the click, not two seconds later", () => {
   assert.ok(resolveDelay(parsed) <= 16,
     `close is delayed ${resolveDelay(parsed)}ms; it must start within a frame`);
 });
+
+// ── after a workspace is trashed ─────────────────────────────────────────────
+//
+// Duy, 2026-09-03: deleting worked, but the desk was left on a blank screen and
+// the switcher kept offering the deleted workspace until a reload.
+
+test("the delete signal is hooked once per tile, not once per menu open", () => {
+  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd) {");
+  assert.match(body, /__wsDeleteHooked/, "nothing listens for the tile's delete");
+  assert.match(body, /media\.once\(_e\.deleted/, "must use the media item's own signal");
+  // The guard is the point: the menu can be opened repeatedly before any delete.
+  assert.match(body, /!media\.__wsDeleteHooked/, "listeners would stack on every open");
+});
+
+test("post-delete recovery clears the cache, the pane and the context", () => {
+  const body = slice(DESK, "  async _onWorkspaceDeleted(media) {");
+  // The switcher cache is the reason the deleted row survived a reload-less UI.
+  assert.match(body, /this\._workspaces = null/, "the stale cache is kept");
+  assert.match(body, /_fetchWorkspaces\(true\)/, "refetch must bypass the cache");
+  assert.match(body, /_renderWorkspaceMenu/, "the switcher is never repainted");
+  // Only when the deleted one is the open one.
+  assert.match(body, /String\(cur\.hub_id\) !== String\(gone\)/,
+    "recovery must not fire for a workspace that was not on screen");
+  // loadWorkspace() no-ops on a matching hub_id, so the context has to go first.
+  const clearAt = body.indexOf("Wm._curWorkspace = null");
+  const openAt = body.indexOf("_openDefaultWorkspace");
+  assert.ok(clearAt > -1 && openAt > -1 && clearAt < openAt,
+    "_curWorkspace must be cleared BEFORE opening the replacement, or the open no-ops");
+  assert.match(body, /headlessLayer/, "the pane showing the deleted workspace is left up");
+});
