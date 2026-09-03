@@ -484,17 +484,7 @@ class __window_mfs extends DrumeeMFS {
     // rather than the DOM: `.smart-container` is not reliably CSS-`:empty` —
     // _doPartition re-appends every tile into section elements that stay in
     // place, and a spinner lives there while the fetch is in flight.
-    //
-    // Armed only from EOD onward. Before that the grid is loading, and an
-    // empty state flashed over a fetch that is about to return files is worse
-    // than a blank pane for the same half-second.
-    // Backbone's own three, plus the list's custom `item:add` — `_e.add` is
-    // 'item:add', not 'add', so binding the lexicon alone would miss every
-    // native mutation and binding the natives alone would miss the widget's.
-    this._syncGridEmpty(listPart);
-    const onGridChange = () => this._syncGridEmpty(listPart);
-    listPart.collection.on("add remove reset", onGridChange);
-    if (_e.add && _e.add !== "add") listPart.collection.on(_e.add, onGridChange);
+    this._wireGridEmpty(listPart);
 
     listPart.once(EOD, () => {
       listPart.el.dataset.wait = 0;
@@ -505,6 +495,69 @@ class __window_mfs extends DrumeeMFS {
       this._gridLoaded = true;
       this._syncGridEmpty(listPart);
       this.trigger(EOD);
+    });
+  }
+
+  /**
+   * Wire the grid's empty-state flag to the list's own load cycle.
+   *
+   * `_gridLoaded` is the gate: _syncGridEmpty refuses to write `data-empty`
+   * until a load has FINISHED, so an empty state cannot flash over a fetch
+   * that is about to return files. The flag matters twice over, because the
+   * skin reads it in both directions — `[data-empty="1"]` hides the list AND
+   * reveals the hero beside it — so a wrong `1` does not add an empty state,
+   * it REPLACES the grid with one.
+   *
+   * The gate used to be opened at the first EOD and never closed again, so it
+   * guarded only the first load. Every reload after that ran unguarded, and
+   * `restart()` is
+   *     restart() { this.trigger(_e.eod); this.start(1) }
+   * with `_e.eod` === the "end:of:data" this listens for: a reload OPENS the
+   * gate and only then empties the collection, whose `reset` lands a
+   * `data-empty="1"` mid-fetch. Result: the "no files yet" hero over a
+   * populated folder, with the tiles removed from layout, on every reload.
+   *
+   * So the cycle is bound to the collection rather than to the caller:
+   *
+   *   reset  — a load is STARTING (start(1) empties before it refetches).
+   *            Close the gate and unwrite any stale flag.
+   *   EOD    — a load has FINISHED. Open the gate and write the real answer.
+   *
+   * Bound once per list and PERSISTENT, both deliberately. Persistent because
+   * plenty of reloads never come back through _prepareListPartition — the WS
+   * changelog refresh, core's restart(w, type), make_root_dirs — and each of
+   * those still has to re-arm on its own EOD or an empty folder would stop
+   * showing the hero at all. Once because _prepareListPartition runs again on
+   * every navigation, and re-binding there would stack a duplicate handler set
+   * per visited folder.
+   *
+   * @param {Object} listPart the smart list
+   */
+  _wireGridEmpty(listPart) {
+    if (!listPart) return;
+    // Re-arm for the load that is about to run, whatever state the previous
+    // one left behind.
+    this._gridLoaded = false;
+    if (listPart.el && listPart.el.dataset) delete listPart.el.dataset.empty;
+
+    if (listPart.__gridEmptyWired) return;
+    listPart.__gridEmptyWired = true;
+
+    const sync = () => this._syncGridEmpty(listPart);
+    // Backbone's own, plus the list's custom `item:add` — `_e.add` is
+    // 'item:add', not 'add', so binding the lexicon alone would miss every
+    // native mutation and binding the natives alone would miss the widget's.
+    listPart.collection.on("add remove", sync);
+    if (_e.add && _e.add !== "add") listPart.collection.on(_e.add, sync);
+
+    listPart.collection.on("reset", () => {
+      this._gridLoaded = false;
+      if (listPart.el && listPart.el.dataset) delete listPart.el.dataset.empty;
+    });
+
+    listPart.on(EOD, () => {
+      this._gridLoaded = true;
+      this._syncGridEmpty(listPart);
     });
   }
 
@@ -527,6 +580,26 @@ class __window_mfs extends DrumeeMFS {
     if (!this._gridLoaded) return;
     const el = listPart && listPart.el;
     if (!el || !el.dataset) return;
+    // A file-type filter (Docs/PDF/Images/Other) narrows the LISTING; it does
+    // not tell us anything about the folder. `type` is applied server-side and
+    // returns matching FILES only — no folders — so a workspace holding twenty
+    // folders and no PDF answers zero rows for "PDF", which is not the same
+    // statement as "this workspace has no files". _resetFileTypeFilter says the
+    // same thing from the other side: a lingering filter "hides every
+    // sub-folder and the listing looks empty".
+    //
+    // The flag is read in BOTH directions by the skin — it hides the list and
+    // reveals the hero — so flagging a filtered view empty replaced a full
+    // folder with "Chat live in files. No more context loss." and a Migrate /
+    // Upload pitch, on every tab that happened to match nothing. The list keeps
+    // its own empty view for this case (evArgs, gridFilesBrowser).
+    //
+    // `_filterType` belongs to the folder window; every other window on this
+    // base leaves it undefined and is unaffected.
+    if (this._filterType) {
+      delete el.dataset.empty;
+      return;
+    }
     const n = (listPart.collection && listPart.collection.length) || 0;
     el.dataset.empty = n ? 0 : 1;
   }

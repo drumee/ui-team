@@ -458,6 +458,12 @@ export function gridFilesBrowser(ui) {
     itemsOpt: opt,
     skip,
     vendorOpt: Preset.List.Orange_e,
+    // Shown when the LISTING comes back empty but the folder is not — i.e. a
+    // file-type filter that matched nothing. The "no files yet" hero beside
+    // this list is deliberately suppressed then (window/utils _syncGridEmpty),
+    // because it pitches adding a first file to a folder that already has
+    // plenty; without this the pane would simply go blank instead.
+    evArgs: Skeletons.Note(LOCALE.FILES_NOT_FOUND, "no-content"),
     api: function (x) {
       return ui.getCurrentApi();
     },
