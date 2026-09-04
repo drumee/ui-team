@@ -88,8 +88,17 @@ test("libs/create-workspace broadcasts workspace:refresh", () => {
 });
 
 test("both create surfaces route through libs/create-workspace", () => {
-  assert.match(FORM, /require\("libs\/create-workspace"\)[\s\S]{0,60}createWorkspace/);
-  assert.match(TUTORIAL, /require\('libs\/create-workspace'\)[\s\S]{0,60}createWorkspace/);
+  // Matched as two independent facts rather than as a windowed span: a comment
+  // between the require and the call is not a change in routing, and a fixed
+  // character window turns one into a failure.
+  for (const [label, src] of [["media/form", FORM], ["tutorial", TUTORIAL]]) {
+    assert.match(
+      src,
+      /require\(['"]libs\/create-workspace['"]\)/,
+      `${label} does not require the lib`,
+    );
+    assert.match(src, /\.createWorkspace\(/, `${label} does not call it`);
+  }
 });
 
 test("the sidebar already listened — the desk is the half that was missing", () => {

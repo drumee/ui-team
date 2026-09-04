@@ -171,13 +171,31 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${pfx}__left-cluster`,
         kids: [
-          {
-            kind: "desk_breadcrumb",
-            sys_pn: "breadcrumb",
-            className: `${pfx}__breadcrumb`,
-            uiHandler: [ui],
-          },
-          workspaceSwitcher(pfx, ui),
+          // The address chip: crumb track + the switcher's caret, in one box.
+          //
+          // They were adjacent siblings and merely LOOKED like one control —
+          // the crumb painted its own rounded ground and hover, the caret sat
+          // outside it, and the two drifted apart whenever either one's padding
+          // changed. The chip now belongs to this container: it carries the
+          // radius, the inset and the hover ground, and .breadcrumb-item__tab
+          // no longer paints one of its own (breadcrumb/item/skin).
+          //
+          // The switcher stays the breadcrumb's IMMEDIATE next sibling inside
+          // here, which is load-bearing: topbar.scss hides the caret on section
+          // screens through `.desk-breadcrumb__ui[data-section="1"] + …`, and
+          // an element between the two would break that selector silently.
+          Skeletons.Box.X({
+            className: `${pfx}__crumb-group`,
+            kids: [
+              {
+                kind: "desk_breadcrumb",
+                sys_pn: "breadcrumb",
+                className: `${pfx}__breadcrumb`,
+                uiHandler: [ui],
+              },
+              workspaceSwitcher(pfx, ui),
+            ],
+          }),
           Skeletons.Box.X({
             className: `${pfx}__folder-tabs`,
             sys_pn: "folder-tabs",

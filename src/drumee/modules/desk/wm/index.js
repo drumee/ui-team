@@ -408,7 +408,15 @@ class __window_manager extends push {
     });
   }
 
-  createFolderFromDialog(cmd) {
+  /**
+   * @param {Object} cmd     the dialog, or anything with getValue()
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.home]  create at the user's HOME ROOT whatever is
+   *   open. Set by the personal-workspace path in libs/create-workspace: a
+   *   personal workspace IS a home-root folder, so "wherever the user is"
+   *   is the one answer that is never right for it.
+   */
+  createFolderFromDialog(cmd, opt = {}) {
     if (this._creatingFolder) return;
     this._creatingFolder = 1;
     const entry = this.getPart("create-folder-name");
@@ -422,7 +430,16 @@ class __window_manager extends push {
       return this.alert(LOCALE.INVALID_FILENAME);
     }
 
-    const onHome = !this._curWorkspace;
+    // WHERE THE FOLDER GOES. By default: inside the open workspace, which is
+    // what "+ New -> Folder" means and is right for that caller.
+    //
+    // `opt.home` overrides it, and exists because the same method creates a
+    // PERSONAL WORKSPACE — which is a home-root folder, not a folder in
+    // whatever happens to be open. Without the override, creating one while an
+    // internal or external workspace was open put it inside that workspace and
+    // stamped it with that workspace's AREA as well, so it stopped being
+    // personal in two ways at once and read as a plain subfolder.
+    const onHome = !!opt.home || !this._curWorkspace;
     const hub_id = onHome ? Visitor.id : this._curWorkspace.hub_id;
     const nid = onHome ? Visitor.get(_a.home_id) : this._curWorkspace.nid;
     const area = onHome ? _a.personal : this._curWorkspace.area;
@@ -884,10 +901,17 @@ class __window_manager extends push {
    *
    * @param {String} hub_id the workspace that was removed
    */
-  onCurrentWorkspaceRemoved(hub_id) {
+  onCurrentWorkspaceRemoved(hub_id, nid) {
     if (!hub_id) return;
     const cur = this._curWorkspace;
     if (!cur || cur.hub_id != hub_id) return;
+    // A PERSONAL workspace is identified by its NODE, never by hub_id alone:
+    // every one of them is a folder in the user's own home, so they all report
+    // hub_id === Visitor.id. Deleting one would otherwise tear the desk down
+    // for whichever personal workspace happened to be open — the same id
+    // collision that put the wrong name in the switcher header. Callers that
+    // know the node pass it; the hub callers pass none and are unaffected.
+    if (nid != null && cur.nid != nid) return;
 
     this._curWorkspace = null;
     // A new generation invalidates any loadWorkspace still in flight for the
@@ -941,6 +965,26 @@ class __window_manager extends push {
       data.hub_id
     ) {
       this.onCurrentWorkspaceRemoved(data.hub_id);
+    }
+    // A PERSONAL workspace leaves as a TRASHED FOLDER, not as a deleted hub —
+    // it has no hub of its own — so neither service above ever names it, and
+    // deleting the open one left the desk showing a workspace that was gone.
+    //
+    // Only the workspace's own ROOT counts. Trashing a folder inside it is an
+    // ordinary delete that must not tear the desk down, which is why this
+    // compares the node and not just the hub.
+    if (service === "media.remove" || service === SERVICE.media.trash) {
+      const cur = this._curWorkspace;
+      const personal = !!(cur && `${cur.hub_id}` === `${Visitor.id}`);
+      // The echo is one node or a list of them (removeContent takes either).
+      const nodes = _.isArray(data) ? data : [data];
+      if (personal) {
+        for (const n of nodes) {
+          if (!n || n.nid == null || cur.nid != n.nid) continue;
+          this.onCurrentWorkspaceRemoved(n.hub_id || Visitor.id, n.nid);
+          break;
+        }
+      }
     }
     if (super.handleWsEvent) return super.handleWsEvent(args);
   }
@@ -2015,6 +2059,44 @@ class __window_manager extends push {
         this.warn("confirmRemoveWorkspace: no hub_id");
         return resolve({ error: "no hub_id" });
       }
+      // NEVER delete_hub THE USER'S OWN ENTITY.
+      //
+      // `hub_id === Visitor.id` does not name a workspace at all — it is the
+      // user's own drumate, which every PERSONAL workspace reports as its
+      // hub_id because a personal workspace is a folder in the user's home,
+      // not a hub. hub.delete_hub answers such a request with
+      // WRONG_ENTITY_TYPE (400, service/private/hub.js delete_hub tests
+      // `entity.type !== 'hub'`), and the caller then said "Could not delete
+      // the workspace. The listing has been restored."
+      //
+      // That 400 is on stage's access log for vowaw91171@robustq.com at
+      // 02:38:54 and 02:39:30 on 2026-09-04, both while the personal workspace
+      // `rrr` was open, and both followed by the reload this failure triggers.
+      //
+      // Guarded HERE rather than at the caller because this is the only place
+      // that can be sure: whichever of the four routes into a workspace delete
+      // ran, the request is about to go out from this line, and one glance at
+      // hub_id is enough to know it cannot be a hub. Callers that already
+      // branch correctly never reach this.
+      if (`${hub_id}` === `${Visitor.id}`) {
+        this.warn(
+          "confirmRemoveWorkspace: hub_id is the user's own entity —"
+            + " this is a PERSONAL workspace, routing to media.trash",
+          { hub_id, filename },
+        );
+        const nid = this._personalWorkspaceNid(media);
+        if (!nid) {
+          this.warn("confirmRemoveWorkspace: no node for the personal workspace");
+          Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+          return resolve({ error: "no personal node" });
+        }
+        return resolve(
+          this.confirmRemovePersonalWorkspace(
+            { nid, hub_id, filename, filepath: this._personalWorkspacePath(media) },
+            media,
+          ),
+        );
+      }
       const tile =
         media && !(media.isDestroyed && media.isDestroyed()) ? media : null;
       this.ensurePart("wrapper-modal").then(async (p) => {
@@ -2079,7 +2161,176 @@ class __window_manager extends push {
     });
   }
 
+  /**
+   * DELETE A PERSONAL WORKSPACE — a home-root FOLDER, not a hub.
+   *
+   * The sibling above removes a hub with `hub.delete_hub` and needs only its
+   * id. A personal workspace has no hub of its own — it is one folder in the
+   * user's home — so it goes out through `media.trash` on its node, which is
+   * what the grid tile's own trash() has always posted (media/core.js
+   * makeTrashOptions). What is NOT borrowed from the tile is the requirement to
+   * have one: see confirmRemoveWorkspace's note, which applies here word for
+   * word, and the caller's.
+   *
+   * Same shape as its two siblings on purpose: the same confirm copy, the same
+   * optimistic ordering (request in PARALLEL with the animation), the same
+   * local echo so the grid tile and any window inside the workspace go without
+   * waiting for the server's, and the same reload-and-explain on failure.
+   *
+   * @param {Object} node {nid, hub_id, filename, filepath} — the WORKSPACE's
+   *   own node, not whatever folder a pane is browsing
+   * @param {Object} [media] the tile, when the caller has one
+   * @returns {Promise}
+   */
+  /**
+   * The node of the personal workspace a misrouted hub delete was about.
+   *
+   * The tile when the caller has one — it carries the folder's real nid. With
+   * no tile, `_curWorkspace`, which loadWorkspace pins to the workspace root
+   * and which navigation never moves. Both are checked because the two routes
+   * into a workspace delete supply different things: the grid passes a tile,
+   * the switcher's menu passes none.
+   */
+  _personalWorkspaceNid(media) {
+    const fromTile = media && _.isFunction(media.mget) ? media.mget(_a.nid) : null;
+    if (fromTile != null && fromTile !== "") return fromTile;
+    const cur = this._curWorkspace;
+    if (cur && `${cur.hub_id}` === `${Visitor.id}` && cur.nid != null) {
+      return cur.nid;
+    }
+    return null;
+  }
+
+  /** The workspace's path, for the removal echo — see the node's docblock. */
+  _personalWorkspacePath(media) {
+    const fromTile =
+      media && _.isFunction(media.mget)
+        ? media.mget(_a.filepath) || media.mget(_a.ownpath)
+        : null;
+    if (fromTile) return fromTile;
+    try {
+      return this.mget(_a.filepath) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  confirmRemovePersonalWorkspace(node, media) {
+    return new Promise((resolve) => {
+      const { nid, filename, filepath } = node || {};
+      if (!nid) {
+        this.warn("confirmRemovePersonalWorkspace: no nid");
+        return resolve({ error: "no nid" });
+      }
+      // A personal workspace lives in the user's own home, so this is always
+      // Visitor.id — taken from the node rather than assumed, because that is
+      // the field the request and the echo must agree on.
+      const hub_id = node.hub_id || Visitor.id;
+      const tile =
+        media && !(media.isDestroyed && media.isDestroyed()) ? media : null;
+      this.ensurePart("wrapper-modal").then(async (p) => {
+        await Kind.waitFor("window_confirm");
+        p.feed({
+          kind: "window_confirm",
+          maxsize: 2,
+          title: LOCALE.DELETE,
+          message: LOCALE.MSG_DELETE_HUB.format(
+            filename || (tile && tile.mget(_a.filename)) || "",
+          ),
+          confirm: LOCALE.DELETE,
+        })
+          .ask()
+          .then(() => {
+            const echoData = {
+              ...(tile ? tile.getAttr() : {}),
+              nid,
+              hub_id,
+              // The path is what closes an open window of this workspace —
+              // removeContent's hub short-circuit is for `filetype: hub` and
+              // this is a folder. Without one the request still runs and the
+              // tile still goes; only the pane would linger.
+              ...(filepath ? { filepath } : {}),
+              filetype: _a.folder,
+            };
+            // Exactly the request media/core.js makeTrashOptions builds for a
+            // folder, so the server sees the same delete whichever surface it
+            // was asked from.
+            const request = this.postService({
+              service: SERVICE.media.trash,
+              nid: [{ nid, hub_id }],
+              hub_id,
+            });
+            const animation = tile
+              ? this.animateMediaToTrash(tile).catch(() => { })
+              : Promise.resolve();
+            animation.then(() => {
+              if (tile && _.isFunction(tile.suppress)) tile.suppress();
+              // `media.remove`, NOT `media.trash`. media.trash is the REQUEST
+              // name; the server answers it by broadcasting media.remove, so
+              // that is the only name a client ever sees on the wire and the
+              // only one the switcher's own listener whitelists
+              // (desk/index.js _onWorkspaceWsEvent). Echoing the request name
+              // would have every subscriber that filters by service ignore
+              // this until the server's copy arrived.
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "media.remove" },
+              });
+            });
+            request
+              .then((data) => {
+                // doRequest swallows a failed request's throw and resolves
+                // UNDEFINED, so no-data is a failure too — same as the hubs.
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                await animation;
+                this.warn(`media.trash failed for personal workspace ${nid}`, e);
+                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
+            p.clear();
+          })
+          .catch(() => resolve({}));
+      });
+    });
+  }
+
   confirmRemoveHub(media) {
+    // Same guard as its sibling, for the same reason: this posts delete_hub
+    // with `media.mget(hub_id)`, and for anything living in the user's own
+    // home that field IS the user's entity id. A media view bucketed here is
+    // supposed to be a hub (libs/media-selection bucketFor keys on isHub), so
+    // reaching this with the user's own id means the classification was wrong
+    // upstream — and the request would come back 400 WRONG_ENTITY_TYPE.
+    // A hub delete with NO id is the other shape of the same mistake, and it is
+    // the other reading of the 400 on stage: the ACL resolves `scope: "hub"`
+    // from hub_id before delete_hub ever runs, so an absent one fails there
+    // instead of at the WRONG_ENTITY_TYPE test. Nothing useful can follow, so
+    // this stops rather than posting it.
+    if (media && !media.mget(_a.hub_id)) {
+      this.warn("confirmRemoveHub: no hub_id on the media item", {
+        nid: media.mget(_a.nid),
+      });
+      Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+      return Promise.resolve({ error: "no hub_id" });
+    }
+    if (media && `${media.mget(_a.hub_id)}` === `${Visitor.id}`) {
+      this.warn(
+        "confirmRemoveHub: asked to delete the user's own entity — routing"
+          + " to the personal-workspace path",
+        { nid: media.mget(_a.nid) },
+      );
+      return this.confirmRemoveWorkspace(
+        Visitor.id,
+        media.mget(_a.filename),
+        media,
+      );
+    }
     return new Promise((resolve, reject) => {
       this.ensurePart("wrapper-modal").then(async (p) => {
         await Kind.waitFor("window_confirm");

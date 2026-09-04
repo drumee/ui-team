@@ -130,12 +130,26 @@ test("the grid and the switcher are fed from the same service", () => {
 
 // ── the highlight ───────────────────────────────────────────────────────────
 
+// The switcher identifies a row by KEY, not by hub_id: personal workspaces all
+// carry the user's own hub_id, so ids alone collapse them into one row. The
+// real _workspaceKey is used here rather than a stand-in, so these tests fail
+// if the two ever disagree about identity.
+const A_LEX = { folder: "folder", personal: "personal", hub: "hub" };
+const workspaceKey = new Function(
+  "_a",
+  "Visitor",
+  `return ({ ${slice(DESK, "  _workspaceKey(row) {")} })._workspaceKey;`,
+)(A_LEX, { id: "me" });
+const keyOf = (row) => workspaceKey.call({}, row);
+
 /** Run the real _syncWorkspaceHighlight against a fake switcher. */
 function runHighlight({ curHubId, rows, headAlive = true }) {
   const body = slice(DESK, "  _syncWorkspaceHighlight() {");
   const children = rows.map((r) => ({
     el: { dataset: { current: r.wasCurrent ? "1" : "0" } },
-    mget: (k) => (k === "wsHubId" ? r.hubId : undefined),
+    // Rows carry the key they were built with in rowFor.
+    mget: (k) =>
+      k === "wsKey" ? keyOf({ hub_id: r.hubId, filetype: "hub" }) : undefined,
     isDestroyed: () => false,
   }));
   const calls = { headFed: 0, fullRefeed: 0 };
@@ -147,6 +161,7 @@ function runHighlight({ curHubId, rows, headAlive = true }) {
     // If the sync ever reaches for this it is re-feeding the whole menu, which
     // rebuilds every row on every navigation — the thing this must not do.
     _renderWorkspaceMenu() { calls.fullRefeed++; },
+    _workspaceKey: workspaceKey,
   };
   const win = { Wm: curHubId ? { _curWorkspace: { hub_id: curHubId } } : {} };
   // eslint-disable-next-line no-new-func
@@ -163,7 +178,10 @@ test("the open workspace is marked and every other row cleared", () => {
   assert.deepEqual(r.marks, ["0", "1", "0"], "the stale mark on A is cleared");
 });
 
-test("loose equality, because hub ids arrive as both string and number", () => {
+test("a numeric id still matches its string row", () => {
+  // Ids reach the client as both. The key is built by interpolation, so 42 and
+  // "42" produce the same key string — which is what lets the comparison be
+  // strict without reintroducing the `==` this used to rely on.
   const r = runHighlight({ curHubId: 42, rows: [{ hubId: "42" }] });
   assert.deepEqual(r.marks, ["1"]);
 });
@@ -197,4 +215,39 @@ test("the highlight rides the one broadcast every entry point shares", () => {
   assert.ok(guarded && /_syncWorkspaceHighlight\(\)/.test(guarded[1]),
     "must sit INSIDE the try: a throw here unwinds Wm.initialize before "
     + "window.Wm is assigned — the failure its comment already records");
+});
+
+test("two personal rows are not one row", () => {
+  // The collision this file's harness now guards against: personal workspaces
+  // all carry the user's hub_id, so keying on it marked every one current at
+  // once. Driven through the real highlight pass, with real keys.
+  const USER = "3638701f36387021";
+  const body = slice(DESK, "  _syncWorkspaceHighlight() {");
+  const rows = [
+    { filetype: "folder", area: "personal", nid: "photos", hub_id: USER },
+    { filetype: "folder", area: "personal", nid: "videos", hub_id: USER },
+  ];
+  const children = rows.map((r) => ({
+    el: { dataset: { current: "0" } },
+    mget: (k) => (k === "wsKey" ? keyOf(r) : undefined),
+    isDestroyed: () => false,
+  }));
+  const ctx = {
+    _workspaces: rows,
+    _wsListPart: { el: {}, isDestroyed: () => false, children: { each: (f) => children.forEach(f) } },
+    _wsHeadPart: null,
+    _feedWorkspaceHead() {},
+    _renderWorkspaceMenu() {},
+    _workspaceKey: workspaceKey,
+  };
+  // "Videos" is open.
+  const win = { Wm: { _curWorkspace: { hub_id: USER, nid: "videos", area: "personal" } } };
+  // eslint-disable-next-line no-new-func
+  new Function("_", "window", `return function () {${slice(body, "{").slice(1, -1)}};`)(
+    lodashish, win).call(ctx);
+  assert.deepEqual(
+    children.map((c) => c.el.dataset.current),
+    ["0", "1"],
+    "keyed on hub_id both rows light, because they share one",
+  );
 });

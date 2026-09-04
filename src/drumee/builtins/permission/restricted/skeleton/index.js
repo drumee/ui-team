@@ -1,3 +1,8 @@
+// The area-tinted workspace shape — the single source this app renders a
+// workspace icon through (the desk breadcrumb, the switcher rows and the
+// create dialog all go via it).
+const folderArt = require("media/grid/template/folder");
+
 /**
  * Workspace-members panel body.
  *
@@ -205,15 +210,86 @@ module.exports = function (ui) {
     .map(mapMember);
   const isAdmin = viewerIsAdmin(members);
 
-  const header = Skeletons.Box.X({
+  /**
+ * Which workspace this panel is about — the area-tinted folder shape and the
+ * name, modelled on `.breadcrumb-item__tab` in the topbar.
+ *
+ * The panel said "Who has access" and never said access to WHAT. It is opened
+ * from three places that each know the answer already (the rail's Access, the
+ * switcher's menu, and the create dialog's follow-up), so the workspace was
+ * only ever obvious from whatever was on screen behind it — and on the create
+ * path there is nothing behind it yet.
+ *
+ * READ FROM `media`, FALLING BACK TO THE PANEL'S OWN MODEL. The two feeds
+ * differ: window/folder's _internalAccessPanel hands over the window's bound
+ * media, which carries filename and area, while media/form wraps the raw
+ * create_hub row (a yp.entity row) — that has `area` but no filename, because
+ * the proc selects entity columns only. Hence the several names tried below.
+ *
+ * Renders NOTHING without a name. A tinted folder with no label is a worse
+ * answer to "which workspace" than not asking the question.
+ */
+function workspaceTab(ui, pfx) {
+  const media = ui.mget(_a.media);
+  const read = (k) => {
+    const fromMedia = media && _.isFunction(media.mget) ? media.mget(k) : null;
+    return fromMedia || ui.mget(k);
+  };
+  const filename =
+    read(_a.filename) || read("hub_name") || read(_a.name) || "";
+  if (!filename) return null;
+
+  return Skeletons.Box.X({
+    active: 0,
+    className: `${pfx}__ws-tab`,
+    kidsOpt: { active: 0 },
+    kids: [
+      // Element + content, not Image.Svg + ico: media/grid/template/folder
+      // returns an HTML STRING, and passing markup as an icon NAME builds
+      // `<use href="#<markup>">` and draws nothing.
+      Skeletons.Element({
+        active: 0,
+        className: `${pfx}__ws-icon ${read(_a.area) || _a.private}`,
+        content: folderArt({
+          area: read(_a.area) || _a.private,
+          filetype: _a.hub,
+          role: "desk",
+          widgetId: _.uniqueId("perm-ws-"),
+          isAttachment: 1,
+        }),
+      }),
+      Skeletons.Note({
+        active: 0,
+        className: `${pfx}__ws-name`,
+        content: filename,
+      }),
+    ],
+  });
+}
+
+const header = Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__header-text`,
         kids: [
-          Skeletons.Note({
-            className: `${pfx}__title`,
-            content: LOCALE.WHO_HAS_ACCESS,
+          // Workspace first, then the title: the subject leads and "Who has
+          // access" reads as what is being said about it. Stacking them put a
+          // second line between the two; this order puts the answer where the
+          // eye lands first.
+          //
+          // `.filter(Boolean)` because workspaceTab returns null when the name
+          // is unknown — the row then holds the title alone, which is what the
+          // panel looked like before any of this.
+          Skeletons.Box.X({
+            className: `${pfx}__title-row`,
+            kids: [
+              workspaceTab(ui, pfx),
+              Skeletons.Note({
+                className: `${pfx}__title`,
+                content: LOCALE.WHO_HAS_ACCESS,
+              }),
+            ].filter(Boolean),
           }),
           Skeletons.Note({
             className: `${pfx}__subtitle`,

@@ -251,7 +251,7 @@ test("a create from the empty screen is forced, whichever path it takes", () => 
 // ── the removal path must not reopen what it just deleted ──────────────────
 
 test("removal opens the default with force", () => {
-  const body = slice(WM, "  onCurrentWorkspaceRemoved(hub_id) {");
+  const body = slice(WM, "  onCurrentWorkspaceRemoved(hub_id, nid) {");
   assert.match(
     body,
     /_openDefaultWorkspace\(\{ force: true \}\)/,
@@ -371,12 +371,73 @@ test("loadDefault is what empties the track", () => {
 });
 
 test("the breadcrumb really is inside __left-cluster", () => {
+  // Sliced to the end of the cluster rather than a fixed character count: the
+  // breadcrumb now sits one level deeper, inside __crumb-group, and a 500-char
+  // window stopped reaching it the moment that container gained a comment.
   const topbar = read("src/drumee/modules/desk/skeleton/topbar.js");
   const at = topbar.indexOf("__left-cluster");
   assert.notEqual(at, -1);
-  const cluster = topbar.slice(at, at + 500);
+  const cluster = topbar.slice(at, topbar.indexOf("__folder-tabs", at));
   assert.match(cluster, /kind: "desk_breadcrumb"/);
   assert.match(cluster, /sys_pn: "breadcrumb"/);
+});
+
+test("the crumb chip wraps the breadcrumb AND the switcher, in that order", () => {
+  // The chip is drawn by __crumb-group, so both have to be inside it — and the
+  // switcher must stay the breadcrumb's IMMEDIATE next sibling, because
+  // topbar.scss hides the caret on section screens through
+  // `.desk-breadcrumb__ui[data-section="1"] + .desk-module-topbar__ws-wrapper`.
+  // Anything inserted between them breaks that silently.
+  const topbar = read("src/drumee/modules/desk/skeleton/topbar.js");
+  const at = topbar.indexOf("__crumb-group");
+  assert.notEqual(at, -1, "the chip container is gone");
+  const group = topbar.slice(at, topbar.indexOf("__folder-tabs", at));
+  const crumb = group.indexOf('kind: "desk_breadcrumb"');
+  const switcher = group.indexOf("workspaceSwitcher(");
+  assert.ok(crumb > -1, "the breadcrumb is not in the chip");
+  assert.ok(switcher > -1, "the switcher is not in the chip");
+  assert.ok(crumb < switcher, "the switcher must follow the breadcrumb");
+  // ADJACENT, not merely in order: an element between them is exactly what the
+  // `+` selector cannot see past, so nothing else may be rendered in the gap.
+  const between = group.slice(crumb, switcher).replace(/\/\/[^\n]*/g, "");
+  assert.ok(
+    !/Skeletons\./.test(between),
+    "something is rendered between the crumb and the caret",
+  );
+  assert.ok(
+    !/\bkind:/.test(between.slice('kind: "desk_breadcrumb"'.length)),
+    "a second widget sits between the crumb and the caret",
+  );
+});
+
+test("the chip is drawn once, by the group — not per crumb", () => {
+  // Two grounds used to live on .breadcrumb-item__tab: the hover chip and the
+  // current-location ground. Both moved up, or the rounded chip ends up with a
+  // square-cornered block inside it.
+  const item = read("src/drumee/modules/desk/breadcrumb/item/skin/index.scss");
+  const stripped = item.replace(/\/\/[^\n]*/g, "");
+  // Read the `&__tab` BLOCK, which is how the file actually spells it — a
+  // match on the full class name never fired, because the source never writes
+  // it that way outside the rules this change removed.
+  const tabAt = stripped.indexOf("&__tab {");
+  assert.notEqual(tabAt, -1, "the tab rule is gone");
+  const tabRule = stripped.slice(tabAt, stripped.indexOf("\n  }", tabAt));
+  assert.ok(
+    !/background/.test(tabRule),
+    "the tab must not paint a ground inside the chip",
+  );
+  // …and no other rule may put one back on it either.
+  assert.ok(
+    !/\.breadcrumb-item__tab[^{]*\{[^}]*background/.test(stripped),
+    "another rule paints the tab",
+  );
+  const topbar = read("src/drumee/modules/desk/skin/topbar.scss");
+  const at = topbar.indexOf("&__crumb-group");
+  assert.notEqual(at, -1);
+  const rule = topbar.slice(at, at + 1400);
+  assert.match(rule, /background-color: var\(--normal-bg-90\)/, "the ground");
+  assert.match(rule, /&:hover/, "and the hover");
+  assert.match(rule, /border-radius: var\(--crumb-radius/, "and the radius");
 });
 
 // ── the workspace opens when the access panel is dismissed ─────────────────
@@ -883,4 +944,142 @@ test("the wait is entered before any of loadWorkspace's side effects", () => {
     assert.ok(at > -1, `${fx} not found`);
     assert.ok(hold < at, `the hold must precede ${fx}`);
   }
+});
+
+// ── the access panel names its workspace ───────────────────────────────────
+//
+// permission-restricted__main said "Who has access" and never said access to
+// WHAT. It is opened from three places that each know the answer, so the
+// workspace was only obvious from whatever was on screen behind it — and on the
+// create path there is nothing behind it yet.
+
+test("the panel renders the workspace icon and name", () => {
+  const skel = read("src/drumee/builtins/permission/restricted/skeleton/index.js");
+  assert.match(skel, /require\("media\/grid\/template\/folder"\)/, "the shared art");
+  assert.match(skel, /__ws-tab/);
+  assert.match(skel, /__ws-icon/);
+  assert.match(skel, /__ws-name/);
+  // Placed in the header column, so it reads under the title.
+  assert.match(skel, /workspaceTab\(ui, pfx\)/);
+});
+
+test("it renders NOTHING when the name is unknown", () => {
+  // media/form feeds the raw create_hub row, which is a yp.entity row: it has
+  // `area` but no filename. A tinted folder with no label is a worse answer to
+  // "which workspace" than not asking.
+  const skel = read("src/drumee/builtins/permission/restricted/skeleton/index.js");
+  const at = skel.indexOf("function workspaceTab");
+  const fn = skel.slice(at, skel.indexOf("\nconst header", at));
+  assert.match(fn, /if \(!filename\) return null;/);
+  // The caller tolerating that null is asserted separately, on the row itself
+  // — pinning it as "workspaceTab immediately followed by ].filter(Boolean)"
+  // encoded the ORDER of the row's children into a test about a null check,
+  // and broke the moment the two were swapped.
+});
+
+test("the name is read from media first, then the panel's own model", () => {
+  const skel = read("src/drumee/builtins/permission/restricted/skeleton/index.js");
+  const at = skel.indexOf("function workspaceTab");
+  const fn = skel.slice(at, skel.indexOf("\nconst header", at));
+  assert.match(fn, /media && _\.isFunction\(media\.mget\)/, "media wins");
+  assert.match(fn, /ui\.mget\(k\)/, "the panel's model is the fallback");
+});
+
+test("the chip is not the same colour as the panel it sits on", () => {
+  // __main paints --normal-bg-90; a chip in that tone is a chip you cannot see.
+  // Comments stripped first: the rule's own note names --normal-bg-90 while
+  // explaining why it is NOT used, and a raw match reads that prose as the
+  // declaration it warns about.
+  const skin = read("src/drumee/builtins/permission/restricted/skin/index.scss")
+    .replace(/\/\/[^\n]*/g, "");
+  const at = skin.indexOf("&__ws-tab {");
+  assert.notEqual(at, -1);
+  const rule = skin.slice(at, skin.indexOf("\n  }", at));
+  assert.match(rule, /background-color: var\(--normal-bg-elevated\)/);
+  assert.ok(!/--normal-bg-90/.test(rule), "same tone as the panel");
+});
+
+test("the emblem's gradient stops are coloured here too", () => {
+  // Their classes are defined by no stylesheet in the repo, so left alone the
+  // stops default to black and the emblem is a dark blob — the same defect
+  // fixed in the create dialog.
+  const skin = read("src/drumee/builtins/permission/restricted/skin/index.scss");
+  assert.match(skin, /\[class\^="gradient-start-"\]/);
+  assert.match(skin, /stop\.gradient-start-private/);
+  assert.match(skin, /stop\.gradient-start-share/);
+});
+
+test("the workspace leads the row, then the title", () => {
+  const skel = read("src/drumee/builtins/permission/restricted/skeleton/index.js");
+  const at = skel.indexOf("__title-row");
+  assert.notEqual(at, -1, "the row is gone");
+  const row = skel.slice(at, skel.indexOf("__subtitle", at));
+  const tab = row.indexOf("workspaceTab(ui, pfx)");
+  const title = row.indexOf("__title`");
+  assert.ok(tab > -1, "the workspace is not in the row");
+  assert.ok(title > -1, "the title is not in the row");
+  assert.ok(tab < title, "the workspace must come first");
+});
+
+test("with no workspace name the row is just the title", () => {
+  // workspaceTab returns null when the name is unknown, so the row has to
+  // tolerate a hole where its FIRST child would be.
+  const skel = read("src/drumee/builtins/permission/restricted/skeleton/index.js");
+  const at = skel.indexOf("__title-row");
+  const row = skel.slice(at, skel.indexOf("__subtitle", at));
+  assert.match(row, /\]\.filter\(Boolean\)/, "a null child would reach the box");
+});
+
+test("the workspace name shrinks, the heading does not", () => {
+  // At the dock's 360px there is not room for both at full width, and the
+  // close button is the header's other child — so something has to give, and
+  // it must be the name rather than the fixed heading.
+  const skin = read("src/drumee/builtins/permission/restricted/skin/index.scss")
+    .replace(/\/\/[^\n]*/g, "");
+  const titleAt = skin.indexOf("&__title {");
+  assert.match(skin.slice(titleAt, titleAt + 200), /flex: 0 0 auto/);
+  const tabAt = skin.indexOf("&__ws-tab {");
+  const tab = skin.slice(tabAt, skin.indexOf("\n  }", tabAt));
+  assert.match(tab, /flex: 0 1 auto/);
+  assert.match(tab, /min-width: 0/, "without this it refuses to shrink at all");
+});
+
+test("the name ellipsizes on the Note's INNER node", () => {
+  // A Skeletons.Note renders its copy inside `.note-content`, so that div owns
+  // the overflowing text. text-overflow set only on the outer box never fires
+  // — the name is hard-clipped mid-glyph instead.
+  const skin = read("src/drumee/builtins/permission/restricted/skin/index.scss");
+  const at = skin.indexOf("&__ws-name {");
+  assert.notEqual(at, -1);
+  const rule = skin.slice(at, skin.indexOf("\n  }\n", at));
+  assert.match(
+    rule,
+    /\.note-content \{[\s\S]{0,140}text-overflow: ellipsis/,
+    "the ellipsis is not on the inner node",
+  );
+});
+
+// ── Wm honours the home override, and only when asked ──────────────────────
+
+test("opt.home forces the home branch, whatever is open", () => {
+  const body = slice(WM, "  createFolderFromDialog(cmd, opt = {}) {");
+  assert.match(
+    body,
+    /const onHome = !!opt\.home \|\| !this\._curWorkspace;/,
+    "the personal-workspace path cannot pin its parent",
+  );
+  // …and the home branch is what supplies the personal area and the home nid.
+  assert.match(body, /onHome \? Visitor\.get\(_a\.home_id\)/);
+  assert.match(body, /onHome \? _a\.personal/);
+});
+
+test("the OTHER caller stays context-sensitive", () => {
+  // "+ New -> Folder" means a subfolder in the open workspace. It must not
+  // acquire the override by accident.
+  const wm = read("src/drumee/modules/desk/wm/index.js");
+  const at = wm.indexOf('case "create-folder-submit":');
+  assert.notEqual(at, -1);
+  const branch = wm.slice(at, at + 160);
+  assert.match(branch, /createFolderFromDialog\(cmd\)/);
+  assert.ok(!/home/.test(branch), "the folder dialog must not force home");
 });

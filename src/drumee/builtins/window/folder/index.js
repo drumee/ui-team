@@ -5260,61 +5260,101 @@ class __window_folder extends mfsInteract {
     // `display: none` (wm _syncHomeGrid), so a tile is simply not something
     // this path can count on.
     //
-    // The window itself knows its hub_id, and that is all a workspace delete
-    // needs — see Wm.confirmRemoveWorkspace.
+    // The window itself knows which workspace it is in, and that is all a
+    // delete needs: the hub's id for a hub (Wm.confirmRemoveWorkspace), the
+    // folder's node for a personal one (Wm.confirmRemovePersonalWorkspace).
     const hubId = this.mget(_a.hub_id);
     const filename = this.mget(_a.filename) || this.mget("hub_name") || "";
     // A tile, if one happens to be around, only buys the trash animation.
     const tile = this._workspaceTrashTarget();
 
     // A PERSONAL workspace is a home-root FOLDER, not a hub: it has no
-    // delete_hub to run, so it keeps the tile path and its own confirm (that
-    // path's own delete asks nothing — removeMediaSelection files a plain
-    // folder in `allowed` and trashes it immediately).
+    // delete_hub to run, so it is removed with media.trash on its own node.
     const isHubWorkspace = !!hubId && `${hubId}` !== `${Visitor.id}`;
 
+    this.closeFolderSettings();
+
     if (isHubWorkspace) {
-      this.closeFolderSettings();
       // Nothing is deleted out of the current selection — this acts on one
       // named hub and never reads getGlobalSelection.
       return Wm.confirmRemoveWorkspace(hubId, filename, tile);
     }
 
-    if (!tile) {
+    // AND IT NO LONGER NEEDS A TILE EITHER.
+    //
+    // Personal was the one branch still routed through the home grid's tile
+    // (`tile.trash()`), and it refused with "Could not delete the workspace"
+    // when it could not find one — which is what was reported. There are two
+    // ways there is no tile at exactly the moment this runs, and both are
+    // normal: the grid is `display: none` for the whole time a workspace is
+    // open (_syncHomeGrid), and a reload that restores straight into a
+    // workspace may never have fetched it at all. That is the same reason the
+    // hub branch above stopped depending on one.
+    //
+    // Worse than the refusal was the case where the lookup SUCCEEDED. It keyed
+    // on `this.mget(_a.nid)`, and openNode() (window/core.js) rewrites that
+    // field to whatever folder the pane is browsing — so from inside a
+    // subfolder this trashed the SUBFOLDER and called it the workspace.
+    // _personalWorkspaceNode() reads the workspace, not the pane's cursor.
+    const node = this._personalWorkspaceNode();
+    if (!node) {
       if (this.warn) {
         this.warn(
-          `[workspace-delete] no media view for the personal workspace at`
-            + ` nid=${this.mget(_a.nid)}; refusing rather than no-op`,
+          `[workspace-delete] no node for the personal workspace in`
+            + ` hub=${hubId}; refusing rather than no-op`,
         );
       }
       Wm.alert(LOCALE.DELETE_WORKSPACE_FAILED);
       return;
     }
+    if (_.isFunction(Wm.unselect)) Wm.unselect();
+    return Wm.confirmRemovePersonalWorkspace(node, tile);
+  }
 
-    this.dialogWrapper.feed({
-      kind: "window_confirm",
-      title: LOCALE.DELETE,
-      message: `${LOCALE.CONFIRM_DELETE} ${
-        tile.mget?.(_a.filename) || filename
-      }?`,
-      confirm: LOCALE.DELETE,
-      confirm_type: "danger",
-    });
-    return this.dialogWrapper.children
-      .last()
-      .ask()
-      .then(() => {
-        this.closeFolderSettings();
-        if (_.isFunction(Wm.unselect)) Wm.unselect();
-        // Re-checked: the confirm is asynchronous and the tile can be destroyed
-        // under it. Still never silent.
-        if (!_.isFunction(tile.trash) || tile.isDestroyed?.()) {
-          Wm.alert(LOCALE.DELETE_WORKSPACE_FAILED);
-          return;
-        }
-        return tile.trash();
-      })
-      .catch(() => {});
+  /**
+   * The personal workspace this window is inside, as a node for media.trash.
+   *
+   * `Wm._curWorkspace` FIRST, and the window's own model only as the fallback:
+   * loadWorkspace pins the workspace's root there and nothing but another
+   * switch moves it, while the window's `nid` follows the user into every
+   * subfolder they open. Deleting "the workspace" from three folders deep has
+   * to mean the workspace.
+   *
+   * `filepath` rides along for the removal echo — removeContent closes a hub's
+   * window on hub_id alone, but a folder's on its path, and a personal
+   * workspace is a folder. Wm's own model carries the workspace's attributes
+   * (loadWorkspace does `this.mset(data)` with them); the pane's are the
+   * browsed folder's, which is still UNDER the workspace path, so either
+   * closes the pane and the workspace's own is the one that also closes any
+   * popup window opened elsewhere inside it.
+   */
+  _personalWorkspaceNode() {
+    const cur = (typeof Wm !== "undefined" && Wm._curWorkspace) || null;
+    const fromWm = (k) => {
+      try {
+        return Wm.mget(k);
+      } catch (e) {
+        return undefined;
+      }
+    };
+    const inWorkspace = !!(cur && `${cur.hub_id}` === `${Visitor.id}`);
+    const nid = (inWorkspace && cur.nid) || this.mget(_a.nid);
+    if (nid == null || nid === "") return null;
+    const filepath =
+      (inWorkspace && fromWm(_a.filepath)) ||
+      this.mget(_a.filepath) ||
+      this.mget(_a.ownpath) ||
+      "";
+    return {
+      nid,
+      hub_id: Visitor.id,
+      filename:
+        (inWorkspace && fromWm(_a.filename)) ||
+        this.mget(_a.filename) ||
+        this.mget("hub_name") ||
+        "",
+      filepath,
+    };
   }
 
   getFolderSettingPart() {
