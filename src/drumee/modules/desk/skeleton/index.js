@@ -228,6 +228,12 @@ const _build_mobile_sheet_host = (ui) => {
 const _build_mobile_rail = (ui) => {
   const fig = ui.fig.family;
 
+  // 📖 BEHAVIOUR CONTRACT for this bar — desk/index.js, the block above
+  // _railTab ("RAIL & INVITE — BEHAVIOUR CONTRACT"). It is short, and every
+  // rule in it is the fix for a reported bug, so the phone is expected to
+  // behave the same way as the desktop rail. Read it before changing what a
+  // tap here does; raise it first if mobile needs to diverge.
+  //
   // ⚠️ MOBILE: `pn` and `radio` below are READ BY NAME from desk_module.
   // desk/index.js _resetRailToFiles() does getPart("mrail-files") and then
   // RADIO_BROADCAST.trigger("mobile-rail-radio", part) to light Files after a

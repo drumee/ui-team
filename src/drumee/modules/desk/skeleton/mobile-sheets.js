@@ -69,6 +69,11 @@ const divider = (fig) => Skeletons.Box.X({ className: `${fig}__msheet-divider` }
 // ── the switcher ─────────────────────────────────────────────────────────────
 function workspaceSheet(ui, rows, curHubId) {
   const fig = ui.fig.family;
+  // 📖 Switching workspace has a BEHAVIOUR CONTRACT — desk/index.js, the block
+  // above _railTab. Rule 2 applies to this sheet the moment these rows work:
+  // a switch lands on FILES and the rail is reset to Files, but ONLY on a real
+  // change of workspace.
+  //
   // ⚠️ MOBILE, KNOWN GAP — these rows do not switch anything today.
   //
   // They re-dispatch to "switch-workspace", and desk/index.js answers that with

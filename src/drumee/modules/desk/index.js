@@ -3298,6 +3298,61 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * ╔══════════════════════════════════════════════════════════════════════╗
+   * ║  RAIL & INVITE — BEHAVIOUR CONTRACT (desktop rail AND phone bar)      ║
+   * ╚══════════════════════════════════════════════════════════════════════╝
+   *
+   * These are DELIBERATE decisions, each one the fix for a reported bug
+   * (Lexis + Duy, 2026-09-04). They are not incidental, and the phone bar
+   * is expected to behave the same way — please do not diverge on mobile
+   * without raising it first.
+   *
+   * 1. THE LIT ROW MUST ALWAYS MATCH WHAT IS ON SCREEN. Every bug below was
+   *    the rail naming a screen that was not up.
+   *
+   * 2. Switching workspace lands on FILES, so the rail is reset to Files
+   *    (_resetRailToFiles, which lights `sidebar-files` on desktop and
+   *    `mrail-files` on the phone). A new window_folder starts with
+   *    `activeTab` unset, which every reader treats as files — the screen
+   *    was always right, only the rail lagged.
+   *    ONLY ON A REAL CHANGE of workspace: re-picking the one already open
+   *    is a loadWorkspace early-return that keeps its tab, and resetting
+   *    there would invent the same mismatch backwards.
+   *
+   * 3. A rail click acts on the workspace that is OPEN, not on whatever
+   *    window happens to be RAISED — see _railWorkspace. Reverting that to
+   *    _activeWorkspace() brings back "the first tab click jumps to the
+   *    first workspace in the list", which is what it reads as when the
+   *    pane is alive but unraised.
+   *
+   * 4. INVITE IS AN OVERLAY ON THE CURRENT TAB, NOT A DESTINATION:
+   *    a. it stays OUT of the rail's radio group (skeleton/sidebar.js
+   *       `soloState`) so the current tab KEEPS its highlight — Files and
+   *       Invite lit together is correct, not a bug. Whoever opens the
+   *       popup lights and unlights the row by hand (_setInviteRowState).
+   *       An Invite row added to the phone bar must follow the same rule:
+   *       do NOT put it in "mobile-rail-radio".
+   *    b. opening it from a workspace tab must NOT change that tab.
+   *    c. opening it from a SECTION SCREEN (Plan / Settings / Get help /
+   *       Calendar / Inbox / Trash / Apps) must leave that screen and land
+   *       on Files first, or the rail lights the section AND Invite while
+   *       the screen underneath is the workspace. Approved for the whole
+   *       class, not just Plan.
+   *
+   * 5. THE SHARED MODAL LAYER (Wm.__wrapperModal) IS RELEASED ONLY WHILE IT
+   *    HOLDS THE INVITE POPUP — see _leaveSectionScreen. Never clear it
+   *    unconditionally on navigation: it also carries the create-workspace
+   *    form, the permission panels and Wm.confirm(), and discarding a
+   *    half-filled form because someone glanced at another tab is a worse
+   *    bug than the one that guard fixes.
+   *
+   * 6. THE INVITE BACKDROP IS THIN ON PURPOSE on desktop
+   *    (invite-popup/skin `[data-invite-overlay]`) so the tab behind stays
+   *    readable — that is what makes it read as a popup over the tab. The
+   *    phone deliberately gets the desk's flat scrim instead, matching
+   *    .desk-module__overlay behind the mobile drawer. Both are intended;
+   *    they are not two people disagreeing.
+   *
    * Rail → folder-window tab. With no workspace open there is nothing to show
    * a tab OF, so OPEN one — the legacy all-workspaces grid this used to fall
    * back to is retired (it is the same screen the Home crumb reached, and the
