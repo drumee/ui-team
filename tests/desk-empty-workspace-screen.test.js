@@ -434,7 +434,18 @@ test("the chip is drawn once, by the group — not per crumb", () => {
   const topbar = read("src/drumee/modules/desk/skin/topbar.scss");
   const at = topbar.indexOf("&__crumb-group");
   assert.notEqual(at, -1);
-  const rule = topbar.slice(at, at + 1400);
+  // The whole rule, matched by BRACES. It used to be `slice(at, at + 1400)`,
+  // and a comment added inside the block pushed `&:hover` past the window —
+  // the assertion then failed on a file that had not changed behaviourally.
+  const rule = (() => {
+    const open = topbar.indexOf("{", at);
+    let depth = 0;
+    for (let j = open; j < topbar.length; j++) {
+      if (topbar[j] === "{") depth++;
+      else if (topbar[j] === "}" && --depth === 0) return topbar.slice(at, j + 1);
+    }
+    return assert.fail("&__crumb-group is unbalanced");
+  })();
   assert.match(rule, /background-color: var\(--normal-bg-90\)/, "the ground");
   assert.match(rule, /&:hover/, "and the hover");
   assert.match(rule, /border-radius: var\(--crumb-radius/, "and the radius");

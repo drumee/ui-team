@@ -107,23 +107,27 @@ test("the canonical items carry the labels Lexis asked for", () => {
 // ── the menu builder ────────────────────────────────────────────────────────
 
 /** Run the real _openWorkspaceMenu against fakes; report what it fed. */
-function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, alreadyOpen = false,
+function run({ win, dialog = true, rect = { left: 73, right: 100, top: 13, bottom: 40 }, alreadyOpen = false,
   // What the workspace's MEDIA item is and what its canonical builder
   // returns. `media: null` is the grid not yet fed.
   media = {}, menuKeys = ["download", "makeACopy", "rename", "separator", "organize", "separator", "info", "separator", "trash"] }) {
   const body = slice(DESK, "  _toggleWorkspaceMenu(cmd, retried) {");
   const fed = [];
+  // The panel, once it is in the DOM. offsetWidth/Height are what the anchor
+  // measures — see tests/ws-menu-anchor.js for the placement itself; here they
+  // only have to be real numbers so the block runs to the end.
+  const menuNode = {
+    el: { style: {}, offsetWidth: 200, offsetHeight: 326 },
+    $el: { height: () => 50, width: () => 200 },
+    // Capture what the code hooks the menu's destruction to.
+    once: (ev, fn) => { ctx.__destroyHook = fn; },
+    isDestroyed: () => false,
+  };
   const dlg = dialog
     ? {
         feed: (v) => { fed.push(v); },
             children: {
-          last: () => ({
-            el: { style: {} },
-            $el: { height: () => 50, width: () => 200 },
-            // Capture what the code hooks the menu's destruction to.
-            once: (ev, fn) => { ctx.__destroyHook = fn; },
-            isDestroyed: () => false,
-          }),
+          last: () => menuNode,
         },
         isDestroyed: () => false,
       }
@@ -223,6 +227,7 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, alreadyOpe
   // and it is the REAL one, so a miss genuinely runs the whole thing twice.
   ctx._toggleWorkspaceMenu = fn;
   fn.call(ctx, cmd);
+  ctx.__menuEl = menuNode.el;
   return Object.assign(fed[0] || {}, { __fed: fed.length, __states: states, __ctx: ctx });
 }
 
@@ -261,10 +266,18 @@ test("with no media item resolved, no menu is shown", () => {
   assert.equal(box.__fed, 0, "a dead menu was shown anyway");
 });
 
-test("it is positioned from the button's rect", () => {
-  const box = run({ win: fakeWin(), rect: { right: 640, bottom: 88 } });
-  assert.equal(box.style.left, 640);
-  assert.equal(box.style.top, 88);
+test("it is positioned beside the panel the ⋯ belongs to", () => {
+  // With no card in reach (this harness's cmd has no closest()), the button is
+  // the fallback anchor: 8px off its right edge, tops level. The card anchor
+  // itself, its clamps and the flip are covered in ws-menu-anchor.js.
+  const box = run({
+    win: fakeWin(),
+    rect: { left: 613, right: 640, top: 61, bottom: 88 },
+  });
+  assert.equal(box.style.left, 648);
+  assert.equal(box.style.top, 61);
+  assert.equal(box.__ctx.__menuEl.style.left, "648px");
+  assert.equal(box.__ctx.__menuEl.style.top, "61px");
 });
 
 test("with NO workspace open nothing is fed", () => {

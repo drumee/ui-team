@@ -2575,7 +2575,32 @@ class desk_module extends LetcBox {
 
     const rect = cmd && cmd.el && _.isFunction(cmd.el.getBoundingClientRect)
       ? cmd.el.getBoundingClientRect()
-      : { right: 0, bottom: 0 };
+      : { left: 0, right: 0, top: 0, bottom: 0 };
+    // ANCHORED TO THE CARD, NOT TO THE ⋯ (Figma: the menu sits beside the
+    // switcher panel, its top level with the panel's).
+    //
+    // The ⋯ is the last chip of __ws-head, which is the first row INSIDE the
+    // switcher card — so anchoring to the button drops the menu over the very
+    // workspace list the user is choosing from. Beside the card it covers
+    // nothing, and it reads as what it is: a flyout off that panel.
+    //
+    // .menu-topic-items is the card that paints the border and background
+    // (topbar.scss __ws-wrapper); the wrapper around it and __ws-menu inside it
+    // are the fallbacks, then the button itself if the ⋯ is ever mounted
+    // outside a card at all.
+    const WS_MENU_GAP = 8;
+    const card =
+      (cmd &&
+        cmd.el &&
+        _.isFunction(cmd.el.closest) &&
+        (cmd.el.closest(".menu-topic-items") ||
+          cmd.el.closest(".menu-topic-items__wrapper") ||
+          cmd.el.closest(".desk-module-topbar__ws-menu"))) ||
+      null;
+    const anchor =
+      card && _.isFunction(card.getBoundingClientRect)
+        ? card.getBoundingClientRect()
+        : rect;
     dialog.feed(
       Skeletons.Box.Y({
         volatility: 4,
@@ -2590,8 +2615,12 @@ class desk_module extends LetcBox {
         uiHandler: [target],
         kids,
         style: {
-          left: rect.right + (window.scrollX || 0),
-          top: rect.bottom + (window.scrollY || 0),
+          // The final placement is applied below, once the panel has a size to
+          // measure. This is the same position minus the clamps, so a panel
+          // that somehow never gets measured still lands beside the card
+          // rather than at 0,0.
+          left: anchor.right + WS_MENU_GAP + (window.scrollX || 0),
+          top: anchor.top + (window.scrollY || 0),
           zIndex: 100000,
         },
       }),
@@ -2611,14 +2640,38 @@ class desk_module extends LetcBox {
       });
     }
 
-    // Same clamp buildContextmenu applies: the ⋯ sits at the right of a panel
-    // near the top of the screen, so the menu can overflow either edge.
-    if (window.innerHeight - (rect.bottom + l.$el.height()) < 0) {
-      l.el.style.top = `${window.innerHeight - l.$el.height()}px`;
+    // BESIDE THE CARD: its left edge a hair off the card's right, tops level.
+    //
+    // It used to be fed `left: rect.right` against the BUTTON, which puts the
+    // panel's left edge on the ⋯'s right edge — 200px of menu hanging into
+    // empty topbar, clear of the card and attached to nothing.
+    //
+    // offsetWidth / offsetHeight, not jQuery's .width() / .height(): those
+    // return the CONTENT box, and this panel carries 6px of padding and a 1px
+    // border on each side, so measuring that way placed it 14px off.
+    const mw = l.el.offsetWidth;
+    const mh = l.el.offsetHeight;
+    const scrollX = window.scrollX || 0;
+    const scrollY = window.scrollY || 0;
+    const EDGE = 8;
+
+    // Right of the card, or LEFT of it when there is no room — never spilling
+    // off the viewport, and never back over the card it belongs to.
+    let left = anchor.right + WS_MENU_GAP + scrollX;
+    if (left + mw > scrollX + window.innerWidth - EDGE) {
+      const flipped = anchor.left - WS_MENU_GAP - mw + scrollX;
+      left = flipped >= scrollX + EDGE
+        ? flipped
+        : Math.max(scrollX + EDGE, scrollX + window.innerWidth - EDGE - mw);
     }
-    if (window.innerWidth - (rect.right + l.$el.width()) < 0) {
-      l.el.style.left = `${window.innerWidth - l.$el.width()}px`;
+    l.el.style.left = `${left}px`;
+
+    // Tops level with the card, slid up only as far as a tall menu needs.
+    let top = anchor.top + scrollY;
+    if (top + mh > scrollY + window.innerHeight - EDGE) {
+      top = Math.max(scrollY + EDGE, scrollY + window.innerHeight - EDGE - mh);
     }
+    l.el.style.top = `${top}px`;
   }
 
   /**
@@ -2793,6 +2846,104 @@ class desk_module extends LetcBox {
       }
       setTimeout(() => finish(false), 2000);
     });
+  }
+
+  /**
+   * MAKE THE ADDRESS CHIP THE SWITCHER'S BUTTON.
+   *
+   * A CAPTURE-phase DOM listener, which is the only thing that works here.
+   * The widget way — a `service` on __crumb-group — cannot see these clicks:
+   * el.onclick is bound by every widget between the box and the pointer (the
+   * breadcrumb root, the menu root, and the menu's own `.menu-trigger` part,
+   * none of which ui-core marks inert), and __handleClick calls
+   * stopPropagation. A click on the caret or on the workspace name was
+   * swallowed there, and only the chip's few pixels of bare padding ever
+   * reached the box. Capture runs root-down, before any of them.
+   *
+   * A CRUMB WITH SOMEWHERE TO GO STILL GOES THERE. The chip holds the whole
+   * address, so a deeper path shows folders in it, and those must navigate.
+   * The one the user is already on is not a destination — clicking it moves
+   * nowhere — so it counts as chip, which is the common case: the address is
+   * just the workspace.
+   */
+  _bindCrumbGroupTrigger(child) {
+    const el = child && child.el;
+    if (!el || !_.isFunction(el.addEventListener)) return;
+    if (el.__wsTriggerBound) return;
+    el.__wsTriggerBound = 1;
+    el.addEventListener(
+      "click",
+      (e) => {
+        if (!this._crumbClickOpensSwitcher(e.target)) return;
+        // Nothing else answers this click: not the crumb underneath, and not
+        // the menu's own RADIO_CLICK outside-close, which only runs off a
+        // widget's triggerHandlers. That is what lets the toggle below be a
+        // plain read of the state.
+        e.preventDefault();
+        e.stopPropagation();
+        this._toggleWorkspaceSwitcher();
+      },
+      true,
+    );
+  }
+
+  /**
+   * Did this click land on the chip, or on a crumb that has somewhere to go?
+   *
+   * @param {Element} target
+   * @returns {Boolean} true when the switcher should open
+   */
+  _crumbClickOpensSwitcher(target) {
+    if (!target || !_.isFunction(target.closest)) return true;
+    // THE PANEL IS NOT THE CHIP, even though it is inside it.
+    //
+    // .menu-topic-items__wrapper is a DESCENDANT of __crumb-group — the
+    // dropdown is absolutely positioned, not detached — so every click in the
+    // open panel passes through this capture listener on its way down: the ⋯,
+    // the rename pencil, the share link, a workspace row, "New workspaces".
+    // Treated as chip, each of them shut the panel and swallowed the click
+    // that was meant for the control the user actually pressed. Reported for
+    // the ⋯: it opened nothing and closed the switcher.
+    //
+    // Both spellings, because the wrapper is ui-core's and __ws-menu is ours;
+    // a fed part that ends up outside the wrapper is still panel, not chip.
+    if (
+      target.closest(".menu-topic-items__wrapper") ||
+      target.closest(".desk-module-topbar__ws-menu")
+    ) {
+      return false;
+    }
+    const crumb = target.closest(".breadcrumb-item__main");
+    if (!crumb) return true;
+    // A SECTION label carries no service — there is nothing to browse to — so
+    // it is not a destination either. It is handled again in the toggle, which
+    // refuses to open a workspace list over Settings or Trash.
+    if (crumb.classList && crumb.classList.contains("breadcrumb-item__main--section")) {
+      return true;
+    }
+    return crumb.dataset && crumb.dataset.current === "1";
+  }
+
+  /**
+   * OPEN OR CLOSE THE WORKSPACE SWITCHER.
+   *
+   * The menu widget used to open itself: its caret lived in its own `trigger`
+   * part, and menu_topic answers any ui event raised in there. The caret is
+   * inert now and the chip around it is the button, so the toggle is driven
+   * from here.
+   */
+  _toggleWorkspaceSwitcher() {
+    const menu = this._wsSwitcher;
+    if (!menu || !menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
+    // A SECTION screen has no workspace in the bar for the panel to hang off,
+    // and the chip paints no ground there — see the `:has()` rule in
+    // desk/skin/topbar.scss. Offering the list would be a control the chip is
+    // not drawing.
+    if (this.el && this.el.querySelector) {
+      const bc = this.el.querySelector(".desk-breadcrumb__ui[data-section='1']");
+      if (bc) return;
+    }
+    if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
   }
 
   _syncWorkspaceLabel() {
@@ -3505,6 +3656,19 @@ class desk_module extends LetcBox {
       case "ws-head":
         this._wsHeadPart = child;
         this._renderWorkspaceMenu(this._wsListPart);
+        break;
+
+      // The switcher widget itself. Held because the CHIP opens it now, and
+      // the chip is not inside it — the caret it used to open itself from is
+      // inert (desk/skeleton/topbar workspaceSwitcher).
+      case "wsmenu":
+        this._wsSwitcher = child;
+        break;
+
+      // The address chip. It is the switcher's button now, and it cannot be
+      // one through a `service` — see _bindCrumbGroupTrigger.
+      case "crumb-group":
+        this._bindCrumbGroupTrigger(child);
         break;
 
       case "ref-avatar":
@@ -5938,6 +6102,7 @@ class desk_module extends LetcBox {
       // right-click builds one. Its rows dispatch to the workspace WINDOW.
       case "workspace-menu":
         return this._toggleWorkspaceMenu(cmd);
+
 
       // Switcher row → open that workspace. Same entry point the sidebar list
       // used, so area handling, panel cleanup and the breadcrumb update are

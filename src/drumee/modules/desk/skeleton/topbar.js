@@ -186,6 +186,23 @@ module.exports = function (ui) {
           // an element between the two would break that selector silently.
           Skeletons.Box.X({
             className: `${pfx}__crumb-group`,
+            // THE WHOLE CHIP OPENS THE SWITCHER, not the caret alone.
+            //
+            // The caret is 16px of glyph at the end of an address that reads as
+            // one control, so the target was a fraction of what looked like the
+            // button.
+            //
+            // NOT a `service` on this box. A service here is raised by
+            // el.onclick, and every widget between it and the pointer binds one
+            // of those too — the breadcrumb root, the menu root, and the menu's
+            // own `.menu-trigger` part (ui-core menu/skeleton, which sets no
+            // `active: 0`) — each of which calls stopPropagation in
+            // __handleClick. A click on the caret or on the workspace name is
+            // therefore consumed before it can reach this box, and only the few
+            // pixels of bare padding ever fired. The desk binds a CAPTURE-phase
+            // listener on this element instead; see _bindCrumbGroupTrigger.
+            sys_pn: "crumb-group",
+            partHandler: ui,
             kids: [
               {
                 kind: "desk_breadcrumb",
@@ -591,13 +608,21 @@ function workspaceSwitcher(pfx, ui) {
     // Still a Button, not a Box: the menu opens from its own onUiEvent, which
     // only fires when a widget inside the trigger part raises an event, and a
     // Box with inert kids raises nothing.
+    // INERT. The caret is drawn, not pressed: __crumb-group around it is the
+    // trigger now, and a widget that answered its own click would call
+    // stopPropagation and keep the click from ever reaching the chip — the
+    // caret would open the menu and the rest of the chip would not.
+    //
+    // `active: 0` rather than deleting it: the glyph is part of the address
+    // (icon, name, caret) and the frame draws it.
+    //
+    // No tooltip either. It named a control that is no longer here, and a tip
+    // hanging off one corner of a chip that is clickable end to end explains
+    // the wrong thing.
     trigger: Skeletons.Button.Svg({
       className: `${pfx}__ws-btn`,
       ico: "ph-caret-down",
-      tooltips: {
-        content: LOCALE.WORKSPACES,
-        className: `${pfx}__utility-tip`,
-      },
+      active: 0,
     }),
     // Figma 48:36991. Three stacked blocks, 12px apart: the current-workspace
     // header, the scrolling list, and the pinned "New workspaces" button.
