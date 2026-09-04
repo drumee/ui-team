@@ -154,6 +154,20 @@
     min-width: 0;
     flex: 0 1 auto;
     box-sizing: border-box;
+    // THE SWITCHER PANEL HANGS OFF THE CHIP, not off the caret.
+    //
+    // .menu-topic-items__wrapper is absolute at `left: 0`, so it lands on the
+    // left edge of whatever positions it. That used to be __ws-wrapper — the
+    // caret alone, at the far RIGHT of the address — so a 260px panel dropped
+    // from the chip's right-hand end and hung out past it. The frame drops it
+    // from the chip's left edge, which is also where the chip is now clicked.
+    //
+    // __ws-wrapper gives up `position: relative` for this (see below); the two
+    // rules are a pair.
+    position: relative;
+    // The chip is only 30px tall and the panel is absolute inside it, so
+    // anything clipping here would take the panel with it.
+    overflow: visible;
     height: var(--crumb-height, 30px);
     padding: 0 var(--crumb-pad-x, 6px);
     border-radius: var(--crumb-radius, 8px);
@@ -1217,7 +1231,10 @@
   // box (as this did) left the wrapper unpositioned and never hidden when
   // closed — which is why the panel glitched and came up empty.
   &__ws-wrapper {
-    position: relative;
+    // STATIC on purpose — the pair of the `position: relative` on
+    // __crumb-group above. A positioned wrapper here would capture
+    // .menu-topic-items__wrapper again and put the panel back under the caret.
+    position: static;
     flex: 0 0 auto;
     align-self: center;
     overflow: visible;
@@ -1233,6 +1250,9 @@
 
     .menu-topic-items__wrapper {
       position: absolute;
+      // Both resolve against __crumb-group now: 100% is the chip's height, so
+      // the panel clears the whole chip rather than just the caret, and 0 is
+      // the chip's left edge.
       top: calc(100% + 6px);
       left: 0;
       right: auto;
