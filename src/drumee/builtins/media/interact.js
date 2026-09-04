@@ -1379,13 +1379,18 @@ class __media_interact extends media_core {
     }
     const destName = dest.wsName || dest.filename || LOCALE.WORKSPACE;
 
+    // Built OUTSIDE the try below. Only the confirmation's own rejection means
+    // "the user said no"; a throw while composing the text does not, and
+    // swallowing one as a cancellation would put this button straight back
+    // where it started - pressed, and silently doing nothing.
+    const prompt = {
+      title: LOCALE.MERGE_WORKSPACE_TITLE.format(sourceName, destName),
+      message: LOCALE.MERGE_WORKSPACE_CONFIRM.format(sourceName, destName),
+      submessage: LOCALE.MERGE_WORKSPACE_KEEPS.format(sourceName),
+      confirm: LOCALE.MOVE,
+    };
     try {
-      await Wm.confirm({
-        title: LOCALE.MERGE_WORKSPACE_TITLE.format(sourceName, destName),
-        message: LOCALE.MERGE_WORKSPACE_CONFIRM.format(sourceName, destName),
-        submessage: LOCALE.MERGE_WORKSPACE_KEEPS.format(sourceName),
-        confirm: LOCALE.MOVE,
-      });
+      await Wm.confirm(prompt);
     } catch (e) {
       // cancelled or closed - not a failure, and nothing to say about it
       return;
@@ -1450,7 +1455,19 @@ class __media_interact extends media_core {
       // root is exactly what mfs_move_all refuses, returning an empty plan,
       // which is why this menu row did nothing at all before that service
       // existed. Branch out here so the file/folder path stays untouched.
-      if (this.isHub) {
+      //
+      // Keyed on `filetype`, NOT on `isHub`. A FOLDER THAT CONTAINS HUBS IS
+      // NOT A HUB: media/grid initContainer() raises `isHub` on any node whose
+      // `hubs` attribute is non-empty, which for a folder means "there are hubs
+      // somewhere inside me". That overload is what sent folders-with-
+      // workspaces to hub.delete_hub and got 400 WRONG_ENTITY_TYPE back, and
+      // why libs/media-selection bucketFor now tests hubs_inside FIRST. Read
+      // through `isHub`, this branch would hijack the move of any such folder:
+      // it would post merge_workspace with the folder's hub_id - the user's own
+      // entity for anything in their home - and the server would refuse it,
+      // leaving a folder that used to move just fine unable to. `filetype` is
+      // the flag that means "I am one", and it is what the move picker keys on.
+      if (this.mget(_a.filetype) === _a.hub) {
         return this._mergeWorkspaceInto(targetDestinations);
       }
       // A true cross-workspace move needs one destination. The move dialog can
