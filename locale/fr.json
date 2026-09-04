@@ -1221,6 +1221,7 @@
   "MY_EXTERNAL_FOLDER": "Mon dossier externe",
   "MY_PUBLIC_FOLDER": "Mon dossier public",
   "FILES_NOT_FOUND": "Fichiers introuvables",
+  "NO_FOLDERS_OR_FILES_YET": "Aucun dossier ni fichier pour le moment",
   "FOLDER_INFO": "Informations sur le dossier",
   "MEMBERS": "Membres",
   "AREA_PERSONAL_LABEL": "Personnel",

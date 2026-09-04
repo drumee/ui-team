@@ -1248,19 +1248,6 @@ class __window_folder extends mfsInteract {
       }
       return;
     }
-    // The Files empty state, whose primary "Migrate from Google Drive" is the
-    // other surface that fires the migrate tour (see onUiEvent
-    // "launch-gdrive-migration"). Nothing is bound here — that button raises a
-    // service, so the handler is the trigger — but the chunk is worth warming
-    // for the same reason as the menu above: this pane is on screen precisely
-    // when the button is about to be pressed, and an empty Files tab is the one
-    // place a first-time user is most likely to press it.
-    if (pn === "files-empty") {
-      if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
-        Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
-      }
-      return;
-    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -1632,9 +1619,6 @@ class __window_folder extends mfsInteract {
       content.feed([
         fileTypeFilterBar(this),
         gridFilesBrowser(this),
-        // Same three as filesContainer's initial render, in the same order —
-        // the empty state must follow the list for the skin's `~` to reach it.
-        require("../skeleton/content/grid/empty")(this),
       ]);
     });
   }
@@ -1754,12 +1738,6 @@ class __window_folder extends mfsInteract {
 
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
-      //
-      // `open-new-menu` used to sit here too: the Files empty state's "+ New"
-      // was not a Menu trigger, so it opened the topbar's menu part by hand.
-      // That button now carries its own menu of the create rows
-      // (skeleton/content/grid/empty.js), which opens under itself instead of
-      // up in the toolbar, and nothing raises the service any more.
       case "close-new-menu":
         return this.closeNewMenu(cmd);
 
@@ -1769,11 +1747,10 @@ class __window_folder extends mfsInteract {
         // reason: what follows is asynchronous (Kind.waitFor then Wm.launch),
         // so there is no "after the popup is up" to raise it from.
         //
-        // Two surfaces reach this case — the Files empty-state hero's primary
-        // "Migrate from Google Drive" (skeleton/content/grid/empty.js) and the
-        // "+ New" menu's gdrive row (skeleton/toolkit/index.js newMenu, class
-        // window-button__dropdown-menu__item--gdrive). Both ASK FOR THE IMPORT
-        // DIALOG, and the tour is what teaches it — so on the run where the tour
+        // Raised by the "+ New" menu's gdrive row (skeleton/toolkit/index.js
+        // newMenu, class window-button__dropdown-menu__item--gdrive). It ASKS
+        // FOR THE IMPORT DIALOG, and the tour is what teaches it — so on the
+        // run where the tour
         // fires, the dialog is handed over when the tour comes down rather than
         // opened underneath it (see the launch below).
         //

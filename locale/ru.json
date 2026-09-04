@@ -1221,6 +1221,7 @@
   "MY_EXTERNAL_FOLDER": "Моя внешняя папка",
   "MY_PUBLIC_FOLDER": "Моя публичная папка",
   "FILES_NOT_FOUND": "Файлы не найдены",
+  "NO_FOLDERS_OR_FILES_YET": "Пока нет папок и файлов",
   "FOLDER_INFO": "Информация о папке",
   "MEMBERS": "Участники",
   "AREA_PERSONAL_LABEL": "Личный",

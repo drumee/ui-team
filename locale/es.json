@@ -280,6 +280,7 @@
   "MY_PUBLIC_FOLDER": "Mi carpeta pública",
   "X_FILES": "{0} archivo(s)",
   "FILES_NOT_FOUND": "Archivos no encontrados",
+  "NO_FOLDERS_OR_FILES_YET": "Aún no hay carpetas ni archivos",
   "FOLDER_INFO": "Información de la carpeta",
   "MEMBERS": "Miembros",
   "AREA_PERSONAL_LABEL": "Personal",

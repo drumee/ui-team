@@ -1,16 +1,12 @@
 /**
- * Rows of the "+ New" menu, in one place because two surfaces render them.
+ * Rows of the "+ New" menu.
  *
  * The topbar's dropdown (toolkit/index.js newMenu) shows the two IMPORT rows
- * and nests these four CREATE rows in a flyout off "+ Add new". The Files
- * empty-state hero's ghost "New" (../content/grid/empty.js) opens the same
- * four as a menu of its own — it stands beside its own Migrate and Upload
- * buttons, so the import rows there would be a second copy of the two controls
- * next to it.
+ * and nests these four CREATE rows in a flyout off "+ Add new".
  *
- * Shared rather than copied so a row added for one surface appears on the
- * other. They can diverge silently otherwise: Note was hidden from the create
- * list in 2026-08 and a second copy of the list would still be offering it.
+ * Kept in their own module rather than inlined so a second surface rendering
+ * the create list cannot diverge from this one: Note was hidden from the list
+ * in 2026-08, and a copied list would still be offering it.
  */
 
 /**
