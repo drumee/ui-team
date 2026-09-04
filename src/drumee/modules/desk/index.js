@@ -6770,6 +6770,32 @@ class desk_module extends LetcBox {
     // (Admin member_add); hub.invite is not gated by Team seat headcount.
     const { isFreeSoloPlan, showFreeSoloLimit } = require("libs/billing");
     if (isFreeSoloPlan()) return showFreeSoloLimit();
+
+    // COMING FROM A SECTION SCREEN? LAND ON FILES FIRST.
+    //
+    // Plan / Settings / Get help / Calendar / Inbox / Trash / Apps mount in
+    // their own slot and the rail lights their row. Opening this popup lifts
+    // the window manager over that slot (see _dismissWmModal), so the screen
+    // silently became "the workspace + the popup" while the slot stayed
+    // mounted underneath, the breadcrumb still read "Billing & subscription"
+    // and the rail lit Plan AND Invite at once. Reported by Duy.
+    //
+    // _railTab("files") is the desk's own "leave the section screen and show
+    // workspace content" path — it closes the slot, rebuilds the breadcrumb off
+    // the workspace and shows the tab — so the screen becomes what the popup is
+    // actually sitting on. _resetRailToFiles then lights Files, which the click
+    // cannot do by itself: Invite is outside the rail's radio group by design
+    // (see _setInviteRowState), so nothing else would unlight Plan.
+    //
+    // ONLY from a section screen. With a workspace tab already showing there is
+    // nothing to leave, and forcing Files would yank the user off the Chat or
+    // Task they are looking at — the opposite of the "popup over the current
+    // tab" behaviour this row is meant to have.
+    if (_.isFunction(this._currentScreenService) && this._currentScreenService()) {
+      this._railTab("files");
+      this._resetRailToFiles();
+    }
+
     return Kind.waitFor("invite_popup").then(() => {
       const ws = (Wm && Wm._curWorkspace) || {};
       Wm.__wrapperModal.feed({
