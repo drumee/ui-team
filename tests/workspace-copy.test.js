@@ -87,7 +87,7 @@ test("duplicateInPlace routes to the workspace path on filetype, not isHub", () 
 // ── what the workspace path sends and says ─────────────────────────────────
 
 function runCopy(opt = {}) {
-  const posted = []; const said = []; const alerted = [];
+  const posted = []; const said = []; const alerted = []; const announced = [];
   const item = {
     mget(k) {
       if (k === _a.hub_id) return "hubId" in opt ? opt.hubId : "WORKSPACE_A";
@@ -113,9 +113,20 @@ function runCopy(opt = {}) {
       alert: (m) => { alerted.push(m); },
       confirm: () => (opt.cancel ? Promise.reject({}) : Promise.resolve()),
     },
+    // The handler reaches for libs/create-workspace, the one file that owns the
+    // broadcast name and the descriptor shape.
+    require: (id) => {
+      assert.equal(id, "libs/create-workspace", "the announcer must come from that lib");
+      return {
+        announceWorkspace: (w) => {
+          announced.push(w);
+          return !!(w && w.hub_id && w.nid);
+        },
+      };
+    },
   };
   const fn = method(INTERACT, "async _copyWorkspace() {", globals);
-  return fn.call(item).then(() => ({ posted, said, alerted }));
+  return fn.call(item).then(() => ({ posted, said, alerted, announced }));
 }
 
 test("asks the service for THIS workspace and nothing else", async () => {
@@ -166,6 +177,64 @@ test("a complete copy is announced once", async () => {
   const { alerted, said } = await runCopy();
   assert.equal(alerted.length, 0);
   assert.equal(said.length, 1);
+});
+
+// ── telling the desk the workspace exists ──────────────────────────────────
+
+test("announces the copy with its ROOT node, never the hub id", async () => {
+  const { announced } = await runCopy({
+    response: {
+      status: "COPIED", hub_id: "NEW_HUB", home_id: "NEW_ROOT",
+      area: "private", filename: "A-copy", requested: 1, copied: 1,
+    },
+  });
+  assert.equal(announced.length, 1, "a copied workspace must be announced once");
+  assert.deepEqual(announced[0], {
+    hub_id: "NEW_HUB",
+    nid: "NEW_ROOT",
+    area: "private",
+    filename: "A-copy",
+  });
+  assert.notEqual(
+    announced[0].nid, announced[0].hub_id,
+    "a hub's own nid opens nothing - the descriptor carries the root node",
+  );
+});
+
+test("an EMPTY copy is still announced - the workspace exists either way", async () => {
+  const { announced, alerted } = await runCopy({
+    response: {
+      status: "COPIED", hub_id: "NEW_HUB", home_id: "NEW_ROOT",
+      filename: "A-copy", requested: 0, copied: 0,
+    },
+  });
+  assert.equal(announced.length, 1);
+  assert.equal(alerted.length, 1, "and the user is still told it was empty");
+});
+
+test("a PARTIAL copy is still announced", async () => {
+  const { announced } = await runCopy({
+    response: {
+      status: "COPIED", hub_id: "NEW_HUB", home_id: "NEW_ROOT",
+      filename: "A-copy", requested: 3, copied: 2,
+    },
+  });
+  assert.equal(announced.length, 1);
+});
+
+test("nothing is announced when nothing was created", async () => {
+  const { announced } = await runCopy({
+    response: { status: "COPIED", requested: 1, copied: 1 },
+  });
+  assert.equal(announced.length, 0);
+});
+
+test("the announcer is exported from the lib that owns the broadcast", () => {
+  const LIB = read("src/drumee/libs/create-workspace.js");
+  assert.match(LIB, /module\.exports = \{[^}]*announceWorkspace[^}]*\}/,
+    "announceWorkspace must be exported");
+  assert.match(LIB, /RADIO_BROADCAST\.trigger\("workspace:refresh"/,
+    "and that lib must remain the only place raising the broadcast");
 });
 
 // ── the strings ────────────────────────────────────────────────────────────

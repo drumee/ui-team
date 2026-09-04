@@ -1404,6 +1404,27 @@ class __media_interact extends media_core {
         return Wm.alert(message);
       }
       const name = data.filename || sourceName;
+
+      // Tell the desk the workspace exists, exactly as a create does. Nothing
+      // else does it for us: the switcher and the home grid are refreshed off
+      // the client-side "workspace:refresh" broadcast, which the create form
+      // raises after desk.create_hub returns - not off any websocket - so
+      // without this the copy is only there after a reload. The descriptor
+      // carries the ROOT node as `nid`, never the hub id, because that is what
+      // a listener reopens from.
+      const { announceWorkspace } = require("libs/create-workspace");
+      const announced = announceWorkspace({
+        hub_id: data.hub_id,
+        nid: data.home_id,
+        area: data.area,
+        filename: name,
+      });
+      if (!announced) {
+        this.warn("Workspace copied but not announced to the desk", {
+          hub_id: data.hub_id, home_id: data.home_id,
+        });
+      }
+
       if (!data.requested) {
         return Wm.alert(LOCALE.COPY_WORKSPACE_EMPTY.format(name, sourceName));
       }

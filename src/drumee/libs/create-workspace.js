@@ -62,6 +62,25 @@ function announce(workspace, personal) {
 }
 
 /**
+ * Announce a workspace that arrived some other way than a create.
+ *
+ * Duplicating one (media.copy_workspace) produces a workspace exactly like a
+ * created one as far as the desk is concerned, and it needs the same
+ * announcement or it stays missing from the switcher and from the home grid
+ * until a reload. Exported rather than re-triggered at the call site so the
+ * broadcast name and the descriptor shape keep living in this one file, which
+ * is the point of it.
+ *
+ * `nid` MUST be the workspace's ROOT node - see announce() above on why a
+ * hub's own nid opens nothing.
+ */
+function announceWorkspace(workspace) {
+  if (!workspace || !workspace.hub_id || !workspace.nid) return false;
+  announce(workspace, false);
+  return true;
+}
+
+/**
  * A home-root folder wearing a workspace's clothes.
  *
  * Wm owns the filename rules and the make_dir call. `home: 1` is what pins the
@@ -296,4 +315,4 @@ function createWorkspace(host, type, name, opt = {}) {
   });
 }
 
-module.exports = { createWorkspace, HUB_AREA };
+module.exports = { createWorkspace, announceWorkspace, HUB_AREA };
