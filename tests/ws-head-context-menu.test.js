@@ -180,7 +180,18 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, alreadyOpe
       };
     },
     _,
-    window: { drumeeDialog: dlg, innerWidth: 1400, innerHeight: 900, scrollX: 0, scrollY: 0 },
+    // `window.Wm._curWorkspace` is where the menu now reads the workspace ROOT
+    // nid from — the pane's own nid follows the user into subfolders, and for a
+    // personal workspace the nid is the only thing that identifies it.
+    window: {
+      drumeeDialog: dlg,
+      innerWidth: 1400,
+      innerHeight: 900,
+      scrollX: 0,
+      scrollY: 0,
+      Wm: { _curWorkspace: win ? { hub_id: hubId, nid: "HUBNODE" } : null },
+    },
+    Visitor: { id: "THE_USER" },
     Skeletons: {
       Box: { Y: (o) => ({ __box: "y", ...o }), X: (o) => ({ __box: "x", ...o }) },
       Note: (o) => ({ __note: 1, ...o }),
@@ -193,7 +204,14 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, alreadyOpe
     new Function(...keys, `return function (${param}) {${slice(src, "{").slice(1, -1)}};`)(
       ...keys.map((k) => globals[k]));
   ctx._closeWorkspaceMenu = mk(slice(DESK, "  _closeWorkspaceMenu() {"));
-  ctx._workspaceMediaItem = mk(slice(DESK, "  _workspaceMediaItem(hub_id) {"), "hub_id");
+  // Two arguments now: a personal workspace cannot be found by hub_id, which
+  // every one of them shares. The real _workspaceKey is bound alongside so this
+  // harness runs the same identity test the source does.
+  ctx._workspaceMediaItem = mk(
+    slice(DESK, "  _workspaceMediaItem(hub_id, nid) {"),
+    "hub_id, nid",
+  );
+  ctx._workspaceKey = mk(slice(DESK, "  _workspaceKey(row) {"), "row");
   const fn = mk(body);
   fn.call(ctx, cmd);
   return Object.assign(fed[0] || {}, { __fed: fed.length, __states: states, __ctx: ctx });
@@ -443,6 +461,15 @@ test("separators come through untouched from the builder", () => {
 
 // ── the link icon is external-only ──────────────────────────────────────────
 
+// The switcher's row identity. `Visitor.id` is what marks a personal
+// workspace: they all carry the user's own hub_id, while a hub carries its own.
+const KEY_LEX = { folder: "folder", personal: "personal", hub: "hub" };
+const workspaceKey = new Function(
+  "_a",
+  "Visitor",
+  `return ({ ${slice(DESK, "  _workspaceKey(row) {")} })._workspaceKey;`,
+)(KEY_LEX, { id: "THE_USER" });
+
 /** Run the real _feedWorkspaceHead and report the action rows it built. */
 function head({ area, filetype = "hub" }) {
   const body = slice(DESK, "  _feedWorkspaceHead(head, rows, cur) {");
@@ -464,8 +491,15 @@ function head({ area, filetype = "hub" }) {
   // eslint-disable-next-line no-new-func
   const fn = new Function(...keys, `return function (head, rows, cur) {${slice(body, "{").slice(1, -1)}};`)(
     ...keys.map((k) => globals[k]));
-  const rows = [{ hub_id: "H", filename: "W", area, filetype }];
-  fn.call(ctx, { feed: (v) => { fed = v; } }, rows, { hub_id: "H" });
+  // The header identifies its row by KEY now, not by hub_id — personal
+  // workspaces all carry the user's own, so ids alone matched the wrong one.
+  // The real _workspaceKey is used so this harness cannot drift from it.
+  ctx._workspaceKey = workspaceKey;
+  // `nid` matters: a personal workspace is a home-root FOLDER, and a folder is
+  // identified by its node — not by hub_id, which every personal workspace of
+  // this user shares. Without one there is nothing to key it by.
+  const rows = [{ hub_id: "H", nid: "N", filename: "W", area, filetype }];
+  fn.call(ctx, { feed: (v) => { fed = v; } }, rows, { hub_id: "H", nid: "N", area, filetype });
   const actions = (fed || []).find((n) => n && /ws-head-actions/.test(n.className || ""));
   return (actions ? actions.kids : []).filter(Boolean);
 }

@@ -64,15 +64,23 @@ function announce(workspace, personal) {
 /**
  * A home-root folder wearing a workspace's clothes.
  *
- * Wm owns the filename rules and the make_dir call, and resolves the parent
- * from whatever workspace is open — which, during the post-signup tutorial, is
- * none, so it lands on the home root. That is exactly where a personal
- * workspace belongs.
+ * Wm owns the filename rules and the make_dir call. `home: 1` is what pins the
+ * parent: left to itself that method creates the folder inside whatever
+ * workspace is open, which is correct for "+ New -> Folder" and never correct
+ * here — a personal workspace lives at the home root by definition.
+ *
+ * Without it, creating one while an internal or external workspace was open
+ * nested it in that workspace AND stamped it with that workspace's area, so it
+ * stopped being personal in two ways and read as a plain subfolder. It only
+ * ever looked right because the paths that exercised it — the post-signup
+ * tutorial, and the desk with nothing open — had no workspace to inherit from.
  *
  * @returns {Promise<Object>} a normalised result
  */
 function createPersonal(host, filename) {
-  return Promise.resolve(Wm.createFolderFromDialog({ getValue: () => filename }))
+  return Promise.resolve(
+    Wm.createFolderFromDialog({ getValue: () => filename }, { home: 1 }),
+  )
     .then((created) => {
       // createFolderFromDialog resolves to the folder on success and undefined
       // on its own handled failures (invalid name, server error), having
@@ -102,15 +110,37 @@ function createPersonal(host, filename) {
  *   success, `{ok: false, quota: true}` when the server refused on quota, or
  *   `{ok: false, message}` with something worth showing the user.
  */
-function createHub(host, type, filename, opt) {
+function createHub(host, type, filename) {
   const area = HUB_AREA[type] || HUB_AREA.team;
-  const target = opt.target || null;
   return host
     .postService(SERVICE.desk.create_hub, {
       area,
       filename,
       hub_id: Visitor.id,
-      pid: target ? target.getCurrentNid() : Visitor.id,
+      // NO `pid`. A workspace belongs at the user's home root, full stop, and
+      // omitting it is how you say so: desk.create_hub does
+      // `pid = input.use(pid) || this.home_id`, and then
+      //
+      //   if (pid && pid != this.get(Attr.home_id)) mfs_move(hub.id, pid)
+      //
+      // — so ANY pid that is not the home id MOVES the freshly created hub
+      // under it.
+      //
+      // This used to send `target.getCurrentNid()`, the node the active window
+      // was showing. Create a workspace while one is open and the new
+      // workspace was moved inside it. With a PERSONAL workspace open the
+      // effect was plainest: that is a home-root folder, so the new workspace
+      // landed inside it and read as a folder there — which is how it was
+      // reported.
+      //
+      // The fallback was wrong too, just harmlessly: `Visitor.id` is the user's
+      // ENTITY id, not their home node, so it also failed `pid != home_id` and
+      // called mfs_move against something that is not a media node — a no-op
+      // that hid the real defect next to it.
+      //
+      // Nesting a hub inside a folder is a thing the server supports, but it is
+      // not what this dialog does, and nothing here should decide it from
+      // whatever happens to be on screen.
     })
     .then((res) => {
       // TAKE THE REFUSAL ROW, NOT THE FIRST ROW.
@@ -248,7 +278,7 @@ function createHub(host, type, filename, opt) {
  * @param {String} type          "team" | "share" | "personal"
  * @param {String} name          the workspace name, untrimmed is fine
  * @param {Object} [opt]
- * @param {Object} [opt.target]  the active window, for a hub's parent nid
+ * @param {Object} [opt]        reserved; a hub's parent is always the home root
  * @returns {Promise<Object>} `{ok: true, workspace, hub?, personal?}` or
  *   `{ok: false, ...}` — `handled` when the failure has already been shown to
  *   the user, `quota` when the server refused on quota, `message` otherwise.
@@ -259,7 +289,7 @@ function createWorkspace(host, type, name, opt = {}) {
   if (!filename) return Promise.resolve({ ok: false, empty: true });
   const run = type === "personal"
     ? createPersonal(host, filename)
-    : createHub(host, type, filename, opt);
+    : createHub(host, type, filename);
   return run.catch((e) => {
     if (host && host.warn) host.warn("Failed to create workspace", e);
     return { ok: false, error: e };

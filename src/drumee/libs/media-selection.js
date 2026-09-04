@@ -38,11 +38,13 @@ const BUCKETS = [
 /**
  * Which bucket one item belongs in.
  *
- * The order of the tests is the behaviour and is deliberately preserved from the
- * window manager's original inline version: `locked` wins over everything, a hub
- * is judged on ownership alone (its `canRemove` is never consulted), and a folder
- * containing a hub is neither trashed nor rejected but routed to its own
- * question.
+ * The order of the tests is the behaviour: `locked` wins over everything, a
+ * folder with hubs inside is neither trashed nor rejected but routed to its own
+ * question, and a hub is judged on ownership alone (its `canRemove` is never
+ * consulted).
+ *
+ * The hubs_inside test sits ABOVE the hub test, which is a correction to the
+ * order this was lifted from — see the note on it.
  *
  * @param {{locked: Boolean, isHub: Boolean, isOwner: Boolean, isFolder: Boolean,
  *          containsHub: Boolean, canRemove: Boolean}} row what the live item says
@@ -52,8 +54,30 @@ const BUCKETS = [
  */
 function bucketFor(row = {}) {
   if (row.locked) return "locked";
-  if (row.isHub) return row.isOwner ? "own_hubs" : "other_hubs";
+  // A FOLDER THAT CONTAINS HUBS IS NOT A HUB — and this test has to come
+  // first, because on a grid tile both flags are set at once.
+  //
+  // media/grid initContainer() raises `isHub` on any node whose `hubs`
+  // attribute is non-empty, which for a folder means "there are hubs
+  // somewhere inside me", not "I am one". Read after `isHub`, the hubs_inside
+  // branch below was unreachable for every tile that could ever qualify for
+  // it: such a folder went to own_hubs, and confirmRemoveHub posted
+  // `hub.delete_hub` with the folder's hub_id.
+  //
+  // For a personal workspace that hub_id is the USER'S OWN entity id — a
+  // personal workspace is a folder in the user's home — so the request came
+  // back 400 WRONG_ENTITY_TYPE (hub.delete_hub refuses an entity whose type
+  // is not `hub`) and the caller said "Could not delete the workspace. The
+  // listing has been restored."
+  //
+  // Reported for vowaw91171@robustq.com's `rrr`, which carries
+  // hubs = 34df038c34df0391; the account's other personal workspaces have no
+  // hubs inside and deleted perfectly well, which is what made this look like
+  // a personal-workspace bug rather than a contains-a-hub one.
+  //
+  // A real hub is unaffected: it sets containsHub but never isFolder.
   if (row.isFolder && row.containsHub) return "hubs_inside";
+  if (row.isHub) return row.isOwner ? "own_hubs" : "other_hubs";
   return row.canRemove ? "allowed" : "rejected";
 }
 

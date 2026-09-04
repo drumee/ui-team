@@ -2067,6 +2067,52 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * One workspace's identity in the switcher.
+   *
+   * NOT hub_id. A Personal workspace is a home-root FOLDER, and every one of
+   * them carries the USER's own hub_id — so keyed on hub_id alone, all of a
+   * user's personal workspaces are the same workspace. That is what made
+   * selecting one row under "Personal" light every row in the section, and it
+   * made clicking any of them open the first one, because the lookup found
+   * whichever matched that shared id first.
+   *
+   * The sidebar has always keyed these correctly (workspace-list
+   * `getWorkspaceKey`, with the reason written out); this is the same rule, in
+   * the one place the switcher can share it.
+   *
+   * Prefixed so a folder nid can never collide with a hub id, and so a null
+   * key is obviously null rather than an accidental "".
+   *
+   * @param {Object} row a desk.home row, or Wm._curWorkspace
+   * @returns {String|null}
+   */
+  _workspaceKey(row) {
+    if (!row) return null;
+    // THREE SIGNALS, because no single one survives both shapes.
+    //
+    //   filetype   a desk.home row has it; Wm._curWorkspace does not.
+    //   area       libs/workspace-target pins `personal` on a folder TARGET,
+    //              but loadWorkspace then overwrites _curWorkspace.area from
+    //              media.attributes — and a home-root folder's area is NULL in
+    //              the database. So an OPEN personal workspace arrives here
+    //              with no area at all, and area alone read it as a hub: its
+    //              key came out `hub:<user id>`, matched none of the
+    //              `folder:<nid>` rows, and the switcher header went blank.
+    //   hub_id     the reliable one. A personal workspace IS the user, so its
+    //              hub_id is Visitor.id; a real hub's is its own.
+    //
+    // Not `nid !== hub_id`, which looks like a structural test and is not: an
+    // open HUB's nid is the workspace ROOT node, so the two differ there too.
+    const isFolder =
+      row.filetype === _a.folder ||
+      row.area === _a.personal ||
+      (row.hub_id != null && `${row.hub_id}` === `${Visitor.id}`);
+    const id = isFolder ? row.nid || row.id : row.hub_id || row.id;
+    if (id == null || id === "") return null;
+    return `${isFolder ? "folder" : "hub"}:${id}`;
+  }
+
+  /**
    * Split the switcher's rows into the types the user chose when creating them.
    *
    * The vocabulary is the CREATE DIALOG's, not a new one invented here —
@@ -2131,8 +2177,13 @@ class desk_module extends LetcBox {
    */
   _feedWorkspaceHead(head, rows, cur) {
     const cn = "desk-module-topbar";
+    // By KEY. Matching on hub_id put the FIRST personal workspace in the header
+    // whichever one was open, because they all carry the user's own — the same
+    // collision that lit the whole "Personal" section at once.
+    const curKey = this._workspaceKey(cur);
     const curRow =
-      (cur && (rows || []).find((r) => (r.hub_id || r.id) == cur.hub_id)) || null;
+      (curKey && (rows || []).find((r) => this._workspaceKey(r) === curKey)) ||
+      null;
     if (!curRow) return head.feed([]);
     return head.feed([
       Skeletons.Element({
@@ -2258,13 +2309,20 @@ class desk_module extends LetcBox {
       });
 
     const cn = "desk-module-topbar";
+    const curKey = this._workspaceKey(cur);
     const rowFor = (row) => {
       const hubId = row.hub_id || row.id;
-      const isCurrent = cur && cur.hub_id == hubId;
+      const wsKey = this._workspaceKey(row);
+      // By KEY, not by hub_id: personal workspaces all share the user's, so
+      // comparing ids marked every one of them current at once.
+      const isCurrent = !!wsKey && wsKey === curKey;
       return Skeletons.Box.X({
         className: `${cn}__ws-item`,
         service: "switch-workspace",
         uiHandler: [this],
+        wsKey,
+        // Kept alongside wsKey: other per-row consumers read it (the phone's
+        // sheet re-dispatch carries the cmd along for exactly this).
         wsHubId: hubId,
         attrOpt: {
           "data-current": isCurrent ? "1" : "0",
@@ -2417,7 +2475,15 @@ class desk_module extends LetcBox {
     //
     // The media widget is the object the folder context menu has always acted
     // on, and it carries the HUB node: real nid, real pid, real filename.
-    const media = this._workspaceMediaItem(w.mget && w.mget(_a.hub_id));
+    // The nid too: for a personal workspace hub_id is the user's own and names
+    // every one of them at once. Wm._curWorkspace is the workspace ROOT, which
+    // the pane's own nid is not once the user has browsed into a subfolder.
+    const _cur = (window.Wm && window.Wm._curWorkspace) || null;
+    const _wsHub = w.mget && w.mget(_a.hub_id);
+    const media = this._workspaceMediaItem(
+      _wsHub,
+      _cur && `${_cur.hub_id}` === `${_wsHub}` ? _cur.nid : w.mget && w.mget(_a.nid),
+    );
     const target = media || w;
 
     // Trashing a workspace removes its tile from the grid (media/core.js
@@ -2477,7 +2543,15 @@ class desk_module extends LetcBox {
     // open a working one.
     if (!keys.length) return;
 
-    const kids = keys.map((k) => item(target, cmd, k)).filter(Boolean);
+    // THE TRIGGER IS THE MEDIA ITEM, not the ⋯ button.
+    //
+    // ui-core's buildContextmenu calls `p.contextmenuSkeleton(p, trigger, e)`
+    // with the tile as BOTH, and builtins/contextmenu/skeleton then passes that
+    // same pair down to every row. Handing `cmd` here made this menu the only
+    // caller in the app whose rows are built against a different trigger than
+    // their handler. No row reads it today, so this changes nothing that runs —
+    // it removes a difference that would decide the behaviour the day one does.
+    const kids = keys.map((k) => item(target, target, k)).filter(Boolean);
     if (_.isEmpty(kids)) return;
 
     const rect = cmd && cmd.el && _.isFunction(cmd.el.getBoundingClientRect)
@@ -2486,7 +2560,14 @@ class desk_module extends LetcBox {
     dialog.feed(
       Skeletons.Box.Y({
         volatility: 4,
-        className: "drumee-contextmenu desk-module-topbar",
+        // `drumee-contextmenu <family> desk-module-topbar`: the family is what
+        // buildContextmenu stamps (`drumee-contextmenu ${p.fig.family}`), so a
+        // rule written for the grid's menu reaches this one too — the two are
+        // the same menu on the same target, opened from two places. The topbar
+        // token stays last for this module's own positioning rules.
+        className: `drumee-contextmenu ${
+          (target.fig && target.fig.family) || "media-grid"
+        } desk-module-topbar`,
         uiHandler: [target],
         kids,
         style: {
@@ -2542,14 +2623,16 @@ class desk_module extends LetcBox {
     const list = this._wsListPart;
     if (!list || !list.el || (list.isDestroyed && list.isDestroyed())) return;
     const cur = (window.Wm && window.Wm._curWorkspace) || null;
-    const hubId = cur && cur.hub_id;
+    const curKey = this._workspaceKey(cur);
     if (list.children && _.isFunction(list.children.each)) {
       list.children.each((row) => {
-        // Section headings are children too and carry no wsHubId.
+        // Section headings are children too and carry no key.
         if (!row || !row.el || !row.el.dataset || !row.mget) return;
-        const rowHub = row.mget("wsHubId");
-        if (rowHub == null) return;
-        row.el.dataset.current = hubId && rowHub == hubId ? "1" : "0";
+        const rowKey = row.mget("wsKey");
+        if (rowKey == null) return;
+        // Same key comparison as rowFor — the two must agree, or a re-render
+        // and an in-place pass would disagree about which row is current.
+        row.el.dataset.current = curKey && rowKey === curKey ? "1" : "0";
       });
     }
     // The header alone — NOT _renderWorkspaceMenu, which re-feeds the rows too
@@ -2646,10 +2729,14 @@ class desk_module extends LetcBox {
   }
 
   /** Switcher row -> open that workspace, then refresh the menu's current mark. */
-  async _switchWorkspace(hubId) {
-    if (!hubId) return;
+  async _switchWorkspace(wsKey) {
+    if (!wsKey) return;
     const rows = await this._fetchWorkspaces();
-    const row = (rows || []).find((r) => (r.hub_id || r.id) == hubId);
+    // Matched on the KEY the row was built with. Finding by hub_id opened the
+    // FIRST personal workspace whichever one was clicked, because they all
+    // carry the user's own hub_id — the same collision that lit the whole
+    // "Personal" section at once.
+    const row = (rows || []).find((r) => this._workspaceKey(r) === wsKey);
     if (!row) return;
     if (!window.Wm || !_.isFunction(window.Wm.loadWorkspace)) return;
     window.Wm.loadWorkspace(this._workspaceTarget(row));
@@ -3165,18 +3252,41 @@ class desk_module extends LetcBox {
     }
   }
 
-  _workspaceMediaItem(hub_id) {
+  _workspaceMediaItem(hub_id, nid) {
     try {
       if (!hub_id || typeof Wm === "undefined") return null;
       const list = Wm.getPart && Wm.getPart(_a.list);
       const kids = list && list.children ? list.children.toArray() : [];
+      const live = (k) =>
+        k && !(k.isDestroyed && k.isDestroyed()) && _.isFunction(k.mget);
+      // BY KEY, not by hub_id.
+      //
+      // hub_id alone cannot tell two personal workspaces apart: they are
+      // folders in the user's own home, so ALL of them report hub_id ===
+      // Visitor.id (verified in desk.home for vowaw91171@robustq.com — rrr,
+      // 111 and 222(1) all carry it, while every hub carries its own id).
+      // This returned whichever came first, so the ⋯ menu of an open personal
+      // workspace was built from — and acted on — a different one.
+      //
+      // Same collision, and the same key, as the switcher's _workspaceKey.
+      const want = this._workspaceKey({ hub_id, nid });
+      if (want) {
+        const byKey = kids.find(
+          (k) =>
+            live(k) &&
+            this._workspaceKey({
+              hub_id: k.mget(_a.hub_id),
+              nid: k.mget(_a.nid),
+              filetype: k.mget(_a.filetype),
+            }) === want,
+        );
+        if (byKey) return byKey;
+      }
+      // A hub is unambiguous by id, and this is the path a caller that knows
+      // only a hub_id still needs.
       return (
         kids.find(
-          (k) =>
-            k &&
-            !(k.isDestroyed && k.isDestroyed()) &&
-            _.isFunction(k.mget) &&
-            String(k.mget(_a.hub_id)) === String(hub_id),
+          (k) => live(k) && String(k.mget(_a.hub_id)) === String(hub_id),
         ) || null
       );
     } catch (e) {
@@ -5753,7 +5863,7 @@ class desk_module extends LetcBox {
       // onUiEvent is not async, so the lookup is chained rather than awaited.
       // _fetchWorkspaces is cached, so this resolves immediately in practice.
       case "switch-workspace":
-        return this._switchWorkspace(cmd.mget("wsHubId"));
+        return this._switchWorkspace(cmd.mget("wsKey"));
 
       // ── Workspace rail (Figma 43:23955) ────────────────────────────────
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is

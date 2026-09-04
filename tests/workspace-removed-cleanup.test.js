@@ -81,7 +81,7 @@ function wmHost({ curHub = HUB, withDesk = true } = {}) {
   const host = Object.create({
     onCurrentWorkspaceRemoved: method(
       WM,
-      "onCurrentWorkspaceRemoved(hub_id) {",
+      "onCurrentWorkspaceRemoved(hub_id, nid) {",
       globals,
     ),
   });
@@ -174,11 +174,19 @@ test("a missing Desk global does not throw", async () => {
 
 function routeHost() {
   const seen = [];
-  const globals = { _: require("underscore") };
+  // The trash branch beside the hub one reads Visitor and SERVICE to tell a
+  // personal workspace's own root from any other trashed folder.
+  const globals = {
+    _: require("underscore"),
+    _a: new Proxy({}, { get: (_t, k) => String(k) }),
+    Visitor: { id: "745df7d0745df7d5" },
+    SERVICE: { media: { trash: "media.trash" } },
+  };
   const fn = method(WM, "handleWsEvent(args = {}) {", globals);
   const host = {
     seen,
     superCalls: 0,
+    _curWorkspace: null,
     onCurrentWorkspaceRemoved(hub_id) {
       seen.push(hub_id);
     },

@@ -38,32 +38,33 @@
   }
 
   // The tab itself: icon + name, matching .desk-breadcrumb__context.
+  //
+  // IT NO LONGER PAINTS A CHIP. The rounded ground, the inset and the hover
+  // used to live here, which made every crumb its own little pill sitting
+  // beside a caret that was not in any of them. The chip is now one box around
+  // the whole address — crumbs AND caret — and it is
+  // .desk-module-topbar__crumb-group that draws it (desk/skin/topbar.scss).
+  //
+  // Keeping a second ground here would nest a pill inside that chip, so what is
+  // left is only what positions the icon against the name.
   &__tab {
     align-items: center;
     gap: var(--crumb-gap, 6px);
     min-width: 0;
     height: calc(var(--crumb-height, 30px) - 6px);
-    padding: 0 var(--crumb-pad-x, 6px);
-    border-radius: var(--crumb-radius, 8px);
     box-sizing: border-box;
-    transition: background-color 0.12s ease;
-  }
-
-  &__ui:hover .breadcrumb-item__tab {
-    background-color: var(--overlay-bg-05);
   }
 
   // A section label (Settings / Get help / Plan / Trash…) is text, not a
-  // destination — the skeleton gives it no service, so a pointer cursor and a
-  // hover ground would both promise a click that does nothing. Written as a
-  // descendant of __ui:hover on purpose: that is what the rule above matches,
-  // so anything shorter loses to it on specificity.
+  // destination — the skeleton gives it no service, so a pointer cursor would
+  // promise a click that does nothing.
+  //
+  // The hover-ground half of this is gone with the chip: there is no longer a
+  // per-tab background here to neutralise, and the group's own hover is
+  // suppressed for a section in desk/skin/topbar.scss, where the section flag
+  // is readable from the breadcrumb root.
   &__main--section {
     cursor: default;
-  }
-
-  &__ui:hover .breadcrumb-item__main--section .breadcrumb-item__tab {
-    background-color: transparent;
   }
 
   // The area-tinted folder shape. It is NOT a plain <svg> to stretch: the
@@ -140,12 +141,17 @@
     white-space: nowrap;
   }
 
-  // The current location carries the frame's ground and a heavier name.
+  // The current location is marked by a HEAVIER NAME, not by a ground of its
+  // own.
+  //
+  // It used to paint --normal-bg-90 on its tab. That was the frame's chip, and
+  // the chip has moved up to .desk-module-topbar__crumb-group so it can enclose
+  // the caret too — leaving this here draws a second, square-cornered ground
+  // inside the rounded one (the radius went up with the rest of it).
+  //
+  // The signal is not lost: weight and colour still say which crumb you are on,
+  // and they do it without a box competing with the chip around them.
   &__main[data-current="1"] {
-    .breadcrumb-item__tab {
-      background-color: var(--normal-bg-90);
-    }
-
     .breadcrumb-item__filename {
       color: var(--normal-fg);
       font-weight: 600;

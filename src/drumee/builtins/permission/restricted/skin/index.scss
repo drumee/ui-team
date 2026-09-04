@@ -84,7 +84,25 @@
   // OUTRIGHT: drumee.typo emits font-size / line-height / color only — it never
   // emits font-weight, and 600 is not even a branch of its $weight chain — so
   // passing $weight there would silently drop this title to regular.
+  // Title + workspace on one line.
+  //
+  // The row is the constrained one, not the header: the close button is the
+  // header's other child, so letting this grow would push it off the edge.
+  // At the dock's 360px there is not room for both at full width, and what
+  // gives is the workspace name — the title is fixed copy and reads as the
+  // heading, so it holds its size and the chip ellipsizes beside it.
+  &__title-row {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
   &__title {
+    // Never squeezed: it is three fixed words, and a wrapped or clipped
+    // heading beside an intact chip reads as the wrong thing having given way.
+    flex: 0 0 auto;
+
     @include drumee.typo(
       $size: 18px,
       $line: 24px,
@@ -100,6 +118,143 @@
       $weight: 400,
       $color: var(--neutral-600)
     );
+  }
+
+  // WHICH workspace, under the title. Modelled on `.breadcrumb-item__tab` in
+  // the topbar so the same workspace reads the same way in both places.
+  //
+  // The numbers are COPIED, not inherited, and that is not laziness: the
+  // --crumb-* ramp those values come from is declared on `.desk-breadcrumb`
+  // (breadcrumb/skin) and therefore cascades only to crumbs. Writing
+  // `var(--crumb-gap, 6px)` here would read as a live link to that ramp while
+  // always resolving to the fallback — a comment's worth of fiction in the
+  // code itself. If the ramp moves, this has to be moved with it.
+  //
+  //   gap 6px · height 30px · radius 8px · pad-x 6px · icon 20px · 13px/18px
+  //
+  // It carries the ground the crumb tab gave up when the topbar's chip moved to
+  // .desk-module-topbar__crumb-group: there, the chip wraps the whole address
+  // and its caret; here this is the only thing in the row, so it draws its own.
+  //
+  // Inert — no cursor, no hover. It names the workspace, it does not navigate.
+  &__ws-tab {
+    align-items: center;
+    gap: 6px;
+    // Shrinks, and is the only thing in the row that does — see __title-row.
+    // `min-width: 0` is what actually permits it: a flex item's default
+    // min-width is its content, so without this the name refuses to ellipsize
+    // and the row overflows instead.
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0 6px;
+    height: 30px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    // ELEVATED, not --normal-bg-90: the panel itself is already that colour
+    // (see __main), so a chip in the same tone is a chip you cannot see. This
+    // sits ON the panel, the way the create dialog's type rows sit on its card.
+    background-color: var(--normal-bg-elevated);
+    border: 1px solid var(--border-default);
+  }
+
+  // Same recipe as the breadcrumb's __icon: folderArt emits a `.folder-shape`
+  // whose AREA CLASS supplies the fill plus an absolutely positioned `.badge`,
+  // authored at 105x86 — without an explicit box it paints at that intrinsic
+  // size, and without `position: relative` the badge anchors to whatever
+  // positioned ancestor it finds.
+  &__ws-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
+
+    .media-grid__folder-art {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 16px;
+    }
+
+    .folder-shape {
+      width: 20px;
+      height: 16px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public { fill: var(--area-public); }
+      &.share,
+      &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+
+    // At 20px a proportional emblem is a smudge, so it is oversized and hangs
+    // off the corner — the desk breadcrumb's own answer, same numbers.
+    //
+    // THE STOPS HAVE TO BE COLOURED. The template draws the emblem in two
+    // layers: white glyph detail, then a path filled `url(#paint-<id>)` whose
+    // gradient stops carry classes `gradient-start-<area>` /
+    // `gradient-end-<area>` and no colour of their own. No stylesheet in this
+    // repo defines those, so left alone the stops fall back to the SVG default
+    // of black and the emblem paints as a dark blob over its own glyph.
+    //
+    // `fill: currentColor` on the <svg> root does NOT reach it: fill inherits,
+    // and an inherited value loses to the presentation attribute on the path
+    // itself. Same values as the create dialog's type rows, so one workspace
+    // wears one emblem wherever it appears.
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      color: var(--grid-color-folder-badge);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+
+      [class^="gradient-start-"] { stop-color: var(--primary-purple-40); }
+      [class^="gradient-end-"] { stop-color: var(--primary-purple-50); }
+      stop.gradient-start-private { stop-color: var(--orange-400); }
+      stop.gradient-end-private { stop-color: var(--orange-600); }
+      stop.gradient-start-share,
+      stop.gradient-end-share { stop-color: var(--area-share, #ffa8dc); }
+    }
+
+    .media-context-menu__folder-trigger {
+      display: none !important;
+    }
+  }
+
+  &__ws-name {
+    @include drumee.typo(
+      $size: 13px,
+      $line: 18px,
+      $color: var(--normal-fg)
+    );
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+
+    // THE TRUNCATION HAS TO BE ON THE INNER NODE. A Skeletons.Note renders its
+    // copy inside a `.note-content` div, so that div — not this box — is the
+    // element whose inline content overflows, and `text-overflow` only acts on
+    // the element that owns the overflowing text. Set on the outside alone it
+    // never fires: the box clips the name mid-glyph with no ellipsis, which is
+    // exactly how it rendered.
+    //
+    // Same family as the note that a Note is never CSS `:empty` for the same
+    // structural reason.
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   // ── Scrollable body ───────────────────────────────────────────

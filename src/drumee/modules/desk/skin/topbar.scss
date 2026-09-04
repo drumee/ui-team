@@ -140,6 +140,50 @@
   // `__ui` root (from breadcrumb/skin/index.scss), which would otherwise
   // stretch it to fill the row and push the tabs all the way right.
   // Override that inside the cluster so the breadcrumb hugs its content.
+  // THE ADDRESS CHIP: the crumb track and the switcher's caret as one control.
+  //
+  // The chip used to be drawn by .breadcrumb-item__tab, one per crumb, with the
+  // caret outside all of them — so "icon, name, caret" only looked like a unit
+  // as long as nothing moved. It is drawn here now, once, around both.
+  //
+  // The --crumb-* ramp is the breadcrumb's own (breadcrumb/skin publishes it),
+  // reused rather than restated so the chip cannot drift from the type and
+  // baseline it wraps.
+  &__crumb-group {
+    align-items: center;
+    min-width: 0;
+    flex: 0 1 auto;
+    box-sizing: border-box;
+    height: var(--crumb-height, 30px);
+    padding: 0 var(--crumb-pad-x, 6px);
+    border-radius: var(--crumb-radius, 8px);
+    // The frame's ground, which the CURRENT crumb's tab used to carry alone.
+    // Held here so it runs under the caret as well — that is what makes the
+    // two read as one address rather than a filled crumb sitting next to a
+    // bare chevron.
+    background-color: var(--normal-bg-90);
+    transition: background-color 0.12s ease;
+
+    // Deepens rather than replaces: --overlay-bg-05 is translucent, so it
+    // darkens the ground above instead of swapping it for a different one.
+    &:hover {
+      background-color: var(--overlay-bg-05);
+    }
+
+    // A SECTION screen — Settings, Get help, Plan, Calendar, Inbox, Contacts,
+    // Trash, Admin console — is a label with nothing behind it, and its caret
+    // is hidden (see __left-cluster below). A chip around a bare word promises
+    // a control that is not there, so the group stops painting one.
+    //
+    // `:has()` because the flag is stamped on the breadcrumb root by
+    // desk_breadcrumb._setSectionMode, which is a CHILD of this box — the same
+    // flag the sibling rule below reads, read from the other direction.
+    &:has(> .desk-breadcrumb__ui[data-section="1"]) {
+      background-color: transparent;
+      cursor: default;
+    }
+  }
+
   &__left-cluster {
     align-items: center;
     gap: 20px;
@@ -1247,10 +1291,6 @@
       height: 12px;
     }
 
-    &:hover {
-      background: var(--overlay-bg-05);
-      color: var(--normal-fg);
-    }
   }
 
 

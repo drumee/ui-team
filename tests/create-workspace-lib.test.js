@@ -29,7 +29,7 @@ const FORM_PATH = join(REPO_ROOT, "src/drumee/builtins/media/form/index.js");
  * it does to the outside world.
  */
 function load(opt = {}) {
-  const calls = { posts: [], broadcasts: [], tracked: [], folders: [] };
+  const calls = { posts: [], broadcasts: [], tracked: [], folders: [], folderOpts: [] };
 
   const Visitor = { id: "u1", get: () => "home1" };
   const SERVICE = { desk: { create_hub: "desk.create_hub" } };
@@ -40,8 +40,9 @@ function load(opt = {}) {
     trigger: (channel, payload) => calls.broadcasts.push({ channel, payload }),
   };
   const Wm = {
-    createFolderFromDialog: (cmd) => {
+    createFolderFromDialog: (cmd, folderOpt) => {
       calls.folders.push(cmd.getValue());
+      calls.folderOpts.push(folderOpt);
       return opt.folder === undefined ? { nid: "n9" } : opt.folder;
     },
   };
@@ -391,4 +392,95 @@ test("an empty array is still a refusal, not a success", async () => {
   const { createWorkspace, host, calls } = load({ hub: [] });
   assert.equal((await createWorkspace(host, "team", "x")).ok, false);
   assert.deepEqual(calls.tracked, []);
+});
+
+// ── a workspace is created at the HOME ROOT, never inside what is open ─────
+//
+// desk.create_hub resolves the parent as `pid = input.use(pid) || home_id` and
+// then MOVES the new hub whenever that parent is not the home root:
+//
+//   if (pid && pid != this.get(Attr.home_id)) mfs_move(hub.id, pid)
+//
+// The dialog used to send `target.getCurrentNid()` — the node the active window
+// was showing — so creating a workspace while one was open nested the new
+// workspace inside it. With a PERSONAL workspace open the effect was plainest:
+// that is a home-root folder, so the new workspace landed inside it and read as
+// a folder there.
+
+/** The create_hub payload for one call. */
+function hubPayload(host, calls, type = "team", name = "New one") {
+  return calls.posts.length ? calls.posts[0].payload : null;
+}
+
+test("no `pid` is sent, so the server keeps the hub at the home root", async () => {
+  const { createWorkspace, host, calls } = load({});
+  await createWorkspace(host, "team", "New one");
+  const payload = hubPayload(host, calls);
+  assert.ok(payload, "create_hub was not called");
+  assert.ok(
+    !("pid" in payload),
+    `pid must not be sent — any value but home_id triggers mfs_move: ${JSON.stringify(payload)}`,
+  );
+});
+
+test("…and that holds for external too", async () => {
+  const { createWorkspace, host, calls } = load({});
+  await createWorkspace(host, "share", "Shared one");
+  assert.ok(!("pid" in calls.posts[0].payload));
+});
+
+test("an active window cannot change where the workspace lands", async () => {
+  // The old signature took the window as `opt.target`. Pass one and the
+  // payload must be identical — nothing on screen may decide the parent.
+  const a = load({});
+  await a.createWorkspace(a.host, "team", "New one");
+  const b = load({});
+  await b.createWorkspace(b.host, "team", "New one", {
+    target: { getCurrentNid: () => "SOME_OPEN_FOLDER_NID" },
+  });
+  assert.deepEqual(
+    b.calls.posts[0].payload,
+    a.calls.posts[0].payload,
+    "the active window still reaches the request",
+  );
+  assert.ok(
+    !JSON.stringify(b.calls.posts[0].payload).includes("SOME_OPEN_FOLDER_NID"),
+    "the open folder's nid is in the create_hub payload",
+  );
+});
+
+test("the payload still carries what the server does need", async () => {
+  const { createWorkspace, host, calls } = load({});
+  await createWorkspace(host, "team", "New one");
+  const p = calls.posts[0].payload;
+  assert.equal(p.area, "private", "team maps to the private area");
+  assert.equal(p.filename, "New one");
+  assert.ok("hub_id" in p, "the owning hub is still identified");
+});
+
+// ── a personal workspace is a HOME-ROOT folder, always ─────────────────────
+//
+// Wm.createFolderFromDialog resolves the parent from whatever workspace is
+// open — right for "+ New -> Folder", never right here. Left to itself it
+// nested the new personal workspace inside the open internal/external
+// workspace AND stamped it with that workspace's area, so it stopped being
+// personal in two ways and read as a plain subfolder.
+
+test("the personal path pins the parent to the home root", async () => {
+  const { createWorkspace, host, calls } = load({});
+  const res = await createWorkspace(host, "personal", "Mine");
+  assert.equal(res.ok, true);
+  assert.deepEqual(
+    calls.folderOpts,
+    [{ home: 1 }],
+    "without this the folder lands inside whatever workspace is open",
+  );
+});
+
+test("it still announces itself as personal", async () => {
+  const { createWorkspace, host, calls } = load({});
+  const res = await createWorkspace(host, "personal", "Mine");
+  assert.equal(res.personal, true);
+  assert.equal(res.workspace.area, "personal");
+  assert.equal(calls.broadcasts[0].payload.personal, 1);
 });

@@ -132,7 +132,10 @@ class __form_folder extends LetcBox {
     // something to keep two copies of. What stays here is this form's: the
     // inline error, the quota block, and which panel opens afterwards.
     return require("libs/create-workspace")
-      .createWorkspace(this, status, filename, { target: Wm.getActiveWindow(1) })
+      // No `target`: a workspace is created at the home root regardless of what
+      // is open. Passing the active window here is what nested a new workspace
+      // inside the one on screen — see the `pid` note in libs/create-workspace.
+      .createWorkspace(this, status, filename)
       .then((res) => {
         if (!res.ok) {
           this._setPending(0);

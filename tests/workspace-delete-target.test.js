@@ -328,15 +328,23 @@ function makeDeleteHost({ tile, Wm, wrapper, hubId = HUB_ID }) {
     host.closed = (host.closed || 0) + 1;
   };
   host._workspaceTrashTarget = () => tile;
+  // The workspace's own node, resolved for real in
+  // tests/personal-workspace-delete.js. Here it only has to exist.
+  host._personalWorkspaceNode = () =>
+    hubId === USER_ID ? { nid: "N", hub_id: USER_ID, filename: "test(1)", filepath: "/test(1)" } : null;
   return host;
 }
 
 function deleteWm() {
-  const calls = { removeWs: [], alerted: null, unselected: 0 };
+  const calls = { removeWs: [], removePersonal: [], alerted: null, unselected: 0 };
   return {
     calls,
     confirmRemoveWorkspace(hub_id, filename, media) {
       calls.removeWs.push({ hub_id, filename, media });
+      return Promise.resolve({});
+    },
+    confirmRemovePersonalWorkspace(node, media) {
+      calls.removePersonal.push({ node, media });
       return Promise.resolve({});
     },
     alert(msg) {
@@ -414,31 +422,41 @@ test("a hub workspace never goes through trash()", async () => {
   );
 });
 
-test("a PERSONAL workspace keeps its confirm and its tile path", async () => {
+test("a PERSONAL workspace goes BY NODE, and needs no tile either", async () => {
   // hub_id === the user's own id is what marks it: it is a home-root FOLDER,
   // with no delete_hub to run.
+  //
+  // It used to be the one branch still routed through the tile — and it
+  // refused with DELETE_WORKSPACE_FAILED when there was none, which is exactly
+  // what the ⋯ menu produces: the grid is display:none for the whole time a
+  // workspace is open, so the tile it looked for may not be there at all.
+  const Wm = deleteWm();
+  const wrapper = makeWrapper();
+  const host = makeDeleteHost({ tile: null, Wm, wrapper, hubId: USER_ID });
+  await host.confirmFolderDelete();
+  assert.equal(Wm.calls.removeWs.length, 0, "there is no hub to delete");
+  assert.equal(Wm.calls.removePersonal.length, 1, "nothing deleted it");
+  assert.equal(Wm.calls.removePersonal[0].node.nid, "N");
+  assert.equal(Wm.calls.alerted, null, "this is the reported failure message");
+  assert.equal(Wm.calls.unselected, 1, "the selection must not go with it");
+});
+
+test("the personal branch raises no confirm of its own", async () => {
+  // Wm.confirmRemovePersonalWorkspace asks MSG_DELETE_HUB, the same question
+  // its two siblings ask. A dialog here would be a second one on top.
   const Wm = deleteWm();
   const wrapper = makeWrapper();
   const t = tileView({ isHub: false });
   const host = makeDeleteHost({ tile: t, Wm, wrapper, hubId: USER_ID });
   await host.confirmFolderDelete();
-  assert.equal(Wm.calls.removeWs.length, 0, "there is no hub to delete");
-  assert.match(wrapper.fed.message, /test\(1\)/);
-  assert.deepEqual(t.calls, ["trash"]);
-  assert.equal(Wm.calls.unselected, 1, "the selection must not go with it");
+  assert.equal(wrapper.fed, null);
+  assert.deepEqual(t.calls, [], "the tile is scenery here too, not the mechanism");
+  assert.equal(Wm.calls.removePersonal[0].media, t, "…but it still gets passed for the animation");
 });
 
-test("the personal branch must ask — its delete path never would", async () => {
-  const Wm = deleteWm();
-  const wrapper = makeWrapper({ confirmed: false });
-  const t = tileView({ isHub: false });
-  const host = makeDeleteHost({ tile: t, Wm, wrapper, hubId: USER_ID });
-  await host.confirmFolderDelete();
-  assert.notEqual(wrapper.fed, null);
-  assert.deepEqual(t.calls, [], "cancel must delete nothing");
-});
-
-test("a personal workspace with no tile fails loudly", async () => {
+test("a personal workspace with no NODE fails loudly", async () => {
+  // The refusal is not gone, only moved to what it is actually about: with no
+  // node there is nothing to trash, and silence is worse than a message.
   const Wm = deleteWm();
   const host = makeDeleteHost({
     tile: null,
@@ -446,8 +464,10 @@ test("a personal workspace with no tile fails loudly", async () => {
     wrapper: makeWrapper(),
     hubId: USER_ID,
   });
+  host._personalWorkspaceNode = () => null;
   await host.confirmFolderDelete();
   assert.equal(Wm.calls.alerted, L.DELETE_WORKSPACE_FAILED);
+  assert.equal(Wm.calls.removePersonal.length, 0);
 });
 
 // ── Wm.confirmRemoveWorkspace ──────────────────────────────────────────────
