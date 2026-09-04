@@ -177,7 +177,7 @@ test("confirmRemoveHubsInside deletes the INNER hubs by their own ids", () => {
 // ── the topbar ⋯ is the grid's menu, opened from elsewhere ─────────────────
 
 test("the topbar menu dispatches to the media item, as the grid's does", () => {
-  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd) {");
+  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd, retried) {");
   const stripped = body.replace(/\/\/[^\n]*/g, "");
   // ui-core buildContextmenu: `p.contextmenuSkeleton(p, trigger, e)` with the
   // tile as both, then `uiHandler: [p]`.
@@ -186,7 +186,7 @@ test("the topbar menu dispatches to the media item, as the grid's does", () => {
 });
 
 test("it carries the media family, like every other contextmenu", () => {
-  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd) {");
+  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd, retried) {");
   const stripped = body.replace(/\/\/[^\n]*/g, "");
   assert.match(stripped, /drumee-contextmenu \$\{/);
   assert.match(stripped, /target\.fig && target\.fig\.family/);

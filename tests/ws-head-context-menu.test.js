@@ -111,7 +111,7 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, alreadyOpe
   // What the workspace's MEDIA item is and what its canonical builder
   // returns. `media: null` is the grid not yet fed.
   media = {}, menuKeys = ["download", "makeACopy", "rename", "separator", "organize", "separator", "info", "separator", "trash"] }) {
-  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd) {");
+  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd, retried) {");
   const fed = [];
   const dlg = dialog
     ? {
@@ -212,7 +212,16 @@ function run({ win, dialog = true, rect = { right: 100, bottom: 40 }, alreadyOpe
     "hub_id, nid",
   );
   ctx._workspaceKey = mk(slice(DESK, "  _workspaceKey(row) {"), "row");
-  const fn = mk(body);
+  // Two parameters now: `retried` gates the single re-open after the grid has
+  // been refreshed. The default press passes nothing, exactly as the button does.
+  const fn = mk(body, "cmd, retried");
+  // The refresh a miss triggers is answered here so a no-media run settles
+  // instead of hanging — and the retry is what these tests then observe.
+  ctx._refreshHomeGrid = () => Promise.resolve(false);
+  ctx.isDestroyed = () => false;
+  // The retry re-enters the real method, so it has to be reachable on ctx —
+  // and it is the REAL one, so a miss genuinely runs the whole thing twice.
+  ctx._toggleWorkspaceMenu = fn;
   fn.call(ctx, cmd);
   return Object.assign(fed[0] || {}, { __fed: fed.length, __states: states, __ctx: ctx });
 }
@@ -746,7 +755,7 @@ test("the drawer's close starts on the click, not two seconds later", () => {
 // the switcher kept offering the deleted workspace until a reload.
 
 test("the delete signal is hooked once per tile, not once per menu open", () => {
-  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd) {");
+  const body = slice(DESK, "  _toggleWorkspaceMenu(cmd, retried) {");
   assert.match(body, /__wsDeleteHooked/, "nothing listens for the tile's delete");
   assert.match(body, /media\.once\(_e\.deleted/, "must use the media item's own signal");
   // The guard is the point: the menu can be opened repeatedly before any delete.

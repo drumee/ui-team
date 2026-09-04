@@ -2450,12 +2450,15 @@ class desk_module extends LetcBox {
    * they can only ever remove a row from someone provably lacking the right,
    * never block a member whose privilege could not be read.
    */
-  _toggleWorkspaceMenu(cmd) {
+  _toggleWorkspaceMenu(cmd, retried) {
     // Second click: shut it and stop. `volatility: 4` listens on POINTERDOWN,
     // which precedes this click, so the menu has already queued its own
     // destroy — but on a 300ms timeout, so it is still alive right now. Without
     // closing here the click would fall through and feed a second menu on top.
-    if (this._closeWorkspaceMenu()) return;
+    //
+    // Not on the RETRY below: that is the same press continuing, and closing
+    // there would answer a menu this press never opened.
+    if (!retried && this._closeWorkspaceMenu()) return;
 
     const w = this._activeWorkspace();
     // Every row acts on an open workspace; with none there is nothing to act
@@ -2537,11 +2540,27 @@ class desk_module extends LetcBox {
         )
       : [];
 
-    // No media item resolved (the home grid has not been fed yet). Every row
-    // would be inert, and a menu whose rows do nothing is the bug this replaced
-    // — so show nothing and let the next click, by which time the grid is up,
-    // open a working one.
-    if (!keys.length) return;
+    // NO MEDIA ITEM. Every row would be inert, and a menu whose rows do nothing
+    // is the bug this replaced — so rather than show one, go and get the grid.
+    //
+    // _refreshHomeGrid explains why it can be missing: a workspace created
+    // while another is open never gets a tile, so the ⋯ was dead until a page
+    // reload. That is now repaired at the source, on the create; this is what
+    // makes a stale grid cost a beat instead of a dead click, whatever emptied
+    // it — a session that booted straight into a restored workspace, say.
+    //
+    // ONCE. A second miss means the workspace genuinely is not in the grid
+    // (it is beyond the list's first page, or gone), and re-fetching for every
+    // press would be a request per click with nothing to show for it.
+    if (!keys.length) {
+      if (retried) return;
+      this._refreshHomeGrid().then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (!cmd || (cmd.isDestroyed && cmd.isDestroyed())) return;
+        this._toggleWorkspaceMenu(cmd, 1);
+      });
+      return;
+    }
 
     // THE TRIGGER IS THE MEDIA ITEM, not the ⋯ button.
     //
@@ -2685,6 +2704,14 @@ class desk_module extends LetcBox {
       this._syncWorkspaceLabel();
     }
 
+    // The HOME GRID has to be refreshed too, and not for its own sake: its
+    // tiles are what the workspace ⋯ menu is built from, and a create while a
+    // workspace is open never reaches it. See _refreshHomeGrid.
+    //
+    // Not awaited — nothing below depends on the tiles, and this handler is on
+    // the path that opens a freshly created workspace.
+    this._refreshHomeGrid();
+
     // CREATED FROM THE EMPTY SCREEN → open it. Forced, because the create
     // happened after the cache was read and step 1 must see the new workspace
     // rather than the empty list it was built from.
@@ -2711,6 +2738,61 @@ class desk_module extends LetcBox {
     await this._showEmptyWorkspaceScreen(
       !((await this._fetchWorkspaces()) || []).length,
     );
+  }
+
+  /**
+   * REFETCH THE HOME GRID.
+   *
+   * The grid's tiles are not just decoration — the workspace ⋯ menu is built
+   * from one (_workspaceMediaItem), because only a media widget carries the
+   * privilege-gated row list and can be the target the rows act on. So a stale
+   * grid is a dead ⋯ button.
+   *
+   * And the grid goes stale on every create, always. Wm inherits newContent
+   * from window/utils, whose first test is
+   *
+   *     if (this.mget(_a.nid) != pid) return;
+   *
+   * — only add what belongs to the folder you are showing. While a workspace is
+   * open, loadWorkspace's `apply()` has done `this.mset(data)` with that
+   * WORKSPACE's attributes, so Wm's nid is the workspace root while the new
+   * workspace's pid is the HOME root. They never match, the tile is never
+   * appended, and the ⋯ stayed dead until a reload put Wm's nid back to
+   * home_id (Wm.reload) and the List.Smart fetched from scratch. That is
+   * exactly the reported "must refresh to open it".
+   *
+   * A restart rather than a targeted append: the list owns its own paging and
+   * ordering, and desk.home is the same request it made to build itself.
+   *
+   * @returns {Promise} settles when the list has answered, or after 2s
+   */
+  _refreshHomeGrid() {
+    const wm = window.Wm;
+    const list = wm && wm.iconsList;
+    if (!list || !list.el || (list.isDestroyed && list.isDestroyed())) {
+      return Promise.resolve(false);
+    }
+    return new Promise((resolve) => {
+      let done = 0;
+      const finish = (v) => {
+        if (done) return;
+        done = 1;
+        resolve(v);
+      };
+      // The collection answering is the signal; the timer is the floor, because
+      // a fetch that fails or returns nothing raises no update at all and the
+      // caller must not be left hanging on it.
+      try {
+        if (list.collection && _.isFunction(list.collection.once)) {
+          list.collection.once("update", () => finish(true));
+        }
+        list.restart();
+      } catch (e) {
+        this.warn && this.warn("[home-grid] restart failed", e);
+        return finish(false);
+      }
+      setTimeout(() => finish(false), 2000);
+    });
   }
 
   _syncWorkspaceLabel() {
