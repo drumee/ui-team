@@ -655,6 +655,18 @@ class __media_interact extends media_core {
    * HTTP response and WebSocket broadcast cannot add the same copy twice.
    */
   duplicateInPlace() {
+    // A WORKSPACE is not a node, so Make a copy on one is not a node copy. It
+    // has its own service. media.copy cannot do it and never could: its root
+    // insert filters `category <> 'hub'`, so before that service existed this
+    // row answered 403 with the workspace's own scope, and 200-with-nothing-
+    // created once the scope was corrected.
+    //
+    // Keyed on `filetype`, NOT on `isHub` - media/grid initContainer() raises
+    // isHub on any FOLDER that merely CONTAINS hubs, and routing one here would
+    // send a folder's copy to the workspace service. Same rule as move().
+    if (this.mget(_a.filetype) === _a.hub) {
+      return this._copyWorkspace();
+    }
     const echoId = Visitor.get(_a.echoId);
     return this.postService(
       SERVICE.media.copy,
@@ -1344,6 +1356,71 @@ class __media_interact extends media_core {
       socket_id: Visitor.get(_a.socket_id),
     });
     this._waitingForZip = nid;
+  }
+
+  /**
+   * Make a copy of a WORKSPACE: a new workspace holding a copy of this one's
+   * files and folders, through media.copy_workspace.
+   *
+   * The source is never touched, so unlike the move this cannot damage
+   * anything - the worst outcome is an extra workspace the owner deletes.
+   *
+   * The confirmation exists for the expectation gap rather than for danger:
+   * somebody duplicating a workspace with members and a year of chat needs to
+   * be told, before it happens, that neither travels.
+   *
+   * Every outcome is spoken, including the two quiet ones - a source with
+   * nothing in it, and a copy that received less than it asked for.
+   */
+  async _copyWorkspace() {
+    const workspaceId = this.mget(_a.hub_id);
+    const sourceName = this.mget(_a.filename) || LOCALE.WORKSPACE;
+    if (!workspaceId) {
+      return Wm.alert(LOCALE.COPY_WORKSPACE_FAILED);
+    }
+
+    // Built outside the try below: only the confirmation's own rejection means
+    // the user said no, and a throw while composing the text must not pass for
+    // one - that is how a button ends up pressed and silently doing nothing.
+    const prompt = {
+      title: LOCALE.COPY_WORKSPACE_TITLE.format(sourceName),
+      message: LOCALE.COPY_WORKSPACE_CONFIRM.format(sourceName),
+      submessage: LOCALE.COPY_WORKSPACE_KEEPS,
+      confirm: LOCALE.MAKE_A_COPY,
+    };
+    try {
+      await Wm.confirm(prompt);
+    } catch (e) {
+      return;
+    }
+
+    const service = (SERVICE.media && SERVICE.media.copy_workspace)
+      || "media.copy_workspace";
+    try {
+      const data = await this.postService({ service, hub_id: workspaceId });
+      if (!data || data.error || !data.hub_id) {
+        const message = (data && (data.reason || data.error))
+          || LOCALE.COPY_WORKSPACE_FAILED;
+        return Wm.alert(message);
+      }
+      const name = data.filename || sourceName;
+      if (!data.requested) {
+        return Wm.alert(LOCALE.COPY_WORKSPACE_EMPTY.format(name, sourceName));
+      }
+      if (data.copied !== data.requested) {
+        return Wm.alert(
+          LOCALE.COPY_WORKSPACE_PARTIAL.format(name, data.copied, data.requested)
+        );
+      }
+      if (typeof Butler !== "undefined" && Butler.say) {
+        Butler.say(LOCALE.COPY_WORKSPACE_DONE.format(name));
+      }
+    } catch (e) {
+      this.warn("Workspace copy failed", e);
+      return Wm.alert(
+        (e && (e.reason || e.error)) || LOCALE.COPY_WORKSPACE_FAILED
+      );
+    }
   }
 
   /**
