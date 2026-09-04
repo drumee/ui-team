@@ -125,10 +125,18 @@ class __tutorial_share extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    // `subject` says what the panel is about — a workspace when the tour was
-    // triggered over one (see fire() in libs/tutorial-tours and the share
-    // trigger in window/folder), absent for the full tour and previews.
-    this.feed(skeleton(this, { ...s, subject: this.mget('subject') }));
+    // What the panel is about, both stamped by the host from fire()'s third
+    // argument (see _buildWidgets in ../index.js):
+    //
+    //   subject       the row's shape — file, folder or workspace
+    //   subject_data  the item's raw fields, when the trigger had them. Absent
+    //                 for the full tour and for `?tutorial=share` previews, and
+    //                 the panel falls back to the frames' placeholder copy.
+    this.feed(skeleton(this, {
+      ...s,
+      subject: this.mget('subject'),
+      subject_data: this.mget('subject_data'),
+    }));
     const [panel, block] = await Promise.all([
       this.ensurePart('sp-panel'),
       this.ensurePart(s.lit),

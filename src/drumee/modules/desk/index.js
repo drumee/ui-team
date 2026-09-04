@@ -6322,31 +6322,18 @@ class desk_module extends LetcBox {
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
       // its manage-access panel. The rail is global but these are per-window,
       // so the target is resolved at click time rather than cached.
-      case "rail-files": {
-        // Resolved BEFORE the tab is shown, for the same reason as the three
-        // rail cases below: _railTab falls back to _openDefaultWorkspace()
-        // when nothing is open, and a Files tour over the home grid explains a
-        // screen the user is not looking at.
-        const _hasWs = !!this._activeWorkspace();
-        const _res = this._railTab("files");
-        // Contextual tour, on the first press of Files in the rail.
-        //
-        // This is the gesture the migrate tour is actually about: its first
-        // screen IS this pane (Figma 142:34981), and pressing Files is how a
-        // new account arrives at it. Its previous trigger surfaces asked for
-        // the import dialog directly — the folder window's "+ New" gdrive row
-        // and the Files hero button — which meant the tour only ran for
-        // someone who had already found the feature it teaches.
-        //
-        // Raised AFTER showFolderTab so the tour can never swallow the
-        // navigation the user asked for — the same ordering rail-chat,
-        // rail-task and rail-meet use. Nothing is remembered here: the kill
-        // switch, the mobile check, the account-scoped once-ever seen-set and
-        // single-flight all live in libs/tutorial-tours, so this surface can
-        // neither duplicate nor lose the gate.
-        if (_hasWs) require("libs/tutorial-tours").fire("migrate", this);
-        return _res;
-      }
+      // NO TOUR HERE, unlike the three rail cases below.
+      //
+      // Files briefly raised the migrate tour, on the reasoning that its first
+      // screen IS this pane. It reads better one step earlier: the tour is now
+      // chained to the END of the post-signup workspace tour, once the
+      // workspace that tour created is actually on screen (see
+      // _chainMigrateTour in desk/tutorial/index.js). A new account therefore
+      // meets it as the continuation of the walkthrough it is already in,
+      // rather than on a rail press it may not make for days — and pressing
+      // Files stays a navigation, not a full-screen interruption.
+      case "rail-files":
+        return this._railTab("files");
       case "rail-chat": {
         // Resolved BEFORE the tab is shown, for the same reason as rail-task
         // and rail-meet below: _railTab falls back to _openDefaultWorkspace()

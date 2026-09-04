@@ -1905,7 +1905,28 @@ class __window_folder extends mfsInteract {
             //
             // Absent for the `full` tour and for ?tutorial=share, which have no
             // trigger and no subject; those keep the file header.
-            require("libs/tutorial-tours").fire("share", this, { subject: "workspace" });
+            //
+            // `subject_data` names the workspace, so the header reads as the
+            // one the user is standing in rather than as the frame's
+            // "Workspace-name" (180:52963). Raw fields, formatted by the panel
+            // — the same contract the media trigger uses
+            // (builtins/media/interact.js). No `filesize`: a workspace has no
+            // meaningful byte count, and the panel drops the size for this
+            // subject anyway.
+            //
+            // `hub_name` is the name that tracks in-window navigation, which is
+            // what the topbar shows; `filename` is the fallback for a window
+            // that has not set one.
+            require("libs/tutorial-tours").fire("share", this, {
+              subject: "workspace",
+              subject_data: {
+                name: this.mget(_a.hub_name) || this.mget(_a.filename),
+                filetype: _a.hub,
+                ctime: this.mget(_a.ctime),
+                mtime: this.mget(_a.mtime),
+                area: this.mget(_a.area),
+              },
+            });
           }
         }
         return this.openManageAccess({ members: membersOnly });
