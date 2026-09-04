@@ -6039,17 +6039,27 @@ class desk_module extends LetcBox {
       // row does — panel/activity/widget/item/index.js, case hub_invite — by
       // handing Wm.route() the same deep link, rather than reaching for
       // loadWorkspace directly and re-deriving what that route already does.
+      // That row now lands DOCKED, and so does this: same route, same landing.
       //
-      // Do NOT "simplify" this to Wm.loadWorkspace({hub_id}). That was tried and
-      // reverted: loadWorkspace mounts the workspace as a HEADLESS pane, and a
-      // headless folder topbar deliberately drops the zoom and minimize chrome
+      // ⚠️ THIS DELIBERATELY REVERSES AN EARLIER DECISION, so that it is not
+      // "fixed" back. This used to point at "#/desk/wm/open/" and the comment
+      // here said not to dock it, because docking had been tried and reverted:
+      // a headless pane's folder topbar drops the zoom and minimize chrome
       // (folder/skeleton/topbar.js — `headless ? "" : zoomMenu(ui)`), so the
-      // window opened from this dialog lost its zoom control. This route launches
-      // a normal popup window_folder, which keeps the full chrome.
+      // window lost its zoom control.
+      //
+      // That objection no longer holds. Missing zoom/minimize is not a defect of
+      // the docked pane, it is the 2.0 desk: EVERY other way into a workspace —
+      // the sidebar, the workspace switcher, and now every notification — mounts
+      // exactly this headless pane. Leaving this one entry point on a floating
+      // popup made a brand-new guest's FIRST screen the only one in the product
+      // that looks pre-2.0. Docked on Duy's call, 2026-09-04.
       //
       // nid=0 is required, not decorative: it is the server's "this hub's root"
-      // value, and openFileLocation would otherwise fetch media.attributes with an
-      // undefined nid — see Wm._rootNid for what that costs.
+      // value, and the opener would otherwise fetch media.attributes with an
+      // undefined nid — see Wm._rootNid for what that costs. It also keeps
+      // openNotificationLocation on its no-navigation path, which is right here:
+      // the target IS the workspace root, so there is no sub-folder to enter.
       //
       // The hub comes off the field set when the dialog was armed, NOT off the
       // button's dataset: toolkit's button() does not pass attrOpt, so an
@@ -6065,7 +6075,7 @@ class desk_module extends LetcBox {
         }
         if (hub_id) {
           location.hash =
-            `#/desk/wm/open/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+            `#/desk/wm/reveal/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
         }
         return;
       }
