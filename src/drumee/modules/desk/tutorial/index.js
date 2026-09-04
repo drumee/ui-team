@@ -51,6 +51,19 @@ const REFLOW_MS = 160;
 const OPEN_WAIT_MS = 8000;
 const OPEN_POLL_MS = 60;
 
+// How long the desk is left alone before the chained `migrate` tour arrives.
+//
+// Three things are still finishing when this tour's destroy fires: softDestroy's
+// own 0.5s fade, the confetti over the workspace that was just made, and the
+// workspace's panes mounting behind both. Raising a second full-screen tour into
+// that lands it over a desk still assembling itself — and over the one moment
+// the user is meant to be looking at the thing they built.
+//
+// Long enough for all three to settle, short enough that the migrate tour still
+// reads as the same walkthrough continuing rather than an unprompted
+// interruption arriving out of nowhere.
+const MIGRATE_CHAIN_MS = 3000;
+
 // Every step widget is a bare `import()` in seeds.js, so each one is its own
 // webpack chunk with no prefetch hint. Left alone, pressing Next is the moment
 // the chunk is requested: Kind.get() hands back the lazy loader placeholder,
@@ -193,11 +206,19 @@ class tutorial_main extends LetcBox {
         is_first: i === 0,
         is_last: i === steps.length - 1,
         // What the tour is ABOUT, when the trigger knew and said so (fire()'s
-        // third argument). Only the share step reads it today — its panel
-        // header shows a workspace instead of a file — but it is stamped on
-        // every step rather than special-cased, because a step is not supposed
-        // to know which tour it is in.
+        // third argument). Only the share step reads these today — its panel
+        // header names the thing being shared — but they are stamped on every
+        // step rather than special-cased, because a step is not supposed to
+        // know which tour it is in.
+        //
+        //   subject       which SHAPE the row takes: file, folder, workspace
+        //   subject_data  the item's raw fields, when a trigger had them —
+        //                 {name, filetype, ext, filesize, ctime, mtime, area}.
+        //                 Absent for a `?tutorial=share` preview and inside
+        //                 `full`, where there is no item; the panel falls back
+        //                 to the frames' placeholder copy.
         subject: this.mget('subject') || null,
+        subject_data: this.mget('subject_data') || null,
       };
       return widget;
     });
@@ -595,8 +616,78 @@ class tutorial_main extends LetcBox {
    */
   _openCreatedAndCelebrate() {
     return this._openCreated().then((pane) => {
-      if (pane) this._celebrate();
+      if (pane) {
+        this._celebrate();
+        this._chainMigrateTour();
+      }
       return pane;
+    });
+  }
+
+  /**
+   * Hand the user on to the `migrate` tour, once they are standing in the
+   * workspace this one just made.
+   *
+   * WHY HERE. The migrate tour teaches how files arrive in a workspace, and
+   * the honest moment for that is the first time the user is looking at an
+   * empty one — which is exactly this callback: the pane is confirmed on
+   * screen (see _workspaceOnScreen; loadWorkspace has no completion signal of
+   * its own, so it is polled for). It briefly hung off the rail's Files button
+   * instead, which fired whenever the user happened to press Files, days later
+   * and mid-task.
+   *
+   * DEFERRED TO THIS WIDGET'S DESTROY, not raised inline, for two independent
+   * reasons:
+   *
+   *   single-flight  libs/tutorial-tours holds `_inFlight` from fire() until
+   *                  the running tour is released, and the desk wires that
+   *                  release to this widget's destroy
+   *                  (modules/desk/index.js, onPartReady "desk-tutorial").
+   *                  Firing now would hit `if (_inFlight) return false` and be
+   *                  dropped in silence.
+   *   the screen     this tour is still ON it. softDestroy fades for 0.5s, and
+   *                  the pane usually lands during that fade, so "the
+   *                  workspace is up" is not yet "the tour is gone".
+   *
+   * Ordering is not a coincidence either: the desk registers its release
+   * handler on this same `destroy` event at mount, and handlers run in
+   * registration order — so release has already cleared single-flight by the
+   * time this one runs.
+   *
+   * Then a further MIGRATE_CHAIN_MS on top, so the tour arrives after the fade,
+   * the confetti and the workspace's own panes have settled rather than into
+   * the middle of them.
+   *
+   * Every gate stays where it belongs. This says only "the moment has come";
+   * whether a tour actually runs is still fire()'s answer — kill switch,
+   * mobile, the account-scoped once-ever seen-set, single-flight. In
+   * particular a user who has already seen `migrate` gets nothing.
+   *
+   * No `_canCreate()` check: the caller only reaches here with a pane, and a
+   * pane only exists when a workspace was created, which only the `workspace`
+   * tour's live screens do. One gate, in one place.
+   */
+  _chainMigrateTour() {
+    if (this._migrateChained || !_.isFunction(this.once)) return;
+    this._migrateChained = true;
+    this.once(_e.destroy, () => {
+      // Deliberately NOT tracked for cleanup: this widget is already destroyed
+      // by the time the timer is armed, so there is nothing left to clear it
+      // from. A late arrival is safe on its own terms — fire() re-checks every
+      // gate at the moment it runs, and a tour whose broadcast reaches a desk
+      // that has since gone away releases itself through the fetch guard
+      // (GUARD_TIMEOUT_MS, libs/tutorial-tours) rather than latching
+      // single-flight for the session.
+      setTimeout(() => {
+        // `this` is gone by now — deliberately nothing off it is touched. Wm is
+        // the host fire() needs for its seen-set write; _host() would fall back
+        // to it anyway, but naming it keeps the dependency visible.
+        try {
+          require('libs/tutorial-tours').fire('migrate', typeof Wm === 'undefined' ? null : Wm);
+        } catch (e) {
+          // A chained tour is never load-bearing for the tour that chained it.
+        }
+      }, MIGRATE_CHAIN_MS);
     });
   }
 

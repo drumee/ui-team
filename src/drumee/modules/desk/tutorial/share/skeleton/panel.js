@@ -36,16 +36,30 @@ const BLOCKS = {
 // (../../skeleton/toolkit/files-grid.js), so the workspace in the panel header
 // is the same picture as the workspaces behind it.
 const folderArt = require("media/grid/template/folder");
+// The glyph map and the "Update <when> • <size>" line, shared with the media
+// grid's own attachment card so the two cannot drift.
+const { fileGlyph, fileMeta } = require("libs/file-meta");
 
-// Sample data — what is being shared, and the members already on the list.
+// Sample data — the members already on the list, and the FALLBACK subject.
 //
-// Two subjects. The first frames drew a file (148:41930); 180:51964 draws a
-// workspace, which is what every contextual trigger of this tour is actually
-// about. Mock copy in both cases, like the rest of the panel: the frame's own
-// placeholder rather than the real workspace's name, so nothing real leaks
-// into a drawing.
-const FILE = { name: "spec_v2.docx", meta: "Update 2 hour ago • 1.2MB" };
-const WORKSPACE = { name: "Folders-name", meta: "Update 2 hour ago • 1.2MB" };
+// THE SUBJECT ROW IS REAL NOW. The rest of the panel is not, and that is
+// deliberate: the members, the password and the link stay the frames' own
+// placeholders, because a tour must not offer a working control. The row was
+// mock too, on the argument that nothing real should leak into a drawing —
+// which lost to the plainer one that a tour about sharing THIS file should say
+// which file. The trigger passes the item (fire()'s third argument, in
+// builtins/media/interact.js) and `subject_data` carries it here.
+//
+// These three are what renders when nobody passed one: `?tutorial=share`
+// previews and the `full` tour, neither of which has an item. Copy is the
+// frames', verbatim — 148:41935 a file, 180:51964 a folder, 180:52963 a
+// workspace. Three subjects where this had two, and its "WORKSPACE" was really
+// the folder frame's copy.
+const FALLBACK = {
+  file: { name: "spec_v2.docx", meta: "Update 2 hour ago • 1.2MB" },
+  folder: { name: "Folders-name", meta: "Update 2 hour ago" },
+  workspace: { name: "Workspace-name", meta: "Update 2 hour ago" },
+};
 const MEMBERS = ["member@drumee.com", "member@drumee.com"];
 const PASSWORD = "123456";
 const LINK = "drumee.com/s/pink-fo…";
@@ -158,23 +172,43 @@ const toggle = (p, on) =>
 /**
  * The header row: what is being shared.
  *
- * Same row either way — 148:41930 and 180:52030 are the identical box, 8/12
- * padding on an 8px radius over the frame's 5% black, with a 14/20 semibold
- * name over a 12/1.4 grey meta line. Only the icon differs, and it differs in
- * kind rather than in glyph: a file gets a tinted 32-box with a document mark
- * inside it, a workspace gets the folder SHAPE itself, area-tinted and badged,
- * with no box around it.
+ * Same box for all three subjects — 148:41930, 180:51964 and 180:52963 are the
+ * identical row, 8/12 padding on an 8px radius over the frame's 5% black, with
+ * a 14/20 semibold name over a 12/1.4 grey meta line. What differs is the icon,
+ * and it differs in KIND rather than in glyph: a file gets a tinted 32-box with
+ * a type mark inside it, a folder or workspace gets the folder SHAPE itself,
+ * area-tinted and badged, with no box around it.
+ *
+ * REAL DATA when the trigger had it: the item's own name, a meta line built
+ * from its timestamp and size, and a glyph from its filetype and extension.
+ * Falling back to FALLBACK[key] rather than to nothing, because a preview URL
+ * has no item and still has to draw the frame.
  *
  * @param {String} p
- * @param {String} [kind] "workspace", or anything else for the file
+ * @param {String} [kind] "workspace", "folder", or anything else for a file
+ * @param {Object} [node] the item's raw fields, when a trigger passed them
  */
-const subject = (p, kind) => {
-  const ws = kind === "workspace";
-  const data = ws ? WORKSPACE : FILE;
+const subject = (p, kind, node) => {
+  // Anything that is not one of the two folder-shaped subjects is a file: an
+  // unrecognised value has to draw something, and the file row is what the
+  // majority of triggers want.
+  const key = kind === "workspace" ? "workspace" : (kind === "folder" ? "folder" : "file");
+  const ws = key !== "file";
+  const real = !!(node && node.name);
+  const data = real
+    ? {
+        name: node.name,
+        // No size on a folder or a workspace — neither has a meaningful byte
+        // count, and the frames' "1.2MB" on those two is copy carried over
+        // from the file variant. An item with no usable timestamp either
+        // yields "", so the frame's line stands in rather than an empty row.
+        meta: fileMeta(node, { size: !ws }) || FALLBACK[key].meta,
+      }
+    : FALLBACK[key];
   return Skeletons.Box.X({ active: 0,
     className: `${p}__file`,
-    dataset: { subject: ws ? "workspace" : "file" },
-    attrOpt: { "data-subject": ws ? "workspace" : "file" },
+    dataset: { subject: key },
+    attrOpt: { "data-subject": key },
     kids: [
       ws
         ? Skeletons.Element({ active: 0,
@@ -185,7 +219,10 @@ const subject = (p, kind) => {
             // kebab — this row is scenery with no menu behind it. Same
             // arguments the Files grid passes, for the same reasons.
             content: folderArt({
-              area: _a.share,
+              // The item's own area, so a shared workspace is pink and an
+              // internal one is not. The frames draw pink because they share
+              // from an external workspace; `share` stays the fallback.
+              area: (real && node.area) || _a.share,
               filetype: _a.hub,
               role: "desk",
               widgetId: _.uniqueId("tutorial-sp-ws-"),
@@ -195,7 +232,13 @@ const subject = (p, kind) => {
         : Skeletons.Box.Y({ active: 0,
             className: `${p}__file-ico`,
             kids: [
-              Skeletons.Image.Svg({ active: 0, ico: "app-doc-file", className: `${p}__file-glyph` }),
+              // The mark for what this actually IS, not a fixed document
+              // glyph — see fileGlyph in libs/file-meta for the map. With no
+              // item to read, the frame's own document mark.
+              Skeletons.Image.Svg({ active: 0,
+                ico: real ? fileGlyph(node) : "app-doc-file",
+                className: `${p}__file-glyph`,
+              }),
             ],
           }),
       Skeletons.Box.Y({ active: 0,
@@ -236,7 +279,7 @@ module.exports = function (ui, opt = {}) {
               Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${p}__close` }),
             ],
           }),
-          subject(p, opt.subject),
+          subject(p, opt.subject, opt.subject_data),
         ],
       }),
 

@@ -69,9 +69,14 @@ module.exports = function (ui, opt = {}) {
                     dataset: { done: copied ? 1 : 0 },
                     attrOpt: { "data-done": copied ? 1 : 0 },
                     kids: [
+                      // Shown on every screen where the address has been
+                      // copied — screens 5 and 6, both of which carry
+                      // `copied`. Deliberately not conditioned any finer: the
+                      // tick means "copied", and a different glyph on the two
+                      // screens that say the same thing would read as a bug.
                       copied
                         ? Skeletons.Image.Svg({ active: 0,
-                            ico: "checked",
+                            ico: "desktop_check",
                             className: `${pfx}__copy-ico`,
                           })
                         : null,

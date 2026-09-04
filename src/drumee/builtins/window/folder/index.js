@@ -1225,23 +1225,24 @@ class __window_folder extends mfsInteract {
       this.syncNewCtrlVisibility();
       return;
     }
-    // The topbar's "+ New" no longer OPENS the migrate tour.
+    // NOTHING IN THIS WINDOW OPENS THE MIGRATE TOUR ANY MORE.
     //
-    // It used to: the menu's `open` event fired `Tours.fire("migrate")`, so the
-    // first press of this button in a folder window put a full-screen tour over
-    // whatever the user was trying to do. Unwired — pressing + New now just
-    // opens + New.
+    // Two surfaces here used to. The menu's `open` event fired it, so the first
+    // press of + New in a folder window put a full-screen tour over whatever
+    // the user was doing; that went first. Then the gdrive row itself
+    // ("launch-gdrive-migration"), which was the wrong place for a different
+    // reason — a user who has already found + New -> Migrate from Google Drive
+    // does not need to be shown where it is.
     //
-    // The tour is still reachable, from the two surfaces where it is the thing
-    // being asked for rather than a side effect of opening a menu:
-    //   - "Migrate from Google Drive" in this menu, and the same button on the
-    //     Files empty-state hero — both land on onUiEvent
-    //     "launch-gdrive-migration", which fires it there.
-    //   - the desk topbar's own + New (desk/index.js, case "addmenu"), which
-    //     still fires on open and is untouched by this.
+    // The tour is now raised by the rail's Files button (modules/desk/index.js,
+    // case "rail-files"), which is where a new account starts and what its
+    // first screen actually draws. The desk topbar's own + New still fires on
+    // open (desk/index.js, case "addmenu") and is untouched by this.
     //
-    // The chunk warm stays: opening this menu is still one click from the
-    // gdrive row that does fire the tour, so it is worth having in memory.
+    // The chunk warm stays. It is not tied to this window firing the tour: the
+    // rail can raise it at any moment, and a tour that has to fetch its chunk
+    // mounts empty and respawns (ui-core letc/kind/loader.js). Warming it while
+    // a create menu is open costs one idle fetch and removes that.
     if (pn === "new-menu") {
       if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
         Promise.resolve(Kind.waitFor("tutorial_migrate")).catch(() => {});
@@ -1742,24 +1743,22 @@ class __window_folder extends mfsInteract {
         return this.closeNewMenu(cmd);
 
       case "launch-gdrive-migration": {
-        // Contextual tour, first statement in the case — the same placement the
-        // share tour uses in builtins/media/interact.js, and for the same
-        // reason: what follows is asynchronous (Kind.waitFor then Wm.launch),
-        // so there is no "after the popup is up" to raise it from.
+        // NO TOUR FROM THIS ROW.
         //
-        // Raised by the "+ New" menu's gdrive row (skeleton/toolkit/index.js
-        // newMenu, class window-button__dropdown-menu__item--gdrive). It ASKS
-        // FOR THE IMPORT DIALOG, and the tour is what teaches it — so on the
-        // run where the tour
-        // fires, the dialog is handed over when the tour comes down rather than
-        // opened underneath it (see the launch below).
+        // It used to be a trigger surface for the migrate tour, on the grounds
+        // that the row ASKS FOR the import dialog and the tour is what teaches
+        // it. That was backwards: a user who has already found "+ New ->
+        // Migrate from Google Drive" does not need to be taught where it is,
+        // and firing here meant the one tour about importing ran only for
+        // people who had solved the discovery problem themselves. The tour is
+        // now raised by the rail's Files button, which is where a new account
+        // actually starts (modules/desk/index.js, case "rail-files").
         //
-        // "First click, new account" needs no gate of its own: the seen-set is
-        // once-ever per user and server-recorded, and a pre-existing user who
-        // finished the old monolithic tour is already covered by the
-        // `tutorial_done` inference in serverState().
+        // Tours.whenDone below STAYS, and is not vestigial: it is what keeps
+        // this dialog from opening underneath a full-screen tour that some
+        // other surface started. With no migrate tour in flight it runs
+        // `launch` synchronously, which is every click on this row today.
         const Tours = require("libs/tutorial-tours");
-        Tours.fire("migrate", this);
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
         // full migration popup; the widget + google_drive.* backend already
         // exist. singleton + wm_unique_id (per the multi-folder-windows fix)
@@ -1816,17 +1815,18 @@ class __window_folder extends mfsInteract {
         //
         // It used to launch immediately and rely on stacking: the tour mounts in
         // the desk's `overlay` (z 10010) and the popup lands in Wm's window layer
-        // beneath it, so on a new account's first click the real dialog opened
-        // unseen, spent the whole walkthrough behind a full-screen mock of
-        // itself, and had to still be there — in its starting state — when the
-        // tour finally came down. Now the destination is captured HERE (the
-        // folder the user was standing in) and the launch is handed to
-        // Tours.whenDone, which runs it the moment the migrate tour is gone.
+        // beneath it, so the real dialog could open unseen, spend the whole
+        // walkthrough behind a full-screen mock of itself, and have to still be
+        // there — in its starting state — when the tour finally came down. So
+        // the destination is captured HERE (the folder the user was standing
+        // in) and the launch is handed to Tours.whenDone, which runs it the
+        // moment the migrate tour is gone.
         //
-        // Every other click is unchanged: with no migrate tour in flight —
-        // already seen, kill switch off, mobile, or another tour holding
-        // single-flight — whenDone runs `launch` synchronously, exactly where
-        // the old call sat.
+        // This row no longer FIRES that tour (see the top of the case), so the
+        // wait is now insurance rather than the common path: it covers a tour
+        // raised elsewhere — the rail's Files button — that is still on screen.
+        // With none in flight, whenDone runs `launch` synchronously, exactly
+        // where a bare call would sit, which is every click on this row today.
         return Tours.whenDone("migrate", launch);
       }
 
@@ -1905,7 +1905,28 @@ class __window_folder extends mfsInteract {
             //
             // Absent for the `full` tour and for ?tutorial=share, which have no
             // trigger and no subject; those keep the file header.
-            require("libs/tutorial-tours").fire("share", this, { subject: "workspace" });
+            //
+            // `subject_data` names the workspace, so the header reads as the
+            // one the user is standing in rather than as the frame's
+            // "Workspace-name" (180:52963). Raw fields, formatted by the panel
+            // — the same contract the media trigger uses
+            // (builtins/media/interact.js). No `filesize`: a workspace has no
+            // meaningful byte count, and the panel drops the size for this
+            // subject anyway.
+            //
+            // `hub_name` is the name that tracks in-window navigation, which is
+            // what the topbar shows; `filename` is the fallback for a window
+            // that has not set one.
+            require("libs/tutorial-tours").fire("share", this, {
+              subject: "workspace",
+              subject_data: {
+                name: this.mget(_a.hub_name) || this.mget(_a.filename),
+                filetype: _a.hub,
+                ctime: this.mget(_a.ctime),
+                mtime: this.mget(_a.mtime),
+                area: this.mget(_a.area),
+              },
+            });
           }
         }
         return this.openManageAccess({ members: membersOnly });

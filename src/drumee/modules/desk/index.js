@@ -6322,6 +6322,16 @@ class desk_module extends LetcBox {
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
       // its manage-access panel. The rail is global but these are per-window,
       // so the target is resolved at click time rather than cached.
+      // NO TOUR HERE, unlike the three rail cases below.
+      //
+      // Files briefly raised the migrate tour, on the reasoning that its first
+      // screen IS this pane. It reads better one step earlier: the tour is now
+      // chained to the END of the post-signup workspace tour, once the
+      // workspace that tour created is actually on screen (see
+      // _chainMigrateTour in desk/tutorial/index.js). A new account therefore
+      // meets it as the continuation of the walkthrough it is already in,
+      // rather than on a rail press it may not make for days — and pressing
+      // Files stays a navigation, not a full-screen interruption.
       case "rail-files":
         return this._railTab("files");
       case "rail-chat": {

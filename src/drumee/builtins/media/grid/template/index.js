@@ -1,18 +1,12 @@
 
 // Human-readable file size for the chat attachment card (Figma "1.2 MB").
-const humanFileSize = (bytes) => {
-  const n = Number(bytes);
-  if (!n || n < 0) return '';
-  if (n < 1024) return `${n} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let v = n / 1024;
-  let i = 0;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i++;
-  }
-  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
-};
+//
+// Moved to libs/file-meta so the share tour's subject row can render the same
+// string (Figma 148:41930) instead of copying it. Same function, same output —
+// a formatter with two definitions drifts, and this one is the only correct
+// answer for these cards: @drumee/ui-essentials `filesize()` is SI and
+// two-decimal, which turns "1.2 MB" into "1.26 MB" and "1.5 KB" into "1.54 kB".
+const { humanFileSize } = require('libs/file-meta');
 
 /**
  *

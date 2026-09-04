@@ -853,7 +853,36 @@ class __media_interact extends media_core {
         // drawer or as a floating window. The tour is about sharing, not about
         // which of those won, so it is raised before the race starts rather
         // than inside any branch of it.
-        require("libs/tutorial-tours").fire("share", this);
+        //
+        // The tour's first screen names WHAT IS BEING SHARED, and only this
+        // click knows it (Figma 148:41197 a file, 180:51964 a folder,
+        // 180:52963 a workspace). So the item rides along as fire()'s third
+        // argument — the same channel the folder window uses to say "this one
+        // is about a workspace".
+        //
+        // RAW FIELDS, not a formatted string. The panel is matching a frame and
+        // owns how the row reads; handing it `name` + `Update 2 hour ago •
+        // 1.2 MB` from here would put that frame's typography in a media
+        // widget, and every other trigger would have to reproduce it.
+        //
+        // `filetype` decides the shape rather than the area does: a hub draws
+        // the workspace variant, a folder the folder variant, everything else
+        // the file icon.
+        const _ft = this.mget(_a.filetype);
+        require("libs/tutorial-tours").fire("share", this, {
+          subject: _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file"),
+          subject_data: {
+            name: this.mget(_a.filename),
+            filetype: _ft,
+            // _fileExt() is the canonical read — `ext` is an SQL alias and
+            // `extension` the field, and only one of them is present.
+            ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
+            filesize: this.mget(_a.filesize),
+            ctime: this.mget(_a.ctime),
+            mtime: this.mget(_a.mtime),
+            area: this.mget(_a.area),
+          },
+        });
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
