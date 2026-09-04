@@ -2972,7 +2972,21 @@ class desk_module extends LetcBox {
     const row = (rows || []).find((r) => this._workspaceKey(r) === wsKey);
     if (!row) return;
     if (!window.Wm || !_.isFunction(window.Wm.loadWorkspace)) return;
+    // Is this row the workspace that is ALREADY open? Asked before the call,
+    // because loadWorkspace overwrites _curWorkspace on its way in.
+    //
+    // By the same KEY the rows are marked `data-current` with, so "the row that
+    // looks current" and "the row that counts as current" cannot disagree — and
+    // so the personal-workspace collision _workspaceKey exists for (they all
+    // carry the user's own hub_id) is not reintroduced here.
+    const wasOpen = this._workspaceKey(window.Wm._curWorkspace) === wsKey;
     window.Wm.loadWorkspace(this._workspaceTarget(row));
+    // ONLY on a real change of workspace. Re-picking the open one makes
+    // loadWorkspace an early return that merely raises the pane, so the window
+    // keeps the tab it was on — resetting the rail there would invent the very
+    // mismatch this removes, in the opposite direction (a Files-lit rail over a
+    // Task board).
+    if (!wasOpen) this._resetRailToFiles();
     this._setWorkspaceLabel(row.filename || row.name);
     return this._renderWorkspaceMenu(this._wsListPart);
   }
@@ -3262,6 +3276,44 @@ class desk_module extends LetcBox {
     if (!w) return this._openDefaultWorkspace();
     w.showFolderTab(tab);
     return w.raise && w.raise();
+  }
+
+  /**
+   * PUT THE RAIL BACK ON FILES, because the workspace that just opened is.
+   *
+   * Opening another workspace mounts a BRAND NEW window_folder (Wm.loadWorkspace
+   * re-feeds headlessLayer), and a fresh one starts with `activeTab` unset —
+   * which showFolderTab, the view stamp and syncNewCtrlVisibility all read as
+   * "files". So the screen always lands on Files.
+   *
+   * The rail does not: it is desk chrome, it is not rebuilt with the window, and
+   * nothing in the switch path touches its radio group. Switching workspace from
+   * Chat / Task / Meet / Access therefore left the previous tab lit over the new
+   * workspace's file grid — the rail claiming a screen that is not up, which is
+   * exactly what Lexis reported (a Task-lit rail over a Files view).
+   *
+   * `mtab` is the SAME stamp _railTab writes, not a second one: the phone's Files
+   * action row (search + "+ New") is keyed on it, so leaving it on "task" would
+   * hide those controls on a files screen.
+   *
+   * getPart, NEVER ensurePart. The two rails are per-device — `sidebar-files`
+   * mounts only on the desktop rail, `mrail-files` only in the phone's bottom bar
+   * (skeleton/index.js, and it has its own radio group so the two cannot mark each
+   * other) — and ensurePart NEVER RESOLVES for a part that will not mount on this
+   * device, which would hang this caller forever. Same reason, same idiom as
+   * _readActivityCount. Both are re-asserted rather than one; which of them is on
+   * screen is not this method's business.
+   */
+  _resetRailToFiles() {
+    if (this.el) this.el.dataset.mtab = "files";
+    if (!_.isFunction(this.getPart)) return;
+    const light = (pn, channel) => {
+      const p = this.getPart(pn);
+      if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) return;
+      RADIO_BROADCAST.trigger(channel, p);
+    };
+    light("sidebar-files", "sidebar-radio");
+    light("mrail-files", "mobile-rail-radio");
   }
 
   /**
