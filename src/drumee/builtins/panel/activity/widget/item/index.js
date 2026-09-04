@@ -391,7 +391,20 @@ class __activity_item extends LetcBox {
       const mNidRaw = this.mget('meeting_pid');
       const mNid = (mNidRaw != null && `${mNidRaw}` !== '0') ? mNidRaw : 0;
       if (mHub) {
-        location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&ts=${ts}`;
+        // activeTab=meeting: land on the folder's MEETING tab (its calendar),
+        // which is what the paragraph above has always described as the point of
+        // this row — "the calendar there is where the meeting can be seen,
+        // joined or edited". The tab was simply never put on the link, so every
+        // scheduled-meeting notice opened the folder on FILES.
+        //
+        // 🚨 Safe ONLY because this is the docked route. window_folder's
+        // onDomRefresh reads a LAUNCH-TIME `activeTab` of "meeting" as
+        // "_launchMeetingStandalone()" — i.e. START/JOIN A CALL, not show the
+        // tab. openNotificationLocation never puts activeTab in the model: it
+        // calls showFolderTab() on the pane after it mounts, which renders the
+        // schedule. Verified live: the calendar opens and no call window is
+        // created. Do NOT copy this onto a Wm.launch/addWindow call.
+        location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&activeTab=${_a.meeting}&ts=${ts}`;
       }
       this.triggerHandlers({ service: 'read-activity', hub_id: mHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
