@@ -262,9 +262,26 @@ class __panel_activity extends LetcBox {
       });
     } catch (e) {
       this.warn('[panel_activity] unread_counts failed', e);
-      return;
+      return false;
     }
-    if (!counts || typeof counts !== 'object') return;
+    if (!counts || typeof counts !== 'object') return false;
+    // THE BELL COMES FROM HERE TOO, so it can never disagree with the tabs.
+    //
+    // It used to be `merged.length` in refreshActivity, which counts only the
+    // rows that method merges — access requests, task mentions/assignments and
+    // the rollups. That set has no file notifications in it, so the bell read
+    // lower than the tabs the moment activity.unread_counts started counting the
+    // base feed's changelog rows. One number, one source: `all` is the server's
+    // own sum of the five buckets.
+    //
+    // refreshActivity falls back to `merged.length` only when this returns
+    // false (the two early returns above), so a failed request still leaves a
+    // bell rather than nothing — and a successful one never gets overwritten by
+    // the lower number.
+    const bell = parseInt(counts.all, 10);
+    if (Number.isFinite(bell)) {
+      RADIO_BROADCAST.trigger('activity-update', { unread_count: bell });
+    }
     for (const bucket of TAB_BUCKETS) {
       const total = parseInt(counts[bucket], 10) || 0;
       this.ensurePart(`tab-count-${bucket}`).then((p) => {
@@ -274,6 +291,7 @@ class __panel_activity extends LetcBox {
         p.el.dataset.empty = total ? '0' : '1';
       });
     }
+    return true;
   }
 
   /**
@@ -1132,11 +1150,19 @@ class __panel_activity extends LetcBox {
 
     // Kept so switching tabs can re-filter the pinned section without refetching.
     this._mergedRows = merged;
-    // The bell badge stays the total across every tab, unchanged — the per-tab
-    // numbers come from activity.unread_counts instead.
-    const unread_count = merged.length;
-    RADIO_BROADCAST.trigger('activity-update', { unread_count });
-    this._renderTabCounts();
+    // The bell comes from activity.unread_counts' `all` (see _renderTabCounts),
+    // so it can never disagree with the tab badges. `merged` is only the
+    // FALLBACK for when that request fails: it holds access requests, task
+    // mentions/assignments and the rollups, but no file notifications, so on its
+    // own it under-counts.
+    //
+    // Fired from the .then rather than before it, deliberately: triggering both
+    // made the bell paint the low number and then correct itself a moment later
+    // (measured 2 -> 8). Not awaited, so nothing below is delayed.
+    this._renderTabCounts().then((ok) => {
+      if (ok) return;
+      RADIO_BROADCAST.trigger('activity-update', { unread_count: merged.length });
+    });
     this.updatePriorityListUnified(merged);
     if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
