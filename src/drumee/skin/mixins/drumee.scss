@@ -62,14 +62,11 @@
 // `color` on the icon, and a row that inherits its label colour instead
 // renders a near-black outline where the design has a coloured one.
 //
-// A mixin because two surfaces render these rows under these class names, and
-// each is scoped somewhere the other cannot reach:
-//   - the folder topbar's "+ New" flyout   window/folder/skin/index.scss,
-//                                          under `__new-ctrl`
-//   - the Files empty-state hero's "New"   window/skin/common.scss,
-//                                          under `.window__fe-menu`
-// The hero's copy was added without them and its glyphs came out near-black,
-// which is what this exists to stop happening again.
+// A mixin because the tints belong with the row vocabulary rather than with
+// one surface's scope: the folder topbar's "+ New" flyout renders these rows
+// under `__new-ctrl` (window/folder/skin/index.scss), and any second surface
+// mounting them elsewhere needs the same five values. A copy added without
+// them comes out near-black, which is what this exists to stop happening.
 //
 // The same five values appear twice more against a DIFFERENT class vocabulary
 // — `.ico-workspace` / `.ico-note` / `.ico-document` / `.ico-spreadsheet` /

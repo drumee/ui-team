@@ -1451,6 +1451,7 @@
   "MY_EXTERNAL_FOLDER": "My external folder",
   "MY_PUBLIC_FOLDER": "My public folder",
   "FILES_NOT_FOUND": "Files not found",
+  "NO_FOLDERS_OR_FILES_YET": "No Folders or Files yet",
   "FOLDER_INFO": "Folder info",
   "MEMBERS": "Members",
   "MEMBERS_SUBTITLE": "Manage organization access and define custom roles.",

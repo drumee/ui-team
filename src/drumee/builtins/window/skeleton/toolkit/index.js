@@ -539,12 +539,19 @@ export function gridFilesBrowser(ui) {
     itemsOpt: opt,
     skip,
     vendorOpt: Preset.List.Orange_e,
-    // Shown when the LISTING comes back empty but the folder is not — i.e. a
-    // file-type filter that matched nothing. The "no files yet" hero beside
-    // this list is deliberately suppressed then (window/utils _syncGridEmpty),
-    // because it pitches adding a first file to a folder that already has
-    // plenty; without this the pane would simply go blank instead.
-    evArgs: Skeletons.Note(LOCALE.FILES_NOT_FOUND, "no-content"),
+    // Shown whenever the LISTING comes back empty — an empty folder, or a
+    // file-type filter that matched nothing. Without it the pane goes blank.
+    //
+    // Its OWN key, not the FILES_NOT_FOUND the search window renders
+    // (window/search/index.js): this reads as the folder's resting state
+    // ("nothing here yet"), whereas search is reporting a query that missed.
+    // Sharing one string means a copy edit for either surface silently
+    // rewrites the other.
+    //
+    // ui-core builds this as the `KIND.blank` empty view (collection-view.js
+    // emptyViewOptions), so the text lands inside the widget-blank placeholder
+    // that `.no-content` styles.
+    evArgs: Skeletons.Note(LOCALE.NO_FOLDERS_OR_FILES_YET, "no-content"),
     api: function (x) {
       return ui.getCurrentApi();
     },
@@ -1138,13 +1145,9 @@ export function filesContainer(ui) {
     type: _a.type,
   };
   if (ui.fig.family === "window-folder") {
-    // The empty state is a following SIBLING of the list — the skin reads the
-    // list's own `data-empty` across `~` (see _syncGridEmpty in ../../utils.js),
-    // so order matters here.
     opt.kids = [
       fileTypeFilterBar(ui),
       gridFilesBrowser(ui),
-      require("../content/grid/empty")(ui),
     ];
   }
   return Skeletons.Box.Y(opt);
@@ -1499,8 +1502,7 @@ export function newMenu(ui, opt = {}) {
   const cnDropdown = `${cnWindowButton}__dropdown-menu`;
   const cnItem = `${cnDropdown}__item`;
 
-  // Row shape lives in ./new-menu-rows, shared with the Files empty-state
-  // hero's ghost "New" (../content/grid/empty.js) so the two cannot diverge.
+  // Row shape lives in ./new-menu-rows.
   const row = (spec) => menuRow(ui, spec);
 
   const importRows = [

@@ -528,259 +528,56 @@
     width: 24px;
   }
 }
-// ── The Files grid with nothing in it (window__fe-*) ──────────────────────
-// Figma 176:42043, frame 176:42052. A workspace whose Files tab is empty used
-// to show a filter bar over blank space; this names what makes files here
-// different and puts the three ways of adding one under the sentence.
+
+// ── The Files grid's empty view (window__icons-list) ──────────────────────
+// The "No Folders or Files yet" note ui-core mounts when the listing comes
+// back with nothing (skeleton/toolkit gridFilesBrowser `evArgs`).
 //
-// Keyed off the LIST's own `data-empty`, read across `~`. Not a container: the
-// folder window's Files view is the filter bar and the bare list fed straight
-// into the content part, and `.window__icons-container` — which only exists in
-// skeleton/content/grid — is never rendered there at all. That is why the first
-// version of this never appeared: the flag was written to an element that was
-// not on the page, by a closest() that answered null.
+// Scoped on `.no-content` — the className that call passes — rather than on
+// `.widget-blank`. Those are two DIFFERENT elements: ui-core only reaches for
+// the blank widget when a list declares NO evArgs at all (collection-view
+// emptyViewOptions defaults `opt.kind` to KIND.blank). This list DOES declare
+// one, built by Skeletons.Note, which carries `kind: 'note'` → kind/seeds
+// maps `note` to widgets/text → the element is `.drumee-widget.note-reader`,
+// and `.widget-blank` never appears here. `.no-content` is the only class the
+// two paths share, so it is the hook that survives either.
 //
-// The flag is written from the list's COLLECTION after EOD, never from the DOM:
-// .smart-container is not reliably CSS-`:empty` (partitioning leaves section
-// elements in place, and a spinner sits there mid-fetch), and an empty state
-// flashed over a fetch that is about to return files is worse than a blank pane
-// for the same half-second.
-//
-// `!important` on both display rules, deliberately. The framework gives every
-// Box `.drumee-widget[data-flow="y"] { display: flex }` at 0,2,0 — a bare
-// `.window__fe-hero { display: none }` is 0,1,0 and loses to it, so the hero
-// would sit under every populated grid. The same reason the rest of this
-// codebase reaches for it against that rule.
-.window__fe-hero {
-  display: none !important;
-}
-
-.window__icons-list[data-empty="1"] {
-  display: none !important;
-}
-
-.window__icons-list[data-empty="1"] ~ .window__fe-hero {
-  display: flex !important;
-}
-
-.window__fe-hero {
-  flex: 1 1 auto;
-  min-height: 0;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 32px;
-  padding: 40px 80px 120px;
-  box-sizing: border-box;
-  overflow: auto;
-}
-
-// The hero SCROLLS, so it also clips — which a dropdown opened inside it
-// cannot afford: on a short pane the create menu became a sliver at the bottom
-// of a scroll region instead of a popup. Released only while the menu is OPEN,
-// so a short pane keeps its scrolling the rest of the time. Same conditional
-// release, on the same signal, that the files column uses one level up
-// (folder/skin/index.scss `&__files-panel:has(…__wrapper[data-state="1"])`).
-.window__fe-hero:has(.window-button__dropdown-menu__wrapper[data-state="1"]) {
-  overflow: visible;
-}
-
-.window__fe-title {
-  font-size: 64px;
-  line-height: 1.1;
-  font-weight: 600;
-  color: var(--normal-fg-800, #34343a);
-  max-width: 615px;
-}
-
-.window__fe-desc {
-  font-size: 18px;
-  line-height: 1.2;
-  font-weight: 400;
-  color: var(--normal-fg-800, #34343a);
-  max-width: 486px;
-}
-
-.window__fe-actions {
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.window__fe-btn {
+// Gated behind `:has(> .no-content)` so the populated grid is untouched. That
+// also makes the rule independent of whatever display the scroll container
+// normally carries: it is a bare template div (ui-core list/smart/template)
+// with no data-flow, so it computes to `display: block` and the
+// `grid-template-columns` the folder skin sets on it are inert — the real
+// grids are the sections inside it. Overriding `display` only in the empty
+// case avoids having to be right about any of that.
+.window__icons-list .smart-container:has(> .no-content) {
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
+  box-sizing: border-box;
+  // 100% of the list, which IS definite: the files panel gives
+  // `.window__icons-list { flex: 1 1 auto; min-height: 0 }` (folder skin), so
+  // the note centres in the whole pane rather than in a band at the top.
+  //
+  // min-height, not height: on any surface where that chain is absent the
+  // percentage resolves against an auto parent and drops out, and the floor
+  // below still gives the note somewhere to sit instead of collapsing it onto
+  // the container's top padding.
+  min-height: 100%;
 }
 
-.window__fe-btn--primary {
-  background: var(--primary-40);
-  color: var(--gray-white, #fff);
-
-  &:hover {
-    background: var(--primary-50);
-  }
-}
-
-// The frame's ghost is a 5% black wash, not a grey token — it has to sit on
-// whatever the pane's ground is.
-.window__fe-btn--ghost {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--normal-fg-10, #0b0a21);
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.09);
-  }
-}
-
-.window__fe-btn-ico {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-
-  svg { width: 100%; height: 100%; }
-  color: currentColor;
-}
-
-.window__fe-btn-label {
-  color: currentColor;
-  white-space: nowrap;
-}
-
-// The hero's ghost "New" opens the create list under itself
-// (skeleton/content/grid/empty.js). The topbar renders the same rows, but every
-// visual rule for that menu is scoped to `.window-folder-topbar__new-ctrl`
-// (folder/skin/index.scss) and cannot reach a menu mounted in the grid — so
-// this surface carries its own copy, deliberately under the same class names
-// so the two read as one control.
-.window__fe-menu {
-  // ui-core nests the topic menu as a list; flatten the chain so the panel can
-  // be positioned against the button rather than against a collapsed <li>.
-  &,
-  .menu-topic,
-  .menu-topic__ui {
-    position: relative;
-    display: flex;
-    align-items: center;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    background: transparent;
-    overflow: visible;
-  }
-
-  .menu-trigger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  // The framework leaves the popup wrapper unpositioned. Anchor it under the
-  // trigger, aligned to its LEFT edge: this button sits mid-pane with room on
-  // both sides, unlike the topbar's, which is pinned right.
-  .menu-topic-items__wrapper {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    right: auto;
-    z-index: 1000;
-    width: max-content;
-    min-width: 200px;
-  }
-
-  // ui-core writes overflow:hidden inline on the wrapper; let the panel escape
-  // only while this menu is open.
-  .menu-topic-items__wrapper[data-state="open"] {
-    overflow: visible !important;
-  }
-
-  // The wrapper is stamped data-state="open" by _openItems and is NEVER reset
-  // (ui-core widgets/menu/index.js resets the inner items and the menu root,
-  // not the wrapper), so keying the closed case on the wrapper alone stops
-  // matching after the first open and leaves an empty panel intercepting
-  // clicks over the grid. The menu ROOT is reset to 0 by _onClosed — the same
-  // source of truth the folder topbar's rules settled on.
-  &:not([data-state="1"]) .menu-topic-items__wrapper {
-    display: none;
-  }
-
-  .menu-topic-items,
-  .menu-items {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    width: max-content;
-    min-width: 200px;
-    padding: 6px;
-    border-radius: 6px;
-    background-color: var(--normal-bg-elevated, #fff);
-    box-shadow:
-      0 4px 6px -4px rgba(0, 0, 0, 0.1),
-      0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    box-sizing: border-box;
-  }
-
-  // Here the create list IS the menu's panel, not a flyout hanging off a parent
-  // row as it is in the topbar — so it lays out in flow and leaves the chrome
-  // above to .menu-items.
-  .window-button__dropdown-menu__create-submenu {
-    display: flex;
-    flex-direction: column;
-    position: static;
-    inset: auto;
-    width: 100%;
-    gap: 2px;
-    padding: 0;
-    background: none;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .window-button__dropdown-menu__item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: "Geist", sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--normal-fg-10);
-    white-space: nowrap;
-    box-sizing: border-box;
-
-    &:hover {
-      background-color: var(--normal-bg-90);
-    }
-
-    svg {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-    }
-  }
-
-  .window-button__dropdown-menu__name {
-    flex: 1;
-  }
-
-  .window-button__dropdown-menu__icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    flex: 0 0 20px;
-  }
-
-  // The same brand tints the topbar's copy of these rows carries. Without them
-  // the glyphs — all `fill="currentColor"` — inherit the label's near-black
-  // --normal-fg-10 and the two menus read as different controls.
-  @include drumee.new-menu-icon-tints;
+.window__icons-list .smart-container:has(> .no-content) > .no-content {
+  min-height: 96px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  // The note widget sets its content with innerHTML on a flex row
+  // (widgets/text, `flow: wrap`), so the string is an anonymous flex item —
+  // it needs the box centred, not just the text.
+  max-width: 320px;
+  padding: 0 24px;
+  box-sizing: border-box;
+  color: var(--normal-fg-20);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
 }

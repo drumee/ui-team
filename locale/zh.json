@@ -1221,6 +1221,7 @@
   "MY_EXTERNAL_FOLDER": "我的外部文件夹",
   "MY_PUBLIC_FOLDER": "我的公共文件夹",
   "FILES_NOT_FOUND": "文件未找到",
+  "NO_FOLDERS_OR_FILES_YET": "暂无文件夹或文件",
   "FOLDER_INFO": "文件夹信息",
   "MEMBERS": "成员",
   "AREA_PERSONAL_LABEL": "个人的",
