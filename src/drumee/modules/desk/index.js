@@ -1679,20 +1679,22 @@ class desk_module extends LetcBox {
    * @returns
    */
   async openContactPanel(args = {}) {
-    let p = await this.ensurePart("chat-panel");
-    let widget = p.children.last();
-    if (!widget || widget.isDestroyed()) {
-      this.togglePanel("address_book", "chat-panel");
-    } else if (widget.mget(_a.kind) === "address_book") {
-      if (widget.el.dataset.anim === "in") {
-        return;
-      } else {
-        this.togglePanel("address_book", "chat-panel");
-      }
-    }
-    this.togglePanel("address_book", "chat-panel");
-    p = await this.ensurePart("chat-panel");
-    widget = p && p.children && p.children.last && p.children.last();
+    // ONE open-only call, always followed by switchTab.
+    //
+    // `togglePanel` is a REAL toggle: for a kind already mounted and animated
+    // in it runs _hidePanel() unless `openOnly` is passed. This used to call it
+    // TWICE in the same pass without that flag, so the first call opened the
+    // Contacts panel and the second immediately closed it again — the "clicking
+    // the contact-invite notification does nothing" report. And the
+    // `dataset.anim === "in"` branch returned EARLY, so a notification arriving
+    // while Contacts was already open never reached [Pending] either.
+    //
+    // openOnly covers every case on its own: empty slot / another kind → load,
+    // mounted but animated out → re-show, mounted and open → leave it open.
+    // Same shape as openP2Pchat, which passes the flag for the same reason.
+    await this.togglePanel("address_book", "chat-panel", true);
+    const p = await this.ensurePart("chat-panel");
+    const widget = p && p.children && p.children.last && p.children.last();
     if (widget && widget.switchTab) widget.switchTab(_a.pending);
   }
 
@@ -3403,15 +3405,34 @@ class desk_module extends LetcBox {
    * screen is not this method's business.
    */
   _resetRailToFiles() {
-    if (this.el) this.el.dataset.mtab = "files";
+    return this._railHighlight("files");
+  }
+
+  /**
+   * Light the rail row for `tab` — the general form of _resetRailToFiles, whose
+   * whole docstring above applies unchanged (getPart not ensurePart, both rails
+   * re-asserted, `mtab` the same single stamp _railTab writes).
+   *
+   * Added for the notification landing, which can put the workspace on Chat or
+   * Task rather than Files and so cannot use the Files-only twin. The row keys
+   * are the rail's own (skeleton/sidebar.js, skeleton/index.js); "meeting" is
+   * the folder window's tab name for the row the rail calls "meet". A tab with
+   * no rail row of its own leaves the rail alone rather than guessing.
+   *
+   * @param {String} tab folder-window tab: files | chat | task | meeting
+   */
+  _railHighlight(tab) {
+    const key = tab === "meeting" ? "meet" : tab;
+    if (!["files", _a.chat, _a.task, "meet", "access"].includes(key)) return;
+    if (this.el) this.el.dataset.mtab = key === "meet" ? "meeting" : key;
     if (!_.isFunction(this.getPart)) return;
     const light = (pn, channel) => {
       const p = this.getPart(pn);
       if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) return;
       RADIO_BROADCAST.trigger(channel, p);
     };
-    light("sidebar-files", "sidebar-radio");
-    light("mrail-files", "mobile-rail-radio");
+    light(`sidebar-${key}`, "sidebar-radio");
+    light(`mrail-${key}`, "mobile-rail-radio");
   }
 
   /**

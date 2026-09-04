@@ -23,6 +23,10 @@ const {
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
+// Hash segment for a NOTIFICATION target: "#/desk/wm/reveal/?hub_id=...".
+// Its own route so notification clicks can land docked without changing what
+// "#/desk/wm/open/" does for mail, chat, share and compact deep links.
+const NOTIFICATION_SEGMENT = "reveal";
 
 class __window_manager extends push {
   constructor(...args) {
@@ -239,6 +243,14 @@ class __window_manager extends push {
       case _a.channel:
       case _a.hub:
         this.loadWorkspace(args);
+        return;
+
+      // Notification clicks. Same payload as `open` below, but landed in the
+      // DOCKED desk workspace instead of a floating window — see
+      // openNotificationLocation. Kept as its own case so `open` and every
+      // deep link that uses it are untouched.
+      case NOTIFICATION_SEGMENT:
+        this.openNotificationLocation(args);
         return;
 
       case _a.folder:
@@ -496,6 +508,181 @@ class __window_manager extends push {
       .finally(() => {
         this._creatingFolder = 0;
       });
+  }
+
+  /**
+   * Land a NOTIFICATION click inside the DOCKED desk workspace.
+   *
+   * Every notification that opens a workspace used to navigate to
+   * `#/desk/wm/open/?...` → `openFileLocation`, which launches a FLOATING
+   * window_folder — the old UI. This is the docked twin: `loadWorkspace` mounts
+   * the SAME window_folder into headlessLayer, and the notification's own
+   * targeting (folder, tab, task, reveal) is then applied to that pane.
+   *
+   * DELIBERATELY ITS OWN ROUTE (`#/desk/wm/reveal/?...`), not a change to
+   * `case _a.open`. Every other consumer of that route — mail deep links, chat
+   * links, share links, the compact `/o/` form, the post-signin relay — keeps
+   * `openFileLocation` byte-for-byte as it is. Only the activity panel points
+   * here, so the blast radius is the notification panel and nothing else.
+   *
+   * The four things the floating path carried, and where each goes now:
+   *  - the FOLDER   → refreshContent on the docked pane (same call
+   *                   openWorkspaceFolder makes for a sidebar sub-folder click)
+   *  - `activeTab`  → showFolderTab on the mounted pane. NOT threaded through
+   *                   loadWorkspace's feed: `apply(attrs)` shadows its `data`
+   *                   argument with the media.attributes response, so anything
+   *                   added to the caller's object is silently dropped there.
+   *  - `open_task_id` → openTaskDeepLink, which exists precisely for "a window
+   *                   that is ALREADY open" and switches to the Task tab itself.
+   *  - `highlight`  → _revealFromNotification (window/utils.js). It polls
+   *                   Wm by nid for the rendered grid CELL, so it never cared
+   *                   which layer the folder window lives in — it works on the
+   *                   docked pane unchanged.
+   *
+   * @param {Object} args parsed hash args from the activity item
+   */
+  async openNotificationLocation(args = {}) {
+    const { hub_id, nid, pid, filetype, activeTab, open_task_id } = args;
+    if (!hub_id) {
+      this.warn("openNotificationLocation: missing hub_id", args);
+      return;
+    }
+    const highlight = !!(args.highlight && `${args.highlight}` !== "0");
+
+    // The folder the pane must END UP showing, resolved by the SAME rule
+    // openFileLocation uses before it launches:
+    //  - a REVEAL (highlight=1) always opens the PARENT and flashes the target
+    //    inside it. That holds for a container target too — a newly created
+    //    SUB-FOLDER is a cell in its parent, and `_revealFromNotification`
+    //    looks for exactly that cell (nid !== pid → _highlightNode). Opening
+    //    the sub-folder itself would leave nothing on screen to highlight.
+    //    Falls back to nid when the row carries no parent.
+    //  - otherwise a container target IS the folder to show, and a file target
+    //    is shown inside its parent.
+    const isContainer =
+      !filetype || filetype === _a.folder || filetype === _a.hub;
+    const hasPid = pid != null && `${pid}` !== "" && `${pid}` !== "0";
+    const targetNid = highlight
+      ? (hasPid ? pid : nid)
+      : (isContainer ? nid : pid);
+
+    // Only mount when this workspace is not already docked. Re-feeding
+    // headlessLayer for a workspace the user is already in would destroy and
+    // rebuild the pane for nothing — and loadWorkspace's own same-workspace
+    // early return cannot be relied on here, because after a sub-folder
+    // navigation _curWorkspace.nid is that sub-folder, not the root.
+    if (!this._findWorkspaceWindow(hub_id)) {
+      // nid 0, not the target: 0 is the server's "this hub's root" shortcut
+      // (see _rootNid). The pane opens at the workspace root and the deep
+      // target, if any, is navigated to below.
+      this.loadWorkspace({ hub_id, nid: 0 });
+    }
+
+    const win = await this._awaitWorkspaceWindow(hub_id);
+    if (!win) {
+      this.warn("openNotificationLocation: workspace pane never mounted", args);
+      return;
+    }
+    if (win.raise) win.raise();
+
+    // Navigate into the target folder when it is not the one already shown.
+    if (
+      targetNid &&
+      `${targetNid}` !== "0" &&
+      `${win.mget(_a.nid)}` !== `${targetNid}` &&
+      _.isFunction(win.refreshContent)
+    ) {
+      const attrs = await this.fetchService(SERVICE.media.attributes, {
+        hub_id,
+        nid: targetNid,
+      }).catch((e) => {
+        this.warn("openNotificationLocation: cannot resolve target", e);
+        return null;
+      });
+      // A resolvable target navigates; an unresolvable one leaves the user on
+      // the workspace root rather than on an error — the notification still
+      // took them somewhere useful.
+      if (attrs && attrs.nid) {
+        win.refreshContent(attrs);
+        // refreshContent cannot infer the ancestor chain for a deep jump, so
+        // both breadcrumbs would keep naming the WORKSPACE while the pane sits
+        // in a sub-folder (measured: pane on "125 à á ạ", crumb still "/ adi").
+        // Rebuilt from get_path exactly as openWorkspaceFolder does after its
+        // own refreshContent — including the _.defer, whose reason is the same:
+        // refreshContent has just issued this folder's media.show_node_by, and
+        // a get_path in the same tick reaches the endpoint first and holds the
+        // listing behind its temporary-table build (libs/path-request).
+        const deepNid = attrs.nid;
+        _.defer(() => {
+          getPath(this, { nid: deepNid, hub_id })
+            .then((path) => {
+              if (_.isEmpty(path)) return;
+              if (_.isFunction(win.refreshBreadcrumbsUI))
+                win.refreshBreadcrumbsUI(path);
+              this.updateBreadcrumb(
+                { ...attrs, service: "change-workspace" },
+                this,
+              );
+            })
+            .catch((e) =>
+              this.warn("openNotificationLocation: breadcrumb refresh failed", e),
+            );
+        });
+      }
+    }
+
+    // Tab LAST, after the navigation: showFolderTab and the task panel both
+    // read the folder the window is on NOW.
+    if (open_task_id && _.isFunction(win.openTaskDeepLink)) {
+      win.openTaskDeepLink(open_task_id);
+    } else if (activeTab && _.isFunction(win.showFolderTab)) {
+      win.showFolderTab(activeTab);
+    }
+    // Keep the rail agreeing with the screen. loadWorkspace does not touch it
+    // (it is desk chrome, rebuilt with nothing) — the defect Lexis reported for
+    // the workspace switcher, which _resetRailToFiles fixed there.
+    if (window.Desk && _.isFunction(window.Desk._railHighlight)) {
+      window.Desk._railHighlight(open_task_id ? _a.task : activeTab || "files");
+    }
+
+    if (highlight) this._revealFromNotification(nid, filetype, pid);
+    return win;
+  }
+
+  /**
+   * Resolve once the docked workspace pane for `hub_id` is mounted AND has
+   * rendered its folder view.
+   *
+   * Polled, not awaited on loadWorkspace: that method is fire-and-forget (it
+   * mounts inside the .then of its own media.attributes fetch) and returns
+   * nothing to wait on. Polling also covers the pane that was ALREADY docked,
+   * where nothing new is mounted at all. Same idiom, and the same budget, as
+   * _highlightNode in window/utils.js.
+   *
+   * The folder-view wait matters: showFolderTab writes tab state through
+   * `$el.find(".window-folder__tab-bar-item")`, which finds nothing before the
+   * window's skeleton renders, and window_folder's own onDomRefresh gates its
+   * launch-time tab on exactly this part.
+   *
+   * @param {String} hub_id
+   * @param {Number} [tries]
+   * @returns {Promise<Object|null>} the pane, or null if it never appeared
+   */
+  _awaitWorkspaceWindow(hub_id, tries = 40) {
+    return new Promise((resolve) => {
+      const seek = (n) => {
+        const win = this._findWorkspaceWindow(hub_id);
+        if (win && _.isFunction(win.ensurePart)) {
+          return win
+            .ensurePart("folder-view")
+            .then(() => resolve(win))
+            .catch(() => resolve(win));
+        }
+        if (n <= 0) return resolve(null);
+        setTimeout(() => seek(n - 1), 150);
+      };
+      seek(tries);
+    });
   }
 
   /**

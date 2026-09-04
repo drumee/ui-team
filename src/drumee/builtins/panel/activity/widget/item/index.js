@@ -1,4 +1,19 @@
 
+// WHY THE LINKS BELOW SAY "reveal" AND NOT "open".
+//
+// Every workspace-opening notification used to navigate to
+// "#/desk/wm/open/?...", which routes to Wm.openFileLocation and launches a
+// FLOATING window_folder — the pre-2.0 UI, reported by Lexis for every type
+// (chat, task, file...). "#/desk/wm/reveal/?..." is the same payload landed in
+// the DOCKED workspace instead (Wm.openNotificationLocation → loadWorkspace),
+// which is where the rest of the desk already puts a workspace — the hub-level
+// team-chat row at the bottom of this file has always gone there via
+// "#/desk/wm/teamchat/".
+//
+// The payload is IDENTICAL and deliberately so: hub_id / nid / pid / filetype /
+// activeTab / open_task_id / highlight all keep their meaning, so nothing about
+// how these rows are built had to change. "#/desk/wm/open/" itself is untouched
+// and still serves mail, chat, share and compact deep links.
 function parseJson(value, fallback) {
   if (!value) return fallback;
   if (_.isObject(value)) return value;
@@ -341,7 +356,7 @@ class __activity_item extends LetcBox {
       // open_task_id → the tasks panel opens this task's detail after its list
       // loads (activity.list flattens task_id alongside task_nid/task_hub_id).
       const tTask = this.mget('task_id');
-      let tHash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
+      let tHash = `#/desk/wm/reveal/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
       if (tTask) tHash += `&open_task_id=${tTask}`;
       location.hash = tHash + `&ts=${ts}`;
       this.triggerHandlers({ service: 'read-activity', hub_id: tHub, item_type, item_key, changelog_id });
@@ -357,7 +372,7 @@ class __activity_item extends LetcBox {
       const tNidRaw = this.mget('nid');
       const tNid = (tNidRaw != null && `${tNidRaw}` !== '0') ? tNidRaw : 0;
       const tTask = this.mget('task_id');
-      let tHash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
+      let tHash = `#/desk/wm/reveal/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
       if (tTask) tHash += `&open_task_id=${tTask}`;
       location.hash = tHash + `&ts=${ts}`;
       this.triggerHandlers({ service: 'read-activity', hub_id: tHub, item_type, item_key, changelog_id });
@@ -376,7 +391,7 @@ class __activity_item extends LetcBox {
       const mNidRaw = this.mget('meeting_pid');
       const mNid = (mNidRaw != null && `${mNidRaw}` !== '0') ? mNidRaw : 0;
       if (mHub) {
-        location.hash = `#/desk/wm/open/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&ts=${ts}`;
+        location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&ts=${ts}`;
       }
       this.triggerHandlers({ service: 'read-activity', hub_id: mHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
@@ -384,7 +399,7 @@ class __activity_item extends LetcBox {
     }
     if (this.mget('event') === 'media.workspace_move') {
       const sourceHubId = this.mget('source_hub_id') || hub_id;
-      location.hash = `#/desk/wm/open/?hub_id=${sourceHubId}&nid=0&filetype=folder&pid=0&ts=${ts}`;
+      location.hash = `#/desk/wm/reveal/?hub_id=${sourceHubId}&nid=0&filetype=folder&pid=0&ts=${ts}`;
       this.triggerHandlers({ service: 'read-activity', hub_id: sourceHubId, item_type, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
@@ -405,7 +420,7 @@ class __activity_item extends LetcBox {
       case _a.media:
         // highlight=1 → reveal the file in its folder (scroll + select + flash)
         // instead of opening it in a player. Scoped to notification clicks.
-        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
+        location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
         this.triggerHandlers({ service: 'read-activity', hub_id, nid: target_nid, item_type, changelog_id })
         // Opening the file is an explicit "I've handled this" → close the panel.
         // Kept separate from dismiss-activity (the trash button uses that alone
@@ -415,7 +430,7 @@ class __activity_item extends LetcBox {
         return
 
       case _a.hub_invite:
-        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${ts}`;
+        location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${ts}`;
         this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, changelog_id })
         return
 
@@ -430,7 +445,7 @@ class __activity_item extends LetcBox {
         const folder_nid = (scope_nid && `${scope_nid}` !== "0") ? scope_nid
           : ((nid && `${nid}` !== "0") ? nid : null);
         if (folder_nid) {
-          hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${folder_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
+          hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${folder_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
           if (message_id) hash = hash + `&message_id=${message_id}`;
           location.hash = hash + `&ts=${ts}`;
           this.triggerHandlers({ service: 'read-activity', hub_id, nid: folder_nid, item_type, changelog_id })
@@ -508,9 +523,9 @@ class __activity_item extends LetcBox {
           && shareFiletype !== _a.folder
           && shareFiletype !== 'hub';
         if (sharedFile) {
-          location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${shareNid}&filetype=${shareFiletype}&pid=${shareParentId || "0"}&highlight=1&ts=${ts}`;
+          location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${shareNid}&filetype=${shareFiletype}&pid=${shareParentId || "0"}&highlight=1&ts=${ts}`;
         } else {
-          location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${shareNid}&filetype=folder&pid=0&ts=${ts}`;
+          location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${shareNid}&filetype=folder&pid=0&ts=${ts}`;
         }
         this.triggerHandlers({
           service: 'read-activity', item_type, item_key,
