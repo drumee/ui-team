@@ -67,7 +67,18 @@ const createNavItem = (
       ? `${cls(fig, "item")} ${cls(fig, `item--${opts.modifier}`)}`
       : cls(fig, "item"),
     uiHandler: [ui],
-    radio: `sidebar-radio`,
+    // One shared group, so exactly one row is lit — right for every row that
+    // REPLACES what is on screen (Files…Access swap the workspace tab, Plan
+    // opens a section screen), wrong for one that opens a popup OVER it.
+    // Invite does that, so being in the group made it unlight the tab the user
+    // was still looking at, and the rail read as though they had left it. It
+    // opts out with `soloState` and desk_module lights it by hand instead
+    // (_setInviteRowState), which is what lets Files and Invite be lit at once.
+    //
+    // Opting out costs nothing else: `service` is dispatched by the uiHandler
+    // loop in ui-core's letc.js, not by the radio behavior — `isRadio` only
+    // decides whether a re-fire of `also:click` is needed when NO handler ran.
+    radio: opts.soloState ? undefined : `sidebar-radio`,
     // Which row is lit before the first click. ui-core's radio behavior reads
     // `initialState` at render (addons/backbone/view/behavior/radio.js
     // onRender) and stamps data-radio, and restores it on a "clear:radio" —
@@ -113,6 +124,11 @@ const createRailFooter = (ui) => {
         "",
         null,
         "sidebar-invite",
+        null,
+        // Not a destination — it opens a popup over whatever tab is up, so it
+        // must not take the rail's highlight away from that tab. See the
+        // `soloState` note in createNavItem.
+        { soloState: 1 },
       ),
       // Opens the billing page. `upgrade-plan` is the desk's existing service
       // and already carries the canUpgradePlan() gate, so an account that

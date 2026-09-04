@@ -70,6 +70,21 @@ class __invite_popup extends LetcBox {
       this._wrapperEl = this.parent.el;
       this._wrapperEl.dataset.state = "open";
       this._wrapperEl.dataset.overlay = "blur";
+      // A SECOND marker, alongside `overlay` rather than instead of it.
+      //
+      // The skin uses it to thin the frosted glass down to something the
+      // current tab is still visible through, so the popup reads as an overlay
+      // ON that tab instead of as a screen that replaced it. The default
+      // rgba(255,255,255,.55) + blur(30px) is opaque enough to look like a
+      // blank white page.
+      //
+      // `overlay` MUST stay "blur": libs/guided-flow and reward-flow both
+      // select on `[data-guided-overlay][data-overlay="blur"]` /
+      // `[data-reward-overlay][data-overlay="blur"]` to swap in their own flat
+      // dim, so retagging this would silently drop the backdrop override for
+      // the onboarding tours that hand the user to this very popup. Both of
+      // those use !important, so they still win when a tour is running.
+      this._wrapperEl.dataset.inviteOverlay = "1";
     }
     this._dismissDropdowns = (e) => {
       if (!this.el.contains(e.target)) return;
@@ -140,6 +155,7 @@ class __invite_popup extends LetcBox {
     if (this._wrapperEl) {
       this._wrapperEl.dataset.state = "closed";
       delete this._wrapperEl.dataset.overlay;
+      delete this._wrapperEl.dataset.inviteOverlay;
     }
     if (this._dismissDropdowns) {
       document.removeEventListener("mousedown", this._dismissDropdowns);

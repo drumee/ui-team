@@ -717,6 +717,43 @@
   }
 }
 
+// ── Desktop backdrop: thin the glass so the tab underneath still reads ──
+//
+// The shared glass (mixins/drumee.scss glass-overlay) is rgba(255,255,255,.55)
+// plus blur(30px) plus a second blur(60px) ::before layer. Over a workspace
+// that is almost opaque white — the popup stopped looking like something ON
+// the current tab and started looking like a screen that had REPLACED it,
+// which is exactly the confusion reported. Same colour, much less of it, and
+// enough blur to keep the card legible without hiding what is behind it.
+//
+// Keyed on data-invite-overlay, which invite-popup/index.js sets ALONGSIDE
+// data-overlay="blur" (never instead of it — libs/guided-flow and reward-flow
+// both select on [data-*-overlay][data-overlay="blur"]). So this cannot reach
+// any other occupant of the shared wrapper: the create-workspace dialog,
+// permission_*, window_info, request_access and Wm.confirm() all keep the
+// glass exactly as it is.
+//
+// Both class names are real on that element and are doubled up for
+// specificity (0,4,0) so this out-cascades the mixin's 0,3,0 without
+// !important — which is what leaves the tours' own !important overrides on top
+// when one is running, and leaves the mobile scrim below (0,5,0 and, for the
+// media query, 0,4,0 declared LATER in this file) the winner on a phone.
+.window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay][data-overlay="blur"] {
+  background-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  html[data-theme="dark"] & {
+    background-color: rgba(11, 10, 33, 0.28);
+  }
+}
+
+// glass-overlay stacks a blurred ::before on top of the colour; left in place
+// it re-frosts everything the rule above just cleared.
+.window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay][data-overlay="blur"]::before {
+  content: none;
+}
+
 // ── Mobile backdrop ─────────────────────────────────────────────────────
 // This popup is fed into Wm.__wrapperModal (desk/index.js and
 // widget/settings/hub both do), and invite-popup/index.js opts that host INTO

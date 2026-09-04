@@ -3346,6 +3346,29 @@ class desk_module extends LetcBox {
    * @param {Object} [w]  the workspace window the rail is about to act on
    */
   _leaveSectionScreen(w) {
+    // THE INVITE POPUP IS IN FRONT TOO, and closeMainPanels() cannot reach it.
+    //
+    // It is fed into Wm.__wrapperModal — z-index 100000, above the workspace
+    // pane and above the three main slots — while the close below only clears
+    // settings-main-slot / trash-panel / chat-panel. So the rail was the ONE
+    // sidebar route in the desk that never released that layer: Plan, Settings,
+    // Trash, Inbox, Contacts, Calendar and Apps all go through togglePanel(),
+    // which opens with _dismissWmModal(). Reported by Lexis as Invite covering
+    // Files/Chat/Task/Meet/Access until you clicked Invite a second time — the
+    // tab underneath had in fact already switched, invisibly.
+    //
+    // ONLY WHEN THE LAYER IS HOLDING THE INVITE POPUP, deliberately. That same
+    // wrapper also carries the create-workspace form, the permission panels and
+    // Wm.confirm() dialogs; clearing it unconditionally would throw away a
+    // half-filled form because the user glanced at another tab, which is a
+    // worse bug than the one being fixed. Nobody has reported those covering
+    // anything, so they keep today's behaviour.
+    if (
+      this._invitePopup &&
+      !(this._invitePopup.isDestroyed && this._invitePopup.isDestroyed())
+    ) {
+      this._dismissWmModal();
+    }
     // Asked BEFORE the close, and getPart rather than ensurePart: this answers
     // synchronously with what is mounted right now, which is what a rail click
     // needs. A breadcrumb that has not mounted yet reads as "no section to
@@ -6666,12 +6689,36 @@ class desk_module extends LetcBox {
     }
   }
 
+  /**
+   * Light or unlight the rail's Invite row, following the popup's lifetime.
+   *
+   * Invite is the one rail row outside the shared `sidebar-radio` group
+   * (skeleton/sidebar.js `soloState`), because it opens a popup OVER the
+   * current tab rather than replacing it — so the tab keeps its own highlight
+   * and this row carries its own. Nothing else writes this row's state, which
+   * is why every close path has to reach here.
+   *
+   * getPart, never ensurePart: the desktop rail does not mount on a phone (the
+   * bottom bar has no Invite row — it lives in the mobile sheet), and
+   * ensurePart never resolves for a part that will not mount on this device.
+   * Same idiom, same reason, as _readActivityCount and _resetRailToFiles.
+   *
+   * @param {Number} on 1 to light the row, 0 to clear it
+   */
+  _setInviteRowState(on) {
+    if (!_.isFunction(this.getPart)) return;
+    const p = this.getPart("sidebar-invite");
+    if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) return;
+    if (_.isFunction(p.setState)) p.setState(on ? 1 : 0);
+  }
+
   async _openInvitePopup(cmd) {
     if (typeof Wm === "undefined" || !Wm || !Wm.__wrapperModal) return;
     if (this._invitePopup && !this._invitePopup.isDestroyed()) {
       Wm.__wrapperModal.clear();
       Wm.__wrapperModal.el.dataset.state = "closed";
       this._invitePopup = null;
+      this._setInviteRowState(0);
       return;
     }
     // Free: solo — no invites (silent). Seat cap is org-members only
@@ -6686,8 +6733,13 @@ class desk_module extends LetcBox {
         uiHandler: [this],
       });
       this._invitePopup = Wm.__wrapperModal.children.last();
+      this._setInviteRowState(1);
       this._invitePopup.once(_e.destroy, () => {
         this._invitePopup = null;
+        // Every close lands here — the X, Escape, a click outside, the rail
+        // dismissing it on the way to another tab, and the toggle above (which
+        // unlights before this fires, so the two agree either way).
+        this._setInviteRowState(0);
         // Same pair as the "invitation-sent" relay above: whichever guided flow
         // asked for this popup needs to know it has gone, and only one of them
         // can be running.
