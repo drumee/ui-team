@@ -3258,6 +3258,46 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * The workspace window a RAIL click should act on.
+   *
+   * _activeWorkspace() answers "which window is RAISED", and that is not always
+   * the workspace even when one is wide open: anything else on top takes the
+   * raise, and a pane can also simply not hold it yet (boot/restore, a re-feed).
+   * getActiveWindow(1) then finds no folder-ish child carrying `state` and
+   * returns Wm itself, which _activeWorkspace reports as null.
+   *
+   * _railTab read that null as "there is no workspace open" and called
+   * _openDefaultWorkspace(), which opens rows[0] — literally the FIRST
+   * workspace in the list, on its default (Files) tab. Reported by Duy: from
+   * the Invite popup, the first tab click landed on a workspace he had never
+   * opened. Confirmed by forcing the state on a pane that was demonstrably
+   * alive: pool ["folder:0:true"], _curWorkspace still the open workspace, and
+   * the click nevertheless switched to the first one in the list.
+   *
+   * So when the raise heuristic finds nothing, ask what the desk ALREADY KNOWS:
+   * Wm._curWorkspace names the open workspace and Wm._findWorkspaceWindow finds
+   * its headless pane — the same pair _curWorkspaceCanWrite already trusts for
+   * exactly this reason. Opening the default workspace stays the answer only
+   * when there is genuinely no current one, which is the case that fallback was
+   * written for.
+   *
+   * PURELY ADDITIVE: when _activeWorkspace() answers, that answer is returned
+   * unchanged, so every path that works today is untouched.
+   *
+   * @returns {Object|null} a folder window with showFolderTab, or null
+   */
+  _railWorkspace() {
+    const w = this._activeWorkspace();
+    if (w) return w;
+    if (typeof Wm === "undefined" || !Wm) return null;
+    const ws = Wm._curWorkspace;
+    if (!ws || !ws.hub_id || !_.isFunction(Wm._findWorkspaceWindow)) return null;
+    const pane = Wm._findWorkspaceWindow(ws.hub_id);
+    if (!pane || (pane.isDestroyed && pane.isDestroyed())) return null;
+    return _.isFunction(pane.showFolderTab) ? pane : null;
+  }
+
+  /**
    * Rail → folder-window tab. With no workspace open there is nothing to show
    * a tab OF, so OPEN one — the legacy all-workspaces grid this used to fall
    * back to is retired (it is the same screen the Home crumb reached, and the
@@ -3270,7 +3310,10 @@ class desk_module extends LetcBox {
     // composer and Task its own "+ New". No stamp (first paint) reads as
     // files, which is also the boot view.
     if (this.el) this.el.dataset.mtab = tab === "files" ? "files" : `${tab}`;
-    const w = this._activeWorkspace();
+    // _railWorkspace, not _activeWorkspace: a pane that is open but not raised
+    // must not be mistaken for "no workspace" and answered with the FIRST one
+    // in the list. See _railWorkspace.
+    const w = this._railWorkspace();
     // BEFORE the tab is shown, and on both branches — see _leaveSectionScreen.
     this._leaveSectionScreen(w);
     if (!w) return this._openDefaultWorkspace();
@@ -3449,7 +3492,9 @@ class desk_module extends LetcBox {
    */
   _railAccess(opt) {
     if (this.el) this.el.dataset.mtab = "access";
-    const w = this._activeWorkspace();
+    // Same as _railTab, and for the same reason: an open-but-unraised pane is
+    // not "no workspace". See _railWorkspace.
+    const w = this._railWorkspace();
     // Same as _railTab: Access is workspace content, so it cannot be reached
     // from behind a section screen either.
     this._leaveSectionScreen(w);
