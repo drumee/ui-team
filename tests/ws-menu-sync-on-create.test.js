@@ -246,6 +246,14 @@ function deskHost({ list, head, wasEmpty = false, rows = [{ hub_id: HUB }] } = {
       _syncWorkspaceLabel() {
         seen.label++;
       },
+      // The home grid is refetched alongside the switcher — its tiles are what
+      // the workspace ⋯ menu is built from, and a create never reaches them on
+      // its own (see _refreshHomeGrid). Recorded so a test can assert it is
+      // NOT awaited on the path that opens the new workspace.
+      _refreshHomeGrid() {
+        seen.gridRefresh = (seen.gridRefresh || 0) + 1;
+        return new Promise(() => {});
+      },
       _fetchWorkspaces: () => Promise.resolve(rows),
       _openWorkspaceOrEmptyScreen(opt) {
         seen.openOrScreen.push(opt);
@@ -332,4 +340,24 @@ test("a REMOVAL of the last workspace raises the screen from here too", async ()
   const { host, seen } = deskHost({ list: livePart(), rows: [] });
   await onWorkspaceCreated.call(host);
   assert.deepEqual(seen.screen, [true]);
+});
+
+test("the home grid is refetched too, and never waited on", async () => {
+  // The ⋯ menu is built from the workspace's home-grid TILE, and a create
+  // while a workspace is open never puts one there (window/utils newContent
+  // only accepts children of the node Wm is showing, and Wm is showing the
+  // open workspace). Until this, the button was dead until a page reload.
+  //
+  // The harness's _refreshHomeGrid returns a promise that NEVER settles, so
+  // this awaits the handler for real: if the source ever starts awaiting the
+  // grid, this test hangs rather than passing — and the open of a freshly
+  // created workspace would hang with it.
+  const { host, seen } = deskHost({ list: livePart(), head: livePart() });
+  const HUNG = Symbol("hung");
+  const settled = await Promise.race([
+    onWorkspaceCreated.call(host, {}),
+    new Promise((r) => setTimeout(() => r(HUNG), 1000)),
+  ]);
+  assert.notEqual(settled, HUNG, "_onWorkspaceCreated now waits on the grid");
+  assert.equal(seen.gridRefresh, 1, "the grid was left stale");
 });
