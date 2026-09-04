@@ -228,6 +228,14 @@ const _build_mobile_sheet_host = (ui) => {
 const _build_mobile_rail = (ui) => {
   const fig = ui.fig.family;
 
+  // ⚠️ MOBILE: `pn` and `radio` below are READ BY NAME from desk_module.
+  // desk/index.js _resetRailToFiles() does getPart("mrail-files") and then
+  // RADIO_BROADCAST.trigger("mobile-rail-radio", part) to light Files after a
+  // workspace switch (the switcher does not go through _railTab, so nothing
+  // else moves the highlight). Renaming either string FAILS SILENTLY: that
+  // lookup uses getPart and skips a missing part on purpose, because the
+  // desktop rail and this bar are per-device and ensurePart never resolves for
+  // a part that will not mount here. Rename → grep desk/index.js first.
   const item = ({ ico, label, service, pn }) =>
     Skeletons.Box.Y({
       className: `${fig}__mrail-item`,

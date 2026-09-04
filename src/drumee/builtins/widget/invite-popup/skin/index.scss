@@ -755,6 +755,12 @@
 }
 
 // ── Mobile backdrop ─────────────────────────────────────────────────────
+// ⚠️ MOBILE: these rules MUST stay BELOW the [data-invite-overlay] block above.
+// The media-query one ties with it on specificity (0,4,0), so it wins on SOURCE
+// ORDER alone — move it up, or hoist the desktop rule down past it, and the
+// phone silently gets the desktop's thin glass instead of this scrim. The
+// [data-device="mobile"] one is 0,5,0 and wins either way.
+//
 // This popup is fed into Wm.__wrapperModal (desk/index.js and
 // widget/settings/hub both do), and invite-popup/index.js opts that host INTO
 // the app's frosted glass by setting data-overlay="blur" on it. On a phone the

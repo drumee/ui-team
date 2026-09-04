@@ -69,6 +69,19 @@ const divider = (fig) => Skeletons.Box.X({ className: `${fig}__msheet-divider` }
 // ── the switcher ─────────────────────────────────────────────────────────────
 function workspaceSheet(ui, rows, curHubId) {
   const fig = ui.fig.family;
+  // ⚠️ MOBILE, KNOWN GAP — these rows do not switch anything today.
+  //
+  // They re-dispatch to "switch-workspace", and desk/index.js answers that with
+  // `this._switchWorkspace(cmd.mget("wsKey"))` — but `extra` below carries only
+  // `wsHubId`, so wsKey is undefined and _switchWorkspace returns on its first
+  // line. Nothing throws; the sheet just closes.
+  //
+  // `wsKey` is desk_module._workspaceKey(row): "hub:<id>" or "folder:<nid>".
+  // hub_id alone is NOT enough and that is the whole point of the key — every
+  // personal workspace carries the user's own hub_id, so id-matching opens the
+  // first one whichever row was tapped. Whoever owns mobile: add
+  // `wsKey: ui._workspaceKey(r)` alongside wsHubId (keep wsHubId — other
+  // per-row consumers read it). Desktop is unaffected; its rows already set it.
   const wsRow = (r) => {
     const hubId = r.hub_id || r.id;
     return row(fig, ui, {
