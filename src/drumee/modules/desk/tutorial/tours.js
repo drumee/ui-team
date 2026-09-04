@@ -108,17 +108,21 @@ const TOURS = {
     steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } }],
   },
 
-  // Importing from Google Drive — the import dialog itself.
-  //
-  // It opened on two Files-pane screens before this (the Migrate CTA and the
-  // + New menu, 142:34981 / 142:35805) so the tour showed how the dialog was
-  // reached. Those were dropped; the tour starts on the dialog.
+  // Importing from Google Drive — how the import dialog is reached, and then
+  // the dialog.
   migrate: {
     id: "migrate",
     flag: "migrate",
-    // Three: the import dialog at three points in the form. The step still
-    // draws the Files pane, but only as the ground the dialog sits on.
-    steps: [{ kind: "tutorial_migrate", screens: 3, chrome: { rail: "files", crumb: true } }],
+    // Six, and the tour BRANCHES: screen 1 is the Files pane (142:34981) whose
+    // three hero buttons each open something, and screens 2-3 are two of those
+    // branches — the + New dropdown (142:35805) and the Upload button — while
+    // the Migrate CTA goes straight to the import dialog at screens 4-6.
+    //
+    // So no single run visits all six, which is why this tour draws no
+    // progress pill (see ../migrate/index.js). The count is still the whole
+    // table: it is what the host slices `screen_count` from, and what `full`
+    // adds into its own total.
+    steps: [{ kind: "tutorial_migrate", screens: 6, chrome: { rail: "files", crumb: true } }],
   },
 
   // Contextual, on the first press of Meet in the rail (desk/index.js,
@@ -149,7 +153,7 @@ const TOURS = {
       { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet", crumb: true } },
       { kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } },
       { kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } },
-      { kind: "tutorial_migrate", screens: 3, chrome: { rail: "files", crumb: true } },
+      { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files", crumb: true } },
     ],
   },
 };

@@ -1,12 +1,49 @@
 @use "mixins/drumee";
 
 // The workspace Files pane the tour draws (tutorial__fp-*).
-// Figma 176:42043 / 142:35805: a filter bar over an empty-state hero, with the
-// Team Chat panel docked on the right.
 //
-// Keyed on ui.fig.group ("tutorial"), not on a step family — the migrate,
-// task, share and meet steps all sit on this pane, and a family-scoped
-// selector would silently stop applying for all but the first of them.
+// Figma 142:34981 ("Files") and 142:35805 ("open blank wp") — one 1600x1080
+// frame each, the second with the + New dropdown open. Every number here is
+// theirs at 1:1, which is the scale the rest of the tour is drawn at: the
+// shell's rail is the frame's 64px and its topbar the frame's 30+8, so at a
+// 1600x1080 viewport this pane is the frame.
+//
+// The frame's own layout, for the rules below to be read against:
+//
+//   142:35808  body row     rail 64 | 8 | main 992 | 8 | chat 512
+//   142:35810  main         1px hairline, radius 8, 12px padding
+//   142:35813  toolbar      964x35 — filter bar / search + New + toggles (452)
+//              gap          120 between the toolbar and the hero block
+//   142:35814  hero         964x558 — 120/80 insets, 32 rhythm, 48px buttons
+//   142:35821  chat         512 — 58 head, bottom-aligned rows, 69 composer
+//   142:38624  + New menu   161x164 at x436/y657, i.e. hung off the New button
+//
+// Keyed on ui.fig.group ("tutorial"), not on a step family — a family-scoped
+// selector would silently stop applying for all but the first step that used
+// the pane.
+//
+// PALETTE. The frame's hexes are taken as the theme-aware token that carries
+// them in light, so the tour still turns over in dark: Primary/40 #5950FF is
+// --primary-purple-40, Primary/50 #433CC5 is --primary-purple-50, Grey/20
+// #F2F2F7 is --normal-bg-90, Grey/90 #34343A is --normal-fg-800, Grey/80
+// #65656C is --normal-fg-20, Grey/70 #84848C is --normal-fg-50, and
+// Primary/100 #0B0A21 is --normal-fg (the frame says #000 for the inactive
+// filter chips; the difference is imperceptible and the token is the one the
+// rest of the tour uses).
+//
+// The one set left literal is `rgba(0, 0, 0, 0.05)` — the design's
+// "Overlay/light mode" at 5%, used for every hairline and every loading
+// placeholder. It is an OVERLAY, so it composites correctly over whichever
+// surface it lands on (#F2F2F2 over a white bubble, #E6E6EA over the grey
+// panel) where a solid token would have to pick one of them. Same treatment
+// the rail's own hairline already gets in skin/index.scss.
+
+// The gap above the hero, and the hero's own vertical inset — 120 each in the
+// frame. `min()` rather than a flat number for the same reason the rail's air
+// is `min(24px, 2.4vh)`: at the frame's 1080 both resolve to 120 exactly, and
+// they give way on a shorter window instead of pushing the buttons through the
+// bottom of the pane.
+$fp-air: min(120px, 11.2vh);
 
 .tutorial {
   &__fp-pane {
@@ -14,16 +51,30 @@
     height: 100%;
     min-height: 0;
     gap: 8px;
-    background: var(--normal-bg-90);
+    // 142:35805's root is `bg-white` with an 8px inset; the shell supplies the
+    // inset and this supplies the ground the 8px gap shows.
+    background: var(--normal-bg-elevated);
   }
 
   &__fp-main {
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
-    border-radius: 12px;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
     background: var(--normal-bg-elevated);
+    // The frame nests two identical 1px/radius-8 boxes here, which is a Figma
+    // artifact rather than a double border — one is drawn.
     overflow: hidden;
+  }
+
+  &__fp-canvas {
+    flex: 1 1 auto;
+    min-height: 0;
+    box-sizing: border-box;
+    padding: 12px;
+    gap: $fp-air;
   }
 
   // ── Toolbar ───────────────────────────────────────────────────────────────
@@ -32,212 +83,345 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 20px;
+    height: 35px;
   }
 
+  // The chips sit in a filled bar of their own — 4px around them, radius 8 —
+  // which is what the active chip's radius-6 pill is inset from. Not a row of
+  // bare chips, which is what this was.
   &__fp-filters {
+    flex: 0 1 auto;
+    min-width: 0;
+    box-sizing: border-box;
     align-items: center;
-    gap: 4px;
+    height: 100%;
+    padding: 4px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+    overflow: hidden;
   }
 
   &__fp-filter {
-    @include drumee.typo($size: 13px, $line: 1.2);
-    font-weight: 500;
-    color: var(--normal-fg-20);
-    padding: 7px 14px;
-    border-radius: 8px;
+    @include drumee.typo($size: 12px, $line: 1.4);
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 16px;
+    border-radius: 6px;
+    font-weight: 400;
+    color: var(--normal-fg);
+    white-space: nowrap;
+
+    // A Note is a flex box wrapping an inner `.note-content` div, so centring
+    // has to happen at both levels or the label sits at the top of its box.
+    .inner,
+    .note-content {
+      align-items: center;
+      justify-content: center;
+    }
 
     &[data-active="1"] {
-      font-weight: 600;
-      color: var(--primary-purple-50);
-      background: var(--primary-purple-10);
+      color: var(--gray-white, #fff);
+      background: var(--primary-purple-40);
     }
   }
 
+  // 452 as a group, and the search field is the only part of it that flexes.
+  &__fp-actions {
+    flex: 0 1 452px;
+    width: 452px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 11px;
+    height: 36px;
+  }
+
   &__fp-search {
-    flex: 0 1 300px;
+    flex: 1 1 auto;
+    min-width: 0;
     box-sizing: border-box;
     align-items: center;
     gap: 8px;
-    height: 34px;
-    padding: 0 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border-default);
+    height: 100%;
+    padding: 0 4px 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
   }
 
   &__fp-search-ico {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
     flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
-    color: var(--normal-fg-50);
+    color: var(--normal-fg);
   }
 
   &__fp-search-text {
-    @include drumee.typo($size: 13px, $line: 1.2);
+    @include drumee.typo($size: 14px, $line: 1.2);
+    flex: 1 1 auto;
+    min-width: 0;
     font-weight: 400;
-    color: var(--placeholder-fg);
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__fp-tools {
+    flex: 0 0 auto;
     align-items: center;
     gap: 8px;
+    height: 100%;
   }
 
   &__fp-new-btn {
+    box-sizing: border-box;
     align-items: center;
-    gap: 6px;
-    height: 34px;
-    padding: 0 14px;
-    border-radius: 8px;
-    background: var(--primary-purple-50);
+    justify-content: center;
+    gap: 8px;
+    height: 100%;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    // Primary/40 — the toolbar button. The hero's Migrate CTA is the DARKER
+    // Primary/50; the two are different buttons in the frame and were both
+    // painted 50 here.
+    background: var(--primary-purple-40);
   }
 
   &__fp-new-ico {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
     color: var(--gray-white, #fff);
   }
 
   &__fp-new-label {
-    @include drumee.typo($size: 13px, $line: 1.2);
+    @include drumee.typo($size: 14px, $line: 1.2);
     font-weight: 600;
     color: var(--gray-white, #fff);
+    white-space: nowrap;
   }
 
-  &__fp-view {
-    width: 30px;
-    height: 30px;
-    padding: 6px;
+  // One bordered group with three cells clipped to it, not three loose
+  // buttons — which is why the active cell's radius only shows on the outer
+  // corner it shares with the container.
+  &__fp-views {
+    flex: 0 0 auto;
     box-sizing: border-box;
-    border-radius: 8px;
+    align-items: stretch;
+    height: 100%;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    overflow: hidden;
+  }
 
-    svg { width: 100%; height: 100%; }
-    color: var(--normal-fg-50);
+  // 34, not 36: the frame's cells are square against the container's INNER
+  // height, and the 1px border takes one off each side. Pinned rather than
+  // `aspect-ratio`, which yields to content for a flex item whose content is
+  // an <svg> with no intrinsic size (see the rail tile in skin/index.scss).
+  &__fp-view {
+    width: 34px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
 
     &[data-active="1"] {
-      background: var(--primary-purple-50);
-
-      color: var(--gray-white, #fff);
+      background: var(--primary-purple-40);
     }
   }
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
-  // `position: relative` (no z-index) so the + New dropdown can hang off it
-  // without opening a stacking context the spotlight would then be trapped by.
-  &__fp-body {
-    position: relative;
-    flex: 1 1 auto;
-    min-height: 0;
-    justify-content: center;
-    padding: 0 56px;
-  }
+  &__fp-view-ico {
+    width: 17.5px;
+    height: 17.5px;
+    flex: 0 0 auto;
 
-  &__fp-hero {
-    // The frame breaks the headline after "files." That break is the design
-    // font's, not a hard one — pinning a width narrow enough to force it here
-    // would break the phrase somewhere else under a different font, and a
-    // hard-coded line break does not survive translation. Left to wrap.
-    max-width: 560px;
-    gap: 20px;
-  }
-
-  &__fp-hero-title {
-    @include drumee.typo($size: 46px, $line: 1.1);
-    font-weight: 700;
+    svg { width: 100%; height: 100%; }
     color: var(--normal-fg);
   }
 
+  &__fp-view[data-active="1"] &__fp-view-ico {
+    color: var(--gray-white, #fff);
+  }
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  // 142:35814: the block is TOP-aligned under the 120px gap, not centred in
+  // what is left of the pane — the frame leaves the space below it empty.
+  &__fp-hero {
+    flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    // DIVERGES FROM THE FRAME, on purpose as far as this file knows.
+    //
+    // 142:35814 is `px-[80px] py-[120px]`: the frame's title sits 120 below the
+    // hero block's own top edge (text 142:35815 at y120 inside a block at y167,
+    // i.e. y287 in the frame). `padding-top: 0` therefore lifts the whole hero
+    // 120px above where the frame puts it — the toolbar's 120px gap above is
+    // then the only air over the headline.
+    //
+    // Left at 0 because it has been set that way deliberately twice. If the
+    // frame's spacing is wanted back, this is the one line: `$fp-air`, matching
+    // padding-bottom. The geometry harness reports it as
+    // `fp-hero-title got [165,168,…] want [165,288,…]`.
+    //
+    // LONGHANDS, deliberately: as a shorthand this read `padding: $fp-air 80px`
+    // and came back rewritten to `padding: 0 80px $fp-air`, which changes three
+    // sides at once. Four longhands cannot be reordered into a different
+    // meaning, so a change to one side stays a change to one side.
+    padding-top: 0;
+    padding-right: 80px;
+    padding-bottom: $fp-air;
+    padding-left: 80px;
+    gap: 32px;
+  }
+
+  &__fp-hero-title {
+    width: 676px;
+    max-width: 100%;
+    gap: 0;
+  }
+
+  &__fp-hero-title-line {
+    @include drumee.typo($size: 64px, $line: 1.1);
+    font-weight: 600;
+    color: var(--normal-fg-800);
+    // A headline the design broke by hand keeps those breaks, so each line is
+    // held to one line. A locale that supplied no break renders as this
+    // element's only child and is free to wrap — otherwise it would run off
+    // under the chat panel.
+    white-space: nowrap;
+
+    &:only-child {
+      white-space: normal;
+    }
+  }
+
   &__fp-hero-desc {
-    @include drumee.typo($size: 15px, $line: 1.5);
+    @include drumee.typo($size: 18px, $line: 1.2);
+    width: 486px;
+    max-width: 100%;
     font-weight: 400;
-    color: var(--normal-fg-20);
+    color: var(--normal-fg-800);
   }
 
   &__fp-hero-actions {
     align-items: center;
     gap: 12px;
-    margin-top: 8px;
+    height: 48px;
+  }
 
-    // Scenery that answers a pointer. The pane is a mock and these three do
-    // nothing, but a row of buttons that stays perfectly still under the cursor
-    // reads as a picture rather than as the product — and this pane is the last
-    // thing the tour shows before handing the real one over.
-    > * {
+  // 250 / 115 / 135 in the frame, which is what 24px insets around these three
+  // labels come to — so they are sized by their content rather than pinned,
+  // and a translation cannot clip.
+  &__fp-cta,
+  &__fp-ghost {
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 24px;
+    border-radius: 12px;
+    transition: background-color 0.15s ease;
+
+    // The pointer follows what is actually BOUND, not what looks like a
+    // button.
+    //
+    // These were pointer-and-hover unconditionally, on the argument that a row
+    // of buttons which stays perfectly still under the cursor reads as a
+    // picture rather than as the product. That held while the whole pane was
+    // scenery. It no longer does: the migrate tour's first screen makes two of
+    // them real controls (`data-live`, stamped from the same flag that binds
+    // the click — see hero() in toolkit/files.js), and on the dialog screens
+    // the pane is behind a scrim with nothing bound at all. Offering a hand
+    // cursor there invites a click the tour drops on the floor.
+    //
+    // Gated on the stamp, which is the convention the sibling scenery already
+    // follows (`es-cta[data-live="1"]`, skin/empty-state.scss).
+    &[data-live="1"] {
       cursor: pointer;
-      transition: background-color 0.15s ease;
     }
   }
 
-  &__fp-cta:hover {
-    background: var(--primary-purple-40);
-  }
-
-  &__fp-ghost:hover {
-    background: var(--normal-bg-80);
-  }
-
   &__fp-cta {
-    align-items: center;
-    height: 44px;
-    padding: 0 22px;
-    border-radius: 10px;
+    // Primary/50 — darker than the toolbar's New.
     background: var(--primary-purple-50);
+
+    &[data-live="1"]:hover { background: var(--primary-purple-40); }
   }
 
   &__fp-cta-label {
-    @include drumee.typo($size: 14px, $line: 1.2);
+    @include drumee.typo($size: 16px, $line: 24px);
     font-weight: 600;
     color: var(--gray-white, #fff);
+    white-space: nowrap;
   }
 
+  // `position: relative` so the + New dropdown can hang off this button.
+  // Deliberately WITHOUT a z-index: that alone opens no stacking context, so
+  // the spotlight's promotion passes straight through on its way up
+  // (spotlight/index.js _light).
   &__fp-ghost {
-    align-items: center;
+    position: relative;
     gap: 8px;
-    height: 44px;
-    padding: 0 18px;
-    border-radius: 10px;
     background: var(--normal-bg-90);
+
+    &[data-live="1"]:hover { background: var(--normal-bg-80); }
   }
 
   &__fp-ghost-ico {
     width: 16px;
     height: 16px;
+    flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
     color: var(--normal-fg);
   }
 
   &__fp-ghost-label {
-    @include drumee.typo($size: 14px, $line: 1.2);
-    font-weight: 500;
+    @include drumee.typo($size: 16px, $line: 24px);
+    font-weight: 600;
     color: var(--normal-fg);
+    white-space: nowrap;
   }
 
   // ── + New dropdown ────────────────────────────────────────────────────────
-  // Anchored under the hero's New button, which is the second action in the
-  // row — measured off the frame rather than hung on the button, because the
-  // button is a flex sibling and has no positioned box of its own.
+  // 142:38624 is at x436/y657 and the New button's own box is x436/y605-653 —
+  // so the menu's left edge IS the button's left edge and its top is 4px under
+  // the button's bottom. Expressed against the button, that stays true at every
+  // width; measured off the hero it is two numbers that are right at 1600 and
+  // wrong everywhere else.
+  //
+  // No z-index, for the reason on `__fp-ghost` above: it is a positioned
+  // element and its only later sibling (the Upload button) is not, so it
+  // already paints over it.
   &__fp-new-menu {
     position: absolute;
-    left: 318px;
-    bottom: 168px;
+    top: calc(100% + 4px);
+    left: 0;
     width: 161px;
     box-sizing: border-box;
     padding: 12px;
     gap: 4px;
     border-radius: 12px;
     background: var(--normal-bg-elevated);
+    // Figma's drop shadow on this node: offset (0,1), radius 11, #00000021.
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    cursor: default;
   }
 
   &__fp-new-item {
+    box-sizing: border-box;
     align-items: center;
-    gap: 10px;
-    padding: 7px 10px;
+    gap: 4px;
+    height: 32px;
+    padding: 0 8px;
     border-radius: 8px;
 
     &[data-active="1"] {
@@ -248,119 +432,297 @@
   &__fp-new-item-ico {
     width: 16px;
     height: 16px;
+    flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
   }
 
+  // The create-row tints, per kind. The glyphs are authored
+  // `fill="currentColor"`, so the tint is the `color` on the icon — a row that
+  // inherited its label colour instead would draw a near-black outline where
+  // the design has a coloured one. Values are the product's own
+  // (`new-menu-icon-tints`, skin/mixins/drumee.scss), and the frame's style
+  // list names the same four: Primary/40, Primary/30, Signal/Success,
+  // Signal/Link share.
+  &__fp-new-item[data-kind="folder"] &__fp-new-item-ico { color: #5950ff; }
+  &__fp-new-item[data-kind="document"] &__fp-new-item-ico { color: #847eff; }
+  &__fp-new-item[data-kind="spreadsheet"] &__fp-new-item-ico { color: #54b684; }
+  &__fp-new-item[data-kind="presentation"] &__fp-new-item-ico { color: #ffa8dc; }
+
   &__fp-new-item-label {
-    @include drumee.typo($size: 13px, $line: 1.2);
-    font-weight: 500;
+    @include drumee.typo($size: 12px, $line: 1.2);
+    font-weight: 600;
     color: var(--normal-fg);
+    white-space: nowrap;
   }
 
   // ── Docked Team Chat ──────────────────────────────────────────────────────
   // Placeholder bars, not copy: the frames use the panel to say "there is a
-  // conversation here" without putting a second thing to read on a screen
-  // that is teaching files.
+  // conversation here" without putting a second thing to read on a screen that
+  // is teaching files.
   &__fp-chat {
-    flex: 0 0 505px;
-    width: 505px;
+    flex: 0 0 512px;
+    width: 512px;
+    min-width: 202px;
     box-sizing: border-box;
     min-height: 0;
-    border-radius: 12px;
-    background: var(--normal-bg-elevated);
+    border-left: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    background: var(--normal-bg-90);
     overflow: hidden;
   }
 
   &__fp-chat-head {
     flex: 0 0 auto;
+    box-sizing: border-box;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 20px;
+    height: 58px;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   &__fp-chat-title {
-    @include drumee.typo($size: 15px, $line: 1.2);
+    @include drumee.typo($size: 16px, $line: 1.2);
     font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__fp-chat-head-tools {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fp-chat-head-btn {
+    width: 25px;
+    height: 25px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  }
+
+  &__fp-chat-head-ico {
+    width: 21px;
+    height: 21px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
     color: var(--normal-fg);
   }
 
-  &__fp-chat-ico {
-    width: 16px;
-    height: 16px;
-
-    svg { width: 100%; height: 100%; }
-    color: var(--normal-fg-50);
-  }
-
+  // Bottom-aligned and clipped: the frame anchors the stream to the composer
+  // and lets it run off the top of the panel, which is what a conversation you
+  // have scrolled to the end of looks like. 32 = the frame's two nested 16px
+  // insets (142:35831 over 142:35832).
   &__fp-chat-body {
     flex: 1 1 auto;
     min-height: 0;
-    gap: 22px;
-    padding: 12px 20px;
+    box-sizing: border-box;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 32px;
     overflow: hidden;
   }
 
   &__fp-chat-row {
     width: 100%;
-    align-items: flex-start;
+    flex: 0 0 auto;
+
+    // Incoming hangs its avatar outside the message's own column, so the
+    // bubble is indented past it (142:35833 — a 24px ellipse, column at x32).
+    &[data-own="0"] {
+      align-items: flex-start;
+      gap: 8px;
+    }
 
     &[data-own="1"] {
       align-items: flex-end;
     }
   }
 
-  &__fp-chat-bubble {
-    width: 68%;
-    gap: 8px;
-    padding: 14px 16px;
-    border-radius: 12px;
-    background: var(--normal-bg-90);
+  &__fp-chat-avatar {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
   }
 
-  // The viewer's OWN messages, tinted by the workspace's type.
-  //
-  // --chat-bubble-* is the product's own set, one per area, and the tour's mock
-  // chat had picked `private` and kept it whatever workspace the user made. The
-  // host stamps the area on the root once one exists (see the `chrome` case in
-  // ../index.js), so the pane the tour finishes on is the colour the real one
-  // will be. `private` stays the default: it is what an internal workspace gets
-  // and what every tour without a created workspace has always shown.
-  &__fp-chat-row[data-own="1"] &__fp-chat-bubble {
-    background: var(--chat-bubble-private);
+  &__fp-chat-col {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 4px;
   }
 
-  &__fp-chat-line {
-    height: 8px;
-    border-radius: 4px;
+  // The sender's name, as a bar — 46x14 in every incoming row of the frame.
+  &__fp-chat-name {
+    width: 46px;
+    height: 14px;
+    flex: 0 0 auto;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &__fp-chat-stack {
     width: 100%;
-    background: rgba(255, 255, 255, 0.85);
-
-    &[data-short="1"] {
-      width: 45%;
-    }
   }
 
-  &__fp-chat-row:not([data-own="1"]) &__fp-chat-line {
+  &__fp-chat-row[data-own="1"] &__fp-chat-stack {
+    align-items: flex-end;
+  }
+
+  // 320 wide, 12px insets, and one corner square — the tail. Incoming squares
+  // the TOP-LEFT (rounded tr/br/bl in the frame), outgoing the top-right.
+  &__fp-chat-bubble {
+    width: 100%;
+    max-width: 320px;
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 8px;
+    border-radius: 16px 16px 16px 16px;
+    border-top-left-radius: 0;
     background: var(--normal-bg-elevated);
   }
 
+  &__fp-chat-row[data-own="1"] &__fp-chat-bubble {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 0;
+    // Signal/Restricted — the frame's own fill, and the panel it is in is
+    // named "[private]".
+    background: var(--signal-restricted, #d65f59);
+  }
+
+  &__fp-chat-lines {
+    width: 100%;
+    gap: 4px;
+  }
+
+  // 16 tall, square, and the last line of a paragraph is short — which is what
+  // stops the panel reading as a block of bars. The widths come from the frame
+  // as percentages of the bubble's 296px content box (toolkit/files.js).
+  &__fp-chat-line {
+    height: 16px;
+    flex: 0 0 auto;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &__fp-chat-row[data-own="1"] &__fp-chat-line {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &__fp-chat-stamp {
+    @include drumee.typo($size: 10px, $line: 1.4);
+    flex: 0 0 auto;
+    padding-top: 4px;
+    font-weight: 400;
+    color: var(--normal-fg-50);
+    white-space: nowrap;
+  }
+
+  // ── Composer ──────────────────────────────────────────────────────────────
   &__fp-chat-composer {
     flex: 0 0 auto;
+    box-sizing: border-box;
+    padding: 16px;
+  }
+
+  &__fp-chat-field {
+    flex: 1 1 auto;
+    min-width: 0;
+    box-sizing: border-box;
     align-items: center;
-    height: 44px;
-    margin: 12px 20px 20px;
-    padding: 0 16px;
-    border-radius: 10px;
-    background: var(--normal-bg-90);
+    gap: 8px;
+    height: 37px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-elevated);
+    overflow: hidden;
+  }
+
+  &__fp-chat-attach {
+    width: 15px;
+    height: 16px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
   }
 
   &__fp-chat-composer-text {
-    @include drumee.typo($size: 13px, $line: 1.2);
+    @include drumee.typo($size: 14px, $line: 1.2);
+    flex: 1 1 auto;
+    min-width: 0;
     font-weight: 400;
-    color: var(--placeholder-fg);
+    // Grey/80, the frame's own placeholder colour — not --placeholder-fg
+    // (#c7c7cc), which is two steps lighter and reads as disabled.
+    color: var(--normal-fg-20);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // The frame groups the smiley and send at the field's right edge, 12 apart,
+  // against the 8 between the paperclip and the placeholder.
+  &__fp-chat-field-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__fp-chat-smiley {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
+  }
+
+  &__fp-chat-send {
+    width: 14.25px;
+    height: 12px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--primary-purple-40);
   }
 }
+
+// ── Below the frame's own width ──────────────────────────────────────────────
+//
+// The tier attributes are on `.tutorial-main` itself, so these are top-level
+// rather than nested in the block above.
+//
+// COMPACT is the only tier that needs rules of its own. Between 1024 and 1366
+// the chat panel's fixed 512 leaves the hero less than its 676px column, and a
+// 64px headline held to one line per line would then be clipped by
+// `__fp-main`'s overflow. The panel gives way first — it is a placeholder, and
+// the hero is what the tour points at — and the headline steps down with it.
+//
+// NARROW and MOBILE are already handled: those tiers scale the whole pane
+// (`--pane-fit`, skin/index.scss), which keeps every proportion the frame
+// specifies instead of inventing a second composition.
+.tutorial-main[data-size="compact"] {
+  .tutorial__fp-chat { flex: 0 0 400px; width: 400px; }
+  .tutorial__fp-hero { padding-left: 56px; padding-right: 56px; }
+  .tutorial__fp-hero-title-line { font-size: 48px; }
+  .tutorial__fp-hero-desc { font-size: 16px; }
+}
+
+// SHORT: the 120px above the hero and its own 120px insets are the only
+// vertical air on this pane, and `min(120px, 11.2vh)` has already given some
+// of it back by here. Below 720 the buttons still need the rest of it.
+.tutorial-main[data-short="1"] {
+  .tutorial__fp-canvas { gap: 40px; }
+  .tutorial__fp-hero { padding-top: 40px; padding-bottom: 40px; }
+  .tutorial__fp-hero-title-line { font-size: 44px; }
+  .tutorial__fp-hero { gap: 20px; }
+}
+
 
 // ── The home empty state (tutorial__home-*) ───────────────────────────────
 //
@@ -722,9 +1084,18 @@ $home-preview-h: 475px;
 
 // ── The chat's own bubbles follow the workspace's type ───────────────────────
 //
-// `data-area` is stamped on the tour's root by the host the moment a workspace
-// exists. Top-level rather than nested, because the attribute is on the ROOT and
-// the bubbles are several levels inside the pane.
+// `data-area` would be stamped on the tour's root once a workspace exists.
+// Top-level rather than nested, because the attribute is on the ROOT and the
+// bubbles are several levels inside the pane.
+//
+// INERT TODAY: nothing in the tour writes `data-area` — the host method this
+// was paired with is gone (`grep -rn data-area modules/desk/tutorial` finds
+// only this rule). So the fill in force is the base one on
+// `__fp-chat-bubble`, which is the frame's Signal/Restricted. Left in place
+// rather than deleted because the intent is sound and the selector still
+// matches; note that reviving it would override the design's own value, since
+// --chat-bubble-private (#ffb4a6) is a lighter tint than the #d65f59 the
+// frames draw.
 @each $area in (personal, private, public, share) {
   .tutorial-main[data-area="#{$area}"] {
     .tutorial__fp-chat-row[data-own="1"] .tutorial__fp-chat-bubble {
