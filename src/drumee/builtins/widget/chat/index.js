@@ -2539,11 +2539,12 @@ class __widget_chat extends LetcBox {
    */
   _showAck(ackMsg) {
     if (!this.__wrapperAck) return;
-    this.__wrapperAck.feed(
-      require("@drumee/ui-core/letc/preset/ack")(this, ackMsg, {
-        height: this.$el.height(),
-      }),
-    );
+    // ./skeleton/ack, not ui-core's mascot preset — see that file for why the
+    // preset rendered as a large black blob in this widget. No `height` is
+    // passed either: it used to forward the whole panel's height, which the
+    // preset set inline on __main, so a toast meant for the 50px __ack-wrapper
+    // strip was stretched to the full panel and spilled out below it.
+    this.__wrapperAck.feed(require("./skeleton/ack")(this, ackMsg));
     const f = () => {
       this.__wrapperAck.feed("");
       return (this.__wrapperAck.el.dataset.state = _a.closed);

@@ -640,37 +640,48 @@
     width: calc(100% - 5px);
     z-index: 50001 !important;
 
+    // Compact "copied to clipboard" pill — see ../skeleton/ack for why the
+    // ui-core mascot preset was dropped. Everything is scoped to
+    // .preset-acknowledge and sizes/centres ITSELF: the __ack-wrapper strip
+    // above is shared with .preset-acknowledge-error below, so restyling the
+    // strip would move the error toast too. The old rules assumed the preset's
+    // absolutely-positioned mascot (`.icon` at left: 11px, text padded 25px to
+    // clear it); the skeleton is a plain Box.X row now, so icon and text just
+    // sit side by side.
     & .preset-acknowledge {
       &__main {
+        align-self: center; // centre the pill across the wrapper's width
+        margin-top: auto; // and settle it at the bottom of the 50px strip
         background-color: var(--dgc-chat-ack-bg);
         border-radius: var(--border-radius);
-        padding: 10px 40px;
+        box-shadow: var(--drumee-shadow-box);
+        padding: 0;
+        width: auto;
       }
 
       &__container {
-        height: 100%;
+        align-items: center;
+        gap: 8px;
+        height: auto;
         justify-content: center;
         margin: 0;
-        padding: 0;
-        width: 100%;
+        padding: 7px 14px;
+        width: auto;
 
         & .icon {
-          height: 18px;
-          left: 11px;
-          margin-left: -5px;
-          position: absolute;
-          width: 18px;
+          color: var(--primary-purple-50); // brand indigo; the sprite fills currentColor
+          flex-shrink: 0;
+          height: 16px;
+          width: 16px;
         }
 
         & .note-reader {
-          padding-left: 25px;
-          margin-top: auto;
-          margin-bottom: auto;
+          white-space: nowrap;
           @include drumee.typo(
-            $size: 14px,
-            $line: 14px,
-            $weight: 300,
-            $color: var(--tertiary-text-color)
+            $size: 13px,
+            $line: 16px,
+            $weight: 400,
+            $color: var(--default-text-color)
           );
         }
       }
