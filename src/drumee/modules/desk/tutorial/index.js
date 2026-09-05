@@ -1,44 +1,15 @@
 require('./skin');
 const Tours = require('libs/tutorial-tours');
 const { tour, flaggedIds, stepChrome } = require('./tours');
+const { REFLOW_MS, tierFor, screensFor, buildStepWidgets } = require('./host-kit');
 
 const SVC_OPT = { async: 1 };
 
-// ── Responsive tiers ─────────────────────────────────────────────────────────
-//
-// The tour draws a MOCK of the product, so it cannot simply reflow the way a
-// document would: at 1440 it has to read as the real desk, and at 390 it has to
-// read as something a thumb can drive. Four tiers rather than a continuum,
-// because each one is a different composition, not the same one squeezed.
-//
-// Stamped as an attribute on the widget root instead of being answered by media
-// queries in each skin, for three reasons: the skins are keyed on fig.family
-// and fig.group and would each need the same breakpoints repeated; the JS needs
-// the same answer the CSS has (the carousel's slide distance, below); and a
-// tour opened in a narrow WINDOW on a big screen is the same problem as a phone
-// — a media query on the device would miss it.
-//
-// Widths are the viewport's. The boundaries are where this particular layout
-// breaks, measured against the mock rather than borrowed from a framework:
-// below 1366 the empty-state hero and its carousel stop both fitting at full
-// size, below 1024 they stop sharing a row at all, and below 760 the rail and
-// the panes have to give up their fixed widths.
-const SIZE_TIERS = [
-  { id: 'mobile', max: 759 },
-  { id: 'narrow', max: 1023 },
-  { id: 'compact', max: 1365 },
-  { id: 'wide', max: Infinity },
-];
-
-// Height is its own axis, and the one that aspect ratio actually moves: a 21:9
-// window and a rotated phone are both SHORT, and shortness is what pushes a
-// callout off the bottom of the tour. Kept separate from the width tier so the
-// two compose instead of multiplying into eight cases.
-const SHORT_HEIGHT = 720;
-
-// Resize settles before anything is re-measured. Long enough to sit out a drag
-// of the window edge, short enough that a rotation feels immediate.
-const REFLOW_MS = 160;
+// The size tiers, the short-height threshold and the resize debounce moved to
+// ./host-kit, which is where both hosts read them from — the desk host measures
+// the viewport, the in-window host measures its own overlay, and the numbers
+// they measure against are the same. The reasoning for each boundary lives
+// there, next to the values.
 
 // How long the confetti waits for the new workspace to actually appear, and how
 // often it looks.
@@ -121,10 +92,7 @@ class tutorial_main extends LetcBox {
    * @returns {Number}
    */
   _screensFor(step) {
-    const declared = ~~step.screens || 1;
-    const live = ~~step.live_screens;
-    if (!live) return declared;
-    return this._canCreate() ? declared : Math.max(1, declared - live);
+    return screensFor(step, this._canCreate());
   }
 
   /**
@@ -148,76 +116,7 @@ class tutorial_main extends LetcBox {
    * @returns {Array}
    */
   _buildWidgets(t) {
-    const steps = t.steps || [];
-    // Progress counts every screen in the tour, so the host has to know the
-    // total and where each step starts — a step widget can see its own screens
-    // and nothing else. Computed once here rather than derived per screen.
-    //
-    // Every screen a step RUNS is a screen the badge counts — including the
-    // create form and the invite card, screens 7 and 8 of an eight-screen tour.
-    // Those were briefly left out on the argument that a form is not a step,
-    // which is true of the form and false of the user, who is still being led
-    // somewhere and wants to know how far along that is. (There was also a
-    // ninth, uncounted finish screen; it is gone — the tour now ends by opening
-    // the workspace it made rather than by announcing that it did.)
-    const runs = (s) => this._screensFor(s);
-    const total = steps.reduce((n, s) => n + runs(s), 0);
-    const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + runs(s)), 0);
-
-    return steps.map((step, i) => {
-      const widget = {
-        kind: step.kind,
-        // NO `service` here, deliberately. ui-core binds an onclick to every
-        // widget that is not `active: 0` and dispatches its own `service` to
-        // its uiHandler (letc.js __handleClick -> triggerHandlers), and the
-        // step widget's element is the whole pane. With `service: 'next-step'`
-        // on it, every part of a step's scenery was a button that advanced the
-        // WHOLE STEP: one stray click on the chat pane at screen 2 of 5 jumped
-        // the tour to the meeting step, so screens 3, 4 and 5 — steps 9, 10
-        // and 11 of the full tour — never appeared.
-        //
-        // The inner scenery is all `active: 0`, which means it has no click
-        // handler of its own and the click bubbles up to here, so making the
-        // pane inert is not enough on its own; the wrapper must not name a
-        // service. `active: 0` is not the fix either — it would gag
-        // triggerHandlers (letc.js:843) and with it the step's own handoff.
-        //
-        // The handoff is explicit instead: each step's last screen calls
-        // triggerHandlers({ service: 'next-step' }). A stray click now reaches
-        // onUiEvent with no service at all and falls through to `default`.
-        uiHandler: [this],
-        screen_count: runs(step),
-        screen_offset: offsets[i],
-        tour_screens: total,
-        is_first: i === 0,
-        is_last: i === steps.length - 1,
-        // What the tour is ABOUT, when the trigger knew and said so (fire()'s
-        // third argument). Only the share step reads these today — its panel
-        // header names the thing being shared — but they are stamped on every
-        // step rather than special-cased, because a step is not supposed to
-        // know which tour it is in.
-        //
-        //   subject       which SHAPE the row takes: file, folder, workspace
-        //   subject_data  the item's raw fields, when a trigger had them —
-        //                 {name, filetype, ext, filesize, ctime, mtime, area}.
-        //                 Absent for a `?tutorial=share` preview and inside
-        //                 `full`, where there is no item; the panel falls back
-        //                 to the frames' placeholder copy.
-        subject: this.mget('subject') || null,
-        subject_data: this.mget('subject_data') || null,
-        // Whether this run of the tour owes the user a celebration.
-        //
-        // Set only by the workspace tour's hand-off (_chainMigrateTour), which
-        // reaches a step through exactly the same road `subject` does: fire()'s
-        // `opt` -> the broadcast -> _showTutorial -> a model attribute here.
-        // The migrate tour raised from the topbar's + New menu carries nothing,
-        // and throws no confetti — there is nothing to celebrate on an ordinary
-        // Tuesday.
-        celebrate: this.mget('celebrate') || null,
-      };
-      return widget;
-    });
+    return buildStepWidgets(this, t, { canCreate: this._canCreate() });
   }
 
   onDomRefresh() {
@@ -344,10 +243,9 @@ class tutorial_main extends LetcBox {
     this.el.dataset.tour = this._tour.id;
     const w = window.innerWidth || 0;
     const h = window.innerHeight || 0;
-    const tier = SIZE_TIERS.find((t) => w <= t.max) || SIZE_TIERS[SIZE_TIERS.length - 1];
-    const short = h > 0 && h < SHORT_HEIGHT ? '1' : '0';
-    const changed = this.el.dataset.size !== tier.id || this.el.dataset.short !== short;
-    this.el.dataset.size = tier.id;
+    const { size, short } = tierFor(w, h);
+    const changed = this.el.dataset.size !== size || this.el.dataset.short !== short;
+    this.el.dataset.size = size;
     this.el.dataset.short = short;
     return changed;
   }
