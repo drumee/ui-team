@@ -665,7 +665,17 @@
       &__main {
         align-self: center; // centre the pill across the wrapper's width
         margin-bottom: auto; // and hug the top of the 50px strip
-        background-color: var(--dgc-chat-ack-bg);
+        // --dgc-chat-ack-bg is declared ONLY in skin/vars/bigchat.scss, which
+        // ships with the bigchat chunk. In the desk's workspace chat panel that
+        // stylesheet is never loaded: walking document.styleSheets there, the
+        // token appears in the two rules that CONSUME it and in none that
+        // declare it. So the var was undefined, the declaration invalid, and
+        // the pill fell back to TRANSPARENT — unreadable whenever it landed on
+        // message text. (Not a `.window` ancestor problem: the panel does have
+        // one; the declaring stylesheet simply isn't there.) --default-bg is
+        // :root-scoped and always loaded, and the token still wins where it is
+        // defined.
+        background-color: var(--dgc-chat-ack-bg, var(--default-bg));
         border-radius: var(--border-radius);
         box-shadow: var(--drumee-shadow-box);
         padding: 0;
