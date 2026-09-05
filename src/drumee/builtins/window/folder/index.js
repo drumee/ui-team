@@ -44,10 +44,11 @@ const WS_SEARCH_FETCH_MAX = 100;
 
 // `?window_tutorial=<id>` is answered by ONE window — the first to open after
 // the URL was typed. Several folder windows can be on screen, and each of them
-// reads the same module args; without this latch they would all try, and the
-// second onwards would be refused by single-flight anyway, noisily and for the
-// wrong reason. Module-scoped rather than per-window, because "already answered"
-// is a fact about the URL, not about a window.
+// reads the same module args; a preview bypasses Tours.claim entirely (see
+// showTutorial), so there is no single-flight backstop on this path — without
+// this latch every open window would mount its own duplicate overlay in the
+// same tick, not be turned away. Module-scoped rather than per-window, because
+// "already answered" is a fact about the URL, not about a window.
 let _previewConsumed = false;
 
 class __window_folder extends mfsInteract {
@@ -624,6 +625,12 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  // These three sit here, next to the onBeforeDestroy that tears the overlay
+  // down, rather than beside _openChatExportModal where the analogous
+  // wrapper-overlay methods live — the tour's teardown is reached from
+  // onBeforeDestroy as well as from the tour's own destroy, so keeping both
+  // ends of that handshake close together matters more here than grouping by
+  // "another appended overlay".
   /**
    * Run a tour over this window.
    *
@@ -912,7 +919,16 @@ class __window_folder extends mfsInteract {
     }
     if (!req) return;
     _previewConsumed = true;
-    this.showTutorial(req.tour, req.opt);
+    const started = this.showTutorial(req.tour, req.opt);
+    // showTutorial returns false when it refuses outright, or a promise
+    // resolving false when the window went away before the wrapper mounted.
+    // Either way this URL was never actually answered, so give the latch
+    // back — otherwise ?window_tutorial= is inert for the rest of the page
+    // session having shown nothing, contradicting the "same URL works twice"
+    // promise above.
+    Promise.resolve(started).then((ok) => {
+      if (!ok) _previewConsumed = false;
+    });
   }
 
   // A folder window opens FULL-FRAME — the whole desk body, the same frame a

@@ -29,9 +29,20 @@ const skin = readFileSync(SKIN, "utf8");
 
 // The showTutorial() body, so assertions cannot accidentally match one of the
 // other twenty overlay openers in this 6000-line file.
+//
+// Anchored on the definition's signature, not the bare name: `showTutorial(`
+// alone also matches every CALL site (_maybeRunPreviewTour, the share
+// trigger), and whichever of those happens to sit first in the file would be
+// picked up instead of the definition. Matching `showTutorial(tour, opt`
+// isolates the definition regardless of where in the class it lives, so the
+// guard-before-claim ordering below is asserted against the right text no
+// matter how the three tutorial methods get reordered later.
 function showTutorialBody() {
-  const start = src.indexOf("showTutorial(");
-  assert.ok(start > 0, "showTutorial() not found in folder/index.js");
+  const start = src.indexOf("showTutorial(tour, opt");
+  assert.ok(
+    start > 0,
+    "showTutorial(tour, opt = {}) definition not found in folder/index.js",
+  );
   // Far enough to cover the method and nothing like a whole neighbour.
   return src.slice(start, start + 1600);
 }
