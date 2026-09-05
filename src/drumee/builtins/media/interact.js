@@ -903,6 +903,12 @@ class __media_interact extends media_core {
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
         const launchFloating = () => Wm.launch(item, { explicit: 1, singleton: 1 });
+        // Opt-in, and only players pass it (player/widget/share): they are
+        // windows stacked above the host folder window, so the drawer below
+        // would render underneath them and read as a dead click. Everything
+        // else keeps the drawer. The tour above still fires either way — it
+        // is about sharing, not about how the panel is presented.
+        if (args.floating) return launchFloating();
         // Figma: render the panel as a right drawer INSIDE the host workspace
         // window (the same dialog-wrapper mechanism as folder settings) so it
         // reads as part of the folder, not a detached floating window. Walk up to
