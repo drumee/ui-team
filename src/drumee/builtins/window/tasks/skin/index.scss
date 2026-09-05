@@ -7058,6 +7058,17 @@ $theme-colors: (
     );
   }
 
+  // Same block inside the CREATE modal, where the children are only queued:
+  // there is no task to open yet, so the row must not advertise a click. Its ✕
+  // and its checkbox stay interactive (they carry their own cursor).
+  &__create-modal &__subtask-row {
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+
   // ── Gantt: expanded child rows + chevron ────────────────────────
   &__gantt-chevron {
     cursor: pointer;

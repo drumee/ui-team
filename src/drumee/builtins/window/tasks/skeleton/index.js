@@ -1118,7 +1118,7 @@ const make = function (ui) {
           className: `${pfx}__subtasks`,
           sys_pn: "subtask-rows",
           partHandler: ui,
-          kids: buildSubtaskRowsContent(ui, detail.id),
+          kids: buildSubtaskRowsContent(ui, detail.id, "detail"),
         });
 
     const attachmentsList = Skeletons.Box.Y({
@@ -1763,6 +1763,18 @@ const make = function (ui) {
                   sys_pn: "create-due-section",
                   partHandler: ui,
                   kids: buildDueSectionContent(ui, "create"),
+                }),
+                // "Child task items", same block the detail panel carries —
+                // here it queues children on the draft instead of posting them,
+                // and _commitTask creates them once the parent has an id. Its
+                // own re-feedable part for the same reason as the detail one:
+                // adding a child must not rebuild the title / description
+                // editors the user is typing into.
+                Skeletons.Box.Y({
+                  className: `${pfx}__subtasks`,
+                  sys_pn: "create-subtask-rows",
+                  partHandler: ui,
+                  kids: buildSubtaskRowsContent(ui, null, "create"),
                 }),
                 // Pinned to the column foot (see skin __create-actions) so it
                 // lines up with the file search/upload bar in the left column.
@@ -3725,30 +3737,85 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
 }
 
 /**
+ * Service names for the child-item block, per scope.
+ *
+ * "detail" edits children that already exist on the server; "create" edits the
+ * queue held on the create modal's draft, which is only posted once the PARENT
+ * has an id. Same markup, same skin, different verbs — hence one table rather
+ * than a second copy of the builder.
+ */
+const SUBTASK_SERVICES = {
+  detail: {
+    add: "add-subtask",
+    cancel: "cancel-subtask",
+    commit: "create-subtask",
+    menu: "toggle-subtask-menu",
+    priority: "set-subtask-priority",
+    status: "set-subtask-status",
+    toggleDone: "toggle-subtask-complete",
+    open: "open-detail",
+    remove: "remove-task",
+    titleField: "subtask-title",
+  },
+  create: {
+    add: "add-create-subtask",
+    cancel: "cancel-create-subtask",
+    commit: "commit-create-subtask",
+    menu: "toggle-create-subtask-menu",
+    priority: "set-create-subtask-priority",
+    status: "set-create-subtask-status",
+    toggleDone: "toggle-create-subtask-done",
+    // A queued child has no id yet, so there is nothing to open.
+    open: null,
+    remove: "remove-create-subtask",
+    titleField: "create-subtask-title",
+  },
+};
+
+/**
  * "Child task items" block — Figma 58471:222398 / 58471:222650.
  *
- * Lives in the detail panel's RIGHT sidebar, under Due date (that is where the
- * design puts it; the earlier written spec had said between Description and
- * Attachments). Header, then the existing children, then the inline creator
- * card when one is open.
+ * Lives in the RIGHT sidebar, under Due date (that is where the design puts it;
+ * the earlier written spec had said between Description and Attachments).
+ * Header, then the existing children, then the inline creator card when one is
+ * open.
  *
- * The whole block is one re-feedable part (sys_pn "subtask-rows") for the same
- * reason attachments and comments are: a full _render() steals focus from the
- * title/description editors and drops unsaved edits. Re-feeding THIS block is
- * safe even mid-typing, because the card's title Entry is seeded from the draft
- * and kept in sync by the `task-input-changed` watch.
+ * Two scopes share it:
+ *  - "detail" (default) — the children of the open task, straight from the
+ *    loaded rows; every control posts to the server.
+ *  - "create" — the children QUEUED on the create modal's draft. They do not
+ *    exist server-side yet: _commitTask posts them, with the new parent's id,
+ *    immediately after the parent itself.
+ *
+ * Either way the whole block is one re-feedable part (sys_pn "subtask-rows" /
+ * "create-subtask-rows") for the same reason attachments and comments are: a
+ * full _render() steals focus from the title/description editors and drops
+ * unsaved edits. Re-feeding THIS block is safe even mid-typing, because the
+ * card's title Entry is seeded from the draft and kept in sync by the
+ * `task-input-changed` watch.
  */
-function buildSubtaskRowsContent(ui, parentId) {
+function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
   const pfx = ui.fig.family;
-  const parent = ui.getTaskById(parentId);
-  const subs = ui.getSubtasks(parentId);
-  const draft = ui.getSubtaskDraft();
+  const isCreate = scope === "create";
+  const svc = SUBTASK_SERVICES[isCreate ? "create" : "detail"];
+  const parent = isCreate ? null : ui.getTaskById(parentId);
+  const subs = isCreate ? ui.getPendingSubtasks() : ui.getSubtasks(parentId);
+  const draft = ui.getSubtaskDraft(scope);
   const priorities = ui.getPriorities() || [];
   const cols = ui.getColumns() || [];
-  const { done, total } = ui.getSubtaskCount(parent || { id: parentId });
+  // Queued rows are not on the board yet, so the server counters do not know
+  // about them — count them here off the same done-status test the board uses.
+  const { done, total } = isCreate
+    ? {
+        done: subs.filter((t) => ui.isDoneStatus(t.status)).length,
+        total: subs.length,
+      }
+    : ui.getSubtaskCount(parent || { id: parentId });
   // One level of nesting: a child never offers a child of its own. Enforced
   // server-side too (SUBTASK_NESTING_DENIED); this only stops it being offered.
-  const canAdd = mayCreateTask(ui) && !ui.isSubtask(parent);
+  // A task being created is by definition top-level, so create scope only has
+  // to check the write privilege.
+  const canAdd = mayCreateTask(ui) && (isCreate || !ui.isSubtask(parent));
 
   const metaOf = (list, key) => list.find((x) => x.key === key) || null;
 
@@ -3786,7 +3853,7 @@ function buildSubtaskRowsContent(ui, parentId) {
             // circle. app-add is the bare 12px plus stroke.
             ico: "app-add",
             bubble: 0,
-            service: "add-subtask",
+            service: svc.add,
             uiHandler: [ui],
             // See gantt.js: the bare string form renders the tooltip as
             // inline text inside the button and hides the icon.
@@ -3810,8 +3877,10 @@ function buildSubtaskRowsContent(ui, parentId) {
     return Skeletons.Box.X({
       className: `${pfx}__subtask-row`,
       bubble: 0,
-      service: "open-detail",
-      uiHandler: [ui],
+      // Queued rows have nowhere to open to, so create scope leaves the row
+      // itself inert — its ✕ and its checkbox are the only controls.
+      service: svc.open,
+      uiHandler: svc.open ? [ui] : null,
       taskId: t.id,
       attrOpt: { "data-done": isDone ? "1" : "0" },
       kids: [
@@ -3819,7 +3888,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           className: `${pfx}__subtask-check`,
           ico: "app-check",
           bubble: 0,
-          service: "toggle-subtask-complete",
+          service: svc.toggleDone,
           uiHandler: [ui],
           taskId: t.id,
           attrOpt: { "data-done": isDone ? "1" : "0" },
@@ -3852,7 +3921,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           className: `${pfx}__subtask-del`,
           ico: "cross",
           bubble: 0,
-          service: "remove-task",
+          service: svc.remove,
           uiHandler: [ui],
           taskId: t.id,
         }),
@@ -3874,7 +3943,7 @@ function buildSubtaskRowsContent(ui, parentId) {
         "data-open": draft && draft.menu === kind ? "1" : "0",
       },
       bubble: 0,
-      service: kind === "date" ? null : "toggle-subtask-menu",
+      service: kind === "date" ? null : svc.menu,
       uiHandler: kind === "date" ? null : [ui],
       menuKind: kind,
       kids: [
@@ -3900,7 +3969,14 @@ function buildSubtaskRowsContent(ui, parentId) {
           ? Skeletons.Element({
               tagName: "input",
               className: `${pfx}__subtask-date-input`,
-              attrOpt: { type: "date", value: (draft && draft.due_date) || "" },
+              // data-scope: the change listener is delegated on the panel root
+              // (the card is rebuilt on every re-feed), so it has to read off
+              // the node which of the two drafts it is editing.
+              attrOpt: {
+                type: "date",
+                value: (draft && draft.due_date) || "",
+                "data-scope": scope,
+              },
             })
           : null,
         // The dropdown is a child of the chip that opened it, not of the card:
@@ -3936,7 +4012,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           className: `${pfx}__subtask-menu-item`,
           attrOpt: { "data-selected": i.selected ? "1" : "0" },
           bubble: 0,
-          service: isPriority ? "set-subtask-priority" : "set-subtask-status",
+          service: isPriority ? svc.priority : svc.status,
           uiHandler: [ui],
           taskPriority: i.key,
           taskStatus: i.key,
@@ -3967,7 +4043,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           kids: [
             Skeletons.Entry({
               className: `${pfx}__subtask-card-title`,
-              name: "subtask-title",
+              name: svc.titleField,
               // Explicit "" matters: the entry template interpolates
               // value="${m.value}" straight from model.toJSON(), so an omitted
               // value renders the literal string "undefined" in the field.
@@ -3977,7 +4053,7 @@ function buildSubtaskRowsContent(ui, parentId) {
               watch: "task-input-changed",
               placeholder: LOCALE.SUBTASK_PLACEHOLDER,
               mode: "commit",
-              service: "create-subtask",
+              service: svc.commit,
               bubble: 0,
               uiHandler: [ui],
             }),
@@ -3985,7 +4061,7 @@ function buildSubtaskRowsContent(ui, parentId) {
               className: `${pfx}__subtask-card-close`,
               ico: "cross",
               bubble: 0,
-              service: "cancel-subtask",
+              service: svc.cancel,
               uiHandler: [ui],
             }),
           ],
@@ -4025,9 +4101,12 @@ function buildSubtaskRowsContent(ui, parentId) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__subtask-create-submit`,
-              content: LOCALE.CREATE,
+              // "Add" in create scope: nothing is created until the parent is,
+              // so a "Create" button that only queues a row would lie about
+              // what pressing it does.
+              content: isCreate ? LOCALE.ADD : LOCALE.CREATE,
               bubble: 0,
-              service: "create-subtask",
+              service: svc.commit,
               uiHandler: [ui],
             }),
           ],

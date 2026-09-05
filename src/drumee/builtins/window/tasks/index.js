@@ -189,6 +189,11 @@ class __tasks_panel extends LetcBox {
     // Inline subtask creator in the detail panel. null = the "+ Add subtask"
     // row is showing; an object = the creator is open on that draft.
     this._subtaskDraft = null;
+    // Same creator, but in the create modal: it queues children onto
+    // _createDefaults.subtasks instead of posting them, because the parent has
+    // no id until Create is pressed. Separate field so the two overlays cannot
+    // clobber each other's half-typed row.
+    this._createSubtaskDraft = null;
     this._attachments = {};
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings. Shared across
@@ -1279,7 +1284,11 @@ class __tasks_panel extends LetcBox {
           assignees: [],
           labels: [],
           pending_files: [],
+          // Children queued before the parent exists. Posted with
+          // parent_task_id right after the parent is created (_commitTask).
+          subtasks: [],
         };
+        this._createSubtaskDraft = null;
         // Force a fresh fetch on first attachment pick so name-collision
         // preview reflects whatever the folder body holds right now.
         this._folderFilenames = null;
@@ -1303,6 +1312,7 @@ class __tasks_panel extends LetcBox {
       case "cancel-add":
         this._creating = false;
         this._createDefaults = null;
+        this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
         this._dismissOverlayNow("create-backdrop");
@@ -1545,6 +1555,47 @@ class __tasks_panel extends LetcBox {
         return;
       }
 
+      // ── Subtasks queued on the create modal ─────────────────────
+      // Same block, same skin, but the parent does not exist yet: these edit
+      // _createDefaults.subtasks, and _commitTask posts them once it has an id.
+      case "add-create-subtask":
+        return this._openCreateSubtaskDraft();
+
+      case "cancel-create-subtask":
+        this._createSubtaskDraft = null;
+        return this._refreshCreateSubtaskSection();
+
+      case "commit-create-subtask":
+        return this._queueCreateSubtask();
+
+      case "remove-create-subtask":
+        return this._removeCreateSubtask(trigger);
+
+      case "toggle-create-subtask-done":
+        return this._toggleCreateSubtaskDone(trigger);
+
+      case "toggle-create-subtask-menu": {
+        if (!this._createSubtaskDraft) return;
+        const kind = trigger.mget("menuKind");
+        this._createSubtaskDraft.menu =
+          this._createSubtaskDraft.menu === kind ? null : kind;
+        return this._refreshCreateSubtaskSection();
+      }
+
+      case "set-create-subtask-priority": {
+        if (!this._createSubtaskDraft) return;
+        this._createSubtaskDraft.priority = trigger.mget("taskPriority");
+        this._createSubtaskDraft.menu = null;
+        return this._refreshCreateSubtaskSection();
+      }
+
+      case "set-create-subtask-status": {
+        if (!this._createSubtaskDraft) return;
+        this._createSubtaskDraft.status = trigger.mget("taskStatus");
+        this._createSubtaskDraft.menu = null;
+        return this._refreshCreateSubtaskSection();
+      }
+
       case "commit-description":
       case "commit-due-date":
         // Drafts stay in sync via the `task-input-changed` watch.
@@ -1730,7 +1781,11 @@ class __tasks_panel extends LetcBox {
           assignees: [],
           labels: [],
           pending_files: [],
+          // Children queued before the parent exists. Posted with
+          // parent_task_id right after the parent is created (_commitTask).
+          subtasks: [],
         };
+        this._createSubtaskDraft = null;
         this._folderFilenames = null;
         this._resetFileSearch();
         return this._render();
@@ -2228,10 +2283,15 @@ class __tasks_panel extends LetcBox {
       if (!t || !t.matches || !t.matches(`.${this.fig.family}__subtask-date-input`)) {
         return;
       }
-      if (!this._subtaskDraft) return;
+      // data-scope says which of the two creators this input belongs to (the
+      // create modal's or the detail panel's) — they use the same class.
+      const isCreate = t.getAttribute("data-scope") === "create";
+      const draft = isCreate ? this._createSubtaskDraft : this._subtaskDraft;
+      if (!draft) return;
       // "" when the user clears the field — a child with no due date is valid.
-      this._subtaskDraft.due_date = t.value || "";
-      this._refreshSubtaskSection();
+      draft.due_date = t.value || "";
+      if (isCreate) this._refreshCreateSubtaskSection();
+      else this._refreshSubtaskSection();
     });
   }
 
@@ -2526,6 +2586,12 @@ class __tasks_panel extends LetcBox {
     if (this._detailId && this._detailDraft) drafts.push(this._detailDraft);
     if (this._creating && this._createDefaults)
       drafts.push(this._createDefaults);
+    // The children queued in the create modal carry a status of their own, so
+    // they can be stranded on the dead column independently of their parent.
+    if (this._creating) {
+      drafts.push(...this.getPendingSubtasks());
+      if (this._createSubtaskDraft) drafts.push(this._createSubtaskDraft);
+    }
     const affected = drafts.filter((d) => String(d.status) === String(key));
     if (!affected.length) return;
 
@@ -2554,6 +2620,9 @@ class __tasks_panel extends LetcBox {
     affected.forEach((d) => {
       d.status = target.key;
     });
+    // Repointed rows are drawn from the draft, so the queued list has to be
+    // redrawn for the new column to show on the chips.
+    if (this._creating) this._refreshCreateSubtaskSection();
     const where = this._plainText(target.name || target.key);
     this._notifyPeerChange(
       who
@@ -3000,6 +3069,14 @@ class __tasks_panel extends LetcBox {
       if (this._subtaskDraft) this._subtaskDraft.title = value;
       return;
     }
+    // Same, for the creator inside the create modal — its draft is a different
+    // field, and the generic tail below would write the child's title onto the
+    // PARENT draft (`_createDefaults.title`), silently renaming the task being
+    // created.
+    if (name === "create-subtask-title") {
+      if (this._createSubtaskDraft) this._createSubtaskDraft.title = value;
+      return;
+    }
 
     const inCreate = this.el.querySelector(".tasks-panel__create-modal");
     const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
@@ -3032,6 +3109,16 @@ class __tasks_panel extends LetcBox {
     const labels = Array.isArray(draft.labels) ? draft.labels.slice() : [];
     const pendingFiles = Array.isArray(draft.pending_files)
       ? draft.pending_files.slice()
+      : [];
+    // A child left half-typed in the creator card counts as one the user meant
+    // to create — fold it in before the snapshot, or pressing Create discards
+    // it without a word.
+    this._flushCreateSubtaskDraft();
+    // Children queued in the modal. Snapshotted before the await, like the
+    // labels and files above, so the teardown below cannot empty the list out
+    // from under the loop that posts them.
+    const queuedSubtasks = Array.isArray(draft.subtasks)
+      ? draft.subtasks.slice()
       : [];
 
     try {
@@ -3089,15 +3176,28 @@ class __tasks_panel extends LetcBox {
           ),
           ...pendingFiles.map(linkPending),
         ]);
+        // Children last, and NOT inside the Promise.all above: they are
+        // ordered (the loop is sequential so they land as entered), and unlike
+        // a label or a file link a failure here leaves a task the user meant to
+        // have children without them — worth saying so rather than swallowing.
+        // The parent exists either way, so this can never fail the create.
+        const subtasksFailed = queuedSubtasks.length
+          ? await this._createQueuedSubtasks(row.id, queuedSubtasks)
+          : 0;
         // Tear down the form only after a successful create — postService
         // resolves undefined (or an error payload with no id) on failure, so
         // the teardown must live INSIDE this success branch or a failed
         // create silently closes the modal and discards the user's draft.
         this._creating = false;
         this._createDefaults = null;
+        this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
         await this._loadTasks();
+        // After the reload, so the board already shows the children that DID
+        // make it and the alert reads as a partial result rather than a total
+        // failure.
+        if (subtasksFailed) Wm.alert(LOCALE.ERROR_NETWORK);
       } else {
         Wm.alert(LOCALE.ERROR_NETWORK);
       }
@@ -7599,6 +7699,15 @@ class __tasks_panel extends LetcBox {
         ".tasks-panel__create-modal .tasks-panel__desc-editor",
         "create",
       );
+      // Same 200ms gap on the child-item creator's title: it is rebuilt by
+      // every full render (a peer's WS event, say), and without this it blinks
+      // empty before ui-core re-seeds it from the skeleton.
+      if (this._createSubtaskDraft) {
+        setVal(
+          ".tasks-panel__create-modal .tasks-panel__subtask-card-title input",
+          this._createSubtaskDraft.title,
+        );
+      }
     }
     if (this._detailDraft) {
       setVal(
@@ -7609,6 +7718,12 @@ class __tasks_panel extends LetcBox {
         ".tasks-panel__detail-panel .tasks-panel__desc-editor",
         "detail",
       );
+      if (this._subtaskDraft) {
+        setVal(
+          ".tasks-panel__detail-panel .tasks-panel__subtask-card-title input",
+          this._subtaskDraft.title,
+        );
+      }
       initEditor(
         ".tasks-panel__detail-panel .tasks-panel__comment-input",
         "comment",
@@ -8335,8 +8450,25 @@ class __tasks_panel extends LetcBox {
     return this._subtasksOpen.has(id);
   }
 
-  getSubtaskDraft() {
-    return this._subtaskDraft;
+  /**
+   * The open child-item creator card, per scope.
+   *
+   * "detail" is the one on an existing task (posts straight away); "create" is
+   * the one in the create modal, which only queues onto the parent's draft.
+   * Two fields rather than one because the create modal and the detail panel
+   * are independent overlays — sharing a draft would let one wipe the other's.
+   */
+  getSubtaskDraft(scope = "detail") {
+    return scope === "create" ? this._createSubtaskDraft : this._subtaskDraft;
+  }
+
+  /**
+   * Children queued on the create modal's draft — rows that do not exist
+   * server-side yet. Posted, with the new parent's id, by _commitTask.
+   */
+  getPendingSubtasks() {
+    const draft = this._createDefaults;
+    return (draft && Array.isArray(draft.subtasks) && draft.subtasks) || [];
   }
 
   // List / Gantt chevron. Local-only toggle, but it changes how many rows the
@@ -8397,6 +8529,184 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  // ── Children queued in the create modal ─────────────────────────
+  //
+  // Everything below mirrors the detail-panel creator, minus the server: the
+  // parent has no id until Create is pressed, so a child can only be held on
+  // the draft and posted afterwards by _commitTask.
+
+  /**
+   * "+ Add child work item" in the create modal.
+   *
+   * Pre-fills the due date from the parent DRAFT (captured first, since the
+   * date lives in the DOM until something reads it), exactly as the detail-panel
+   * creator pre-fills from the saved parent.
+   */
+  _openCreateSubtaskDraft() {
+    if (!this._createDefaults) return;
+    this._captureCreateDraft();
+    const cols = this.getColumns();
+    const firstOpen = cols.find((c) => !c.is_done) || cols[0];
+    this._createSubtaskDraft = {
+      title: "",
+      due_date: this._createDefaults.due_date || "",
+      priority: "medium",
+      status: firstOpen ? firstOpen.key : "todo",
+      menu: null,
+    };
+    this._refreshCreateSubtaskSection();
+  }
+
+  /**
+   * Re-feed ONLY the create modal's child-item block.
+   *
+   * A full _render() would rebuild the title textarea and the description
+   * editor alongside it, stealing focus mid-compose — the same reason the due
+   * section and the detail panel's own child block are separate parts.
+   */
+  _refreshCreateSubtaskSection() {
+    if (!this._creating) return;
+    this._withPart("create-subtask-rows")
+      .then((part) => {
+        if (!this._creating || !part || part.isDestroyed?.()) return;
+        part.feed(
+          require("./skeleton").buildSubtaskRowsContent(this, null, "create"),
+        );
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
+  }
+
+  _createSubtaskInput() {
+    return (
+      this.el &&
+      this.el.querySelector(
+        `.${this.fig.family}__create-modal .${this.fig.family}__subtask-card-title input`,
+      )
+    );
+  }
+
+  // Live <input> first, draft second: the value is bound asynchronously, so on
+  // a fast type-then-click the draft can still be a keystroke behind.
+  _readCreateSubtaskTitle() {
+    const draft = this._createSubtaskDraft;
+    if (!draft) return "";
+    const input = this._createSubtaskInput();
+    return String((input && input.value) || draft.title || "").trim();
+  }
+
+  /**
+   * Fold a half-typed child into the queue before the parent is committed.
+   *
+   * The parent's Create button sits directly below the creator card, so "type
+   * the child, press Create" is the natural gesture — and without this the row
+   * the user just typed is silently dropped. Exactly the trap the detail
+   * panel's explicit Create button was added for, one level up.
+   *
+   * Only ever ADDS: an empty card is left alone rather than stealing focus the
+   * way pressing Add on it would.
+   */
+  _flushCreateSubtaskDraft() {
+    if (!this._createSubtaskDraft || !this._readCreateSubtaskTitle()) return;
+    this._queueCreateSubtask();
+  }
+
+  /**
+   * Queue the creator card's row onto the draft. Purely local — nothing is
+   * posted until the parent is.
+   *
+   * Reads the title off the live <input> first for the same reason
+   * _commitSubtask does: the value is bound asynchronously, so on a fast
+   * type-then-click the draft can still be a keystroke behind.
+   */
+  _queueCreateSubtask() {
+    const parentDraft = this._createDefaults;
+    const draft = this._createSubtaskDraft;
+    if (!parentDraft || !draft) return;
+    const input = this._createSubtaskInput();
+    const title = this._readCreateSubtaskTitle();
+    if (!title) {
+      if (input && typeof input.focus === "function") input.focus();
+      return;
+    }
+    if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
+    parentDraft.subtasks.push({
+      // Local key, not a server id. Named `id` so the shared row skeleton can
+      // keep passing `taskId` and the handlers below can look rows up the same
+      // way the detail scope does.
+      id: `pending:${(this._pendingSubtaskSeq = (this._pendingSubtaskSeq || 0) + 1)}`,
+      title,
+      priority: draft.priority || "medium",
+      status: draft.status || this.getDefaultStatus(),
+      due_date: draft.due_date || "",
+    });
+    // Stay open with only the title cleared, matching the detail-panel creator:
+    // breaking a task down means adding several children in a row.
+    this._createSubtaskDraft = { ...draft, title: "", menu: null };
+    if (input) input.value = "";
+    this._refreshCreateSubtaskSection();
+  }
+
+  _removeCreateSubtask(trigger) {
+    const id = trigger.mget("taskId");
+    const draft = this._createDefaults;
+    if (!id || !draft || !Array.isArray(draft.subtasks)) return;
+    draft.subtasks = draft.subtasks.filter((t) => t.id !== id);
+    this._refreshCreateSubtaskSection();
+  }
+
+  // The queued row's checkbox. No server round-trip and no rollup to apply —
+  // it just moves the row between the first done and first open column, which
+  // is the status it will be created with.
+  _toggleCreateSubtaskDone(trigger) {
+    const id = trigger.mget("taskId");
+    const row = this.getPendingSubtasks().find((t) => t.id === id);
+    if (!row) return;
+    const cols = this.getColumns();
+    const target = this.isDoneStatus(row.status)
+      ? cols.find((c) => !c.is_done)
+      : cols.find((c) => c.is_done);
+    if (!target) return;
+    row.status = target.key;
+    this._refreshCreateSubtaskSection();
+  }
+
+  /**
+   * Post the children queued on the create modal, now that the parent has an
+   * id. Sequential, so they land in the order they were entered.
+   *
+   * Never throws: the parent is already created by the time this runs, so a
+   * child that fails must not roll the create back or take the modal down with
+   * it. Returns how many failed, for the caller to report.
+   */
+  async _createQueuedSubtasks(parentId, queued) {
+    let failed = 0;
+    for (const sub of queued) {
+      try {
+        const created = await this.postService({
+          service: SERVICE.task.create,
+          hub_id: this._hubId,
+          // Sent for parity with a normal create; the server ignores it for a
+          // child and inherits the parent's folder instead.
+          nid: this._scopeNid,
+          parent_task_id: parentId,
+          title: sub.title,
+          priority: sub.priority || "medium",
+          status: sub.status || undefined,
+          due_date: sub.due_date || null,
+        });
+        const row = Array.isArray(created) ? created[0] : created;
+        // postService resolves falsy on failure rather than rejecting.
+        if (!row || !row.id) failed += 1;
+      } catch (err) {
+        console.error("[tasks_panel] queued subtask create failed:", err);
+        failed += 1;
+      }
+    }
+    return failed;
+  }
+
   /**
    * Create a subtask under the currently open task.
    *
@@ -8413,9 +8723,13 @@ class __tasks_panel extends LetcBox {
     // `__subtask-create-input` selector no longer matched anything, which left
     // this reading the draft alone — fine while the watch keeps up, but the
     // empty-title branch below then focused nothing and the create looked dead.
+    // Scoped to the detail panel: the create modal now carries a creator card
+    // with the same class, so an unscoped lookup could read the wrong one.
     const input =
       this.el &&
-      this.el.querySelector(`.${this.fig.family}__subtask-card-title input`);
+      this.el.querySelector(
+        `.${this.fig.family}__detail-panel .${this.fig.family}__subtask-card-title input`,
+      );
     const title = String((input && input.value) || draft.title || "").trim();
     if (!title) {
       if (input && typeof input.focus === "function") input.focus();
@@ -8428,7 +8742,9 @@ class __tasks_panel extends LetcBox {
     // button (same reasoning as the comment actions above).
     const submitBtn =
       this.el &&
-      this.el.querySelector(`.${this.fig.family}__subtask-create-submit`);
+      this.el.querySelector(
+        `.${this.fig.family}__detail-panel .${this.fig.family}__subtask-create-submit`,
+      );
     this._setControlBusy(submitBtn, true, { swapLabel: true });
     try {
       const created = await this.postService({
