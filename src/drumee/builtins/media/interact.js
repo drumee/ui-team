@@ -1426,24 +1426,35 @@ class __media_interact extends media_core {
     const current = this.mget(_a.filename) || "";
     this.__wsRenameValue = current;
 
-    const cn = `${this.fig.family}__ws-rename`;
+    // Dressed as a form, not as a bare box: a label above a bordered field, in
+    // the confirm dialog's own namespace so it is styled beside the buttons it
+    // sits with (window/confirm/skin __field-label / __field) and matches the
+    // create-workspace form field. `message` takes an ARRAY of skeletons —
+    // window/confirm/skeleton/body spreads one straight into the body.
+    const cn = "window-confirm__field";
     const answered = Wm.confirm({
       title: LOCALE.RENAME,
-      message: Skeletons.Textarea({
-        className: cn,
-        name: _a.lastname,
-        value: current,
-        rows: 1,
-        require: _a.any,
-        bubble: 0,
-        mode: _a.commit,
-        preselect: 1,
-        // Enter must not commit: the dialog's own button is what confirms, and
-        // a stray Enter would submit a half-typed name.
-        ignoreEnter: true,
-        service: "workspace-rename-input",
-        uiHandler: [this],
-      }),
+      message: [
+        Skeletons.Note({
+          content: LOCALE.WORKSPACE_NAME,
+          className: "window-confirm__field-label",
+        }),
+        Skeletons.Textarea({
+          className: cn,
+          name: _a.lastname,
+          value: current,
+          rows: 1,
+          require: _a.any,
+          bubble: 0,
+          mode: _a.commit,
+          preselect: 1,
+          // Enter must not commit: the dialog's own button is what confirms,
+          // and a stray Enter would submit a half-typed name.
+          ignoreEnter: true,
+          service: "workspace-rename-input",
+          uiHandler: [this],
+        }),
+      ],
       confirm: LOCALE.RENAME,
     });
 
@@ -1470,7 +1481,36 @@ class __media_interact extends media_core {
     this.__wsRenameValue = null;
     const value = String(typed == null ? "" : typed).trim();
     if (!value || value === current) return;
-    return this._commitRename(value);
+
+    const done = await this._commitRename(value);
+
+    // The desk BREADCRUMB still names the workspace by its old alias. It is
+    // not fed by the rename path at all: it listens for the RADIO_BROADCAST
+    // "breadcrumb:content" and only follows one whose source IS Wm, then
+    // re-resolves the path from the server (desk/breadcrumb _onBrowse ->
+    // _updatePath -> libs/path-request getPath). That request is de-duplicated
+    // only while in flight and never cached, so a fresh one answers the NEW
+    // name — its own header says a rename "is picked up by the next call".
+    //
+    // The pane's own refreshBreadcrumbsUI cannot do this: it returns early for
+    // a headless workspace pane, which is exactly what a workspace is here.
+    //
+    // Never allowed to fail the rename: the name is already saved by now, and
+    // a stale crumb is one navigation away from correct.
+    try {
+      const hubId = this.mget(_a.hub_id);
+      const pane = _.isFunction(Wm._findWorkspaceWindow)
+        && Wm._findWorkspaceWindow(hubId);
+      // The pane's own nid, not the workspace root: the user may have browsed
+      // into a subfolder, and the crumb has to keep that trail.
+      const nid = pane && pane.mget(_a.nid);
+      if (nid && hubId && _.isFunction(Wm.updateBreadcrumb)) {
+        Wm.updateBreadcrumb({ nid, hub_id: hubId }, Wm);
+      }
+    } catch (e) {
+      this.warn("Workspace renamed, but the breadcrumb kept the old name", e);
+    }
+    return done;
   }
 
   /**
