@@ -3491,6 +3491,18 @@ class __window_manager extends push {
       anchor = anchor.closest("a");
     }
     if (anchor && anchor.tagName == "A") {
+      // A modified click is the browser's to serve: ctrl/cmd (new tab), shift
+      // (new window), alt (download). preventDefault() below used to run
+      // unconditionally, which is why Ctrl+click on a chat link did nothing at
+      // all. Still stop propagation so no other chat handler (selection,
+      // message services) sees the click — stopPropagation does not cancel the
+      // anchor's default action, so the browser still opens the link.
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
+
       e.stopPropagation();
       e.stopImmediatePropagation();
       e.preventDefault();
@@ -3572,14 +3584,34 @@ class __window_manager extends push {
       let re = new RegExp(_K.module.desk + "/wm/");
       let text = anchor.innerText;
       let href;
-      if (/^http/.test(text)) {
+      // Prefer the anchor's own href. Autolinker renders a SHORTENED label —
+      // it strips the scheme, a leading "www." and any trailing slash — so
+      // innerText is a lossy source to rebuild a URL from, and it turned
+      // "mailto:"/"tel:" links into bogus https:// ones. The innerText path
+      // stays as the fallback for anchors that carry no usable href.
+      const raw = anchor.getAttribute("href");
+      if (raw && raw.trim() && !/^#/.test(raw)) {
+        href = anchor.href; // browser-resolved, absolute, lossless
+      } else if (/^http/.test(text)) {
         href = text;
       } else {
         const { protocol } = bootstrap();
         href = `${protocol}://${text}`;
       }
+      // Deliberately still parsed from the label: this is the routing path that
+      // already works (Autolinker keeps the whole "#/…/kind=…&nid=…" hash in
+      // the label), and feeding it the href instead would only add junk keys.
       let opt = Visitor.parseModuleArgs(text);
-      const url = new URL(href);
+      let url;
+      try {
+        url = new URL(href);
+      } catch (err) {
+        // An unparseable URL used to throw here — AFTER preventDefault() — so
+        // the click died silently. Hand it to the browser instead.
+        this.warn("Unparseable anchor href", href, err);
+        window.open(href, "_blank");
+        return true;
+      }
       let host = new RegExp(`${bootstrap().main_domain}$`)
       this.debug("AAA:1933", host.test(url.host), url.host, bootstrap().main_domain)
       if (!host.test(url.host) || /\#\/plugins/.test(url.hash)) {
@@ -3590,6 +3622,14 @@ class __window_manager extends push {
         this.openSharedLink(opt);
         return true;
       }
+      // Same-domain link with no routable `kind` — e.g. the desk deep links
+      // Autolinker produces for "…/#/desk/wm/o/<hub>/<nid>/<name>", whose hash
+      // carries no "key=value" pair for parseModuleArgs to pick up. Execution
+      // used to fall off the end here with preventDefault() already applied,
+      // so the link was simply dead — for plain AND ctrl clicks. Open it rather
+      // than swallowing the click.
+      window.open(href, "_blank");
+      return true;
     }
   }
 
