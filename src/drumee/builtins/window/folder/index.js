@@ -10,6 +10,8 @@ const {
 
 const { overMeetingCap } = require("libs/billing");
 
+const { previewRequest } = require("../tutorial/preview");
+
 const {
 
   
@@ -39,6 +41,14 @@ const WS_SEARCH_LIMIT = 20;
 // before that fence, so asking for exactly 20 could hand back 20 rows from a
 // sibling workspace and leave the dropdown empty. 100 is the service's own cap.
 const WS_SEARCH_FETCH_MAX = 100;
+
+// `?window_tutorial=<id>` is answered by ONE window — the first to open after
+// the URL was typed. Several folder windows can be on screen, and each of them
+// reads the same module args; without this latch they would all try, and the
+// second onwards would be refused by single-flight anyway, noisily and for the
+// wrong reason. Module-scoped rather than per-window, because "already answered"
+// is a fact about the URL, not about a window.
+let _previewConsumed = false;
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -614,6 +624,108 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  /**
+   * Run a tour over this window.
+   *
+   * The tour is drawn by `window_tutorial` (builtins/window/tutorial), which
+   * renders the same step widgets the desk tour does but lays them ON this
+   * window instead of replacing the desk with a picture of one.
+   *
+   * THE ORDER OF THE TWO GUARDS IS LOAD-BEARING. `Tours.claim` takes the
+   * account-wide single-flight latch and holds it until the mounted tour is
+   * destroyed and `release()` runs. Claim first and then refuse to mount, and
+   * nothing is ever destroyed, `release()` is never reached, and every later
+   * tour on this account is dropped in silence for the rest of the session (the
+   * 30s guard timer eventually covers it, which is thirty seconds of swallowed
+   * triggers). So the already-mounted check comes first, and only a run that is
+   * definitely going to mount takes the claim.
+   *
+   * A preview skips the claim outright: an explicitly requested tour is never
+   * gated on the seen-set, the kill switch or single-flight — the same rule the
+   * desk's `?tutorial=` follows, and the only way QA can reach a tour twice.
+   *
+   * The overlay is appended rather than declared in ./skeleton because that
+   * skeleton returns a single node (`__main`) which becomes this window's
+   * `content` part; a sibling of it cannot be declared there. Same idiom as
+   * _openChatExportModal.
+   *
+   * @param {String} tour a tour id from modules/desk/tutorial/tours
+   * @param {Object} [opt] extra model attributes for the tour widget
+   * @returns {Boolean|Promise<Boolean>} false when refused
+   */
+  showTutorial(tour, opt = {}) {
+    if (this._tutorialOverlay) return false;
+    const Tours = require("libs/tutorial-tours");
+    if (!opt.preview && !Tours.claim(tour, this)) return false;
+
+    this.append(
+      Skeletons.Wrapper.Y({
+        className: "window-folder__wrapper-tutorial",
+        name: "tutorial",
+      }),
+    );
+
+    return this.ensurePart("wrapper-tutorial").then((wrapper) => {
+      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) {
+        // The window went away between the append and the resolve. Hand the
+        // latch back or nothing else runs this session.
+        if (!opt.preview) Tours.release(tour);
+        return false;
+      }
+      this._tutorialOverlay = wrapper;
+      wrapper.feed({
+        kind: "window_tutorial",
+        tour,
+        sys_pn: "window-tutorial",
+        partHandler: this,
+        ...opt,
+      });
+      return true;
+    });
+  }
+
+  /**
+   * The tour widget mounted. Wire its ending to the latch it is holding.
+   *
+   * The same handshake the desk makes (modules/desk/index.js, onPartReady
+   * "desk-tutorial"): `release` on destroy, so single-flight is settled by
+   * every ending a tour has — the last Done, the callout's skip, Escape, and
+   * this window being closed out from under it.
+   *
+   * A preview took no claim, so it releases nothing; `release` is id-checked
+   * and idempotent, but not calling it at all is clearer than relying on that.
+   *
+   * @param {Object} child the window_tutorial widget
+   */
+  _wireTutorialOverlay(child) {
+    if (!child || !_.isFunction(child.once)) return;
+    const tour = child.mget && child.mget("tour");
+    const preview = child.mget && child.mget("preview");
+    child.once(_e.destroy, () => {
+      this._tutorialOverlay = null;
+      if (preview) return;
+      try {
+        require("libs/tutorial-tours").release(tour);
+      } catch (e) {
+        // A release that throws must not take the window down with it.
+      }
+    });
+  }
+
+  /**
+   * Tear the tour overlay down, e.g. because this window is closing.
+   *
+   * `goodbye()` destroys the wrapper and its child, which fires the `destroy`
+   * handler above and hands the latch back.
+   */
+  _closeTutorialOverlay() {
+    const wrapper = this._tutorialOverlay;
+    if (!wrapper) return;
+    this._tutorialOverlay = null;
+    if (_.isFunction(wrapper.goodbye)) wrapper.goodbye();
+    else if (_.isFunction(wrapper.suppress)) wrapper.suppress();
+  }
+
   onBeforeDestroy(opt) {
     clearGrouped(this);
     if (this._folderGridSortTimer) {
@@ -633,6 +745,10 @@ class __window_folder extends mfsInteract {
     this._stopAwaitMeetingReady();
     this._ftTeardown();
     this._unbindThreadMenuOutside();
+    // A tour is holding the account-wide single-flight latch. Closing the
+    // window it is drawn on must hand that back, or no tour runs again this
+    // session.
+    this._closeTutorialOverlay();
     this._unbindViewportReframe();
     this._unbindDeskChrome();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -769,6 +885,34 @@ class __window_folder extends mfsInteract {
     if (this.mget(_a.headless)) {
       this.el.dataset.headless = "1";
     }
+    // A forced in-window tour, for checking the UI. Last, so it is laid over a
+    // window that has already decided what it is showing.
+    this._maybeRunPreviewTour();
+  }
+
+  /**
+   * Run the tour `?window_tutorial=<id>` asked for, if one did.
+   *
+   * Only `share` has a live in-window trigger, so this URL is how the other
+   * five are reachable in this host at all — for review, for QA and for a bug
+   * report that can name a screen.
+   *
+   * PREVIEW, not a real run: it is exempt from the seen-set in both directions,
+   * so the same URL works twice and the real trigger stays armed. Without that,
+   * one look at a tour would kill its trigger for the account permanently,
+   * because a tour records itself the moment it mounts.
+   */
+  _maybeRunPreviewTour() {
+    if (_previewConsumed) return;
+    let req = null;
+    try {
+      req = previewRequest(Visitor.parseModuleArgs());
+    } catch (e) {
+      return;
+    }
+    if (!req) return;
+    _previewConsumed = true;
+    this.showTutorial(req.tour, req.opt);
   }
 
   // A folder window opens FULL-FRAME — the whole desk body, the same frame a
@@ -1162,6 +1306,10 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
+    if (pn === "window-tutorial") {
+      this._wireTutorialOverlay(child);
+      return;
+    }
     // Neither of these returns: window/core's onPartReady tail wires
     // `child.onChildBubble` on every part it sees, and the control these two
     // replace (the old zoom trigger) went through it. Fall through so the
@@ -1927,7 +2075,12 @@ class __window_folder extends mfsInteract {
             // `hub_name` is the name that tracks in-window navigation, which is
             // what the topbar shows; `filename` is the fallback for a window
             // that has not set one.
-            require("libs/tutorial-tours").fire("share", this, {
+            // In-window, not on the desk. fire() broadcasts, and the desk's
+            // listener would answer it by replacing the whole screen with a
+            // mock of itself — while the panel this tour is about is right
+            // here. showTutorial takes the same claim fire() would have taken,
+            // so every gate still applies exactly once.
+            this.showTutorial("share", {
               subject: "workspace",
               subject_data: {
                 name: this.mget(_a.hub_name) || this.mget(_a.filename),

@@ -5092,3 +5092,44 @@ html[data-theme="dark"] {
     }
   }
 }
+
+// ── The in-window tour overlay ───────────────────────────────────────────────
+//
+// `window_tutorial` mounted into a wrapper appended to the window ROOT, so it
+// covers the whole window — the header, the tab bar and the pane together —
+// rather than only `__main`. A tour that left the real tab bar live beside it
+// would let the user change the pane underneath the mock mid-walkthrough.
+//
+// `.window__ui` is `position: absolute` with `overflow: visible`
+// (window/skin/window.scss), so `inset: 0` here resolves against the window and
+// stops at its edge. `border-radius: inherit` + `overflow: hidden` are what keep
+// the square overlay from poking out past the window's rounded corners, which
+// the window's own `overflow: visible` would otherwise allow.
+//
+// z-index has to clear everything inside this window; the folder skin already
+// reaches 100000 for its own overlays. Opening a stacking context here is fine
+// and in fact desirable: the spotlight's three layers (scrim 10003, the lit
+// surface 10004, the callout 10010) are all mocks INSIDE the overlay, so they
+// share one context by construction and nothing outside can interleave with
+// them.
+//
+// `!important` on position and display for the same reason chat-export needs it
+// (widget/chat-export/skin/index.scss): the shared wrapper rules and the
+// Wrapper kind's own defaults both set these, and an agreeing declaration is
+// not something to rely on.
+.window-folder {
+  &__wrapper-tutorial {
+    position: absolute !important;
+    inset: 0;
+    z-index: 100001;
+    display: block !important;
+    border-radius: inherit;
+    overflow: hidden;
+
+    // The wrapper behavior stamps this when it receives children.
+    &[data-state="open"] {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  }
+}
