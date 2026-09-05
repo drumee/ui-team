@@ -640,6 +640,19 @@
     width: calc(100% - 5px);
     z-index: 50001 !important;
 
+    // The "copied" toast rides at the TOP of the message area instead of the
+    // bottom, where it sat over the composer. Gated on :has() so ONLY that
+    // toast moves: this strip is shared with .preset-acknowledge-error below,
+    // and an error belongs next to the composer that raised it. The token
+    // `preset-acknowledge__main` is exact — `preset-acknowledge-error__main`
+    // is a different class token, so the error toast never matches.
+    // `.widget-chat__main` starts below the panel header, so top:5px lands the
+    // toast just under "Team Chat", not over it.
+    &:has(.preset-acknowledge__main) {
+      bottom: auto;
+      top: 5px;
+    }
+
     // Compact "copied to clipboard" pill — see ../skeleton/ack for why the
     // ui-core mascot preset was dropped. Everything is scoped to
     // .preset-acknowledge and sizes/centres ITSELF: the __ack-wrapper strip
@@ -651,7 +664,7 @@
     & .preset-acknowledge {
       &__main {
         align-self: center; // centre the pill across the wrapper's width
-        margin-top: auto; // and settle it at the bottom of the 50px strip
+        margin-bottom: auto; // and hug the top of the 50px strip
         background-color: var(--dgc-chat-ack-bg);
         border-radius: var(--border-radius);
         box-shadow: var(--drumee-shadow-box);
