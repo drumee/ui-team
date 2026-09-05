@@ -732,6 +732,22 @@ class __media_interact extends media_core {
       case "direct-rename":
         return this.rename();
 
+      // The workspace ... menu asks for THIS instead of direct-rename. Its
+      // rows are built from the home-grid tile, and that grid is display:none
+      // while a workspace is open, so rename()'s inline editor was appended
+      // into an invisible element: created, pre-filled, and unreachable. The
+      // grid's own menus still ask for direct-rename and are untouched.
+      case "workspace-rename":
+        return this._renameWorkspacePrompt();
+
+      // Value events from that dialog's field. The inline path reads its text
+      // through checkSanity() -> this.entry, which only sees a textarea this
+      // widget owns; the dialog's field belongs to the dialog, so its value is
+      // kept here instead.
+      case "workspace-rename-input":
+        this.__wsRenameValue = cmd.mget(_a.value);
+        return;
+
       case "organize":
         // Organize: shows submenu with Move + Link to task tracker.
         // Submenu rendering handled by contextmenu skin (hover state).
@@ -1385,6 +1401,91 @@ class __media_interact extends media_core {
       socket_id: Visitor.get(_a.socket_id),
     });
     this._waitingForZip = nid;
+  }
+
+  /**
+   * Rename a WORKSPACE from the desk topbar menu, through a dialog.
+   *
+   * rename() cannot serve that menu. It appends its editor INTO this widget
+   * (interact.js _createInput -> this.append), and this widget is the
+   * workspace's home-grid tile, which is display:none whenever a workspace is
+   * open — which is the only time that menu can be reached. The textarea was
+   * being created and pre-filled with the right name, in a place nobody could
+   * see or type into, so the row looked dead.
+   *
+   * The dialog only collects the text. Everything after it — validation of the
+   * empty and unchanged cases, the payload, the holder-scoped hub_id, the post
+   * and afterRename — is _commitRename, shared verbatim with the inline path.
+   *
+   * The typed value is read from the field ELEMENT rather than from the
+   * dialog: window_confirm resolves and then destroys itself in the same tick,
+   * so anything that reads the DOM afterwards finds nothing. A detached node
+   * still answers .value, and the ui event above keeps a copy either way.
+   */
+  async _renameWorkspacePrompt() {
+    const current = this.mget(_a.filename) || "";
+    this.__wsRenameValue = current;
+
+    const cn = `${this.fig.family}__ws-rename`;
+    const answered = Wm.confirm({
+      title: LOCALE.RENAME,
+      message: Skeletons.Textarea({
+        className: cn,
+        name: _a.lastname,
+        value: current,
+        rows: 1,
+        require: _a.any,
+        bubble: 0,
+        mode: _a.commit,
+        preselect: 1,
+        // Enter must not commit: the dialog's own button is what confirms, and
+        // a stray Enter would submit a half-typed name.
+        ignoreEnter: true,
+        service: "workspace-rename-input",
+        uiHandler: [this],
+      }),
+      confirm: LOCALE.RENAME,
+    });
+
+    const field = await this._waitForRenameField(cn);
+    if (field) {
+      try {
+        field.focus();
+        if (_.isFunction(field.select)) field.select();
+      } catch (e) { }
+      field.addEventListener("input", () => {
+        this.__wsRenameValue = field.value;
+      });
+    }
+
+    try {
+      await answered;
+    } catch (e) {
+      // cancelled or closed — not a failure, and nothing to say about it
+      this.__wsRenameValue = null;
+      return;
+    }
+
+    const typed = field ? field.value : this.__wsRenameValue;
+    this.__wsRenameValue = null;
+    const value = String(typed == null ? "" : typed).trim();
+    if (!value || value === current) return;
+    return this._commitRename(value);
+  }
+
+  /**
+   * The dialog mounts asynchronously; give it a few frames to appear rather
+   * than assume it is there. Returns null instead of throwing, so a slow or
+   * failed mount degrades to the ui-event copy rather than to an exception.
+   */
+  async _waitForRenameField(className) {
+    for (let i = 0; i < 40; i++) {
+      const el = document.querySelector(`.${className} textarea, textarea.${className}`);
+      if (el) return el;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    this.warn("Rename dialog field never appeared", { className });
+    return null;
   }
 
   /**

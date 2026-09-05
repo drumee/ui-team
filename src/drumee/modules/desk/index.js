@@ -2585,7 +2585,26 @@ class desk_module extends LetcBox {
     // caller in the app whose rows are built against a different trigger than
     // their handler. No row reads it today, so this changes nothing that runs —
     // it removes a difference that would decide the behaviour the day one does.
-    const kids = keys.map((k) => item(target, target, k)).filter(Boolean);
+    const kids = keys
+      .map((k) => {
+        const row = item(target, target, k);
+        // RENAME opens a DIALOG from this menu, not the inline editor.
+        //
+        // Every row here acts on the workspace's home-grid tile, and that grid
+        // is display:none whenever a workspace is open — which is the only
+        // time this menu exists. rename() appends its textarea INTO that tile
+        // (media/interact _createInput -> this.append), so it was being
+        // created, pre-filled with the right name, and left invisible: the row
+        // looked dead while doing exactly what it was written to do.
+        //
+        // Re-pointing the service is all it takes, and it is confined to this
+        // menu: the grid's own folder and file menus still carry
+        // `direct-rename` and still rename inline. The key stays `rename` so
+        // the row keeps its icon, label and classes from the shared builder.
+        if (row && k === _a.rename) row.service = "workspace-rename";
+        return row;
+      })
+      .filter(Boolean);
     if (_.isEmpty(kids)) return;
 
     const rect = cmd && cmd.el && _.isFunction(cmd.el.getBoundingClientRect)
