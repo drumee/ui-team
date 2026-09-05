@@ -1498,13 +1498,53 @@ class __window_folder extends mfsInteract {
         .map((s) => Object.assign({}, ctx, s));
     }
     const depth = this._navStack.length;
+
+    // Mirror the ACTIVE workspace pane's navigation into the visible desk
+    // topbar breadcrumb (desk_breadcrumb). refreshBreadcrumbsUI is the single
+    // chokepoint for every in-place navigation (workspace switch, sidebar
+    // folder open, and in-grid forward/backward), so driving it here keeps the
+    // topbar in sync for all of them — not just section toggles.
+    //
+    // THIS MUST STAY ABOVE THE HEADLESS BAIL BELOW. It used to sit at the end
+    // of this method, after `if (headless) return` — and its own condition
+    // requires `headless`, so it could never run at all: opening a subfolder
+    // inside a workspace left the desk breadcrumb showing the workspace root,
+    // with no crumbs to click back through. The window's own updateTopbar
+    // broadcast does not cover it either: that one passes `this` as the source,
+    // and desk_breadcrumb accepts only broadcasts whose source IS Wm (folder
+    // WINDOW navigation is private to that window and must not retitle the
+    // bar). Hence the explicit window.Wm below.
+    //
+    // Still gated on focused (`state == 1`): headlessLayer can hold more than
+    // one workspace pane, and a background one must not retitle the bar.
+    if (
+      window.Wm &&
+      this.mget(_a.headless) &&
+      this.mget(_a.state) == 1 &&
+      _.isFunction(this.updateBreadcrumb)
+    ) {
+      let curNid = this.mget(_a.nid);
+      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+        curNid = this.mget(_a.actual_home_id);
+      }
+      this.updateBreadcrumb(
+        {
+          nid: curNid,
+          hub_id: this.mget(_a.hub_id),
+          actual_home_id: this.mget(_a.actual_home_id),
+          filetype: this.mget(_a.filetype),
+          service: "change-workspace",
+        },
+        window.Wm,
+      );
+    }
+
     // The in-window crumb strip lives in the window topbar, which a headless
     // workspace pane no longer renders — the DESK topbar carries the path
-    // instead (Wm.updateBreadcrumb / desk_breadcrumb). Bail before the
-    // ensurePart: it never settles for a part that will not mount, so the
-    // continuation below would be dead weight held for the pane's lifetime.
-    // _navStack is still built above, which is what in-pane back navigation
-    // (_navigateToStackIndex) actually reads.
+    // instead (the mirror above). Bail before the ensurePart: it never settles
+    // for a part that will not mount, so the continuation below would be dead
+    // weight held for the pane's lifetime. _navStack is still built above,
+    // which is what in-pane back navigation (_navigateToStackIndex) reads.
     if (this.mget(_a.headless)) return;
     this.ensurePart("folder-breadcrumb-path").then((box) => {
       if (!box || (box.isDestroyed && box.isDestroyed())) return;
@@ -1545,36 +1585,6 @@ class __window_folder extends mfsInteract {
       box.feed(crumbs);
     });
 
-    // Mirror the ACTIVE workspace window's navigation into the visible desk
-    // topbar breadcrumb (desk_breadcrumb). refreshBreadcrumbsUI is the single
-    // chokepoint for every in-place navigation (workspace switch, sidebar
-    // folder open, and in-grid forward/backward), so driving it here keeps the
-    // topbar breadcrumb in sync for all of them — not just section toggles.
-    // Gate on headless + focused so standalone/background folder windows never
-    // retitle the topbar. desk_breadcrumb._updateContent only accepts
-    // broadcasts whose source IS Wm, so pass Wm explicitly; it resolves the
-    // full Home › Workspace › … path itself via get_path.
-    if (
-      window.Wm &&
-      this.mget(_a.headless) &&
-      this.mget(_a.state) == 1 &&
-      _.isFunction(this.updateBreadcrumb)
-    ) {
-      let curNid = this.mget(_a.nid);
-      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
-        curNid = this.mget(_a.actual_home_id);
-      }
-      this.updateBreadcrumb(
-        {
-          nid: curNid,
-          hub_id: this.mget(_a.hub_id),
-          actual_home_id: this.mget(_a.actual_home_id),
-          filetype: this.mget(_a.filetype),
-          service: "change-workspace",
-        },
-        window.Wm,
-      );
-    }
   }
 
   toggleFilesLayout(cmd) {

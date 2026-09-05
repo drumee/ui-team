@@ -144,23 +144,6 @@ const deskNewMenu = (pfx, ui, mayWrite) => {
           service: "launch-gdrive-migration",
           className: `${pfx}__new-menu-item--gdrive`,
         }),
-        // "New department" — Figma 104:33055's + New menu.
-        //
-        // Gated on orgFeature() rather than on `mayWrite`: the two rows above
-        // ask whether the viewer may write in the workspace they are standing
-        // in, which has nothing to do with whether their organisation may gain
-        // a department. With no organisation there is no domain to hang one on,
-        // and with no server endpoint there is nothing to call — either way the
-        // row is not built at all rather than built and refused on click.
-        //
-        // It opens the org view and arms the same inline entry the screen's own
-        // "+ New" arms — one way to name a department however it was started.
-        !require("libs/org-overview").orgFeature() ? "" : newMenuRow(pfx, ui, {
-          ico: "ph-cube",
-          label: LOCALE.NEW_DEPARTMENT,
-          service: "new-department",
-          className: `${pfx}__new-menu-item--department`,
-        }),
         createGroup,
       ],
     }),

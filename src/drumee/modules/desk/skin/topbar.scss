@@ -171,23 +171,29 @@
     height: var(--crumb-height, 30px);
     padding: 0 var(--crumb-pad-x, 6px);
     border-radius: var(--crumb-radius, 8px);
-    // The frame's ground, which the CURRENT crumb's tab used to carry alone.
-    // Held here so it runs under the caret as well — that is what makes the
-    // two read as one address rather than a filled crumb sitting next to a
-    // bare chevron.
-    background-color: var(--normal-bg-90);
+    // NO RESTING GROUND. The address sits directly on the bar.
+    //
+    // It used to carry --normal-bg-90 permanently, which put a grey slab
+    // around the path — the org chip beside it already carries one, so the bar
+    // read as two competing pills rather than an identity chip followed by a
+    // location. The hover ground stays: it is what still says the whole
+    // address (crumbs AND caret) is one clickable target.
+    background-color: transparent;
     transition: background-color 0.12s ease;
 
-    // Deepens rather than replaces: --overlay-bg-05 is translucent, so it
-    // darkens the ground above instead of swapping it for a different one.
     &:hover {
       background-color: var(--overlay-bg-05);
     }
 
     // A SECTION screen — Settings, Get help, Plan, Calendar, Inbox, Contacts,
     // Trash, Admin console — is a label with nothing behind it, and its caret
-    // is hidden (see __left-cluster below). A chip around a bare word promises
-    // a control that is not there, so the group stops painting one.
+    // is hidden (see __left-cluster below). A ground under a bare word promises
+    // a control that is not there.
+    //
+    // The resting ground is transparent for everyone now, so what this still
+    // buys is the HOVER: :has() carries the specificity of its argument, which
+    // puts this rule above `&:hover` and keeps a section label flat under the
+    // pointer. The cursor goes with it.
     //
     // `:has()` because the flag is stamped on the breadcrumb root by
     // desk_breadcrumb._setSectionMode, which is a CHILD of this box — the same

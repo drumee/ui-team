@@ -40,10 +40,17 @@ const folderIcon = require("media/grid/template/folder");
 
 const INBOX_SLOT = "settings-main-slot";
 
+// How long the cached workspace list may be served before it is refreshed in
+// the background. Short enough that a workspace shared with the user, or one
+// renamed elsewhere, shows up within a minute; long enough that opening the
+// switcher repeatedly costs nothing.
+const WS_CACHE_TTL = 60000;
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
     this._updateAddmenu = this._updateAddmenu.bind(this);
+    this._onWorkspaceListChanged = this._onWorkspaceListChanged.bind(this);
     this.onPartReady = this.onPartReady.bind(this);
     this.mediaDragLeaveAvatar = this.mediaDragLeaveAvatar.bind(this);
     this.mediaDragOverAvatar = this.mediaDragOverAvatar.bind(this);
@@ -656,6 +663,7 @@ class desk_module extends LetcBox {
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
     RADIO_BROADCAST.off("breadcrumb:content", this._updateAddmenu);
+    RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceListChanged);
     if (this._folderTabsBound && window.Wm && Wm.$el) {
       Wm.$el.off("folder:open", this._onFolderOpen);
       Wm.$el.off("folder:close", this._onFolderClose);
@@ -1710,6 +1718,9 @@ class desk_module extends LetcBox {
     captureUtm();
     this.route();
     RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
+    // A workspace was just created (libs/create-workspace announces every
+    // type here) — the cached list is known-wrong at that instant.
+    RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceListChanged);
     // Post-onboarding handoff for users who picked Google Drive in the
     // tools step. Delayed so workspace renders first.
     setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
@@ -1979,7 +1990,19 @@ class desk_module extends LetcBox {
    * network call. Refreshed on demand via `force`.
    */
   async _fetchWorkspaces(force) {
-    if (this._workspaces && !force) return this._workspaces;
+    if (this._workspaces && !force) {
+      // Serve the cached list immediately — the switcher must open filled, not
+      // empty behind a request — but refresh behind it once it has aged out.
+      // Nothing else invalidates this cache except a workspace being created
+      // or trashed, so without the age check a workspace SHARED with the user,
+      // or RENAMED by someone else, stayed wrong (or missing, and therefore
+      // unreachable — this menu is the only global way to change workspace)
+      // until the page was reloaded.
+      if (this._workspacesAt && Date.now() - this._workspacesAt > WS_CACHE_TTL) {
+        this._revalidateWorkspaces();
+      }
+      return this._workspaces;
+    }
     let rows = [];
     try {
       rows = await this.fetchService(SERVICE.desk.home, {
@@ -2054,7 +2077,59 @@ class desk_module extends LetcBox {
     this._workspaces = _.sortBy(list, (it) =>
       it.filetype === _a.folder ? 1 : 0,
     );
+    // Stamped only on a SUCCESSFUL fetch: the early return above leaves both
+    // the cache and this untouched when the request fails, so a network blip
+    // keeps the last good list rather than emptying the switcher.
+    this._workspacesAt = Date.now();
     return this._workspaces;
+  }
+
+  /**
+   * Refresh the workspace list behind an answer already served from cache.
+   *
+   * Re-feeds the switcher only when the list actually CHANGED — this can run
+   * while the menu is open, and re-feeding identical rows would rebuild every
+   * row (and drop the in-place current-row highlight) for nothing.
+   *
+   * Single-flight, and its failure is swallowed: this is a background repair
+   * of a cache that is merely stale, so it must never surface an error or
+   * queue up behind a server that is down.
+   */
+  _revalidateWorkspaces() {
+    if (this._wsRevalidating) return this._wsRevalidating;
+    const sig = (rows) =>
+      (rows || [])
+        .map((r) => `${r.hub_id || r.id}:${r.filename || r.name}:${r.area}`)
+        .join("|");
+    const before = sig(this._workspaces);
+    // force:1, so this cannot re-enter the stale branch that called it.
+    this._wsRevalidating = this._fetchWorkspaces(1)
+      .then((rows) => {
+        if (sig(rows) === before) return;
+        if (this._wsListPart) this._renderWorkspaceMenu(this._wsListPart);
+        this._syncWorkspaceLabel();
+      })
+      .catch(() => {})
+      .finally(() => {
+        this._wsRevalidating = null;
+      });
+    return this._wsRevalidating;
+  }
+
+  /**
+   * A workspace was created — libs/create-workspace announces every type on
+   * "workspace:refresh". The cache is known-wrong at that instant, so drop it
+   * and repaint the switcher rather than waiting for it to age out.
+   */
+  _onWorkspaceListChanged() {
+    this._workspaces = null;
+    this._workspacesAt = 0;
+    this._fetchWorkspaces(1)
+      .then(() => {
+        if (this._wsListPart) this._renderWorkspaceMenu(this._wsListPart);
+        this._syncWorkspaceLabel();
+      })
+      .catch(() => {});
   }
 
   /**

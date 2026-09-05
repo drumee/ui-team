@@ -791,6 +791,10 @@ class __window_manager extends push {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
+      // Drop the OUTGOING pane's claim on the context before feed() destroys
+      // it — see the destroy hook below for why identity, not hub_id, is what
+      // decides ownership here.
+      this._curWorkspacePane = null;
       this.headlessLayer.feed({
         kind: "window_folder",
         hub_id,
@@ -831,15 +835,29 @@ class __window_manager extends push {
       // whatever the user opened most recently — see Wm.folderWindowIn.
       let cur = this.folderWindowIn(this.headlessLayer);
       if (cur) {
-        cur.once(_a.destroy, () => {
-          // On a workspace switch the OLD pane's destroy fires after the new
-          // context is already applied — only clear when this pane still owns it,
-          // else rapid switching leaves _curWorkspace null for the live pane.
-          // hub_id-only match is enough here: headlessLayer is a singleton pool
-          // and a hub's workspace root nid never changes.
-          if (this._curWorkspace && this._curWorkspace.hub_id == hub_id) {
-            this._curWorkspace = null;
-          }
+        const pane = cur;
+        this._curWorkspacePane = pane;
+        pane.once(_a.destroy, () => {
+          // On a workspace switch the OLD pane's destroy fires AFTER the new
+          // context is already applied, so this must only clear when the pane
+          // dying is the one that still owns the context.
+          //
+          // Ownership is the pane's IDENTITY, not its hub_id. hub_id cannot
+          // tell two workspaces apart when they live in the same hub, and
+          // every PERSONAL workspace does — a personal workspace is a folder
+          // in the user's own hub, so `hub_id` is Visitor.id for all of them.
+          // Switching personal → personal therefore let the outgoing pane wipe
+          // the INCOMING workspace's context: Wm._curWorkspace went null under
+          // a live pane, which blanked the switcher's header (it feeds []
+          // without a current row) and un-highlighted every row.
+          //
+          // The claim is released before feed() above, so an outgoing pane no
+          // longer owns anything by the time it dies; a pane dying on its own
+          // (trashed workspace, headlessLayer.clear) still owns it and still
+          // clears, which is the behaviour this hook exists for.
+          if (this._curWorkspacePane !== pane) return;
+          this._curWorkspacePane = null;
+          this._curWorkspace = null;
         });
       }
       // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
@@ -1295,7 +1313,24 @@ class __window_manager extends push {
     if (window.Desk && _.isFunction(window.Desk.closeMainPanels)) {
       window.Desk.closeMainPanels();
     }
-    let media = Wm.getItemsByAttr(_a.nid, data.nid)[0];
+    // Reuse an on-screen tile for this node ONLY if it belongs to the pane we
+    // are actually navigating.
+    //
+    // getItemsByAttr walks the ENTIRE receiver subtree, so asking Wm walked
+    // every layer, every open folder window and every tile in them, then fired
+    // open-node on the FIRST match anywhere. With a second folder window open
+    // on the clicked folder, a breadcrumb click navigated that window instead
+    // of the workspace pane in front of the user — the click appeared to do
+    // nothing, or moved a window the user was not looking at.
+    //
+    // Scoped to the active pane, the lookup answers the question it was meant
+    // to ask: "is the target already a tile in THIS listing?" Outside the pane
+    // it now falls through to the resolve-and-refresh path below, which is the
+    // correct handling for a node that is not on screen.
+    const scope = this.folderWindowIn(this.headlessLayer) || null;
+    const media = scope && _.isFunction(scope.getItemsByAttr)
+      ? scope.getItemsByAttr(_a.nid, data.nid)[0]
+      : null;
     if (media) {
       return media.triggerHandlers({ service: "open-node" });
     }

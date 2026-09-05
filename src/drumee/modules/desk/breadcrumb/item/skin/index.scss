@@ -141,31 +141,26 @@
     white-space: nowrap;
   }
 
-  // The current location is marked by a HEAVIER NAME, not by a ground of its
-  // own.
+  // EVERY CRUMB READS THE SAME. The current one is not bolded.
   //
-  // It used to paint --normal-bg-90 on its tab. That was the frame's chip, and
-  // the chip has moved up to .desk-module-topbar__crumb-group so it can enclose
-  // the caret too — leaving this here draws a second, square-cornered ground
-  // inside the rounded one (the radius went up with the rest of it).
+  // It used to render at weight 600 while its ancestors stayed at 400, so a
+  // two-crumb path showed the workspace light and the subfolder heavy and the
+  // track looked like two unrelated labels rather than one address. Where you
+  // are is already said by position — the last crumb — and by the caret that
+  // follows it.
   //
-  // The signal is not lost: weight and colour still say which crumb you are on,
-  // and they do it without a box competing with the chip around them.
-  &__main[data-current="1"] {
-    .breadcrumb-item__filename {
-      color: var(--normal-fg);
-      font-weight: 600;
-    }
-  }
+  // (Before the weight, this rule painted --normal-bg-90 on the current tab;
+  // that ground moved up to .desk-module-topbar__crumb-group, and has since
+  // been dropped there too.)
 }
 
 html[data-theme="dark"] {
   .breadcrumb-item {
+    // One colour for the whole track, matching light mode: the current crumb
+    // used to be lifted to --normal-fg while its ancestors sat at
+    // --normal-fg-20, which is the same two-tone split the light theme has
+    // now dropped.
     &__filename {
-      color: var(--normal-fg-20);
-    }
-
-    &__main[data-current="1"] .breadcrumb-item__filename {
       color: var(--normal-fg);
     }
   }

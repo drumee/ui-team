@@ -69,7 +69,14 @@ module.exports = function (ui) {
 
   const kids = [];
   // "/" per the frame (59:55943), not the old "›".
-  if (!isSection) {
+  // A separator BETWEEN crumbs, never before the first one.
+  //
+  // Every crumb used to prepend one unconditionally, so the track opened with
+  // a stray "/" floating to the left of the workspace — a path that reads
+  // "/ Workspace / Folder" instead of "Workspace / Folder". The index is
+  // already resolved above for the crumb's own ordering, so the first tab
+  // simply skips it.
+  if (!isSection && index > 0) {
     kids.push(
       Skeletons.Note({
         content: "/",
