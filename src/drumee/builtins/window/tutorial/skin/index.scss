@@ -1,0 +1,31 @@
+// The in-window tour host.
+//
+// Almost everything this widget looks like comes from the tutorial skins, which
+// it reaches by wearing `tutorial-main`, `tutorial-main__layout` and
+// `tutorial-main__content` alongside its own classes (see skeleton/index.js).
+// Those are CONCATENATED selectors (`.tutorial-main__layout { … }`), not
+// descendant ones, so they apply to this widget's nodes directly.
+//
+// What is left here is the part that is genuinely different: this host is an
+// OVERLAY on a folder window, not a full-screen pane on the desk.
+
+.window-tutorial {
+  // The widget's own root (ui-core stamps `<family>__ui` on it). The desk host
+  // gets `position: absolute; inset: 0` from `.tutorial-main__ui`, which this
+  // widget does not wear — its root is `.window-tutorial__ui` — so it is
+  // declared here. The containing block is the wrapper the folder window
+  // appends, which is itself inset:0 on the window root.
+  &__ui {
+    position: absolute;
+    inset: 0;
+  }
+
+  // The layout already gets its size, its overflow and its opaque background
+  // from `.tutorial-main__layout`. The one override: the desk pane is a card
+  // inset from a canvas and rounds its own corners; here the window underneath
+  // owns the corner radius, and a second radius inside it reads as a card
+  // floating on a card.
+  &__content {
+    border-radius: 0;
+  }
+}
