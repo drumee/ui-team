@@ -32,7 +32,9 @@ function previewRequest(args = {}) {
   const id = args && args.window_tutorial;
   if (typeof id !== 'string') return null;
   if (EXCLUDED.has(id)) return null;
-  if (!TOURS[id]) return null;
+  // Bare TOURS[id] is truthy for inherited Object.prototype members
+  // ('constructor', 'toString', etc) reachable from the URL hash.
+  if (!Object.prototype.hasOwnProperty.call(TOURS, id)) return null;
 
   const opt = { preview: 1 };
   // 1-based in the URL, matching what the badge shows; the host and the step

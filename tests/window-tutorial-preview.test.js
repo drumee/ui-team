@@ -20,6 +20,15 @@ test("an unknown tour id is not a request", () => {
   assert.equal(previewRequest({ window_tutorial: "nope" }), null);
 });
 
+test("an inherited Object property name is not a tour", () => {
+  // These names are reachable from the URL hash, so this defends against
+  // a real attack surface. A bare TOURS[id] lookup is truthy for inherited
+  // members like 'constructor', so we must check own properties only.
+  for (const id of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+    assert.equal(previewRequest({ window_tutorial: id }), null, `${id} must not be reachable`);
+  }
+});
+
 test("a non-string id is not a request", () => {
   assert.equal(previewRequest({ window_tutorial: 1 }), null);
 });
