@@ -27,7 +27,7 @@
 const folderArt = require("media/grid/template/folder");
 
 /**
- * The three types, in the design's order.
+ * The workspace types this dialog offers, in the design's order.
  *
  * `area` is the real area token, so each row is tinted the colour the product
  * would give that workspace rather than one picked to match a screenshot.
@@ -41,6 +41,17 @@ const folderArt = require("media/grid/template/folder");
  * twice on the screen where the callout is up. Same reasoning, same keys, as
  * the tour's own rows.
  */
+
+// PERSONAL IS DELIBERATELY NOT HERE. A personal workspace is not a workspace
+// at all in the product's terms — libs/create-workspace makes it a plain
+// folder at the user's home root, with no hub, no area, no membership and no
+// follow-up access panel — and offering it beside two real workspace types
+// mis-sold what the user was creating. Removed from the dialog rather than
+// from the creation library: the `personal` branch there still serves the
+// product tour's own create screen (tutorial/skeleton/toolkit/workspace-dialog,
+// which teaches all three types and has a tour step per row), and the existing
+// personal workspaces users already own must keep working everywhere else —
+// the switcher still lists and opens them under "Personal".
 const STATUS_OPTIONS = [
   {
     area: _a.private,
@@ -55,13 +66,6 @@ const STATUS_OPTIONS = [
     desc: LOCALE.WS_TYPE_EXTERNAL_HINT,
     initial: 0,
     name: "share",
-  },
-  {
-    area: _a.personal,
-    label: LOCALE.PERSONAL_WORKSPACE,
-    desc: LOCALE.WS_TYPE_PERSONAL_HINT,
-    initial: 0,
-    name: "personal",
   },
 ];
 
