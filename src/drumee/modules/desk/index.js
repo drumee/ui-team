@@ -797,6 +797,88 @@ class desk_module extends LetcBox {
    *
    * @returns {Boolean} whether this boot carried such a link
    */
+  /**
+   * Run the in-window tour `?window_tutorial=<id>` asked for, if one did.
+   *
+   * THE DESK OWNS THIS, not the folder window, and that is the fix for a bug
+   * that made the URL do nothing at all. The read used to live in
+   * `__window_folder.buildContent`, which has two problems:
+   *
+   *   it reads too LATE   the hash is rewritten to `#/desk` during boot, so the
+   *                       arg set was always empty by then. The router now
+   *                       captures the intent from the URL early, the same way
+   *                       campaign and billing links are captured, and this
+   *                       consumes what it armed.
+   *   it reads too DEEP   buildContent only runs when a folder window mounts, so
+   *                       with nothing open — the home grid, an ordinary state
+   *                       (see the rail handlers' own `_hasWs` guards) — it was
+   *                       never called at all. That hit
+   *                       `?window_tutorial=workspace` hardest: the tour that
+   *                       teaches CREATING a workspace could not run for someone
+   *                       who had none open.
+   *
+   * So this opens a workspace when there is none, because a tour is drawn ON a
+   * folder window and there has to be one to draw on.
+   *
+   * `_railWorkspace()`, NOT `_activeWorkspace()`: the latter answers "which
+   * window is RAISED" and reports null while a workspace is open but unraised
+   * (boot, a re-feed, anything on top). Trusting it would open a SECOND,
+   * arbitrary workspace over the one already there — the exact fault
+   * `_railWorkspace` was written for.
+   *
+   * @returns {Promise<Boolean>} whether a tour was handed to a window
+   */
+  async _maybeRunWindowTutorial() {
+    const intent = require("libs/window-tutorial-intent");
+    if (!intent.has()) return false;
+
+    let ws = this._railWorkspace();
+    if (!ws) {
+      await this._openDefaultWorkspace();
+      ws = await this._awaitRailWorkspace();
+    }
+
+    // Consumed even when there is nothing to run it on. The intent belongs to
+    // THIS page load; leaving it armed would fire the tour at some unrelated
+    // later moment, and the warning below is what makes the failure visible
+    // instead of silent — which is what this whole bug was.
+    const req = intent.take();
+    if (!req) return false;
+    if (!ws || !_.isFunction(ws.showTutorial)) {
+      this.warn(
+        `[window-tutorial] "${req.tour}" was asked for, but no workspace could be opened to run it on`,
+      );
+      return false;
+    }
+    ws.showTutorial(req.tour, req.opt);
+    return true;
+  }
+
+  /**
+   * Wait for the workspace pane to actually exist after opening one.
+   *
+   * `loadWorkspace` returns the instant it is CALLED and mounts the pane from
+   * inside a `media.attributes` fetch, so `_openDefaultWorkspace()` resolving is
+   * not the same event as a window being there to draw on. Polled rather than
+   * hooked: there is no broadcast that means "this workspace is open", and a
+   * failed open should simply time out instead of leaving a listener behind.
+   *
+   * @returns {Promise<Object|null>}
+   */
+  _awaitRailWorkspace() {
+    const deadline = Date.now() + 5000;
+    return new Promise((resolve) => {
+      const look = () => {
+        if (this.isDestroyed && this.isDestroyed()) return resolve(null);
+        const w = this._railWorkspace();
+        if (w) return resolve(w);
+        if (Date.now() >= deadline) return resolve(null);
+        setTimeout(look, 100);
+      };
+      look();
+    });
+  }
+
   _maybeOpenFileDeepLink() {
     const hash = fileDeepLink.consume();
     if (!hash) return false;
@@ -5614,6 +5696,11 @@ class desk_module extends LetcBox {
     // the two are mutually exclusive in practice (a URL is either #/desk/billing
     // or a file link, never both).
     this._maybeOpenFileDeepLink();
+    // Same tier again, and for the same reason: `?window_tutorial=<id>` is an
+    // explicit request typed by a person, so it runs before the reward /
+    // LAUNCH30 flows rather than underneath them. A no-op unless the router
+    // armed one.
+    this._maybeRunWindowTutorial();
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()

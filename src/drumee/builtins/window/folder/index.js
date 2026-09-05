@@ -10,7 +10,6 @@ const {
 
 const { overMeetingCap } = require("libs/billing");
 
-const { previewRequest } = require("../tutorial/preview");
 
 const {
 
@@ -42,14 +41,6 @@ const WS_SEARCH_LIMIT = 20;
 // sibling workspace and leave the dropdown empty. 100 is the service's own cap.
 const WS_SEARCH_FETCH_MAX = 100;
 
-// `?window_tutorial=<id>` is answered by ONE window — the first to open after
-// the URL was typed. Several folder windows can be on screen, and each of them
-// reads the same module args; a preview bypasses Tours.claim entirely (see
-// showTutorial), so there is no single-flight backstop on this path — without
-// this latch every open window would mount its own duplicate overlay in the
-// same tick, not be turned away. Module-scoped rather than per-window, because
-// "already answered" is a fact about the URL, not about a window.
-let _previewConsumed = false;
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -912,44 +903,8 @@ class __window_folder extends mfsInteract {
     if (this.mget(_a.headless)) {
       this.el.dataset.headless = "1";
     }
-    // A forced in-window tour, for checking the UI. Last, so it is laid over a
-    // window that has already decided what it is showing.
-    this._maybeRunPreviewTour();
   }
 
-  /**
-   * Run the tour `?window_tutorial=<id>` asked for, if one did.
-   *
-   * Only `share` has a live in-window trigger, so this URL is how the other
-   * five are reachable in this host at all — for review, for QA and for a bug
-   * report that can name a screen.
-   *
-   * PREVIEW, not a real run: it is exempt from the seen-set in both directions,
-   * so the same URL works twice and the real trigger stays armed. Without that,
-   * one look at a tour would kill its trigger for the account permanently,
-   * because a tour records itself the moment it mounts.
-   */
-  _maybeRunPreviewTour() {
-    if (_previewConsumed) return;
-    let req = null;
-    try {
-      req = previewRequest(Visitor.parseModuleArgs());
-    } catch (e) {
-      return;
-    }
-    if (!req) return;
-    _previewConsumed = true;
-    const started = this.showTutorial(req.tour, req.opt);
-    // showTutorial returns false when it refuses outright, or a promise
-    // resolving false when the window went away before the wrapper mounted.
-    // Either way this URL was never actually answered, so give the latch
-    // back — otherwise ?window_tutorial= is inert for the rest of the page
-    // session having shown nothing, contradicting the "same URL works twice"
-    // promise above.
-    Promise.resolve(started).then((ok) => {
-      if (!ok) _previewConsumed = false;
-    });
-  }
 
   // A folder window opens FULL-FRAME — the whole desk body, the same frame a
   // workspace pane gets from the sidebar — instead of the inset popup box it

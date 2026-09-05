@@ -98,9 +98,17 @@ test("the share trigger mounts in-window instead of broadcasting", () => {
   );
 });
 
-test("the preview URL is read once, not once per open window", () => {
-  assert.match(src, /previewRequest/);
-  assert.match(src, /_previewConsumed|PREVIEW_CONSUMED/);
+test("the folder window does not read the URL itself", () => {
+  // It used to: `_maybeRunPreviewTour()` sat at the end of buildContent and
+  // parsed `?window_tutorial=` there. Wrong twice over — the hash is already
+  // rewritten to `#/desk` by then, and buildContent only runs when a folder
+  // window mounts, so with nothing open it never ran at all. The desk owns the
+  // read now (libs/window-tutorial-intent, armed by the router); this window
+  // only exposes showTutorial for the desk to call.
+  assert.ok(!/previewRequest/.test(src), "URL parsing belongs to the desk now");
+  assert.ok(!/_maybeRunPreviewTour/.test(src));
+  assert.ok(!/_previewConsumed/.test(src));
+  assert.match(src, /showTutorial\(tour, opt/);
 });
 
 test("the overlay covers the whole window and stops at its corners", () => {
