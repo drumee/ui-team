@@ -1092,12 +1092,16 @@ export function searchResults(ui, rows) {
  * @returns
  */
 export function fileTypeFilterBar(ui) {
+  // Same five buckets the listing resolves server-side (mfs_show_node_by's
+  // type filter). Labels via LOCALE: this bar shipped with literals, so the
+  // workspace tabs stayed English while the identical bar in
+  // skeleton/content/grid renders the translated strings.
   const tabs = [
-    { label: "All", value: "all" },
-    { label: "Docs", value: "docs" },
-    { label: "PDF", value: "pdf" },
-    { label: "Images", value: "image" },
-    { label: "Other", value: "other" },
+    { label: LOCALE.ALL, value: "all" },
+    { label: LOCALE.DOCS, value: "docs" },
+    { label: LOCALE.PDF, value: "pdf" },
+    { label: LOCALE.IMAGES, value: "image" },
+    { label: LOCALE.OTHER, value: "other" },
   ];
   const filterTabs = tabs.map((tab, index) =>
     button(ui, {
