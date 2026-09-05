@@ -805,3 +805,21 @@
     transform: translate(-50%, -220px) scale(1.1);
   }
 }
+
+// "No sound is coming from your microphone" notice (webrtc/room/jitsi
+// showMicWarning): same pill as .message-text, plus an inline action that
+// opens the device picker. The container may be click-through, so the action
+// re-enables pointer events on itself.
+.window-connect__message-container .message-mic-warning {
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacer-2) var(--spacer-3);
+
+  .message-mic-warning__action {
+    pointer-events: auto;
+    cursor: pointer;
+    text-decoration: underline;
+    white-space: nowrap;
+  }
+}
