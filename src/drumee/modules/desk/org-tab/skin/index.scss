@@ -1,0 +1,359 @@
+@use "mixins/drumee";
+
+// desk_org_tab — Figma 104:33055 (org-tab chip + org-dropdown, 294x296)
+//
+// PALETTE NOTE, learned the hard way. The `--normal-fg-*` ramp is FOREGROUND:
+// `--normal-fg-10` is #0b0a21, i.e. near-black, NOT a 10% tint of the
+// foreground. Using it as a background painted the Open pill and the chip
+// solid black. Surfaces come from the `--normal-bg-*` ramp
+// (#ffffff → #f2f2f7 → #e5e5ea → #d1d1d6); `--normal-bg-90` is the app's
+// standard hover surface (see topbar.scss __new-menu-item).
+//
+// ICON SIZING is not optional. A Button.Label/Button.Svg renders a bare <svg>
+// with no intrinsic size, so without an explicit `svg { width; height }` it
+// expands to fill its container — which is how the gear beside "Manage
+// organization" rendered ~200px tall. Every icon rule below carries one.
+//
+// Box.X/Box.Y already set display:flex and the direction, so nothing here
+// declares either — EXCEPT on Button.Label, where the framework writes an
+// inline display that only `!important` overrides (same as topbar's __ws-new).
+.desk-org-tab {
+
+  &__wrapper {
+    align-items: center;
+    position: relative;
+  }
+
+  // ── The chip in the bar ────────────────────────────────────────────────
+  // Figma 48:37106 org-tab: 191x30, fill #f2f2f7, r8, padding [4 12 4 4], gap 8.
+  // The tint is PERMANENT, not a hover state — the chip reads as a pill in the
+  // bar, and the asymmetric padding is what lets the 22px avatar sit flush
+  // against the left edge while the caret keeps its breathing room.
+  &__chip {
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    box-sizing: border-box;
+    padding: 4px 12px 4px 4px;
+    border-radius: var(--corner-radius-3);
+    background-color: var(--normal-bg-90);
+    cursor: pointer;
+    max-width: 260px;
+    color: var(--normal-fg);
+
+    &:hover {
+      background-color: var(--normal-bg-80);
+    }
+  }
+
+  &__avatar,
+  &__head-avatar {
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: var(--corner-radius-3);
+    background-color: var(--primary-40);
+    color: var(--white);
+  }
+
+  &__avatar {
+    width: 22px;
+    height: 22px;
+  }
+
+  &__head-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  &__avatar-text {
+    @include drumee.typo($color: var(--white), $size: 12px, $line: 16px);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  &__name {
+    @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 20px);
+    flex: 0 1 auto;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // The plan tag. A pill, and hidden when planLabel() returns nothing rather
+  // than drawn as an empty capsule — :empty is the only reliable test because
+  // the label is server-derived and can legitimately be "".
+  // Figma plan-tag: fill #5950ff at 10% with #5950ff text — a wash, not a solid
+  // badge. --primary-10 (#e4e3ff) is that wash composited on white, so the pill
+  // stays a token instead of an rgba() literal. Solid purple with white text
+  // (an earlier revision) read as a call-to-action rather than a label.
+  &__plan {
+    @include drumee.typo($color: var(--primary-40), $size: 12px, $line: 14px);
+    font-weight: 600;
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border-radius: var(--corner-radius-max);
+    background-color: var(--primary-10);
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__caret {
+    // display:flex + a block-level svg, deliberately. Without it the inner
+    // <svg> is an INLINE element: it sits on the text baseline and reserves
+    // descender space below itself, which drops it a couple of pixels relative
+    // to the number beside it — the classic "icon and value not on the same
+    // line". align-items on the parent cannot fix that, because the box being
+    // aligned is the inline box, not the glyph.
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  // ── The dropdown ───────────────────────────────────────────────────────
+  &__items {
+    min-width: 294px;
+  }
+
+  // Figma's surfaces are all r12 + a rgba(0,0,0,.05) hairline (--border-muted),
+  // never the heavier --border-default. The shadow is what separates the panel
+  // from the page, since the border alone is nearly invisible by design.
+  &__panel {
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  &__head {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__head-id {
+    gap: 4px;
+    // Without an explicit min-width a flex child refuses to shrink below its
+    // content, so a long org name pushed the Open pill out of the panel
+    // instead of ellipsing.
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  &__head-name-row {
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__head-name {
+    @include drumee.typo($color: var(--normal-fg), $size: 15px, $line: 20px);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__rename {
+    position: relative;
+    overflow: visible;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+    cursor: pointer;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover { color: var(--normal-fg); }
+  }
+
+  &__rename-entry {
+    width: 100%;
+  }
+
+  &__stats {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__stat {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__stat-value {
+    // The Note wrapper is itself a flex row around `.note-content`, so its box
+    // height is not simply the line-height. Centring inside it makes both
+    // children of the row predictable boxes, which is what lets the parent's
+    // align-items actually line the digits up with the glyph.
+    display: flex;
+    align-items: center;
+    @include drumee.typo($color: var(--primary-50), $size: 14px, $line: 16px);
+    font-weight: 600;
+  }
+
+  &__stat-ico {
+    position: relative;
+    overflow: visible;
+    // display:flex + a block-level svg, deliberately. Without it the inner
+    // <svg> is an INLINE element: it sits on the text baseline and reserves
+    // descender space below itself, which drops it a couple of pixels relative
+    // to the number beside it — the classic "icon and value not on the same
+    // line". align-items on the parent cannot fix that, because the box being
+    // aligned is the inline box, not the glyph.
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__open {
+    @include drumee.typo($color: var(--normal-fg), $size: 13px, $line: 17px);
+    font-weight: 500;
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--normal-bg-90);
+    cursor: pointer;
+
+    &:hover { background-color: var(--normal-bg-80); }
+  }
+
+  // A Button.Label: icon + text on one row. The framework writes an inline
+  // display on it, so the row layout needs !important — same as topbar's
+  // __ws-new and __new-menu-item.
+  &__manage {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 12px;
+    border-radius: var(--corner-radius-4);
+    border: 1px solid var(--border-muted);
+    cursor: pointer;
+    @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 20px);
+    font-weight: 500;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+    }
+
+    &:hover { background-color: var(--normal-bg-90); }
+  }
+
+  // ── Deferred multi-org block (see ../multi-org.js) ─────────────────────
+  &__switch {
+    gap: 8px;
+  }
+
+  &__divider {
+    height: 1px;
+    flex: 0 0 1px;
+    background-color: var(--border-default);
+  }
+
+  &__switch-label {
+    @include drumee.typo($color: var(--normal-fg-50), $size: 12px, $line: 17px);
+  }
+
+  &__switch-list {
+    gap: 2px;
+    max-height: 132px;
+    overflow-y: auto;
+  }
+
+  &__new-org {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 12px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--primary-40);
+    cursor: pointer;
+    @include drumee.typo($color: var(--white), $size: 14px, $line: 20px);
+    font-weight: 600;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+    }
+
+    &:hover { background-color: var(--primary-50); }
+  }
+
+  // The hover bubble ui-core injects INSIDE the icon element (__addTooltips
+  // appends a <div> to this.$el and toggles display on pointerenter).
+  //
+  // position:absolute is the whole point: without it the div is an ordinary
+  // flex child of a 16px icon box, so the label simply printed next to the
+  // glyph. pointer-events:none keeps it from eating the hover that summoned it.
+  // Geometry copied from desk/skin/topbar.scss __utility-tip so every tooltip
+  // in the shell reads as the same component.
+  &__tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: var(--corner-radius-3);
+    background-color: var(--normal-fg-10);
+    color: var(--normal-bg-100);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 400;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-bottom-color: var(--normal-fg-10);
+    }
+  }
+
+}

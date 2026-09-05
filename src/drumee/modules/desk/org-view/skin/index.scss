@@ -1,0 +1,520 @@
+@use "mixins/drumee";
+
+// desk_org_view — Figma 104:33055
+//
+// A full-canvas section screen in the same slot as Settings / Get help, so it
+// owns the whole pane and scrolls internally rather than growing the page.
+//
+// PALETTE NOTE: `--normal-fg-*` is the FOREGROUND ramp — `--normal-fg-10` is
+// #0b0a21 (near-black) and `--normal-fg-20` is #65656c (mid grey), NOT tints.
+// Surfaces come from `--normal-bg-*` (#ffffff → #f2f2f7 → #e5e5ea → #d1d1d6).
+// An earlier revision used the fg ramp for card and button backgrounds and
+// painted them solid black.
+//
+// ICON SIZING: a Button.Label/Button.Svg renders a bare <svg> with no
+// intrinsic size, so every icon needs an explicit `svg { width; height }` or
+// it expands to fill its container. Button.Label also carries an inline
+// display that only `!important` overrides (same as topbar's __ws-new).
+.desk-org-view {
+
+  // Figma 104:33973 Frame 1618873130: white panel, r16, 1px #f2f2f7 border,
+  // padding 24, gap 24. It is a rounded card inset from the rail, not a bare
+  // full-bleed pane.
+  &__main {
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 24px;
+    padding: 24px;
+    overflow-y: auto;
+    border-radius: var(--corner-radius-5);
+    border: 1px solid var(--normal-bg-90);
+    background-color: var(--normal-bg);
+  }
+
+  // ── Header ─────────────────────────────────────────────────────────────
+  &__header {
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    @include drumee.typo($color: var(--normal-fg), $size: 24px, $line: 26px);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  &__header-actions {
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  // Figma 48:37106: 245x36 white pill, r12, rgba(0,0,0,.05) hairline,
+  // padding [4 4 4 12], gap 12, magnifier inside at the left.
+  //
+  // The PILL owns the border and background; the entry inside is chromeless.
+  // Bordering the input itself (an earlier revision) drew a second box inside
+  // the first.
+  &__search-box {
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    width: 180px;
+    min-height: 36px;
+    padding: 4px 4px 4px 12px;
+    border-radius: var(--corner-radius-4);
+    border: 1px solid var(--border-muted);
+    background-color: var(--normal-bg);
+
+    &:focus-within { border-color: var(--active-border); }
+  }
+
+  &__search-ico {
+    // display:flex + a block-level svg, deliberately. Without it the inner
+    // <svg> is an INLINE element: it sits on the text baseline and reserves
+    // descender space below itself, which drops it a couple of pixels relative
+    // to the number beside it — the classic "icon and value not on the same
+    // line". align-items on the parent cannot fix that, because the box being
+    // aligned is the inline box, not the glyph.
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: var(--normal-fg-50);
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__search {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      outline: none;
+      background: transparent;
+      @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 17px);
+
+      &::placeholder { color: var(--normal-fg-50); }
+    }
+  }
+
+  &__new-btn {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 8px 14px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--primary-40);
+    cursor: pointer;
+    white-space: nowrap;
+    @include drumee.typo($color: var(--white), $size: 14px, $line: 20px);
+    font-weight: 600;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+    }
+
+    &:hover { background-color: var(--primary-50); }
+  }
+
+  &__new-menu-items {
+    min-width: 237px;
+    padding: 6px;
+    gap: 2px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  &__new-menu-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    @include drumee.typo($color: var(--normal-fg), $size: 13px, $line: 16px);
+    font-weight: 500;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+    }
+
+    &:hover { background-color: var(--normal-bg-90); }
+  }
+
+  // ── Sections ───────────────────────────────────────────────────────────
+  &__sections {
+    gap: 16px;
+  }
+
+
+  // Figma section: white, r16, padding 24, gap 24, and a #f2f2f7 border —
+  // NOT the rgba(0,0,0,.05) hairline the cards use. The two weights are
+  // deliberate: the section frame is a touch more present than the tiles in it.
+  &__section {
+    gap: 24px;
+    padding: 24px;
+    box-sizing: border-box;
+    border-radius: var(--corner-radius-5);
+    border: 1px solid var(--normal-bg-90);
+    background-color: var(--normal-bg);
+  }
+
+  &__section-head {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__section-id {
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__section-name-row {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__section-name {
+    @include drumee.typo($color: var(--normal-fg), $size: 15px, $line: 19px);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__section-rename,
+  &__section-delete {
+    position: relative;
+    overflow: visible;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+    cursor: pointer;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+    // Revealed on hover: two icons beside every department title is noise on a
+    // page whose subject is the workspaces underneath.
+    opacity: 0;
+
+    &:hover { color: var(--normal-fg); }
+  }
+
+  &__section-head:hover &__section-rename,
+  &__section-head:hover &__section-delete {
+    opacity: 1;
+  }
+
+  // Keyboard users never hover, so focus has to reveal them too or the
+  // controls are unreachable without a mouse.
+  &__section-rename:focus,
+  &__section-delete:focus {
+    opacity: 1;
+  }
+
+  &__section-meta {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__section-count-group {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__section-count {
+    // The Note wrapper is itself a flex row around `.note-content`, so its box
+    // height is not simply the line-height. Centring inside it makes both
+    // children of the row predictable boxes, which is what lets the parent's
+    // align-items actually line the digits up with the glyph.
+    display: flex;
+    align-items: center;
+    @include drumee.typo($color: var(--primary-50), $size: 13px, $line: 17px);
+    font-weight: 600;
+  }
+
+  &__section-count-label {
+    @include drumee.typo($color: var(--normal-fg-50), $size: 12px, $line: 17px);
+  }
+
+  // Figma "Button Lightmode": 167x36, fill #f2f2f7, r12, padding 8/16, gap 8,
+  // label 14/600 in the normal foreground — a quiet secondary button, not an
+  // accent one.
+  &__section-new {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 8px 16px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--normal-bg-90);
+    cursor: pointer;
+    white-space: nowrap;
+    @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 20px);
+    font-weight: 600;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+    }
+
+    &:hover { background-color: var(--normal-bg-80); }
+  }
+
+  &__section-rename-entry {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  // ── Workspace cards ────────────────────────────────────────────────────
+  // Box.G is real CSS grid (skin/lib/container.scss `[data-flow="g"]`), so the
+  // track definition belongs here and flex sizing on the cards would be
+  // ignored. auto-fill + minmax reproduces the frame's 215px cards while still
+  // filling a wide pane.
+  &__grid {
+    // Figma 104:33973 lays 215px cards on a 1412px row: six columns, 24px gaps
+    // (6x215 + 5x24 = 1412). The department drill-down (48:37106) uses 287px
+    // cards; this is the org overview, which packs them tighter.
+    // auto-fill + minmax keeps 287 as the floor and stretches to fill, so a
+    // narrower pane drops a column instead of leaving a ragged right edge.
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 24px;
+  }
+
+  // Figma 104:33973 card: 215x128, r16, padding 24, gap 8, NO fill — white on
+  // the white page, separated only by a rgba(0,0,0,.05) hairline. An earlier
+  // revision filled them with --normal-bg-90 and bordered them with the heavier
+  // --border-default, which turned a light tile grid into rows of grey blocks.
+  &__card {
+    gap: 8px;
+    padding: 24px;
+    box-sizing: border-box;
+    // The content is only ~70px tall, so without a floor the cards collapse to
+    // half height and read as a dense table rather than the tile grid drawn.
+    min-height: 128px;
+    border-radius: var(--corner-radius-5);
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-muted);
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+
+    // The frame draws no hover. A hairline lift is the least it can do to say
+    // the tile is clickable, without inventing a fill the design does not have.
+    &:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  // Icon at the top, name and member count together at the foot — the frame
+  // groups the two text rows rather than distributing all three evenly.
+  &__card-icon { margin-bottom: auto; }
+
+  // The area-tinted workspace glyph, reused from media/grid/template/folder.
+  //
+  // FOUR LEVELS HAVE TO BE CONSTRAINED, not one. That template emits
+  // `<div class="media-grid__folder-art"><svg class="folder-shape …">` plus an
+  // absolutely-positioned `.badge`, and the SVG is authored at 105x86 for a
+  // full-size grid tile. Sizing only the <svg> (what an earlier revision did)
+  // left the badge at its authored size and absolute offset, so it escaped the
+  // 26px box and landed on top of the workspace name.
+  //
+  // The wrapper keeps `overflow: visible` on purpose — the badge is meant to
+  // ride the corner of the folder body, slightly outside it.
+  //
+  // Same recipe as desk/breadcrumb/item/skin, scaled 20px → 26px (Figma's
+  // "folder mini icon"). The shape keeps the 105:86 aspect: 26 × 21.
+  &__card-icon {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    flex: 0 0 auto;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 26px;
+      height: 21px;
+    }
+
+    .folder-shape {
+      width: 26px;
+      height: 21px;
+      fill: var(--area-private);
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public { fill: var(--area-public); }
+      &.share,
+      &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+
+    // Explicit, and !important, because the badge carries its own authored
+    // dimensions — at this size it would otherwise dwarf the folder.
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 15px !important;
+      height: 15px !important;
+      color: var(--grid-color-folder-badge);
+    }
+  }
+
+  &__card-name {
+    @include drumee.typo($color: var(--normal-fg), $size: 16px, $line: 19px);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ── Shared bits ────────────────────────────────────────────────────────
+  &__members {
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  &__members-value {
+    // The Note wrapper is itself a flex row around `.note-content`, so its box
+    // height is not simply the line-height. Centring inside it makes both
+    // children of the row predictable boxes, which is what lets the parent's
+    // align-items actually line the digits up with the glyph.
+    display: flex;
+    align-items: center;
+    @include drumee.typo($color: var(--primary-50), $size: 16px, $line: 19px);
+    font-weight: 600;
+  }
+
+  &__members-ico {
+    position: relative;
+    overflow: visible;
+    // display:flex + a block-level svg, deliberately. Without it the inner
+    // <svg> is an INLINE element: it sits on the text baseline and reserves
+    // descender space below itself, which drops it a couple of pixels relative
+    // to the number beside it — the classic "icon and value not on the same
+    // line". align-items on the parent cannot fix that, because the box being
+    // aligned is the inline box, not the glyph.
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__ungrouped-hint {
+    @include drumee.typo($color: var(--normal-fg-50), $size: 13px, $line: 20px);
+  }
+
+  &__empty {
+    @include drumee.typo($color: var(--normal-fg-50), $size: 13px, $line: 20px);
+    padding: 24px 0;
+    text-align: center;
+  }
+
+  &__new-dept-entry {
+    max-width: 320px;
+
+    input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--corner-radius-3);
+      border: 1px solid var(--border-default);
+      background-color: var(--normal-bg-elevated);
+    }
+  }
+
+  // The hover bubble ui-core injects INSIDE the icon element (__addTooltips
+  // appends a <div> to this.$el and toggles display on pointerenter).
+  //
+  // position:absolute is the whole point: without it the div is an ordinary
+  // flex child of a 16px icon box, so the label simply printed next to the
+  // glyph. pointer-events:none keeps it from eating the hover that summoned it.
+  // Geometry copied from desk/skin/topbar.scss __utility-tip so every tooltip
+  // in the shell reads as the same component.
+  &__tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: var(--corner-radius-3);
+    background-color: var(--normal-fg-10);
+    color: var(--normal-bg-100);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 400;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-bottom-color: var(--normal-fg-10);
+    }
+  }
+
+}

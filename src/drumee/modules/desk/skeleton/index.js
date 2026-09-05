@@ -386,11 +386,6 @@ const _desk_main = function (ui) {
       sys_pn: "desk-body",
       className: `${ui.fig.family}__right-side`,
       kids: [
-        Skeletons.Box.Y({
-          sys_pn: "top-bar",
-          className: `${ui.fig.family}__topbar`,
-          kids: [require("./topbar")(ui)],
-        }),
         Skeletons.Box.X({
           sys_pn: "desk-wrapper",
           className: `${ui.fig.family}__wm-container`,
@@ -480,6 +475,24 @@ const _desk_main = function (ui) {
   }
 
   const mainKids = [
+    // The top bar spans the FULL canvas width, above the rail — Figma
+    // 104:33973 puts the org chip in the very top-left corner and starts the
+    // dark rail beneath it.
+    //
+    // It used to live inside __right-side, i.e. to the RIGHT of the rail, so
+    // the rail owned the top-left corner and the bar began at x=80. Hoisting
+    // it here is what makes the rail start below the bar instead of beside it.
+    //
+    // Rendered on mobile too, exactly as before: the phone gets its own
+    // __mobile-topbar (unshifted below) and this one is hidden by
+    // `&__topbar[data-device="mobile"]` in the skin. Dropping it on mobile
+    // instead would leave `getPart("top-bar")` — which _syncWorkspaceTopbar and
+    // three other call sites use — resolving to nothing.
+    Skeletons.Box.Y({
+      sys_pn: "top-bar",
+      className: `${ui.fig.family}__topbar`,
+      kids: [require("./topbar")(ui)],
+    }),
     Skeletons.Box.X({
       className: `${ui.fig.family}__body`,
       kids: bodyKids,

@@ -56,10 +56,15 @@ html {
     overflow: auto;
 
     &:not([data-device="mobile"]) {
-      // Padding only. NO gap here: __main is a Box.Y wrapping a single child
-      // (__body), so a gap on it is vertical and never separated the rail from
-      // the workspace. The horizontal row is __body — see below.
+      // __main is a Box.Y holding TWO children now — the full-width top bar and
+      // then __body (rail + workspace). So the vertical gap here is exactly
+      // what separates the bar from the row beneath it; it is the 8px that used
+      // to be __right-side's `gap` back when the bar lived inside that column.
+      //
+      // It is still NOT what separates the rail from the workspace — that
+      // remains horizontal, and __body owns it (see below).
       padding: 8px;
+      gap: 8px;
       box-sizing: border-box;
       // A DEFINITE height, not just max-height: the panels inside are sized
       // height:100% so they fit the padded content box. Without it they fall
@@ -217,7 +222,18 @@ html {
 
   &__body {
     // 100% of the padded canvas, not 100vh — see __main above.
+    // Mobile only, now: on desktop __main also carries the top bar, so a flat
+    // 100% here would overflow the column by the bar's height. See below.
     height: 100%;
+
+    // Desktop: take whatever the top bar leaves. min-height:0 is required or
+    // the flex item refuses to shrink below its content and the workspace
+    // pane's own scrollers never engage.
+    &:not([data-device="mobile"]) {
+      height: auto;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
 
     // The 8px gutter between the rail and the workspace (43:23955: the rail
     // ends at x=72, the workspace card starts at x=80).
@@ -242,7 +258,10 @@ html {
     overflow: hidden;
   }
 
-  // Frame 1 stacks top-bar then body with an 8px gap.
+  // Frame 1 stacks top-bar then body with an 8px gap. That gap moved to __main
+  // when the bar was hoisted to full width — __right-side now has a single
+  // child (__wm-container), so this is inert. Kept because the column regains
+  // siblings the moment anything else is added beside the window manager.
   &__right-side {
     gap: 8px;
   }

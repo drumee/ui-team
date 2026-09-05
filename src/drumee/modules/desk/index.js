@@ -5491,6 +5491,32 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * The organisation screen — Figma 104:33055.
+   *
+   * A full-canvas section screen. The breadcrumb is retitled first, the same
+   * way Settings / Get help / Calendar announce themselves, so leaving the
+   * screen later takes the `wasSection` branch in _leaveSectionScreen and the
+   * workspace path is rebuilt rather than left reading "Organization".
+   *
+   * REFUSES when there is no organisation to show, or no server behind it.
+   * The only way in is the topbar chip, which is not mounted in either case —
+   * but the "New department" path also arrives here from a RADIO_BROADCAST,
+   * and a broadcast has no such gate of its own. Without this, an account on
+   * domain 1 that somehow reached it would get a screen whose breadcrumb reads
+   * the SHARED server domain's name ("Drumee Stage Server", via the
+   * metadata.isOrganization row) over an empty grid.
+   *
+   * @param {Object} [opt] merged into the mounted widget (e.g. armNewDepartment)
+   */
+  _openOrgView(opt) {
+    if (!require("libs/org-overview").orgFeature()) return;
+    RADIO_BROADCAST.trigger("breadcrumb:context", {
+      filename: Organization.name() || LOCALE.ORGANIZATION,
+    });
+    return this.togglePanel("desk_org_view", "settings-main-slot", true, opt);
+  }
+
+  /**
    * Slots whose mounted widget uses `data-anim` CSS for slide-in/out.
    * For these we keep the widget alive on close (preserving fetched
    * data + scroll position), only flipping `data-anim`. Other slots
@@ -5715,7 +5741,11 @@ class desk_module extends LetcBox {
     // leaving the topbar's "New" (add workspace / upload) visible would put two
     // identically-labelled buttons 24px apart meaning different things.
     this.ensurePart("action-cluster").then((p) => {
-      if (["apps_main", "settings_main", "calendar_main"].includes(kind)) {
+      // desk_org_view joins the list for the same reason the Calendar did: it
+      // carries its OWN "+ New" (department / workspace / migrate), so leaving
+      // the topbar's visible would put two identically-labelled buttons on one
+      // screen meaning different things.
+      if (["apps_main", "settings_main", "calendar_main", "desk_org_view"].includes(kind)) {
         p.setState(0);
       } else {
         p.setState(1);
@@ -6517,6 +6547,38 @@ class desk_module extends LetcBox {
           .then(() => Kind.waitFor("apps_main"))
           .then(() => this.togglePanel("apps_main", "settings-main-slot", true, consoleOpt))
           .catch((e) => this.warn && this.warn("admin-console load failed", e));
+      }
+
+      // ── Organisation (Figma 104:33055) ────────────────────────────────
+      // The org dropdown's "Open" → the organisation screen, in the same slot
+      // as Settings / Get help / Calendar so it inherits their mutual
+      // exclusion and their destroy-on-close. Open-only, like its neighbours.
+      case "open-org-view":
+        return this._openOrgView();
+
+      // The dropdown's "Manage organization" is the admin console — that IS
+      // the organisation's management screen (members, security, domain). It
+      // routes to the SAME case rather than a parallel one, so the plugin's
+      // on-demand load, its upsell gating and its breadcrumb all stay in the
+      // single place that owns them.
+      case "manage-organization":
+        return this.onUiEvent(cmd, { ...args, service: "toggle-apps" });
+
+      // "New department" from the topbar's + New menu. The org view owns the
+      // entry — this only has to make sure that screen is up.
+      //
+      // settings-main-slot is not a keep-alive slot, so togglePanel returns
+      // early for an already-mounted kind and never applies `opt`. Hence the
+      // split: mount it with the intent, or, when it is already the screen the
+      // user is on, tell it.
+      case "new-department": {
+        if (
+          this._pendingKinds
+          && this._pendingKinds["settings-main-slot"] === "desk_org_view"
+        ) {
+          return RADIO_BROADCAST.trigger("org:new-department");
+        }
+        return this._openOrgView({ armNewDepartment: 1 });
       }
 
       case "toggle-trash":

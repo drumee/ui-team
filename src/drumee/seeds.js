@@ -160,6 +160,12 @@ module.exports = {
   desk_breadcrumb_item: function () {
     return import("./modules/desk/breadcrumb/item");
   },
+  desk_org_tab: function () {
+    return import("./modules/desk/org-tab");
+  },
+  desk_org_view: function () {
+    return import("./modules/desk/org-view");
+  },
   workspace_item: function () {
     return import("./modules/desk/workspace-item");
   },

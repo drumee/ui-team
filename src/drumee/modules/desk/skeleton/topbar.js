@@ -144,6 +144,23 @@ const deskNewMenu = (pfx, ui, mayWrite) => {
           service: "launch-gdrive-migration",
           className: `${pfx}__new-menu-item--gdrive`,
         }),
+        // "New department" — Figma 104:33055's + New menu.
+        //
+        // Gated on orgFeature() rather than on `mayWrite`: the two rows above
+        // ask whether the viewer may write in the workspace they are standing
+        // in, which has nothing to do with whether their organisation may gain
+        // a department. With no organisation there is no domain to hang one on,
+        // and with no server endpoint there is nothing to call — either way the
+        // row is not built at all rather than built and refused on click.
+        //
+        // It opens the org view and arms the same inline entry the screen's own
+        // "+ New" arms — one way to name a department however it was started.
+        !require("libs/org-overview").orgFeature() ? "" : newMenuRow(pfx, ui, {
+          ico: "ph-cube",
+          label: LOCALE.NEW_DEPARTMENT,
+          service: "new-department",
+          className: `${pfx}__new-menu-item--department`,
+        }),
         createGroup,
       ],
     }),
@@ -171,6 +188,18 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${pfx}__left-cluster`,
         kids: [
+          // Organisation chip + dropdown (Figma 104:33055), ahead of the
+          // breadcrumb exactly as the frame orders them.
+          //
+          // orgFeature(), not inOrganization(): the chip is absent both for an
+          // account with no organisation (domain 1 — the majority) AND on a
+          // deployment whose server has not shipped the org endpoints yet. In
+          // the second case the chip would otherwise look fine (name and plan
+          // come from the boot payload) while its dropdown reported "0
+          // departments, 0 members" — a number it never actually learned.
+          require("libs/org-overview").orgFeature()
+            ? { kind: "desk_org_tab", className: `${pfx}__org-tab`, uiHandler: [ui] }
+            : null,
           // The address chip: crumb track + the switcher's caret, in one box.
           //
           // They were adjacent siblings and merely LOOKED like one control —
