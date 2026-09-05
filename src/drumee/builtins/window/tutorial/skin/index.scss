@@ -27,3 +27,34 @@
   // Step panes with their own background get the same corner treatment here as in
   // the desk tour, which is the right behaviour.
 }
+
+// ── One card width, whatever the screen says ─────────────────────────────────
+//
+// A callout takes one of two shapes: a title + description card, which is a flat
+// 297px, and a "bare" one-line card, which hugs its copy
+// (`width: max-content`, skin/tooltip.scss). Across a tour that reads as the
+// bubble changing size from screen to screen — the workspace tour alternates
+// between the two four times, so the card grows, shrinks and grows again while
+// the thing it points at stays put.
+//
+// That hug is right on the desk, where there is room for a 420px line. It is
+// not right here: a folder pane is a fraction of the desk's width, and a card
+// sized to its longest sentence crowds the very surface it is describing.
+//
+// SCOPED TO THIS HOST, deliberately. The desk tour keeps the design's hugging
+// bare card; only tours drawn inside a window are made uniform.
+//
+// Only the hug is overridden, not a width per tier. `.tutorial__bubble-card` is
+// on BOTH shapes, and the tier rules
+// (`.tutorial-main[data-size="narrow"] .tutorial__bubble-card`, and mobile's
+// `!important` bottom-sheet) select on that shared class at a higher specificity
+// than this rule — so the bare card follows the standard one down to 268px at
+// narrow and into the sheet at mobile on its own, with no second set of numbers
+// here to drift out of step.
+.window-tutorial__ui .tutorial__bubble-card--bare {
+  width: 297px;
+  // `min(420px, 60vw)` was the cap the hug needed. With a fixed width there is
+  // nothing to cap, and leaving it would let 60vw shrink this card below the
+  // standard one on a narrow viewport — reintroducing the mismatch.
+  max-width: none;
+}
