@@ -125,6 +125,56 @@ function buildStepWidgets(ui, t, opt = {}) {
   }));
 }
 
+/**
+ * Where the callout card sits, given the rect of what it is talking about.
+ *
+ * The four direction names mean the direction the callout REACHES OUT in, NOT
+ * the side of the target it lands on: 'west' reaches west, so the card sits to
+ * the target's right.
+ *
+ * BOTH BOXES ARE VIEWPORT RECTS, and the result is expressed relative to
+ * `host`. That parameter is the fix for a real bug: this used to read `rect`
+ * from getBoundingClientRect() and the far edges from window.innerWidth /
+ * innerHeight — both viewport-relative — and write them straight onto an
+ * absolutely-positioned callout, which resolves against its CONTAINING BLOCK.
+ *
+ * NEITHER host is the viewport, which is the part that went unnoticed. Measured
+ * with the real skins: the callout's offset parent is the spotlight in both, and
+ * its origin sits at (0, 60) under the desk — `.desk-module__overlay` is
+ * positioned and starts below the desk topbar — and at (80, 60) inside a folder
+ * window, which is positioned too. So the desk tour's callouts have ALWAYS been
+ * one topbar too low; it reads as a near-miss there because the horizontal
+ * offset is zero and the mock's targets are large. In a window the error is on
+ * both axes against small targets, which is what made it obvious.
+ *
+ * Passing the host's own rect makes the caller say which box it means. A caller
+ * that genuinely fills the viewport passes the viewport and gets exactly the old
+ * numbers — that equivalence is pinned by a test — but no caller in this app
+ * actually does.
+ *
+ * @param {Object} rect      what the callout points at, in viewport coordinates
+ * @param {String} direction north | south | east | west
+ * @param {Number} gap       card edge to target edge
+ * @param {Object} host      the callout's containing block, in viewport
+ *   coordinates — `{left, top, right, bottom}`
+ * @returns {Object} CSS placement relative to `host`
+ */
+function anchorFor(rect, direction, gap, host) {
+  const cx = rect.left + rect.width / 2 - host.left;
+  const cy = rect.top + rect.height / 2 - host.top;
+  switch (direction) {
+    case 'south':
+      return { left: `${cx}px`, bottom: `${host.bottom - rect.top + gap}px` };
+    case 'east':
+      return { right: `${host.right - rect.left + gap}px`, top: `${cy}px` };
+    case 'west':
+      return { left: `${rect.right + gap - host.left}px`, top: `${cy}px` };
+    case 'north':
+    default:
+      return { left: `${cx}px`, top: `${rect.bottom + gap - host.top}px` };
+  }
+}
+
 module.exports = {
   SIZE_TIERS,
   SHORT_HEIGHT,
@@ -132,4 +182,5 @@ module.exports = {
   tierFor,
   screensFor,
   buildStepWidgets,
+  anchorFor,
 };

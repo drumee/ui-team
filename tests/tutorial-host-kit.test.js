@@ -90,3 +90,77 @@ test("buildStepWidgets: absent context is null, never undefined", () => {
   assert.equal(w[0].subject_data, null);
   assert.equal(w[0].celebrate, null);
 });
+
+// ── anchorFor ────────────────────────────────────────────────────────────────
+//
+// Where the callout card is placed, given the rect of the thing it points at.
+//
+// This moved here from spotlight/index.js to fix a real bug. It used to mix two
+// coordinate systems: `getBoundingClientRect()` and `window.innerWidth/Height`
+// are VIEWPORT-relative, but the value is written as `top`/`left`/`bottom`/
+// `right` on an absolutely-positioned callout, which resolves against its
+// CONTAINING BLOCK.
+//
+// Measured with the real skins: the callout's origin is (0, 60) under the desk
+// and (80, 60) inside a folder window — BOTH are offset, because
+// `.desk-module__overlay` and `.window__ui` are each positioned. So the desk
+// tour's callouts have always been one topbar too low; it passes for a near-miss
+// there because the horizontal offset is zero and the mock's targets are large.
+//
+// So the host box is passed in. The viewport-host case below is a pure
+// equivalence check on the arithmetic, not a claim that any real host is the
+// viewport — none is.
+const VIEWPORT = { left: 0, top: 0, right: 1440, bottom: 900 };
+
+// A folder window inset below the desk topbar and right of the rail.
+const WINDOW = { left: 80, top: 60, right: 1440, bottom: 900 };
+
+// The thing being pointed at, in viewport coordinates.
+const TARGET = { left: 200, top: 240, right: 500, bottom: 300, width: 300, height: 60 };
+
+test("anchorFor: a viewport host reproduces the pre-move values exactly", () => {
+  // cx = 350, cy = 270, gap = 32.
+  assert.deepEqual(kit.anchorFor(TARGET, "west", 32, VIEWPORT), {
+    left: "532px",
+    top: "270px",
+  });
+  assert.deepEqual(kit.anchorFor(TARGET, "north", 32, VIEWPORT), {
+    left: "350px",
+    top: "332px",
+  });
+  assert.deepEqual(kit.anchorFor(TARGET, "east", 32, VIEWPORT), {
+    right: "1272px",
+    top: "270px",
+  });
+  assert.deepEqual(kit.anchorFor(TARGET, "south", 32, VIEWPORT), {
+    left: "350px",
+    bottom: "692px",
+  });
+});
+
+test("anchorFor: THE FIX — an offset host shifts the card by that offset", () => {
+  // The bug: with the host 60px down the page, `top: 270px` put the card 60px
+  // too low, because 270 was measured from the viewport and applied from the
+  // window. It must be 210 — the target's centre expressed in the host's box.
+  const west = kit.anchorFor(TARGET, "west", 32, WINDOW);
+  assert.equal(west.top, "210px", "card is a window-offset too low");
+  assert.equal(west.left, "452px");
+
+  const north = kit.anchorFor(TARGET, "north", 32, WINDOW);
+  assert.equal(north.top, "272px");
+  assert.equal(north.left, "270px");
+});
+
+test("anchorFor: south and east measure from the HOST's far edges", () => {
+  // These used window.innerHeight / window.innerWidth, which is the viewport's
+  // far edge — wrong whenever the callout does not fill the viewport.
+  assert.equal(kit.anchorFor(TARGET, "south", 32, WINDOW).bottom, "692px");
+  assert.equal(kit.anchorFor(TARGET, "east", 32, WINDOW).right, "1272px");
+});
+
+test("anchorFor: an unknown direction falls back to north", () => {
+  assert.deepEqual(
+    kit.anchorFor(TARGET, "nonsense", 32, VIEWPORT),
+    kit.anchorFor(TARGET, "north", 32, VIEWPORT),
+  );
+});

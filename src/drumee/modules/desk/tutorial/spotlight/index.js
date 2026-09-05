@@ -1,5 +1,6 @@
 require('./skin');
 const { tooltipBubble } = require('../skeleton/toolkit');
+const { anchorFor } = require('../host-kit');
 
 // Card edge to target edge.
 //
@@ -100,28 +101,13 @@ function opensStackingContext(node) {
   return false;
 }
 
-/**
- * Where the card sits, given the rect it is talking about.
- *
- * The four names mean what they have always meant — the direction the callout
- * reaches out in, NOT the side of the target it lands on. 'west' reaches west,
- * so the card sits to the target's right.
- */
-function anchorFor(rect, direction, gap = GAP) {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  switch (direction) {
-    case 'south':
-      return { left: `${cx}px`, bottom: `${window.innerHeight - rect.top + gap}px` };
-    case 'east':
-      return { right: `${window.innerWidth - rect.left + gap}px`, top: `${cy}px` };
-    case 'west':
-      return { left: `${rect.right + gap}px`, top: `${cy}px` };
-    case 'north':
-    default:
-      return { left: `${cx}px`, top: `${rect.bottom + gap}px` };
-  }
-}
+// anchorFor moved to ../host-kit.
+//
+// It has to know the box the callout is positioned INSIDE, and that box is no
+// longer always the viewport: a tour drawn over a folder window sits inside a
+// positioned ancestor, so viewport coordinates written as `top`/`left` landed
+// the card a window-offset away from its target. The kit's version takes the
+// host rect, and focus() below measures it.
 
 class __tutorial_spotlight extends LetcBox {
 
@@ -270,11 +256,15 @@ class __tutorial_spotlight extends LetcBox {
     }
     if (this._stale(ticket)) return;
     const anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    // The callout is absolutely positioned inside THIS widget, so its
+    // coordinates are relative to this box — not to the viewport, which is only
+    // the same thing when nothing above the tour is positioned.
+    const host = this.el.getBoundingClientRect();
     callout.feed(tooltipBubble(owner || this, {
       ...tooltip,
       direction,
       beak,
-      style: anchorFor(anchorRect, direction, gap),
+      style: anchorFor(anchorRect, direction, gap, host),
     }));
     await this._keepInView(callout, ticket);
   }
