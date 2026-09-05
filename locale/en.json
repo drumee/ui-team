@@ -3102,5 +3102,8 @@
   "NOT_ENOUGH_PRIVILEGE": "You do not have permission to do that.",
   "INVALID_NAME": "Enter a name.",
   "WORKSPACE_NOT_FOUND": "That workspace no longer exists.",
-  "NO_ORG": "No organization was found for this account."
+  "NO_ORG": "No organization was found for this account.",
+  "ORG_ROLE_OWNER": "Owner",
+  "ORG_ROLE_ADMIN": "Admin",
+  "ORG_ROLE_MEMBER": "Member"
 }

@@ -60,6 +60,34 @@ function chip(pfx) {
 }
 
 /**
+ * The viewer's standing in this organisation — Owner / Admin / Member.
+ *
+ * The server decides it (three words over a six-step Remit ladder) so the
+ * label and the affordances beside it can never disagree: "admin" starts at
+ * exactly the tier that may open the org view.
+ *
+ * Rendered only when there is a role to show. An organisation whose owner's
+ * privilege row has gone leaves members with no role at all, and a blank chip
+ * is worse than none.
+ *
+ * @param {String} pfx
+ * @param {String} role 'owner' | 'admin' | 'member'
+ */
+function roleTag(pfx, role) {
+  if (!role) return null;
+  const label = {
+    owner: LOCALE.ORG_ROLE_OWNER,
+    admin: LOCALE.ORG_ROLE_ADMIN,
+    member: LOCALE.ORG_ROLE_MEMBER,
+  }[role];
+  if (!label) return null;
+  return Skeletons.Note({
+    className: `${pfx}__role ${pfx}__role--${role}`,
+    content: label,
+  });
+}
+
+/**
  * One count in the panel header — "3 [cube]" / "24 [people]".
  *
  * @param {String} pfx
@@ -123,6 +151,13 @@ function header(pfx, ui, data) {
             partHandler: ui,
             kids: [
               Skeletons.Note({ className: `${pfx}__head-name`, content: name }),
+              // The role is shown to EVERYONE, not only to those without a
+              // pencil. An owner asking "what am I here?" deserves the same
+              // answer a member gets — and an either/or would have told the 52
+              // owners on a live install nothing at all, which is the opposite
+              // of what the label is for.
+              roleTag(pfx, data.role),
+              // The pencil is additional, and only for those who may rename.
               data.can_manage
                 ? Skeletons.Button.Svg({
                     ico: "ph-pencil-simple-line",
@@ -146,12 +181,20 @@ function header(pfx, ui, data) {
       // "Open" — the org view. A Note rather than a Button.Label because the
       // frame draws a bare pill with no icon, and Button.Label always lays out
       // an icon slot.
-      Skeletons.Note({
-        className: `${pfx}__open`,
-        content: LOCALE.OPEN,
-        service: "open-org-view",
-        uiHandler: [ui],
-      }),
+      //
+      // ABSENT, not disabled, below admin: the server sends a member no
+      // departments and no workspaces (they carry the names of workspaces the
+      // member cannot open), so the screen behind this would be empty. A
+      // greyed pill invites a click that can only disappoint; the role beside
+      // the org name is what explains its absence.
+      data.can_browse
+        ? Skeletons.Note({
+            className: `${pfx}__open`,
+            content: LOCALE.OPEN,
+            service: "open-org-view",
+            uiHandler: [ui],
+          })
+        : null,
     ],
   });
 }

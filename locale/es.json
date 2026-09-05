@@ -2898,5 +2898,8 @@
   "NOT_ENOUGH_PRIVILEGE": "No tienes permiso para hacer eso.",
   "INVALID_NAME": "Introduce un nombre.",
   "WORKSPACE_NOT_FOUND": "Ese espacio ya no existe.",
-  "NO_ORG": "No se encontró ninguna organización para esta cuenta."
+  "NO_ORG": "No se encontró ninguna organización para esta cuenta.",
+  "ORG_ROLE_OWNER": "Propietario",
+  "ORG_ROLE_ADMIN": "Administrador",
+  "ORG_ROLE_MEMBER": "Miembro"
 }

@@ -163,6 +163,11 @@
   &__head-name {
     @include drumee.typo($color: var(--normal-fg), $size: 15px, $line: 20px);
     font-weight: 600;
+    // The row now holds three things — name, role, and (for some) the pencil.
+    // A nowrap text child will not shrink below its content without this, so a
+    // long org name pushed the role tag and the pencil out of the panel.
+    min-width: 0;
+    flex: 0 1 auto;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -183,6 +188,28 @@
     }
 
     &:hover { color: var(--normal-fg); }
+  }
+
+  // The viewer's role, in the slot the rename pencil occupies for those who
+  // have one. A quiet wash rather than a solid badge — it is a statement of
+  // fact, not a control, and the plan tag in the chip above is already the
+  // one accent-coloured pill in this panel.
+  &__role {
+    @include drumee.typo($color: var(--normal-fg-50), $size: 11px, $line: 14px);
+    font-weight: 600;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: var(--corner-radius-max);
+    background-color: var(--normal-bg-90);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  // The owner is the one role worth colouring: it is the only one that cannot
+  // be granted away, and it answers "can I hand this to someone else?".
+  &__role--owner {
+    color: var(--primary-40);
+    background-color: var(--primary-10);
   }
 
   &__rename-entry {

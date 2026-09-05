@@ -24,7 +24,14 @@
  */
 
 /** The shape every consumer can render, with or without a server behind it. */
-const EMPTY = { organisation: null, departments: [], workspaces: [], can_manage: 0 };
+const EMPTY = {
+  organisation: null,
+  role: null,
+  departments: [],
+  workspaces: [],
+  can_manage: 0,
+  can_browse: 0,
+};
 
 let __pending = null;
 
@@ -107,9 +114,16 @@ function normalize(data) {
   const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
   return {
     organisation: data.organisation || null,
+    // 'owner' | 'admin' | 'member', decided server-side from yp.privilege.
+    role: data.role || null,
     departments: list(data.departments),
     workspaces: list(data.workspaces),
     can_manage: ~~data.can_manage,
+    // Reported, never inferred from `departments.length`: a member is sent an
+    // empty list because they may not see one, which is a different state from
+    // an organisation that has no departments yet, and the two must not render
+    // alike.
+    can_browse: ~~data.can_browse,
   };
 }
 

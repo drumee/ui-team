@@ -6,7 +6,7 @@
  * Settings / Get help / Calendar, so it inherits their mutual exclusion and
  * their destroy-on-close.
  * ==================================================================== */
-const { orgOverview, groupByDepartment } = require("libs/org-overview");
+const { orgOverview, groupByDepartment, EMPTY } = require("libs/org-overview");
 const { workspaceTarget } = require("libs/workspace-target");
 
 /**
@@ -139,6 +139,22 @@ class __desk_org_view extends LetcBox {
    */
   _paint(part) {
     const data = this._filtered();
+    // A viewer below admin is sent no departments and no workspaces — those
+    // lists carry the names of workspaces they cannot open. Say so, rather
+    // than let the empty payload fall through to "No departments yet", which
+    // would blame the organisation for a permission boundary.
+    //
+    // The chip does not offer "Open" to them at all, so this is the backstop
+    // for any other way in (a restored panel, a stale broadcast), not the
+    // expected path.
+    if (data && data.organisation && !data.can_browse) {
+      return part.feed(
+        Skeletons.Note({
+          className: `${this.fig.family}__empty`,
+          content: LOCALE.NOT_ENOUGH_PRIVILEGE,
+        }),
+      );
+    }
     part.feed(
       require("./skeleton").sections(
         this.fig.family,
@@ -159,7 +175,11 @@ class __desk_org_view extends LetcBox {
    */
   _filtered() {
     const q = this._filter.trim().toLowerCase();
-    if (!q || !this._data) return this._data || { departments: [], workspaces: [], can_manage: 0 };
+    // EMPTY from the lib, not an inline literal: the payload has grown twice
+    // now (role, can_browse), and a hand-written fallback here silently stops
+    // matching it — which is how a guard keyed on a field the fallback lacks
+    // starts reading as false.
+    if (!q || !this._data) return this._data || { ...EMPTY };
     return {
       ...this._data,
       workspaces: this._data.workspaces.filter((w) =>

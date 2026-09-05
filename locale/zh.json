@@ -2894,5 +2894,8 @@
   "NOT_ENOUGH_PRIVILEGE": "您没有执行此操作的权限。",
   "INVALID_NAME": "请输入名称。",
   "WORKSPACE_NOT_FOUND": "该工作区已不存在。",
-  "NO_ORG": "未找到此账户所属的组织。"
+  "NO_ORG": "未找到此账户所属的组织。",
+  "ORG_ROLE_OWNER": "所有者",
+  "ORG_ROLE_ADMIN": "管理员",
+  "ORG_ROLE_MEMBER": "成员"
 }
