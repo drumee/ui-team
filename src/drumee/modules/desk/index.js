@@ -2842,10 +2842,15 @@ class desk_module extends LetcBox {
    * `_syncWorkspaceLabel` after, because its "not in the cached index (…created
    * since boot)" fallback is now answerable from the index itself.
    *
-   * Deliberately does NOT switch to the new workspace. Who opens it differs per
-   * surface — the dialog chains to the members panel, the tour's host opens it
-   * once the walkthrough is done — and a switcher that navigated on a broadcast
-   * would fight both.
+   * WHETHER IT SWITCHES IS THE CREATE SURFACE'S CALL, not this handler's. It
+   * used to switch for nobody, on the grounds that who opens the new workspace
+   * differs per surface — and that is still true, which is why the answer is
+   * carried in the broadcast (`open`, see libs/create-workspace) rather than
+   * decided here. What changed is that the create DIALOG asks: making a
+   * workspace and being left standing in the old one, with the new one
+   * reachable only by then finding it in the switcher, is not what the user
+   * asked for. The tour's own create screen still does not ask, because it
+   * opens the workspace itself once the walkthrough ends.
    */
   async _onWorkspaceCreated(payload = {}) {
     // Was the desk on the no-workspace screen? Read the stamp BEFORE anything
@@ -2878,9 +2883,10 @@ class desk_module extends LetcBox {
     // happened after the cache was read and step 1 must see the new workspace
     // rather than the empty list it was built from.
     //
-    // Only from empty. Every other create surface decides its own follow-up —
-    // the dialog chains to the members panel, the tour's host opens it once the
-    // walkthrough ends — and opening one here would fight both.
+    // This branch is the case with NOTHING TO NAME: the workspace just made is
+    // the only one there is, so "open whichever exists" and "open that one" are
+    // the same answer and the descriptor is not needed. A create that asks to
+    // be switched to is handled below, where it does have to be named.
     if (wasEmpty) {
       // A PERSONAL workspace raises no follow-up panel — it is a home-root
       // folder, not a hub, so media/form finishes as soon as it exists. Nothing
@@ -2895,11 +2901,80 @@ class desk_module extends LetcBox {
       return;
     }
 
+    // THE CREATE ASKED TO BE SWITCHED TO. Same two-step shape as the empty
+    // screen above — that path is simply the case where the descriptor is not
+    // needed, because the new workspace is the only one there is.
+    //
+    // Declined while a walkthrough is on screen: reward-flow and
+    // activate-workspace create through the same dialog, which sends `open`
+    // regardless, and each owns its own sequel — see _walkthroughRunning.
+    //
+    // A descriptor with no resolvable key (an older announcement, or one whose
+    // workspace came back without an id) is treated as no request at all
+    // rather than as "open something": guessing is what the empty-screen
+    // fallback is for, and it is wrong here.
+    const created =
+      payload.open && !this._walkthroughRunning() && this._workspaceKey(payload.workspace)
+        ? payload.workspace
+        : null;
+    if (created) {
+      // A personal workspace raises no follow-up panel — a home-root folder is
+      // not a hub — so there is nothing to wait for.
+      if (payload.personal) {
+        await this._openCreatedWorkspace(created);
+        return;
+      }
+      this._openWorkspaceAfterAccessPanel(created);
+      return;
+    }
+
     // Otherwise just keep the screen honest: a create cannot make the desk
     // empty, but a REMOVAL reaches this same handler (ws:event) and can.
     await this._showEmptyWorkspaceScreen(
       !((await this._fetchWorkspaces()) || []).length,
     );
+  }
+
+  /**
+   * OPEN THE WORKSPACE A CREATE JUST PRODUCED.
+   *
+   * Through `_switchWorkspace`, not a bare `Wm.loadWorkspace`: opening a
+   * workspace is more than mounting the pane — the rail goes back to Files, the
+   * topbar label has to name it, and the switcher has to re-mark its current
+   * row. All three already live in that method, and arriving in a new workspace
+   * with a Task-lit rail over a Files view is exactly the mismatch it exists to
+   * avoid. It resolves the row by `_workspaceKey`, which is also why the key is
+   * the thing tested for upstream.
+   *
+   * IT WORKS OFF `desk.home`, and that list is refetched by _onWorkspaceCreated
+   * before anything gets here, so the new workspace is normally in it. When it
+   * is NOT — the create is confirmed but the list answered before the row was
+   * visible to it — fall back to the descriptor. It carries everything
+   * loadWorkspace needs (libs/create-workspace pins `nid` to the workspace ROOT
+   * node for precisely this reuse, and the reload-restore path opens from the
+   * same shape). Without the fallback a list one beat behind is a silent
+   * no-op: the workspace exists, and the user is left standing where they were
+   * — which is the behaviour this whole path removes.
+   *
+   * @param {Object} ws the create's workspace descriptor
+   */
+  async _openCreatedWorkspace(ws) {
+    const wsKey = this._workspaceKey(ws);
+    if (!wsKey) return;
+    const rows = await this._fetchWorkspaces();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if ((rows || []).some((r) => this._workspaceKey(r) === wsKey)) {
+      return this._switchWorkspace(wsKey);
+    }
+    if (!window.Wm || !_.isFunction(window.Wm.loadWorkspace)) return;
+    // `filetype` is what libs/workspace-target branches on, and a descriptor
+    // carries `area` instead — so say it, rather than letting a personal
+    // workspace resolve as a hub and open Home.
+    const row = ws.area === _a.personal ? { ...ws, filetype: _a.folder } : ws;
+    window.Wm.loadWorkspace(this._workspaceTarget(row));
+    this._resetRailToFiles();
+    this._setWorkspaceLabel(ws.filename);
+    return this._renderWorkspaceMenu(this._wsListPart, true);
   }
 
   /**
@@ -3240,9 +3315,17 @@ class desk_module extends LetcBox {
    * an error: a create that raised no panel at all (no hub in the response, or
    * a caller whose post_override is falsy) still ends with a workspace that
    * wants opening.
+   *
+   * @param {Object} [created] the create's workspace descriptor. Given, THAT
+   *   workspace is the one opened; omitted, the desk falls back to "open
+   *   whichever workspace exists", which is only ever right on the path that
+   *   omits it — a create from the no-workspace screen, where the one just made
+   *   is the only one there is.
    */
-  _openWorkspaceAfterAccessPanel() {
-    const openNow = () => this._openWorkspaceOrEmptyScreen({ force: true });
+  _openWorkspaceAfterAccessPanel(created) {
+    const openNow = () => (created
+      ? this._openCreatedWorkspace(created)
+      : this._openWorkspaceOrEmptyScreen({ force: true }));
     if (!window.Wm || !_.isFunction(Wm.ensurePart)) return openNow();
     if (this._awaitingAccessClose) return;
     this._awaitingAccessClose = 1;
@@ -4798,6 +4881,30 @@ class desk_module extends LetcBox {
   _createFormOverrides() {
     if (!this._activateFlow || this._activateFlow.isDestroyed()) return {};
     return { post_override: "permission_restricted" };
+  }
+
+  /**
+   * Is a guided onboarding walkthrough currently driving the desk?
+   *
+   * Asked before acting on a create's `open` request. Both flows create their
+   * workspace through the SAME dialog every other surface uses — so the dialog
+   * cannot tell that one is driving it, and it asks for the switch either way —
+   * but each owns what happens after its own create:
+   *
+   *   activate-workspace  runs its invite step ON the members panel, and then
+   *                       hands over to whatever comes next.
+   *   reward-flow         Step 3 opens the workspace itself, when the user
+   *                       presses Upload, and closes it again on teardown.
+   *
+   * Navigating out from under either is how a walkthrough loses the target its
+   * current step is spotlighting. So the desk declines here rather than the
+   * form declining there: which flows are on screen is the desk's knowledge,
+   * and it already holds both references for exactly this kind of question
+   * (see _createFormOverrides directly above, which reads one of them).
+   */
+  _walkthroughRunning() {
+    const alive = (f) => !!(f && !(f.isDestroyed && f.isDestroyed()));
+    return alive(this._activateFlow) || alive(this._rewardFlow);
   }
 
   /**

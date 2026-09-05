@@ -135,7 +135,19 @@ class __form_folder extends LetcBox {
       // No `target`: a workspace is created at the home root regardless of what
       // is open. Passing the active window here is what nested a new workspace
       // inside the one on screen — see the `pid` note in libs/create-workspace.
-      .createWorkspace(this, status, filename)
+      //
+      // `open`: TAKE THE USER INTO IT. Creating a workspace from this dialog
+      // used to leave the desk exactly where it was — still inside the
+      // workspace the user had open, with the new one reachable only by then
+      // picking it out of the switcher. This says so once, in the broadcast;
+      // the desk owns the navigation and the timing (it has to wait for the
+      // access panel below to be dismissed first, or opening would destroy it).
+      //
+      // Unconditional, because this dialog cannot tell that a guided
+      // walkthrough is driving it — reward-flow and activate-workspace both
+      // create through this same form, and each owns its own sequel. The desk
+      // is what knows a flow is running, and it declines there.
+      .createWorkspace(this, status, filename, { open: 1 })
       .then((res) => {
         if (!res.ok) {
           this._setPending(0);

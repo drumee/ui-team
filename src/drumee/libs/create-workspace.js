@@ -54,10 +54,19 @@ function track(host, type, opt) {
  *
  * `personal: 1` also tells listeners this type has no follow-up permission
  * panel, so they should finish rather than wait for one.
+ *
+ * `open: 1` is the calling SURFACE asking whoever owns navigation to take the
+ * user INTO the workspace once it exists. A request, not an instruction — the
+ * desk is the only listener that acts on it, and it declines while a guided
+ * walkthrough is running. It is threaded through from `opt.open` rather than
+ * assumed here because the surfaces genuinely disagree: the create dialog wants
+ * it, and the tour's own create screen does not — that one opens the workspace
+ * itself when the walkthrough ends, and two navigations would fight.
  */
-function announce(workspace, personal) {
+function announce(workspace, personal, open) {
   const payload = { workspace };
   if (personal) payload.personal = 1;
+  if (open) payload.open = 1;
   RADIO_BROADCAST.trigger("workspace:refresh", payload);
 }
 
@@ -96,7 +105,7 @@ function announceWorkspace(workspace) {
  *
  * @returns {Promise<Object>} a normalised result
  */
-function createPersonal(host, filename) {
+function createPersonal(host, filename, open) {
   return Promise.resolve(
     Wm.createFolderFromDialog({ getValue: () => filename }, { home: 1 }),
   )
@@ -117,7 +126,7 @@ function createPersonal(host, filename) {
       // the ACL enum-checks it, and the lexicon would turn a missing key into a
       // silently dropped row.
       track(host, "personal", { wid: workspace.nid, area: _a.personal, filename });
-      announce(workspace, true);
+      announce(workspace, true, open);
       return { ok: true, personal: true, workspace };
     });
 }
@@ -129,7 +138,7 @@ function createPersonal(host, filename) {
  *   success, `{ok: false, quota: true}` when the server refused on quota, or
  *   `{ok: false, message}` with something worth showing the user.
  */
-function createHub(host, type, filename) {
+function createHub(host, type, filename, open) {
   const area = HUB_AREA[type] || HUB_AREA.team;
   return host
     .postService(SERVICE.desk.create_hub, {
@@ -280,7 +289,7 @@ function createHub(host, type, filename) {
       // analytics table from yp.hub keys on hub id, and the two must agree or a
       // backfilled workspace is counted twice.
       track(host, type, { wid: workspace.hub_id, area: workspace.area, filename });
-      announce(workspace, false);
+      announce(workspace, false, open);
       return { ok: true, hub, workspace };
     });
 }
@@ -297,7 +306,9 @@ function createHub(host, type, filename) {
  * @param {String} type          "team" | "share" | "personal"
  * @param {String} name          the workspace name, untrimmed is fine
  * @param {Object} [opt]
- * @param {Object} [opt]        reserved; a hub's parent is always the home root
+ * @param {Boolean} [opt.open]  ask navigation to switch to the new workspace
+ *   once it exists — broadcast as `open: 1`, see announce(). A hub's parent is
+ *   always the home root, so there is nothing else to pass here.
  * @returns {Promise<Object>} `{ok: true, workspace, hub?, personal?}` or
  *   `{ok: false, ...}` — `handled` when the failure has already been shown to
  *   the user, `quota` when the server refused on quota, `message` otherwise.
@@ -306,9 +317,10 @@ function createHub(host, type, filename) {
 function createWorkspace(host, type, name, opt = {}) {
   const filename = String(name || "").trim();
   if (!filename) return Promise.resolve({ ok: false, empty: true });
+  const open = !!opt.open;
   const run = type === "personal"
-    ? createPersonal(host, filename)
-    : createHub(host, type, filename);
+    ? createPersonal(host, filename, open)
+    : createHub(host, type, filename, open);
   return run.catch((e) => {
     if (host && host.warn) host.warn("Failed to create workspace", e);
     return { ok: false, error: e };
