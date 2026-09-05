@@ -21,11 +21,9 @@
   }
 
   // The layout already gets its size, its overflow and its opaque background
-  // from `.tutorial-main__layout`. The one override: the desk pane is a card
-  // inset from a canvas and rounds its own corners; here the window underneath
-  // owns the corner radius, and a second radius inside it reads as a card
-  // floating on a card.
-  &__content {
-    border-radius: 0;
-  }
+  // from `.tutorial-main__layout`. No radius override is needed: the content slot
+  // inherits `border-radius: 12px` from `.tutorial-main__content`, which is correct.
+  // The layout behind it has the same background colour, so the radius is invisible.
+  // Step panes with their own background get the same corner treatment here as in
+  // the desk tour, which is the right behaviour.
 }
