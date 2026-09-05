@@ -2530,15 +2530,28 @@ class desk_module extends LetcBox {
       ? tidy(
           media
             .contextmenuItemsForFolder()
-            // Lexis' menu (Figma wd3) shows Move as a FLAT row. `organize` is
-            // the submenu wrapping Move + "Link to task tracker" (items.js).
-            // Swapped here only — the grid's own menu keeps its submenu.
-            .map((k) => (k === "organize" ? "move" : k))
-            // Not in Lexis' menu. The builder adds a secure-share row on a
-            // `share` workspace, but sharing already has two doors — the
-            // header's chain icon and the rail's Access — and a third one here
-            // is the duplication this menu was just cleared of.
-            .filter((k) => k !== "secureShare" && k !== _a.share),
+            // Everything below is a WORKSPACE-menu-only subtraction. The
+            // builder is shared with the grid's folder menu, which keeps every
+            // one of these rows — nothing here may change what a folder or a
+            // file offers.
+            .filter((k) =>
+              // MOVE — dropped 2026-09-04 (Lexis, via Duy): moving a whole
+              // workspace is too much work for what it buys, and Move stays a
+              // folder/sub-folder and file action. `organize` is the submenu
+              // wrapping Move + "Link to task tracker" (items.js); this menu
+              // used to flatten it to a bare "move" row. Filtering the key out
+              // instead of mapping it is what removes the row — the grid's own
+              // menu still renders the submenu for folders and files.
+              k !== "organize"
+              // GET INFO — hidden 2026-09-04 (Lexis, via Duy) on the WORKSPACE
+              // menu only. Folders and files keep it; so does the workspace's
+              // own grid-tile menu, which is built by contextmenuItemsForHub.
+              && k !== _a.info
+              // Not in Lexis' menu. The builder adds a secure-share row on a
+              // `share` workspace, but sharing already has two doors — the
+              // header's chain icon and the rail's Access — and a third one
+              // here is the duplication this menu was just cleared of.
+              && k !== "secureShare" && k !== _a.share),
         )
       : [];
 
