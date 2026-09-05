@@ -5111,7 +5111,8 @@ html[data-theme="dark"] {
 // and in fact desirable: the spotlight's three layers (scrim 10003, the lit
 // surface 10004, the callout 10010) are all mocks INSIDE the overlay, so they
 // share one context by construction and nothing outside can interleave with
-// them.
+// them. The actual z-index is set inside the `&[data-state="open"]` block
+// below, not here — see the comment there for why.
 //
 // `!important` on position and display for the same reason chat-export needs it
 // (widget/chat-export/skin/index.scss): the shared wrapper rules and the
@@ -5121,13 +5122,20 @@ html[data-theme="dark"] {
   &__wrapper-tutorial {
     position: absolute !important;
     inset: 0;
-    z-index: 100001;
     display: block !important;
     border-radius: inherit;
     overflow: hidden;
 
     // The wrapper behavior stamps this when it receives children.
     &[data-state="open"] {
+      // !important, and NOT decoration. skin/lib/utils.scss declares
+      // `[data-state="open"] { z-index: var(--z-index-context) !important }`
+      // (50000), which beats a plain declaration at equal specificity — so the
+      // 100001 this block used to declare outside the state selector never
+      // applied at all, and .role-option-tooltip (2155, z-index 100000) in the
+      // Manage-access panel the share tour opens over outranked the tour. Same
+      // workaround the wm skin uses for the same trap (wm/skin/index.scss:561,589,606).
+      z-index: 100001 !important;
       width: 100% !important;
       height: 100% !important;
     }

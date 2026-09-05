@@ -709,7 +709,27 @@ class __window_folder extends mfsInteract {
     const tour = child.mget && child.mget("tour");
     const preview = child.mget && child.mget("preview");
     child.once(_e.destroy, () => {
+      // Only `child` (the window_tutorial widget) is destroyed here, not the
+      // `window-folder__wrapper-tutorial` Wrapper that holds it. Left alone
+      // the emptied wrapper would sit around collapsed and harmless -- until
+      // a second `showTutorial` on this same window `append()`-ed a second
+      // wrapper with the same `name`, at which point `ensurePart` could
+      // resolve either one. Tear it down here too.
+      //
+      // Capture + null the handle first so the guard reads clearly, then use
+      // the local `wrapper` to tear down: when this fires as part of
+      // `_closeTutorialOverlay`'s own `wrapper.goodbye()` cascade (window
+      // closing), `this._tutorialOverlay` is already null by the time the
+      // cascade reaches us, so `wrapper` is falsy here and we skip -- that
+      // avoids fighting `_closeTutorialOverlay` with a second goodbye() on
+      // the same wrapper. Only a tour that ended on its own (Done/skip/
+      // Escape) reaches this with the handle still set.
+      const wrapper = this._tutorialOverlay;
       this._tutorialOverlay = null;
+      if (wrapper && !(wrapper.isDestroyed && wrapper.isDestroyed())) {
+        if (_.isFunction(wrapper.goodbye)) wrapper.goodbye();
+        else if (_.isFunction(wrapper.suppress)) wrapper.suppress();
+      }
       if (preview) return;
       try {
         require("libs/tutorial-tours").release(tour);

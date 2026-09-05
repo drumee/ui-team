@@ -873,8 +873,10 @@ class __media_interact extends media_core {
         // The tour's first screen names WHAT IS BEING SHARED, and only this
         // click knows it (Figma 148:41197 a file, 180:51964 a folder,
         // 180:52963 a workspace). So the item rides along as fire()'s third
-        // argument — the same channel the folder window uses to say "this one
-        // is about a workspace".
+        // argument. The folder window no longer broadcasts through fire() for
+        // this — it mounts its own in-window tour and hands `opt` straight to
+        // its own showTutorial, same shape as here. Sharing a file still goes
+        // through fire() to the desk host, which is this call site.
         //
         // RAW FIELDS, not a formatted string. The panel is matching a frame and
         // owns how the row reads; handing it `name` + `Update 2 hour ago •
