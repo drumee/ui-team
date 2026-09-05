@@ -51,19 +51,6 @@ const REFLOW_MS = 160;
 const OPEN_WAIT_MS = 8000;
 const OPEN_POLL_MS = 60;
 
-// How long the desk is left alone before the chained `migrate` tour arrives.
-//
-// Three things are still finishing when this tour's destroy fires: softDestroy's
-// own 0.5s fade, the confetti over the workspace that was just made, and the
-// workspace's panes mounting behind both. Raising a second full-screen tour into
-// that lands it over a desk still assembling itself — and over the one moment
-// the user is meant to be looking at the thing they built.
-//
-// Long enough for all three to settle, short enough that the migrate tour still
-// reads as the same walkthrough continuing rather than an unprompted
-// interruption arriving out of nowhere.
-const MIGRATE_CHAIN_MS = 3000;
-
 // Every step widget is a bare `import()` in seeds.js, so each one is its own
 // webpack chunk with no prefetch hint. Left alone, pressing Next is the moment
 // the chunk is requested: Kind.get() hands back the lazy loader placeholder,
@@ -219,6 +206,15 @@ class tutorial_main extends LetcBox {
         //                 to the frames' placeholder copy.
         subject: this.mget('subject') || null,
         subject_data: this.mget('subject_data') || null,
+        // Whether this run of the tour owes the user a celebration.
+        //
+        // Set only by the workspace tour's hand-off (_chainMigrateTour), which
+        // reaches a step through exactly the same road `subject` does: fire()'s
+        // `opt` -> the broadcast -> _showTutorial -> a model attribute here.
+        // The migrate tour raised from the topbar's + New menu carries nothing,
+        // and throws no confetti — there is nothing to celebrate on an ordinary
+        // Tuesday.
+        celebrate: this.mget('celebrate') || null,
       };
       return widget;
     });
@@ -577,7 +573,7 @@ class tutorial_main extends LetcBox {
     // Escape means "I am done with the tour", not "undo what I just built" —
     // and the alternative is the desk home with a new row in the sidebar and
     // no sign of where it went.
-    this._openCreatedAndCelebrate();
+    this._openCreatedAndChain();
     this.softDestroy();
   }
 
@@ -596,30 +592,33 @@ class tutorial_main extends LetcBox {
    *
    */
   _enterCreated() {
-    this._openCreatedAndCelebrate();
+    this._openCreatedAndChain();
     return this._enterWorkspace();
   }
 
   /**
-   * Open the workspace, and celebrate only once it is actually on screen.
+   * Open the workspace, and hand on to the next tour only once it is actually
+   * on screen.
    *
-   * Not fire-and-hope. The confetti used to go up the instant loadWorkspace was
-   * CALLED, which is a different event from the workspace opening: that call
-   * returns immediately and mounts the pane from inside a media.attributes
-   * fetch, so on a slow link the confetti played over an empty desk, and on a
-   * failed open it played over a workspace that never arrived.
+   * Not fire-and-hope. This used to be the confetti's gate as well, and the
+   * reason for the gate has not changed with the confetti moving: loadWorkspace
+   * returns the instant it is CALLED, which is a different event from the
+   * workspace opening — it mounts the pane from inside a media.attributes
+   * fetch. So on a slow link the celebration played over an empty desk, and on
+   * a failed open it played over a workspace that never arrived.
+   *
+   * The confetti now belongs to the migrate tour's first screen, and this is
+   * still what decides whether that tour is raised at all — so the same gate
+   * still answers the same question.
    *
    * Deliberately NOT awaited by the caller. The tour comes down on its own
    * schedule — the fade is what reveals the workspace underneath — so making
    * the teardown wait on the network would hold a dead tour on screen. This
    * runs alongside it and lands whenever the pane does.
    */
-  _openCreatedAndCelebrate() {
+  _openCreatedAndChain() {
     return this._openCreated().then((pane) => {
-      if (pane) {
-        this._celebrate();
-        this._chainMigrateTour();
-      }
+      if (pane) this._chainMigrateTour();
       return pane;
     });
   }
@@ -636,8 +635,8 @@ class tutorial_main extends LetcBox {
    * instead, which fired whenever the user happened to press Files, days later
    * and mid-task.
    *
-   * DEFERRED TO THIS WIDGET'S DESTROY, not raised inline, for two independent
-   * reasons:
+   * DEFERRED TO THIS WIDGET'S DESTROY, not raised inline, and that is still
+   * two independent reasons even though the delay on top of it is gone:
    *
    *   single-flight  libs/tutorial-tours holds `_inFlight` from fire() until
    *                  the running tour is released, and the desk wires that
@@ -645,23 +644,39 @@ class tutorial_main extends LetcBox {
    *                  (modules/desk/index.js, onPartReady "desk-tutorial").
    *                  Firing now would hit `if (_inFlight) return false` and be
    *                  dropped in silence.
-   *   the screen     this tour is still ON it. softDestroy fades for 0.5s, and
-   *                  the pane usually lands during that fade, so "the
-   *                  workspace is up" is not yet "the tour is gone".
+   *   the screen     this tour is still ON it while it fades.
    *
    * Ordering is not a coincidence either: the desk registers its release
    * handler on this same `destroy` event at mount, and handlers run in
    * registration order — so release has already cleared single-flight by the
    * time this one runs.
    *
-   * Then a further MIGRATE_CHAIN_MS on top, so the tour arrives after the fade,
-   * the confetti and the workspace's own panes have settled rather than into
-   * the middle of them.
+   * NO DELAY ON TOP. There used to be a further 3s, on the reading that the
+   * destroy fires into a desk still assembling itself — the fade, the confetti
+   * over the new workspace, and that workspace's own panes all landing at once.
+   * That reading was wrong about the first two. softDestroy runs its 0.5s gsap
+   * fade and calls its `_fire` on the animation's onComplete (ui-core
+   * letc/addons/backbone/view/utils.js), so `destroy` is raised AFTER the tour
+   * has faded out and left the DOM — and the confetti is no longer thrown here
+   * at all: it belongs to the screen this fire() raises. The panes were already
+   * confirmed up before this method was ever reached (_workspaceOnScreen). So
+   * the 3s was three seconds of empty desk between one tour and the next, and
+   * the hand-off reads as one continuous walkthrough without it.
+   *
+   * `celebrate` is the flag that makes the migrate tour's first screen throw
+   * the confetti this method used to throw itself. It rides in on fire()'s
+   * `opt`, which is the channel a trigger uses to tell a tour something the
+   * tour cannot work out for itself — so the SAME tour raised from the
+   * topbar's + New menu, which knows of no new workspace, carries nothing and
+   * celebrates nothing.
    *
    * Every gate stays where it belongs. This says only "the moment has come";
    * whether a tour actually runs is still fire()'s answer — kill switch,
    * mobile, the account-scoped once-ever seen-set, single-flight. In
-   * particular a user who has already seen `migrate` gets nothing.
+   * particular a user who has already seen `migrate` gets nothing, and since
+   * the confetti now rides on that tour, they get no confetti either. That is
+   * a deliberate trade: the celebration belongs to the first-run walkthrough,
+   * not to every workspace ever created.
    *
    * No `_canCreate()` check: the caller only reaches here with a pane, and a
    * pane only exists when a workspace was created, which only the `workspace`
@@ -670,79 +685,20 @@ class tutorial_main extends LetcBox {
   _chainMigrateTour() {
     if (this._migrateChained || !_.isFunction(this.once)) return;
     this._migrateChained = true;
+    // Read NOW, while this widget is alive. The handler below runs from
+    // `destroy`, by which point nothing may be taken off `this`.
+    const opt = { celebrate: 1 };
     this.once(_e.destroy, () => {
-      // Deliberately NOT tracked for cleanup: this widget is already destroyed
-      // by the time the timer is armed, so there is nothing left to clear it
-      // from. A late arrival is safe on its own terms — fire() re-checks every
-      // gate at the moment it runs, and a tour whose broadcast reaches a desk
-      // that has since gone away releases itself through the fetch guard
-      // (GUARD_TIMEOUT_MS, libs/tutorial-tours) rather than latching
-      // single-flight for the session.
-      setTimeout(() => {
-        // `this` is gone by now — deliberately nothing off it is touched. Wm is
-        // the host fire() needs for its seen-set write; _host() would fall back
-        // to it anyway, but naming it keeps the dependency visible.
-        try {
-          require('libs/tutorial-tours').fire('migrate', typeof Wm === 'undefined' ? null : Wm);
-        } catch (e) {
-          // A chained tour is never load-bearing for the tour that chained it.
-        }
-      }, MIGRATE_CHAIN_MS);
+      // `this` is gone by now — deliberately nothing off it is touched. Wm is
+      // the host fire() needs for its seen-set write; _host() would fall back
+      // to it anyway, but naming it keeps the dependency visible.
+      try {
+        require('libs/tutorial-tours')
+          .fire('migrate', typeof Wm === 'undefined' ? null : Wm, opt);
+      } catch (e) {
+        // A chained tour is never load-bearing for the tour that chained it.
+      }
     });
-  }
-
-  /**
-   * Throw the confetti over the workspace the tour just made.
-   *
-   * The MODULE-LEVEL confetti(), not create() — and that is the whole point.
-   * create() binds to a canvas this widget owns, and this widget is about to be
-   * destroyed; the celebration has to outlive it, because what it is
-   * celebrating is arriving somewhere the tour is not. The global one appends
-   * its own fixed, pointer-events:none canvas to <body> and removes it again
-   * when the animation finishes (canvas-confetti src/confetti.js `done`), so
-   * there is nothing to clean up and nothing left behind.
-   *
-   * `.default || mod` is NOT defensive noise. canvas-confetti ships two builds
-   * and declares both — "main" is CommonJS (module.exports = fn) and "module"
-   * is ESM (export default fn). Webpack targets the web, where mainFields
-   * defaults to ['browser', 'module', 'main'], so it bundles the ESM build and
-   * hands this require a module NAMESPACE OBJECT: { create, default }. Calling
-   * that throws. Node's require() reads "main" and hands back a function, so
-   * the bare call worked in every test and in nothing the user could see —
-   * `confetti is not a function`, caught below, warned, and the tour ended with
-   * no confetti and no explanation. See tests/tutorial-confetti-interop.test.js.
-   *
-   * Fired when the workspace is ON SCREEN, not when its open was requested —
-   * see _workspaceOnScreen. That usually lands during the tour's own fade, so
-   * the confetti still carries over the reveal; on a slow link it waits, which
-   * is the point. Confetti over an empty desk celebrates nothing.
-   *
-   * Two bursts from the lower corners, the way the frame scatters them across
-   * the whole pane rather than out of one point.
-   */
-  _celebrate() {
-    if (this._celebrated || !this._createdWorkspace) return;
-    this._celebrated = true;
-    try {
-      const mod = require('canvas-confetti');
-      const confetti = mod.default || mod;
-      const burst = (x, angle) => confetti({
-        particleCount: 90,
-        spread: 70,
-        startVelocity: 55,
-        origin: { x, y: 0.9 },
-        angle,
-        scalar: 0.9,
-        // Over the tour while it fades, and over the desk after. The overlay
-        // the tour lives in sits at 10010; the default 100 would spend the
-        // fade behind it.
-        zIndex: 10020,
-      });
-      burst(0.15, 60);
-      burst(0.85, 120);
-    } catch (e) {
-      this.warn && this.warn('[tutorial] confetti failed', e);
-    }
   }
 
   /**
@@ -755,12 +711,14 @@ class tutorial_main extends LetcBox {
    * desk's _workspaceTarget builds, so the folder opens rather than Home.
    *
    * @returns {Promise<Object|null>} the workspace pane, or null if it never
-   *   arrived — the caller uses that to decide whether to celebrate.
+   *   arrived — the caller uses that to decide whether to hand on to the next
+   *   tour, which is what carries the celebration now.
    */
   _openCreated() {
     const ws = this._createdWorkspace || this._createdFromStep();
     if (!ws || !ws.hub_id || typeof Wm === 'undefined') return Promise.resolve(null);
-    // Remember it either way, so _celebrate's own guard sees it too.
+    // Remembered either way: _skipTour and _enterCreated can both reach here,
+    // and whichever arrives second must not open the workspace twice.
     this._createdWorkspace = ws;
     try {
       Wm.loadWorkspace(ws);

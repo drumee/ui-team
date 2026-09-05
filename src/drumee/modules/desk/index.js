@@ -4143,9 +4143,33 @@ class desk_module extends LetcBox {
           Visitor.parseModuleArgs().tutorial ||
           this._postOnboardingTutorial
         ) {
+          // Read BEFORE the flag is cleared: it is what tells the two ways into
+          // this branch apart, and only one of them should wait.
+          const postOnboarding = !!this._postOnboardingTutorial;
           this._postOnboardingTutorial = false;
           const explicit = !!Visitor.parseModuleArgs().tutorial;
           const forced = this._forcedTourId();
+          // NO DELAY COMING OUT OF THE WIZARD.
+          //
+          // The 2s here was never reasoned for the tutorial: `}, 2000)` is the
+          // idiom the two sibling branches use to let the desk settle before
+          // stacking the reward flow or the LAUNCH30 popup on it, and this
+          // branch inherited it. The tour has nothing to settle for — it draws
+          // its OWN desk, full screen, over whatever is underneath — so the two
+          // seconds were spent showing the user a home screen that the next
+          // frame covers up.
+          //
+          // Nor were they buying the chunk any time: `desk_tutorial` is fetched
+          // when _showTutorial feeds the kind, not before, so the wait ran to
+          // completion and the round trip started afterwards. _loadOnboarding
+          // now warms that kind while the wizard is on screen, which is what
+          // actually makes this immediate rather than merely earlier.
+          //
+          // `?tutorial=` keeps the 2s. That path runs at COLD BOOT, where the
+          // desk is still restoring behind the overlay and there has been no
+          // wizard to warm anything during — a different situation with its own
+          // timing, and not the one being fixed.
+          const delay = postOnboarding ? 0 : 2000;
           setTimeout(() => {
             if (this._launchHomeTutorial(explicit, forced)) return;
             // Nothing mounted, and nothing is going to: the post-onboarding
@@ -4158,7 +4182,7 @@ class desk_module extends LetcBox {
             clearTimeout(this._homeSettledFallback);
             this._homeSettledFallback = null;
             this._afterHomeSettled();
-          }, 2000);
+          }, delay);
           // Safety net. In this branch the ONLY route to _afterHomeSettled is
           // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
           // to mount — kind not loaded, widget throws, part never signals —
@@ -4288,6 +4312,28 @@ class desk_module extends LetcBox {
     Kind.loadPlugin({ name: "onboarding", kind: "onboarding" })
       .then(async () => {
         await Kind.waitFor("onboarding");
+        // Warm the tour while the wizard is on screen.
+        //
+        // Finishing onboarding is the ONE moment the `workspace` tour is
+        // raised automatically (onPartReady "overlay"), and it was raised cold:
+        // desk_tutorial is the only gated widget the desk never warms —
+        // tutorial_migrate, reward_flow, promo_launch30 and over_limit_popup
+        // all are — so feeding the kind was the moment its chunk was first
+        // requested. Kind.get() then hands back the lazy-loader placeholder,
+        // which mounts EMPTY, waits on the network and respawns itself once the
+        // module lands (ui-core letc/kind/loader.js). The user pays a round trip
+        // and a mount-and-rebuild at exactly the handover we want to feel
+        // instant.
+        //
+        // The wizard is several screens long, so this resolves many times over
+        // before it is needed and Kind.get() answers synchronously. Fire and
+        // forget, and deliberately NOT awaited: a warm-up that fails costs
+        // nothing, because the kind still loads on demand exactly as it did.
+        // Not awaited for a second reason — the wizard must not wait on a
+        // prefetch to render.
+        if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+          Promise.resolve(Kind.waitFor("desk_tutorial")).catch(() => {});
+        }
         this.feed({
           kind: "onboarding",
           type: "app",

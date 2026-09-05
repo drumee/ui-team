@@ -183,6 +183,30 @@ class __tutorial_migrate extends LetcBox {
     // Re-entered via Back from a later step: resume where we left off.
     this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
+    this._maybeCelebrate();
+  }
+
+  /**
+   * The confetti, over this tour's FIRST SCREEN.
+   *
+   * `celebrate` is set only when the workspace tour handed over — a workspace
+   * was just made, opened, and confirmed on screen before this tour was raised
+   * at all (see _chainMigrateTour in ../index.js). It arrives the way `subject`
+   * does: fire()'s `opt` -> the broadcast -> the host -> a model attribute on
+   * this step. So the same tour opened from the topbar's + New menu carries
+   * nothing and throws nothing, which is right — there is no new workspace to
+   * celebrate on an ordinary Tuesday.
+   *
+   * HERE rather than in _showScreen, and that is what keeps it a once. This
+   * tour BRANCHES: screens 2 and 3 both name `back: 'pane'`, so screen 1 is
+   * returned to rather than passed through, and a burst keyed on "the pane
+   * screen is up" would fire again every time the user backed out of a branch.
+   * onDomRefresh runs once per mount, and on a chained run entryScreen answers
+   * 0 — so this IS "the first screen of the migrate tour", said once.
+   */
+  _maybeCelebrate() {
+    if (!this.mget('celebrate')) return;
+    require('../confetti').celebrate(this);
   }
 
   onPartReady(child, pn) {
