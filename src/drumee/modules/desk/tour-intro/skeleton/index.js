@@ -4,10 +4,21 @@
  * The composition is the hero from the design: a bordered pill above two large
  * lines, the second in the brand purple. The logo is not in that frame — it is
  * here because this screen appears INSIDE the app, after sign-in, where an
- * unbranded marketing hero would read as a different product. Same
- * `raw-logo-drumee-full` wordmark desk/home-empty uses, and an Image rather
- * than a Button because it is decoration: a Button would raise a ui event on
- * click, and nothing on this screen is pressable.
+ * unbranded marketing hero would read as a different product.
+ *
+ * `raw-logo-drumee-lockup` is the SIGN-IN FORM'S logo — mark plus wordmark,
+ * the exported lockup from signin/src/assets — added to the sprite for this
+ * screen with one change: its six wordmark fills are `currentColor` instead of
+ * the export's hardcoded #0B0A21. That is what lets the skin paint the letters
+ * black, and what keeps them legible when the theme turns over. The mark's own
+ * #433CC5 is untouched.
+ *
+ * NOT `raw-logo-drumee-full`, which desk/home-empty uses: that symbol is seven
+ * fills of brand purple, so its wordmark is purple too and no CSS can change
+ * it — Image.Svg renders `<use>`, and a shadow tree only inherits.
+ *
+ * An Image rather than a Button because it is decoration: a Button would raise
+ * a ui event on click, and nothing on this screen is pressable.
  *
  * ONE MESSAGE FOR ALL FOUR TOURS. Files, Chat, Task and Meet all show this, and
  * it says the same thing on each — what is about to happen, not which pane is
@@ -23,7 +34,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Image.Svg({
         active: 0,
-        ico: "raw-logo-drumee-full",
+        ico: "raw-logo-drumee-lockup",
         className: `${pfx}__logo`,
       }),
       Skeletons.Note({

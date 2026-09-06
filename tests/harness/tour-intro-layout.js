@@ -39,6 +39,7 @@ let css = "";
 for (const entry of [
   "skin/vars/revamp.scss",
   "router/skin/themes/light.scss",
+  "router/skin/themes/dark.scss",
   "skin/lib/container.scss",
   "modules/desk/skin/index.scss",
   "modules/desk/tour-intro/skin/index.scss",
@@ -49,8 +50,16 @@ for (const entry of [
 const ui = { fig: { family: "desk-tour-intro" }, mget: () => null };
 const screen = toHtml(renderModule("src/drumee/modules/desk/tour-intro/skeleton/index.js", ui));
 
-for (const [w, h, label] of [[1440, 900, "wide"], [900, 700, "narrow"], [650, 700, "small"]]) {
-  const page = `<!doctype html><meta charset="utf-8">
+// The dark row is not decoration: the wordmark is `currentColor` precisely so
+// it can turn over, and an export with hardcoded black would pass every other
+// check here while being invisible against a dark ground.
+for (const [w, h, label, theme] of [
+  [1440, 900, "wide", "light"],
+  [900, 700, "narrow", "light"],
+  [650, 700, "small", "light"],
+  [1440, 900, "wide/dark", "dark"],
+]) {
+  const page = `<!doctype html><html data-theme="${theme}"><meta charset="utf-8">
 <style>html,body{margin:0;height:100%}${css}</style>
 <div class="desk-module desk-module__ui" data-window-tour="1"
      style="position:relative;width:${w}px;height:${h}px">
@@ -89,10 +98,15 @@ for (const [w, h, label] of [[1440, 900, "wide"], [900, 700, "narrow"], [650, 70
   document.title = JSON.stringify({
     host, main, logo, line, content,
     lineSize: cs.fontSize,
-    // 4:1 is the symbol's own viewBox (160x40). It is xMidYMid meet, so a
-    // wrong box letterboxes rather than distorting — invisible in a screenshot
-    // and invisible in a descriptor tree, which is why it is measured.
+    // 5.03:1 is the lockup's own viewBox (120.723x24). It is xMidYMid meet, so
+    // a wrong box letterboxes rather than distorting — invisible in a
+    // screenshot and invisible in a descriptor tree, which is why it is
+    // measured.
     logoRatio: Math.round((logo.w / logo.h) * 100) / 100,
+    // What the wordmark's currentColor resolves to. The letters are the only
+    // part of this symbol the page can colour, and black is the whole ask.
+    logoColor: getComputedStyle(document.querySelector('.desk-tour-intro__logo')).color,
+    ground: getComputedStyle(document.querySelector('.desk-module__tour-intro-slot')).backgroundColor,
     // Does the curtain actually hide the pane? Ask the browser, not the CSS.
     topmost: (() => {
       const el = document.elementFromPoint(host.cx, host.cy);
@@ -120,12 +134,13 @@ for (const [w, h, label] of [[1440, 900, "wide"], [900, 700, "narrow"], [650, 70
   const dx = Math.abs(d.main.cx - d.host.cx);
   const dy = Math.abs(d.content.cy - d.host.cy);
   const covers = d.topmost !== "pane";
-  const ratioOk = Math.abs(d.logoRatio - 4) < 0.01;
+  const ratioOk = Math.abs(d.logoRatio - 120.723 / 24) < 0.02;
   const ok = dx <= 1 && dy <= 2 && covers && ratioOk;
   console.log(
     `${ok ? "✓" : "✗"} ${label.padEnd(7)} ${w}x${h}  ` +
     `off-centre x${dx} y${Math.round(dy)}  line ${d.lineSize}  ` +
-    `logo ${d.logo.w}x${d.logo.h} (${d.logoRatio}:1${ratioOk ? "" : " ✗ not 4:1"})  ` +
+    `logo ${d.logo.w}x${d.logo.h} (${d.logoRatio}:1${ratioOk ? "" : " ✗ ratio"})  ` +
+    `letters ${d.logoColor} on ${d.ground}  ` +
     `over the pane: ${covers ? "yes" : "NO — " + d.topmost}`,
   );
 }

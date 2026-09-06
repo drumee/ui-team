@@ -23,29 +23,31 @@
     text-align: center;
   }
 
-  // The full drumee lockup, sized the way the sign-in form sizes its own
-  // (signin/src/widgets/form/skin, &__logo-image): both dimensions pinned and
-  // `flex: 0 0 auto`, with the svg filling the box.
+  // The sign-in form's lockup — mark plus wordmark — sized the way that form
+  // sizes it (signin/src/widgets/form/skin, &__logo-image): both dimensions
+  // pinned and `flex: 0 0 auto`, with the svg filling the box.
   //
-  // 4:1, WHICH IS THE SYMBOL'S OWN RATIO. `raw-logo-drumee-full` is authored at
-  // viewBox "0 0 160 40" with preserveAspectRatio="xMidYMid meet", so an
-  // off-ratio box does not stretch it — it letterboxes, and the logo sits in a
-  // band of its own empty space. desk/home-empty's 148x40 is 3.7:1 and does
-  // exactly that; this is the same lockup without the padding.
+  // BLACK LETTERS, THROUGH `color`. The symbol's wordmark is `currentColor`
+  // (see icons/src/raw/logo-drumee-lockup.svg), which is the only channel that
+  // reaches it: Image.Svg renders `<use>`, and a shadow tree inherits colour
+  // but cannot be selected into. --normal-fg is #0B0A21 on light, the export's
+  // own black, and turns over on dark so the word does not vanish into the
+  // background. The mark stays brand purple, hardcoded in the symbol.
   //
-  // Bigger than the sign-in form's 120.72x24 by design: that one sits in a
-  // narrow card, and this fills a work area.
+  // 5.03:1, WHICH IS THE SYMBOL'S OWN RATIO — viewBox "0 0 120.723 24". The
+  // sprite build stamps preserveAspectRatio="xMidYMid meet", so an off-ratio
+  // box does not stretch it; it letterboxes, and the logo sits in a band of its
+  // own empty space. (The export carries preserveAspectRatio="none", where the
+  // same mistake DOES stretch — which is why the sign-in form pins both of its
+  // dimensions to the ratio and says so.)
   //
-  // NO FILL RE-POINTING. desk/home-empty carries a rule mapping the wordmark's
-  // hardcoded #0B0A21 onto --normal-fg, and copying it here was wrong: that
-  // colour is in assets/drumee-logo.svg, the EXPORT the sign-in form renders as
-  // an <img>. The sprite symbol used here is seven fills of #433CC5 and nothing
-  // else, so the rule matched nothing. Brand purple reads on both themes, which
-  // is why this needs no theme handling at all.
+  // Bigger than that form's 120.72x24 by design: it sits in a narrow card, and
+  // this fills a work area.
   &__logo {
-    width: 240px;
+    width: 302px;
     height: 60px;
     flex: 0 0 auto;
+    color: var(--normal-fg);
 
     svg {
       width: 100%;
@@ -100,14 +102,14 @@
   .desk-tour-intro {
     &__main { gap: 24px; }
     &__line { font-size: 32px; }
-    &__logo { width: 180px; height: 45px; }
+    &__logo { width: 226px; height: 45px; }
   }
 }
 
 @media (max-width: 650px) {
   .desk-tour-intro {
     &__main { gap: 20px; padding: 32px 16px; }
-    &__logo { width: 140px; height: 35px; }
+    &__logo { width: 176px; height: 35px; }
     &__line { font-size: 26px; }
     &__pill { font-size: 12px; padding: 6px 14px; }
   }
