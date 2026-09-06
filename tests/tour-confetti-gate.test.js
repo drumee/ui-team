@@ -61,3 +61,30 @@ test("the rail raises the same tour and passes nothing", () => {
   // it knew something the tour could not.
   assert.match(src, /fire\(tour,\s*this\)/);
 });
+
+// ── the boot tour must not steal the hand-off's moment ───────────────────────
+//
+// _afterHomeSettled runs from an EARLIER handler on the workspace tour's
+// destroy than _chainMigrateTour does. So a boot-time claim of `migrate` would
+// win the race, the hand-off's showTutorial would return false, and the tour
+// would run without `celebrate` — same tour, no confetti, nothing in the logs.
+//
+// The guard is a source fact rather than a behaviour a unit test can drive, so
+// it is asserted as one.
+test("the boot tour stands down when a tutorial ran automatically", () => {
+  const src = strip(read("src/drumee/modules/desk/index.js"));
+  const i = src.search(/async _maybeRunBootTour\(\)\s*\{/);
+  assert.ok(i > 0, "no _maybeRunBootTour");
+  const body = src.slice(i, src.indexOf("\n  }", i));
+  assert.match(body, /_tutorialWasAutomatic/);
+  // First statement in, so nothing else can have run before it bails.
+  const first = body.slice(body.indexOf("{") + 1).trim().split("\n")[0];
+  assert.match(first, /_tutorialWasAutomatic/, "it has to be the first gate");
+});
+
+test("a URL tour also outranks the boot tour", () => {
+  const src = strip(read("src/drumee/modules/desk/index.js"));
+  const i = src.search(/async _maybeRunBootTour\(\)\s*\{/);
+  const body = src.slice(i, src.indexOf("\n  }", i));
+  assert.match(body, /window-tutorial-intent/);
+});

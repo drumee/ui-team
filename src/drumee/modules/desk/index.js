@@ -4075,6 +4075,67 @@ class desk_module extends LetcBox {
    * its own default tab, which beats landing on a screen we no longer ship.
    */
   /**
+   * Offer the migrate tour on an ordinary boot.
+   *
+   * A refresh restores a workspace and lands on Files — the same surface the
+   * rail's Files button leads to, and the one this tour is about. Without this
+   * the tour was reachable only by pressing a rail item the user was already
+   * looking at the result of.
+   *
+   * IT STANDS DOWN FOR THE POST-ONBOARDING CHAIN, and that guard is load-
+   * bearing rather than tidy. The workspace tour hands over to migrate from its
+   * own destroy handler (desk/tutorial, _chainMigrateTour), and this method runs
+   * from _afterHomeSettled — which is an EARLIER handler on that same destroy.
+   * Claiming here first would make the hand-off's showTutorial return false, so
+   * the tour would still run but arrive without `celebrate`, and the confetti
+   * that belongs to a workspace just created would be lost. The chain owns that
+   * moment; this is for every other boot.
+   *
+   * A URL tour also wins: `?window_tutorial=` is a person asking by name.
+   *
+   * Everything else is the seen-set's answer, as ever. `migrate` is
+   * `mark_on: "success"`, so it keeps being offered until a folder is created,
+   * files are uploaded, or the last step is reached — which is what makes this
+   * "in case the user is not done" rather than "once".
+   *
+   * @returns {Promise<Boolean>} whether the tour was asked for
+   */
+  async _maybeRunBootTour() {
+    if (this._tutorialWasAutomatic) return false;
+    if (require("libs/window-tutorial-intent").has()) return false;
+    try {
+      // The same wait the URL hook documents at length: the restore clears its
+      // flag on a TIMER, not when the pane arrives, so a workspace has to be
+      // watched for rather than asked about once.
+      await this._awaitRestoreSettled();
+      const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 3000);
+      if (!ws) return false;
+      if (this.isDestroyed && this.isDestroyed()) return false;
+      // The curtain, for the same reason a rail press raises one: the tour is
+      // several hops away and the pane it is about would otherwise sit there
+      // being read first.
+      this._showTourCurtain();
+      if (await this._raiseRailTour("migrate")) {
+        // The curtain has no tab switch to wait for here, but it still needs
+        // the same safety the rail path has: a tour that is claimed and then
+        // never mounts — no window, a chunk that fails — registers no destroy
+        // handler, and that handler is otherwise the only thing that clears
+        // the stamp. whenDone runs on the release, which that path does reach.
+        require("libs/tutorial-tours").whenDone("migrate", () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this._hideTourCurtain();
+        });
+        return true;
+      }
+      this._hideTourCurtain();
+      return false;
+    } catch (e) {
+      this._hideTourCurtain();
+      return false;
+    }
+  }
+
+  /**
    * Resolve once no tour holds single-flight.
    *
    * A rail click ENDS the tour that is up (_railTab -> _endWindowTour) and may
@@ -6216,6 +6277,10 @@ class desk_module extends LetcBox {
     // LAUNCH30 flows rather than underneath them. A no-op unless the router
     // armed one.
     this._maybeRunWindowTutorial();
+    // An ordinary boot lands on a workspace's Files tab, which is the surface
+    // the migrate tour is about — so offer it there too, not only on a rail
+    // press. Declines for almost every session; see the method.
+    this._maybeRunBootTour();
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
