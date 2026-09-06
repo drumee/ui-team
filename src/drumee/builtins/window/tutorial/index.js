@@ -377,6 +377,17 @@ class __window_tutorial extends LetcBox {
     if (!action || !ws || !_.isFunction(ws.onUiEvent)) return false;
     if (ws.isDestroyed && ws.isDestroyed()) return false;
     this._watchForSuccess(ws);
+    // Let the window rise above this tour while it holds a real dialog.
+    //
+    // The tour is drawn in the desk's overlay (10010) and the window sits at
+    // 10000, so a dialog opened INSIDE that window is painted over by the tour —
+    // and it cannot climb out on its own, because the window is a stacking
+    // context and nothing inside it can exceed the window's own level. The
+    // window is what has to rise, and the skin lifts it only while a modal is
+    // actually open (`:has()`, folder/skin/index.scss), so this attribute can be
+    // set once and simply left.
+    if (ws.el && ws.el.dataset) ws.el.dataset.tourActing = '1';
+    this._acting = ws;
     try {
       ws.onUiEvent(cmd || this, { service: action });
     } catch (e) {
@@ -427,6 +438,15 @@ class __window_tutorial extends LetcBox {
   }
 
   onBeforeDestroy() {
+    // Hand the window back its ordinary stacking. The skin only lifts a marked
+    // window while a modal is open, so leaving this set would be harmless today
+    // — and exactly the kind of harmless leftover that turns into a mystery the
+    // first time something else opens a dialog on that window.
+    const acting = this._acting;
+    if (acting && acting.el && acting.el.dataset) {
+      delete acting.el.dataset.tourActing;
+    }
+    this._acting = null;
     this._unobserveSize();
     if (this._escapeHotkey) {
       require('libs/hotkeys').unregister(this._escapeHotkey);

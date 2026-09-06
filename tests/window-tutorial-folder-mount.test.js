@@ -109,13 +109,19 @@ test("the folder window does not read the URL itself", () => {
   assert.match(src, /showTutorial\(tour, opt/);
 });
 
-test("the overlay covers the whole window and stops at its corners", () => {
-  const i = skin.indexOf("__wrapper-tutorial");
-  assert.ok(i > 0, "no __wrapper-tutorial rule in the folder skin");
-  const block = skin.slice(i, i + 700);
-  assert.match(block, /position:\s*absolute\s*!important/);
-  assert.match(block, /inset:\s*0/);
-  assert.match(block, /border-radius:\s*inherit/);
-  assert.match(block, /overflow:\s*hidden/);
-  assert.match(block, /z-index:/);
+test("a real dialog raised by the tour lifts its window above the tour", () => {
+  // The tour is drawn in the desk overlay (10010) and this window sits at 10000,
+  // so a dialog opened inside the window is painted over by the tour. It cannot
+  // climb out alone: `.window__ui` is a stacking context, so nothing inside it —
+  // not even [data-state="open"]'s global 50000 — can exceed the window's own
+  // level. The window is what rises.
+  const i = skin.indexOf("data-tour-acting");
+  assert.ok(i > 0, "no lift rule for a tour-raised dialog");
+  const block = skin.slice(i, i + 400);
+  // Gated on a modal actually being open, so closing the dialog drops the window
+  // back with no JS to restore it.
+  assert.match(block, /:has\(\.window__wrapper-modal\[data-state="open"\]\)/);
+  assert.match(block, /z-index: 100010 !important/);
+  // The overlay itself is no longer this window's business — it moved to the desk.
+  assert.ok(!/wrapper-tutorial/.test(skin), "the old in-window overlay skin is dead");
 });

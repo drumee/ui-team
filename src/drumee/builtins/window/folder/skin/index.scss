@@ -5093,51 +5093,28 @@ html[data-theme="dark"] {
   }
 }
 
-// ── The in-window tour overlay ───────────────────────────────────────────────
+// ── A real dialog raised from the in-window tour ─────────────────────────────
 //
-// `window_tutorial` mounted into a wrapper appended to the window ROOT, so it
-// covers the whole window — the header, the tab bar and the pane together —
-// rather than only `__main`. A tour that left the real tab bar live beside it
-// would let the user change the pane underneath the mock mid-walkthrough.
+// The tour is drawn in the desk's `overlay` (z-index 10010) and this window sits
+// at 10000, so the tour paints over it. That is right while the tour is only a
+// picture — but the migrate tour's `+ New` rows open the PRODUCT'S create-folder
+// dialog, and a dialog the user cannot see is a dead end.
 //
-// `.window__ui` is `position: absolute` with `overflow: visible`
-// (window/skin/window.scss), so `inset: 0` here resolves against the window and
-// stops at its edge. `border-radius: inherit` + `overflow: hidden` are what keep
-// the square overlay from poking out past the window's rounded corners, which
-// the window's own `overflow: visible` would otherwise allow.
+// The dialog cannot climb out on its own: it lives inside this window, and
+// `.window__ui` is a stacking context, so no z-index on the dialog can exceed
+// the window's own. `[data-state="open"]`'s global 50000 (skin/lib/utils.scss)
+// is capped by it for the same reason. The WINDOW is what has to rise.
 //
-// z-index has to clear everything inside this window; the folder skin already
-// reaches 100000 for its own overlays. Opening a stacking context here is fine
-// and in fact desirable: the spotlight's three layers (scrim 10003, the lit
-// surface 10004, the callout 10010) are all mocks INSIDE the overlay, so they
-// share one context by construction and nothing outside can interleave with
-// them. The actual z-index is set inside the `&[data-state="open"]` block
-// below, not here — see the comment there for why.
+// So it rises, but only where that is needed: the tour marks the window it is
+// acting on, and `:has()` keeps the lift to the moments a modal is actually
+// open — closing the dialog drops the window back with no JS to restore it, and
+// a window nobody is touring is untouched.
 //
-// `!important` on position and display for the same reason chat-export needs it
-// (widget/chat-export/skin/index.scss): the shared wrapper rules and the
-// Wrapper kind's own defaults both set these, and an agreeing declaration is
-// not something to rely on.
-.window-folder {
-  &__wrapper-tutorial {
-    position: absolute !important;
-    inset: 0;
-    display: block !important;
-    border-radius: inherit;
-    overflow: hidden;
-
-    // The wrapper behavior stamps this when it receives children.
-    &[data-state="open"] {
-      // !important, and NOT decoration. skin/lib/utils.scss declares
-      // `[data-state="open"] { z-index: var(--z-index-context) !important }`
-      // (50000), which beats a plain declaration at equal specificity — so the
-      // 100001 this block used to declare outside the state selector never
-      // applied at all, and .role-option-tooltip (2155, z-index 100000) in the
-      // Manage-access panel the share tour opens over outranked the tour. Same
-      // workaround the wm skin uses for the same trap (wm/skin/index.scss:561,589,606).
-      z-index: 100001 !important;
-      width: 100% !important;
-      height: 100% !important;
-    }
-  }
+// What this covers is a DRAWING of this same pane, so the user sees the real
+// thing appear where its own likeness was, with the dialog on top of it.
+.window-folder__ui[data-tour-acting="1"]:has(.window__wrapper-modal[data-state="open"]) {
+  // Above the desk overlay. `!important` and specific enough to beat
+  // `.window__ui[data-state="1"]:not(.window-manager__ui) { z-index: 10000
+  // !important }` — with both important, specificity decides.
+  z-index: 100010 !important;
 }
