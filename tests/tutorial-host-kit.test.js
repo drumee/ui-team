@@ -174,17 +174,22 @@ test("migrate is four screens now, not six", () => {
 });
 
 test("which tours are EARNED rather than merely shown", () => {
-  // A tour marked on sight is spent the moment it appears. These four ask the
-  // user to do something, so they are recorded only when it is done — a folder
-  // created or files uploaded (migrate), or the last step reached (all four),
-  // which for the task and meeting tours is their single CTA.
+  // A tour marked on sight is spent the moment it appears. These five are
+  // recorded only once the user has actually been through them — a folder
+  // created or files uploaded (migrate), or the last step reached (all five),
+  // which for the task and meeting tours is their single CTA and for share is
+  // the sixth screen its own pill counts to.
+  //
+  // `workspace` stays marked on sight: it runs once, post-signup, and hands
+  // straight to the migrate tour. `full` carries no flag of its own — it marks
+  // every flagged tour on its way out.
   //
   // Pinned as a SET, both ways round, because the cost of getting it wrong is
   // silent in each direction: a tour that should be earned and is not gets one
   // chance and burns it, and a tour that should be shown and is not is offered
   // again forever.
-  const earned = ["migrate", "chat", "folder_task", "meeting"];
-  const shown = ["workspace", "share", "full"];
+  const earned = ["migrate", "chat", "folder_task", "meeting", "share"];
+  const shown = ["workspace", "full"];
   for (const id of earned) {
     assert.equal(TOURS[id].mark_on, "success", `${id} must be earned`);
   }

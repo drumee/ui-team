@@ -142,6 +142,20 @@ const TOURS = {
     flag: "share",
     // Six, and the frames number them "STEP 1/6" … "STEP 6/6" in a pill.
     steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access" } }],
+    // RECORDED ON THE LAST STEP, not on sight — the fifth tour to be.
+    //
+    // Six screens with a numbered pill is the longest walkthrough in the set,
+    // and marking it on mount spent it the instant it appeared: someone who
+    // opened the access panel, met screen 1 and closed it never saw the other
+    // five again. Its own pill says "STEP 1/6", which is a promise the tour was
+    // not keeping.
+    //
+    // Nothing in it acts on the window — unlike migrate, task and meeting, it
+    // has no closing CTA — so "success" here means exactly what the pill counts
+    // to: the last screen hands back, the step list runs out, and both hosts
+    // record it from _nextStep. Escape and skip leave it armed, so a tour
+    // abandoned at 2/6 is offered again.
+    mark_on: "success",
   },
 
   // Importing from Google Drive — how the import dialog is reached, and then

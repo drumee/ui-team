@@ -230,3 +230,23 @@ test("meeting: not offered once the CTA has been pressed", () => {
   Tours.markSeen("meeting", host);
   assert.equal(Tours.claim("meeting", host), false);
 });
+
+// ── the share tour ───────────────────────────────────────────────────────────
+//
+// Six screens with a "STEP n/6" pill, offered from the desk topbar's workspace
+// head and from a media context menu's Share. Recorded only at the end, so the
+// pill's promise is one the tour keeps.
+
+test("share: offered again while it has not been walked to the end", () => {
+  reset();
+  assert.equal(Tours.claim("share", host), true);
+  Tours.release("share");
+  assert.equal(Tours.claim("share", host), true, "abandoned at 2/6, offered again");
+  Tours.release("share");
+});
+
+test("share: not offered once the last screen has been reached", () => {
+  reset();
+  Tours.markSeen("share", host);
+  assert.equal(Tours.claim("share", host), false);
+});
