@@ -1,17 +1,18 @@
 /**
  * The tour's celebration, in one place.
  *
- * Thrown over the FIRST SCREEN OF THE MIGRATE TOUR, which is where the
- * post-signup walkthrough now lands after a workspace has been made: the
- * workspace tour opens the new workspace, comes down, and hands straight over
- * to `migrate`. The confetti belongs to that arrival rather than to the tour
- * that ended, so it is raised by the tour that is on screen when it plays.
+ * Thrown over the FIRST STEP OF THE MIGRATE TOUR as it runs in the in-window
+ * host (builtins/window/tutorial), which is where the post-signup walkthrough
+ * lands once a workspace has been made: the workspace tour opens the new
+ * workspace, comes down, and hands straight over. The confetti belongs to that
+ * arrival rather than to the tour that ended, so it is raised by the host that
+ * is on screen when it plays.
  *
- * It used to be `_celebrate()` on tutorial_main, fired as that widget tore
- * itself down — which is why the notes below are about surviving a destroy.
- * They still hold: the module-level entry point owns its own canvas either
- * way, and keeping the interop lesson in one file is the reason this is a
- * module rather than three lines at the call site.
+ * NO FLAG. It used to ride in on a `celebrate` model attribute passed from the
+ * tour that handed over, threaded through the broadcast and buildStepWidgets
+ * to reach the step. The host it runs in is the condition now — nothing else
+ * mounts the migrate tour in a window — so the attribute, its propagation and
+ * the step's hook are all gone.
  *
  * The MODULE-LEVEL confetti(), not create(). create() binds to a canvas the
  * caller owns; the global one appends its own fixed, pointer-events:none
@@ -30,10 +31,24 @@
  * explanation.
  */
 
-// Over the tour, not behind it. The overlay a tour lives in sits at 10010, so
-// canvas-confetti's default of 100 would spend the whole animation underneath
-// the screen it is celebrating.
-const Z_INDEX = 10020;
+// Over the tour, not behind it — and the number that does that is much larger
+// than it looks like it needs to be.
+//
+// The tour lives in `.desk-module__overlay`, whose own rule says z-index 10010.
+// That is not what it computes to: skin/lib/utils.scss carries a BARE
+// `[data-state="open"] { z-index: var(--z-index-context) !important }`, which
+// matches any element with that attribute — the overlay included — and lifts it
+// to 50000. canvas-confetti appends its canvas to <body>, so it competes at the
+// root against that 50000, not against 10010.
+//
+// So the old constant here (10020) put the whole animation BEHIND the screen it
+// was celebrating. Measured with elementFromPoint against the real cascade: at
+// 10020 the tour is on top, at this value the canvas is.
+//
+// Above 100001 too, which is where the desk topbar sits after it was lifted
+// clear of the same overlay. Confetti over the whole window is the intent, and
+// canvas-confetti's canvas is pointer-events: none, so nothing is blocked.
+const Z_INDEX = 100002;
 
 /**
  * Two bursts from the lower corners, the way the frame scatters them across
@@ -66,4 +81,8 @@ function celebrate(host) {
   }
 }
 
-module.exports = { celebrate };
+// Z_INDEX is exported for tests/harness/confetti-stacking.js, which measures
+// it against the real cascade — the whole point of the number is a comparison
+// with something declared in another file, so a harness that hardcoded it
+// would pass while the code was wrong.
+module.exports = { celebrate, Z_INDEX };

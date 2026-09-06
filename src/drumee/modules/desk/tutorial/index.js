@@ -1,53 +1,24 @@
 require('./skin');
 const Tours = require('libs/tutorial-tours');
 const { tour, flaggedIds, stepChrome } = require('./tours');
+const { REFLOW_MS, tierFor, screensFor, buildStepWidgets } = require('./host-kit');
 
 const SVC_OPT = { async: 1 };
 
-// ── Responsive tiers ─────────────────────────────────────────────────────────
-//
-// The tour draws a MOCK of the product, so it cannot simply reflow the way a
-// document would: at 1440 it has to read as the real desk, and at 390 it has to
-// read as something a thumb can drive. Four tiers rather than a continuum,
-// because each one is a different composition, not the same one squeezed.
-//
-// Stamped as an attribute on the widget root instead of being answered by media
-// queries in each skin, for three reasons: the skins are keyed on fig.family
-// and fig.group and would each need the same breakpoints repeated; the JS needs
-// the same answer the CSS has (the carousel's slide distance, below); and a
-// tour opened in a narrow WINDOW on a big screen is the same problem as a phone
-// — a media query on the device would miss it.
-//
-// Widths are the viewport's. The boundaries are where this particular layout
-// breaks, measured against the mock rather than borrowed from a framework:
-// below 1366 the empty-state hero and its carousel stop both fitting at full
-// size, below 1024 they stop sharing a row at all, and below 760 the rail and
-// the panes have to give up their fixed widths.
-const SIZE_TIERS = [
-  { id: 'mobile', max: 759 },
-  { id: 'narrow', max: 1023 },
-  { id: 'compact', max: 1365 },
-  { id: 'wide', max: Infinity },
-];
+// The size tiers, the short-height threshold and the resize debounce moved to
+// ./host-kit, which is where both hosts read them from — the desk host measures
+// the viewport, the in-window host measures its own overlay, and the numbers
+// they measure against are the same. The reasoning for each boundary lives
+// there, next to the values.
 
-// Height is its own axis, and the one that aspect ratio actually moves: a 21:9
-// window and a rotated phone are both SHORT, and shortness is what pushes a
-// callout off the bottom of the tour. Kept separate from the width tier so the
-// two compose instead of multiplying into eight cases.
-const SHORT_HEIGHT = 720;
-
-// Resize settles before anything is re-measured. Long enough to sit out a drag
-// of the window edge, short enough that a rotation feels immediate.
-const REFLOW_MS = 160;
-
-// How long the confetti waits for the new workspace to actually appear, and how
-// often it looks.
+// How long the hand-off waits for the new workspace to actually appear, and
+// how often it looks.
 //
 // Wm.loadWorkspace is fire-and-forget — it returns undefined and mounts the
 // pane from inside a media.attributes fetch — so the only honest answer to "did
 // it open" is to watch for the pane. The budget covers a slow link; past it the
 // open has failed (loadWorkspace has its own 'cannot resolve workspace root'
-// path) and there is nothing to celebrate.
+// path) and there is no window for the next tour to be drawn on.
 const OPEN_WAIT_MS = 8000;
 const OPEN_POLL_MS = 60;
 
@@ -121,10 +92,7 @@ class tutorial_main extends LetcBox {
    * @returns {Number}
    */
   _screensFor(step) {
-    const declared = ~~step.screens || 1;
-    const live = ~~step.live_screens;
-    if (!live) return declared;
-    return this._canCreate() ? declared : Math.max(1, declared - live);
+    return screensFor(step, this._canCreate());
   }
 
   /**
@@ -148,76 +116,7 @@ class tutorial_main extends LetcBox {
    * @returns {Array}
    */
   _buildWidgets(t) {
-    const steps = t.steps || [];
-    // Progress counts every screen in the tour, so the host has to know the
-    // total and where each step starts — a step widget can see its own screens
-    // and nothing else. Computed once here rather than derived per screen.
-    //
-    // Every screen a step RUNS is a screen the badge counts — including the
-    // create form and the invite card, screens 7 and 8 of an eight-screen tour.
-    // Those were briefly left out on the argument that a form is not a step,
-    // which is true of the form and false of the user, who is still being led
-    // somewhere and wants to know how far along that is. (There was also a
-    // ninth, uncounted finish screen; it is gone — the tour now ends by opening
-    // the workspace it made rather than by announcing that it did.)
-    const runs = (s) => this._screensFor(s);
-    const total = steps.reduce((n, s) => n + runs(s), 0);
-    const offsets = [];
-    steps.reduce((n, s) => (offsets.push(n), n + runs(s)), 0);
-
-    return steps.map((step, i) => {
-      const widget = {
-        kind: step.kind,
-        // NO `service` here, deliberately. ui-core binds an onclick to every
-        // widget that is not `active: 0` and dispatches its own `service` to
-        // its uiHandler (letc.js __handleClick -> triggerHandlers), and the
-        // step widget's element is the whole pane. With `service: 'next-step'`
-        // on it, every part of a step's scenery was a button that advanced the
-        // WHOLE STEP: one stray click on the chat pane at screen 2 of 5 jumped
-        // the tour to the meeting step, so screens 3, 4 and 5 — steps 9, 10
-        // and 11 of the full tour — never appeared.
-        //
-        // The inner scenery is all `active: 0`, which means it has no click
-        // handler of its own and the click bubbles up to here, so making the
-        // pane inert is not enough on its own; the wrapper must not name a
-        // service. `active: 0` is not the fix either — it would gag
-        // triggerHandlers (letc.js:843) and with it the step's own handoff.
-        //
-        // The handoff is explicit instead: each step's last screen calls
-        // triggerHandlers({ service: 'next-step' }). A stray click now reaches
-        // onUiEvent with no service at all and falls through to `default`.
-        uiHandler: [this],
-        screen_count: runs(step),
-        screen_offset: offsets[i],
-        tour_screens: total,
-        is_first: i === 0,
-        is_last: i === steps.length - 1,
-        // What the tour is ABOUT, when the trigger knew and said so (fire()'s
-        // third argument). Only the share step reads these today — its panel
-        // header names the thing being shared — but they are stamped on every
-        // step rather than special-cased, because a step is not supposed to
-        // know which tour it is in.
-        //
-        //   subject       which SHAPE the row takes: file, folder, workspace
-        //   subject_data  the item's raw fields, when a trigger had them —
-        //                 {name, filetype, ext, filesize, ctime, mtime, area}.
-        //                 Absent for a `?tutorial=share` preview and inside
-        //                 `full`, where there is no item; the panel falls back
-        //                 to the frames' placeholder copy.
-        subject: this.mget('subject') || null,
-        subject_data: this.mget('subject_data') || null,
-        // Whether this run of the tour owes the user a celebration.
-        //
-        // Set only by the workspace tour's hand-off (_chainMigrateTour), which
-        // reaches a step through exactly the same road `subject` does: fire()'s
-        // `opt` -> the broadcast -> _showTutorial -> a model attribute here.
-        // The migrate tour raised from the topbar's + New menu carries nothing,
-        // and throws no confetti — there is nothing to celebrate on an ordinary
-        // Tuesday.
-        celebrate: this.mget('celebrate') || null,
-      };
-      return widget;
-    });
+    return buildStepWidgets(this, t, { canCreate: this._canCreate() });
   }
 
   onDomRefresh() {
@@ -239,7 +138,13 @@ class tutorial_main extends LetcBox {
     // the way OUT is the wrong half of the same rule: previewing `migrate` once
     // would kill the real + New trigger for that account forever, and a UI
     // check would be a one-shot. Contextual runs still record normally.
-    if (this._tour.flag && !this.mget('preview')) {
+    // `mark_on: 'success'` opts a tour OUT of being recorded here. The migrate
+    // tour is the only one: it asks the user to create or upload something, and
+    // someone who opened it and did neither has not been taught anything, so it
+    // is offered again. Recorded by the in-window host when the action lands
+    // (builtins/window/tutorial, _markDone) — this host has no live controls to
+    // earn it with, so on the desk that tour simply stays armed.
+    if (this._tour.flag && !this.mget('preview') && this._tour.mark_on !== 'success') {
       Tours.markSeen(this._tour.flag, this);
     }
     this._bindEscape();
@@ -297,33 +202,28 @@ class tutorial_main extends LetcBox {
   /**
    * Put the shell into the context the current step is teaching.
    *
-   * The rail and the breadcrumb are NOT constant across a tour: `full` opens on
-   * the create-workspace dialog, where no workspace exists — so the rail has no
-   * workspace tabs and the topbar names nothing — and then spends every later
-   * step inside one. Rendering the shell once at mount left five workspace tabs
-   * and a workspace name over a dialog whose whole point is that the user has
-   * not made a workspace yet.
+   * The rail is NOT constant across a tour: `full` opens on the create-workspace
+   * dialog, where no workspace exists and so the rail has no workspace tabs, and
+   * then spends every later step inside one. Rendering the shell once at mount
+   * left five workspace tabs over a dialog whose whole point is that the user
+   * has not made a workspace yet.
    *
-   * Both are `sys_pn` slots, re-fed here rather than rebuilt: the rail's logo
-   * and footer do not change, and neither does the utility cluster. What is fed
-   * is the slot's CONTENTS — feeding the container itself back in would nest a
-   * second __sb-nav inside the first.
+   * A `sys_pn` slot, re-fed here rather than rebuilt: the rail's logo and footer
+   * do not change. What is fed is the slot's CONTENTS — feeding the container
+   * itself back in would nest a second __sb-nav inside the first.
+   *
+   * It used to re-feed two more slots, the workspace crumb and the utility
+   * cluster. Both belonged to the mock topbar, which no tour draws any more;
+   * awaiting parts that never mount would simply hang.
    */
   _applyChrome() {
     const step = (this._tour.steps || [])[this._stepIndex];
-    const { rail, crumb } = stepChrome(step);
+    const { rail } = stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
-    const topbar = require('./skeleton/topbar');
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
     // entry has to come back with the workspace tabs or the org-home rail —
     // which has no tabs at all — is fed an empty list and renders bare.
     this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
-    // Same trap as the callout: feed(null) is a no-op, so a step that wants NO
-    // crumb has to clear the slot rather than feed nothing into it.
-    this.ensurePart('crumb').then((p) => (
-      crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
-    ));
-    this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this)));
   }
 
   /**
@@ -344,10 +244,9 @@ class tutorial_main extends LetcBox {
     this.el.dataset.tour = this._tour.id;
     const w = window.innerWidth || 0;
     const h = window.innerHeight || 0;
-    const tier = SIZE_TIERS.find((t) => w <= t.max) || SIZE_TIERS[SIZE_TIERS.length - 1];
-    const short = h > 0 && h < SHORT_HEIGHT ? '1' : '0';
-    const changed = this.el.dataset.size !== tier.id || this.el.dataset.short !== short;
-    this.el.dataset.size = tier.id;
+    const { size, short } = tierFor(w, h);
+    const changed = this.el.dataset.size !== size || this.el.dataset.short !== short;
+    this.el.dataset.size = size;
     this.el.dataset.short = short;
     return changed;
   }
@@ -396,6 +295,22 @@ class tutorial_main extends LetcBox {
     if (this._widgets[this._stepIndex]) {
       this._showStep(this._widgetAt(this._stepIndex));
     } else {
+      // WALKING THE WHOLE TOUR COUNTS AS DOING IT, for a tour that is recorded
+      // on success rather than on sight.
+      //
+      // onDomRefresh deliberately skips markSeen for those (`mark_on:
+      // 'success'` — the migrate tour), so that someone who opens one and does
+      // nothing is offered it again. Nothing then recorded it here either, so a
+      // user who walked every screen to the last Done was also offered it
+      // again — and the topbar's "+ New" menu, which fires it on every open,
+      // would have gone on doing so forever.
+      //
+      // Only this route. _skipTour is the Escape / skip path and leaves the
+      // tour armed, which is the difference between finishing something and
+      // getting out of it.
+      if (this._tour.flag && !this.mget('preview') && this._tour.mark_on === 'success') {
+        Tours.markSeen(this._tour.flag, this);
+      }
       // Through _enterCreated, which opens the workspace the tour made before
       // taking the tour down. With none — every other tour — it is exactly
       // _enterWorkspace.
@@ -600,16 +515,11 @@ class tutorial_main extends LetcBox {
    * Open the workspace, and hand on to the next tour only once it is actually
    * on screen.
    *
-   * Not fire-and-hope. This used to be the confetti's gate as well, and the
-   * reason for the gate has not changed with the confetti moving: loadWorkspace
-   * returns the instant it is CALLED, which is a different event from the
-   * workspace opening — it mounts the pane from inside a media.attributes
-   * fetch. So on a slow link the celebration played over an empty desk, and on
-   * a failed open it played over a workspace that never arrived.
-   *
-   * The confetti now belongs to the migrate tour's first screen, and this is
-   * still what decides whether that tour is raised at all — so the same gate
-   * still answers the same question.
+   * Not fire-and-hope: loadWorkspace returns the instant it is CALLED, which is
+   * a different event from the workspace opening — it mounts the pane from
+   * inside a media.attributes fetch. The next tour is drawn ON that pane, so
+   * without this gate it would be handed a window that is not there yet, or one
+   * that never arrives at all.
    *
    * Deliberately NOT awaited by the caller. The tour comes down on its own
    * schedule — the fade is what reveals the workspace underneath — so making
@@ -618,7 +528,7 @@ class tutorial_main extends LetcBox {
    */
   _openCreatedAndChain() {
     return this._openCreated().then((pane) => {
-      if (pane) this._chainMigrateTour();
+      if (pane) this._chainMigrateTour(pane);
       return pane;
     });
   }
@@ -638,12 +548,12 @@ class tutorial_main extends LetcBox {
    * DEFERRED TO THIS WIDGET'S DESTROY, not raised inline, and that is still
    * two independent reasons even though the delay on top of it is gone:
    *
-   *   single-flight  libs/tutorial-tours holds `_inFlight` from fire() until
+   *   single-flight  libs/tutorial-tours holds `_inFlight` from the claim until
    *                  the running tour is released, and the desk wires that
    *                  release to this widget's destroy
    *                  (modules/desk/index.js, onPartReady "desk-tutorial").
-   *                  Firing now would hit `if (_inFlight) return false` and be
-   *                  dropped in silence.
+   *                  Claiming now would hit `if (_inFlight) return false` and
+   *                  be dropped in silence.
    *   the screen     this tour is still ON it while it fades.
    *
    * Ordering is not a coincidence either: the desk registers its release
@@ -652,49 +562,49 @@ class tutorial_main extends LetcBox {
    * time this one runs.
    *
    * NO DELAY ON TOP. There used to be a further 3s, on the reading that the
-   * destroy fires into a desk still assembling itself — the fade, the confetti
-   * over the new workspace, and that workspace's own panes all landing at once.
-   * That reading was wrong about the first two. softDestroy runs its 0.5s gsap
-   * fade and calls its `_fire` on the animation's onComplete (ui-core
-   * letc/addons/backbone/view/utils.js), so `destroy` is raised AFTER the tour
-   * has faded out and left the DOM — and the confetti is no longer thrown here
-   * at all: it belongs to the screen this fire() raises. The panes were already
-   * confirmed up before this method was ever reached (_workspaceOnScreen). So
-   * the 3s was three seconds of empty desk between one tour and the next, and
-   * the hand-off reads as one continuous walkthrough without it.
+   * destroy fires into a desk still assembling itself. It does not: softDestroy
+   * runs its 0.5s gsap fade and calls its `_fire` on the animation's onComplete
+   * (ui-core letc/addons/backbone/view/utils.js), so `destroy` is raised AFTER
+   * this tour has faded out and left the DOM, and the panes were confirmed up
+   * before this method was ever reached (_workspaceOnScreen). So the 3s was
+   * three seconds of empty desk between one tour and the next, and the hand-off
+   * reads as one continuous walkthrough without it.
    *
-   * `celebrate` is the flag that makes the migrate tour's first screen throw
-   * the confetti this method used to throw itself. It rides in on fire()'s
-   * `opt`, which is the channel a trigger uses to tell a tour something the
-   * tour cannot work out for itself — so the SAME tour raised from the
-   * topbar's + New menu, which knows of no new workspace, carries nothing and
-   * celebrates nothing.
+   * IN THE WINDOW, NOT ON THE DESK. This used to `fire('migrate')`, which
+   * broadcasts on the desk's tour channel and mounts `desk_tutorial` — a
+   * second full-screen tour drawing its own mock desk, over the real workspace
+   * that had just been made and opened. The migrate tour is about a folder
+   * window, and there is now a host that draws a tour ON one
+   * (builtins/window/tutorial), so it runs there: the user watches the tour
+   * over the workspace they just created rather than over a picture of one.
    *
-   * Every gate stays where it belongs. This says only "the moment has come";
-   * whether a tour actually runs is still fire()'s answer — kill switch,
-   * mobile, the account-scoped once-ever seen-set, single-flight. In
-   * particular a user who has already seen `migrate` gets nothing, and since
-   * the confetti now rides on that tour, they get no confetti either. That is
-   * a deliberate trade: the celebration belongs to the first-run walkthrough,
-   * not to every workspace ever created.
+   * `pane.showTutorial(...)` rather than a broadcast built here, because that
+   * is the product's own entry point for an in-window tour and it takes the
+   * claim. Every gate therefore still stays where it belongs — kill switch,
+   * mobile, the account-scoped seen-set, single-flight — and this method says
+   * only "the moment has come". A user who has already seen `migrate` gets
+   * nothing.
+   *
+   * Waiting for the fade matters more now than it did: the window underneath
+   * is what the tour draws ON, and raising it earlier would put an in-window
+   * tour beneath a full-screen one still fading off it.
    *
    * No `_canCreate()` check: the caller only reaches here with a pane, and a
    * pane only exists when a workspace was created, which only the `workspace`
    * tour's live screens do. One gate, in one place.
+   *
+   * @param {Object} pane the folder window of the workspace just created
    */
-  _chainMigrateTour() {
+  _chainMigrateTour(pane) {
     if (this._migrateChained || !_.isFunction(this.once)) return;
+    if (!pane || !_.isFunction(pane.showTutorial)) return;
     this._migrateChained = true;
-    // Read NOW, while this widget is alive. The handler below runs from
-    // `destroy`, by which point nothing may be taken off `this`.
-    const opt = { celebrate: 1 };
     this.once(_e.destroy, () => {
-      // `this` is gone by now — deliberately nothing off it is touched. Wm is
-      // the host fire() needs for its seen-set write; _host() would fall back
-      // to it anyway, but naming it keeps the dependency visible.
+      // `this` is gone by now — deliberately nothing off it is touched. The
+      // pane was captured above and is the only thing this needs.
       try {
-        require('libs/tutorial-tours')
-          .fire('migrate', typeof Wm === 'undefined' ? null : Wm, opt);
+        if (pane.isDestroyed && pane.isDestroyed()) return;
+        pane.showTutorial('migrate');
       } catch (e) {
         // A chained tour is never load-bearing for the tour that chained it.
       }
@@ -712,7 +622,7 @@ class tutorial_main extends LetcBox {
    *
    * @returns {Promise<Object|null>} the workspace pane, or null if it never
    *   arrived — the caller uses that to decide whether to hand on to the next
-   *   tour, which is what carries the celebration now.
+   *   tour, and it is the window that tour is drawn on.
    */
   _openCreated() {
     const ws = this._createdWorkspace || this._createdFromStep();
@@ -778,7 +688,7 @@ class tutorial_main extends LetcBox {
    * behind on a destroyed widget.
    *
    * Resolves immediately when the pane is already there — re-running the tour
-   * against an existing workspace still ends in a celebration.
+   * against an existing workspace still hands on to the next one.
    *
    * @param {String|Number} hub_id
    * @returns {Promise<Object|null>}
@@ -822,8 +732,9 @@ class tutorial_main extends LetcBox {
       case 'end-tour':
         this._skipTour();
         break;
-      // The step made a workspace. The host is what opens it and celebrates,
-      // because both outlive the step — the tour is coming down around them.
+      // The step made a workspace. The host is what opens it and hands on to
+      // the next tour, because both outlive the step — the tour is coming down
+      // around them.
       case 'workspace-created': {
         const ws = args.workspace || {};
         if (ws.hub_id) this._createdWorkspace = ws;

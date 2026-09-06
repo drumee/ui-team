@@ -518,6 +518,77 @@ html {
   }
 }
 
+// ── While an in-window tour is up ─────────────────────────────────────────────
+//
+// The `overlay` slot hosts FULL-SCREEN guests — desk_tutorial, the reward flow,
+// the promo modals — and is built for them: opening it paints a body-wide scrim
+// and takes `pointer-events: auto` across the whole desk, so whatever is inside
+// has the user's whole attention and nothing behind can be touched.
+//
+// An in-window tour is the opposite kind of guest. It covers ONE window and
+// leaves the desk running, so both of those defaults are wrong for it: the rail
+// could not be clicked at all, and the topbar's workspace switcher, utility
+// tooltips and account menu were painted over by an overlay that is transparent
+// where they are.
+//
+// The flag is stamped by the desk for the life of that tour (mountWindowTutorial).
+.desk-module[data-window-tour="1"] {
+  .desk-module__overlay {
+    // No scrim: the tour is not asking for the desk's attention, and the desk
+    // behind it is the real thing, not a backdrop.
+    background-color: transparent;
+    // Click through everything the tour does not itself occupy. The tour's own
+    // root takes events back (builtins/window/tutorial/skin).
+    pointer-events: none;
+  }
+
+  // LIFTED, not dissolved — the same move, and the same reasoning, as the
+  // switcher lift below: dissolving the topbar's context would drop it under
+  // the sidebar (10002) and the slide-out panels (10001), which its 10003 is
+  // there to clear.
+  //
+  // Above the overlay's 10010 so the switcher, the utility tooltips and the
+  // account menu open OVER the tour rather than under it. They hang downward
+  // into the window the tour is drawn on, which is the only place they overlap
+  // it.
+  .desk-module__topbar {
+    // 100001, not "one above the overlay's 10010" — the overlay is not at
+    // 10010 while it holds anything. It is a Wrapper, so receiving the tour
+    // stamps `data-state="open"`, and skin/lib/utils.scss declares
+    // `[data-state="open"] { z-index: var(--z-index-context) !important }`,
+    // which is 50000. A lift to 10011 lost to that silently.
+    //
+    // This is the number the switcher lift below already uses, for exactly the
+    // same reason: it has to clear a 50000 context.
+    //
+    // ONE ABOVE THE RAIL, and that is not decoration. `__topbar` comes BEFORE
+    // `__body` in the skeleton and the rail lives inside `__body`, so at equal
+    // z-index the rail paints last and wins — which put the dark rail over the
+    // workspace switcher's dropdown, the one thing up here that hangs down far
+    // enough to overlap it.
+    z-index: 100002;
+  }
+
+  // Same, for the rail. It is beside the tour rather than under it, so this is
+  // belt and braces for the click fix above — but a rail that paints below a
+  // tour it is not covered by would be a puzzle to whoever met it next.
+  //
+  // `.desk-module-sidebar__main`, with a HYPHEN. This was written as
+  // `.desk-module__sidebar`, a class that appears nowhere else in the codebase
+  // and that nothing has ever worn — the rail is its own widget family, so its
+  // root is `desk-module-sidebar__main`, not a `__sidebar` block of the desk's.
+  // The rule matched nothing and the lift never happened; the rail stayed
+  // clickable only because the overlay above is `pointer-events: none`.
+  .desk-module-sidebar__main {
+    // The rail already carries `position: absolute` inside its __rail wrapper,
+    // so z-index applies; declared for the mobile drawer, which is `fixed` and
+    // already sits at 99999 of its own.
+    //
+    // One BELOW the topbar above, which has to win: see the note there.
+    z-index: 100001;
+  }
+}
+
 @media (max-width: 650px) {
   html,
   body {

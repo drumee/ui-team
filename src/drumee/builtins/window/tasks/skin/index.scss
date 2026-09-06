@@ -1328,7 +1328,13 @@ $theme-colors: (
     backdrop-filter: blur(30px);
     align-items: center;
     justify-content: center;
-    animation: tasks-panel-fade-in 0.15s ease;
+
+    // Only on the OPENING render — see the note on __create-backdrop. feed()
+    // rebuilds this element every render, and a fresh element replays its
+    // animation.
+    &[data-entered="0"] {
+      animation: tasks-panel-fade-in 0.15s ease;
+    }
   }
 
   &__board-modal {
@@ -1348,6 +1354,9 @@ $theme-colors: (
       0px 25px 50px -12px rgba(0, 0, 0, 0.25),
       0px 1px 11px 0px rgba(0, 0, 0, 0.13);
     overflow-y: auto;
+  }
+
+  &__board-backdrop[data-entered="0"] &__board-modal {
     animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 
@@ -1527,7 +1536,15 @@ $theme-colors: (
     backdrop-filter: blur(30px);
     align-items: center;
     justify-content: center;
-    animation: tasks-panel-fade-in 0.15s ease;
+
+    // ONLY ON THE OPENING RENDER. _render() rebuilds this element through
+    // feed(), and a newly created element runs its animation again — so while
+    // the modal was open every re-render faded another card in on top of the
+    // one already there. The panel stamps `data-entered` once it has been
+    // painted (isCreateEntered in ../index.js), and from then on it simply is.
+    &[data-entered="0"] {
+      animation: tasks-panel-fade-in 0.15s ease;
+    }
   }
 
   &__create-modal {
@@ -1543,6 +1560,20 @@ $theme-colors: (
       0px 25px 50px -12px rgba(0, 0, 0, 0.25),
       0px 1px 11px 0px rgba(0, 0, 0, 0.13);
     overflow: hidden;
+  }
+
+  // THE CARD'S OWN ENTRANCE, gated on the same flag as the backdrop's.
+  //
+  // There are TWO animations on this modal — a fade on the backdrop and a
+  // pop-in on the card — and gating only the backdrop fixed nothing visible:
+  // the card is what the eye follows, and it went on popping in on every
+  // re-render while the modal was open. Which is what "it renders a lot of
+  // cards at the same time" was.
+  //
+  // Written as a descendant of the flagged backdrop rather than given a stamp
+  // of its own, so the two can never disagree about whether this opening has
+  // already been painted.
+  &__create-backdrop[data-entered="0"] &__create-modal {
     animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 
@@ -1974,7 +2005,13 @@ $theme-colors: (
     backdrop-filter: blur(30px);
     align-items: center;
     justify-content: center;
-    animation: tasks-panel-fade-in 0.15s ease;
+
+    // Only on the OPENING render — see the note on __create-backdrop. feed()
+    // rebuilds this element every render, and a fresh element replays its
+    // animation.
+    &[data-entered="0"] {
+      animation: tasks-panel-fade-in 0.15s ease;
+    }
   }
 
   // Near-full-window issue view (Figma 2040-14173) — proportional to the
@@ -1994,6 +2031,11 @@ $theme-colors: (
       0px 25px 50px -12px rgba(0, 0, 0, 0.25),
       0px 1px 11px 0px rgba(0, 0, 0, 0.13);
     overflow: hidden;
+  }
+
+  // The detail panel re-renders on every keystroke in its own form, so an
+  // ungated entrance here flashed the whole panel on each one.
+  &__detail-backdrop[data-entered="0"] &__detail-panel {
     animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 

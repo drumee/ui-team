@@ -1,5 +1,6 @@
 require('./skin');
 const { tooltipBubble } = require('../skeleton/toolkit');
+const { anchorFor, splitAnchor } = require('../host-kit');
 
 // Card edge to target edge.
 //
@@ -100,28 +101,13 @@ function opensStackingContext(node) {
   return false;
 }
 
-/**
- * Where the card sits, given the rect it is talking about.
- *
- * The four names mean what they have always meant — the direction the callout
- * reaches out in, NOT the side of the target it lands on. 'west' reaches west,
- * so the card sits to the target's right.
- */
-function anchorFor(rect, direction, gap = GAP) {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  switch (direction) {
-    case 'south':
-      return { left: `${cx}px`, bottom: `${window.innerHeight - rect.top + gap}px` };
-    case 'east':
-      return { right: `${window.innerWidth - rect.left + gap}px`, top: `${cy}px` };
-    case 'west':
-      return { left: `${rect.right + gap}px`, top: `${cy}px` };
-    case 'north':
-    default:
-      return { left: `${cx}px`, top: `${rect.bottom + gap}px` };
-  }
-}
+// anchorFor moved to ../host-kit.
+//
+// It has to know the box the callout is positioned INSIDE, and that box is no
+// longer always the viewport: a tour drawn over a folder window sits inside a
+// positioned ancestor, so viewport coordinates written as `top`/`left` landed
+// the card a window-offset away from its target. The kit's version takes the
+// host rect, and focus() below measures it.
 
 class __tutorial_spotlight extends LetcBox {
 
@@ -179,7 +165,9 @@ class __tutorial_spotlight extends LetcBox {
    *   `[data-tour]` rule got wrong.
    */
   async focus(args = {}) {
-    const { target, anchor, tooltip, direction = 'north', beak, owner, gap, dim = true } = args;
+    const {
+      target, anchor, anchor_x, tooltip, direction = 'north', beak, owner, gap, dim = true,
+    } = args;
     if (!target) return this.clear();
     // Written before anything is awaited, so the scrim is already right for
     // this screen by the time it fades in with the callout.
@@ -208,9 +196,11 @@ class __tutorial_spotlight extends LetcBox {
     // one another, so they are resolved together rather than in the order they
     // happen to be written in.
     const anchorEl = anchor ? live(elementOf(anchor)) : null;
-    const [rect, measuredAnchor, callout] = await Promise.all([
+    const anchorXEl = anchor_x ? live(elementOf(anchor_x)) : null;
+    const [rect, measuredAnchor, measuredAnchorX, callout] = await Promise.all([
       waitForStableRect(el),
       anchorEl && anchorEl !== el ? waitForStableRect(anchorEl) : null,
+      anchorXEl ? waitForStableRect(anchorXEl) : null,
       this.ensurePart('callout'),
     ]);
     if (this._stale(ticket)) return;
@@ -269,14 +259,58 @@ class __tutorial_spotlight extends LetcBox {
       return;
     }
     if (this._stale(ticket)) return;
-    const anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    const pointsAt = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    // A card can clear one box while pointing at another INSIDE it.
+    //
+    // The import dialog is the case the design states outright: 176:47527 puts
+    // the dialog's right edge at x1056 and the callout's left at x1090 — 34px
+    // clear of the DIALOG, not of the row the step is about. Measuring the gap
+    // from the row instead measured it from an edge 28px further in, so the
+    // card came to rest against the panel it was meant to stand off.
+    //
+    // So the horizontal comes from `anchor_x` when a screen names one, and the
+    // vertical stays with `anchor`, which is what the beak marks. splitAnchor
+    // names every field rather than spreading — see the warning on it.
+    const anchorRect = anchor_x
+      ? splitAnchor(pointsAt, measuredAnchorX)
+      : pointsAt;
+    // Kept for _keepInView, which may have to place the card again on the other
+    // side of this same rect.
+    this._anchorRect = anchorRect;
+    this._gap = gap == null ? GAP : gap;
+    // The callout is absolutely positioned inside THIS widget, so its
+    // coordinates are relative to this box — not to the viewport, which is only
+    // the same thing when nothing above the tour is positioned.
+    const host = this.el.getBoundingClientRect();
+    const style = anchorFor(anchorRect, direction, this._gap, host);
+    // Diagnostic, gated on a tour having been asked for by URL, so an ordinary
+    // session prints nothing. Callout placement is four numbers derived from two
+    // rects, and reading a screenshot cannot tell you which of them is wrong.
+    require('libs/window-tutorial-intent').trace('callout placed', {
+      direction,
+      anchor: { l: Math.round(anchorRect.left), r: Math.round(anchorRect.right),
+                t: Math.round(anchorRect.top), w: Math.round(anchorRect.width) },
+      host: { l: Math.round(host.left), r: Math.round(host.right),
+              t: Math.round(host.top), w: Math.round(host.width) },
+      style,
+      litFallback: lit !== el,
+    });
     callout.feed(tooltipBubble(owner || this, {
       ...tooltip,
       direction,
       beak,
-      style: anchorFor(anchorRect, direction, gap),
+      style,
     }));
     await this._keepInView(callout, ticket);
+    const placed = card => card && card.getBoundingClientRect();
+    const finalCard = callout.el && callout.el.querySelector(`.${BUBBLE_CLASS}`);
+    const fr = placed(finalCard);
+    if (fr) {
+      require('libs/window-tutorial-intent').trace('callout settled', {
+        l: Math.round(fr.left), r: Math.round(fr.right), w: Math.round(fr.width),
+        dir: finalCard.dataset.direction, tail: finalCard.dataset.tail || 'on',
+      });
+    }
   }
 
   /**
@@ -304,11 +338,25 @@ class __tutorial_spotlight extends LetcBox {
     // several frames, so a single rAF measures a card that is still growing —
     // and a short measurement under-nudges, which is the same clipped button
     // with extra steps. This is the helper the targets already use.
-    const r = await waitForStableRect(card);
+    let r = await waitForStableRect(card);
     if (this._stale(ticket) || !card.isConnected) return;
     if (!r.width || !r.height) return;
 
-    const bounds = this.el.getBoundingClientRect();
+    let bounds = this.el.getBoundingClientRect();
+    // A bounds box with no size makes every comparison below nonsense: `over()`
+    // would read min > max, return a huge dx, blow past the beak cap and slide
+    // the card hard against an edge with its tail off — which looks exactly like
+    // a placement bug and is not one. It can happen while the tour is still
+    // being laid out, or if the host was measured before it had a box.
+    //
+    // There is nothing to keep in view against a box that is not there, so the
+    // card is left where anchorFor put it.
+    if (!bounds.width || !bounds.height) {
+      require('libs/window-tutorial-intent').trace('keepInView skipped — host has no box', {
+        w: Math.round(bounds.width), h: Math.round(bounds.height),
+      });
+      return;
+    }
 
     const over = (lo, hi, min, max) => {
       if (lo < min) return min - lo;
@@ -317,6 +365,56 @@ class __tutorial_spotlight extends LetcBox {
     };
     let dx = over(r.left, r.right, bounds.left + EDGE, bounds.right - EDGE);
     let dy = over(r.top, r.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+
+    // NO ROOM ON THIS SIDE? GO TO THE OTHER ONE.
+    //
+    // Sliding is the wrong answer when the card simply does not fit where it was
+    // asked to go. The cap below then gives up the tail and moves it as far as
+    // it must, which walks the card across the tour and leaves it flush against
+    // an edge, pointing at nothing — the migrate tour's dialog screens landed
+    // beside the mock's hero copy that way, half a pane from the dialog they
+    // describe.
+    //
+    // The opposite side is almost always empty, because the thing being
+    // described is what filled the first one. Flipping keeps the card beside its
+    // subject and keeps the beak on it; only if the flip does not fit either do
+    // we fall through to the old behaviour, which is the honest last resort.
+    const args = this._args || {};
+    const dir = args.direction || 'north';
+    const FLIP = { west: 'east', east: 'west', north: 'south', south: 'north' };
+    const horizontal = dir === 'east' || dir === 'west';
+    const overflowAxis = horizontal ? dx : dy;
+    const capBeforeFlip = horizontal
+      ? Math.max(0, r.width / 2 - BEAK_INSET)
+      : Math.max(0, r.height / 2 - BEAK_INSET);
+    if (overflowAxis && Math.abs(overflowAxis) > capBeforeFlip && this._anchorRect && FLIP[dir]) {
+      const flipped = FLIP[dir];
+      const style = anchorFor(this._anchorRect, flipped, this._gap, bounds);
+      // Clear the placement the first side used, or the two fight: `left` and
+      // `right` are both live if only one is overwritten.
+      for (const k of ['left', 'right', 'top', 'bottom']) card.style[k] = '';
+      Object.assign(card.style, style);
+      card.dataset.direction = flipped;
+      card.setAttribute('data-direction', flipped);
+      const after = await waitForStableRect(card);
+      if (this._stale(ticket) || !card.isConnected) return;
+      const stillOver = horizontal
+        ? over(after.left, after.right, bounds.left + EDGE, bounds.right - EDGE)
+        : over(after.top, after.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+      if (!stillOver || Math.abs(stillOver) <= capBeforeFlip) {
+        // The flip worked. Re-measure both axes against the new position and
+        // let the nudge below fine-tune what is left.
+        dx = over(after.left, after.right, bounds.left + EDGE, bounds.right - EDGE);
+        dy = over(after.top, after.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+        r = after;
+      } else {
+        // No better there. Put it back and take the old medicine.
+        for (const k of ['left', 'right', 'top', 'bottom']) card.style[k] = '';
+        Object.assign(card.style, anchorFor(this._anchorRect, dir, this._gap, bounds));
+        card.dataset.direction = dir;
+        card.setAttribute('data-direction', dir);
+      }
+    }
 
     // Past this the tail would leave the card it belongs to, and a beak
     // pointing at nothing is worse than a card slightly off-centre. The cap is

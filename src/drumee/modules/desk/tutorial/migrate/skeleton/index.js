@@ -20,24 +20,36 @@
 const { filesPane } = require('../../skeleton/toolkit/files');
 const dialog = require('./dialog');
 
-module.exports = function (ui, screen = {}) {
+module.exports = function (ui, screen = {}, state = {}) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__stage`,
     kids: [
       filesPane(ui, {
-        menu: screen.menu,
-        // Only where the screen asks for them. Everywhere else these two are
-        // the drawing the frames show, and a stray click on the pane must not
-        // move the tour.
+        // Open only while the user has opened it — the + New button toggles it
+        // now rather than the tour drawing it open on a screen of its own.
+        menu: screen.menu && !!state.menuOpen,
+        // `live_menu` is what turns the dropdown's rows from a drawing into
+        // controls that really create. Without it they stay inert, which is
+        // what every other tour drawing this pane wants.
+        live_menu: screen.live_menu,
+        // Only where the screen asks for them. Everywhere else these are the
+        // drawing the frames show, and a stray click on the pane must not move
+        // the tour.
         cta_service: screen.live ? 'mg-open-dialog' : null,
-        new_service: screen.live ? 'mg-open-menu' : null,
-        upload_service: screen.live ? 'mg-open-upload' : null,
+        new_service: screen.live ? 'mg-toggle-menu' : null,
+        upload_service: screen.live ? 'mg-do-upload' : null,
       }),
       screen.dialog
         ? Skeletons.Box.Y({ active: 0,
             className: `${pfx}__overlay`,
-            kids: [dialog(ui, { copied: screen.copied, linked: screen.linked })],
+            kids: [dialog(ui, {
+            copied: screen.copied,
+            linked: screen.linked,
+            // Set only on the screen where the card ARRIVES — see _transition
+            // and the `enter` note in ../index.js.
+            enter: state.enter,
+          })],
           })
         : null,
     ].filter(Boolean),

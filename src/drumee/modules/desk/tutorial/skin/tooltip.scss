@@ -165,12 +165,20 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   // workspace name here" is at 20px SemiBold. Pinned to the standard 296 it
   // wrapped to two lines and stopped being the shape the design draws.
   //
-  // Capped so the hug cannot run off a narrow tour; past the cap it wraps,
-  // which is the right failure — the alternative is a card wider than the
-  // screen with its tail pointing at nothing.
+  // ONE WIDTH FOR EVERY CARD IN EVERY STEP. This used to hug its content
+  // (`width: max-content`, capped at `min(420px, 60vw)`), which is what the
+  // frames draw — but a tour alternates bare and standard screens, so the
+  // callout changed size as the user pressed Next and the eye had to find it
+  // again each time. A `text` screen and a `title`/`desc` screen are the same
+  // component saying different things, and they now measure the same.
+  //
+  // Only the insets differ, which is the part of the design that was about the
+  // bare shape rather than about its length.
+  //
+  // The window host carried this fix for its own tours already; it is the
+  // shared rule now, and that override is gone.
   &__bubble-card--bare {
-    width: max-content;
-    max-width: min(420px, 60vw);
+    width: 297px;
     padding: 24px;
     gap: 16px;
   }

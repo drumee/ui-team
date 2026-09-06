@@ -221,6 +221,23 @@ class __window_manager extends push {
 
     /** Reset the url to its default value*/
     setTimeout(()=>{
+      // NOT while a tour was launched from this URL.
+      //
+      // `?window_tutorial=<id>` asks for a tour that is drawn ON a workspace
+      // pane. Rewriting the hash re-routes the app, which re-renders that pane
+      // and drops the overlay appended to it — WITHOUT destroying the window,
+      // so no destroy handler fires and the tour simply vanishes a few seconds
+      // after appearing, leaving a workspace behind. That was reported three
+      // times before this line was found, because every lifecycle hook stayed
+      // silent while the DOM node quietly went away.
+      //
+      // The reset is cosmetic — it tidies the address bar back to a resting
+      // value — so standing it down for the one kind of load whose URL is
+      // load-bearing costs nothing. `armed()` is true only on a page load that
+      // actually asked for a tour, so every other session is untouched.
+      try {
+        if (require('libs/window-tutorial-intent').armed()) return;
+      } catch (e) { /* never let a URL tidy-up break the desk */ }
       location.hash='#/desk/wm/home'
     }, Visitor.timeout(5000))
 

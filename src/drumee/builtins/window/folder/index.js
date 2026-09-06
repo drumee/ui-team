@@ -10,6 +10,7 @@ const {
 
 const { overMeetingCap } = require("libs/billing");
 
+
 const {
 
   
@@ -39,6 +40,7 @@ const WS_SEARCH_LIMIT = 20;
 // before that fence, so asking for exactly 20 could hand back 20 rows from a
 // sibling workspace and leave the dropdown empty. 100 is the service's own cap.
 const WS_SEARCH_FETCH_MAX = 100;
+
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -614,6 +616,71 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  // These three sit here, next to the onBeforeDestroy that tears the overlay
+  // down, rather than beside _openChatExportModal where the analogous
+  // wrapper-overlay methods live — the tour's teardown is reached from
+  // onBeforeDestroy as well as from the tour's own destroy, so keeping both
+  // ends of that handshake close together matters more here than grouping by
+  // "another appended overlay".
+  /**
+   * Run a tour over this window.
+   *
+   * The tour is drawn by `window_tutorial` (builtins/window/tutorial), which
+   * renders the same step widgets the desk tour does but lays them ON this
+   * window instead of replacing the desk with a picture of one.
+   *
+   * THE ORDER OF THE TWO GUARDS IS LOAD-BEARING. `Tours.claim` takes the
+   * account-wide single-flight latch and holds it until the mounted tour is
+   * destroyed and `release()` runs. Claim first and then refuse to mount, and
+   * nothing is ever destroyed, `release()` is never reached, and every later
+   * tour on this account is dropped in silence for the rest of the session (the
+   * 30s guard timer eventually covers it, which is thirty seconds of swallowed
+   * triggers). So the already-mounted check comes first, and only a run that is
+   * definitely going to mount takes the claim.
+   *
+   * A preview skips the claim outright: an explicitly requested tour is never
+   * gated on the seen-set, the kill switch or single-flight — the same rule the
+   * desk's `?tutorial=` follows, and the only way QA can reach a tour twice.
+   *
+   * The overlay is appended rather than declared in ./skeleton because that
+   * skeleton returns a single node (`__main`) which becomes this window's
+   * `content` part; a sibling of it cannot be declared there. Same idiom as
+   * _openChatExportModal.
+   *
+   * @param {String} tour a tour id from modules/desk/tutorial/tours
+   * @param {Object} [opt] extra model attributes for the tour widget
+   * @returns {Boolean|Promise<Boolean>} false when refused
+   */
+  showTutorial(tour, opt = {}) {
+    const Tours = require("libs/tutorial-tours");
+    if (!opt.preview && !Tours.claim(tour, this)) return false;
+    // BROADCAST, do not append.
+    //
+    // This used to `this.append()` a wrapper and feed the tour into it. That put
+    // the overlay in THIS window's Marionette collection, and `Box.feed()` is
+    // `collection.set()` — so any feed on this window dropped it. A pane is fed
+    // repeatedly while it builds, so a tour raised on a freshly opened workspace
+    // was racing a rebuild, and lost: the node left the DOM with the window
+    // still alive and nothing destroyed, so no handler ever fired.
+    //
+    // The desk owns the mount now, in its own `overlay` slot — the one
+    // `desk_tutorial` has always used, which nothing else re-feeds. The tour
+    // lays itself over this window and follows it (see window/tutorial,
+    // _syncToWindow), so it still reads as an overlay on this window.
+    //
+    // Announced rather than called: this window has no handle on the desk
+    // module, and the desk already listens on this bus for tour traffic.
+    try {
+      RADIO_BROADCAST.trigger("window-tutorial:mount", { window: this, tour, opt });
+    } catch (e) {
+      if (!opt.preview) Tours.release(tour);
+      return false;
+    }
+    return true;
+  }
+
+
+
   onBeforeDestroy(opt) {
     clearGrouped(this);
     if (this._folderGridSortTimer) {
@@ -633,6 +700,9 @@ class __window_folder extends mfsInteract {
     this._stopAwaitMeetingReady();
     this._ftTeardown();
     this._unbindThreadMenuOutside();
+    // A tour is holding the account-wide single-flight latch. Closing the
+    // window it is drawn on must hand that back, or no tour runs again this
+    // session.
     this._unbindViewportReframe();
     this._unbindDeskChrome();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -723,6 +793,28 @@ class __window_folder extends mfsInteract {
     // "Join Meeting" to members while a host is in the call (chat meeting.start/
     // meeting.end sentinels — realtime + an initial history scan).
     this._initMeetingPresence();
+    // Warm the tasks panel while the window that hosts it is on screen.
+    //
+    // `tasks_panel` is a lazy kind (seeds.js) and was the one tab widget the
+    // app never warmed — tutorial_migrate, desk_tutorial, reward_flow,
+    // promo_launch30 and over_limit_popup all are. So the first press of Task,
+    // from this window's tab bar or from the rail, WAS the moment its chunk was
+    // first requested: Kind.get() hands back the lazy-loader placeholder, which
+    // mounts empty, waits on the network and respawns itself once the module
+    // lands (ui-core letc/kind/loader.js). The user pays a round trip and a
+    // mount-and-rebuild at the moment they asked to see their tasks.
+    //
+    // It is the largest lazy chunk in the build — 612 KB — so that round trip
+    // is not a formality. Measured against stage: 2.9s, because the endpoint
+    // serves it uncompressed (gzip would be 133 KB).
+    //
+    // Fire and forget, and deliberately NOT awaited: a warm-up that fails costs
+    // nothing, because the kind still loads on demand exactly as it did. Not
+    // awaited for a second reason too — the Files tab must not wait on a
+    // prefetch for a tab the user may never open.
+    if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+      Promise.resolve(Kind.waitFor("tasks_panel")).catch(() => {});
+    }
     const initialTab = this.mget("activeTab");
     if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
       this._launchMeetingStandalone();
@@ -770,6 +862,7 @@ class __window_folder extends mfsInteract {
       this.el.dataset.headless = "1";
     }
   }
+
 
   // A folder window opens FULL-FRAME — the whole desk body, the same frame a
   // workspace pane gets from the sidebar — instead of the inset popup box it
@@ -1808,6 +1901,15 @@ class __window_folder extends mfsInteract {
               hub_id: destHub,
               nid: destNidFinal,
               destinationName: destName || undefined,
+              // What the destination LOOKS like, so the popup's card draws
+              // this folder's own shape rather than a generic one. Read off
+              // the same window the name and the nid come from — a hub ROOT
+              // window is a workspace and gets its area badge, anything the
+              // user has navigated into is a plain folder.
+              destArea: this.mget(_a.area) || undefined,
+              destFiletype: destNid === this.mget(_a.actual_home_id)
+                ? _a.hub
+                : _a.folder,
               direct: 1,
               // Destination-scoped id (same scheme as window_folder-<hub>-<nid>).
               // A plain shared id made singleton raise() a popup opened from
@@ -1850,9 +1952,25 @@ class __window_folder extends mfsInteract {
       case "create-folder-submit":
         return this.createFolderFromDialog(cmd);
 
-      case "close-folder-dialog":
+      case "close-folder-dialog": {
         this.isShowSettings = false;
-        return this.dialogWrapper.clear();
+        // Marked, then cleared on a timer, so the card's exit animation gets
+        // frames. Clearing on the spot destroys the element before one is
+        // painted, which left the create dialog with an entrance and no exit.
+        // Same idiom and the same 160ms as media/form's close; a timer rather
+        // than `animationend`, because reduced-motion disables the animation
+        // and that event would then never fire.
+        const wrapper = this.dialogWrapper;
+        const card = wrapper && wrapper.el
+          && wrapper.el.querySelector(".window-folder__create-folder-dialog");
+        if (!card || !card.dataset) return wrapper.clear();
+        card.dataset.closing = "1";
+        setTimeout(() => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          wrapper.clear();
+        }, 160);
+        return;
+      }
 
       case "close-export":
         this._closeChatExportOverlay();
@@ -1873,6 +1991,9 @@ class __window_folder extends mfsInteract {
         // going to open the matrix instead.
         const membersOnly =
           !!(args && args.members) || this._manageAccessIsInternal();
+        // Set by the tour branch below; read after it to decide whether the
+        // panel opens now or once the tour is done.
+        let raised = false;
         if (!membersOnly) {
           // Belt for the two hidden entry points (topbar icon + overflow menu):
           // the panel mints secure-share links that can grant can_edit, and
@@ -1904,6 +2025,9 @@ class __window_folder extends mfsInteract {
           // Internal is excluded because the tour teaches secure sharing —
           // six screens of link options (modules/desk/tutorial/share,
           // LOCALE.SECURE_SHARE) — over a panel that has no links in it.
+          // Whether the tour actually went up. showTutorial answers false for
+          // every gate — already completed, mobile, the kill switch, another
+          // tour in flight — and that answer is what decides the ORDER below.
           if (!this.isShowSettings) {
             // What this panel is about, told to the tour because the tour
             // cannot work it out: openManageAccess() opens a WORKSPACE's
@@ -1927,7 +2051,12 @@ class __window_folder extends mfsInteract {
             // `hub_name` is the name that tracks in-window navigation, which is
             // what the topbar shows; `filename` is the fallback for a window
             // that has not set one.
-            require("libs/tutorial-tours").fire("share", this, {
+            // In-window, not on the desk. fire() broadcasts, and the desk's
+            // listener would answer it by replacing the whole screen with a
+            // mock of itself — while the panel this tour is about is right
+            // here. showTutorial takes the same claim fire() would have taken,
+            // so every gate still applies exactly once.
+            raised = this.showTutorial("share", {
               subject: "workspace",
               subject_data: {
                 name: this.mget(_a.hub_name) || this.mget(_a.filename),
@@ -1938,6 +2067,41 @@ class __window_folder extends mfsInteract {
               },
             });
           }
+        }
+        // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
+        // tour teaches the secure-share panel, so it is drawn over the very
+        // window that panel slides into, and the user met a walkthrough with
+        // the real thing already open and invisible behind it.
+        //
+        // So the two are sequenced. Not done with the tour → it plays, and the
+        // panel opens as it comes down. Done with it → `raised` is false and
+        // the panel opens now, exactly as before, which is every click after
+        // the first walkthrough.
+        //
+        // whenDone runs its callback synchronously when nothing is in flight,
+        // so the second case costs a microtask and no branch of its own.
+        if (raised) {
+          const Tours = require("libs/tutorial-tours");
+          return Tours.whenDone("share", () => {
+            if (this.isDestroyed && this.isDestroyed()) return;
+          // THE PANEL IS THE REWARD FOR FINISHING, so a tour the user walked
+          // out of does not get one. Three outcomes, and they are not
+          // interchangeable:
+          //
+          //   completed   isSeen — this tour is `mark_on: "success"`, so its
+          //               flag is written only when the last screen is reached.
+          //               Open the panel.
+          //   abandoned   it appeared and the user closed it. They answered;
+          //               opening the panel anyway is what this rule exists to
+          //               stop.
+          //   never ran   claimed and released without reaching the screen — a
+          //               window it could not be drawn on, a chunk that failed.
+          //               Nothing was taught and nothing was declined, so the
+          //               click must still do what it was for; swallowing it
+          //               would make Share a dead control.
+            if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            this.openManageAccess({ members: membersOnly });
+          });
         }
         return this.openManageAccess({ members: membersOnly });
       }
@@ -2106,6 +2270,40 @@ class __window_folder extends mfsInteract {
         // not where a first-time user goes looking for it.
         return this.showFolderTab(_a.task);
 
+      case "add-task": {
+        // Open the panel's New task form, from outside the panel.
+        //
+        // WHO ASKS: the task tour's "Create your first task" CTA, through the
+        // in-window host (window/tutorial, _actOnWindow), which dispatches
+        // here because a tour knows the WINDOW it is drawn on and not the
+        // widgets inside it. `add-task` is the tasks panel's own service — the
+        // same one its viewbar "+ New" button raises — so this forwards rather
+        // than reimplementing the form.
+        //
+        // DEFERRED PAST THE TOUR, and that is the load-bearing part. The create
+        // modal opens INSIDE the panel, which is inside this window, which the
+        // tour is covering — `isolation: isolate` on the window manager's root
+        // means no z-index in here can lift it over a desk-level screen (the
+        // same wall the migrate tour's dialog hit). So it waits for the tour to
+        // come down. With none in flight, whenDone runs the callback
+        // synchronously, exactly where a bare call would sit.
+        const open = () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          const p = this._taskPanel;
+          if (!p || (p.isDestroyed && p.isDestroyed())) return;
+          if (!_.isFunction(p.onUiEvent)) return;
+          // The panel reads `taskColumn` off the trigger to pick a starting
+          // column and falls back to its default status without one, which is
+          // what a tour wants: a task in the first column, like the viewbar
+          // button makes.
+          p.onUiEvent(cmd || this, { service: "add-task" });
+        };
+        // The task tab has to be showing, or the panel is not mounted at all.
+        this.showFolderTab(_a.task);
+        require("libs/tutorial-tours").whenDone("folder_task", open);
+        return;
+      }
+
       case "toggle-task-filter":
         // Tab-bar filter button → open/close the task panel's member dropdown.
         if (this._taskPanel && _.isFunction(this._taskPanel.toggleFilter)) {
@@ -2216,9 +2414,25 @@ class __window_folder extends mfsInteract {
       }
 
       // ── Meeting scheduling modal (skeleton/meeting-modal.js) ───────────
-      case "open-schedule":
+      case "open-schedule": {
         // Calendar "Schedule" CTA → create a new meeting.
-        return this.openMeetingModal();
+        //
+        // DEFERRED PAST THE MEETING TOUR, which ends by raising this same
+        // service (desk/tutorial/meeting, _openTheRealThing). The modal opens
+        // INSIDE this window, which the tour is covering, and
+        // `isolation: isolate` on the window manager's root means no z-index
+        // in here can lift it over a desk-level screen — the same wall the
+        // migrate tour's dialog and the task tour's form both hit.
+        //
+        // With no tour in flight, whenDone runs the callback synchronously,
+        // exactly where the bare call used to sit — which is every press of
+        // the Schedule button itself.
+        const Tours = require("libs/tutorial-tours");
+        return Tours.whenDone("meeting", () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.openMeetingModal();
+        });
+      }
 
       case "sched-new-at": {
         // Click an empty weekly half-slot → create a meeting prefilled at that

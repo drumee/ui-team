@@ -1,4 +1,7 @@
 const skeleton = require('./skeleton');
+// How long the dialog's exit is given before the next screen replaces it.
+// Matches the 0.16s in ./skin.
+const CLOSE_MS = 160;
 const { isLastScreen, entryScreen } = require('../tours');
 
 /**
@@ -69,67 +72,15 @@ const SCREENS = [
     pane: true,
     live: true,
     bare: true,
+    // The dropdown is drawn on this screen now, and its rows act. `+ New` and
+    // `Upload` are no longer screens of their own — see the note above the
+    // table.
+    menu: true,
+    live_menu: true,
     target: 'fp-migrate',
     anchor: 'fp-migrate',
     direction: 'north',
     beak: 'start',
-  },
-  {
-    // 142:35805. The dropdown is the subject, so it is what is lit — not the
-    // button it hangs from, which would leave the menu itself in the scrim.
-    //
-    // 'east' reaches east, so the card sits to the menu's LEFT. The menu opens
-    // at x436 of 1600 with the hero's copy to its left and nothing but pane to
-    // its right — but 'west' would put the card over the empty middle of the
-    // pane, and the frames keep this flow's callouts beside their subject.
-    // East puts it against the hero copy the menu was opened from.
-    //
-    // BACK ONLY. This screen is the `+ New` branch off screen 1, not a step on
-    // the way to the dialog: the dialog is what a DIFFERENT button opens. A
-    // Next here would have to invent a transition the product does not make.
-    key: 'menu',
-    pane: true,
-    menu: true,
-    back_only: true,
-    back: 'pane',
-    target: 'fp-new-menu',
-    anchor: 'fp-new-menu',
-    direction: 'east',
-    // Centred on the card's right edge, level with the middle of the dropdown.
-    // Stated rather than left to tooltipBubble's default so the screen says
-    // where its own tail goes — `start`/`end` are what the other placements in
-    // this tour use, and an unstated beak reads as "nobody decided".
-    beak: 'center',
-    // The card is titled with the BUTTON it points at, not with the tour.
-    // LOCALE.NEW is the label on that button (toolkit/files.js), so the two
-    // cannot drift apart or disagree in translation.
-    title: () => LOCALE.NEW,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_MENU_DESC,
-  },
-  {
-    // The `Upload` branch off screen 1 — the third way files arrive, and the
-    // one that is not an import at all.
-    //
-    // 'west' reaches west, so the card sits to the button's RIGHT, level with
-    // it. The button is the last of the three, with empty pane to its right,
-    // so there is room; 'east' would stack the card over the + New button and
-    // the Migrate CTA it sits beside.
-    //
-    // Nothing is drawn open on the pane for this one. The real Upload opens the
-    // OS file picker, which is not ours to mock — so the screen is the pane
-    // with the button lit and the card beside it, which is as far as a mock can
-    // honestly go.
-    key: 'upload',
-    pane: true,
-    back_only: true,
-    back: 'pane',
-    target: 'fp-hero-upload',
-    anchor: 'fp-hero-upload',
-    direction: 'west',
-    beak: 'center',
-    // Same rule as the menu screen: the card carries the button's own label.
-    title: () => LOCALE.UPLOAD,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_UPLOAD_DESC,
   },
   {
     // Back goes to the PANE, not to the screen before this one.
@@ -142,7 +93,17 @@ const SCREENS = [
     dialog: true,
     target: 'mg-dialog',
     anchor: 'mg-address',
+    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
+    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
+    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
+    //
+    // Anchoring the placement on the row measured the gap from the wrong edge.
+    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
+    // gap from the row left the card 4px off the panel — all but touching it,
+    // on all three screens.
+    anchor_x: 'mg-dialog',
     direction: 'west',
+    gap: 34,
     title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
     desc: () => LOCALE.TUTORIAL_MIGRATE_COPY_DESC,
   },
@@ -153,7 +114,17 @@ const SCREENS = [
     copied: true,
     target: 'mg-dialog',
     anchor: 'mg-link',
+    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
+    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
+    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
+    //
+    // Anchoring the placement on the row measured the gap from the wrong edge.
+    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
+    // gap from the row left the card 4px off the panel — all but touching it,
+    // on all three screens.
+    anchor_x: 'mg-dialog',
     direction: 'west',
+    gap: 34,
     title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
     desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
   },
@@ -164,9 +135,22 @@ const SCREENS = [
     linked: true,
     target: 'mg-dialog',
     anchor: 'mg-verify',
+    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
+    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
+    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
+    //
+    // Anchoring the placement on the row measured the gap from the wrong edge.
+    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
+    // gap from the row left the card 4px off the panel — all but touching it,
+    // on all three screens.
+    anchor_x: 'mg-dialog',
     direction: 'west',
+    gap: 34,
     title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
+    // Its own line, not the paste screen's. This screen is reached with the
+    // link already in the field, so "Paste the link" described a step the user
+    // had just finished; the only thing left on it is the button.
+    desc: () => LOCALE.TUTORIAL_MIGRATE_VERIFY_DESC,
   },
 ];
 
@@ -174,6 +158,12 @@ class __tutorial_migrate extends LetcBox {
 
   initialize(opt = {}) {
     require('./skin');
+    // The destination card in ./skeleton/dialog is the REAL popup's block,
+    // wearing the real popup's class names, so it needs the real popup's skin.
+    // Nothing else here has loaded it: the widget it belongs to is lazy
+    // (seeds.js migrate_gdrive_popup) and may never have been opened in this
+    // session — which is the normal case for a user meeting this tour.
+    require('builtins/widget/migrate-gdrive-popup/skin');
     super.initialize(opt);
     this.declareHandlers();
     this._screenIndex = 0;
@@ -183,30 +173,6 @@ class __tutorial_migrate extends LetcBox {
     // Re-entered via Back from a later step: resume where we left off.
     this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
-    this._maybeCelebrate();
-  }
-
-  /**
-   * The confetti, over this tour's FIRST SCREEN.
-   *
-   * `celebrate` is set only when the workspace tour handed over — a workspace
-   * was just made, opened, and confirmed on screen before this tour was raised
-   * at all (see _chainMigrateTour in ../index.js). It arrives the way `subject`
-   * does: fire()'s `opt` -> the broadcast -> the host -> a model attribute on
-   * this step. So the same tour opened from the topbar's + New menu carries
-   * nothing and throws nothing, which is right — there is no new workspace to
-   * celebrate on an ordinary Tuesday.
-   *
-   * HERE rather than in _showScreen, and that is what keeps it a once. This
-   * tour BRANCHES: screens 2 and 3 both name `back: 'pane'`, so screen 1 is
-   * returned to rather than passed through, and a burst keyed on "the pane
-   * screen is up" would fire again every time the user backed out of a branch.
-   * onDomRefresh runs once per mount, and on a chained run entryScreen answers
-   * 0 — so this IS "the first screen of the migrate tour", said once.
-   */
-  _maybeCelebrate() {
-    if (!this.mget('celebrate')) return;
-    require('../confetti').celebrate(this);
   }
 
   onPartReady(child, pn) {
@@ -221,7 +187,45 @@ class __tutorial_migrate extends LetcBox {
 
   /** Jump straight to a named screen. */
   _goto(key) {
-    this._screenIndex = this._indexOf(key);
+    return this._transition(this._indexOf(key));
+  }
+
+  /**
+   * Move to a screen, letting the dialog leave before the pane comes back.
+   *
+   * EVERY SCREEN CHANGE REBUILDS THE BODY (`feed` in _showScreen), so a screen
+   * that no longer draws the dialog simply does not emit it and the card is
+   * gone between two frames. Marking it and deferring is what gives the exit
+   * something to play in — the same idiom, and the same 160ms, as the folder
+   * window's create dialog.
+   *
+   * A TIMER, NOT `animationend`: reduced motion disables the animation, and
+   * that event would then never fire — Back would stop working entirely for
+   * anyone who asked for less motion.
+   *
+   * Only dialog → no-dialog defers. Between two dialog screens the card stays
+   * up and must not flicker, and pane → dialog is the entrance, which the
+   * screen's own `enter` flag plays.
+   *
+   * @param {Number} index into SCREENS
+   */
+  _transition(index) {
+    const next = SCREENS[index] || {};
+    if (this._dialogUp && !next.dialog) {
+      const part = this.getPart && this.getPart('mg-dialog');
+      const card = (part && part.el)
+        || (this.el && this.el.querySelector(`.${this.fig.family}__dialog`));
+      if (card && card.dataset && !card.dataset.closing) {
+        card.dataset.closing = '1';
+        _.delay(() => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this._screenIndex = index;
+          this._showScreen();
+        }, CLOSE_MS);
+        return;
+      }
+    }
+    this._screenIndex = index;
     return this._showScreen();
   }
 
@@ -238,10 +242,16 @@ class __tutorial_migrate extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(skeleton(this, s));
-    const [target, anchor] = await Promise.all([
+    // The dialog animates in only when it ARRIVES. Every screen change rebuilds
+    // the body, so an entrance that played on render would re-pop the card on
+    // each of the three dialog screens — read as a flicker, not a transition.
+    const enter = !!s.dialog && !this._dialogUp;
+    this._dialogUp = !!s.dialog;
+    this.feed(skeleton(this, s, { menuOpen: !!this._menuOpen, enter }));
+    const [target, anchor, anchor_x] = await Promise.all([
       this.ensurePart(s.target),
       this.ensurePart(s.anchor),
+      s.anchor_x ? this.ensurePart(s.anchor_x) : null,
     ]);
 
     // `bare` raises the screen with NO card: focus() feeds the callout null and
@@ -269,9 +279,12 @@ class __tutorial_migrate extends LetcBox {
       service: 'spotlight:focus',
       target: target.el,
       anchor: anchor && anchor.el,
+      // Clears the DIALOG, points at the ROW. See the SCREENS entries.
+      anchor_x: anchor_x && anchor_x.el,
       tooltip,
       direction: s.direction,
       beak: s.beak,
+      gap: s.gap,
       // NO scrim on the two pane screens. 142:34981 and 142:35805 are drawn at
       // full strength — they are pictures of the product, and what marks the
       // subject on them is the callout's beak, not a dimmed surround. The
@@ -287,6 +300,39 @@ class __tutorial_migrate extends LetcBox {
     });
   }
 
+  /**
+   * Hand the user the REAL import dialog as the tour lets go.
+   *
+   * Every screen up to here has been a drawing. Ending on one leaves the user
+   * looking at a picture of a form they were just taught to fill in, with the
+   * actual one still three clicks away in a menu the tour spent its first
+   * screen showing them. So Done opens it.
+   *
+   * ORDER MATTERS, and it is why this runs BEFORE `next-step` rather than
+   * after. The folder window's own `launch-gdrive-migration` defers through
+   * Tours.whenDone("migrate", ...), which only queues while the tour is still
+   * claimed — raised after the hand-back, it would find the tour already gone
+   * and open the popup underneath one still fading out. Raised here, the launch
+   * is queued against this tour's own release and runs the moment it is down.
+   *
+   * ONLY WHEN THIS SCREEN REALLY ENDS THE TOUR. The same button reads "Next"
+   * when migrate is a step inside `full`, where it hands over to the tour after
+   * it and opening a dialog would interrupt the run. `isLastScreen` is the same
+   * test that decides the wording, so the two can never disagree.
+   *
+   * Raised at the host, like the create and upload rows: the step does not know
+   * which window it is drawn over, and the popup's destination is read off that
+   * window. With no host window — the desk-level `full` run — `_actOnWindow`
+   * declines and the tour simply ends, which is what it did before.
+   */
+  _openTheRealThing() {
+    if (!isLastScreen(this, this._screenIndex, SCREENS.length)) return;
+    this.triggerHandlers({
+      service: 'window-tutorial:act',
+      action: 'launch-gdrive-migration',
+    });
+  }
+
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
@@ -299,18 +345,46 @@ class __tutorial_migrate extends LetcBox {
       // the dialog would otherwise silently send the CTA to the wrong one.
       case 'mg-open-dialog':
         return this._goto('copy');
-      case 'mg-open-menu':
-        return this._goto('menu');
-      case 'mg-open-upload':
-        return this._goto('upload');
+
+      // `+ New` and `Upload` are REAL now. They used to jump to a screen each
+      // that drew the gesture and described it; they perform it instead, at the
+      // folder window this tour is laid over.
+      //
+      // Raised at the host rather than handled here: the step has no idea which
+      // window it is drawn on — that is the host's `target_window` — and it is
+      // deliberately kept that way, because a step that knows its host is a step
+      // that only works in one.
+      case 'mg-toggle-menu':
+        this._menuOpen = !this._menuOpen;
+        return this._showScreen();
+
+      case 'mg-do-create': {
+        const el = trigger && trigger.el;
+        const action = el && el.dataset && el.dataset.service;
+        if (!action) return;
+        // THE ROW ITSELF is forwarded as the trigger, not this widget. The
+        // product's handler reads the file name off the thing that was clicked
+        // (`cmd.mget(_a.name)` in window/core.js newDocument), so handing it
+        // anything else creates a document with no template name and it refuses.
+        return this.triggerHandlers({ service: 'window-tutorial:act', action, cmd: trigger });
+      }
+
+      case 'mg-do-upload':
+        return this.triggerHandlers({
+          service: 'window-tutorial:act',
+          action: _e.upload,
+          cmd: trigger,
+        });
 
       case 'next-step':
         // Only the last screen hands the tour back to tutorial_main, and it
         // NAMES the service. The step widget carries no `service` of its own
         // any more — see _buildWidgets in ../index.js.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
-        this._screenIndex = this._screenIndex + 1;
-        return this._showScreen();
+        if (this._screenIndex >= SCREENS.length - 1) {
+          this._openTheRealThing();
+          return this.triggerHandlers({ service: 'next-step' });
+        }
+        return this._transition(this._screenIndex + 1);
       case 'back-step': {
         // A screen may name where Back goes, because this tour BRANCHES at
         // screen 1 and index-1 is then the wrong answer — see `back` on the
@@ -318,8 +392,7 @@ class __tutorial_migrate extends LetcBox {
         const back = (SCREENS[this._screenIndex] || {}).back;
         if (back) return this._goto(back);
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });
-        this._screenIndex = this._screenIndex - 1;
-        return this._showScreen();
+        return this._transition(this._screenIndex - 1);
       }
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);

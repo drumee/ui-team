@@ -163,6 +163,18 @@
   }
 }
 
+
+// Entrance / exit for the create-folder card, mirroring media/form's pair.
+@keyframes window-folder-dialog-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes window-folder-dialog-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.96); }
+}
+
 .window-folder {
   &__ui {
     // Container query anchor. The folder window registers itself as a
@@ -1589,7 +1601,51 @@
     pointer-events: none;
   }
 
-  &__create-folder-dialog,
+  // ── The create-folder card ──────────────────────────────────────────────
+  //
+  // The create-WORKSPACE dialog's ramp (builtins/media/form/skin), which is
+  // itself the workspace tour's `__wsd-*` card (Figma 176:40762). These two are
+  // the same act one level apart — make a container, name it — and they were
+  // visibly different objects: 360px against 460, a flat `--normal-bg-90`
+  // against an elevated surface with a hairline, and a 1px shadow against a
+  // real ambient one.
+  //
+  // Written out rather than shared: webpack injects a widget's stylesheet only
+  // when that widget loads, so a common partial would have to be @use'd from
+  // both sides anyway — the same reasoning media/form gives for copying the
+  // ramp off the tour rather than importing it.
+  //
+  // `__rename-folder-dialog` keeps its own smaller treatment below; only the
+  // create card is promoted.
+  &__create-folder-dialog {
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    gap: 24px;
+    padding: 32px;
+    border-radius: 24px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.15),
+      0 7px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+
+    // Entrance, matching media/form's.
+    //
+    // `backwards`, never `both`: a filling animation keeps its last keyframe
+    // forever and outranks inline styles, so anything positioning this element
+    // in JS afterwards would be silently overridden.
+    animation: window-folder-dialog-in 0.18s ease-out backwards;
+  }
+
+  // Set by whoever closes the dialog, which then defers the teardown so the
+  // exit actually gets frames. Without the flag the card is simply removed and
+  // there is no close animation at all — the entrance would be the only half.
+  &__create-folder-dialog[data-closing="1"] {
+    animation: window-folder-dialog-out 0.16s ease-in forwards;
+  }
+
   &__rename-folder-dialog {
     width: 360px;
     background: var(--normal-bg-90);
@@ -1743,6 +1799,88 @@
 
   &__create-folder-button {
     width: 100%;
+  }
+
+  // ── The create card's interior ──────────────────────────────────────────
+  //
+  // The CARD owns the rhythm now — 32px insets and a 24px stack, from
+  // media/form's ramp above. Everything below used to supply its own, from when
+  // this was a plain 360px box with no padding of its own, so each block added
+  // 24px inside the card's 32 and the card's gap added again between them: a
+  // dialog that was mostly empty space.
+  //
+  // Written as overrides after the shared rules rather than by editing them,
+  // because every one of those selectors is shared with `__rename-folder-*`,
+  // which keeps its own smaller treatment.
+  &__create-folder-header,
+  &__create-folder-content,
+  &__create-folder-footer {
+    padding: 0;
+  }
+
+  &__create-folder-header {
+    // No rule under the header. media/form dropped its own for the same reason:
+    // a title, a line of explanation and a cross do not need a border to read as
+    // a header, and the 24px stack already separates them from the field.
+    border-bottom: 0;
+  }
+
+  &__create-folder-content {
+    // Label to field. Tighter than the card's 24px stack because these two are
+    // one thing — the same relationship the heading's 4px expresses.
+    gap: 8px;
+  }
+
+  &__create-folder-close {
+    // media/form's close, which this card's ramp comes from. It had neither a
+    // cursor nor a hover state: the only thing saying the ✕ was a control was
+    // that it looks like one, and on a card the user is meant to answer, the
+    // way out should say so under the pointer.
+    cursor: pointer;
+    // A hit target the pointer can actually find. 14x24 is the glyph's own box
+    // and reads as a sliver off-centre; media/form uses a square, and the icon
+    // scales to it rather than being stretched.
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover {
+      color: var(--normal-fg);
+    }
+  }
+
+  &__create-folder-entry {
+    input {
+      // VISIBLE. The card is `--normal-bg-elevated` now and this input was the
+      // same colour with `border: 0`, so the field was invisible: the typed name
+      // floated on the card as bare text with no box around it.
+      //
+      // media/form's own input, which has always had to sit on that surface.
+      min-height: 44px;
+      padding: 0 14px;
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      background: var(--normal-bg-elevated);
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--normal-fg)
+      );
+
+      // NO focus style, by request.
+      //
+      // Worth knowing what that costs: `skin/lib/input.scss` already kills the
+      // native ring app-wide (`input { outline: none !important }`), so with the
+      // border change gone this field gives a keyboard user nothing at all to
+      // say where they are. There is one field on this card, so the cost is
+      // small here — but it is a cost, not a no-op.
+    }
   }
 
   &__rename-folder-button {
@@ -5090,5 +5228,19 @@ html[data-theme="dark"] {
     .widget-chatItem-reply__note.name .note-content {
       color: var(--primary-purple-100);
     }
+  }
+}
+
+// ── reduced motion ───────────────────────────────────────────────────────────
+// Motion is decoration here: the card's job is to be answered, and someone who
+// has asked for less of it should still get the dialog instantly.
+//
+// LAST IN THE FILE, and that is load-bearing. This block used to sit near the
+// top, a thousand lines above the rules it cancels — and a media query adds no
+// specificity, so the later rule simply won and the setting did nothing at all.
+@media (prefers-reduced-motion: reduce) {
+  .window-folder__create-folder-dialog,
+  .window-folder__create-folder-dialog[data-closing="1"] {
+    animation: none;
   }
 }

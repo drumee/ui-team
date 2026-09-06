@@ -98,6 +98,9 @@ let _reconciled = false;
 // (modules/desk/index.js, onPartReady "desk-tutorial"). See whenDone().
 const _done = new Map();
 
+// Which tour last reached the screen — see armed().
+let _shown = null;
+
 // ── environment ──────────────────────────────────────────────────────────────
 
 /** Kill switch. Absent/0 = off, and off means nothing fires and nothing is written. */
@@ -292,21 +295,23 @@ function isSeen(tourId, host) {
 }
 
 /**
- * Ask for a tour. The ONLY entry point a trigger site uses.
+ * Take a tour, without saying who will show it.
  *
- * Writes nothing to the seen-set — that is markSeen()'s job, once the tour has
- * proved it can mount.
+ * Every gate fire() applies, and the single-flight latch, but no broadcast: the
+ * CALLER mounts the tour itself. That is what a host which is not the desk
+ * needs — going through fire() would broadcast, and the desk's own listener
+ * would mount a second, full-screen copy of the same tour.
+ *
+ * A true return is a DEBT: single-flight is held from here until the mounted
+ * tour is destroyed and release() runs. A caller that claims and then fails to
+ * mount must release, or every later tour is dropped in silence until the
+ * guard timer fires.
  *
  * @param {String} tourId
- * @param {Object} host  the widget asking, for the seen-set lookup
- * @param {Object} [opt] extra model attributes for the tour widget, for a
- *   trigger that knows something the tour cannot work out for itself. The
- *   share panel's header is the case that needs it: opened over a workspace it
- *   should show a workspace, and only the trigger knows that. Rides in the
- *   broadcast under its own key so it can never collide with `tour`.
- * @returns {Boolean} whether the tour was broadcast
+ * @param {Object} host the widget asking, for the seen-set lookup
+ * @returns {Boolean} whether the caller may show the tour
  */
-function fire(tourId, host, opt) {
+function claim(tourId, host) {
   if (!enabled()) return false;
   if (isMobile()) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
@@ -316,6 +321,25 @@ function fire(tourId, host, opt) {
   _inFlight = tourId;
   clearTimeout(_guardTimer);
   _guardTimer = setTimeout(() => release(tourId), GUARD_TIMEOUT_MS);
+  return true;
+}
+
+/**
+ * Ask for a tour on the desk. The entry point a trigger site uses when it is
+ * not going to mount the tour itself.
+ *
+ * Writes nothing to the seen-set — that is markSeen()'s job, once the tour has
+ * proved it can mount.
+ *
+ * @param {String} tourId
+ * @param {Object} host  the widget asking, for the seen-set lookup
+ * @param {Object} [opt] extra model attributes for the tour widget, for a
+ *   trigger that knows something the tour cannot work out for itself. Rides in
+ *   the broadcast under its own key so it can never collide with `tour`.
+ * @returns {Boolean} whether the tour was broadcast
+ */
+function fire(tourId, host, opt) {
+  if (!claim(tourId, host)) return false;
 
   try {
     if (typeof RADIO_BROADCAST !== "undefined") {
@@ -332,10 +356,29 @@ function fire(tourId, host, opt) {
 /**
  * The tour is on screen. Cancels the fetch guard; from here only destroy
  * releases single-flight.
+ *
+ * ALSO THE ONE HONEST RECORD OF "the user actually saw it". Both hosts call
+ * this from their own onDomRefresh, so it means the tour reached the screen —
+ * unlike a claim, which a tour whose chunk never loaded also satisfies, and
+ * unlike the seen-set, which for an earned tour is only written on completion.
  */
 function armed() {
   clearTimeout(_guardTimer);
   _guardTimer = null;
+  _shown = _inFlight;
+}
+
+/**
+ * Did this tour reach the screen in its most recent run?
+ *
+ * For a caller deciding what to do after `whenDone`: the three outcomes are
+ * COMPLETED (isSeen, for an earned tour), ABANDONED (appeared but not seen) and
+ * NEVER RAN (claimed, released, never appeared). They are not interchangeable —
+ * a user who closed a tour has answered, and a tour that failed to arrive has
+ * not, so a click that waited on it must not be swallowed.
+ */
+function appeared(tourId) {
+  return _shown === tourId;
 }
 
 /**
@@ -451,6 +494,7 @@ function __resetModuleState() {
   _guardTimer = null;
   _seen = null;
   _reconciled = false;
+  _shown = null;
   _done.clear();
 }
 
@@ -463,8 +507,10 @@ module.exports = {
   enabled,
   serverState,
   isSeen,
+  claim,
   fire,
   armed,
+  appeared,
   release,
   inFlight,
   whenDone,

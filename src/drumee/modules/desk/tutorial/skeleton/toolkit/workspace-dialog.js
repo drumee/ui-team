@@ -4,8 +4,8 @@
  * Figma 176:40762 → 176:41391 (component 85:42209). This is the whole subject
  * of the `workspace` tour in 2.0 — the post-signup tour used to point at three
  * workspace tiles on the desk, but a brand-new account has no tiles, so the
- * design teaches the three workspace TYPES where the user actually meets
- * them: in the dialog that creates one.
+ * design teaches the workspace TYPES where the user actually meets them: in
+ * the dialog that creates one.
  *
  * The dialog is the lit surface; the screen picks which block inside it is at
  * full strength and marks the rest `data-dim`, which is the design's own
@@ -27,7 +27,13 @@
 const folderArt = require("media/grid/template/folder");
 
 /**
- * The three types, in the design's order.
+ * The types the tour offers, in the design's order.
+ *
+ * PERSONAL IS NOT AMONG THEM. The dialog draws three in the product and the
+ * frames teach three; this one shows the two that a new account is being set
+ * up to use, and the screen that taught the third went with it. A row here is
+ * a row the tour's live create form can actually submit, so hiding it in CSS
+ * would have left a type that is selectable and invisible.
  *
  * `area` is the real area token, so each row gets the tint the product would
  * give that workspace rather than a colour picked to match a screenshot.
@@ -49,12 +55,6 @@ const TYPES = [
     area: _a.share,
     title: () => LOCALE.EXTERNAL_WORKSPACE,
     desc: () => LOCALE.WS_TYPE_EXTERNAL_HINT,
-  },
-  {
-    key: "personal",
-    area: _a.personal,
-    title: () => LOCALE.PERSONAL_WORKSPACE,
-    desc: () => LOCALE.WS_TYPE_PERSONAL_HINT,
   },
 ];
 

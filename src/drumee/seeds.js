@@ -151,6 +151,9 @@ module.exports = {
   tutorial_migrate: function () {
     return import("./modules/desk/tutorial/migrate");
   },
+  window_tutorial: function () {
+    return import("./builtins/window/tutorial");
+  },
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");
   },

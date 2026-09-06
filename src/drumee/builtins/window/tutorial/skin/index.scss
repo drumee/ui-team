@@ -1,0 +1,72 @@
+// The in-window tour host.
+//
+// Almost everything this widget looks like comes from the tutorial skins, which
+// it reaches by wearing `tutorial-main`, `tutorial-main__layout` and
+// `tutorial-main__content` alongside its own classes (see skeleton/index.js).
+// Those are CONCATENATED selectors (`.tutorial-main__layout { … }`), not
+// descendant ones, so they apply to this widget's nodes directly.
+//
+// What is left here is the part that is genuinely different: this host is an
+// OVERLAY on a folder window, not a full-screen pane on the desk.
+
+.window-tutorial {
+  // The widget's own root (ui-core stamps `<family>__ui` on it). The desk host
+  // gets `position: absolute; inset: 0` from `.tutorial-main__ui`, which this
+  // widget does not wear — its root is `.window-tutorial__ui` — so it is
+  // declared here. The containing block is the wrapper the folder window
+  // appends, which is itself inset:0 on the window root.
+  &__ui {
+    position: absolute;
+    inset: 0;
+    // The desk stands its overlay down to `pointer-events: none` while this tour
+    // runs, so the rail and the topbar behind stay usable. The tour takes events
+    // back for its own box — it has live controls in it.
+    pointer-events: auto;
+  }
+
+  // The layout already gets its size, its overflow and its opaque background
+  // from `.tutorial-main__layout`. No radius override is needed: the content slot
+  // inherits `border-radius: 12px` from `.tutorial-main__content`, which is correct.
+  // The layout behind it has the same background colour, so the radius is invisible.
+  // Step panes with their own background get the same corner treatment here as in
+  // the desk tour, which is the right behaviour.
+}
+
+// ── A real dialog the tour raises ────────────────────────────────────────────
+//
+// Centred over the tour, above its scrim and its callout.
+//
+// It is drawn here rather than in the folder window it belongs to because it
+// cannot be seen there: `isolation: isolate` on the window manager's root traps
+// every layer inside it (wm/skin/index.scss), so no z-index on the dialog, its
+// window, or its layer can lift it over a desk-level screen. The codebase makes
+// the same move for the same reason — the "return to call" affordance is a
+// desk-level pill, not the parked tile.
+//
+// The dialog keeps the folder window's own BEM prefix, so it takes the styles it
+// already has; only where it sits is different.
+.window-tutorial {
+  &__dialog {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    // Above the callout (10010), which is the highest thing the tour draws.
+    z-index: 10020;
+    // NO film. The tour behind is a picture of the product, not something to
+    // hold back — and a scrim over it made the step look like it had ended.
+    // The dialog's own elevation is what separates the two.
+    background: transparent;
+    // The film is gone, so the slot must not swallow clicks on the tour around
+    // the card; only the card itself takes them.
+    pointer-events: none;
+
+    > * { pointer-events: auto; }
+
+    // The wrapper behavior stamps this when it receives the dialog.
+    &[data-state="open"] {
+      display: flex;
+    }
+  }
+}

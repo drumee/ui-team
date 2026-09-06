@@ -4,8 +4,13 @@ const { isLastScreen, entryScreen } = require('../tours');
 /**
  * The `task` tour — Figma 146:40534 and 162:20161.
  *
- * TWO steps: the Task empty state, whose carousel walks the five views by
- * itself, and then the Board with the New task dialog open.
+ * ONE screen: the Task empty state, whose carousel walks the five views by
+ * itself. Its CTA — "Create your first task" — ends the tour and opens the
+ * REAL New task dialog on the panel underneath.
+ *
+ * There used to be a second screen drawing a mock of that dialog. It is gone:
+ * the tour was showing a picture of the form and then leaving the user to find
+ * the real one, when the CTA is named for exactly the thing it can now do.
  *
  * The carousel used to be five separate STEPS, one per card, which made the
  * card index and the step number the same value. That was wrong in both
@@ -23,25 +28,16 @@ const SCREENS = [
   // The empty state. No `desc` — it carries no callout (see _showScreen), and
   // each card names its own view through the skeleton's VIEWS titles.
   { target: 'es-viewport', anchor: 'es-cta', direction: 'north' },
-  // The dialog the flow ends on.
-  //
-  // `gap` because spotlight's GAP is measured to the ANCHOR, and this anchor —
-  // the submit button — sits 30px inside the dialog's edge, that being the
-  // dialog's own padding. The default 32 would put the card 2px off the dialog:
-  // not overlapping it, but touching. 30 + 24 clears it by the 24 the backdrop
-  // reserves for exactly this (see $nt-callout-col in ./skin/index.scss).
-  { dialog: true, target: 'nt-dialog', anchor: 'nt-submit', direction: 'west',
-    gap: 54, desc: () => LOCALE.TUTORIAL_TASK_NEW },
 ];
 
 // How long each card holds before the track moves on.
 //
 // The carousel screen carries no callout (see the note in _showScreen), so
 // nothing on it asks the user to press anything — the track advancing is what
-// shows the five views. 3.5s is long enough to read the title under a card and
-// take in the artwork, short enough that all five have been seen before someone
-// reaches for the CTA.
-const AUTO_SLIDE_MS = 3500;
+// shows the five views. It has to get through all five before someone reaches
+// for the CTA, and with the CTA now ending the tour outright that is a shorter
+// window than it was: 2s a card, ten for the set.
+const AUTO_SLIDE_MS = 2000;
 
 // How far a drag must travel to count as "next card" rather than a slip. A
 // quarter of the pitch: far enough that a click with a shaky hand does not
@@ -301,15 +297,48 @@ class __tutorial_task extends LetcBox {
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
+  /**
+   * Hand the user the REAL New task dialog as the tour lets go.
+   *
+   * "Create your first task" is what the CTA says, and until now it did not:
+   * it walked to a drawing of the form and stopped, leaving the user to find
+   * the real one. The same hand-off the migrate tour makes on its last Done.
+   *
+   * RAISED AT THE HOST, like every other real action a step asks for. The step
+   * does not know which window it is drawn on — that is the host's
+   * `target_window` — and the panel that owns `add-task` is a child of that
+   * window, which forwards to it (window/folder, case "add-task"). That
+   * forward is also what defers the dialog until this tour is off the screen:
+   * a create modal inside the panel would otherwise open underneath a tour
+   * still covering it.
+   *
+   * BEFORE the hand-back, not after, for the reason the migrate tour documents:
+   * the deferral only queues while the tour is still claimed. With no host
+   * window — the desk-level `full` run — the host declines and the tour simply
+   * ends, as it did before.
+   *
+   * ONLY WHEN THIS SCREEN REALLY ENDS THE TOUR. Inside `full` the same press
+   * hands over to the tour after this one, and opening a dialog would interrupt
+   * the run. `isLastScreen` is the same test the callout uses for its Done, so
+   * the two cannot disagree.
+   */
+  _openTheRealThing() {
+    if (!isLastScreen(this, this._screenIndex, SCREENS.length)) return;
+    this.triggerHandlers({ service: 'window-tutorial:act', action: 'add-task' });
+  }
+
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        // Raised by the empty state's CTA on the carousel screen (its
-        // `cta_service`, skeleton/index.js) and by the callout's Next on the
-        // dialog. Now that the cards are not steps, the CTA goes straight to
-        // the dialog it is named after — one press, not five.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
+        // Raised by the empty state's CTA (its `cta_service`,
+        // skeleton/index.js). With the mock dialog screen gone this is the only
+        // screen, so the CTA ends the tour — and opens the form it is named
+        // after on the way out.
+        if (this._screenIndex >= SCREENS.length - 1) {
+          this._openTheRealThing();
+          return this.triggerHandlers({ service: 'next-step' });
+        }
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':

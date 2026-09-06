@@ -35,12 +35,11 @@
 //
 //   rail   the workspace tab the rail lights, or null for the org-home rail,
 //          which has no workspace tabs at all (nothing is open yet).
-//   crumb  whether the topbar names a workspace.
 //
 // Declared per step rather than per tour because `full` crosses the boundary:
 // it opens on the create-workspace dialog with no workspace, then spends every
 // later step inside one.
-const DEFAULT_CHROME = { rail: "files", crumb: true };
+const DEFAULT_CHROME = { rail: "files" };
 
 const TOURS = {
   // Post-signup. In 2.0 this is no longer three workspace tiles on the desk —
@@ -49,8 +48,8 @@ const TOURS = {
   workspace: {
     id: "workspace",
     flag: "workspace",
-    // No workspace exists yet on these screens, so the rail has no tabs and
-    // the topbar names nothing — which is what the org-home frames show.
+    // No workspace exists yet on these screens, so the rail has no tabs —
+    // which is what the org-home frames show.
     //
     // `live_screens` is the tail of this step that stops being a mock: a real
     // create-workspace form and the invite screen after it. They run ONLY on
@@ -60,9 +59,13 @@ const TOURS = {
     // host subtracts rather than the step guessing.
     steps: [{
       kind: "tutorial_workspace",
-      screens: 8,
+      // SEVEN. The personal workspace type is no longer offered by the dialog
+      // the tour draws, so the screen that taught it is gone with it — five
+      // mock screens (home, name, internal, external, create) and the two live
+      // ones below.
+      screens: 7,
       live_screens: 2,
-      chrome: { rail: null, crumb: false },
+      chrome: { rail: null },
     }],
   },
 
@@ -75,18 +78,35 @@ const TOURS = {
   // 142:35805) whose callout-bearing frames were not captured in this pass, and
   // that is where a Files step would come back.
   //
-  // TWO screens: the tracker's empty state, whose carousel walks five cards on
-  // a timer without being a step each, then the New task dialog (146:40534,
-  // 162:20161). It declared six while the cards were steps — which made the
-  // pill count to six through one screen, and cost four presses of a CTA
-  // labelled "Create your first task" before it created anything.
+  // ONE screen: the tracker's empty state, whose carousel walks five cards on a
+  // timer without being a step each (146:40534).
+  //
+  // It declared six while the cards were steps — which made the pill count to
+  // six through one screen, and cost four presses of a CTA labelled "Create
+  // your first task" before it created anything. Then two, when the cards
+  // stopped being steps and a mock of the New task dialog followed them. Now
+  // one: that mock is gone and the CTA opens the REAL dialog as the tour ends,
+  // which is what its label promised all along.
   folder_task: {
     id: "folder_task",
     flag: "folder_task",
     // The scheduler is no longer a step of its own: 2.0 puts it at the end of
     // the MEET flow (156:19597), which is where anyone would reach it.
     // `tutorial_schedule` stays on disk but is out of every tour.
-    steps: [{ kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } }],
+    steps: [{ kind: "tutorial_task", screens: 1, chrome: { rail: "task" } }],
+    // RECORDED ON THE CTA, not on sight — the third tour to be, with `migrate`
+    // and `chat`.
+    //
+    // This tour is one screen and one button, and that button is the whole
+    // point of it: pressing "Create your first task" is both the completion and
+    // the hand-off to the real form. Marking on mount would spend the tour on
+    // someone who glanced at the carousel and clicked away, and there is no
+    // second screen left for them to have seen.
+    //
+    // `mark_on: "success"` is what keeps both hosts from marking it on mount;
+    // they record it from _nextStep instead, where the step list runs out —
+    // which for this tour is the CTA. Escape and skip still leave it armed.
+    mark_on: "success",
   },
 
   // Chat was three screens INSIDE the folder step. 2.0 pulls it out: four
@@ -98,14 +118,44 @@ const TOURS = {
   chat: {
     id: "chat",
     flag: "chat",
-    steps: [{ kind: "tutorial_chat", screens: 5, chrome: { rail: "chat", crumb: true } }],
+    steps: [{ kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } }],
+    // RECORDED ON COMPLETION, not on sight — the second tour to be, after
+    // `migrate`, and for a related reason.
+    //
+    // Five screens about threads is more than a glance: someone who opens Chat,
+    // meets the tour and clicks away has not been taught what a thread is, and
+    // marking it there would spend the one chance this tour gets. So it is
+    // written only when the user reaches the last Done — which is what
+    // `mark_on: "success"` means for a tour with nothing to create: both hosts
+    // record it from _nextStep, where the step list runs out.
+    //
+    // Escape and the callout's skip still leave it armed, which is the
+    // difference between finishing something and getting out of it. The cost is
+    // the one migrate accepts too: someone who keeps declining keeps being
+    // offered. Five screens on the rail's Chat button is a small enough price
+    // for the tour landing at all.
+    mark_on: "success",
   },
 
   share: {
     id: "share",
     flag: "share",
     // Six, and the frames number them "STEP 1/6" … "STEP 6/6" in a pill.
-    steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } }],
+    steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access" } }],
+    // RECORDED ON THE LAST STEP, not on sight — the fifth tour to be.
+    //
+    // Six screens with a numbered pill is the longest walkthrough in the set,
+    // and marking it on mount spent it the instant it appeared: someone who
+    // opened the access panel, met screen 1 and closed it never saw the other
+    // five again. Its own pill says "STEP 1/6", which is a promise the tour was
+    // not keeping.
+    //
+    // Nothing in it acts on the window — unlike migrate, task and meeting, it
+    // has no closing CTA — so "success" here means exactly what the pill counts
+    // to: the last screen hands back, the step list runs out, and both hosts
+    // record it from _nextStep. Escape and skip leave it armed, so a tour
+    // abandoned at 2/6 is offered again.
+    mark_on: "success",
   },
 
   // Importing from Google Drive — how the import dialog is reached, and then
@@ -122,7 +172,25 @@ const TOURS = {
     // progress pill (see ../migrate/index.js). The count is still the whole
     // table: it is what the host slices `screen_count` from, and what `full`
     // adds into its own total.
-    steps: [{ kind: "tutorial_migrate", screens: 6, chrome: { rail: "files", crumb: true } }],
+    // FOUR, not six. The `+ New` and `Upload` branches were screens of their
+    // own that drew the gesture and described it; those buttons now perform it
+    // for real on screen 1, so the table is the Files pane and the three import
+    // dialog screens the Migrate CTA leads to.
+    steps: [{ kind: "tutorial_migrate", screens: 4, chrome: { rail: "files" } }],
+    // MARKED ON SUCCESS, not on mount — the only tour that is.
+    //
+    // Every other tour records itself the moment it appears, because a tour is
+    // something you are shown and being shown it once is the whole of it. This
+    // one asks the user to DO something: create a file or a folder, or upload
+    // one. Someone who opens it and does neither has not been taught anything,
+    // so it is offered again next time.
+    //
+    // The cost is the reason the mount rule exists elsewhere (see
+    // libs/tutorial-tours): a tour that is only recorded on completion can be
+    // offered indefinitely to someone who keeps declining it. That is accepted
+    // here deliberately — this tour is about getting the first file into a
+    // workspace, and a workspace with no files has not outgrown the prompt.
+    mark_on: "success",
   },
 
   // Contextual, on the first press of Meet in the rail (desk/index.js,
@@ -132,10 +200,22 @@ const TOURS = {
   //
   // Flagged, so it is suppressed once seen and recorded server-side — which is
   // why the WIRE CONTRACT at the top of this file has four sites and not two.
+  // ONE screen: the Meet empty state, whose carousel walks two previews on a
+  // timer (148:44759). The mock of the Schedule dialog that followed it is gone
+  // — the CTA opens the REAL scheduler as the tour ends, which is what
+  // "Schedule your first meeting" promised.
   meeting: {
     id: "meeting",
     flag: "meeting",
-    steps: [{ kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet", crumb: true } }],
+    steps: [{ kind: "tutorial_meeting", screens: 1, chrome: { rail: "meet" } }],
+    // RECORDED ON THE CTA, not on sight — the fourth tour to be, with migrate,
+    // chat and folder_task.
+    //
+    // One screen and one button, and that button is the whole point of it:
+    // pressing it is both the completion and the hand-off to the real form.
+    // Marking on mount would spend the tour on someone who glanced at the
+    // previews, with no second screen left for them to have seen.
+    mark_on: "success",
   },
 
   // Everything, in product order. Run by ?tutorial=1 and by Get help ->
@@ -145,15 +225,15 @@ const TOURS = {
     id: "full",
     flag: null,
     steps: [
-      // Six, not eight: no `live_screens`, so the create form is not part of
+      // Five, not seven: no `live_screens`, so the create form is not part of
       // the full tour. Someone re-watching the tour from Get help already has
       // workspaces and asked to see the product, not to make another one.
-      { kind: "tutorial_workspace", screens: 6, chrome: { rail: null, crumb: false } },
-      { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat", crumb: true } },
-      { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet", crumb: true } },
-      { kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } },
-      { kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } },
-      { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files", crumb: true } },
+      { kind: "tutorial_workspace", screens: 5, chrome: { rail: null } },
+      { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } },
+      { kind: "tutorial_meeting", screens: 1, chrome: { rail: "meet" } },
+      { kind: "tutorial_task", screens: 1, chrome: { rail: "task" } },
+      { kind: "tutorial_share", screens: 6, chrome: { rail: "access" } },
+      { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files" } },
     ],
   },
 };
@@ -164,7 +244,7 @@ const DEFAULT_TOUR = "full";
  * The shell a step wants around it.
  *
  * @param {Object} step a TOURS step
- * @returns {{rail: String|null, crumb: Boolean}}
+ * @returns {{rail: String|null}}
  */
 function stepChrome(step) {
   return { ...DEFAULT_CHROME, ...((step && step.chrome) || {}) };

@@ -173,6 +173,24 @@ class __tasks_panel extends LetcBox {
     this._labels = [];
     this._creating = false;
     this._createDefaults = null;
+    // Which overlays have already been PAINTED in their current opening.
+    //
+    // Every overlay in this panel has an entrance — the create card pops in,
+    // its backdrop fades, and so do the detail panel and the board modal — and
+    // _render() rebuilds the whole subtree through feed(). A newly created
+    // element runs its animation again, so while an overlay was open ANY later
+    // render played its entrance afresh: a second card popping in over the
+    // first, and again, and again. That is what "it renders a lot of cards at
+    // the same time" was.
+    //
+    // The elements cannot remember it — they are new elements every time — so
+    // the panel remembers for them, and it rides out on `data-entered`.
+    //
+    // Recomputed at the END of every render from what is open at that moment
+    // (see _render), which is what makes it self-maintaining: an overlay that
+    // closes clears its own flag, so its next opening animates again without a
+    // single handler having to remember to reset anything.
+    this._painted = {};
     this._detailId = null;
     this._detailDraft = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
@@ -437,9 +455,26 @@ class __tasks_panel extends LetcBox {
     this._installFileSearchFocus();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
+    // TWO PHASES, so the board is on screen as soon as it can be drawn.
+    //
+    // All six of these used to be awaited together, which made the SLOWEST of
+    // them decide when anything appeared at all. Only two of the six decide
+    // whether a board can be drawn: the tasks and the columns. The other four
+    // decorate it — watches are a per-column flag, activity feeds the detail
+    // panel, members are assignee avatars and labels are chips — and every one
+    // of them reads its own state, none of them reads `_tasks` or `_columns`,
+    // so none has to be in before the first paint.
+    //
+    // Their state is initialised empty in initialize(), and the skeleton draws
+    // from those empty lists without complaint, so the first pass renders a
+    // real board rather than a placeholder.
+    //
+    // _render is built to be called repeatedly — it captures and restores the
+    // focused input, the cursor and the scroll position around the DOM swap —
+    // so the second pass is what that machinery is for, not a workaround for it.
+    await Promise.all([this._loadTasks(), this._loadColumns()]);
+    this._render();
     await Promise.all([
-      this._loadTasks(),
-      this._loadColumns(),
       this._loadColumnWatches(),
       this._loadActivity(),
       this._loadMembers(),
@@ -7823,6 +7858,19 @@ class __tasks_panel extends LetcBox {
     const savedScroll = this._captureViewScroll();
 
     this.feed(require("./skeleton")(this));
+    // Whatever was open has now been painted, so the NEXT render must not play
+    // its entrance again. Recorded AFTER the build, because the skeleton reads
+    // these while assembling — see hasPainted.
+    //
+    // Read from the live state rather than set by each open/close handler:
+    // there are several ways into and out of each of these overlays, and a
+    // flag maintained by hand at every one of them is a flag that will be
+    // missed at one of them.
+    this._painted = {
+      create: !!this._creating,
+      detail: !!this._detailId,
+      board: !!this._boardModalOpen,
+    };
     // ui-core sets <input> values through a 200ms `waitElement` poll, so
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).
@@ -9028,6 +9076,18 @@ class __tasks_panel extends LetcBox {
   }
   getGanttSelected() {
     return this._ganttSelected;
+  }
+
+  /**
+   * Has this overlay already been painted in its current opening?
+   *
+   * The skeleton asks so it can stamp `data-entered`, which is what the skin
+   * gates every entrance animation on. See `_painted` in initialize.
+   *
+   * @param {String} key one of the keys _render records
+   */
+  hasPainted(key) {
+    return !!(this._painted && this._painted[key]);
   }
 
   isCreating() {

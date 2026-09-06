@@ -873,8 +873,10 @@ class __media_interact extends media_core {
         // The tour's first screen names WHAT IS BEING SHARED, and only this
         // click knows it (Figma 148:41197 a file, 180:51964 a folder,
         // 180:52963 a workspace). So the item rides along as fire()'s third
-        // argument — the same channel the folder window uses to say "this one
-        // is about a workspace".
+        // argument. The folder window no longer broadcasts through fire() for
+        // this — it mounts its own in-window tour and hands `opt` straight to
+        // its own showTutorial, same shape as here. Sharing a file still goes
+        // through fire() to the desk host, which is this call site.
         //
         // RAW FIELDS, not a formatted string. The panel is matching a frame and
         // owns how the row reads; handing it `name` + `Update 2 hour ago •
@@ -885,7 +887,11 @@ class __media_interact extends media_core {
         // the workspace variant, a folder the folder variant, everything else
         // the file icon.
         const _ft = this.mget(_a.filetype);
-        require("libs/tutorial-tours").fire("share", this, {
+        // `_tourDone` marks the RE-ENTRY below, after the tour has finished.
+        // Without it this line would fire again — and a tour the user escaped
+        // is not marked seen, so it would be raised, deferred, re-entered and
+        // raised again, forever.
+        const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
           subject: _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file"),
           subject_data: {
             name: this.mget(_a.filename),
@@ -899,6 +905,42 @@ class __media_interact extends media_core {
             area: this.mget(_a.area),
           },
         });
+        // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
+        // tour teaches the secure-share panel, and the panel was opening while
+        // the walkthrough about it was still on screen — visible only once the
+        // tour came down, already filled in.
+        //
+        // `fire` answers whether the tour actually went up: false for every
+        // gate — already completed, mobile, the kill switch, another tour in
+        // flight — and that is what decides the order. Not done → the tour
+        // plays and the panel opens as it comes down. Done → the panel opens
+        // now, which is every click after the first walkthrough.
+        //
+        // whenDone runs its callback synchronously when nothing is in flight,
+        // so the second case is the same code path it always was.
+        if (_raised) {
+          const Tours = require("libs/tutorial-tours");
+          return Tours.whenDone("share", () => {
+            if (this.isDestroyed && this.isDestroyed()) return;
+              // THE PANEL IS THE REWARD FOR FINISHING, so a tour the user walked
+            // out of does not get one. Three outcomes, and they are not
+            // interchangeable:
+            //
+            //   completed   isSeen — this tour is `mark_on: "success"`, so its
+            //               flag is written only when the last screen is reached.
+            //               Open the panel.
+            //   abandoned   it appeared and the user closed it. They answered;
+            //               opening the panel anyway is what this rule exists to
+            //               stop.
+            //   never ran   claimed and released without reaching the screen — a
+            //               window it could not be drawn on, a chunk that failed.
+            //               Nothing was taught and nothing was declined, so the
+            //               click must still do what it was for; swallowing it
+            //               would make Share a dead control.
+            if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            this.onUiEvent(cmd, { ...args, _tourDone: 1 });
+          });
+        }
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
