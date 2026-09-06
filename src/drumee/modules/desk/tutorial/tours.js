@@ -59,7 +59,11 @@ const TOURS = {
     // host subtracts rather than the step guessing.
     steps: [{
       kind: "tutorial_workspace",
-      screens: 8,
+      // SEVEN. The personal workspace type is no longer offered by the dialog
+      // the tour draws, so the screen that taught it is gone with it — five
+      // mock screens (home, name, internal, external, create) and the two live
+      // ones below.
+      screens: 7,
       live_screens: 2,
       chrome: { rail: null },
     }],
@@ -162,10 +166,10 @@ const TOURS = {
     id: "full",
     flag: null,
     steps: [
-      // Six, not eight: no `live_screens`, so the create form is not part of
+      // Five, not seven: no `live_screens`, so the create form is not part of
       // the full tour. Someone re-watching the tour from Get help already has
       // workspaces and asked to see the product, not to make another one.
-      { kind: "tutorial_workspace", screens: 6, chrome: { rail: null } },
+      { kind: "tutorial_workspace", screens: 5, chrome: { rail: null } },
       { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } },
       { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet" } },
       { kind: "tutorial_task", screens: 2, chrome: { rail: "task" } },

@@ -32,10 +32,10 @@ test("tierFor: short is its own axis, and 720 is not short", () => {
 
 test("screensFor: a live tail runs only when the host may create", () => {
   const step = TOURS.workspace.steps[0];
-  assert.equal(step.screens, 8, "registry changed; update this test");
+  assert.equal(step.screens, 7, "registry changed; update this test");
   assert.equal(step.live_screens, 2, "registry changed; update this test");
-  assert.equal(kit.screensFor(step, true), 8);
-  assert.equal(kit.screensFor(step, false), 6);
+  assert.equal(kit.screensFor(step, true), 7);
+  assert.equal(kit.screensFor(step, false), 5);
 });
 
 test("screensFor: a step with no live tail is unaffected", () => {
@@ -47,10 +47,10 @@ test("screensFor: a step with no live tail is unaffected", () => {
 test("buildStepWidgets: offsets accumulate across a multi-step tour", () => {
   const w = kit.buildStepWidgets(ui(), TOURS.full, { canCreate: false });
   assert.equal(w.length, 6);
-  // 6 + 5 + 2 + 2 + 6 + 6 = 27 screens.
-  assert.deepEqual(w.map((x) => x.screen_count), [6, 5, 2, 2, 6, 6]);
-  assert.deepEqual(w.map((x) => x.screen_offset), [0, 6, 11, 13, 15, 21]);
-  for (const x of w) assert.equal(x.tour_screens, 27);
+  // 5 + 5 + 2 + 2 + 6 + 6 = 26 screens.
+  assert.deepEqual(w.map((x) => x.screen_count), [5, 5, 2, 2, 6, 6]);
+  assert.deepEqual(w.map((x) => x.screen_offset), [0, 5, 10, 12, 14, 20]);
+  for (const x of w) assert.equal(x.tour_screens, 26);
   assert.equal(w[0].is_first, true);
   assert.equal(w[0].is_last, false);
   assert.equal(w[5].is_last, true);
@@ -59,8 +59,8 @@ test("buildStepWidgets: offsets accumulate across a multi-step tour", () => {
 test("buildStepWidgets: the total follows canCreate", () => {
   const yes = kit.buildStepWidgets(ui(), TOURS.workspace, { canCreate: true });
   const no = kit.buildStepWidgets(ui(), TOURS.workspace, { canCreate: false });
-  assert.equal(yes[0].tour_screens, 8);
-  assert.equal(no[0].tour_screens, 6);
+  assert.equal(yes[0].tour_screens, 7);
+  assert.equal(no[0].tour_screens, 5);
 });
 
 test("buildStepWidgets: names no service, and routes events at the host", () => {

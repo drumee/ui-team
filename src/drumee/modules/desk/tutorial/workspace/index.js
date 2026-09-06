@@ -3,7 +3,11 @@ const { BLOCKS } = require('../skeleton/toolkit/workspace-dialog');
 const { isLastScreen, entryScreen } = require('../tours');
 
 // The type keys the dialog uses are the design's; the create service's are the
-// product's, and they are not the same three words. One map, at the boundary.
+// product's, and they are not the same words. One map, at the boundary.
+//
+// `personal` stays in the map although the dialog no longer offers it: the map
+// describes the whole boundary, and the service on the other side of it still
+// takes that type.
 const SERVICE_TYPE = { internal: 'team', external: 'share', personal: 'personal' };
 
 /**
@@ -11,9 +15,10 @@ const SERVICE_TYPE = { internal: 'team', external: 'share', personal: 'personal'
  * (Figma 176:40762 → 176:41391).
  *
  * 1.x pointed at three workspace TILES on the desk. A brand-new account, which
- * is exactly who this tour runs for, has no tiles — so 2.0 teaches the three
+ * is exactly who this tour runs for, has no tiles — so 2.0 teaches the
  * workspace types where the user actually meets them, inside the dialog that
- * makes one.
+ * makes one. Personal is not among them: a new account is being set up to
+ * collaborate, and the screen that taught that type went with the row.
  *
  * The dialog is the lit surface throughout; what changes per screen is which
  * block inside it is at full strength (`lit`) and where the callout's beak
@@ -80,12 +85,6 @@ const SCREENS = [
     desc: () => LOCALE.EXTERNAL_WORKSPACE_HINT,
   },
   {
-    lit: BLOCKS.type('personal'),
-    anchor: BLOCKS.type('personal'),
-    title: () => LOCALE.TUTORIAL_WS_PERSONAL_TITLE,
-    desc: () => LOCALE.PERSONAL_WORKSPACE_HINT,
-  },
-  {
     // The closing screen lights the type list AND the now-enabled Create
     // button, because it is about the pair.
     lit: BLOCKS.CREATE,
@@ -115,9 +114,11 @@ const SCREENS = [
     // screen's card and told the user to make a workspace they had just made.
     //
     // Except on the personal card, which says "You can't invite member to
-    // personal workspace!" and needs nothing beside it saying otherwise. The
-    // type is not known when this table is written, so the callout is dropped
-    // in _showScreen where `_created` is.
+    // personal workspace!" and needs nothing beside it saying otherwise — a
+    // case the dialog can no longer reach, since it stopped offering that type.
+    // The guard stays: the type comes back from libs/create-workspace, which
+    // still has it, and this table cannot see what came back anyway. It is
+    // dropped in _showScreen where `_created` is.
     invite: true,
     target: 'inv-card',
     anchor: 'inv-card',
@@ -205,6 +206,10 @@ class __tutorial_workspace extends LetcBox {
     // The personal card is already a full sentence explaining itself, and a
     // callout beside it would be a second one. Only that variant: the invite
     // card has room for a caption and wants one.
+    //
+    // Unreachable from this dialog now that personal is not one of the types it
+    // offers, and kept anyway — the type is whatever create-workspace answers
+    // with, not whatever was clicked here.
     const mute = !!(s.invite && this._created && this._created.type === 'personal');
     const chrome = {
       hide_next: live,
