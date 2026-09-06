@@ -90,7 +90,17 @@ const SCREENS = [
     dialog: true,
     target: 'mg-dialog',
     anchor: 'mg-address',
+    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
+    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
+    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
+    //
+    // Anchoring the placement on the row measured the gap from the wrong edge.
+    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
+    // gap from the row left the card 4px off the panel — all but touching it,
+    // on all three screens.
+    anchor_x: 'mg-dialog',
     direction: 'west',
+    gap: 34,
     title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
     desc: () => LOCALE.TUTORIAL_MIGRATE_COPY_DESC,
   },
@@ -101,7 +111,17 @@ const SCREENS = [
     copied: true,
     target: 'mg-dialog',
     anchor: 'mg-link',
+    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
+    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
+    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
+    //
+    // Anchoring the placement on the row measured the gap from the wrong edge.
+    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
+    // gap from the row left the card 4px off the panel — all but touching it,
+    // on all three screens.
+    anchor_x: 'mg-dialog',
     direction: 'west',
+    gap: 34,
     title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
     desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
   },
@@ -112,7 +132,17 @@ const SCREENS = [
     linked: true,
     target: 'mg-dialog',
     anchor: 'mg-verify',
+    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
+    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
+    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
+    //
+    // Anchoring the placement on the row measured the gap from the wrong edge.
+    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
+    // gap from the row left the card 4px off the panel — all but touching it,
+    // on all three screens.
+    anchor_x: 'mg-dialog',
     direction: 'west',
+    gap: 34,
     title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
     desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
   },
@@ -187,9 +217,10 @@ class __tutorial_migrate extends LetcBox {
       return;
     }
     this.feed(skeleton(this, s, { menuOpen: !!this._menuOpen }));
-    const [target, anchor] = await Promise.all([
+    const [target, anchor, anchor_x] = await Promise.all([
       this.ensurePart(s.target),
       this.ensurePart(s.anchor),
+      s.anchor_x ? this.ensurePart(s.anchor_x) : null,
     ]);
 
     // `bare` raises the screen with NO card: focus() feeds the callout null and
@@ -217,9 +248,12 @@ class __tutorial_migrate extends LetcBox {
       service: 'spotlight:focus',
       target: target.el,
       anchor: anchor && anchor.el,
+      // Clears the DIALOG, points at the ROW. See the SCREENS entries.
+      anchor_x: anchor_x && anchor_x.el,
       tooltip,
       direction: s.direction,
       beak: s.beak,
+      gap: s.gap,
       // NO scrim on the two pane screens. 142:34981 and 142:35805 are drawn at
       // full strength — they are pictures of the product, and what marks the
       // subject on them is the callout's beak, not a dimmed surround. The

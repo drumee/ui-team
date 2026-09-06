@@ -165,7 +165,9 @@ class __tutorial_spotlight extends LetcBox {
    *   `[data-tour]` rule got wrong.
    */
   async focus(args = {}) {
-    const { target, anchor, tooltip, direction = 'north', beak, owner, gap, dim = true } = args;
+    const {
+      target, anchor, anchor_x, tooltip, direction = 'north', beak, owner, gap, dim = true,
+    } = args;
     if (!target) return this.clear();
     // Written before anything is awaited, so the scrim is already right for
     // this screen by the time it fades in with the callout.
@@ -194,9 +196,11 @@ class __tutorial_spotlight extends LetcBox {
     // one another, so they are resolved together rather than in the order they
     // happen to be written in.
     const anchorEl = anchor ? live(elementOf(anchor)) : null;
-    const [rect, measuredAnchor, callout] = await Promise.all([
+    const anchorXEl = anchor_x ? live(elementOf(anchor_x)) : null;
+    const [rect, measuredAnchor, measuredAnchorX, callout] = await Promise.all([
       waitForStableRect(el),
       anchorEl && anchorEl !== el ? waitForStableRect(anchorEl) : null,
+      anchorXEl ? waitForStableRect(anchorXEl) : null,
       this.ensurePart('callout'),
     ]);
     if (this._stale(ticket)) return;
@@ -255,7 +259,25 @@ class __tutorial_spotlight extends LetcBox {
       return;
     }
     if (this._stale(ticket)) return;
-    const anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    let anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    // A card can clear one box while pointing at another INSIDE it.
+    //
+    // The import dialog is the case the design states outright: 176:47527 puts
+    // the dialog's right edge at x1056 and the callout's left at x1090 — 34px
+    // clear of the DIALOG, not of the row the step is about. Measuring the gap
+    // from the row instead measured it from an edge 28px further in, so the
+    // card came to rest against the panel it was meant to stand off.
+    //
+    // So the horizontal comes from `anchor_x` when a screen names one, and the
+    // vertical stays with `anchor`, which is what the beak marks.
+    if (measuredAnchorX && measuredAnchorX.width) {
+      anchorRect = {
+        ...anchorRect,
+        left: measuredAnchorX.left,
+        right: measuredAnchorX.right,
+        width: measuredAnchorX.width,
+      };
+    }
     // Kept for _keepInView, which may have to place the card again on the other
     // side of this same rect.
     this._anchorRect = anchorRect;

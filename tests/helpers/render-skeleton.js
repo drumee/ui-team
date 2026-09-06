@@ -205,7 +205,9 @@ function render(over = {}) {
 //
 // @param {String} relPath  from the repo root
 // @param {Object} ui       the stub the skeleton will be called with
-function renderModule(relPath, ui) {
+// @param {...*}   rest     further arguments the skeleton takes — a step
+//   skeleton's SCREENS entry and its state, say, which decide what it draws
+function renderModule(relPath, ui, ...rest) {
   const { join } = require("node:path");
   const restoreGlobals = installGlobals();
   const restoreResolver = installResolver();
@@ -213,7 +215,7 @@ function renderModule(relPath, ui) {
     const path = require.resolve(join(__dirname, "..", "..", relPath));
     delete require.cache[path];
     const make = require(path);
-    return make(ui);
+    return make(ui, ...rest);
   } finally {
     restoreResolver();
     restoreGlobals();
