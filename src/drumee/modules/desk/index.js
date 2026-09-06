@@ -4188,18 +4188,28 @@ class desk_module extends LetcBox {
     return true;
   }
 
-  _railTab(tab) {
-    // Leaving what the tour is about ends it — see _endWindowTour for why an
-    // in-window tour cannot simply be navigated out from under.
-    //
-    // Asked of the RUNNING tour rather than against a hardcoded tab: pressing
-    // Chat while the chat tour is up is not leaving it, and ending it there
-    // would restart the tour from screen one on every press of the row the user
-    // is already on.
+  /**
+   * End an in-window tour unless the destination is what it is about.
+   *
+   * Leaving what a tour teaches ends it — see _endWindowTour for why an
+   * in-window tour cannot simply be navigated out from under. Asked of the
+   * RUNNING tour rather than against a hardcoded tab: pressing Chat while the
+   * chat tour is up is not leaving it, and ending it there would restart the
+   * tour from screen one on every press of the row the user is already on.
+   *
+   * @param {String} tab where the user is going
+   * @returns {Boolean} whether a tour was ended
+   */
+  _endWindowTourUnlessAbout(tab) {
     const running = this._windowTour && _.isFunction(this._windowTour.mget)
       ? this._windowTour.mget("tour")
       : null;
-    if (!running || WINDOW_TOUR_TAB[running] !== tab) this._endWindowTour();
+    if (running && WINDOW_TOUR_TAB[running] === tab) return false;
+    return this._endWindowTour();
+  }
+
+  _railTab(tab) {
+    this._endWindowTourUnlessAbout(tab);
     // The active tab, stamped for the skin: the phone's Files action row
     // (search + "+ New") shows only while the files view is up — Chat has its
     // composer and Task its own "+ New". No stamp (first paint) reads as
@@ -4382,10 +4392,12 @@ class desk_module extends LetcBox {
       typeof Kind !== "undefined" && Kind && _.isFunction(Kind.waitFor)
         ? Promise.resolve(Kind.waitFor("window_secure_share")).catch(() => {})
         : Promise.resolve();
-    return warm.then(() => {
-      this._railAccess();
-      set(0);
-    });
+    // AWAITED now that _railAccess waits for an in-window tour to release: the
+    // icon's spinner should cover the whole wait, not just the chunk fetch it
+    // used to be the only part of.
+    return warm
+      .then(() => this._railAccess())
+      .then(() => set(0), () => set(0));
   }
 
   /** Rail → the workspace's manage-access panel (the Permission Matrix). */
@@ -4404,7 +4416,7 @@ class desk_module extends LetcBox {
    * for. Sharing this method is why the flag is a parameter and not a change
    * inside openManageAccess, which four other surfaces also reach.
    */
-  _railAccess(opt) {
+  async _railAccess(opt) {
     if (this.el) this.el.dataset.mtab = "access";
     // Same as _railTab, and for the same reason: an open-but-unraised pane is
     // not "no workspace". See _railWorkspace.
@@ -4414,6 +4426,28 @@ class desk_module extends LetcBox {
     this._leaveSectionScreen(w);
     // Same as _railTab: open a workspace rather than the retired home grid.
     if (!w) return this._openDefaultWorkspace();
+
+    // AND THE SAME AS _railTab HERE TOO, which it never was — this is the one
+    // rail route that did not end an in-window tour, and it showed:
+    //
+    // the workspace tour hands over to the migrate tour, which is drawn over
+    // this window. Press the topbar's access icon then and NOTHING HAPPENS.
+    // Twice over, and neither half is visible:
+    //
+    //   the share tour is refused, because `migrate` still holds single-flight
+    //   and showTutorial's claim returns false;
+    //   the access panel opens anyway — into this window's dialogWrapper,
+    //   underneath the tour covering it, where `isolation: isolate` on the
+    //   window manager's root means nothing can lift it out.
+    //
+    // So the tour it is not about is ended, and the window is not asked until
+    // that tour has RELEASED — a claim is not free until then, and softDestroy
+    // fades for half a second first.
+    this._endWindowTourUnlessAbout("access");
+    await this._whenToursIdle();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // Re-read: the wait is long enough for the window to have gone.
+    if (w.isDestroyed && w.isDestroyed()) return;
     if (_.isFunction(w.onUiEvent)) {
       return w.onUiEvent(w, {
         service: "folder-manage-access",

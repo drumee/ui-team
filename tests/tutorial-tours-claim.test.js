@@ -323,3 +323,31 @@ test("appeared: names the tour, not merely 'something ran'", () => {
   assert.equal(Tours.appeared("chat"), true);
   assert.equal(Tours.appeared("share"), false, "a different tour is not this one");
 });
+
+// ── one tour must not swallow the next surface's ─────────────────────────────
+//
+// The workspace tour hands over to the migrate tour, so the moment after
+// onboarding there IS a tour in flight. A click on the topbar's access icon
+// then asked the window for the share tour and was refused — claim returns
+// false while anything else is held — and the panel opened underneath the tour
+// covering the window. Nothing visible, twice over.
+//
+// _railAccess now ends that tour and waits for the release before asking, which
+// is what these two describe.
+
+test("a claim is refused while another tour is in flight", () => {
+  reset();
+  assert.equal(Tours.claim("migrate", host), true, "the chained tour holds it");
+  assert.equal(Tours.claim("share", host), false, "so share cannot be raised");
+  Tours.release("migrate");
+});
+
+test("and succeeds once that tour has released", () => {
+  reset();
+  Tours.claim("migrate", host);
+  // What _endWindowTour starts and the tour's destroy finishes.
+  Tours.release("migrate");
+  assert.equal(Tours.inFlight(), null);
+  assert.equal(Tours.claim("share", host), true);
+  Tours.release("share");
+});
