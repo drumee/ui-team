@@ -140,10 +140,12 @@ test("the desk consumes the intent and opens a workspace when none is open", () 
   // _railWorkspace, NOT _activeWorkspace: the latter answers "which window is
   // RAISED" and returns null while a workspace is open but unraised, which would
   // open a second, wrong workspace.
-  const body = deskSrc.slice(deskSrc.indexOf("_maybeRunWindowTutorial"));
-  assert.match(body.slice(0, 1400), /_railWorkspace\(\)/);
+  const body = deskSrc.slice(deskSrc.indexOf("async _maybeRunWindowTutorial"));
+  // Reached through _awaitRailWorkspace, which polls _railWorkspace — a single
+  // read is what opened a second workspace (see the pane test below).
+  assert.match(body.slice(0, 900), /_awaitRailWorkspace\(/);
   assert.ok(
-    !/_activeWorkspace\(\)/.test(body.slice(0, 1400)),
+    !/_activeWorkspace\(\)/.test(body.slice(0, 900)),
     "_activeWorkspace is the wrong accessor here",
   );
 });
@@ -172,4 +174,28 @@ test("the desk waits for the workspace restore before mounting a tour", () => {
   assert.match(body.slice(0, 2000), /_awaitRestoreSettled\(\)/);
   assert.match(deskSrc, /_awaitRestoreSettled\(\)\s*{/);
   assert.match(deskSrc, /_restoreInFlight/);
+});
+
+test("the desk waits for the restore's PANE, not just its flag", () => {
+  // The flag is not the pane. `_clearRestoreInFlight` clears _restoreInFlight on
+  // a 2.5s timer while `loadWorkspace` mounts its pane from inside a fetch, so
+  // the flag routinely clears with the restore's pane still in flight — and
+  // `_railWorkspace()` answers null until Wm._findWorkspaceWindow has something.
+  //
+  // Peeking once there opened a SECOND workspace and mounted the tour on it,
+  // and the restore's original pane then took the screen. Nothing was destroyed
+  // — the tour was left alive on the pane behind, which is why no teardown ever
+  // fired. So the first look must be a poll, gated on whether a pane is
+  // actually coming (Wm._curWorkspace), not a single read.
+  const body = deskSrc.slice(deskSrc.indexOf("async _maybeRunWindowTutorial"), );
+  const head = body.slice(0, 900);
+  assert.match(head, /_awaitRailWorkspace\(this\._workspaceIncoming\(\)/,
+    "the first look must poll for an incoming pane");
+  // The bare single read is what caused the bug; it must not come back.
+  assert.ok(
+    !/let ws = this\._railWorkspace\(\);/.test(head),
+    "a single peek at _railWorkspace reintroduces the double-open",
+  );
+  assert.match(deskSrc, /_workspaceIncoming\(\)\s*{/);
+  assert.match(deskSrc, /Wm\._curWorkspace/);
 });

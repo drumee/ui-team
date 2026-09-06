@@ -853,8 +853,27 @@ class desk_module extends LetcBox {
     intent.trace("hook entered", { restoreInFlight: !!this._restoreInFlight });
     await this._awaitRestoreSettled();
 
-    let ws = this._railWorkspace();
-    intent.trace("after restore settled", { found: id(ws) });
+    // WAIT FOR A PANE, NOT FOR A FLAG — this is the actual fix.
+    //
+    // `_restoreInFlight` is cleared by a TIMER (_clearRestoreInFlight(2500)),
+    // not by the workspace appearing, and `loadWorkspace` mounts its pane from
+    // inside a media.attributes fetch. So the flag routinely clears while the
+    // restore's own pane is still in flight, and `_railWorkspace()` answers null
+    // then — it needs Wm._findWorkspaceWindow to have mounted something.
+    //
+    // Peeking once there is what produced the reported fault: the hook opened a
+    // SECOND workspace, mounted the tour on it, and the restore's original pane
+    // then arrived and took the screen. Nothing was ever destroyed — which is
+    // why no teardown trace fired — the tour was simply left on the pane behind.
+    //
+    // So poll for the pane the restore is already bringing, and only open one if
+    // none is coming at all. `Wm._curWorkspace` is what says which it is: set
+    // means a pane is on its way and waiting is right; unset means nothing is
+    // coming and waiting would just be dead time before the tour.
+    let ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 0);
+    intent.trace("after restore settled", {
+      found: id(ws), incoming: this._workspaceIncoming(),
+    });
     if (!ws) {
       await this._openDefaultWorkspace();
       ws = await this._awaitRailWorkspace();
@@ -920,8 +939,26 @@ class desk_module extends LetcBox {
     });
   }
 
-  _awaitRailWorkspace() {
-    const deadline = Date.now() + 5000;
+  /**
+   * Is a workspace pane already on its way?
+   *
+   * `Wm._curWorkspace` names the workspace the desk has decided on;
+   * `Wm._findWorkspaceWindow` finds its pane once mounted. The gap between the
+   * two is a real interval — loadWorkspace returns before its fetch lands — and
+   * it is exactly the window in which opening another workspace produces two.
+   *
+   * @returns {Boolean}
+   */
+  _workspaceIncoming() {
+    try {
+      return !!(typeof Wm !== "undefined" && Wm && Wm._curWorkspace && Wm._curWorkspace.hub_id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  _awaitRailWorkspace(timeoutMs = 5000) {
+    const deadline = Date.now() + timeoutMs;
     return new Promise((resolve) => {
       const look = () => {
         if (this.isDestroyed && this.isDestroyed()) return resolve(null);
