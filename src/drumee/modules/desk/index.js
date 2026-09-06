@@ -4154,6 +4154,51 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Show a rail tab — but let its tour go FIRST.
+   *
+   * THE ORDER WAS THE OTHER WAY ROUND, deliberately: every rail case called
+   * _railTab and only then asked for the tour, so "the tour can never swallow
+   * the navigation the user asked for". The cost of that is what this fixes.
+   * _railTab is SYNCHRONOUS and the tour is several async hops behind it — a
+   * claim, a broadcast, a poll for the workspace, a mount — so pressing Files
+   * drew window-folder__split-body, and the migrate tour then appeared on top
+   * of the pane it exists to introduce. The user watched the answer before the
+   * question.
+   *
+   * So the tab now follows the tour down. What still happens IMMEDIATELY is
+   * everything the tour itself needs:
+   *
+   *   the section screen  goes at once — a tour drawn over Settings would be
+   *                       teaching a pane that is not on screen.
+   *   a window            has to exist, because an in-window tour is drawn ON
+   *                       one. Opening a workspace is not the same as switching
+   *                       its tab, and only the second waits.
+   *   any other tour      is ended here rather than inside the deferred
+   *                       _railTab, or pressing Chat during the Files tour
+   *                       would leave the first one up while the second was
+   *                       refused for single-flight.
+   *
+   * And when no tour is raised — already completed, mobile, the kill switch —
+   * the tab shows immediately, which is every press after the walkthrough.
+   *
+   * @param {String} tab  the rail tab pressed
+   * @param {String} tour the tour that tab is about
+   * @returns {Promise}
+   */
+  async _railTabWithTour(tab, tour) {
+    const w = this._railWorkspace();
+    this._leaveSectionScreen(w);
+    this._endWindowTourUnlessAbout(tab);
+    if (!w) await this._openDefaultWorkspace();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!(await this._raiseRailTour(tour))) return this._railTab(tab);
+    require("libs/tutorial-tours").whenDone(tour, () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._railTab(tab);
+    });
+  }
+
+  /**
    * Take an in-window tour down, if one is up.
    *
    * WHY NAVIGATION HAS TO DO THIS. The tour is an OPAQUE overlay covering the
@@ -7357,20 +7402,16 @@ class desk_module extends LetcBox {
       // rather than on a rail press it may not make for days — and pressing
       // Files stays a navigation, not a full-screen interruption.
       case "rail-files": {
-        const _res = this._railTab("files");
         // Contextual tour, on a press of Files in the rail — the gesture this
         // tour is actually about, and the one place a user with an empty
         // workspace goes looking for somewhere to put their files.
         //
-        // AFTER _railTab, never before, so the tour can never swallow the
-        // navigation the user asked for — the same ordering rail-chat,
-        // rail-task and rail-meet use. Un-awaited for the same reason: the
-        // click has already been answered.
-        this._raiseRailTour("migrate");
-        return _res;
+        // BEFORE the tab, not after — see _railTabWithTour. The Files pane
+        // this tour introduces used to render first, and the tour then
+        // appeared on top of it.
+        return this._railTabWithTour("files", "migrate");
       }
       case "rail-chat": {
-        const _res = this._railTab(_a.chat);
         // Contextual tour, on the first press of Chat in the rail.
         //
         // `chat` has described itself as "fired the first time someone opens a
@@ -7380,12 +7421,10 @@ class desk_module extends LetcBox {
         // about threads never ran for anyone who did not ask for the whole
         // product tour — exactly the gap rail-meet was added to close.
         //
-        // Raised AFTER showFolderTab so the tour can never swallow the
-        // navigation the user asked for — the same ordering rail-task and
-        // rail-meet use. Nothing is remembered here: the kill switch, the
-        // mobile check, the once-ever seen-set and single-flight all live in
-        // libs/tutorial-tours, so a fourth trigger surface can neither
-        // duplicate nor lose the gate.
+        // BEFORE the tab, not after — see _railTabWithTour. Nothing is
+        // remembered here: the kill switch, the mobile check, the once-ever
+        // seen-set and single-flight all live in libs/tutorial-tours, so a
+        // fourth trigger surface can neither duplicate nor lose the gate.
         //
         // IN THE WINDOW now, not on the desk. This tour is about a workspace's
         // threads, so it is drawn over the real chat pane the click just
@@ -7398,11 +7437,9 @@ class desk_module extends LetcBox {
         // on the home grid — it is drawn on a window or not at all — and if
         // that fallback did open a workspace, the chat pane is exactly what the
         // user is now looking at.
-        this._raiseRailTour(_a.chat);
-        return _res;
+        return this._railTabWithTour(_a.chat, _a.chat);
       }
       case "rail-task": {
-        const _res = this._railTab(_a.task);
         // Contextual tour, on the first press of Task in the rail.
         //
         // This is the gesture the tour is actually about — five tracker views
@@ -7411,11 +7448,10 @@ class desk_module extends LetcBox {
         // only infer an interest in tasks from having opened a folder, so a
         // user who went straight to the rail would never have seen it.
         //
-        // Raised AFTER showFolderTab so the tour can never swallow the
-        // navigation the user asked for — the same ordering those two use.
-        // Nothing is remembered here: the kill switch, the mobile check, the
-        // once-ever seen-set and single-flight all live in libs/tutorial-tours,
-        // so a fourth entry point can neither duplicate nor lose the gate.
+        // BEFORE the tab, not after — see _railTabWithTour. Nothing is
+        // remembered here: the kill switch, the mobile check, the once-ever
+        // seen-set and single-flight all live in libs/tutorial-tours, so a
+        // fourth entry point can neither duplicate nor lose the gate.
         //
         // IN THE WINDOW now, not on the desk. This tour ends by opening the
         // panel's real New task form, which only the in-window host can reach
@@ -7434,19 +7470,17 @@ class desk_module extends LetcBox {
         // is written when — and only when — "Create your first task" is
         // pressed. Until then the claim keeps succeeding and the rail keeps
         // offering it.
-        this._raiseRailTour("folder_task");
-        return _res;
+        return this._railTabWithTour(_a.task, "folder_task");
       }
       case "rail-meet": {
-        const _res = this._railTab("meeting");
         // Contextual tour, on a press of Meet in the rail — the gesture this
         // tour is about, and until recently the only one it had: `meeting` was
         // reachable from the full product tour alone.
         //
-        // Raised AFTER showFolderTab so the tour can never swallow the
-        // navigation. Nothing is remembered here: the kill switch, the mobile
-        // check, the account-scoped once-ever seen-set and single-flight all
-        // live in libs/tutorial-tours — and the seen-set is the whole answer to
+        // BEFORE the tab, not after — see _railTabWithTour. Nothing is
+        // remembered here: the kill switch, the mobile check, the
+        // account-scoped once-ever seen-set and single-flight all live in
+        // libs/tutorial-tours — and the seen-set is the whole answer to
         // "has the user finished with it". This tour is `mark_on: "success"`
         // with one way forward, so its flag is written when, and only when,
         // "Schedule your first meeting" is pressed.
@@ -7457,8 +7491,7 @@ class desk_module extends LetcBox {
         // the user is not on". An in-window tour cannot land on the home grid —
         // it is drawn on a window or not at all — and _onTourTrigger is what
         // routes this one there.
-        this._raiseRailTour("meeting");
-        return _res;
+        return this._railTabWithTour("meeting", "meeting");
       }
       // The rail's Access and the switcher header's link icon do the identical
       // thing — hand `folder-manage-access` to the active workspace window,

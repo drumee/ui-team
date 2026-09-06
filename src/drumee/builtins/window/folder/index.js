@@ -812,8 +812,30 @@ class __window_folder extends mfsInteract {
     // nothing, because the kind still loads on demand exactly as it did. Not
     // awaited for a second reason too — the Files tab must not wait on a
     // prefetch for a tab the user may never open.
+    //
+    // `window_tutorial` rides along, and it is the more urgent of the two. It
+    // is the HOST every in-window tour mounts into — the rail's Files, Chat,
+    // Task and Meet all raise one — and nothing warmed it anywhere, so the
+    // first rail press paid a chunk fetch before anything could appear. That is
+    // what turned "the tour arrives a moment after the tab" into a wait long
+    // enough to watch: the tab is switched synchronously, and the tour was
+    // several async hops AND a network round trip behind it.
+    //
+    // The step kinds come too. tutorial_migrate is warmed by the topbar's
+    // + New menu and tutorial_task/tutorial_share by their own surfaces, but
+    // tutorial_chat and tutorial_meeting were warmed by nothing at all — and
+    // all four are one rail press away from here.
     if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
-      Promise.resolve(Kind.waitFor("tasks_panel")).catch(() => {});
+      for (const kind of [
+        "tasks_panel",
+        "window_tutorial",
+        "tutorial_migrate",
+        "tutorial_chat",
+        "tutorial_task",
+        "tutorial_meeting",
+      ]) {
+        Promise.resolve(Kind.waitFor(kind)).catch(() => {});
+      }
     }
     const initialTab = this.mget("activeTab");
     if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
