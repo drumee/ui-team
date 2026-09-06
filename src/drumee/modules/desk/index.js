@@ -4103,18 +4103,30 @@ class desk_module extends LetcBox {
   async _maybeRunBootTour() {
     if (this._tutorialWasAutomatic) return false;
     if (require("libs/window-tutorial-intent").has()) return false;
+    // ASKED BEFORE ANYTHING IS SHOWN, and this is what makes the curtain
+    // possible at all. `offerable` applies every gate a claim would except
+    // single-flight, and takes no lock — so a user who has finished the tour
+    // returns here having seen nothing, and the workspace they refreshed into
+    // is never covered by a curtain for a tour that was not going to run.
+    if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
     try {
+      // THE CURTAIN GOES UP FIRST, before either wait below.
+      //
+      // It used to be raised after them, which is the whole of the reported
+      // fault: _awaitRestoreSettled and _awaitRailWorkspace are where the time
+      // goes on a boot, so window-manager__main rendered, sat there being read,
+      // and only then was covered. Raised here it is what the restore finishes
+      // behind.
+      this._showTourCurtain();
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be
       // watched for rather than asked about once.
       await this._awaitRestoreSettled();
       const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 3000);
-      if (!ws) return false;
-      if (this.isDestroyed && this.isDestroyed()) return false;
-      // The curtain, for the same reason a rail press raises one: the tour is
-      // several hops away and the pane it is about would otherwise sit there
-      // being read first.
-      this._showTourCurtain();
+      if (!ws || (this.isDestroyed && this.isDestroyed())) {
+        this._hideTourCurtain();
+        return false;
+      }
       if (await this._raiseRailTour("migrate")) {
         // The curtain has no tab switch to wait for here, but it still needs
         // the same safety the rail path has: a tour that is claimed and then
@@ -4256,14 +4268,19 @@ class desk_module extends LetcBox {
     // that happens several async hops later — a claim, a broadcast, a poll for
     // the workspace, a mount — and the gap is exactly what the user sees: the
     // pane they came FROM, sitting there while the tour they asked for is on
-    // its way. Raised optimistically here and taken down again below if no tour
-    // turns out to be coming.
-    this._showTourCurtain();
+    // its way.
+    //
+    // Only when the tour could actually run. `offerable` is every gate a claim
+    // applies except single-flight, without taking one, so a user who finished
+    // this tour long ago gets their tab with no curtain flashing over it — and
+    // that is every press after the walkthrough.
+    const offerable = require("libs/tutorial-tours").offerable(tour, this);
+    if (offerable) this._showTourCurtain();
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
-    if (!(await this._raiseRailTour(tour))) {
-      // Nothing was raised — already completed, mobile, the kill switch. The
-      // tab shows at once, which is every press after the walkthrough.
+    if (!offerable || !(await this._raiseRailTour(tour))) {
+      // Nothing was raised — already completed, mobile, the kill switch, or
+      // another tour holding single-flight. The tab shows at once.
       this._hideTourCurtain();
       return this._railTab(tab);
     }

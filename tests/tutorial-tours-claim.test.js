@@ -351,3 +351,41 @@ test("and succeeds once that tour has released", () => {
   assert.equal(Tours.claim("share", host), true);
   Tours.release("share");
 });
+
+// ── offerable(): the gates, without taking the lock ──────────────────────────
+//
+// A surface with work to do BEFORE it can raise a tour — waiting out a restore,
+// polling for a workspace — needs to know whether to show anything while it
+// waits. Asking claim() would take single-flight and then have to give it back.
+
+test("offerable: true for a tour that would be claimed", () => {
+  reset();
+  assert.equal(Tours.offerable("migrate", host), true);
+});
+
+test("offerable: false once the tour has been completed", () => {
+  reset();
+  Tours.markSeen("migrate", host);
+  assert.equal(Tours.offerable("migrate", host), false);
+});
+
+test("offerable: false when the kill switch is off, and on mobile", () => {
+  reset();
+  platform = {};
+  assert.equal(Tours.offerable("migrate", host), false);
+  reset();
+  mobile = true;
+  assert.equal(Tours.offerable("migrate", host), false);
+});
+
+test("offerable: takes no lock, and is racy about single-flight on purpose", () => {
+  reset();
+  assert.equal(Tours.offerable("migrate", host), true);
+  assert.equal(Tours.inFlight(), null, "asking must not claim anything");
+  // Another tour running does NOT make this false: the answer is about the
+  // tour's own merits, and the caller still has to claim.
+  Tours.claim("chat", host);
+  assert.equal(Tours.offerable("migrate", host), true);
+  assert.equal(Tours.claim("migrate", host), false, "...and the claim still refuses");
+  Tours.release("chat");
+});

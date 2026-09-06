@@ -311,11 +311,32 @@ function isSeen(tourId, host) {
  * @param {Object} host the widget asking, for the seen-set lookup
  * @returns {Boolean} whether the caller may show the tour
  */
-function claim(tourId, host) {
+/**
+ * Would this tour be offered, if nothing else were running?
+ *
+ * Every gate claim() applies EXCEPT single-flight, and it takes no lock and
+ * leaves nothing behind — so a caller can ask before committing to anything.
+ *
+ * WHAT IT IS FOR: a surface that has work to do BEFORE it can raise a tour —
+ * waiting out a restore, polling for a workspace — and something to show while
+ * it does. The desk raises its curtain on this answer, so a user who has
+ * finished the tour never sees one flash over the screen they asked for.
+ *
+ * NOT a substitute for claim(). It is deliberately racy about single-flight:
+ * true here does not promise the claim will succeed, only that this tour is not
+ * ruled out on its own merits.
+ */
+function offerable(tourId, host) {
   if (!enabled()) return false;
   if (isMobile()) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
   if (isSeen(tourId, host)) return false;
+  return true;
+}
+
+function claim(tourId, host) {
+  // One definition of the gates, so a second caller cannot drift from it.
+  if (!offerable(tourId, host)) return false;
   if (_inFlight) return false;
 
   _inFlight = tourId;
@@ -507,6 +528,7 @@ module.exports = {
   enabled,
   serverState,
   isSeen,
+  offerable,
   claim,
   fire,
   armed,

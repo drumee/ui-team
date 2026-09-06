@@ -88,3 +88,35 @@ test("a URL tour also outranks the boot tour", () => {
   const body = src.slice(i, src.indexOf("\n  }", i));
   assert.match(body, /window-tutorial-intent/);
 });
+
+// ── the curtain has to precede the waits ─────────────────────────────────────
+//
+// This was the reported fault: the curtain was raised AFTER
+// _awaitRestoreSettled and _awaitRailWorkspace, which is where a boot spends
+// its time — so window-manager__main rendered, sat there being read, and was
+// covered only once the tour was already on its way. Source order is the whole
+// difference and nothing about the running app reveals it.
+test("the boot curtain goes up before the restore is awaited", () => {
+  const src = strip(read("src/drumee/modules/desk/index.js"));
+  const i = src.search(/async _maybeRunBootTour\(\)\s*\{/);
+  const body = src.slice(i, src.indexOf("\n  }", i));
+  const curtain = body.indexOf("_showTourCurtain()");
+  const restore = body.indexOf("_awaitRestoreSettled()");
+  const pane = body.indexOf("_awaitRailWorkspace(");
+  assert.ok(curtain > 0 && restore > 0 && pane > 0, "expected all three");
+  assert.ok(curtain < restore, "the curtain must precede the restore wait");
+  assert.ok(curtain < pane, "and the wait for the pane");
+});
+
+test("but only when the tour could actually run", () => {
+  // Otherwise every refresh flashes a curtain at someone who finished the tour
+  // months ago. `offerable` is the gate that costs nothing to ask.
+  const src = strip(read("src/drumee/modules/desk/index.js"));
+  const i = src.search(/async _maybeRunBootTour\(\)\s*\{/);
+  const body = src.slice(i, src.indexOf("\n  }", i));
+  assert.match(body, /offerable\("migrate", this\)/);
+  assert.ok(
+    body.indexOf("offerable(") < body.indexOf("_showTourCurtain()"),
+    "the gate must come before the curtain",
+  );
+});
