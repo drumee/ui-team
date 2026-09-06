@@ -19,6 +19,61 @@
 const IMPORT_ADDRESS = "drumee-drive-import@growth-hacking-491411.ia…";
 const SAMPLE_LINK = "https://drive.google.com";
 
+// The real popup's BEM prefix, deliberately, for the destination card below.
+const POPUP = "migrate-gdrive-popup";
+
+// The folder shape the desk draws everywhere it names a place.
+const folderArt = require("media/grid/template/folder");
+
+/**
+ * The destination card, borrowed whole from the real dialog.
+ *
+ * MOCK ONLY — no service, no part, nothing reads it. It is here because the
+ * card the user meets after this tour opens with one, and a walkthrough that
+ * omits it teaches a dialog with a different first row than the one that
+ * actually appears.
+ *
+ * IT WEARS THE POPUP'S OWN CLASS NAMES rather than the tour's. That is the
+ * whole point: this block takes its styling from
+ * builtins/widget/migrate-gdrive-popup/skin, so the drawing cannot drift away
+ * from the thing it is a drawing of. The step's skin loads that file for the
+ * same reason (see ../index.js).
+ *
+ * The workspace it names is the tour's own fixture, like the address and the
+ * link above it — an example, not the user's real destination, which the tour
+ * has no way to know.
+ */
+function destCard() {
+  return Skeletons.Box.X({ active: 0,
+    className: `${POPUP}__dest-card`,
+    kids: [
+      Skeletons.Element({ active: 0,
+        className: `${POPUP}__dest-ico`,
+        content: folderArt({
+          area: _a.personal,
+          filetype: _a.hub,
+          role: "desk",
+          widgetId: _.uniqueId("mg-dest-"),
+          isAttachment: 1,
+        }),
+      }),
+      Skeletons.Box.Y({ active: 0,
+        className: `${POPUP}__dest-text`,
+        kids: [
+          Skeletons.Note({ active: 0,
+            className: `${POPUP}__field-label`,
+            content: LOCALE.DESTINATION || "Destination",
+          }),
+          Skeletons.Note({ active: 0,
+            className: `${POPUP}__destination`,
+            content: LOCALE.MY_HOME || "My home",
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 /**
  * @param {Object} ui
  * @param {Object} [opt]
@@ -47,6 +102,8 @@ module.exports = function (ui, opt = {}) {
               Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${pfx}__close` }),
             ],
           }),
+
+          destCard(),
 
           Skeletons.Box.Y({ active: 0,
             className: `${pfx}__step`,

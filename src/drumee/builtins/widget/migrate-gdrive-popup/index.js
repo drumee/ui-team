@@ -31,6 +31,14 @@ class __migrate_gdrive_popup extends LetcBox {
     this._hub_id = opt.hub_id || Visitor.id;
     this._nid = opt.nid || Visitor.get(_a.home_id);
     this._destinationName = opt.destinationName || LOCALE.MY_HOME || 'My home';
+    // What the destination LOOKS like, for the card's glyph — the same two
+    // fields the desk breadcrumb draws a folder from. A launcher that knows
+    // (the folder window, which read the destination off itself) passes them;
+    // the ones that always mean the user's own home — settings, onboarding,
+    // the desk — leave them out and get the personal workspace shape, which is
+    // what that home is.
+    this._destArea = opt.destArea || _a.personal;
+    this._destFiletype = opt.destFiletype || _a.hub;
     // direct=1 (folder-window launch): the import lands IN the destination
     // folder itself — the user picked it by standing in it. Without it (the
     // settings / Home / onboarding launches) the importer keeps its

@@ -1879,6 +1879,15 @@ class __window_folder extends mfsInteract {
               hub_id: destHub,
               nid: destNidFinal,
               destinationName: destName || undefined,
+              // What the destination LOOKS like, so the popup's card draws
+              // this folder's own shape rather than a generic one. Read off
+              // the same window the name and the nid come from — a hub ROOT
+              // window is a workspace and gets its area badge, anything the
+              // user has navigated into is a plain folder.
+              destArea: this.mget(_a.area) || undefined,
+              destFiletype: destNid === this.mget(_a.actual_home_id)
+                ? _a.hub
+                : _a.folder,
               direct: 1,
               // Destination-scoped id (same scheme as window_folder-<hub>-<nid>).
               // A plain shared id made singleton raise() a popup opened from

@@ -155,6 +155,12 @@ class __tutorial_migrate extends LetcBox {
 
   initialize(opt = {}) {
     require('./skin');
+    // The destination card in ./skeleton/dialog is the REAL popup's block,
+    // wearing the real popup's class names, so it needs the real popup's skin.
+    // Nothing else here has loaded it: the widget it belongs to is lazy
+    // (seeds.js migrate_gdrive_popup) and may never have been opened in this
+    // session — which is the normal case for a user meeting this tour.
+    require('builtins/widget/migrate-gdrive-popup/skin');
     super.initialize(opt);
     this.declareHandlers();
     this._screenIndex = 0;

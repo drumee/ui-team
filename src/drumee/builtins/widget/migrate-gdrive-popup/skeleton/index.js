@@ -3,8 +3,39 @@
  * Reads ui.getState() / ui.getJobSnap() / ui.isAutoFromOnboarding() to
  * render the right card body.
  */
+// The area-tinted folder shape, from the single source this app draws it from
+// (media/grid/template/folder — the desk sidebar, the workspace switcher and
+// the breadcrumb all go through it).
+//
+// It returns an HTML STRING, hence Element + content rather than Image.Svg +
+// ico: passing markup as an icon NAME builds `<use href="#<markup>">` and
+// renders nothing. Same note as modules/desk/breadcrumb/item/skeleton, which
+// is the block this one is modelled on.
+const folderArt = require('media/grid/template/folder');
+
 module.exports = function (ui) {
   const pfx = ui.fig.family;
+
+  // The destination's own glyph, not a generic folder outline.
+  //
+  // This card names a real place the import is about to land in, and every
+  // other surface that names one — the breadcrumb, the sidebar, the switcher —
+  // draws it with the workspace's own colour and badge. A flat coral
+  // `desktop_folder` made the one screen where the destination MATTERS the
+  // only screen that would not show you which one it is.
+  const destIco = () => Skeletons.Element({
+    className: `${pfx}__dest-ico`,
+    content: folderArt({
+      area: ui._destArea,
+      filetype: ui._destFiletype,
+      // What tells the template to draw a workspace rather than a plain inner
+      // folder, and so whether there is a badge at all.
+      role: ui._destFiletype === _a.hub ? 'desk' : '',
+      widgetId: _.uniqueId('gdrive-dest-'),
+      // No kebab: there is nothing here for a context menu to act on.
+      isAttachment: 1,
+    }),
+  });
 
   const close = Skeletons.Button.Svg({
     className: `${pfx}__close`, ico: 'cross',
@@ -167,7 +198,7 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__dest-card`,
           kids: [
-            Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+            destIco(),
             Skeletons.Box.Y({
               className: `${pfx}__dest-text`,
               kids: [
@@ -333,7 +364,7 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__dest-card`,
           kids: [
-            Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+            destIco(),
             Skeletons.Box.Y({
               className: `${pfx}__dest-text`,
               kids: [
@@ -656,7 +687,7 @@ module.exports = function (ui) {
               Skeletons.Box.X({
                 className: `${pfx}__dest-card`,
                 kids: [
-                  Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+                  destIco(),
                   Skeletons.Box.Y({
                     className: `${pfx}__dest-text`,
                     kids: [

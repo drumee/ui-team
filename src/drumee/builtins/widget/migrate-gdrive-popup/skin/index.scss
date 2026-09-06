@@ -107,15 +107,27 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(480px, calc(100vw - 32px));
+    // THE TOUR'S MOCK OF THIS DIALOG IS THE DESIGN (Figma 176:47527), and the
+    // numbers below are its: 513 wide, 16px radius, an elevated ground on a
+    // muted hairline, and a deeper, softer shadow than this popup carried.
+    // The tour spends three screens teaching a card that then opened looking
+    // like a different component; see tutorial/migrate/skin, which is where
+    // these were measured.
+    //
+    // Declared in the same place as before, so the mobile mixin further down —
+    // which re-declares width — still wins.
+    width: min(513px, calc(100vw - 32px));
+    // 513 INCLUDING the hairline. On content-box the border made the card 515
+    // and the mock's 513 was never reachable.
+    box-sizing: border-box;
     max-height: calc(100vh - 48px);
     overflow-y: auto;
-    background: var(--normal-bg-90);
-    border: 1px solid var(--border-default);
-    border-radius: var(--corner-radius-4);          // 12px
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    border-radius: 16px;
     box-shadow:
-      0 16px 48px -8px rgba(11, 10, 33, 0.24),
-      0 4px 12px rgba(11, 10, 33, 0.08);
+      0 40px 80px rgba(0, 0, 0, 0.15),
+      0 7px 10px rgba(0, 0, 0, 0.05);
     z-index: 99998;
     animation: migrate-gdrive-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 
@@ -174,18 +186,21 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     }
   }
 
+  // 28px inset and a 20px rhythm — the mock's, and tighter through the body
+  // than the 24/16 this had.
   &__container {
-    padding: var(--spacer-6);                        // 24px
-    gap: var(--spacer-5);                            // 16px
+    padding: 28px;
+    gap: 20px;
   }
 
   // ───────── header ─────────
+  // NO RULE UNDER THE TITLE. The mock has none: the container's 20px gap is
+  // what separates the heading from the body, and a divider on top of it made
+  // the card read as two stacked panels.
   &__header {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding-bottom: var(--spacer-4);                 // 12px
-    border-bottom: 1px solid var(--border-muted);
   }
 
   &__title-wrap { align-items: center; gap: var(--spacer-3); }   // 8px
@@ -196,26 +211,29 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     // No "Manrope": Drumee is Armin Grotesk everywhere (skin/vars/font.scss
     // maps every weight to it), so naming another family here made this the
     // one dialog whose title did not match the app around it.
-    @include drumee.typo($size: 18px, $weight: 700, $line: 24px, $color: var(--normal-fg-10));
-    font-family: var(--font-bold);
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    // 22px/600 on the plain family, per the mock. It was 18px/700 in
+    // --font-bold, which read heavier and smaller than the card being taught.
+    @include drumee.typo($size: 22px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 600;
   }
 
+  // The mock's glyph — 20px, drawn at --normal-fg-20, with no chip behind it.
+  // The hover and the pointer stay: the mock is a drawing and never had to
+  // answer a mouse, and a close control with neither is the bug that was
+  // reported on the tour's own dialog.
   &__close {
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--corner-radius-2);
     cursor: pointer;
     flex: 0 0 auto;
-    color: var(--normal-fg-50);
-    transition: color 0.15s, background 0.15s;
+    color: var(--normal-fg-20);
+    transition: color 0.15s;
 
-    svg { width: 16px; height: 16px; fill: currentColor; }
-    &:hover { color: var(--normal-fg-10); background: var(--overlay-bg-05); }
+    svg { width: 100%; height: 100%; fill: currentColor; }
+    &:hover { color: var(--normal-fg); }
   }
 
   // ───────── hero (big icon + title + subtitle) ─────────
@@ -326,18 +344,76 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     padding: var(--spacer-4);
   }
 
-  // Home/personal folder glyph — coral per Figma (Signal/Restricted #d65f59),
-  // decoupled from the brand accent so it stays red while buttons are indigo.
+  // The destination's OWN folder shape, wrapped the way the desk breadcrumb
+  // wraps it (modules/desk/breadcrumb/item/skin, &__icon — the block this is
+  // based on). Same numbers, scaled from that 20px tab to this 40px card slot.
+  //
+  // It replaces a flat coral `desktop_folder` on a tinted chip. That glyph was
+  // the same on every launch, so the one card whose job is to say WHERE the
+  // import lands looked identical whether it was a workspace root, a shared
+  // area or a folder three levels down.
+  //
+  // TWO THINGS THE WRAPPER HAS TO DO, both inherited from the breadcrumb:
+  //
+  //   pin the size   The template's SVG is authored at 105x86. Without an
+  //                  explicit width and height on `.folder-shape` it renders at
+  //                  that intrinsic size — a glyph wider than the card holding
+  //                  it.
+  //   leave the fill The colour IS the path's fill, chosen by the AREA CLASS
+  //                  the template stamps on it. There is no currentColor to
+  //                  tint, which is why no `color`/`fill` is set on the box.
   &__dest-ico {
-    width: 36px;
-    height: 36px;
-    padding: 7px;
-    box-sizing: border-box;
-    border-radius: var(--corner-radius-2);
-    background: rgba(214, 95, 89, 0.14);
-    color: #d65f59;
-    fill: #d65f59;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
     flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 34px;
+      height: 28px;
+    }
+
+    .folder-shape {
+      width: 34px;
+      height: 28px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder {
+        fill: var(--area-personal);
+      }
+      &.public {
+        fill: var(--area-public);
+      }
+      &.share,
+      &.dmz {
+        fill: var(--area-share);
+      }
+      &.private {
+        fill: var(--area-private);
+      }
+    }
+
+    // The area badge rides the folder body. At this size it would otherwise
+    // sit off the shape entirely — same correction, same reason, as the
+    // breadcrumb's.
+    .badge {
+      position: absolute;
+      bottom: -3px;
+      left: -3px;
+      width: 20px !important;
+      height: 20px !important;
+      color: var(--grid-color-folder-badge);
+    }
   }
 
   &__dest-text { gap: 1px; min-width: 0; }
@@ -354,8 +430,15 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   &__field { gap: var(--spacer-3); }
 
   &__entry {
-    padding: 0 var(--spacer-4);
-    height: 42px;
+    // The mock's field: 44 tall on a 10px radius with a 14px inset. Its radius
+    // overrides the -3 shared with the dest and toggle cards above.
+    padding: 0 14px;
+    border-radius: 10px;
+    height: 44px;
+    // 44 INCLUDING the hairline, as the mock has it. Left on content-box the
+    // border added two more and the field stood a pixel taller than the one
+    // the tour drew.
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -578,9 +661,15 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     // this a 24px-radius pill at 16px by copying the plan-card CTAs; that is a
     // different button in a different screen, and next to the settings UI it
     // read as another product.
-    padding: 6px var(--spacer-6);
-    border-radius: var(--corner-radius-1);
-    @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
+    // The mock's "Verify & import": 15px/600 on a 12px radius, and deep
+    // enough to read as the card's main action rather than a toolbar button.
+    //
+    // Width is NOT taken from it. That submit is the only control on its
+    // screen; here two of these share a footer row, and a full-width rule
+    // would stack them.
+    padding: 14px var(--spacer-6);
+    border-radius: 12px;
+    @include drumee.typo($size: 15px, $line: 1.2);
     font-weight: 600;
     user-select: none;
     text-align: center;
