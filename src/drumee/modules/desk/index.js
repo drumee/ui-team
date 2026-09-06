@@ -4189,13 +4189,63 @@ class desk_module extends LetcBox {
     const w = this._railWorkspace();
     this._leaveSectionScreen(w);
     this._endWindowTourUnlessAbout(tab);
+    // THE CURTAIN GOES UP ON THE CLICK, not when the tour mounts.
+    //
+    // The stamp that reveals it is the same one mountWindowTutorial sets, but
+    // that happens several async hops later — a claim, a broadcast, a poll for
+    // the workspace, a mount — and the gap is exactly what the user sees: the
+    // pane they came FROM, sitting there while the tour they asked for is on
+    // its way. Raised optimistically here and taken down again below if no tour
+    // turns out to be coming.
+    this._showTourCurtain();
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
-    if (!(await this._raiseRailTour(tour))) return this._railTab(tab);
+    if (!(await this._raiseRailTour(tour))) {
+      // Nothing was raised — already completed, mobile, the kill switch. The
+      // tab shows at once, which is every press after the walkthrough.
+      this._hideTourCurtain();
+      return this._railTab(tab);
+    }
     require("libs/tutorial-tours").whenDone(tour, () => {
       if (this.isDestroyed && this.isDestroyed()) return;
+      // THE TAB FIRST, THEN THE CURTAIN. Switching underneath means what is
+      // revealed is already the pane the user asked for; lifting first would
+      // show the old one for a frame, which is the fault this screen exists to
+      // hide, in miniature.
       this._railTab(tab);
+      // Cleared HERE as well as on the tour's destroy, and that is not
+      // belt-and-braces: a tour that is claimed and then never mounts — no
+      // window to draw on, a chunk that fails — registers no destroy handler
+      // at all, so this is the only thing that would ever take the curtain
+      // down. `whenDone` runs on the release, which that path does reach.
+      this._hideTourCurtain();
     });
+  }
+
+  /**
+   * Cover the work area while a rail tour is coming up.
+   *
+   * The curtain (desk/tour-intro) and the tour share ONE piece of state: the
+   * `data-window-tour` stamp on the desk root, which the skin keys on. So there
+   * is no way for the curtain to outlive the tour — every exit a tour has,
+   * including one that never mounts, clears the stamp through the same handler
+   * (onPartReady "window-tutorial") or through _hideTourCurtain here.
+   *
+   * Fed once and kept: the screen is static, and re-feeding it on every rail
+   * press would replay its mount for no gain.
+   */
+  _showTourCurtain() {
+    if (this.el && this.el.dataset) this.el.dataset.windowTour = "1";
+    this.ensurePart("tour-intro-slot").then((p) => {
+      if (!p || (p.isDestroyed && p.isDestroyed())) return;
+      if (p.children && p.children.length) return;
+      p.feed({ kind: "desk_tour_intro" });
+    });
+  }
+
+  /** Take it down. Cheap and idempotent — the stamp is the whole mechanism. */
+  _hideTourCurtain() {
+    if (this.el && this.el.dataset) delete this.el.dataset.windowTour;
   }
 
   /**

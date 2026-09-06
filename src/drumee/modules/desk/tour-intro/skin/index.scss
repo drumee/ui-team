@@ -1,0 +1,111 @@
+@use "mixins/drumee";
+
+// Logo, pill, two lines — centred in the work area.
+//
+// Token-only, like desk/home-empty: this covers the pane on both themes and
+// nobody should have to remember to check the second one.
+.desk-tour-intro {
+  &__ui {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  &__main {
+    width: 100%;
+    min-height: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 48px 24px;
+    text-align: center;
+  }
+
+  // Sized explicitly: the symbol is authored at its own dimensions and would
+  // otherwise paint at that intrinsic size.
+  //
+  // THE WORDMARK IS NOT THEME-SAFE ON ITS OWN — assets/drumee-logo.svg paints
+  // the letters with a hardcoded `fill="#0B0A21"`, which is --normal-fg on
+  // light and almost exactly --normal-bg on dark, so the word "drumee"
+  // disappears there and only the purple mark is left. Re-pointed at the token,
+  // matched on the literal fill because that is what the asset carries and CSS
+  // beats a presentation attribute. The mark's own #433CC5 is brand purple and
+  // reads on both themes, so it is left alone.
+  //
+  // Same treatment, same reason, as desk/home-empty's logo.
+  &__logo {
+    width: 148px;
+    height: 40px;
+    flex: 0 0 auto;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    [fill="#0B0A21"],
+    [fill="#0b0a21"] {
+      fill: var(--normal-fg);
+    }
+  }
+
+  // The bordered capsule above the headline. Monospace and letter-spaced, which
+  // is what makes it read as a label rather than as a third line of copy.
+  &__pill {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 7px 18px;
+    border: 1px solid var(--primary-purple-40);
+    // Fully round: the capsule's ends follow its height whatever the copy or
+    // the locale does to its width.
+    border-radius: var(--corner-radius-max, 999px);
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--primary-purple-40));
+    font-family: var(--font-mono, ui-monospace, monospace);
+    letter-spacing: 0.02em;
+    max-width: 100%;
+  }
+
+  &__lines {
+    align-items: center;
+    gap: 4px;
+    max-width: 720px;
+  }
+
+  // drumee.typo() emits no font-weight ($weight only selects a family), so the
+  // weight is written out — same as desk/home-empty's title.
+  &__line {
+    @include drumee.typo($size: 44px, $line: 1.15, $color: var(--normal-fg));
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  &__line--accent {
+    color: var(--primary-purple-40);
+  }
+}
+
+// ── narrow work areas ────────────────────────────────────────────────────────
+//
+// The work area is what is left after the rail and any open panel, so it goes
+// narrow long before the viewport does. A container query rather than a media
+// query would be better, but the desk does not declare a container here and
+// adding one changes the stacking for everything else in it.
+@media (max-width: 900px) {
+  .desk-tour-intro {
+    &__main { gap: 24px; }
+    &__line { font-size: 32px; }
+    &__logo { width: 118px; height: 32px; }
+  }
+}
+
+@media (max-width: 650px) {
+  .desk-tour-intro {
+    &__main { gap: 20px; padding: 32px 16px; }
+    &__line { font-size: 26px; }
+    &__pill { font-size: 12px; padding: 6px 14px; }
+  }
+}
