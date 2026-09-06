@@ -66,7 +66,7 @@ const ART =
 
 const ui = { fig: { family: "tutorial-migrate", group: "tutorial" }, mget: () => null };
 const mock = toHtml(
-  renderModule("src/drumee/modules/desk/tutorial/migrate/skeleton/index.js", ui, { dialog: true }, {}),
+  renderModule("src/drumee/modules/desk/tutorial/migrate/skeleton/index.js", ui, { dialog: true, copied: true, linked: true }, {}),
 )
   // REPLACE the stub's text, do not prepend to it: it stringifies to
   // "[object Object]" and becomes a second flex item that shoves the art out
@@ -95,8 +95,20 @@ const popup = `
         <div class="migrate-gdrive-popup__destination">My home</div>
       </div>
     </div>
-    <div class="migrate-gdrive-popup__entry">drumee-drive-import@…</div>
-    <div class="migrate-gdrive-popup__primary-btn">Verify &amp; import</div>
+    <div class="migrate-gdrive-popup__sa-step">
+      <div class="migrate-gdrive-popup__sa-step-title">1. In Google Drive, share the folder or file with this address (Viewer access is enough):</div>
+      <div class="migrate-gdrive-popup__sa-email-card">
+        <div class="migrate-gdrive-popup__sa-email">drumee-drive-import@growth-hacking-491411.ia…</div>
+        <div class="migrate-gdrive-popup__sa-copy" data-copied="1">Copy</div>
+      </div>
+    </div>
+    <div class="migrate-gdrive-popup__sa-step">
+      <div class="migrate-gdrive-popup__sa-step-title">2. Paste the folder's or file's link (or ID) here:</div>
+      <div class="migrate-gdrive-popup__sa-input-row"><input value="https://drive.google.com"></div>
+    </div>
+    <div class="migrate-gdrive-popup__footer">
+      <div class="migrate-gdrive-popup__primary-btn migrate-gdrive-popup__primary-btn--full">Verify &amp; import</div>
+    </div>
   </div>
 </div>`;
 
@@ -132,6 +144,9 @@ ${popup}
       close: box('.tutorial-migrate__close'),
       entry: box('.tutorial-migrate__entry'),
       submit: box('.tutorial-migrate__submit'),
+      stepLabel: box('.tutorial-migrate__step-label'),
+      address: box('.tutorial-migrate__address'),
+      copy: box('.tutorial-migrate__copy'),
       destIco: box('.tutorial-migrate__dialog .migrate-gdrive-popup__dest-ico'),
       destShape: box('.tutorial-migrate__dialog .folder-shape'),
     },
@@ -140,8 +155,11 @@ ${popup}
       container: box('.migrate-gdrive-popup__container'),
       heading: box('.migrate-gdrive-popup__title'),
       close: box('.migrate-gdrive-popup__close'),
-      entry: box('.migrate-gdrive-popup__entry'),
+      entry: box('.migrate-gdrive-popup__sa-input-row input'),
       submit: box('.migrate-gdrive-popup__primary-btn'),
+      stepLabel: box('.migrate-gdrive-popup__sa-step-title'),
+      address: box('.migrate-gdrive-popup__sa-email-card'),
+      copy: box('.migrate-gdrive-popup__sa-copy'),
       destIco: box('.migrate-gdrive-popup__ui .migrate-gdrive-popup__dest-ico'),
       destShape: box('.migrate-gdrive-popup__ui .folder-shape'),
     },
@@ -177,6 +195,12 @@ const CHECKS = [
   ["entry radius", data.mock.entry.radius, data.popup.entry.radius],
   ["submit radius", data.mock.submit.radius, data.popup.submit.radius],
   ["submit size", data.mock.submit.size, data.popup.submit.size],
+  ["step label size", data.mock.stepLabel.size, data.popup.stepLabel.size],
+  ["step label weight", data.mock.stepLabel.weight, data.popup.stepLabel.weight],
+  ["address height", data.mock.address.h, data.popup.address.h],
+  ["address radius", data.mock.address.radius, data.popup.address.radius],
+  ["copy pill radius", data.mock.copy.radius, data.popup.copy.radius],
+  ["copy pill (done)", data.mock.copy.bg, data.popup.copy.bg],
   ["dest icon box", data.mock.destIco.w, data.popup.destIco.w],
   ["dest shape", data.mock.destShape.w, data.popup.destShape.w],
 ];
