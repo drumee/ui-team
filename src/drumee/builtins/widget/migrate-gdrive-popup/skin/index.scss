@@ -7,6 +7,14 @@
   to   { opacity: 1; }
 }
 
+// Opacity-only on the way out too, and for the same reason as the way in: the
+// mobile card must hold `transform: none` so its fixed ::before scrim stays
+// pinned to the viewport instead of shrinking to the card.
+@keyframes migrate-gdrive-out-mobile {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
 @mixin gdrive-mobile-card {
   // inset:0 + margin:auto centres on both axes without a transform. `inset: 0`
   // is what replaces the desktop top:50%/left:50% anchor — do NOT then set
@@ -19,6 +27,10 @@
   height: fit-content;
   max-height: calc(100dvh - 48px);
   animation: migrate-gdrive-in-mobile 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  &[data-closing="1"] {
+    animation: migrate-gdrive-out-mobile 0.16s ease-in forwards;
+  }
 
   &::before {
     content: "";
@@ -130,6 +142,13 @@ $danger-soft: rgba(246, 81, 75, 0.12);
       0 7px 10px rgba(0, 0, 0, 0.05);
     z-index: 99998;
     animation: migrate-gdrive-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+    // Set by _close(), which then defers the teardown so these frames actually
+    // happen. `forwards`, so the card holds its faded-out state for the few
+    // milliseconds between the animation ending and the widget going away.
+    &[data-closing="1"] {
+      animation: migrate-gdrive-out 0.16s ease-in forwards;
+    }
 
     &[data-state="0"] { display: none; }
 
@@ -1243,4 +1262,38 @@ html[data-theme="dark"] .migrate-gdrive-popup {
 @keyframes migrate-gdrive-in {
   from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+// The other half. The card had an entrance and no exit, so it appeared with a
+// pop and then simply ceased to exist.
+//
+// It ends where the entrance began, which is what makes the two read as one
+// motion reversed rather than two different effects.
+@keyframes migrate-gdrive-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+}
+
+// ── reduced motion ───────────────────────────────────────────────────────────
+// LAST IN THE FILE, and that is load-bearing. A media query adds no
+// specificity, so this block and the rules it cancels are both (0,2,0) — put it
+// above them and the later rule simply wins, leaving the setting with no
+// effect at all and nothing to show for it.
+//
+// Motion is decoration on this card: someone who has asked for less of it
+// still gets the dialog, and still gets it dismissed — the close path defers on
+// a timer, not on `animationend`, precisely so that stays true.
+// Motion is decoration on this card: someone who has asked for less of it
+// still gets the dialog, and still gets it dismissed — the close path defers on
+// a timer, not on `animationend`, precisely so that stays true.
+@media (prefers-reduced-motion: reduce) {
+  .migrate-gdrive-popup__ui,
+  .migrate-gdrive-popup__ui[data-closing="1"],
+  // The mobile card's pair carries an extra attribute selector, which outranks
+  // the two above on specificity. Being last in the file is not enough against
+  // a heavier selector, so both are named.
+  .migrate-gdrive-popup__ui[data-device="mobile"],
+  .migrate-gdrive-popup__ui[data-device="mobile"][data-closing="1"] {
+    animation: none;
+  }
 }

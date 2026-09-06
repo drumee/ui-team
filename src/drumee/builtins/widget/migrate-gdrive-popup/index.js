@@ -19,6 +19,9 @@
  */
 
 const POLL_INTERVAL_MS = 2000;
+// How long the card's exit animation is given before the widget goes away.
+// Matches the 0.16s in the skin, and the folder window's create dialog.
+const CLOSE_MS = 160;
 
 class __migrate_gdrive_popup extends LetcBox {
   static initClass() {
@@ -868,6 +871,34 @@ class __migrate_gdrive_popup extends LetcBox {
       this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId })
         .catch(() => {});
     }
+    // Mark, then tear down on a timer, so the exit gets frames.
+    //
+    // Removing the element on the spot destroys it before a single frame of
+    // the animation is painted — which is why this card had an entrance and
+    // no exit for its whole life. Same idiom, and the same 160ms, as the
+    // folder window's create dialog.
+    //
+    // A TIMER, NOT `animationend`. Reduced motion disables the animation
+    // outright, and that event would then never fire — the popup would simply
+    // refuse to close for anyone who asked for less motion.
+    //
+    // The flag also guards re-entry: a second click on × while the first is
+    // still playing must not schedule a second teardown.
+    const el = this.el;
+    if (el && el.dataset && !el.dataset.closing) {
+      el.dataset.closing = '1';
+      _.delay(() => this._teardown(), CLOSE_MS);
+      return;
+    }
+    return this._teardown();
+  }
+
+  /**
+   * Actually remove the popup. Split out of _close() so the exit animation has
+   * something to run in front of.
+   */
+  _teardown() {
+    if (this.isDestroyed && this.isDestroyed()) return;
     // parent.clear() is only right when the parent is a single-widget modal
     // host (clearing resets its data-state — the stuck-overlay rule). Under
     // Wm.launch the parent is the shared windowsLayer: clear() there wipes

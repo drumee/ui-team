@@ -1,4 +1,7 @@
 const skeleton = require('./skeleton');
+// How long the dialog's exit is given before the next screen replaces it.
+// Matches the 0.16s in ./skin.
+const CLOSE_MS = 160;
 const { isLastScreen, entryScreen } = require('../tours');
 
 /**
@@ -208,7 +211,45 @@ class __tutorial_migrate extends LetcBox {
 
   /** Jump straight to a named screen. */
   _goto(key) {
-    this._screenIndex = this._indexOf(key);
+    return this._transition(this._indexOf(key));
+  }
+
+  /**
+   * Move to a screen, letting the dialog leave before the pane comes back.
+   *
+   * EVERY SCREEN CHANGE REBUILDS THE BODY (`feed` in _showScreen), so a screen
+   * that no longer draws the dialog simply does not emit it and the card is
+   * gone between two frames. Marking it and deferring is what gives the exit
+   * something to play in — the same idiom, and the same 160ms, as the folder
+   * window's create dialog.
+   *
+   * A TIMER, NOT `animationend`: reduced motion disables the animation, and
+   * that event would then never fire — Back would stop working entirely for
+   * anyone who asked for less motion.
+   *
+   * Only dialog → no-dialog defers. Between two dialog screens the card stays
+   * up and must not flicker, and pane → dialog is the entrance, which the
+   * screen's own `enter` flag plays.
+   *
+   * @param {Number} index into SCREENS
+   */
+  _transition(index) {
+    const next = SCREENS[index] || {};
+    if (this._dialogUp && !next.dialog) {
+      const part = this.getPart && this.getPart('mg-dialog');
+      const card = (part && part.el)
+        || (this.el && this.el.querySelector(`.${this.fig.family}__dialog`));
+      if (card && card.dataset && !card.dataset.closing) {
+        card.dataset.closing = '1';
+        _.delay(() => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this._screenIndex = index;
+          this._showScreen();
+        }, CLOSE_MS);
+        return;
+      }
+    }
+    this._screenIndex = index;
     return this._showScreen();
   }
 
@@ -225,7 +266,12 @@ class __tutorial_migrate extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(skeleton(this, s, { menuOpen: !!this._menuOpen }));
+    // The dialog animates in only when it ARRIVES. Every screen change rebuilds
+    // the body, so an entrance that played on render would re-pop the card on
+    // each of the three dialog screens — read as a flicker, not a transition.
+    const enter = !!s.dialog && !this._dialogUp;
+    this._dialogUp = !!s.dialog;
+    this.feed(skeleton(this, s, { menuOpen: !!this._menuOpen, enter }));
     const [target, anchor, anchor_x] = await Promise.all([
       this.ensurePart(s.target),
       this.ensurePart(s.anchor),
@@ -362,8 +408,7 @@ class __tutorial_migrate extends LetcBox {
           this._openTheRealThing();
           return this.triggerHandlers({ service: 'next-step' });
         }
-        this._screenIndex = this._screenIndex + 1;
-        return this._showScreen();
+        return this._transition(this._screenIndex + 1);
       case 'back-step': {
         // A screen may name where Back goes, because this tour BRANCHES at
         // screen 1 and index-1 is then the wrong answer — see `back` on the
@@ -371,8 +416,7 @@ class __tutorial_migrate extends LetcBox {
         const back = (SCREENS[this._screenIndex] || {}).back;
         if (back) return this._goto(back);
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });
-        this._screenIndex = this._screenIndex - 1;
-        return this._showScreen();
+        return this._transition(this._screenIndex - 1);
       }
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);

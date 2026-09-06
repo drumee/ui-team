@@ -43,7 +43,13 @@ module.exports = function (ui, screen = {}, state = {}) {
       screen.dialog
         ? Skeletons.Box.Y({ active: 0,
             className: `${pfx}__overlay`,
-            kids: [dialog(ui, { copied: screen.copied, linked: screen.linked })],
+            kids: [dialog(ui, {
+            copied: screen.copied,
+            linked: screen.linked,
+            // Set only on the screen where the card ARRIVES — see _transition
+            // and the `enter` note in ../index.js.
+            enter: state.enter,
+          })],
           })
         : null,
     ].filter(Boolean),

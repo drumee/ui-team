@@ -79,10 +79,13 @@ function destCard() {
  * @param {Object} [opt]
  * @param {Boolean} [opt.copied] the address has been copied — Copy goes green
  * @param {Boolean} [opt.linked] a link has been pasted — Verify goes solid
+ * @param {Boolean} [opt.enter] this screen is where the card arrives, so play
+ *   the entrance. False between two dialog screens, where the card is already
+ *   up and an animation would read as a flicker.
  */
 module.exports = function (ui, opt = {}) {
   const pfx = ui.fig.family;
-  const { copied = false, linked = false } = opt;
+  const { copied = false, linked = false, enter = false } = opt;
 
   return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__backdrop`,
@@ -91,6 +94,8 @@ module.exports = function (ui, opt = {}) {
         className: `${pfx}__dialog`,
         sys_pn: "mg-dialog",
         partHandler: ui,
+        dataset: { enter: enter ? 1 : 0 },
+        attrOpt: { "data-enter": enter ? 1 : 0 },
         kids: [
           Skeletons.Box.X({ active: 0,
             className: `${pfx}__header`,

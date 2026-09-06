@@ -1,5 +1,19 @@
 @use "mixins/drumee";
 
+// Entrance / exit for the import card, the same pair the real popup plays
+// (builtins/widget/migrate-gdrive-popup/skin) and the same one media/form and
+// the folder window's create dialog use. The tour teaches a card the user then
+// meets for real; the way it arrives and leaves is part of that.
+@keyframes tutorial-migrate-dialog-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes tutorial-migrate-dialog-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.97); }
+}
+
 // "Import a folder or file" — Figma 176:47527. 512px card, 32px insets,
 // 24px radius, over the Files pane the step's backdrop supplies.
 //
@@ -46,6 +60,24 @@
     background: var(--normal-bg-elevated);
     border: 1px solid var(--border-muted);
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  // Only on the screen where the card arrives. Between two dialog screens the
+  // flag is 0 and nothing plays — the body is rebuilt on every screen change,
+  // so an unguarded entrance would re-pop the card three times on the way
+  // through the form.
+  //
+  // `backwards`, never `both`: a filling animation keeps its last keyframe and
+  // outranks inline styles, so anything positioning this card in JS afterwards
+  // would be silently overridden.
+  &__dialog[data-enter="1"] {
+    animation: tutorial-migrate-dialog-in 0.18s ease-out backwards;
+  }
+
+  // Set by _transition, which then defers the next screen so these frames
+  // actually happen.
+  &__dialog[data-closing="1"] {
+    animation: tutorial-migrate-dialog-out 0.16s ease-in forwards;
   }
 
   &__header {
@@ -172,5 +204,24 @@
       color: var(--reverse-fg);
       background: var(--primary-purple-50);
     }
+  }
+}
+
+// ── reduced motion ───────────────────────────────────────────────────────────
+// LAST IN THE FILE, and that is load-bearing. A media query adds no
+// specificity, so this block and the rules it cancels are both (0,2,0) — put it
+// above them and the later rule simply wins, leaving the setting with no
+// effect at all and nothing to show for it.
+//
+// Motion is decoration here. The tour still runs, and Back still returns to
+// the pane, because the transition defers on a timer rather than on
+// `animationend` — see _transition in ../index.js.
+// Motion is decoration here. The tour still runs, and Back still returns to
+// the pane, because the transition defers on a timer rather than on
+// `animationend` — see _transition in ../index.js.
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-migrate__dialog[data-enter="1"],
+  .tutorial-migrate__dialog[data-closing="1"] {
+    animation: none;
   }
 }

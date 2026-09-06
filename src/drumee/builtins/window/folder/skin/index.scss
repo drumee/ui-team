@@ -175,15 +175,6 @@
   to   { opacity: 0; transform: scale(0.96); }
 }
 
-// Motion is decoration here: the card's job is to be answered, and someone who
-// has asked for less of it should still get the dialog instantly.
-@media (prefers-reduced-motion: reduce) {
-  .window-folder__create-folder-dialog,
-  .window-folder__create-folder-dialog[data-closing="1"] {
-    animation: none;
-  }
-}
-
 .window-folder {
   &__ui {
     // Container query anchor. The folder window registers itself as a
@@ -5240,3 +5231,16 @@ html[data-theme="dark"] {
   }
 }
 
+// ── reduced motion ───────────────────────────────────────────────────────────
+// Motion is decoration here: the card's job is to be answered, and someone who
+// has asked for less of it should still get the dialog instantly.
+//
+// LAST IN THE FILE, and that is load-bearing. This block used to sit near the
+// top, a thousand lines above the rules it cancels — and a media query adds no
+// specificity, so the later rule simply won and the setting did nothing at all.
+@media (prefers-reduced-motion: reduce) {
+  .window-folder__create-folder-dialog,
+  .window-folder__create-folder-dialog[data-closing="1"] {
+    animation: none;
+  }
+}
