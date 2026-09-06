@@ -566,10 +566,17 @@ html {
   // Same, for the rail. It is beside the tour rather than under it, so this is
   // belt and braces for the click fix above — but a rail that paints below a
   // tour it is not covered by would be a puzzle to whoever met it next.
-  .desk-module__sidebar {
-    // `position` because the rail carries none of its own, and z-index needs
-    // one. Same value and the same reasoning as the bar above.
-    position: relative;
+  //
+  // `.desk-module-sidebar__main`, with a HYPHEN. This was written as
+  // `.desk-module__sidebar`, a class that appears nowhere else in the codebase
+  // and that nothing has ever worn — the rail is its own widget family, so its
+  // root is `desk-module-sidebar__main`, not a `__sidebar` block of the desk's.
+  // The rule matched nothing and the lift never happened; the rail stayed
+  // clickable only because the overlay above is `pointer-events: none`.
+  .desk-module-sidebar__main {
+    // The rail already carries `position: absolute` inside its __rail wrapper,
+    // so z-index applies; declared for the mobile drawer, which is `fixed` and
+    // already sits at 99999 of its own.
     z-index: 100001;
   }
 }

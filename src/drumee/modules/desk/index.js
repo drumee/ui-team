@@ -4071,7 +4071,45 @@ class desk_module extends LetcBox {
     }
   }
 
+  /**
+   * Take an in-window tour down, if one is up.
+   *
+   * WHY NAVIGATION HAS TO DO THIS. The tour is an OPAQUE overlay covering the
+   * folder window, mounted in the desk's own `overlay` slot at z 50000 — it is
+   * not inside the window and cannot be raised past. So a rail click while it
+   * is up does everything it is supposed to (the tab really does change, the
+   * window really is raised) and none of it can be seen: the tour is still
+   * painted over the pane, showing the mock it was showing before.
+   *
+   * That reads as a dead click, and it is the fault behind "clicking Chat does
+   * not move to chat". The rail itself is fine — the desk stands its overlay
+   * down to `pointer-events: none` for exactly this reason, and the click does
+   * land on the row.
+   *
+   * softDestroy rather than destroy: it fades, which is how every other exit
+   * from this tour leaves, and its destroy is what releases single-flight and
+   * clears `data-window-tour`.
+   *
+   * @returns {Boolean} whether a tour was taken down
+   */
+  _endWindowTour() {
+    const t = this._windowTour;
+    if (!t || (t.isDestroyed && t.isDestroyed())) return false;
+    this._windowTour = null;
+    try {
+      if (_.isFunction(t.softDestroy)) t.softDestroy();
+      else if (_.isFunction(t.destroy)) t.destroy();
+    } catch (e) {
+      this.warn && this.warn("[desk] could not close the in-window tour", e);
+      return false;
+    }
+    return true;
+  }
+
   _railTab(tab) {
+    // Leaving what the tour is about ends it. Files is the exception: that tab
+    // is its subject, and it is where _maybeShowFilesTour raises it.
+    if (tab !== "files") this._endWindowTour();
     // The active tab, stamped for the skin: the phone's Files action row
     // (search + "+ New") shows only while the files view is up — Chat has its
     // composer and Task its own "+ New". No stamp (first paint) reads as
@@ -4826,8 +4864,11 @@ class desk_module extends LetcBox {
       case "window-tutorial": {
         const wtTour = (child && child.mget && child.mget("tour")) || null;
         const wtPreview = child && child.mget && child.mget("preview");
+        // Held so navigation can take the tour down — see _endWindowTour.
+        this._windowTour = child;
         if (child && _.isFunction(child.once)) {
           child.once(_e.destroy, () => {
+            if (this._windowTour === child) this._windowTour = null;
             if (this.el && this.el.dataset) delete this.el.dataset.windowTour;
             if (wtPreview || !wtTour) return;
             try {
@@ -6505,6 +6546,11 @@ class desk_module extends LetcBox {
    *
    */
   togglePanel(kind, pn, openOnly, opt) {
+    // A section screen is navigation away from the workspace, so it ends an
+    // in-window tour for the same reason a rail tab does: the tour is painted
+    // over the pane at desk level and would sit on top of whatever opens. See
+    // _endWindowTour.
+    this._endWindowTour();
     // Release the wm z-30000 lift before any sidebar screen change — see
     // _dismissWmModal. Covers both the first-open (_loadKind) and the
     // keep-alive re-show (_showPanel) paths.
