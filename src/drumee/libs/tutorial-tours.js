@@ -98,6 +98,9 @@ let _reconciled = false;
 // (modules/desk/index.js, onPartReady "desk-tutorial"). See whenDone().
 const _done = new Map();
 
+// Which tour last reached the screen — see armed().
+let _shown = null;
+
 // ── environment ──────────────────────────────────────────────────────────────
 
 /** Kill switch. Absent/0 = off, and off means nothing fires and nothing is written. */
@@ -353,10 +356,29 @@ function fire(tourId, host, opt) {
 /**
  * The tour is on screen. Cancels the fetch guard; from here only destroy
  * releases single-flight.
+ *
+ * ALSO THE ONE HONEST RECORD OF "the user actually saw it". Both hosts call
+ * this from their own onDomRefresh, so it means the tour reached the screen —
+ * unlike a claim, which a tour whose chunk never loaded also satisfies, and
+ * unlike the seen-set, which for an earned tour is only written on completion.
  */
 function armed() {
   clearTimeout(_guardTimer);
   _guardTimer = null;
+  _shown = _inFlight;
+}
+
+/**
+ * Did this tour reach the screen in its most recent run?
+ *
+ * For a caller deciding what to do after `whenDone`: the three outcomes are
+ * COMPLETED (isSeen, for an earned tour), ABANDONED (appeared but not seen) and
+ * NEVER RAN (claimed, released, never appeared). They are not interchangeable —
+ * a user who closed a tour has answered, and a tour that failed to arrive has
+ * not, so a click that waited on it must not be swallowed.
+ */
+function appeared(tourId) {
+  return _shown === tourId;
 }
 
 /**
@@ -472,6 +494,7 @@ function __resetModuleState() {
   _guardTimer = null;
   _seen = null;
   _reconciled = false;
+  _shown = null;
   _done.clear();
 }
 
@@ -487,6 +510,7 @@ module.exports = {
   claim,
   fire,
   armed,
+  appeared,
   release,
   inFlight,
   whenDone,

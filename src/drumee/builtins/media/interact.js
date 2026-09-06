@@ -919,8 +919,27 @@ class __media_interact extends media_core {
         // whenDone runs its callback synchronously when nothing is in flight,
         // so the second case is the same code path it always was.
         if (_raised) {
-          return require("libs/tutorial-tours")
-            .whenDone("share", () => this.onUiEvent(cmd, { ...args, _tourDone: 1 }));
+          const Tours = require("libs/tutorial-tours");
+          return Tours.whenDone("share", () => {
+            if (this.isDestroyed && this.isDestroyed()) return;
+              // THE PANEL IS THE REWARD FOR FINISHING, so a tour the user walked
+            // out of does not get one. Three outcomes, and they are not
+            // interchangeable:
+            //
+            //   completed   isSeen — this tour is `mark_on: "success"`, so its
+            //               flag is written only when the last screen is reached.
+            //               Open the panel.
+            //   abandoned   it appeared and the user closed it. They answered;
+            //               opening the panel anyway is what this rule exists to
+            //               stop.
+            //   never ran   claimed and released without reaching the screen — a
+            //               window it could not be drawn on, a chunk that failed.
+            //               Nothing was taught and nothing was declined, so the
+            //               click must still do what it was for; swallowing it
+            //               would make Share a dead control.
+            if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            this.onUiEvent(cmd, { ...args, _tourDone: 1 });
+          });
         }
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';

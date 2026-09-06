@@ -279,14 +279,47 @@ test("share: a tour that cannot be raised opens the panel at once", () => {
   assert.equal(opened, true);
 });
 
-test("share: a tour claimed but never mounted still releases the panel", () => {
+// THE PANEL IS THE REWARD FOR FINISHING. What the caller does after whenDone
+// depends on WHICH of three things happened, and the two signals that tell them
+// apart are isSeen (completed, for an earned tour) and appeared (reached the
+// screen at all).
+const wouldOpen = () => !(!Tours.isSeen("share", host) && Tours.appeared("share"));
+
+test("share: completed → the panel opens", () => {
   reset();
-  // _mountWindowTourFor releases when no window can be found — which is what
-  // makes the panel open anyway instead of being stranded behind a tour that
-  // never appeared.
-  assert.equal(Tours.claim("share", host), true);
-  let opened = false;
-  Tours.whenDone("share", () => { opened = true; });
+  Tours.claim("share", host);
+  Tours.armed();                 // the host says it is on screen
+  Tours.markSeen("share", host); // the last screen was reached
   Tours.release("share");
-  assert.equal(opened, true);
+  assert.equal(wouldOpen(), true);
+});
+
+test("share: abandoned → the panel does NOT open", () => {
+  reset();
+  Tours.claim("share", host);
+  Tours.armed();                 // it appeared...
+  Tours.release("share");        // ...and was closed without finishing
+  assert.equal(Tours.isSeen("share", host), false, "nothing was recorded");
+  assert.equal(Tours.appeared("share"), true, "but the user did see it");
+  assert.equal(wouldOpen(), false);
+});
+
+test("share: never reached the screen → the panel opens anyway", () => {
+  reset();
+  // Claimed and released without a mount — no window to draw on, or a chunk
+  // that failed. Nothing was taught and nothing was declined, so swallowing
+  // the click would make Share a dead control.
+  Tours.claim("share", host);
+  Tours.release("share");
+  assert.equal(Tours.appeared("share"), false);
+  assert.equal(wouldOpen(), true);
+});
+
+test("appeared: names the tour, not merely 'something ran'", () => {
+  reset();
+  Tours.claim("chat", host);
+  Tours.armed();
+  Tours.release("chat");
+  assert.equal(Tours.appeared("chat"), true);
+  assert.equal(Tours.appeared("share"), false, "a different tour is not this one");
 });
