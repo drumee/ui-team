@@ -58,6 +58,18 @@ const WINDOW_TOUR_TAB = {
   folder_task: "task",
   // _railHighlight maps "meeting" to the rail's "meet" row itself.
   meeting: "meeting",
+  // The share tour is about the secure-share panel, which slides into a folder
+  // window — so it belongs over that window, not over a mock desk.
+  //
+  // It reached the desk host only because it was missing from this table: the
+  // folder window's own trigger calls showTutorial directly and always ran
+  // in-window, while a media context menu's Share goes through fire() and
+  // landed here. Two surfaces, one tour, two different-looking runs.
+  //
+  // The desk host draws a full mock desk WITH a mock share panel in it, which
+  // is the tour's subject — so that run also read as the real panel opening
+  // before the tour was finished.
+  share: "access",
 };
 
 class desk_module extends LetcBox {

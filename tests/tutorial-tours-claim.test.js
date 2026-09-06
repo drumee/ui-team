@@ -250,3 +250,43 @@ test("share: not offered once the last screen has been reached", () => {
   Tours.markSeen("share", host);
   assert.equal(Tours.claim("share", host), false);
 });
+
+// ── the share tour's panel waits for it ──────────────────────────────────────
+//
+// Both surfaces that raise this tour also open the secure-share panel, and the
+// tour is ABOUT that panel — so the panel is deferred until the tour releases.
+// The deferral is `whenDone`, and these pin the three ways it has to behave.
+
+test("share: the panel waits while the tour is in flight", () => {
+  reset();
+  assert.equal(Tours.claim("share", host), true, "the tour goes up");
+  let opened = false;
+  Tours.whenDone("share", () => { opened = true; });
+  assert.equal(opened, false, "the panel has NOT opened yet");
+  Tours.release("share");
+  assert.equal(opened, true, "and opens as the tour comes down");
+});
+
+test("share: a tour that cannot be raised opens the panel at once", () => {
+  reset();
+  // Already completed — claim refuses, so the caller never defers at all.
+  Tours.markSeen("share", host);
+  assert.equal(Tours.claim("share", host), false);
+  let opened = false;
+  // Nothing in flight, so whenDone runs synchronously: the same code path the
+  // panel took before any of this existed.
+  Tours.whenDone("share", () => { opened = true; });
+  assert.equal(opened, true);
+});
+
+test("share: a tour claimed but never mounted still releases the panel", () => {
+  reset();
+  // _mountWindowTourFor releases when no window can be found — which is what
+  // makes the panel open anyway instead of being stranded behind a tour that
+  // never appeared.
+  assert.equal(Tours.claim("share", host), true);
+  let opened = false;
+  Tours.whenDone("share", () => { opened = true; });
+  Tours.release("share");
+  assert.equal(opened, true);
+});
