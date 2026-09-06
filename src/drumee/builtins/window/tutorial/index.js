@@ -73,6 +73,37 @@ class __window_tutorial extends LetcBox {
     return Math.max(0, Math.min(this._widgets.length - 1, ~~raw - 1));
   }
 
+  /**
+   * The confetti, over the migrate tour's first step.
+   *
+   * WHY HERE. This is the arrival at the end of the post-signup walkthrough:
+   * the workspace tour makes a workspace, opens it, comes down, and hands the
+   * migrate tour to that window (desk/tutorial/index.js, _chainMigrateTour).
+   * The burst belongs to that moment, so it is raised by the host that is on
+   * screen when it plays rather than by the tour that ended.
+   *
+   * THE HOST IS THE CONDITION, not a flag. It used to arrive as a `celebrate`
+   * model attribute, threaded from the handing-over tour through the broadcast
+   * and buildStepWidgets down to the step — five places to carry one boolean.
+   * Nothing else mounts `migrate` in a window, so asking which host we are in
+   * answers the same question with none of that.
+   *
+   * NOT IN THE STEP. tutorial_migrate is drawn by both hosts and deliberately
+   * knows about neither; a burst raised there would also fire on the desk-level
+   * run, which no workspace precedes.
+   *
+   * ONLY ON THE FIRST STEP, so `?window_tutorial=migrate&step=2` — a QA link
+   * into the middle of the tour — celebrates nothing. The migrate tour has one
+   * step today, which is exactly why the guard is written down rather than
+   * assumed.
+   *
+   * After the feed, so the pane it plays over is on screen.
+   */
+  _maybeCelebrate() {
+    if (this._tour.id !== 'migrate' || this._stepIndex !== 0) return;
+    require('desk/tutorial/confetti').celebrate(this);
+  }
+
   onDomRefresh() {
     // The tour is on screen.
     //
@@ -99,9 +130,10 @@ class __window_tutorial extends LetcBox {
     this._observeSize();
     this.feed(require('./skeleton')(this));
     const entry = this.mget('enter_at_screen');
-    this.ensurePart(_a.content).then((p) =>
-      p.feed(this._widgetAt(this._stepIndex, entry ? { enter_at_screen: entry } : {})),
-    );
+    this.ensurePart(_a.content).then((p) => {
+      p.feed(this._widgetAt(this._stepIndex, entry ? { enter_at_screen: entry } : {}));
+      this._maybeCelebrate();
+    });
     this._preloadSteps();
   }
 
