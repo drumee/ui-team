@@ -401,7 +401,17 @@ class drumee_router extends LetcBox {
       return true;
     }
     let [hostname] = location.host.split(':'); /** In case specific port */
-    if (Visitor.isOnline() && hostname != Organization.host()) {
+    // THE HOST NAMES THE ORG -- unless this tab has switched in place.
+    //
+    // This re-sync runs on EVERY route, i.e. every hashchange, and exists to
+    // keep the URL on the org's own subdomain. In-place switching abandons
+    // that invariant deliberately (history.replaceState cannot change the host
+    // cross-origin, so a switch is structurally incapable of being reflected
+    // in the URL), and leaving this armed would navigate away on the very next
+    // navigation the user made -- silently undoing the switch and looking like
+    // a random reload. See libs/org-switch.
+    const orgSwitch = require("libs/org-switch");
+    if (Visitor.isOnline() && !orgSwitch.inPlace() && hostname != Organization.host()) {
       if (this.changeHost(Organization.host())) {
         // DROP THIS ORIGIN'S COPY — but only when the URL is carrying the
         // destination onward, AND only for the account the link names.

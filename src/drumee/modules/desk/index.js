@@ -223,6 +223,11 @@ class desk_module extends LetcBox {
     // appeared THERE and made the switcher look selectively broken.
     this._onWorkspaceCreated = this._onWorkspaceCreated.bind(this);
     RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceCreated);
+    // Everything the desk holds that belonged to the PREVIOUS organisation.
+    // libs/org-switch has already re-seeded the globals and cleared the module
+    // caches by the time this fires; this is the desk's own share.
+    this._onOrgSwitched = this._onOrgSwitched.bind(this);
+    RADIO_BROADCAST.on("org:switched", this._onOrgSwitched);
     setTimeout(this.lazyClasses, 5000);
 
     // Chrome-style folder tabs in the desk topbar. One tab per open
@@ -3368,6 +3373,30 @@ class desk_module extends LetcBox {
    * asked for. The tour's own create screen still does not ask, because it
    * opens the workspace itself once the walkthrough ends.
    */
+  /**
+   * The organisation changed under a page that is staying put.
+   *
+   * The workspace list is the important one and the least obvious: it is
+   * fetched with `hub_id: Visitor.id` and no organisation anywhere in the key,
+   * so nothing about it says which org it belongs to and nothing would ever
+   * invalidate it. _curWorkspace matters for a different reason -- loadWorkspace
+   * no-ops when handed a hub_id it thinks is already open, so a stale value
+   * does not merely look wrong, it silently refuses to open the new org's
+   * default workspace.
+   */
+  _onOrgSwitched() {
+    try {
+      this._workspaces = null;
+      this._workspacesAt = 0;
+      if (typeof Wm !== "undefined" && Wm) Wm._curWorkspace = null;
+    } catch (e) { /* nothing here is worth failing a switch over */ }
+    try {
+      // Repaint the chrome that reads Organization.name() but does not listen
+      // for its change: the sidebar rail header and the workspace indicator.
+      RADIO_BROADCAST.trigger("workspace:refresh");
+    } catch (e) { }
+  }
+
   async _onWorkspaceCreated(payload = {}) {
     // Was the desk on the no-workspace screen? Read the stamp BEFORE anything
     // refetches, because that is what decides whether the user needs taking

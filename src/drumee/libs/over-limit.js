@@ -240,9 +240,31 @@ async function refresh(host) {
   return current();
 }
 
+/**
+ * Forget everything learned under the previous organisation.
+ *
+ * current() seeds _current from Organization's boot metadata exactly once and
+ * latches on _initialized, which is right for a page whose org never changes
+ * and wrong the moment one can be switched in place: the latch would keep
+ * serving the PREVIOUS org's lock state, so a switch out of a hard-locked org
+ * would stay read-only and a switch into one would not clamp.
+ *
+ * Clearing the latch rather than re-seeding here, so the next current() reads
+ * whatever Organization now holds. The broadcast lets anything already
+ * rendered re-ask.
+ */
+function reset() {
+  _current = undefined;
+  _initialized = false;
+  try {
+    if (typeof RADIO_BROADCAST !== "undefined") RADIO_BROADCAST.trigger(CHANGED);
+  } catch (e) { }
+}
+
 module.exports = {
   CHANGED,
   enforcementOn,
+  reset,
   current,
   setCurrent,
   isLocked,

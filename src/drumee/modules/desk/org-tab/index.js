@@ -145,6 +145,68 @@ class __desk_org_tab extends LetcBox {
   }
 
   /**
+   * Move to another organisation.
+   *
+   * A HOST CHANGE, because an organisation IS a host: org_provision gives each
+   * one `<ident>.<main_domain>` and yp.vhost routes it. The session survives —
+   * the sid cookie is written with Domain=<main_domain>, so it is sent to every
+   * org subdomain and this is a page load, not a sign-in.
+   *
+   * It is NOT, however, the only way this could work. The server resolves a
+   * tenant from the explicit hub_id every request already carries (Host is only
+   * a fallback in Session._initHub), so switching in place — refetch the
+   * workspace list, the overview and the breadcrumb, touch nothing else — is
+   * reachable without a reload. That is a later step: it needs the ~99 call
+   * sites that read the acting domain classified as "home" or "current" first,
+   * and getting that wrong on the billing ones costs money rather than pixels.
+   * Navigating is the honest thing to do until then, and it is what the current
+   * ui-core Organization model does on its own when `link` changes.
+   *
+   * @param {View} cmd the clicked row
+   */
+  /**
+   * Switch organisation without leaving the page.
+   *
+   * This used to call uiRouter.changeHost(link) -- a full page load which,
+   * despite appearances, never switched anything: the session's organisation
+   * is resolved from drumate.domain_id (home) and the Host header has no say
+   * in it. Changing host changed which vhost bootstrapped, and with one org
+   * per person that was indistinguishable from a real switch.
+   *
+   * libs/org-switch does the real thing: announce the target to the server,
+   * re-seed the boot globals from its answer, and drop everything cached under
+   * the previous org. It returns false when the server declines -- a
+   * membership revoked between this menu rendering and the click -- and the
+   * navigation is kept as the fallback for that, and for the case where the
+   * feature cannot run at all.
+   */
+  async _switchOrganization(cmd) {
+    const domainId = ~~cmd.mget("orgDomainId");
+    const link = cmd.mget("orgLink");
+
+    if (domainId > 1) {
+      let ok = false;
+      try {
+        ok = await require("libs/org-switch").switchTo(domainId);
+      } catch (e) {
+        ok = false;
+      }
+      if (ok) return;
+    }
+
+    // Fallback: the old behaviour. Still leaves the user signed in -- the
+    // session cookie is written on main_domain and spans every org subdomain.
+    if (!link) return;
+    if (typeof uiRouter === "undefined" || !_.isFunction(uiRouter.changeHost)) return;
+    // changeHost refuses on a loose host and inside the DMZ, answering false
+    // rather than throwing. Nothing to fall back to, so say so instead of
+    // leaving the click looking dead.
+    if (uiRouter.changeHost(link) === false && Wm && Wm.alert) {
+      Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+    }
+  }
+
+  /**
    * @param {View} cmd
    * @param {Object} args
    */
@@ -157,12 +219,14 @@ class __desk_org_tab extends LetcBox {
       case "commit-organization-name":
         return this._commitOrganizationName(cmd);
 
-      // Both are the DESK's screens, not this widget's — it owns the panel,
-      // not what opening one does. triggerHandlers walks up to the desk, which
-      // is where every other section screen is opened from.
+      // The DESK's screen, not this widget's — it owns the panel, not what
+      // opening one does. triggerHandlers walks up to the desk, which is where
+      // every other section screen is opened from.
       case "open-org-view":
-      case "manage-organization":
         return this.triggerHandlers({ service });
+
+      case "switch-organization":
+        return this._switchOrganization(cmd);
 
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);

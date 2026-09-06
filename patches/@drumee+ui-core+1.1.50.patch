@@ -138,6 +138,32 @@ index be31634..e3f94f4 100644
    })
  }
  
+diff --git a/node_modules/@drumee/ui-core/letc/organization.js b/node_modules/@drumee/ui-core/letc/organization.js
+index c31b606..15257fc 100644
+--- a/node_modules/@drumee/ui-core/letc/organization.js
++++ b/node_modules/@drumee/ui-core/letc/organization.js
+@@ -40,7 +40,20 @@ class __core_organization extends Backbone.Model {
+   listenChanges() {
+     this.on(_e.change, (m) => {
+       if (m.changed) {
+-        if (m.changed.link && Visitor.isOnline()) {
++        // A `link` change means the organisation moved, and historically the
++        // only way that happened was provisioning -- so following it to the
++        // new host was right.
++        //
++        // Switching organisation in place changes `link` too, and must NOT
++        // navigate: that is the entire point of the switch. The flag is read
++        // off Visitor rather than imported so this file keeps no dependency on
++        // the host app (see ui-team src/drumee/libs/org-switch.js, which owns
++        // it). {silent:true} at the call site is not an alternative -- the org
++        // chip listens on this same event to repaint itself, and silencing it
++        // would leave the old organisation's name on screen.
++        let inPlace = 0;
++        try { inPlace = ~~Visitor.get('org_in_place'); } catch (e) { inPlace = 0; }
++        if (m.changed.link && Visitor.isOnline() && !inPlace) {
+           uiRouter.changeHost(m.changed.link);
+         }
+       }
 diff --git a/node_modules/@drumee/ui-core/letc/user.js b/node_modules/@drumee/ui-core/letc/user.js
 index a288e64..4b85937 100644
 --- a/node_modules/@drumee/ui-core/letc/user.js

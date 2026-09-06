@@ -63,6 +63,7 @@ class Drumee extends Marionette.Application {
     switch (r.__status) {
       case 200:
         this.init_globals(r.data);
+        this.restore_acting_org(r.data);
         this.load_router(r.data);
         return;
       default:
@@ -138,6 +139,38 @@ class Drumee extends Marionette.Application {
         return a.innerHTML = require("./template/page/500")(b, data, style);
       default:
         return a.innerHTML = require("./template/page/failover")(b, data, style);
+    }
+  }
+
+  /**
+   * Put this TAB back in the organisation it was switched to.
+   *
+   * The boot get_env cannot carry the answer itself: the remembered org is
+   * stored under a per-user key (so signing in as somebody else in the same
+   * tab cannot inherit it), and the user is not known until that very request
+   * comes back. So the flag is restored here, once Visitor exists, and only
+   * when the org it names differs from the one we actually booted into does a
+   * second round trip happen -- which is to say, only when a switch is
+   * outstanding.
+   *
+   * Deliberately not awaited: load_router must not wait on it. The switch
+   * re-seeds the globals and broadcasts, and every org-scoped surface already
+   * repaints on that.
+   */
+  restore_acting_org(data) {
+    try {
+      const orgSwitch = require("libs/org-switch");
+      const wanted = orgSwitch.restore();
+      if (wanted <= 1) return;
+      const booted = ~~(data && data.organization && data.organization.domain_id);
+      if (wanted === booted) return;
+      // Not a member any more, or the org is gone: forget it rather than
+      // retrying this on every reload.
+      orgSwitch.switchTo(wanted).then((ok) => {
+        if (!ok) orgSwitch.remember(0);
+      }).catch(() => orgSwitch.remember(0));
+    } catch (e) {
+      console.warn("Failed to restore acting organisation", e);
     }
   }
 

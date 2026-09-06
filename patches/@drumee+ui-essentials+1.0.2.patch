@@ -1,8 +1,40 @@
 diff --git a/node_modules/@drumee/ui-essentials/socket/utils.js b/node_modules/@drumee/ui-essentials/socket/utils.js
-index d64d394..9769f5c 100644
+index d64d394..5365108 100644
 --- a/node_modules/@drumee/ui-essentials/socket/utils.js
 +++ b/node_modules/@drumee/ui-essentials/socket/utils.js
-@@ -22,10 +22,20 @@ function defultHeaders() {
+@@ -6,12 +6,30 @@ const Sessions = new Map();
+  */
+ function defultHeaders() {
+   if (typeof (Visitor) == 'object') {
+-    return {
++    const headers = {
+       'x-param-lang': Visitor.language(),
+       'x-param-page-language': Visitor.pagelang(),
+       'x-param-device': Visitor.device(),
+       'x-param-device-id': Visitor.deviceId(),
+     };
++    // WHICH ORGANISATION IS THIS REQUEST ACTING IN?
++    //
++    // A header rather than a payload field, because defaultPayload() below is
++    // reached only from fetchService/postService. This function is reached
++    // from makeHeaders, which also covers uploadFile (which bypasses the
++    // payload entirely and encodes its params in x-param-xia-data), xhRequest,
++    // the MFS fetch path -- and the boot yp.get_env, which sends headers and
++    // no body at all and is precisely the call that must carry a remembered
++    // org across a reload.
++    //
++    // NOT named domain_id: caller arguments spread over defaultPayload, so a
++    // parameter by that name would begin appearing on the 667 hub-scoped
++    // services that never asked for one, where absence currently means
++    // absence. The server reads this as input.get('acting-domain') and honours
++    // it only after confirming a membership.
++    const actingDomain = Visitor.get('acting_domain_id');
++    if (actingDomain) headers['x-param-acting-domain'] = String(actingDomain);
++    return headers;
+   }
+   return {}
+ }
+@@ -22,10 +40,20 @@ function defultHeaders() {
   */
  function defaultPayload() {
    if (typeof (Visitor) == 'object') {

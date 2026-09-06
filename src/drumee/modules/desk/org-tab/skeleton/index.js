@@ -116,6 +116,45 @@ function stat(pfx, value, ico, tip) {
 }
 
 /**
+ * One organisation in the switch list.
+ *
+ * The CURRENT one is marked and inert — it is where you already are, and a
+ * click that reloads you into the page you are on is a click that looks broken.
+ * Every other row carries the switch service.
+ *
+ * @param {String} pfx
+ * @param {Object} ui
+ * @param {Object} o  a my_organisations row
+ */
+function orgRow(pfx, ui, o) {
+  const current = !!~~o.is_current;
+  return Skeletons.Box.X({
+    className: `${pfx}__switch-row`,
+    attrOpt: { "data-current": current ? "1" : "0" },
+    // No service on the current row: see above.
+    ...(current
+      ? {}
+      : {
+          service: "switch-organization",
+          // orgDomainId is what actually performs the switch now -- the server
+          // resolves an acting organisation by domain_id. orgLink is kept for
+          // the fallback path, which navigates when an in-place switch cannot
+          // be completed.
+          orgDomainId: o.domain_id,
+          orgLink: o.link,
+          orgId: o.id,
+          uiHandler: [ui],
+        }),
+    kids: [
+      Skeletons.Note({ active: 0, className: `${pfx}__switch-name`, content: o.name || o.ident || "" }),
+      current
+        ? Skeletons.Image.Svg({ active: 0, ico: "ph-check", className: `${pfx}__switch-tick` })
+        : null,
+    ],
+  });
+}
+
+/**
  * The dropdown's header block: identity, counts, and the way in.
  *
  * The rename pencil and every other affordance is gated on `can_manage`, which
@@ -209,44 +248,49 @@ function header(pfx, ui, data) {
  * @param {Object} data
  */
 function panel(pfx, ui, data) {
+  const orgList = data.organisations || [];
   return Skeletons.Box.Y({
     className: `${pfx}__panel`,
     kids: [
       header(pfx, ui, data),
-      Skeletons.Button.Label({
-        ico: "apps-gear",
-        className: `${pfx}__manage`,
-        label: LOCALE.MANAGE_ORGANIZATION,
-        service: "manage-organization",
-        uiHandler: [ui],
-      }),
-      // Deferred — see ../multi-org.js. The divider belongs to the gated block,
-      // so with the flag off the panel ends cleanly after "Manage organization"
-      // rather than on a rule with nothing under it.
-      multiOrgOnly(() =>
-        Skeletons.Box.Y({
-          className: `${pfx}__switch`,
-          kids: [
-            Skeletons.Box.X({ className: `${pfx}__divider` }),
-            Skeletons.Note({
-              className: `${pfx}__switch-label`,
-              content: LOCALE.SWITCH_ORGANIZATIONS,
-            }),
-            Skeletons.Box.Y({
-              className: `${pfx}__switch-list`,
-              sys_pn: "switch-list",
-              partHandler: ui,
-            }),
-            Skeletons.Button.Label({
-              ico: "ph-plus",
-              className: `${pfx}__new-org`,
-              label: LOCALE.NEW_ORGANIZATION,
-              service: "new-organization",
-              uiHandler: [ui],
-            }),
-          ],
-        }),
-      ),
+      // The organisations this person belongs to, one row each.
+      //
+      // Rendered from the DATA, not from a feature flag: the server answers a
+      // list, and a list of one is a legitimate answer that renders correctly.
+      // The day yp.privilege stops keying on uid alone, this section starts
+      // showing more rows and nothing here changes.
+      //
+      // The divider lives inside the block so an account with nothing to list
+      // (no organisation at all) ends the panel cleanly rather than on a rule
+      // with nothing under it.
+      orgList.length
+        ? Skeletons.Box.Y({
+            className: `${pfx}__switch`,
+            kids: [
+              Skeletons.Box.X({ className: `${pfx}__divider` }),
+              Skeletons.Note({
+                className: `${pfx}__switch-label`,
+                content: LOCALE.SWITCH_ORGANIZATIONS,
+              }),
+              Skeletons.Box.Y({
+                className: `${pfx}__switch-list`,
+                kids: orgList.map((o) => orgRow(pfx, ui, o)),
+              }),
+              // Creating one is still gated: an organisation is a domain, a
+              // vhost and a pool entity, and the only path that provisions one
+              // is the billing checkout. See ../multi-org.js.
+              multiOrgOnly(() =>
+                Skeletons.Button.Label({
+                  ico: "ph-plus",
+                  className: `${pfx}__new-org`,
+                  label: LOCALE.NEW_ORGANIZATION,
+                  service: "new-organization",
+                  uiHandler: [ui],
+                }),
+              ),
+            ],
+          })
+        : null,
     ],
   });
 }
