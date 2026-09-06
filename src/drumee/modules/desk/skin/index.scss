@@ -552,15 +552,25 @@ html {
   // into the window the tour is drawn on, which is the only place they overlap
   // it.
   .desk-module__topbar {
-    z-index: 10011;
+    // 100001, not "one above the overlay's 10010" — the overlay is not at
+    // 10010 while it holds anything. It is a Wrapper, so receiving the tour
+    // stamps `data-state="open"`, and skin/lib/utils.scss declares
+    // `[data-state="open"] { z-index: var(--z-index-context) !important }`,
+    // which is 50000. A lift to 10011 lost to that silently.
+    //
+    // This is the number the switcher lift below already uses, for exactly the
+    // same reason: it has to clear a 50000 context.
+    z-index: 100001;
   }
 
   // Same, for the rail. It is beside the tour rather than under it, so this is
   // belt and braces for the click fix above — but a rail that paints below a
   // tour it is not covered by would be a puzzle to whoever met it next.
   .desk-module__sidebar {
+    // `position` because the rail carries none of its own, and z-index needs
+    // one. Same value and the same reasoning as the bar above.
     position: relative;
-    z-index: 10011;
+    z-index: 100001;
   }
 }
 

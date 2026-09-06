@@ -364,8 +364,14 @@ test("an in-window tour stands the desk's overlay down instead of taking the des
   const block = deskSkin.slice(i, i + 2200);
   assert.match(block, /background-color: transparent/);
   assert.match(block, /pointer-events: none/);
-  // Above the overlay's 10010, so the topbar's menus open OVER the tour.
-  assert.match(block, /\.desk-module__topbar \{\s*z-index: 10011/);
+  // 100001, and the number matters. The overlay is NOT at its declared 10010
+  // while it holds the tour: it is a Wrapper, so receiving one stamps
+  // `data-state="open"`, and skin/lib/utils.scss lifts anything carrying that to
+  // `--z-index-context` (50000) with !important. A lift to 10011 lost to it in
+  // silence. This is the same value the workspace-switcher lift in that file
+  // already uses, for the same reason.
+  assert.match(block, /z-index: 100001/);
+  assert.ok(!/z-index: 10011/.test(block), "10011 loses to the 50000 data-state lift");
   assert.match(block, /\.desk-module__sidebar \{/);
 
   // The desk raises and clears the flag itself.
