@@ -4827,7 +4827,7 @@ class desk_module extends LetcBox {
         // needs the answer does not run until the tour is destroyed. See
         // _maybeStartActivateWorkspace.
         this._tutorialWasAutomatic = !this._tourReturnsToHelp;
-        this._chainRewardFlowAfterTutorial(child);
+        this._chainRewardFlowAfterTutorial(child, tour);
         // Only fires for a tour launched from Get help; the automatic
         // post-signup run leaves the user on the desk as before.
         this._chainHelpReturnAfterTutorial(child);
@@ -6027,14 +6027,90 @@ class desk_module extends LetcBox {
    *                  tester reported as Modal A stacked over step 1/5; it stays
    *                  on the hold, which is what makes that harmless.
    */
-  _chainRewardFlowAfterTutorial(tutorial) {
+  _chainRewardFlowAfterTutorial(tutorial, tour) {
     if (tutorial && _.isFunction(tutorial.once)) {
       tutorial.once(_e.destroy, () => {
-        this._afterHomeSettled({ immediate: 1 });
+        // THE WALKTHROUGH HAS A SECOND HALF. The migrate tour follows this one
+        // out of onboarding, and the post-home chain waits for IT — see the
+        // method below, which settles the chain itself when it takes over.
+        //
+        // Guarded rather than chained blindly: it declines for most sessions,
+        // and a decline has to land on the same immediate settle this branch
+        // has always done, not on a delayed one.
+        this._runMigrateTourAfterOnboarding(tour)
+          .catch((e) => {
+            this.warn && this.warn("[home] migrate tour handoff failed", e);
+            return false;
+          })
+          .then((took) => {
+            if (!took) this._afterHomeSettled({ immediate: 1 });
+          });
       });
       return;
     }
     this._afterHomeSettled();
+  }
+
+  /**
+   * The second half of the post-onboarding walkthrough.
+   *
+   * THE FLOW: the wizard ends, the `workspace` tour teaches the desk, and then
+   * the `migrate` tour teaches getting existing files in — ending on a Done
+   * that opens the real import dialog (desk/tutorial/migrate,
+   * _openTheRealThing). Two tours back to back, which is why the second is
+   * chained off the first's destroy rather than triggered by anything the user
+   * does.
+   *
+   * NO CONTENT GATE OF ITS OWN. Whether this tour is right for this user is a
+   * question the tour system already answers — the kill switch, the mobile
+   * gate, the seen-set and single-flight all live in `claim`, and every other
+   * trigger site in the app defers to exactly that. Adding a second opinion
+   * here is how one tour ends up with rules none of the others have.
+   *
+   * ONLY AFTER THE AUTOMATIC RUN. `workspace` is also what "Product tour"
+   * replays from Get help, and someone rewatching it a month later must not be
+   * handed a second walkthrough they never asked for. `_tutorialWasAutomatic`
+   * is set immediately before this chain is armed and is exactly that
+   * distinction.
+   *
+   * WHO SETTLES THE POST-HOME CHAIN. This one, whenever it takes over: the
+   * reward flow, the LAUNCH30 offer and the invited-workspace prompt are all
+   * full-screen or modal and must not land on a tour. `Tours.whenDone` fires on
+   * the tour's release, which the `window-tutorial` destroy handler raises.
+   *
+   * @param {String} tour the tour that just ended
+   * @returns {Promise<Boolean>} whether this took over the chain
+   */
+  async _runMigrateTourAfterOnboarding(tour) {
+    if (tour !== "workspace" || !this._tutorialWasAutomatic) return false;
+
+    // Claimed HERE, not by the window: the folder window's showTutorial takes
+    // its own claim, and this mounts through mountWindowTutorial, which
+    // deliberately does not. A refusal — seen, mobile, switch off, something
+    // else already in flight — hands the chain straight back.
+    const Tours = require("libs/tutorial-tours");
+    if (!Tours.claim("migrate", this)) return false;
+
+    // A tour is drawn ON a folder window, so there has to be one. The restore
+    // is long finished by now — the workspace tour ran to completion in front
+    // of it — so this is a short wait in practice, and a workspace that never
+    // arrives simply declines rather than opening one: unlike the URL hook,
+    // nobody asked for this tour by name, and it is not worth changing what is
+    // on screen to deliver.
+    const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 5000);
+    if (!ws || !this.mountWindowTutorial(ws, "migrate", { post_onboarding: 1 })) {
+      Tours.release("migrate");
+      return false;
+    }
+    Tours.whenDone("migrate", () => this._afterHomeSettled({ immediate: 1 }));
+    // Safety net, the same one the desk-tutorial branch keeps and for the same
+    // reason: this tour is now the only route to the post-home chain, so a
+    // mount that claims and then never reports in would cost the session its
+    // reward flow, its LAUNCH30 offer and its invited-workspace prompt.
+    // Harmless if the tour does end first — _afterHomeSettled runs once per
+    // session.
+    setTimeout(() => this._afterHomeSettled({ immediate: 1 }), 20000);
+    return true;
   }
 
   /**
