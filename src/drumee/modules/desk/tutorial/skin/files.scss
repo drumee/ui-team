@@ -549,9 +549,14 @@ $fp-air: min(120px, 11.2vh);
     border-radius: 4px;
   }
 
+  // 16 in a 25px button, not 21. At 21 the glyph all but filled its own
+  // button — the row read as three solid marks rather than three controls, and
+  // the two that gained real app symbols (app-search, app-circle-arrow-right)
+  // carry more internal detail than the bare caret they replaced, so they
+  // needed the room more, not less.
   &__fp-chat-head-ico {
-    width: 21px;
-    height: 21px;
+    width: 16px;
+    height: 16px;
     flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
