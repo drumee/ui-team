@@ -223,6 +223,27 @@ module.exports = function (ui) {
                 uiHandler: [ui],
               },
               workspaceSwitcher(pfx, ui),
+              // Inline workspace rename (the ⋯ menu's Rename row). Empty until
+              // desk._renameWorkspaceInline feeds an editor into it, and
+              // `&:empty { display: none }` in the skin keeps an empty one out
+              // of the chip entirely.
+              //
+              // AFTER the switcher, never between it and the breadcrumb: the
+              // section-screen caret rule noted above depends on those two
+              // staying adjacent siblings.
+              //
+              // Here rather than on the switcher card's own header, where the
+              // name is also drawn: picking Rename in the ⋯ flyout is a click
+              // OUTSIDE the card, so ui-core's menu closes the card on it
+              // (RADIO_CLICK -> _onOutsideClick -> _closeItems). An editor in
+              // the header is therefore hidden the instant it is created —
+              // measured on the endpoint, which is why it lives out here in the
+              // part of the chip that is always on screen.
+              Skeletons.Box.X({
+                className: `${pfx}__ws-rename`,
+                sys_pn: "ws-rename",
+                partHandler: ui,
+              }),
             ],
           }),
           Skeletons.Box.X({

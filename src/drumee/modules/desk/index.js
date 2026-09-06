@@ -2505,6 +2505,208 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Rename the open workspace by editing its NAME IN THE ADDRESS CHIP.
+   *
+   * Lexis, 2026-09-05: no dialog — edit the name in place, the way the old
+   * desk edited a tile's label.
+   *
+   * 🚨 NOT on the switcher card's header, where the name is also drawn.
+   * Choosing Rename in the ⋯ flyout is a click OUTSIDE the card, and ui-core's
+   * menu closes on exactly that (RADIO_CLICK -> _onOutsideClick ->
+   * _closeItems), so an editor fed into the header is created and then hidden
+   * with the card a beat later. Measured on the endpoint: editor present, right
+   * value, right font, and `menu-topic-items__wrapper` already `display: none`.
+   * It draws in __ws-rename instead — desk's own slot in the chip, beside the
+   * breadcrumb, which is on screen whether the card is open or not.
+   *
+   * The tile still owns the WRITE. media/core _commitRename builds the
+   * holder-scoped payload a hub node needs (hub_id = Visitor.id, because the
+   * node sits on the caller's desk, not inside the workspace it names) and runs
+   * afterRename. Re-deriving that here would be a second copy of the one thing
+   * that must not drift.
+   *
+   * Returns false when it cannot start, so the caller can fall back rather than
+   * leave the row doing nothing — the failure this menu already had once.
+   */
+  _renameWorkspaceInline() {
+    const w = this._activeWorkspace();
+    if (!w) return false;
+
+    // Resolved exactly as _toggleWorkspaceMenu resolves it, so the row and the
+    // editor always act on the same workspace.
+    const _cur = (window.Wm && window.Wm._curWorkspace) || null;
+    const wsHub = w.mget && w.mget(_a.hub_id);
+    const tile = this._workspaceMediaItem(
+      wsHub,
+      _cur && `${_cur.hub_id}` === `${wsHub}` ? _cur.nid : w.mget && w.mget(_a.nid),
+    );
+    if (!tile || !_.isFunction(tile._commitRename)) return false;
+
+    const box = this._wsRenamePart;
+    if (!box || !box.el || (box.isDestroyed && box.isDestroyed())) return false;
+    const chip = this._crumbGroupPart;
+    if (!chip || !chip.el) return false;
+
+    // The TILE's filename, because that is the value _commitRename compares
+    // against and writes — the label in the chip is the breadcrumb's rendering
+    // of it. The crumb is the fallback for a tile that somehow carries none.
+    const crumbEl = chip.el.querySelector(".breadcrumb-item__filename");
+    const current = String(
+      (tile.mget && tile.mget(_a.filename))
+      || (crumbEl && crumbEl.textContent)
+      || "",
+    ).trim();
+    if (!current) return false;
+
+    const st = { tile, current, hubId: wsHub, box, chip };
+    this.__wsRename = st;
+    const cn = `${this.fig.family}-topbar`;
+    // Hides the crumb and the caret for as long as the editor is up, so the
+    // field takes the name's place instead of appearing beside it.
+    chip.el.dataset.renaming = "1";
+    // `entry` is registered lazily, and _createInput waits on it for exactly
+    // this reason: feeding a Textarea before its kind exists renders nothing.
+    // Everything that can FAIL was checked above, so the caller's fallback
+    // decision stays synchronous even though the editor arrives a tick later.
+    Kind.waitFor("entry").then(() => {
+      // A second Rename, or a workspace switch, may have superseded this edit
+      // while the kind loaded.
+      if (this.__wsRename !== st) return;
+      if (!box.el || (box.isDestroyed && box.isDestroyed())) {
+        this.__wsRename = null;
+        delete chip.el.dataset.renaming;
+        return;
+      }
+      box.feed(
+        Skeletons.Textarea({
+          className: `${cn}__ws-rename-input`,
+          sys_pn: "ws-rename-input",
+          value: current,
+          rows: 1,
+          require: _a.any,
+          bubble: 0,
+          mode: _a.commit,
+          preselect: 1,
+          removeOnEscape: 1,
+          // WITHOUT THIS, ENTER TYPES A NEWLINE INSTEAD OF SAVING. The widget
+          // only preventDefaults Enter when `ignoreEnter` is set (ui-core
+          // entry/input _onKeydown), so the keypress fell through into the
+          // textarea: measured "ZZ Probe Inline\n", the second line pushed out
+          // of the 22px box, and the field looked as if it had been wiped.
+          // media/interact _createInput passes it for the same reason.
+          ignoreEnter: true,
+          service: "workspace-rename-input",
+          uiHandler: [this],
+        }),
+      );
+      // Focus once the widget has mounted; the editor is the point of the row.
+      //
+      // Deliberately NOT hung off `box.children.last()`: for a NESTED part that
+      // read races the render and hands back a stale child — written up above
+      // _forcedTourId (2026-07-31), where it silently broke the tutorial chain.
+      // Every way this edit can end is handled in _onWorkspaceRenameInput.
+      _.defer(() => {
+        const field = box.el && box.el.querySelector("textarea, input");
+        if (!field) return;
+        try {
+          field.focus();
+          if (_.isFunction(field.select)) field.select();
+        } catch (e) { }
+      });
+    });
+    return true;
+  }
+
+  /**
+   * Take the editor down and give the chip its name back.
+   *
+   * The breadcrumb owns that label, so nothing is written into it here: the
+   * commit path re-resolves the crumb from the server, and a cancel never
+   * changed it in the first place.
+   */
+  _endWorkspaceRename() {
+    const st = this.__wsRename;
+    const chip = (st && st.chip) || this._crumbGroupPart;
+    const box = (st && st.box) || this._wsRenamePart;
+    if (box && box.el && !(box.isDestroyed && box.isDestroyed())) box.feed([]);
+    if (chip && chip.el) delete chip.el.dataset.renaming;
+  }
+
+  /**
+   * The inline editor's own events.
+   *
+   * Mirrors media/interact's `case _e.rename`: Escape is a cancel, commit and
+   * Enter are the write, anything else is a keystroke and is ignored.
+   */
+  _onWorkspaceRenameInput(cmd) {
+    const st = this.__wsRename;
+    if (!st || !cmd) return;
+
+    // Escape. removeOnEscape tears the editor down itself, but the slot still
+    // has to be emptied and the crumb un-hidden. Deferred so the widget
+    // finishes destroying before the box is re-fed.
+    if (cmd.status === _e.Escape) {
+      return _.defer(() => {
+        this._endWorkspaceRename();
+        this.__wsRename = null;
+      });
+    }
+    // Anything else is a keystroke, not an end to the edit.
+    if (![_a.commit, _e.Enter].includes(cmd.status)) return;
+
+    // Close the editor and give the chip its name back, whichever way this
+    // ended. Read the state OUT before clearing it: _endWorkspaceRename needs
+    // the same chip and slot this edit was started on.
+    const done = () => {
+      try {
+        if (_.isFunction(cmd.goodbye)) cmd.goodbye();
+        else if (_.isFunction(cmd.softDestroy)) cmd.softDestroy();
+      } catch (e) { }
+      this._endWorkspaceRename();
+      this.__wsRename = null;
+    };
+
+    const value = String(cmd.mget(_a.value) || "").trim();
+    // Nothing typed, or nothing changed: close without a request. An empty
+    // name would rename the workspace to nothing.
+    if (!value || value === st.current) return done();
+
+    const posted = st.tile._commitRename(value);
+    // _commitRename answers nothing when it decides there is no write to make
+    // — empty, or already the TILE's filename, which can differ from the label
+    // this editor captured. Nothing to await, and nothing failed.
+    if (!posted || !_.isFunction(posted.then)) return done();
+
+    return posted
+      .then(() => {
+        done();
+        // The desk BREADCRUMB is fed by neither the rename nor the topbar. It
+        // follows RADIO_BROADCAST "breadcrumb:content" and only from source Wm,
+        // then re-resolves the path from the server — libs/path-request
+        // de-duplicates in flight only and never caches, so a fresh call
+        // answers the new name. The PANE's nid, not the workspace root: the
+        // user may be inside a subfolder and the crumb has to keep that trail.
+        try {
+          const pane = _.isFunction(Wm._findWorkspaceWindow)
+            && Wm._findWorkspaceWindow(st.hubId);
+          const nid = pane && pane.mget(_a.nid);
+          if (nid && st.hubId && _.isFunction(Wm.updateBreadcrumb)) {
+            Wm.updateBreadcrumb({ nid, hub_id: st.hubId }, Wm);
+          }
+        } catch (e) {
+          this.warn("Workspace renamed, but the breadcrumb kept the old name", e);
+        }
+      })
+      .catch((e) => {
+        // The write did not land. The chip still shows the OLD name — nothing
+        // in this path ever wrote it — so closing the editor is all that is
+        // needed to stop claiming a rename that never happened.
+        this.warn("Workspace rename failed", e);
+        done();
+      });
+  }
+
+  /**
    * The switcher header's ⋯ — toggles the open workspace's own menu.
    *
    * Built the way a right-click builds one (ui-core letc.js buildContextmenu):
@@ -2676,7 +2878,14 @@ class desk_module extends LetcBox {
         // menu: the grid's own folder and file menus still carry
         // `direct-rename` and still rename inline. The key stays `rename` so
         // the row keeps its icon, label and classes from the shared builder.
-        if (row && k === _a.rename) row.service = "workspace-rename";
+        if (row && k === _a.rename) {
+          row.service = "workspace-rename";
+          // ...and to THIS, not to the tile. Renaming now edits the name in
+          // the topbar, which is the desk's own chrome; the tile still owns
+          // the commit (its _commitRename carries the holder-scoped payload),
+          // but it does not own the label being edited.
+          row.uiHandler = [this];
+        }
         return row;
       })
       .filter(Boolean);
@@ -3095,6 +3304,13 @@ class desk_module extends LetcBox {
       target.closest(".menu-topic-items__wrapper") ||
       target.closest(".desk-module-topbar__ws-menu")
     ) {
+      return false;
+    }
+    // THE INLINE RENAME FIELD IS NOT THE CHIP EITHER. It is fed into the chip
+    // (desk/skeleton/topbar __ws-rename), so a click meant to put the caret in
+    // the name would otherwise reach this listener and open the switcher over
+    // the field the user is typing in.
+    if (target.closest(".desk-module-topbar__ws-rename")) {
       return false;
     }
     const crumb = target.closest(".breadcrumb-item__main");
@@ -4054,7 +4270,13 @@ class desk_module extends LetcBox {
       // The address chip. It is the switcher's button now, and it cannot be
       // one through a `service` — see _bindCrumbGroupTrigger.
       case "crumb-group":
+        this._crumbGroupPart = child;
         this._bindCrumbGroupTrigger(child);
+        break;
+
+      // Where the ⋯ menu's Rename draws its editor. Empty the rest of the time.
+      case "ws-rename":
+        this._wsRenamePart = child;
         break;
 
       case "ref-avatar":
@@ -6710,6 +6932,32 @@ class desk_module extends LetcBox {
       // which is not a lazy kind and has nothing to wait for.
       case "workspace-access":
         return this._workspaceAccessFromHeader(cmd);
+
+      // Switcher header ⋯ → Rename. Lexis, 2026-09-05: edit the NAME in place,
+      // the way the old desk edited a tile's label — no dialog.
+      case "workspace-rename": {
+        if (this._renameWorkspaceInline()) return;
+        // The inline editor could not start (no chip, no slot, no tile).
+        // Rather than leave the row doing nothing — the exact failure this
+        // menu had before — fall back to the tile's dialog, which needs no
+        // desk chrome of its own.
+        const w = this._activeWorkspace();
+        const _cur = (window.Wm && window.Wm._curWorkspace) || null;
+        const wsHub = w && w.mget && w.mget(_a.hub_id);
+        const tile = wsHub && this._workspaceMediaItem(
+          wsHub,
+          _cur && `${_cur.hub_id}` === `${wsHub}` ? _cur.nid : w.mget(_a.nid),
+        );
+        if (tile && _.isFunction(tile._renameWorkspacePrompt)) {
+          this.warn("Workspace rename: inline editor unavailable, using the dialog");
+          return tile._renameWorkspacePrompt();
+        }
+        return this.warn("Workspace rename: no way to collect a name");
+      }
+
+      // Value/commit events from that inline editor.
+      case "workspace-rename-input":
+        return this._onWorkspaceRenameInput(cmd);
 
       // Mute popup CARDS for every workspace — an empty hub_id is the global
       // scope in activity/mute.js. It suppresses the interrupting card only:

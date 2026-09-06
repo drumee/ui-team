@@ -204,6 +204,84 @@
     }
   }
 
+  // INLINE WORKSPACE RENAME — the ⋯ menu's Rename row (Lexis, 2026-09-05: no
+  // dialog). desk._renameWorkspaceInline feeds an editor in here and stamps
+  // `data-renaming` on the chip; the crumb and the caret step aside for it, so
+  // the field takes the NAME'S place rather than appearing beside it.
+  //
+  // Empty the rest of the time, and an empty flex item would still eat the
+  // chip's padding — hence `:empty`.
+  &__ws-rename {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    // The global `textarea { min-height: 100px }` in the reset beats a plain
+    // height on the control (a min- always does), so the box has to be
+    // released here as well as sized below.
+    min-height: 0;
+
+    &:empty {
+      display: none;
+    }
+
+    textarea,
+    input {
+      display: block;
+      box-sizing: border-box;
+      // Wide enough to type a real name into, and capped so a rename cannot
+      // push the utility icons off the right of the bar.
+      width: 220px;
+      max-width: 100%;
+      // Must come with the height: the global `textarea` rule sets
+      // min-width: 90px and min-height: 100px, which would otherwise win and
+      // leave a 100px box hanging out of the 30px chip.
+      min-width: 0;
+      min-height: 0;
+      height: 22px;
+      line-height: 20px;
+      padding: 0 6px;
+      resize: none;
+      overflow: hidden;
+      white-space: nowrap;
+      background: var(--normal-bg-elevated);
+      // inset, never a border or an outline: a border adds to the box and
+      // re-flows the 30px chip, and an outline is painted outside it and would
+      // spill over the icon beside it.
+      border: 0;
+      outline: none;
+      box-shadow: inset 0 0 0 1px var(--border-default);
+      border-radius: 6px;
+      // The crumb's own ramp, so the name does not change shape when it
+      // becomes editable. drumee.typo() emits no font-weight.
+      @include drumee.typo(
+        $color: var(--normal-fg-10),
+        $size: 13px,
+        $line: 18px
+      );
+      font-weight: 400;
+
+      &:focus {
+        box-shadow: inset 0 0 0 1px var(--primary-purple-40);
+      }
+    }
+  }
+
+  // While the editor is up. The crumb and the caret are taken out of the row so
+  // the field stands where the name did; the chip is sized by the field's own
+  // 220px, which is close enough to a normal address that the bar does not
+  // visibly jump when editing starts.
+  //
+  // Beats `&:hover` above on source order (same specificity), which is what
+  // stops the chip painting its switcher-button ground under a text field.
+  &__crumb-group[data-renaming="1"] {
+    background-color: transparent;
+
+    > .desk-breadcrumb__ui,
+    > .desk-module-topbar__ws-wrapper {
+      display: none;
+    }
+  }
+
   &__left-cluster {
     align-items: center;
     gap: 20px;
