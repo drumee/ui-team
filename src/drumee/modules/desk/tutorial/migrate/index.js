@@ -272,6 +272,39 @@ class __tutorial_migrate extends LetcBox {
     });
   }
 
+  /**
+   * Hand the user the REAL import dialog as the tour lets go.
+   *
+   * Every screen up to here has been a drawing. Ending on one leaves the user
+   * looking at a picture of a form they were just taught to fill in, with the
+   * actual one still three clicks away in a menu the tour spent its first
+   * screen showing them. So Done opens it.
+   *
+   * ORDER MATTERS, and it is why this runs BEFORE `next-step` rather than
+   * after. The folder window's own `launch-gdrive-migration` defers through
+   * Tours.whenDone("migrate", ...), which only queues while the tour is still
+   * claimed — raised after the hand-back, it would find the tour already gone
+   * and open the popup underneath one still fading out. Raised here, the launch
+   * is queued against this tour's own release and runs the moment it is down.
+   *
+   * ONLY WHEN THIS SCREEN REALLY ENDS THE TOUR. The same button reads "Next"
+   * when migrate is a step inside `full`, where it hands over to the tour after
+   * it and opening a dialog would interrupt the run. `isLastScreen` is the same
+   * test that decides the wording, so the two can never disagree.
+   *
+   * Raised at the host, like the create and upload rows: the step does not know
+   * which window it is drawn over, and the popup's destination is read off that
+   * window. With no host window — the desk-level `full` run — `_actOnWindow`
+   * declines and the tour simply ends, which is what it did before.
+   */
+  _openTheRealThing() {
+    if (!isLastScreen(this, this._screenIndex, SCREENS.length)) return;
+    this.triggerHandlers({
+      service: 'window-tutorial:act',
+      action: 'launch-gdrive-migration',
+    });
+  }
+
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
@@ -319,7 +352,10 @@ class __tutorial_migrate extends LetcBox {
         // Only the last screen hands the tour back to tutorial_main, and it
         // NAMES the service. The step widget carries no `service` of its own
         // any more — see _buildWidgets in ../index.js.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
+        if (this._screenIndex >= SCREENS.length - 1) {
+          this._openTheRealThing();
+          return this.triggerHandlers({ service: 'next-step' });
+        }
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step': {

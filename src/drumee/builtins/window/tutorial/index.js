@@ -339,10 +339,15 @@ class __window_tutorial extends LetcBox {
   /**
    * Leave, however it was reached — the last Done, the callout's skip, Escape.
    *
-   * All three are the same act here, because there is no completion to record
-   * beyond the mount-time markSeen and nothing to open afterwards. The folder
-   * window releases single-flight from this widget's destroy, so every ending
-   * settles the guard the same way.
+   * All three are the same act HERE: there is no completion to record beyond
+   * the mount-time markSeen, and the desk releases single-flight from this
+   * widget's destroy, so every ending settles the guard the same way.
+   *
+   * A step that wants something to happen on the way out arranges it BEFORE
+   * handing back — the migrate tour's last Done queues the real import dialog
+   * against this release (see _openTheRealThing in desk/tutorial/migrate). This
+   * method stays the plain exit the three endings share; it is not the place to
+   * ask which one it was.
    *
    * softDestroy runs a 0.5s fade and raises `destroy` on its completion, so the
    * folder window is revealed underneath rather than snapping back.
