@@ -89,6 +89,10 @@ for (const [w, h, label] of [[1440, 900, "wide"], [900, 700, "narrow"], [650, 70
   document.title = JSON.stringify({
     host, main, logo, line, content,
     lineSize: cs.fontSize,
+    // 4:1 is the symbol's own viewBox (160x40). It is xMidYMid meet, so a
+    // wrong box letterboxes rather than distorting — invisible in a screenshot
+    // and invisible in a descriptor tree, which is why it is measured.
+    logoRatio: Math.round((logo.w / logo.h) * 100) / 100,
     // Does the curtain actually hide the pane? Ask the browser, not the CSS.
     topmost: (() => {
       const el = document.elementFromPoint(host.cx, host.cy);
@@ -116,10 +120,12 @@ for (const [w, h, label] of [[1440, 900, "wide"], [900, 700, "narrow"], [650, 70
   const dx = Math.abs(d.main.cx - d.host.cx);
   const dy = Math.abs(d.content.cy - d.host.cy);
   const covers = d.topmost !== "pane";
-  const ok = dx <= 1 && dy <= 2 && covers;
+  const ratioOk = Math.abs(d.logoRatio - 4) < 0.01;
+  const ok = dx <= 1 && dy <= 2 && covers && ratioOk;
   console.log(
     `${ok ? "✓" : "✗"} ${label.padEnd(7)} ${w}x${h}  ` +
     `off-centre x${dx} y${Math.round(dy)}  line ${d.lineSize}  ` +
+    `logo ${d.logo.w}x${d.logo.h} (${d.logoRatio}:1${ratioOk ? "" : " ✗ not 4:1"})  ` +
     `over the pane: ${covers ? "yes" : "NO — " + d.topmost}`,
   );
 }

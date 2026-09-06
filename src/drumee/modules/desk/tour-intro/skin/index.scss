@@ -23,31 +23,33 @@
     text-align: center;
   }
 
-  // Sized explicitly: the symbol is authored at its own dimensions and would
-  // otherwise paint at that intrinsic size.
+  // The full drumee lockup, sized the way the sign-in form sizes its own
+  // (signin/src/widgets/form/skin, &__logo-image): both dimensions pinned and
+  // `flex: 0 0 auto`, with the svg filling the box.
   //
-  // THE WORDMARK IS NOT THEME-SAFE ON ITS OWN — assets/drumee-logo.svg paints
-  // the letters with a hardcoded `fill="#0B0A21"`, which is --normal-fg on
-  // light and almost exactly --normal-bg on dark, so the word "drumee"
-  // disappears there and only the purple mark is left. Re-pointed at the token,
-  // matched on the literal fill because that is what the asset carries and CSS
-  // beats a presentation attribute. The mark's own #433CC5 is brand purple and
-  // reads on both themes, so it is left alone.
+  // 4:1, WHICH IS THE SYMBOL'S OWN RATIO. `raw-logo-drumee-full` is authored at
+  // viewBox "0 0 160 40" with preserveAspectRatio="xMidYMid meet", so an
+  // off-ratio box does not stretch it — it letterboxes, and the logo sits in a
+  // band of its own empty space. desk/home-empty's 148x40 is 3.7:1 and does
+  // exactly that; this is the same lockup without the padding.
   //
-  // Same treatment, same reason, as desk/home-empty's logo.
+  // Bigger than the sign-in form's 120.72x24 by design: that one sits in a
+  // narrow card, and this fills a work area.
+  //
+  // NO FILL RE-POINTING. desk/home-empty carries a rule mapping the wordmark's
+  // hardcoded #0B0A21 onto --normal-fg, and copying it here was wrong: that
+  // colour is in assets/drumee-logo.svg, the EXPORT the sign-in form renders as
+  // an <img>. The sprite symbol used here is seven fills of #433CC5 and nothing
+  // else, so the rule matched nothing. Brand purple reads on both themes, which
+  // is why this needs no theme handling at all.
   &__logo {
-    width: 148px;
-    height: 40px;
+    width: 240px;
+    height: 60px;
     flex: 0 0 auto;
 
     svg {
       width: 100%;
       height: 100%;
-    }
-
-    [fill="#0B0A21"],
-    [fill="#0b0a21"] {
-      fill: var(--normal-fg);
     }
   }
 
@@ -98,13 +100,14 @@
   .desk-tour-intro {
     &__main { gap: 24px; }
     &__line { font-size: 32px; }
-    &__logo { width: 118px; height: 32px; }
+    &__logo { width: 180px; height: 45px; }
   }
 }
 
 @media (max-width: 650px) {
   .desk-tour-intro {
     &__main { gap: 20px; padding: 32px 16px; }
+    &__logo { width: 140px; height: 35px; }
     &__line { font-size: 26px; }
     &__pill { font-size: 12px; padding: 6px 14px; }
   }
