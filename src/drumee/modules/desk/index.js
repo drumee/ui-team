@@ -874,27 +874,49 @@ class desk_module extends LetcBox {
     intent.trace("after restore settled", {
       found: id(ws), incoming: this._workspaceIncoming(),
     });
-    if (!ws) {
-      await this._openDefaultWorkspace();
-      ws = await this._awaitRailWorkspace();
-      intent.trace("opened a default workspace", { found: id(ws) });
-    }
+    // HOLD THE RESTORE FLAG ACROSS OUR OWN OPEN — this is the fix, and the desk
+    // documents the hazard itself at _restoreDeskState: "Keep the restore flag
+    // up across the open, or the breadcrumb's mount-time loadHome() fires
+    // Wm.reload() and wipes it."
+    //
+    // loadDefault raises the flag around its own _openDefaultWorkspace() for
+    // exactly that reason. This hook did the opposite: it WAITED for the flag to
+    // clear and then opened, so nothing suppressed loadHome() and Wm.reload()
+    // wiped the pane — and the tour mounted on it — a moment later, then
+    // repainted. That wipe does not route through Marionette's destroy, which is
+    // why no teardown ever fired and the tour appeared simply to vanish.
+    //
+    // Cleared only after the tour is mounted, on the same 2.5s delay loadDefault
+    // uses, and in a `finally` so an early return cannot leave the flag raised —
+    // a stuck flag would suppress loadHome for the rest of the session.
+    let held = false;
+    try {
+      if (!ws) {
+        this._restoreInFlight = true;
+        held = true;
+        await this._openDefaultWorkspace();
+        ws = await this._awaitRailWorkspace();
+        intent.trace("opened a default workspace", { found: id(ws), guarded: true });
+      }
 
-    // Consumed even when there is nothing to run it on. The intent belongs to
-    // THIS page load; leaving it armed would fire the tour at some unrelated
-    // later moment, and the warning below is what makes the failure visible
-    // instead of silent — which is what this whole bug was.
-    const req = intent.take();
-    if (!req) return false;
-    if (!ws || !_.isFunction(ws.showTutorial)) {
-      this.warn(
-        `[window-tutorial] "${req.tour}" was asked for, but no workspace could be opened to run it on`,
-      );
-      return false;
+      // Consumed even when there is nothing to run it on. The intent belongs to
+      // THIS page load; leaving it armed would fire the tour at some unrelated
+      // later moment, and the warning below is what makes the failure visible
+      // instead of silent — which is what this whole bug was.
+      const req = intent.take();
+      if (!req) return false;
+      if (!ws || !_.isFunction(ws.showTutorial)) {
+        this.warn(
+          `[window-tutorial] "${req.tour}" was asked for, but no workspace could be opened to run it on`,
+        );
+        return false;
+      }
+      intent.trace("handing tour to window", { tour: req.tour, window: id(ws) });
+      ws.showTutorial(req.tour, req.opt);
+      return true;
+    } finally {
+      if (held) this._clearRestoreInFlight(ws ? 2500 : 0);
     }
-    intent.trace("handing tour to window", { tour: req.tour, window: id(ws) });
-    ws.showTutorial(req.tour, req.opt);
-    return true;
   }
 
   /**

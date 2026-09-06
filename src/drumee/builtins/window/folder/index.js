@@ -671,10 +671,24 @@ class __window_folder extends mfsInteract {
         return false;
       }
       this._tutorialOverlay = wrapper;
-      require("libs/window-tutorial-intent").trace("overlay mounted on window", {
+      const wtTrace = require("libs/window-tutorial-intent").trace;
+      wtTrace("overlay mounted on window", {
         hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid),
         headless: !!this.mget(_a.headless),
       });
+      // Wm.reload() wipes panes without going through Marionette's destroy, so
+      // no handler fires and the overlay simply stops being in the document.
+      // Looking at the DOM is the only way to see that happen.
+      for (const ms of [1500, 4000]) {
+        setTimeout(() => {
+          const el = wrapper && wrapper.el;
+          wtTrace(`overlay still attached? (+${ms}ms)`, {
+            inDocument: !!(el && el.isConnected),
+            windowInDocument: !!(this.el && this.el.isConnected),
+            windowDestroyed: !!(this.isDestroyed && this.isDestroyed()),
+          });
+        }, ms);
+      }
       wrapper.feed({
         kind: "window_tutorial",
         tour,
@@ -700,6 +714,8 @@ class __window_folder extends mfsInteract {
    * @param {Object} child the window_tutorial widget
    */
   _wireTutorialOverlay(child) {
+    const trace = require("libs/window-tutorial-intent").trace;
+    trace("tour part ready — destroy handler wiring", { wired: !!(child && _.isFunction(child.once)) });
     if (!child || !_.isFunction(child.once)) return;
     const tour = child.mget && child.mget("tour");
     const preview = child.mget && child.mget("preview");
