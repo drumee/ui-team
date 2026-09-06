@@ -47,10 +47,10 @@ test("screensFor: a step with no live tail is unaffected", () => {
 test("buildStepWidgets: offsets accumulate across a multi-step tour", () => {
   const w = kit.buildStepWidgets(ui(), TOURS.full, { canCreate: false });
   assert.equal(w.length, 6);
-  // 5 + 5 + 2 + 1 + 6 + 6 = 25 screens.
-  assert.deepEqual(w.map((x) => x.screen_count), [5, 5, 2, 1, 6, 6]);
-  assert.deepEqual(w.map((x) => x.screen_offset), [0, 5, 10, 12, 13, 19]);
-  for (const x of w) assert.equal(x.tour_screens, 25);
+  // 5 + 5 + 1 + 1 + 6 + 6 = 24 screens.
+  assert.deepEqual(w.map((x) => x.screen_count), [5, 5, 1, 1, 6, 6]);
+  assert.deepEqual(w.map((x) => x.screen_offset), [0, 5, 10, 11, 12, 18]);
+  for (const x of w) assert.equal(x.tour_screens, 24);
   assert.equal(w[0].is_first, true);
   assert.equal(w[0].is_last, false);
   assert.equal(w[5].is_last, true);
@@ -174,16 +174,17 @@ test("migrate is four screens now, not six", () => {
 });
 
 test("which tours are EARNED rather than merely shown", () => {
-  // A tour marked on sight is spent the moment it appears. These three ask the
+  // A tour marked on sight is spent the moment it appears. These four ask the
   // user to do something, so they are recorded only when it is done — a folder
-  // created or files uploaded (migrate), or the last step reached (all three).
+  // created or files uploaded (migrate), or the last step reached (all four),
+  // which for the task and meeting tours is their single CTA.
   //
   // Pinned as a SET, both ways round, because the cost of getting it wrong is
   // silent in each direction: a tour that should be earned and is not gets one
   // chance and burns it, and a tour that should be shown and is not is offered
   // again forever.
-  const earned = ["migrate", "chat", "folder_task"];
-  const shown = ["workspace", "share", "meeting", "full"];
+  const earned = ["migrate", "chat", "folder_task", "meeting"];
+  const shown = ["workspace", "share", "full"];
   for (const id of earned) {
     assert.equal(TOURS[id].mark_on, "success", `${id} must be earned`);
   }

@@ -186,10 +186,22 @@ const TOURS = {
   //
   // Flagged, so it is suppressed once seen and recorded server-side — which is
   // why the WIRE CONTRACT at the top of this file has four sites and not two.
+  // ONE screen: the Meet empty state, whose carousel walks two previews on a
+  // timer (148:44759). The mock of the Schedule dialog that followed it is gone
+  // — the CTA opens the REAL scheduler as the tour ends, which is what
+  // "Schedule your first meeting" promised.
   meeting: {
     id: "meeting",
     flag: "meeting",
-    steps: [{ kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet" } }],
+    steps: [{ kind: "tutorial_meeting", screens: 1, chrome: { rail: "meet" } }],
+    // RECORDED ON THE CTA, not on sight — the fourth tour to be, with migrate,
+    // chat and folder_task.
+    //
+    // One screen and one button, and that button is the whole point of it:
+    // pressing it is both the completion and the hand-off to the real form.
+    // Marking on mount would spend the tour on someone who glanced at the
+    // previews, with no second screen left for them to have seen.
+    mark_on: "success",
   },
 
   // Everything, in product order. Run by ?tutorial=1 and by Get help ->
@@ -204,7 +216,7 @@ const TOURS = {
       // workspaces and asked to see the product, not to make another one.
       { kind: "tutorial_workspace", screens: 5, chrome: { rail: null } },
       { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } },
-      { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet" } },
+      { kind: "tutorial_meeting", screens: 1, chrome: { rail: "meet" } },
       { kind: "tutorial_task", screens: 1, chrome: { rail: "task" } },
       { kind: "tutorial_share", screens: 6, chrome: { rail: "access" } },
       { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files" } },

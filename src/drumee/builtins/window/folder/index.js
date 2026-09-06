@@ -2373,9 +2373,25 @@ class __window_folder extends mfsInteract {
       }
 
       // ── Meeting scheduling modal (skeleton/meeting-modal.js) ───────────
-      case "open-schedule":
+      case "open-schedule": {
         // Calendar "Schedule" CTA → create a new meeting.
-        return this.openMeetingModal();
+        //
+        // DEFERRED PAST THE MEETING TOUR, which ends by raising this same
+        // service (desk/tutorial/meeting, _openTheRealThing). The modal opens
+        // INSIDE this window, which the tour is covering, and
+        // `isolation: isolate` on the window manager's root means no z-index
+        // in here can lift it over a desk-level screen — the same wall the
+        // migrate tour's dialog and the task tour's form both hit.
+        //
+        // With no tour in flight, whenDone runs the callback synchronously,
+        // exactly where the bare call used to sit — which is every press of
+        // the Schedule button itself.
+        const Tours = require("libs/tutorial-tours");
+        return Tours.whenDone("meeting", () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.openMeetingModal();
+        });
+      }
 
       case "sched-new-at": {
         // Click an empty weekly half-slot → create a meeting prefilled at that

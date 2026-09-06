@@ -4,8 +4,14 @@ const { isLastScreen, entryScreen } = require('../tours');
 /**
  * The `meeting` tour — Figma 148:44759, 149:44974, 156:19597.
  *
- * TWO steps: the Meet empty state, whose carousel walks the two previews by
- * itself, then the Schedule-a-meeting dialog over the week view.
+ * ONE screen: the Meet empty state, whose carousel walks the two previews by
+ * itself. Its CTA — "Schedule your first meeting" — ends the tour and opens the
+ * REAL scheduler on the window underneath.
+ *
+ * There used to be a second screen drawing a mock of that dialog. It is gone,
+ * for the reason the task tour's went: the tour showed a picture of the form
+ * and then left the user to find the real one, when the CTA is named for
+ * exactly the thing it can now do.
  *
  * The two previews used to be two STEPS, which made the card index and the step
  * number the same value — pressing Next only slid the track. They are content
@@ -21,15 +27,13 @@ const SCREENS = [
   // The empty state. No `desc` — it carries no callout (see _showScreen), and
   // each preview names itself through the caption under the track.
   { target: 'es-viewport', anchor: 'es-cta', direction: 'north' },
-  { dialog: true, target: 'sc-dialog', anchor: 'sc-submit', direction: 'west',
-    desc: () => LOCALE.TUTORIAL_MEET_SCHEDULE },
 ];
 
-// How long each preview holds before the track moves on. The same 3.5s the
-// task tour's carousel uses — long enough to read the caption and take in the
-// screenshot, short enough that both have been seen before someone reaches for
-// the CTA.
-const AUTO_SLIDE_MS = 3500;
+// How long each preview holds before the track moves on. The same 2s the task
+// tour's carousel uses, and for the same reason: with the CTA now ending the
+// tour outright, both previews have to have been seen before someone reaches
+// for it.
+const AUTO_SLIDE_MS = 2000;
 
 // The last card, from the skeleton's own list so the two cannot drift: a cursor
 // that thinks there is a third preview would slide the track into blank space.
@@ -209,14 +213,44 @@ class __tutorial_meeting extends LetcBox {
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
+  /**
+   * Hand the user the REAL scheduler as the tour lets go.
+   *
+   * "Schedule your first meeting" is what the CTA says, and until now it did
+   * not: it walked to a drawing of the form and stopped. `open-schedule` is the
+   * folder window's own service — the same one its Schedule button raises
+   * (skeleton/meeting-schedule.js) — so the form is the product's, not a copy.
+   *
+   * Raised at the HOST, which dispatches at the window: a step does not know
+   * which window it is drawn on. That window defers the modal until this tour
+   * is off the screen — it opens inside the window the tour is covering, and
+   * `isolation: isolate` on the window manager's root means no z-index in
+   * there can lift it over a desk-level screen.
+   *
+   * BEFORE the hand-back, because that deferral only queues while the tour is
+   * still claimed. With no host window — the desk-level `full` run — the host
+   * declines and the tour simply ends, as it did before.
+   *
+   * ONLY WHEN THIS SCREEN REALLY ENDS THE TOUR: inside `full` the same press
+   * hands over to the tour after this one, and a dialog would interrupt the
+   * run. `isLastScreen` is the same test the callout uses for its Done.
+   */
+  _openTheRealThing() {
+    if (!isLastScreen(this, this._screenIndex, SCREENS.length)) return;
+    this.triggerHandlers({ service: 'window-tutorial:act', action: 'open-schedule' });
+  }
+
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        // Raised by the empty state's CTA on the carousel screen and by the
-        // callout's Next on the dialog. The previews are not steps, so the CTA
-        // goes straight to the scheduler — one press, not two.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
+        // Raised by the empty state's CTA. With the mock dialog screen gone
+        // this is the only screen, so the CTA ends the tour — and opens the
+        // scheduler it is named after on the way out.
+        if (this._screenIndex >= SCREENS.length - 1) {
+          this._openTheRealThing();
+          return this.triggerHandlers({ service: 'next-step' });
+        }
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':

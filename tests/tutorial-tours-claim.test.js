@@ -210,3 +210,23 @@ test("folder_task: not offered once the CTA has been pressed", () => {
   Tours.markSeen("folder_task", host);
   assert.equal(Tours.claim("folder_task", host), false);
 });
+
+// ── the meeting tour ─────────────────────────────────────────────────────────
+//
+// Same shape as the task tour: one screen, one button. "Schedule your first
+// meeting" both completes it and opens the real scheduler, so the rail's Meet
+// row keeps offering it until that press.
+
+test("meeting: offered again until the CTA is pressed", () => {
+  reset();
+  assert.equal(Tours.claim("meeting", host), true);
+  Tours.release("meeting");
+  assert.equal(Tours.claim("meeting", host), true);
+  Tours.release("meeting");
+});
+
+test("meeting: not offered once the CTA has been pressed", () => {
+  reset();
+  Tours.markSeen("meeting", host);
+  assert.equal(Tours.claim("meeting", host), false);
+});

@@ -52,7 +52,13 @@ const WS_CACHE_TTL = 60000;
 // An in-window tour leaves the REAL rail on screen beside it, so the rail has
 // to agree with what the tour is teaching. The desk host has no equivalent: it
 // draws its own rail and the registry's `chrome.rail` says which row it lights.
-const WINDOW_TOUR_TAB = { migrate: "files", chat: "chat", folder_task: "task" };
+const WINDOW_TOUR_TAB = {
+  migrate: "files",
+  chat: "chat",
+  folder_task: "task",
+  // _railHighlight maps "meeting" to the rail's "meet" row itself.
+  meeting: "meeting",
+};
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -7386,23 +7392,26 @@ class desk_module extends LetcBox {
         return _res;
       }
       case "rail-meet": {
-        // Resolved BEFORE the tab is shown, for the same reason as rail-task:
-        // _railTab falls back to loadHome() with no workspace open, and a
-        // meeting tour over the home grid explains a screen the user is not on.
-        const _hasWs = !!this._activeWorkspace();
         const _res = this._railTab("meeting");
-        // Contextual tour, on the first press of Meet in the rail.
-        //
-        // Until now `meeting` had no contextual trigger at all — it was
-        // reachable only from the full product tour, so the one tour about
-        // meetings never ran for anyone who did not ask for that. This is the
-        // gesture it is about.
+        // Contextual tour, on a press of Meet in the rail — the gesture this
+        // tour is about, and until recently the only one it had: `meeting` was
+        // reachable from the full product tour alone.
         //
         // Raised AFTER showFolderTab so the tour can never swallow the
         // navigation. Nothing is remembered here: the kill switch, the mobile
         // check, the account-scoped once-ever seen-set and single-flight all
-        // live in libs/tutorial-tours.
-        if (_hasWs) require("libs/tutorial-tours").fire("meeting", this);
+        // live in libs/tutorial-tours — and the seen-set is the whole answer to
+        // "has the user finished with it". This tour is `mark_on: "success"`
+        // with one way forward, so its flag is written when, and only when,
+        // "Schedule your first meeting" is pressed.
+        //
+        // The `_activeWorkspace()` pre-check that used to gate it is gone with
+        // the desk host it protected: it existed because _railTab falls back to
+        // loadHome(), and "a meeting tour over the home grid explains a screen
+        // the user is not on". An in-window tour cannot land on the home grid —
+        // it is drawn on a window or not at all — and _onTourTrigger is what
+        // routes this one there.
+        this._raiseRailTour("meeting");
         return _res;
       }
       // The rail's Access and the switcher header's link icon do the identical
