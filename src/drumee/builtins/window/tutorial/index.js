@@ -82,11 +82,16 @@ class __window_tutorial extends LetcBox {
    * The burst belongs to that moment, so it is raised by the host that is on
    * screen when it plays rather than by the tour that ended.
    *
-   * THE HOST IS THE CONDITION, not a flag. It used to arrive as a `celebrate`
-   * model attribute, threaded from the handing-over tour through the broadcast
-   * and buildStepWidgets down to the step — five places to carry one boolean.
-   * Nothing else mounts `migrate` in a window, so asking which host we are in
-   * answers the same question with none of that.
+   * A FLAG, AND IT HAS TO BE ONE AGAIN. This was briefly decided by the host
+   * alone, on the reasoning that nothing else mounted `migrate` in a window —
+   * true when it was written and false now: the rail's Files button raises the
+   * same tour in the same host (desk/index.js, _railTabWithTour), and pressing
+   * Files on an ordinary Tuesday is not an arrival worth confetti.
+   *
+   * So the handing-over tour says so, and only it does. `celebrate` rides in on
+   * showTutorial's opt (desk/tutorial/index.js, _chainMigrateTour) and reaches
+   * this widget's model through mountWindowTutorial. Every other way in — the
+   * rail, a `?window_tutorial=` link — carries nothing and celebrates nothing.
    *
    * NOT IN THE STEP. tutorial_migrate is drawn by both hosts and deliberately
    * knows about neither; a burst raised there would also fire on the desk-level
@@ -100,6 +105,7 @@ class __window_tutorial extends LetcBox {
    * After the feed, so the pane it plays over is on screen.
    */
   _maybeCelebrate() {
+    if (!this.mget('celebrate')) return;
     if (this._tour.id !== 'migrate' || this._stepIndex !== 0) return;
     require('desk/tutorial/confetti').celebrate(this);
   }

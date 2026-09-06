@@ -604,7 +604,11 @@ class tutorial_main extends LetcBox {
       // pane was captured above and is the only thing this needs.
       try {
         if (pane.isDestroyed && pane.isDestroyed()) return;
-        pane.showTutorial('migrate');
+        // `celebrate` is what makes this hand-off — and ONLY this hand-off —
+        // throw the confetti on the migrate tour's first screen. A workspace
+        // has just been made, opened and confirmed on screen; the same tour
+        // raised from the rail has no such moment behind it.
+        pane.showTutorial('migrate', { celebrate: 1 });
       } catch (e) {
         // A chained tour is never load-bearing for the tour that chained it.
       }
