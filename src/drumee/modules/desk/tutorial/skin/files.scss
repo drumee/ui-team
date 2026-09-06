@@ -424,8 +424,52 @@ $fp-air: min(120px, 11.2vh);
     padding: 0 8px;
     border-radius: 8px;
 
+    // The frame draws its first row filled, to show what a hovered row looks
+    // like. That is a DRAWING's way of saying it — see the live block below for
+    // why it cannot stay once the row is a control.
     &[data-active="1"] {
       background: var(--normal-bg-90);
+    }
+
+    // ── Rows that really create ────────────────────────────────────────────
+    //
+    // `data-live` is set only where the menu was built with `live_menu` (the
+    // migrate tour's screen 1, toolkit/files.js). Everywhere else this dropdown
+    // is scenery in a picture of the product, and scenery that follows the
+    // pointer invites a click that does nothing.
+    //
+    // The fill is the frame's own — the same `--normal-bg-90` the static row
+    // above uses — so a hovered row here looks exactly like the row the design
+    // drew hovered, rather than introducing a second idea of "highlighted".
+    &[data-live="1"] {
+      cursor: pointer;
+      transition: background 120ms ease;
+
+      // `:focus-visible` alongside `:hover` because these are real controls
+      // now: someone tabbing through the menu has to be able to see where they
+      // are, and the tour is full-screen so there is nothing else to look at.
+      &:hover,
+      &:focus-visible {
+        background: var(--normal-bg-90);
+      }
+
+      // A press reads as one shade deeper, which is the only way a row with no
+      // ripple and no label change says "that click landed" during the moment
+      // before the create dialog or the file picker opens.
+      &:active {
+        background: var(--normal-bg-80);
+      }
+    }
+
+    // The static fill belongs to the drawing ONLY.
+    //
+    // On a live menu the user does the hovering, so a row that paints itself
+    // filled claims to be hovered when the pointer is elsewhere — and with four
+    // rows that all respond, the permanently-lit first one reads as selected,
+    // or as the only one that works. It is dropped, and hover puts it back
+    // wherever the pointer actually is.
+    &[data-live="1"][data-active="1"]:not(:hover):not(:focus-visible) {
+      background: transparent;
     }
   }
 
