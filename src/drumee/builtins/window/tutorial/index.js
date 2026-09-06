@@ -150,8 +150,45 @@ class __window_tutorial extends LetcBox {
    *
    * @returns {Boolean} whether either value changed
    */
+  /**
+   * Lay this host over the window it is about.
+   *
+   * The tour is mounted in the DESK's overlay, not inside the folder window —
+   * appending it to the window put it in that window's Marionette collection,
+   * where any `feed()` (and a pane being opened is fed repeatedly while it
+   * builds) silently dropped it. So the tour now owns a stable slot and takes
+   * responsibility for its own geometry instead.
+   *
+   * Both rects are viewport-relative and the host is absolutely positioned
+   * inside the overlay, so the window's box is expressed relative to the
+   * overlay's — the same conversion `anchorFor` makes for the callout.
+   *
+   * @returns {Boolean} whether a target was found and applied
+   */
+  _syncToWindow() {
+    const ws = this.mget('target_window');
+    const el = ws && ws.el;
+    if (!el || !el.isConnected || !this.el || !this.el.parentElement) return false;
+    const box = el.getBoundingClientRect();
+    const host = this.el.parentElement.getBoundingClientRect();
+    if (!box.width || !box.height) return false;
+    const st = this.el.style;
+    st.position = 'absolute';
+    st.left = `${box.left - host.left}px`;
+    st.top = `${box.top - host.top}px`;
+    st.width = `${box.width}px`;
+    st.height = `${box.height}px`;
+    // The window rounds its corners and the tour must not square them off.
+    st.borderRadius = getComputedStyle(el).borderRadius;
+    st.overflow = 'hidden';
+    return true;
+  }
+
   _applySize() {
     if (!this.el || !this.el.dataset || !this.el.getBoundingClientRect) return false;
+    // Geometry first: the tier is measured from this host's box, and that box is
+    // only right once it has been laid over its window.
+    this._syncToWindow();
     this.el.dataset.tour = this._tour.id;
     // The tier rules are written `.tutorial-main[data-size="..."]`, so the bare
     // class has to sit on the same element as the attribute. desk_tutorial gets
@@ -200,6 +237,13 @@ class __window_tutorial extends LetcBox {
     if (typeof ResizeObserver !== 'undefined' && this.el) {
       this._ro = new ResizeObserver(settle);
       this._ro.observe(this.el);
+      // ALSO watch the window this tour is laid over. This host no longer lives
+      // inside that window, so a window that is dragged, zoomed, tiled or
+      // resized changes nothing about this element's own box — observing only
+      // ourselves would leave the tour behind, still sitting where the window
+      // used to be.
+      const ws = this.mget('target_window');
+      if (ws && ws.el) this._ro.observe(ws.el);
       return;
     }
     // No ResizeObserver: catch what a viewport event can still tell us. Strictly

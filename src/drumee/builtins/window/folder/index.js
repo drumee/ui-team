@@ -652,121 +652,34 @@ class __window_folder extends mfsInteract {
    * @returns {Boolean|Promise<Boolean>} false when refused
    */
   showTutorial(tour, opt = {}) {
-    if (this._tutorialOverlay) return false;
     const Tours = require("libs/tutorial-tours");
     if (!opt.preview && !Tours.claim(tour, this)) return false;
-
-    this.append(
-      Skeletons.Wrapper.Y({
-        className: "window-folder__wrapper-tutorial",
-        name: "tutorial",
-      }),
-    );
-
-    return this.ensurePart("wrapper-tutorial").then((wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) {
-        // The window went away between the append and the resolve. Hand the
-        // latch back or nothing else runs this session.
-        if (!opt.preview) Tours.release(tour);
-        return false;
-      }
-      this._tutorialOverlay = wrapper;
-      const wtTrace = require("libs/window-tutorial-intent").trace;
-      wtTrace("overlay mounted on window", {
-        hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid),
-        headless: !!this.mget(_a.headless),
-      });
-      // Wm.reload() wipes panes without going through Marionette's destroy, so
-      // no handler fires and the overlay simply stops being in the document.
-      // Looking at the DOM is the only way to see that happen.
-      for (const ms of [1500, 4000]) {
-        setTimeout(() => {
-          const el = wrapper && wrapper.el;
-          wtTrace(`overlay still attached? (+${ms}ms)`, {
-            inDocument: !!(el && el.isConnected),
-            windowInDocument: !!(this.el && this.el.isConnected),
-            windowDestroyed: !!(this.isDestroyed && this.isDestroyed()),
-          });
-        }, ms);
-      }
-      wrapper.feed({
-        kind: "window_tutorial",
-        tour,
-        sys_pn: "window-tutorial",
-        partHandler: this,
-        ...opt,
-      });
-      return true;
-    });
+    // BROADCAST, do not append.
+    //
+    // This used to `this.append()` a wrapper and feed the tour into it. That put
+    // the overlay in THIS window's Marionette collection, and `Box.feed()` is
+    // `collection.set()` — so any feed on this window dropped it. A pane is fed
+    // repeatedly while it builds, so a tour raised on a freshly opened workspace
+    // was racing a rebuild, and lost: the node left the DOM with the window
+    // still alive and nothing destroyed, so no handler ever fired.
+    //
+    // The desk owns the mount now, in its own `overlay` slot — the one
+    // `desk_tutorial` has always used, which nothing else re-feeds. The tour
+    // lays itself over this window and follows it (see window/tutorial,
+    // _syncToWindow), so it still reads as an overlay on this window.
+    //
+    // Announced rather than called: this window has no handle on the desk
+    // module, and the desk already listens on this bus for tour traffic.
+    try {
+      RADIO_BROADCAST.trigger("window-tutorial:mount", { window: this, tour, opt });
+    } catch (e) {
+      if (!opt.preview) Tours.release(tour);
+      return false;
+    }
+    return true;
   }
 
-  /**
-   * The tour widget mounted. Wire its ending to the latch it is holding.
-   *
-   * The same handshake the desk makes (modules/desk/index.js, onPartReady
-   * "desk-tutorial"): `release` on destroy, so single-flight is settled by
-   * every ending a tour has — the last Done, the callout's skip, Escape, and
-   * this window being closed out from under it.
-   *
-   * A preview took no claim, so it releases nothing; `release` is id-checked
-   * and idempotent, but not calling it at all is clearer than relying on that.
-   *
-   * @param {Object} child the window_tutorial widget
-   */
-  _wireTutorialOverlay(child) {
-    const trace = require("libs/window-tutorial-intent").trace;
-    trace("tour part ready — destroy handler wiring", { wired: !!(child && _.isFunction(child.once)) });
-    if (!child || !_.isFunction(child.once)) return;
-    const tour = child.mget && child.mget("tour");
-    const preview = child.mget && child.mget("preview");
-    child.once(_e.destroy, () => {
-      require("libs/window-tutorial-intent").trace(
-        "tour widget destroyed", { windowAlive: !(this.isDestroyed && this.isDestroyed()) },
-        new Error("teardown path").stack,
-      );
-      // Only `child` (the window_tutorial widget) is destroyed here, not the
-      // `window-folder__wrapper-tutorial` Wrapper that holds it. Left alone
-      // the emptied wrapper would sit around collapsed and harmless -- until
-      // a second `showTutorial` on this same window `append()`-ed a second
-      // wrapper with the same `name`, at which point `ensurePart` could
-      // resolve either one. Tear it down here too.
-      //
-      // Capture + null the handle first so the guard reads clearly, then use
-      // the local `wrapper` to tear down: when this fires as part of
-      // `_closeTutorialOverlay`'s own `wrapper.goodbye()` cascade (window
-      // closing), `this._tutorialOverlay` is already null by the time the
-      // cascade reaches us, so `wrapper` is falsy here and we skip -- that
-      // avoids fighting `_closeTutorialOverlay` with a second goodbye() on
-      // the same wrapper. Only a tour that ended on its own (Done/skip/
-      // Escape) reaches this with the handle still set.
-      const wrapper = this._tutorialOverlay;
-      this._tutorialOverlay = null;
-      if (wrapper && !(wrapper.isDestroyed && wrapper.isDestroyed())) {
-        if (_.isFunction(wrapper.goodbye)) wrapper.goodbye();
-        else if (_.isFunction(wrapper.suppress)) wrapper.suppress();
-      }
-      if (preview) return;
-      try {
-        require("libs/tutorial-tours").release(tour);
-      } catch (e) {
-        // A release that throws must not take the window down with it.
-      }
-    });
-  }
 
-  /**
-   * Tear the tour overlay down, e.g. because this window is closing.
-   *
-   * `goodbye()` destroys the wrapper and its child, which fires the `destroy`
-   * handler above and hands the latch back.
-   */
-  _closeTutorialOverlay() {
-    const wrapper = this._tutorialOverlay;
-    if (!wrapper) return;
-    this._tutorialOverlay = null;
-    if (_.isFunction(wrapper.goodbye)) wrapper.goodbye();
-    else if (_.isFunction(wrapper.suppress)) wrapper.suppress();
-  }
 
   onBeforeDestroy(opt) {
     clearGrouped(this);
@@ -790,13 +703,6 @@ class __window_folder extends mfsInteract {
     // A tour is holding the account-wide single-flight latch. Closing the
     // window it is drawn on must hand that back, or no tour runs again this
     // session.
-    if (this._tutorialOverlay) {
-      require("libs/window-tutorial-intent").trace(
-        "WINDOW being destroyed while a tour is on it",
-        new Error("window teardown path").stack,
-      );
-    }
-    this._closeTutorialOverlay();
     this._unbindViewportReframe();
     this._unbindDeskChrome();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -1327,10 +1233,6 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
-    if (pn === "window-tutorial") {
-      this._wireTutorialOverlay(child);
-      return;
-    }
     // Neither of these returns: window/core's onPartReady tail wires
     // `child.onChildBubble` on every part it sees, and the control these two
     // replace (the old zoom trigger) went through it. Fall through so the

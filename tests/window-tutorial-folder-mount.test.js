@@ -51,34 +51,32 @@ test("showTutorial exists and takes a tour plus options", () => {
   assert.match(src, /showTutorial\(tour,\s*opt\s*=\s*\{\}\)/);
 });
 
-test("the already-mounted guard comes BEFORE the claim", () => {
+test("showTutorial claims, then broadcasts — and hands the latch back if it cannot", () => {
+  // The mount moved to the desk (its `overlay` slot), because appending the
+  // overlay to THIS window put it in the window's Marionette collection, where
+  // any feed() dropped it silently. What stays here is the gate: claim first,
+  // announce second, and release if the announcement fails — a claim that is
+  // taken and never mounted strands single-flight for the session.
   const body = showTutorialBody();
-  const guard = body.indexOf("_tutorialOverlay");
   const claim = body.indexOf("claim(");
-  assert.ok(guard > -1, "no already-mounted guard");
+  const send = body.indexOf("RADIO_BROADCAST.trigger");
   assert.ok(claim > -1, "no claim");
-  assert.ok(
-    guard < claim,
-    "claiming before the guard strands single-flight when the guard refuses",
-  );
+  assert.ok(send > -1, "no broadcast");
+  assert.ok(claim < send, "the claim must be taken before the tour is announced");
+  assert.match(body, /window-tutorial:mount/);
+  assert.match(body, /release\(tour\)/);
+  assert.match(body, /opt\.preview/);
 });
 
-test("a preview skips the claim entirely", () => {
-  // An explicitly requested tour is never gated, matching the desk's ?tutorial=.
-  assert.match(showTutorialBody(), /opt\.preview/);
+test("the folder window no longer owns the overlay's lifecycle", () => {
+  // All of this moved to the desk with the mount. Leaving any of it behind
+  // would mean two owners for one overlay.
+  for (const dead of ["_tutorialOverlay", "_wireTutorialOverlay", "_closeTutorialOverlay", "wrapper-tutorial"]) {
+    assert.ok(!new RegExp(dead).test(src), `${dead} should have moved to the desk`);
+  }
+  assert.ok(!/this\.append\(/.test(showTutorialBody()), "must not append into this window");
 });
 
-test("it mounts the window_tutorial kind into its own wrapper", () => {
-  const body = showTutorialBody();
-  assert.match(body, /window-folder__wrapper-tutorial/);
-  assert.match(body, /name:\s*["']tutorial["']/);
-  assert.match(body, /kind:\s*["']window_tutorial["']/);
-  assert.match(body, /ensurePart\(["']wrapper-tutorial["']\)/);
-});
-
-test("it does NOT reuse wrapper-dialog", () => {
-  assert.ok(!/wrapper-dialog/.test(showTutorialBody()));
-});
 
 test("destroy releases single-flight", () => {
   assert.match(src, /window-tutorial/);

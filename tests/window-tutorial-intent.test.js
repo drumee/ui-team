@@ -229,3 +229,49 @@ test("armed() survives take(), so the URL reset stays suppressed all session", (
   assert.equal(intent.has(), false, "the intent itself is one-shot");
   assert.equal(intent.armed(), true, "but armed() must outlive it");
 });
+
+test("the desk owns the mount, in the slot that nothing else re-feeds", () => {
+  // THE FIX. `Box.feed()` is `collection.set()`, so appending the overlay to the
+  // folder window meant any feed on that window replaced the collection and
+  // dropped it — with the window alive, the tour's part never registered, and
+  // every lifecycle handler silent. A workspace pane is fed repeatedly while it
+  // builds, so a tour on a freshly opened pane always lost that race.
+  //
+  // The desk's `overlay` Wrapper is where desk_tutorial has always mounted and
+  // nothing else re-feeds it, so the tour is mounted there and lays itself over
+  // the window instead of living inside it.
+  assert.match(deskSrc, /mountWindowTutorial\(ws, tour, opt/);
+  const body = deskSrc.slice(deskSrc.indexOf("mountWindowTutorial(ws, tour, opt"));
+  assert.match(body.slice(0, 700), /ensurePart\("overlay"\)/);
+  assert.match(body.slice(0, 700), /kind: "window_tutorial"/);
+  assert.match(body.slice(0, 700), /target_window: ws/);
+  // and it answers the folder window's broadcast
+  assert.match(deskSrc, /"window-tutorial:mount"/);
+  assert.match(deskSrc, /_onWindowTutorial/);
+});
+
+test("single-flight is released from the desk now that it owns the mount", () => {
+  // The handshake moved with the mount. Without it a claimed tour would hold the
+  // account-wide latch forever and no later tour would ever run.
+  const i = deskSrc.indexOf('case "window-tutorial"');
+  assert.ok(i > 0, "no onPartReady case for the in-window tour");
+  const body = deskSrc.slice(i, i + 800);
+  assert.match(body, /once\(_e\.destroy/);
+  assert.match(body, /release\(/);
+  assert.match(body, /preview/);
+});
+
+test("the tour lays itself over its window, and follows it", () => {
+  const hostSrc = stripComments(
+    readFileSync(join(ROOT, "src/drumee/builtins/window/tutorial/index.js"), "utf8"),
+  );
+  assert.match(hostSrc, /_syncToWindow\(\)\s*{/);
+  assert.match(hostSrc, /target_window/);
+  // _applySize measures this host's own box for the tier, so the geometry has to
+  // be applied before it reads that box.
+  const size = hostSrc.slice(hostSrc.indexOf("_applySize() {"));
+  assert.match(size.slice(0, 400), /_syncToWindow\(\)/);
+  // The host no longer lives inside the window, so watching only itself would
+  // miss the window being dragged, zoomed or tiled.
+  assert.match(hostSrc, /_ro\.observe\(ws\.el\)/);
+});

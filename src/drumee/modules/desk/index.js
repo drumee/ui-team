@@ -105,6 +105,10 @@ class desk_module extends LetcBox {
     // listener. Same shape as the over-limit channel above.
     this._onTourTrigger = this._onTourTrigger.bind(this);
     RADIO_BROADCAST.on(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
+    // A folder window asking for a tour to be laid over it. It has no handle
+    // on this module, and the mount belongs here because the overlay slot does.
+    this._onWindowTutorial = this._onWindowTutorial.bind(this);
+    RADIO_BROADCAST.on("window-tutorial:mount", this._onWindowTutorial);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
     // capture listener only exists while a desk is alive — both of its targets
@@ -641,6 +645,7 @@ class desk_module extends LetcBox {
       this._workspaceWsBound = 0;
     }
     RADIO_BROADCAST.off(require("libs/tutorial-tours").CHANNEL, this._onTourTrigger);
+    RADIO_BROADCAST.off("window-tutorial:mount", this._onWindowTutorial);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchHotkey || this._escHotkey) {
       const hk = require("libs/hotkeys");
@@ -912,7 +917,7 @@ class desk_module extends LetcBox {
         return false;
       }
       intent.trace("handing tour to window", { tour: req.tour, window: id(ws) });
-      ws.showTutorial(req.tour, req.opt);
+      this.mountWindowTutorial(ws, req.tour, req.opt);
       return true;
     } finally {
       if (held) this._clearRestoreInFlight(ws ? 2500 : 0);
@@ -945,6 +950,64 @@ class desk_module extends LetcBox {
    *
    * @returns {Promise<Boolean>} whether it settled before the deadline
    */
+  /**
+   * Put an in-window tour on screen, over `ws`.
+   *
+   * MOUNTED IN THE DESK'S OVERLAY, not appended to the folder window — and that
+   * is the fix for a fault that survived three attempts.
+   *
+   * The overlay used to be `window.append(wrapper)`, which puts it in the
+   * window's own Marionette collection. `Box.feed()` is `collection.set([c])`,
+   * so ANY feed on that window replaces the collection and drops the wrapper.
+   * The window is not destroyed and the tour widget's part never registers, so
+   * every lifecycle handler stays silent while the node simply leaves the DOM —
+   * which is exactly what the traces showed: overlay gone, window alive,
+   * nothing torn down.
+   *
+   * A workspace pane is fed repeatedly while it builds (loadWorkspace mounts it
+   * from inside a media.attributes fetch), so a tour handed to a pane that has
+   * just been opened is racing a rebuild it cannot see.
+   *
+   * The desk's `overlay` part has none of that: it is a dedicated Wrapper that
+   * nothing else re-feeds, and it is where `desk_tutorial` has always mounted.
+   * The tour positions itself over the window it is about (see
+   * builtins/window/tutorial, _syncToWindow), so it still reads as an overlay ON
+   * that window while being owned by a slot whose lifecycle we control.
+   *
+   * @param {Object} ws   the folder window the tour is about
+   * @param {String} tour a tour id
+   * @param {Object} [opt] extra model attributes
+   */
+  /**
+   * A folder window asked for a tour to be drawn over it.
+   *
+   * Every gate has already been decided by the caller (showTutorial takes the
+   * claim), so this only mounts.
+   */
+  _onWindowTutorial(args = {}) {
+    if (!args.window || !args.tour) return;
+    this.mountWindowTutorial(args.window, args.tour, args.opt || {});
+  }
+
+  mountWindowTutorial(ws, tour, opt = {}) {
+    if (!ws || !tour) return false;
+    this.ensurePart("overlay").then((p) => {
+      p.feed({
+        kind: "window_tutorial",
+        tour,
+        // The window this tour is drawn over. A widget reference, the same way
+        // `trigger` and `uiHandler` carry one, because the tour has to measure
+        // that window's box on every reflow — an id would need a lookup that
+        // could answer with a different pane after a rebuild.
+        target_window: ws,
+        sys_pn: "window-tutorial",
+        partHandler: this,
+        ...opt,
+      });
+    });
+    return true;
+  }
+
   _awaitRestoreSettled() {
     const deadline = Date.now() + 6000;
     return new Promise((resolve) => {
@@ -4712,6 +4775,22 @@ class desk_module extends LetcBox {
           }, 2000);
         }
         return;
+
+      // The in-window tour. Release single-flight on its destroy, the same
+      // handshake desk-tutorial gets below — it moved here with the mount.
+      case "window-tutorial": {
+        const wtTour = (child && child.mget && child.mget("tour")) || null;
+        const wtPreview = child && child.mget && child.mget("preview");
+        if (child && _.isFunction(child.once)) {
+          child.once(_e.destroy, () => {
+            if (wtPreview || !wtTour) return;
+            try {
+              require("libs/tutorial-tours").release(wtTour);
+            } catch (e) { /* a release must not take the desk down */ }
+          });
+        }
+        return;
+      }
 
       case "desk-tutorial": {
         const tour = (child && child.mget && child.mget("tour")) || "full";
