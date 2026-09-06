@@ -264,13 +264,35 @@ class __tutorial_spotlight extends LetcBox {
     // coordinates are relative to this box — not to the viewport, which is only
     // the same thing when nothing above the tour is positioned.
     const host = this.el.getBoundingClientRect();
+    const style = anchorFor(anchorRect, direction, this._gap, host);
+    // Diagnostic, gated on a tour having been asked for by URL, so an ordinary
+    // session prints nothing. Callout placement is four numbers derived from two
+    // rects, and reading a screenshot cannot tell you which of them is wrong.
+    require('libs/window-tutorial-intent').trace('callout placed', {
+      direction,
+      anchor: { l: Math.round(anchorRect.left), r: Math.round(anchorRect.right),
+                t: Math.round(anchorRect.top), w: Math.round(anchorRect.width) },
+      host: { l: Math.round(host.left), r: Math.round(host.right),
+              t: Math.round(host.top), w: Math.round(host.width) },
+      style,
+      litFallback: lit !== el,
+    });
     callout.feed(tooltipBubble(owner || this, {
       ...tooltip,
       direction,
       beak,
-      style: anchorFor(anchorRect, direction, gap, host),
+      style,
     }));
     await this._keepInView(callout, ticket);
+    const placed = card => card && card.getBoundingClientRect();
+    const finalCard = callout.el && callout.el.querySelector(`.${BUBBLE_CLASS}`);
+    const fr = placed(finalCard);
+    if (fr) {
+      require('libs/window-tutorial-intent').trace('callout settled', {
+        l: Math.round(fr.left), r: Math.round(fr.right), w: Math.round(fr.width),
+        dir: finalCard.dataset.direction, tail: finalCard.dataset.tail || 'on',
+      });
+    }
   }
 
   /**
@@ -302,7 +324,21 @@ class __tutorial_spotlight extends LetcBox {
     if (this._stale(ticket) || !card.isConnected) return;
     if (!r.width || !r.height) return;
 
-    const bounds = this.el.getBoundingClientRect();
+    let bounds = this.el.getBoundingClientRect();
+    // A bounds box with no size makes every comparison below nonsense: `over()`
+    // would read min > max, return a huge dx, blow past the beak cap and slide
+    // the card hard against an edge with its tail off — which looks exactly like
+    // a placement bug and is not one. It can happen while the tour is still
+    // being laid out, or if the host was measured before it had a box.
+    //
+    // There is nothing to keep in view against a box that is not there, so the
+    // card is left where anchorFor put it.
+    if (!bounds.width || !bounds.height) {
+      require('libs/window-tutorial-intent').trace('keepInView skipped — host has no box', {
+        w: Math.round(bounds.width), h: Math.round(bounds.height),
+      });
+      return;
+    }
 
     const over = (lo, hi, min, max) => {
       if (lo < min) return min - lo;
