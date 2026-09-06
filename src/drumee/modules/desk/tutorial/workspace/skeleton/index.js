@@ -13,7 +13,7 @@ const { inviteScreen } = require('../../skeleton/toolkit/invite');
  * ../../index.js) and are not a mock: the same dialog with every section in
  * use, and then the invite card for whatever type was created. The tour ends on
  * that card: however it is left — sent, skipped, or closed — the host opens the
- * new workspace and throws the confetti over it as the tour comes down.
+ * new workspace and hands the migrate tour to it as the tour comes down.
  *
  * @param {Object} ui
  * @param {Object} screen an entry from the step's SCREENS table

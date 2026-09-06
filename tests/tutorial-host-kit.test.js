@@ -75,20 +75,18 @@ test("buildStepWidgets: names no service, and routes events at the host", () => 
 
 test("buildStepWidgets: passes the trigger's context through", () => {
   const w = kit.buildStepWidgets(
-    ui({ subject: "workspace", subject_data: { name: "Acme" }, celebrate: 1 }),
+    ui({ subject: "workspace", subject_data: { name: "Acme" } }),
     TOURS.share,
     {},
   );
   assert.equal(w[0].subject, "workspace");
   assert.deepEqual(w[0].subject_data, { name: "Acme" });
-  assert.equal(w[0].celebrate, 1);
 });
 
 test("buildStepWidgets: absent context is null, never undefined", () => {
   const w = kit.buildStepWidgets(ui(), TOURS.share, {});
   assert.equal(w[0].subject, null);
   assert.equal(w[0].subject_data, null);
-  assert.equal(w[0].celebrate, null);
 });
 
 // ── anchorFor ────────────────────────────────────────────────────────────────

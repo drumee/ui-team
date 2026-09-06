@@ -11,14 +11,14 @@ const SVC_OPT = { async: 1 };
 // they measure against are the same. The reasoning for each boundary lives
 // there, next to the values.
 
-// How long the confetti waits for the new workspace to actually appear, and how
-// often it looks.
+// How long the hand-off waits for the new workspace to actually appear, and
+// how often it looks.
 //
 // Wm.loadWorkspace is fire-and-forget — it returns undefined and mounts the
 // pane from inside a media.attributes fetch — so the only honest answer to "did
 // it open" is to watch for the pane. The budget covers a slow link; past it the
 // open has failed (loadWorkspace has its own 'cannot resolve workspace root'
-// path) and there is nothing to celebrate.
+// path) and there is no window for the next tour to be drawn on.
 const OPEN_WAIT_MS = 8000;
 const OPEN_POLL_MS = 60;
 
@@ -499,16 +499,11 @@ class tutorial_main extends LetcBox {
    * Open the workspace, and hand on to the next tour only once it is actually
    * on screen.
    *
-   * Not fire-and-hope. This used to be the confetti's gate as well, and the
-   * reason for the gate has not changed with the confetti moving: loadWorkspace
-   * returns the instant it is CALLED, which is a different event from the
-   * workspace opening — it mounts the pane from inside a media.attributes
-   * fetch. So on a slow link the celebration played over an empty desk, and on
-   * a failed open it played over a workspace that never arrived.
-   *
-   * The confetti now belongs to the migrate tour's first screen, and this is
-   * still what decides whether that tour is raised at all — so the same gate
-   * still answers the same question.
+   * Not fire-and-hope: loadWorkspace returns the instant it is CALLED, which is
+   * a different event from the workspace opening — it mounts the pane from
+   * inside a media.attributes fetch. The next tour is drawn ON that pane, so
+   * without this gate it would be handed a window that is not there yet, or one
+   * that never arrives at all.
    *
    * Deliberately NOT awaited by the caller. The tour comes down on its own
    * schedule — the fade is what reveals the workspace underneath — so making
@@ -551,16 +546,13 @@ class tutorial_main extends LetcBox {
    * time this one runs.
    *
    * NO DELAY ON TOP. There used to be a further 3s, on the reading that the
-   * destroy fires into a desk still assembling itself — the fade, the confetti
-   * over the new workspace, and that workspace's own panes all landing at once.
-   * That reading was wrong about the first two. softDestroy runs its 0.5s gsap
-   * fade and calls its `_fire` on the animation's onComplete (ui-core
-   * letc/addons/backbone/view/utils.js), so `destroy` is raised AFTER the tour
-   * has faded out and left the DOM — and the confetti is no longer thrown here
-   * at all: it belongs to the screen this raises. The panes were already
-   * confirmed up before this method was ever reached (_workspaceOnScreen). So
-   * the 3s was three seconds of empty desk between one tour and the next, and
-   * the hand-off reads as one continuous walkthrough without it.
+   * destroy fires into a desk still assembling itself. It does not: softDestroy
+   * runs its 0.5s gsap fade and calls its `_fire` on the animation's onComplete
+   * (ui-core letc/addons/backbone/view/utils.js), so `destroy` is raised AFTER
+   * this tour has faded out and left the DOM, and the panes were confirmed up
+   * before this method was ever reached (_workspaceOnScreen). So the 3s was
+   * three seconds of empty desk between one tour and the next, and the hand-off
+   * reads as one continuous walkthrough without it.
    *
    * IN THE WINDOW, NOT ON THE DESK. This used to `fire('migrate')`, which
    * broadcasts on the desk's tour channel and mounts `desk_tutorial` — a
@@ -577,12 +569,6 @@ class tutorial_main extends LetcBox {
    * only "the moment has come". A user who has already seen `migrate` gets
    * nothing.
    *
-   * `celebrate` makes the migrate tour's first screen throw the confetti this
-   * method used to throw itself. It rides in on the tour widget's model, which
-   * is how a trigger tells a tour something the tour cannot work out for
-   * itself — so the SAME tour raised from the topbar's + New menu, which knows
-   * of no new workspace, carries nothing and celebrates nothing.
-   *
    * Waiting for the fade matters more now than it did: the window underneath
    * is what the tour draws ON, and raising it earlier would put an in-window
    * tour beneath a full-screen one still fading off it.
@@ -597,15 +583,12 @@ class tutorial_main extends LetcBox {
     if (this._migrateChained || !_.isFunction(this.once)) return;
     if (!pane || !_.isFunction(pane.showTutorial)) return;
     this._migrateChained = true;
-    // Read NOW, while this widget is alive. The handler below runs from
-    // `destroy`, by which point nothing may be taken off `this`.
-    const opt = { celebrate: 1 };
     this.once(_e.destroy, () => {
       // `this` is gone by now — deliberately nothing off it is touched. The
       // pane was captured above and is the only thing this needs.
       try {
         if (pane.isDestroyed && pane.isDestroyed()) return;
-        pane.showTutorial('migrate', opt);
+        pane.showTutorial('migrate');
       } catch (e) {
         // A chained tour is never load-bearing for the tour that chained it.
       }
@@ -623,7 +606,7 @@ class tutorial_main extends LetcBox {
    *
    * @returns {Promise<Object|null>} the workspace pane, or null if it never
    *   arrived — the caller uses that to decide whether to hand on to the next
-   *   tour, which is what carries the celebration now.
+   *   tour, and it is the window that tour is drawn on.
    */
   _openCreated() {
     const ws = this._createdWorkspace || this._createdFromStep();
@@ -689,7 +672,7 @@ class tutorial_main extends LetcBox {
    * behind on a destroyed widget.
    *
    * Resolves immediately when the pane is already there — re-running the tour
-   * against an existing workspace still ends in a celebration.
+   * against an existing workspace still hands on to the next one.
    *
    * @param {String|Number} hub_id
    * @returns {Promise<Object|null>}
@@ -733,8 +716,9 @@ class tutorial_main extends LetcBox {
       case 'end-tour':
         this._skipTour();
         break;
-      // The step made a workspace. The host is what opens it and celebrates,
-      // because both outlive the step — the tour is coming down around them.
+      // The step made a workspace. The host is what opens it and hands on to
+      // the next tour, because both outlive the step — the tour is coming down
+      // around them.
       case 'workspace-created': {
         const ws = args.workspace || {};
         if (ws.hub_id) this._createdWorkspace = ws;

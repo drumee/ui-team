@@ -121,7 +121,6 @@ function buildStepWidgets(ui, t, opt = {}) {
     // know which tour it is in.
     subject: ui.mget('subject') || null,
     subject_data: ui.mget('subject_data') || null,
-    celebrate: ui.mget('celebrate') || null,
   }));
 }
 

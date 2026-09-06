@@ -342,7 +342,7 @@ class __tutorial_workspace extends LetcBox {
 
     // Carried to the next screen, which needs the type to pick its card and the
     // hub_id to invite anyone to — and to the HOST, which is what opens it and
-    // throws the confetti once the tour is done.
+    // hands on to the migrate tour once this one is done.
     this._created = { type, ...res.workspace };
     this.triggerHandlers({ service: 'workspace-created', workspace: this._created });
     this._screenIndex = this._screenIndex + 1;
@@ -407,7 +407,7 @@ class __tutorial_workspace extends LetcBox {
    * Every exit off the invite card — sent, skipped, closed, or the personal
    * card's "Invite later" — therefore lands on the same `next-step`, which is
    * what the tour ends on. The host takes it from there: it opens the workspace
-   * that was made and throws the confetti over it (see _enterCreated in
+   * that was made and hands the migrate tour to it (see _enterCreated in
    * ../index.js). Nothing else would — `workspace:refresh` is heard only by the
    * sidebar list and the activate-workspace flow, and neither navigates.
    */
