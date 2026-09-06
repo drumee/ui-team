@@ -336,7 +336,11 @@ test("the tour hosts a real dialog itself, because a window's cannot be seen", (
   // returns undefined through a gone `_entry` — and the window's own fallback
   // looks in ITS tree, where this dialog was never rendered. Every folder came
   // out named "New folder".
-  const submit = hostSrc.slice(hostSrc.indexOf("_submitCreateFolder(entry)"));
+  const submit = hostSrc.slice(hostSrc.indexOf("_submitCreateFolder(_trigger)"));
+  // Looked UP, never taken from the trigger: the field and the Create button
+  // both raise this service and only the field has a value, so trusting the
+  // trigger worked from the keyboard and produced "New folder" from the button.
+  assert.match(submit.slice(0, 900), /getPart\('create-folder-name'\)/);
   const read = submit.indexOf("entry.getValue()");
   const close = submit.indexOf("_closeCreateFolder()");
   assert.ok(read > -1 && close > -1, "submit must read then close");

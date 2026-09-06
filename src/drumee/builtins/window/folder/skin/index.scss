@@ -1810,6 +1810,61 @@
     width: 100%;
   }
 
+  // ── The create card's interior ──────────────────────────────────────────
+  //
+  // The CARD owns the rhythm now — 32px insets and a 24px stack, from
+  // media/form's ramp above. Everything below used to supply its own, from when
+  // this was a plain 360px box with no padding of its own, so each block added
+  // 24px inside the card's 32 and the card's gap added again between them: a
+  // dialog that was mostly empty space.
+  //
+  // Written as overrides after the shared rules rather than by editing them,
+  // because every one of those selectors is shared with `__rename-folder-*`,
+  // which keeps its own smaller treatment.
+  &__create-folder-header,
+  &__create-folder-content,
+  &__create-folder-footer {
+    padding: 0;
+  }
+
+  &__create-folder-header {
+    // No rule under the header. media/form dropped its own for the same reason:
+    // a title, a line of explanation and a cross do not need a border to read as
+    // a header, and the 24px stack already separates them from the field.
+    border-bottom: 0;
+  }
+
+  &__create-folder-content {
+    // Label to field. Tighter than the card's 24px stack because these two are
+    // one thing — the same relationship the heading's 4px expresses.
+    gap: 8px;
+  }
+
+  &__create-folder-entry {
+    input {
+      // VISIBLE. The card is `--normal-bg-elevated` now and this input was the
+      // same colour with `border: 0`, so the field was invisible: the typed name
+      // floated on the card as bare text with no box around it.
+      //
+      // media/form's own input, which has always had to sit on that surface.
+      min-height: 44px;
+      padding: 0 14px;
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      background: var(--normal-bg-elevated);
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--normal-fg)
+      );
+
+      &:focus {
+        border-color: var(--primary-purple-100, #433cc5);
+      }
+    }
+  }
+
   &__rename-folder-button {
     align-items: center;
     justify-content: center;

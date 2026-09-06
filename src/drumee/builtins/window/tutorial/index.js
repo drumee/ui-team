@@ -459,21 +459,34 @@ class __window_tutorial extends LetcBox {
    *
    * @param {Object} entry the EntryBox that was submitted
    */
-  _submitCreateFolder(entry) {
+  /**
+   * Hand the typed name to the window, which does the creating.
+   *
+   * THE ENTRY IS LOOKED UP, NOT TAKEN FROM THE TRIGGER. Two different widgets
+   * raise `create-folder-submit` — the field, on Enter, and the Create button —
+   * and only one of them has a value. Trusting the trigger therefore worked
+   * from the keyboard and silently produced "New folder" from the button, which
+   * is the way almost everyone submits.
+   *
+   * The window's own handler survives that through a second fallback,
+   * `this.getPart("create-folder-name")` — but that reads the WINDOW's tree,
+   * and this dialog is rendered in the tour's, so it finds nothing. Reading our
+   * own part is the equivalent, and it does not care which control was used.
+   *
+   * Read BEFORE the dialog closes: clearing destroys the entry_reminder, whose
+   * getValue() then returns undefined through a `_entry` that went with it.
+   *
+   * @param {Object} _trigger whatever raised the submit; deliberately unused
+   */
+  _submitCreateFolder(_trigger) {
     const ws = this._dialogFor;
-    // READ THE NAME BEFORE CLOSING. _closeCreateFolder() clears the slot, which
-    // destroys the entry widget — and a destroyed entry_reminder's getValue()
-    // returns undefined, because it reads through an inner `_entry` that has
-    // gone with it. Closing first therefore handed the window nothing, and its
-    // own fallback could not help either: `this.getPart("create-folder-name")`
-    // looks in the WINDOW's tree, and this dialog is rendered in the tour's. So
-    // every folder was created as "New folder" whatever the user typed.
+    const entry = this.getPart && this.getPart('create-folder-name');
     const name = entry && _.isFunction(entry.getValue) ? entry.getValue() : null;
     this._closeCreateFolder();
     if (!ws || !_.isFunction(ws.createFolderFromDialog)) return;
     if (ws.isDestroyed && ws.isDestroyed()) return;
-    // A stand-in carrying the value, because the real one is gone by now.
-    // `createFolderFromDialog` asks its `cmd` for exactly one thing —
+    // A stand-in carrying the value, because the real entry is gone by now.
+    // createFolderFromDialog asks its `cmd` for exactly one thing —
     // `cmd.getValue()` — so this is the whole of what it needs, and the
     // validation, destination and service call all stay the window's.
     ws.createFolderFromDialog({ getValue: () => name });

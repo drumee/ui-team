@@ -25,6 +25,8 @@ function installGlobals() {
     Note: node("note"),
     Element: node("element"),
     Entry: node("entry"),
+    // The reminder-style entry (ui-core toolkit maps EntryBox -> entry/reminder).
+    EntryBox: node("entrybox"),
     Textarea: node("textarea"),
     Button: { Svg: node("button.svg"), Label: node("button.label") },
     Image: { Svg: node("image.svg") },
