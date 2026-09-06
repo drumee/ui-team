@@ -1,5 +1,29 @@
 const { isTaskViewAllowed } = require("libs/billing");
 
+/**
+ * The `data-entered` stamp that gates an overlay's entrance animation.
+ *
+ * Every overlay in this panel animates in, and _render() rebuilds the whole
+ * subtree through feed() — a newly created element runs its animation again.
+ * So while an overlay was open, any later render replayed its entrance: a
+ * second card popping in over the first, and another, and another.
+ *
+ * The element cannot remember it has been painted, being a new element each
+ * time, so the panel remembers (`_painted` / hasPainted in ../index.js) and the
+ * skin gates on `[data-entered="0"]`.
+ *
+ * BOTH channels, because they are not interchangeable: the skin selects on the
+ * ATTRIBUTE, and a Skeletons node needs the dataset for the DOM side. Shipping
+ * one without the other fails silently.
+ *
+ * @param {Object} ui  the panel
+ * @param {String} key which overlay — create | detail | board
+ */
+const entered = (ui, key) => {
+  const on = ui.hasPainted && ui.hasPainted(key) ? 1 : 0;
+  return { dataset: { entered: on }, attrOpt: { "data-entered": on } };
+};
+
 function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   const pfx = ui.fig.family;
   const fileSearch = ui.getFileSearch();
@@ -1380,6 +1404,7 @@ const make = function (ui) {
     // on the left, the metadata sidebar on the right.
     return Skeletons.Box.Y({
       className: `${pfx}__detail-backdrop`,
+      ...entered(ui, "detail"),
       // No backdrop service — closing is explicit (X or Cancel), matching the
       // create modal and guarding against accidental loss of unsaved edits.
       bubble: 0,
@@ -1454,6 +1479,7 @@ const make = function (ui) {
     const themes = ui.getColumnThemes();
     return Skeletons.Box.Y({
       className: `${pfx}__board-backdrop`,
+      ...entered(ui, "board"),
       bubble: 0,
       kids: [
         Skeletons.Box.Y({
@@ -1809,14 +1835,9 @@ const make = function (ui) {
       // No service on the backdrop — closing the modal must be explicit
       // (the X button or the Cancel link in the form footer).
       bubble: 0,
-      // The entrance runs on the OPENING render only. feed() rebuilds this
-      // element on every render, and a fresh element replays its animation —
-      // so with the modal open, an unrelated re-render faded a second card in
-      // over the first. See isCreateEntered in ../index.js.
-      dataset: { entered: ui.isCreateEntered && ui.isCreateEntered() ? 1 : 0 },
-      attrOpt: {
-        "data-entered": ui.isCreateEntered && ui.isCreateEntered() ? 1 : 0,
-      },
+      // The entrance runs on the OPENING render only — see `entered` below and
+      // `_painted` in ../index.js.
+      ...entered(ui, "create"),
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__create-modal`,
