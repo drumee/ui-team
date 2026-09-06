@@ -188,3 +188,25 @@ test("a second tour is refused until the first releases", () => {
   assert.equal(Tours.claim("chat", host), true);
   Tours.release("chat");
 });
+
+// ── the task tour ────────────────────────────────────────────────────────────
+//
+// One screen and one button, and that button is the whole tour: "Create your
+// first task" both completes it and opens the real form. So the rail's Task
+// row keeps offering it until that press.
+
+test("folder_task: offered again until the CTA is pressed", () => {
+  reset();
+  assert.equal(Tours.claim("folder_task", host), true);
+  Tours.release("folder_task");
+  assert.equal(Tours.claim("folder_task", host), true);
+  Tours.release("folder_task");
+});
+
+test("folder_task: not offered once the CTA has been pressed", () => {
+  reset();
+  // The CTA is the tour's only way forward, so completing every step and
+  // pressing it are the same event; both end in this write.
+  Tours.markSeen("folder_task", host);
+  assert.equal(Tours.claim("folder_task", host), false);
+});
