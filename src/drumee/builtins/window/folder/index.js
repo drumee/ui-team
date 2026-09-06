@@ -2229,6 +2229,40 @@ class __window_folder extends mfsInteract {
         // not where a first-time user goes looking for it.
         return this.showFolderTab(_a.task);
 
+      case "add-task": {
+        // Open the panel's New task form, from outside the panel.
+        //
+        // WHO ASKS: the task tour's "Create your first task" CTA, through the
+        // in-window host (window/tutorial, _actOnWindow), which dispatches
+        // here because a tour knows the WINDOW it is drawn on and not the
+        // widgets inside it. `add-task` is the tasks panel's own service — the
+        // same one its viewbar "+ New" button raises — so this forwards rather
+        // than reimplementing the form.
+        //
+        // DEFERRED PAST THE TOUR, and that is the load-bearing part. The create
+        // modal opens INSIDE the panel, which is inside this window, which the
+        // tour is covering — `isolation: isolate` on the window manager's root
+        // means no z-index in here can lift it over a desk-level screen (the
+        // same wall the migrate tour's dialog hit). So it waits for the tour to
+        // come down. With none in flight, whenDone runs the callback
+        // synchronously, exactly where a bare call would sit.
+        const open = () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          const p = this._taskPanel;
+          if (!p || (p.isDestroyed && p.isDestroyed())) return;
+          if (!_.isFunction(p.onUiEvent)) return;
+          // The panel reads `taskColumn` off the trigger to pick a starting
+          // column and falls back to its default status without one, which is
+          // what a tour wants: a task in the first column, like the viewbar
+          // button makes.
+          p.onUiEvent(cmd || this, { service: "add-task" });
+        };
+        // The task tab has to be showing, or the panel is not mounted at all.
+        this.showFolderTab(_a.task);
+        require("libs/tutorial-tours").whenDone("folder_task", open);
+        return;
+      }
+
       case "toggle-task-filter":
         // Tab-bar filter button → open/close the task panel's member dropdown.
         if (this._taskPanel && _.isFunction(this._taskPanel.toggleFilter)) {

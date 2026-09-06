@@ -78,18 +78,35 @@ const TOURS = {
   // 142:35805) whose callout-bearing frames were not captured in this pass, and
   // that is where a Files step would come back.
   //
-  // TWO screens: the tracker's empty state, whose carousel walks five cards on
-  // a timer without being a step each, then the New task dialog (146:40534,
-  // 162:20161). It declared six while the cards were steps — which made the
-  // pill count to six through one screen, and cost four presses of a CTA
-  // labelled "Create your first task" before it created anything.
+  // ONE screen: the tracker's empty state, whose carousel walks five cards on a
+  // timer without being a step each (146:40534).
+  //
+  // It declared six while the cards were steps — which made the pill count to
+  // six through one screen, and cost four presses of a CTA labelled "Create
+  // your first task" before it created anything. Then two, when the cards
+  // stopped being steps and a mock of the New task dialog followed them. Now
+  // one: that mock is gone and the CTA opens the REAL dialog as the tour ends,
+  // which is what its label promised all along.
   folder_task: {
     id: "folder_task",
     flag: "folder_task",
     // The scheduler is no longer a step of its own: 2.0 puts it at the end of
     // the MEET flow (156:19597), which is where anyone would reach it.
     // `tutorial_schedule` stays on disk but is out of every tour.
-    steps: [{ kind: "tutorial_task", screens: 2, chrome: { rail: "task" } }],
+    steps: [{ kind: "tutorial_task", screens: 1, chrome: { rail: "task" } }],
+    // RECORDED ON THE CTA, not on sight — the third tour to be, with `migrate`
+    // and `chat`.
+    //
+    // This tour is one screen and one button, and that button is the whole
+    // point of it: pressing "Create your first task" is both the completion and
+    // the hand-off to the real form. Marking on mount would spend the tour on
+    // someone who glanced at the carousel and clicked away, and there is no
+    // second screen left for them to have seen.
+    //
+    // `mark_on: "success"` is what keeps both hosts from marking it on mount;
+    // they record it from _nextStep instead, where the step list runs out —
+    // which for this tour is the CTA. Escape and skip still leave it armed.
+    mark_on: "success",
   },
 
   // Chat was three screens INSIDE the folder step. 2.0 pulls it out: four
@@ -188,7 +205,7 @@ const TOURS = {
       { kind: "tutorial_workspace", screens: 5, chrome: { rail: null } },
       { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } },
       { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet" } },
-      { kind: "tutorial_task", screens: 2, chrome: { rail: "task" } },
+      { kind: "tutorial_task", screens: 1, chrome: { rail: "task" } },
       { kind: "tutorial_share", screens: 6, chrome: { rail: "access" } },
       { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files" } },
     ],

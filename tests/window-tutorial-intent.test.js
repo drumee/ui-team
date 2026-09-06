@@ -379,7 +379,18 @@ test("an in-window tour stands the desk's overlay down instead of taking the des
   // already uses, for the same reason.
   assert.match(block, /z-index: 100001/);
   assert.ok(!/z-index: 10011/.test(block), "10011 loses to the 50000 data-state lift");
-  assert.match(block, /\.desk-module__sidebar \{/);
+  // The RAIL's own class, with a hyphen. This asserted `.desk-module__sidebar`,
+  // which appears nowhere else in the codebase and which nothing has ever worn
+  // — the rail is its own widget family. The rule matched nothing and the test
+  // was green anyway, which is the failure mode a source-scanning assertion has
+  // to be written against.
+  assert.match(block, /\.desk-module-sidebar__main \{/);
+  // Stripped, because the block explains the old name in prose and a raw scan
+  // matches its own explanation — the assertion is about SELECTORS.
+  assert.ok(
+    !/\.desk-module__sidebar\b/.test(stripComments(deskSkin)),
+    "a class nothing wears is a fix that will be believed",
+  );
 
   // The desk raises and clears the flag itself.
   assert.match(deskSrc, /dataset\.windowTour = "1"/);

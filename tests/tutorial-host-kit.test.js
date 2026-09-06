@@ -47,10 +47,10 @@ test("screensFor: a step with no live tail is unaffected", () => {
 test("buildStepWidgets: offsets accumulate across a multi-step tour", () => {
   const w = kit.buildStepWidgets(ui(), TOURS.full, { canCreate: false });
   assert.equal(w.length, 6);
-  // 5 + 5 + 2 + 2 + 6 + 6 = 26 screens.
-  assert.deepEqual(w.map((x) => x.screen_count), [5, 5, 2, 2, 6, 6]);
-  assert.deepEqual(w.map((x) => x.screen_offset), [0, 5, 10, 12, 14, 20]);
-  for (const x of w) assert.equal(x.tour_screens, 26);
+  // 5 + 5 + 2 + 1 + 6 + 6 = 25 screens.
+  assert.deepEqual(w.map((x) => x.screen_count), [5, 5, 2, 1, 6, 6]);
+  assert.deepEqual(w.map((x) => x.screen_offset), [0, 5, 10, 12, 13, 19]);
+  for (const x of w) assert.equal(x.tour_screens, 25);
   assert.equal(w[0].is_first, true);
   assert.equal(w[0].is_last, false);
   assert.equal(w[5].is_last, true);
@@ -173,11 +173,29 @@ test("migrate is four screens now, not six", () => {
   assert.equal(kit.screensFor(TOURS.migrate.steps[0], false), 4);
 });
 
-test("migrate is the only tour earned rather than shown", () => {
-  assert.equal(TOURS.migrate.mark_on, "success");
-  for (const id of ["workspace", "chat", "folder_task", "share", "meeting", "full"]) {
+test("which tours are EARNED rather than merely shown", () => {
+  // A tour marked on sight is spent the moment it appears. These three ask the
+  // user to do something, so they are recorded only when it is done — a folder
+  // created or files uploaded (migrate), or the last step reached (all three).
+  //
+  // Pinned as a SET, both ways round, because the cost of getting it wrong is
+  // silent in each direction: a tour that should be earned and is not gets one
+  // chance and burns it, and a tour that should be shown and is not is offered
+  // again forever.
+  const earned = ["migrate", "chat", "folder_task"];
+  const shown = ["workspace", "share", "meeting", "full"];
+  for (const id of earned) {
+    assert.equal(TOURS[id].mark_on, "success", `${id} must be earned`);
+  }
+  for (const id of shown) {
     assert.equal(TOURS[id].mark_on, undefined, `${id} must keep mount-marking`);
   }
+  // Nothing outside those two lists, so a new tour has to choose deliberately.
+  assert.deepEqual(
+    Object.keys(TOURS).sort(),
+    [...earned, ...shown].sort(),
+    "a new tour must be added to one of the two lists above",
+  );
 });
 
 test("a live menu row carries its payload where each reader looks for it", () => {
