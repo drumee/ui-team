@@ -517,7 +517,7 @@ class tutorial_main extends LetcBox {
    */
   _openCreatedAndChain() {
     return this._openCreated().then((pane) => {
-      if (pane) this._chainMigrateTour();
+      if (pane) this._chainMigrateTour(pane);
       return pane;
     });
   }
@@ -537,12 +537,12 @@ class tutorial_main extends LetcBox {
    * DEFERRED TO THIS WIDGET'S DESTROY, not raised inline, and that is still
    * two independent reasons even though the delay on top of it is gone:
    *
-   *   single-flight  libs/tutorial-tours holds `_inFlight` from fire() until
+   *   single-flight  libs/tutorial-tours holds `_inFlight` from the claim until
    *                  the running tour is released, and the desk wires that
    *                  release to this widget's destroy
    *                  (modules/desk/index.js, onPartReady "desk-tutorial").
-   *                  Firing now would hit `if (_inFlight) return false` and be
-   *                  dropped in silence.
+   *                  Claiming now would hit `if (_inFlight) return false` and
+   *                  be dropped in silence.
    *   the screen     this tour is still ON it while it fades.
    *
    * Ordering is not a coincidence either: the desk registers its release
@@ -557,43 +557,55 @@ class tutorial_main extends LetcBox {
    * fade and calls its `_fire` on the animation's onComplete (ui-core
    * letc/addons/backbone/view/utils.js), so `destroy` is raised AFTER the tour
    * has faded out and left the DOM — and the confetti is no longer thrown here
-   * at all: it belongs to the screen this fire() raises. The panes were already
+   * at all: it belongs to the screen this raises. The panes were already
    * confirmed up before this method was ever reached (_workspaceOnScreen). So
    * the 3s was three seconds of empty desk between one tour and the next, and
    * the hand-off reads as one continuous walkthrough without it.
    *
-   * `celebrate` is the flag that makes the migrate tour's first screen throw
-   * the confetti this method used to throw itself. It rides in on fire()'s
-   * `opt`, which is the channel a trigger uses to tell a tour something the
-   * tour cannot work out for itself — so the SAME tour raised from the
-   * topbar's + New menu, which knows of no new workspace, carries nothing and
-   * celebrates nothing.
+   * IN THE WINDOW, NOT ON THE DESK. This used to `fire('migrate')`, which
+   * broadcasts on the desk's tour channel and mounts `desk_tutorial` — a
+   * second full-screen tour drawing its own mock desk, over the real workspace
+   * that had just been made and opened. The migrate tour is about a folder
+   * window, and there is now a host that draws a tour ON one
+   * (builtins/window/tutorial), so it runs there: the user watches the tour
+   * over the workspace they just created rather than over a picture of one.
    *
-   * Every gate stays where it belongs. This says only "the moment has come";
-   * whether a tour actually runs is still fire()'s answer — kill switch,
-   * mobile, the account-scoped once-ever seen-set, single-flight. In
-   * particular a user who has already seen `migrate` gets nothing, and since
-   * the confetti now rides on that tour, they get no confetti either. That is
-   * a deliberate trade: the celebration belongs to the first-run walkthrough,
-   * not to every workspace ever created.
+   * `pane.showTutorial(...)` rather than a broadcast built here, because that
+   * is the product's own entry point for an in-window tour and it takes the
+   * claim. Every gate therefore still stays where it belongs — kill switch,
+   * mobile, the account-scoped seen-set, single-flight — and this method says
+   * only "the moment has come". A user who has already seen `migrate` gets
+   * nothing.
+   *
+   * `celebrate` makes the migrate tour's first screen throw the confetti this
+   * method used to throw itself. It rides in on the tour widget's model, which
+   * is how a trigger tells a tour something the tour cannot work out for
+   * itself — so the SAME tour raised from the topbar's + New menu, which knows
+   * of no new workspace, carries nothing and celebrates nothing.
+   *
+   * Waiting for the fade matters more now than it did: the window underneath
+   * is what the tour draws ON, and raising it earlier would put an in-window
+   * tour beneath a full-screen one still fading off it.
    *
    * No `_canCreate()` check: the caller only reaches here with a pane, and a
    * pane only exists when a workspace was created, which only the `workspace`
    * tour's live screens do. One gate, in one place.
+   *
+   * @param {Object} pane the folder window of the workspace just created
    */
-  _chainMigrateTour() {
+  _chainMigrateTour(pane) {
     if (this._migrateChained || !_.isFunction(this.once)) return;
+    if (!pane || !_.isFunction(pane.showTutorial)) return;
     this._migrateChained = true;
     // Read NOW, while this widget is alive. The handler below runs from
     // `destroy`, by which point nothing may be taken off `this`.
     const opt = { celebrate: 1 };
     this.once(_e.destroy, () => {
-      // `this` is gone by now — deliberately nothing off it is touched. Wm is
-      // the host fire() needs for its seen-set write; _host() would fall back
-      // to it anyway, but naming it keeps the dependency visible.
+      // `this` is gone by now — deliberately nothing off it is touched. The
+      // pane was captured above and is the only thing this needs.
       try {
-        require('libs/tutorial-tours')
-          .fire('migrate', typeof Wm === 'undefined' ? null : Wm, opt);
+        if (pane.isDestroyed && pane.isDestroyed()) return;
+        pane.showTutorial('migrate', opt);
       } catch (e) {
         // A chained tour is never load-bearing for the tour that chained it.
       }
