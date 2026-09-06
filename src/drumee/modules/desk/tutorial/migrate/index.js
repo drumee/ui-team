@@ -144,7 +144,10 @@ const SCREENS = [
     direction: 'west',
     gap: 34,
     title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
+    // Its own line, not the paste screen's. This screen is reached with the
+    // link already in the field, so "Paste the link" described a step the user
+    // had just finished; the only thing left on it is the button.
+    desc: () => LOCALE.TUTORIAL_MIGRATE_VERIFY_DESC,
   },
 ];
 
