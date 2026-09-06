@@ -58,3 +58,36 @@
   // standard one on a narrow viewport — reintroducing the mismatch.
   max-width: none;
 }
+
+// ── A real dialog the tour raises ────────────────────────────────────────────
+//
+// Centred over the tour, above its scrim and its callout.
+//
+// It is drawn here rather than in the folder window it belongs to because it
+// cannot be seen there: `isolation: isolate` on the window manager's root traps
+// every layer inside it (wm/skin/index.scss), so no z-index on the dialog, its
+// window, or its layer can lift it over a desk-level screen. The codebase makes
+// the same move for the same reason — the "return to call" affordance is a
+// desk-level pill, not the parked tile.
+//
+// The dialog keeps the folder window's own BEM prefix, so it takes the styles it
+// already has; only where it sits is different.
+.window-tutorial {
+  &__dialog {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    // Above the callout (10010), which is the highest thing the tour draws.
+    z-index: 10020;
+    // A film, so the dialog reads as the thing to answer while the mock behind
+    // it stays legible as context.
+    background: var(--transparency-container-overlay, rgba(137, 146, 158, 0.4));
+
+    // The wrapper behavior stamps this when it receives the dialog.
+    &[data-state="open"] {
+      display: flex;
+    }
+  }
+}

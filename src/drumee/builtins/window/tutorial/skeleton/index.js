@@ -38,6 +38,22 @@ module.exports = function (ui) {
       // After the content, so the scrim and the callout sit later in DOM order
       // as well as above it by z-index.
       { kind: 'tutorial_spotlight', sys_pn: 'spotlight', partHandler: ui },
+      // A real dialog the tour raises, drawn HERE rather than inside the folder
+      // window it came from.
+      //
+      // `isolation: isolate` on the window manager's root traps every layer
+      // inside it (wm/skin/index.scss), so nothing in a window can paint above
+      // this tour — by design, and the reason the "return to call" affordance is
+      // a desk-level pill rather than the parked tile. A dialog opened in the
+      // window is therefore invisible under the tour, whatever z-index it or its
+      // window is given.
+      //
+      // So the tour hosts it. Last, so it sits above the scrim and the callout.
+      Skeletons.Wrapper.Y({
+        className: `${fig}__dialog`,
+        sys_pn: 'dialog',
+        partHandler: ui,
+      }),
     ],
   });
 };

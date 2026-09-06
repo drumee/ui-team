@@ -377,17 +377,20 @@ class __window_tutorial extends LetcBox {
     if (!action || !ws || !_.isFunction(ws.onUiEvent)) return false;
     if (ws.isDestroyed && ws.isDestroyed()) return false;
     this._watchForSuccess(ws);
-    // Let the window rise above this tour while it holds a real dialog.
+
+    // `add-folder` is intercepted, and it is the only one that has to be.
     //
-    // The tour is drawn in the desk's overlay (10010) and the window sits at
-    // 10000, so a dialog opened INSIDE that window is painted over by the tour —
-    // and it cannot climb out on its own, because the window is a stacking
-    // context and nothing inside it can exceed the window's own level. The
-    // window is what has to rise, and the skin lifts it only while a modal is
-    // actually open (`:has()`, folder/skin/index.scss), so this attribute can be
-    // set once and simply left.
-    if (ws.el && ws.el.dataset) ws.el.dataset.tourActing = '1';
-    this._acting = ws;
+    // It opens a DIALOG inside the folder window, and nothing in a window can
+    // paint above this tour: `isolation: isolate` on the window manager's root
+    // traps every layer inside it (wm/skin/index.scss), by design. Raising the
+    // dialog cannot work, and neither can raising its window or its layer —
+    // both are inside that same isolated context. So the tour draws the dialog
+    // itself, at desk level, where it can actually be seen.
+    //
+    // The other two need nothing: `new-document` creates without a dialog, and
+    // `_e.upload` opens the OS file picker, which is not ours to stack.
+    if (action === 'add-folder') return this._openCreateFolder(ws);
+
     try {
       ws.onUiEvent(cmd || this, { service: action });
     } catch (e) {
@@ -395,6 +398,55 @@ class __window_tutorial extends LetcBox {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Draw the product's create-folder dialog, on top of this tour.
+   *
+   * The SAME skeleton the folder window uses, rendered with that window's own
+   * BEM prefix so it takes the styles it already has — this is the product's
+   * dialog in a different place, not a copy of it.
+   *
+   * @param {Object} ws the folder window the folder will be created in
+   */
+  _openCreateFolder(ws) {
+    this._dialogFor = ws;
+    return this.ensurePart('dialog').then((p) => {
+      p.feed(require('builtins/window/folder/skeleton/create-folder-dialog')(this, {
+        prefix: 'window-folder__create-folder',
+      }));
+      // Focus the field the way the window does: ensurePart resolves when the
+      // EntryBox mounts, before its inner <input> exists.
+      this.ensurePart('create-folder-name').then((entry) => _.delay(() => {
+        const input = entry && entry.el && entry.el.querySelector('input');
+        if (input) { input.focus(); input.select(); }
+      }, 60));
+    });
+  }
+
+  /** Take the dialog down, leaving the tour as it was. */
+  _closeCreateFolder() {
+    this._dialogFor = null;
+    const p = this.getPart && this.getPart('dialog');
+    if (p && _.isFunction(p.clear)) p.clear();
+  }
+
+  /**
+   * Hand the typed name to the window, which does the creating.
+   *
+   * `createFolderFromDialog` reads its value from `cmd.getValue()` before it
+   * looks for its own part, so passing the entry widget is all it needs — the
+   * validation, the destination node and the service call stay the window's,
+   * and a folder made here is indistinguishable from one made any other way.
+   *
+   * @param {Object} entry the EntryBox that was submitted
+   */
+  _submitCreateFolder(entry) {
+    const ws = this._dialogFor;
+    this._closeCreateFolder();
+    if (!ws || !_.isFunction(ws.createFolderFromDialog)) return;
+    if (ws.isDestroyed && ws.isDestroyed()) return;
+    ws.createFolderFromDialog(entry);
   }
 
   /**
@@ -438,15 +490,6 @@ class __window_tutorial extends LetcBox {
   }
 
   onBeforeDestroy() {
-    // Hand the window back its ordinary stacking. The skin only lifts a marked
-    // window while a modal is open, so leaving this set would be harmless today
-    // — and exactly the kind of harmless leftover that turns into a mystery the
-    // first time something else opens a dialog on that window.
-    const acting = this._acting;
-    if (acting && acting.el && acting.el.dataset) {
-      delete acting.el.dataset.tourActing;
-    }
-    this._acting = null;
     this._unobserveSize();
     if (this._escapeHotkey) {
       require('libs/hotkeys').unregister(this._escapeHotkey);
@@ -477,6 +520,14 @@ class __window_tutorial extends LetcBox {
       // A step asking for a REAL action on the window underneath. The migrate
       // tour's + New rows and its Upload button raise this; the step names the
       // service and never learns which window it lands on.
+      // The hosted dialog's own controls.
+      case 'create-folder-submit':
+        this._submitCreateFolder(trigger);
+        break;
+      case 'close-folder-dialog':
+        this._closeCreateFolder();
+        break;
+
       case 'window-tutorial:act':
         this._actOnWindow(args.action, args.cmd);
         break;

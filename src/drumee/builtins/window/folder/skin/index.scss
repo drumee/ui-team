@@ -5093,28 +5093,3 @@ html[data-theme="dark"] {
   }
 }
 
-// ── A real dialog raised from the in-window tour ─────────────────────────────
-//
-// The tour is drawn in the desk's `overlay` (z-index 10010) and this window sits
-// at 10000, so the tour paints over it. That is right while the tour is only a
-// picture — but the migrate tour's `+ New` rows open the PRODUCT'S create-folder
-// dialog, and a dialog the user cannot see is a dead end.
-//
-// The dialog cannot climb out on its own: it lives inside this window, and
-// `.window__ui` is a stacking context, so no z-index on the dialog can exceed
-// the window's own. `[data-state="open"]`'s global 50000 (skin/lib/utils.scss)
-// is capped by it for the same reason. The WINDOW is what has to rise.
-//
-// So it rises, but only where that is needed: the tour marks the window it is
-// acting on, and `:has()` keeps the lift to the moments a modal is actually
-// open — closing the dialog drops the window back with no JS to restore it, and
-// a window nobody is touring is untouched.
-//
-// What this covers is a DRAWING of this same pane, so the user sees the real
-// thing appear where its own likeness was, with the dialog on top of it.
-.window-folder__ui[data-tour-acting="1"]:has(.window__wrapper-modal[data-state="open"]) {
-  // Above the desk overlay. `!important` and specific enough to beat
-  // `.window__ui[data-state="1"]:not(.window-manager__ui) { z-index: 10000
-  // !important }` — with both important, specificity decides.
-  z-index: 100010 !important;
-}

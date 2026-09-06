@@ -313,3 +313,26 @@ test("the migrate tour is recorded on the action landing, not on mount", () => {
   const done = hostSrc.slice(hostSrc.indexOf("_markDone()"));
   assert.match(done.slice(0, 400), /mget\('preview'\)/);
 });
+
+test("the tour hosts a real dialog itself, because a window's cannot be seen", () => {
+  // `isolation: isolate` on the window manager's root traps every layer inside
+  // it (wm/skin/index.scss), so a dialog opened in a folder window can never
+  // paint above a desk-level screen — nor can its window or its layer, both of
+  // which are inside that same isolated context. Two z-index fixes failed on
+  // exactly that before this was understood.
+  //
+  // So the tour draws the product's own dialog, with the window's BEM prefix so
+  // it keeps its styles, and hands the typed name back to the window — whose
+  // createFolderFromDialog reads cmd.getValue() before its own part, so the
+  // entry widget is all it needs. The creating stays the window's.
+  const hostSrc = stripComments(
+    readFileSync(join(ROOT, "src/drumee/builtins/window/tutorial/index.js"), "utf8"),
+  );
+  assert.match(hostSrc, /action === 'add-folder'/);
+  assert.match(hostSrc, /create-folder-dialog/);
+  assert.match(hostSrc, /prefix: 'window-folder__create-folder'/);
+  assert.match(hostSrc, /ws\.createFolderFromDialog\(entry\)/);
+  // and both of the dialog's own controls are routed
+  assert.match(hostSrc, /case 'create-folder-submit'/);
+  assert.match(hostSrc, /case 'close-folder-dialog'/);
+});
