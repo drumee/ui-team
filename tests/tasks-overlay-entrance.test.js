@@ -57,6 +57,10 @@ const open = (entered, over = {}) =>
     pickerService: () => "assignee-search", getPickerQuery: () => "",
     getAssigneeResults: () => [],
     getFileSearch: () => ({ query: "", results: [], scope: null, page: 1, hasMore: false }),
+    // Every overlay in this panel needs the whole getter surface, not just the
+    // one it is named after — the create modal grew subtask fields, and a
+    // fixture that only fed the detail panel started failing on them.
+    ...REST,
     ...over,
   });
 
@@ -93,10 +97,7 @@ test("the detail panel is gated too", () => {
       assignees: [], labels: [] }),
     getDetailAttachments: () => [],
     getActivityTab: () => "comments",
-    // The whole ui surface the skeleton can reach, so a detail render does not
-    // fail on an unrelated getter. Collected from the skeleton itself rather
-    // than discovered one crash at a time.
-    ...REST
+    getActivityTab: () => "comments"
   });
   const bd = find(t, "tasks-panel__detail-backdrop");
   assert.ok(bd, "the detail overlay is drawn");

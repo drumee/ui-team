@@ -178,6 +178,10 @@ function makeUi(over = {}) {
     getActivityTab: () => "comments",
     getTaskHistory: () => [],
     getRowUploads: () => [],
+    // Child items drafted while the parent is still being created — the create
+    // modal reads this whenever it draws, so a fixture without it cannot render
+    // that modal at all.
+    getPendingSubtasks: () => [],
   };
   return { ...base, ...over };
 }
