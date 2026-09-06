@@ -35,12 +35,11 @@
 //
 //   rail   the workspace tab the rail lights, or null for the org-home rail,
 //          which has no workspace tabs at all (nothing is open yet).
-//   crumb  whether the topbar names a workspace.
 //
 // Declared per step rather than per tour because `full` crosses the boundary:
 // it opens on the create-workspace dialog with no workspace, then spends every
 // later step inside one.
-const DEFAULT_CHROME = { rail: "files", crumb: true };
+const DEFAULT_CHROME = { rail: "files" };
 
 const TOURS = {
   // Post-signup. In 2.0 this is no longer three workspace tiles on the desk —
@@ -49,8 +48,8 @@ const TOURS = {
   workspace: {
     id: "workspace",
     flag: "workspace",
-    // No workspace exists yet on these screens, so the rail has no tabs and
-    // the topbar names nothing — which is what the org-home frames show.
+    // No workspace exists yet on these screens, so the rail has no tabs —
+    // which is what the org-home frames show.
     //
     // `live_screens` is the tail of this step that stops being a mock: a real
     // create-workspace form and the invite screen after it. They run ONLY on
@@ -62,7 +61,7 @@ const TOURS = {
       kind: "tutorial_workspace",
       screens: 8,
       live_screens: 2,
-      chrome: { rail: null, crumb: false },
+      chrome: { rail: null },
     }],
   },
 
@@ -86,7 +85,7 @@ const TOURS = {
     // The scheduler is no longer a step of its own: 2.0 puts it at the end of
     // the MEET flow (156:19597), which is where anyone would reach it.
     // `tutorial_schedule` stays on disk but is out of every tour.
-    steps: [{ kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } }],
+    steps: [{ kind: "tutorial_task", screens: 2, chrome: { rail: "task" } }],
   },
 
   // Chat was three screens INSIDE the folder step. 2.0 pulls it out: four
@@ -98,14 +97,14 @@ const TOURS = {
   chat: {
     id: "chat",
     flag: "chat",
-    steps: [{ kind: "tutorial_chat", screens: 5, chrome: { rail: "chat", crumb: true } }],
+    steps: [{ kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } }],
   },
 
   share: {
     id: "share",
     flag: "share",
     // Six, and the frames number them "STEP 1/6" … "STEP 6/6" in a pill.
-    steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } }],
+    steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access" } }],
   },
 
   // Importing from Google Drive — how the import dialog is reached, and then
@@ -126,7 +125,7 @@ const TOURS = {
     // own that drew the gesture and described it; those buttons now perform it
     // for real on screen 1, so the table is the Files pane and the three import
     // dialog screens the Migrate CTA leads to.
-    steps: [{ kind: "tutorial_migrate", screens: 4, chrome: { rail: "files", crumb: true } }],
+    steps: [{ kind: "tutorial_migrate", screens: 4, chrome: { rail: "files" } }],
     // MARKED ON SUCCESS, not on mount — the only tour that is.
     //
     // Every other tour records itself the moment it appears, because a tour is
@@ -153,7 +152,7 @@ const TOURS = {
   meeting: {
     id: "meeting",
     flag: "meeting",
-    steps: [{ kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet", crumb: true } }],
+    steps: [{ kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet" } }],
   },
 
   // Everything, in product order. Run by ?tutorial=1 and by Get help ->
@@ -166,12 +165,12 @@ const TOURS = {
       // Six, not eight: no `live_screens`, so the create form is not part of
       // the full tour. Someone re-watching the tour from Get help already has
       // workspaces and asked to see the product, not to make another one.
-      { kind: "tutorial_workspace", screens: 6, chrome: { rail: null, crumb: false } },
-      { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat", crumb: true } },
-      { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet", crumb: true } },
-      { kind: "tutorial_task", screens: 2, chrome: { rail: "task", crumb: true } },
-      { kind: "tutorial_share", screens: 6, chrome: { rail: "access", crumb: true } },
-      { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files", crumb: true } },
+      { kind: "tutorial_workspace", screens: 6, chrome: { rail: null } },
+      { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } },
+      { kind: "tutorial_meeting", screens: 2, chrome: { rail: "meet" } },
+      { kind: "tutorial_task", screens: 2, chrome: { rail: "task" } },
+      { kind: "tutorial_share", screens: 6, chrome: { rail: "access" } },
+      { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files" } },
     ],
   },
 };
@@ -182,7 +181,7 @@ const DEFAULT_TOUR = "full";
  * The shell a step wants around it.
  *
  * @param {Object} step a TOURS step
- * @returns {{rail: String|null, crumb: Boolean}}
+ * @returns {{rail: String|null}}
  */
 function stepChrome(step) {
   return { ...DEFAULT_CHROME, ...((step && step.chrome) || {}) };

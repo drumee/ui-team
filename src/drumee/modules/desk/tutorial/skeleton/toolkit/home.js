@@ -25,7 +25,8 @@
 // is legible enough that the difference showed.
 const { filesGrid } = require("./files-grid");
 // The area-tinted workspace shape. Returns an HTML STRING, hence Element +
-// content rather than Image.Svg + ico — the same note as skeleton/topbar.js.
+// content rather than Image.Svg + ico: passing markup as an icon NAME builds
+// `<use href="#<markup>">` and renders nothing.
 const folderArt = require("media/grid/template/folder");
 
 // The rail inside the preview. Same entries as the full one; drawn here rather
@@ -267,11 +268,13 @@ function orgHome(ui) {
   const p = pfx(ui);
   return Skeletons.Box.X({ active: 0,
     className: `${p}-canvas`,
-    // The organisation is named ONCE, in the topbar chip the frame puts at the
-    // top left (skeleton/topbar.js). This canvas used to repeat it above the
-    // hero, which 140:22684 does not do — the frame goes straight from the rail
-    // to the headline — and which had no skin behind it, so turning the org
-    // chrome on rendered a bare unstyled line over the hero.
+    // NOT named above the hero. 140:22684 goes straight from the rail to the
+    // headline, and the line that used to sit here had no skin behind it, so
+    // turning the org chrome on rendered a bare unstyled string over the hero.
+    //
+    // The frame names the org in a topbar chip at the top left, which this
+    // shell no longer draws at all (see skeleton/index.js). The rail's own
+    // Dept. entry is what says which organisation this is now.
     kids: [hero(ui), preview(ui)],
   });
 }

@@ -17,10 +17,12 @@ function installGlobals() {
     global[k] = v;
   };
 
-  const Box = node("box");
+  // `flow` is what ui-core stamps as data-flow, and it is the only thing that
+  // tells a Box.X from a Box.Y — the descriptor is otherwise identical.
+  const boxNode = (flow) => (props = {}) => ({ __kind: "box", __flow: flow, ...props });
   set("Skeletons", {
-    Box: Object.assign(node("box"), {
-      X: Box, Y: Box, Z: Box, G: Box,
+    Box: Object.assign(boxNode("y"), {
+      X: boxNode("x"), Y: boxNode("y"), Z: boxNode("y"), G: boxNode("y"),
     }),
     Note: node("note"),
     Element: node("element"),
@@ -262,9 +264,21 @@ module.exports = {
 
 // Descriptor tree → HTML, so a browser can lay out what the skeleton really
 // emits. Only the attributes layout and hit-testing depend on.
+//
+// A BOX MUST CARRY ITS AXIS OR NOTHING LAYS OUT. ui-core renders every Box as
+// `.box[data-flow=x|y]`, and skin/lib/container.scss is what turns that into
+// `display:flex` with a direction — without it a Box.X stacks its children
+// vertically and any `flex: 1` child collapses to zero. Measurements taken
+// that way look like a broken layout and are simply a broken fixture.
+//
+// The axis is not on the descriptor (Skeletons.Box.X and .Y are the same
+// factory), so `flow` is stamped by the factory itself — see installGlobals.
 function toHtml(n) {
   if (n == null || typeof n !== "object") return "";
-  const cls = n.className ? ` class="${n.className}"` : "";
+  const box = n.__flow ? ` data-flow="${n.__flow}"` : "";
+  const cls = n.className
+    ? ` class="${n.__flow ? "box " : ""}${n.className}"`
+    : (n.__flow ? ' class="box"' : "");
   const attrs = Object.entries(n.attrOpt || {})
     .filter(([, v]) => v != null)
     .map(([k, v]) => ` ${k}="${String(v)}"`)
@@ -275,6 +289,6 @@ function toHtml(n) {
     .join("");
   const kids = [].concat(n.kids || []).map(toHtml).join("");
   const text = n.content != null && !kids ? String(n.content) : "";
-  return `<div${cls}${attrs}${ds}>${text}${kids}</div>`;
+  return `<div${cls}${box}${attrs}${ds}>${text}${kids}</div>`;
 }
 module.exports.toHtml = toHtml;

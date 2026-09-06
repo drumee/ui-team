@@ -1,17 +1,19 @@
 /**
- * The tour's shell.
+ * The tour's shell: the dark rail, and the pane the step draws into.
  *
- * Drumee 2.0 stacks it topbar-over-everything: the utility bar spans the full
- * width, and the dark rail starts beneath it. The 1.x shell put the rail
- * first and the topbar inside the main column, which is why this is a
- * restructure rather than a restyle.
+ * NO TOPBAR. The 2.0 shell drew one — an org chip, a workspace breadcrumb and
+ * the utility cluster, spanning the full width above the rail — and it is gone
+ * from every tour. It was scenery in the strictest sense: inert on every screen
+ * of every tour, pointed at by none of them, and drawn directly over the REAL
+ * topbar that is mounted underneath (the tour lives in the desk's `overlay`
+ * part, a sibling of desk-module-topbar__main). What the user saw was a
+ * pixel-copy of the bar they already had, covering the bar they already had.
  */
 module.exports = function (ui) {
   const fig = ui.fig.family;
   return Skeletons.Box.Y({ active: 0,
     className: `${fig}__layout`,
     kids: [
-      require('./topbar')(ui),
       Skeletons.Box.X({ active: 0,
         className: `${fig}__body`,
         kids: [

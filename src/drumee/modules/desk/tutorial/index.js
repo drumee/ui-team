@@ -202,33 +202,28 @@ class tutorial_main extends LetcBox {
   /**
    * Put the shell into the context the current step is teaching.
    *
-   * The rail and the breadcrumb are NOT constant across a tour: `full` opens on
-   * the create-workspace dialog, where no workspace exists — so the rail has no
-   * workspace tabs and the topbar names nothing — and then spends every later
-   * step inside one. Rendering the shell once at mount left five workspace tabs
-   * and a workspace name over a dialog whose whole point is that the user has
-   * not made a workspace yet.
+   * The rail is NOT constant across a tour: `full` opens on the create-workspace
+   * dialog, where no workspace exists and so the rail has no workspace tabs, and
+   * then spends every later step inside one. Rendering the shell once at mount
+   * left five workspace tabs over a dialog whose whole point is that the user
+   * has not made a workspace yet.
    *
-   * Both are `sys_pn` slots, re-fed here rather than rebuilt: the rail's logo
-   * and footer do not change, and neither does the utility cluster. What is fed
-   * is the slot's CONTENTS — feeding the container itself back in would nest a
-   * second __sb-nav inside the first.
+   * A `sys_pn` slot, re-fed here rather than rebuilt: the rail's logo and footer
+   * do not change. What is fed is the slot's CONTENTS — feeding the container
+   * itself back in would nest a second __sb-nav inside the first.
+   *
+   * It used to re-feed two more slots, the workspace crumb and the utility
+   * cluster. Both belonged to the mock topbar, which no tour draws any more;
+   * awaiting parts that never mount would simply hang.
    */
   _applyChrome() {
     const step = (this._tour.steps || [])[this._stepIndex];
-    const { rail, crumb } = stepChrome(step);
+    const { rail } = stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
-    const topbar = require('./skeleton/topbar');
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
     // entry has to come back with the workspace tabs or the org-home rail —
     // which has no tabs at all — is fed an empty list and renders bare.
     this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
-    // Same trap as the callout: feed(null) is a no-op, so a step that wants NO
-    // crumb has to clear the slot rather than feed nothing into it.
-    this.ensurePart('crumb').then((p) => (
-      crumb ? p.feed(topbar.workspaceCrumb(this)) : p.clear()
-    ));
-    this.ensurePart('utility-cluster').then((p) => p.feed(topbar.utilityItems(this)));
   }
 
   /**
