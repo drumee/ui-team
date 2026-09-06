@@ -671,6 +671,10 @@ class __window_folder extends mfsInteract {
         return false;
       }
       this._tutorialOverlay = wrapper;
+      require("libs/window-tutorial-intent").trace("overlay mounted on window", {
+        hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid),
+        headless: !!this.mget(_a.headless),
+      });
       wrapper.feed({
         kind: "window_tutorial",
         tour,
@@ -700,6 +704,10 @@ class __window_folder extends mfsInteract {
     const tour = child.mget && child.mget("tour");
     const preview = child.mget && child.mget("preview");
     child.once(_e.destroy, () => {
+      require("libs/window-tutorial-intent").trace(
+        "tour widget destroyed", { windowAlive: !(this.isDestroyed && this.isDestroyed()) },
+        new Error("teardown path").stack,
+      );
       // Only `child` (the window_tutorial widget) is destroyed here, not the
       // `window-folder__wrapper-tutorial` Wrapper that holds it. Left alone
       // the emptied wrapper would sit around collapsed and harmless -- until
@@ -766,6 +774,12 @@ class __window_folder extends mfsInteract {
     // A tour is holding the account-wide single-flight latch. Closing the
     // window it is drawn on must hand that back, or no tour runs again this
     // session.
+    if (this._tutorialOverlay) {
+      require("libs/window-tutorial-intent").trace(
+        "WINDOW being destroyed while a tour is on it",
+        new Error("window teardown path").stack,
+      );
+    }
     this._closeTutorialOverlay();
     this._unbindViewportReframe();
     this._unbindDeskChrome();

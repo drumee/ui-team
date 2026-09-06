@@ -849,12 +849,16 @@ class desk_module extends LetcBox {
     // interference — the comment on it in loadDefault describes an earlier race
     // it was written for — so the honest fix is to respect it rather than to
     // open a workspace into the middle of someone else's open.
+    const id = (w) => (w && w.mget ? `${w.mget(_a.hub_id)}/${w.mget(_a.nid)}` : String(w));
+    intent.trace("hook entered", { restoreInFlight: !!this._restoreInFlight });
     await this._awaitRestoreSettled();
 
     let ws = this._railWorkspace();
+    intent.trace("after restore settled", { found: id(ws) });
     if (!ws) {
       await this._openDefaultWorkspace();
       ws = await this._awaitRailWorkspace();
+      intent.trace("opened a default workspace", { found: id(ws) });
     }
 
     // Consumed even when there is nothing to run it on. The intent belongs to
@@ -869,6 +873,7 @@ class desk_module extends LetcBox {
       );
       return false;
     }
+    intent.trace("handing tour to window", { tour: req.tour, window: id(ws) });
     ws.showTutorial(req.tour, req.opt);
     return true;
   }

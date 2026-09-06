@@ -42,6 +42,9 @@
 const { previewRequest } = require("../builtins/window/tutorial/preview");
 
 let _intent = null;
+// True once a tour has been asked for on this load. Gates the diagnostic
+// breadcrumbs below so an ordinary session prints nothing.
+let _armed = false;
 
 /**
  * Read the URL and remember any tour it names.
@@ -56,7 +59,10 @@ let _intent = null;
 function captureFromUrl() {
   try {
     const req = previewRequest(Visitor.parseModuleArgs());
-    if (req) _intent = req;
+    if (req) {
+      _intent = req;
+      _armed = true;
+    }
   } catch (e) {
     // No Visitor yet, or a malformed hash. Either way there is no tour to run,
     // and boot must not care.
@@ -85,9 +91,36 @@ function take() {
   return i;
 }
 
+/**
+ * Was a tour asked for on this page load?
+ *
+ * Stays true after take(), unlike has() — the interesting part of this flow is
+ * what happens AFTER the intent is consumed, so the breadcrumbs that trace it
+ * need a flag the consumption does not clear.
+ */
+function armed() {
+  return _armed;
+}
+
+/**
+ * A diagnostic breadcrumb, printed only when a tour was asked for.
+ *
+ * The in-window tour is launched during desk boot, where a console pasted by
+ * hand arrives far too late to see anything, and the failure mode being chased
+ * — the tour mounting and then vanishing — is a teardown whose CAUSE is
+ * invisible from the outside. These lines name the path.
+ */
+function trace(...args) {
+  if (!_armed) return;
+  try {
+    console.warn("[window-tutorial]", ...args);
+  } catch (e) { /* a log must never break a boot */ }
+}
+
 /** Test seam only — never called by app code. */
 function __reset() {
   _intent = null;
+  _armed = false;
 }
 
-module.exports = { captureFromUrl, has, take, __reset };
+module.exports = { captureFromUrl, has, take, armed, trace, __reset };
