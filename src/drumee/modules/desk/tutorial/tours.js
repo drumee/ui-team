@@ -102,6 +102,22 @@ const TOURS = {
     id: "chat",
     flag: "chat",
     steps: [{ kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } }],
+    // RECORDED ON COMPLETION, not on sight — the second tour to be, after
+    // `migrate`, and for a related reason.
+    //
+    // Five screens about threads is more than a glance: someone who opens Chat,
+    // meets the tour and clicks away has not been taught what a thread is, and
+    // marking it there would spend the one chance this tour gets. So it is
+    // written only when the user reaches the last Done — which is what
+    // `mark_on: "success"` means for a tour with nothing to create: both hosts
+    // record it from _nextStep, where the step list runs out.
+    //
+    // Escape and the callout's skip still leave it armed, which is the
+    // difference between finishing something and getting out of it. The cost is
+    // the one migrate accepts too: someone who keeps declining keeps being
+    // offered. Five screens on the rail's Chat button is a small enough price
+    // for the tour landing at all.
+    mark_on: "success",
   },
 
   share: {

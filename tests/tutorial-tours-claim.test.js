@@ -151,3 +151,40 @@ test("migrate: markSeen writes only the tour it is given", () => {
   assert.equal(Tours.claim("share", host), true);
   Tours.release("share");
 });
+
+// ── the chat tour follows the same rule ──────────────────────────────────────
+//
+// Recorded on completion rather than on sight, so the rail's Chat button keeps
+// offering it until the user reaches the last Done. Five screens about threads
+// is more than a glance, and marking it on mount spends the one chance it gets.
+
+test("chat: offered again while the user has not finished it", () => {
+  reset();
+  assert.equal(Tours.claim("chat", host), true);
+  Tours.release("chat");
+  assert.equal(Tours.claim("chat", host), true);
+  Tours.release("chat");
+});
+
+test("chat: not offered once it has been completed", () => {
+  reset();
+  Tours.markSeen("chat", host);
+  assert.equal(Tours.claim("chat", host), false);
+});
+
+// The rail can end one tour and raise another in a single gesture — Chat
+// pressed during the migrate tour. The claim is not free until the outgoing
+// tour is RELEASED, which is what _whenToursIdle waits for; without it the
+// incoming tour meets `if (_inFlight) return false` and is refused in silence.
+test("a second tour is refused until the first releases", () => {
+  reset();
+  assert.equal(Tours.claim("migrate", host), true);
+  assert.equal(Tours.claim("chat", host), false, "refused while migrate is in flight");
+  let settled = false;
+  Tours.whenDone("migrate", () => { settled = true; });
+  assert.equal(settled, false, "and the continuation waits");
+  Tours.release("migrate");
+  assert.equal(settled, true, "released, so the waiter runs");
+  assert.equal(Tours.claim("chat", host), true);
+  Tours.release("chat");
+});
