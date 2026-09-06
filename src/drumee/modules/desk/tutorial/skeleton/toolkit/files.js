@@ -51,11 +51,22 @@ const VIEWS = ["app-tree-view", "view-list", "view-grid"];
 // are the product's own create-row palette (`new-menu-icon-tints` in
 // skin/mixins/drumee.scss); that mixin is keyed on the folder flyout's own
 // class vocabulary and so cannot be included here, but the values are its.
+// The rows of the + New dropdown, carrying the SAME payloads the real menu
+// sends (builtins/window/skeleton/toolkit/new-menu-rows.js): one `add-folder`
+// and three `new-document`s distinguished only by the file name they ask for.
+//
+// Kept in step with that file by copying its payloads rather than its rows —
+// the drawing here is the tour's, matching a frame, while the behaviour has to
+// be the product's or the tour teaches a gesture that does nothing.
 const NEW_ITEMS = [
-  { kind: "folder", ico: "addmenu-folder", label: () => LOCALE.FOLDER },
-  { kind: "document", ico: "addmenu-document", label: () => LOCALE.DOCUMENT },
-  { kind: "spreadsheet", ico: "addmenu-spreadsheet", label: () => LOCALE.SPREADSHEET },
-  { kind: "presentation", ico: "addmenu-presentation", label: () => LOCALE.PRESENTATION },
+  { kind: "folder", ico: "addmenu-folder", label: () => LOCALE.FOLDER,
+    service: "add-folder" },
+  { kind: "document", ico: "addmenu-document", label: () => LOCALE.DOCUMENT,
+    service: "new-document", name: "document.docx" },
+  { kind: "spreadsheet", ico: "addmenu-spreadsheet", label: () => LOCALE.SPREADSHEET,
+    service: "new-document", name: "spreadsheet.xlsx" },
+  { kind: "presentation", ico: "addmenu-presentation", label: () => LOCALE.PRESENTATION,
+    service: "new-document", name: "presentation.pptx" },
 ];
 
 // The docked chat panel renders as loading placeholders in both Files frames —
@@ -202,7 +213,7 @@ function toolbar(ui) {
  */
 function hero(ui, opt = {}) {
   const p = pfx(ui);
-  const { menu, cta_service, new_service, upload_service } = opt;
+  const { menu, live_menu, cta_service, new_service, upload_service } = opt;
   // A button's props: inert, or clickable and stamped as such so the skin can
   // say so. Stamped from the same flag that makes it clickable, so the two
   // cannot disagree — and keyed on that rather than on the tour, since these
@@ -255,7 +266,7 @@ function hero(ui, opt = {}) {
             kids: [
               Skeletons.Image.Svg({ active: 0, ico: "app-add", className: `${p}-ghost-ico` }),
               Skeletons.Note({ active: 0, className: `${p}-ghost-label`, content: LOCALE.NEW }),
-              menu ? newMenu(ui) : null,
+              menu ? newMenu(ui, live_menu) : null,
             ].filter(Boolean),
           }),
           // Named, so a screen can point at it — the migrate tour's upload
@@ -277,15 +288,35 @@ function hero(ui, opt = {}) {
   });
 }
 
-/** The + New dropdown, hung off the hero's own New button. */
-function newMenu(ui) {
+/**
+ * The + New dropdown, hung off the hero's own New button.
+ *
+ * `live` turns the rows from a drawing into controls. They then raise
+ * `mg-do-create`, carrying the row's own service and file name, which the tour
+ * forwards to the folder window it is laid over — the same handler the real
+ * menu's rows reach. Without it the rows stay inert, which is what every other
+ * screen of every other tour wants.
+ */
+function newMenu(ui, live) {
   const p = pfx(ui);
+  const row = (item) => (live
+    ? {
+        service: "mg-do-create",
+        uiHandler: [ui],
+        dataset: { live: 1, service: item.service, name: item.name || "" },
+        attrOpt: {
+          "data-live": 1,
+          "data-service": item.service,
+          "data-name": item.name || "",
+        },
+      }
+    : { active: 0 });
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-new-menu`,
     sys_pn: "fp-new-menu",
     partHandler: ui,
     kids: NEW_ITEMS.map((item, i) =>
-      Skeletons.Box.X({ active: 0,
+      Skeletons.Box.X({ ...row(item),
         className: `${p}-new-item`,
         // The first row carries the frame's hover fill; `kind` picks the
         // glyph's tint. dataset alone is dropped at render unless an attribute

@@ -138,7 +138,13 @@ class tutorial_main extends LetcBox {
     // the way OUT is the wrong half of the same rule: previewing `migrate` once
     // would kill the real + New trigger for that account forever, and a UI
     // check would be a one-shot. Contextual runs still record normally.
-    if (this._tour.flag && !this.mget('preview')) {
+    // `mark_on: 'success'` opts a tour OUT of being recorded here. The migrate
+    // tour is the only one: it asks the user to create or upload something, and
+    // someone who opened it and did neither has not been taught anything, so it
+    // is offered again. Recorded by the in-window host when the action lands
+    // (builtins/window/tutorial, _markDone) — this host has no live controls to
+    // earn it with, so on the desk that tour simply stays armed.
+    if (this._tour.flag && !this.mget('preview') && this._tour.mark_on !== 'success') {
       Tours.markSeen(this._tour.flag, this);
     }
     this._bindEscape();

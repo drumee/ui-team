@@ -164,3 +164,20 @@ test("anchorFor: an unknown direction falls back to north", () => {
     kit.anchorFor(TARGET, "north", 32, VIEWPORT),
   );
 });
+
+// ── the migrate tour's live controls ─────────────────────────────────────────
+
+test("migrate is four screens now, not six", () => {
+  // The `+ New` and `Upload` branches were screens that drew a gesture and
+  // described it. Those buttons perform it for real on screen 1 instead, so the
+  // table is the Files pane plus the three import-dialog screens.
+  assert.equal(TOURS.migrate.steps[0].screens, 4);
+  assert.equal(kit.screensFor(TOURS.migrate.steps[0], false), 4);
+});
+
+test("migrate is the only tour earned rather than shown", () => {
+  assert.equal(TOURS.migrate.mark_on, "success");
+  for (const id of ["workspace", "chat", "folder_task", "share", "meeting", "full"]) {
+    assert.equal(TOURS[id].mark_on, undefined, `${id} must keep mount-marking`);
+  }
+});

@@ -275,3 +275,37 @@ test("the tour lays itself over its window, and follows it", () => {
   // miss the window being dragged, zoomed or tiled.
   assert.match(hostSrc, /_ro\.observe\(ws\.el\)/);
 });
+
+test("the host forwards a step's action to the window it is drawn over", () => {
+  const hostSrc = stripComments(
+    readFileSync(join(ROOT, "src/drumee/builtins/window/tutorial/index.js"), "utf8"),
+  );
+  // Dispatched at the window's own onUiEvent — where the real menu's rows land
+  // too — so a create goes through the product's dialog and Upload opens the
+  // real picker, instead of the tour reimplementing either.
+  assert.match(hostSrc, /window-tutorial:act/);
+  assert.match(hostSrc, /_actOnWindow\(action, name\)/);
+  assert.match(hostSrc, /ws\.onUiEvent\(this, args\)/);
+});
+
+test("the migrate tour is recorded on the action landing, not on mount", () => {
+  const hostSrc = stripComments(
+    readFileSync(join(ROOT, "src/drumee/builtins/window/tutorial/index.js"), "utf8"),
+  );
+  const deskTutSrc = stripComments(
+    readFileSync(join(ROOT, "src/drumee/modules/desk/tutorial/index.js"), "utf8"),
+  );
+  // BOTH hosts must skip mount-marking for it, or the desk one burns the flag
+  // and the in-window one never gets the chance to earn it.
+  for (const src of [hostSrc, deskTutSrc]) {
+    assert.match(src, /mark_on !== 'success'/);
+  }
+  // newContent is the folder window's arrival hook for a create AND an upload,
+  // so it distinguishes "did it" from "opened a picker and cancelled" — which
+  // is the entire reason this tour is marked on success.
+  assert.match(hostSrc, /newContent/);
+  assert.match(hostSrc, /_markDone\(\)\s*{/);
+  // A preview must not burn the flag on the way out any more than on the way in.
+  const done = hostSrc.slice(hostSrc.indexOf("_markDone()"));
+  assert.match(done.slice(0, 400), /mget\('preview'\)/);
+});

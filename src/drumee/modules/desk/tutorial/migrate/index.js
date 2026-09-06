@@ -69,67 +69,15 @@ const SCREENS = [
     pane: true,
     live: true,
     bare: true,
+    // The dropdown is drawn on this screen now, and its rows act. `+ New` and
+    // `Upload` are no longer screens of their own — see the note above the
+    // table.
+    menu: true,
+    live_menu: true,
     target: 'fp-migrate',
     anchor: 'fp-migrate',
     direction: 'north',
     beak: 'start',
-  },
-  {
-    // 142:35805. The dropdown is the subject, so it is what is lit — not the
-    // button it hangs from, which would leave the menu itself in the scrim.
-    //
-    // 'east' reaches east, so the card sits to the menu's LEFT. The menu opens
-    // at x436 of 1600 with the hero's copy to its left and nothing but pane to
-    // its right — but 'west' would put the card over the empty middle of the
-    // pane, and the frames keep this flow's callouts beside their subject.
-    // East puts it against the hero copy the menu was opened from.
-    //
-    // BACK ONLY. This screen is the `+ New` branch off screen 1, not a step on
-    // the way to the dialog: the dialog is what a DIFFERENT button opens. A
-    // Next here would have to invent a transition the product does not make.
-    key: 'menu',
-    pane: true,
-    menu: true,
-    back_only: true,
-    back: 'pane',
-    target: 'fp-new-menu',
-    anchor: 'fp-new-menu',
-    direction: 'east',
-    // Centred on the card's right edge, level with the middle of the dropdown.
-    // Stated rather than left to tooltipBubble's default so the screen says
-    // where its own tail goes — `start`/`end` are what the other placements in
-    // this tour use, and an unstated beak reads as "nobody decided".
-    beak: 'center',
-    // The card is titled with the BUTTON it points at, not with the tour.
-    // LOCALE.NEW is the label on that button (toolkit/files.js), so the two
-    // cannot drift apart or disagree in translation.
-    title: () => LOCALE.NEW,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_MENU_DESC,
-  },
-  {
-    // The `Upload` branch off screen 1 — the third way files arrive, and the
-    // one that is not an import at all.
-    //
-    // 'west' reaches west, so the card sits to the button's RIGHT, level with
-    // it. The button is the last of the three, with empty pane to its right,
-    // so there is room; 'east' would stack the card over the + New button and
-    // the Migrate CTA it sits beside.
-    //
-    // Nothing is drawn open on the pane for this one. The real Upload opens the
-    // OS file picker, which is not ours to mock — so the screen is the pane
-    // with the button lit and the card beside it, which is as far as a mock can
-    // honestly go.
-    key: 'upload',
-    pane: true,
-    back_only: true,
-    back: 'pane',
-    target: 'fp-hero-upload',
-    anchor: 'fp-hero-upload',
-    direction: 'west',
-    beak: 'center',
-    // Same rule as the menu screen: the card carries the button's own label.
-    title: () => LOCALE.UPLOAD,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_UPLOAD_DESC,
   },
   {
     // Back goes to the PANE, not to the screen before this one.
@@ -238,7 +186,7 @@ class __tutorial_migrate extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(skeleton(this, s));
+    this.feed(skeleton(this, s, { menuOpen: !!this._menuOpen }));
     const [target, anchor] = await Promise.all([
       this.ensurePart(s.target),
       this.ensurePart(s.anchor),
@@ -299,10 +247,35 @@ class __tutorial_migrate extends LetcBox {
       // the dialog would otherwise silently send the CTA to the wrong one.
       case 'mg-open-dialog':
         return this._goto('copy');
-      case 'mg-open-menu':
-        return this._goto('menu');
-      case 'mg-open-upload':
-        return this._goto('upload');
+
+      // `+ New` and `Upload` are REAL now. They used to jump to a screen each
+      // that drew the gesture and described it; they perform it instead, at the
+      // folder window this tour is laid over.
+      //
+      // Raised at the host rather than handled here: the step has no idea which
+      // window it is drawn on — that is the host's `target_window` — and it is
+      // deliberately kept that way, because a step that knows its host is a step
+      // that only works in one.
+      case 'mg-toggle-menu':
+        this._menuOpen = !this._menuOpen;
+        return this._showScreen();
+
+      case 'mg-do-create': {
+        const el = trigger && trigger.el;
+        const d = (el && el.dataset) || {};
+        if (!d.service) return;
+        return this.triggerHandlers({
+          service: 'window-tutorial:act',
+          action: d.service,
+          name: d.name || undefined,
+        });
+      }
+
+      case 'mg-do-upload':
+        return this.triggerHandlers({
+          service: 'window-tutorial:act',
+          action: _e.upload,
+        });
 
       case 'next-step':
         // Only the last screen hands the tour back to tutorial_main, and it

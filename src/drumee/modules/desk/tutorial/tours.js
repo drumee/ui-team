@@ -122,7 +122,25 @@ const TOURS = {
     // progress pill (see ../migrate/index.js). The count is still the whole
     // table: it is what the host slices `screen_count` from, and what `full`
     // adds into its own total.
-    steps: [{ kind: "tutorial_migrate", screens: 6, chrome: { rail: "files", crumb: true } }],
+    // FOUR, not six. The `+ New` and `Upload` branches were screens of their
+    // own that drew the gesture and described it; those buttons now perform it
+    // for real on screen 1, so the table is the Files pane and the three import
+    // dialog screens the Migrate CTA leads to.
+    steps: [{ kind: "tutorial_migrate", screens: 4, chrome: { rail: "files", crumb: true } }],
+    // MARKED ON SUCCESS, not on mount — the only tour that is.
+    //
+    // Every other tour records itself the moment it appears, because a tour is
+    // something you are shown and being shown it once is the whole of it. This
+    // one asks the user to DO something: create a file or a folder, or upload
+    // one. Someone who opens it and does neither has not been taught anything,
+    // so it is offered again next time.
+    //
+    // The cost is the reason the mount rule exists elsewhere (see
+    // libs/tutorial-tours): a tour that is only recorded on completion can be
+    // offered indefinitely to someone who keeps declining it. That is accepted
+    // here deliberately — this tour is about getting the first file into a
+    // workspace, and a workspace with no files has not outgrown the prompt.
+    mark_on: "success",
   },
 
   // Contextual, on the first press of Meet in the rail (desk/index.js,

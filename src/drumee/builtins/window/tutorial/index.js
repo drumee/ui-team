@@ -86,7 +86,12 @@ class __window_tutorial extends LetcBox {
     Tours.armed();
     // A preview is exempt from the seen-set on the way IN, so burning the flag
     // on the way OUT is the wrong half of the same rule.
-    if (this._tour.flag && !this.mget('preview')) {
+    // MOUNT-MARKING IS SKIPPED for a tour the registry says is earned rather
+    // than shown (`mark_on: 'success'` — the migrate tour). Recording it here
+    // would mean someone who opened it and did nothing never sees it again,
+    // which is the opposite of what that tour is for. _markDone() records it
+    // when the user actually creates or uploads something.
+    if (this._tour.flag && !this.mget('preview') && this._tour.mark_on !== 'success') {
       Tours.markSeen(this._tour.flag, this);
     }
     this._bindEscape();
@@ -348,6 +353,77 @@ class __window_tutorial extends LetcBox {
     this.softDestroy();
   }
 
+  /**
+   * Perform a real action on the window this tour is drawn over.
+   *
+   * Dispatched at that window's own `onUiEvent`, which is where the real menu's
+   * rows land too — `sharebox` delegates the same way
+   * (`this.wm.onUiEvent(cmd, { service })`). So a folder created from the tour
+   * goes through the product's create dialog, and Upload opens the real file
+   * picker, rather than the tour reimplementing either.
+   *
+   * The trigger passed along is this host: handlers read `cmd.mget(...)` off it
+   * for a few services, and a live widget answering those is safer than a
+   * literal.
+   *
+   * @param {String} action a service name the folder window handles
+   * @param {String} [name] the file name a `new-document` asks for
+   */
+  _actOnWindow(action, name) {
+    const ws = this.mget('target_window');
+    if (!action || !ws || !_.isFunction(ws.onUiEvent)) return false;
+    if (ws.isDestroyed && ws.isDestroyed()) return false;
+    this._watchForSuccess(ws);
+    const args = name ? { service: action, name } : { service: action };
+    try {
+      ws.onUiEvent(this, args);
+    } catch (e) {
+      this.warn && this.warn(`[window-tutorial] "${action}" failed on the window`, e);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Record the tour as done once the window actually receives something.
+   *
+   * `newContent` is the folder window's arrival hook — a create and an upload
+   * both land there — so it is the one honest signal that the user did the
+   * thing rather than merely opening a dialog or a file picker they then
+   * cancelled. That distinction is the whole point of marking this tour on
+   * success: a cancelled picker must leave it armed for next time.
+   *
+   * Wrapped rather than listened to, because the window raises no event of its
+   * own for this. Installed once, and it restores nothing — the wrapper calls
+   * through and stays harmless for the life of the window.
+   */
+  _watchForSuccess(ws) {
+    if (this._watching || !ws || !_.isFunction(ws.newContent)) return;
+    this._watching = true;
+    const original = ws.newContent.bind(ws);
+    ws.newContent = (...a) => {
+      const out = original(...a);
+      this._markDone();
+      return out;
+    };
+  }
+
+  /**
+   * The user did it. Record the tour and take it down.
+   *
+   * Only for a tour the registry marks on success, and never for a preview —
+   * an explicitly requested run is exempt from the seen-set in both directions,
+   * exactly as it is on the way in.
+   */
+  _markDone() {
+    if (this._done) return;
+    this._done = true;
+    if (this._tour.flag && !this.mget('preview')) {
+      Tours.markSeen(this._tour.flag, this);
+    }
+    this._endTour();
+  }
+
   onBeforeDestroy() {
     this._unobserveSize();
     if (this._escapeHotkey) {
@@ -376,6 +452,13 @@ class __window_tutorial extends LetcBox {
       // here instead of bubbling to the folder window as an unknown service.
       case 'workspace-created':
         break;
+      // A step asking for a REAL action on the window underneath. The migrate
+      // tour's + New rows and its Upload button raise this; the step names the
+      // service and never learns which window it lands on.
+      case 'window-tutorial:act':
+        this._actOnWindow(args.action, args.name);
+        break;
+
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));
         break;
