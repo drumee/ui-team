@@ -437,9 +437,26 @@ class __tasks_panel extends LetcBox {
     this._installFileSearchFocus();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
+    // TWO PHASES, so the board is on screen as soon as it can be drawn.
+    //
+    // All six of these used to be awaited together, which made the SLOWEST of
+    // them decide when anything appeared at all. Only two of the six decide
+    // whether a board can be drawn: the tasks and the columns. The other four
+    // decorate it — watches are a per-column flag, activity feeds the detail
+    // panel, members are assignee avatars and labels are chips — and every one
+    // of them reads its own state, none of them reads `_tasks` or `_columns`,
+    // so none has to be in before the first paint.
+    //
+    // Their state is initialised empty in initialize(), and the skeleton draws
+    // from those empty lists without complaint, so the first pass renders a
+    // real board rather than a placeholder.
+    //
+    // _render is built to be called repeatedly — it captures and restores the
+    // focused input, the cursor and the scroll position around the DOM swap —
+    // so the second pass is what that machinery is for, not a workaround for it.
+    await Promise.all([this._loadTasks(), this._loadColumns()]);
+    this._render();
     await Promise.all([
-      this._loadTasks(),
-      this._loadColumns(),
       this._loadColumnWatches(),
       this._loadActivity(),
       this._loadMembers(),

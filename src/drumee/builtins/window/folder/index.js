@@ -793,6 +793,28 @@ class __window_folder extends mfsInteract {
     // "Join Meeting" to members while a host is in the call (chat meeting.start/
     // meeting.end sentinels — realtime + an initial history scan).
     this._initMeetingPresence();
+    // Warm the tasks panel while the window that hosts it is on screen.
+    //
+    // `tasks_panel` is a lazy kind (seeds.js) and was the one tab widget the
+    // app never warmed — tutorial_migrate, desk_tutorial, reward_flow,
+    // promo_launch30 and over_limit_popup all are. So the first press of Task,
+    // from this window's tab bar or from the rail, WAS the moment its chunk was
+    // first requested: Kind.get() hands back the lazy-loader placeholder, which
+    // mounts empty, waits on the network and respawns itself once the module
+    // lands (ui-core letc/kind/loader.js). The user pays a round trip and a
+    // mount-and-rebuild at the moment they asked to see their tasks.
+    //
+    // It is the largest lazy chunk in the build — 612 KB — so that round trip
+    // is not a formality. Measured against stage: 2.9s, because the endpoint
+    // serves it uncompressed (gzip would be 133 KB).
+    //
+    // Fire and forget, and deliberately NOT awaited: a warm-up that fails costs
+    // nothing, because the kind still loads on demand exactly as it did. Not
+    // awaited for a second reason too — the Files tab must not wait on a
+    // prefetch for a tab the user may never open.
+    if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+      Promise.resolve(Kind.waitFor("tasks_panel")).catch(() => {});
+    }
     const initialTab = this.mget("activeTab");
     if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
       this._launchMeetingStandalone();
