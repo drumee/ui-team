@@ -250,14 +250,15 @@ class __desk_breadcrumb extends LetcBox {
     if (!wm) return this.loadDefault();
     let nid = null;
     let hub_id = null;
-    // headlessLayer explicitly, and only when it exists: folderWindowIn falls
-    // back to getWindowsPool() for a missing pool, and that can answer a POPUP
-    // folder window — whose navigation is private to it and must never retitle
-    // this bar. At boot the layer is not up yet, which correctly leaves the
+    // The PANE, and only the pane: a POPUP folder window's navigation is
+    // private to it and must never retitle this bar. Wm.headlessPane is what
+    // tells the two apart — folderWindowIn answers the LAST window_folder in
+    // the layer, and headlessLayer holds every explicitly launched window too,
+    // so with a folder popup open it hands back the popup. (It also falls back
+    // to getWindowsPool() for a missing pool, which is a second way to the same
+    // wrong answer.) At boot no pane is up yet, which correctly leaves the
     // track to _curWorkspace and then to loadDefault().
-    const pane = wm.headlessLayer && _.isFunction(wm.folderWindowIn)
-      ? wm.folderWindowIn(wm.headlessLayer)
-      : null;
+    const pane = _.isFunction(wm.headlessPane) ? wm.headlessPane() : null;
     if (pane && !(pane.isDestroyed && pane.isDestroyed()) && pane.model) {
       const a = pane.model.toJSON();
       hub_id = a.hub_id;

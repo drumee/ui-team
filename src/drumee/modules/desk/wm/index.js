@@ -703,6 +703,40 @@ class __window_manager extends push {
   }
 
   /**
+   * THE WORKSPACE PANE — the headless window_folder that IS the desk.
+   *
+   * Not Wm.folderWindowIn(headlessLayer): that answers the LAST window_folder
+   * in the layer, and headlessLayer receives every explicitly launched window
+   * too (launch -> getWindowsPool). A folder popup — "Open in window", "Get
+   * info", a chat/notification "open location" — is therefore appended AFTER
+   * the pane and wins that lookup, so callers meaning "the desk" got the popup
+   * instead: in-place navigation drove the window nobody was looking at while
+   * the pane stayed where it was.
+   *
+   * `headless` is the discriminator, because it is the flag that decides the
+   * window's whole shape (window/folder/skeleton: pane vs. popup) and it is
+   * set by loadWorkspace alone. Hub-agnostic sibling of _findWorkspaceWindow —
+   * only one pane is mounted at a time (loadWorkspace re-feeds the layer), so
+   * the caller does not have to know which workspace it is.
+   *
+   * @returns {Object|null} the live workspace pane, or null before one mounts
+   */
+  headlessPane() {
+    const layer = this.headlessLayer;
+    if (!layer || !layer.children) return null;
+    const panes = layer.children
+      .toArray()
+      .filter(
+        (c) =>
+          c &&
+          !(c.isDestroyed && c.isDestroyed()) &&
+          c.mget(_a.kind) === "window_folder" &&
+          c.mget(_a.headless),
+      );
+    return panes[panes.length - 1] || null;
+  }
+
+  /**
    * Find a headless workspace window already open for the given hub_id.
    * Searches headlessLayer only — headless windows never live in windowsLayer.
    * Returns null if none is open or all are mid-destroy.
@@ -847,10 +881,12 @@ class __window_manager extends push {
         if (this._modalHoldsAccessPanelFor(p, hub_id)) return;
         p.clear();
       });
-      // By KIND, not by position: headlessLayer also receives every explicitly
-      // launched window (a player, the Drive popup...), so children.last() is
-      // whatever the user opened most recently — see Wm.folderWindowIn.
-      let cur = this.folderWindowIn(this.headlessLayer);
+      // By KIND AND `headless`, not by position: headlessLayer also receives
+      // every explicitly launched window (a player, a folder popup, the Drive
+      // popup...), so children.last() is whatever the user opened most
+      // recently, and even the last window_folder in it can be a popup — see
+      // Wm.headlessPane.
+      let cur = this.headlessPane();
       if (cur) {
         const pane = cur;
         this._curWorkspacePane = pane;
@@ -907,7 +943,10 @@ class __window_manager extends push {
             // Resolved again HERE, not reused from above: feed() may not have
             // mounted the new pane yet when this callback was set up, and a
             // second switch may have replaced it while the path was in flight.
-            const w = this.folderWindowIn(this.headlessLayer);
+            // The PANE, not the last window_folder in the layer: a folder popup
+            // launched during the round trip would otherwise take this
+            // workspace's crumbs (Wm.headlessPane).
+            const w = this.headlessPane();
             if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
           })
           // Without this the throw above escaped as an unhandledrejection —
@@ -1344,7 +1383,7 @@ class __window_manager extends push {
     // to ask: "is the target already a tile in THIS listing?" Outside the pane
     // it now falls through to the resolve-and-refresh path below, which is the
     // correct handling for a node that is not on screen.
-    const scope = this.folderWindowIn(this.headlessLayer) || null;
+    const scope = this.headlessPane();
     const media = scope && _.isFunction(scope.getItemsByAttr)
       ? scope.getItemsByAttr(_a.nid, data.nid)[0]
       : null;
@@ -1365,17 +1404,45 @@ class __window_manager extends push {
         const resolved =
           attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
         if (!resolved) {
-          this.warn("loadWorkspace: cannot resolve workspace root", {
+          this.warn("openWorkspaceFolder: cannot resolve node", {
             hub_id,
+            nid,
             attrs,
           });
           return;
         }
-        // Same trap as loadWorkspace above: the pool's last child is whatever
-        // was launched most recently, not necessarily the folder window, and
-        // refreshContent below is a folder-only method (Wm.folderWindowIn).
-        let currentFolder = this.folderWindowIn();
-        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) return;
+        // THE WORKSPACE PANE, never "the last folder window anywhere".
+        //
+        // This used to be folderWindowIn() with no pool, which answers
+        // getWindowsPool() — headlessLayer whenever a workspace is open — and
+        // takes the LAST window_folder in it. Every explicitly launched window
+        // lands in that layer too, so with a folder popup up ("Open in window",
+        // "Get info", a chat/notification "open location") the click navigated
+        // the popup and the pane the breadcrumb describes never moved: the
+        // crumbs cropped to the clicked ancestor, the grid stayed where it was,
+        // and the only way out of a subfolder was one level at a time.
+        // headlessPane() filters on the flag that tells the two apart.
+        //
+        // Resolved HERE rather than reusing `scope` from before the fetch: a
+        // workspace switch during the round trip replaces the pane, and the
+        // dead one must not be navigated.
+        const currentFolder = this.headlessPane();
+        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) {
+          // No pane to navigate — a section screen over an empty desk, or a
+          // crumb clicked before the first workspace mounted. Open the target
+          // as a workspace rather than dropping the click on the floor.
+          //
+          // An EXPLICIT shape, like the sidebar's own folder rows build:
+          // loadWorkspace prefers actual_home_id/home_id over nid, and this
+          // node's row carries the workspace ROOT in both — spreading it would
+          // open Home instead of the folder that was clicked.
+          return this.loadWorkspace({
+            hub_id,
+            nid: attrs.nid || nid,
+            area: attrs.area || data.area,
+            filename: attrs.filename || data.filename,
+          });
+        }
         currentFolder.refreshContent(attrs);
         // refreshContent can't infer the ancestor chain for a deep jump, so the
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
