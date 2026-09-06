@@ -228,3 +228,65 @@ test("anchorFor: the four directions are exact opposites in pairs", () => {
   assert.equal(south.bottom, `${H.bottom - T.top + 32}px`);
   assert.equal(north.left, south.left);
 });
+
+// ── splitAnchor ──────────────────────────────────────────────────────────────
+// The migrate tour's dialog screens: the card clears the whole panel but points
+// at the row inside it.
+
+// getBoundingClientRect() returns a DOMRect, and a DOMRect keeps every property
+// on its PROTOTYPE. That is the whole reason splitAnchor exists, so the fixture
+// has to be shaped the same way — a plain object would pass while the shipped
+// code produced NaN.
+class Rect {
+  constructor(left, top, width, height) {
+    Object.defineProperty(this, "_", { value: { left, top, width, height } });
+  }
+  get left() { return this._.left; }
+  get top() { return this._.top; }
+  get width() { return this._.width; }
+  get height() { return this._.height; }
+  get right() { return this._.left + this._.width; }
+  get bottom() { return this._.top + this._.height; }
+}
+
+test("splitAnchor: a DOMRect keeps its vertical, the other rect gives the horizontal", () => {
+  // The measured import dialog and the row a step points at, from
+  // tests/harness/migrate-callout-placement.js.
+  const dialog = new Rect(0, 90, 513, 480);
+  const row = new Rect(28, 250, 457, 56);
+  const merged = kit.splitAnchor(row, dialog);
+
+  // Vertical from the row — the beak marks it.
+  assert.equal(merged.top, 250);
+  assert.equal(merged.bottom, 306);
+  assert.equal(merged.height, 56);
+  // Horizontal from the dialog — the card clears it.
+  assert.equal(merged.left, 0);
+  assert.equal(merged.right, 513);
+  assert.equal(merged.width, 513);
+});
+
+test("splitAnchor: the result survives being read as a rect, unlike a spread", () => {
+  const row = new Rect(28, 250, 457, 56);
+  // The bug this replaced: spreading a DOMRect yields nothing at all.
+  assert.deepEqual({ ...row }, {});
+
+  const merged = kit.splitAnchor(row, new Rect(0, 90, 513, 480));
+  const host = { left: 0, top: 0, right: 1368, bottom: 860 };
+  const style = kit.anchorFor(merged, "west", 34, host);
+  // 34px clear of the PANEL, centred on the ROW — and no NaN on either axis,
+  // which is what silently dropped the card to the top of the callout layer.
+  assert.equal(style.left, "547px");
+  assert.equal(style.top, "278px");
+  assert.ok(!/NaN/.test(style.left + style.top));
+});
+
+test("splitAnchor: no usable horizontal rect leaves the anchor alone", () => {
+  const row = new Rect(28, 250, 457, 56);
+  // A part that has not laid out yet measures 0x0. Falling back to the rect we
+  // do have beats placing the card against an edge at x0.
+  const merged = kit.splitAnchor(row, new Rect(0, 0, 0, 0));
+  assert.equal(merged.left, 28);
+  assert.equal(merged.right, 485);
+  assert.equal(merged.top, 250);
+});

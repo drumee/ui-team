@@ -175,6 +175,42 @@ function anchorFor(rect, direction, gap, host) {
   }
 }
 
+/**
+ * One rect's horizontal edges on another rect's vertical ones.
+ *
+ * A callout sometimes has to CLEAR one box while POINTING AT another inside it:
+ * the migrate tour's import dialog is the case the design states outright
+ * (176:47527 puts the dialog's right edge at x1056 and the card's left at
+ * x1090), while the beak still has to mark the row the step is about.
+ *
+ * WHY THIS IS A FUNCTION AND NOT A SPREAD — the obvious one-liner is
+ * `{ ...vertical, left: h.left, right: h.right, width: h.width }`, and it is
+ * silently, totally wrong. These rects come from getBoundingClientRect(), and a
+ * DOMRect carries every property as a PROTOTYPE GETTER, not an own enumerable
+ * one, so `{ ...domRect }` is `{}`. The merge then has no `top` and no
+ * `height`, the centre works out to NaN, and `top: "NaNpx"` is an invalid
+ * declaration the browser drops without a word — leaving the card pinned to the
+ * top of the callout layer, horizontally correct and vertically nowhere.
+ *
+ * So the fields are named. A plain object out is also what `_keepInView` wants,
+ * since it re-reads this rect on a flip.
+ *
+ * @param {Object} vertical   the rect that decides top/bottom — what is pointed at
+ * @param {Object} horizontal the rect that decides left/right — what is cleared
+ * @returns {Object} a plain rect, safe to read and to spread
+ */
+function splitAnchor(vertical, horizontal) {
+  const h = horizontal && horizontal.width ? horizontal : vertical;
+  return {
+    top: vertical.top,
+    bottom: vertical.bottom,
+    height: vertical.height,
+    left: h.left,
+    right: h.right,
+    width: h.width,
+  };
+}
+
 module.exports = {
   SIZE_TIERS,
   SHORT_HEIGHT,
@@ -183,4 +219,5 @@ module.exports = {
   screensFor,
   buildStepWidgets,
   anchorFor,
+  splitAnchor,
 };

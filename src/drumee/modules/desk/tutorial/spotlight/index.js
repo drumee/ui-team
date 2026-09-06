@@ -1,6 +1,6 @@
 require('./skin');
 const { tooltipBubble } = require('../skeleton/toolkit');
-const { anchorFor } = require('../host-kit');
+const { anchorFor, splitAnchor } = require('../host-kit');
 
 // Card edge to target edge.
 //
@@ -259,7 +259,7 @@ class __tutorial_spotlight extends LetcBox {
       return;
     }
     if (this._stale(ticket)) return;
-    let anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    const pointsAt = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
     // A card can clear one box while pointing at another INSIDE it.
     //
     // The import dialog is the case the design states outright: 176:47527 puts
@@ -269,15 +269,11 @@ class __tutorial_spotlight extends LetcBox {
     // card came to rest against the panel it was meant to stand off.
     //
     // So the horizontal comes from `anchor_x` when a screen names one, and the
-    // vertical stays with `anchor`, which is what the beak marks.
-    if (measuredAnchorX && measuredAnchorX.width) {
-      anchorRect = {
-        ...anchorRect,
-        left: measuredAnchorX.left,
-        right: measuredAnchorX.right,
-        width: measuredAnchorX.width,
-      };
-    }
+    // vertical stays with `anchor`, which is what the beak marks. splitAnchor
+    // names every field rather than spreading — see the warning on it.
+    const anchorRect = anchor_x
+      ? splitAnchor(pointsAt, measuredAnchorX)
+      : pointsAt;
     // Kept for _keepInView, which may have to place the card again on the other
     // side of this same rect.
     this._anchorRect = anchorRect;
