@@ -1991,6 +1991,9 @@ class __window_folder extends mfsInteract {
         // going to open the matrix instead.
         const membersOnly =
           !!(args && args.members) || this._manageAccessIsInternal();
+        // Set by the tour branch below; read after it to decide whether the
+        // panel opens now or once the tour is done.
+        let raised = false;
         if (!membersOnly) {
           // Belt for the two hidden entry points (topbar icon + overflow menu):
           // the panel mints secure-share links that can grant can_edit, and
@@ -2022,6 +2025,9 @@ class __window_folder extends mfsInteract {
           // Internal is excluded because the tour teaches secure sharing —
           // six screens of link options (modules/desk/tutorial/share,
           // LOCALE.SECURE_SHARE) — over a panel that has no links in it.
+          // Whether the tour actually went up. showTutorial answers false for
+          // every gate — already completed, mobile, the kill switch, another
+          // tour in flight — and that answer is what decides the ORDER below.
           if (!this.isShowSettings) {
             // What this panel is about, told to the tour because the tour
             // cannot work it out: openManageAccess() opens a WORKSPACE's
@@ -2050,7 +2056,7 @@ class __window_folder extends mfsInteract {
             // mock of itself — while the panel this tour is about is right
             // here. showTutorial takes the same claim fire() would have taken,
             // so every gate still applies exactly once.
-            this.showTutorial("share", {
+            raised = this.showTutorial("share", {
               subject: "workspace",
               subject_data: {
                 name: this.mget(_a.hub_name) || this.mget(_a.filename),
@@ -2061,6 +2067,24 @@ class __window_folder extends mfsInteract {
               },
             });
           }
+        }
+        // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
+        // tour teaches the secure-share panel, so it is drawn over the very
+        // window that panel slides into, and the user met a walkthrough with
+        // the real thing already open and invisible behind it.
+        //
+        // So the two are sequenced. Not done with the tour → it plays, and the
+        // panel opens as it comes down. Done with it → `raised` is false and
+        // the panel opens now, exactly as before, which is every click after
+        // the first walkthrough.
+        //
+        // whenDone runs its callback synchronously when nothing is in flight,
+        // so the second case costs a microtask and no branch of its own.
+        if (raised) {
+          return require("libs/tutorial-tours").whenDone("share", () => {
+            if (this.isDestroyed && this.isDestroyed()) return;
+            this.openManageAccess({ members: membersOnly });
+          });
         }
         return this.openManageAccess({ members: membersOnly });
       }

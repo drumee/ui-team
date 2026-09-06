@@ -560,7 +560,13 @@ html {
     //
     // This is the number the switcher lift below already uses, for exactly the
     // same reason: it has to clear a 50000 context.
-    z-index: 100001;
+    //
+    // ONE ABOVE THE RAIL, and that is not decoration. `__topbar` comes BEFORE
+    // `__body` in the skeleton and the rail lives inside `__body`, so at equal
+    // z-index the rail paints last and wins — which put the dark rail over the
+    // workspace switcher's dropdown, the one thing up here that hangs down far
+    // enough to overlap it.
+    z-index: 100002;
   }
 
   // Same, for the rail. It is beside the tour rather than under it, so this is
@@ -577,6 +583,8 @@ html {
     // The rail already carries `position: absolute` inside its __rail wrapper,
     // so z-index applies; declared for the mobile drawer, which is `fixed` and
     // already sits at 99999 of its own.
+    //
+    // One BELOW the topbar above, which has to win: see the note there.
     z-index: 100001;
   }
 }

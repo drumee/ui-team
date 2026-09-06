@@ -368,7 +368,10 @@ test("an in-window tour stands the desk's overlay down instead of taking the des
   const deskSkin = rf(join(ROOT, "src/drumee/modules/desk/skin/index.scss"), "utf8");
   const i = deskSkin.indexOf('.desk-module[data-window-tour="1"]');
   assert.ok(i > 0, "no stand-down block for an in-window tour");
-  const block = deskSkin.slice(i, i + 2200);
+  // Sized to the block, not a guessed length: a comment added inside it used
+  // to push the last rule out of a fixed slice and fail an assertion about
+  // code that was correct.
+  const block = deskSkin.slice(i, deskSkin.indexOf("\n}\n", i));
   assert.match(block, /background-color: transparent/);
   assert.match(block, /pointer-events: none/);
   // 100001, and the number matters. The overlay is NOT at its declared 10010
@@ -377,8 +380,22 @@ test("an in-window tour stands the desk's overlay down instead of taking the des
   // `--z-index-context` (50000) with !important. A lift to 10011 lost to it in
   // silence. This is the same value the workspace-switcher lift in that file
   // already uses, for the same reason.
-  assert.match(block, /z-index: 100001/);
-  assert.ok(!/z-index: 10011/.test(block), "10011 loses to the 50000 data-state lift");
+  // THE ORDERING IS THE INVARIANT, not either number on its own.
+  //
+  // Both have to clear the overlay's real 50000, and the TOPBAR has to clear
+  // the RAIL: `__topbar` comes before `__body` in the skeleton and the rail
+  // lives inside `__body`, so at equal z-index the rail paints last and wins —
+  // which put the dark rail over the workspace switcher's dropdown, the one
+  // thing up here that hangs down far enough to overlap it.
+  const zOf = (sel) => {
+    const at = block.indexOf(sel);
+    assert.ok(at > 0, `${sel} is not lifted at all`);
+    return Number(/z-index:\s*(\d+)/.exec(block.slice(at))[1]);
+  };
+  const topbar = zOf(".desk-module__topbar");
+  const rail = zOf(".desk-module-sidebar__main");
+  assert.ok(rail > 50000, `the rail (${rail}) must clear the overlay's 50000`);
+  assert.ok(topbar > rail, `the topbar (${topbar}) must clear the rail (${rail})`);
   // The RAIL's own class, with a hyphen. This asserted `.desk-module__sidebar`,
   // which appears nowhere else in the codebase and which nothing has ever worn
   // — the rail is its own widget family. The rule matched nothing and the test

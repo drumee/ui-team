@@ -887,7 +887,11 @@ class __media_interact extends media_core {
         // the workspace variant, a folder the folder variant, everything else
         // the file icon.
         const _ft = this.mget(_a.filetype);
-        require("libs/tutorial-tours").fire("share", this, {
+        // `_tourDone` marks the RE-ENTRY below, after the tour has finished.
+        // Without it this line would fire again — and a tour the user escaped
+        // is not marked seen, so it would be raised, deferred, re-entered and
+        // raised again, forever.
+        const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
           subject: _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file"),
           subject_data: {
             name: this.mget(_a.filename),
@@ -901,6 +905,23 @@ class __media_interact extends media_core {
             area: this.mget(_a.area),
           },
         });
+        // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
+        // tour teaches the secure-share panel, and the panel was opening while
+        // the walkthrough about it was still on screen — visible only once the
+        // tour came down, already filled in.
+        //
+        // `fire` answers whether the tour actually went up: false for every
+        // gate — already completed, mobile, the kill switch, another tour in
+        // flight — and that is what decides the order. Not done → the tour
+        // plays and the panel opens as it comes down. Done → the panel opens
+        // now, which is every click after the first walkthrough.
+        //
+        // whenDone runs its callback synchronously when nothing is in flight,
+        // so the second case is the same code path it always was.
+        if (_raised) {
+          return require("libs/tutorial-tours")
+            .whenDone("share", () => this.onUiEvent(cmd, { ...args, _tourDone: 1 }));
+        }
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
