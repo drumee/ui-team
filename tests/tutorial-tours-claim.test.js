@@ -115,3 +115,39 @@ test("fire: a throwing listener releases single-flight", () => {
   assert.equal(Tours.inFlight(), null, "a bad listener must not latch the guard");
   global.RADIO_BROADCAST = { trigger: (ch, p) => broadcasts.push([ch, p]) };
 });
+
+// ── the migrate tour's "is the user done with it" contract ───────────────────
+//
+// The rail's Files button offers this tour on every press, and asks nothing
+// itself about whether the user has finished with it — claim() is the whole
+// answer (see _maybeShowFilesTour in modules/desk/index.js). What makes that
+// safe is that the tour is `mark_on: "success"`: its flag is written only when
+// the user creates a folder, uploads files, or walks every step to the last
+// Done. These pin both halves of that.
+
+test("migrate: offered again while the user has not finished with it", () => {
+  reset();
+  // Nothing recorded — the state after opening the tour and doing nothing,
+  // which is exactly what mark_on:"success" leaves behind.
+  assert.equal(Tours.claim("migrate", host), true);
+  Tours.release("migrate");
+  assert.equal(Tours.claim("migrate", host), true, "and again, and again");
+  // Released, not left standing: a claim arms a 30s guard timer, and an
+  // un-released one at the end of the file keeps the runner waiting it out.
+  Tours.release("migrate");
+});
+
+test("migrate: not offered once it has been completed", () => {
+  reset();
+  // Whichever of the three completions ran, they all end in the same write.
+  Tours.markSeen("migrate", host);
+  assert.equal(Tours.claim("migrate", host), false);
+});
+
+test("migrate: markSeen writes only the tour it is given", () => {
+  reset();
+  Tours.markSeen("migrate", host);
+  // A completed migrate must not burn the tours the user has not met.
+  assert.equal(Tours.claim("share", host), true);
+  Tours.release("share");
+});

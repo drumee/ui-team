@@ -4035,6 +4035,42 @@ class desk_module extends LetcBox {
    * rail cannot render a "no workspace" state anyway). The workspace opens on
    * its own default tab, which beats landing on a screen we no longer ship.
    */
+  /**
+   * The migrate tour, over the workspace the Files rail just showed.
+   *
+   * IN THE WINDOW, not on the desk. This tour is about a folder window — its
+   * "+ New" menu, its Upload button, its import dialog — and there is a host
+   * that draws a tour ON one, so it runs there over the real pane rather than
+   * over a full-screen drawing of it.
+   *
+   * WHETHER THE USER IS "DONE" IS NOT ASKED HERE. `showTutorial` takes the
+   * claim, and the seen-set behind it is the answer: this tour is
+   * `mark_on: "success"` (tutorial/tours.js), so its flag is written only when
+   * the user creates a folder, uploads files, or walks every step to the last
+   * Done — and until one of those happens the claim keeps succeeding and the
+   * tour keeps being offered. Re-deriving that condition here would give one
+   * tour a rule none of the others have, and a second place for it to drift.
+   *
+   * AWAITED, because the pane may not exist yet: _railTab falls back to
+   * _openDefaultWorkspace() when nothing is open, which mounts from inside a
+   * media.attributes fetch. Polling for it covers both cases — a workspace
+   * already open answers on the first look. A click that lands on the home grid
+   * instead simply times out and offers nothing, which is right: a tour drawn
+   * on a window needs a window.
+   *
+   * @returns {Promise<Boolean>} whether a tour was raised
+   */
+  async _maybeShowFilesTour() {
+    try {
+      const ws = await this._awaitRailWorkspace(3000);
+      if (!ws || !_.isFunction(ws.showTutorial)) return false;
+      return !!ws.showTutorial("migrate");
+    } catch (e) {
+      // A tour is never load-bearing for the navigation that triggered it.
+      return false;
+    }
+  }
+
   _railTab(tab) {
     // The active tab, stamped for the skin: the phone's Files action row
     // (search + "+ New") shows only while the files view is up — Chat has its
@@ -7134,8 +7170,19 @@ class desk_module extends LetcBox {
       // meets it as the continuation of the walkthrough it is already in,
       // rather than on a rail press it may not make for days — and pressing
       // Files stays a navigation, not a full-screen interruption.
-      case "rail-files":
-        return this._railTab("files");
+      case "rail-files": {
+        const _res = this._railTab("files");
+        // Contextual tour, on a press of Files in the rail — the gesture this
+        // tour is actually about, and the one place a user with an empty
+        // workspace goes looking for somewhere to put their files.
+        //
+        // AFTER _railTab, never before, so the tour can never swallow the
+        // navigation the user asked for — the same ordering rail-chat,
+        // rail-task and rail-meet use. Un-awaited for the same reason: the
+        // click has already been answered.
+        this._maybeShowFilesTour();
+        return _res;
+      }
       case "rail-chat": {
         // Resolved BEFORE the tab is shown, for the same reason as rail-task
         // and rail-meet below: _railTab falls back to _openDefaultWorkspace()

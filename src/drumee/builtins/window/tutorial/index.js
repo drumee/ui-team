@@ -354,7 +354,15 @@ class __window_tutorial extends LetcBox {
       this._showStep(this._widgetAt(this._stepIndex));
       return;
     }
-    this._endTour();
+    // WALKING THE WHOLE TOUR COUNTS AS DOING IT. There is nothing past the last
+    // step, so arriving here means the user pressed Done on it — which is a
+    // completion, and for a `mark_on: 'success'` tour it has to be recorded
+    // like one.
+    //
+    // Only this route. Escape and the callout's skip also end the tour and
+    // reach _endTour directly; they leave it armed, which is the difference
+    // between finishing something and getting out of it.
+    this._markDone();
   }
 
   /**
@@ -531,6 +539,9 @@ class __window_tutorial extends LetcBox {
 
   /**
    * Record the tour as done once the window actually receives something.
+   *
+   * ONE OF THE TWO WAYS THIS TOUR IS COMPLETED — a folder created or files
+   * uploaded. The other is walking it to the end, which _nextStep records.
    *
    * `newContent` is the folder window's arrival hook — a create and an upload
    * both land there — so it is the one honest signal that the user did the

@@ -309,8 +309,15 @@ test("the migrate tour is recorded on the action landing, not on mount", () => {
   // is the entire reason this tour is marked on success.
   assert.match(hostSrc, /newContent/);
   assert.match(hostSrc, /_markDone\(\)\s*{/);
+  // Walking every step to the last Done is the tour's other completion, so
+  // _nextStep records it rather than falling through to a plain exit.
+  assert.match(hostSrc, /_markDone\(\);\s*}\s*_prevStep/);
   // A preview must not burn the flag on the way out any more than on the way in.
-  const done = hostSrc.slice(hostSrc.indexOf("_markDone()"));
+  //
+  // Anchored on the DEFINITION, not on the first mention of the name: the call
+  // sites now come first in the file, and slicing from one of those read the
+  // wrong function's body.
+  const done = hostSrc.slice(hostSrc.search(/_markDone\(\)\s*{/));
   assert.match(done.slice(0, 400), /mget\('preview'\)/);
 });
 

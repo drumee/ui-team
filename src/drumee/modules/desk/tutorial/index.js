@@ -295,6 +295,22 @@ class tutorial_main extends LetcBox {
     if (this._widgets[this._stepIndex]) {
       this._showStep(this._widgetAt(this._stepIndex));
     } else {
+      // WALKING THE WHOLE TOUR COUNTS AS DOING IT, for a tour that is recorded
+      // on success rather than on sight.
+      //
+      // onDomRefresh deliberately skips markSeen for those (`mark_on:
+      // 'success'` — the migrate tour), so that someone who opens one and does
+      // nothing is offered it again. Nothing then recorded it here either, so a
+      // user who walked every screen to the last Done was also offered it
+      // again — and the topbar's "+ New" menu, which fires it on every open,
+      // would have gone on doing so forever.
+      //
+      // Only this route. _skipTour is the Escape / skip path and leaves the
+      // tour armed, which is the difference between finishing something and
+      // getting out of it.
+      if (this._tour.flag && !this.mget('preview') && this._tour.mark_on === 'success') {
+        Tours.markSeen(this._tour.flag, this);
+      }
       // Through _enterCreated, which opens the workspace the tour made before
       // taking the tour down. With none — every other tour — it is exactly
       // _enterWorkspace.
