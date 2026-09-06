@@ -18,6 +18,10 @@
   &__ui {
     position: absolute;
     inset: 0;
+    // The desk stands its overlay down to `pointer-events: none` while this tour
+    // runs, so the rail and the topbar behind stay usable. The tour takes events
+    // back for its own box — it has live controls in it.
+    pointer-events: auto;
   }
 
   // The layout already gets its size, its overflow and its opaque background

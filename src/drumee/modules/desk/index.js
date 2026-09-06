@@ -991,6 +991,15 @@ class desk_module extends LetcBox {
 
   mountWindowTutorial(ws, tour, opt = {}) {
     if (!ws || !tour) return false;
+    // Mark the desk for the duration.
+    //
+    // The `overlay` slot is built for FULL-SCREEN guests — desk_tutorial, the
+    // reward flow, the promo modals — so opening it paints a body-wide scrim and
+    // takes `pointer-events: auto` over the whole desk. An in-window tour covers
+    // one window and must do neither: with that scrim up the rail could not be
+    // clicked at all, and the topbar's own menus were painted over. The skin
+    // reads this flag to stand both of those down.
+    if (this.el && this.el.dataset) this.el.dataset.windowTour = "1";
     this.ensurePart("overlay").then((p) => {
       p.feed({
         kind: "window_tutorial",
@@ -4783,6 +4792,7 @@ class desk_module extends LetcBox {
         const wtPreview = child && child.mget && child.mget("preview");
         if (child && _.isFunction(child.once)) {
           child.once(_e.destroy, () => {
+            if (this.el && this.el.dataset) delete this.el.dataset.windowTour;
             if (wtPreview || !wtTour) return;
             try {
               require("libs/tutorial-tours").release(wtTour);

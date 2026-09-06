@@ -350,3 +350,29 @@ test("the tour hosts a real dialog itself, because a window's cannot be seen", (
   assert.match(hostSrc, /case 'create-folder-submit'/);
   assert.match(hostSrc, /case 'close-folder-dialog'/);
 });
+
+test("an in-window tour stands the desk's overlay down instead of taking the desk", () => {
+  // The `overlay` slot is built for full-screen guests: opening it paints a
+  // body-wide scrim and takes pointer-events across the whole desk. An in-window
+  // tour covers ONE window, so both defaults are wrong for it — the rail could
+  // not be clicked at all, and the topbar's switcher, tooltips and account menu
+  // were painted over.
+  const { readFileSync: rf } = require("node:fs");
+  const deskSkin = rf(join(ROOT, "src/drumee/modules/desk/skin/index.scss"), "utf8");
+  const i = deskSkin.indexOf('.desk-module[data-window-tour="1"]');
+  assert.ok(i > 0, "no stand-down block for an in-window tour");
+  const block = deskSkin.slice(i, i + 2200);
+  assert.match(block, /background-color: transparent/);
+  assert.match(block, /pointer-events: none/);
+  // Above the overlay's 10010, so the topbar's menus open OVER the tour.
+  assert.match(block, /\.desk-module__topbar \{\s*z-index: 10011/);
+  assert.match(block, /\.desk-module__sidebar \{/);
+
+  // The desk raises and clears the flag itself.
+  assert.match(deskSrc, /dataset\.windowTour = "1"/);
+  assert.match(deskSrc, /delete this\.el\.dataset\.windowTour/);
+
+  // And the tour takes events back for its own box, or nothing in it is clickable.
+  const tourSkin = rf(join(ROOT, "src/drumee/builtins/window/tutorial/skin/index.scss"), "utf8");
+  assert.match(tourSkin, /pointer-events: auto/);
+});
