@@ -832,6 +832,25 @@ class desk_module extends LetcBox {
     const intent = require("libs/window-tutorial-intent");
     if (!intent.has()) return false;
 
+    // WAIT FOR THE RESTORE FIRST, and this is not defensive tidying — without
+    // it the tour flashed up and vanished.
+    //
+    // loadDefault raises `_restoreInFlight`, feeds the skeleton — whose
+    // `overlay` part reaches onPartReady -> _afterHomeSettled -> here,
+    // synchronously — and only THEN calls _restoreDeskState(). So at this
+    // moment nothing is open yet: `_railWorkspace()` answered null, this opened
+    // rows[0] (an arbitrary workspace), mounted the tour on it, and the restore
+    // then opened the REMEMBERED workspace over the top. Destroying that folder
+    // window takes its overlay with it (__window_folder.onBeforeDestroy ->
+    // _closeTutorialOverlay), so the tour appeared, closed, and left a
+    // workspace behind.
+    //
+    // `_restoreInFlight` is the flag that exists to stop precisely this kind of
+    // interference — the comment on it in loadDefault describes an earlier race
+    // it was written for — so the honest fix is to respect it rather than to
+    // open a workspace into the middle of someone else's open.
+    await this._awaitRestoreSettled();
+
     let ws = this._railWorkspace();
     if (!ws) {
       await this._openDefaultWorkspace();
@@ -865,6 +884,37 @@ class desk_module extends LetcBox {
    *
    * @returns {Promise<Object|null>}
    */
+  /**
+   * Resolve once the desk has finished restoring its screen.
+   *
+   * `_restoreInFlight` is raised before the skeleton is fed and cleared by
+   * _clearRestoreInFlight, usually on a 2-2.5s delay after the workspace opens
+   * — so it means "the desk is still deciding what it is showing", which is
+   * exactly the window in which nothing else should open a workspace.
+   *
+   * Bounded, because the flag is cleared by a timer that a failed restore may
+   * never reach. Timing out simply falls through to the normal path, which
+   * opens a default workspace — the same thing that would have happened had
+   * there been no restore at all.
+   *
+   * @returns {Promise<Boolean>} whether it settled before the deadline
+   */
+  _awaitRestoreSettled() {
+    const deadline = Date.now() + 6000;
+    return new Promise((resolve) => {
+      const look = () => {
+        if (this.isDestroyed && this.isDestroyed()) return resolve(false);
+        if (!this._restoreInFlight) return resolve(true);
+        if (Date.now() >= deadline) {
+          this.warn && this.warn("[window-tutorial] desk restore did not settle");
+          return resolve(false);
+        }
+        setTimeout(look, 100);
+      };
+      look();
+    });
+  }
+
   _awaitRailWorkspace() {
     const deadline = Date.now() + 5000;
     return new Promise((resolve) => {

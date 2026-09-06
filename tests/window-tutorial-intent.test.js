@@ -154,3 +154,22 @@ test("the folder window no longer reads the URL itself", () => {
   // showTutorial stays — it is what the desk calls.
   assert.match(folderSrc, /showTutorial\(tour, opt/);
 });
+
+test("the desk waits for the workspace restore before mounting a tour", () => {
+  // loadDefault raises `_restoreInFlight`, feeds the skeleton — which reaches
+  // onPartReady("overlay") -> _afterHomeSettled() -> here, synchronously — and
+  // only THEN calls _restoreDeskState(). So this hook runs BEFORE the desk has
+  // opened its workspace.
+  //
+  // Without waiting, `_railWorkspace()` is null at that moment, so this opened
+  // rows[0] — an arbitrary workspace — mounted the tour on it, and was then
+  // replaced by the restore's own workspace. Destroying that folder window
+  // takes its overlay with it (__window_folder.onBeforeDestroy ->
+  // _closeTutorialOverlay), which is why the tour appeared, vanished, and left
+  // a workspace behind. `_restoreInFlight` is the flag that exists to stop
+  // exactly this, and ignoring it was the bug.
+  const body = deskSrc.slice(deskSrc.indexOf("_maybeRunWindowTutorial"));
+  assert.match(body.slice(0, 2000), /_awaitRestoreSettled\(\)/);
+  assert.match(deskSrc, /_awaitRestoreSettled\(\)\s*{/);
+  assert.match(deskSrc, /_restoreInFlight/);
+});
