@@ -331,7 +331,17 @@ test("the tour hosts a real dialog itself, because a window's cannot be seen", (
   assert.match(hostSrc, /action === 'add-folder'/);
   assert.match(hostSrc, /create-folder-dialog/);
   assert.match(hostSrc, /prefix: 'window-folder__create-folder'/);
-  assert.match(hostSrc, /ws\.createFolderFromDialog\(entry\)/);
+  // The typed name is READ BEFORE the dialog is torn down and handed over in a
+  // stand-in. Closing first destroyed the entry_reminder, whose getValue() then
+  // returns undefined through a gone `_entry` — and the window's own fallback
+  // looks in ITS tree, where this dialog was never rendered. Every folder came
+  // out named "New folder".
+  const submit = hostSrc.slice(hostSrc.indexOf("_submitCreateFolder(entry)"));
+  const read = submit.indexOf("entry.getValue()");
+  const close = submit.indexOf("_closeCreateFolder()");
+  assert.ok(read > -1 && close > -1, "submit must read then close");
+  assert.ok(read < close, "the name must be read before the dialog is cleared");
+  assert.match(submit.slice(0, 900), /getValue: \(\) => name/);
   // and both of the dialog's own controls are routed
   assert.match(hostSrc, /case 'create-folder-submit'/);
   assert.match(hostSrc, /case 'close-folder-dialog'/);

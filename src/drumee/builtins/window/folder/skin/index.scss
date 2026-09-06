@@ -163,6 +163,27 @@
   }
 }
 
+
+// Entrance / exit for the create-folder card, mirroring media/form's pair.
+@keyframes window-folder-dialog-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes window-folder-dialog-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.96); }
+}
+
+// Motion is decoration here: the card's job is to be answered, and someone who
+// has asked for less of it should still get the dialog instantly.
+@media (prefers-reduced-motion: reduce) {
+  .window-folder__create-folder-dialog,
+  .window-folder__create-folder-dialog[data-closing="1"] {
+    animation: none;
+  }
+}
+
 .window-folder {
   &__ui {
     // Container query anchor. The folder window registers itself as a
@@ -1589,7 +1610,51 @@
     pointer-events: none;
   }
 
-  &__create-folder-dialog,
+  // ── The create-folder card ──────────────────────────────────────────────
+  //
+  // The create-WORKSPACE dialog's ramp (builtins/media/form/skin), which is
+  // itself the workspace tour's `__wsd-*` card (Figma 176:40762). These two are
+  // the same act one level apart — make a container, name it — and they were
+  // visibly different objects: 360px against 460, a flat `--normal-bg-90`
+  // against an elevated surface with a hairline, and a 1px shadow against a
+  // real ambient one.
+  //
+  // Written out rather than shared: webpack injects a widget's stylesheet only
+  // when that widget loads, so a common partial would have to be @use'd from
+  // both sides anyway — the same reasoning media/form gives for copying the
+  // ramp off the tour rather than importing it.
+  //
+  // `__rename-folder-dialog` keeps its own smaller treatment below; only the
+  // create card is promoted.
+  &__create-folder-dialog {
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    gap: 24px;
+    padding: 32px;
+    border-radius: 24px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.15),
+      0 7px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+
+    // Entrance, matching media/form's.
+    //
+    // `backwards`, never `both`: a filling animation keeps its last keyframe
+    // forever and outranks inline styles, so anything positioning this element
+    // in JS afterwards would be silently overridden.
+    animation: window-folder-dialog-in 0.18s ease-out backwards;
+  }
+
+  // Set by whoever closes the dialog, which then defers the teardown so the
+  // exit actually gets frames. Without the flag the card is simply removed and
+  // there is no close animation at all — the entrance would be the only half.
+  &__create-folder-dialog[data-closing="1"] {
+    animation: window-folder-dialog-out 0.16s ease-in forwards;
+  }
+
   &__rename-folder-dialog {
     width: 360px;
     background: var(--normal-bg-90);

@@ -424,11 +424,29 @@ class __window_tutorial extends LetcBox {
     });
   }
 
-  /** Take the dialog down, leaving the tour as it was. */
+  /**
+   * Take the dialog down, leaving the tour as it was.
+   *
+   * Marked, then cleared on a timer, so the exit animation gets frames —
+   * clearing on the spot destroys the element before a single one is painted
+   * and only the entrance is ever seen. Same idiom, and the same 160ms, as
+   * media/form's own close.
+   *
+   * A timer rather than `animationend`: reduced-motion disables the animation
+   * outright, and that event would then never fire, leaving the dialog up
+   * forever.
+   */
   _closeCreateFolder() {
     this._dialogFor = null;
     const p = this.getPart && this.getPart('dialog');
-    if (p && _.isFunction(p.clear)) p.clear();
+    if (!p || !_.isFunction(p.clear)) return;
+    const card = p.el && p.el.querySelector('.window-folder__create-folder-dialog');
+    if (!card || !card.dataset) return p.clear();
+    card.dataset.closing = '1';
+    setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      p.clear();
+    }, 160);
   }
 
   /**
@@ -443,10 +461,22 @@ class __window_tutorial extends LetcBox {
    */
   _submitCreateFolder(entry) {
     const ws = this._dialogFor;
+    // READ THE NAME BEFORE CLOSING. _closeCreateFolder() clears the slot, which
+    // destroys the entry widget — and a destroyed entry_reminder's getValue()
+    // returns undefined, because it reads through an inner `_entry` that has
+    // gone with it. Closing first therefore handed the window nothing, and its
+    // own fallback could not help either: `this.getPart("create-folder-name")`
+    // looks in the WINDOW's tree, and this dialog is rendered in the tour's. So
+    // every folder was created as "New folder" whatever the user typed.
+    const name = entry && _.isFunction(entry.getValue) ? entry.getValue() : null;
     this._closeCreateFolder();
     if (!ws || !_.isFunction(ws.createFolderFromDialog)) return;
     if (ws.isDestroyed && ws.isDestroyed()) return;
-    ws.createFolderFromDialog(entry);
+    // A stand-in carrying the value, because the real one is gone by now.
+    // `createFolderFromDialog` asks its `cmd` for exactly one thing —
+    // `cmd.getValue()` — so this is the whole of what it needs, and the
+    // validation, destination and service call all stay the window's.
+    ws.createFolderFromDialog({ getValue: () => name });
   }
 
   /**

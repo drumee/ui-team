@@ -1921,9 +1921,25 @@ class __window_folder extends mfsInteract {
       case "create-folder-submit":
         return this.createFolderFromDialog(cmd);
 
-      case "close-folder-dialog":
+      case "close-folder-dialog": {
         this.isShowSettings = false;
-        return this.dialogWrapper.clear();
+        // Marked, then cleared on a timer, so the card's exit animation gets
+        // frames. Clearing on the spot destroys the element before one is
+        // painted, which left the create dialog with an entrance and no exit.
+        // Same idiom and the same 160ms as media/form's close; a timer rather
+        // than `animationend`, because reduced-motion disables the animation
+        // and that event would then never fire.
+        const wrapper = this.dialogWrapper;
+        const card = wrapper && wrapper.el
+          && wrapper.el.querySelector(".window-folder__create-folder-dialog");
+        if (!card || !card.dataset) return wrapper.clear();
+        card.dataset.closing = "1";
+        setTimeout(() => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          wrapper.clear();
+        }, 160);
+        return;
+      }
 
       case "close-export":
         this._closeChatExportOverlay();
