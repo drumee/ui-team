@@ -1840,6 +1840,29 @@
     gap: 8px;
   }
 
+  &__create-folder-close {
+    // media/form's close, which this card's ramp comes from. It had neither a
+    // cursor nor a hover state: the only thing saying the ✕ was a control was
+    // that it looks like one, and on a card the user is meant to answer, the
+    // way out should say so under the pointer.
+    cursor: pointer;
+    // A hit target the pointer can actually find. 14x24 is the glyph's own box
+    // and reads as a sliver off-centre; media/form uses a square, and the icon
+    // scales to it rather than being stretched.
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover {
+      color: var(--normal-fg);
+    }
+  }
+
   &__create-folder-entry {
     input {
       // VISIBLE. The card is `--normal-bg-elevated` now and this input was the
