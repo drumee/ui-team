@@ -256,6 +256,10 @@ class __tutorial_spotlight extends LetcBox {
     }
     if (this._stale(ticket)) return;
     const anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    // Kept for _keepInView, which may have to place the card again on the other
+    // side of this same rect.
+    this._anchorRect = anchorRect;
+    this._gap = gap == null ? GAP : gap;
     // The callout is absolutely positioned inside THIS widget, so its
     // coordinates are relative to this box — not to the viewport, which is only
     // the same thing when nothing above the tour is positioned.
@@ -294,7 +298,7 @@ class __tutorial_spotlight extends LetcBox {
     // several frames, so a single rAF measures a card that is still growing —
     // and a short measurement under-nudges, which is the same clipped button
     // with extra steps. This is the helper the targets already use.
-    const r = await waitForStableRect(card);
+    let r = await waitForStableRect(card);
     if (this._stale(ticket) || !card.isConnected) return;
     if (!r.width || !r.height) return;
 
@@ -307,6 +311,56 @@ class __tutorial_spotlight extends LetcBox {
     };
     let dx = over(r.left, r.right, bounds.left + EDGE, bounds.right - EDGE);
     let dy = over(r.top, r.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+
+    // NO ROOM ON THIS SIDE? GO TO THE OTHER ONE.
+    //
+    // Sliding is the wrong answer when the card simply does not fit where it was
+    // asked to go. The cap below then gives up the tail and moves it as far as
+    // it must, which walks the card across the tour and leaves it flush against
+    // an edge, pointing at nothing — the migrate tour's dialog screens landed
+    // beside the mock's hero copy that way, half a pane from the dialog they
+    // describe.
+    //
+    // The opposite side is almost always empty, because the thing being
+    // described is what filled the first one. Flipping keeps the card beside its
+    // subject and keeps the beak on it; only if the flip does not fit either do
+    // we fall through to the old behaviour, which is the honest last resort.
+    const args = this._args || {};
+    const dir = args.direction || 'north';
+    const FLIP = { west: 'east', east: 'west', north: 'south', south: 'north' };
+    const horizontal = dir === 'east' || dir === 'west';
+    const overflowAxis = horizontal ? dx : dy;
+    const capBeforeFlip = horizontal
+      ? Math.max(0, r.width / 2 - BEAK_INSET)
+      : Math.max(0, r.height / 2 - BEAK_INSET);
+    if (overflowAxis && Math.abs(overflowAxis) > capBeforeFlip && this._anchorRect && FLIP[dir]) {
+      const flipped = FLIP[dir];
+      const style = anchorFor(this._anchorRect, flipped, this._gap, bounds);
+      // Clear the placement the first side used, or the two fight: `left` and
+      // `right` are both live if only one is overwritten.
+      for (const k of ['left', 'right', 'top', 'bottom']) card.style[k] = '';
+      Object.assign(card.style, style);
+      card.dataset.direction = flipped;
+      card.setAttribute('data-direction', flipped);
+      const after = await waitForStableRect(card);
+      if (this._stale(ticket) || !card.isConnected) return;
+      const stillOver = horizontal
+        ? over(after.left, after.right, bounds.left + EDGE, bounds.right - EDGE)
+        : over(after.top, after.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+      if (!stillOver || Math.abs(stillOver) <= capBeforeFlip) {
+        // The flip worked. Re-measure both axes against the new position and
+        // let the nudge below fine-tune what is left.
+        dx = over(after.left, after.right, bounds.left + EDGE, bounds.right - EDGE);
+        dy = over(after.top, after.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+        r = after;
+      } else {
+        // No better there. Put it back and take the old medicine.
+        for (const k of ['left', 'right', 'top', 'bottom']) card.style[k] = '';
+        Object.assign(card.style, anchorFor(this._anchorRect, dir, this._gap, bounds));
+        card.dataset.direction = dir;
+        card.setAttribute('data-direction', dir);
+      }
+    }
 
     // Past this the tail would leave the card it belongs to, and a beak
     // pointing at nothing is worse than a card slightly off-centre. The cap is

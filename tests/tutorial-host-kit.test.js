@@ -206,3 +206,25 @@ test("a live menu row carries its payload where each reader looks for it", () =>
   assert.equal((body.match(/\n\s*dataset: \{/g) || []).length, 1);
   assert.equal((body.match(/\n\s*attrOpt: \{/g) || []).length, 1);
 });
+
+test("anchorFor: the four directions are exact opposites in pairs", () => {
+  // The spotlight flips a callout to the other side when it cannot fit where it
+  // was asked to go, so the pairs have to actually mirror: reaching west puts
+  // the card to the target's right, east to its left, and the same vertically.
+  const T = { left: 400, top: 300, right: 700, bottom: 360, width: 300, height: 60 };
+  const H = { left: 0, top: 0, right: 1000, bottom: 800 };
+  const west = kit.anchorFor(T, "west", 32, H);
+  const east = kit.anchorFor(T, "east", 32, H);
+  // west places by `left` past the target's right edge; east by `right`,
+  // measured back from the host's far edge to the target's left.
+  assert.equal(west.left, `${T.right + 32}px`);
+  assert.equal(east.right, `${H.right - T.left + 32}px`);
+  // Both sit on the target's vertical centre, so a flip does not move the beak.
+  assert.equal(west.top, east.top);
+
+  const north = kit.anchorFor(T, "north", 32, H);
+  const south = kit.anchorFor(T, "south", 32, H);
+  assert.equal(north.top, `${T.bottom + 32}px`);
+  assert.equal(south.bottom, `${H.bottom - T.top + 32}px`);
+  assert.equal(north.left, south.left);
+});
