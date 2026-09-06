@@ -199,3 +199,33 @@ test("the desk waits for the restore's PANE, not just its flag", () => {
   assert.match(deskSrc, /_workspaceIncoming\(\)\s*{/);
   assert.match(deskSrc, /Wm\._curWorkspace/);
 });
+
+test("the wm's URL reset stands down when a tour was launched from the URL", () => {
+  // wm.route() unconditionally scheduled `location.hash = '#/desk/wm/home'` 5s
+  // after boot. That re-routes the app, re-renders the workspace pane, and drops
+  // the overlay appended to it — WITHOUT destroying the window, so no destroy
+  // handler fires. The tour appeared, vanished a few seconds later, and left a
+  // workspace behind, with every lifecycle hook silent. It took three rounds to
+  // find because the only visible trace was the address bar changing.
+  const wmSrc = stripComments(
+    readFileSync(join(ROOT, "src/drumee/modules/desk/wm/index.js"), "utf8"),
+  );
+  const i = wmSrc.indexOf("location.hash='#/desk/wm/home'");
+  assert.ok(i > 0, "the reset moved; this guard needs revisiting");
+  // The stand-down must come BEFORE the assignment, inside the same timeout.
+  const before = wmSrc.slice(Math.max(0, i - 400), i);
+  assert.match(before, /window-tutorial-intent/);
+  assert.match(before, /armed\(\)/);
+  assert.match(before, /return;/);
+});
+
+test("armed() survives take(), so the URL reset stays suppressed all session", () => {
+  // The reset fires ~5s in, long after the desk has consumed the intent. If
+  // `armed` were cleared by take(), the guard above would already be false by
+  // the time it mattered.
+  reset("#/desk?window_tutorial=migrate");
+  intent.captureFromUrl();
+  intent.take();
+  assert.equal(intent.has(), false, "the intent itself is one-shot");
+  assert.equal(intent.armed(), true, "but armed() must outlive it");
+});
