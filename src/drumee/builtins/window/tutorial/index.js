@@ -367,16 +367,18 @@ class __window_tutorial extends LetcBox {
    * literal.
    *
    * @param {String} action a service name the folder window handles
-   * @param {String} [name] the file name a `new-document` asks for
+   * @param {Object} [cmd] the widget that was clicked. Forwarded as the
+   *   handler's `cmd`, because the product reads its payload off the trigger —
+   *   `newDocument` takes the file name from `cmd.mget(_a.name)`, so the row
+   *   itself has to be what arrives, not this host.
    */
-  _actOnWindow(action, name) {
+  _actOnWindow(action, cmd) {
     const ws = this.mget('target_window');
     if (!action || !ws || !_.isFunction(ws.onUiEvent)) return false;
     if (ws.isDestroyed && ws.isDestroyed()) return false;
     this._watchForSuccess(ws);
-    const args = name ? { service: action, name } : { service: action };
     try {
-      ws.onUiEvent(this, args);
+      ws.onUiEvent(cmd || this, { service: action });
     } catch (e) {
       this.warn && this.warn(`[window-tutorial] "${action}" failed on the window`, e);
       return false;
@@ -456,7 +458,7 @@ class __window_tutorial extends LetcBox {
       // tour's + New rows and its Upload button raise this; the step names the
       // service and never learns which window it lands on.
       case 'window-tutorial:act':
-        this._actOnWindow(args.action, args.name);
+        this._actOnWindow(args.action, args.cmd);
         break;
 
       case 'spotlight:focus':

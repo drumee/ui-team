@@ -262,19 +262,20 @@ class __tutorial_migrate extends LetcBox {
 
       case 'mg-do-create': {
         const el = trigger && trigger.el;
-        const d = (el && el.dataset) || {};
-        if (!d.service) return;
-        return this.triggerHandlers({
-          service: 'window-tutorial:act',
-          action: d.service,
-          name: d.name || undefined,
-        });
+        const action = el && el.dataset && el.dataset.service;
+        if (!action) return;
+        // THE ROW ITSELF is forwarded as the trigger, not this widget. The
+        // product's handler reads the file name off the thing that was clicked
+        // (`cmd.mget(_a.name)` in window/core.js newDocument), so handing it
+        // anything else creates a document with no template name and it refuses.
+        return this.triggerHandlers({ service: 'window-tutorial:act', action, cmd: trigger });
       }
 
       case 'mg-do-upload':
         return this.triggerHandlers({
           service: 'window-tutorial:act',
           action: _e.upload,
+          cmd: trigger,
         });
 
       case 'next-step':

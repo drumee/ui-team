@@ -299,17 +299,16 @@ function hero(ui, opt = {}) {
  */
 function newMenu(ui, live) {
   const p = pfx(ui);
+  // `name` rides on the MODEL, not in a dataset, because that is where the
+  // product's own handler reads it from: window/core.js newDocument does
+  // `cmd.mget(_a.name)`. The row is forwarded to that handler as the `cmd`, so
+  // it has to carry what a real menu row carries.
+  //
+  // The real service travels as an attribute instead, because `service` on the
+  // model is already taken by `mg-do-create` — the tour has to see the click
+  // before the product does.
   const row = (item) => (live
-    ? {
-        service: "mg-do-create",
-        uiHandler: [ui],
-        dataset: { live: 1, service: item.service, name: item.name || "" },
-        attrOpt: {
-          "data-live": 1,
-          "data-service": item.service,
-          "data-name": item.name || "",
-        },
-      }
+    ? { service: "mg-do-create", uiHandler: [ui], name: item.name }
     : { active: 0 });
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-new-menu`,
@@ -318,11 +317,25 @@ function newMenu(ui, live) {
     kids: NEW_ITEMS.map((item, i) =>
       Skeletons.Box.X({ ...row(item),
         className: `${p}-new-item`,
+        // ONE dataset declaration, merged. These used to be declared after the
+        // spread above, which silently overwrote the payload it had just set —
+        // later keys win in an object literal — so every row dispatched with no
+        // service and the handler returned without doing anything. The menu
+        // opened and nothing in it worked.
+        //
         // The first row carries the frame's hover fill; `kind` picks the
         // glyph's tint. dataset alone is dropped at render unless an attribute
         // map rides along, so both are spelled out.
-        dataset: { active: i === 0 ? 1 : 0, kind: item.kind },
-        attrOpt: { "data-active": i === 0 ? 1 : 0, "data-kind": item.kind },
+        dataset: {
+          active: i === 0 ? 1 : 0,
+          kind: item.kind,
+          ...(live ? { live: 1, service: item.service } : {}),
+        },
+        attrOpt: {
+          "data-active": i === 0 ? 1 : 0,
+          "data-kind": item.kind,
+          ...(live ? { "data-live": 1, "data-service": item.service } : {}),
+        },
         kids: [
           Skeletons.Image.Svg({ active: 0, ico: item.ico, className: `${p}-new-item-ico` }),
           Skeletons.Note({ active: 0, className: `${p}-new-item-label`, content: item.label() }),

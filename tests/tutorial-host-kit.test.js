@@ -181,3 +181,28 @@ test("migrate is the only tour earned rather than shown", () => {
     assert.equal(TOURS[id].mark_on, undefined, `${id} must keep mount-marking`);
   }
 });
+
+test("a live menu row carries its payload where each reader looks for it", () => {
+  // Regression guard for a bug that made every row a no-op: the row's options
+  // were spread first and `dataset`/`attrOpt` re-declared after, so the payload
+  // was silently overwritten — later keys win in an object literal.
+  //
+  // Two readers, two channels, and they are not interchangeable:
+  //   name    on the MODEL, because window/core.js newDocument reads
+  //           cmd.mget(_a.name) off the clicked row
+  //   service in the DATASET, because `service` on the model is already
+  //           `mg-do-create` — the tour must see the click before the product
+  const { readFileSync } = require("node:fs");
+  const { join } = require("node:path");
+  const src = readFileSync(
+    join(__dirname, "..", "src/drumee/modules/desk/tutorial/skeleton/toolkit/files.js"),
+    "utf8",
+  );
+  const i = src.indexOf("function newMenu(");
+  const body = src.slice(i, src.indexOf("\n}", i));
+  assert.match(body, /name: item\.name/, "the file name must be on the model");
+  assert.match(body, /"data-service": item\.service/, "the service must reach the DOM");
+  // Exactly one dataset and one attrOpt in the row, or one silently wins.
+  assert.equal((body.match(/\n\s*dataset: \{/g) || []).length, 1);
+  assert.equal((body.match(/\n\s*attrOpt: \{/g) || []).length, 1);
+});

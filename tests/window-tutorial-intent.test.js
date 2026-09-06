@@ -284,8 +284,12 @@ test("the host forwards a step's action to the window it is drawn over", () => {
   // too — so a create goes through the product's dialog and Upload opens the
   // real picker, instead of the tour reimplementing either.
   assert.match(hostSrc, /window-tutorial:act/);
-  assert.match(hostSrc, /_actOnWindow\(action, name\)/);
-  assert.match(hostSrc, /ws\.onUiEvent\(this, args\)/);
+  assert.match(hostSrc, /_actOnWindow\(action, cmd\)/);
+  // The CLICKED ROW is forwarded as the handler's `cmd`, not this host. The
+  // product reads its payload off the trigger — newDocument takes the file name
+  // from cmd.mget(_a.name) — so handing it anything else creates a document
+  // with no template name and it refuses.
+  assert.match(hostSrc, /ws\.onUiEvent\(cmd \|\| this,/);
 });
 
 test("the migrate tour is recorded on the action landing, not on mount", () => {
