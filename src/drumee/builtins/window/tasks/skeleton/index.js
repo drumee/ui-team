@@ -1809,6 +1809,14 @@ const make = function (ui) {
       // No service on the backdrop — closing the modal must be explicit
       // (the X button or the Cancel link in the form footer).
       bubble: 0,
+      // The entrance runs on the OPENING render only. feed() rebuilds this
+      // element on every render, and a fresh element replays its animation —
+      // so with the modal open, an unrelated re-render faded a second card in
+      // over the first. See isCreateEntered in ../index.js.
+      dataset: { entered: ui.isCreateEntered && ui.isCreateEntered() ? 1 : 0 },
+      attrOpt: {
+        "data-entered": ui.isCreateEntered && ui.isCreateEntered() ? 1 : 0,
+      },
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__create-modal`,

@@ -173,6 +173,19 @@ class __tasks_panel extends LetcBox {
     this._labels = [];
     this._creating = false;
     this._createDefaults = null;
+    // Has the create modal already been PAINTED once for this opening?
+    //
+    // Its backdrop carries a 0.15s fade-in, and _render() rebuilds the whole
+    // subtree through feed() — so every later render creates a fresh backdrop
+    // element and the animation runs again. With the modal open, an ordinary
+    // re-render therefore fades a whole new card in over the one already
+    // there. The tour's hand-off is where that is worst: the panel's two
+    // load-phase renders land right after the modal opens, so the card is
+    // faded in three times in a row.
+    //
+    // The element cannot remember this for itself — it is a new element every
+    // time — so the flag lives here and rides out on `data-entered`.
+    this._createEntered = false;
     this._detailId = null;
     this._detailDraft = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
@@ -1289,6 +1302,9 @@ class __tasks_panel extends LetcBox {
 
       case "add-task":
         this._creating = true;
+        // A new opening animates once. Reset here rather than on close, so a
+        // modal reopened from any of the close paths still gets its entrance.
+        this._createEntered = false;
         this._createDefaults = {
           status: trigger.mget("taskColumn") || this.getDefaultStatus(),
           reporter_uid: Visitor.id,
@@ -7840,6 +7856,10 @@ class __tasks_panel extends LetcBox {
     const savedScroll = this._captureViewScroll();
 
     this.feed(require("./skeleton")(this));
+    // The modal has now been painted, so the next render must not fade another
+    // one in over it. Set AFTER the build, because the skeleton reads the flag
+    // while assembling — see isCreateEntered.
+    this._createEntered = this._creating;
     // ui-core sets <input> values through a 200ms `waitElement` poll, so
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).
@@ -9045,6 +9065,11 @@ class __tasks_panel extends LetcBox {
   }
   getGanttSelected() {
     return this._ganttSelected;
+  }
+
+  /** Has this opening of the create modal already been painted once? */
+  isCreateEntered() {
+    return !!this._createEntered;
   }
 
   isCreating() {
