@@ -160,9 +160,6 @@ module.exports = {
   desk_home_empty: function () {
     return import("./modules/desk/home-empty");
   },
-  desk_tour_intro: function () {
-    return import("./modules/desk/tour-intro");
-  },
   desk_breadcrumb_item: function () {
     return import("./modules/desk/breadcrumb/item");
   },

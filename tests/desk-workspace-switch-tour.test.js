@@ -78,8 +78,6 @@ function desk(curKey, opt = {}) {
       log.push("end");
       return true;
     },
-    _showTourCurtain: () => log.push("curtain:up"),
-    _hideTourCurtain: () => log.push("curtain:down"),
     _raiseRailTour: async (tour) => {
       log.push(`raise:${tour}`);
       return opt.raises !== false;
@@ -92,6 +90,9 @@ function desk(curKey, opt = {}) {
     },
   };
   const req = () => Tours;
+  // The REAL counter, not a stub of it — what the async paths compare is the
+  // whole point, so a fake that counts differently would prove nothing.
+  d._navigated = method("_navigated")(win, req);
   d._leavesWorkspace = method("_leavesWorkspace")(win, req);
   d._endWindowTourOnSwitch = method("_endWindowTourOnSwitch")(win, req);
   d._switchWorkspaceAndOffer = method("_switchWorkspaceAndOffer")(win, req);
@@ -126,14 +127,14 @@ test("a row with no key does nothing but hand over", async () => {
   assert.deepEqual(d.log, ["switch:null"]);
 });
 
-test("only a real switch bumps the count the async paths read", () => {
+test("only a real switch counts as a navigation", () => {
   const d = desk("hub:7");
   d._endWindowTourOnSwitch("hub:7");
-  assert.equal(d._wsSwitch, undefined, "re-picking the open one is not a switch");
+  assert.equal(d._navSeq, undefined, "re-picking the open one is not a switch");
   d._endWindowTourOnSwitch("hub:9");
   d.win.Wm._curWorkspace = { key: "hub:9" };
   d._endWindowTourOnSwitch("hub:3");
-  assert.equal(d._wsSwitch, 2);
+  assert.equal(d._navSeq, 2);
 });
 
 test("walking out does not count as finishing", () => {
@@ -184,16 +185,7 @@ test("walking out does not count as finishing", () => {
 test("the workspace it lands in offers the migrate tour", async () => {
   const d = desk("hub:7");
   await go(d, "hub:9");
-  // The curtain goes up on the CLICK, before the switch, or the user reads
-  // window-manager__main while the tour is still several hops away.
-  assert.deepEqual(d.log, [
-    "end",
-    "curtain:up",
-    "switch:hub:9",
-    "raise:migrate",
-    "whenDone:migrate",
-    "curtain:down",
-  ]);
+  assert.deepEqual(d.log, ["end", "switch:hub:9", "raise:migrate"]);
 });
 
 test("a user who has finished it switches with nothing flashing over them", async () => {
@@ -202,21 +194,21 @@ test("a user who has finished it switches with nothing flashing over them", asyn
   assert.deepEqual(d.log, ["end", "switch:hub:9"]);
 });
 
-test("a tour that will not rise takes its curtain with it", async () => {
-  // Refused for single-flight, or claimed and never mounted. The curtain must
-  // not be what is left holding the screen.
+test("a tour that will not rise is asked for and then let go", async () => {
+  // Refused for single-flight, or claimed and never mounted — either way the
+  // switch is already done and nothing is left holding the screen.
   const d = desk("hub:7", { raises: false });
   await go(d, "hub:9");
-  assert.deepEqual(d.log.slice(-2), ["raise:migrate", "curtain:down"]);
+  assert.deepEqual(d.log, ["end", "switch:hub:9", "raise:migrate"]);
 });
 
-test("a switch that does not take puts nothing up", async () => {
+test("a switch that does not take raises nothing", async () => {
   // The row can be gone from the list — deleted in another tab, a stale menu —
-  // and _switchWorkspace declines silently. A curtain over the pane the user is
-  // still standing on would hide the app for a tour with nothing to draw on.
+  // and _switchWorkspace declines silently. A tour raised then would have
+  // nothing to draw on.
   const d = desk("hub:7", { rowGone: true });
   await go(d, "hub:9");
-  assert.deepEqual(d.log, ["end", "curtain:up", "switch:hub:9", "curtain:down"]);
+  assert.deepEqual(d.log, ["end", "switch:hub:9"]);
   assert.ok(!d.log.some((l) => l.startsWith("raise:")), "no tour was raised");
 });
 
@@ -228,7 +220,7 @@ test("the switcher is the only gesture that offers", async () => {
   // vanish on the one arrival it is for.
   const body = source("_switchWorkspace").src;
   assert.ok(
-    !/migrate|_raiseRailTour|TourCurtain/.test(body),
+    !/migrate|_raiseRailTour/.test(body),
     "_switchWorkspace must stay a switch",
   );
   assert.match(
@@ -246,13 +238,13 @@ test("the switcher is the only gesture that offers", async () => {
 // ── the two async paths that had already committed to a workspace ───────────
 
 test("a tour asked for on one workspace never lands on another", () => {
-  // _mountWindowTourFor polls up to 3s for a pane, under a curtain the switcher
-  // is still reachable through.
+  // _mountWindowTourFor polls up to 3s for a pane, and the switcher is
+  // reachable throughout — it sits above the tour's own overlay.
   const body = DESK.slice(
     DESK.indexOf("async _mountWindowTourFor("),
     DESK.indexOf("async _raiseRailTour("),
   );
-  assert.match(body, /const seq = this\._wsSwitch \|\| 0;/);
+  assert.match(body, /const seq = this\._navSeq \|\| 0;/);
   const guard = body.indexOf("!== seq");
   const mount = body.indexOf("mountWindowTutorial(");
   assert.ok(guard > 0 && guard < mount, "the count must be checked before mounting");
@@ -269,8 +261,15 @@ test("the deferred tab dies with the workspace it belonged to", () => {
       ? DESK.indexOf("async _railAccess(")
       : DESK.length,
   );
-  assert.match(body, /const seq = this\._wsSwitch \|\| 0;/);
-  assert.match(body, /if \(\(this\._wsSwitch \|\| 0\) === seq\) this\._railTab\(tab\);/);
+  assert.match(body, /const seq = this\._navSeq \|\| 0;/);
+  assert.match(body, /if \(\(this\._navSeq \|\| 0\) === seq\) this\._railTab\(tab\);/);
+  // AND THE PRESS ITSELF COUNTS. Without this the callback a PREVIOUS press
+  // parked still fires — the reported "click Files, the Task panel lands on
+  // top of it" — because only a workspace switch used to bump the count.
+  assert.ok(
+    body.indexOf("this._navigated();") < body.indexOf("_endWindowTourUnlessAbout"),
+    "the press must count before it ends the tour that would fire the callback",
+  );
   // Read after the open this method does itself, or its own workspace would
   // read as the user leaving.
   assert.ok(

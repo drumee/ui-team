@@ -4103,46 +4103,20 @@ class desk_module extends LetcBox {
   async _maybeRunBootTour() {
     if (this._tutorialWasAutomatic) return false;
     if (require("libs/window-tutorial-intent").has()) return false;
-    // ASKED BEFORE ANYTHING IS SHOWN, and this is what makes the curtain
-    // possible at all. `offerable` applies every gate a claim would except
-    // single-flight, and takes no lock — so a user who has finished the tour
-    // returns here having seen nothing, and the workspace they refreshed into
-    // is never covered by a curtain for a tour that was not going to run.
+    // ASKED BEFORE EITHER WAIT BELOW. `offerable` applies every gate a claim
+    // would except single-flight, and takes no lock — so a user who finished
+    // this tour long ago is not made to sit through _awaitRestoreSettled and
+    // _awaitRailWorkspace for a tour that was never going to run.
     if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
     try {
-      // THE CURTAIN GOES UP FIRST, before either wait below.
-      //
-      // It used to be raised after them, which is the whole of the reported
-      // fault: _awaitRestoreSettled and _awaitRailWorkspace are where the time
-      // goes on a boot, so window-manager__main rendered, sat there being read,
-      // and only then was covered. Raised here it is what the restore finishes
-      // behind.
-      this._showTourCurtain();
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be
       // watched for rather than asked about once.
       await this._awaitRestoreSettled();
       const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 3000);
-      if (!ws || (this.isDestroyed && this.isDestroyed())) {
-        this._hideTourCurtain();
-        return false;
-      }
-      if (await this._raiseRailTour("migrate")) {
-        // The curtain has no tab switch to wait for here, but it still needs
-        // the same safety the rail path has: a tour that is claimed and then
-        // never mounts — no window, a chunk that fails — registers no destroy
-        // handler, and that handler is otherwise the only thing that clears
-        // the stamp. whenDone runs on the release, which that path does reach.
-        require("libs/tutorial-tours").whenDone("migrate", () => {
-          if (this.isDestroyed && this.isDestroyed()) return;
-          this._hideTourCurtain();
-        });
-        return true;
-      }
-      this._hideTourCurtain();
-      return false;
+      if (!ws || (this.isDestroyed && this.isDestroyed())) return false;
+      return await this._raiseRailTour("migrate");
     } catch (e) {
-      this._hideTourCurtain();
       return false;
     }
   }
@@ -4193,16 +4167,16 @@ class desk_module extends LetcBox {
    */
   async _mountWindowTourFor(tour, opt = {}) {
     const Tours = require("libs/tutorial-tours");
-    // The workspace this tour was asked for, by _endWindowTourOnSwitch's count.
-    // The poll below is up to 3s long and the switcher is reachable throughout
-    // it — under the curtain as much as under a mounted tour — so without this
-    // a tour asked for on one workspace could arrive on another, which is the
-    // same wrong-window fault one hop earlier.
-    const seq = this._wsSwitch || 0;
+    // THE NAVIGATION THIS TOUR WAS ASKED FOR — see _navigated. The poll below
+    // is up to 3s long and both the rail and the switcher are reachable
+    // throughout it (they sit above the tour's overlay), so without this a
+    // tour asked for on one workspace could arrive on another, or a tour the
+    // user has already pressed past could arrive at all.
+    const seq = this._navSeq || 0;
     try {
       const ws = await this._awaitRailWorkspace(3000);
       if (this.isDestroyed && this.isDestroyed()) return false;
-      if ((this._wsSwitch || 0) !== seq) {
+      if ((this._navSeq || 0) !== seq) {
         Tours.release(tour);
         return false;
       }
@@ -4269,81 +4243,43 @@ class desk_module extends LetcBox {
    * @returns {Promise}
    */
   async _railTabWithTour(tab, tour) {
+    // THIS PRESS SUPERSEDES THE ONE BEFORE IT. See _navigated: the previous
+    // press may have parked a tab switch on its tour's release, and ending
+    // that tour below is exactly what fires it.
+    this._navigated();
     const w = this._railWorkspace();
     this._leaveSectionScreen(w);
-    this._endWindowTourUnlessAbout(tab);
-    // THE CURTAIN GOES UP ON THE CLICK, not when the tour mounts.
+    // ASKED FIRST, and the order is load-bearing now rather than incidental.
     //
-    // The stamp that reveals it is the same one mountWindowTutorial sets, but
-    // that happens several async hops later — a claim, a broadcast, a poll for
-    // the workspace, a mount — and the gap is exactly what the user sees: the
-    // pane they came FROM, sitting there while the tour they asked for is on
-    // its way.
-    //
-    // Only when the tour could actually run. `offerable` is every gate a claim
-    // applies except single-flight, without taking one, so a user who finished
-    // this tour long ago gets their tab with no curtain flashing over it — and
-    // that is every press after the walkthrough.
+    // `offerable` is every gate a claim applies except single-flight, without
+    // taking one — so a press after the walkthrough skips _whenToursIdle's
+    // wait entirely and shows its tab at once. And asking BEFORE the tour that
+    // is up comes down is what lets that one skip its fade: a tour being
+    // replaced by another tour has nothing to reveal, while a tour that is
+    // simply ending is uncovering the window on purpose. See _endWindowTour.
     const offerable = require("libs/tutorial-tours").offerable(tour, this);
-    if (offerable) this._showTourCurtain();
+    this._endWindowTourUnlessAbout(tab, { immediate: offerable });
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
     // Read AFTER the open above, which is this method's own doing and not a
-    // switch. From here on a change means the user chose another workspace
-    // while the tour was up — see the deferred _railTab below.
-    const seq = this._wsSwitch || 0;
+    // navigation. From here on a change means the user has gone somewhere else
+    // — another rail item, or another workspace — see the deferred tab below.
+    const seq = this._navSeq || 0;
     if (!offerable || !(await this._raiseRailTour(tour))) {
       // Nothing was raised — already completed, mobile, the kill switch, or
       // another tour holding single-flight. The tab shows at once.
-      this._hideTourCurtain();
       return this._railTab(tab);
     }
     require("libs/tutorial-tours").whenDone(tour, () => {
       if (this.isDestroyed && this.isDestroyed()) return;
-      // THE TAB FIRST, THEN THE CURTAIN. Switching underneath means what is
-      // revealed is already the pane the user asked for; lifting first would
-      // show the old one for a frame, which is the fault this screen exists to
-      // hide, in miniature.
-      //
-      // UNLESS THE USER LEFT. Ending the tour by picking another workspace
-      // runs this callback too (the release is the release), and _railTab
-      // would then flip the workspace they just arrived in to the tab of the
-      // tour they walked out of — half a second after _switchWorkspace put the
-      // rail back on Files. The tab belonged to the workspace that is gone.
-      if ((this._wsSwitch || 0) === seq) this._railTab(tab);
-      // Cleared HERE as well as on the tour's destroy, and that is not
-      // belt-and-braces: a tour that is claimed and then never mounts — no
-      // window to draw on, a chunk that fails — registers no destroy handler
-      // at all, so this is the only thing that would ever take the curtain
-      // down. `whenDone` runs on the release, which that path does reach.
-      this._hideTourCurtain();
+      // UNLESS THE USER HAS MOVED ON. Every way of ending this tour early runs
+      // this callback — the release is the release — so without the check the
+      // tab it was parked for lands on top of wherever the user actually went:
+      // the Task panel over the Files pane they pressed Files for, or the tab
+      // of a tour they walked out of over the workspace they switched into.
+      // Both were reported; see _navigated.
+      if ((this._navSeq || 0) === seq) this._railTab(tab);
     });
-  }
-
-  /**
-   * Cover the work area while a rail tour is coming up.
-   *
-   * The curtain (desk/tour-intro) and the tour share ONE piece of state: the
-   * `data-window-tour` stamp on the desk root, which the skin keys on. So there
-   * is no way for the curtain to outlive the tour — every exit a tour has,
-   * including one that never mounts, clears the stamp through the same handler
-   * (onPartReady "window-tutorial") or through _hideTourCurtain here.
-   *
-   * Fed once and kept: the screen is static, and re-feeding it on every rail
-   * press would replay its mount for no gain.
-   */
-  _showTourCurtain() {
-    if (this.el && this.el.dataset) this.el.dataset.windowTour = "1";
-    this.ensurePart("tour-intro-slot").then((p) => {
-      if (!p || (p.isDestroyed && p.isDestroyed())) return;
-      if (p.children && p.children.length) return;
-      p.feed({ kind: "desk_tour_intro" });
-    });
-  }
-
-  /** Take it down. Cheap and idempotent — the stamp is the whole mechanism. */
-  _hideTourCurtain() {
-    if (this.el && this.el.dataset) delete this.el.dataset.windowTour;
   }
 
   /**
@@ -4361,18 +4297,35 @@ class desk_module extends LetcBox {
    * down to `pointer-events: none` for exactly this reason, and the click does
    * land on the row.
    *
-   * softDestroy rather than destroy: it fades, which is how every other exit
-   * from this tour leaves, and its destroy is what releases single-flight and
-   * clears `data-window-tour`.
+   * softDestroy rather than destroy BY DEFAULT: it fades, which is how every
+   * other exit from this tour leaves, and its destroy is what releases
+   * single-flight and clears `data-window-tour`.
    *
+   * `opt.immediate` DROPS THE FADE, and it is the answer to a reported fault
+   * rather than a tuning knob. That fade is half a second during which this
+   * tour is dissolving and the next one cannot even be claimed — a claim is
+   * not free until the release, which the destroy at the END of the fade is
+   * what does. So switching between rail items played: tour dissolves, the
+   * folder pane underneath is revealed for half a second, then the next tour
+   * arrives on top of it. The pane flashing between two tours is what the
+   * user sees, and there is nothing to fade FOR when the thing replacing it is
+   * another tour over the same window.
+   *
+   * Only when a replacement is actually coming — see _railTabWithTour. Every
+   * other exit (Escape, a section screen, a workspace switch, completion) ends
+   * with the window revealed on purpose and keeps the fade.
+   *
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.immediate] destroy now instead of fading out
    * @returns {Boolean} whether a tour was taken down
    */
-  _endWindowTour() {
+  _endWindowTour(opt = {}) {
     const t = this._windowTour;
     if (!t || (t.isDestroyed && t.isDestroyed())) return false;
     this._windowTour = null;
     try {
-      if (_.isFunction(t.softDestroy)) t.softDestroy();
+      const fade = !opt.immediate && _.isFunction(t.softDestroy);
+      if (fade) t.softDestroy();
       else if (_.isFunction(t.destroy)) t.destroy();
     } catch (e) {
       this.warn && this.warn("[desk] could not close the in-window tour", e);
@@ -4391,14 +4344,16 @@ class desk_module extends LetcBox {
    * tour from screen one on every press of the row the user is already on.
    *
    * @param {String} tab where the user is going
+   * @param {Object} [opt] forwarded to _endWindowTour — `immediate` when the
+   *   caller is about to raise another tour over the same window
    * @returns {Boolean} whether a tour was ended
    */
-  _endWindowTourUnlessAbout(tab) {
+  _endWindowTourUnlessAbout(tab, opt) {
     const running = this._windowTour && _.isFunction(this._windowTour.mget)
       ? this._windowTour.mget("tour")
       : null;
     if (running && WINDOW_TOUR_TAB[running] === tab) return false;
-    return this._endWindowTour();
+    return this._endWindowTour(opt);
   }
 
   /**
@@ -4424,19 +4379,137 @@ class desk_module extends LetcBox {
    * the one it is about — so there is nothing to leave. Same test, by the same
    * key, that _switchWorkspace uses to decide whether the rail resets.
    *
-   * `_wsSwitch` counts the real ones, for the two places that have already
-   * committed to a workspace and finish asynchronously (_mountWindowTourFor
-   * and _railTabWithTour's deferred tab). They compare the count rather than
-   * ask the window manager, because during a switch its `_curWorkspace` is
-   * mid-flight and answers for neither workspace reliably.
+   * A real switch counts as a navigation (_navigated), which is what the two
+   * places that have already committed to a workspace and finish
+   * asynchronously read — _mountWindowTourFor and _railTabWithTour's deferred
+   * tab. They compare that count rather than ask the window manager, because
+   * during a switch its `_curWorkspace` is mid-flight and answers for neither
+   * workspace reliably.
    *
    * @param {String} wsKey the row pressed, by _workspaceKey
    * @returns {Boolean} whether a tour was taken down
    */
   _endWindowTourOnSwitch(wsKey) {
     if (!this._leavesWorkspace(wsKey)) return false;
-    this._wsSwitch = (this._wsSwitch || 0) + 1;
+    this._navigated();
     return this._endWindowTour();
+  }
+
+  /**
+   * WARM EVERYTHING THE DESK-HOSTED TOUR MOUNTS, not just its shell.
+   *
+   * `desk_tutorial` has been warmed during the wizard for a while, and that
+   * fixed the shell — but the shell is not what the user is waiting for. It
+   * mounts and then feeds TWO more gated kinds, both of which were cold at
+   * exactly the handover that is supposed to feel instant:
+   *
+   *   tutorial_spotlight  its skeleton declares it (desk/tutorial/skeleton)
+   *   the step            onDomRefresh feeds step 1's kind, which for the
+   *                       post-onboarding run is `tutorial_workspace`
+   *
+   * AND THE HOST'S OWN PRELOADER CANNOT COVER THE STEP. _preloadSteps warms
+   * `steps.slice(1)` — deliberately, because by the time it runs step 1 has
+   * already been fed — so step 1 is never warm before the mount, and the
+   * `workspace` tour has exactly one step, which makes that preloader a no-op
+   * for this run. Kind.get() then hands back the lazy-loader placeholder,
+   * which mounts EMPTY, waits on the network and respawns itself once the
+   * module lands (ui-core letc/kind/loader.js): a round trip and a
+   * mount-and-rebuild, with the tour's shell already on screen around a hole.
+   *
+   * Read off the registry rather than named here, so a tour that gains a step
+   * is warmed without anyone remembering this method.
+   *
+   * Fire and forget: a warm-up that fails costs nothing, because every kind
+   * still loads on demand exactly as it does today.
+   *
+   * @param {String} tourId the tour that is going to run
+   */
+  _warmDeskTourKinds(tourId) {
+    if (typeof Kind === "undefined" || !_.isFunction(Kind.waitFor)) return;
+    const kinds = ["desk_tutorial", "tutorial_spotlight"];
+    try {
+      const t = require("desk/tutorial/tours").tour(tourId);
+      for (const step of (t && t.steps) || []) {
+        if (step.kind && !kinds.includes(step.kind)) kinds.push(step.kind);
+      }
+    } catch (e) {
+      // The registry is not load-bearing for a prefetch — the shell and the
+      // spotlight are still worth warming without it.
+      this.warn && this.warn("[tutorial] could not read the tour registry", e);
+    }
+    for (const kind of kinds) {
+      Promise.resolve(Kind.waitFor(kind)).catch((e) => {
+        this.warn && this.warn(`[tutorial] could not warm ${kind}`, e);
+      });
+    }
+  }
+
+  /**
+   * PULL THE TOUR'S OWN CHUNKS DOWN BEFORE ANYTHING ASKS FOR THEM.
+   *
+   * `mountWindowTutorial` feeds `kind: "window_tutorial"`, and the host it
+   * names feeds `tutorial_spotlight` in turn (builtins/window/tutorial/
+   * skeleton). Both are lazy seeds, so the FIRST rail press that raises a tour
+   * pays a fetch for each of them — and what the user looks at while it lands
+   * is the pane they came from, because the tab is deliberately not switched
+   * until the tour is done. That is the other half of the reported "the folder
+   * pane shows before the tutorial".
+   *
+   * Kind.waitFor resolves the import and registers the class, after which
+   * Kind.get() answers synchronously — no placeholder, no fetch. The same
+   * warm-up the desk host does for its steps (desk/tutorial, _preloadSteps),
+   * for the same reason.
+   *
+   * ONLY WHEN A TOUR IS STILL OWED. `offerable` is free to ask, and an account
+   * past the walkthrough fetches nothing — which is almost every session.
+   *
+   * Fire and forget: a warm-up that fails costs nothing, because the kind
+   * still loads on demand exactly as it does today.
+   */
+  _warmWindowTourKinds() {
+    if (typeof Kind === "undefined" || !_.isFunction(Kind.waitFor)) return;
+    const Tours = require("libs/tutorial-tours");
+    const owed = Object.keys(WINDOW_TOUR_TAB).some((t) => Tours.offerable(t, this));
+    if (!owed) return;
+    for (const kind of ["window_tutorial", "tutorial_spotlight"]) {
+      Promise.resolve(Kind.waitFor(kind)).catch((e) => {
+        this.warn && this.warn(`[window-tutorial] could not warm ${kind}`, e);
+      });
+    }
+  }
+
+  /**
+   * COUNT A NAVIGATION, so work already in flight for the previous one can see
+   * that it is stale.
+   *
+   * THE BUG THIS EXISTS FOR, in full, because it took three attempts to see:
+   * a rail press with a tour does not switch its tab immediately. The tab is
+   * deferred to the tour's release (_railTabWithTour), and a release happens
+   * however the tour ends — including when the NEXT rail press ends it. So:
+   *
+   *   Files is open. Press Task -> the task tour comes up and "show the Task
+   *   tab" is parked on its release. Press Files -> that press ends the task
+   *   tour and shows Files, the ended tour releases, and the parked callback
+   *   fires: the Task panel lands on top of the Files pane the user just
+   *   asked for. Pressing Files a second time works, because by then nothing
+   *   is parked.
+   *
+   * A press therefore has to invalidate what the press before it parked. This
+   * was HALF built already — the count existed as `_wsSwitch` and only a
+   * workspace switch bumped it, which is the same fault on the other axis and
+   * was fixed there first. One counter, bumped by every navigation, is what
+   * closes both: the rail (here and _railAccess) and the switcher
+   * (_endWindowTourOnSwitch).
+   *
+   * Read by the deferred tab in _railTabWithTour and by _mountWindowTourFor,
+   * which polls up to 3s for a window and must not land a tour that a later
+   * press has already moved on from.
+   *
+   * @returns {Number} the new count
+   */
+  _navigated() {
+    this._navSeq = (this._navSeq || 0) + 1;
+    return this._navSeq;
   }
 
   /**
@@ -4475,45 +4548,33 @@ class desk_module extends LetcBox {
    * this one — the walkthrough's confetti would vanish, on the one arrival it
    * is for.
    *
-   * The curtain goes up on the CLICK for the reason _railTabWithTour writes out
-   * at length: the tour is several async hops behind the pane, and the gap is
-   * what the user reads. Only when the tour could actually run, so a user who
-   * finished it long ago switches workspace with nothing flashing over it.
-   *
    * @param {String} wsKey the row pressed
    * @returns {Promise}
    */
   async _switchWorkspaceAndOffer(wsKey) {
-    // Not a switch — hand straight over, no tour, no curtain.
+    // Not a switch — hand straight over, and offer nothing.
     if (!this._leavesWorkspace(wsKey)) return this._switchWorkspace(wsKey);
     const Tours = require("libs/tutorial-tours");
     // BEFORE the switch: the pane a running tour is painted on is about to be
     // replaced underneath it. Ends it WITHOUT recording it — see
     // _endWindowTourOnSwitch.
     this._endWindowTourOnSwitch(wsKey);
+    // Asked before the switch, and cheap: `offerable` takes no lock, so a user
+    // who finished this tour long ago pays nothing for the question.
     const offerable = Tours.offerable("migrate", this);
-    if (offerable) this._showTourCurtain();
     await this._switchWorkspace(wsKey);
     if (this.isDestroyed && this.isDestroyed()) return;
     if (!offerable) return;
     // DID IT ACTUALLY GO? _switchWorkspace declines silently when the row is
     // not in the list any more — deleted from another tab, or a stale menu —
-    // and a curtain over the pane the user is still standing on would hide the
-    // app for a tour with nothing to draw on. loadWorkspace overwrites
-    // _curWorkspace on its way in, which is what makes this readable here.
-    if (this._workspaceKey(window.Wm && window.Wm._curWorkspace) !== wsKey) {
-      return this._hideTourCurtain();
-    }
+    // and a tour raised then would have nothing to draw on. loadWorkspace
+    // overwrites _curWorkspace on its way in, which is what makes this
+    // readable here.
+    if (this._workspaceKey(window.Wm && window.Wm._curWorkspace) !== wsKey) return;
     // _raiseRailTour, not fire(): the tour just ended fades for 0.5s and only
     // its destroy releases single-flight, so asking on the spot is refused in
-    // silence. And the curtain comes down on the release either way — a tour
-    // that is claimed and never mounts registers no destroy handler, so
-    // whenDone is the only thing left holding it.
-    if (!(await this._raiseRailTour("migrate"))) return this._hideTourCurtain();
-    Tours.whenDone("migrate", () => {
-      if (this.isDestroyed && this.isDestroyed()) return;
-      this._hideTourCurtain();
-    });
+    // silence.
+    await this._raiseRailTour("migrate");
   }
 
   _railTab(tab) {
@@ -4725,6 +4786,11 @@ class desk_module extends LetcBox {
    * inside openManageAccess, which four other surfaces also reach.
    */
   async _railAccess(opt) {
+    // A navigation like any other rail press — see _navigated. This one raises
+    // no tour of its own, but it still has to invalidate a tab the press
+    // before it parked, and the _endWindowTourUnlessAbout below is what would
+    // otherwise set that off.
+    this._navigated();
     if (this.el) this.el.dataset.mtab = "access";
     // Same as _railTab, and for the same reason: an open-but-unraised pane is
     // not "no workspace". See _railWorkspace.
@@ -5318,9 +5384,17 @@ class desk_module extends LetcBox {
         // next trigger for the rest of the session. Hangs off the same destroy
         // event _chainRewardFlowAfterTutorial uses.
         if (_.isFunction(child.once)) {
-          child.once(_e.destroy, () =>
-            require("libs/tutorial-tours").release(tour),
-          );
+          child.once(_e.destroy, () => {
+            if (this.el && this.el.dataset) delete this.el.dataset.deskTour;
+            require("libs/tutorial-tours").release(tour);
+          });
+        }
+        // Belt and braces for the stamp: a tour whose kind fails to load never
+        // reaches the destroy above, and a desk left stamped would keep the
+        // topbar lifted and the overlay inset for the rest of the session.
+        // `release` is already covered by the 20s net in _afterHomeSettled.
+        if (!_.isFunction(child.once) && this.el && this.el.dataset) {
+          delete this.el.dataset.deskTour;
         }
         // Only the post-onboarding run and the full tour own the hand-off to
         // the post-home chain. A contextual tour firing an hour later reaches
@@ -5414,25 +5488,17 @@ class desk_module extends LetcBox {
         // Warm the tour while the wizard is on screen.
         //
         // Finishing onboarding is the ONE moment the `workspace` tour is
-        // raised automatically (onPartReady "overlay"), and it was raised cold:
-        // desk_tutorial is the only gated widget the desk never warms —
-        // tutorial_migrate, reward_flow, promo_launch30 and over_limit_popup
-        // all are — so feeding the kind was the moment its chunk was first
-        // requested. Kind.get() then hands back the lazy-loader placeholder,
-        // which mounts EMPTY, waits on the network and respawns itself once the
-        // module lands (ui-core letc/kind/loader.js). The user pays a round trip
-        // and a mount-and-rebuild at exactly the handover we want to feel
-        // instant.
+        // raised automatically (onPartReady "overlay"), and it used to be
+        // raised cold. THE WHOLE SET, not just `desk_tutorial`: warming the
+        // shell alone left its spotlight and its step to be fetched after it
+        // mounted, which is the part the user actually waits for — see
+        // _warmDeskTourKinds.
         //
-        // The wizard is several screens long, so this resolves many times over
-        // before it is needed and Kind.get() answers synchronously. Fire and
-        // forget, and deliberately NOT awaited: a warm-up that fails costs
-        // nothing, because the kind still loads on demand exactly as it did.
-        // Not awaited for a second reason — the wizard must not wait on a
-        // prefetch to render.
-        if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
-          Promise.resolve(Kind.waitFor("desk_tutorial")).catch(() => {});
-        }
+        // The wizard is several screens long, so these resolve many times over
+        // before they are needed and Kind.get() answers synchronously.
+        // Deliberately NOT awaited: the wizard must not wait on a prefetch to
+        // render, and a warm-up that fails costs nothing.
+        this._warmDeskTourKinds("workspace");
         this.feed({
           kind: "onboarding",
           type: "app",
@@ -5481,6 +5547,23 @@ class desk_module extends LetcBox {
 
   _showTutorial(tourId, opt = {}) {
     const tour = tourId || "full";
+    // MARK THE DESK FOR THE DURATION, the same way an in-window tour does.
+    //
+    // This tour draws its own rail and its own canvas but NO topbar — the real
+    // one is mounted underneath it (see tutorial/skeleton/index.js) — and until
+    // now the tour's canvas simply painted over it. So the workspace switcher
+    // and the account menu were unreachable for the length of the tour, and a
+    // menu opened before it started was buried: both hang DOWN off the bar into
+    // exactly the area the tour covers.
+    //
+    // The skin reads this flag to lift the bar — and ONLY to lift the bar.
+    // The overlay this tour mounts into is a child of `__body` (see
+    // desk/skeleton/index.js, where the slot is pushed onto `bodyKids`), so it
+    // has always been confined to the body area and has never covered the bar.
+    // Two earlier attempts at insetting it were therefore fixing a problem
+    // that did not exist, and each pushed the tour BELOW the body's top —
+    // which uncovered the real desk in the gap: its rail, and its folder art.
+    if (this.el && this.el.dataset) this.el.dataset.deskTour = "1";
     this.ensurePart("overlay").then((p) => {
       p.feed({
         kind: "desk_tutorial",
@@ -6433,6 +6516,10 @@ class desk_module extends LetcBox {
     // the migrate tour is about — so offer it there too, not only on a rail
     // press. Declines for almost every session; see the method.
     this._maybeRunBootTour();
+    // And whether or not that one runs, warm the chunks a RAIL press would
+    // need, so the first press does not sit on a fetch with the previous pane
+    // on screen. Declines for almost every session too.
+    this._warmWindowTourKinds();
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()

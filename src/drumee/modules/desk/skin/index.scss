@@ -370,15 +370,6 @@ html {
     display: none;
   }
 
-  // The rail-tour curtain (desk/tour-intro). Hidden by default and revealed
-  // only by the desk root's `data-window-tour` stamp, for the same reason
-  // __home-empty-slot is: a Skeletons.Box is a CollectionView whose emptyView
-  // renders its own element, so an unfed box is NEVER CSS-empty and `:empty`
-  // would leave it laid out over the workspace.
-  &__tour-intro-slot {
-    display: none;
-  }
-
   &__settings-main-slot {
     position: absolute;
     inset: 0;
@@ -598,6 +589,38 @@ html {
   }
 }
 
+// ── A desk-hosted tour ───────────────────────────────────────────────────────
+//
+// `data-desk-tour="1"` is stamped by _showTutorial and cleared on the tour's
+// destroy. It is the DESK host (desk/tutorial) — the one that draws its own
+// rail and canvas — not the in-window one above.
+//
+// ONE RULE, and the two that used to be here were both wrong. The slot this
+// tour mounts into is a CHILD OF `__body`: desk/skeleton/index.js pushes the
+// `overlay` slot onto `bodyKids`. So it has always been confined to the body
+// area and has never covered the top bar. Insetting it — first by a literal
+// 46px, then by the bar's measured height — pushed the tour BELOW the body's
+// top instead, and what appeared in the gap was the real desk: its rail,
+// contributing a second logo above the tour's own, and the home grid's folder
+// art over the tour's top edge. Both were reported as broken UI and both were
+// self-inflicted.
+//
+// What was actually missing is only this. The bar's MENUS hang DOWN off it
+// into the body, which is where the tour is, so they were painted under it.
+.desk-module[data-desk-tour="1"] {
+  // 100002, the number the in-window block above uses, for the reason written
+  // out there: the overlay is a Wrapper, so holding the tour stamps
+  // `data-state="open"` on it and skin/lib/utils.scss lifts anything carrying
+  // that to `--z-index-context` (50000) with !important. A lift to 10011 loses
+  // to that silently.
+  //
+  // The rail is deliberately NOT lifted, unlike the in-window block: this tour
+  // draws its own, and lifting the real one would put two on screen.
+  .desk-module__topbar {
+    z-index: 100002;
+  }
+}
+
 @media (max-width: 650px) {
   html,
   body {
@@ -801,27 +824,6 @@ html {
 
 // ── No workspace ─────────────────────────────────────────────────────────────
 //
-// `data-window-tour="1"` is stamped on the desk root the moment a rail press
-// decides to raise an in-window tour, and cleared on that tour's destroy — so
-// this curtain's whole lifetime is the tour's, however the tour ends. It covers
-// the window because the pane behind is the tab the user came FROM: the tab
-// they pressed is not switched until the tour is done (_railTabWithTour), and
-// watching the previous pane sit there is the fault this answers.
-//
-// The paint and the stacking live only here, mirroring the block below.
-.desk-module[data-window-tour="1"] {
-  .desk-module__tour-intro-slot {
-    display: flex;
-    position: absolute;
-    inset: 0;
-    // Above the window manager, below the tour itself — the tour mounts in
-    // __overlay, which the same stamp lifts far clear of this.
-    z-index: 1400;
-    isolation: isolate;
-    background: var(--normal-bg-90);
-  }
-}
-
 // `data-no-workspace="1"` is stamped on the desk root by
 // _openWorkspaceOrEmptyScreen. The paint and the stacking live only here, so a
 // mistake in the base rule above is cosmetic rather than a blank desk.

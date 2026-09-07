@@ -13,9 +13,12 @@
 // NOTE ON WHAT THIS CAN AND CANNOT SEE. It measures the <symbol> TEMPLATE, so
 // the six `currentColor` letters compute to black here whatever the page does —
 // currentColor resolves per <use> INSTANCE, and the template is not inside the
-// styled box. The instance colour is measured by tour-intro-layout.js instead.
-// What this file is for is the two fills that do NOT depend on the instance:
-// the mark's #433CC5 and the fill-less path's `none`.
+// styled box. What this file is for is the two fills that do NOT depend on the
+// instance: the mark's #433CC5 and the fill-less path's `none`.
+//
+// NOTHING DRAWS THIS LOCKUP ANY MORE. The tour-intro curtain was the only
+// screen that used it and it is gone; the symbol is still in the sprite, so
+// this stays as the guard on it for whoever reaches for it next.
 //
 // Run:  node tests/harness/logo-lockup-fills.js
 const { execFileSync } = require("node:child_process");

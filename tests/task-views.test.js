@@ -46,9 +46,15 @@ test("the five bitmaps are gone, and nothing asks for them", () => {
   }
   const src = readFileSync(join(ROOT, `${TASK}/index.js`), "utf8");
   assert.ok(!/require\([^)]*task-\w+\.png/.test(src), "a bitmap is still required");
-  // The two that stay are the Meet cards — those frames are photographs of a
-  // video call, which is not something this codebase draws.
-  assert.ok(existsSync(join(ROOT, "src/drumee/assets/tutorial/meet-schedule.png")));
+  // The Meet cards went the same way afterwards — see the meet test in
+  // rail-press-supersedes. Nothing in assets/tutorial is a whole frame any
+  // more; what is left there is four video tiles, which are pictures of
+  // people and could never be anything else.
+  for (const gone of ["meet-schedule.png", "meet-instant.jpg"]) {
+    assert.ok(!existsSync(join(ROOT, `src/drumee/assets/tutorial/${gone}`)),
+      `${gone} is still on disk`);
+  }
+  assert.ok(existsSync(join(ROOT, "src/drumee/assets/tutorial/meeting-user1.png")));
 });
 
 test("the carousel hands the cards a composed node", () => {

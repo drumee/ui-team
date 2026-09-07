@@ -286,7 +286,13 @@ function toHtml(n) {
   const cls = n.className
     ? ` class="${n.__flow ? "box " : ""}${n.className}"`
     : (n.__flow ? ' class="box"' : "");
-  const attrs = Object.entries(n.attrOpt || {})
+  // BOTH ATTRIBUTE CHANNELS. ui-core takes plain HTML attributes through
+  // `attribute` (that is how Skeletons.Element carries an <img>'s src — see
+  // card() in tutorial/skeleton/toolkit/empty-state.js) and data-* through
+  // `attrOpt`. A harness that emitted only the second could never render an
+  // image at all, which is how a carousel of photographs measured as a
+  // carousel of empty boxes.
+  const attrs = Object.entries({ ...(n.attribute || {}), ...(n.attrOpt || {}) })
     .filter(([, v]) => v != null)
     .map(([k, v]) => ` ${k}="${String(v)}"`)
     .join("");
@@ -310,6 +316,13 @@ function toHtml(n) {
   const css = style ? ` style="${style}"` : "";
   const kids = [].concat(n.kids || []).map(toHtml).join("");
   const text = n.content != null && !kids ? String(n.content) : "";
+  // `tagName` is what an Element uses to be something other than a div — an
+  // <img>, mostly. A void element takes no children and no text.
+  if (n.__kind === "element" && n.tagName) {
+    const tag = String(n.tagName).toLowerCase();
+    const open = `<${tag}${cls}${box}${attrs}${ds}${css}>`;
+    return /^(img|br|hr|input)$/.test(tag) ? open : `${open}${text}${kids}</${tag}>`;
+  }
   // AN ICON IS AN <svg><use>, not a div. ui-core renders Image.Svg as a
   // reference into the sprite (`#--icon-<name>`), and emitting a bare box for
   // it left every glyph out of the picture — which is fine for a descriptor

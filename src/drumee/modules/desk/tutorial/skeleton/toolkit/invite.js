@@ -31,6 +31,48 @@ const button = (p, cls, opt) =>
   });
 
 /**
+ * THE WORKSPACE, AS THE BREADCRUMB DRAWS IT: its area-tinted shape, then its
+ * name. Same source as the topbar's crumb and the switcher's rows —
+ * media/grid/template/folder is the one place this app renders that shape
+ * from — so a workspace looks like itself everywhere it is named.
+ *
+ * MARKUP, not a descriptor, because it sits INLINE in a sentence: `{0}` is
+ * mid-copy in TUTORIAL_INVITE_BLURB_NAMED, and three sibling descriptors would
+ * lay the sentence out as three columns rather than flow it (the skin has to
+ * force `display: block` on the blurb for the same reason — see invite.scss).
+ * folderArt returns an HTML string already, which is why passing it as an icon
+ * NAME renders nothing.
+ *
+ * THE NAME IS ESCAPED, and that is not decoration: it is whatever the user
+ * typed into the create dialog one screen ago, so it reaches here as untrusted
+ * text. Interpolating it raw would put their input into the page as markup.
+ *
+ * @param {String} p   the family prefix
+ * @param {Object} created libs/create-workspace's descriptor
+ * @returns {String} HTML for one inline crumb
+ */
+function crumb(p, created) {
+  const folderArt = require("media/grid/template/folder");
+  const area = (created && created.area) || "";
+  // A workspace is a hub, EXCEPT a personal one, which is a home-root folder —
+  // the same rule desk/index.js `_openCreatedWorkspace` applies to the same
+  // descriptor, and the reason it matters is the glyph: `hub` with role
+  // "desk" is what gets the area emblem.
+  const isHub = area !== _a.personal;
+  const art = folderArt({
+    area,
+    filetype: isHub ? _a.hub : _a.folder,
+    role: isHub ? "desk" : "",
+    widgetId: _.uniqueId("inv-crumb-icon-"),
+    // No kebab beside a name in a sentence: there is nothing for it to act on.
+    isAttachment: 1,
+  });
+  const label = _.escape((created && created.filename) || "");
+  return `<span class="${p}-crumb"><span class="${p}-crumb-icon ${_.escape(area)}">${art}`
+    + `</span><span class="${p}-crumb-name">${label}</span></span>`;
+}
+
+/**
  * internal / external — 200:9366.
  *
  * 460 wide, 33px insets, the heading and the ✕ on one row, then the blurb, the
@@ -42,8 +84,16 @@ function inviteCard(ui, created) {
   // generic pitch arriving straight after a create, and the user has no
   // confirmation the thing they typed a name for actually exists.
   const name = (created && created.filename) || "";
+  // AND IT NAMES IT THE WAY THE TOPBAR NAMES IT — the area-tinted glyph and
+  // then the name, which is what desk-module-topbar__breadcrumb draws
+  // (desk/breadcrumb/item/skeleton). The workspace the user is being asked to
+  // invite into is the one they will see in that bar a second later, so it
+  // reads as the same object rather than as a quoted string.
+  //
+  // `{0}` in the copy is where it goes, so the sentence stays a sentence and
+  // the chip sits inline in it.
   const blurb = name
-    ? String(LOCALE.TUTORIAL_INVITE_BLURB_NAMED).replace("{0}", name)
+    ? String(LOCALE.TUTORIAL_INVITE_BLURB_NAMED).split("{0}").join(crumb(p, created))
     : LOCALE.TUTORIAL_INVITE_BLURB;
   return Skeletons.Box.Y({ active: 0,
     className: `${p}-card`,
@@ -68,10 +118,18 @@ function inviteCard(ui, created) {
         ],
       }),
 
-      Skeletons.Note({ active: 0,
-        className: `${p}-blurb`,
-        content: blurb,
-      }),
+      // Element, not Note: a Note renders its content as TEXT, so the chip
+      // would appear as its own markup. Only when there is a name — with no
+      // workspace to draw the copy is a plain sentence and a Note is right.
+      name
+        ? Skeletons.Element({ active: 0,
+            className: `${p}-blurb`,
+            content: blurb,
+          })
+        : Skeletons.Note({ active: 0,
+            className: `${p}-blurb`,
+            content: blurb,
+          }),
 
       Skeletons.Box.Y({ active: 0,
         className: `${p}-field`,
