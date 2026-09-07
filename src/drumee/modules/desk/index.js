@@ -4249,12 +4249,16 @@ class desk_module extends LetcBox {
     this._navigated();
     const w = this._railWorkspace();
     this._leaveSectionScreen(w);
-    this._endWindowTourUnlessAbout(tab);
-    // ASKED BEFORE ANYTHING IS AWAITED. `offerable` is every gate a claim
-    // applies except single-flight, without taking one, so a press after the
-    // walkthrough skips _whenToursIdle's wait entirely and shows its tab at
-    // once — which is every press after the walkthrough.
+    // ASKED FIRST, and the order is load-bearing now rather than incidental.
+    //
+    // `offerable` is every gate a claim applies except single-flight, without
+    // taking one — so a press after the walkthrough skips _whenToursIdle's
+    // wait entirely and shows its tab at once. And asking BEFORE the tour that
+    // is up comes down is what lets that one skip its fade: a tour being
+    // replaced by another tour has nothing to reveal, while a tour that is
+    // simply ending is uncovering the window on purpose. See _endWindowTour.
     const offerable = require("libs/tutorial-tours").offerable(tour, this);
+    this._endWindowTourUnlessAbout(tab, { immediate: offerable });
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
     // Read AFTER the open above, which is this method's own doing and not a
@@ -4293,18 +4297,35 @@ class desk_module extends LetcBox {
    * down to `pointer-events: none` for exactly this reason, and the click does
    * land on the row.
    *
-   * softDestroy rather than destroy: it fades, which is how every other exit
-   * from this tour leaves, and its destroy is what releases single-flight and
-   * clears `data-window-tour`.
+   * softDestroy rather than destroy BY DEFAULT: it fades, which is how every
+   * other exit from this tour leaves, and its destroy is what releases
+   * single-flight and clears `data-window-tour`.
    *
+   * `opt.immediate` DROPS THE FADE, and it is the answer to a reported fault
+   * rather than a tuning knob. That fade is half a second during which this
+   * tour is dissolving and the next one cannot even be claimed — a claim is
+   * not free until the release, which the destroy at the END of the fade is
+   * what does. So switching between rail items played: tour dissolves, the
+   * folder pane underneath is revealed for half a second, then the next tour
+   * arrives on top of it. The pane flashing between two tours is what the
+   * user sees, and there is nothing to fade FOR when the thing replacing it is
+   * another tour over the same window.
+   *
+   * Only when a replacement is actually coming — see _railTabWithTour. Every
+   * other exit (Escape, a section screen, a workspace switch, completion) ends
+   * with the window revealed on purpose and keeps the fade.
+   *
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.immediate] destroy now instead of fading out
    * @returns {Boolean} whether a tour was taken down
    */
-  _endWindowTour() {
+  _endWindowTour(opt = {}) {
     const t = this._windowTour;
     if (!t || (t.isDestroyed && t.isDestroyed())) return false;
     this._windowTour = null;
     try {
-      if (_.isFunction(t.softDestroy)) t.softDestroy();
+      const fade = !opt.immediate && _.isFunction(t.softDestroy);
+      if (fade) t.softDestroy();
       else if (_.isFunction(t.destroy)) t.destroy();
     } catch (e) {
       this.warn && this.warn("[desk] could not close the in-window tour", e);
@@ -4323,14 +4344,16 @@ class desk_module extends LetcBox {
    * tour from screen one on every press of the row the user is already on.
    *
    * @param {String} tab where the user is going
+   * @param {Object} [opt] forwarded to _endWindowTour — `immediate` when the
+   *   caller is about to raise another tour over the same window
    * @returns {Boolean} whether a tour was ended
    */
-  _endWindowTourUnlessAbout(tab) {
+  _endWindowTourUnlessAbout(tab, opt) {
     const running = this._windowTour && _.isFunction(this._windowTour.mget)
       ? this._windowTour.mget("tour")
       : null;
     if (running && WINDOW_TOUR_TAB[running] === tab) return false;
-    return this._endWindowTour();
+    return this._endWindowTour(opt);
   }
 
   /**
@@ -4370,6 +4393,40 @@ class desk_module extends LetcBox {
     if (!this._leavesWorkspace(wsKey)) return false;
     this._navigated();
     return this._endWindowTour();
+  }
+
+  /**
+   * PULL THE TOUR'S OWN CHUNKS DOWN BEFORE ANYTHING ASKS FOR THEM.
+   *
+   * `mountWindowTutorial` feeds `kind: "window_tutorial"`, and the host it
+   * names feeds `tutorial_spotlight` in turn (builtins/window/tutorial/
+   * skeleton). Both are lazy seeds, so the FIRST rail press that raises a tour
+   * pays a fetch for each of them — and what the user looks at while it lands
+   * is the pane they came from, because the tab is deliberately not switched
+   * until the tour is done. That is the other half of the reported "the folder
+   * pane shows before the tutorial".
+   *
+   * Kind.waitFor resolves the import and registers the class, after which
+   * Kind.get() answers synchronously — no placeholder, no fetch. The same
+   * warm-up the desk host does for its steps (desk/tutorial, _preloadSteps),
+   * for the same reason.
+   *
+   * ONLY WHEN A TOUR IS STILL OWED. `offerable` is free to ask, and an account
+   * past the walkthrough fetches nothing — which is almost every session.
+   *
+   * Fire and forget: a warm-up that fails costs nothing, because the kind
+   * still loads on demand exactly as it does today.
+   */
+  _warmWindowTourKinds() {
+    if (typeof Kind === "undefined" || !_.isFunction(Kind.waitFor)) return;
+    const Tours = require("libs/tutorial-tours");
+    const owed = Object.keys(WINDOW_TOUR_TAB).some((t) => Tours.offerable(t, this));
+    if (!owed) return;
+    for (const kind of ["window_tutorial", "tutorial_spotlight"]) {
+      Promise.resolve(Kind.waitFor(kind)).catch((e) => {
+        this.warn && this.warn(`[window-tutorial] could not warm ${kind}`, e);
+      });
+    }
   }
 
   /**
@@ -6393,6 +6450,10 @@ class desk_module extends LetcBox {
     // the migrate tour is about — so offer it there too, not only on a rail
     // press. Declines for almost every session; see the method.
     this._maybeRunBootTour();
+    // And whether or not that one runs, warm the chunks a RAIL press would
+    // need, so the first press does not sit on a fetch with the previous pane
+    // on screen. Declines for almost every session too.
+    this._warmWindowTourKinds();
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()

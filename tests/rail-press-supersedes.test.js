@@ -154,3 +154,68 @@ test("the count is bumped before the tour that would fire the callback is ended"
     "count first, then end the tour",
   );
 });
+
+// ── the pane must not flash between two tours ───────────────────────────────
+
+test("a tour being replaced by another tour does not fade out", () => {
+  // REPORTED: switching between rail items showed the folder pane before the
+  // next tutorial. softDestroy fades for half a second, and the next tour
+  // cannot even be CLAIMED until that fade's destroy releases single-flight —
+  // so the sequence was: tour dissolves, pane revealed, next tour lands on it.
+  //
+  // Order matters as much as the flag: `offerable` has to be asked BEFORE the
+  // outgoing tour is ended, or there is nothing to decide the swap on.
+  const body = method("_railTabWithTour").source;
+  const gate = body.indexOf("offerable(tour, this)");
+  const end = body.indexOf("_endWindowTourUnlessAbout(");
+  assert.ok(gate > 0 && end > 0, "expected both");
+  assert.ok(gate < end, "ask whether a replacement is coming, then end the tour");
+  assert.match(body, /_endWindowTourUnlessAbout\(tab, \{ immediate: offerable \}\)/);
+});
+
+test("every other exit keeps the fade", () => {
+  // The fade is right when the window is being uncovered on purpose: Escape,
+  // a section screen, a workspace switch, completion. Only a swap skips it.
+  const end = method("_endWindowTour", ["_"])(require("lodash"));
+  const calls = [];
+  const tour = () => ({
+    isDestroyed: () => false,
+    softDestroy: () => calls.push("soft"),
+    destroy: () => calls.push("hard"),
+  });
+
+  const host = { warn: () => {} };
+  host._windowTour = tour();
+  end.call(host);
+  assert.deepEqual(calls, ["soft"], "the default is still a fade");
+
+  calls.length = 0;
+  host._windowTour = tour();
+  end.call(host, { immediate: true });
+  assert.deepEqual(calls, ["hard"], "a swap destroys at once");
+
+  // And it still reports what it did, and clears its reference either way.
+  host._windowTour = tour();
+  assert.equal(end.call(host, { immediate: true }), true);
+  assert.equal(host._windowTour, null);
+  assert.equal(end.call(host), false, "nothing left to end");
+});
+
+test("the rail press's chunks are warmed at boot, and only when owed", () => {
+  // The other half of the report: window_tutorial and tutorial_spotlight are
+  // lazy seeds, so the FIRST press that raises a tour paid a fetch for each
+  // while the previous pane sat on screen.
+  const src = readFileSync(
+    join(__dirname, "..", "src/drumee/modules/desk/index.js"), "utf8");
+  const body = method("_warmWindowTourKinds").source;
+  assert.match(body, /Kind\.waitFor/);
+  for (const kind of ["window_tutorial", "tutorial_spotlight"]) {
+    assert.ok(body.includes(`"${kind}"`), `${kind} is not warmed`);
+  }
+  // Gated, or every session fetches two chunks it will never use.
+  assert.match(body, /offerable\(t, this\)/);
+  // Fire and forget — a warm-up that throws must not break the boot.
+  assert.match(body, /\.catch\(/);
+  // Wired into the boot, beside the boot tour.
+  assert.match(src, /this\._maybeRunBootTour\(\);\n[\s\S]{0,300}this\._warmWindowTourKinds\(\);/);
+});
