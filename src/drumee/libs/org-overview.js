@@ -26,6 +26,7 @@
 /** The shape every consumer can render, with or without a server behind it. */
 const EMPTY = {
   organisation: null,
+  organisations: [],
   role: null,
   departments: [],
   workspaces: [],
@@ -114,6 +115,11 @@ function normalize(data) {
   const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
   return {
     organisation: data.organisation || null,
+    // Every organisation the viewer belongs to. One entry today — yp.privilege
+    // still has a unique key on uid alone — but written as a list because that
+    // is what it is, and because the day a second membership exists nothing
+    // here should have to change.
+    organisations: list(data.organisations),
     // 'owner' | 'admin' | 'member', decided server-side from yp.privilege.
     role: data.role || null,
     departments: list(data.departments),

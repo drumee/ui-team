@@ -318,8 +318,55 @@
 
   &__switch-list {
     gap: 2px;
+    // Figma caps the list at 132px and scrolls; the "New organization" button
+    // is a SIBLING of this box, so it stays put while the rows scroll.
     max-height: 132px;
     overflow-y: auto;
+  }
+
+  &__switch-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 33px;
+    box-sizing: border-box;
+    padding: 8px;
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+
+    &:hover { background-color: var(--normal-bg-90); }
+
+    // The one you are already in: marked, and not a target. The cursor says so
+    // too — a pointer over a row that cannot be clicked promises a navigation
+    // that will not happen.
+    &[data-current="1"] {
+      cursor: default;
+      background-color: var(--normal-bg-90);
+    }
+  }
+
+  &__switch-name {
+    @include drumee.typo($color: var(--normal-fg), $size: 13px, $line: 17px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  &__switch-tick {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: var(--primary-40);
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
   }
 
   &__new-org {
