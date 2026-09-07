@@ -4193,9 +4193,19 @@ class desk_module extends LetcBox {
    */
   async _mountWindowTourFor(tour, opt = {}) {
     const Tours = require("libs/tutorial-tours");
+    // The workspace this tour was asked for, by _endWindowTourOnSwitch's count.
+    // The poll below is up to 3s long and the switcher is reachable throughout
+    // it — under the curtain as much as under a mounted tour — so without this
+    // a tour asked for on one workspace could arrive on another, which is the
+    // same wrong-window fault one hop earlier.
+    const seq = this._wsSwitch || 0;
     try {
       const ws = await this._awaitRailWorkspace(3000);
       if (this.isDestroyed && this.isDestroyed()) return false;
+      if ((this._wsSwitch || 0) !== seq) {
+        Tours.release(tour);
+        return false;
+      }
       if (!ws || !this.mountWindowTutorial(ws, tour, opt)) {
         Tours.release(tour);
         return false;
@@ -4278,6 +4288,10 @@ class desk_module extends LetcBox {
     if (offerable) this._showTourCurtain();
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
+    // Read AFTER the open above, which is this method's own doing and not a
+    // switch. From here on a change means the user chose another workspace
+    // while the tour was up — see the deferred _railTab below.
+    const seq = this._wsSwitch || 0;
     if (!offerable || !(await this._raiseRailTour(tour))) {
       // Nothing was raised — already completed, mobile, the kill switch, or
       // another tour holding single-flight. The tab shows at once.
@@ -4290,7 +4304,13 @@ class desk_module extends LetcBox {
       // revealed is already the pane the user asked for; lifting first would
       // show the old one for a frame, which is the fault this screen exists to
       // hide, in miniature.
-      this._railTab(tab);
+      //
+      // UNLESS THE USER LEFT. Ending the tour by picking another workspace
+      // runs this callback too (the release is the release), and _railTab
+      // would then flip the workspace they just arrived in to the tab of the
+      // tour they walked out of — half a second after _switchWorkspace put the
+      // rail back on Files. The tab belonged to the workspace that is gone.
+      if ((this._wsSwitch || 0) === seq) this._railTab(tab);
       // Cleared HERE as well as on the tour's destroy, and that is not
       // belt-and-braces: a tour that is claimed and then never mounts — no
       // window to draw on, a chunk that fails — registers no destroy handler
@@ -4378,6 +4398,46 @@ class desk_module extends LetcBox {
       ? this._windowTour.mget("tour")
       : null;
     if (running && WINDOW_TOUR_TAB[running] === tab) return false;
+    return this._endWindowTour();
+  }
+
+  /**
+   * End an in-window tour when the switcher sends the user to another
+   * workspace.
+   *
+   * A TOUR IS DRAWN ON A WINDOW, and a switcher row replaces that window. The
+   * rail already knows this (_railTab -> _endWindowTourUnlessAbout) but the
+   * switcher did not, and it is reachable from under a running tour: the tour
+   * covers the work area at z 50000, while the topbar was lifted clear of the
+   * same overlay and sits above it. So the row could be pressed, the workspace
+   * really did change, and the tour stayed painted over the pane of the
+   * workspace the user had just left — showing a mock of the wrong window.
+   *
+   * IT IS NOT COMPLETION. _endWindowTour goes through softDestroy, and only
+   * _markDone in the host records the flag (every window tour is
+   * `mark_on: "success"`), so a tour cut short this way stays armed and is
+   * offered again — the same treatment Escape and the rail get. Walking away
+   * from a lesson is not finishing it.
+   *
+   * NOT WHEN THE ROW IS THE OPEN WORKSPACE. Re-picking it makes loadWorkspace
+   * an early return that merely raises the pane — the tour's own window, still
+   * the one it is about — so there is nothing to leave. Same test, by the same
+   * key, that _switchWorkspace uses to decide whether the rail resets.
+   *
+   * `_wsSwitch` counts the real ones, for the two places that have already
+   * committed to a workspace and finish asynchronously (_mountWindowTourFor
+   * and _railTabWithTour's deferred tab). They compare the count rather than
+   * ask the window manager, because during a switch its `_curWorkspace` is
+   * mid-flight and answers for neither workspace reliably.
+   *
+   * @param {String} wsKey the row pressed, by _workspaceKey
+   * @returns {Boolean} whether a tour was taken down
+   */
+  _endWindowTourOnSwitch(wsKey) {
+    if (!wsKey) return false;
+    const cur = this._workspaceKey(window.Wm && window.Wm._curWorkspace);
+    if (cur && cur === wsKey) return false;
+    this._wsSwitch = (this._wsSwitch || 0) + 1;
     return this._endWindowTour();
   }
 
@@ -7516,8 +7576,14 @@ class desk_module extends LetcBox {
       // all unchanged.
       // onUiEvent is not async, so the lookup is chained rather than awaited.
       // _fetchWorkspaces is cached, so this resolves immediately in practice.
-      case "switch-workspace":
-        return this._switchWorkspace(cmd.mget("wsKey"));
+      case "switch-workspace": {
+        const wsKey = cmd.mget("wsKey");
+        // BEFORE the switch, not after: the pane the tour is painted on is
+        // about to be replaced underneath it. See _endWindowTourOnSwitch —
+        // this ends the tour without recording it as done.
+        this._endWindowTourOnSwitch(wsKey);
+        return this._switchWorkspace(wsKey);
+      }
 
       // ── Workspace rail (Figma 43:23955) ────────────────────────────────
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
