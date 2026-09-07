@@ -51,6 +51,15 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
   <div class="box desk-module__topbar" data-flow="y">
     <div class="box desk-module-topbar__main" data-flow="x">
       <div id="chip" class="box desk-module-topbar__ws-current" data-flow="x">ws</div>
+    <!-- BOTH PANELS LIVE INSIDE __main, which is what makes the inert rule
+         reach them: desk/skeleton/topbar.js builds the switcher from the left
+         cluster and the account menu from the utility cluster, both children
+         of __main. Built as siblings, this fixture would have said the bar was
+         inert while the menus still answered. -->
+    <div id="wsmenu" class="box desk-module-topbar__ws-menu" data-flow="y"
+         style="position:absolute;top:46px;left:20px;width:300px;height:320px;background:#fff">menu</div>
+    <div id="acct" class="box desk-module-topbar__account-menu" data-flow="y"
+         style="position:absolute;top:46px;right:20px;width:280px;height:260px;background:#fff">acct</div>
     </div>
     <!-- A SECOND ROW, and it is the point of this fixture. __topbar is a
          Box.Y and the breadcrumb row and the window tab strip live in it, so
@@ -58,12 +67,6 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
          uncovered the difference and the real desk showed through it.
          (No backticks in here: this page is a template literal.) -->
     <div class="box" data-flow="x" style="height:34px">crumb</div>
-    <!-- Both panels, open, as the topbar renders them: absolutely placed and
-         hanging down off the bar. -->
-    <div id="wsmenu" class="box desk-module-topbar__ws-menu" data-flow="y"
-         style="position:absolute;top:46px;left:20px;width:300px;height:320px;background:#fff">menu</div>
-    <div id="acct" class="box desk-module-topbar__account-menu" data-flow="y"
-         style="position:absolute;top:46px;right:20px;width:280px;height:260px;background:#fff">acct</div>
   </div>
   <!-- THE OVERLAY IS A CHILD OF __body, and getting that wrong is what made
        this fixture agree with two broken fixes in a row. desk/skeleton/index.js
@@ -98,6 +101,18 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
     onChip: at(box("chip").x + 5, box("chip").y + 10),
     // And a point well inside the tour, clear of both panels.
     onTour: at(640, 600),
+    // STILL LEGIBLE, and this has to be read off the computed style rather
+    // than off a hit test: pointer-events none takes the box out of
+    // hit-testing, so elementsFromPoint stops reporting it too and could not
+    // tell invisible from inert. (No backticks in here -- template literal.)
+    barPaint: (() => {
+      const cs = getComputedStyle(document.querySelector(".desk-module-topbar__main"));
+      // Concatenation, not a template literal: this whole page IS one, and an
+      // inner backtick closes it. Four separate SyntaxErrors this session came
+      // from exactly that.
+      return cs.display + " / visibility:" + cs.visibility
+        + " / opacity:" + cs.opacity + " / events:" + cs.pointerEvents;
+    })(),
     barH: bar.offsetHeight,
     // THE ROW UNDER THE BAR. With a literal 46px inset and a taller bar this
     // is the real desk, which is the reported break.
@@ -123,18 +138,32 @@ for (const stamped of [false, true]) {
   console.log(`  the chip  -> ${d.onChip}`);
   console.log(`  the tour  -> ${d.onTour}`);
   console.log(`  bar ${d.barH}px, the row under it -> ${d.justBelowBar}`);
+  console.log(`  __main computed: ${d.barPaint}`);
+  // WITH THE STAMP the bar is on top and INERT: elementFromPoint reports what
+  // paints, and pointer-events: none takes the box out of hit-testing — so a
+  // point over the bar answers with whatever is behind it. That is the whole
+  // pair of properties this block is for: visible, not clickable.
   const checks = [
     // The tour sits in the body either way — it always did, because its slot
-    // is a child of the body. What the stamp changes is only what paints on
-    // top of it.
+    // is a child of the body. What the stamp changes is what paints on top of
+    // it, and what answers a click.
     ["the tour sits in the body, under the bar", d.tour.y === d.barH],
-    ["the switcher panel is on top", hit(d.onWsMenu, "ws-menu")],
-    ["the account menu is on top", hit(d.onAcctMenu, "account-menu")],
-    ["the bar itself is reachable", hit(d.onChip, "ws-current|topbar")],
+    stamped
+      ? ["the switcher panel does not answer a click", !hit(d.onWsMenu, "ws-menu")]
+      : ["the switcher panel is buried by the tour", hit(d.onWsMenu, "tutorial-main")],
+    stamped
+      ? ["the account menu does not answer a click", !hit(d.onAcctMenu, "account-menu")]
+      : ["the account menu is buried by the tour", hit(d.onAcctMenu, "tutorial-main")],
+    stamped
+      ? ["nor does the bar itself", !hit(d.onChip, "ws-current")]
+      : ["the bar answered before the tour", hit(d.onChip, "ws-current|topbar")],
     ["and the tour still takes its own clicks", hit(d.onTour, "tutorial-main")],
-    // The one that catches a hardcoded inset: with the bar at 80 and the
-    // inset at 46, this point is the desk's own body.
     ["no desk showing under the bar", stamped ? hit(d.justBelowBar, "tutorial-main") : true],
+    // Inert, not hidden: the bar is lifted precisely so it stays readable.
+    ["the bar is still fully visible", /visibility:visible/.test(d.barPaint)
+      && /opacity:1/.test(d.barPaint) && !/display:none/.test(d.barPaint)],
+    ["events are off only with the stamp",
+     /events:(none)/.test(d.barPaint) === stamped],
   ];
   for (const [what, ok] of checks) console.log(`  ${ok ? "✓" : "✗"} ${what}`);
 }

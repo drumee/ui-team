@@ -325,11 +325,28 @@ test("a desk tour lets the topbar's menus open over it", () => {
   // 100002 for the same reason the in-window block uses it: it has to clear a
   // 50000 stacking context, not the overlay's declared 10010.
   assert.match(block, /z-index: 100002/);
-  // AND NOTHING ELSE. The tour's box is already right; an inset moves it wrong.
+  // NO INSET. The tour's box is already right; an inset moves it wrong — see
+  // above, twice.
   assert.ok(!/top:/.test(block), "the overlay must not be inset — see above");
-  assert.ok(!/pointer-events/.test(block), "the bar was never covered");
-  assert.ok(!/sidebar__main/.test(css.slice(i, i + 400)),
+  assert.ok(!/sidebar__main/.test(css.slice(i, i + 900)),
     "the rail must not be lifted: this tour draws its own");
+
+  // VISIBLE BUT INERT. The bar is lifted so it stays readable over the tour,
+  // and every control in it — including the switcher's panel and the account
+  // menu, which are built INSIDE __main (desk/skeleton/topbar.js calls
+  // workspaceSwitcher from the left cluster) — stops answering, so a click
+  // cannot take the user somewhere the tour is not while the tour is still up.
+  const inert = new RegExp(
+    '\\.desk-module\\[data-desk-tour="1"\\] \\.desk-module-topbar__main \\{([^}]*)\\}',
+  ).exec(css);
+  assert.ok(inert, "the bar is not made inert");
+  assert.match(inert[1], /pointer-events: none/);
+  // Inert, NOT hidden — measured in tests/harness/desk-tour-topbar.js, which
+  // reads the computed style because pointer-events:none takes the box out of
+  // hit-testing and elementsFromPoint could not tell the two apart.
+  assert.ok(!/visibility:\s*hidden/.test(inert[1]), "the bar must stay legible");
+  assert.ok(!/display:\s*none/.test(inert[1]), "the bar must stay legible");
+  assert.ok(!/opacity/.test(inert[1]), "the bar must stay legible");
 
   // The stamp is raised and cleared by the desk, and nothing measures anything.
   const desk = readFileSync(join(__dirname, "..",
