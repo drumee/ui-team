@@ -14,6 +14,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { readFileSync } = require("node:fs");
+const { execFileSync } = require("node:child_process");
 const { join } = require("node:path");
 
 const DESK = readFileSync(
@@ -291,4 +292,50 @@ test("the wizard is what warms them", () => {
   );
   // And the handover itself still has no delay of its own.
   assert.match(src, /const delay = postOnboarding \? 0 : 2000;/);
+});
+
+// ── the real topbar, during a desk-hosted tour ──────────────────────────────
+
+test("a desk tour leaves the bar its strip and lets its menus open over it", () => {
+  // REPORTED: the workspace switcher and the account menu had to be reachable
+  // during the desk workspace tour.
+  //
+  // WHY THEY WERE NOT: that tour draws its own rail and canvas but NO topbar —
+  // the mock one was removed as scenery — and its canvas is `inset: 0` of the
+  // desk's overlay, which an open Wrapper lifts to 50000 (utils.scss, from
+  // --z-index-context). The bar sits at 10003. So the tour covered the bar and
+  // both menus, which hang DOWN off it into exactly that area.
+  //
+  // Measured against the real cascade in tests/harness/desk-tour-topbar.js —
+  // without the stamp, elementFromPoint returns the tour at all three points.
+  // This pins the two rules that harness proves.
+  const sass = (e) => execFileSync("sass",
+    ["-I", ".", "-I", "skin", "--no-source-map", e],
+    { cwd: join(__dirname, "..", "src/drumee"), encoding: "utf8", maxBuffer: 1 << 26 });
+  const css = sass("modules/desk/skin/index.scss");
+  const i = css.indexOf('.desk-module[data-desk-tour="1"]');
+  assert.ok(i > 0, "no block for a desk-hosted tour");
+  const block = css.slice(i, i + 1200);
+
+  // The tour takes the body's area, so the bar keeps the 46px it occupies —
+  // its own fixed height, not a guess.
+  assert.match(block, /top: 46px/);
+  assert.match(block, /height: auto/, "or it hangs 46px past the bottom");
+  assert.match(block, /bottom: 0/);
+  // 100002 for the same reason the in-window block uses it: it has to clear a
+  // 50000 stacking context, not the overlay's declared 10010.
+  assert.match(block, /z-index: 100002/);
+  // Not on mobile, where the desktop bar is display:none.
+  // Quotes optional — sass strips them from simple attribute values.
+  assert.match(block, /:not\(\[data-device="?mobile"?\]\)/);
+
+  // And the tour must keep its own clicks once the overlay stands down.
+  const tourCss = sass("modules/desk/tutorial/skin/index.scss");
+  assert.match(tourCss, /\.tutorial-main__ui \{[^}]*pointer-events: auto/);
+
+  // The stamp is raised and cleared by the desk.
+  const desk = readFileSync(join(__dirname, "..",
+    "src/drumee/modules/desk/index.js"), "utf8");
+  assert.match(desk, /dataset\.deskTour = "1"/);
+  assert.match(desk, /delete this\.el\.dataset\.deskTour/);
 });

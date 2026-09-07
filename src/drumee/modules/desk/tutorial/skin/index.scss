@@ -37,9 +37,14 @@ $rail-width: 64px;
   //
   // `inset: 0` cannot collapse: with no positioned ancestor it falls back to
   // the viewport, which is the old behaviour minus the overhang.
+  // `pointer-events: auto` because the desk stands the overlay holding this
+  // down to `none` while a desk tour is up, so the real topbar above keeps its
+  // clicks (desk/skin/index.scss, `[data-desk-tour]`). Without this the tour
+  // itself would stop answering — Next, Back and every live control on it.
   &__ui {
     position: absolute;
     inset: 0;
+    pointer-events: auto;
   }
 
   // The 2.0 canvas is inset from the window and rounded. It used to open with

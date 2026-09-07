@@ -589,6 +589,62 @@ html {
   }
 }
 
+// ── A desk-hosted tour ───────────────────────────────────────────────────────
+//
+// `data-desk-tour="1"` is stamped by _showTutorial and cleared on the tour's
+// destroy. It is the DESK host (desk/tutorial) — the one that draws its own
+// rail and canvas — not the in-window one above.
+//
+// THE TOUR HAS NO TOPBAR OF ITS OWN. It used to draw a pixel-copy of the real
+// bar directly over the real bar, and that copy was removed as pure scenery
+// (tutorial/skeleton/index.js) — which left the tour's canvas painting over
+// the real bar instead. The workspace switcher and the account menu were then
+// unreachable for the length of the tour, and one opened just before it
+// started was buried: both hang DOWN off the bar into exactly the area the
+// tour covers.
+//
+// So the tour sits in the desk BODY, where the workspace itself sits, and the
+// bar keeps the strip it already occupies.
+.desk-module[data-desk-tour="1"] {
+  // 46px is the bar's own fixed height (desk/skin/topbar.scss __main), not a
+  // guess — it is `height` AND `min-height` there, so the strip cannot grow
+  // out from under this.
+  //
+  // `height: auto` with both edges pinned, because the base rule sets
+  // `height: 100%`: with a top offset alone the overlay would hang 46px past
+  // the bottom of the desk.
+  //
+  // NOT on mobile, where the desktop bar is `display: none` and the overlay is
+  // `fixed` to the viewport on purpose — an inset there would reserve a strip
+  // for a bar that is not drawn. Tours are gated off mobile anyway
+  // (libs/tutorial-tours isMobile), so this is for a forced `?tutorial=` run.
+  .desk-module__overlay:not([data-device="mobile"]) {
+    top: 46px;
+    height: auto;
+    bottom: 0;
+    // Hand the bar back its clicks. The tour's own root takes them again for
+    // everything below the strip — see `__ui` in tutorial/skin/index.scss —
+    // and the tour is `inset: 0` of this box, so nothing else can be reached:
+    // the choice is the bar or the tour.
+    pointer-events: none;
+  }
+
+  // LIFTED, and the number is the one the in-window block above uses, for the
+  // same reason written out there: the overlay is a Wrapper, so holding the
+  // tour stamps `data-state="open"` on it and skin/lib/utils.scss lifts
+  // anything carrying that to `--z-index-context` (50000) with !important. A
+  // lift to 10011 would lose to that silently.
+  //
+  // The bar is not covered by the tour any more, but its MENUS still hang down
+  // into it, and they are the point of this rule.
+  //
+  // The rail is deliberately NOT lifted, unlike the in-window block: this tour
+  // draws its own rail, and lifting the real one would put two rails on screen.
+  .desk-module__topbar {
+    z-index: 100002;
+  }
+}
+
 @media (max-width: 650px) {
   html,
   body {

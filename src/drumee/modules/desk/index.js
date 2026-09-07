@@ -5384,9 +5384,17 @@ class desk_module extends LetcBox {
         // next trigger for the rest of the session. Hangs off the same destroy
         // event _chainRewardFlowAfterTutorial uses.
         if (_.isFunction(child.once)) {
-          child.once(_e.destroy, () =>
-            require("libs/tutorial-tours").release(tour),
-          );
+          child.once(_e.destroy, () => {
+            if (this.el && this.el.dataset) delete this.el.dataset.deskTour;
+            require("libs/tutorial-tours").release(tour);
+          });
+        }
+        // Belt and braces for the stamp: a tour whose kind fails to load never
+        // reaches the destroy above, and a desk left stamped would keep the
+        // topbar lifted and the overlay inset for the rest of the session.
+        // `release` is already covered by the 20s net in _afterHomeSettled.
+        if (!_.isFunction(child.once) && this.el && this.el.dataset) {
+          delete this.el.dataset.deskTour;
         }
         // Only the post-onboarding run and the full tour own the hand-off to
         // the post-home chain. A contextual tour firing an hour later reaches
@@ -5539,6 +5547,18 @@ class desk_module extends LetcBox {
 
   _showTutorial(tourId, opt = {}) {
     const tour = tourId || "full";
+    // MARK THE DESK FOR THE DURATION, the same way an in-window tour does.
+    //
+    // This tour draws its own rail and its own canvas but NO topbar — the real
+    // one is mounted underneath it (see tutorial/skeleton/index.js) — and until
+    // now the tour's canvas simply painted over it. So the workspace switcher
+    // and the account menu were unreachable for the length of the tour, and a
+    // menu opened before it started was buried: both hang DOWN off the bar into
+    // exactly the area the tour covers.
+    //
+    // The skin reads this flag to sit the tour in the desk BODY, where the
+    // workspace itself sits, and to lift the bar above it.
+    if (this.el && this.el.dataset) this.el.dataset.deskTour = "1";
     this.ensurePart("overlay").then((p) => {
       p.feed({
         kind: "desk_tutorial",
