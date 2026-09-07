@@ -177,7 +177,22 @@ $fp-air: min(120px, 11.2vh);
     height: 100%;
   }
 
+  // `position: relative` so THIS button's + New dropdown can hang off it, the
+  // same arrangement the hero's ghost uses (see `__fp-ghost` below) and for the
+  // same reason: expressed against the button it stays true at every width.
+  //
+  // Deliberately WITHOUT a z-index — that alone opens no stacking context, so
+  // the spotlight's promotion passes straight through on its way up
+  // (spotlight/index.js _light). It does not need one to paint over the pane
+  // either: a positioned element already draws above the non-positioned hero
+  // block that follows it in the tree.
+  //
+  // The menu fits with room to spare, which is why it is left-aligned here as
+  // well. The toolbar's own content pins this button ~195px in from the pane's
+  // right edge (the view toggles' 104 + an 8 gap + this button's ~83) at any
+  // pane width, and the dropdown is 161 wide.
   &__fp-new-btn {
+    position: relative;
     box-sizing: border-box;
     align-items: center;
     justify-content: center;
@@ -190,6 +205,27 @@ $fp-air: min(120px, 11.2vh);
     // Primary/50; the two are different buttons in the frame and were both
     // painted 50 here.
     background: var(--primary-purple-40);
+
+    // Live ONLY where it is bound — the migrate tour's first screen — for the
+    // reason written out on `__fp-cta` below: on every other screen this pane
+    // is a drawing behind a scrim, and a hand cursor there invites a click the
+    // tour drops on the floor.
+    &[data-live="1"] {
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+
+      &:hover,
+      &:focus-visible {
+        background: var(--primary-purple-30);
+      }
+    }
+
+    // The button whose dropdown is showing stays pressed in. With the same
+    // menu reachable from two buttons, this is the only thing on screen that
+    // says which one it belongs to.
+    &[data-open="1"] {
+      background: var(--primary-purple-50);
+    }
   }
 
   &__fp-new-ico {
@@ -373,6 +409,10 @@ $fp-air: min(120px, 11.2vh);
     background: var(--normal-bg-90);
 
     &[data-live="1"]:hover { background: var(--normal-bg-80); }
+
+    // Its half of the pair — see `__fp-new-btn[data-open]`. The dropdown can
+    // hang off either button, and the one showing it says so.
+    &[data-open="1"] { background: var(--normal-bg-80); }
   }
 
   &__fp-ghost-ico {
@@ -398,11 +438,26 @@ $fp-air: min(120px, 11.2vh);
   // width; measured off the hero it is two numbers that are right at 1600 and
   // wrong everywhere else.
   //
-  // No z-index, for the reason on `__fp-ghost` above: it is a positioned
-  // element and its only later sibling (the Upload button) is not, so it
-  // already paints over it.
+  // z-index 1, and it is load-bearing — the note that used to be here said the
+  // opposite and was wrong on its own terms.
+  //
+  // It claimed the menu needed nothing because "its only later sibling is not
+  // positioned". EVERY `.box` is `position: relative` (skin/lib/container.scss),
+  // so all of them are positioned, all of them are z-index auto, and tree order
+  // alone decides between them. That never showed while only the hero's copy
+  // had a menu: its later siblings sit beside it, not under it.
+  //
+  // The toolbar's copy hangs into the hero block, which comes AFTER it — and
+  // the hero won. Measured, not reasoned about: tests/harness/migrate-toolbar-
+  // menu.js reads `elementFromPoint` at the menu's last row and got
+  // `tutorial__fp-hero` back.
+  //
+  // 1 is enough: it beats `auto` siblings in the same stacking context and
+  // opens a context containing nothing but this menu's own rows, so the
+  // spotlight's promotion of a target elsewhere in the pane is unaffected.
   &__fp-new-menu {
     position: absolute;
+    z-index: 1;
     top: calc(100% + 4px);
     left: 0;
     width: 161px;
