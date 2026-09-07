@@ -296,24 +296,23 @@ test("the wizard is what warms them", () => {
 
 // ── the real topbar, during a desk-hosted tour ──────────────────────────────
 
-test("a desk tour lets the topbar's menus open over it", () => {
-  // REQUESTED: the workspace switcher and the account menu had to be usable
-  // during the desk workspace tour.
+test("a desk tour does not draw the real topbar at all", () => {
+  // The tour is a full-screen walkthrough of a mock desk, and the bar belongs
+  // to the desk underneath it: every use of it leads somewhere the tour is not,
+  // and it has nothing to say about the screens being explained.
   //
-  // WHAT WAS ACTUALLY WRONG, after two attempts at something larger: only the
-  // MENUS. The slot this tour mounts into is a child of `__body`
-  // (desk/skeleton/index.js pushes the overlay onto `bodyKids`), so the tour
-  // has always been confined to the body and the bar was always visible and
-  // clickable. But the menus hang DOWN off the bar into the body, which is
-  // where the tour is, and the overlay holding it is lifted to 50000 by
-  // utils.scss (`[data-state="open"]` -> --z-index-context) against the bar's
-  // 10003. So they were painted underneath.
+  // ONE RULE, and it makes two earlier ones moot rather than merely replacing
+  // them. The bar was first lifted to 100002 so its menus painted over the
+  // tour, then given `pointer-events: none` so nothing in it answered a click.
+  // A bar that is not rendered needs neither, and the workspace switcher and
+  // the account menu go with it — both are built inside `__main`
+  // (desk/skeleton/topbar.js).
   //
-  // Insetting the overlay — first by a literal 46px, then by the bar's
-  // measured height — pushed the tour BELOW the body's top and uncovered the
-  // real desk in the gap. Measured in tests/harness/desk-tour-topbar.js, whose
-  // fixture now puts the overlay inside `__body` as the desk does; with the
-  // stamp removed, both menus come back as `tutorial-main__body`.
+  // `display: none` rather than `visibility: hidden`: `__topbar` is a flex
+  // child of `__main`, so removing it hands its strip to `__body`, where the
+  // tour's own slot lives. Measured in tests/harness/desk-tour-topbar.js — the
+  // tour goes from 1280x720 at y=80 to 1280x800 at y=0, and both menus report
+  // offsetHeight 0.
   const sass = (e) => execFileSync("sass",
     ["-I", ".", "-I", "skin", "--no-source-map", e],
     { cwd: join(__dirname, "..", "src/drumee"), encoding: "utf8", maxBuffer: 1 << 26 });
@@ -322,38 +321,21 @@ test("a desk tour lets the topbar's menus open over it", () => {
   assert.ok(i > 0, "no block for a desk-hosted tour");
   const block = css.slice(i, css.indexOf("}", css.indexOf("{", i)) + 1);
 
-  // 100002 for the same reason the in-window block uses it: it has to clear a
-  // 50000 stacking context, not the overlay's declared 10010.
-  assert.match(block, /z-index: 100002/);
-  // NO INSET. The tour's box is already right; an inset moves it wrong — see
-  // above, twice.
-  assert.ok(!/top:/.test(block), "the overlay must not be inset — see above");
-  assert.ok(!/sidebar__main/.test(css.slice(i, i + 900)),
-    "the rail must not be lifted: this tour draws its own");
-
-  // VISIBLE BUT INERT. The bar is lifted so it stays readable over the tour,
-  // and every control in it — including the switcher's panel and the account
-  // menu, which are built INSIDE __main (desk/skeleton/topbar.js calls
-  // workspaceSwitcher from the left cluster) — stops answering, so a click
-  // cannot take the user somewhere the tour is not while the tour is still up.
-  const inert = new RegExp(
-    '\\.desk-module\\[data-desk-tour="1"\\] \\.desk-module-topbar__main \\{([^}]*)\\}',
-  ).exec(css);
-  assert.ok(inert, "the bar is not made inert");
-  assert.match(inert[1], /pointer-events: none/);
-  // Inert, NOT hidden — measured in tests/harness/desk-tour-topbar.js, which
-  // reads the computed style because pointer-events:none takes the box out of
-  // hit-testing and elementsFromPoint could not tell the two apart.
-  assert.ok(!/visibility:\s*hidden/.test(inert[1]), "the bar must stay legible");
-  assert.ok(!/display:\s*none/.test(inert[1]), "the bar must stay legible");
-  assert.ok(!/opacity/.test(inert[1]), "the bar must stay legible");
+  assert.match(block, /display: none/);
+  // The three that are gone, asserted as gone so a revert has to be deliberate.
+  assert.ok(!/z-index/.test(block), "a bar that is not drawn needs no lift");
+  assert.ok(!/pointer-events/.test(block), "nor a pointer-events stand-down");
+  assert.ok(!/top:/.test(block), "and the overlay must not be inset — see git log");
+  // Scoped to the desktop bar only. The mobile one is already display:none and
+  // the phone draws its own __mobile-topbar.
+  assert.ok(!/mobile-topbar/.test(block), "the phone's bar is not this rule's business");
 
   // The stamp is raised and cleared by the desk, and nothing measures anything.
   const desk = readFileSync(join(__dirname, "..",
     "src/drumee/modules/desk/index.js"), "utf8");
   assert.match(desk, /dataset\.deskTour = "1"/);
   assert.match(desk, /delete this\.el\.dataset\.deskTour/);
-  assert.ok(!/--desk-tour-top/.test(desk), "the measurement is gone");
+  assert.ok(!/--desk-tour-top/.test(desk), "the measured inset is gone");
 });
 
 // ── the workspace tour's two live screens ───────────────────────────────────
