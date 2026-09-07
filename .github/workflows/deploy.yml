@@ -23,7 +23,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy
-    runs-on: self-hosted
+    runs-on: [self-hosted, drumee-in]
     timeout-minutes: 20
     env:
       SGP_USER: debian
