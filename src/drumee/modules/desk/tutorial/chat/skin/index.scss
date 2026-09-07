@@ -243,11 +243,31 @@
   // is 16 on three corners and SQUARE on the one facing the speaker: top-left
   // for an incoming message (186:73694), top-right for your own (186:73696).
   // That squared corner is the bubble's tail; it was 12px all round.
+  // 9/16, NOT 12 ALL ROUND — read off the base image rather than guessed.
+  //
+  // Two bubbles of known line counts pin both numbers at once: the three-line
+  // one is 45 image-px tall and the two-line one 34, and the image renders a
+  // 320px bubble at 206, so the scale is 0.644. The difference between them is
+  // one line (17.5px), and what is left over is the vertical padding — 9, not
+  // 12. Horizontally the first glyph starts 10.5 image-px in, which is 16.
+  //
+  // The old 12 was square padding on a box the design pads asymmetrically, so
+  // every bubble sat a little tall and a little tight.
+  // A FIXED 320, not a cap it happens to reach.
+  //
+  // Every incoming bubble in the base image measures 204-206 image-px wide —
+  // the three-line one, the two-line ones, the short one — which at the 0.635
+  // that image is rendered at is 320 for all of them. The design gives the
+  // column one width and lets the text sit in it; `max-width` made each bubble
+  // hug its own longest line instead, so the stream stepped in and out by
+  // whatever the loaded font happened to measure. `max-width: 100%` is what
+  // keeps that honest in the 510px thread panel.
   &__bubble {
     box-sizing: border-box;
-    max-width: 320px;
+    width: 320px;
+    max-width: 100%;
     gap: 8px;
-    padding: 12px;
+    padding: 9px 16px;
     border-radius: 0 16px 16px 16px;
     background: var(--normal-bg-elevated);
   }
@@ -261,9 +281,12 @@
     background: var(--grid-color-folder-restricted, #d65f59);
   }
 
-  // Body/Small Body at the frame's tighter 1.2 leading.
+  // 1.25 — 17.5px, which is what the two bubbles above measure to: their
+  // heights differ by exactly one line, 11 image-px at the 0.644 the base
+  // image is rendered at. 1.2 set them 0.7px tight per line, which is
+  // invisible on one line and reads as cramped on three.
   &__msg-text {
-    @include drumee.typo($size: 14px, $line: 1.2);
+    @include drumee.typo($size: 14px, $line: 1.25);
     font-weight: 400;
     color: var(--normal-fg);
   }

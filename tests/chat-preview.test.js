@@ -194,3 +194,38 @@ test("the opening message keeps the break the design composed", () => {
   // The link survived the split, once.
   assert.equal(first.content.split("tutorial-chat__msg-link").length - 1, 1);
 });
+
+test("the bubble's box is the frame's, not a guess", () => {
+  // Read off the base image, which pins all three numbers at once: every
+  // incoming bubble measures 204-206 image-px wide whatever it says, the
+  // three-line one is 45 image-px tall and the two-line one 34, and the image
+  // renders the pane's 285px folder column at 181 — a scale of 0.635.
+  //
+  //   width   205 / 0.635 = 323  -> 320, the same for all of them, so a fixed
+  //                                width rather than a cap they reach
+  //   line    (45 - 34) / 0.635  = 17.3 -> 1.25 of 14px
+  //   padding (34 - 2*17.5) / 2 / 0.635 = 9 vertical; the first glyph starts
+  //           10.5 image-px in -> 16 horizontal
+  const css = execFileSync(
+    "sass",
+    ["-I", ".", "-I", "skin", "--no-source-map", "modules/desk/tutorial/chat/skin/index.scss"],
+    { cwd: join(ROOT, "src/drumee"), encoding: "utf8", maxBuffer: 1 << 26 },
+  );
+  const bubble = /\.tutorial-chat__bubble \{([^}]*)\}/.exec(css);
+  assert.ok(bubble, "no bubble rule");
+  assert.match(bubble[1], /width: 320px/, "the design gives the column one width");
+  assert.match(bubble[1], /max-width: 100%/, "and the 510px thread panel needs the cap");
+  assert.match(bubble[1], /padding: 9px 16px/, "square padding is not what the frame draws");
+  assert.match(css, /\.tutorial-chat__msg-text \{[^}]*line-height: 1\.25/);
+});
+
+test("the carets are affordances, not headlines", () => {
+  // At --normal-fg they weighed the same as the name they sit beside. The base
+  // image's darkest caret pixel is #86868d against this token's #84848c.
+  const css = execFileSync(
+    "sass",
+    ["-I", ".", "-I", "skin", "--no-source-map", "modules/desk/tutorial/skin/preview.scss"],
+    { cwd: join(ROOT, "src/drumee"), encoding: "utf8", maxBuffer: 1 << 26 },
+  );
+  assert.match(css, /\.tutorial__pv-tb-caret \{[^}]*color: var\(--normal-fg-50\)/);
+});

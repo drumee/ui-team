@@ -155,13 +155,17 @@ $plate-h: 475px;
     white-space: nowrap;
   }
 
+  // GREY, not ink. Both carets are affordances on a pill whose subject is the
+  // NAME beside them, and at --normal-fg they carried the same weight as it —
+  // three equally black things in a row. Measured off the base image: its
+  // darkest caret pixel is #86868d against this token's #84848c.
   &__pv-tb-caret {
     width: 16px;
     height: 16px;
     flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
-    color: var(--normal-fg);
+    color: var(--normal-fg-50);
   }
 
   // The department segment sits BETWEEN the two pills, on the bare bar — a
