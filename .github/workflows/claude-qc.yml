@@ -26,8 +26,22 @@ jobs:
     uses: ./.github/workflows/code-quality.yml
     secrets: inherit
 
+  # DISABLED deliberately (Duy, 2026-09-07), and it needs saying why, because
+  # nothing about it looks broken: this job has in practice never run. It sits
+  # behind `needs: quality`, and the lint job inside that gate failed on every
+  # PR touching a file with `export default` -- i.e. very nearly all of them --
+  # so `review` was skipped every time.
+  #
+  # Repairing the gate (same PR) would therefore have switched an AI reviewer
+  # on across every PR into test/preview, with the API cost and the PR comments
+  # that implies, as an accidental side effect of a lint config fix. Turning it
+  # on is a decision worth taking on its own terms, so the state it has always
+  # had is now the state it declares.
+  #
+  # Delete the `if: false` line to enable it.
   review:
     name: AI QC report (advisory)
+    if: false
     needs: quality
     runs-on: ubuntu-latest
     permissions:
