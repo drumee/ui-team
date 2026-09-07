@@ -13,7 +13,7 @@
 // bumped by every navigation, and this file runs the reported sequence.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { readFileSync } = require("node:fs");
+const { readFileSync, existsSync } = require("node:fs");
 const { execFileSync } = require("node:child_process");
 const { join } = require("node:path");
 
@@ -455,4 +455,102 @@ test("the invite blurb draws the workspace as a breadcrumb crumb", () => {
     assert.ok(mine.includes(t), `${t} is in the breadcrumb but not the crumb`);
   }
   assert.match(css, /\.tutorial__inv-crumb-icon \{[^}]*width: 20px/);
+});
+
+// ── the meet carousel's second card ─────────────────────────────────────────
+
+test("both meet cards are composed, and only the faces stay photographs", () => {
+  // meet-schedule.png was a week calendar over the workspace chrome and
+  // meet-instant.jpg was a whole video call, chrome and all — one frame each,
+  // exported flat.
+  //
+  // Both are composed now. The plate, the topbar and the rail are the
+  // workspace preview's, the week is a grid with five placed meetings
+  // (meeting/skeleton/calendar.js), and the call is a header bar over a 2x2
+  // grid (meeting/skeleton/call.js). WHAT STAYS BITMAP is the four video
+  // tiles, because a video tile is a picture of a person — supplied as their
+  // own crops, with the name bars and mute pills the design baked into them.
+  for (const gone of ["meet-schedule.png", "meet-instant.jpg"]) {
+    assert.ok(!existsSync(join(__dirname, "..", `src/drumee/assets/tutorial/${gone}`)),
+      `${gone} is still on disk`);
+  }
+  for (let i = 1; i <= 4; i++) {
+    assert.ok(existsSync(join(__dirname, "..",
+      `src/drumee/assets/tutorial/meeting-user${i}.png`)), `tile ${i} is missing`);
+  }
+
+  const src = readFileSync(join(__dirname, "..",
+    "src/drumee/modules/desk/tutorial/meeting/skeleton/index.js"), "utf8");
+  assert.ok(!/require\([^)]*meet-(schedule|instant)/.test(src), "a frame is still required");
+  assert.match(src, /scheduleCard/);
+  assert.match(src, /callCard/);
+
+  const { installGlobals, installResolver, find, findAll } =
+    require("./helpers/render-skeleton.js");
+  const rg = installGlobals();
+  const rr = installResolver();
+  try {
+    for (const k of Object.keys(require.cache)) if (/tutorial/.test(k)) delete require.cache[k];
+    const ui = { fig: { family: "tutorial-meeting", group: "tutorial" }, mget: () => null };
+    const { scheduleCard, EVENTS, DAYS, HOURS, ROW_H } = require(join(__dirname, "..",
+      "src/drumee/modules/desk/tutorial/meeting/skeleton/calendar.js"));
+    const { callCard, TILES } = require(join(__dirname, "..",
+      "src/drumee/modules/desk/tutorial/meeting/skeleton/call.js"));
+
+    // ── the week ────────────────────────────────────────────────────────────
+    const cal = scheduleCard(ui);
+    // Placed BY TIME, not a pixel each: `top` comes from the event's own start,
+    // so a half-past meeting lands half way down its hour and the card
+    // survives a change of row height.
+    const events = findAll(cal, "tutorial__mc-event");
+    assert.equal(events.length, EVENTS.length, "not every meeting was drawn");
+    const half = EVENTS.find((e) => e.from % 60 === 30);
+    assert.ok(half, "expected a half-past meeting in the fixture");
+    const want = `${Math.round(((half.from - 8 * 60) / 60) * ROW_H)}px`;
+    assert.ok(events.some((n) => n.styleOpt && n.styleOpt.top === want),
+      `no event placed at ${want} for ${half.title}`);
+    for (const n of events) {
+      assert.ok(n.styleOpt && n.styleOpt.top && n.styleOpt.height, "an event has no box");
+    }
+    assert.equal(findAll(cal, "tutorial__mc-head-day").length, DAYS.length);
+    assert.equal(findAll(cal, "tutorial__mc-hour").length, HOURS.length);
+    assert.ok(find(cal, "tutorial__mc-switch"), "no Weekly switch");
+    assert.ok(find(cal, "tutorial__mc-today"), "no Today control");
+    // Its window ends where the card does, because the toolbar right-aligns
+    // that switch onto the card's own edge.
+    assert.equal(find(cal, "tutorial__pv-scale").style.width, `${Math.round(691 / 0.62)}px`);
+
+    // ── the call ────────────────────────────────────────────────────────────
+    const call = callCard(ui);
+    assert.equal(findAll(call, "tutorial__mv-tile").length, TILES.length);
+    assert.equal(TILES.length, 4);
+    const videos = findAll(call, "tutorial__mv-video");
+    assert.equal(videos.length, 4, "a tile has no video");
+    for (const v of videos) {
+      // `attribute`, which is the channel ui-core takes plain HTML attributes
+      // through — `attrOpt` is for data-*, and an <img> fed through it has no
+      // src at all.
+      assert.ok(v.attribute && "src" in v.attribute, "a video carries no src");
+      assert.equal(v.tagName, "img");
+    }
+    assert.ok(find(call, "tutorial__mv-head-title"), "no call header");
+    assert.ok(find(call, "tutorial__mv-end"), "no End control");
+
+    // Both cards are pictures of the Meet tab, so both light Meet and nothing
+    // else — from the same rail every other card uses.
+    for (const [name, card] of [["calendar", cal], ["call", call]]) {
+      const lit = findAll(card, "tutorial__pv-rail-item")
+        .filter((n) => n.attrOpt["data-active"] === 1);
+      assert.equal(lit.length, 1, `${name} lit ${lit.length} tabs`);
+      assert.equal(lit[0].kids[1].content, "MEET", `${name} lit the wrong tab`);
+    }
+
+    // Scenery: the carousel owns every control on that screen.
+    for (const card of [cal, call]) {
+      for (const n of require("./helpers/render-skeleton.js").walk(card)) {
+        assert.ok(!n.service, `${n.className} raises ${n.service}`);
+        assert.ok(!n.sys_pn, `${n.className} claims a part name`);
+      }
+    }
+  } finally { rr(); rg(); }
 });

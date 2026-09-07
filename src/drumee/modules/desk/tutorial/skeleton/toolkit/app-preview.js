@@ -182,11 +182,15 @@ function previewTopbar(ui) {
  * @param {String} [opt.fit] "card" to fill the box it is given instead of
  *   taking the home screen's own 705x475. The chat tour hands it a carousel
  *   card, which brings its own geometry.
+ * @param {Number} [opt.w] the window's own width, when the default is wrong
+ *   for what is on it. The meet card asks for one: its toolbar right-aligns a
+ *   control, and at 1280 that control lands past the card's edge — a body
+ *   whose own chrome has to END at the crop needs the window to end there too.
  * @returns {Object} the plate
  */
 function appPreview(ui, opt = {}) {
   const p = pfx(ui);
-  const { active = "files", body, fit } = opt;
+  const { active = "files", body, fit, w } = opt;
 
   const railItem = (item) =>
     Skeletons.Box.Y({ active: 0,
@@ -214,7 +218,7 @@ function appPreview(ui, opt = {}) {
         kids: [
           Skeletons.Box.Y({ active: 0,
             className: `${p}-scale`,
-            style: { width: `${PREVIEW_WIDTH}px` },
+            style: { width: `${w || PREVIEW_WIDTH}px` },
             kids: [
               previewTopbar(ui),
               Skeletons.Box.X({ active: 0,

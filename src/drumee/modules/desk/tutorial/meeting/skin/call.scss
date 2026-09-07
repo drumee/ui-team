@@ -1,0 +1,147 @@
+@use "mixins/drumee";
+
+// THE CALL ON THE MEET CAROUSEL'S FIRST CARD — Figma 148:44759, chrome drawn
+// and the four video tiles left as photographs (../skeleton/call.js).
+//
+// Window pixels throughout: the plate composes at the app's own scale and
+// shrinks by 0.62, so the frame's 26px header bar is 43 here and its 238x200
+// tiles are 384x323.
+//
+// Keyed on fig.group, like the plate it sits on.
+
+.tutorial {
+  &__mv-pane {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    // The same reason the calendar's pane needs it: this is a flex item in the
+    // plate's row, and a flex item will not shrink below its min-content
+    // unless told to — which here is the whole tile grid.
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 8px;
+    gap: 12px;
+    background: var(--normal-bg-elevated);
+  }
+
+  // ── The call's own header ─────────────────────────────────────────────────
+  &__mv-head {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+  }
+
+  // The rounded brand tile the frame puts the camera glyph in.
+  &__mv-head-tile {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--primary-purple-40);
+  }
+
+  &__mv-head-ico {
+    width: 16px;
+    height: 16px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--gray-white, #fff);
+  }
+
+  &__mv-head-title {
+    @include drumee.typo($size: 16px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__mv-tools {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 16px;
+    // The cluster sits at the far end of the bar, and the End pill beyond it
+    // runs off the card exactly as the frame shows.
+    margin-left: auto;
+  }
+
+  &__mv-tool {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
+  }
+
+  // Signal/Restricted, the same fill the chat tour's own bubbles use — one
+  // "this ends something" colour across the tour.
+  &__mv-end {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    border-radius: 99px;
+    background: var(--grid-color-folder-restricted, #d65f59);
+  }
+
+  &__mv-end-ico {
+    width: 14px;
+    height: 14px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--gray-white, #fff);
+  }
+
+  &__mv-end-label {
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--gray-white, #fff));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  // ── The 2x2 grid ──────────────────────────────────────────────────────────
+  //
+  // Wrapped rather than a two-column grid, so the pair per row comes from the
+  // tile width and the frame's own gap — and the third and fourth tiles fall
+  // to the second row, which the card then crops. That is what the frame
+  // shows: two tiles whole and two cut off along the bottom.
+  &__mv-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 12px;
+  }
+
+  &__mv-tile {
+    // 238x200 in the frame at its 572 export. Scaled to the card's 762 that is
+    // 317x266, and undoing the plate's 0.62 gives 511x430 — which is what puts
+    // TWO per row with the second one ending exactly on the card's right edge,
+    // as the frame shows. 384 fitted three.
+    flex: 0 0 511px;
+    width: 511px;
+    height: 430px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--normal-bg-90);
+  }
+
+  // The participant's video fills its tile and is cropped by it, the way a
+  // call does — the crops are not all the same aspect.
+  &__mv-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    // The pointer belongs to the carousel's track: an <img> has a native drag
+    // of its own that would hijack the gesture.
+    pointer-events: none;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+}
