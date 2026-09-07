@@ -21,6 +21,7 @@ const {
   expandRecurrence,
   passesFilter,
   viewRange,
+  rowStart,
   day,
   ymd,
 } = require("./skeleton/helpers");
@@ -152,7 +153,23 @@ class __calendar_main extends LetcBox {
     const out = [];
     this._items.forEach((row) => {
       if (!passesFilter(row, this._filter)) return;
-      expandRecurrence(row, from, to).forEach((r) => out.push(r));
+      expandRecurrence(row, from, to).forEach((r) => {
+        // Only rows the grids can actually place. Two shapes reach here that
+        // cannot be drawn anywhere, and both used to be counted as "visible":
+        //
+        //   • a task with no due_date — rowStart() is null, so no cell owns it
+        //     (the helpers state a task with no due date never appears)
+        //   • a series whose occurrences all fall outside the window —
+        //     expandRecurrence falls back to `[row]`, putting the ORIGIN's own
+        //     date back in play even though it is out of range
+        //
+        // The grids drop both at render, so they were invisible either way —
+        // but they made getVisibleItems() non-empty, which suppressed
+        // "Nothing scheduled" and left the screen blank with no explanation.
+        const s = rowStart(r);
+        if (!s || s.isBefore(from, "day") || s.isAfter(to, "day")) return;
+        out.push(r);
+      });
     });
     return out;
   }
@@ -198,7 +215,15 @@ class __calendar_main extends LetcBox {
     // Single-row collapse: a result set holding exactly one row answers `{...}`
     // where every other count answers `[...]`. This has already emptied a
     // calendar once in this product (room.list), so normalise every shape.
-    const list = Array.isArray(rows) ? rows : rows && rows.id ? [rows] : null;
+    //
+    // Tested on id OR nid, and with `!= null` rather than truthiness: a raw
+    // meeting row is keyed by `nid` and carries no `id` at all, and an `id` of
+    // 0 is a legitimate key. `rows.id` alone therefore read a perfectly good
+    // single meeting as a failed request and drew "Try again" over an empty
+    // calendar — the exact failure this collapse handling exists to prevent.
+    const isRow = (r) =>
+      r && typeof r === "object" && (r.id != null || r.nid != null);
+    const list = Array.isArray(rows) ? rows : isRow(rows) ? [rows] : null;
     if (!list) {
       this._loadFailed = 1;
       // DEV ONLY: ?calfixture=1 renders sample rows so the grids, chips,
@@ -390,6 +415,21 @@ class __calendar_main extends LetcBox {
 
   _closeForm() {
     this._form = null;
+    this._render();
+  }
+
+  /**
+   * Re-paint after a click that changed the draft while the modal is open.
+   *
+   * MUST be used instead of _render() by every in-form handler. _render()
+   * re-feeds the whole page from `draft`, and the free-text fields (title,
+   * description, the four time boxes, the password) only live in the DOM until
+   * _absorbFormText runs — so picking a status pill, flipping AM/PM or ticking
+   * a switch used to silently wipe whatever the user had typed above it.
+   * Absorbing first makes the re-render lossless.
+   */
+  _renderForm() {
+    this._absorbFormText();
     this._render();
   }
 
@@ -769,12 +809,12 @@ class __calendar_main extends LetcBox {
       case "cal-form-status":
         if (!this._form) return;
         this._form.draft.status = cmd.mget("calStatus") || "todo";
-        return this._render();
+        return this._renderForm();
 
       case "cal-form-priority":
         if (!this._form) return;
         this._form.draft.priority = cmd.mget("calPriority") || "medium";
-        return this._render();
+        return this._renderForm();
 
       case "cal-form-time":
         // Absorbed at commit from getData(); nothing to do per keystroke.
@@ -786,7 +826,7 @@ class __calendar_main extends LetcBox {
         const part = this._form.draft[which] || {};
         part.meridiem = cmd.mget("calMeridiem") === "PM" ? "PM" : "AM";
         this._form.draft[which] = part;
-        return this._render();
+        return this._renderForm();
       }
 
       case "cal-toggle-require-email": {
@@ -797,18 +837,18 @@ class __calendar_main extends LetcBox {
         if (!d.require_email) {
           d.restrict = false;
         }
-        return this._render();
+        return this._renderForm();
       }
 
       case "cal-toggle-restrict":
         if (!this._form) return;
         this._form.draft.restrict = !this._form.draft.restrict;
-        return this._render();
+        return this._renderForm();
 
       case "cal-toggle-password":
         if (!this._form) return;
         this._form.draft.password_on = !this._form.draft.password_on;
-        return this._render();
+        return this._renderForm();
 
       case "cal-add-recipient": {
         if (!this._form) return;
@@ -820,7 +860,7 @@ class __calendar_main extends LetcBox {
         if (!list.includes(value)) list.push(value);
         this._form.draft.recipients = list;
         if (input) input.value = "";
-        return this._render();
+        return this._renderForm();
       }
 
       case "cal-remove-recipient": {
@@ -829,7 +869,7 @@ class __calendar_main extends LetcBox {
         this._form.draft.recipients = (this._form.draft.recipients || []).filter(
           (e) => e !== email,
         );
-        return this._render();
+        return this._renderForm();
       }
 
       case "cal-submit-task":

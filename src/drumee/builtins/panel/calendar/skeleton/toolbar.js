@@ -194,27 +194,38 @@ module.exports = function (ui) {
   });
 
   // ── + New ▾ ────────────────────────────────────────────────────────────────
+  // Icon + label row, built the way the desk topbar's own "New" menu builds
+  // one (modules/desk/skeleton/topbar.js → newMenuRow): a Box.X carrying the
+  // service, with the icon and the label as inert kids.
+  //
+  // NOT Skeletons.Button.Label. Its template renders the sprite as
+  // `<svg class="full …">` — width:100%/height:100% — and Button.Label gives
+  // the icon no box of its own, so inside a text-height menu row the svg
+  // claimed the whole 150px width and shoved the label out of the dropdown.
+  // An Image.Svg/Button.Svg in a pinned wrapper (see __menu-ico in the skin)
+  // is the shape the rest of the app uses for exactly this reason.
+  const newMenuRow = (ico, label, service) =>
+    Skeletons.Box.X({
+      className: `${pfx}__menu-item`,
+      bubble: 0,
+      service,
+      uiHandler: [ui],
+      // See __range above — a kid left interactive swallows the click before
+      // triggerHandlers runs.
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Image.Svg({ ico, className: `${pfx}__menu-ico` }),
+        Skeletons.Note({ className: `${pfx}__menu-label`, content: label }),
+      ],
+    });
+
   const newMenu = ui.isNewMenuOpen()
     ? Skeletons.Box.Y({
         className: `${pfx}__menu`,
         attrOpt: { "data-anchor": "new" },
         kids: [
-          Skeletons.Button.Label({
-            className: `${pfx}__menu-item`,
-            ico: "app-task-list",
-            label: LOCALE.TASK,
-            bubble: 0,
-            service: "cal-new-task",
-            uiHandler: [ui],
-          }),
-          Skeletons.Button.Label({
-            className: `${pfx}__menu-item`,
-            ico: "ph-video",
-            label: LOCALE.MEETING,
-            bubble: 0,
-            service: "cal-new-meeting",
-            uiHandler: [ui],
-          }),
+          newMenuRow("app-task-list", LOCALE.TASK, "cal-new-task"),
+          newMenuRow("ph-video", LOCALE.MEETING, "cal-new-meeting"),
         ],
       })
     : null;

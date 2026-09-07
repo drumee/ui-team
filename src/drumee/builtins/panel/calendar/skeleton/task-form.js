@@ -31,6 +31,11 @@ module.exports = function (ui) {
           service,
           uiHandler: [ui],
           [argKey]: o.key,
+          // Both kids cover almost the whole pill, and a kid left interactive
+          // stopPropagation()s the click before this service can fire — so
+          // status/priority only changed when the click landed on the pill's
+          // 12px of side padding. Same trap the toolbar documents three times.
+          kidsOpt: { active: 0 },
           kids: [
             Skeletons.Note({
               className: `${pfx}__pill-dot`,
@@ -166,6 +171,10 @@ module.exports = function (ui) {
         ],
       }),
 
+      // Delete (destructive, pushed left) · Cancel · confirm — the footer both
+      // the Task tab's create modal and the Meet tab's schedule modal use.
+      // Cancel is not decoration here: this dialog's only other way out was the
+      // ✕ in the header, which neither of those two relies on alone.
       Skeletons.Box.X({
         className: `${pfx}__modal-foot`,
         attrOpt: { "data-mode": editing ? "edit" : "create" },
@@ -179,6 +188,13 @@ module.exports = function (ui) {
                 uiHandler: [ui],
               })
             : null,
+          Skeletons.Note({
+            className: `${pfx}__button ${pfx}__button--neutral`,
+            content: LOCALE.CANCEL,
+            bubble: 0,
+            service: "cal-close-form",
+            uiHandler: [ui],
+          }),
           Skeletons.Note({
             className: `${pfx}__button ${pfx}__button--primary`,
             content: editing ? LOCALE.UPDATE_TASK : LOCALE.CREATE_TASK,

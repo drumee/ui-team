@@ -82,14 +82,19 @@ function toggleRow(ui, opt) {
       Skeletons.Image.Svg({ ico: opt.ico, className: `${pfx}__toggle-ico` }),
       Skeletons.Box.Y({
         className: `${pfx}__toggle-text`,
+        // kidsOpt above reaches this box but NOT its own kids, so the label and
+        // hint — the widest target in the row — still swallowed the click.
+        // Marked here explicitly.
         kids: [
           Skeletons.Note({
             className: `${pfx}__toggle-label`,
             content: LOCALE[opt.labelKey],
+            active: 0,
           }),
           Skeletons.Note({
             className: `${pfx}__toggle-hint`,
             content: LOCALE[opt.hintKey],
+            active: 0,
           }),
         ],
       }),
@@ -316,9 +321,17 @@ module.exports = function (ui) {
         ],
       }),
 
+      // Cancel · confirm, as in the Meet tab's own schedule modal.
       Skeletons.Box.X({
         className: `${pfx}__modal-foot`,
         kids: [
+          Skeletons.Note({
+            className: `${pfx}__button ${pfx}__button--neutral`,
+            content: LOCALE.CANCEL,
+            bubble: 0,
+            service: "cal-close-form",
+            uiHandler: [ui],
+          }),
           Skeletons.Note({
             className: `${pfx}__button ${pfx}__button--primary`,
             content: LOCALE.CREATE_MEETING_SEND_INVITE,
