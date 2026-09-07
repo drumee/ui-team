@@ -306,6 +306,17 @@ function toHtml(n) {
   const css = style ? ` style="${style}"` : "";
   const kids = [].concat(n.kids || []).map(toHtml).join("");
   const text = n.content != null && !kids ? String(n.content) : "";
+  // AN ICON IS AN <svg><use>, not a div. ui-core renders Image.Svg as a
+  // reference into the sprite (`#--icon-<name>`), and emitting a bare box for
+  // it left every glyph out of the picture — which is fine for a descriptor
+  // test and useless for a harness that is comparing a rendering to a design.
+  // The caller inlines icons/sprites/normalized.sprite.svg for these to
+  // resolve against; with no sprite on the page they render as nothing, which
+  // is what they did before anyway.
+  if (n.__kind === "image.svg" && n.ico) {
+    return `<div${cls}${box}${attrs}${ds}${css}>`
+      + `<svg><use href="#--icon-${n.ico}" xlink:href="#--icon-${n.ico}"></use></svg></div>`;
+  }
   return `<div${cls}${box}${attrs}${ds}${css}>${text}${kids}</div>`;
 }
 module.exports.toHtml = toHtml;
