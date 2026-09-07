@@ -296,59 +296,45 @@ test("the wizard is what warms them", () => {
 
 // ── the real topbar, during a desk-hosted tour ──────────────────────────────
 
-test("a desk tour leaves the bar its strip and lets its menus open over it", () => {
-  // REPORTED: the workspace switcher and the account menu had to be reachable
+test("a desk tour lets the topbar's menus open over it", () => {
+  // REQUESTED: the workspace switcher and the account menu had to be usable
   // during the desk workspace tour.
   //
-  // WHY THEY WERE NOT: that tour draws its own rail and canvas but NO topbar —
-  // the mock one was removed as scenery — and its canvas is `inset: 0` of the
-  // desk's overlay, which an open Wrapper lifts to 50000 (utils.scss, from
-  // --z-index-context). The bar sits at 10003. So the tour covered the bar and
-  // both menus, which hang DOWN off it into exactly that area.
+  // WHAT WAS ACTUALLY WRONG, after two attempts at something larger: only the
+  // MENUS. The slot this tour mounts into is a child of `__body`
+  // (desk/skeleton/index.js pushes the overlay onto `bodyKids`), so the tour
+  // has always been confined to the body and the bar was always visible and
+  // clickable. But the menus hang DOWN off the bar into the body, which is
+  // where the tour is, and the overlay holding it is lifted to 50000 by
+  // utils.scss (`[data-state="open"]` -> --z-index-context) against the bar's
+  // 10003. So they were painted underneath.
   //
-  // Measured against the real cascade in tests/harness/desk-tour-topbar.js —
-  // without the stamp, elementFromPoint returns the tour at all three points.
-  // This pins the two rules that harness proves.
+  // Insetting the overlay — first by a literal 46px, then by the bar's
+  // measured height — pushed the tour BELOW the body's top and uncovered the
+  // real desk in the gap. Measured in tests/harness/desk-tour-topbar.js, whose
+  // fixture now puts the overlay inside `__body` as the desk does; with the
+  // stamp removed, both menus come back as `tutorial-main__body`.
   const sass = (e) => execFileSync("sass",
     ["-I", ".", "-I", "skin", "--no-source-map", e],
     { cwd: join(__dirname, "..", "src/drumee"), encoding: "utf8", maxBuffer: 1 << 26 });
   const css = sass("modules/desk/skin/index.scss");
   const i = css.indexOf('.desk-module[data-desk-tour="1"]');
   assert.ok(i > 0, "no block for a desk-hosted tour");
-  const block = css.slice(i, i + 1200);
+  const block = css.slice(i, css.indexOf("}", css.indexOf("{", i)) + 1);
 
-  // The tour takes the body's area, so the bar keeps the strip it occupies —
-  // MEASURED, because `__topbar` is a Box.Y and the breadcrumb row and the tab
-  // strip live in it too. A literal 46 (which is only `__main`'s height)
-  // uncovered the difference and the real desk showed through: the rail, which
-  // spans the whole desk height, and whatever the body was drawing.
-  assert.match(block, /top: var\(--desk-tour-top, 46px\)/);
-  assert.match(block, /height: auto/, "or it hangs 46px past the bottom");
-  assert.match(block, /bottom: 0/);
   // 100002 for the same reason the in-window block uses it: it has to clear a
   // 50000 stacking context, not the overlay's declared 10010.
   assert.match(block, /z-index: 100002/);
-  // Not on mobile, where the desktop bar is display:none.
-  // Quotes optional — sass strips them from simple attribute values.
-  assert.match(block, /:not\(\[data-device="?mobile"?\]\)/);
+  // AND NOTHING ELSE. The tour's box is already right; an inset moves it wrong.
+  assert.ok(!/top:/.test(block), "the overlay must not be inset — see above");
+  assert.ok(!/pointer-events/.test(block), "the bar was never covered");
+  assert.ok(!/sidebar__main/.test(css.slice(i, i + 400)),
+    "the rail must not be lifted: this tour draws its own");
 
-  // And the bar paints its own strip: `__main` is background-color:transparent,
-  // so the bar is otherwise a window onto the desk behind it.
-  assert.match(block, /background: var\(--normal-bg\)/);
-
-  // And the tour must keep its own clicks once the overlay stands down.
-  const tourCss = sass("modules/desk/tutorial/skin/index.scss");
-  assert.match(tourCss, /\.tutorial-main__ui \{[^}]*pointer-events: auto/);
-
-  // The stamp is raised and cleared by the desk.
+  // The stamp is raised and cleared by the desk, and nothing measures anything.
   const desk = readFileSync(join(__dirname, "..",
     "src/drumee/modules/desk/index.js"), "utf8");
   assert.match(desk, /dataset\.deskTour = "1"/);
   assert.match(desk, /delete this\.el\.dataset\.deskTour/);
-  // The measurement is taken when the tour is raised AND again when it reports
-  // in, because the bar can still be settling at the first of those.
-  assert.equal((desk.match(/_syncDeskTourInset\(\)/g) || []).length, 3,
-    "expected the definition and both call sites");
-  assert.match(desk, /setProperty\("--desk-tour-top"/);
-  assert.match(desk, /removeProperty\("--desk-tour-top"\)/);
+  assert.ok(!/--desk-tour-top/.test(desk), "the measurement is gone");
 });

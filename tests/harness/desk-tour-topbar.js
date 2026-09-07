@@ -65,25 +65,26 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
     <div id="acct" class="box desk-module-topbar__account-menu" data-flow="y"
          style="position:absolute;top:46px;right:20px;width:280px;height:260px;background:#fff">acct</div>
   </div>
-  <!-- A MARKER for the desk underneath: anything of this that shows is a bug. -->
+  <!-- THE OVERLAY IS A CHILD OF __body, and getting that wrong is what made
+       this fixture agree with two broken fixes in a row. desk/skeleton/index.js
+       pushes the overlay slot onto bodyKids, so the tour is confined to the
+       body from the start and never covered the bar. Built as a SIBLING of the
+       bar, the tour appeared to cover it, an inset looked necessary, and the
+       inset is what uncovered the real desk on screen.
+       #real is a marker for that desk: any of it that shows is a bug. -->
   <div class="box desk-module__body" data-flow="x" style="flex:1;position:relative">
     <div id="real" style="position:absolute;inset:0;background:#ff0000"></div>
-  </div>
-  <div class="box desk-module__overlay" data-state="open" data-flow="y" style="opacity:1">
-    <div id="tour" class="tutorial-main tutorial-main__ui">
-      <div class="box tutorial-main__layout" data-flow="y" style="height:100%">
-        <div class="box tutorial-main__body" data-flow="x" style="flex:1"></div>
+    <div class="box desk-module__overlay" data-state="open" data-flow="y" style="opacity:1">
+      <div id="tour" class="tutorial-main tutorial-main__ui">
+        <div class="box tutorial-main__layout" data-flow="y" style="height:100%">
+          <div class="box tutorial-main__body" data-flow="x" style="flex:1"></div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 <script>
-  // What _syncDeskTourInset does: measure the bar, write the property.
   const bar = document.querySelector(".desk-module__topbar");
-  const root = document.querySelector(".desk-module");
-  if (${stamped} && bar.offsetHeight > 0) {
-    root.style.setProperty("--desk-tour-top", bar.offsetHeight + "px");
-  }
   const box = (id) => { const r = document.getElementById(id).getBoundingClientRect();
     return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }; };
   const at = (x, y) => { const e = document.elementFromPoint(x, y); return e ? e.className : null; };
@@ -123,8 +124,10 @@ for (const stamped of [false, true]) {
   console.log(`  the tour  -> ${d.onTour}`);
   console.log(`  bar ${d.barH}px, the row under it -> ${d.justBelowBar}`);
   const checks = [
-    [stamped ? "the tour starts at the bar's measured bottom" : "the tour covers the bar",
-     d.tour.y === (stamped ? d.barH : 0)],
+    // The tour sits in the body either way — it always did, because its slot
+    // is a child of the body. What the stamp changes is only what paints on
+    // top of it.
+    ["the tour sits in the body, under the bar", d.tour.y === d.barH],
     ["the switcher panel is on top", hit(d.onWsMenu, "ws-menu")],
     ["the account menu is on top", hit(d.onAcctMenu, "account-menu")],
     ["the bar itself is reachable", hit(d.onChip, "ws-current|topbar")],

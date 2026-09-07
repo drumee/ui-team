@@ -595,67 +595,29 @@ html {
 // destroy. It is the DESK host (desk/tutorial) — the one that draws its own
 // rail and canvas — not the in-window one above.
 //
-// THE TOUR HAS NO TOPBAR OF ITS OWN. It used to draw a pixel-copy of the real
-// bar directly over the real bar, and that copy was removed as pure scenery
-// (tutorial/skeleton/index.js) — which left the tour's canvas painting over
-// the real bar instead. The workspace switcher and the account menu were then
-// unreachable for the length of the tour, and one opened just before it
-// started was buried: both hang DOWN off the bar into exactly the area the
-// tour covers.
+// ONE RULE, and the two that used to be here were both wrong. The slot this
+// tour mounts into is a CHILD OF `__body`: desk/skeleton/index.js pushes the
+// `overlay` slot onto `bodyKids`. So it has always been confined to the body
+// area and has never covered the top bar. Insetting it — first by a literal
+// 46px, then by the bar's measured height — pushed the tour BELOW the body's
+// top instead, and what appeared in the gap was the real desk: its rail,
+// contributing a second logo above the tour's own, and the home grid's folder
+// art over the tour's top edge. Both were reported as broken UI and both were
+// self-inflicted.
 //
-// So the tour sits in the desk BODY, where the workspace itself sits, and the
-// bar keeps the strip it already occupies.
+// What was actually missing is only this. The bar's MENUS hang DOWN off it
+// into the body, which is where the tour is, so they were painted under it.
 .desk-module[data-desk-tour="1"] {
-  // MEASURED, not assumed. `--desk-tour-top` is written by
-  // _syncDeskTourInset from the bar's own offsetHeight.
-  //
-  // The 46px fallback is `__main`'s declared height (desk/skin/topbar.scss) and
-  // it is only that — a fallback. `__topbar` is a Box.Y, and the breadcrumb row
-  // and the window tab strip live in it too, so the bar is often taller. A
-  // literal 46 here uncovered the difference and the REAL DESK showed through
-  // it: the rail, which spans the whole desk height, and whatever the body was
-  // drawing. That was a second rail logo above the tour's own and folder art
-  // over its top edge.
-  //
-  // `height: auto` with both edges pinned, because the base rule sets
-  // `height: 100%`: with a top offset alone the overlay would hang past the
-  // bottom of the desk by the bar's height.
-  //
-  // NOT on mobile, where the desktop bar is `display: none` and the overlay is
-  // `fixed` to the viewport on purpose — an inset there would reserve a strip
-  // for a bar that is not drawn. Tours are gated off mobile anyway
-  // (libs/tutorial-tours isMobile), so this is for a forced `?tutorial=` run.
-  .desk-module__overlay:not([data-device="mobile"]) {
-    top: var(--desk-tour-top, 46px);
-    height: auto;
-    bottom: 0;
-    // Hand the bar back its clicks. The tour's own root takes them again for
-    // everything below the strip — see `__ui` in tutorial/skin/index.scss —
-    // and the tour is `inset: 0` of this box, so nothing else can be reached:
-    // the choice is the bar or the tour.
-    pointer-events: none;
-  }
-
-  // LIFTED, and the number is the one the in-window block above uses, for the
-  // same reason written out there: the overlay is a Wrapper, so holding the
-  // tour stamps `data-state="open"` on it and skin/lib/utils.scss lifts
-  // anything carrying that to `--z-index-context` (50000) with !important. A
-  // lift to 10011 would lose to that silently.
-  //
-  // The bar is not covered by the tour any more, but its MENUS still hang down
-  // into it, and they are the point of this rule.
+  // 100002, the number the in-window block above uses, for the reason written
+  // out there: the overlay is a Wrapper, so holding the tour stamps
+  // `data-state="open"` on it and skin/lib/utils.scss lifts anything carrying
+  // that to `--z-index-context` (50000) with !important. A lift to 10011 loses
+  // to that silently.
   //
   // The rail is deliberately NOT lifted, unlike the in-window block: this tour
-  // draws its own rail, and lifting the real one would put two rails on screen.
+  // draws its own, and lifting the real one would put two on screen.
   .desk-module__topbar {
     z-index: 100002;
-    // AND IT PAINTS ITS OWN STRIP. `__main` is `background-color: transparent`,
-    // so the bar is a window onto whatever is behind it — which is the desk,
-    // and the desk is not what the tour is showing. Belt and braces beside the
-    // measured inset above: if the bar's height changes between the measure
-    // and the paint, the worst case is the bar overlapping the tour's top edge
-    // rather than a band of the real desk appearing in the gap.
-    background: var(--normal-bg);
   }
 }
 
