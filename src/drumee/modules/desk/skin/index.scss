@@ -606,20 +606,27 @@ html {
 // So the tour sits in the desk BODY, where the workspace itself sits, and the
 // bar keeps the strip it already occupies.
 .desk-module[data-desk-tour="1"] {
-  // 46px is the bar's own fixed height (desk/skin/topbar.scss __main), not a
-  // guess — it is `height` AND `min-height` there, so the strip cannot grow
-  // out from under this.
+  // MEASURED, not assumed. `--desk-tour-top` is written by
+  // _syncDeskTourInset from the bar's own offsetHeight.
+  //
+  // The 46px fallback is `__main`'s declared height (desk/skin/topbar.scss) and
+  // it is only that — a fallback. `__topbar` is a Box.Y, and the breadcrumb row
+  // and the window tab strip live in it too, so the bar is often taller. A
+  // literal 46 here uncovered the difference and the REAL DESK showed through
+  // it: the rail, which spans the whole desk height, and whatever the body was
+  // drawing. That was a second rail logo above the tour's own and folder art
+  // over its top edge.
   //
   // `height: auto` with both edges pinned, because the base rule sets
-  // `height: 100%`: with a top offset alone the overlay would hang 46px past
-  // the bottom of the desk.
+  // `height: 100%`: with a top offset alone the overlay would hang past the
+  // bottom of the desk by the bar's height.
   //
   // NOT on mobile, where the desktop bar is `display: none` and the overlay is
   // `fixed` to the viewport on purpose — an inset there would reserve a strip
   // for a bar that is not drawn. Tours are gated off mobile anyway
   // (libs/tutorial-tours isMobile), so this is for a forced `?tutorial=` run.
   .desk-module__overlay:not([data-device="mobile"]) {
-    top: 46px;
+    top: var(--desk-tour-top, 46px);
     height: auto;
     bottom: 0;
     // Hand the bar back its clicks. The tour's own root takes them again for
@@ -642,6 +649,13 @@ html {
   // draws its own rail, and lifting the real one would put two rails on screen.
   .desk-module__topbar {
     z-index: 100002;
+    // AND IT PAINTS ITS OWN STRIP. `__main` is `background-color: transparent`,
+    // so the bar is a window onto whatever is behind it — which is the desk,
+    // and the desk is not what the tour is showing. Belt and braces beside the
+    // measured inset above: if the bar's height changes between the measure
+    // and the paint, the worst case is the bar overlapping the tour's top edge
+    // rather than a band of the real desk appearing in the gap.
+    background: var(--normal-bg);
   }
 }
 

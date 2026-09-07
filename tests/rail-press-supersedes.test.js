@@ -317,9 +317,12 @@ test("a desk tour leaves the bar its strip and lets its menus open over it", () 
   assert.ok(i > 0, "no block for a desk-hosted tour");
   const block = css.slice(i, i + 1200);
 
-  // The tour takes the body's area, so the bar keeps the 46px it occupies —
-  // its own fixed height, not a guess.
-  assert.match(block, /top: 46px/);
+  // The tour takes the body's area, so the bar keeps the strip it occupies —
+  // MEASURED, because `__topbar` is a Box.Y and the breadcrumb row and the tab
+  // strip live in it too. A literal 46 (which is only `__main`'s height)
+  // uncovered the difference and the real desk showed through: the rail, which
+  // spans the whole desk height, and whatever the body was drawing.
+  assert.match(block, /top: var\(--desk-tour-top, 46px\)/);
   assert.match(block, /height: auto/, "or it hangs 46px past the bottom");
   assert.match(block, /bottom: 0/);
   // 100002 for the same reason the in-window block uses it: it has to clear a
@@ -328,6 +331,10 @@ test("a desk tour leaves the bar its strip and lets its menus open over it", () 
   // Not on mobile, where the desktop bar is display:none.
   // Quotes optional — sass strips them from simple attribute values.
   assert.match(block, /:not\(\[data-device="?mobile"?\]\)/);
+
+  // And the bar paints its own strip: `__main` is background-color:transparent,
+  // so the bar is otherwise a window onto the desk behind it.
+  assert.match(block, /background: var\(--normal-bg\)/);
 
   // And the tour must keep its own clicks once the overlay stands down.
   const tourCss = sass("modules/desk/tutorial/skin/index.scss");
@@ -338,4 +345,10 @@ test("a desk tour leaves the bar its strip and lets its menus open over it", () 
     "src/drumee/modules/desk/index.js"), "utf8");
   assert.match(desk, /dataset\.deskTour = "1"/);
   assert.match(desk, /delete this\.el\.dataset\.deskTour/);
+  // The measurement is taken when the tour is raised AND again when it reports
+  // in, because the bar can still be settling at the first of those.
+  assert.equal((desk.match(/_syncDeskTourInset\(\)/g) || []).length, 3,
+    "expected the definition and both call sites");
+  assert.match(desk, /setProperty\("--desk-tour-top"/);
+  assert.match(desk, /removeProperty\("--desk-tour-top"\)/);
 });

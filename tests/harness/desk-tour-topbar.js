@@ -52,6 +52,12 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
     <div class="box desk-module-topbar__main" data-flow="x">
       <div id="chip" class="box desk-module-topbar__ws-current" data-flow="x">ws</div>
     </div>
+    <!-- A SECOND ROW, and it is the point of this fixture. __topbar is a
+         Box.Y and the breadcrumb row and the window tab strip live in it, so
+         the bar is often taller than __main's 46. A literal 46px inset
+         uncovered the difference and the real desk showed through it.
+         (No backticks in here: this page is a template literal.) -->
+    <div class="box" data-flow="x" style="height:34px">crumb</div>
     <!-- Both panels, open, as the topbar renders them: absolutely placed and
          hanging down off the bar. -->
     <div id="wsmenu" class="box desk-module-topbar__ws-menu" data-flow="y"
@@ -59,7 +65,10 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
     <div id="acct" class="box desk-module-topbar__account-menu" data-flow="y"
          style="position:absolute;top:46px;right:20px;width:280px;height:260px;background:#fff">acct</div>
   </div>
-  <div class="box desk-module__body" data-flow="x" style="flex:1"></div>
+  <!-- A MARKER for the desk underneath: anything of this that shows is a bug. -->
+  <div class="box desk-module__body" data-flow="x" style="flex:1;position:relative">
+    <div id="real" style="position:absolute;inset:0;background:#ff0000"></div>
+  </div>
   <div class="box desk-module__overlay" data-state="open" data-flow="y" style="opacity:1">
     <div id="tour" class="tutorial-main tutorial-main__ui">
       <div class="box tutorial-main__layout" data-flow="y" style="height:100%">
@@ -69,6 +78,12 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
   </div>
 </div>
 <script>
+  // What _syncDeskTourInset does: measure the bar, write the property.
+  const bar = document.querySelector(".desk-module__topbar");
+  const root = document.querySelector(".desk-module");
+  if (${stamped} && bar.offsetHeight > 0) {
+    root.style.setProperty("--desk-tour-top", bar.offsetHeight + "px");
+  }
   const box = (id) => { const r = document.getElementById(id).getBoundingClientRect();
     return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }; };
   const at = (x, y) => { const e = document.elementFromPoint(x, y); return e ? e.className : null; };
@@ -82,6 +97,10 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
     onChip: at(box("chip").x + 5, box("chip").y + 10),
     // And a point well inside the tour, clear of both panels.
     onTour: at(640, 600),
+    barH: bar.offsetHeight,
+    // THE ROW UNDER THE BAR. With a literal 46px inset and a taller bar this
+    // is the real desk, which is the reported break.
+    justBelowBar: at(640, bar.offsetHeight + 2),
   });
 </script>`.replace('box("overlay") || null', 'box("tour")');
 
@@ -102,13 +121,17 @@ for (const stamped of [false, true]) {
   console.log(`  account   -> ${d.onAcctMenu}`);
   console.log(`  the chip  -> ${d.onChip}`);
   console.log(`  the tour  -> ${d.onTour}`);
+  console.log(`  bar ${d.barH}px, the row under it -> ${d.justBelowBar}`);
   const checks = [
-    [stamped ? "the tour starts below the 46px bar" : "the tour covers the bar",
-     d.tour.y === (stamped ? 46 : 0)],
+    [stamped ? "the tour starts at the bar's measured bottom" : "the tour covers the bar",
+     d.tour.y === (stamped ? d.barH : 0)],
     ["the switcher panel is on top", hit(d.onWsMenu, "ws-menu")],
     ["the account menu is on top", hit(d.onAcctMenu, "account-menu")],
     ["the bar itself is reachable", hit(d.onChip, "ws-current|topbar")],
     ["and the tour still takes its own clicks", hit(d.onTour, "tutorial-main")],
+    // The one that catches a hardcoded inset: with the bar at 80 and the
+    // inset at 46, this point is the desk's own body.
+    ["no desk showing under the bar", stamped ? hit(d.justBelowBar, "tutorial-main") : true],
   ];
   for (const [what, ok] of checks) console.log(`  ${ok ? "✓" : "✗"} ${what}`);
 }

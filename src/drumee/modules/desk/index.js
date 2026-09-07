@@ -4396,6 +4396,39 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * TELL THE SKIN HOW TALL THE TOPBAR ACTUALLY IS.
+   *
+   * The desk tour sits in the body area so the bar keeps its own strip, and
+   * the first version of that inset was the literal 46px `__main` declares.
+   * THAT IS ONLY THE BAR'S FIRST ROW. `__topbar` is a Box.Y — a column — and
+   * what it holds varies with state: the breadcrumb row and the window tab
+   * strip both live in it. Whenever it is taller than 46, the inset uncovered
+   * the difference, and what showed through was the real desk: the rail (which
+   * spans the whole desk height) and whatever the body was drawing. That is
+   * the reported break — a second rail logo above the tour's own, and folder
+   * art poking out over the tour's top edge.
+   *
+   * Measured, therefore, and written as a custom property the skin reads with
+   * the 46 only as a last-resort fallback. offsetHeight rather than a
+   * getBoundingClientRect, because an integer is what the property wants and
+   * a fractional px here leaves a hairline of desk showing.
+   *
+   * Called when the tour is raised and again when it reports in, because the
+   * bar can still be settling at the first of those.
+   */
+  _syncDeskTourInset() {
+    if (!this.el || !this.el.style || !this.el.querySelector) return;
+    const bar = this.el.querySelector(".desk-module__topbar");
+    const h = bar ? bar.offsetHeight : 0;
+    // A hidden bar (mobile, or a headless workspace pane) measures 0, and the
+    // tour should then take the whole desk — which is what dropping the
+    // property does, since the skin's own rule is skipped for mobile and 0 is
+    // the honest answer anywhere else.
+    if (h > 0) this.el.style.setProperty("--desk-tour-top", `${h}px`);
+    else this.el.style.removeProperty("--desk-tour-top");
+  }
+
+  /**
    * WARM EVERYTHING THE DESK-HOSTED TOUR MOUNTS, not just its shell.
    *
    * `desk_tutorial` has been warmed during the wizard for a while, and that
@@ -5379,6 +5412,10 @@ class desk_module extends LetcBox {
 
       case "desk-tutorial": {
         const tour = (child && child.mget && child.mget("tour")) || "full";
+        // Re-measure: the bar can still have been settling when the tour was
+        // raised, and the inset has to be its FINAL height or the difference
+        // shows the real desk through. See _syncDeskTourInset.
+        this._syncDeskTourInset();
         // Release single-flight for EVERY tour, deliberately outside the chain
         // gate below: a contextual tour that is never released would block the
         // next trigger for the rest of the session. Hangs off the same destroy
@@ -5386,6 +5423,9 @@ class desk_module extends LetcBox {
         if (_.isFunction(child.once)) {
           child.once(_e.destroy, () => {
             if (this.el && this.el.dataset) delete this.el.dataset.deskTour;
+            if (this.el && this.el.style) {
+              this.el.style.removeProperty("--desk-tour-top");
+            }
             require("libs/tutorial-tours").release(tour);
           });
         }
@@ -5559,6 +5599,7 @@ class desk_module extends LetcBox {
     // The skin reads this flag to sit the tour in the desk BODY, where the
     // workspace itself sits, and to lift the bar above it.
     if (this.el && this.el.dataset) this.el.dataset.deskTour = "1";
+    this._syncDeskTourInset();
     this.ensurePart("overlay").then((p) => {
       p.feed({
         kind: "desk_tutorial",
