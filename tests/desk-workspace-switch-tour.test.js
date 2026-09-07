@@ -1,4 +1,4 @@
-// Leaving a workspace while a tour is drawn on it.
+// Switching workspace while a tour is up, and what happens on arrival.
 //
 // The switcher (desk-module-topbar__ws-list) is reachable from UNDER a running
 // in-window tour: the tour covers the work area at z 50000 and the topbar was
@@ -6,9 +6,11 @@
 // then is that the workspace really did change and the tour stayed painted over
 // the pane of the workspace that was gone.
 //
-// Two halves are worth pinning, and they pull in opposite directions:
+// Three things are worth pinning, and the first two pull in opposite directions:
 //   - the tour comes DOWN, on a real switch and only on a real switch;
-//   - it is NOT recorded as done, so it is offered again.
+//   - it is NOT recorded as done, so it is offered again;
+//   - the workspace it lands in offers the migrate tour, because a switch
+//     always arrives on Files and Files is what that tour is about.
 // Miss the first and the user is stuck; miss the second and they never see the
 // tour again because they once clicked the wrong row.
 const test = require("node:test");
@@ -29,82 +31,109 @@ const TOURS = readFileSync(
 
 /**
  * Lift one method out of the desk module so it can be RUN rather than matched.
- * The desk cannot be required here (webpack aliases, a live DOM, Wm), but the
- * method under test touches only its own `this` and `window`, so it survives
- * being taken out on its own.
+ * The desk cannot be required here (webpack aliases, a live DOM, Wm), but these
+ * methods touch only their own `this`, `window` and `require`, so they survive
+ * being taken out on their own.
  */
-function method(name) {
-  const at = DESK.indexOf(`\n  ${name}(`);
-  assert.ok(at > 0, `${name} is missing`);
-  let i = DESK.indexOf("{", at);
+function source(name) {
+  const plain = DESK.indexOf(`\n  ${name}(`);
+  const asyn = DESK.indexOf(`\n  async ${name}(`);
+  const from = plain > 0 ? plain : asyn;
+  assert.ok(from > 0, `${name} is missing`);
   let depth = 0;
-  for (let j = i; j < DESK.length; j++) {
+  for (let j = DESK.indexOf("{", from); j < DESK.length; j++) {
     if (DESK[j] === "{") depth++;
     else if (DESK[j] === "}" && --depth === 0) {
-      const src = DESK.slice(at + 3, j + 1);
-      return new Function("window", `return function ${src}`);
+      return { src: DESK.slice(from + 3, j + 1), async: plain < 0 };
     }
   }
   throw new Error(`unbalanced ${name}`);
 }
 
-/** A host with just the collaborators the method reaches for. */
-function host(curKey) {
-  return {
-    ended: 0,
+function method(name) {
+  const { src, async } = source(name);
+  const decl = async ? `async function ${src.replace(/^async /, "")}` : `function ${src}`;
+  // new Function only PARSES — free identifiers are resolved at call time — so
+  // a method that reaches for the module's own imports still lifts cleanly.
+  return new Function("window", "require", `return ${decl}`);
+}
+
+/**
+ * A desk with just the collaborators these methods reach for, and a log of
+ * what they did to it.
+ */
+function desk(curKey, opt = {}) {
+  const win = { Wm: { _curWorkspace: curKey ? { key: curKey } : null } };
+  const Tours = {
+    offerable: () => opt.offerable !== false,
+    whenDone: (tour, cb) => log.push(`whenDone:${tour}`) && cb(),
+  };
+  const log = [];
+  const d = {
+    log,
+    win,
+    isDestroyed: () => false,
     _workspaceKey: (row) => (row ? row.key : null),
     _endWindowTour() {
-      this.ended++;
+      log.push("end");
       return true;
     },
-    _cur: curKey ? { key: curKey } : null,
+    _showTourCurtain: () => log.push("curtain:up"),
+    _hideTourCurtain: () => log.push("curtain:down"),
+    _raiseRailTour: async (tour) => {
+      log.push(`raise:${tour}`);
+      return opt.raises !== false;
+    },
+    async _switchWorkspace(wsKey) {
+      log.push(`switch:${wsKey}`);
+      // loadWorkspace overwrites _curWorkspace on its way in — unless the row
+      // is gone from the list, where it declines and nothing moves.
+      if (!opt.rowGone) win.Wm._curWorkspace = { key: wsKey };
+    },
   };
+  const req = () => Tours;
+  d._leavesWorkspace = method("_leavesWorkspace")(win, req);
+  d._endWindowTourOnSwitch = method("_endWindowTourOnSwitch")(win, req);
+  d._switchWorkspaceAndOffer = method("_switchWorkspaceAndOffer")(win, req);
+  return d;
 }
 
-function run(h, wsKey) {
-  const fn = method("_endWindowTourOnSwitch");
-  return fn({ Wm: { _curWorkspace: h._cur } }).call(h, wsKey);
-}
+const go = (d, wsKey) => d._switchWorkspaceAndOffer.call(d, wsKey);
 
-test("another workspace takes the tour down", () => {
-  const h = host("hub:7");
-  assert.equal(run(h, "hub:9"), true);
-  assert.equal(h.ended, 1);
+// ── leaving ─────────────────────────────────────────────────────────────────
+
+test("another workspace takes the tour down, before the switch", async () => {
+  const d = desk("hub:7");
+  await go(d, "hub:9");
+  assert.deepEqual(
+    d.log.filter((l) => l === "end" || l.startsWith("switch:")),
+    ["end", "switch:hub:9"],
+    "the pane the tour is drawn on is replaced by the switch",
+  );
 });
 
-test("re-picking the open workspace leaves it up", () => {
+test("re-picking the open workspace leaves it up and offers nothing", async () => {
   // loadWorkspace is an early return there — the pane the tour is drawn on is
-  // the one being asked for, so nothing is being left.
-  const h = host("hub:7");
-  assert.equal(run(h, "hub:7"), false);
-  assert.equal(h.ended, 0);
+  // the one being asked for, so nothing is being left and nothing arrives.
+  const d = desk("hub:7");
+  await go(d, "hub:7");
+  assert.deepEqual(d.log, ["switch:hub:7"]);
 });
 
-test("a row with no key does nothing", () => {
-  const h = host("hub:7");
-  assert.equal(run(h, null), false);
-  assert.equal(h.ended, 0);
+test("a row with no key does nothing but hand over", async () => {
+  const d = desk("hub:7");
+  await go(d, null);
+  assert.deepEqual(d.log, ["switch:null"]);
 });
 
 test("only a real switch bumps the count the async paths read", () => {
-  const h = host("hub:7");
-  run(h, "hub:7");
-  assert.equal(h._wsSwitch, undefined, "re-picking the open one is not a switch");
-  run(h, "hub:9");
-  run(h, "hub:9");
-  assert.equal(h._wsSwitch, 2);
-});
-
-test("the switcher ends the tour before it switches", () => {
-  // Order matters: _switchWorkspace calls loadWorkspace, which replaces the
-  // window the tour is drawn on.
-  const at = DESK.indexOf('case "switch-workspace": {');
-  assert.ok(at > 0, "the switcher case is gone");
-  const body = DESK.slice(at, DESK.indexOf("\n      }", at));
-  const end = body.indexOf("_endWindowTourOnSwitch");
-  const go = body.indexOf("_switchWorkspace(");
-  assert.ok(end > 0 && go > 0, "both calls must be in the case");
-  assert.ok(end < go, "the tour must come down first");
+  const d = desk("hub:7");
+  d._endWindowTourOnSwitch("hub:7");
+  assert.equal(d._wsSwitch, undefined, "re-picking the open one is not a switch");
+  d._endWindowTourOnSwitch("hub:9");
+  d.win.Wm._curWorkspace = { key: "hub:9" };
+  d._endWindowTourOnSwitch("hub:3");
+  assert.equal(d._wsSwitch, 2);
 });
 
 test("walking out does not count as finishing", () => {
@@ -142,14 +171,79 @@ test("walking out does not count as finishing", () => {
         break;
       }
     }
-    const decl = TOURS.slice(at, end);
     assert.match(
-      decl,
+      TOURS.slice(at, end),
       /mark_on:\s*"success"/,
       `${id} would be recorded on sight, so leaving it would count as doing it`,
     );
   }
 });
+
+// ── arriving ────────────────────────────────────────────────────────────────
+
+test("the workspace it lands in offers the migrate tour", async () => {
+  const d = desk("hub:7");
+  await go(d, "hub:9");
+  // The curtain goes up on the CLICK, before the switch, or the user reads
+  // window-manager__main while the tour is still several hops away.
+  assert.deepEqual(d.log, [
+    "end",
+    "curtain:up",
+    "switch:hub:9",
+    "raise:migrate",
+    "whenDone:migrate",
+    "curtain:down",
+  ]);
+});
+
+test("a user who has finished it switches with nothing flashing over them", async () => {
+  const d = desk("hub:7", { offerable: false });
+  await go(d, "hub:9");
+  assert.deepEqual(d.log, ["end", "switch:hub:9"]);
+});
+
+test("a tour that will not rise takes its curtain with it", async () => {
+  // Refused for single-flight, or claimed and never mounted. The curtain must
+  // not be what is left holding the screen.
+  const d = desk("hub:7", { raises: false });
+  await go(d, "hub:9");
+  assert.deepEqual(d.log.slice(-2), ["raise:migrate", "curtain:down"]);
+});
+
+test("a switch that does not take puts nothing up", async () => {
+  // The row can be gone from the list — deleted in another tab, a stale menu —
+  // and _switchWorkspace declines silently. A curtain over the pane the user is
+  // still standing on would hide the app for a tour with nothing to draw on.
+  const d = desk("hub:7", { rowGone: true });
+  await go(d, "hub:9");
+  assert.deepEqual(d.log, ["end", "curtain:up", "switch:hub:9", "curtain:down"]);
+  assert.ok(!d.log.some((l) => l.startsWith("raise:")), "no tour was raised");
+});
+
+test("the switcher is the only gesture that offers", async () => {
+  // _openCreatedWorkspace goes through _switchWorkspace: the workspace tour
+  // creates a workspace, opens it that way, then chains the migrate tour ITSELF
+  // with `celebrate` set. Offering from inside _switchWorkspace would race that
+  // chain for single-flight and win, and the walkthrough's confetti would
+  // vanish on the one arrival it is for.
+  const body = source("_switchWorkspace").src;
+  assert.ok(
+    !/migrate|_raiseRailTour|TourCurtain/.test(body),
+    "_switchWorkspace must stay a switch",
+  );
+  assert.match(
+    DESK,
+    /case "switch-workspace":[\s\S]{0,400}this\._switchWorkspaceAndOffer\(cmd\.mget\("wsKey"\)\)/,
+    "the switcher row must go through the offering path",
+  );
+  assert.match(
+    DESK.slice(DESK.indexOf("async _openCreatedWorkspace(")),
+    /^[\s\S]{0,1200}this\._switchWorkspace\(wsKey\)/,
+    "and the create path must stay on the bare switch",
+  );
+});
+
+// ── the two async paths that had already committed to a workspace ───────────
 
 test("a tour asked for on one workspace never lands on another", () => {
   // _mountWindowTourFor polls up to 3s for a pane, under a curtain the switcher

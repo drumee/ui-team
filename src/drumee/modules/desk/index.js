@@ -4434,11 +4434,86 @@ class desk_module extends LetcBox {
    * @returns {Boolean} whether a tour was taken down
    */
   _endWindowTourOnSwitch(wsKey) {
-    if (!wsKey) return false;
-    const cur = this._workspaceKey(window.Wm && window.Wm._curWorkspace);
-    if (cur && cur === wsKey) return false;
+    if (!this._leavesWorkspace(wsKey)) return false;
     this._wsSwitch = (this._wsSwitch || 0) + 1;
     return this._endWindowTour();
+  }
+
+  /**
+   * Does this switcher row go somewhere else?
+   *
+   * Re-picking the workspace that is already open makes loadWorkspace an early
+   * return that merely raises the pane — nothing is left and nothing arrives —
+   * so neither the tour that is up nor the tour that would be offered has any
+   * business reacting to it. By the same key the rows are marked `data-current`
+   * with, which is also the key _switchWorkspace resets the rail on.
+   *
+   * @param {String} wsKey the row pressed
+   * @returns {Boolean}
+   */
+  _leavesWorkspace(wsKey) {
+    if (!wsKey) return false;
+    const cur = this._workspaceKey(window.Wm && window.Wm._curWorkspace);
+    return !cur || cur !== wsKey;
+  }
+
+  /**
+   * SWITCHER ROW -> OPEN THAT WORKSPACE, AND OFFER THE TOUR IT LANDS ON.
+   *
+   * A switch always arrives on Files (_switchWorkspace -> _resetRailToFiles),
+   * and Files is what the migrate tour is about — so this is the same moment
+   * the rail's Files button offers it (_railTabWithTour) and the same moment a
+   * refresh does (_maybeRunBootTour), reached by a third gesture. A user who
+   * has not been shown how to get files into a workspace has not been shown it
+   * in the workspace they just opened either.
+   *
+   * ONLY FROM THE SWITCHER. _switchWorkspace itself is left alone because
+   * _openCreatedWorkspace goes through it: the workspace tour creates a
+   * workspace, opens it that way, and then chains the migrate tour ITSELF with
+   * `celebrate` set (_chainMigrateTour). Offering from inside _switchWorkspace
+   * would race that chain for single-flight, and the copy that won would be
+   * this one — the walkthrough's confetti would vanish, on the one arrival it
+   * is for.
+   *
+   * The curtain goes up on the CLICK for the reason _railTabWithTour writes out
+   * at length: the tour is several async hops behind the pane, and the gap is
+   * what the user reads. Only when the tour could actually run, so a user who
+   * finished it long ago switches workspace with nothing flashing over it.
+   *
+   * @param {String} wsKey the row pressed
+   * @returns {Promise}
+   */
+  async _switchWorkspaceAndOffer(wsKey) {
+    // Not a switch — hand straight over, no tour, no curtain.
+    if (!this._leavesWorkspace(wsKey)) return this._switchWorkspace(wsKey);
+    const Tours = require("libs/tutorial-tours");
+    // BEFORE the switch: the pane a running tour is painted on is about to be
+    // replaced underneath it. Ends it WITHOUT recording it — see
+    // _endWindowTourOnSwitch.
+    this._endWindowTourOnSwitch(wsKey);
+    const offerable = Tours.offerable("migrate", this);
+    if (offerable) this._showTourCurtain();
+    await this._switchWorkspace(wsKey);
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!offerable) return;
+    // DID IT ACTUALLY GO? _switchWorkspace declines silently when the row is
+    // not in the list any more — deleted from another tab, or a stale menu —
+    // and a curtain over the pane the user is still standing on would hide the
+    // app for a tour with nothing to draw on. loadWorkspace overwrites
+    // _curWorkspace on its way in, which is what makes this readable here.
+    if (this._workspaceKey(window.Wm && window.Wm._curWorkspace) !== wsKey) {
+      return this._hideTourCurtain();
+    }
+    // _raiseRailTour, not fire(): the tour just ended fades for 0.5s and only
+    // its destroy releases single-flight, so asking on the spot is refused in
+    // silence. And the curtain comes down on the release either way — a tour
+    // that is claimed and never mounts registers no destroy handler, so
+    // whenDone is the only thing left holding it.
+    if (!(await this._raiseRailTour("migrate"))) return this._hideTourCurtain();
+    Tours.whenDone("migrate", () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._hideTourCurtain();
+    });
   }
 
   _railTab(tab) {
@@ -7576,14 +7651,12 @@ class desk_module extends LetcBox {
       // all unchanged.
       // onUiEvent is not async, so the lookup is chained rather than awaited.
       // _fetchWorkspaces is cached, so this resolves immediately in practice.
-      case "switch-workspace": {
-        const wsKey = cmd.mget("wsKey");
-        // BEFORE the switch, not after: the pane the tour is painted on is
-        // about to be replaced underneath it. See _endWindowTourOnSwitch —
-        // this ends the tour without recording it as done.
-        this._endWindowTourOnSwitch(wsKey);
-        return this._switchWorkspace(wsKey);
-      }
+      case "switch-workspace":
+        // NOT _switchWorkspace directly: a switcher row both ENDS the tour
+        // drawn on the workspace being left and OFFERS the one the workspace
+        // it opens begins on. See _switchWorkspaceAndOffer for why only this
+        // gesture does the second half.
+        return this._switchWorkspaceAndOffer(cmd.mget("wsKey"));
 
       // ── Workspace rail (Figma 43:23955) ────────────────────────────────
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
