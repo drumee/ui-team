@@ -219,3 +219,76 @@ test("the rail press's chunks are warmed at boot, and only when owed", () => {
   // Wired into the boot, beside the boot tour.
   assert.match(src, /this\._maybeRunBootTour\(\);\n[\s\S]{0,300}this\._warmWindowTourKinds\(\);/);
 });
+
+// ── and the desk-hosted tour, coming out of the wizard ──────────────────────
+
+test("the post-onboarding tour warms its step and its spotlight, not just its shell", () => {
+  // REPORTED: the workspace tutorial took a moment to appear after onboarding.
+  // `desk_tutorial` was already warmed during the wizard — but the shell is
+  // not what the user waits for. It mounts and THEN feeds two more gated
+  // kinds: its spotlight, and step 1, which is `tutorial_workspace` and its
+  // own 44K chunk. The host's _preloadSteps cannot cover step 1 (it warms
+  // slice(1), and the workspace tour has exactly one step), so that fetch
+  // happened with the tour's shell already on screen around a hole.
+  //
+  // RUN, not matched: what matters is that the step kind is DERIVED from the
+  // registry, so a tour that gains a step is warmed without anyone editing
+  // this method.
+  const warm = method("_warmDeskTourKinds", ["Kind", "_", "require"]);
+  const asked = [];
+  const registry = require(join(__dirname, "..",
+    "src/drumee/modules/desk/tutorial/tours.js"));
+  const fn = warm(
+    { waitFor: (k) => { asked.push(k); return Promise.resolve(); } },
+    require("lodash"),
+    (id) => {
+      assert.equal(id, "desk/tutorial/tours", `unexpected require(${id})`);
+      return registry;
+    },
+  );
+  fn.call({ warn: () => {} }, "workspace");
+
+  assert.ok(asked.includes("desk_tutorial"), "the shell");
+  assert.ok(asked.includes("tutorial_spotlight"), "the spotlight it feeds");
+  // The step, as the registry states it — not as this test restates it.
+  const steps = registry.tour("workspace").steps.map((s) => s.kind);
+  assert.ok(steps.length > 0, "the workspace tour has no steps?");
+  for (const kind of steps) {
+    assert.ok(asked.includes(kind), `step kind ${kind} was not warmed`);
+  }
+  assert.equal(new Set(asked).size, asked.length, "nothing warmed twice");
+});
+
+test("a missing registry does not stop the shell being warmed", () => {
+  // A prefetch must never be load-bearing.
+  const warm = method("_warmDeskTourKinds", ["Kind", "_", "require"]);
+  const asked = [];
+  const fn = warm(
+    { waitFor: (k) => { asked.push(k); return Promise.resolve(); } },
+    require("lodash"),
+    () => { throw new Error("no registry"); },
+  );
+  const warns = [];
+  fn.call({ warn: (m) => warns.push(m) }, "workspace");
+  assert.deepEqual(asked, ["desk_tutorial", "tutorial_spotlight"]);
+  assert.equal(warns.length, 1, "and it says so");
+});
+
+test("the wizard is what warms them", () => {
+  // While onboarding is on screen, which is several screens long — so by the
+  // time the tour is raised Kind.get() answers synchronously.
+  const src = readFileSync(join(__dirname, "..",
+    "src/drumee/modules/desk/index.js"), "utf8");
+  const body = method("_loadOnboarding").source;
+  assert.match(body, /this\._warmDeskTourKinds\("workspace"\)/);
+  // Before the wizard is fed, so the fetch overlaps the screens rather than
+  // following them. Against `this.feed({`, not `kind: "onboarding"` — that
+  // string is also in the loadPlugin call at the top of the method, and
+  // indexOf would find that one and prove nothing.
+  assert.ok(
+    body.indexOf("_warmDeskTourKinds") < body.indexOf("this.feed({"),
+    "warm first, then render the wizard",
+  );
+  // And the handover itself still has no delay of its own.
+  assert.match(src, /const delay = postOnboarding \? 0 : 2000;/);
+});

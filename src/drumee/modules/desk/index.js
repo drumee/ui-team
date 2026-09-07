@@ -4396,6 +4396,55 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * WARM EVERYTHING THE DESK-HOSTED TOUR MOUNTS, not just its shell.
+   *
+   * `desk_tutorial` has been warmed during the wizard for a while, and that
+   * fixed the shell — but the shell is not what the user is waiting for. It
+   * mounts and then feeds TWO more gated kinds, both of which were cold at
+   * exactly the handover that is supposed to feel instant:
+   *
+   *   tutorial_spotlight  its skeleton declares it (desk/tutorial/skeleton)
+   *   the step            onDomRefresh feeds step 1's kind, which for the
+   *                       post-onboarding run is `tutorial_workspace`
+   *
+   * AND THE HOST'S OWN PRELOADER CANNOT COVER THE STEP. _preloadSteps warms
+   * `steps.slice(1)` — deliberately, because by the time it runs step 1 has
+   * already been fed — so step 1 is never warm before the mount, and the
+   * `workspace` tour has exactly one step, which makes that preloader a no-op
+   * for this run. Kind.get() then hands back the lazy-loader placeholder,
+   * which mounts EMPTY, waits on the network and respawns itself once the
+   * module lands (ui-core letc/kind/loader.js): a round trip and a
+   * mount-and-rebuild, with the tour's shell already on screen around a hole.
+   *
+   * Read off the registry rather than named here, so a tour that gains a step
+   * is warmed without anyone remembering this method.
+   *
+   * Fire and forget: a warm-up that fails costs nothing, because every kind
+   * still loads on demand exactly as it does today.
+   *
+   * @param {String} tourId the tour that is going to run
+   */
+  _warmDeskTourKinds(tourId) {
+    if (typeof Kind === "undefined" || !_.isFunction(Kind.waitFor)) return;
+    const kinds = ["desk_tutorial", "tutorial_spotlight"];
+    try {
+      const t = require("desk/tutorial/tours").tour(tourId);
+      for (const step of (t && t.steps) || []) {
+        if (step.kind && !kinds.includes(step.kind)) kinds.push(step.kind);
+      }
+    } catch (e) {
+      // The registry is not load-bearing for a prefetch — the shell and the
+      // spotlight are still worth warming without it.
+      this.warn && this.warn("[tutorial] could not read the tour registry", e);
+    }
+    for (const kind of kinds) {
+      Promise.resolve(Kind.waitFor(kind)).catch((e) => {
+        this.warn && this.warn(`[tutorial] could not warm ${kind}`, e);
+      });
+    }
+  }
+
+  /**
    * PULL THE TOUR'S OWN CHUNKS DOWN BEFORE ANYTHING ASKS FOR THEM.
    *
    * `mountWindowTutorial` feeds `kind: "window_tutorial"`, and the host it
@@ -5431,25 +5480,17 @@ class desk_module extends LetcBox {
         // Warm the tour while the wizard is on screen.
         //
         // Finishing onboarding is the ONE moment the `workspace` tour is
-        // raised automatically (onPartReady "overlay"), and it was raised cold:
-        // desk_tutorial is the only gated widget the desk never warms —
-        // tutorial_migrate, reward_flow, promo_launch30 and over_limit_popup
-        // all are — so feeding the kind was the moment its chunk was first
-        // requested. Kind.get() then hands back the lazy-loader placeholder,
-        // which mounts EMPTY, waits on the network and respawns itself once the
-        // module lands (ui-core letc/kind/loader.js). The user pays a round trip
-        // and a mount-and-rebuild at exactly the handover we want to feel
-        // instant.
+        // raised automatically (onPartReady "overlay"), and it used to be
+        // raised cold. THE WHOLE SET, not just `desk_tutorial`: warming the
+        // shell alone left its spotlight and its step to be fetched after it
+        // mounted, which is the part the user actually waits for — see
+        // _warmDeskTourKinds.
         //
-        // The wizard is several screens long, so this resolves many times over
-        // before it is needed and Kind.get() answers synchronously. Fire and
-        // forget, and deliberately NOT awaited: a warm-up that fails costs
-        // nothing, because the kind still loads on demand exactly as it did.
-        // Not awaited for a second reason — the wizard must not wait on a
-        // prefetch to render.
-        if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
-          Promise.resolve(Kind.waitFor("desk_tutorial")).catch(() => {});
-        }
+        // The wizard is several screens long, so these resolve many times over
+        // before they are needed and Kind.get() answers synchronously.
+        // Deliberately NOT awaited: the wizard must not wait on a prefetch to
+        // render, and a warm-up that fails costs nothing.
+        this._warmDeskTourKinds("workspace");
         this.feed({
           kind: "onboarding",
           type: "app",
