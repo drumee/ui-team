@@ -39,20 +39,40 @@
 
   // The tab itself: icon + name, matching .desk-breadcrumb__context.
   //
-  // IT NO LONGER PAINTS A CHIP. The rounded ground, the inset and the hover
-  // used to live here, which made every crumb its own little pill sitting
-  // beside a caret that was not in any of them. The chip is now one box around
-  // the whole address — crumbs AND caret — and it is
-  // .desk-module-topbar__crumb-group that draws it (desk/skin/topbar.scss).
+  // IT PAINTS NO RESTING GROUND — the address sits directly on the bar, and the
+  // chip around it (.desk-module-topbar__crumb-group) carries the radius and
+  // the inset for the whole thing. What the tab does own is its HOVER, because
+  // a crumb is a destination of its own: clicking one walks the pane back to
+  // that folder (desk_breadcrumb._loadActiveWindow).
   //
-  // Keeping a second ground here would nest a pill inside that chip, so what is
-  // left is only what positions the icon against the name.
+  // That hover used to live on the chip instead, one ground over crumbs AND
+  // caret, so the whole address lit up as a single button wherever the pointer
+  // went and no crumb ever showed itself as separately clickable. It is back
+  // here, per-tab, and the chip's own ground is gone (desk/skin/topbar.scss).
+  //
+  // The geometry is the frame's (59:55943): 4px inset, r=8, sized so the pill
+  // appears and disappears without moving anything around it.
   &__tab {
     align-items: center;
     gap: var(--crumb-gap, 6px);
     min-width: 0;
     height: calc(var(--crumb-height, 30px) - 6px);
     box-sizing: border-box;
+    padding: 0 var(--crumb-tab-pad, 4px);
+    border-radius: var(--crumb-radius, 8px);
+    background-color: transparent;
+    transition: background-color 0.12s ease;
+  }
+
+  // Hovering a crumb lights THAT crumb — never the separator beside it, which
+  // is why the ground is on the tab and not on __main.
+  //
+  // A SECTION label (Settings, Get help, Plan, Calendar, Inbox, Contacts,
+  // Trash, Admin console) is excluded: the skeleton gives it no service and no
+  // handler, so a ground under it would promise a click that does nothing —
+  // the same reason it already gives up the pointer cursor below.
+  &__main:not(.breadcrumb-item__main--section):hover &__tab {
+    background-color: var(--overlay-bg-05);
   }
 
   // A section label (Settings / Get help / Plan / Trash…) is text, not a

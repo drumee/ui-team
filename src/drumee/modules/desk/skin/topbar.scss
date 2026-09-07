@@ -171,35 +171,42 @@
     height: var(--crumb-height, 30px);
     padding: 0 var(--crumb-pad-x, 6px);
     border-radius: var(--crumb-radius, 8px);
-    // NO RESTING GROUND. The address sits directly on the bar.
+    // NO GROUND AT ALL — resting OR hover. The address sits directly on the bar
+    // and each PART of it answers the pointer on its own.
     //
-    // It used to carry --normal-bg-90 permanently, which put a grey slab
-    // around the path — the org chip beside it already carries one, so the bar
-    // read as two competing pills rather than an identity chip followed by a
-    // location. The hover ground stays: it is what still says the whole
-    // address (crumbs AND caret) is one clickable target.
+    // The resting ground went first: --normal-bg-90 put a grey slab around the
+    // path, and the org chip beside it already carries one, so the bar read as
+    // two competing pills rather than an identity chip followed by a location.
+    //
+    // The hover ground has now gone the same way. It painted the whole chip —
+    // every crumb AND the caret — so the address lit up as ONE button wherever
+    // the pointer landed, which is not what a click does: an ancestor crumb
+    // walks the pane back to that folder, while the current crumb, the caret
+    // and the bare inset open the workspace switcher (desk
+    // _crumbClickOpensSwitcher draws exactly that line). Nothing in a single
+    // ground said which of the two was under the pointer, and the crumbs in
+    // particular gave no sign they were separately clickable — the report this
+    // fixes.
+    //
+    // Each target lights itself instead: the crumb tab in
+    // breadcrumb/item/skin, and the caret in __ws-btn below. Both are painted
+    // on boxes that already have their size, so nothing shifts on hover.
     background-color: transparent;
-    transition: background-color 0.12s ease;
-
-    &:hover {
-      background-color: var(--overlay-bg-05);
-    }
 
     // A SECTION screen — Settings, Get help, Plan, Calendar, Inbox, Contacts,
     // Trash, Admin console — is a label with nothing behind it, and its caret
-    // is hidden (see __left-cluster below). A ground under a bare word promises
-    // a control that is not there.
+    // is hidden (see __left-cluster below), so the chip is not a control at
+    // all there and must not offer a hand.
     //
-    // The resting ground is transparent for everyone now, so what this still
-    // buys is the HOVER: :has() carries the specificity of its argument, which
-    // puts this rule above `&:hover` and keeps a section label flat under the
-    // pointer. The cursor goes with it.
+    // The ground it also used to reset is gone from every state above; what
+    // this still buys is the CURSOR. (The crumb itself gives up the pointer in
+    // breadcrumb/item/skin, on __main--section — this covers the inset around
+    // it, which belongs to no crumb.)
     //
     // `:has()` because the flag is stamped on the breadcrumb root by
     // desk_breadcrumb._setSectionMode, which is a CHILD of this box — the same
     // flag the sibling rule below reads, read from the other direction.
     &:has(> .desk-breadcrumb__ui[data-section="1"]) {
-      background-color: transparent;
       cursor: default;
     }
   }
@@ -1389,12 +1396,30 @@
     border-radius: 6px;
     cursor: pointer;
     color: var(--normal-fg-20);
+    background-color: transparent;
+    transition: background-color 0.12s ease;
 
     svg {
       width: 12px;
       height: 12px;
     }
 
+    // The caret's own hover, now that the chip no longer paints one for the
+    // whole address (see __crumb-group). It is the switcher's glyph, so this
+    // is the part of the chip that should answer when the pointer is on it.
+    //
+    // ON THE BUTTON, not on __ws-wrapper: the dropdown is a DESCENDANT of that
+    // wrapper (absolutely positioned, not detached), so a hover there would
+    // stay lit the whole time the pointer is anywhere in the open panel. The
+    // 22px box and its radius are already here, so the ground needs no
+    // geometry of its own.
+    //
+    // `active: 0` on the trigger (desk/skeleton/topbar workspaceSwitcher) makes
+    // the caret inert to CLICKS — the chip's capture listener opens the menu —
+    // but hover is CSS and reaches it either way.
+    &:hover {
+      background-color: var(--overlay-bg-05);
+    }
   }
 
 

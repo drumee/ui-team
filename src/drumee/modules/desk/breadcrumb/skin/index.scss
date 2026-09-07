@@ -21,6 +21,10 @@
   --crumb-height: 30px;
   --crumb-radius: 8px;
   --crumb-pad-x: 6px;
+  // The inset INSIDE one tab, which is also the bed of its hover ground —
+  // distinct from --crumb-pad-x, which is the chip's inset around the whole
+  // address (desk/skin/topbar.scss __crumb-group).
+  --crumb-tab-pad: 4px;
   --crumb-gap: 6px;
   --crumb-icon: 20px;
 
