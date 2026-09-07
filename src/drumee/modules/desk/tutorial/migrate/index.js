@@ -247,7 +247,7 @@ class __tutorial_migrate extends LetcBox {
     // each of the three dialog screens — read as a flicker, not a transition.
     const enter = !!s.dialog && !this._dialogUp;
     this._dialogUp = !!s.dialog;
-    this.feed(skeleton(this, s, { menuOpen: !!this._menuOpen, enter }));
+    this.feed(skeleton(this, s, { menuOpen: this._menuOpen || null, enter }));
     const [target, anchor, anchor_x] = await Promise.all([
       this.ensurePart(s.target),
       this.ensurePart(s.anchor),
@@ -354,9 +354,21 @@ class __tutorial_migrate extends LetcBox {
       // window it is drawn on — that is the host's `target_window` — and it is
       // deliberately kept that way, because a step that knows its host is a step
       // that only works in one.
-      case 'mg-toggle-menu':
-        this._menuOpen = !this._menuOpen;
+      // BOTH `+ New` buttons raise this — the toolbar's and the hero's. They
+      // are one control in the product, so they are one service here, and the
+      // click says which of the two it was on `data-menu`.
+      //
+      // The key rather than a flag: the dropdown is a CHILD of the button it
+      // hangs off (see the positioning note in skin/files.scss), so drawing it
+      // open without knowing which button was pressed puts it under the other
+      // one. Pressing the button that already has it closes it; pressing the
+      // other MOVES it, which is what a single menu with two triggers does.
+      case 'mg-toggle-menu': {
+        const el = trigger && trigger.el;
+        const at = (el && el.dataset && el.dataset.menu) || 'hero';
+        this._menuOpen = this._menuOpen === at ? null : at;
         return this._showScreen();
+      }
 
       case 'mg-do-create': {
         const el = trigger && trigger.el;

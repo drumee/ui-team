@@ -37,6 +37,9 @@ function installGlobals() {
     FileSelector: node("fileselector"),
   });
   set("LOCALE", new Proxy({}, { get: (_t, k) => String(k) }));
+  // Reached by the workspace preview's topbar (toolkit/app-preview.js), which
+  // names the org on its pill.
+  set("Organization", { name: () => "Org-name", id: "org", get: () => "" });
   set("Visitor", {
     id: "me",
     get: () => "",
@@ -291,8 +294,33 @@ function toHtml(n) {
     .filter(([, v]) => v != null)
     .map(([k, v]) => ` data-${k}="${String(v)}"`)
     .join("");
+  // INLINE STYLE IS PART OF THE LAYOUT, not decoration. The workspace preview
+  // composes its window at the app's real width by setting `style.width` on
+  // one box and scaling the result down; dropped, that box shrink-to-fits its
+  // container and the miniature is measured at the wrong size — which looks
+  // like a broken component and is a broken fixture.
+  // BOTH CHANNELS. ui-core reads `opt.style || opt.styleOpt` (letc.js), and the
+  // tour's tracker views use the second one for everything that is computed —
+  // the donut's conic-gradient, the gantt's bar offsets, the board's progress
+  // fill. A harness that honours only the first draws them all as empty boxes.
+  const style = Object.entries({ ...(n.styleOpt || {}), ...(n.style || {}) })
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => `${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${v}`)
+    .join(";");
+  const css = style ? ` style="${style}"` : "";
   const kids = [].concat(n.kids || []).map(toHtml).join("");
   const text = n.content != null && !kids ? String(n.content) : "";
-  return `<div${cls}${box}${attrs}${ds}>${text}${kids}</div>`;
+  // AN ICON IS AN <svg><use>, not a div. ui-core renders Image.Svg as a
+  // reference into the sprite (`#--icon-<name>`), and emitting a bare box for
+  // it left every glyph out of the picture — which is fine for a descriptor
+  // test and useless for a harness that is comparing a rendering to a design.
+  // The caller inlines icons/sprites/normalized.sprite.svg for these to
+  // resolve against; with no sprite on the page they render as nothing, which
+  // is what they did before anyway.
+  if (n.__kind === "image.svg" && n.ico) {
+    return `<div${cls}${box}${attrs}${ds}${css}>`
+      + `<svg><use href="#--icon-${n.ico}" xlink:href="#--icon-${n.ico}"></use></svg></div>`;
+  }
+  return `<div${cls}${box}${attrs}${ds}${css}>${text}${kids}</div>`;
 }
 module.exports.toHtml = toHtml;

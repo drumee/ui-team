@@ -14,8 +14,9 @@
  * `sys_pn`.
  */
 
-const { FILE, TIME, REPLIES_SUMMARY, STREAM, THREAD, ACTIONS } = require('../fixture');
+const { FILE, TIME, REPLIES_SUMMARY, STREAM, THREAD, THREADS, FOLDER_BADGE, ACTIONS } = require('../fixture');
 const { emptyState } = require('../../skeleton/toolkit/empty-state');
+const { appPreview } = require('../../skeleton/toolkit/app-preview');
 
 const avatar = (pfx, name) =>
   Skeletons.Box.Y({ active: 0,
@@ -53,14 +54,20 @@ function message(ui, pfx, msg, opt = {}) {
   // stack. Safe to interpolate: these strings are literals in ../fixture.js,
   // not anything a user can reach.
   const linked = msg.link && msg.text.includes(msg.link);
+  // "\n" IS A BREAK THE DESIGN COMPOSED, not whitespace to collapse. The
+  // opening message is set as three lines in the frame and wrapping put the
+  // break one word off — see the note on it in ../fixture.js. A Note renders
+  // its content as text, so anything carrying a break has to go through
+  // Element, exactly as a linked run does.
+  const broken = msg.text.includes('\n');
+  const markup = msg.text
+    .split(msg.link || '\u0000')
+    .join(`<span class="${pfx}__msg-link">${msg.link}</span>`)
+    .split('\n')
+    .join('<br>');
   const body = [
-    linked
-      ? Skeletons.Element({ active: 0,
-          className: `${pfx}__msg-text`,
-          content: msg.text
-            .split(msg.link)
-            .join(`<span class="${pfx}__msg-link">${msg.link}</span>`),
-        })
+    linked || broken
+      ? Skeletons.Element({ active: 0, className: `${pfx}__msg-text`, content: markup })
       : Skeletons.Note({ active: 0, className: `${pfx}__msg-text`, content: msg.text }),
   ];
   if (msg.attachment) {
@@ -180,6 +187,28 @@ function barItem(ui, pfx, a) {
 }
 
 /** The channel / file-thread rail on the left. */
+/**
+ * One row of the folder column: a glyph, a name, and an unread count when the
+ * row has one.
+ *
+ * `divided` is the open folder's own rule — the frame rules off the folder
+ * from the threads that hang under it.
+ */
+const railRow = (pfx, row) =>
+  Skeletons.Box.X({ active: 0,
+    className: `${pfx}__rail-row`,
+    // dataset alone is dropped at render unless an attribute map rides along.
+    dataset: { active: row.active || 0, divided: row.divided || 0 },
+    attrOpt: { 'data-active': row.active || 0, 'data-divided': row.divided || 0 },
+    kids: [
+      Skeletons.Image.Svg({ active: 0, ico: row.ico, className: `${pfx}__rail-ico` }),
+      Skeletons.Note({ active: 0, className: `${pfx}__rail-name`, content: row.name }),
+      row.badge
+        ? Skeletons.Note({ active: 0, className: `${pfx}__rail-badge`, content: row.badge })
+        : null,
+    ].filter(Boolean),
+  });
+
 function rail(ui, pfx) {
   return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__rail`,
@@ -188,24 +217,20 @@ function rail(ui, pfx) {
         className: `${pfx}__rail-body`,
         kids: [
           Skeletons.Note({ active: 0, className: `${pfx}__rail-label`, content: LOCALE.THIS_FOLDER }),
-          Skeletons.Box.X({ active: 0,
-            className: `${pfx}__rail-row`,
-            dataset: { active: 1 },
-            attrOpt: { 'data-active': 1 },
-            kids: [
-              Skeletons.Image.Svg({ active: 0, ico: 'app-folder', className: `${pfx}__rail-ico` }),
-              Skeletons.Note({ active: 0, className: `${pfx}__rail-name`, content: LOCALE.GENERAL }),
-              Skeletons.Note({ active: 0, className: `${pfx}__rail-badge`, content: '90' }),
-            ],
+          railRow(pfx, {
+            ico: 'app-folder',
+            name: LOCALE.GENERAL,
+            badge: FOLDER_BADGE,
+            active: 1,
+            divided: 1,
           }),
           Skeletons.Note({ active: 0, className: `${pfx}__rail-label`, content: LOCALE.FILE_THREADS }),
-          Skeletons.Box.X({ active: 0,
-            className: `${pfx}__rail-row`,
-            kids: [
-              Skeletons.Image.Svg({ active: 0, ico: 'app-attachment', className: `${pfx}__rail-ico` }),
-              Skeletons.Note({ active: 0, className: `${pfx}__rail-name`, content: FILE }),
-            ],
-          }),
+          // THREE, from the fixture. The column listed one, which is the
+          // opposite of what this screen is for — a folder that has
+          // accumulated conversations, not a folder with a conversation.
+          ...THREADS.map((t) =>
+            railRow(pfx, { ico: 'app-attachment', name: t.name, badge: t.badge }),
+          ),
         ],
       }),
       Skeletons.Box.X({ active: 0,
@@ -350,6 +375,59 @@ function threadPanel(ui, pfx, opt) {
   });
 }
 
+/** The stream's own header: the channel name and its search. */
+const head = (ui, pfx) =>
+  Skeletons.Box.X({ active: 0,
+    className: `${pfx}__head`,
+    kids: [
+      Skeletons.Note({ active: 0, className: `${pfx}__head-title`, content: `# ${LOCALE.GENERAL}` }),
+      Skeletons.Image.Svg({ active: 0, ico: 'magnifying-glass', className: `${pfx}__head-ico` }),
+    ],
+  });
+
+/**
+ * The pane as the OPENING screen's plate shows it — the same folder column and
+ * the same conversation, at preview scale.
+ *
+ * This replaces a PNG (assets/tutorial/chat-threads.png). The bitmap was a
+ * photograph of a screen this file already draws: it could not follow the
+ * theme, it went stale the moment the pane moved, and it shipped 147KB to say
+ * what the tree below says. Screens 2 to 5 render the same rail, the same
+ * `head`, and the same fixture, so the miniature cannot drift from what the
+ * user sees one press later.
+ *
+ * TWO DELIBERATE OMISSIONS, both matching the frame (142:39142):
+ *
+ *   the file message  arrives with the gesture screen 3 teaches, exactly as it
+ *                     is held back on screen 2. Showing it here would put the
+ *                     result of the instruction three screens ahead of it.
+ *   the sys_pn        every part name is dropped — `chat-main`, `stream`, and
+ *                     the ids that become `msg-*`. Nothing points at anything
+ *                     inside a plate, and registering those here would give the
+ *                     step two parts by each name.
+ */
+function previewPane(ui, pfx) {
+  return Skeletons.Box.X({ active: 0,
+    className: `${pfx}__pane`,
+    kids: [
+      rail(ui, pfx),
+      Skeletons.Box.Y({ active: 0,
+        className: `${pfx}__main`,
+        kids: [
+          head(ui, pfx),
+          Skeletons.Box.Y({ active: 0,
+            className: `${pfx}__stream`,
+            kids: STREAM
+              .filter((m) => m.id !== 'file-message')
+              .map((m) => message(ui, pfx, { ...m, id: null })),
+          }),
+          composer(ui, pfx),
+        ],
+      }),
+    ],
+  });
+}
+
 /**
  * @param {Object} ui
  * @param {Object} [opt]
@@ -369,7 +447,17 @@ module.exports = function (ui, opt = {}) {
       title: LOCALE.CHAT_HERO_TITLE,
       desc: LOCALE.CHAT_HERO_DESC,
       cta: LOCALE.START_DISCOVERING,
-      items: [{ src: require('assets/tutorial/chat-threads.png').default }],
+      // COMPOSED, not exported. The frame's artwork here is the workspace
+      // plate the create-workspace flow already draws — same gradient, same
+      // window, same topbar and rail — with Chat lit and this pane inside it.
+      items: [{
+        node: appPreview(ui, {
+          active: 'chat',
+          body: previewPane(ui, pfx),
+          // The carousel card brings its own 760x515 and its own clipping.
+          fit: 'card',
+        }),
+      }],
       card: 'wide',
       // "Start discovering now" carries the tour forward. This screen raises no
       // callout (see `bare` on screen 1 in ../index.js), so without a live CTA
@@ -388,13 +476,7 @@ module.exports = function (ui, opt = {}) {
         sys_pn: 'chat-main',
         partHandler: ui,
         kids: [
-          Skeletons.Box.X({ active: 0,
-            className: `${pfx}__head`,
-            kids: [
-              Skeletons.Note({ active: 0, className: `${pfx}__head-title`, content: `# ${LOCALE.GENERAL}` }),
-              Skeletons.Image.Svg({ active: 0, ico: 'magnifying-glass', className: `${pfx}__head-ico` }),
-            ],
-          }),
+          head(ui, pfx),
           Skeletons.Box.Y({ active: 0,
             className: `${pfx}__stream`,
             sys_pn: 'stream',

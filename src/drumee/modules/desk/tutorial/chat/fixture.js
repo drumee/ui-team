@@ -15,13 +15,38 @@ const TIME = "11:53 AM";
 // Sample, not a label: the thread's reply count as the frames show it.
 const REPLIES_SUMMARY = "10 replies \u00b7 2 hours ago";
 
+// The folder's own thread list, as the column shows it (142:39142). THREE,
+// which is the point of the screen: a folder accumulates conversations, and a
+// list of one reads as a feature nobody uses. `FILE` leads it because that is
+// the thread every later screen opens.
+//
+// `badge` is an unread count, on the one the frame marks.
+const THREADS = [
+  { name: FILE },
+  { name: "Drumee_Reddit_Content" },
+  { name: "2_Drumee_Premium_Visual02", badge: "34" },
+];
+
+// The open folder's own unread count, on the row above them.
+const FOLDER_BADGE = "90";
+
 // `own` is the viewer's own side (the salmon bubbles on the right).
 const STREAM = [
   {
     from: "Emma",
+    // BROKEN BY HAND, on "\n" — three lines, which is how 142:39142 sets it:
+    // the filename opens the second line and the last sentence has the third
+    // to itself.
+    //
+    // Left to wrap, where the break falls depends on the font that actually
+    // loaded and on a few pixels of bubble width, and it landed one word off:
+    // "folder. Please" ran together and "take a look when you have time" was
+    // orphaned. This is sample data, not a translated string, so composing it
+    // the way the design composes it costs nothing and cannot drift.
     text:
-      "Morning team 👋 I've uploaded the latest Drumee_Strategy_Q2.pdf to the " +
-      "Strategy folder. Please take a look when you have time.",
+      "Morning team 👋 I've uploaded the latest\n" +
+      "Drumee_Strategy_Q2.pdf to the Strategy folder.\n" +
+      "Please take a look when you have time.",
     link: "Drumee_Strategy_Q2.pdf",
   },
   {
@@ -96,4 +121,4 @@ const ACTIONS = [
   { ico: "chat-action-smiley" },
 ];
 
-module.exports = { FILE, TIME, REPLIES_SUMMARY, STREAM, THREAD, ACTIONS };
+module.exports = { FILE, TIME, REPLIES_SUMMARY, STREAM, THREAD, THREADS, FOLDER_BADGE, ACTIONS };

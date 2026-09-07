@@ -26,9 +26,13 @@ module.exports = function (ui, screen = {}, state = {}) {
     className: `${pfx}__stage`,
     kids: [
       filesPane(ui, {
-        // Open only while the user has opened it — the + New button toggles it
+        // Open only while the user has opened it — the + New buttons toggle it
         // now rather than the tour drawing it open on a screen of its own.
-        menu: screen.menu && !!state.menuOpen,
+        //
+        // The KEY of the button it hangs off ("toolbar" or "hero"), because the
+        // pane draws that button twice and the menu is a child of whichever one
+        // was pressed.
+        menu: screen.menu ? state.menuOpen : null,
         // `live_menu` is what turns the dropdown's rows from a drawing into
         // controls that really create. Without it they stay inert, which is
         // what every other tour drawing this pane wants.
@@ -37,6 +41,7 @@ module.exports = function (ui, screen = {}, state = {}) {
         // drawing the frames show, and a stray click on the pane must not move
         // the tour.
         cta_service: screen.live ? 'mg-open-dialog' : null,
+        // Makes BOTH + New buttons controls — the toolbar's and the hero's.
         new_service: screen.live ? 'mg-toggle-menu' : null,
         upload_service: screen.live ? 'mg-do-upload' : null,
       }),

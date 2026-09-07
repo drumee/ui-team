@@ -51,17 +51,41 @@
     padding: 9px 10px;
     border-radius: 8px;
 
+    // A BRAND TINT, not a grey. The open folder is selected, and the frame
+    // says so in purple — the same `rgba(89, 80, 255, 0.1)` the topbar's plan
+    // chip and the preview's department tile are tinted with, so the three
+    // selected-things on screen agree. Grey/20 said "hovered" at best, and
+    // now that the message column carries that exact grey it would have said
+    // nothing at all.
     &[data-active="1"] {
-      background: var(--normal-bg-90);
+      background: rgba(89, 80, 255, 0.1);
+    }
+
+    // The group's own rule, under the folder the thread list belongs to.
+    &[data-divided="1"] {
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border-default);
+      border-radius: 8px 8px 0 0;
+      padding-bottom: 12px;
     }
   }
 
+  // PURPLE. Every glyph in this column is brand-tinted in the frame — the open
+  // folder and each paperclip — and they were the one grey thing in a column
+  // whose whole subject is "these files are talking".
+  //
+  // The footer's download icon keeps the grey: it is a utility, not one of the
+  // things being listed.
   &__rail-ico {
     width: 16px;
     height: 16px;
     flex: 0 0 auto;
 
     svg { width: 100%; height: 100%; }
+    color: var(--primary-purple-40);
+  }
+
+  &__rail-foot &__rail-ico {
     color: var(--normal-fg-20);
   }
 
@@ -102,10 +126,23 @@
   }
 
   // ── Stream ────────────────────────────────────────────────────────────────
+  // THE MESSAGE SIDE IS GREY, and that is what makes the bubbles read as
+  // bubbles.
+  //
+  // It was transparent, so it took the pane's white — and the messages, which
+  // are white, disappeared into it: what the frame shows as cards on a ground
+  // rendered as text on a blank page. 142:39178 puts Grey/20 behind the whole
+  // column, head included, and the hairline under the head is what separates
+  // the two. The composer already carried this exact token for the same
+  // reason, which is the tell that it belonged one level up.
+  //
+  // On __main rather than on __stream, so the head, the stream and the
+  // composer are one surface. The folder column keeps the pane's white.
   &__main {
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
+    background: var(--normal-bg-90);
   }
 
   &__head {
@@ -206,11 +243,31 @@
   // is 16 on three corners and SQUARE on the one facing the speaker: top-left
   // for an incoming message (186:73694), top-right for your own (186:73696).
   // That squared corner is the bubble's tail; it was 12px all round.
+  // 9/16, NOT 12 ALL ROUND — read off the base image rather than guessed.
+  //
+  // Two bubbles of known line counts pin both numbers at once: the three-line
+  // one is 45 image-px tall and the two-line one 34, and the image renders a
+  // 320px bubble at 206, so the scale is 0.644. The difference between them is
+  // one line (17.5px), and what is left over is the vertical padding — 9, not
+  // 12. Horizontally the first glyph starts 10.5 image-px in, which is 16.
+  //
+  // The old 12 was square padding on a box the design pads asymmetrically, so
+  // every bubble sat a little tall and a little tight.
+  // A FIXED 320, not a cap it happens to reach.
+  //
+  // Every incoming bubble in the base image measures 204-206 image-px wide —
+  // the three-line one, the two-line ones, the short one — which at the 0.635
+  // that image is rendered at is 320 for all of them. The design gives the
+  // column one width and lets the text sit in it; `max-width` made each bubble
+  // hug its own longest line instead, so the stream stepped in and out by
+  // whatever the loaded font happened to measure. `max-width: 100%` is what
+  // keeps that honest in the 510px thread panel.
   &__bubble {
     box-sizing: border-box;
-    max-width: 320px;
+    width: 320px;
+    max-width: 100%;
     gap: 8px;
-    padding: 12px;
+    padding: 9px 16px;
     border-radius: 0 16px 16px 16px;
     background: var(--normal-bg-elevated);
   }
@@ -224,9 +281,35 @@
     background: var(--grid-color-folder-restricted, #d65f59);
   }
 
-  // Body/Small Body at the frame's tighter 1.2 leading.
+  // 1.25 — 17.5px, which is what the two bubbles above measure to: their
+  // heights differ by exactly one line, 11 image-px at the 0.644 the base
+  // image is rendered at. 1.2 set them 0.7px tight per line, which is
+  // invisible on one line and reads as cramped on three.
   &__msg-text {
-    @include drumee.typo($size: 14px, $line: 1.2);
+    // PROSE, NOT A FLEX ROW — and this line is the whole of a reported bug.
+    //
+    // A message that carries a link is an Element with markup rather than a
+    // Note, because the filename has to sit INLINE in the flowing sentence
+    // (see message() in ../skeleton/index.js). ui-core renders Element through
+    // its `wrapper` kind, which lands on `.box[data-flow]` — a flex ROW — so
+    // the three runs either side of that <span> became three flex ITEMS and
+    // laid out as three narrow columns, each wrapping inside its own column:
+    //
+    //     Morning        Drumee_Strategy_Q2.pdf   to the
+    //     team 👋 I've                            Strategy
+    //     uploaded                                folder.
+    //
+    // The <br>s were dropped for the same reason — a line break means nothing
+    // between flex items. That is why the message read as a column no matter
+    // what the fixture said.
+    //
+    // `!important` because the rule being cancelled is `.box[data-flow="x"]`
+    // in skin/lib/container.scss, which is a class AND an attribute — a single
+    // class here cannot outweigh it, and the alternative is qualifying every
+    // prose Element with `.box`, which spreads a layout detail across every
+    // skin that draws a sentence.
+    display: block !important;
+    @include drumee.typo($size: 14px, $line: 1.25);
     font-weight: 400;
     color: var(--normal-fg);
   }

@@ -100,6 +100,50 @@ const STAMP = "11:53 AM";
 const pfx = (ui) => `${ui.fig.group}__fp`;
 
 /**
+ * WHICH `+ New` button owns the open dropdown.
+ *
+ * The pane draws that button TWICE — once in the toolbar and once in the hero
+ * — and the frame gives them the same menu. So "is the menu open" is not a
+ * boolean any more: it is the key of the button it is hanging off, because a
+ * dropdown drawn under the other one is a dropdown pointing at the wrong
+ * thing.
+ *
+ * `true` is accepted and means the hero's, which was the only one that had a
+ * menu when this was a flag.
+ */
+const menuAt = (menu) => (menu === true ? "hero" : menu || null);
+
+/**
+ * The props that make a `+ New` button real.
+ *
+ * SHARED BY BOTH COPIES, deliberately: the toolbar's and the hero's are the
+ * same control in the product, and giving them one service and one payload is
+ * what stops them drifting into two buttons that half-agree.
+ *
+ * `data-menu` is what tells them apart at the handler — one service, and the
+ * click carries where its dropdown belongs. `data-open` says which of the two
+ * is currently showing it, so the skin can press that one in.
+ *
+ * A button is scenery unless the caller names a service; `active: 0` and a
+ * service are mutually exclusive, not merely different, because ui-core binds
+ * an onclick only while a widget is not inert.
+ *
+ * @param {Object} ui
+ * @param {String} key  "toolbar" or "hero"
+ * @param {Object} opt  the pane's options — `new_service` and `menu`
+ */
+function newButton(ui, key, opt = {}) {
+  if (!opt.new_service) return { active: 0 };
+  const open = menuAt(opt.menu) === key ? 1 : 0;
+  return {
+    service: opt.new_service,
+    uiHandler: [ui],
+    dataset: { live: 1, menu: key, open },
+    attrOpt: { "data-live": 1, "data-menu": key, "data-open": open },
+  };
+}
+
+/**
  * The headline, split on newlines.
  *
  * The frame breaks it by hand — 142:35815 is two lines, "Chat live in files."
@@ -114,7 +158,7 @@ const pfx = (ui) => `${ui.fig.group}__fp`;
  */
 const titleLines = (text) => String(text || "").split("\n");
 
-function toolbar(ui) {
+function toolbar(ui, opt = {}) {
   const p = pfx(ui);
   return Skeletons.Box.X({ active: 0,
     className: `${p}-toolbar`,
@@ -152,14 +196,25 @@ function toolbar(ui) {
           Skeletons.Box.X({ active: 0,
             className: `${p}-tools`,
             kids: [
-              Skeletons.Box.X({ active: 0,
+              // THE SAME CONTROL AS THE HERO'S `+ New`, not a picture of it.
+              //
+              // It was scenery while only the hero's copy acted, and that is
+              // the fault: the toolbar button is the one a user reaches for
+              // out of habit — it is where the product keeps New — so pressing
+              // it and getting nothing reads as a tour that has frozen. Same
+              // service, same dropdown, same rows; only `data-menu` differs,
+              // and that is what hangs the menu under the button that was
+              // actually pressed.
+              Skeletons.Box.X({
+                ...newButton(ui, "toolbar", opt),
                 className: `${p}-new-btn`,
                 sys_pn: "fp-new-btn",
                 partHandler: ui,
                 kids: [
                   Skeletons.Image.Svg({ active: 0, ico: "topbar-add", className: `${p}-new-ico` }),
                   Skeletons.Note({ active: 0, className: `${p}-new-label`, content: LOCALE.NEW }),
-                ],
+                  menuAt(opt.menu) === "toolbar" ? newMenu(ui, opt.live_menu) : null,
+                ].filter(Boolean),
               }),
               // One bordered group with three cells in it, not three loose
               // buttons: the frame draws a single rounded container and clips
@@ -202,18 +257,22 @@ function toolbar(ui) {
  *
  * @param {Object} ui
  * @param {Object} [opt]
- * @param {Boolean} [opt.menu] draw the + New dropdown open under the New button
+ * @param {String} [opt.menu] which + New button has its dropdown open —
+ *   "toolbar" or "hero". `true` means the hero's, historically the only one.
  * @param {String} [opt.cta_service] makes "Migrate from Google Drive" raise
  *   this service at `ui`. The migrate tour's first screen carries no callout —
  *   the frame has none — so these three buttons are its only way forward.
- * @param {String} [opt.new_service] makes the hero's "+ New" raise this one
+ * @param {String} [opt.new_service] makes the "+ New" buttons raise this one —
+ *   the hero's here, and the toolbar's in toolbar()
  * @param {String} [opt.upload_service] and this one makes "Upload" a control.
  *   Named separately from `new_service` because the two ghosts share the
  *   `-ghost` class: only a `sys_pn` and a service tell them apart.
  */
 function hero(ui, opt = {}) {
   const p = pfx(ui);
-  const { menu, live_menu, cta_service, new_service, upload_service } = opt;
+  // `new_service` is read by newButton() off `opt` — both copies of the button
+  // take the same props from the same place.
+  const { menu, live_menu, cta_service, upload_service } = opt;
   // A button's props: inert, or clickable and stamped as such so the skin can
   // say so. Stamped from the same flag that makes it clickable, so the two
   // cannot disagree — and keyed on that rather than on the tour, since these
@@ -259,14 +318,14 @@ function hero(ui, opt = {}) {
           // `position: relative` opens no stacking context, so the spotlight's
           // promotion still reaches the menu (spotlight/index.js _light).
           Skeletons.Box.X({
-            ...control(new_service),
+            ...newButton(ui, "hero", opt),
             className: `${p}-ghost`,
             sys_pn: "fp-hero-new",
             partHandler: ui,
             kids: [
               Skeletons.Image.Svg({ active: 0, ico: "app-add", className: `${p}-ghost-ico` }),
               Skeletons.Note({ active: 0, className: `${p}-ghost-label`, content: LOCALE.NEW }),
-              menu ? newMenu(ui, live_menu) : null,
+              menuAt(menu) === "hero" ? newMenu(ui, live_menu) : null,
             ].filter(Boolean),
           }),
           // Named, so a screen can point at it — the migrate tour's upload
@@ -460,9 +519,11 @@ function chatPlaceholder(ui) {
 /**
  * @param {Object} ui
  * @param {Object} [opt]
- * @param {Boolean} [opt.menu] draw the + New dropdown open (142:35805)
+ * @param {String} [opt.menu] which + New button has its dropdown open (142:35805)
  * @param {String} [opt.cta_service] make the Migrate CTA a control — see hero()
- * @param {String} [opt.new_service] make the hero's + New a control
+ * @param {String} [opt.new_service] make BOTH + New buttons controls — the
+ *   toolbar's and the hero's. They raise the same service and are told apart
+ *   by `data-menu`; see newButton().
  * @param {String} [opt.upload_service] make the hero's Upload a control
  *
  * A step that lays its own UI over this pane (the import dialog) composes the
@@ -482,7 +543,7 @@ function filesPane(ui, opt = {}) {
         kids: [
           Skeletons.Box.Y({ active: 0,
             className: `${p}-canvas`,
-            kids: [toolbar(ui), hero(ui, opt)],
+            kids: [toolbar(ui, opt), hero(ui, opt)],
           }),
         ],
       }),
