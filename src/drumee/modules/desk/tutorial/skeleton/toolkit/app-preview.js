@@ -72,6 +72,18 @@ const PREVIEW_UTILS = ["top-bell", "top-calendar", "top-inbox", "top-contacts", 
 function previewTopbar(ui) {
   const p = pfx(ui);
 
+  // A PLACEHOLDER, not the viewer's own organisation.
+  //
+  // This read Organization.name(), which on a real account puts that account's
+  // org into a picture of the product — "Drumee stage server" where the frame
+  // says "Org-name", beside a department and a workspace that are both
+  // placeholders. One live segment among three sample ones does not read as
+  // personalisation; it reads as a mistake, and it is the only string on the
+  // plate that can be arbitrarily long.
+  //
+  // LOCALE.ORG_NAME is the same kind of key its two neighbours already use,
+  // and it stands with them in the file.
+  const orgName = LOCALE.ORG_NAME;
   const org = Skeletons.Box.X({ active: 0,
     className: `${p}-tb-org`,
     kids: [
@@ -80,11 +92,11 @@ function previewTopbar(ui) {
         kids: [
           Skeletons.Note({ active: 0,
             className: `${p}-tb-org-avatar-text`,
-            content: (Organization.name() || "").charAt(0),
+            content: (orgName || "").charAt(0),
           }),
         ],
       }),
-      Skeletons.Note({ active: 0, className: `${p}-tb-org-name`, content: Organization.name() }),
+      Skeletons.Note({ active: 0, className: `${p}-tb-org-name`, content: orgName }),
       Skeletons.Note({ active: 0,
         className: `${p}-tb-org-plan`,
         content: require("libs/billing").planLabel(),

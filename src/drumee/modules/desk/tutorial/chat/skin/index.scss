@@ -286,6 +286,29 @@
   // image is rendered at. 1.2 set them 0.7px tight per line, which is
   // invisible on one line and reads as cramped on three.
   &__msg-text {
+    // PROSE, NOT A FLEX ROW — and this line is the whole of a reported bug.
+    //
+    // A message that carries a link is an Element with markup rather than a
+    // Note, because the filename has to sit INLINE in the flowing sentence
+    // (see message() in ../skeleton/index.js). ui-core renders Element through
+    // its `wrapper` kind, which lands on `.box[data-flow]` — a flex ROW — so
+    // the three runs either side of that <span> became three flex ITEMS and
+    // laid out as three narrow columns, each wrapping inside its own column:
+    //
+    //     Morning        Drumee_Strategy_Q2.pdf   to the
+    //     team 👋 I've                            Strategy
+    //     uploaded                                folder.
+    //
+    // The <br>s were dropped for the same reason — a line break means nothing
+    // between flex items. That is why the message read as a column no matter
+    // what the fixture said.
+    //
+    // `!important` because the rule being cancelled is `.box[data-flow="x"]`
+    // in skin/lib/container.scss, which is a class AND an attribute — a single
+    // class here cannot outweigh it, and the alternative is qualifying every
+    // prose Element with `.box`, which spreads a layout detail across every
+    // skin that draws a sentence.
+    display: block !important;
     @include drumee.typo($size: 14px, $line: 1.25);
     font-weight: 400;
     color: var(--normal-fg);

@@ -1,6 +1,7 @@
 {
   "DEPARTMENT": "部门",
   "DEPARTMENT_NAME": "部门名称",
+  "ORG_NAME": "组织名称",
   "ENTER_EMAIL_ADDRESS": "输入邮箱地址",
   "FILES_EMPTY_DESC": "这里的每个文件都存在于一段对话中。评论、共享上下文、让决策紧贴工作，不必再翻查另一个应用来弄清文件为何变更。",
   "FILES_EMPTY_TITLE": "对话就在文件里，不再丢失上下文。",

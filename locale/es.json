@@ -1,6 +1,7 @@
 {
   "DEPARTMENT": "Depto.",
   "DEPARTMENT_NAME": "Nombre del departamento",
+  "ORG_NAME": "Nombre de la organización",
   "ENTER_EMAIL_ADDRESS": "Introduce un correo electrónico",
   "FILES_EMPTY_DESC": "Cada archivo vive dentro de una conversación. Comenta, comparte contexto y mantén las decisiones junto al trabajo, sin rebuscar en otra aplicación por qué cambió un archivo.",
   "FILES_EMPTY_TITLE": "El chat vive en los archivos. Sin perder el contexto.",

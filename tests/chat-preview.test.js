@@ -229,3 +229,48 @@ test("the carets are affordances, not headlines", () => {
   );
   assert.match(css, /\.tutorial__pv-tb-caret \{[^}]*color: var\(--normal-fg-50\)/);
 });
+
+test("a linked message reads as a sentence, not as three columns", () => {
+  // THE BUG THIS CANCELS: a message carrying a link is an Element with markup
+  // (the filename has to sit inline in the flowing sentence), and ui-core
+  // renders Element through its `wrapper` kind — `.box[data-flow]`, a flex
+  // ROW. The runs either side of the <span> became flex ITEMS and laid out as
+  // three narrow columns with the <br>s dropped.
+  //
+  // Neither a descriptor test nor a harness that emits a plain <div> can see
+  // that, which is how it shipped; tests/harness/msg-text-flow.js stamps the
+  // container the way ui-core does and measures it. This pins the one line.
+  const css = execFileSync(
+    "sass",
+    ["-I", ".", "-I", "skin", "--no-source-map", "modules/desk/tutorial/chat/skin/index.scss"],
+    { cwd: join(ROOT, "src/drumee"), encoding: "utf8", maxBuffer: 1 << 26 },
+  );
+  const rule = /\.tutorial-chat__msg-text \{([^}]*)\}/.exec(css);
+  assert.ok(rule, "no msg-text rule");
+  // !important, because what it cancels is `.box[data-flow="x"]` — a class AND
+  // an attribute, which a single class cannot outweigh.
+  assert.match(rule[1], /display: block !important/);
+  // And only the Element branch needs it, so the markup must still be one run.
+  const src = readFileSync(join(ROOT, CHAT), "utf8");
+  assert.match(src, /linked \|\| broken/, "the Element branch is what carries markup");
+});
+
+test("the plate names a placeholder organisation, not the viewer's", () => {
+  // It read Organization.name(), which puts the real account's org — "Drumee
+  // stage server" — into a picture of the product, beside a department and a
+  // workspace that are both placeholders.
+  const src = readFileSync(
+    join(ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/app-preview.js"), "utf8");
+  // CODE, not comments — the note above the change says what it replaced, and
+  // that sentence is worth keeping.
+  const code = src.replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/Organization\.name\(\)/.test(code), "the live org name is back");
+  assert.match(src, /LOCALE\.ORG_NAME/);
+
+  // The key stands with the two it belongs to, in every locale.
+  for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
+    const d = JSON.parse(readFileSync(join(ROOT, `locale/${lang}.json`), "utf8"));
+    assert.ok(d.ORG_NAME, `${lang} has no ORG_NAME`);
+    assert.ok(d.DEPARTMENT_NAME && d.WORKSPACE_NAME, `${lang} lost a neighbour`);
+  }
+});

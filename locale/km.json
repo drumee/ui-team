@@ -1,6 +1,7 @@
 {
   "DEPARTMENT": "Dept.",
   "DEPARTMENT_NAME": "Department name",
+  "ORG_NAME": "Org name",
   "ENTER_EMAIL_ADDRESS": "Enter email address",
   "FILES_EMPTY_DESC": "Every file here lives inside a conversation. Comment, share context, keep decisions attached to the work, no digging through another app to find why a file changed.",
   "FILES_EMPTY_TITLE": "Chat live in files. No more context loss.",
