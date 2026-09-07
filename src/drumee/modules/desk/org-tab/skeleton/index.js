@@ -213,16 +213,9 @@ function panel(pfx, ui, data) {
     className: `${pfx}__panel`,
     kids: [
       header(pfx, ui, data),
-      Skeletons.Button.Label({
-        ico: "apps-gear",
-        className: `${pfx}__manage`,
-        label: LOCALE.MANAGE_ORGANIZATION,
-        service: "manage-organization",
-        uiHandler: [ui],
-      }),
       // Deferred — see ../multi-org.js. The divider belongs to the gated block,
-      // so with the flag off the panel ends cleanly after "Manage organization"
-      // rather than on a rule with nothing under it.
+      // so with the flag off the panel ends cleanly after the header rather
+      // than on a rule with nothing under it.
       multiOrgOnly(() =>
         Skeletons.Box.Y({
           className: `${pfx}__switch`,

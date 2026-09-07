@@ -7882,14 +7882,6 @@ class desk_module extends LetcBox {
       case "open-org-view":
         return this._openOrgView();
 
-      // The dropdown's "Manage organization" is the admin console — that IS
-      // the organisation's management screen (members, security, domain). It
-      // routes to the SAME case rather than a parallel one, so the plugin's
-      // on-demand load, its upsell gating and its breadcrumb all stay in the
-      // single place that owns them.
-      case "manage-organization":
-        return this.onUiEvent(cmd, { ...args, service: "toggle-apps" });
-
       // "New department" from the topbar's + New menu. The org view owns the
       // entry — this only has to make sure that screen is up.
       //

@@ -273,34 +273,6 @@
     &:hover { background-color: var(--normal-bg-80); }
   }
 
-  // A Button.Label: icon + text on one row. The framework writes an inline
-  // display on it, so the row layout needs !important — same as topbar's
-  // __ws-new and __new-menu-item.
-  &__manage {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 36px;
-    padding: 8px 12px;
-    border-radius: var(--corner-radius-4);
-    border: 1px solid var(--border-muted);
-    cursor: pointer;
-    @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 20px);
-    font-weight: 500;
-
-    svg {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
-    }
-
-    &:hover { background-color: var(--normal-bg-90); }
-  }
-
   // ── Deferred multi-org block (see ../multi-org.js) ─────────────────────
   &__switch {
     gap: 8px;

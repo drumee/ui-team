@@ -17,6 +17,23 @@
 // display that only `!important` overrides (same as topbar's __ws-new).
 .desk-org-view {
 
+  // The widget ROOT (`{family}__ui`). It lives in the desk's
+  // __settings-main-slot, which is `position: absolute; inset: 0` but is also
+  // a Box.Y — so this element is a flex ITEM: it stretches across the slot,
+  // but its HEIGHT is content-based unless it asks for one. Without this rule
+  // the screen drew only as tall as its header plus whatever cards had loaded
+  // (a strip across the top of an otherwise empty pane), and __main's
+  // `height: 100%` could not recover it either — a percentage height resolves
+  // against an auto-height parent as `auto`. `min-height: 0` keeps __main's
+  // internal `overflow-y: auto` scrolling instead of pushing the root taller.
+  // Same rule settings-main carries for the same slot.
+  &__ui {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+  }
+
   // Figma 104:33973 Frame 1618873130: white panel, r16, 1px #f2f2f7 border,
   // padding 24, gap 24. It is a rounded card inset from the rail, not a bare
   // full-bleed pane.

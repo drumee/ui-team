@@ -157,11 +157,10 @@ class __desk_org_tab extends LetcBox {
       case "commit-organization-name":
         return this._commitOrganizationName(cmd);
 
-      // Both are the DESK's screens, not this widget's — it owns the panel,
-      // not what opening one does. triggerHandlers walks up to the desk, which
-      // is where every other section screen is opened from.
+      // The DESK's screen, not this widget's — it owns the panel, not what
+      // opening one does. triggerHandlers walks up to the desk, which is where
+      // every other section screen is opened from.
       case "open-org-view":
-      case "manage-organization":
         return this.triggerHandlers({ service });
 
       default:
