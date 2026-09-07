@@ -309,6 +309,7 @@
     @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
     align-items: center;
     gap: 8px;
+    min-height: 34px;
     padding: 8px 10px;
     border-radius: 6px;
     cursor: pointer;
@@ -323,6 +324,35 @@
       font-weight: 600;
       color: var(--primary-40);
     }
+  }
+
+  // Sprite icons render as `<svg class="full …">` — width/height 100% — so an
+  // icon with no box of its own stretches to fill the whole row (this is what
+  // broke the New dropdown). Pin the wrapper AND the svg, the way the desk
+  // topbar's New menu and both reference modals do.
+  &__menu-ico {
+    // Not a Box, so `display` is ours to set — same as the reference modals'
+    // icon wrappers.
+    display: flex;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    color: var(--normal-fg-20);
+    overflow: hidden;
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      fill: currentcolor;
+    }
+  }
+
+  &__menu-label {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   // segmented All / Task / Meet — 43:31159: 14px labels, the active pill on
@@ -759,6 +789,13 @@
   }
 
   // ── modal ─────────────────────────────────────────────────────────────────
+  // Deliberately the same dialog language as the two popups this screen sits
+  // next to — the Task tab's create modal (tasks-panel__create-*) and the Meet
+  // tab's schedule modal (window-folder__meeting-modal). Those two agreed with
+  // each other and this one did not: it had its own radius, its own 20px
+  // heading in navy, unsized field rows and a full-width lone CTA. Everything
+  // below is lifted from them, so a user moving between the three tabs meets
+  // one dialog, not three. Change them together.
   &__modal-wrapper {
     position: fixed;
     inset: 0;
@@ -771,7 +808,10 @@
 
     &[data-state="open"] {
       pointer-events: auto;
-      background: var(--overlay-bg);
+      // The Task tab's glass backdrop, not a flat black scrim.
+      background: rgba(250, 250, 250, 0.05);
+      backdrop-filter: blur(30px);
+      animation: calendar-main-fade-in 0.15s ease;
     }
 
     &:empty {
@@ -780,46 +820,85 @@
   }
 
   &__modal {
-    width: 400px;
-    max-width: calc(100vw - 32px);
-    max-height: calc(100vh - 64px);
-    padding: 20px;
-    gap: 16px;
+    // Same footprint as the meeting modal (a centred card, unlike the Task
+    // tab's near-fullscreen sheet), so the two read as the same object.
+    width: min(480px, calc(100vw - 32px));
+    max-height: 88vh;
+    padding: 28px 32px;
+    gap: 18px;
     box-sizing: border-box;
     overflow-y: auto;
     background: var(--normal-bg-elevated);
-    // 22px, per the prototype spec's modal radius.
-    border-radius: 22px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    border: 1px solid var(--border-muted);
+    border-radius: 16px;
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0 1px 11px rgba(0, 0, 0, 0.13);
+    animation: calendar-main-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
 
+    // Two columns of fields + the invite block — the meeting modal's own width.
     &[data-form="meeting"] {
-      width: 440px;
+      width: min(600px, calc(100vw - 32px));
+    }
+  }
+
+  @keyframes calendar-main-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes calendar-main-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 
   &__modal-head {
     flex: 0 0 auto;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
   }
 
   &__modal-title {
-    @include drumee.typo($size: 20px, $line: 26px, $color: var(--primary-purple-100));
+    // 24px/600 in --normal-fg-800 (#34343a) — the heading both reference
+    // modals use. This was 20px in --primary-purple-100, the odd one out.
+    @include drumee.typo($size: 24px, $line: 27px, $color: var(--normal-fg-800));
     font-weight: 600;
   }
 
   &__modal-close {
-    flex: 0 0 auto;
-    width: 24px;
-    height: 24px;
+    display: flex;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     color: var(--normal-fg-20);
     border-radius: 4px;
+    overflow: hidden;
+
+    // The sprite svg is width/height 100%, so it needs a box — see __menu-ico.
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      fill: currentcolor;
+    }
 
     &:hover {
       background: var(--overlay-bg-05);
-      color: var(--normal-fg);
+      color: var(--normal-fg-10);
     }
   }
 
@@ -829,15 +908,16 @@
     gap: 16px;
   }
 
+  // Right-aligned action row under a hairline, as in the meeting modal. Buttons
+  // size to their label instead of stretching, so a lone "Create" no longer
+  // spans the card while the paired Delete/Update splits it in half.
   &__modal-foot {
     flex: 0 0 auto;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
-
-    // Edit mode pairs Delete with Update; create has a single full-width CTA.
-    &[data-mode="edit"] > * {
-      flex: 1 1 0;
-    }
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-muted);
   }
 
   &__field {
@@ -845,8 +925,8 @@
   }
 
   &__field-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
-    font-weight: 600;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 500;
   }
 
   &__input,
@@ -854,7 +934,7 @@
   &__date-input {
     width: 100%;
     box-sizing: border-box;
-    background: var(--normal-bg-90);
+    background: var(--overlay-bg-05);
     border: 1px solid transparent;
     border-radius: 8px;
 
@@ -867,17 +947,18 @@
     textarea {
       width: 100%;
       box-sizing: border-box;
-      padding: 10px 12px;
+      // 44px rows (12px padding on a 20px line) — the reference field height.
+      padding: 12px;
       border: 0;
       background: transparent;
       outline: none;
-      @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
       font-family: inherit;
     }
 
     textarea {
       resize: vertical;
-      min-height: 72px;
+      min-height: 76px;
     }
   }
 
@@ -948,8 +1029,11 @@
   &__time-input {
     width: 100%;
     box-sizing: border-box;
-    background: var(--normal-bg-90);
-    border-radius: 6px;
+    // Same ground and radius as __input / __date-input above — one field
+    // treatment per dialog, and --overlay-bg-05 flips with the theme where
+    // --normal-bg-90 stays a solid surface.
+    background: var(--overlay-bg-05);
+    border-radius: 8px;
 
     input {
       width: 100%;
@@ -1157,9 +1241,9 @@
   &__link-row {
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 12px;
     border-radius: 8px;
-    background: var(--normal-bg-90);
+    background: var(--overlay-bg-05);
     cursor: pointer;
   }
 
@@ -1181,14 +1265,24 @@
   }
 
   // ── buttons ───────────────────────────────────────────────────────────────
+  // Geometry and variants copied from window-folder__meeting-modal-btn so the
+  // three dialogs' footers are interchangeable: 38px pills, the destructive
+  // action pushed left by its own margin, confirm actions right.
   &__button {
-    flex: 1 1 auto;
-    padding: 12px 16px;
-    border-radius: 12px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     text-align: center;
     cursor: pointer;
     user-select: none;
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--gray-white));
+    white-space: nowrap;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--gray-white));
     font-weight: 600;
 
     &--primary {
@@ -1200,10 +1294,23 @@
     }
 
     &--danger {
+      // Sits apart from the confirm pair rather than sharing the row evenly.
+      margin-right: auto;
       background: var(--signal-error, #d74e49);
 
       &:hover {
         opacity: 0.9;
+      }
+    }
+
+    // Dismiss without saving — outlined, so it never reads as a confirm.
+    &--neutral {
+      background: transparent;
+      border-color: var(--border-strong);
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background: var(--overlay-bg-05);
       }
     }
   }

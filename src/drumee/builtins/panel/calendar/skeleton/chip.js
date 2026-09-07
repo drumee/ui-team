@@ -20,6 +20,8 @@ function provenancePill(pfx, row) {
   return Skeletons.Note({
     className: `${pfx}__chip-origin`,
     content: text,
+    // Inert — see the note on the chip root.
+    active: 0,
     attrOpt: { "data-scope": personal ? "personal" : "workspace" },
   });
 }
@@ -46,14 +48,29 @@ function chip(ui, row, opt = {}) {
   // two never distinguishes them.
   const isOccurrence = !!row.is_occurrence;
 
+  // Month view suppresses the provenance pill (no room for it at four chips to
+  // a cell — 43:31159) and a workspace-owned item opens nothing yet (the C-05
+  // quick-preview TODO in _openItem). Between those two a month-view user had
+  // NO way to learn which workspace a task came from — on the one screen whose
+  // whole purpose is aggregating several. A native title costs no layout and
+  // needs no frame, so the compact chip carries it.
+  const originText = [
+    row.title,
+    row.scope === "personal" ? LOCALE.PERSONAL : row.origin_name,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const lead = meeting
     ? Skeletons.Note({
         className: `${pfx}__chip-time`,
         content: startLabel(row),
+        active: 0,
       })
     : Skeletons.Note({
         className: `${pfx}__chip-dot`,
         styleOpt: { background: pm.color },
+        active: 0,
       });
 
   const kids = [
@@ -61,6 +78,7 @@ function chip(ui, row, opt = {}) {
     Skeletons.Note({
       className: `${pfx}__chip-title`,
       content: row.title,
+      active: 0,
     }),
     // 43:31159 draws the month chip as lead + title and nothing else — at three
     // chips to a cell there is no room for the pill, and it crowded out the
@@ -78,6 +96,7 @@ function chip(ui, row, opt = {}) {
         Skeletons.Note({
           className: `${pfx}__chip-desc`,
           content: row.description,
+          active: 0,
         }),
       );
     }
@@ -86,14 +105,19 @@ function chip(ui, row, opt = {}) {
         Skeletons.Box.X({
           className: `${pfx}__chip-status`,
           attrOpt: { "data-theme": status.theme },
+          // Every level has to be inert, not just this one: kidsOpt/active is
+          // applied per node and does not reach a grandchild.
+          active: 0,
           kids: [
             Skeletons.Note({
               className: `${pfx}__chip-status-dot`,
               styleOpt: { background: status.color },
+              active: 0,
             }),
             Skeletons.Note({
               className: `${pfx}__chip-status-label`,
               content: status.label,
+              active: 0,
             }),
           ],
         }),
@@ -119,6 +143,17 @@ function chip(ui, row, opt = {}) {
     );
   }
 
+  // Every kid above carries `active: 0` and the remove button deliberately does
+  // NOT. ui-core binds an onclick to every widget left at the default, and that
+  // handler calls e.stopPropagation() BEFORE triggerHandlers — so an inert kid
+  // left active swallows the click and this service never fires. That is why
+  // clicking a chip's time, title, provenance pill or status did nothing at all
+  // and only its 7px of padding opened the item.
+  //
+  // Marked per node rather than with `kidsOpt: {active: 0}`: kidsOpt is merged
+  // INTO each kid (builder.js `_.merge(k, a.kidsOpt)`), so it wins over a kid's
+  // own props and would silence the remove button's own service — and it only
+  // reaches DIRECT kids, never the status pill's nested notes.
   return Skeletons.Box[compact ? "X" : "Y"]({
     className: `${pfx}__chip`,
     ...(opt.style ? { styleOpt: opt.style } : {}),
@@ -134,6 +169,10 @@ function chip(ui, row, opt = {}) {
     // occurrence would open the series for editing.
     itemOccurrence: isOccurrence ? 1 : 0,
     attrOpt: {
+      // Spread, never `title: undefined` — refresh() does a bare
+      // setAttribute(k, v) over the attribute model, so an undefined value
+      // lands in the DOM as the literal string "undefined".
+      ...(compact && originText ? { title: originText } : {}),
       "data-kind": row.kind,
       "data-scope": row.scope,
       "data-status": row.status || "todo",
