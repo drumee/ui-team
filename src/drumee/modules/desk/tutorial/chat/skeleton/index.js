@@ -16,6 +16,7 @@
 
 const { FILE, TIME, REPLIES_SUMMARY, STREAM, THREAD, ACTIONS } = require('../fixture');
 const { emptyState } = require('../../skeleton/toolkit/empty-state');
+const { appPreview } = require('../../skeleton/toolkit/app-preview');
 
 const avatar = (pfx, name) =>
   Skeletons.Box.Y({ active: 0,
@@ -350,6 +351,59 @@ function threadPanel(ui, pfx, opt) {
   });
 }
 
+/** The stream's own header: the channel name and its search. */
+const head = (ui, pfx) =>
+  Skeletons.Box.X({ active: 0,
+    className: `${pfx}__head`,
+    kids: [
+      Skeletons.Note({ active: 0, className: `${pfx}__head-title`, content: `# ${LOCALE.GENERAL}` }),
+      Skeletons.Image.Svg({ active: 0, ico: 'magnifying-glass', className: `${pfx}__head-ico` }),
+    ],
+  });
+
+/**
+ * The pane as the OPENING screen's plate shows it — the same folder column and
+ * the same conversation, at preview scale.
+ *
+ * This replaces a PNG (assets/tutorial/chat-threads.png). The bitmap was a
+ * photograph of a screen this file already draws: it could not follow the
+ * theme, it went stale the moment the pane moved, and it shipped 147KB to say
+ * what the tree below says. Screens 2 to 5 render the same rail, the same
+ * `head`, and the same fixture, so the miniature cannot drift from what the
+ * user sees one press later.
+ *
+ * TWO DELIBERATE OMISSIONS, both matching the frame (142:39142):
+ *
+ *   the file message  arrives with the gesture screen 3 teaches, exactly as it
+ *                     is held back on screen 2. Showing it here would put the
+ *                     result of the instruction three screens ahead of it.
+ *   the sys_pn        every part name is dropped — `chat-main`, `stream`, and
+ *                     the ids that become `msg-*`. Nothing points at anything
+ *                     inside a plate, and registering those here would give the
+ *                     step two parts by each name.
+ */
+function previewPane(ui, pfx) {
+  return Skeletons.Box.X({ active: 0,
+    className: `${pfx}__pane`,
+    kids: [
+      rail(ui, pfx),
+      Skeletons.Box.Y({ active: 0,
+        className: `${pfx}__main`,
+        kids: [
+          head(ui, pfx),
+          Skeletons.Box.Y({ active: 0,
+            className: `${pfx}__stream`,
+            kids: STREAM
+              .filter((m) => m.id !== 'file-message')
+              .map((m) => message(ui, pfx, { ...m, id: null })),
+          }),
+          composer(ui, pfx),
+        ],
+      }),
+    ],
+  });
+}
+
 /**
  * @param {Object} ui
  * @param {Object} [opt]
@@ -369,7 +423,17 @@ module.exports = function (ui, opt = {}) {
       title: LOCALE.CHAT_HERO_TITLE,
       desc: LOCALE.CHAT_HERO_DESC,
       cta: LOCALE.START_DISCOVERING,
-      items: [{ src: require('assets/tutorial/chat-threads.png').default }],
+      // COMPOSED, not exported. The frame's artwork here is the workspace
+      // plate the create-workspace flow already draws — same gradient, same
+      // window, same topbar and rail — with Chat lit and this pane inside it.
+      items: [{
+        node: appPreview(ui, {
+          active: 'chat',
+          body: previewPane(ui, pfx),
+          // The carousel card brings its own 760x515 and its own clipping.
+          fit: 'card',
+        }),
+      }],
       card: 'wide',
       // "Start discovering now" carries the tour forward. This screen raises no
       // callout (see `bare` on screen 1 in ../index.js), so without a live CTA
@@ -388,13 +452,7 @@ module.exports = function (ui, opt = {}) {
         sys_pn: 'chat-main',
         partHandler: ui,
         kids: [
-          Skeletons.Box.X({ active: 0,
-            className: `${pfx}__head`,
-            kids: [
-              Skeletons.Note({ active: 0, className: `${pfx}__head-title`, content: `# ${LOCALE.GENERAL}` }),
-              Skeletons.Image.Svg({ active: 0, ico: 'magnifying-glass', className: `${pfx}__head-ico` }),
-            ],
-          }),
+          head(ui, pfx),
           Skeletons.Box.Y({ active: 0,
             className: `${pfx}__stream`,
             sys_pn: 'stream',

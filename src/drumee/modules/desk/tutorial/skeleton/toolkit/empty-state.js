@@ -55,16 +55,22 @@ const titleLines = (text) => String(text || "").split("\n");
 /**
  * One carousel card: the view's own artwork, and its caption.
  *
- * `src` is the frame exported straight out of Figma. These were CSS shape
- * abstractions first, and they were not close: the frames put a rendered
- * mini-app in each card — a tab bar over two board columns, a donut and a
- * bar chart for Project Health — and the chat one is literally a bitmap in
- * the design file (142:39142 "image 1"). At that level of detail, redrawing
- * is both a lot of work and permanently wrong.
+ * TWO KINDS OF ARTWORK, and a card takes either.
  *
- * They are emitted as separate files by file-loader, not inlined, so a user
- * who never opens the tour never fetches them and only the cards on screen
- * load.
+ * `src` is a frame exported straight out of Figma. The Task and Meet cards use
+ * it, and they should: those frames put a rendered mini-app in each card — a
+ * tab bar over two board columns, a donut and a bar chart for Project Health —
+ * and at that level of detail redrawing is both a lot of work and permanently
+ * wrong. They are emitted as separate files by file-loader, not inlined, so a
+ * user who never opens the tour never fetches them and only the cards on
+ * screen load.
+ *
+ * `node` is a descriptor, drawn in place of the image. The chat card takes it:
+ * its artwork is the SAME plate the create-workspace flow already composes
+ * (./app-preview.js), so a bitmap there was a second copy of a component this
+ * codebase already has — one that could not follow the theme and went stale
+ * the moment the product moved. A picture of something we cannot draw is worth
+ * a PNG; a picture of something we draw anyway is not.
  */
 const card = (p, item, variant) =>
   Skeletons.Box.Y({ active: 0,
@@ -77,11 +83,12 @@ const card = (p, item, variant) =>
         dataset: { card: variant },
         attrOpt: { "data-card": variant },
         kids: [
-          Skeletons.Element({ active: 0,
-            tagName: "img",
-            className: `${p}-card-img`,
-            attribute: { src: item.src, alt: "" },
-          }),
+          item.node
+            || Skeletons.Element({ active: 0,
+              tagName: "img",
+              className: `${p}-card-img`,
+              attribute: { src: item.src, alt: "" },
+            }),
         ],
       }),
       item.title
@@ -102,7 +109,8 @@ const card = (p, item, variant) =>
  * @param {String} [opt.cta_service] makes the CTA a control that raises this
  *   service at `ui` instead of inert scenery. Omit and it stays a drawing —
  *   which is what the tours that merely POINT at it want.
- * @param {Array}  [opt.items] carousel cards
+ * @param {Array}  [opt.items] carousel cards — each `{src}` for an exported
+ *   frame or `{node}` for artwork this codebase composes; see card()
  * @param {Number} [opt.index=0] which card the track is scrolled to
  * @param {Boolean} [opt.dots]   draw the dot row under the track (Task)
  * @param {Object|Array} [opt.caption] `{ico, title, desc}` under the track

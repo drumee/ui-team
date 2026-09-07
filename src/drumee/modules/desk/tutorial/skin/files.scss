@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "./preview.scss" as pv;
 
 // The workspace Files pane the tour draws (tutorial__fp-*).
 //
@@ -830,9 +831,10 @@ $fp-air: min(120px, 11.2vh);
 
 // ── The home empty state (tutorial__home-*) ───────────────────────────────
 //
-// The plate's height, shared with the hero beside it so the two share a top
-// edge the way 140:22945 lays them out.
-$home-preview-h: 475px;
+// The plate itself moved to ./preview.scss when the chat tour started drawing
+// it too. What is left here is the hero beside it — which still has to match
+// its height, so it reads that number from there rather than keeping a second
+// copy of it.
 
 // Figma 140:22684 — the frame the create-workspace flow opens on: a hero on
 // the left and a preview of a populated workspace on the right.
@@ -867,7 +869,7 @@ $home-preview-h: 475px;
   &__home-hero {
     flex: 0 0 auto;
     width: 520px;
-    height: $home-preview-h;
+    height: pv.$plate-h;
     justify-content: flex-start;
     gap: 18px;
   }
@@ -911,279 +913,6 @@ $home-preview-h: 475px;
     justify-content: center;
   }
 
-  // ── Preview card ────────────────────────────────────────────────────────
-  // A gradient plate with an app window on it, clipped at the right edge the
-  // way the frame lets the window run off. The window inside is composed at
-  // the app's real width and scaled down, so what it shows is the SAME tree
-  // the full screens render rather than a second miniature that can drift.
-  &__home-preview {
-    flex: 0 0 auto;
-    width: 705px;
-    max-width: 46%;
-    align-self: center;
-    // The frame's 705x476 is the OUTER card — the window's 70/66 offset is
-    // measured inside it. Without this the insets were added to the height and
-    // the plate stood 543 tall against a 475 hero, so the two stopped sharing
-    // the top edge they are aligned on.
-    box-sizing: border-box;
-    height: $home-preview-h;
-    margin-right: 46px;
-    // Where the window actually sits on the plate: `image 1` (140:23218) is
-    // absolutely placed at left 70 / top 66 inside the 705x476 card. 30/22 sat
-    // it almost in the corner and left barely a sliver of the gradient to read.
-    padding: 66px 0 0 70px;
-    // 140:23220, verbatim: a 20px card with a 1px brand hairline, and a
-    // gradient that runs top to BOTTOM — not the 150deg diagonal this had —
-    // from a near-transparent brand tint to solid #5950ff. The old top stop
-    // was an opaque #b9b4ff, which painted a lilac band across the head of the
-    // card; the real one is 5% ink, so the canvas wash behind it shows through
-    // and the plate only gains weight towards the bottom.
-    border: 1px;
-    border-radius: 20px;
-    overflow: hidden;
-    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100.03%);
-  }
-
-  &__home-pv-viewport {
-    flex: 1 1 auto;
-    min-height: 0;
-    border-radius: 10px 0 0 0;
-    overflow: hidden;
-    background: var(--normal-bg-elevated);
-  }
-
-  // transform-origin top-left plus a fixed viewport above: the window keeps its
-  // real proportions and the viewport crops it, which is what the frame shows.
-  // A stacking context is opened here, which is safe — nothing inside the
-  // preview is ever the spotlight's target (the callout points at the CTA).
-  &__home-pv-scale {
-    flex: 0 0 auto;
-    // Sized so the window FILLS the card and is cropped by it, which is how
-    // the frame shows it — a smaller scale leaves white margins the design
-    // does not have.
-    transform: scale(0.62);
-    transform-origin: top left;
-  }
-
-  // ── The window's own topbar (tutorial__home-pv-tb-*) ────────────────────
-  // The base image on the plate (176:40744): org pill / department / workspace
-  // crumb on the left, utility cluster on the right. Same numbers as the tour's
-  // own bar in skin/index.scss — this is a picture of that product, and the
-  // 0.62 scale on the wrapper is what makes it a miniature.
-  &__home-pv-topbar {
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 12px;
-    height: 52px;
-    padding: 0 22px;
-  }
-
-  // Both pills: the grey lozenge with 4px around its leading icon.
-  &__home-pv-tb-org,
-  &__home-pv-tb-crumb {
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 12px 4px 4px;
-    border-radius: 8px;
-    background: var(--normal-bg-90);
-  }
-
-  &__home-pv-tb-org-avatar {
-    width: 24px;
-    height: 24px;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--primary-purple-40);
-  }
-
-  &__home-pv-tb-org-avatar-text {
-    @include drumee.typo($size: 12px, $line: 1);
-    font-weight: 600;
-    color: var(--gray-white, #fff);
-    text-transform: uppercase;
-  }
-
-  &__home-pv-tb-org-name,
-  &__home-pv-tb-crumb-name {
-    @include drumee.typo($size: 14px, $line: 20px);
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    color: var(--normal-fg);
-    white-space: nowrap;
-  }
-
-  &__home-pv-tb-org-plan {
-    @include drumee.typo($size: 12px, $line: 1.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    color: var(--primary-purple-40);
-    padding: 4px 8px;
-    border-radius: 52px;
-    background: rgba(89, 80, 255, 0.1);
-    white-space: nowrap;
-  }
-
-  &__home-pv-tb-caret {
-    width: 16px;
-    height: 16px;
-    flex: 0 0 auto;
-
-    svg { width: 100%; height: 100%; }
-    color: var(--normal-fg);
-  }
-
-  // The department segment sits BETWEEN the two pills, on the bare bar — a
-  // tinted tile, the name, and the slash that leads into the workspace.
-  &__home-pv-tb-dept {
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 8px;
-  }
-
-  &__home-pv-tb-dept-tile {
-    width: 24px;
-    height: 24px;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    background: var(--primary-purple-10);
-  }
-
-  &__home-pv-tb-dept-ico {
-    width: 16px;
-    height: 16px;
-
-    svg { width: 100%; height: 100%; }
-    color: var(--primary-purple-40);
-  }
-
-  &__home-pv-tb-dept-name {
-    @include drumee.typo($size: 14px, $line: 20px);
-    font-weight: 400;
-    color: var(--normal-fg);
-    white-space: nowrap;
-  }
-
-  &__home-pv-tb-dept-sep {
-    @include drumee.typo($size: 14px, $line: 20px);
-    font-weight: 400;
-    color: var(--normal-fg-20);
-  }
-
-  // folderArt paints at its authored 105x86 unless pinned — the same explicit
-  // box the tour's own breadcrumb gives it.
-  &__home-pv-tb-crumb-icon {
-    position: relative;
-    width: 24px;
-    height: 20px;
-    min-width: 24px;
-    flex: 0 0 auto;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    overflow: visible;
-
-    .media-grid__folder-art {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 20px;
-    }
-
-    svg.folder-shape { width: 24px; height: 20px; }
-  }
-
-  // Pushed to the far edge, as the frames place it.
-  &__home-pv-tb-utils {
-    flex: 1 1 auto;
-    min-width: 0;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-
-  &__home-pv-tb-util {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-
-    svg { width: 100%; height: 100%; }
-    color: var(--normal-fg-20);
-  }
-
-  &__home-pv-tb-avatar {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 auto;
-    margin-left: 4px;
-    border-radius: 50%;
-    background: var(--normal-bg-80);
-  }
-
-  &__home-pv-app {
-    flex: 1 1 auto;
-    min-height: 0;
-    gap: 10px;
-    padding: 0 0 0 10px;
-  }
-
-  &__home-pv-rail {
-    flex: 0 0 92px;
-    width: 92px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 14px;
-    padding: 18px 0;
-    border-radius: 14px;
-    background: var(--primary-purple-70);
-    color: var(--gray-white, #fff);
-  }
-
-  &__home-pv-rail-logo {
-    width: 34px;
-    height: 34px;
-
-    svg { width: 100%; height: 100%; }
-  }
-
-  &__home-pv-rail-item {
-    align-items: center;
-    gap: 5px;
-  }
-
-  &__home-pv-rail-tile {
-    width: 42px;
-    height: 42px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-  }
-
-  &__home-pv-rail-item[data-active="1"] &__home-pv-rail-tile {
-    background: var(--primary-purple-40);
-  }
-
-  &__home-pv-rail-ico {
-    width: 22px;
-    height: 22px;
-
-    svg { width: 100%; height: 100%; }
-  }
-
-  &__home-pv-rail-text {
-    @include drumee.typo($size: 13px, $line: 1.2);
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-  }
 }
 
 // ── The chat's own bubbles follow the workspace's type ───────────────────────

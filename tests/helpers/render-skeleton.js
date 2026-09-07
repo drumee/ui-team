@@ -37,6 +37,9 @@ function installGlobals() {
     FileSelector: node("fileselector"),
   });
   set("LOCALE", new Proxy({}, { get: (_t, k) => String(k) }));
+  // Reached by the workspace preview's topbar (toolkit/app-preview.js), which
+  // names the org on its pill.
+  set("Organization", { name: () => "Org-name", id: "org", get: () => "" });
   set("Visitor", {
     id: "me",
     get: () => "",
@@ -291,8 +294,18 @@ function toHtml(n) {
     .filter(([, v]) => v != null)
     .map(([k, v]) => ` data-${k}="${String(v)}"`)
     .join("");
+  // INLINE STYLE IS PART OF THE LAYOUT, not decoration. The workspace preview
+  // composes its window at the app's real width by setting `style.width` on
+  // one box and scaling the result down; dropped, that box shrink-to-fits its
+  // container and the miniature is measured at the wrong size — which looks
+  // like a broken component and is a broken fixture.
+  const style = Object.entries(n.style || {})
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => `${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${v}`)
+    .join(";");
+  const css = style ? ` style="${style}"` : "";
   const kids = [].concat(n.kids || []).map(toHtml).join("");
   const text = n.content != null && !kids ? String(n.content) : "";
-  return `<div${cls}${box}${attrs}${ds}>${text}${kids}</div>`;
+  return `<div${cls}${box}${attrs}${ds}${css}>${text}${kids}</div>`;
 }
 module.exports.toHtml = toHtml;
