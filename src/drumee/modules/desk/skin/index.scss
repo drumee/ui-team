@@ -619,6 +619,26 @@ html {
   .desk-module__topbar {
     z-index: 100002;
   }
+
+  // AND NOTHING IN IT ANSWERS A CLICK. The tour draws its own desk and walks
+  // the user through it; the real bar underneath is scenery for the duration,
+  // and a click on it takes them somewhere the tour is not — Settings, another
+  // workspace, a section screen — with the tour still up over the result.
+  //
+  // ON `__main`, WHICH IS EVERYTHING: the breadcrumb, the folder tabs, "+ New",
+  // the utility cluster and the avatar, AND the workspace switcher's panel and
+  // the account menu, both of which are built inside it
+  // (desk/skeleton/topbar.js calls workspaceSwitcher from the left cluster).
+  // So neither can be opened during the tour. They keep the lift above, so a
+  // panel that was already open is not buried by the tour — it is simply not
+  // usable while the tour is up.
+  //
+  // Deliberately not `visibility: hidden` or an opacity: the bar stays fully
+  // legible, which is the point of lifting it in the first place. Only its
+  // events go.
+  .desk-module-topbar__main {
+    pointer-events: none;
+  }
 }
 
 @media (max-width: 650px) {
