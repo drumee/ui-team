@@ -1103,12 +1103,30 @@ export function fileTypeFilterBar(ui) {
     { label: LOCALE.IMAGES, value: "image" },
     { label: LOCALE.OTHER, value: "other" },
   ];
+  // Which tab is lit comes from the WINDOW, never from the tab's position.
+  // This bar is rebuilt from scratch every time the view toggle switches
+  // grid/list/group (folder.toggleFilesLayout re-feeds the content part), while
+  // the active filter lives on the window as `_filterType` and deliberately
+  // survives that rebuild — the listing keeps honoring it through
+  // getCurrentApi(). Hard-coding the first tab therefore left the bar claiming
+  // "All" over a still-filtered listing, and on a filter that matched nothing
+  // the workspace read as "All → no files at all".
+  //
+  // `_filterType` is null for All (folder's filter-by-type stores null for the
+  // "all" value), so first render lands on index 0 exactly as before. The
+  // Math.max keeps a tab lit even if the window ever holds a value this bar
+  // does not list — never leave the control with nothing selected.
+  const current = ui._filterType || "all";
+  const activeIndex = Math.max(
+    tabs.findIndex((tab) => tab.value === current),
+    0,
+  );
   const filterTabs = tabs.map((tab, index) =>
     button(ui, {
       label: tab.label,
       className: `${ui.fig.family}__filter-tab`,
       service: "filter-by-type",
-      state: index === 0 ? 1 : 0,
+      state: index === activeIndex ? 1 : 0,
       radiotoggle: `media-filter-${ui._id}`,
       value: tab.value,
       dataset: { area: ui.mget(_a.area) },
