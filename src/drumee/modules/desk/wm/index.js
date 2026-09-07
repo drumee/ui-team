@@ -144,7 +144,59 @@ class __window_manager extends push {
    */
   openDeepLinkHash(hash) {
     if (!hash) return;
-    return this.openFileLocation(this._deepLinkPayload(hash));
+    return this.openDesignationLink(this._deepLinkPayload(hash));
+  }
+
+  /**
+   * Open a Designation link and LEAVE THE DESK STANDING IN THE WORKSPACE that
+   * holds the file, instead of on the home grid.
+   *
+   * Lexis/Duy, 2026-09-07: the link opened the file correctly, but behind it the
+   * desk sat on home — the screen Drumee 2.0 dropped. It lands there because a
+   * deep-link arrival deliberately stands the remembered-screen restore down
+   * (desk `_hasDeepLink` → `_restoreInFlight = false`, so the file cannot lose
+   * focus to it), and nothing then mounts a workspace: the file opens as a
+   * FLOATING window over an empty desk. So closing the file dropped the visitor
+   * on a screen that no longer exists in the product.
+   *
+   * Docking the workspace is all that was missing, and `loadWorkspace` — the
+   * same call the sidebar and `openNotificationLocation` make — is the one
+   * entry point for it.
+   *
+   * 🔑 ORDER IS LOAD-BEARING, and it is a paint-order hazard, not a logical one.
+   * headlessLayer (the docked pane) sits LATER IN THE DOM than windowsLayer, so
+   * with both layers non-empty they tie on z-index and the pane paints OVER the
+   * floating file — the wm skin says so in as many words, and the layer that
+   * hosts the active window is what breaks the tie (`:has(> [data-state="1"])`
+   * → z 50001). Mounting the pane and AWAITING it before launching the file
+   * makes the file unambiguously the last window opened, so windowsLayer takes
+   * the lift and the player stays on top. This is the same trap that put the
+   * secure-share panel under the document player.
+   *
+   * Every failure path falls back to today's behaviour rather than costing the
+   * open: no hub_id, an unmountable workspace, or a throw all still call
+   * `openFileLocation` exactly as before. Its return value is passed through
+   * unchanged for the callers that use it.
+   *
+   * @param {Object} payload the parsed deep-link payload (nid, hub_id, filetype…)
+   */
+  async openDesignationLink(payload = {}) {
+    const hub_id = payload && payload.hub_id;
+    // Already standing in it (warm click from inside the workspace) — mounting
+    // again would destroy and rebuild the pane for nothing.
+    if (hub_id && !this._findWorkspaceWindow(hub_id)) {
+      try {
+        // nid 0 is the server's "this hub's root" shortcut (_rootNid), exactly
+        // as openNotificationLocation mounts it: the pane opens at the workspace
+        // root, which is what "stand inside the workspace" means here. The file
+        // itself is opened by openFileLocation below.
+        this.loadWorkspace({ hub_id, nid: 0 });
+        await this._awaitWorkspaceWindow(hub_id);
+      } catch (e) {
+        this.warn("openDesignationLink: could not dock the workspace", e);
+      }
+    }
+    return this.openFileLocation(payload);
   }
 
   /**
@@ -279,6 +331,15 @@ class __window_manager extends push {
         // relay below cannot reopen this file later in the tab — the same reason
         // hubDeepLink.clear() is called where that intent is handled directly.
         fileDeepLink.clear();
+        // `open` is the Designation link — the shape that gets SENT to someone
+        // — so it also docks the workspace behind the file (see
+        // openDesignationLink). The other four shapes in this group are not
+        // designation links and keep the opener they have always had; that is
+        // the same line libs/file-deep-link draws in its LONG/COMPACT regexes.
+        if (path[2] === _a.open) {
+          this.openDesignationLink(args);
+          return;
+        }
         this.openFileLocation(args);
         return;
 
@@ -293,7 +354,11 @@ class __window_manager extends push {
         const compact = parseCompactPath(path);
         if (compact) {
           fileDeepLink.clear();       // settled here — see the `open` case above
-          this.openFileLocation(compact);
+          // The compact form IS a Designation link, so it docks the workspace
+          // too — otherwise shortening a link would silently change where the
+          // desk lands, which is exactly the drift the compact form exists to
+          // avoid.
+          this.openDesignationLink(compact);
           return;
         }
         break;
