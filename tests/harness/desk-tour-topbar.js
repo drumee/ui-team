@@ -1,11 +1,23 @@
-// Do the workspace switcher and the account menu open OVER a desk-hosted tour?
+// Is the real topbar drawn at all while a desk-hosted tour is up?
 //
-// Both hang DOWN off the topbar into exactly the area the tour covers, and the
-// numbers involved are not the declared ones: the overlay holding the tour is a
-// Wrapper, so it carries `data-state="open"`, and skin/lib/utils.scss lifts
-// anything with that to --z-index-context (50000) with !important. So a lift to
-// "one above 10010" loses silently, which is why this is measured against the
-// real cascade with elementFromPoint rather than reasoned about.
+// It is not. The tour is a full-screen walkthrough of a mock desk, and the bar
+// belongs to the desk underneath it — so `[data-desk-tour]` sets
+// `display: none` on it.
+//
+// TWO EARLIER ANSWERS TO THE SAME AREA are recorded here because the fixture
+// had to be rebuilt for each, and the rebuilds are the lesson:
+//
+//   1. The bar's menus were painted UNDER the tour, so the bar was lifted to
+//      100002. The numbers are not the declared ones — an open Wrapper carries
+//      `data-state="open"` and utils.scss lifts that to --z-index-context
+//      (50000), so a lift to 10011 loses silently.
+//   2. Then the bar had to stop answering clicks, so `__main` took
+//      `pointer-events: none`. That reached the two menus because both are
+//      built INSIDE `__main`.
+//
+// Both are moot now: a bar that is not rendered needs neither. What this
+// harness measures is that nothing of it is left — no box, no paint, no hit —
+// and that the tour takes the strip it vacates.
 //
 // Run:  node tests/harness/desk-tour-topbar.js
 const { execFileSync } = require("node:child_process");
@@ -88,35 +100,26 @@ const page = (stamped) => `<!doctype html><meta charset="utf-8">
 </div>
 <script>
   const bar = document.querySelector(".desk-module__topbar");
-  const box = (id) => { const r = document.getElementById(id).getBoundingClientRect();
+  const box = (id) => { const e = document.getElementById(id); if (!e) return null;
+    const r = e.getBoundingClientRect();
     return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }; };
   const at = (x, y) => { const e = document.elementFromPoint(x, y); return e ? e.className : null; };
-  const wm = box("wsmenu"), am = box("acct"), t = box("tour");
+  const cs = getComputedStyle(bar);
+  const t = box("tour");
   document.title = JSON.stringify({
     tour: t,
-    overlay: box("overlay") || null,
-    // The middle of each panel, and a point on the bar itself.
-    onWsMenu: at(wm.x + wm.w / 2, wm.y + wm.h / 2),
-    onAcctMenu: at(am.x + am.w / 2, am.y + am.h / 2),
-    onChip: at(box("chip").x + 5, box("chip").y + 10),
-    // And a point well inside the tour, clear of both panels.
-    onTour: at(640, 600),
-    // STILL LEGIBLE, and this has to be read off the computed style rather
-    // than off a hit test: pointer-events none takes the box out of
-    // hit-testing, so elementsFromPoint stops reporting it too and could not
-    // tell invisible from inert. (No backticks in here -- template literal.)
-    barPaint: (() => {
-      const cs = getComputedStyle(document.querySelector(".desk-module-topbar__main"));
-      // Concatenation, not a template literal: this whole page IS one, and an
-      // inner backtick closes it. Four separate SyntaxErrors this session came
-      // from exactly that.
-      return cs.display + " / visibility:" + cs.visibility
-        + " / opacity:" + cs.opacity + " / events:" + cs.pointerEvents;
-    })(),
+    barDisplay: cs.display,
+    // A display:none box has no geometry at all.
     barH: bar.offsetHeight,
-    // THE ROW UNDER THE BAR. With a literal 46px inset and a taller bar this
-    // is the real desk, which is the reported break.
-    justBelowBar: at(640, bar.offsetHeight + 2),
+    // Whatever is at the very top-left of the desk, where the bar used to be.
+    atTopLeft: at(40, 10),
+    // And well inside the tour.
+    onTour: at(640, 400),
+    // The two menus the earlier rounds were about: gone with their parent.
+    menus: [!!document.getElementById("wsmenu"), !!document.getElementById("acct")]
+      .join(",") + " present, offsetHeight "
+      + [document.getElementById("wsmenu").offsetHeight,
+         document.getElementById("acct").offsetHeight].join("/"),
   });
 </script>`.replace('box("overlay") || null', 'box("tour")');
 
@@ -132,38 +135,30 @@ for (const stamped of [false, true]) {
 
   const hit = (s, want) => new RegExp(want).test(s || "");
   console.log(`\n${stamped ? "WITH" : "WITHOUT"} data-desk-tour`);
-  console.log(`  tour box  ${d.tour.x},${d.tour.y} ${d.tour.w}x${d.tour.h}`);
-  console.log(`  ws-menu   -> ${d.onWsMenu}`);
-  console.log(`  account   -> ${d.onAcctMenu}`);
-  console.log(`  the chip  -> ${d.onChip}`);
-  console.log(`  the tour  -> ${d.onTour}`);
-  console.log(`  bar ${d.barH}px, the row under it -> ${d.justBelowBar}`);
-  console.log(`  __main computed: ${d.barPaint}`);
-  // WITH THE STAMP the bar is on top and INERT: elementFromPoint reports what
-  // paints, and pointer-events: none takes the box out of hit-testing — so a
-  // point over the bar answers with whatever is behind it. That is the whole
-  // pair of properties this block is for: visible, not clickable.
+  console.log(`  tour box   ${d.tour.x},${d.tour.y} ${d.tour.w}x${d.tour.h}`);
+  console.log(`  bar        display:${d.barDisplay}  offsetHeight:${d.barH}`);
+  console.log(`  top-left   -> ${d.atTopLeft}`);
+  console.log(`  the tour   -> ${d.onTour}`);
+  console.log(`  menus      ${d.menus}`);
   const checks = [
-    // The tour sits in the body either way — it always did, because its slot
-    // is a child of the body. What the stamp changes is what paints on top of
-    // it, and what answers a click.
-    ["the tour sits in the body, under the bar", d.tour.y === d.barH],
     stamped
-      ? ["the switcher panel does not answer a click", !hit(d.onWsMenu, "ws-menu")]
-      : ["the switcher panel is buried by the tour", hit(d.onWsMenu, "tutorial-main")],
+      ? ["the bar is not drawn", d.barDisplay === "none"]
+      : ["the bar is drawn", d.barDisplay !== "none"],
     stamped
-      ? ["the account menu does not answer a click", !hit(d.onAcctMenu, "account-menu")]
-      : ["the account menu is buried by the tour", hit(d.onAcctMenu, "tutorial-main")],
+      ? ["it occupies no space", d.barH === 0]
+      : ["it occupies its strip", d.barH > 0],
+    // The strip it vacates goes to __body, where the tour's own slot lives.
     stamped
-      ? ["nor does the bar itself", !hit(d.onChip, "ws-current")]
-      : ["the bar answered before the tour", hit(d.onChip, "ws-current|topbar")],
-    ["and the tour still takes its own clicks", hit(d.onTour, "tutorial-main")],
-    ["no desk showing under the bar", stamped ? hit(d.justBelowBar, "tutorial-main") : true],
-    // Inert, not hidden: the bar is lifted precisely so it stays readable.
-    ["the bar is still fully visible", /visibility:visible/.test(d.barPaint)
-      && /opacity:1/.test(d.barPaint) && !/display:none/.test(d.barPaint)],
-    ["events are off only with the stamp",
-     /events:(none)/.test(d.barPaint) === stamped],
+      ? ["the tour takes the whole height", d.tour.y === 0]
+      : ["the tour starts below the bar", d.tour.y > 0],
+    stamped
+      ? ["nothing of the bar answers at the top-left", !hit(d.atTopLeft, "topbar")]
+      : ["the bar answers there before the tour", hit(d.atTopLeft, "topbar")],
+    ["the tour still takes its own clicks", hit(d.onTour, "tutorial-main")],
+    // Both menus go with their parent — they are built inside __main.
+    stamped
+      ? ["and both menus are gone with it", /offsetHeight 0\/0/.test(d.menus)]
+      : ["the menus have boxes before the tour", !/offsetHeight 0\/0/.test(d.menus)],
   ];
   for (const [what, ok] of checks) console.log(`  ${ok ? "✓" : "✗"} ${what}`);
 }

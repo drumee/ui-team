@@ -595,49 +595,32 @@ html {
 // destroy. It is the DESK host (desk/tutorial) — the one that draws its own
 // rail and canvas — not the in-window one above.
 //
-// ONE RULE, and the two that used to be here were both wrong. The slot this
-// tour mounts into is a CHILD OF `__body`: desk/skeleton/index.js pushes the
-// `overlay` slot onto `bodyKids`. So it has always been confined to the body
-// area and has never covered the top bar. Insetting it — first by a literal
-// 46px, then by the bar's measured height — pushed the tour BELOW the body's
-// top instead, and what appeared in the gap was the real desk: its rail,
-// contributing a second logo above the tour's own, and the home grid's folder
-// art over the tour's top edge. Both were reported as broken UI and both were
-// self-inflicted.
+// THE REAL BAR IS NOT DRAWN AT ALL while that tour is up. The tour is a
+// full-screen walkthrough of a mock desk, and the bar belongs to the desk
+// underneath it: every use of it leads somewhere the tour is not — Settings,
+// another workspace, a section screen — and it has nothing to say about the
+// screens being explained.
 //
-// What was actually missing is only this. The bar's MENUS hang DOWN off it
-// into the body, which is where the tour is, so they were painted under it.
+// `display: none`, not `visibility: hidden`. `__topbar` is a flex child of
+// `__main`, so removing it hands its strip (and `__main`'s 8px gap) to
+// `__body`, which is where the tour's own slot lives — the tour gets the full
+// height instead of a blank band where the bar used to be. The window manager
+// watches its container with a ResizeObserver, so the reflow on the way back
+// out is the one it already handles.
+//
+// THIS REPLACES TWO EARLIER RULES, and both are moot rather than merely
+// removed: a lift to 100002 so the bar's menus painted over the tour, and
+// `pointer-events: none` on `__main` so nothing in it answered a click. A bar
+// that is not rendered needs neither. The workspace switcher and the account
+// menu are inside it (desk/skeleton/topbar.js builds both from `__main`), so
+// they are gone for the length of the tour too.
+//
+// The MOBILE bar is untouched: `__topbar[data-device="mobile"]` is already
+// `display: none` and the phone draws its own `__mobile-topbar`. Tours are
+// gated off mobile anyway (libs/tutorial-tours isMobile).
 .desk-module[data-desk-tour="1"] {
-  // 100002, the number the in-window block above uses, for the reason written
-  // out there: the overlay is a Wrapper, so holding the tour stamps
-  // `data-state="open"` on it and skin/lib/utils.scss lifts anything carrying
-  // that to `--z-index-context` (50000) with !important. A lift to 10011 loses
-  // to that silently.
-  //
-  // The rail is deliberately NOT lifted, unlike the in-window block: this tour
-  // draws its own, and lifting the real one would put two on screen.
   .desk-module__topbar {
-    z-index: 100002;
-  }
-
-  // AND NOTHING IN IT ANSWERS A CLICK. The tour draws its own desk and walks
-  // the user through it; the real bar underneath is scenery for the duration,
-  // and a click on it takes them somewhere the tour is not — Settings, another
-  // workspace, a section screen — with the tour still up over the result.
-  //
-  // ON `__main`, WHICH IS EVERYTHING: the breadcrumb, the folder tabs, "+ New",
-  // the utility cluster and the avatar, AND the workspace switcher's panel and
-  // the account menu, both of which are built inside it
-  // (desk/skeleton/topbar.js calls workspaceSwitcher from the left cluster).
-  // So neither can be opened during the tour. They keep the lift above, so a
-  // panel that was already open is not buried by the tour — it is simply not
-  // usable while the tour is up.
-  //
-  // Deliberately not `visibility: hidden` or an opacity: the bar stays fully
-  // legible, which is the point of lifting it in the first place. Only its
-  // events go.
-  .desk-module-topbar__main {
-    pointer-events: none;
+    display: none;
   }
 }
 
