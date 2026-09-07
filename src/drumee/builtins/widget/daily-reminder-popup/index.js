@@ -7,12 +7,14 @@
  * per device, which is a deliberate choice — a two-device user seeing it twice
  * is acceptable and it costs no schema.
  *
- * 🚨 [My calendar] IS DELIBERATELY NOT WIRED. There is no personal Calendar
- * to open yet. It is drawn exactly as designed and says so when clicked,
- * rather than being quietly omitted or silently doing nothing — a button that
- * looks live and is dead is how the Phase 2 Mute button sat shipped-but-inert
- * for a whole phase. A test pins this so it cannot reach a PR by accident;
- * when the Calendar exists, wire this ONE case and delete that test.
+ * [My calendar] opens the Personal Calendar. It was deliberately inert until
+ * 2026-09-07 because that screen did not exist yet; it does now, so the button
+ * dispatches the desk's own `toggle-calendar` — the exact service the left
+ * rail, the topbar utility cluster and the phone's go-to grid already fire.
+ * Going through the desk rather than mounting the panel here is what keeps the
+ * breadcrumb, the sidebar highlight, the mutual exclusion with Settings / Get
+ * help / Billing and the reload-restore all working: `toggle-calendar` is in
+ * desk `_RESTORABLE_SCREENS`, and none of that would follow a hand-rolled open.
  *
  * Discard and ✕ are the same action: close, write nothing. There is no
  * server-side "seen" state at all.
@@ -125,18 +127,25 @@ class __daily_reminder_popup extends LetcBox {
       case "daily-reminder-close":
         return this._close();
 
-      // 🚨 DELIBERATELY NOT WIRED — see the header. Do not "fix" this by
-      // routing it somewhere plausible; there is no personal Calendar yet and
-      // a wrong destination is worse than an honest notice.
+      // [My calendar] → the Personal Calendar. See the header for why this
+      // delegates instead of opening the panel itself.
       case "daily-reminder-calendar": {
-        // CLOSE FIRST, then raise the notice. Butler renders BEHIND this card,
-        // so saying it while the card is still up hides the message until the
-        // user dismisses the card — which reads as the button doing nothing.
-        // The message is captured before _close() because this widget may be
-        // destroyed by it.
-        const msg = LOCALE.DAILY_REMINDER_NO_CALENDAR;
+        // CLOSE FIRST, then open — the same ordering the notice needed, for a
+        // different reason: this card lives in `Wm.__wrapperModal`, which sits
+        // ABOVE the settings-main-slot the calendar mounts into, so leaving it
+        // up would bury the screen the click just asked for.
+        //
+        // Not merely relying on togglePanel's own _dismissWmModal() to sweep
+        // the card away: that would work today, but it makes this button's
+        // behaviour a side effect of someone else's cleanup. Closing here is
+        // the same explicit close Discard and ✕ already use.
         this._close();
-        if (typeof Butler !== "undefined" && Butler.say) Butler.say(msg);
+        // `service` is passed in args, so Desk.onUiEvent never dereferences
+        // `cmd` — which matters because _close() above may already have
+        // destroyed this widget and the button inside it.
+        if (window.Desk && _.isFunction(Desk.onUiEvent)) {
+          Desk.onUiEvent(cmd, { service: "toggle-calendar" });
+        }
         return;
       }
     }
