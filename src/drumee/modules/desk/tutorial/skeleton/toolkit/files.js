@@ -411,7 +411,11 @@ function chatPlaceholder(ui) {
           Skeletons.Note({ active: 0, className: `${p}-chat-title`, content: LOCALE.FOLDER_SCOPED_CHAT }),
           Skeletons.Box.X({ active: 0,
             className: `${p}-chat-head-tools`,
-            kids: ["apps-dots-vertical", "magnifying-glass", "caret-right"].map((ico) =>
+            // The frame's three: the kebab, search, and the collapse chevron.
+            // `app-search` and `app-circle-arrow-right` are the app's own
+            // symbols for the second and third, rather than the generic
+            // magnifier and bare caret this stood in with.
+            kids: ["apps-dots-vertical", "app-search", "app-circle-arrow-right"].map((ico) =>
               Skeletons.Box.Y({ active: 0,
                 className: `${p}-chat-head-btn`,
                 kids: [Skeletons.Image.Svg({ active: 0, ico, className: `${p}-chat-head-ico` })],

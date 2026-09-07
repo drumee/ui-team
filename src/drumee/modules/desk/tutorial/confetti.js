@@ -8,11 +8,14 @@
  * arrival rather than to the tour that ended, so it is raised by the host that
  * is on screen when it plays.
  *
- * NO FLAG. It used to ride in on a `celebrate` model attribute passed from the
- * tour that handed over, threaded through the broadcast and buildStepWidgets
- * to reach the step. The host it runs in is the condition now — nothing else
- * mounts the migrate tour in a window — so the attribute, its propagation and
- * the step's hook are all gone.
+ * RAISED ONLY BY THE HAND-OFF. `celebrate` is set on showTutorial's opt by
+ * _chainMigrateTour and by nothing else, so this fires when a workspace has
+ * just been made, opened and confirmed on screen — and not when the same tour
+ * is raised from the rail's Files button, which is an ordinary Tuesday.
+ *
+ * That flag was briefly removed, on the reasoning that the in-window host was
+ * itself the condition because nothing else mounted this tour there. True when
+ * it was written; the rail trigger made it false.
  *
  * The MODULE-LEVEL confetti(), not create(). create() binds to a canvas the
  * caller owns; the global one appends its own fixed, pointer-events:none

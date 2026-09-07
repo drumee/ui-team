@@ -409,6 +409,17 @@ const _desk_main = function (ui) {
               sys_pn: "home-empty-slot",
               className: `${ui.fig.family}__home-empty-slot`,
             }),
+            // Host for the curtain a rail tour comes up behind
+            // (desk/tour-intro), fed by _railTabWithTour.
+            //
+            // Beside home-empty-slot for the same reason it is beside the
+            // window manager: both are "do not show the window right now", and
+            // the WM never has to be torn down and rebuilt to enter or leave
+            // either state.
+            Skeletons.Box.Y({
+              sys_pn: "tour-intro-slot",
+              className: `${ui.fig.family}__tour-intro-slot`,
+            }),
           ],
         }),
       ],

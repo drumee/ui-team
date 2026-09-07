@@ -4075,6 +4075,79 @@ class desk_module extends LetcBox {
    * its own default tab, which beats landing on a screen we no longer ship.
    */
   /**
+   * Offer the migrate tour on an ordinary boot.
+   *
+   * A refresh restores a workspace and lands on Files — the same surface the
+   * rail's Files button leads to, and the one this tour is about. Without this
+   * the tour was reachable only by pressing a rail item the user was already
+   * looking at the result of.
+   *
+   * IT STANDS DOWN FOR THE POST-ONBOARDING CHAIN, and that guard is load-
+   * bearing rather than tidy. The workspace tour hands over to migrate from its
+   * own destroy handler (desk/tutorial, _chainMigrateTour), and this method runs
+   * from _afterHomeSettled — which is an EARLIER handler on that same destroy.
+   * Claiming here first would make the hand-off's showTutorial return false, so
+   * the tour would still run but arrive without `celebrate`, and the confetti
+   * that belongs to a workspace just created would be lost. The chain owns that
+   * moment; this is for every other boot.
+   *
+   * A URL tour also wins: `?window_tutorial=` is a person asking by name.
+   *
+   * Everything else is the seen-set's answer, as ever. `migrate` is
+   * `mark_on: "success"`, so it keeps being offered until a folder is created,
+   * files are uploaded, or the last step is reached — which is what makes this
+   * "in case the user is not done" rather than "once".
+   *
+   * @returns {Promise<Boolean>} whether the tour was asked for
+   */
+  async _maybeRunBootTour() {
+    if (this._tutorialWasAutomatic) return false;
+    if (require("libs/window-tutorial-intent").has()) return false;
+    // ASKED BEFORE ANYTHING IS SHOWN, and this is what makes the curtain
+    // possible at all. `offerable` applies every gate a claim would except
+    // single-flight, and takes no lock — so a user who has finished the tour
+    // returns here having seen nothing, and the workspace they refreshed into
+    // is never covered by a curtain for a tour that was not going to run.
+    if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
+    try {
+      // THE CURTAIN GOES UP FIRST, before either wait below.
+      //
+      // It used to be raised after them, which is the whole of the reported
+      // fault: _awaitRestoreSettled and _awaitRailWorkspace are where the time
+      // goes on a boot, so window-manager__main rendered, sat there being read,
+      // and only then was covered. Raised here it is what the restore finishes
+      // behind.
+      this._showTourCurtain();
+      // The same wait the URL hook documents at length: the restore clears its
+      // flag on a TIMER, not when the pane arrives, so a workspace has to be
+      // watched for rather than asked about once.
+      await this._awaitRestoreSettled();
+      const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 3000);
+      if (!ws || (this.isDestroyed && this.isDestroyed())) {
+        this._hideTourCurtain();
+        return false;
+      }
+      if (await this._raiseRailTour("migrate")) {
+        // The curtain has no tab switch to wait for here, but it still needs
+        // the same safety the rail path has: a tour that is claimed and then
+        // never mounts — no window, a chunk that fails — registers no destroy
+        // handler, and that handler is otherwise the only thing that clears
+        // the stamp. whenDone runs on the release, which that path does reach.
+        require("libs/tutorial-tours").whenDone("migrate", () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this._hideTourCurtain();
+        });
+        return true;
+      }
+      this._hideTourCurtain();
+      return false;
+    } catch (e) {
+      this._hideTourCurtain();
+      return false;
+    }
+  }
+
+  /**
    * Resolve once no tour holds single-flight.
    *
    * A rail click ENDS the tour that is up (_railTab -> _endWindowTour) and may
@@ -4120,9 +4193,19 @@ class desk_module extends LetcBox {
    */
   async _mountWindowTourFor(tour, opt = {}) {
     const Tours = require("libs/tutorial-tours");
+    // The workspace this tour was asked for, by _endWindowTourOnSwitch's count.
+    // The poll below is up to 3s long and the switcher is reachable throughout
+    // it — under the curtain as much as under a mounted tour — so without this
+    // a tour asked for on one workspace could arrive on another, which is the
+    // same wrong-window fault one hop earlier.
+    const seq = this._wsSwitch || 0;
     try {
       const ws = await this._awaitRailWorkspace(3000);
       if (this.isDestroyed && this.isDestroyed()) return false;
+      if ((this._wsSwitch || 0) !== seq) {
+        Tours.release(tour);
+        return false;
+      }
       if (!ws || !this.mountWindowTutorial(ws, tour, opt)) {
         Tours.release(tour);
         return false;
@@ -4151,6 +4234,116 @@ class desk_module extends LetcBox {
     await this._whenToursIdle();
     if (this.isDestroyed && this.isDestroyed()) return false;
     return require("libs/tutorial-tours").fire(tour, this);
+  }
+
+  /**
+   * Show a rail tab — but let its tour go FIRST.
+   *
+   * THE ORDER WAS THE OTHER WAY ROUND, deliberately: every rail case called
+   * _railTab and only then asked for the tour, so "the tour can never swallow
+   * the navigation the user asked for". The cost of that is what this fixes.
+   * _railTab is SYNCHRONOUS and the tour is several async hops behind it — a
+   * claim, a broadcast, a poll for the workspace, a mount — so pressing Files
+   * drew window-folder__split-body, and the migrate tour then appeared on top
+   * of the pane it exists to introduce. The user watched the answer before the
+   * question.
+   *
+   * So the tab now follows the tour down. What still happens IMMEDIATELY is
+   * everything the tour itself needs:
+   *
+   *   the section screen  goes at once — a tour drawn over Settings would be
+   *                       teaching a pane that is not on screen.
+   *   a window            has to exist, because an in-window tour is drawn ON
+   *                       one. Opening a workspace is not the same as switching
+   *                       its tab, and only the second waits.
+   *   any other tour      is ended here rather than inside the deferred
+   *                       _railTab, or pressing Chat during the Files tour
+   *                       would leave the first one up while the second was
+   *                       refused for single-flight.
+   *
+   * And when no tour is raised — already completed, mobile, the kill switch —
+   * the tab shows immediately, which is every press after the walkthrough.
+   *
+   * @param {String} tab  the rail tab pressed
+   * @param {String} tour the tour that tab is about
+   * @returns {Promise}
+   */
+  async _railTabWithTour(tab, tour) {
+    const w = this._railWorkspace();
+    this._leaveSectionScreen(w);
+    this._endWindowTourUnlessAbout(tab);
+    // THE CURTAIN GOES UP ON THE CLICK, not when the tour mounts.
+    //
+    // The stamp that reveals it is the same one mountWindowTutorial sets, but
+    // that happens several async hops later — a claim, a broadcast, a poll for
+    // the workspace, a mount — and the gap is exactly what the user sees: the
+    // pane they came FROM, sitting there while the tour they asked for is on
+    // its way.
+    //
+    // Only when the tour could actually run. `offerable` is every gate a claim
+    // applies except single-flight, without taking one, so a user who finished
+    // this tour long ago gets their tab with no curtain flashing over it — and
+    // that is every press after the walkthrough.
+    const offerable = require("libs/tutorial-tours").offerable(tour, this);
+    if (offerable) this._showTourCurtain();
+    if (!w) await this._openDefaultWorkspace();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // Read AFTER the open above, which is this method's own doing and not a
+    // switch. From here on a change means the user chose another workspace
+    // while the tour was up — see the deferred _railTab below.
+    const seq = this._wsSwitch || 0;
+    if (!offerable || !(await this._raiseRailTour(tour))) {
+      // Nothing was raised — already completed, mobile, the kill switch, or
+      // another tour holding single-flight. The tab shows at once.
+      this._hideTourCurtain();
+      return this._railTab(tab);
+    }
+    require("libs/tutorial-tours").whenDone(tour, () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      // THE TAB FIRST, THEN THE CURTAIN. Switching underneath means what is
+      // revealed is already the pane the user asked for; lifting first would
+      // show the old one for a frame, which is the fault this screen exists to
+      // hide, in miniature.
+      //
+      // UNLESS THE USER LEFT. Ending the tour by picking another workspace
+      // runs this callback too (the release is the release), and _railTab
+      // would then flip the workspace they just arrived in to the tab of the
+      // tour they walked out of — half a second after _switchWorkspace put the
+      // rail back on Files. The tab belonged to the workspace that is gone.
+      if ((this._wsSwitch || 0) === seq) this._railTab(tab);
+      // Cleared HERE as well as on the tour's destroy, and that is not
+      // belt-and-braces: a tour that is claimed and then never mounts — no
+      // window to draw on, a chunk that fails — registers no destroy handler
+      // at all, so this is the only thing that would ever take the curtain
+      // down. `whenDone` runs on the release, which that path does reach.
+      this._hideTourCurtain();
+    });
+  }
+
+  /**
+   * Cover the work area while a rail tour is coming up.
+   *
+   * The curtain (desk/tour-intro) and the tour share ONE piece of state: the
+   * `data-window-tour` stamp on the desk root, which the skin keys on. So there
+   * is no way for the curtain to outlive the tour — every exit a tour has,
+   * including one that never mounts, clears the stamp through the same handler
+   * (onPartReady "window-tutorial") or through _hideTourCurtain here.
+   *
+   * Fed once and kept: the screen is static, and re-feeding it on every rail
+   * press would replay its mount for no gain.
+   */
+  _showTourCurtain() {
+    if (this.el && this.el.dataset) this.el.dataset.windowTour = "1";
+    this.ensurePart("tour-intro-slot").then((p) => {
+      if (!p || (p.isDestroyed && p.isDestroyed())) return;
+      if (p.children && p.children.length) return;
+      p.feed({ kind: "desk_tour_intro" });
+    });
+  }
+
+  /** Take it down. Cheap and idempotent — the stamp is the whole mechanism. */
+  _hideTourCurtain() {
+    if (this.el && this.el.dataset) delete this.el.dataset.windowTour;
   }
 
   /**
@@ -4206,6 +4399,121 @@ class desk_module extends LetcBox {
       : null;
     if (running && WINDOW_TOUR_TAB[running] === tab) return false;
     return this._endWindowTour();
+  }
+
+  /**
+   * End an in-window tour when the switcher sends the user to another
+   * workspace.
+   *
+   * A TOUR IS DRAWN ON A WINDOW, and a switcher row replaces that window. The
+   * rail already knows this (_railTab -> _endWindowTourUnlessAbout) but the
+   * switcher did not, and it is reachable from under a running tour: the tour
+   * covers the work area at z 50000, while the topbar was lifted clear of the
+   * same overlay and sits above it. So the row could be pressed, the workspace
+   * really did change, and the tour stayed painted over the pane of the
+   * workspace the user had just left — showing a mock of the wrong window.
+   *
+   * IT IS NOT COMPLETION. _endWindowTour goes through softDestroy, and only
+   * _markDone in the host records the flag (every window tour is
+   * `mark_on: "success"`), so a tour cut short this way stays armed and is
+   * offered again — the same treatment Escape and the rail get. Walking away
+   * from a lesson is not finishing it.
+   *
+   * NOT WHEN THE ROW IS THE OPEN WORKSPACE. Re-picking it makes loadWorkspace
+   * an early return that merely raises the pane — the tour's own window, still
+   * the one it is about — so there is nothing to leave. Same test, by the same
+   * key, that _switchWorkspace uses to decide whether the rail resets.
+   *
+   * `_wsSwitch` counts the real ones, for the two places that have already
+   * committed to a workspace and finish asynchronously (_mountWindowTourFor
+   * and _railTabWithTour's deferred tab). They compare the count rather than
+   * ask the window manager, because during a switch its `_curWorkspace` is
+   * mid-flight and answers for neither workspace reliably.
+   *
+   * @param {String} wsKey the row pressed, by _workspaceKey
+   * @returns {Boolean} whether a tour was taken down
+   */
+  _endWindowTourOnSwitch(wsKey) {
+    if (!this._leavesWorkspace(wsKey)) return false;
+    this._wsSwitch = (this._wsSwitch || 0) + 1;
+    return this._endWindowTour();
+  }
+
+  /**
+   * Does this switcher row go somewhere else?
+   *
+   * Re-picking the workspace that is already open makes loadWorkspace an early
+   * return that merely raises the pane — nothing is left and nothing arrives —
+   * so neither the tour that is up nor the tour that would be offered has any
+   * business reacting to it. By the same key the rows are marked `data-current`
+   * with, which is also the key _switchWorkspace resets the rail on.
+   *
+   * @param {String} wsKey the row pressed
+   * @returns {Boolean}
+   */
+  _leavesWorkspace(wsKey) {
+    if (!wsKey) return false;
+    const cur = this._workspaceKey(window.Wm && window.Wm._curWorkspace);
+    return !cur || cur !== wsKey;
+  }
+
+  /**
+   * SWITCHER ROW -> OPEN THAT WORKSPACE, AND OFFER THE TOUR IT LANDS ON.
+   *
+   * A switch always arrives on Files (_switchWorkspace -> _resetRailToFiles),
+   * and Files is what the migrate tour is about — so this is the same moment
+   * the rail's Files button offers it (_railTabWithTour) and the same moment a
+   * refresh does (_maybeRunBootTour), reached by a third gesture. A user who
+   * has not been shown how to get files into a workspace has not been shown it
+   * in the workspace they just opened either.
+   *
+   * ONLY FROM THE SWITCHER. _switchWorkspace itself is left alone because
+   * _openCreatedWorkspace goes through it: the workspace tour creates a
+   * workspace, opens it that way, and then chains the migrate tour ITSELF with
+   * `celebrate` set (_chainMigrateTour). Offering from inside _switchWorkspace
+   * would race that chain for single-flight, and the copy that won would be
+   * this one — the walkthrough's confetti would vanish, on the one arrival it
+   * is for.
+   *
+   * The curtain goes up on the CLICK for the reason _railTabWithTour writes out
+   * at length: the tour is several async hops behind the pane, and the gap is
+   * what the user reads. Only when the tour could actually run, so a user who
+   * finished it long ago switches workspace with nothing flashing over it.
+   *
+   * @param {String} wsKey the row pressed
+   * @returns {Promise}
+   */
+  async _switchWorkspaceAndOffer(wsKey) {
+    // Not a switch — hand straight over, no tour, no curtain.
+    if (!this._leavesWorkspace(wsKey)) return this._switchWorkspace(wsKey);
+    const Tours = require("libs/tutorial-tours");
+    // BEFORE the switch: the pane a running tour is painted on is about to be
+    // replaced underneath it. Ends it WITHOUT recording it — see
+    // _endWindowTourOnSwitch.
+    this._endWindowTourOnSwitch(wsKey);
+    const offerable = Tours.offerable("migrate", this);
+    if (offerable) this._showTourCurtain();
+    await this._switchWorkspace(wsKey);
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!offerable) return;
+    // DID IT ACTUALLY GO? _switchWorkspace declines silently when the row is
+    // not in the list any more — deleted from another tab, or a stale menu —
+    // and a curtain over the pane the user is still standing on would hide the
+    // app for a tour with nothing to draw on. loadWorkspace overwrites
+    // _curWorkspace on its way in, which is what makes this readable here.
+    if (this._workspaceKey(window.Wm && window.Wm._curWorkspace) !== wsKey) {
+      return this._hideTourCurtain();
+    }
+    // _raiseRailTour, not fire(): the tour just ended fades for 0.5s and only
+    // its destroy releases single-flight, so asking on the spot is refused in
+    // silence. And the curtain comes down on the release either way — a tour
+    // that is claimed and never mounts registers no destroy handler, so
+    // whenDone is the only thing left holding it.
+    if (!(await this._raiseRailTour("migrate"))) return this._hideTourCurtain();
+    Tours.whenDone("migrate", () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._hideTourCurtain();
+    });
   }
 
   _railTab(tab) {
@@ -6121,6 +6429,10 @@ class desk_module extends LetcBox {
     // LAUNCH30 flows rather than underneath them. A no-op unless the router
     // armed one.
     this._maybeRunWindowTutorial();
+    // An ordinary boot lands on a workspace's Files tab, which is the surface
+    // the migrate tour is about — so offer it there too, not only on a rail
+    // press. Declines for almost every session; see the method.
+    this._maybeRunBootTour();
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
@@ -7340,7 +7652,11 @@ class desk_module extends LetcBox {
       // onUiEvent is not async, so the lookup is chained rather than awaited.
       // _fetchWorkspaces is cached, so this resolves immediately in practice.
       case "switch-workspace":
-        return this._switchWorkspace(cmd.mget("wsKey"));
+        // NOT _switchWorkspace directly: a switcher row both ENDS the tour
+        // drawn on the workspace being left and OFFERS the one the workspace
+        // it opens begins on. See _switchWorkspaceAndOffer for why only this
+        // gesture does the second half.
+        return this._switchWorkspaceAndOffer(cmd.mget("wsKey"));
 
       // ── Workspace rail (Figma 43:23955) ────────────────────────────────
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
@@ -7357,20 +7673,16 @@ class desk_module extends LetcBox {
       // rather than on a rail press it may not make for days — and pressing
       // Files stays a navigation, not a full-screen interruption.
       case "rail-files": {
-        const _res = this._railTab("files");
         // Contextual tour, on a press of Files in the rail — the gesture this
         // tour is actually about, and the one place a user with an empty
         // workspace goes looking for somewhere to put their files.
         //
-        // AFTER _railTab, never before, so the tour can never swallow the
-        // navigation the user asked for — the same ordering rail-chat,
-        // rail-task and rail-meet use. Un-awaited for the same reason: the
-        // click has already been answered.
-        this._raiseRailTour("migrate");
-        return _res;
+        // BEFORE the tab, not after — see _railTabWithTour. The Files pane
+        // this tour introduces used to render first, and the tour then
+        // appeared on top of it.
+        return this._railTabWithTour("files", "migrate");
       }
       case "rail-chat": {
-        const _res = this._railTab(_a.chat);
         // Contextual tour, on the first press of Chat in the rail.
         //
         // `chat` has described itself as "fired the first time someone opens a
@@ -7380,12 +7692,10 @@ class desk_module extends LetcBox {
         // about threads never ran for anyone who did not ask for the whole
         // product tour — exactly the gap rail-meet was added to close.
         //
-        // Raised AFTER showFolderTab so the tour can never swallow the
-        // navigation the user asked for — the same ordering rail-task and
-        // rail-meet use. Nothing is remembered here: the kill switch, the
-        // mobile check, the once-ever seen-set and single-flight all live in
-        // libs/tutorial-tours, so a fourth trigger surface can neither
-        // duplicate nor lose the gate.
+        // BEFORE the tab, not after — see _railTabWithTour. Nothing is
+        // remembered here: the kill switch, the mobile check, the once-ever
+        // seen-set and single-flight all live in libs/tutorial-tours, so a
+        // fourth trigger surface can neither duplicate nor lose the gate.
         //
         // IN THE WINDOW now, not on the desk. This tour is about a workspace's
         // threads, so it is drawn over the real chat pane the click just
@@ -7398,11 +7708,9 @@ class desk_module extends LetcBox {
         // on the home grid — it is drawn on a window or not at all — and if
         // that fallback did open a workspace, the chat pane is exactly what the
         // user is now looking at.
-        this._raiseRailTour(_a.chat);
-        return _res;
+        return this._railTabWithTour(_a.chat, _a.chat);
       }
       case "rail-task": {
-        const _res = this._railTab(_a.task);
         // Contextual tour, on the first press of Task in the rail.
         //
         // This is the gesture the tour is actually about — five tracker views
@@ -7411,11 +7719,10 @@ class desk_module extends LetcBox {
         // only infer an interest in tasks from having opened a folder, so a
         // user who went straight to the rail would never have seen it.
         //
-        // Raised AFTER showFolderTab so the tour can never swallow the
-        // navigation the user asked for — the same ordering those two use.
-        // Nothing is remembered here: the kill switch, the mobile check, the
-        // once-ever seen-set and single-flight all live in libs/tutorial-tours,
-        // so a fourth entry point can neither duplicate nor lose the gate.
+        // BEFORE the tab, not after — see _railTabWithTour. Nothing is
+        // remembered here: the kill switch, the mobile check, the once-ever
+        // seen-set and single-flight all live in libs/tutorial-tours, so a
+        // fourth entry point can neither duplicate nor lose the gate.
         //
         // IN THE WINDOW now, not on the desk. This tour ends by opening the
         // panel's real New task form, which only the in-window host can reach
@@ -7434,19 +7741,17 @@ class desk_module extends LetcBox {
         // is written when — and only when — "Create your first task" is
         // pressed. Until then the claim keeps succeeding and the rail keeps
         // offering it.
-        this._raiseRailTour("folder_task");
-        return _res;
+        return this._railTabWithTour(_a.task, "folder_task");
       }
       case "rail-meet": {
-        const _res = this._railTab("meeting");
         // Contextual tour, on a press of Meet in the rail — the gesture this
         // tour is about, and until recently the only one it had: `meeting` was
         // reachable from the full product tour alone.
         //
-        // Raised AFTER showFolderTab so the tour can never swallow the
-        // navigation. Nothing is remembered here: the kill switch, the mobile
-        // check, the account-scoped once-ever seen-set and single-flight all
-        // live in libs/tutorial-tours — and the seen-set is the whole answer to
+        // BEFORE the tab, not after — see _railTabWithTour. Nothing is
+        // remembered here: the kill switch, the mobile check, the
+        // account-scoped once-ever seen-set and single-flight all live in
+        // libs/tutorial-tours — and the seen-set is the whole answer to
         // "has the user finished with it". This tour is `mark_on: "success"`
         // with one way forward, so its flag is written when, and only when,
         // "Schedule your first meeting" is pressed.
@@ -7457,8 +7762,7 @@ class desk_module extends LetcBox {
         // the user is not on". An in-window tour cannot land on the home grid —
         // it is drawn on a window or not at all — and _onTourTrigger is what
         // routes this one there.
-        this._raiseRailTour("meeting");
-        return _res;
+        return this._railTabWithTour("meeting", "meeting");
       }
       // The rail's Access and the switcher header's link icon do the identical
       // thing — hand `folder-manage-access` to the active workspace window,
