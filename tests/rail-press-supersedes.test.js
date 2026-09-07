@@ -379,3 +379,80 @@ test("the create and invite screens raise no callout", () => {
     }
   }
 });
+
+// ── the invite card names its workspace the way the topbar does ─────────────
+
+test("the invite blurb draws the workspace as a breadcrumb crumb", () => {
+  const { installGlobals, installResolver } = require("./helpers/render-skeleton.js");
+  const { find } = require("./helpers/render-skeleton.js");
+  const rg = installGlobals();
+  const rr = installResolver();
+  let named;
+  let unnamed;
+  try {
+    // A REAL TEMPLATE. The default stub answers every key with its own name,
+    // and the name has no `{0}` in it — so the split-and-join would find
+    // nothing, the crumb would never appear, and this test would pass on a
+    // string that cannot work.
+    const keys = { TUTORIAL_INVITE_BLURB_NAMED: "Don't work alone in {0} — collaborate now!" };
+    global.LOCALE = new Proxy(keys, { get: (t, k) => (k in t ? t[k] : String(k)) });
+    for (const k of Object.keys(require.cache)) if (/tutorial/.test(k)) delete require.cache[k];
+    const { inviteScreen } = require(join(__dirname, "..",
+      "src/drumee/modules/desk/tutorial/skeleton/toolkit/invite.js"));
+    const ui = { fig: { family: "tutorial-workspace", group: "tutorial" }, mget: () => null };
+    // A name with markup in it, because this one is USER INPUT — whatever they
+    // typed into the create dialog one screen earlier.
+    named = inviteScreen(ui, { filename: "R&D <team>", area: "private", hub_id: 7 });
+    unnamed = inviteScreen(ui, {});
+  } finally { rr(); rg(); }
+
+  const blurb = find(named, "tutorial__inv-blurb");
+  assert.ok(blurb, "no blurb");
+  // An Element, because a Note renders its content as TEXT and the crumb would
+  // appear as its own markup.
+  assert.equal(blurb.__kind, "element");
+  assert.match(blurb.content, /tutorial__inv-crumb\b/, "no crumb in the sentence");
+  assert.match(blurb.content, /tutorial__inv-crumb-icon/);
+  assert.match(blurb.content, /tutorial__inv-crumb-name/);
+  // INLINE, so the sentence stays a sentence: the copy's `{0}` is mid-string,
+  // and there has to be text on both sides of the chip.
+  const [before, after] = blurb.content.split('<span class="tutorial__inv-crumb"');
+  assert.ok(before.trim().length > 0, "nothing before the crumb");
+  assert.ok(/\w/.test(after.split("</span>").pop()), "nothing after it");
+
+  // ESCAPED. Raw interpolation would put the user's typing into the page as
+  // markup.
+  assert.match(blurb.content, /R&amp;D &lt;team&gt;/, "the name is not escaped");
+  assert.ok(!/R&D <team>/.test(blurb.content));
+
+  // With no workspace to name, the copy is a plain sentence and a Note is right.
+  const plain = find(unnamed, "tutorial__inv-blurb");
+  assert.equal(plain.__kind, "note");
+  assert.ok(!/inv-crumb/.test(String(plain.content)));
+
+  // AND THE SHIPPED STRING STILL HAS THE SLOT. Without `{0}` the crumb has
+  // nowhere to go and the card silently loses it, in every locale.
+  for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
+    const d = JSON.parse(readFileSync(join(__dirname, "..", `locale/${lang}.json`), "utf8"));
+    assert.match(d.TUTORIAL_INVITE_BLURB_NAMED, /\{0\}/,
+      `${lang}'s named blurb has no slot for the workspace`);
+  }
+
+  const sass = (e) => execFileSync("sass",
+    ["-I", ".", "-I", "skin", "--no-source-map", e],
+    { cwd: join(__dirname, "..", "src/drumee"), encoding: "utf8", maxBuffer: 1 << 26 });
+  const css = sass("modules/desk/tutorial/skin/index.scss");
+  // Prose, not a flex row — the same trap `tutorial-chat__msg-text` fell into.
+  assert.match(css, /\.tutorial__inv-blurb \{[^}]*display: block !important/);
+
+  // ONE WORKSPACE, ONE COLOUR. The tints and the shape box are the
+  // breadcrumb's own numbers, so a workspace looks like itself in both places.
+  const crumbCss = sass("modules/desk/breadcrumb/item/skin/index.scss");
+  const tints = (s) => (s.match(/fill: var\(--area-[a-z]+\)/g) || []).sort();
+  const mine = tints(css.slice(css.indexOf(".tutorial__inv-crumb-icon")));
+  assert.ok(mine.length >= 4, `expected the four area tints, saw ${mine}`);
+  for (const t of tints(crumbCss)) {
+    assert.ok(mine.includes(t), `${t} is in the breadcrumb but not the crumb`);
+  }
+  assert.match(css, /\.tutorial__inv-crumb-icon \{[^}]*width: 20px/);
+});

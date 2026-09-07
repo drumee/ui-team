@@ -65,9 +65,104 @@
   }
 
   &__inv-blurb {
+    // PROSE, NOT A FLEX ROW. With a workspace to name this is an Element
+    // carrying markup — the inline crumb sits mid-sentence — and ui-core
+    // renders Element through its `wrapper` kind, which lands on
+    // `.box[data-flow]`: a flex ROW. The runs either side of the chip would
+    // become flex ITEMS and lay the sentence out as three narrow columns.
+    //
+    // `!important` because what it cancels is `.box[data-flow="x"]` in
+    // skin/lib/container.scss — a class AND an attribute, which a single class
+    // cannot outweigh. Same rule and same reason as `tutorial-chat__msg-text`.
+    display: block !important;
     @include drumee.typo($size: 16px, $line: 1.2);
     font-weight: 400;
     color: var(--normal-fg-20);
+  }
+
+  // ── The workspace, as the breadcrumb draws it ─────────────────────────────
+  //
+  // Geometry taken from desk/breadcrumb/item/skin: a 20px icon box holding a
+  // 20x16 shape, 6px to the name. Inline-flex so the chip sits ON the text
+  // baseline inside the sentence rather than breaking it.
+  &__inv-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    vertical-align: baseline;
+    // The name is the subject of the sentence, so it takes the body ink while
+    // the copy around it stays Grey/20.
+    color: var(--normal-fg);
+  }
+
+  &__inv-crumb-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
+    // Nudged so the 20px box centres on the 16px line box of the copy beside
+    // it instead of sitting on the baseline.
+    vertical-align: -5px;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 20px;
+      height: 16px;
+    }
+
+    // The area tints, byte-identical to the breadcrumb's — one workspace, one
+    // colour, wherever it is named.
+    .folder-shape {
+      width: 20px;
+      height: 16px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder {
+        fill: var(--area-personal);
+      }
+      &.public {
+        fill: var(--area-public);
+      }
+      &.share,
+      &.dmz {
+        fill: var(--area-share);
+      }
+      &.private {
+        fill: var(--area-private);
+      }
+    }
+
+    // The area badge rides the folder body; at 20px it would otherwise sit
+    // outside the shape.
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      color: var(--grid-color-folder-badge);
+    }
+  }
+
+  &__inv-crumb-name {
+    font-weight: 600;
+    color: var(--normal-fg);
+    // A workspace name can be long, and this one is inside a sentence.
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
   }
 
   // 52x43 in the frame; the sprite's mark is the same shape at 32x27.
