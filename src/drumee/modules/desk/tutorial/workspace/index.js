@@ -102,28 +102,32 @@ const SCREENS = [
   {
     // Every section at full strength, because there is no longer one being
     // taught: the user is filling it in.
+    //
+    // AND NO CALLOUT. Five screens have just explained this dialog field by
+    // field; a sixth card beside the filled-in version of it is the tour
+    // talking over the thing it spent those five screens introducing. The
+    // dialog carries Create, which is the only way forward this screen has.
     live: true,
+    bare: true,
     target: 'wsd-dialog',
     anchor: 'wsd-dialog',
     direction: 'west',
-    text: () => LOCALE.TUTORIAL_WS_NOW_CREATE,
   },
   {
-    // Its own sentence. It used to raise no callout at all, which — with
-    // feed(null) being a no-op in ui-core — meant it inherited the create
-    // screen's card and told the user to make a workspace they had just made.
+    // NO CALLOUT HERE EITHER, and `bare` is what says so rather than the
+    // absence of `text`. Leaving the text off is not the same thing: feed(null)
+    // is a no-op in ui-core, so a screen that raises nothing INHERITS the
+    // previous screen's card — which is how this one once ended up telling the
+    // user to create a workspace they had just created. `bare` makes focus()
+    // feed the callout null, which clears it.
     //
-    // Except on the personal card, which says "You can't invite member to
-    // personal workspace!" and needs nothing beside it saying otherwise — a
-    // case the dialog can no longer reach, since it stopped offering that type.
-    // The guard stays: the type comes back from libs/create-workspace, which
-    // still has it, and this table cannot see what came back anyway. It is
-    // dropped in _showScreen where `_created` is.
+    // The card itself carries Send and Skip, so nothing is lost by going
+    // quiet: it is already a complete screen with its own two ways out.
     invite: true,
+    bare: true,
     target: 'inv-card',
     anchor: 'inv-card',
     direction: 'west',
-    text: () => LOCALE.TUTORIAL_INVITE_CALLOUT,
   },
 ];
 
@@ -198,19 +202,13 @@ class __tutorial_workspace extends LetcBox {
     // Deliberately no dashes anywhere here: the design leaves this tour
     // uncounted. `hide_back` comes from the tour, so it reads correctly both
     // standing alone and as step one of `full`.
-    // A screen the user FILLS IN keeps its number and its Back, and loses only
-    // Next: the form has Create and the invite card has Send and Skip, so a
-    // Next beside either is a second way forward that skips what is being
-    // asked for. Back is the one thing those screens do not offer themselves.
+    // THIS CHROME ONLY EVER REACHES THE DIALOG SCREENS NOW. Both live screens
+    // are `bare`, so the tooltip below is null for them and none of these
+    // flags is read. `live` is kept because the flags stay correct if one of
+    // them is ever given a card again: a screen the user fills in has its own
+    // way forward — Create on the form, Send and Skip on the invite card — so
+    // a Next beside either would be a second one that skips what is asked for.
     const live = !!(s.live || s.invite);
-    // The personal card is already a full sentence explaining itself, and a
-    // callout beside it would be a second one. Only that variant: the invite
-    // card has room for a caption and wants one.
-    //
-    // Unreachable from this dialog now that personal is not one of the types it
-    // offers, and kept anyway — the type is whatever create-workspace answers
-    // with, not whatever was clicked here.
-    const mute = !!(s.invite && this._created && this._created.type === 'personal');
     const chrome = {
       hide_next: live,
       // NO progress indicator on any screen of this tour. No `step`/`steps` are
@@ -227,10 +225,10 @@ class __tutorial_workspace extends LetcBox {
       //
       // Other tours are untouched: `chat` asks for dashes, the rest take the
       // pill by default (see progressStyle in toolkit/tooltip.js).
-      // No way back once the workspace exists. The create form would happily
+      // No way back once the workspace exists — the create form would happily
       // make a second one with no sign the first happened, and the invite card
-      // may already have sent an invitation — neither is somewhere to return
-      // to.
+      // may already have sent an invitation. Moot while that screen is bare,
+      // and kept for the same reason as `live` above.
       hide_back: (!!this.mget('is_first') && this._screenIndex === 0)
         || !!s.invite,
       // Done belongs to the last screen with a Next on it. The live tail has
@@ -240,7 +238,12 @@ class __tutorial_workspace extends LetcBox {
     // `bare` raises the screen with no tooltip at all: focus() feeds the
     // callout null and returns, so nothing is drawn and nothing is left over
     // from the previous screen either.
-    const tooltip = s.bare || mute
+    //
+    // THREE SCREENS OF THIS TOUR ARE BARE — the home screen it opens on, and
+    // both of the live ones at the end. A per-variant `mute` for the personal
+    // invite card used to sit beside this test; with the whole invite screen
+    // bare it could never fire, so it is gone.
+    const tooltip = s.bare
       ? null
       : s.text
         ? { text: s.text(), ...chrome }

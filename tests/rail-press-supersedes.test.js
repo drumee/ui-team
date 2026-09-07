@@ -338,3 +338,44 @@ test("a desk tour lets the topbar's menus open over it", () => {
   assert.match(desk, /delete this\.el\.dataset\.deskTour/);
   assert.ok(!/--desk-tour-top/.test(desk), "the measurement is gone");
 });
+
+// ── the workspace tour's two live screens ───────────────────────────────────
+
+test("the create and invite screens raise no callout", () => {
+  // Five screens explain the dialog field by field; a sixth card beside the
+  // filled-in version of it talks over what they just introduced. And the
+  // invite card is already a complete screen with Send and Skip on it.
+  //
+  // `bare: true` RATHER THAN NO TEXT, and the difference is a bug that has
+  // been here before: feed(null) is a no-op in ui-core, so a screen that
+  // raises nothing INHERITS the previous screen's card — which is how the
+  // invite screen once told the user to create a workspace they had just
+  // created. `bare` is what makes focus() feed the callout null and clear it.
+  const src = readFileSync(join(__dirname, "..",
+    "src/drumee/modules/desk/tutorial/workspace/index.js"), "utf8");
+  const table = src.slice(src.indexOf("const SCREENS = ["), src.indexOf("\n];"));
+
+  // Split the table into entries and find the two live ones by their flags.
+  const entries = table.split(/\n  \{/).slice(1);
+  const live = entries.filter((e) => /\blive: true/.test(e));
+  const invite = entries.filter((e) => /\binvite: true/.test(e));
+  assert.equal(live.length, 1, "expected one live create screen");
+  assert.equal(invite.length, 1, "expected one invite screen");
+
+  for (const [name, e] of [["create", live[0]], ["invite", invite[0]]]) {
+    assert.match(e, /\bbare: true/, `${name} still raises a callout`);
+    assert.ok(!/\btext:/.test(e), `${name} still carries callout text`);
+    assert.ok(!/\btitle:/.test(e), `${name} still carries a callout title`);
+  }
+
+  // And the mechanism they rely on: bare feeds null, it does not just skip.
+  assert.match(src, /const tooltip = s\.bare\s*\n?\s*\? null/);
+
+  // The two strings they used are gone from every locale, not left orphaned.
+  for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
+    const d = JSON.parse(readFileSync(join(__dirname, "..", `locale/${lang}.json`), "utf8"));
+    for (const k of ["TUTORIAL_WS_NOW_CREATE", "TUTORIAL_INVITE_CALLOUT"]) {
+      assert.ok(!(k in d), `${lang} still carries ${k}`);
+    }
+  }
+});
