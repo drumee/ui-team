@@ -676,8 +676,16 @@ class __widget_chat extends LetcBox {
     return 0;
   }
 
+  // Device uploads are promoted into the folder a post WRITES to (postNid),
+  // not the folder it READS from (scopedNid). The workspace team chat reads
+  // the whole hub, so scopedNid is empty there by design (see initialize) —
+  // gating on it left every file uploaded through workspace chat in the
+  // hidden /__chat__/ sbox. Such a file has no folder placement: its thread
+  // (keyed on the sbox copy) never appears in the folder's thread rail, and
+  // "Show in folder" reveals nothing. postNid is set on both folder and
+  // workspace scopes, so the write check below is the only real gate.
   canPromoteDeviceAttachmentsToFolder() {
-    if (!this.getScopedNid()) return false;
+    if (!this.getPostNid()) return false;
     return !!(_K.permission.write & this._scopePrivilege());
   }
 
