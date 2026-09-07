@@ -370,15 +370,6 @@ html {
     display: none;
   }
 
-  // The rail-tour curtain (desk/tour-intro). Hidden by default and revealed
-  // only by the desk root's `data-window-tour` stamp, for the same reason
-  // __home-empty-slot is: a Skeletons.Box is a CollectionView whose emptyView
-  // renders its own element, so an unfed box is NEVER CSS-empty and `:empty`
-  // would leave it laid out over the workspace.
-  &__tour-intro-slot {
-    display: none;
-  }
-
   &__settings-main-slot {
     position: absolute;
     inset: 0;
@@ -801,27 +792,6 @@ html {
 
 // ── No workspace ─────────────────────────────────────────────────────────────
 //
-// `data-window-tour="1"` is stamped on the desk root the moment a rail press
-// decides to raise an in-window tour, and cleared on that tour's destroy — so
-// this curtain's whole lifetime is the tour's, however the tour ends. It covers
-// the window because the pane behind is the tab the user came FROM: the tab
-// they pressed is not switched until the tour is done (_railTabWithTour), and
-// watching the previous pane sit there is the fault this answers.
-//
-// The paint and the stacking live only here, mirroring the block below.
-.desk-module[data-window-tour="1"] {
-  .desk-module__tour-intro-slot {
-    display: flex;
-    position: absolute;
-    inset: 0;
-    // Above the window manager, below the tour itself — the tour mounts in
-    // __overlay, which the same stamp lifts far clear of this.
-    z-index: 1400;
-    isolation: isolate;
-    background: var(--normal-bg-90);
-  }
-}
-
 // `data-no-workspace="1"` is stamped on the desk root by
 // _openWorkspaceOrEmptyScreen. The paint and the stacking live only here, so a
 // mistake in the base rule above is cosmetic rather than a blank desk.

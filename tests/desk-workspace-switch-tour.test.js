@@ -78,8 +78,6 @@ function desk(curKey, opt = {}) {
       log.push("end");
       return true;
     },
-    _showTourCurtain: () => log.push("curtain:up"),
-    _hideTourCurtain: () => log.push("curtain:down"),
     _raiseRailTour: async (tour) => {
       log.push(`raise:${tour}`);
       return opt.raises !== false;
@@ -184,16 +182,7 @@ test("walking out does not count as finishing", () => {
 test("the workspace it lands in offers the migrate tour", async () => {
   const d = desk("hub:7");
   await go(d, "hub:9");
-  // The curtain goes up on the CLICK, before the switch, or the user reads
-  // window-manager__main while the tour is still several hops away.
-  assert.deepEqual(d.log, [
-    "end",
-    "curtain:up",
-    "switch:hub:9",
-    "raise:migrate",
-    "whenDone:migrate",
-    "curtain:down",
-  ]);
+  assert.deepEqual(d.log, ["end", "switch:hub:9", "raise:migrate"]);
 });
 
 test("a user who has finished it switches with nothing flashing over them", async () => {
@@ -202,21 +191,21 @@ test("a user who has finished it switches with nothing flashing over them", asyn
   assert.deepEqual(d.log, ["end", "switch:hub:9"]);
 });
 
-test("a tour that will not rise takes its curtain with it", async () => {
-  // Refused for single-flight, or claimed and never mounted. The curtain must
-  // not be what is left holding the screen.
+test("a tour that will not rise is asked for and then let go", async () => {
+  // Refused for single-flight, or claimed and never mounted — either way the
+  // switch is already done and nothing is left holding the screen.
   const d = desk("hub:7", { raises: false });
   await go(d, "hub:9");
-  assert.deepEqual(d.log.slice(-2), ["raise:migrate", "curtain:down"]);
+  assert.deepEqual(d.log, ["end", "switch:hub:9", "raise:migrate"]);
 });
 
-test("a switch that does not take puts nothing up", async () => {
+test("a switch that does not take raises nothing", async () => {
   // The row can be gone from the list — deleted in another tab, a stale menu —
-  // and _switchWorkspace declines silently. A curtain over the pane the user is
-  // still standing on would hide the app for a tour with nothing to draw on.
+  // and _switchWorkspace declines silently. A tour raised then would have
+  // nothing to draw on.
   const d = desk("hub:7", { rowGone: true });
   await go(d, "hub:9");
-  assert.deepEqual(d.log, ["end", "curtain:up", "switch:hub:9", "curtain:down"]);
+  assert.deepEqual(d.log, ["end", "switch:hub:9"]);
   assert.ok(!d.log.some((l) => l.startsWith("raise:")), "no tour was raised");
 });
 
@@ -228,7 +217,7 @@ test("the switcher is the only gesture that offers", async () => {
   // vanish on the one arrival it is for.
   const body = source("_switchWorkspace").src;
   assert.ok(
-    !/migrate|_raiseRailTour|TourCurtain/.test(body),
+    !/migrate|_raiseRailTour/.test(body),
     "_switchWorkspace must stay a switch",
   );
   assert.match(
@@ -246,8 +235,8 @@ test("the switcher is the only gesture that offers", async () => {
 // ── the two async paths that had already committed to a workspace ───────────
 
 test("a tour asked for on one workspace never lands on another", () => {
-  // _mountWindowTourFor polls up to 3s for a pane, under a curtain the switcher
-  // is still reachable through.
+  // _mountWindowTourFor polls up to 3s for a pane, and the switcher is
+  // reachable throughout — it sits above the tour's own overlay.
   const body = DESK.slice(
     DESK.indexOf("async _mountWindowTourFor("),
     DESK.indexOf("async _raiseRailTour("),
