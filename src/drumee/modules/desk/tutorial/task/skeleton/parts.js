@@ -11,7 +11,7 @@ const { STATUSES } = require('./data');
 const statusOf = (key) => STATUSES.find((s) => s.key === key) || STATUSES[0];
 
 /** Coloured dot + label, e.g. "● In Progress". */
-export function statusPill(pfx, key, opt = {}) {
+function statusPill(pfx, key, opt = {}) {
   const s = statusOf(key);
   return Skeletons.Box.X({ active: 0,
     className: `${pfx}__pill status${opt.plain ? ' plain' : ''}`,
@@ -24,7 +24,7 @@ export function statusPill(pfx, key, opt = {}) {
 }
 
 /** Priority pill, or the muted "Priority ⌄" placeholder when unset. */
-export function priorityPill(pfx, key) {
+function priorityPill(pfx, key) {
   if (!key) {
     return Skeletons.Box.X({ active: 0,
       className: `${pfx}__pill priority unset`,
@@ -42,7 +42,7 @@ export function priorityPill(pfx, key) {
   });
 }
 
-export function dateChip(pfx, date) {
+function dateChip(pfx, date) {
   if (!date) {
     return Skeletons.Box.X({ active: 0,
       className: `${pfx}__chip date unset`,
@@ -58,7 +58,7 @@ export function dateChip(pfx, date) {
   });
 }
 
-export function fileChip(pfx, name) {
+function fileChip(pfx, name) {
   return Skeletons.Box.X({ active: 0,
     className: `${pfx}__chip file`,
     kids: [
@@ -73,7 +73,7 @@ export function fileChip(pfx, name) {
  * No photography in the tour, so each is a tinted disc — the tones cycle so a
  * stack reads as different people.
  */
-export function avatars(pfx, count, opt = {}) {
+function avatars(pfx, count, opt = {}) {
   if (!count) {
     if (!opt.unassigned) return null;
     return Skeletons.Box.X({ active: 0,
@@ -96,9 +96,15 @@ export function avatars(pfx, count, opt = {}) {
 }
 
 /** Small square icon button (bell-off on column headers, chevrons, …). */
-export function iconBtn(pfx, ico, extra = '') {
+function iconBtn(pfx, ico, extra = '') {
   return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__icon-btn ${extra}`.trim(),
     kids: [Skeletons.Image.Svg({ active: 0, ico, className: `${pfx}__icon-btn-svg` })],
   });
 }
+
+// CommonJS, like the rest of the tour's toolkit reads it. It was `export`
+// alongside a `require` in the same file, which webpack accepts and node does
+// not — so nothing here could be rendered by a test or a harness, which is a
+// large part of how this whole view set went stale unnoticed.
+module.exports = { statusPill, priorityPill, dateChip, fileChip, avatars, iconBtn };

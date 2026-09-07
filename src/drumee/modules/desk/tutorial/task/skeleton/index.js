@@ -13,17 +13,25 @@
 
 const { emptyState } = require('../../skeleton/toolkit/empty-state');
 const newTask = require('./new-task');
+const { taskPreview } = require('./preview');
 
 /**
- * The five cards, in the frame's order, each with the artwork exported from
- * its own frame (146:40547, 146:40652, 146:40677, 146:40646, 146:40683).
+ * The five cards, in the frame's order (146:40547, 146:40652, 146:40677,
+ * 146:40646, 146:40683).
+ *
+ * COMPOSED, not exported. Each was a PNG of a tracker view this repo already
+ * draws — ./board, ./calendar, ./gantt, ./list and ./health were on disk the
+ * whole time, left there when the tour moved onto the 2.0 shell and the
+ * bitmaps took over. Five screenshots cannot follow the theme, cannot agree
+ * with one another once the panel moves, and cost 386KB to say what those
+ * builders say from one dataset. See ./preview.js.
  */
 const VIEWS = [
-  { src: require('assets/tutorial/task-board.png').default, title: () => LOCALE.TASK_CARD_BOARD },
-  { src: require('assets/tutorial/task-calendar.png').default, title: () => LOCALE.TASK_CARD_CALENDAR },
-  { src: require('assets/tutorial/task-gantt.png').default, title: () => LOCALE.TASK_CARD_GANTT },
-  { src: require('assets/tutorial/task-list.png').default, title: () => LOCALE.TASK_CARD_LIST },
-  { src: require('assets/tutorial/task-health.png').default, title: () => LOCALE.TASK_CARD_HEALTH },
+  { key: 'board', title: () => LOCALE.TASK_CARD_BOARD },
+  { key: 'calendar', title: () => LOCALE.TASK_CARD_CALENDAR },
+  { key: 'gantt', title: () => LOCALE.TASK_CARD_GANTT },
+  { key: 'list', title: () => LOCALE.TASK_CARD_LIST },
+  { key: 'health', title: () => LOCALE.TASK_CARD_HEALTH },
 ];
 
 module.exports = function (ui, screen = {}) {
@@ -34,7 +42,7 @@ module.exports = function (ui, screen = {}) {
     cta: LOCALE.CREATE_FIRST_TASK,
     // Narrow, so the headline's three hard lines have room to be three lines.
     hero: 'narrow',
-    items: VIEWS.map((v) => ({ ...v, title: v.title() })),
+    items: VIEWS.map((v) => ({ title: v.title(), node: taskPreview(ui, v.key) })),
     index: screen.index || 0,
     dots: true,
     // The carousel screen carries no callout (see ../index.js), so this button

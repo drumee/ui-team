@@ -23,21 +23,21 @@ const DONE = 'done';
 
 // `dot` is the saturated colour used for status dots; `tint` is the softer one
 // the design gives the donut arcs and legend swatches.
-export const STATUSES = [
+const STATUSES = [
   { key: TODO, label: 'To Do', dot: '#b0b0b8', tint: '#e5e5ea' },
   { key: PROGRESS, label: 'In Progress', dot: '#5950ff', tint: '#b9b4ff' },
   { key: REVIEW, label: 'To review', dot: '#e8a13b', tint: '#f2c98a' },
   { key: DONE, label: 'Complete', dot: '#34c77b', tint: '#7ed9a8' },
 ];
 
-export const PRIORITIES = [
+const PRIORITIES = [
   { key: 'urgent', label: 'Urgent' },
   { key: 'high', label: 'High' },
   { key: 'medium', label: 'Medium' },
   { key: 'low', label: 'Low' },
 ];
 
-export const TASKS = [
+const TASKS = [
   {
     name: 'Landing Page Wireframe UX',
     desc: 'Task Tracker · UX',
@@ -176,12 +176,12 @@ export const TASKS = [
 ];
 
 /** @returns {Array} tasks in the given status, in dataset order */
-export function byStatus(key) {
+function byStatus(key) {
   return TASKS.filter((t) => t.status === key);
 }
 
 /** Counts + percentages for Project Health, derived so they always add up. */
-export function statusBreakdown() {
+function statusBreakdown() {
   const total = TASKS.length;
   return STATUSES.map((s) => {
     const n = byStatus(s.key).length;
@@ -189,11 +189,17 @@ export function statusBreakdown() {
   });
 }
 
-export function priorityBreakdown() {
+function priorityBreakdown() {
   return PRIORITIES.map((p) => ({
     ...p,
     count: TASKS.filter((t) => t.priority === p.key).length,
   }));
 }
 
-export const TOTAL = TASKS.length;
+const TOTAL = TASKS.length;
+
+// CommonJS, like the rest of the tour's toolkit reads it. It was `export`
+// alongside a `require` in the same file, which webpack accepts and node does
+// not — so nothing here could be rendered by a test or a harness, which is a
+// large part of how this whole view set went stale unnoticed.
+module.exports = { STATUSES, PRIORITIES, TASKS, byStatus, statusBreakdown, priorityBreakdown, TOTAL };

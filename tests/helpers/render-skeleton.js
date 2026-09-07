@@ -299,7 +299,11 @@ function toHtml(n) {
   // one box and scaling the result down; dropped, that box shrink-to-fits its
   // container and the miniature is measured at the wrong size — which looks
   // like a broken component and is a broken fixture.
-  const style = Object.entries(n.style || {})
+  // BOTH CHANNELS. ui-core reads `opt.style || opt.styleOpt` (letc.js), and the
+  // tour's tracker views use the second one for everything that is computed —
+  // the donut's conic-gradient, the gantt's bar offsets, the board's progress
+  // fill. A harness that honours only the first draws them all as empty boxes.
+  const style = Object.entries({ ...(n.styleOpt || {}), ...(n.style || {}) })
     .filter(([, v]) => v != null)
     .map(([k, v]) => `${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${v}`)
     .join(";");

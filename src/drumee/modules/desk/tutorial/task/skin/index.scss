@@ -1,4 +1,6 @@
 @use "mixins/drumee";
+@use "./views.scss";
+@use "./preview.scss";
 
 // The Task step: the shared empty-state carousel (skin/empty-state.scss) for
 // screens 1-5, and the New task dialog over an empty Board for screen 6.
