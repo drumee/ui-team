@@ -90,6 +90,9 @@ function desk(curKey, opt = {}) {
     },
   };
   const req = () => Tours;
+  // The REAL counter, not a stub of it — what the async paths compare is the
+  // whole point, so a fake that counts differently would prove nothing.
+  d._navigated = method("_navigated")(win, req);
   d._leavesWorkspace = method("_leavesWorkspace")(win, req);
   d._endWindowTourOnSwitch = method("_endWindowTourOnSwitch")(win, req);
   d._switchWorkspaceAndOffer = method("_switchWorkspaceAndOffer")(win, req);
@@ -124,14 +127,14 @@ test("a row with no key does nothing but hand over", async () => {
   assert.deepEqual(d.log, ["switch:null"]);
 });
 
-test("only a real switch bumps the count the async paths read", () => {
+test("only a real switch counts as a navigation", () => {
   const d = desk("hub:7");
   d._endWindowTourOnSwitch("hub:7");
-  assert.equal(d._wsSwitch, undefined, "re-picking the open one is not a switch");
+  assert.equal(d._navSeq, undefined, "re-picking the open one is not a switch");
   d._endWindowTourOnSwitch("hub:9");
   d.win.Wm._curWorkspace = { key: "hub:9" };
   d._endWindowTourOnSwitch("hub:3");
-  assert.equal(d._wsSwitch, 2);
+  assert.equal(d._navSeq, 2);
 });
 
 test("walking out does not count as finishing", () => {
@@ -241,7 +244,7 @@ test("a tour asked for on one workspace never lands on another", () => {
     DESK.indexOf("async _mountWindowTourFor("),
     DESK.indexOf("async _raiseRailTour("),
   );
-  assert.match(body, /const seq = this\._wsSwitch \|\| 0;/);
+  assert.match(body, /const seq = this\._navSeq \|\| 0;/);
   const guard = body.indexOf("!== seq");
   const mount = body.indexOf("mountWindowTutorial(");
   assert.ok(guard > 0 && guard < mount, "the count must be checked before mounting");
@@ -258,8 +261,15 @@ test("the deferred tab dies with the workspace it belonged to", () => {
       ? DESK.indexOf("async _railAccess(")
       : DESK.length,
   );
-  assert.match(body, /const seq = this\._wsSwitch \|\| 0;/);
-  assert.match(body, /if \(\(this\._wsSwitch \|\| 0\) === seq\) this\._railTab\(tab\);/);
+  assert.match(body, /const seq = this\._navSeq \|\| 0;/);
+  assert.match(body, /if \(\(this\._navSeq \|\| 0\) === seq\) this\._railTab\(tab\);/);
+  // AND THE PRESS ITSELF COUNTS. Without this the callback a PREVIOUS press
+  // parked still fires — the reported "click Files, the Task panel lands on
+  // top of it" — because only a workspace switch used to bump the count.
+  assert.ok(
+    body.indexOf("this._navigated();") < body.indexOf("_endWindowTourUnlessAbout"),
+    "the press must count before it ends the tour that would fire the callback",
+  );
   // Read after the open this method does itself, or its own workspace would
   // read as the user leaving.
   assert.ok(

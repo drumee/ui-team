@@ -4167,16 +4167,16 @@ class desk_module extends LetcBox {
    */
   async _mountWindowTourFor(tour, opt = {}) {
     const Tours = require("libs/tutorial-tours");
-    // The workspace this tour was asked for, by _endWindowTourOnSwitch's count.
-    // The poll below is up to 3s long and the switcher is reachable throughout
-    // it — the switcher sits above the tour's overlay — so without this
-    // a tour asked for on one workspace could arrive on another, which is the
-    // same wrong-window fault one hop earlier.
-    const seq = this._wsSwitch || 0;
+    // THE NAVIGATION THIS TOUR WAS ASKED FOR — see _navigated. The poll below
+    // is up to 3s long and both the rail and the switcher are reachable
+    // throughout it (they sit above the tour's overlay), so without this a
+    // tour asked for on one workspace could arrive on another, or a tour the
+    // user has already pressed past could arrive at all.
+    const seq = this._navSeq || 0;
     try {
       const ws = await this._awaitRailWorkspace(3000);
       if (this.isDestroyed && this.isDestroyed()) return false;
-      if ((this._wsSwitch || 0) !== seq) {
+      if ((this._navSeq || 0) !== seq) {
         Tours.release(tour);
         return false;
       }
@@ -4243,6 +4243,10 @@ class desk_module extends LetcBox {
    * @returns {Promise}
    */
   async _railTabWithTour(tab, tour) {
+    // THIS PRESS SUPERSEDES THE ONE BEFORE IT. See _navigated: the previous
+    // press may have parked a tab switch on its tour's release, and ending
+    // that tour below is exactly what fires it.
+    this._navigated();
     const w = this._railWorkspace();
     this._leaveSectionScreen(w);
     this._endWindowTourUnlessAbout(tab);
@@ -4254,9 +4258,9 @@ class desk_module extends LetcBox {
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
     // Read AFTER the open above, which is this method's own doing and not a
-    // switch. From here on a change means the user chose another workspace
-    // while the tour was up — see the deferred _railTab below.
-    const seq = this._wsSwitch || 0;
+    // navigation. From here on a change means the user has gone somewhere else
+    // — another rail item, or another workspace — see the deferred tab below.
+    const seq = this._navSeq || 0;
     if (!offerable || !(await this._raiseRailTour(tour))) {
       // Nothing was raised — already completed, mobile, the kill switch, or
       // another tour holding single-flight. The tab shows at once.
@@ -4264,12 +4268,13 @@ class desk_module extends LetcBox {
     }
     require("libs/tutorial-tours").whenDone(tour, () => {
       if (this.isDestroyed && this.isDestroyed()) return;
-      // UNLESS THE USER LEFT. Ending the tour by picking another workspace
-      // runs this callback too (the release is the release), and _railTab
-      // would then flip the workspace they just arrived in to the tab of the
-      // tour they walked out of — half a second after _switchWorkspace put the
-      // rail back on Files. The tab belonged to the workspace that is gone.
-      if ((this._wsSwitch || 0) === seq) this._railTab(tab);
+      // UNLESS THE USER HAS MOVED ON. Every way of ending this tour early runs
+      // this callback — the release is the release — so without the check the
+      // tab it was parked for lands on top of wherever the user actually went:
+      // the Task panel over the Files pane they pressed Files for, or the tab
+      // of a tour they walked out of over the workspace they switched into.
+      // Both were reported; see _navigated.
+      if ((this._navSeq || 0) === seq) this._railTab(tab);
     });
   }
 
@@ -4351,19 +4356,54 @@ class desk_module extends LetcBox {
    * the one it is about — so there is nothing to leave. Same test, by the same
    * key, that _switchWorkspace uses to decide whether the rail resets.
    *
-   * `_wsSwitch` counts the real ones, for the two places that have already
-   * committed to a workspace and finish asynchronously (_mountWindowTourFor
-   * and _railTabWithTour's deferred tab). They compare the count rather than
-   * ask the window manager, because during a switch its `_curWorkspace` is
-   * mid-flight and answers for neither workspace reliably.
+   * A real switch counts as a navigation (_navigated), which is what the two
+   * places that have already committed to a workspace and finish
+   * asynchronously read — _mountWindowTourFor and _railTabWithTour's deferred
+   * tab. They compare that count rather than ask the window manager, because
+   * during a switch its `_curWorkspace` is mid-flight and answers for neither
+   * workspace reliably.
    *
    * @param {String} wsKey the row pressed, by _workspaceKey
    * @returns {Boolean} whether a tour was taken down
    */
   _endWindowTourOnSwitch(wsKey) {
     if (!this._leavesWorkspace(wsKey)) return false;
-    this._wsSwitch = (this._wsSwitch || 0) + 1;
+    this._navigated();
     return this._endWindowTour();
+  }
+
+  /**
+   * COUNT A NAVIGATION, so work already in flight for the previous one can see
+   * that it is stale.
+   *
+   * THE BUG THIS EXISTS FOR, in full, because it took three attempts to see:
+   * a rail press with a tour does not switch its tab immediately. The tab is
+   * deferred to the tour's release (_railTabWithTour), and a release happens
+   * however the tour ends — including when the NEXT rail press ends it. So:
+   *
+   *   Files is open. Press Task -> the task tour comes up and "show the Task
+   *   tab" is parked on its release. Press Files -> that press ends the task
+   *   tour and shows Files, the ended tour releases, and the parked callback
+   *   fires: the Task panel lands on top of the Files pane the user just
+   *   asked for. Pressing Files a second time works, because by then nothing
+   *   is parked.
+   *
+   * A press therefore has to invalidate what the press before it parked. This
+   * was HALF built already — the count existed as `_wsSwitch` and only a
+   * workspace switch bumped it, which is the same fault on the other axis and
+   * was fixed there first. One counter, bumped by every navigation, is what
+   * closes both: the rail (here and _railAccess) and the switcher
+   * (_endWindowTourOnSwitch).
+   *
+   * Read by the deferred tab in _railTabWithTour and by _mountWindowTourFor,
+   * which polls up to 3s for a window and must not land a tour that a later
+   * press has already moved on from.
+   *
+   * @returns {Number} the new count
+   */
+  _navigated() {
+    this._navSeq = (this._navSeq || 0) + 1;
+    return this._navSeq;
   }
 
   /**
@@ -4640,6 +4680,11 @@ class desk_module extends LetcBox {
    * inside openManageAccess, which four other surfaces also reach.
    */
   async _railAccess(opt) {
+    // A navigation like any other rail press — see _navigated. This one raises
+    // no tour of its own, but it still has to invalidate a tab the press
+    // before it parked, and the _endWindowTourUnlessAbout below is what would
+    // otherwise set that off.
+    this._navigated();
     if (this.el) this.el.dataset.mtab = "access";
     // Same as _railTab, and for the same reason: an open-but-unraised pane is
     // not "no workspace". See _railWorkspace.
