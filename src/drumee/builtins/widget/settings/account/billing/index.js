@@ -1,4 +1,4 @@
-const { canUpgradePlan, billingAvailable } = require("libs/billing");
+const { canUpgradePlan, billingAvailable, planRank } = require("libs/billing");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
@@ -562,7 +562,6 @@ class settings_billing extends LetcBox {
     const currentTitle = label(current);
     const targetTitle = label(targetPlan);
     const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
-    const rank = { free: 0, pro: 1, team: 2, business: 3, sovereign: 4 };
 
     // Three shapes for three different situations (product spec 2026-07-29):
     //  - same plan, other cycle  → DEFERRED: the current cycle runs to its
@@ -593,7 +592,7 @@ class settings_billing extends LetcBox {
           || "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {4} {5} subscription will be canceled immediately, and any remaining subscription time will not be carried over. Your {0} {1} plan will start right away.")
           .format(targetTitle, cycleWord(period), price, per, currentTitle, cycleWord(currentPeriod)),
       ];
-      if ((rank[targetPlan] ?? 0) < (rank[current] ?? 0)) {
+      if (planRank(targetPlan) < planRank(current)) {
         lines.push(this._downgradeConsequences(targetPlan));
       }
       title = (LOCALE.PLAN_SWITCH_CYCLE_TITLE || "Switch to {0} {1}")
@@ -604,7 +603,7 @@ class settings_billing extends LetcBox {
       // quoted — "for $X/month or $Y/year" — because the plan card the user
       // clicked sells the plan, not a cycle; the checkout tab still lets them
       // pick either before paying.
-      const down = (rank[targetPlan] ?? 0) < (rank[current] ?? 0);
+      const down = planRank(targetPlan) < planRank(current);
       const mPrice = this._money(this._catPrice(targetPlan, "month"));
       const yPrice = this._money(this._catPrice(targetPlan, "year"));
       if (down) {

@@ -260,12 +260,31 @@
         }
       }
 
-      &-text {
-        font-weight: 500;
+      // The sales-led card has no figure, so "Contact sales" stands in for the
+      // amount — and is rendered ON the amount element (priceHeader() gives it
+      // both classes) rather than beside it. That is what keeps the five
+      // tinted headers the same height: the line box, and the colour rules for
+      // the popular/current card, come from -price-amount, which the container
+      // queries at the foot of this file already tune at every width. Reserving
+      // the height here instead would mean one min-height per breakpoint, and
+      // the amount is sized in five of them — get it wrong and the Sovereign
+      // header lands 80px against 97px on the other four.
+      //
+      // Only the SIZE differs, and deliberately only the size: the weight is
+      // left to -price-amount (600) so the sales line reads as bold as the
+      // figures beside it. It is standing in for a price, so it should carry a
+      // price's weight — and inheriting it means the two cannot drift apart.
+      //
+      // Compiles to
+      //   .settings-billing__plan-header
+      //   .settings-billing__plan-price-amount.settings-billing__plan-price-text
+      // — three classes on purpose: those container queries are two deep and
+      // come LATER in the file, so a weaker selector loses the font-size back
+      // to them and "Contact sales" renders at price size.
+      .settings-billing__plan-header &-amount#{&}-text {
         font-size: 20px;
-        line-height: 1.1;
         letter-spacing: -0.4px;
-        color: var(--tertiary-grey-80);
+        white-space: nowrap;
       }
     }
 
