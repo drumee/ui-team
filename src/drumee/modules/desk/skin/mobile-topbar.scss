@@ -1,8 +1,24 @@
 @use "mixins/drumee";
 
-// Compact top bar rendered above the desk body on mobile only. Desktop
-// and tablet skip this element entirely in skeleton/index.js, so all
-// rules below assume mobile.
+// The phone's top bar — the Drumee 2.0 shell reduced to one row.
+//
+// Rendered only on mobile (skeleton/index.js), so every rule here assumes it.
+//
+// The design is taken from the desktop bar (43:23955 / 59:55943) rather than
+// invented, because the Figma file has no mobile frames at all:
+//
+//   the workspace pill  <- the desktop org-tab: a #F2F2F7 r=8 chip holding the
+//                          area-tinted folder shape, the name at 14/600 and a
+//                          caret. Same shape, same ramp, one size down.
+//   the icon chips      <- the desktop utility cluster: 32px r=8 squares that
+//                          take a 10% brand wash when pressed, not the old
+//                          grey-filled r=4 buttons.
+//   the ground          <- the canvas: --normal-bg with a 5%-black hairline,
+//                          matching the panel edges everywhere else.
+//
+// What it replaces gave its entire left half to a 101px wordmark and never
+// showed the workspace name, so a phone user could not tell which workspace
+// they were in.
 .desk-module {
   &__mobile-topbar {
     display: flex;
@@ -10,73 +26,333 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    height: 48px;
+    height: 52px;
     box-sizing: border-box;
-    padding: 8px 16px;
+    padding: 8px 12px;
+    gap: 8px;
     background-color: var(--normal-bg);
-    border-bottom: 1px solid var(--border-muted);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
     z-index: 99999;
   }
 
-  &__mobile-topbar-logo {
+  // Hamburger + identity. flex:1 with min-width:0 so the NAME is what gives
+  // way when the bar is tight — never the icons, which have no shorter form.
+  &__mobile-topbar-left {
     align-items: center;
-    height: 100%;
-
-    &-icon {
-      width: 101px;
-      height: 20px;
-
-      svg {
-        width: 100%;
-        height: 100%;
-      }
-    }
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__mobile-topbar-wrapper {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    flex: 0 0 auto;
   }
 
+  // ── icon chips ──────────────────────────────────────────────────────────
   &__mobile-topbar-btn {
-    width: 36px;
-    height: 36px;
-    padding: 8px;
-    border-radius: 4px;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    flex: 0 0 auto;
+    padding: 0;
+    border-radius: 8px;
     cursor: pointer;
+    box-sizing: border-box;
     color: var(--normal-fg-10);
-    background-color: var(--normal-bg-50);
+    background-color: transparent;
+    transition: background-color 0.12s ease;
 
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
+    // 44px is the smallest reliable touch target; the chip is 32px so it can
+    // sit in a 52px bar. The pseudo-element pads the TARGET without changing
+    // the painted box or the layout.
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -6px;
     }
 
-    &:hover,
     &:active,
     &[data-state="active"] {
-      background-color: var(--primary-40);
-      color: var(--white);
+      background-color: var(--primary-30);
+      color: var(--primary-40);
     }
   }
+
+  &__mobile-topbar-ico {
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  // Unread marker on the bell. A DOT, not a number: the desktop cluster shows
+  // one too (Ellipse 882, 6px, #D74E49), and a count is unreadable at this
+  // size. The desk writes the value into this part; empty means nothing
+  // unread, so it is hidden until it has one.
+  &__mobile-topbar-count {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border-radius: 50%;
+    background-color: #d74e49;
+    // The text itself is never shown — only its presence matters.
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+    pointer-events: none;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  // ── the workspace pill ──────────────────────────────────────────────────
+  &__mobile-workspace {
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 8px;
+    background-color: var(--normal-bg-90);
+    cursor: pointer;
+    box-sizing: border-box;
+
+    &:active {
+      background-color: var(--normal-bg-80);
+    }
+  }
+
+  // The area-tinted folder shape from media/grid/template/folder. It is NOT a
+  // plain <svg> to stretch: the template emits a `.folder-shape` path whose
+  // AREA CLASS supplies the fill, and the SVG is authored at 105x86 — without
+  // explicit sizing it paints at that intrinsic size.
+  &__mobile-workspace-ico {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    flex: 0 0 auto;
+    align-items: center;
+    display: flex !important;
+    justify-content: center;
+    position: relative;
+    pointer-events: none;
+
+    .media-grid__folder-art {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      position: relative;
+      width: 20px;
+      height: 16px;
+    }
+
+    .folder-shape {
+      width: 20px;
+      height: 16px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public       { fill: var(--area-public); }
+      &.share,
+      &.dmz          { fill: var(--area-share); }
+      &.private      { fill: var(--area-private); }
+    }
+
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      color: var(--grid-color-folder-badge);
+    }
+  }
+
+  // The desktop org-tab's ramp (14px/600), which is also the breadcrumb's.
+  // Ellipsis on the inner .note-content — a Note is a flex row around it, so
+  // truncation on the wrapper clips without the "…".
+  &__mobile-workspace-name {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 600;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    pointer-events: none;
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__mobile-workspace-caret {
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-20);
+    pointer-events: none;
+  }
+
+  // ── the avatar chip (opens the account sheet) ─────────────────────────────
+  &__mobile-topbar-avatar {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 0 0 2px var(--normal-bg), 0 0 0 3px var(--border-default);
+    margin-left: 3px;
+  }
+
+  &__mobile-topbar-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+
+    &.user-profile__ui {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      border: none;
+    }
+
+    .user-profile__main,
+    img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  }
+
+  // ── the Files action row (search + "+ New") ──────────────────────────────
+  // Between the bar and the content, per the approved canvas. Shown on the
+  // Files tab only: Chat has its composer and Task its own "+ New", so the
+  // desk stamps the active rail tab (data-mtab) and every other value hides
+  // this row. No stamp yet (first paint) = the files default = visible.
+  &__mobile-actions {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 0;
+    flex: 0 0 auto;
+  }
+
+  &__ui[data-mtab]:not([data-mtab="files"]) &__mobile-actions {
+    display: none !important;
+  }
+
+  &__mobile-search-pill {
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+    flex: 1 1 auto;
+    min-width: 0;
+    cursor: pointer;
+
+    &:active {
+      background: var(--normal-bg-80);
+    }
+  }
+
+  &__mobile-search-ico {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    color: var(--normal-fg-50);
+    pointer-events: none;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__mobile-search-hint {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-50));
+    pointer-events: none;
+  }
+
+  &__mobile-new-btn {
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: var(--primary-40);
+    color: var(--gray-white);
+    flex: 0 0 auto;
+    cursor: pointer;
+
+    &:active {
+      background: var(--primary-50);
+    }
+  }
+
+  &__mobile-new-plus {
+    @include drumee.typo($size: 17px, $line: 17px, $color: inherit);
+    font-weight: 500;
+    pointer-events: none;
+  }
+
+  &__mobile-new-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    font-weight: 600;
+    pointer-events: none;
+  }
+
 }
 
+// ── Dark mode ─────────────────────────────────────────────────────────────
 html[data-theme="dark"] .desk-module {
   &__mobile-topbar {
-    background-color: var(--primary-90);
+    background-color: var(--normal-bg);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
   }
 
   &__mobile-topbar-btn {
     color: var(--normal-fg);
 
-    &:hover,
     &:active,
     &[data-state="active"] {
       background-color: var(--normal-bg-80);
     }
+  }
+
+  &__mobile-workspace {
+    background-color: var(--normal-bg-80);
+  }
+
+  &__mobile-workspace-name {
+    color: var(--normal-fg);
   }
 }

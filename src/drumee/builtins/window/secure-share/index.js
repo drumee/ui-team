@@ -159,6 +159,40 @@ class __window_secure_share extends mfsInteract {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
+      // The embedded drawer slides OUT the way it slid in.
+      //
+      // Not for lack of an animation before: selfDestroy already tweens
+      // {opacity: 0, scale: 0.2} — the floating-window shrink — which on a
+      // right-docked drawer reads as the panel imploding rather than leaving.
+      // goodbye's second argument is merged into that tween, so opacity and
+      // scale are restated at 1 to CANCEL those defaults; without them the
+      // panel would slide and shrink at once.
+      //
+      // Only when embedded. The standalone window is a floating window and the
+      // shrink is right for it.
+      // Delegates rather than `break`s: only `default:` reaches
+      // super.onUiEvent, so breaking out of the switch here would leave the
+      // floating window's close button doing nothing at all.
+      case _e.close:
+        if (this._embedded) {
+          // `timeout` is NOT optional here, and 0 would not do.
+          //
+          // goodbye's own `timeout: 2` lives in a PARAMETER DEFAULT, so it
+          // applies only when goodbye is called with no argument. Passing
+          // options discards it, and selfDestroy then falls back to its own
+          // `timeout: 2000` — which is `_.delay(go, 2000)`, i.e. the panel sat
+          // still for two seconds before the tween even started.
+          //
+          // 2ms, matching goodbye's own default. Zero is falsy, and
+          // `o.timeout || Visitor.timeout()` would send it straight back to
+          // 2000.
+          return this.goodbye(
+            { duration: 0.28, timeout: 2 },
+            { xPercent: 100, opacity: 1, scale: 1 },
+          );
+        }
+        return super.onUiEvent ? super.onUiEvent(cmd, args) : undefined;
+
       case 'create-secure-share':
         return this._createShare();
       case 'select-permission':

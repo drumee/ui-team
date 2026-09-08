@@ -13,6 +13,17 @@ const {
   isGrouped,
 } = require("./skeleton/toolkit/file-group");
 
+// Filetypes that open as a CONTAINER window rather than a file viewer — the
+// keys in window/configs/application that map to window_folder / window_team /
+// window_sharebox / window_website. openFileLocation does not attach a media
+// node for these: those windows source their own `media`, and the fix below is
+// only about giving a file VIEWER the node it reads its content through.
+const CONTAINER_FILETYPES = [
+  _a.hub, _a.folder, "personal", "private", "share", "public",
+  // Not a file either — application maps it to window_contact.
+  _a.contact,
+];
+
 const ViewMode = new Map();
 const DEFAULT = "default";
 ViewMode.set(DEFAULT, _a.icon);
@@ -910,6 +921,65 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
+   * Is `path` the node at `ancestor`, or something inside it?
+   *
+   * REPLACES `new RegExp("^" + filepath)`, which was wrong three ways:
+   *
+   *   - UNESCAPED. A workspace named "test(1)" built /^\/test(1)/, which
+   *     matches "/test1" and not "/test(1)" — so deleting it closed nothing.
+   *     Any of ( ) [ ] { } + * ? . ^ $ | \ in a filename did something like
+   *     this, silently.
+   *   - THROWING. An unbalanced bracket ("test)") made the RegExp constructor
+   *     raise SyntaxError, which escaped removeContent and aborted the echo for
+   *     every OTHER open window too.
+   *   - TOO BROAD. "^/a" also matches "/abc", so deleting /a closed a window
+   *     sitting in the unrelated /abc.
+   *
+   * Compared by SEGMENT, which is what "inside" actually means: equal, or
+   * prefixed by the ancestor plus a separator. No pattern is compiled, so no
+   * filename can be read as syntax.
+   *
+   * @param {String} path      where this window is
+   * @param {String} ancestor  what was deleted
+   * @returns {Boolean}
+   */
+  _pathIsUnder(path, ancestor) {
+    if (path == null || ancestor == null) return false;
+    // Trailing slashes are noise: the same node is written "/a" and "/a/"
+    // depending on which proc produced it. The root stays "/".
+    const trim = (v) => {
+      const s = `${v}`;
+      if (!s) return "";
+      const t = s.replace(/\/+$/, "");
+      return t === "" ? "/" : t;
+    };
+    const p = trim(path);
+    const a = trim(ancestor);
+    if (!p || !a) return false;
+    if (p === a) return true;
+    if (a === "/") return p.startsWith("/");
+    return p.startsWith(`${a}/`);
+  }
+
+  /**
+   * Where this window is, whatever named the field.
+   *
+   * `filepath` is mfs_show_node_by's column, so grid TILES have it. A headless
+   * workspace pane is fed from media.attributes → mfs_node_attr, which emits
+   * `file_path` and no `filepath` at all — so `mget(_a.filepath)` was undefined
+   * on exactly the view that had to close itself when its hub was deleted.
+   * `ownpath` is the third spelling, set by loadWorkspace.
+   */
+  _ownPath() {
+    return (
+      this.mget(_a.filepath) ||
+      this.mget(_a.file_path) ||
+      this.mget(_a.ownpath) ||
+      null
+    );
+  }
+
+  /**
    *
    */
   removeContent(args) {
@@ -958,9 +1028,39 @@ class __window_mfs extends DrumeeMFS {
      * item's tile from the grid, which is what that pass does.
      */
     if (typeof Wm !== "undefined" && this === Wm) return;
-    let re = new RegExp("^" + filepath);
-    let path = this.mget(_a.filepath);
-    if (this.mget(_a.hub_id) == hub_id && re.test(path) && path != "/") {
+
+    const sameHub = this.mget(_a.hub_id) == hub_id;
+
+    // A DELETED HUB TAKES ITS WHOLE WINDOW, path be damned.
+    //
+    // This case cannot be decided by the path test below and never could. The
+    // echo's filepath is the hub's placeholder row in the user's HOME
+    // ("/test(1)"), while a window showing that workspace is at the root
+    // INSIDE the hub, whose own path is "/" — two unrelated strings. So the
+    // prefix test could not match, and `path != "/"` would have vetoed it even
+    // if it had.
+    //
+    // hub_id plus `filetype: hub` on the echo is already unambiguous: the hub
+    // this window belongs to no longer exists, so nothing it is showing does
+    // either. That echo shape is what confirmRemoveHub and confirmLeaveHub
+    // both send (desk/wm), and what the server broadcasts for delete_hub.
+    //
+    // This is the fix for the reported bug: after deleting a workspace its
+    // headless pane stayed mounted, which left Wm._curWorkspace set (it is
+    // cleared only by that pane's destroy handler), the topbar breadcrumb
+    // naming the dead workspace, and _snapshotWorkspace persisting it for the
+    // next page load to reopen.
+    if (sameHub && args.filetype === _a.hub) {
+      this.goodbye();
+      return;
+    }
+
+    // Otherwise: close only if this window is sitting AT or INSIDE the node
+    // that was deleted. `_ownPath` because the field has three spellings and a
+    // pane only has one of them; `_pathIsUnder` because the old
+    // `new RegExp("^" + filepath)` mis-parsed any name with regex syntax in it.
+    const path = this._ownPath();
+    if (sameHub && path && path !== "/" && this._pathIsUnder(path, filepath)) {
       this.goodbye();
       return;
     }
@@ -1453,6 +1553,30 @@ class __window_mfs extends DrumeeMFS {
       );
       if (!node || !node.nid) {
         return Wm.alert(LOCALE.FILE_NOT_FOUND);
+      }
+      // Hand the window the media node it will read its CONTENT through.
+      //
+      // editor/note, editor/markdow and player/text all load their body with
+      // `if (this.media) url = this.media.actualNode().url` — no media, no url,
+      // no fetch, and the file opens BLANK. They normally get it by finding the
+      // grid tile (Wm.getItemsByAttr in their initialize), which only works when
+      // the containing folder happens to be on screen. Arriving from a deep link
+      // it is not, so this branch — the one that opens a file whose tile is not
+      // rendered — has always launched them empty.
+      //
+      // Built exactly the way wm's fetchMediaAttributes already builds it for the
+      // audio/video/image/document players, from the attributes just fetched.
+      // Containers are excluded: a folder / workspace window takes its own
+      // `media` and must keep behaving as it does today.
+      if (!opt.media && !CONTAINER_FILETYPES.includes(node.filetype)) {
+        try {
+          const k = await Kind.waitFor(_a.media);
+          opt.media = media || new k({ model: new Backbone.Model(node) });
+        } catch (e) {
+          // Never let this cost the open itself: without media the file still
+          // opens, just as blank as it did before.
+          if (this.warn) this.warn("[openFileLocation] could not build media", e);
+        }
       }
       return Wm.launch({ ...opt, ...node }, { explicit: 1 });
     }

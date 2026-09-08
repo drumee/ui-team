@@ -10,6 +10,7 @@ const {
   isOverdue,
   priorityMeta,
   statusMeta,
+  subtaskBadge,
 } = require("./helpers");
 
 const MAX_AVATARS = 3; // avatars shown before collapsing to a "+N" chip
@@ -19,7 +20,7 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
   const cols = ui.getColumns();
   const sort = ui.getSort();
-  const tasks = ui.getFilteredTasks().slice();
+  const tasks = ui.getTopLevelTasks().slice();
 
   const statusOrder = cols.reduce((a, c, i) => {
     a[c.key] = i;
@@ -86,12 +87,41 @@ module.exports = function (ui) {
     ],
   });
 
-  // Task cell — leading checkbox (toggles complete) + title.
-  const titleCell = (t) => {
+  // Task cell — expand chevron + leading checkbox (toggles complete) + title.
+  // `sub` renders the indented child variant: no chevron (one level of nesting,
+  // so a subtask never has children of its own) and no count badge.
+  const titleCell = (t, sub) => {
     const done = ui.isDoneStatus(t.status);
+    const { total } = ui.getSubtaskCount(t);
+    // A task with no children gets no live chevron — no dead affordance — but
+    // it still renders the element as an inert, invisible spacer. Without one
+    // its checkbox and title sit a chevron-width to the left of every
+    // expandable neighbour's, and the column visibly jitters row to row. Child
+    // rows take the spacer too: one level of nesting, so a subtask never has
+    // children of its own. Same treatment as gantt.js.
+    //
+    // The live chevron needs bubble:0 of its own: the whole row carries
+    // service:"open-detail", so without it expanding would also open the modal.
+    const chevron =
+      !sub && total
+        ? Skeletons.Note({
+            className: `${pfx}__list-chevron`,
+            content: "›",
+            bubble: 0,
+            service: "toggle-subtasks",
+            uiHandler: [ui],
+            taskId: t.id,
+            attrOpt: { "data-open": ui.isSubtasksOpen(t.id) ? "1" : "0" },
+          })
+        : Skeletons.Note({
+            className: `${pfx}__list-chevron`,
+            attrOpt: { "data-empty": "1" },
+          });
     return Skeletons.Box.X({
       className: `${pfx}__list-cell ${pfx}__list-title-cell`,
+      attrOpt: sub ? { "data-sub": "1" } : undefined,
       kids: [
+        chevron,
         Skeletons.Button.Svg({
           className: `${pfx}__list-check`,
           ico: "app-check",
@@ -105,7 +135,8 @@ module.exports = function (ui) {
           className: `${pfx}__list-title`,
           content: t.title || "",
         }),
-      ],
+        sub ? null : subtaskBadge(ui, t, `${pfx}__list-subcount`),
+      ].filter(Boolean),
     });
   };
 
@@ -133,9 +164,17 @@ module.exports = function (ui) {
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__list-status`,
-          attrOpt: { "data-status": t.status || "" },
+          // The pill tint is keyed on data-theme, not data-status: a custom
+          // column's status IS its DB id, which no per-status rule can match.
+          attrOpt: {
+            "data-status": t.status || "",
+            "data-theme": s.theme || "default",
+          },
           kids: [
-            Skeletons.Note({ className: `${pfx}__list-status-dot` }),
+            Skeletons.Note({
+              className: `${pfx}__list-status-dot`,
+              styleOpt: { background: s.color || "#AEAEB2" },
+            }),
             Skeletons.Note({
               className: `${pfx}__list-status-label`,
               content: s.name || LOCALE[s.label] || s.key,
@@ -253,16 +292,20 @@ module.exports = function (ui) {
     });
   };
 
-  const row = (t) =>
+  const row = (t, sub) =>
     Skeletons.Box.X({
       className: `${pfx}__list-row`,
       bubble: 0,
       service: "open-detail",
       uiHandler: [ui],
       taskId: t.id,
-      attrOpt: { "data-done": ui.isDoneStatus(t.status) ? "1" : "0" },
+      attrOpt: {
+        "data-done": ui.isDoneStatus(t.status) ? "1" : "0",
+        // The skin indents and de-emphasises child rows off this flag.
+        "data-sub": sub ? "1" : "0",
+      },
       kids: [
-        titleCell(t),
+        titleCell(t, sub),
         priorityCell(t),
         statusCell(t),
         dueCell(t),
@@ -270,6 +313,17 @@ module.exports = function (ui) {
         assigneeCell(t),
       ],
     });
+
+  // A parent followed by its children when expanded. Sub-rows use the same
+  // columns as the parent, per the spec — they are ordinary task rows, just
+  // indented.
+  const rowGroup = (t) => {
+    const kids = [row(t, false)];
+    if (ui.isSubtasksOpen(t.id)) {
+      ui.getSubtasks(t.id).forEach((s) => kids.push(row(s, true)));
+    }
+    return kids;
+  };
 
   return Skeletons.Box.Y({
     className: `${pfx}__list`,
@@ -281,7 +335,7 @@ module.exports = function (ui) {
       Skeletons.Box.Y({
         className: `${pfx}__list-body`,
         kids: tasks.length
-          ? tasks.map(row)
+          ? tasks.flatMap(rowGroup)
           : [
               Skeletons.Note({
                 className: `${pfx}__list-empty`,

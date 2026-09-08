@@ -46,6 +46,10 @@ class __devel_router extends LetcBox {
       case "icons":
         return this.feed({ kind: 'devel_icons' });
 
+      case "nudge":
+        // Nudge Lab — upgrade-popup scenario panel for testers (nudge_lab flag).
+        return this.feed({ kind: 'nudge_lab' });
+
       default:
         return Butler.say(`<u>devel/${tab}</u>`.printf(LOCALE.MODULE_NOT_FOUND));
     }

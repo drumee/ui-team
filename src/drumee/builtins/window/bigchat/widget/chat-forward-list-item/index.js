@@ -82,9 +82,30 @@ class ___chat_forward_list_item extends LetcBox {
 // unresolved row must not be selectable in the meantime.
 // ===========================================================
   isChatDisabled() {
-    const eligibility = this.mget('shareEligibility');
+    const eligibility = this.eligibilityMap();
     if (!eligibility) return false;
     return Number(eligibility[this.mget(_a.id)]) !== 1;
+  }
+
+// ===========================================================
+// The live verdict map, read from the OWNER rather than from this row's model.
+//
+// `shareEligibility` is handed down through itemsOpt, so it lands in a Backbone
+// model — which copies the attributes it is given. The row therefore holds a
+// SNAPSHOT taken before any verdict arrived (an empty object), while the picker
+// keeps filling its own map. Verified live on stage: the owner's map held
+// {id: 1} for every recipient while each row's copy still had zero keys, so
+// every row read "no verdict" and stayed disabled.
+//
+// Reading through the owner keeps one source of truth. The model value is still
+// the flag for WHETHER this row is gated at all (the picker only passes it when
+// the tab needs scoring), so an ungated row keeps returning false above.
+// ===========================================================
+  eligibilityMap() {
+    const gated = this.mget('shareEligibility');
+    if (!gated) return null;
+    const owner = this.mget('eligibilityOwner');
+    return (owner && owner._shareEligibility) || gated;
   }
 
 // ===========================================================

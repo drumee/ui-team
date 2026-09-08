@@ -1,4 +1,9 @@
 
+const { supportAvatar, isSupportEntity } = require("libs/support");
+// The workspace icon — the area-tinted folder shape. Single source, shared
+// with the desk sidebar's workspace_item (via its getFolderIcon wrapper).
+const folderIcon = require("media/grid/template/folder");
+
 const __skl_widget_chatcontactItem = function (ui) {
   let chat_icon, msg, state;
   const contentFig = ui.fig.family;
@@ -10,7 +15,16 @@ const __skl_widget_chatcontactItem = function (ui) {
   const lname = ui.mget(_a.lastname) || '';
   const fullname = ui.mget(_a.fullname) || `${fname} ${lname}`.trim();
   const displayName = (ui.mget('display') || '').trim() || fullname || fname || lname;
-  if (ui.mget('flag') === 'contact') {
+  // The row whose PEER is the support account — the user's side of the
+  // conversation. The account that answers support can never match: its own
+  // id is not among its rows' peers.
+  const supportPeer = isSupportEntity(ui.mget('entity_id'));
+
+  if (supportPeer) {
+    // Product mark rather than auto-coloured initials, so support does not
+    // read as one more contact in the list. See libs/support.supportAvatar.
+    chat_icon = supportAvatar(`${contentFig}__support-avatar`);
+  } else if (ui.mget('flag') === 'contact') {
     chat_icon = Skeletons.UserProfile({
       className: `${contentFig}__profile`,
       id: ui.mget('entity_id'),
@@ -21,6 +35,27 @@ const __skl_widget_chatcontactItem = function (ui) {
       live_status: 1,
       auto_color: 1,
       sys_pn: _a.profile
+    });
+  } else if (ui.mget('is_workspace')) {
+    // A workspace team-chat row (inbox -> Workspace chat). Draw the WORKSPACE'S
+    // OWN icon — the area-tinted folder shape from media/grid/template/folder —
+    // so a row is recognisably the same object as its desk tile and sidebar
+    // entry, instead of the generic project-room glyph every workspace shared.
+    //
+    // That module is the single source for this icon (workspace-item uses it
+    // through getFolderIcon) and it returns an HTML string, hence Element +
+    // content rather than Image.Svg. `role: desk` + `filetype: hub` is what
+    // selects the workspace shape and its area badge; isAttachment suppresses
+    // the kebab, which has nothing to act on in a chat row.
+    chat_icon = Skeletons.Element({
+      className: `${contentFig}__icon ${contentFig}__icon--workspace ${ui.mget(_a.area) || ''}`,
+      content: folderIcon({
+        area: ui.mget(_a.area),
+        filetype: _a.hub,
+        role: 'desk',
+        widgetId: ui._id || _.uniqueId('ws-chat-icon-'),
+        isAttachment: 1,
+      }),
     });
   } else {
     chat_icon = Skeletons.Button.Svg({
@@ -34,6 +69,26 @@ const __skl_widget_chatcontactItem = function (ui) {
     content: displayName,
     escapeContextmenu: true
   });
+
+  // Support conversations are marked in both inboxes: as a user, so the
+  // support thread is findable among ordinary chats; as the admin who answers
+  // support, so a request from a stranger is not mistaken for a colleague.
+  // The owning chat_p2p panel decides — it is the one that knows which
+  // account answers support. Rows in window_bigchat have no such parent and
+  // simply never carry the pill.
+  const panel = _.isFunction(ui.getParentByKind)
+    ? ui.getParentByKind('chat_p2p')
+    : null;
+  // Not on the user's own support row: the Drumee mark and the name already
+  // say what it is, and the badge only repeats them. It stays on the agent's
+  // side, where it is what marks a stranger's row as a request for help.
+  const supportPill =
+    !supportPeer && panel && _.isFunction(panel._isSupportRow) && panel._isSupportRow(ui)
+      ? Skeletons.Note({
+          className: `${contentFig}__support-pill`,
+          content: LOCALE.SUPPORT_LABEL
+        })
+      : null;
 
   const md = ui.mget(_a.metadata);
   if (md && (md.message_type === 'call')) {
@@ -78,10 +133,17 @@ const __skl_widget_chatcontactItem = function (ui) {
     escapeContextmenu: true
   });
 
+  // A conversation with no messages yet has no ctime — Dayjs.unix(undefined)
+  // formats as "Invalid Date", so render nothing instead.
+  // Support with nothing said yet reads "Always" rather than blank — the row
+  // is pinned and permanent, and an empty slot makes it look unfinished.
+  const ctime = ui.mget(_a.ctime);
   const chatTime = Skeletons.Note({
     className: `${contentFig}__note time`,
     sys_pn: 'msg-time',
-    content: Dayjs.unix(ui.mget(_a.ctime)).locale(Visitor.language()).format("HH:mm")
+    content: ctime
+      ? Dayjs.unix(ctime).locale(Visitor.language()).format("HH:mm")
+      : (supportPeer ? LOCALE.SUPPORT_ALWAYS : '')
   });
 
   const value = ui.mget('room_count') || "";
@@ -122,6 +184,7 @@ const __skl_widget_chatcontactItem = function (ui) {
                 className: `${contentFig}__info-top`,
                 kids: [
                   name,
+                  supportPill,
                   chatTime
                 ]
               }),

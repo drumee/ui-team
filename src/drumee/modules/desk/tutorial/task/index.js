@@ -1,40 +1,53 @@
-const { screen } = require('./skeleton');
-
-const BADGE = {
-  badge_text: 'STEP 4/6',
-  title: 'Project tracker in folder',
-  desc: `Track tasks, deadlines, and progress without leaving your folder. Every folder has its own project tracker so your team stays aligned on what's happening inside.`,
-};
+const skeleton = require('./skeleton');
+const { isLastScreen, entryScreen } = require('../tours');
 
 /**
- * Step 4 walks the five tracker views behind ONE parent step, the same way
- * tutorial_workspace runs its sub-badges and tutorial_folder its three screens:
- * navigation stays inside this widget until the last view, and only then does
- * it hand back to tutorial_main. The badge reads STEP 4/5 throughout.
+ * The `task` tour — Figma 146:40534 and 162:20161.
  *
- * The copy is identical on all five screens because the design repeats one
- * callout across all five frames (Figma 5:75112, 3202:123320, 3202:185373,
- * 3202:185461, 3202:185481).
+ * ONE screen: the Task empty state, whose carousel walks the five views by
+ * itself. Its CTA — "Create your first task" — ends the tour and opens the
+ * REAL New task dialog on the panel underneath.
  *
- * Each entry owns the view it renders, the part the spotlight points at, and
- * the direction the connector leaves the card — `west` throughout, as the
- * design puts the card to the RIGHT of what it marks.
+ * There used to be a second screen drawing a mock of that dialog. It is gone:
+ * the tour was showing a picture of the form and then leaving the user to find
+ * the real one, when the CTA is named for exactly the thing it can now do.
+ *
+ * The carousel used to be five separate STEPS, one per card, which made the
+ * card index and the step number the same value. That was wrong in both
+ * directions. The CTA reads "Create your first task", but on four of those five
+ * steps all it did was nudge the track — so reaching the dialog it names took
+ * five presses. And the progress pill counted to six through what the user sees
+ * as one screen.
+ *
+ * The cards are content this screen animates through (`_card`), not steps of
+ * the flow (`_screenIndex`). Keeping the two apart is the whole point of the
+ * split: the timer and the drag move the first, the CTA and the callout's
+ * Next/Back move the second.
  */
-// `radius` is only the fallback for when the bar cannot be measured — the hole
-// is normally sized by _holeRadius() so the view switcher stays readable on
-// every screen.
 const SCREENS = [
-  // The card the design's connector lands on, inside the In Progress column.
-  { view: 'board', target: 'board-card', direction: 'west', radius: 520 },
-  // The busiest day of the week strip.
-  { view: 'calendar', target: 'cal-day', direction: 'west', radius: 520 },
-  // The selected row's bar — its own rect is a thin ribbon.
-  { view: 'gantt', target: 'gantt-bar', direction: 'west', radius: 520 },
-  // The status cell of the highlighted row; the table itself is full-width.
-  { view: 'list', target: 'list-focus', direction: 'west', radius: 420 },
-  // Status overview: the donut and its legend.
-  { view: 'health', target: 'health-status', direction: 'west', radius: 520 },
+  // The empty state. No `desc` — it carries no callout (see _showScreen), and
+  // each card names its own view through the skeleton's VIEWS titles.
+  { target: 'es-viewport', anchor: 'es-cta', direction: 'north' },
 ];
+
+// How long each card holds before the track moves on.
+//
+// The carousel screen carries no callout (see the note in _showScreen), so
+// nothing on it asks the user to press anything — the track advancing is what
+// shows the five views. It has to get through all five before someone reaches
+// for the CTA, and with the CTA now ending the tour outright that is a shorter
+// window than it was: 2s a card, ten for the set.
+const AUTO_SLIDE_MS = 2000;
+
+// How far a drag must travel to count as "next card" rather than a slip. A
+// quarter of the pitch: far enough that a click with a shaky hand does not
+// move the carousel, close enough that a deliberate flick always does.
+const DRAG_SNAP = 0.25;
+
+// The last card, taken from the skeleton's own list so the two cannot drift: a
+// cursor that thinks there is a sixth card would slide the track into blank
+// space, and one that stopped at four would never show Project Health.
+const LAST_CARD = Math.max(0, skeleton.VIEWS.length - 1);
 
 class __tutorial_task extends LetcBox {
 
@@ -43,99 +56,297 @@ class __tutorial_task extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._screenIndex = 0;
+    // Which card the carousel is resting on. Survives a walk into the dialog
+    // and back, so Back returns to the screen the user left rather than
+    // snapping the track to the first view.
+    this._card = 0;
   }
 
   async onDomRefresh() {
-    // Re-entered via Back from Step 5: resume on the view we left off on.
-    if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
+    this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 
   onPartReady(child, pn) {
-    switch (pn) {
-      default:
-        if (super.onPartReady) super.onPartReady(child, pn);
-    }
+    if (super.onPartReady) super.onPartReady(child, pn);
   }
 
-  /**
-   * Radius that keeps the whole view-switcher bar inside the lit area.
-   *
-   * The hole is a circle centred on the screen's target and is fully clear out
-   * to 55% of its radius (see spotlight/skin). The bar is the window's full
-   * width, so a circle that holds it entirely inside that clear core needs a
-   * radius of ~1200-1600px — on a 1440x1024 stage that stops the vignette
-   * dimming anything at all. COVERAGE places the bar's far corner at 72%
-   * instead: the bar reads end to end while the edges of the window still fade.
-   *
-   * Measured from the DOM rather than tabulated per screen, so it stays right
-   * if the window or the bar changes.
-   *
-   * @param {Element} el the spotlight target
-   * @returns {Number|null} null when the bar cannot be measured
-   */
-  _holeRadius(el) {
-    const COVERAGE = 0.72;
-    if (!el || typeof el.getBoundingClientRect !== 'function') return null;
-    if (!this.el || typeof this.el.querySelector !== 'function') return null;
-    const bar = this.el.querySelector(`.${this.fig.family}__bar`);
-    if (!bar) return null;
-    const t = el.getBoundingClientRect();
-    const b = bar.getBoundingClientRect();
-    if (!t.width || !b.width) return null;
-    const cx = t.left + t.width / 2;
-    const cy = t.top + t.height / 2;
-    const far = Math.max(
-      Math.hypot(b.left - cx, b.top - cy),
-      Math.hypot(b.right - cx, b.top - cy),
-      Math.hypot(b.left - cx, b.bottom - cy),
-      Math.hypot(b.right - cx, b.bottom - cy),
-    );
-    return Math.round(far / COVERAGE);
-  }
-
-  /**
-   * Render the current view and move the spotlight onto its target.
-   *
-   * The part is awaited rather than read straight after `feed`, because the
-   * body is rebuilt on every view change and only answers once the new DOM has
-   * landed.
-   */
   async _showScreen() {
     const s = SCREENS[this._screenIndex];
     if (!s) {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(screen(this, s.view));
-    const target = await this.ensurePart(s.target);
+    // `index` is the card, not the step — the dialog screen ignores it.
+    this.feed(skeleton(this, { ...s, index: this._card }));
+    const [target, anchor] = await Promise.all([
+      this.ensurePart(s.target),
+      this.ensurePart(s.anchor),
+    ]);
+    // The callout appears on the DIALOG screen only. The carousel screen is the
+    // empty state with its track sliding — the artwork is the thing being
+    // shown, and a card over it was covering the view it names.
+    //
+    // That leaves the carousel with no Next either, since the callout footer
+    // was the only control on it. The CTA carries the flow instead
+    // (`cta_service` in skeleton/index.js), the same arrangement the chat
+    // tour's opening screen and the workspace tour's home screen use — without
+    // it the tour would strand on screen 1 and never reach the dialog.
+    const tooltip = s.dialog
+      ? {
+          title: LOCALE.TASK_HERO_TITLE_SHORT,
+          desc: s.desc(),
+          // NO stepProgress spread: without `step`/`steps` the callout draws
+          // no progress pill (see progress() in ../skeleton/toolkit/tooltip.js,
+          // which needs both). The tour is one carousel and one dialog, and a
+          // "STEP 2/2" badge over the form counted screens the user never
+          // experienced as steps — the five views go past on a timer inside
+          // the first one. Same reason the workspace tour dropped its pill.
+          hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+          done: isLastScreen(this, this._screenIndex, SCREENS.length),
+        }
+      : null;
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
-      // Back is live on every screen: from the first it walks out to Step 3,
-      // so there is never a dead end to hide it for.
-      tooltip: { ...BADGE, variant: 'figma' },
+      anchor: anchor && anchor.el,
+      tooltip,
       direction: s.direction,
-      // Measured so the whole view switcher stays lit; s.radius is the fallback.
-      radius: this._holeRadius(target.el) || s.radius,
+      gap: s.gap,
+      // No film on either screen of this tour. The carousel screen is about the
+      // artwork in the cards, and dimming the pane to light the viewport held
+      // back the only thing worth reading; the dialog screen then follows suit
+      // so the flow does not flicker a scrim in at the end.
+      dim: false,
       owner: this,
     });
+    this._armAutoSlide();
+    this._armDrag();
+  }
+
+  /** Motion the user has not asked for; honour the platform preference. */
+  _mayAnimate() {
+    try {
+      return !(typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
+   * Queue the next slide, or stand down.
+   *
+   * Stands down on the dialog screen, which has no carousel, and under
+   * prefers-reduced-motion. A drag pauses it for the length of the gesture and
+   * re-arms on release — the carousel is a showcase, so it carries on once let
+   * go rather than freezing wherever the user happened to stop.
+   */
+  _armAutoSlide() {
+    clearTimeout(this._slideTimer);
+    this._slideTimer = null;
+    if (!this._mayAnimate()) return;
+    const s = SCREENS[this._screenIndex];
+    // The carousel wraps, so there is no last card to stop on.
+    if (!s || s.dialog) return;
+    this._slideTimer = setTimeout(() => this._slideOn(), AUTO_SLIDE_MS);
+  }
+
+  /**
+   * Move the track one card on, IN PLACE.
+   *
+   * Not through _showScreen: that re-feeds the whole empty state, which
+   * rebuilds the track element — and a freshly mounted node has no previous
+   * transform to transition from, so the skin's `transition: transform` never
+   * runs and the carousel jumps. Setting the transform on the node that is
+   * already there is what makes it a slide.
+   *
+   * Safe to bypass a re-render only because the cards are not steps: there is
+   * no spotlight focus to re-raise and no callout copy to swap, so the track
+   * and its dot row are the whole of what changes between them.
+   *
+   * `--es-pitch` is read rather than recomputed — the skin sets it per variant
+   * AND per size tier, so a distance worked out here would desync on a narrow
+   * pane (see the note on PITCH in skeleton/toolkit/empty-state.js).
+   */
+  async _slideOn() {
+    // Past the last card, back to the first. A plain wrap, so the return trip
+    // is one long slide across all five rather than a seam — cloning the items
+    // to fake an endless belt would double the artwork and the DOM for a
+    // five-card showcase that is only ever glanced at.
+    const next = this._card >= LAST_CARD ? 0 : this._card + 1;
+    if (!(await this._moveTrack(next))) return;
+    this._armAutoSlide();
+  }
+
+  /**
+   * Put the track on card `i` without re-rendering, moving the lit dot with it.
+   *
+   * Returns false when it could not — the step is gone, or the screen changed
+   * while the part was being awaited and there is no track on show any more.
+   */
+  async _moveTrack(i) {
+    const track = await this.ensurePart('es-track');
+    if (this.isDestroyed && this.isDestroyed()) return false;
+    const s = SCREENS[this._screenIndex];
+    if (!s || s.dialog) return false;
+    if (!track || !track.el) return false;
+
+    this._card = i;
+    track.el.style.transform = `translateX(calc(var(--es-pitch) * -${i}))`;
+    this._syncDots(i);
+    return true;
+  }
+
+  /**
+   * Let the pointer drag the carousel.
+   *
+   * Bound to the track element itself, which `feed` replaces on every screen
+   * render — so `pointerdown` is re-bound each time and the discarded node
+   * takes its listener with it. `pointermove`/`pointerup` go on the WINDOW
+   * instead, and only for the life of one drag: a pointer that leaves the track
+   * mid-gesture still has to be followed, and a release outside it still has to
+   * end the drag. They are removed the moment it does, so nothing accumulates.
+   */
+  async _armDrag() {
+    const track = await this.ensurePart('es-track');
+    if (!track || !track.el) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const el = track.el;
+    // One pitch, read from CSS so it stays right on a narrow pane.
+    const pitch = () =>
+      parseFloat(getComputedStyle(el).getPropertyValue('--es-pitch')) || 0;
+
+    const onDown = (e) => {
+      if (e.button != null && e.button !== 0) return;
+      const p = pitch();
+      if (!p) return;
+      // A drag is the user driving, so the timer stands down for its duration —
+      // paused, not stopped: it is re-armed when the drag ends.
+      clearTimeout(this._slideTimer);
+      this._slideTimer = null;
+      this._drag = { x0: e.clientX, from: this._card, pitch: p, moved: false };
+      el.dataset.dragging = '1';
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    };
+
+    const onMove = (e) => {
+      const d = this._drag;
+      if (!d) return;
+      const dx = e.clientX - d.x0;
+      if (Math.abs(dx) > 2) d.moved = true;
+      // Rubber-band at both ends: there is nothing beyond card 0 or the last
+      // card to pull into view, so the track gives only a third of the travel
+      // there rather than dragging emptiness in.
+      const raw = -d.from * d.pitch + dx;
+      const min = -LAST_CARD * d.pitch;
+      const eased = raw > 0 ? raw / 3 : raw < min ? min + (raw - min) / 3 : raw;
+      el.style.transform = `translateX(${eased}px)`;
+    };
+
+    const onUp = (e) => {
+      const d = this._drag;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      this._drag = null;
+      delete el.dataset.dragging;
+      if (!d) return;
+      const dx = (e && typeof e.clientX === 'number' ? e.clientX : d.x0) - d.x0;
+      let to = d.from;
+      if (Math.abs(dx) > d.pitch * DRAG_SNAP) to = dx < 0 ? d.from + 1 : d.from - 1;
+      // Clamp rather than wrap: a wrap on a drag would fling the track the
+      // whole way across, which is not what a short pull asked for. The timer
+      // still wraps.
+      to = Math.max(0, Math.min(LAST_CARD, to));
+      this._card = to;
+      // Back to a pitch-based transform so the resting position stays correct
+      // if the tier changes --es-pitch under it.
+      el.style.transform = `translateX(calc(var(--es-pitch) * -${to}))`;
+      this._syncDots(to);
+      this._armAutoSlide();
+    };
+
+    el.addEventListener('pointerdown', onDown);
+    this._dragCleanup = () => {
+      el.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }
+
+  /** The lit dot is baked in from `index` at build time, so it moves by hand. */
+  async _syncDots(i) {
+    const dots = await this.ensurePart('es-dots');
+    if (!dots || !dots.el) return;
+    const row = dots.el.children;
+    for (let k = 0; k < row.length; k++) {
+      row[k].dataset.on = k === i ? '1' : '0';
+    }
+  }
+
+  onBeforeDestroy() {
+    clearTimeout(this._slideTimer);
+    this._slideTimer = null;
+    if (this._dragCleanup) this._dragCleanup();
+    this._dragCleanup = null;
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
+   * Hand the user the REAL New task dialog as the tour lets go.
+   *
+   * "Create your first task" is what the CTA says, and until now it did not:
+   * it walked to a drawing of the form and stopped, leaving the user to find
+   * the real one. The same hand-off the migrate tour makes on its last Done.
+   *
+   * RAISED AT THE HOST, like every other real action a step asks for. The step
+   * does not know which window it is drawn on — that is the host's
+   * `target_window` — and the panel that owns `add-task` is a child of that
+   * window, which forwards to it (window/folder, case "add-task"). That
+   * forward is also what defers the dialog until this tour is off the screen:
+   * a create modal inside the panel would otherwise open underneath a tour
+   * still covering it.
+   *
+   * BEFORE the hand-back, not after, for the reason the migrate tour documents:
+   * the deferral only queues while the tour is still claimed. With no host
+   * window — the desk-level `full` run — the host declines and the tour simply
+   * ends, as it did before.
+   *
+   * ONLY WHEN THIS SCREEN REALLY ENDS THE TOUR. Inside `full` the same press
+   * hands over to the tour after this one, and opening a dialog would interrupt
+   * the run. `isLastScreen` is the same test the callout uses for its Done, so
+   * the two cannot disagree.
+   */
+  _openTheRealThing() {
+    if (!isLastScreen(this, this._screenIndex, SCREENS.length)) return;
+    this.triggerHandlers({ service: 'window-tutorial:act', action: 'add-task' });
   }
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        // Only the last view hands the tour back to tutorial_main; the bare
-        // triggerHandlers() lets it read this widget's own service attribute.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers();
+        // Raised by the empty state's CTA (its `cta_service`,
+        // skeleton/index.js). With the mock dialog screen gone this is the only
+        // screen, so the CTA ends the tour — and opens the form it is named
+        // after on the way out.
+        if (this._screenIndex >= SCREENS.length - 1) {
+          this._openTheRealThing();
+          return this.triggerHandlers({ service: 'next-step' });
+        }
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':
-        // Back off the first view leaves Step 4 entirely (→ Step 3).
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });
         this._screenIndex = this._screenIndex - 1;
         return this._showScreen();
+      default:
+        if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
   }
 }

@@ -3,8 +3,16 @@
 @use "buttons" as *;
 
 .window-wallpaper-settings {
+  // __main is a flex column holding __header (72px) + this body. `height: 100%`
+  // made the body claim the WHOLE column, so header + body came to 72px MORE
+  // than the box and the footer inside it was pushed out the bottom (clipped by
+  // __main's overflow:hidden, so Cancel / Apply & Save became unclickable).
+  // `min-height: 0` is the load-bearing half: a flex item defaults to
+  // min-height:auto = its min-content height, which the uploader + footer floor
+  // at ~500px, so without it the body refuses to shrink and overflows anyway.
   &__body {
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   &__ui {
@@ -14,6 +22,12 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     width: 800px;
     height: 700px;
+    // Anchored at top:72px with no cap, this asked for 772px of viewport and
+    // simply ran off the bottom of any short screen — on a 14" laptop at 150%
+    // Windows scaling (CSS viewport ~1280x596) 180px hung below the fold and
+    // the footer buttons were unreachable. 88px = the 72px top offset + a 16px
+    // breathing gap. Above ~772px tall this is inert and the window stays 700px.
+    max-height: calc(100vh - 88px);
     top: 72px;
     left: calc(100vw - 800px);
 
@@ -98,6 +112,15 @@
     background-color: var(--neutral-200);
     background-size: cover;
     transition: all 0.3s ease;
+    // On a short screen the capped dialog has to pay for this box out of the
+    // wallpaper grid, which collapsed to ~67px (under one thumbnail row).
+    // Trading 64px of empty drop-zone back to the grid keeps it usable at
+    // ~139px. 800px covers every 14" laptop viewport (596-740px) and leaves
+    // full-height desktops (>=956px) untouched.
+    @media (max-height: 800px) {
+      min-height: 120px;
+      margin: var(--spacer-3) auto;
+    }
 
     &:hover {
       background-color: var(--neutral-300);

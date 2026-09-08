@@ -117,6 +117,44 @@
     width: 0;
     height: 0;
     overflow: visible;
+
+    // Every context menu in the app is hosted HERE, not next to the widget that
+    // opened it: `buildContextmenu` feeds `window.drumeeDialog` (@drumee/ui-core
+    // letc/addons/letc.js), which router/index.js `onPartReady` points at this
+    // part. So this layer has to out-stack the whole window manager, and it is
+    // the only thing this layer ever holds.
+    //
+    // It cannot do that on its own. This is a Wrapper, so holding a menu stamps
+    // `data-state="open"` and the global
+    // `[data-state="open"] { z-index: var(--z-index-context) !important }`
+    // (skin/lib/utils.scss) pins it to 50000 — one BELOW the WM's own
+    // `.window-manager__layer:has(> [data-state="1"])` lift of `50001
+    // !important` (desk/wm/skin), and below the upload-progress layer (50002)
+    // and the file-created card (50003).
+    //
+    // Those numbers are normally harmless: `.window-manager__ui` is
+    // `isolation: isolate` (desk/wm/skin), so they never leave the WM's own
+    // stacking context, which sits at z 1000. But three `:has()` rules in
+    // desk/skin/index.scss DISSOLVE that context on purpose — while the upload
+    // progress floater is mounted, while a call window is live, and while a WM
+    // modal is open — and then every layer inside resolves at the document root
+    // and 50001 beats this layer's 50000. The menu paints BEHIND the window.
+    //
+    // Reported as: the kebab menu on a freshly UPLOADED file is invisible for
+    // ~5s. That is the upload-progress floater's auto-dismiss delay
+    // (`_maybeArmAutoMinimize`, window/upload-progress/index.js) — once the
+    // floater goes, the WM re-isolates and the menu paints normally again.
+    //
+    // 50010 (`--z-index-context-upper`) clears 50001/50002/50003 with nothing
+    // else declared in that band. Scoped to `[data-state="open"]` so the
+    // `[data-state="closed"]` contract (z -1, hidden) is left exactly as it was.
+    // `html &` + `!important` is not optional: the `[data-state="open"]` lift is
+    // `!important` at the same (0,1,0) specificity, so a plain declaration would
+    // win or lose on bundle order. Same trick, same reason, as
+    // `html .list-smart__container` below.
+    html &[data-state="open"] {
+      z-index: var(--z-index-context-upper, 50010) !important;
+    }
   }
 }
 

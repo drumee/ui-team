@@ -3,8 +3,39 @@
  * Reads ui.getState() / ui.getJobSnap() / ui.isAutoFromOnboarding() to
  * render the right card body.
  */
+// The area-tinted folder shape, from the single source this app draws it from
+// (media/grid/template/folder — the desk sidebar, the workspace switcher and
+// the breadcrumb all go through it).
+//
+// It returns an HTML STRING, hence Element + content rather than Image.Svg +
+// ico: passing markup as an icon NAME builds `<use href="#<markup>">` and
+// renders nothing. Same note as modules/desk/breadcrumb/item/skeleton, which
+// is the block this one is modelled on.
+const folderArt = require('media/grid/template/folder');
+
 module.exports = function (ui) {
   const pfx = ui.fig.family;
+
+  // The destination's own glyph, not a generic folder outline.
+  //
+  // This card names a real place the import is about to land in, and every
+  // other surface that names one — the breadcrumb, the sidebar, the switcher —
+  // draws it with the workspace's own colour and badge. A flat coral
+  // `desktop_folder` made the one screen where the destination MATTERS the
+  // only screen that would not show you which one it is.
+  const destIco = () => Skeletons.Element({
+    className: `${pfx}__dest-ico`,
+    content: folderArt({
+      area: ui._destArea,
+      filetype: ui._destFiletype,
+      // What tells the template to draw a workspace rather than a plain inner
+      // folder, and so whether there is a badge at all.
+      role: ui._destFiletype === _a.hub ? 'desk' : '',
+      widgetId: _.uniqueId('gdrive-dest-'),
+      // No kebab: there is nothing here for a context menu to act on.
+      isAttachment: 1,
+    }),
+  });
 
   const close = Skeletons.Button.Svg({
     className: `${pfx}__close`, ico: 'cross',
@@ -167,7 +198,7 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__dest-card`,
           kids: [
-            Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+            destIco(),
             Skeletons.Box.Y({
               className: `${pfx}__dest-text`,
               kids: [
@@ -304,21 +335,24 @@ module.exports = function (ui) {
       SA_BAD_LINK: LOCALE.GDRIVE_SA_BAD_LINK,
       SA_NOT_A_FOLDER: LOCALE.GDRIVE_SA_NOT_A_FOLDER,
     };
-    // Two numbered steps, each a titled block. The old screen ran the step
-    // numbers inline in prose ("1. In Google Drive, share…"), so the two
-    // actions read as one paragraph of instructions with controls scattered
-    // through it — the user could not see at a glance that this is a
-    // do-this-then-that task, or which half they were on.
-    const step = (n, title, kids) => Skeletons.Box.Y({
+    // Two steps, each one label over its control.
+    //
+    // THE NUMBER IS IN THE LABEL, not in a disc beside it. This screen used
+    // discs — a purple counter, then the title on its own line — and they are
+    // gone because the design (Figma 176:47527) does not have them, and the
+    // tour that teaches this dialog draws it the design's way. A user is
+    // walked through five screens of one layout and then handed another; the
+    // count in a disc is not worth that.
+    //
+    // The label strings are the TOUR'S OWN — MIGRATE_STEP_SHARE_ADDRESS and
+    // MIGRATE_STEP_PASTE_LINK, which already carry "1." and "2." and fold in
+    // what the separate description line used to say. Shared deliberately: two
+    // strings for one instruction is how the drawing and the real thing drift
+    // apart in the first place.
+    const step = (label, kids) => Skeletons.Box.Y({
       className: `${pfx}__sa-step`,
       kids: [
-        Skeletons.Box.X({
-          className: `${pfx}__sa-step-head`,
-          kids: [
-            Skeletons.Note({ className: `${pfx}__sa-step-badge`, content: String(n) }),
-            Skeletons.Note({ className: `${pfx}__sa-step-title`, content: title }),
-          ],
-        }),
+        Skeletons.Note({ className: `${pfx}__sa-step-title`, content: label }),
         ...kids.filter(Boolean),
       ],
     });
@@ -333,7 +367,7 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__dest-card`,
           kids: [
-            Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+            destIco(),
             Skeletons.Box.Y({
               className: `${pfx}__dest-text`,
               kids: [
@@ -343,8 +377,7 @@ module.exports = function (ui) {
             }),
           ],
         }),
-        step(1, LOCALE.GDRIVE_SA_STEP1_TITLE, [
-          Skeletons.Note({ className: `${pfx}__description`, content: LOCALE.GDRIVE_SA_STEP1_BODY }),
+        step(LOCALE.MIGRATE_STEP_SHARE_ADDRESS, [
           Skeletons.Box.X({
             className: `${pfx}__sa-email-card`,
             kids: [
@@ -364,7 +397,7 @@ module.exports = function (ui) {
             ],
           }),
         ]),
-        step(2, LOCALE.GDRIVE_SA_STEP2_TITLE, [
+        step(LOCALE.MIGRATE_STEP_PASTE_LINK, [
         Skeletons.Box.X({
           className: `${pfx}__sa-input-row`,
           dataset: { partname: 'sa-folder-row' },
@@ -656,7 +689,7 @@ module.exports = function (ui) {
               Skeletons.Box.X({
                 className: `${pfx}__dest-card`,
                 kids: [
-                  Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+                  destIco(),
                   Skeletons.Box.Y({
                     className: `${pfx}__dest-text`,
                     kids: [
@@ -760,11 +793,17 @@ module.exports = function (ui) {
       ],
     });
   } else if (state === 'sa') {
-    // "Import from Google Drive", not "Import a folder or file": name the
-    // source, which is what the user is orienting by. Uses the shared
-    // header() so this screen carries the Drive logo like the others — it
-    // was the one titled header built by hand, and so the one without it.
-    head = header(LOCALE.GDRIVE_SA_HEADER_TITLE);
+    // The heading the tour spends three screens showing, word for word, and
+    // with no logo beside it — 176:47527 has neither. This is the one state
+    // the tour draws, so it is the one state that has to arrive looking like
+    // the drawing; the others keep the shared header() and its Drive mark.
+    head = Skeletons.Box.X({
+      className: `${pfx}__header`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.IMPORT_FOLDER_OR_FILE }),
+        close,
+      ],
+    });
   } else if (state === 'in-progress') {
     head = Skeletons.Box.X({
       className: `${pfx}__header`,

@@ -24,13 +24,13 @@ const DAYS = [
 const FOCUS_DATE = 9;
 
 function entry(pfx, task) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__cal-entry`,
     kids: [
-      Skeletons.Box.Y({ className: `${pfx}__cal-entry-dot`, dataset: { status: task.status } }),
-      Skeletons.Note({ className: `${pfx}__cal-entry-title`, content: task.name }),
+      Skeletons.Box.Y({ active: 0, className: `${pfx}__cal-entry-dot`, dataset: { status: task.status } }),
+      Skeletons.Note({ active: 0, className: `${pfx}__cal-entry-title`, content: task.name }),
       task.desc
-        ? Skeletons.Note({ className: `${pfx}__cal-entry-desc`, content: task.desc })
+        ? Skeletons.Note({ active: 0, className: `${pfx}__cal-entry-desc`, content: task.desc })
         : null,
       // A filled badge here, tinted by status — the design's calendar entries
       // carry the colour, unlike the list where the status is plain text.
@@ -42,12 +42,12 @@ function entry(pfx, task) {
 function dayCell(ui, pfx, day) {
   const tasks = TASKS.filter((t) => t.day === day.date);
   const focus = day.date === FOCUS_DATE;
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__cal-day`,
     ...(focus ? { sys_pn: 'cal-day', partHandler: ui } : {}),
     kids: [
-      Skeletons.Note({ className: `${pfx}__cal-date`, content: String(day.date) }),
-      Skeletons.Box.Y({
+      Skeletons.Note({ active: 0, className: `${pfx}__cal-date`, content: String(day.date) }),
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__cal-entries`,
         kids: tasks.map((t) => entry(pfx, t)),
       }),
@@ -56,16 +56,16 @@ function dayCell(ui, pfx, day) {
 }
 
 module.exports = function calendar(ui, pfx) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__cal`,
     kids: [
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__cal-head`,
         kids: DAYS.map((d) =>
-          Skeletons.Note({ className: `${pfx}__cal-head-day`, content: d.label }),
+          Skeletons.Note({ active: 0, className: `${pfx}__cal-head-day`, content: d.label }),
         ),
       }),
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__cal-grid`,
         kids: DAYS.map((d) => dayCell(ui, pfx, d)),
       }),

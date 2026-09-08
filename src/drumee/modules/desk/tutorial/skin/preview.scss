@@ -1,0 +1,326 @@
+@use "mixins/drumee";
+
+// A WORKSPACE IN MINIATURE — the gradient plate with an app window on it
+// (tutorial__pv-*), drawn by ./toolkit/app-preview.js.
+//
+// Two tours open on it: the create-workspace flow (140:22684, Files) and the
+// chat tour (142:39142, a conversation). It was one component in the design
+// and, in the code, a composed plate here plus a BITMAP in the chat tour —
+// which is what this file exists to stop.
+//
+// Keyed on fig.group like the Files pane it sits beside, and for the same
+// reason: more than one step renders it.
+
+// The plate's height on the home screen, shared with the hero next to it so
+// the two keep the top edge 140:22945 aligns them on. Exported, because
+// ./files.scss sets the hero from it — one number, one place.
+$plate-h: 475px;
+
+.tutorial {
+  // ── Preview card ────────────────────────────────────────────────────────
+  // A gradient plate with an app window on it, clipped at the right edge the
+  // way the frame lets the window run off. The window inside is composed at
+  // the app's real width and scaled down, so what it shows is the SAME tree
+  // the full screens render rather than a second miniature that can drift.
+  &__pv-plate {
+    flex: 0 0 auto;
+    width: 705px;
+    max-width: 46%;
+    align-self: center;
+    // The frame's 705x476 is the OUTER card — the window's 70/66 offset is
+    // measured inside it. Without this the insets were added to the height and
+    // the plate stood 543 tall against a 475 hero, so the two stopped sharing
+    // the top edge they are aligned on.
+    box-sizing: border-box;
+    height: $plate-h;
+    margin-right: 46px;
+    // Where the window actually sits on the plate: `image 1` (140:23218) is
+    // absolutely placed at left 70 / top 66 inside the 705x476 card. 30/22 sat
+    // it almost in the corner and left barely a sliver of the gradient to read.
+    padding: 66px 0 0 70px;
+    // 140:23220, verbatim: a 20px card with a 1px brand hairline, and a
+    // gradient that runs top to BOTTOM — not the 150deg diagonal this had —
+    // from a near-transparent brand tint to solid #5950ff. The old top stop
+    // was an opaque #b9b4ff, which painted a lilac band across the head of the
+    // card; the real one is 5% ink, so the canvas wash behind it shows through
+    // and the plate only gains weight towards the bottom.
+    border: 1px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100.03%);
+
+    // FILL THE BOX INSTEAD, when the caller has one of its own.
+    //
+    // The numbers above are the home screen's: the plate stands beside a hero
+    // and shares its top edge, so it is pinned. The chat tour hands this to a
+    // carousel card that is already sized (760x515, `es-card-art[data-card=
+    // "wide"]`) and already clips and rounds — so the plate takes that box and
+    // keeps only what makes it a plate: the gradient and the window's inset.
+    &[data-fit="card"] {
+      width: 100%;
+      max-width: none;
+      height: 100%;
+      margin-right: 0;
+      border-radius: 0;
+    }
+  }
+
+  &__pv-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+    border-radius: 10px 0 0 0;
+    overflow: hidden;
+    background: var(--normal-bg-elevated);
+  }
+
+  // transform-origin top-left plus a fixed viewport above: the window keeps its
+  // real proportions and the viewport crops it, which is what the frame shows.
+  // A stacking context is opened here, which is safe — nothing inside the
+  // preview is ever the spotlight's target (the callout points at the CTA).
+  &__pv-scale {
+    flex: 0 0 auto;
+    // Sized so the window FILLS the card and is cropped by it, which is how
+    // the frame shows it — a smaller scale leaves white margins the design
+    // does not have.
+    transform: scale(0.62);
+    transform-origin: top left;
+  }
+
+  // ── The window's own topbar (tutorial__home-pv-tb-*) ────────────────────
+  // The base image on the plate (176:40744): org pill / department / workspace
+  // crumb on the left, utility cluster on the right. Same numbers as the tour's
+  // own bar in skin/index.scss — this is a picture of that product, and the
+  // 0.62 scale on the wrapper is what makes it a miniature.
+  &__pv-topbar {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    height: 52px;
+    padding: 0 22px;
+  }
+
+  // Both pills: the grey lozenge with 4px around its leading icon.
+  &__pv-tb-org,
+  &__pv-tb-crumb {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+  }
+
+  // ROUND, not a rounded square. The base image (176:40744) puts the org's
+  // picture in a circle here, which is also what the product's own avatars are
+  // — the 8px this had made it read as another tile like the department's,
+  // beside it, instead of as somebody's face.
+  &__pv-tb-org-avatar {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--primary-purple-40);
+  }
+
+  &__pv-tb-org-avatar-text {
+    @include drumee.typo($size: 12px, $line: 1);
+    font-weight: 600;
+    color: var(--gray-white, #fff);
+    text-transform: uppercase;
+  }
+
+  &__pv-tb-org-name,
+  &__pv-tb-crumb-name {
+    @include drumee.typo($size: 14px, $line: 20px);
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__pv-tb-org-plan {
+    @include drumee.typo($size: 12px, $line: 1.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--primary-purple-40);
+    padding: 4px 8px;
+    border-radius: 52px;
+    background: rgba(89, 80, 255, 0.1);
+    white-space: nowrap;
+  }
+
+  // GREY, not ink. Both carets are affordances on a pill whose subject is the
+  // NAME beside them, and at --normal-fg they carried the same weight as it —
+  // three equally black things in a row. Measured off the base image: its
+  // darkest caret pixel is #86868d against this token's #84848c.
+  &__pv-tb-caret {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-50);
+  }
+
+  // The department segment sits BETWEEN the two pills, on the bare bar — a
+  // tinted tile, the name, and the slash that leads into the workspace.
+  &__pv-tb-dept {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__pv-tb-dept-tile {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: var(--primary-purple-10);
+  }
+
+  &__pv-tb-dept-ico {
+    width: 16px;
+    height: 16px;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--primary-purple-40);
+  }
+
+  &__pv-tb-dept-name {
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 400;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__pv-tb-dept-sep {
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  // folderArt paints at its authored 105x86 unless pinned — the same explicit
+  // box the tour's own breadcrumb gives it.
+  &__pv-tb-crumb-icon {
+    position: relative;
+    width: 24px;
+    height: 20px;
+    min-width: 24px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 20px;
+    }
+
+    svg.folder-shape { width: 24px; height: 20px; }
+  }
+
+  // Pushed to the far edge, as the frames place it.
+  &__pv-tb-utils {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  &__pv-tb-util {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+
+    svg { width: 100%; height: 100%; }
+    color: var(--normal-fg-20);
+  }
+
+  &__pv-tb-avatar {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    margin-left: 4px;
+    border-radius: 50%;
+    background: var(--normal-bg-80);
+  }
+
+  &__pv-app {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 10px;
+    padding: 0 0 0 10px;
+  }
+
+  // 64, WHICH IS THE PRODUCT'S OWN NUMBER — the collapsed desk rail
+  // (desk/skin/sidebar.scss, `[data-collapsed="1"] &__main`) and the width the
+  // tour's own shell is drawn at.
+  //
+  // This was 92, and it was the one part of the plate whose proportions did
+  // not come from anywhere: measured against the base images it renders about
+  // a third too wide, which reads as a different product beside a folder
+  // column that matches to within 2%. Everything inside it is scaled by the
+  // same 0.7 rather than re-picked, so the tile still centres and the labels
+  // still fit on one line.
+  &__pv-rail {
+    flex: 0 0 64px;
+    width: 64px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-radius: 14px;
+    background: var(--primary-purple-70);
+    color: var(--gray-white, #fff);
+  }
+
+  &__pv-rail-logo {
+    width: 26px;
+    height: 26px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__pv-rail-item {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__pv-rail-tile {
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+  }
+
+  &__pv-rail-item[data-active="1"] &__pv-rail-tile {
+    background: var(--primary-purple-40);
+  }
+
+  &__pv-rail-ico {
+    width: 18px;
+    height: 18px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__pv-rail-text {
+    @include drumee.typo($size: 10px, $line: 1.2);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+  }
+}

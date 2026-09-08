@@ -30,6 +30,7 @@ const __classname = function(_ui_, trigger, k){
     rotateRight: 'desktop_rotate',
     separator: 'separator',
     settings:'editbox_cog',
+    // `trash` is the class the shared skin paints --red-500.
     trash:'trash',
     unlock:'unlock',
     upload:'upload',

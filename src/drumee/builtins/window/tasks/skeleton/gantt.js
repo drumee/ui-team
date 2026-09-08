@@ -5,7 +5,7 @@
 // A purple "today" line and a shaded current-period band sit behind the bars.
 //   Figma: 2057-32279 (weeks), 2065-90472 (months), 2365-137835 (body detail).
 // Globals Skeletons/LOCALE/Dayjs are injected at runtime.
-const { priorityMeta, mayCreateTask } = require("./helpers");
+const { priorityMeta, mayCreateTask, subtaskBadge } = require("./helpers");
 
 const ASIDE_W = 300; // left task-list width
 const ROW_H = 56; // task row height (aside + track share it)
@@ -43,7 +43,7 @@ module.exports = function (ui) {
   // the task's start_date (Duration toggle) when set, else its created time as
   // a fallback. Clamped to ≤ end. Tasks with no due_date are dropped.
   const rows = [];
-  (ui.getFilteredTasks() || []).forEach((t) => {
+  (ui.getTopLevelTasks() || []).forEach((t) => {
     if (!t.due_date) return;
     let end;
     try {
@@ -70,10 +70,50 @@ module.exports = function (ui) {
     rows.push({ task: t, start, end });
   });
 
+  // ── Expand ───────────────────────────────────────────────────
+  // A parent whose chevron is open contributes its children as rows directly
+  // beneath it. Built BEFORE the date domain so a child running past its
+  // parent widens the timeline instead of overflowing it, and consumed by a
+  // single loop below so the aside rows and the timeline tracks cannot drift
+  // out of alignment (they are two parallel arrays keyed only by position).
+  const displayRows = [];
+  rows.forEach((r) => {
+    displayRows.push({ ...r, child: false });
+    if (!ui.isSubtasksOpen || !ui.isSubtasksOpen(r.task.id)) return;
+    (ui.getSubtasks ? ui.getSubtasks(r.task.id) : []).forEach((task) => {
+      // A child with no date of its own rides the parent's window, so it still
+      // gets a bar rather than silently disappearing the way the top-level
+      // loop drops a task with no due_date.
+      let start = r.start;
+      let end = r.end;
+      if (task.due_date) {
+        try {
+          const d = Dayjs(task.due_date).startOf("day");
+          if (d.isValid()) {
+            end = d;
+            let s = null;
+            if (task.start_date) {
+              const sd = Dayjs(task.start_date).startOf("day");
+              if (sd.isValid()) s = sd;
+            }
+            if (!s) {
+              const ct = Number(task.ctime) || 0;
+              s = ct ? Dayjs(ct * 1000).startOf("day") : end;
+            }
+            start = !s.isValid() || s.isAfter(end) ? end : s;
+          }
+        } catch {
+          /* unparseable — keep the parent's window */
+        }
+      }
+      displayRows.push({ task, start, end, child: true });
+    });
+  });
+
   // ── Date domain ──────────────────────────────────────────────
   let minD = today;
   let maxD = today;
-  rows.forEach((r) => {
+  displayRows.forEach((r) => {
     if (r.start.isBefore(minD)) minD = r.start;
     if (r.end.isAfter(maxD)) maxD = r.end;
   });
@@ -179,13 +219,15 @@ module.exports = function (ui) {
   // ── Aside rows + timeline tracks ─────────────────────────────
   const asideRows = [];
   const trackRows = [];
-  rows.forEach(({ task, start, end }) => {
+  displayRows.forEach(({ task, start, end, child }) => {
     const sel = selected && selected.has && selected.has(task.id);
     const pm = priorityMeta(ui, task.priority);
+    const kids = ui.getSubtaskCount ? ui.getSubtaskCount(task).total : 0;
     asideRows.push(
       Skeletons.Box.X({
         className: `${pfx}__gantt-arow`,
         styleOpt: { height: `${ROW_H}px` },
+        attrOpt: { "data-child": child ? "1" : "0" },
         dataset: { selected: sel ? 1 : 0 },
         kids: [
           Skeletons.Box.X({
@@ -202,7 +244,25 @@ module.exports = function (ui) {
               }),
             ],
           }),
-          Skeletons.Note({ className: `${pfx}__gantt-chevron`, content: "›" }),
+          // Expands the children inline (Figma 58471:221905 puts this on
+          // every row). A childless or child row still renders the element, as
+          // an empty spacer, so every title stays on the same x-position.
+          child || !kids
+            ? Skeletons.Note({
+                className: `${pfx}__gantt-chevron`,
+                attrOpt: { "data-empty": "1" },
+              })
+            : Skeletons.Note({
+                className: `${pfx}__gantt-chevron`,
+                content: "›",
+                bubble: 0,
+                service: "toggle-subtasks",
+                uiHandler: [ui],
+                taskId: task.id,
+                attrOpt: {
+                  "data-open": ui.isSubtasksOpen(task.id) ? "1" : "0",
+                },
+              }),
           task.priority
             ? Skeletons.Note({
                 className: `${pfx}__gantt-dot`,
@@ -217,6 +277,33 @@ module.exports = function (ui) {
             uiHandler: [ui],
             taskId: task.id,
           }),
+          subtaskBadge(ui, task, `${pfx}__gantt-subcount`),
+          // "Create child task items" — Figma 58471:221905 puts this on every
+          // Gantt row, between the title and the delete control. It opens the
+          // task's own detail panel with the child-item creator already open,
+          // which is where the design puts the creator (58471:222398); there is
+          // no inline creator on the Gantt row itself.
+          mayCreateTask(ui) && !child
+            ? Skeletons.Button.Svg({
+                className: `${pfx}__gantt-add-child`,
+                // app-add, not "plus" — see the subtask header's ＋: the "plus"
+                // glyph is a filled disc, which paints as a solid black circle.
+                ico: "app-add",
+                bubble: 0,
+                service: "add-child-task",
+                uiHandler: [ui],
+                taskId: task.id,
+                // Object form with __tip: ui-core appends the tooltip as a
+                // plain CHILD of the button and gives it no styling, so the
+                // bare string form renders as inline text inside the button
+                // and displaces the icon. __tip is the absolutely-positioned
+                // flyover this panel already uses for exactly that reason.
+                tooltips: {
+                  content: LOCALE.CREATE_CHILD_TASK,
+                  className: `${pfx}__tip`,
+                },
+              })
+            : null,
           Skeletons.Button.Svg({
             className: `${pfx}__gantt-del`,
             ico: "cross",
@@ -269,6 +356,7 @@ module.exports = function (ui) {
       Skeletons.Box.Y({
         className: `${pfx}__gantt-track`,
         styleOpt: { height: `${ROW_H}px` },
+        attrOpt: { "data-child": child ? "1" : "0" },
         kids: barKids,
       }),
     );

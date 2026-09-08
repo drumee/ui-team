@@ -1,5 +1,6 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
+const { menuRow, createRows } = require("./new-menu-rows");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.
@@ -143,20 +144,146 @@ function fileNewControl(ui) {
     // Resolve write permission after mount; starting hidden prevents a flash
     // for viewers who cannot upload or create files.
     dataset: { visible: 0 },
-    kids: [newMenu(ui)],
+    // The menu is registered as a part in its own right, not just wrapped: the
+    // folder window listens for its `open` to trigger the migrate tour, and the
+    // wrapper above cannot report that — it is a plain box, and the open state
+    // lives on the menu widget. Named here rather than inside newMenu() so the
+    // part belongs to the control that owns it.
+    kids: [
+      { ...newMenu(ui), sys_pn: "new-menu", partHandler: ui },
+      // Mobile-only dim layer behind the centred card (the skin re-anchors the
+      // panel to the viewport centre on small screens). Desktop never shows it.
+      //
+      // It has to be a real framework Box rather than a CSS ::before, because
+      // ui-core's menu closes on outside click via RADIO_CLICK, and that channel
+      // is only ever fired from View.prototype.triggerHandlers — i.e. by taps on
+      // framework views. A pseudo-element would dim the screen and then swallow
+      // every tap without closing anything, trapping the user in the menu.
+      //
+      // Deliberately a SIBLING *after* the menu, so the skin can reveal it with
+      // `…__wrapper[data-state="1"] ~ &` — a plain sibling combinator keyed off
+      // the state ui-core already writes, needing neither :has() nor a second
+      // piece of state to keep in sync. Paint order is set by z-index, not by
+      // this DOM order.
+      Skeletons.Box.X({
+        className: `${cnTopbar}__new-backdrop`,
+        service: "close-new-menu",
+        uiHandler: [ui],
+      }),
+    ],
+  });
+}
+
+// ── Workspace file search (43:23955) ──────────────────────────────────────
+// The "Search…" field in a workspace toolbar, owned by the folder window that
+// draws it.
+//
+// It used to be the DESK's own box (desk/skeleton/topbar deskSearchBox, with the
+// desk as uiHandler), i.e. the GLOBAL search simply mounted inside a workspace:
+// it queried `desk.search` — every hub the user owns, plus chat messages across
+// all of them — and answered an empty query with the LIST OF WORKSPACES. Sitting
+// above one workspace's files, that is the wrong question; the field must search
+// the files of THAT workspace.
+//
+// So the box belongs to the window now:
+//   - the window answers the keystrokes (onUiEvent "ws-search-typed") and runs
+//     `media.search_all`, a scope=hub service: filenames, extensions and indexed
+//     content under this window's own hub_id, so nothing outside the workspace
+//     can match;
+//   - the part names are the window's own (`ws-search-*`). That also ends a
+//     latent collision: the desk claimed "search-box" / "search-suggestions" /
+//     "suggestions-list" for whichever copy mounted LAST, so with two workspace
+//     windows open, typing in one drove the other one's dropdown.
+//
+// Keystrokes arrive through the Entry's `watch` hook, which fires
+// onUiEvent("ws-search-typed", { value }) once the field is ready — the <input>
+// is built asynchronously (waitElement), so a listener wired at part-ready time
+// would run before it exists. Same hook the chat search bar above uses.
+//
+// The classes are unchanged (`…-topbar__search-*`), so the folder skin's pill +
+// dropdown (skin/index.scss, "Workspace toolbar search") still dresses it.
+function workspaceSearchBox(ui, pfx) {
+  return Skeletons.Box.Y({
+    className: `${pfx}__search-container`,
+    sys_pn: "ws-search-container",
+    partHandler: ui,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__search-bar`,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "magnifying-glass",
+            className: `${pfx}__search-icon`,
+          }),
+          Skeletons.Entry({
+            className: `${pfx}__search-input`,
+            sys_pn: "ws-search-box",
+            partHandler: ui,
+            uiHandler: [ui],
+            placeholder: LOCALE.SEARCH_FILES,
+            require: "any",
+            mode: "interactive",
+            interactive: 1,
+            bubble: 0,
+            watch: "ws-search-typed",
+            // Kept from the box this replaces: the Entry template interpolates
+            // both straight into the tag, so unset they render
+            // type="undefined" and autocomplete="undefined" — and the browser's
+            // autofill list then covers the result dropdown.
+            type: _a.text,
+            autocomplete: _a.off,
+          }),
+        ],
+      }),
+      // Result dropdown. Hidden at data-state 0 by the skin; the window flips it
+      // through setState() as answers arrive. Rows are fed by the window rather
+      // than fetched by a List.Smart: the result set is one short page, and the
+      // window has to normalize the response first (a single hit comes back as a
+      // bare object, which list/index.js drops as "not an array").
+      Skeletons.Box.Y({
+        className: `${pfx}__search-suggestions`,
+        sys_pn: "ws-search-suggestions",
+        partHandler: ui,
+        state: 0,
+        kids: [
+          Skeletons.Box.Y({
+            className: `${pfx}__search-results`,
+            sys_pn: "ws-search-results",
+            partHandler: ui,
+          }),
+        ],
+      }),
+    ],
   });
 }
 
 function fileFilterControls(ui) {
   const cnTopbar = `${ui.fig.family}-topbar`;
+  // 43:23955's workspace toolbar right group is: Search... | + New | the three
+  // view toggles. Search used to live in the desk topbar; it is built here now,
+  // scoped to the workspace the window is showing (see workspaceSearchBox).
+  //
+  // Folder windows only, and never a share: `media.search_all` searches the
+  // WHOLE hub, while a DMZ recipient was given one folder and must not see past
+  // it (same boundary the chat gates above defend). Skipped on mobile too — the
+  // phone shell has its own search card (desk/skeleton/index.js), which is the
+  // global one on purpose.
+  const search =
+    ui.fig.family === "window-folder" && !_inDmzShare(ui) && !Visitor.isMobile()
+      ? workspaceSearchBox(ui, cnTopbar)
+      : "";
+
   return Skeletons.Box.X({
     className: `${cnTopbar}__file-controls`,
     kids: [
+      search,
       fileNewControl(ui),
       fileViewToggle(ui, {
         namedState: true,
         modes: [
-          { mode: "group", ico: "view-group" },
+          // app-tree-view, not view-group: Figma 85:36284 draws this position
+          // as TreeView — a hierarchy, not a stack of groups.
+          { mode: "group", ico: "app-tree-view" },
           { mode: "list", ico: "view-list" },
           { mode: "grid", ico: "view-grid" },
         ],
@@ -317,16 +444,55 @@ export function tabBar(ui, opt = {}) {
       ? fileViewToggle(ui)
       : "";
 
+  // The strip is the scroller for the mobile carousel (folder skin's
+  // @container block pages it two tabs at a time), so it needs to be reachable
+  // from JS — the scroll listener that tracks the current page lives in
+  // folder/index.js onPartReady("tab-bar-tabs").
+  const tabStrip = Skeletons.Box.X({
+    className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
+    sys_pn: "tab-bar-tabs",
+    partHandler: ui,
+    kids,
+  });
+
+  // Carousel footer: one dot per page of two tabs, so a phone user can see that
+  // the strip continues past the two visible tabs. Built HERE rather than at
+  // runtime because the tab count is already settled at this point — Chat and
+  // Task have been dropped for DMZ shares above, and Meeting was pushed or not.
+  // `kids` carries "" for each dropped tab, hence the filter.
+  //
+  // Folder only. The container query that reveals these is window-folder-w, and
+  // the other families that share this tab bar would each need their own skin
+  // work and their own onPartReady hook — so they render no dots at all rather
+  // than dead markup.
+  //
+  // One page means nothing to page through: data-visible=0 hides the footer, the
+  // same convention __new-ctrl uses.
+  const tabPages = Math.ceil(kids.filter(Boolean).length / 2);
+  const tabDots = isFolder
+    ? Skeletons.Box.X({
+        className: `${cnRoot}-dots ${ui.fig.family}__tab-bar-dots`,
+        sys_pn: "tab-bar-dots",
+        partHandler: ui,
+        // `page` is the only state this footer has. The scroll listener writes
+        // it and the skin maps it to the active dot, so nothing per-dot has to
+        // be touched as the strip moves.
+        dataset: { page: 0, visible: tabPages > 1 ? 1 : 0 },
+        kids: Array.from({ length: tabPages }, (_, i) =>
+          Skeletons.Box.X({
+            className: `${cnRoot}-dot ${ui.fig.family}__tab-bar-dot`,
+            service: "tab-bar-page",
+            dataset: { page: i },
+            uiHandler: [ui],
+          }),
+        ),
+      })
+    : "";
+
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
-    kids: [
-      Skeletons.Box.X({
-        className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
-        kids,
-      }),
-      splitBtn,
-    ],
+    kids: [tabStrip, splitBtn, tabDots],
   });
 }
 
@@ -362,11 +528,30 @@ export function gridFilesBrowser(ui) {
     dataset: {
       role: _a.container,
     },
-    spinnerWait: 1500,
+    // The listing this drives (media.show_node_by) takes ~800ms of server time
+    // on a real workspace, so a 1500ms arming delay meant the grid sat blank
+    // with no feedback at all for the entire wait and the spinner only ever
+    // appeared on the slowest folders — measured: first paint at 1747ms, first
+    // spinner at 1272ms. Arm it early enough to actually cover the wait; it is
+    // still late enough that a cached/instant listing never flashes one.
+    spinnerWait: 250,
     spinner: true,
     itemsOpt: opt,
     skip,
     vendorOpt: Preset.List.Orange_e,
+    // Shown whenever the LISTING comes back empty — an empty folder, or a
+    // file-type filter that matched nothing. Without it the pane goes blank.
+    //
+    // Its OWN key, not the FILES_NOT_FOUND the search window renders
+    // (window/search/index.js): this reads as the folder's resting state
+    // ("nothing here yet"), whereas search is reporting a query that missed.
+    // Sharing one string means a copy edit for either surface silently
+    // rewrites the other.
+    //
+    // ui-core builds this as the `KIND.blank` empty view (collection-view.js
+    // emptyViewOptions), so the text lands inside the widget-blank placeholder
+    // that `.no-content` styles.
+    evArgs: Skeletons.Note(LOCALE.NO_FOLDERS_OR_FILES_YET, "no-content"),
     api: function (x) {
       return ui.getCurrentApi();
     },
@@ -647,13 +832,22 @@ export function chatPanel(ui) {
     sys_pn: "folder-chat",
   };
 
-  // Folder-scoped chat: scope the conversation to the current folder (nid) so
-  // only that folder's messages load. Applies to the authenticated folder window
-  // AND the DMZ share view — without scope=folder the chat widget omits `nid`
-  // from channel.messages (see chat/index.js getScopedNid) and loads the whole
-  // hub, pulling in messages from other scopes.
+  // Two scopes, and the difference is who is reading.
+  //
+  // `workspace` — the team chat of a workspace the viewer is a member of. ONE
+  // conversation for the whole workspace: Chat is a workspace rail item now
+  // (Figma 43:23955), not a per-folder tab, so walking into a subfolder must
+  // not switch conversations. The widget still receives `nid` — that is where
+  // a post's uploads land (chat/index.js: scopedNid vs postNid).
+  //
+  // `folder` — a DMZ share. Here the scope is an ACCESS boundary, not a view
+  // preference: the recipient was given one folder and must read that folder's
+  // messages only, never the hub's. A window/folder opened FROM a share
+  // carries the pinned token and belongs on this side too.
   if (ui.fig.family === "window-folder" || ui.fig.family === "dmz-sharebox") {
-    chat.scope = _a.folder;
+    const sharedView =
+      ui.fig.family === "dmz-sharebox" || !!ui.mget(_a.token);
+    chat.scope = sharedView ? _a.folder : "workspace";
     chat.type = _a.share;
     chat.area = _a.share;
     chat.hub_id = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
@@ -898,30 +1092,71 @@ export function searchResults(ui, rows) {
  * @returns
  */
 export function fileTypeFilterBar(ui) {
+  // Same five buckets the listing resolves server-side (mfs_show_node_by's
+  // type filter). Labels via LOCALE: this bar shipped with literals, so the
+  // workspace tabs stayed English while the identical bar in
+  // skeleton/content/grid renders the translated strings.
   const tabs = [
-    { label: "All", value: "all" },
-    { label: "Docs", value: "docs" },
-    { label: "PDF", value: "pdf" },
-    { label: "Images", value: "image" },
-    { label: "Other", value: "other" },
+    { label: LOCALE.ALL, value: "all" },
+    { label: LOCALE.DOCS, value: "docs" },
+    { label: LOCALE.PDF, value: "pdf" },
+    { label: LOCALE.IMAGES, value: "image" },
+    { label: LOCALE.OTHER, value: "other" },
   ];
+  // Which tab is lit comes from the WINDOW, never from the tab's position.
+  // This bar is rebuilt from scratch every time the view toggle switches
+  // grid/list/group (folder.toggleFilesLayout re-feeds the content part), while
+  // the active filter lives on the window as `_filterType` and deliberately
+  // survives that rebuild — the listing keeps honoring it through
+  // getCurrentApi(). Hard-coding the first tab therefore left the bar claiming
+  // "All" over a still-filtered listing, and on a filter that matched nothing
+  // the workspace read as "All → no files at all".
+  //
+  // `_filterType` is null for All (folder's filter-by-type stores null for the
+  // "all" value), so first render lands on index 0 exactly as before. The
+  // Math.max keeps a tab lit even if the window ever holds a value this bar
+  // does not list — never leave the control with nothing selected.
+  const current = ui._filterType || "all";
+  const activeIndex = Math.max(
+    tabs.findIndex((tab) => tab.value === current),
+    0,
+  );
   const filterTabs = tabs.map((tab, index) =>
     button(ui, {
       label: tab.label,
       className: `${ui.fig.family}__filter-tab`,
       service: "filter-by-type",
-      state: index === 0 ? 1 : 0,
+      state: index === activeIndex ? 1 : 0,
       radiotoggle: `media-filter-${ui._id}`,
       value: tab.value,
       dataset: { area: ui.mget(_a.area) },
     }),
   );
+  // The five tabs live on a TRACK of their own — the segmented control's grey
+  // ground (Figma base) — because this bar also carries search, "+ New" and the
+  // view toggle, and painting the bar itself would put all three on the track.
+  //
+  // `sys_pn` rides on the TRACK, not the bar, deliberately: the part it names
+  // is what _resetFileTypeFilter reaches for, and that walks
+  // `bar.children.find(c => c.mget(value) === "all")` — DIRECT children
+  // (folder/index.js). Left on the bar, the tabs became grandchildren, the
+  // lookup answered undefined and navigating into a folder silently stopped
+  // clearing a "Docs" filter — which hides every sub-folder and reads as an
+  // empty folder. Naming the track keeps that walk pointed at the tabs and
+  // needs no change on the JS side.
   return Skeletons.Box.X({
     className: `${ui.fig.family}__filter-bar`,
-    sys_pn: "file-type-filter",
-    partHandler: ui,
     dataset: { area: ui.mget(_a.area) },
-    kids: [...filterTabs, fileFilterControls(ui)],
+    kids: [
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__filter-track`,
+        sys_pn: "file-type-filter",
+        partHandler: ui,
+        dataset: { area: ui.mget(_a.area) },
+        kids: filterTabs,
+      }),
+      fileFilterControls(ui),
+    ],
   });
 }
 
@@ -932,7 +1167,10 @@ export function filesContainer(ui) {
     type: _a.type,
   };
   if (ui.fig.family === "window-folder") {
-    opt.kids = [fileTypeFilterBar(ui), gridFilesBrowser(ui)];
+    opt.kids = [
+      fileTypeFilterBar(ui),
+      gridFilesBrowser(ui),
+    ];
   }
   return Skeletons.Box.Y(opt);
 }
@@ -1044,7 +1282,11 @@ function fileThreadChatConfig(ui, fileNid, label, replyData) {
     type: ui.mget(_a.area),
     area: ui.mget(_a.area),
     view: "quickChat",
-    scope: _a.folder,
+    // Same split as chatPanel — see the comment there. This panel is
+    // file-scoped in practice (scoped_file_nid wins in getCurrentApi and
+    // matchesScopedChannel), but it falls back to this when the file scope is
+    // cleared, and it must land on the same conversation the middle chat shows.
+    scope: ui.mget(_a.token) ? _a.folder : "workspace",
     hub_id: ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id),
     nid: ui.mget(_a.nid),
     home_id: ui.mget(_a.home_id),
@@ -1282,34 +1524,8 @@ export function newMenu(ui, opt = {}) {
   const cnDropdown = `${cnWindowButton}__dropdown-menu`;
   const cnItem = `${cnDropdown}__item`;
 
-  // Build one menu row (icon + label) that carries a `service`. Mirrors the row
-  // shape used by dropdownMenuButton: active:0 on the row's kids so a click on
-  // the icon/label bubbles to the row (which owns the service) rather than being
-  // swallowed by the interactive Button.Svg / Note.
-  const row = ({ service, ico, content, area, name, className }) =>
-    Skeletons.Box.X({
-      className: className ? `${cnItem} ${className}` : cnItem,
-      uiHandler: [ui],
-      service,
-      // `name` rides along so new-document rows carry their filename
-      // (document.docx / spreadsheet.xlsx / presentation.pptx) — newDocument()
-      // reads cmd.mget(_a.name).
-      name,
-      kidsOpt: { active: 0 },
-      kids: [
-        Skeletons.Button.Svg({
-          ico,
-          active: 0,
-          className: `${cnDropdown}__icon`,
-          dataset: area ? { area } : undefined,
-        }),
-        Skeletons.Note({
-          content,
-          active: 0,
-          className: `${cnDropdown}__name`,
-        }),
-      ],
-    });
+  // Row shape lives in ./new-menu-rows.
+  const row = (spec) => menuRow(ui, spec);
 
   const importRows = [
     row({
@@ -1326,47 +1542,9 @@ export function newMenu(ui, opt = {}) {
     }),
   ];
 
-  // Create rows keep the historical folder services and filenames. Only their
-  // presentation moves into the right-side flyout.
-  const createRows = [
-    row({
-      service: "add-folder",
-      ico: "addmenu-folder",
-      content: LOCALE.FOLDER,
-      area: ui.mget(_a.area) || _a.personal,
-      className: `${cnItem}--add-folder ${cnDropdown}__submenu-item`,
-    }),
-    // Note is temporarily hidden from this create flyout (2026-08). The
-    // add-note handler (window/core.js) and editor_markdown stay wired —
-    // uncomment this row to restore the option.
-    // row({
-    //   service: "add-note",
-    //   ico: "addmenu-note",
-    //   content: LOCALE.NOTE,
-    //   className: `${cnItem}--add-note ${cnDropdown}__submenu-item`,
-    // }),
-    row({
-      service: "new-document",
-      name: "document.docx",
-      ico: "addmenu-document",
-      content: LOCALE.DOCUMENT,
-      className: `${cnItem}--document ${cnDropdown}__submenu-item`,
-    }),
-    row({
-      service: "new-document",
-      name: "spreadsheet.xlsx",
-      ico: "addmenu-spreadsheet",
-      content: LOCALE.SPREADSHEET,
-      className: `${cnItem}--spreadsheet ${cnDropdown}__submenu-item`,
-    }),
-    row({
-      service: "new-document",
-      name: "presentation.pptx",
-      ico: "addmenu-presentation",
-      content: LOCALE.PRESENTATION,
-      className: `${cnItem}--presentation ${cnDropdown}__submenu-item`,
-    }),
-  ];
+  // The four create rows, shared with the empty-state hero. `submenu: 1` adds
+  // the flyout-item class this surface's nested presentation indents on.
+  const createItems = createRows(ui, { submenu: 1 });
 
   const createGroup = Skeletons.Box.X({
     className: `${cnItem} ${cnItem}--create-group`,
@@ -1390,7 +1568,7 @@ export function newMenu(ui, opt = {}) {
       Skeletons.Box.Y({
         active: 0,
         className: `${cnDropdown}__create-submenu`,
-        kids: createRows,
+        kids: createItems,
       }),
     ],
   });
@@ -1602,15 +1780,28 @@ export function zoomMenu(ui) {
                 service,
                 uiHandler: [ui],
                 dataset: { preset, active: 0 },
-                kidsOpt: { active: 0 },
                 // The glyph is pure CSS: this Box is the outline, its kid
                 // the inner block whose width/position the skin varies by
                 // `data-preset`.
+                //
+                // `active: 0` must be set on EACH kid, not via the parent's
+                // `kidsOpt` — ui-core's mergeKidsOptions rebinds its local
+                // `item` and never writes back, so kidsOpt reaches nothing.
+                // An active kid binds its own onclick, and ui-core's
+                // __handleClick calls stopPropagation() BEFORE it discovers
+                // it has no uiHandler — so the glyph swallowed the click and
+                // the preset's service never ran. Only the second click of a
+                // double-click got through (the 300ms suppressor returns
+                // before stopPropagation). Mirrors topbarMoreMenu's items.
                 kids: [
                   Skeletons.Box.X({
                     className: `${cnRoot}-glyph`,
+                    active: 0,
                     kids: [
-                      Skeletons.Element({ className: `${cnRoot}-glyph-fill` }),
+                      Skeletons.Element({
+                        className: `${cnRoot}-glyph-fill`,
+                        active: 0,
+                      }),
                     ],
                   }),
                 ],

@@ -1,12 +1,21 @@
 require('./skin');
-const { tooltipBadge } = require('../skeleton/toolkit');
+const { tooltipBubble } = require('../skeleton/toolkit');
+const { anchorFor, splitAnchor } = require('../host-kit');
 
-const GAP = 12;
-const MIN_RADIUS = 120;
-const RADIUS_PADDING = 40;
+// Card edge to target edge.
+//
+// Measured off the frames rather than guessed: the import dialog's right edge
+// sits at x1056 and its callout's left edge at x1090 (176:47527); the share
+// panel and its callout are 31px apart (148:41197); the chat callout clears
+// the composer by 30 (142:39178). 16 — what this was — reads as the card being
+// stuck to the thing it points at.
+//
+// The beak occupies about 13 of this, leaving ~19px of clear space, which is
+// what the frames show.
+const GAP = 32;
+
 // One frame per sample, so this is also the wall-clock ceiling in frames
-// (~330ms at 60Hz) — the same ceiling the two-RAF version had at half the
-// sample count.
+// (~330ms at 60Hz).
 const STABLE_MAX_TRIES = 20;
 
 function nextFrameRect(el) {
@@ -16,17 +25,9 @@ function nextFrameRect(el) {
 }
 
 // Wait until the element's measured size stops changing between consecutive
-// frames. Covers async children (e.g. media_grid icon) that resize the target
-// after it first lands in the DOM — without which the very first focus measures
-// a collapsed rect and the tooltip lands off-screen.
-//
-// Sampled once per frame, seeded from a free synchronous read. It used to call
-// getElStablePosition (two RAFs) twice, so an element that had ALREADY settled —
-// which is every screen change after the first, the common case by far — still
-// cost four frames to confirm, and focus() paid that twice when a screen passes
-// an anchor. Measured 118ms per screen change; one frame confirms the same
-// thing. Per-frame sampling also spots a late resize a frame sooner than
-// per-two-frames did, so the case this exists for got quicker too.
+// frames. Covers async children that resize the target after it first lands in
+// the DOM — without which the very first focus measures a collapsed rect and
+// the callout lands off-screen.
 async function waitForStableRect(el) {
   let prev = el.getBoundingClientRect();
   for (let i = 0; i < STABLE_MAX_TRIES; i++) {
@@ -45,34 +46,84 @@ function elementOf(t) {
   return t.nodeType ? t : t.el || (t.$el && t.$el[0]);
 }
 
-function anchorFor(rect, direction) {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  switch (direction) {
-    case 'south':
-      return { left: `${cx}px`, bottom: `${window.innerHeight - rect.top + GAP}px` };
-    case 'east':
-      return { right: `${window.innerWidth - rect.left + GAP}px`, top: `${cy}px` };
-    case 'west':
-      return { left: `${rect.right + GAP}px`, top: `${cy}px` };
-    case 'north':
-    default:
-      return { left: `${cx}px`, top: `${rect.bottom + GAP}px` };
-  }
+// The element a step hands over can belong to the PREVIOUS render.
+//
+// ensurePart answers out of ui-core's `_branches`, which keeps pointing at the
+// old child until the new one registers itself (letc.js registerPart), and it
+// only rejects that entry if the view has been destroyed — detached-but-alive
+// passes. A detached node measures 0x0, which used to make focus() give up
+// without a callout.
+//
+// registerPart stamps the part's name on the element it registers, so the live
+// one can always be found in the document. Cheap, and it runs before anything
+// is measured.
+function live(el) {
+  if (!el || el.isConnected) return el;
+  const name = el.dataset && el.dataset.partname;
+  const found = name && document.querySelector(`[data-partname="${name}"]`);
+  return found || el;
 }
 
-function autoRadius(rect) {
-  // Half-diagonal + padding ensures the entire target fits inside the
-  // transparent center of the vignette (see gradient stops in skin/index.scss).
-  const halfDiag = Math.sqrt(rect.width * rect.width + rect.height * rect.height) / 2;
-  return Math.max(MIN_RADIUS, halfDiag + RADIUS_PADDING);
+// What to call the thing in a warning: its part name if it has one, else its
+// class. Enough to name the culprit in a console line someone can paste back.
+function nameOf(el) {
+  if (!el) return '(none)';
+  return (el.dataset && el.dataset.partname) || el.className || el.tagName;
 }
+
+// One above the scrim (10003), below the callout (10010).
+const LIT_Z = '10004';
+// The callout card, and how far its tail sits from the card's own corner —
+// both shared with skin/tooltip.scss, which is where the beak is drawn.
+const BUBBLE_CLASS = 'tutorial__bubble-card';
+const BEAK_INSET = 26;
+// Breathing room between the card and the edge of the tour.
+const EDGE = 12;
+// Where the ancestor walk stops: the tour's own root, which is the scrim's
+// containing block. Going past it would start lifting the desk.
+const LAYOUT_CLASS = 'tutorial-main__layout';
+
+/**
+ * Does this element open a stacking context its children cannot escape?
+ *
+ * Not the complete list from the spec — it is the list that occurs in these
+ * mocks: a positioned element with an explicit z-index, a transform (the four
+ * step roots centre themselves with one), a filter, or partial opacity.
+ * Anything missed here fails the same way an unpromoted target does, which is
+ * visible immediately on the screen that hits it.
+ */
+function opensStackingContext(node) {
+  const s = getComputedStyle(node);
+  if (s.position !== 'static' && s.zIndex !== 'auto') return true;
+  if (s.transform && s.transform !== 'none') return true;
+  if (s.filter && s.filter !== 'none') return true;
+  if (s.opacity !== '' && parseFloat(s.opacity) < 1) return true;
+  return false;
+}
+
+// anchorFor moved to ../host-kit.
+//
+// It has to know the box the callout is positioned INSIDE, and that box is no
+// longer always the viewport: a tour drawn over a folder window sits inside a
+// positioned ancestor, so viewport coordinates written as `top`/`left` landed
+// the card a window-offset away from its target. The kit's version takes the
+// host rect, and focus() below measures it.
 
 class __tutorial_spotlight extends LetcBox {
 
   initialize(opt = {}) {
     super.initialize(opt);
     this.declareHandlers();
+    // Every focus/clear takes a ticket. Both do async work before they touch
+    // the callout, so without this the LAST one to finish wins rather than the
+    // last one asked for — and a step swap asks for clear-then-focus in that
+    // order but resolves them in whichever order the awaits happen to land.
+    this._seq = 0;
+  }
+
+  /** Has a newer focus/clear been asked for since `ticket` was taken? */
+  _stale(ticket) {
+    return ticket !== this._seq;
   }
 
   onDomRefresh() {
@@ -85,57 +136,434 @@ class __tutorial_spotlight extends LetcBox {
   }
 
   /**
+   * Light one surface and put the callout beside it.
+   *
+   * The 2.0 design does NOT cut a hole. It lays a flat scrim over the whole
+   * mock desk and raises the surface being taught above it — which is why
+   * every `radius` this used to compute is gone, along with `_holeRadius()` in
+   * the tracker and share steps. A circle sized to keep a full-width toolbar
+   * legible had to be so large it stopped dimming anything; a scrim has no
+   * such tension.
+   *
    * @param {Object} args
-   * @param {*} args.target   what the hole is cut around
+   * @param {*} args.target   what is raised out of the scrim
    * @param {*} [args.anchor] what the callout points at, when that is not the
-   *   whole target — e.g. a panel is lit but the badge marks one card inside
-   *   it. Defaults to `target`.
-   * @param {Object} [args.tooltip]
+   *   whole target — e.g. a panel is lit but the beak marks one row inside it.
+   *   Defaults to `target`.
+   * @param {Object} [args.tooltip] see tooltipBubble
    * @param {String} [args.direction]
-   * @param {Number} [args.radius]
-   * @param {Object} [args.owner]
+   * @param {Number} [args.gap] card-edge to target-edge, overriding GAP. One
+   *   number for every callout is an average, and a step that sits beside a
+   *   surface the average was not measured on can say so.
+   * @param {String} [args.beak]
+   * @param {Object} [args.owner] the step widget; Back/Next are routed at it
+   * @param {Boolean} [args.dim=true] paint the scrim behind the lit surface.
+   *   PER SCREEN, not per tour: the chat flow opens on an empty state whose
+   *   frame has no dim and then dims the four screens that follow, and a tour
+   *   attribute cannot say that. It also keeps working when those same screens
+   *   run inside `full`, where the tour id is "full" — which is exactly what a
+   *   `[data-tour]` rule got wrong.
    */
   async focus(args = {}) {
-    const { target, anchor, tooltip, direction = 'north', radius, owner } = args;
+    const {
+      target, anchor, anchor_x, tooltip, direction = 'north', beak, owner, gap, dim = true,
+    } = args;
     if (!target) return this.clear();
-    const el = elementOf(target);
+    // Written before anything is awaited, so the scrim is already right for
+    // this screen by the time it fades in with the callout.
+    //
+    // `data-scrim`, not `data-dim`: the latter is already taken inside a step,
+    // where a row the screen is not about carries it to hold itself back
+    // (skin/tooltip.scss `[data-dim="1"] { opacity: .35 }`). That rule is a
+    // descendant selector under `.tutorial`, so reusing the name here risks
+    // fading the scrim and the callout themselves.
+    if (this.el && this.el.dataset) this.el.dataset.scrim = dim ? '1' : '0';
+    // Kept so the screen can be laid out again without the step having to
+    // re-raise it — see reflow(). The step is the only object that knows what
+    // its current screen points at, and it is not watching the window.
+    this._args = args;
+    const el = live(elementOf(target));
     if (!el || typeof el.getBoundingClientRect !== 'function') return;
 
+    const ticket = ++this._seq;
+
+    // The previous screen's element has to drop back into the scrim before
+    // this one comes out of it, or two surfaces read as lit at once during
+    // the crossfade.
+    this._unlight();
+
     // The target rect, the anchor rect and the callout part do not depend on
-    // one another, so they are resolved together. Awaiting them one after the
-    // other put two full settle waits on the critical path of every screen that
-    // passes an anchor, for no reason other than the order they were written in.
-    const anchorEl = anchor ? elementOf(anchor) : null;
-    const [rect, measuredAnchor, callout] = await Promise.all([
+    // one another, so they are resolved together rather than in the order they
+    // happen to be written in.
+    const anchorEl = anchor ? live(elementOf(anchor)) : null;
+    const anchorXEl = anchor_x ? live(elementOf(anchor_x)) : null;
+    const [rect, measuredAnchor, measuredAnchorX, callout] = await Promise.all([
       waitForStableRect(el),
       anchorEl && anchorEl !== el ? waitForStableRect(anchorEl) : null,
+      anchorXEl ? waitForStableRect(anchorXEl) : null,
       this.ensurePart('callout'),
     ]);
-    if (!rect.width || !rect.height) return;
+    if (this._stale(ticket)) return;
+    // A zero-size target means waitForStableRect gave up: the element is in the
+    // DOM but has no box, usually because the step's own layout has not settled
+    // or the part named here is not the one that carries the size.
+    //
+    // Returning here used to be the end of it, and that was worse than it
+    // looks. Between two SCREENS of one step nothing clears the callout first
+    // — only _showStep does, and that runs on step boundaries — so bailing
+    // left the PREVIOUS screen's card on screen with a live Next on it. The
+    // tour then walked forward on someone else's control, one dead screen at a
+    // time, showing nothing new until it fell out the far end of the step.
+    //
+    // So the measurement degrades instead of giving up. In order: the target,
+    // the anchor inside it, the step's own root — and failing all three, the
+    // middle of the tour with nothing lit. A misplaced callout is a cosmetic
+    // bug; a missing one strands the user on a screen with no way out, which
+    // is what "stuck on step 8, can't go next or back" was.
+    const usable = (r) => !!(r && r.width && r.height);
+    let box = rect;
+    let lit = el;
+    if (!usable(box)) {
+      const rootEl = owner && owner.el;
+      const rootRect = rootEl && rootEl.getBoundingClientRect
+        ? rootEl.getBoundingClientRect() : null;
+      this.warn && this.warn(
+        `[tutorial] spotlight target "${nameOf(el)}" has no box`, el,
+      );
+      if (usable(measuredAnchor)) {
+        // Pointing at the row rather than the panel it sits in is a smaller
+        // error than not pointing at all.
+        box = measuredAnchor;
+        lit = anchorEl;
+      } else if (usable(rootRect)) {
+        box = rootRect;
+        lit = rootEl;
+      } else {
+        const b = this.el.getBoundingClientRect();
+        const cx = b.left + b.width / 2;
+        const cy = b.top + b.height / 2;
+        box = { left: cx, right: cx, top: cy, bottom: cy, width: 0, height: 0 };
+        lit = null;
+      }
+    }
 
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const r = radius || autoRadius(rect);
-    this.el.style.setProperty('--spot-x', `${cx}px`);
-    this.el.style.setProperty('--spot-y', `${cy}px`);
-    this.el.style.setProperty('--spot-radius', `${r}px`);
+    if (lit) this._light(lit);
     this.setState(1);
 
     if (!tooltip) {
-      callout.feed(null);
+      // clear(), not feed(null). `feed` treats a falsy payload as "nothing to
+      // do" and returns the last child untouched (ui-core widgets/box), so
+      // feeding null left the PREVIOUS screen's card on screen — which is how
+      // the invite screen came up wearing the create screen's callout.
+      callout.clear();
       return;
     }
-    const anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : rect;
-    callout.feed(tooltipBadge(owner || this, {
+    if (this._stale(ticket)) return;
+    const pointsAt = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    // A card can clear one box while pointing at another INSIDE it.
+    //
+    // The import dialog is the case the design states outright: 176:47527 puts
+    // the dialog's right edge at x1056 and the callout's left at x1090 — 34px
+    // clear of the DIALOG, not of the row the step is about. Measuring the gap
+    // from the row instead measured it from an edge 28px further in, so the
+    // card came to rest against the panel it was meant to stand off.
+    //
+    // So the horizontal comes from `anchor_x` when a screen names one, and the
+    // vertical stays with `anchor`, which is what the beak marks. splitAnchor
+    // names every field rather than spreading — see the warning on it.
+    const anchorRect = anchor_x
+      ? splitAnchor(pointsAt, measuredAnchorX)
+      : pointsAt;
+    // Kept for _keepInView, which may have to place the card again on the other
+    // side of this same rect.
+    this._anchorRect = anchorRect;
+    this._gap = gap == null ? GAP : gap;
+    // The callout is absolutely positioned inside THIS widget, so its
+    // coordinates are relative to this box — not to the viewport, which is only
+    // the same thing when nothing above the tour is positioned.
+    const host = this.el.getBoundingClientRect();
+    const style = anchorFor(anchorRect, direction, this._gap, host);
+    // Diagnostic, gated on a tour having been asked for by URL, so an ordinary
+    // session prints nothing. Callout placement is four numbers derived from two
+    // rects, and reading a screenshot cannot tell you which of them is wrong.
+    require('libs/window-tutorial-intent').trace('callout placed', {
+      direction,
+      anchor: { l: Math.round(anchorRect.left), r: Math.round(anchorRect.right),
+                t: Math.round(anchorRect.top), w: Math.round(anchorRect.width) },
+      host: { l: Math.round(host.left), r: Math.round(host.right),
+              t: Math.round(host.top), w: Math.round(host.width) },
+      style,
+      litFallback: lit !== el,
+    });
+    callout.feed(tooltipBubble(owner || this, {
       ...tooltip,
       direction,
-      style: anchorFor(anchorRect, direction),
+      beak,
+      style,
     }));
+    await this._keepInView(callout, ticket);
+    const placed = card => card && card.getBoundingClientRect();
+    const finalCard = callout.el && callout.el.querySelector(`.${BUBBLE_CLASS}`);
+    const fr = placed(finalCard);
+    if (fr) {
+      require('libs/window-tutorial-intent').trace('callout settled', {
+        l: Math.round(fr.left), r: Math.round(fr.right), w: Math.round(fr.width),
+        dir: finalCard.dataset.direction, tail: finalCard.dataset.tail || 'on',
+      });
+    }
   }
 
-  clear() {
+  /**
+   * Nudge the callout back inside the tour if the anchor pushed it out.
+   *
+   * anchorFor places the card from the ANCHOR's centre and nothing bounds it,
+   * so a block near an edge puts part of the card outside — and `__layout` is
+   * `overflow: hidden`, so what lands outside is clipped, buttons included.
+   * Share's step 5 rings Link Expiration near the bottom of the panel and lost
+   * its Next that way: the callout was on screen, its control was not.
+   *
+   * The nudge is applied as a transform offset through two custom properties,
+   * so it composes with the placement transform the skin already sets per
+   * direction rather than fighting it. The beak is moved the opposite way by
+   * the same amount, so the tail stays on the anchor while the card shifts —
+   * and the nudge is clamped so the beak cannot slide off the card's own edge.
+   *
+   * @param {Object} callout the callout part
+   * @param {Number} ticket  the focus ticket, so a stale pass does nothing
+   */
+  async _keepInView(callout, ticket) {
+    const card = callout && callout.el && callout.el.querySelector(`.${BUBBLE_CLASS}`);
+    if (!card) return;
+    // Settled, not just next-frame. feed() mounts the card's children over
+    // several frames, so a single rAF measures a card that is still growing —
+    // and a short measurement under-nudges, which is the same clipped button
+    // with extra steps. This is the helper the targets already use.
+    let r = await waitForStableRect(card);
+    if (this._stale(ticket) || !card.isConnected) return;
+    if (!r.width || !r.height) return;
+
+    let bounds = this.el.getBoundingClientRect();
+    // A bounds box with no size makes every comparison below nonsense: `over()`
+    // would read min > max, return a huge dx, blow past the beak cap and slide
+    // the card hard against an edge with its tail off — which looks exactly like
+    // a placement bug and is not one. It can happen while the tour is still
+    // being laid out, or if the host was measured before it had a box.
+    //
+    // There is nothing to keep in view against a box that is not there, so the
+    // card is left where anchorFor put it.
+    if (!bounds.width || !bounds.height) {
+      require('libs/window-tutorial-intent').trace('keepInView skipped — host has no box', {
+        w: Math.round(bounds.width), h: Math.round(bounds.height),
+      });
+      return;
+    }
+
+    const over = (lo, hi, min, max) => {
+      if (lo < min) return min - lo;
+      if (hi > max) return max - hi;
+      return 0;
+    };
+    let dx = over(r.left, r.right, bounds.left + EDGE, bounds.right - EDGE);
+    let dy = over(r.top, r.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+
+    // NO ROOM ON THIS SIDE? GO TO THE OTHER ONE.
+    //
+    // Sliding is the wrong answer when the card simply does not fit where it was
+    // asked to go. The cap below then gives up the tail and moves it as far as
+    // it must, which walks the card across the tour and leaves it flush against
+    // an edge, pointing at nothing — the migrate tour's dialog screens landed
+    // beside the mock's hero copy that way, half a pane from the dialog they
+    // describe.
+    //
+    // The opposite side is almost always empty, because the thing being
+    // described is what filled the first one. Flipping keeps the card beside its
+    // subject and keeps the beak on it; only if the flip does not fit either do
+    // we fall through to the old behaviour, which is the honest last resort.
+    const args = this._args || {};
+    const dir = args.direction || 'north';
+    const FLIP = { west: 'east', east: 'west', north: 'south', south: 'north' };
+    const horizontal = dir === 'east' || dir === 'west';
+    const overflowAxis = horizontal ? dx : dy;
+    const capBeforeFlip = horizontal
+      ? Math.max(0, r.width / 2 - BEAK_INSET)
+      : Math.max(0, r.height / 2 - BEAK_INSET);
+    if (overflowAxis && Math.abs(overflowAxis) > capBeforeFlip && this._anchorRect && FLIP[dir]) {
+      const flipped = FLIP[dir];
+      const style = anchorFor(this._anchorRect, flipped, this._gap, bounds);
+      // Clear the placement the first side used, or the two fight: `left` and
+      // `right` are both live if only one is overwritten.
+      for (const k of ['left', 'right', 'top', 'bottom']) card.style[k] = '';
+      Object.assign(card.style, style);
+      card.dataset.direction = flipped;
+      card.setAttribute('data-direction', flipped);
+      const after = await waitForStableRect(card);
+      if (this._stale(ticket) || !card.isConnected) return;
+      const stillOver = horizontal
+        ? over(after.left, after.right, bounds.left + EDGE, bounds.right - EDGE)
+        : over(after.top, after.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+      if (!stillOver || Math.abs(stillOver) <= capBeforeFlip) {
+        // The flip worked. Re-measure both axes against the new position and
+        // let the nudge below fine-tune what is left.
+        dx = over(after.left, after.right, bounds.left + EDGE, bounds.right - EDGE);
+        dy = over(after.top, after.bottom, bounds.top + EDGE, bounds.bottom - EDGE);
+        r = after;
+      } else {
+        // No better there. Put it back and take the old medicine.
+        for (const k of ['left', 'right', 'top', 'bottom']) card.style[k] = '';
+        Object.assign(card.style, anchorFor(this._anchorRect, dir, this._gap, bounds));
+        card.dataset.direction = dir;
+        card.setAttribute('data-direction', dir);
+      }
+    }
+
+    // Past this the tail would leave the card it belongs to, and a beak
+    // pointing at nothing is worse than a card slightly off-centre. The cap is
+    // measured from the card's own edge, so a taller card can move further.
+    const capX = Math.max(0, r.width / 2 - BEAK_INSET);
+    const capY = Math.max(0, r.height / 2 - BEAK_INSET);
+    const capped = { x: Math.max(-capX, Math.min(capX, dx)), y: Math.max(-capY, Math.min(capY, dy)) };
+
+    // …but the cap only holds while the capped nudge is ENOUGH. A card that
+    // lands well outside the tour cannot be pulled back within half its own
+    // height, and the part left outside is usually the footer — which is where
+    // Back and Next are. An unreachable button is not a cosmetic problem, so
+    // past that point the card moves as far as it must and gives up its tail:
+    // a detached beak reads as a stray triangle, a clipped one reads as a
+    // broken tour.
+    const detached = capped.x !== dx || capped.y !== dy;
+    if (!detached) {
+      dx = capped.x;
+      dy = capped.y;
+    }
+    card.dataset.tail = detached ? 'off' : 'on';
+
+    card.style.setProperty('--bubble-nudge-x', `${Math.round(dx)}px`);
+    card.style.setProperty('--bubble-nudge-y', `${Math.round(dy)}px`);
+  }
+
+  /**
+   * Raise an element out of the scrim.
+   *
+   * A z-index only wins inside its own stacking context, and the step skins are
+   * full of them: four of the step roots centre themselves with
+   * `transform: translate(-50%, -50%)`, which opens a context whether or not
+   * anything asks for one. Promoting the target alone would leave it stuck at
+   * its ancestor's level — under the scrim — with no error and nothing to
+   * inspect, on exactly the steps that look most finished.
+   *
+   * So the promotion walks up to the tutorial layout and lifts every ancestor
+   * that opens a context on the way. That is a handful of nodes, computed once
+   * per screen, and it makes the mechanism independent of skin discipline
+   * rather than dependent on it.
+   *
+   * Every element's own inline values are remembered, so a step that styles a
+   * block inline is handed back exactly what it had.
+   */
+  _light(el) {
+    if (!el || !el.style) return;
+    const touched = [];
+    const raise = (node) => {
+      touched.push({ node, position: node.style.position, zIndex: node.style.zIndex });
+      // Only reposition a statically-positioned element; anything already
+      // positioned keeps the position it chose for its own layout reasons.
+      if (getComputedStyle(node).position === 'static') node.style.position = 'relative';
+      node.style.zIndex = LIT_Z;
+    };
+
+    raise(el);
+    for (let n = el.parentElement; n && !n.classList.contains(LAYOUT_CLASS); n = n.parentElement) {
+      if (opensStackingContext(n)) raise(n);
+    }
+
+    this._lit = touched;
+    el.classList.add('is-lit');
+  }
+
+  _unlight() {
+    const touched = this._lit;
+    if (!touched) return;
+    this._lit = null;
+    for (const { node, position, zIndex } of touched) {
+      if (!node || !node.style) continue;
+      node.style.position = position || '';
+      node.style.zIndex = zIndex || '';
+    }
+    const el = touched[0] && touched[0].node;
+    if (el && el.classList) el.classList.remove('is-lit');
+  }
+
+  /**
+   * Put the callout's Done button into its pending state.
+   *
+   * The tour host calls this while the tour's closing write is in flight: on a
+   * slow link that write is a visible pause during which the callout just sits
+   * there, and the button the user pressed is where the wait belongs.
+   *
+   * The node is queried rather than held as a part because the callout is
+   * rebuilt on every screen, so the one that matters is whichever is on screen
+   * now; `is-done` marks it, and only the last screen carries it.
+   *
+   * @returns {Boolean} whether a button was actually found and marked
+   */
+  async busy() {
+    const callout = await this.ensurePart('callout');
+    const btn = callout && callout.el && callout.el.querySelector('.is-done');
+    if (btn) btn.classList.add('loading');
+    return !!btn;
+  }
+
+  /**
+   * Put the spotlight down.
+   *
+   * Awaitable, and ticketed: a clear that loses its race against a newer focus
+   * must not wipe that focus's callout. Returning the promise lets the host
+   * order a step swap (see tutorial/index.js _showStep).
+   */
+  /**
+   * Lay the current screen out again, in place.
+   *
+   * The callout's position comes from the rect of what it points at, measured
+   * once when the screen was raised. A window resize — or a tablet rotating,
+   * which arrives as the same event — invalidates that: the card keeps the
+   * coordinates the old viewport gave it, which near an edge means its buttons
+   * end up somewhere the user cannot reach.
+   *
+   * Re-entering focus() re-measures everything and re-runs _keepInView, and it
+   * is safe to call at any time: the sequence ticket makes the newer call the
+   * winner if one is already in flight.
+   *
+   * @returns {Promise|undefined}
+   */
+  reflow() {
+    const args = this._args;
+    if (!args) return;
+    const el = elementOf(args.target);
+    // The step that raised this screen may be long gone (its pane rebuilt, or
+    // the tour moved on). Nothing to re-place, and re-running focus on a
+    // detached node would only warn.
+    if (!el || !el.isConnected) return;
+    return this.focus(args);
+  }
+
+  async clear() {
+    const ticket = ++this._seq;
+    // The screen is coming down; there is nothing left to lay out again.
+    this._args = null;
+    this._unlight();
     this.setState(0);
-    this.ensurePart('callout').then((p) => p.feed(null));
+    const callout = await this.ensurePart('callout');
+    if (this._stale(ticket)) return;
+    // See focus(): feed(null) is a no-op, so this never cleared anything. Every
+    // step boundary has fed a new card immediately afterwards, which is the
+    // only reason it went unnoticed.
+    callout.clear();
+  }
+
+  onBeforeDestroy() {
+    // The lit element belongs to a step, which may outlive this widget during
+    // teardown; leaving it promoted would strand an inline z-index on it.
+    this._unlight();
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 }
 

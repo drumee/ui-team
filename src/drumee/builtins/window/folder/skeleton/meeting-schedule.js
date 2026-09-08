@@ -5,9 +5,14 @@
 // window/folder/index.js, which re-feeds this.
 const { stripMarkers } = require("../meeting-markers");
 
+// `autoDaily` marks a `view` that the RESPONSIVE rule chose, not the user:
+// _applyScheduleBreakpoint sets it when a narrow panel switches weekly → daily,
+// and every explicit view service (sched-set-view / sched-toggle-view /
+// sched-pick-day) clears it. That one bit is what lets widening the panel undo
+// an automatic switch without ever undoing a deliberate one.
 function schedState(ui) {
   if (!ui._sched) {
-    ui._sched = { anchor: Dayjs(), view: "weekly" };
+    ui._sched = { anchor: Dayjs(), view: "weekly", autoDaily: false };
   }
   return ui._sched;
 }
@@ -240,8 +245,16 @@ function weeklyGrid(ui, pfx) {
     );
   };
 
+  // `--day` marks the single-column variant, mirroring the month grid's own
+  // `--month` modifier. The skin needs it because weekly and daily share every
+  // other class: the compact block gives the grid a 620px min-width so seven
+  // columns stay usable by scrolling, and without this modifier ONE column
+  // inherited that floor and scrolled sideways too — which is precisely what
+  // switching to daily on a narrow panel exists to avoid.
+  const dayMod = daily ? ` ${pfx}-sched-days--day` : "";
+  const bodyMod = daily ? ` ${pfx}-sched-body--day` : "";
   const header = Skeletons.Box.X({
-    className: `${pfx}-sched-days`,
+    className: `${pfx}-sched-days${dayMod}`,
     kids: [
       Skeletons.Box.Y({ className: `${pfx}-sched-corner` }),
       ...Array.from({ length: nDays }, (_, i) => {
@@ -290,7 +303,10 @@ function weeklyGrid(ui, pfx) {
     }),
   );
 
-  return [header, Skeletons.Box.Y({ className: `${pfx}-sched-body`, kids: rows })];
+  return [
+    header,
+    Skeletons.Box.Y({ className: `${pfx}-sched-body${bodyMod}`, kids: rows }),
+  ];
 }
 
 // ── Monthly grid: weekday header + weeks of day cells ─────────────────────

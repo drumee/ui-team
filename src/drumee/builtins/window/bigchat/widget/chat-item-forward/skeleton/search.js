@@ -59,26 +59,44 @@ const __skl_chat_item_forward_search = function(_ui_, type) {
         ]})
     ]});
   
+  // The workspace-member tab is searched here rather than by the server:
+  // hub_get_members_by_type takes no search key. Until its cache arrives the
+  // search must stay empty; falling through to that API would show every member
+  // for any query. Cache arrival re-feeds this skeleton from the picker.
+  const usesWorkspaceMembers = _ui_._usesWorkspaceMembers(type);
+  const memberRows = usesWorkspaceMembers
+    ? _ui_.memberSearchRows()
+    : null;
+
+  const rowOpt = {
+    kind         : 'widget_chat_forward_list_item',
+    selectedList : _selectedList,
+    // Same rule as the non-search list: gated whenever the source is a
+    // workspace, share-room-only from a P2P chat.
+    ...(_ui_._needsEligibility(type) ? {
+      shareEligibility: _ui_._shareEligibility,
+      eligibilityOwner: _ui_
+    } : {}),
+    type,
+    service      : 'trigger-search-room-select',
+    uiHandler    : [_ui_]
+  };
+
   const searchList = Skeletons.List.Smart({
     className   : `${chatSearchFig}__list contact-list`,
     placeholder : noRoom,
     spinner     : true,
     timer       : 50,
-    itemsOpt    : { 
-      kind         : 'widget_chat_forward_list_item',
-      selectedList : _selectedList,
-      // Same rule as the non-search list: gated whenever the source is a
-      // workspace, share-room-only from a P2P chat.
-      ...(_ui_._needsEligibility(type) ? {
-        shareEligibility: _ui_._shareEligibility,
-        eligibilityOwner: _ui_
-      } : {}),
-      type,
-      service      : 'trigger-search-room-select',
-      uiHandler    : [_ui_]
-    },
     sys_pn      : 'forward-search-list',
-    api         : _ui_.getRoomSearchApi
+    ...(usesWorkspaceMembers
+      ? {
+        // List.initialize object-spreads kids when itemsOpt is also present.
+        // These static rows are therefore prepared here and carry no itemsOpt.
+        kids: Array.isArray(memberRows)
+          ? memberRows.map((row) => ({ ...row, ...rowOpt }))
+          : []
+      }
+      : { itemsOpt: rowOpt, api: _ui_.getRoomSearchApi })
   });
 
   const a = Skeletons.Box.Y({

@@ -96,7 +96,7 @@ function subscriptionBanner(ui) {
 
   if (ui._isCanceling) {
     return Skeletons.Box.X({
-      className: `${fig} ${fig}--canceling`,
+      className: `${fig} ${fig}--canceling${ui._motionClass()}`,
       kids: [
         Skeletons.Box.Y({
           className: `${fig}-text`,
@@ -126,7 +126,7 @@ function subscriptionBanner(ui) {
   // and Cancel ends it immediately via promo.cancel (not cancel_subscription).
   if (ui._isPromoTrial) {
     return Skeletons.Box.X({
-      className: `${fig} ${fig}--active ${fig}--promo`,
+      className: `${fig} ${fig}--active ${fig}--promo${ui._motionClass()}`,
       kids: [
         Skeletons.Note({
           className: `${fig}-title`,
@@ -146,7 +146,7 @@ function subscriptionBanner(ui) {
   }
 
   return Skeletons.Box.X({
-    className: `${fig} ${fig}--active`,
+    className: `${fig} ${fig}--active${ui._motionClass()}`,
     kids: [
       Skeletons.Note({
         className: `${fig}-title`,
@@ -214,7 +214,7 @@ function claimPill(ui) {
     ? Dayjs.unix(promo.campaign_ends_at).format("MMM D, YYYY")
     : "";
   return Skeletons.Box.Z({
-    className: fig,
+    className: `${fig}${ui._motionClass()}`,
     kids: [
       Skeletons.Button.Svg({
         className: `${fig}-close`,
@@ -354,7 +354,7 @@ function redeemBox(ui) {
     });
 
   return Skeletons.Box.Y({
-    className: `${fig} is-open`,
+    className: `${fig} is-open${ui._motionClass()}`,
     kids: [
       toggleRow,
       Skeletons.Note({

@@ -1,4 +1,3 @@
-const { userMenu } = require("../../../builtins/skeleton/toolkit/user");
 const { canUpgradePlan, planLabel } = require("libs/billing");
 
 /**
@@ -23,6 +22,7 @@ const createNavItem = (
   on_click,
   sys_pn,
   badgePn,
+  opts = {},
 ) => {
   const fig = `${ui.fig.family}-sidebar`;
 
@@ -33,6 +33,19 @@ const createNavItem = (
     }),
     createText(fig, `item-text ${color}`, label),
   ];
+
+  // A row that leads somewhere rather than doing something (the mobile "Add
+  // new" row, which swaps the drawer to its `create` mode) carries a trailing
+  // arrow so it reads as navigation. Pushed before the badge so a row could
+  // carry both.
+  if (opts.affordance) {
+    kids.push(
+      Skeletons.Button.Svg({
+        ico: opts.affordance,
+        className: cls(fig, "item-affordance"),
+      }),
+    );
+  }
 
   if (badgePn) {
     kids.push(
@@ -47,10 +60,36 @@ const createNavItem = (
   }
 
   return Skeletons.Box.X({
-    className: cls(fig, "item"),
+    // `modifier` is a BEM hook for a row that needs to be reachable on its own
+    // — mirroring the topbar's --gdrive. Like that one it carries no style of
+    // its own today.
+    className: opts.modifier
+      ? `${cls(fig, "item")} ${cls(fig, `item--${opts.modifier}`)}`
+      : cls(fig, "item"),
     uiHandler: [ui],
-    radio: `sidebar-radio`,
+    // One shared group, so exactly one row is lit — right for every row that
+    // REPLACES what is on screen (Files…Access swap the workspace tab, Plan
+    // opens a section screen), wrong for one that opens a popup OVER it.
+    // Invite does that, so being in the group made it unlight the tab the user
+    // was still looking at, and the rail read as though they had left it. It
+    // opts out with `soloState` and desk_module lights it by hand instead
+    // (_setInviteRowState), which is what lets Files and Invite be lit at once.
+    //
+    // Opting out costs nothing else: `service` is dispatched by the uiHandler
+    // loop in ui-core's letc.js, not by the radio behavior — `isRadio` only
+    // decides whether a re-fire of `also:click` is needed when NO handler ran.
+    radio: opts.soloState ? undefined : `sidebar-radio`,
+    // Which row is lit before the first click. ui-core's radio behavior reads
+    // `initialState` at render (addons/backbone/view/behavior/radio.js
+    // onRender) and stamps data-radio, and restores it on a "clear:radio" —
+    // so this is the group's resting selection, not a one-shot paint.
+    // undefined for every other row, exactly like `name` below.
+    initialState: opts.initialState,
     service,
+    // Template filename for the office create services — Wm.newDocument reads
+    // it back with cmd.mget(_a.name), so it has to be a model field on the row
+    // itself. undefined for every row that has no use for it.
+    name: opts.name,
     on_click,
     sys_pn,
     kidsOpt: {
@@ -60,36 +99,10 @@ const createNavItem = (
   });
 };
 
-// ---------- Workspace Section ----------
-const createWorkspaceSection = (ui) => {
-  const fig = getSidebarFig(ui);
-
-  return Skeletons.Box.Y({
-    className: cls(fig, "workspace"),
-    kids: [
-      createText(fig, "workspace-title", LOCALE.WORKSPACES),
-      {
-        kind: "workspace_list",
-        className: cls(fig, "workspace-main"),
-        uiHandler: [ui],
-        sys_pn: "workspace-main",
-      },
-    ],
-  });
-};
-
 // ---------- Footer ----------
-const getInitials = (name = "") =>
-  name
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-
-// Has the user pinned the desktop sidebar open? Persisted across sessions.
-// Default (unset) = not pinned = collapsed-to-rail. Display mode used to
-// live in the footer here; it has moved to Settings → Appearance.
+// Whether the user pinned the rail open — read at build time so the rail
+// mounts in the state they left it. (Restored verbatim: the drawer removal
+// accidentally swept this out with the footer block beside it.)
 const isSidebarPinned = () => {
   try {
     return localStorage.getItem("drumee.sidebar.pinned") === "1";
@@ -98,111 +111,46 @@ const isSidebarPinned = () => {
   }
 };
 
-const createFooter = (ui, username) => {
+const createRailFooter = (ui) => {
   const fig = getSidebarFig(ui);
-  // Real plan badge under the username. planLabel (libs/billing) resolves it
-  // rather than capitalising quota.plan: that field still carries retired and
-  // hand-granted names ('pro', 'Drumee Plus'), which would print a plan that
-  // no longer exists.
-  const planBadge = (LOCALE.PLAN_BADGE || "{0} Plan").format(planLabel());
-  // Environment (does this install sell plans at all?) + ownership rule —
-  // see libs/billing. Shared with the upgrade-plan service handler so the
-  // entry and its action can never disagree.
-  const canUpgrade = canUpgradePlan();
-
   return Skeletons.Box.Y({
     className: cls(fig, "footer"),
     kids: [
-      // Design: a dedicated "Upgrade plan" entry above Settings (org owners
-      // and personal accounts only — see canUpgrade above).
-      canUpgrade
-        ? createNavItem(
-            ui,
-            "billing",
-            LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
-            "upgrade-plan",
-            "",
-            null,
-            "sidebar-upgrade",
-          )
-        : null,
-      // "Get help" sits above Settings (Figma 58004-54589). Opens the help
-      // screen in the same full-page slot as Settings / Billing.
       createNavItem(
         ui,
-        "ph-info",
-        LOCALE.GET_HELP,
-        "toggle-help",
+        "rail-invite",
+        LOCALE.INVITE,
+        "invite-member",
         "",
         null,
-        "sidebar-help",
+        "sidebar-invite",
+        null,
+        // Not a destination — it opens a popup over whatever tab is up, so it
+        // must not take the rail's highlight away from that tab. See the
+        // `soloState` note in createNavItem.
+        { soloState: 1 },
       ),
+      // Opens the billing page. `upgrade-plan` is the desk's existing service
+      // and already carries the canUpgradePlan() gate, so an account that
+      // cannot buy still lands somewhere sensible rather than on a dead row.
       createNavItem(
         ui,
-        "sidebar_settings",
-        LOCALE.SETTINGS,
-        "toggle-settings",
+        "rail-plan",
+        LOCALE.PLAN,
+        "upgrade-plan",
         "",
         null,
-        "sidebar-settings",
+        "sidebar-plan",
       ),
-      createNavItem(
-        ui,
-        "sidebar_signout",
-        LOCALE.SIGN_OUT,
-        "",
-        "red",
-        Butler.logout,
-      ),
-      // Bottom profile item: shows the user's avatar (UserProfile widget —
-      // photo with auto-letter fallback) and opens the Settings layout on
-      // click. Refreshed on the "avatar-changed" broadcast by desk_module.
-      Skeletons.Box.Y({
-        className: cls(fig, "footer-user-wrapper"),
-        sys_pn: "user-menu-anchor",
-        partHandler: ui,
-        kids: [
-          Skeletons.Box.X({
-            className: cls(fig, "footer-user-btn"),
-            sys_pn: "user-menu-trigger",
-            partHandler: ui,
-            service: "toggle-settings",
-            uiHandler: [ui],
-            kidsOpt: { active: 0 },
-            kids: [
-              Skeletons.UserProfile({
-                className: cls(fig, "footer-avatar"),
-                sys_pn: "sidebar-avatar",
-                partHandler: ui,
-                auto_color: 0,
-                oneLetter: 1,
-              }),
-              Skeletons.Box.Y({
-                className: cls(fig, "footer-name-wrapper"),
-                kidsOpt: { active: 0 },
-                kids: [
-                  Skeletons.Note({
-                    className: cls(fig, "footer-username"),
-                    content: username,
-                    active: 0,
-                    sys_pn: "sidebar-username",
-                    partHandler: ui,
-                  }),
-                  createText(fig, "footer-user-plan", planBadge),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
     ],
   });
 };
 
-// ---------- Logo Row (logo + mobile close button) ----------
-// Used at the top of both createNav and createActionsNav so the close
-// button sits consistently on the right. The close button is rendered
-// in both contexts but is hidden via CSS on non-mobile devices.
+// ---------- Logo Row ----------
+// The rail's header. Desktop only now — the drawer this used to double for is
+// gone (the phone shell lives in skeleton/index.js), and with it this row's
+// sub-screen form (back arrow + title) and its mobile close button. The
+// desktop markup below is byte-identical to what it always rendered.
 const createLogoRow = (ui) => {
   const fig = getSidebarFig(ui);
 
@@ -218,8 +166,12 @@ const createLogoRow = (ui) => {
             ico: "raw-logo-drumee-full",
             className: `${fig}__logo-icon`,
           }),
+          // `rail-logo` is the mark exactly as 43:23955 draws it (32x27,
+          // single path, currentColor) so it sits white on the indigo
+          // rail. The old raw-logo-drumee-icon carries its own brand
+          // colours, which read as a dark blob on that ground.
           Skeletons.Button.Svg({
-            ico: "raw-logo-drumee-icon",
+            ico: "rail-logo",
             className: `${fig}__logo-mark`,
           }),
           createText(
@@ -230,8 +182,7 @@ const createLogoRow = (ui) => {
         ],
       }),
       // Desktop collapse/pin toggle — a panel/sidebar glyph (same in both
-      // states; the rail itself shows whether it's open or mini). Hidden on
-      // mobile via CSS (the drawer uses the close button on the right).
+      // states; the rail itself shows whether it's open or mini).
       Skeletons.Button.Svg({
         ico: "square-split-horizontal",
         className: `${fig}__logo-pin-btn`,
@@ -240,19 +191,12 @@ const createLogoRow = (ui) => {
         sys_pn: "sidebar-pin-btn",
         partHandler: ui,
       }),
-      Skeletons.Button.Svg({
-        ico: "cross",
-        className: `${fig}__logo-close-btn`,
-        service: "mobile-close-drawer",
-        uiHandler: [ui],
-        sys_pn: "mobile-close-btn",
-      }),
     ],
   });
 };
 
 // ---------- Navigation ----------
-const createNav = (ui) => {
+const createRailNav = (ui) => {
   const fig = getSidebarFig(ui);
 
   return Skeletons.Box.Y({
@@ -261,200 +205,67 @@ const createNav = (ui) => {
     kids: [
       createLogoRow(ui),
 
+      // Workspace-scoped rail — Figma 43:23955 plus the per-tab frames
+      // (52:43332 files, 52:43936 chat, 53:51691 task, 53:52738 meet,
+      // 59:54860 access). These are the folder window's OWN tabs promoted to
+      // global nav: each drives the ACTIVE workspace window, not the desk, so
+      // the handler resolves Wm.getActiveWindow(1) at click time.
+      //
+      // What used to live here moved out rather than away: notifications,
+      // calendar, inbox, contacts, trash and the admin console are now the
+      // topbar utility cluster, and Settings / Get help / Sign out are in the
+      // topbar avatar menu (59:55943) — both in skeleton/topbar.js. Home is
+      // the logo row above.
       Skeletons.Box.Y({
         className: `${fig}__nav-main`,
         kids: [
-          createNavItem(
-            ui,
-            "sidebar_home",
-            LOCALE.HOME,
-            _e.home,
-            "",
-            null,
-            "sidebar-home",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_notifications",
-            LOCALE.NOTIFICATIONS,
-            "toggle-activity",
-            "",
-            null,
-            "sidebar-notifications",
-            "activity-count",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_inbox",
-            LOCALE.INBOX,
-            "toggle-inbox",
-            "",
-            null,
-            "sidebar-inbox",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_contacts",
-            LOCALE.CONTACTS,
-            "toggle-contacts",
-            "",
-            null,
-            "sidebar-contacts",
-          ),
-          createNavItem(
-            ui,
-            "sidebar_trash",
-            LOCALE.TRASH,
-            "toggle-trash",
-            "",
-            null,
-            "sidebar-trash",
-          ),
-          // Admin Console — the full in-desk console (apps_main), loaded from the
-          // @drumee/admin-console plugin on click (see desk onUiEvent "toggle-apps").
-          createNavItem(
-            ui,
-            "sidebar_apps",
-            LOCALE.ADMIN_CONSOLE,
-            "toggle-apps",
-            "",
-            null,
-            "sidebar-apps",
-          ),
+          // Files is the group's default selection: the desk boots into a
+          // workspace on its files tab (_railTab's "no stamp reads as files",
+          // and _openDefaultWorkspace opens on the default tab), so an unlit
+          // rail was disagreeing with the screen behind it.
+          createNavItem(ui, "rail-files", LOCALE.FILES, "rail-files", "", null, "sidebar-files", null, { initialState: 1 }),
+          createNavItem(ui, "rail-chat", LOCALE.CHAT, "rail-chat", "", null, "sidebar-chat"),
+          createNavItem(ui, "rail-task", LOCALE.TASK, "rail-task", "", null, "sidebar-task"),
+          createNavItem(ui, "rail-meet", LOCALE.MEET, "rail-meet", "", null, "sidebar-meet"),
+          createNavItem(ui, "rail-access", LOCALE.ACCESS, "rail-access", "", null, "sidebar-access"),
         ],
-      }),
-
-      createWorkspaceSection(ui),
-    ],
-  });
-};
-
-// ---------- Actions Navigation (mobile only) ----------
-// Mirrors createNav's structure (logo + nav-main) so the "actions" mode
-// of the mobile drawer looks identical to the "nav" mode — just with
-// Add new / Upload / Search / Invite as the rows.
-const createActionsNav = (ui) => {
-  const fig = getSidebarFig(ui);
-  // While over-limit the create/upload/invite rows are omitted — same
-  // rule as the topbar. Search stays (read).
-  const locked = require("libs/over-limit").isLocked();
-  const actionKids = [
-    ...(locked
-      ? []
-      : [
-          createNavItem(
-            ui,
-            "app-add",
-            LOCALE.ADD_NEW || "Add new",
-            "new-workspace",
-            "",
-            null,
-            "mobile-add-new",
-          ),
-          createNavItem(
-            ui,
-            "app-upload",
-            LOCALE.UPLOAD,
-            _e.upload,
-            "",
-            null,
-            "mobile-upload",
-          ),
-        ]),
-    createNavItem(
-      ui,
-      "app-search",
-      LOCALE.SEARCH || "Search",
-      "search-files",
-      "",
-      null,
-      "mobile-search",
-    ),
-    ...(locked
-      ? []
-      : [
-          createNavItem(
-            ui,
-            "topbar-invite",
-            LOCALE.INVITE || "Invite",
-            "invite-member",
-            "",
-            null,
-            "mobile-invite",
-          ),
-        ]),
-  ];
-
-  return Skeletons.Box.Y({
-    className: `${fig}__nav`,
-    kids: [
-      createLogoRow(ui),
-
-      Skeletons.Box.Y({
-        className: `${fig}__nav-main`,
-        kids: actionKids,
       }),
     ],
   });
 };
 
 // ---------- Export ----------
+//
+// DESKTOP ONLY. The phone has no drawer any more: the approved mobile shell
+// (Option A, design canvas "Drumee 2.0 Mobile Shell") replaces it with the
+// bottom rail plus three bottom sheets, all built in skeleton/index.js and
+// skeleton/mobile-sheets.js. skeleton/index.js simply does not mount this
+// module on mobile.
 module.exports = function (ui) {
   const fig = getSidebarFig(ui);
-  const isMobile = Visitor.isMobile();
 
-  if (!isMobile) {
-    // The rail is the in-flow flex column that reserves horizontal space
-    // in the desk body. __main is absolutely positioned inside it (see
-    // sidebar.scss), so widening on hover OVERLAYS the workspace rather
-    // than pushing it — no content reflow. data-collapsed drives the
-    // mini (icon-only) vs full width; it starts collapsed unless the user
-    // has pinned it open. desk_module flips it on "toggle-sidebar-pin".
-    return Skeletons.Box.Y({
-      className: cls(fig, "rail"),
-      sys_pn: "sidebar-rail",
-      partHandler: ui,
-      // NOTE: use attrOpt, not `dataset` — the framework only honors a
-      // skeleton `dataset` when `attribute`/`attrOpt` is ALSO present
-      // (letc.js applies dataset onto the attribute model), and `_a.dataset`
-      // is undefined so the secondary path is a no-op. attrOpt sets the
-      // attribute directly at render time. desk_module flips it on the pin
-      // toggle (data-collapsed: "1" = mini rail, "0" = pinned open).
-      attrOpt: { "data-collapsed": isSidebarPinned() ? "0" : "1" },
-      kids: [
-        Skeletons.Box.Y({
-          className: cls(fig, "main"),
-          kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
-        }),
-      ],
-    });
-  }
-
-  // Mobile: sidebar becomes a slide-in drawer. data-mode picks between
-  // "nav" (default sidebar content) and "actions" (Add new / Upload /
-  // Search / Invite rendered as nav-item rows with the same logo
-  // header). The footer (Settings / Theme / Sign out / Profile) lives
-  // outside both slots so it stays visible in both modes — and so its
-  // sys_pn elements (sidebar-avatar, etc.) stay unique.
-  // data-state toggles closed (off-screen) vs open.
+  // The rail is the in-flow flex column that reserves horizontal space
+  // in the desk body. __main is absolutely positioned inside it (see
+  // sidebar.scss), so widening on hover OVERLAYS the workspace rather
+  // than pushing it — no content reflow. data-collapsed drives the
+  // mini (icon-only) vs full width; it starts collapsed unless the user
+  // has pinned it open. desk_module flips it on "toggle-sidebar-pin".
   return Skeletons.Box.Y({
-    className: cls(fig, "main"),
-    sys_pn: "sidebar-main",
+    className: cls(fig, "rail"),
+    sys_pn: "sidebar-rail",
     partHandler: ui,
-    dataset: {
-      mode: "nav",
-      state: "closed",
-    },
+    // NOTE: use attrOpt, not `dataset` — the framework only honors a
+    // skeleton `dataset` when `attribute`/`attrOpt` is ALSO present
+    // (letc.js applies dataset onto the attribute model), and `_a.dataset`
+    // is undefined so the secondary path is a no-op. attrOpt sets the
+    // attribute directly at render time. desk_module flips it on the pin
+    // toggle (data-collapsed: "1" = mini rail, "0" = pinned open).
+    attrOpt: { "data-collapsed": isSidebarPinned() ? "0" : "1" },
     kids: [
       Skeletons.Box.Y({
-        className: cls(fig, "nav-slot"),
-        kids: [createNav(ui)],
+        className: cls(fig, "main"),
+        kids: [createRailNav(ui), createRailFooter(ui)],
       }),
-      Skeletons.Box.Y({
-        className: cls(fig, "actions-slot"),
-        kids: [createActionsNav(ui)],
-      }),
-      createFooter(ui, Visitor.firstname()),
     ],
   });
 };

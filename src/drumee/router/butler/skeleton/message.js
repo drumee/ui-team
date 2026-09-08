@@ -14,7 +14,14 @@
  * limitations under the License.
  * =============================================================================
  */
-const message = function(_ui_, content, type) {
+/**
+ * @param {Object} [opt]
+ * @param {Boolean} [opt.closable=true]  false drops the header X, leaving the
+ *        primary button as the single way out. Both fire _e.close, so they
+ *        already did the same thing; a caller that gives closing a MEANING
+ *        (Butler.say's callback) wants one control, not two.
+ */
+const message = function(_ui_, content, type, opt = {}) {
   const fig = _ui_.fig.family;
   let body;
   if (_.isString(content)) {
@@ -32,7 +39,7 @@ const message = function(_ui_, content, type) {
     debug     : __filename,
     sys_pn    : "container",
     kids: [
-      require('./header')(_ui_, _e.close),
+      require('./header')(_ui_, _e.close, opt),
       type ? Skeletons.Note({
         className : `${fig}__title`,
         content   : type

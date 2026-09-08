@@ -1,5 +1,6 @@
 const { uploadFile, copyToClipboard } = require("@drumee/ui-essentials");
 const { sendOtp, openOtpModal, resendOtpGate } = require("../../otp-gate");
+const readCache = require("libs/read-cache");
 
 /**
  * Full-area Settings page rendered into the desk main center
@@ -50,17 +51,57 @@ class settings_main extends LetcBox {
     // flight — rendering then showed the wrong on/off state, so a click read
     // the wrong baseline and toggled the wrong way. Awaiting here means the
     // switch only renders once it reflects the server's stored mfa.
+    await this._refreshPage({ force: true });
+  }
+
+  /**
+   * Load everything the page renders from, then feed it — unconditionally on
+   * `force` (the mount), otherwise only if any of it CHANGED since the last
+   * paint. The gate is what makes a re-show safe: a feed rebuilds every card
+   * from the model, which would wipe an uncommitted bio draft or close a
+   * sub-dialog the user left open, so it must not run for an identical answer.
+   *
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.force]  feed even when nothing changed
+   */
+  async _refreshPage(opt = {}) {
     const [links, gdrive, , referral] = await Promise.all([
       this._loadOauthLinks(),
       this._loadGdriveState(),
       this._refreshVisitorProfile(),
       this._loadReferral(),
     ]);
+    if (this.isDestroyed && this.isDestroyed()) return;
     this._oauthLinks = links;
     this._gdriveState = gdrive;
     this._referral = referral;
     this._reconcilePasswordSet();
+    // Visitor.profile() is what the 2FA switch and the identity card read, so
+    // it is part of what a repaint must be justified by.
+    const signature = readCache.signature([links, gdrive, referral, Visitor.profile()]);
+    if (!opt.force && signature === this._pageSignature) return;
+    this._pageSignature = signature;
     this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * The desk keeps this screen mounted when the user navigates away and
+   * reveals it again on the next Settings press (desk/index.js
+   * _slotKeepsChild), so coming back is instant. The data the mount fetched —
+   * profile, linked providers, Drive migration state, referral — is then
+   * re-read behind the visible page and the page re-fed when it lands, which
+   * is onDomRefresh exactly. One refresh at a time: a second re-show while
+   * the first is still out just lets it finish.
+   */
+  onPanelShown() {
+    if (this._reshowing) return;
+    this._reshowing = true;
+    Promise.resolve()
+      .then(() => this._refreshPage())
+      .catch((e) => this.warn("settings_main: refresh on re-show failed", e))
+      .then(() => {
+        this._reshowing = false;
+      });
   }
 
   /**

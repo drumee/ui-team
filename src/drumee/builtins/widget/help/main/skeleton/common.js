@@ -4,6 +4,19 @@
  */
 
 /**
+ * True when the signed-in user is the account that answers Contact Support.
+ * Reads the desk's cached lookup, warmed at boot; false while it is still in
+ * flight, which only ever shows the link to someone who could have used it.
+ */
+function isSupportAccount() {
+  return !!(
+    typeof Desk !== "undefined" &&
+    _.isFunction(Desk.isSupportContact) &&
+    Desk.isSupportContact()
+  );
+}
+
+/**
  * 16:9 media block.
  *
  * Nothing media-related is loaded up front: the frame renders as a poster
@@ -222,13 +235,23 @@ function feedbackRow(ui) {
       Skeletons.Box.X({
         className: `${pfx}-support`,
         kids: [
-          Skeletons.Note({
-            className: `${pfx}-support-link`,
-            content: LOCALE.HELP_CONTACT_SUPPORT,
-            service: "help-contact-support",
-            channel: "mail",
-            uiHandler: [ui],
-          }),
+          // The link starts a live conversation with a real person; the two
+          // icons beside it stay the asynchronous channels. The desk falls
+          // back to mail when no support account is configured, so this is
+          // never a dead click.
+          //
+          // Hidden for the account that ANSWERS support — there is no
+          // conversation to open with yourself. The icons stay: mailing or
+          // messaging the shared channel is still meaningful.
+          isSupportAccount()
+            ? null
+            : Skeletons.Note({
+                className: `${pfx}-support-link`,
+                content: LOCALE.HELP_CONTACT_SUPPORT,
+                service: "help-contact-support",
+                channel: "chat",
+                uiHandler: [ui],
+              }),
           Skeletons.Box.X({
             className: `${pfx}-support-btns`,
             kids: [

@@ -1,0 +1,41 @@
+@use "sass:math";
+
+// ── Pending spinner ──────────────────────────────────────────────────────────
+//
+// One keyframes for the whole tour. The two buttons that wait on the network —
+// the dialog's Create and the invite card's Send — live in different skins but
+// on the same page, and @keyframes is global.
+//
+// Drawn with a border on ::after rather than an added node: the buttons are
+// Notes, whose content is an inner div, so a pseudo-element lands beside the
+// label as a second flex item without touching the markup.
+@keyframes tutorial-spin {
+  to { transform: rotate(360deg); }
+}
+
+// ABSOLUTE, not a flex item beside the label.
+//
+// Two reasons. A ::after is `display: inline` by default, where width and
+// height simply do not apply — which drew the first attempt as a 2px vertical
+// hairline under the word. And the buttons are Notes, whose root is a plain
+// block wrapping an `.inner.note-content` div; making it a flex row to seat a
+// sibling would move the label these buttons already centre correctly.
+//
+// Pinned to the right edge instead, so the label stays exactly where it was and
+// the spinner appears beside it without either knowing about the other. The
+// caller supplies `position: relative` on the button.
+@mixin pending-spinner($size: 14px) {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  width: $size;
+  height: $size;
+  margin-top: -#{math.div($size, 2)};
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: tutorial-spin 0.7s linear infinite;
+}

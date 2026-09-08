@@ -219,7 +219,16 @@
     user-select: none;
   }
 
+  // `daily` highlights WEEKLY on purpose. The switch has two positions and
+  // daily is a drill-down of the week (same hourly grid, nDays = 1), so it is
+  // the weekly side of the toggle, not a third state. Without this the daily
+  // view lit NEITHER label — which read as a broken control the moment a narrow
+  // panel started defaulting to daily (see _applyScheduleBreakpoint).
+  //
+  // The knob needs no rule: only [data-view="monthly"] moves it, so daily
+  // already leaves it in the weekly position.
   &__meeting-sched-toggle[data-view="weekly"] &__meeting-sched-toggle-label.weekly,
+  &__meeting-sched-toggle[data-view="daily"] &__meeting-sched-toggle-label.weekly,
   &__meeting-sched-toggle[data-view="monthly"] &__meeting-sched-toggle-label.monthly {
     color: #0b0a21;
     font-weight: 600;
@@ -639,17 +648,64 @@
       flex-wrap: wrap !important;
       gap: 12px 8px;
       padding: 12px;
+      // The base rule pins the two groups apart with `space-between`, which is
+      // right for one wide row and wrong for every other case: on a wrapped
+      // line holding a single group it degrades to flex-start. Measured at
+      // 390px — the nav group sat at centre x=143 against a bar centre of 196,
+      // i.e. 53px off, hugging the left edge with dead space to its right.
+      //
+      // `center` is applied per LINE, which is all this needs: the two groups
+      // stack across effectively the whole compact range, and a lone group on
+      // its own line is exactly what `center` centres.
+      //
+      // Nothing here forces `flex: 1 1 100%`, because nothing has to — the
+      // groups already wrap on their own. Measured: they need 693px of inner
+      // width to share a line (nav 261 + gap 8 + controls 424), so they only
+      // ever would between 693 and 700px, a 7px slice of the range. Adding the
+      // basis would buy nothing and would stack them by decree instead of by
+      // fit, which is worse the day one of the groups gets shorter.
+      justify-content: center;
     }
 
     &__meeting-sched-toolbar-left,
     &__meeting-sched-toolbar-right {
       flex-wrap: wrap !important;
       gap: 8px 12px;
+      // Same reasoning one level in: these groups wrap internally too (the
+      // right one carries the toggle plus both CTAs), and their own children
+      // were left-aligned inside a row that spans the bar.
+      //
+      // Safe for the mini-calendar dropdown, which is `position: absolute;
+      // left: 0` against `-toolbar-left` (`position: relative`): centring moves
+      // the anchor box but the popup stays pinned to its left edge, and at
+      // 264px wide it still clears a 390px window from wherever that lands.
+      justify-content: center;
+    }
+
+    // Give the Weekly/Monthly toggle its own line so the two CTAs pair up on
+    // the next one.
+    //
+    // Without this the right group wrapped wherever it happened to run out of
+    // room, which split the pair at exactly the widths that matter most —
+    // measured: 390px and 430px both produced [toggle, "Start a Meeting"] on
+    // one line and "Schedule" stranded alone below it. (320px already paired
+    // them, purely because the toggle did not fit beside Start there — the
+    // right result by accident, which is what made this look fine on the
+    // narrowest phone and wrong on the common one.)
+    //
+    // The pair costs 235px together (Start 137 + gap 12 + Schedule 86), so it
+    // clears even the 296px of inner width a 320px window leaves. Nothing
+    // needs a media query below this one.
+    &__meeting-sched-toggle {
+      flex: 1 1 100%;
+      justify-content: center;
     }
 
     &__meeting-sched-schedule-btn,
     &__meeting-sched-start-btn {
       padding: 0 14px;
+      // Never let the pair be broken up by shrinking instead of wrapping.
+      flex: 0 0 auto;
     }
 
     // The 8-column week grid can't fit a phone — let it scroll sideways rather
@@ -662,6 +718,55 @@
     &__meeting-sched-days,
     &__meeting-sched-body {
       min-width: 620px;
+    }
+
+    // ...but NOT the single-day or month grids, which are the two views that
+    // actually fit here.
+    //
+    // The `--day` pair is load-bearing, not defensive: daily and weekly share
+    // every other class (weeklyGrid renders both), so without the modifier ONE
+    // day column inherited the seven-column floor and scrolled sideways at
+    // 390px — measured, and exactly the thing switching to daily is meant to
+    // prevent.
+    //
+    // The month grid is 7 narrow columns of day numbers, which stays readable
+    // at a phone width; the weekly grid needs the floor only because its
+    // columns carry meeting cards with titles, where a month cell carries a
+    // date and a one-line chip.
+    &__meeting-sched-days--day,
+    &__meeting-sched-body--day,
+    &__meeting-sched-days--month,
+    &__meeting-sched-body--month {
+      min-width: 0;
+    }
+
+    // Tighten the day cells so seven of them fit without the date colliding
+    // with its chips: the desktop 8/10px padding alone eats 140px of a 390px
+    // window across the row.
+    &__meeting-sched-mcell {
+      padding: 4px 3px;
+      gap: 1px;
+    }
+
+    &__meeting-sched-mnum {
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    // The chip keeps its left rule as the only colour cue and drops the
+    // horizontal padding — at a 7th of a phone width, padding is most of the
+    // cell and the title is what has to survive.
+    &__meeting-sched-mcard {
+      padding: 1px 3px;
+      border-left-width: 2px;
+      font-size: 11px;
+      line-height: 14px;
+    }
+
+    // Week rows get shorter with their contents, so a month does not need a
+    // full page of scrolling to see the last week.
+    &__meeting-sched-week {
+      min-height: 64px;
     }
   }
 }

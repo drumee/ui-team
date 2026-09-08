@@ -26,3 +26,84 @@
     pointer-events: none;
   }
 }
+
+// =====================================================================
+// The desk's flat scrim — the backdrop `.desk-module__overlay` puts behind
+// the mobile drawer (modules/desk/skin/index.scss). Counterpart to
+// glass-overlay above: same job, flatter treatment.
+//
+// --overlay-bg is theme-aware on its own (rgba(0,0,0,.4) on :root,
+// rgba(20,17,35,.4) under html[data-theme="dark"]), so unlike glass-overlay
+// this needs no explicit dark branch. blur(6px) is the frost the desk rule
+// pairs with the scrim in its own mobile-open state; the two were designed
+// together, and a heavier frost under a 0.4 scrim just washes out.
+//
+// The ::before reset matters when this lands on a host that ALSO matches
+// `[data-overlay="blur"]`: glass-overlay stacks a second blurred layer
+// there (blur(60px)), and without clearing it the backdrop stays frosted
+// despite the flat colour underneath. Same reason the reward flow clears it
+// in widget/reward-flow/skin. Inert on hosts that never carried the glass.
+// =====================================================================
+@mixin scrim-overlay {
+  background-color: var(--overlay-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  &::before {
+    content: none;
+  }
+}
+
+// =====================================================================
+// Brand tints for the "+ New" create rows — Folder / Note / Document /
+// Spreadsheet / Presentation.
+//
+// The glyphs are `fill="currentColor"` (icons/sprites), so the tint IS the
+// `color` on the icon, and a row that inherits its label colour instead
+// renders a near-black outline where the design has a coloured one.
+//
+// A mixin because the tints belong with the row vocabulary rather than with
+// one surface's scope: the folder topbar's "+ New" flyout renders these rows
+// under `__new-ctrl` (window/folder/skin/index.scss), and any second surface
+// mounting them elsewhere needs the same five values. A copy added without
+// them comes out near-black, which is what this exists to stop happening.
+//
+// The same five values appear twice more against a DIFFERENT class vocabulary
+// — `.ico-workspace` / `.ico-note` / `.ico-document` / `.ico-spreadsheet` /
+// `.ico-presentation`, in desk/skin/topbar.scss (the desk's Add-new menu) and
+// builtins/contextmenu/skin (its Add-new submenu). Those selectors do not
+// match this mixin and are deliberately left alone; unifying the palette
+// across both vocabularies is a bigger change than the one this serves.
+//
+// Keyed on the row's modifier class, so it tints whatever row is present and
+// nothing else. Deliberately on `svg` rather than the icon wrapper: the
+// wrapper is what the folder row's `data-area` accent lands on, and this
+// overrides that on purpose — inside the create list a folder is brand purple
+// regardless of which area it will be made in.
+// =====================================================================
+@mixin new-menu-icon-tints {
+  .window-button__dropdown-menu__item--add-folder svg {
+    fill: #5950ff;
+    color: #5950ff;
+  }
+
+  .window-button__dropdown-menu__item--add-note svg {
+    fill: #e8a13b;
+    color: #e8a13b;
+  }
+
+  .window-button__dropdown-menu__item--document svg {
+    fill: #847eff;
+    color: #847eff;
+  }
+
+  .window-button__dropdown-menu__item--spreadsheet svg {
+    fill: #54b684;
+    color: #54b684;
+  }
+
+  .window-button__dropdown-menu__item--presentation svg {
+    fill: #ffa8dc;
+    color: #ffa8dc;
+  }
+}

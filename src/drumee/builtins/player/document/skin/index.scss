@@ -129,6 +129,28 @@
     overflow: visible;
   }
 
+  // While the progress bar is up — first load, every reload, and every
+  // Edit <-> Preview switch — the header actions all act on a document that
+  // is not there yet, so they go inert. Close is exempt: a stuck or slow
+  // load must always be dismissable.
+  //
+  // Derived from the progress part's own `data-state` rather than a second
+  // flag of our own. Six call sites flip that state directly (initProgess,
+  // message, _hideEditorProgress, onFetchProgress, nextPages, checkPreview),
+  // and a parallel flag would drift from at least one of them. Matching only
+  // `="1"` also covers the `hide()` path, which writes "closed", not 0.
+  //
+  // The flag sits on an ancestor, not on the row's children, so it survives
+  // `updateMenu()` re-feeding `.drumee-topbar__actions` on every mode change.
+  &:has(.player-document__progress-container[data-state="1"]) {
+    .drumee-topbar__actions > *:not(.close) {
+      opacity: 0.4;
+      // The only enforcement: these controls are divs carrying an onclick,
+      // not focusable buttons, so there is no keyboard path around it.
+      pointer-events: none;
+    }
+  }
+
   &__tooltips {
     position: absolute;
     top: calc(100% + 6px);

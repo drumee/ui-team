@@ -1,9 +1,88 @@
 @use "mixins/drumee";
 
+// =====================================================================
+// Mobile reflow for a trash row.
+//
+// The panel is a 360px card on a phone (panel/trash/skin), which leaves the
+// info column ~120px once the 40px icon, the actions cluster and 48px of
+// padding are taken out. The meta line needs ~257px for "Deleted by: me" plus
+// the date, so it cannot stay on one line — it stacks, and the row grows from
+// 72px to about 86px.
+//
+// The date is ellipsized as a floor, not as the plan: at 120px it shows roughly
+// "Date: 08/17/2026 - 13:4" and clips the seconds. Without it the 155px date
+// simply overflows the info column and reaches into the actions, which is the
+// bug this is fixing. Giving the date its full width costs another ~24px of row
+// height (the meta line has to span the row rather than sit beside the actions)
+// — a trade worth making only if the timestamp matters more than density.
+//
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px, so the attribute is absent in the DevTools
+// emulator and on a landscape phone.
+// =====================================================================
+@mixin trash-item-mobile-row {
+  // The fixed 72px cannot hold a stacked meta line.
+  height: auto;
+  min-height: 72px;
+
+  // The row's width:100% plus 48px of side padding on a content-box element
+  // made it 48px WIDER than the panel holding it — 408px inside the 360px
+  // mobile card — which pushed the actions past the panel's clipped edge and
+  // left the date running under the days badge.
+  //
+  // Scoped here rather than fixed on the base rule, even though the same
+  // arithmetic overflows the 500px desktop panel by the same 48px. Correcting
+  // it there hands those 48px back and narrows desktop's info column, which
+  // measurably cost the desktop row its timestamp ("13:40:…") and wrapped the
+  // days badge onto two lines. That is a real desktop layout question and it
+  // deserves its own change, not a side effect of this one.
+  .trash-item__row {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  // `stretch`, not `flex-start`. Stacked lines sized to their own content are
+  // not constrained by the 120px info column, so the 155px date simply
+  // overflowed into the actions and the ellipsis below never fired — the
+  // original bug in a new direction. Stretch makes each line the column's
+  // width, which is what gives overflow something to clip against. Text stays
+  // left-aligned because that is the writing direction, not the box width.
+  .trash-item__meta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacer-2);
+    min-width: 0;
+  }
+
+  .trash-item__date {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Content width instead of the reserved 128px. That reservation exists for
+  // the "Restore" button, which this skin only reveals on :hover — a state a
+  // touch device never enters — so on a phone it was holding space for
+  // something unreachable. Hands the difference back to the date.
+  .trash-item__actions {
+    width: auto;
+  }
+}
+
 .trash-item {
   &__ui {
     width: 100%;
     height: 72px;
+
+    &[data-device="mobile"] {
+      @include trash-item-mobile-row;
+    }
+
+    @media (max-width: 650px) {
+      & {
+        @include trash-item-mobile-row;
+      }
+    }
   }
 
   &__row {

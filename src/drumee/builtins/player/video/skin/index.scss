@@ -7,6 +7,26 @@
 @import "openplayer.css";
 
 .player-video {
+
+  // While the loading spinner is up, the header actions all act on media that
+  // is not there yet, so they go inert. Close is exempt: a stuck or slow load
+  // must always be dismissable. Mirrors the document player's rule.
+  //
+  // Derived from the spinner's own markup rather than a flag of our own:
+  // `spinner(1)` appends `.drumee-loading` to the player root and `spinner(0)`
+  // removes it (ui-core addons/backbone/view/utils.js), so presence IS the
+  // loading state and every existing call site is covered for free.
+  //
+  // The hook sits on the root, not on the row's children, so it survives the
+  // action row being re-fed.
+  &:has(> .drumee-loading) {
+    .drumee-topbar__actions > *:not(.close) {
+      opacity: 0.4;
+      // The only enforcement: these controls are divs carrying an onclick,
+      // not focusable buttons, so there is no keyboard path around it.
+      pointer-events: none;
+    }
+  }
   display: flex;
   width: 100%;
   height: 100%;

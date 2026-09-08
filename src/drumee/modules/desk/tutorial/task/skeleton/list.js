@@ -20,12 +20,12 @@ const COLUMNS = [
 ];
 
 function headRow(ui, pfx) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__ls-row head`,
     kids: [
-      Skeletons.Box.Y({ className: `${pfx}__ls-check` }),
+      Skeletons.Box.Y({ active: 0, className: `${pfx}__ls-check` }),
       ...COLUMNS.map((c) =>
-        Skeletons.Note({
+        Skeletons.Note({ active: 0,
           className: `${pfx}__ls-cell head`,
           dataset: { col: c.key },
           content: c.label,
@@ -36,7 +36,7 @@ function headRow(ui, pfx) {
 }
 
 function cell(pfx, col, kid, extra = {}) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__ls-cell`,
     dataset: { col },
     ...extra,
@@ -46,11 +46,11 @@ function cell(pfx, col, kid, extra = {}) {
 
 function taskRow(ui, pfx, task) {
   const files = task.files || [];
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__ls-row`,
     kids: [
-      Skeletons.Box.Y({ className: `${pfx}__ls-check` }),
-      cell(pfx, 'task', Skeletons.Note({ className: `${pfx}__ls-name`, content: task.name })),
+      Skeletons.Box.Y({ active: 0, className: `${pfx}__ls-check` }),
+      cell(pfx, 'task', Skeletons.Note({ active: 0, className: `${pfx}__ls-name`, content: task.name })),
       cell(pfx, 'priority', priorityPill(pfx, task.priority)),
       // The status cell of the focused row anchors the callout: the table is
       // full-width, so pointing the badge at the whole body would push it off
@@ -58,12 +58,12 @@ function taskRow(ui, pfx, task) {
       cell(pfx, 'status', statusPill(pfx, task.status, { plain: true }),
         task.focus ? { sys_pn: 'list-focus', partHandler: ui } : {}),
       cell(pfx, 'date', dateChip(pfx, task.date)),
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__ls-cell`,
         dataset: { col: 'files' },
         kids: files.slice(0, 2).map((f) => fileChip(pfx, f)).concat(
           task.more
-            ? [Skeletons.Note({ className: `${pfx}__chip file more`, content: `+${task.more}` })]
+            ? [Skeletons.Note({ active: 0, className: `${pfx}__chip file more`, content: `+${task.more}` })]
             : [],
         ),
       }),
@@ -73,11 +73,11 @@ function taskRow(ui, pfx, task) {
 }
 
 module.exports = function list(ui, pfx) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ls`,
     kids: [
       headRow(ui, pfx),
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__ls-body`,
         sys_pn: 'list-body',
         partHandler: ui,

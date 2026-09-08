@@ -25,18 +25,18 @@ const MEMBERS = [1, 2, 3, 4, 5, 6].map((n) => ({
 }));
 
 function tile(pfx, t) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__ph-tile`,
     kids: [
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__ph-tile-icon`,
-        kids: [Skeletons.Image.Svg({ ico: t.ico, className: `${pfx}__ph-tile-svg` })],
+        kids: [Skeletons.Image.Svg({ active: 0, ico: t.ico, className: `${pfx}__ph-tile-svg` })],
       }),
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__ph-tile-body`,
         kids: [
-          Skeletons.Note({ className: `${pfx}__ph-tile-value`, content: t.value }),
-          Skeletons.Note({ className: `${pfx}__ph-tile-sub`, content: t.sub }),
+          Skeletons.Note({ active: 0, className: `${pfx}__ph-tile-value`, content: t.value }),
+          Skeletons.Note({ active: 0, className: `${pfx}__ph-tile-sub`, content: t.sub }),
         ],
       }),
     ],
@@ -44,15 +44,15 @@ function tile(pfx, t) {
 }
 
 function panelHead(pfx, title, sub, link) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ph-head`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__ph-title`, content: title }),
-      Skeletons.Box.X({
+      Skeletons.Note({ active: 0, className: `${pfx}__ph-title`, content: title }),
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__ph-sub`,
         kids: [
-          Skeletons.Note({ className: `${pfx}__ph-sub-text`, content: sub }),
-          link ? Skeletons.Note({ className: `${pfx}__ph-link`, content: link }) : null,
+          Skeletons.Note({ active: 0, className: `${pfx}__ph-sub-text`, content: sub }),
+          link ? Skeletons.Note({ active: 0, className: `${pfx}__ph-link`, content: link }) : null,
         ].filter(Boolean),
       }),
     ],
@@ -67,15 +67,15 @@ function donut(pfx, split) {
     at += s.pct;
     return `${s.tint} ${from}% ${at}%`;
   });
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ph-donut`,
     styleOpt: { background: `conic-gradient(${stops.join(', ')})` },
     kids: [
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__ph-donut-hole`,
         kids: [
-          Skeletons.Note({ className: `${pfx}__ph-donut-value`, content: String(TOTAL) }),
-          Skeletons.Note({
+          Skeletons.Note({ active: 0, className: `${pfx}__ph-donut-value`, content: String(TOTAL) }),
+          Skeletons.Note({ active: 0,
             className: `${pfx}__ph-donut-label`,
             content: LOCALE.TOTAL_WORK_ITEMS || 'Total work items',
           }),
@@ -87,7 +87,7 @@ function donut(pfx, split) {
 
 function statusOverview(ui, pfx) {
   const split = statusBreakdown();
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ph-panel`,
     // Screen 5's spotlight target.
     sys_pn: 'health-status',
@@ -99,25 +99,25 @@ function statusOverview(ui, pfx) {
         'Get a snapshot of the status of your work items.',
         LOCALE.VIEW_ALL_WORK_ITEMS || 'View all work items',
       ),
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__ph-donut-row`,
         kids: [
           donut(pfx, split),
-          Skeletons.Box.Y({
+          Skeletons.Box.Y({ active: 0,
             className: `${pfx}__ph-legend`,
             kids: split.map((s) =>
-              Skeletons.Box.X({
+              Skeletons.Box.X({ active: 0,
                 className: `${pfx}__ph-legend-row`,
                 kids: [
-                  Skeletons.Box.Y({
+                  Skeletons.Box.Y({ active: 0,
                     className: `${pfx}__ph-legend-swatch`,
                     styleOpt: { background: s.tint },
                   }),
-                  Skeletons.Note({
+                  Skeletons.Note({ active: 0,
                     className: `${pfx}__ph-legend-label`,
                     content: `${s.label}: ${s.count}`,
                   }),
-                  Skeletons.Note({ className: `${pfx}__ph-legend-pct`, content: `${s.pct}%` }),
+                  Skeletons.Note({ active: 0, className: `${pfx}__ph-legend-pct`, content: `${s.pct}%` }),
                 ],
               }),
             ),
@@ -131,7 +131,7 @@ function statusOverview(ui, pfx) {
 function priorityPanel(pfx) {
   const bars = priorityBreakdown();
   const max = Math.max(...bars.map((b) => b.count), 5);
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ph-panel`,
     kids: [
       panelHead(
@@ -140,24 +140,24 @@ function priorityPanel(pfx) {
         'Get a holistic view of how work is being prioritized.',
         'How to manage priorities for spaces',
       ),
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__ph-bars`,
         kids: bars.map((b) =>
-          Skeletons.Box.Y({
+          Skeletons.Box.Y({ active: 0,
             className: `${pfx}__ph-bar-col`,
             kids: [
-              Skeletons.Box.Y({
+              Skeletons.Box.Y({ active: 0,
                 className: `${pfx}__ph-bar`,
                 styleOpt: { height: `${Math.round((b.count / max) * 100)}%` },
               }),
-              Skeletons.Box.X({
+              Skeletons.Box.X({ active: 0,
                 className: `${pfx}__ph-bar-label`,
                 kids: [
-                  Skeletons.Box.Y({
+                  Skeletons.Box.Y({ active: 0,
                     className: `${pfx}__ph-bar-dot`,
                     dataset: { priority: b.key },
                   }),
-                  Skeletons.Note({ className: `${pfx}__ph-bar-name`, content: b.label }),
+                  Skeletons.Note({ active: 0, className: `${pfx}__ph-bar-name`, content: b.label }),
                 ],
               }),
             ],
@@ -169,7 +169,7 @@ function priorityPanel(pfx) {
 }
 
 function workloadPanel(pfx) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ph-panel`,
     kids: [
       panelHead(
@@ -178,18 +178,18 @@ function workloadPanel(pfx) {
         'Monitor the capacity of your team.',
         'Reassign work items to get the right balance',
       ),
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__ph-workload`,
         kids: MEMBERS.map((m) =>
-          Skeletons.Box.X({
+          Skeletons.Box.X({ active: 0,
             className: `${pfx}__ph-member`,
             kids: [
-              Skeletons.Box.Y({ className: `${pfx}__avatar`, dataset: { tone: 0 } }),
-              Skeletons.Note({ className: `${pfx}__ph-member-name`, content: m.name }),
-              Skeletons.Box.Y({
+              Skeletons.Box.Y({ active: 0, className: `${pfx}__avatar`, dataset: { tone: 0 } }),
+              Skeletons.Note({ active: 0, className: `${pfx}__ph-member-name`, content: m.name }),
+              Skeletons.Box.Y({ active: 0,
                 className: `${pfx}__ph-member-track`,
                 kids: [
-                  Skeletons.Box.Y({
+                  Skeletons.Box.Y({ active: 0,
                     className: `${pfx}__ph-member-fill`,
                     styleOpt: { width: `${Math.round(m.load * 100)}%` },
                   }),
@@ -204,35 +204,35 @@ function workloadPanel(pfx) {
 }
 
 function activityPanel(pfx) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ph-panel activity`,
     kids: [
       panelHead(pfx, LOCALE.ACTIVITY || 'Activity', 'Latest updates in the space.'),
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__ph-activity`,
         kids: [1, 2, 3].map((n) =>
-          Skeletons.Box.X({
+          Skeletons.Box.X({ active: 0,
             className: `${pfx}__ph-act-row`,
             kids: [
-              Skeletons.Box.Y({ className: `${pfx}__avatar`, dataset: { tone: n % 3 } }),
-              Skeletons.Box.Y({
+              Skeletons.Box.Y({ active: 0, className: `${pfx}__avatar`, dataset: { tone: n % 3 } }),
+              Skeletons.Box.Y({ active: 0,
                 className: `${pfx}__ph-act-body`,
                 kids: [
-                  Skeletons.Box.X({
+                  Skeletons.Box.X({ active: 0,
                     className: `${pfx}__ph-act-line`,
                     kids: [
-                      Skeletons.Note({
+                      Skeletons.Note({ active: 0,
                         className: `${pfx}__ph-act-who`,
                         content: 'Username',
                       }),
-                      Skeletons.Note({
+                      Skeletons.Note({ active: 0,
                         className: `${pfx}__ph-act-what`,
                         content: n === 1 ? 'created' : 'updated',
                       }),
-                      Skeletons.Note({ className: `${pfx}__ph-act-task`, content: 'Task Title' }),
+                      Skeletons.Note({ active: 0, className: `${pfx}__ph-act-task`, content: 'Task Title' }),
                     ],
                   }),
-                  Skeletons.Note({
+                  Skeletons.Note({ active: 0,
                     className: `${pfx}__ph-act-when`,
                     content: `${n * 15} minutes ago`,
                   }),
@@ -247,21 +247,21 @@ function activityPanel(pfx) {
 }
 
 module.exports = function health(ui, pfx) {
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__ph`,
     kids: [
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__ph-tiles`,
         kids: TILES.map((t) => tile(pfx, t)),
       }),
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__ph-cols`,
         kids: [
-          Skeletons.Box.Y({
+          Skeletons.Box.Y({ active: 0,
             className: `${pfx}__ph-main`,
             kids: [statusOverview(ui, pfx), priorityPanel(pfx)],
           }),
-          Skeletons.Box.Y({
+          Skeletons.Box.Y({ active: 0,
             className: `${pfx}__ph-side`,
             kids: [activityPanel(pfx), workloadPanel(pfx)],
           }),

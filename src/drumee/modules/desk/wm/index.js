@@ -8,12 +8,25 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+// Reader for the compact "#/desk/wm/o/<nid>/<hub_id>/<filetype>" deep link. The
+// long "open" form is unchanged and still resolved by the same openers.
+const {
+  COMPACT_SEGMENT,
+  parseCompactPath,
+} = require("libs/compact-deep-link");
+// "Open this file once I am signed in" — armed at module scope in index.web.js
+// from the original URL, consumed below once the desk has mounted after sign-in.
+const fileDeepLink = require("libs/file-deep-link");
 const {
   blocksGroupedArrange,
 } = require("window/skeleton/toolkit/file-group");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
+// Hash segment for a NOTIFICATION target: "#/desk/wm/reveal/?hub_id=...".
+// Its own route so notification clicks can land docked without changing what
+// "#/desk/wm/open/" does for mail, chat, share and compact deep links.
+const NOTIFICATION_SEGMENT = "reveal";
 
 class __window_manager extends push {
   constructor(...args) {
@@ -97,6 +110,96 @@ class __window_manager extends push {
   }
 
   /**
+   * Turn a stored desk hash — "#/desk/wm/o/<nid>/<hub_id>/<type>" or its long
+   * "…/open/nid=…&hub_id=…" twin — into the payload the openers take.
+   *
+   * Shared by the two callers below so the parsing lives in one place; they
+   * deliberately do NOT share an opener (see openDeepLinkHash).
+   *
+   * @param {String} hash a full location.hash
+   */
+  _deepLinkPayload(hash) {
+    const savedPath = Visitor.parseModule(hash);
+    const savedArgs = Visitor.parseModuleArgs(hash);
+    // parseCompactPath supplies the recomputed `kind` the compact form omits and
+    // returns null for any non-compact hash, leaving the long form on its args.
+    return parseCompactPath(savedPath) || savedArgs;
+  }
+
+  /**
+   * Open the file a signed-out visitor arrived on (libs/file-deep-link, replayed
+   * from desk's _afterHomeSettled).
+   *
+   * `openFileLocation`, the SAME opener the warm path uses, so a link behaves
+   * identically whether or not the visitor had a session. It is also the only
+   * one that loads a note / markdown / text body: openSharedLink resolves those
+   * through `if (opt.kind) launch(opt)` with no attributes fetch and no media, so
+   * they would open blank. Files only, by construction — file-deep-link's
+   * urlWantsFile matches nothing else.
+   *
+   * The legacy `locationOnStart` restore in route() deliberately stays on
+   * openSharedLink: that path predates this one and is left exactly as it was.
+   *
+   * @param {String} hash a full location.hash
+   */
+  openDeepLinkHash(hash) {
+    if (!hash) return;
+    return this.openDesignationLink(this._deepLinkPayload(hash));
+  }
+
+  /**
+   * Open a Designation link and LEAVE THE DESK STANDING IN THE WORKSPACE that
+   * holds the file, instead of on the home grid.
+   *
+   * Lexis/Duy, 2026-09-07: the link opened the file correctly, but behind it the
+   * desk sat on home — the screen Drumee 2.0 dropped. It lands there because a
+   * deep-link arrival deliberately stands the remembered-screen restore down
+   * (desk `_hasDeepLink` → `_restoreInFlight = false`, so the file cannot lose
+   * focus to it), and nothing then mounts a workspace: the file opens as a
+   * FLOATING window over an empty desk. So closing the file dropped the visitor
+   * on a screen that no longer exists in the product.
+   *
+   * Docking the workspace is all that was missing, and `loadWorkspace` — the
+   * same call the sidebar and `openNotificationLocation` make — is the one
+   * entry point for it.
+   *
+   * 🔑 ORDER IS LOAD-BEARING, and it is a paint-order hazard, not a logical one.
+   * headlessLayer (the docked pane) sits LATER IN THE DOM than windowsLayer, so
+   * with both layers non-empty they tie on z-index and the pane paints OVER the
+   * floating file — the wm skin says so in as many words, and the layer that
+   * hosts the active window is what breaks the tie (`:has(> [data-state="1"])`
+   * → z 50001). Mounting the pane and AWAITING it before launching the file
+   * makes the file unambiguously the last window opened, so windowsLayer takes
+   * the lift and the player stays on top. This is the same trap that put the
+   * secure-share panel under the document player.
+   *
+   * Every failure path falls back to today's behaviour rather than costing the
+   * open: no hub_id, an unmountable workspace, or a throw all still call
+   * `openFileLocation` exactly as before. Its return value is passed through
+   * unchanged for the callers that use it.
+   *
+   * @param {Object} payload the parsed deep-link payload (nid, hub_id, filetype…)
+   */
+  async openDesignationLink(payload = {}) {
+    const hub_id = payload && payload.hub_id;
+    // Already standing in it (warm click from inside the workspace) — mounting
+    // again would destroy and rebuild the pane for nothing.
+    if (hub_id && !this._findWorkspaceWindow(hub_id)) {
+      try {
+        // nid 0 is the server's "this hub's root" shortcut (_rootNid), exactly
+        // as openNotificationLocation mounts it: the pane opens at the workspace
+        // root, which is what "stand inside the workspace" means here. The file
+        // itself is opened by openFileLocation below.
+        this.loadWorkspace({ hub_id, nid: 0 });
+        await this._awaitWorkspaceWindow(hub_id);
+      } catch (e) {
+        this.warn("openDesignationLink: could not dock the workspace", e);
+      }
+    }
+    return this.openFileLocation(payload);
+  }
+
+  /**
    *
    */
   changeModalState(s) {
@@ -170,6 +273,23 @@ class __window_manager extends push {
 
     /** Reset the url to its default value*/
     setTimeout(()=>{
+      // NOT while a tour was launched from this URL.
+      //
+      // `?window_tutorial=<id>` asks for a tour that is drawn ON a workspace
+      // pane. Rewriting the hash re-routes the app, which re-renders that pane
+      // and drops the overlay appended to it — WITHOUT destroying the window,
+      // so no destroy handler fires and the tour simply vanishes a few seconds
+      // after appearing, leaving a workspace behind. That was reported three
+      // times before this line was found, because every lifecycle hook stayed
+      // silent while the DOM node quietly went away.
+      //
+      // The reset is cosmetic — it tidies the address bar back to a resting
+      // value — so standing it down for the one kind of load whose URL is
+      // load-bearing costs nothing. `armed()` is true only on a page load that
+      // actually asked for a tour, so every other session is untouched.
+      try {
+        if (require('libs/window-tutorial-intent').armed()) return;
+      } catch (e) { /* never let a URL tidy-up break the desk */ }
       location.hash='#/desk/wm/home'
     }, Visitor.timeout(5000))
 
@@ -194,21 +314,72 @@ class __window_manager extends push {
         this.loadWorkspace(args);
         return;
 
+      // Notification clicks. Same payload as `open` below, but landed in the
+      // DOCKED desk workspace instead of a floating window — see
+      // openNotificationLocation. Kept as its own case so `open` and every
+      // deep link that uses it are untouched.
+      case NOTIFICATION_SEGMENT:
+        this.openNotificationLocation(args);
+        return;
+
       case _a.folder:
       case _a.file:
       case _a.edit:
       case _a.play:
       case _a.open:
+        // Opening it now settles any intent armed for the same visit, so the
+        // relay below cannot reopen this file later in the tab — the same reason
+        // hubDeepLink.clear() is called where that intent is handled directly.
+        fileDeepLink.clear();
+        // `open` is the Designation link — the shape that gets SENT to someone
+        // — so it also docks the workspace behind the file (see
+        // openDesignationLink). The other four shapes in this group are not
+        // designation links and keep the opener they have always had; that is
+        // the same line libs/file-deep-link draws in its LONG/COMPACT regexes.
+        if (path[2] === _a.open) {
+          this.openDesignationLink(args);
+          return;
+        }
         this.openFileLocation(args);
         return;
+
+      // Compact twin of `open`: same payload, values carried as path segments
+      // instead of a query string (libs/compact-deep-link). Purely additive —
+      // the `open` case above is untouched, so every long link already sitting
+      // in an inbox, a chat or a notification resolves exactly as before.
+      // A malformed compact path `break`s instead of returning, so it lands on
+      // the same fallback resolution an unrecognised path has always used
+      // rather than dead-ending here.
+      case COMPACT_SEGMENT: {
+        const compact = parseCompactPath(path);
+        if (compact) {
+          fileDeepLink.clear();       // settled here — see the `open` case above
+          // The compact form IS a Designation link, so it docks the workspace
+          // too — otherwise shortening a link would silently change where the
+          // desk lands, which is exactly the drift the compact form exists to
+          // avoid.
+          this.openDesignationLink(compact);
+          return;
+        }
+        break;
+      }
     }
+    // Legacy resting-hash restore, unchanged. It cannot carry a link across a
+    // sign-in: butler/index.js rewrites `locationOnStart` on every boot and
+    // signing in reloads the document, so by then it holds "#/welcome/signin"
+    // (measured — boot 1 stored an 83-char hash carrying `nid=`, boot 2 stored
+    // 16 chars). That journey is served by libs/file-deep-link instead, armed at
+    // module scope in index.web.js and consumed in desk's _afterHomeSettled
+    // alongside the billing and workspace-invite intents — the only place proven
+    // to run after a sign-in. Left exactly as it behaved before.
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
     if (loc) {
       let { hash } = loc;
       if (hash) {
-        const savedPath = Visitor.parseModule(hash);
-        const savedArgs = Visitor.parseModuleArgs(hash);
-        this.openSharedLink(savedArgs);
+        // Stays on openSharedLink — this path predates the relay and keeps the
+        // opener (and the checkPrivilegeForHub / _onShareAccessDenied handling)
+        // it has always had. Only the parsing is now shared.
+        this.openSharedLink(this._deepLinkPayload(hash));
       }
     }
     // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]
@@ -331,7 +502,15 @@ class __window_manager extends push {
     });
   }
 
-  createFolderFromDialog(cmd) {
+  /**
+   * @param {Object} cmd     the dialog, or anything with getValue()
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.home]  create at the user's HOME ROOT whatever is
+   *   open. Set by the personal-workspace path in libs/create-workspace: a
+   *   personal workspace IS a home-root folder, so "wherever the user is"
+   *   is the one answer that is never right for it.
+   */
+  createFolderFromDialog(cmd, opt = {}) {
     if (this._creatingFolder) return;
     this._creatingFolder = 1;
     const entry = this.getPart("create-folder-name");
@@ -345,7 +524,16 @@ class __window_manager extends push {
       return this.alert(LOCALE.INVALID_FILENAME);
     }
 
-    const onHome = !this._curWorkspace;
+    // WHERE THE FOLDER GOES. By default: inside the open workspace, which is
+    // what "+ New -> Folder" means and is right for that caller.
+    //
+    // `opt.home` overrides it, and exists because the same method creates a
+    // PERSONAL WORKSPACE — which is a home-root folder, not a folder in
+    // whatever happens to be open. Without the override, creating one while an
+    // internal or external workspace was open put it inside that workspace and
+    // stamped it with that workspace's AREA as well, so it stopped being
+    // personal in two ways at once and read as a plain subfolder.
+    const onHome = !!opt.home || !this._curWorkspace;
     const hub_id = onHome ? Visitor.id : this._curWorkspace.hub_id;
     const nid = onHome ? Visitor.get(_a.home_id) : this._curWorkspace.nid;
     const area = onHome ? _a.personal : this._curWorkspace.area;
@@ -405,6 +593,218 @@ class __window_manager extends push {
   }
 
   /**
+   * Land a NOTIFICATION click inside the DOCKED desk workspace.
+   *
+   * Every notification that opens a workspace used to navigate to
+   * `#/desk/wm/open/?...` → `openFileLocation`, which launches a FLOATING
+   * window_folder — the old UI. This is the docked twin: `loadWorkspace` mounts
+   * the SAME window_folder into headlessLayer, and the notification's own
+   * targeting (folder, tab, task, reveal) is then applied to that pane.
+   *
+   * DELIBERATELY ITS OWN ROUTE (`#/desk/wm/reveal/?...`), not a change to
+   * `case _a.open`. Every other consumer of that route — mail deep links, chat
+   * links, share links, the compact `/o/` form, the post-signin relay — keeps
+   * `openFileLocation` byte-for-byte as it is. Only the activity panel points
+   * here, so the blast radius is the notification panel and nothing else.
+   *
+   * The four things the floating path carried, and where each goes now:
+   *  - the FOLDER   → refreshContent on the docked pane (same call
+   *                   openWorkspaceFolder makes for a sidebar sub-folder click)
+   *  - `activeTab`  → showFolderTab on the mounted pane. NOT threaded through
+   *                   loadWorkspace's feed: `apply(attrs)` shadows its `data`
+   *                   argument with the media.attributes response, so anything
+   *                   added to the caller's object is silently dropped there.
+   *  - `open_task_id` → openTaskDeepLink, which exists precisely for "a window
+   *                   that is ALREADY open" and switches to the Task tab itself.
+   *  - `highlight`  → _revealFromNotification (window/utils.js). It polls
+   *                   Wm by nid for the rendered grid CELL, so it never cared
+   *                   which layer the folder window lives in — it works on the
+   *                   docked pane unchanged.
+   *
+   * @param {Object} args parsed hash args from the activity item
+   */
+  async openNotificationLocation(args = {}) {
+    const { hub_id, nid, pid, filetype, activeTab, open_task_id } = args;
+    if (!hub_id) {
+      this.warn("openNotificationLocation: missing hub_id", args);
+      return;
+    }
+    const highlight = !!(args.highlight && `${args.highlight}` !== "0");
+
+    // The folder the pane must END UP showing, resolved by the SAME rule
+    // openFileLocation uses before it launches:
+    //  - a REVEAL (highlight=1) always opens the PARENT and flashes the target
+    //    inside it. That holds for a container target too — a newly created
+    //    SUB-FOLDER is a cell in its parent, and `_revealFromNotification`
+    //    looks for exactly that cell (nid !== pid → _highlightNode). Opening
+    //    the sub-folder itself would leave nothing on screen to highlight.
+    //    Falls back to nid when the row carries no parent.
+    //  - otherwise a container target IS the folder to show, and a file target
+    //    is shown inside its parent.
+    const isContainer =
+      !filetype || filetype === _a.folder || filetype === _a.hub;
+    const hasPid = pid != null && `${pid}` !== "" && `${pid}` !== "0";
+    const targetNid = highlight
+      ? (hasPid ? pid : nid)
+      : (isContainer ? nid : pid);
+
+    // Only mount when this workspace is not already docked. Re-feeding
+    // headlessLayer for a workspace the user is already in would destroy and
+    // rebuild the pane for nothing — and loadWorkspace's own same-workspace
+    // early return cannot be relied on here, because after a sub-folder
+    // navigation _curWorkspace.nid is that sub-folder, not the root.
+    if (!this._findWorkspaceWindow(hub_id)) {
+      // nid 0, not the target: 0 is the server's "this hub's root" shortcut
+      // (see _rootNid). The pane opens at the workspace root and the deep
+      // target, if any, is navigated to below.
+      this.loadWorkspace({ hub_id, nid: 0 });
+    }
+
+    const win = await this._awaitWorkspaceWindow(hub_id);
+    if (!win) {
+      this.warn("openNotificationLocation: workspace pane never mounted", args);
+      return;
+    }
+    if (win.raise) win.raise();
+
+    // Navigate into the target folder when it is not the one already shown.
+    if (
+      targetNid &&
+      `${targetNid}` !== "0" &&
+      `${win.mget(_a.nid)}` !== `${targetNid}` &&
+      _.isFunction(win.refreshContent)
+    ) {
+      const attrs = await this.fetchService(SERVICE.media.attributes, {
+        hub_id,
+        nid: targetNid,
+      }).catch((e) => {
+        this.warn("openNotificationLocation: cannot resolve target", e);
+        return null;
+      });
+      // A resolvable target navigates; an unresolvable one leaves the user on
+      // the workspace root rather than on an error — the notification still
+      // took them somewhere useful.
+      if (attrs && attrs.nid) {
+        win.refreshContent(attrs);
+        // refreshContent cannot infer the ancestor chain for a deep jump, so
+        // both breadcrumbs would keep naming the WORKSPACE while the pane sits
+        // in a sub-folder (measured: pane on "125 à á ạ", crumb still "/ adi").
+        // Rebuilt from get_path exactly as openWorkspaceFolder does after its
+        // own refreshContent — including the _.defer, whose reason is the same:
+        // refreshContent has just issued this folder's media.show_node_by, and
+        // a get_path in the same tick reaches the endpoint first and holds the
+        // listing behind its temporary-table build (libs/path-request).
+        const deepNid = attrs.nid;
+        _.defer(() => {
+          // Painted twice at most: at once from the session's last answer for
+          // this node, and again only if the server's differs (path-request).
+          const paint = (path) => {
+            if (_.isEmpty(path)) return;
+            if (_.isFunction(win.refreshBreadcrumbsUI))
+              win.refreshBreadcrumbsUI(path);
+            this.updateBreadcrumb(
+              { ...attrs, service: "change-workspace" },
+              this,
+            );
+          };
+          getPath(this, { nid: deepNid, hub_id }, paint)
+            .then(paint)
+            .catch((e) =>
+              this.warn("openNotificationLocation: breadcrumb refresh failed", e),
+            );
+        });
+      }
+    }
+
+    // Tab LAST, after the navigation: showFolderTab and the task panel both
+    // read the folder the window is on NOW.
+    if (open_task_id && _.isFunction(win.openTaskDeepLink)) {
+      win.openTaskDeepLink(open_task_id);
+    } else if (activeTab && _.isFunction(win.showFolderTab)) {
+      win.showFolderTab(activeTab);
+    }
+    // Keep the rail agreeing with the screen. loadWorkspace does not touch it
+    // (it is desk chrome, rebuilt with nothing) — the defect Lexis reported for
+    // the workspace switcher, which _resetRailToFiles fixed there.
+    if (window.Desk && _.isFunction(window.Desk._railHighlight)) {
+      window.Desk._railHighlight(open_task_id ? _a.task : activeTab || "files");
+    }
+
+    if (highlight) this._revealFromNotification(nid, filetype, pid);
+    return win;
+  }
+
+  /**
+   * Resolve once the docked workspace pane for `hub_id` is mounted AND has
+   * rendered its folder view.
+   *
+   * Polled, not awaited on loadWorkspace: that method is fire-and-forget (it
+   * mounts inside the .then of its own media.attributes fetch) and returns
+   * nothing to wait on. Polling also covers the pane that was ALREADY docked,
+   * where nothing new is mounted at all. Same idiom, and the same budget, as
+   * _highlightNode in window/utils.js.
+   *
+   * The folder-view wait matters: showFolderTab writes tab state through
+   * `$el.find(".window-folder__tab-bar-item")`, which finds nothing before the
+   * window's skeleton renders, and window_folder's own onDomRefresh gates its
+   * launch-time tab on exactly this part.
+   *
+   * @param {String} hub_id
+   * @param {Number} [tries]
+   * @returns {Promise<Object|null>} the pane, or null if it never appeared
+   */
+  _awaitWorkspaceWindow(hub_id, tries = 40) {
+    return new Promise((resolve) => {
+      const seek = (n) => {
+        const win = this._findWorkspaceWindow(hub_id);
+        if (win && _.isFunction(win.ensurePart)) {
+          return win
+            .ensurePart("folder-view")
+            .then(() => resolve(win))
+            .catch(() => resolve(win));
+        }
+        if (n <= 0) return resolve(null);
+        setTimeout(() => seek(n - 1), 150);
+      };
+      seek(tries);
+    });
+  }
+
+  /**
+   * THE WORKSPACE PANE — the headless window_folder that IS the desk.
+   *
+   * Not Wm.folderWindowIn(headlessLayer): that answers the LAST window_folder
+   * in the layer, and headlessLayer receives every explicitly launched window
+   * too (launch -> getWindowsPool). A folder popup — "Open in window", "Get
+   * info", a chat/notification "open location" — is therefore appended AFTER
+   * the pane and wins that lookup, so callers meaning "the desk" got the popup
+   * instead: in-place navigation drove the window nobody was looking at while
+   * the pane stayed where it was.
+   *
+   * `headless` is the discriminator, because it is the flag that decides the
+   * window's whole shape (window/folder/skeleton: pane vs. popup) and it is
+   * set by loadWorkspace alone. Hub-agnostic sibling of _findWorkspaceWindow —
+   * only one pane is mounted at a time (loadWorkspace re-feeds the layer), so
+   * the caller does not have to know which workspace it is.
+   *
+   * @returns {Object|null} the live workspace pane, or null before one mounts
+   */
+  headlessPane() {
+    const layer = this.headlessLayer;
+    if (!layer || !layer.children) return null;
+    const panes = layer.children
+      .toArray()
+      .filter(
+        (c) =>
+          c &&
+          !(c.isDestroyed && c.isDestroyed()) &&
+          c.mget(_a.kind) === "window_folder" &&
+          c.mget(_a.headless),
+      );
+    return panes[panes.length - 1] || null;
+  }
+
+  /**
    * Find a headless workspace window already open for the given hub_id.
    * Searches headlessLayer only — headless windows never live in windowsLayer.
    * Returns null if none is open or all are mid-destroy.
@@ -461,7 +861,37 @@ class __window_manager extends push {
       if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;
     }
+    // WAIT FOR THE ACCESS PANEL. Nothing below this line runs while
+    // `.permission-restricted__main` for THIS workspace is up.
+    //
+    // Guarded here, at the choke point, and not at the callers. Creating a
+    // workspace from the empty screen chains to that panel (media/form ->
+    // parent.feed) and the desk defers its own open until it closes — but the
+    // panel kept being torn out anyway, so something else calls this method
+    // after a create. The live bundle has seven call sites and inspection did
+    // not identify which; every one of them ends up here, so this is the one
+    // place a wait cannot be bypassed.
+    //
+    // Deferring the WHOLE method, not just the wrapper clear: opening the
+    // workspace also re-feeds headlessLayer, stamps the home grid away and
+    // closes the desk's panels, all of which are visible next to a panel the
+    // user is still working in.
+    if (this._deferForAccessPanel(workspace, hub_id)) return;
+
+    // Hide the home grid for the WHOLE switch, starting now.
+    //
+    // __icons-list (the home workspace tiles) lives in a sibling layer BELOW
+    // headlessLayer, so it stays mounted behind an open workspace. Switching
+    // destroys the old pane and feeds a new one, and in that gap the old home
+    // screen flashed through. Stamping here — before the async media.attributes
+    // fetch, not in apply() — covers the entire transition. Cleared in
+    // reload(), which is the only path back to the home view.
+    this._syncHomeGrid(1);
     Desk.closeAllPanels();
+    // The call survives a workspace switch now (it lives in the call layer, not
+    // in the headlessLayer this method re-feeds) — park it in its corner tile so
+    // it doesn't cover the workspace the user just opened. No-op without a call.
+    this.parkLiveCall();
     // Close any settings/admin/apps panel that would occlude the workspace
     // grid. Sidebar workspace items dispatch directly to Wm.loadWorkspace
     // (not through desk.onUiEvent), so cleanup must live here too. Only
@@ -480,6 +910,10 @@ class __window_manager extends push {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
+      // Drop the OUTGOING pane's claim on the context before feed() destroys
+      // it — see the destroy hook below for why identity, not hub_id, is what
+      // decides ownership here.
+      this._curWorkspacePane = null;
       this.headlessLayer.feed({
         kind: "window_folder",
         hub_id,
@@ -494,21 +928,57 @@ class __window_manager extends push {
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
         wm_unique_id: `window_folder-${hub_id}`,
       });
-      this.ensurePart("wrapper-modal").then((p) => p.clear());
-      // By KIND, not by position: headlessLayer also receives every explicitly
-      // launched window (a player, the Drive popup...), so children.last() is
-      // whatever the user opened most recently — see Wm.folderWindowIn.
-      let cur = this.folderWindowIn(this.headlessLayer);
+      // KEEP THIS WORKSPACE'S OWN ACCESS PANEL.
+      //
+      // This clear is what dismisses the create dialog when a workspace opens,
+      // and it is right for that. It is wrong for one case: media/form chains
+      // to `permission_restricted` in this very wrapper on a successful create,
+      // so whatever opens the new workspace next destroys the panel the user
+      // was about to invite people from. Reported as the access panel appearing
+      // and then vanishing as the workspace opened.
+      //
+      // Guarding HERE rather than at the callers because there are seven of
+      // them and the damage is the same whichever one ran — the desk defers its
+      // own open until the panel closes, and this covers every other route.
+      //
+      // Scoped to the SAME hub, deliberately: a panel bound to the workspace
+      // being opened is still about that workspace, so keeping it is coherent.
+      // Switching to a DIFFERENT workspace still clears, or the panel would be
+      // left describing a workspace nobody is looking at any more.
+      this.ensurePart("wrapper-modal").then((p) => {
+        if (this._modalHoldsAccessPanelFor(p, hub_id)) return;
+        p.clear();
+      });
+      // By KIND AND `headless`, not by position: headlessLayer also receives
+      // every explicitly launched window (a player, a folder popup, the Drive
+      // popup...), so children.last() is whatever the user opened most
+      // recently, and even the last window_folder in it can be a popup — see
+      // Wm.headlessPane.
+      let cur = this.headlessPane();
       if (cur) {
-        cur.once(_a.destroy, () => {
-          // On a workspace switch the OLD pane's destroy fires after the new
-          // context is already applied — only clear when this pane still owns it,
-          // else rapid switching leaves _curWorkspace null for the live pane.
-          // hub_id-only match is enough here: headlessLayer is a singleton pool
-          // and a hub's workspace root nid never changes.
-          if (this._curWorkspace && this._curWorkspace.hub_id == hub_id) {
-            this._curWorkspace = null;
-          }
+        const pane = cur;
+        this._curWorkspacePane = pane;
+        pane.once(_a.destroy, () => {
+          // On a workspace switch the OLD pane's destroy fires AFTER the new
+          // context is already applied, so this must only clear when the pane
+          // dying is the one that still owns the context.
+          //
+          // Ownership is the pane's IDENTITY, not its hub_id. hub_id cannot
+          // tell two workspaces apart when they live in the same hub, and
+          // every PERSONAL workspace does — a personal workspace is a folder
+          // in the user's own hub, so `hub_id` is Visitor.id for all of them.
+          // Switching personal → personal therefore let the outgoing pane wipe
+          // the INCOMING workspace's context: Wm._curWorkspace went null under
+          // a live pane, which blanked the switcher's header (it feeds []
+          // without a current row) and un-highlighted every row.
+          //
+          // The claim is released before feed() above, so an outgoing pane no
+          // longer owns anything by the time it dies; a pane dying on its own
+          // (trashed workspace, headlessLayer.clear) still owns it and still
+          // clears, which is the behaviour this hook exists for.
+          if (this._curWorkspacePane !== pane) return;
+          this._curWorkspacePane = null;
+          this._curWorkspace = null;
         });
       }
       // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
@@ -525,18 +995,36 @@ class __window_manager extends push {
       // path of "undefined" — the same defect as the fetch above, and it left the
       // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
       // it this way (attrs.nid || nid).
-      getPath(this, { nid: data.nid || nid, hub_id })
-        .then((path) => {
+      // Deferred so it cannot outrun the window's OWN content request. feed()
+      // above mounts window_folder, whose list issues media.show_node_by a
+      // microtask later; this call used to run synchronously right here and so
+      // reached the endpoint first. That ordering is expensive: libs/path-request
+      // documents that mfs_get_path builds a temporary table per call (173ms, and
+      // 404ms-3013ms for a concurrent twin) and delays whatever is queued behind
+      // it — which was the file grid, the one thing the user is waiting for.
+      // The breadcrumb is cosmetic and already got its immediate local update
+      // from updateBreadcrumb() above, so it can afford to go last.
+      _.defer(() => {
+        // Painted at once from the session's last answer for this node when
+        // there is one, and again only if the server's differs (path-request)
+        // — the switch no longer waits on mfs_get_path to name itself.
+        const paint = (path) => {
           if (_.isEmpty(path)) return;
           // Resolved again HERE, not reused from above: feed() may not have
           // mounted the new pane yet when this callback was set up, and a
           // second switch may have replaced it while the path was in flight.
-          const w = this.folderWindowIn(this.headlessLayer);
+          // The PANE, not the last window_folder in the layer: a folder popup
+          // launched during the round trip would otherwise take this
+          // workspace's crumbs (Wm.headlessPane).
+          const w = this.headlessPane();
           if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
-        })
-        // Without this the throw above escaped as an unhandledrejection —
-        // which is exactly how it reached production unnoticed.
-        .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
+        };
+        getPath(this, { nid: data.nid || nid, hub_id }, paint)
+          .then(paint)
+          // Without this the throw above escaped as an unhandledrejection —
+          // which is exactly how it reached production unnoticed.
+          .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
+      });
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -603,6 +1091,235 @@ class __window_manager extends push {
    */
   _rootNid(nid) {
     return nid == null || nid === "" ? 0 : nid;
+  }
+
+  /**
+   * Hold a workspace open until this workspace's access panel is dismissed.
+   *
+   * Returns TRUE when the open was postponed, in which case the caller's
+   * loadWorkspace is a no-op and this re-invokes it once the panel goes.
+   *
+   * SCOPED TO THE SAME HUB. A panel belonging to another workspace is not a
+   * reason to hold this one back — switching away from it is a deliberate act
+   * and the existing clear handles it.
+   *
+   * BOUNDED, and only ever once per hub. `_accessHold` is what stops a
+   * re-invocation from being deferred again by the same panel and looping; the
+   * timer is what stops a panel that is never dismissed (a tab left open,
+   * a widget that fails to suppress) from stranding the desk on the empty
+   * screen forever.
+   *
+   * @param {Object} workspace the original argument, replayed verbatim
+   * @param {String} hub_id
+   * @returns {Boolean} whether the open was deferred
+   */
+  _deferForAccessPanel(workspace, hub_id) {
+    if (!hub_id) return false;
+    this._accessHold = this._accessHold || {};
+    const held = this._accessHold[hub_id];
+
+    // TWO KINDS OF REPEAT CALL, and they must not be treated alike.
+    //
+    // `replaying` is this hold's OWN re-invocation, fired once the panel has
+    // gone — it has to be let through or nothing would ever open.
+    //
+    // Anything else arriving while a hold is active is another caller racing to
+    // open the same workspace, and it must be DROPPED, not let through. Getting
+    // this wrong is the whole bug: a single ambiguous latch returned "don't
+    // defer" to that second caller, so the desk sat politely waiting for the
+    // panel while some other path opened the workspace underneath it.
+    if (held) return !held.replaying;
+
+    const p = _.isFunction(this.getPart) ? this.getPart("wrapper-modal") : null;
+    if (!this._modalHoldsAccessPanelFor(p, hub_id)) return false;
+
+    const entry = { replaying: 0 };
+    this._accessHold[hub_id] = entry;
+
+    const cleanup = () => {
+      p.collection.off("update reset", onChange);
+      if (timer) clearTimeout(timer);
+    };
+    const release = () => {
+      if (this._accessHold[hub_id] !== entry) return;
+      cleanup();
+      if (this.isDestroyed && this.isDestroyed()) {
+        delete this._accessHold[hub_id];
+        return;
+      }
+      // Marked BEFORE the replay and cleared after, so the re-entrant call
+      // this makes is recognised as the replay and every other caller in that
+      // window is still dropped.
+      entry.replaying = 1;
+      try {
+        this.loadWorkspace(workspace);
+      } finally {
+        delete this._accessHold[hub_id];
+      }
+    };
+    const onChange = () => {
+      if (this.isDestroyed && this.isDestroyed()) {
+        cleanup();
+        delete this._accessHold[hub_id];
+        return;
+      }
+      // Still showing this workspace's panel — keep waiting. Anything else in
+      // the wrapper (or an empty one) means the panel is gone.
+      if (this._modalHoldsAccessPanelFor(p, hub_id)) return;
+      release();
+    };
+    const timer = setTimeout(() => {
+      this.warn(
+        `loadWorkspace held ${hub_id} for the access panel; opening anyway`,
+      );
+      release();
+    }, 120000);
+
+    // No teardown hook to unregister in: Wm is session-lifetime and defines
+    // neither onDestroy nor onBeforeDestroy. The isDestroyed() checks in both
+    // callbacks are what covers a torn-down manager, and the timer is bounded.
+    p.collection.on("update reset", onChange);
+    return true;
+  }
+
+  /**
+   * Does the wrapper-modal currently hold the access panel for THIS hub?
+   *
+   * `permission_restricted` is what media/form chains to on a successful
+   * create, fed with the new workspace's `hub_id`. Matching on both the kind
+   * and the hub keeps the guard narrow: anything else in the wrapper (the
+   * create form itself, window_info, the invite popup) still gets cleared, and
+   * so does a panel belonging to some other workspace.
+   *
+   * @param {Object} p the wrapper-modal part
+   * @param {String} hub_id the workspace being opened
+   * @returns {Boolean}
+   */
+  _modalHoldsAccessPanelFor(p, hub_id) {
+    if (!p || !p.collection || !hub_id) return false;
+    try {
+      return p.collection.some((m) => {
+        if (!m || !_.isFunction(m.get)) return false;
+        if (m.get(_a.kind) !== "permission_restricted") return false;
+        return `${m.get(_a.hub_id)}` === `${hub_id}`;
+      });
+    } catch (e) {
+      // Never let a bookkeeping question stop a workspace from opening.
+      this.warn && this.warn("[loadWorkspace] modal inspect failed", e);
+      return false;
+    }
+  }
+
+  /**
+   * THE OPEN WORKSPACE JUST STOPPED EXISTING.
+   *
+   * Handled here, explicitly, rather than left to fall out of the pane's
+   * `once(destroy)` handler in loadWorkspace. That handler does clear
+   * `_curWorkspace`, but only if something destroys the pane — and for a long
+   * time nothing did (see removeContent in window/utils), which is how deleting
+   * a workspace left the topbar breadcrumb naming it, the wm-container showing
+   * its content, and the next page load trying to reopen it. Depending on a
+   * destroy side effect means every future way of losing a pane has to remember
+   * to trigger one; saying it outright does not.
+   *
+   * Both removals qualify: a workspace you deleted (hub.delete_hub) and one you
+   * left or were removed from (desk.leave_hub). Either way it is gone for you.
+   *
+   * WM'S OWN MODEL IS RESET TOO, and that is not housekeeping. loadWorkspace
+   * does `this.mset({hub_id, nid, ownpath, home_id, ...})`, so Wm keeps
+   * claiming to be inside a workspace after it is gone — the exact stale state
+   * that once made Wm's own removeContent match itself and call goodbye() on
+   * the desk's whole work area (its docblock records the incident). The
+   * `this === Wm` guard stops the symptom; clearing the model removes the lie.
+   *
+   * @param {String} hub_id the workspace that was removed
+   */
+  onCurrentWorkspaceRemoved(hub_id, nid) {
+    if (!hub_id) return;
+    const cur = this._curWorkspace;
+    if (!cur || cur.hub_id != hub_id) return;
+    // A PERSONAL workspace is identified by its NODE, never by hub_id alone:
+    // every one of them is a folder in the user's own home, so they all report
+    // hub_id === Visitor.id. Deleting one would otherwise tear the desk down
+    // for whichever personal workspace happened to be open — the same id
+    // collision that put the wrong name in the switcher header. Callers that
+    // know the node pass it; the hub callers pass none and are unaffected.
+    if (nid != null && cur.nid != nid) return;
+
+    this._curWorkspace = null;
+    // A new generation invalidates any loadWorkspace still in flight for the
+    // dead hub, so its `apply()` cannot put the context back.
+    this._wsGeneration = (this._wsGeneration || 0) + 1;
+    try {
+      this.mset({
+        hub_id: null,
+        nid: null,
+        nodeId: null,
+        area: null,
+        ownpath: null,
+        home_id: null,
+        filepath: null,
+      });
+    } catch (e) {
+      this.warn && this.warn("[workspace-removed] could not reset model", e);
+    }
+
+    // Land somewhere renderable. The shell's rail (Files / Chat / Task / Meet /
+    // Access) all act on an OPEN workspace, so "no workspace" is not a state it
+    // can draw — the same reason _restoreDeskState opens a default when it has
+    // nothing to restore. Opening one also repaints the topbar breadcrumb,
+    // which is what clears the dead workspace's name from the left cluster.
+    const desk = window.Desk;
+    if (desk && _.isFunction(desk._openDefaultWorkspace)) {
+      // Deferred: the pane for the dead hub is being torn down on this same
+      // echo, and opening the next one first would have the old pane's destroy
+      // handler clear the NEW context on its way out.
+      _.defer(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this._curWorkspace) return; // something already opened one
+        // FORCED. The desk's cached workspace list still contains the hub that
+        // was just deleted, so an unforced step 1 would "find" it and try to
+        // reopen the very thing being removed.
+        desk._openDefaultWorkspace({ force: true });
+      });
+    }
+  }
+
+  /**
+   * Wm's own WS hook: notice when the workspace it is pointing at is removed,
+   * then hand on to the base handler (which drops the tile from the grid).
+   */
+  handleWsEvent(args = {}) {
+    const { data, options } = args || {};
+    const service = (options && options.service) || "";
+    if (
+      /^(hub\.delete_hub|desk\.leave_hub)$/.test(service) &&
+      data &&
+      data.hub_id
+    ) {
+      this.onCurrentWorkspaceRemoved(data.hub_id);
+    }
+    // A PERSONAL workspace leaves as a TRASHED FOLDER, not as a deleted hub —
+    // it has no hub of its own — so neither service above ever names it, and
+    // deleting the open one left the desk showing a workspace that was gone.
+    //
+    // Only the workspace's own ROOT counts. Trashing a folder inside it is an
+    // ordinary delete that must not tear the desk down, which is why this
+    // compares the node and not just the hub.
+    if (service === "media.remove" || service === SERVICE.media.trash) {
+      const cur = this._curWorkspace;
+      const personal = !!(cur && `${cur.hub_id}` === `${Visitor.id}`);
+      // The echo is one node or a list of them (removeContent takes either).
+      const nodes = _.isArray(data) ? data : [data];
+      if (personal) {
+        for (const n of nodes) {
+          if (!n || n.nid == null || cur.nid != n.nid) continue;
+          this.onCurrentWorkspaceRemoved(n.hub_id || Visitor.id, n.nid);
+          break;
+        }
+      }
+    }
+    if (super.handleWsEvent) return super.handleWsEvent(args);
   }
 
   // Clear _curWorkspace only if it still points at the given workspace —
@@ -724,7 +1441,24 @@ class __window_manager extends push {
     if (window.Desk && _.isFunction(window.Desk.closeMainPanels)) {
       window.Desk.closeMainPanels();
     }
-    let media = Wm.getItemsByAttr(_a.nid, data.nid)[0];
+    // Reuse an on-screen tile for this node ONLY if it belongs to the pane we
+    // are actually navigating.
+    //
+    // getItemsByAttr walks the ENTIRE receiver subtree, so asking Wm walked
+    // every layer, every open folder window and every tile in them, then fired
+    // open-node on the FIRST match anywhere. With a second folder window open
+    // on the clicked folder, a breadcrumb click navigated that window instead
+    // of the workspace pane in front of the user — the click appeared to do
+    // nothing, or moved a window the user was not looking at.
+    //
+    // Scoped to the active pane, the lookup answers the question it was meant
+    // to ask: "is the target already a tile in THIS listing?" Outside the pane
+    // it now falls through to the resolve-and-refresh path below, which is the
+    // correct handling for a node that is not on screen.
+    const scope = this.headlessPane();
+    const media = scope && _.isFunction(scope.getItemsByAttr)
+      ? scope.getItemsByAttr(_a.nid, data.nid)[0]
+      : null;
     if (media) {
       return media.triggerHandlers({ service: "open-node" });
     }
@@ -742,24 +1476,57 @@ class __window_manager extends push {
         const resolved =
           attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
         if (!resolved) {
-          this.warn("loadWorkspace: cannot resolve workspace root", {
+          this.warn("openWorkspaceFolder: cannot resolve node", {
             hub_id,
+            nid,
             attrs,
           });
           return;
         }
-        // Same trap as loadWorkspace above: the pool's last child is whatever
-        // was launched most recently, not necessarily the folder window, and
-        // refreshContent below is a folder-only method (Wm.folderWindowIn).
-        let currentFolder = this.folderWindowIn();
-        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) return;
+        // THE WORKSPACE PANE, never "the last folder window anywhere".
+        //
+        // This used to be folderWindowIn() with no pool, which answers
+        // getWindowsPool() — headlessLayer whenever a workspace is open — and
+        // takes the LAST window_folder in it. Every explicitly launched window
+        // lands in that layer too, so with a folder popup up ("Open in window",
+        // "Get info", a chat/notification "open location") the click navigated
+        // the popup and the pane the breadcrumb describes never moved: the
+        // crumbs cropped to the clicked ancestor, the grid stayed where it was,
+        // and the only way out of a subfolder was one level at a time.
+        // headlessPane() filters on the flag that tells the two apart.
+        //
+        // Resolved HERE rather than reusing `scope` from before the fetch: a
+        // workspace switch during the round trip replaces the pane, and the
+        // dead one must not be navigated.
+        const currentFolder = this.headlessPane();
+        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) {
+          // No pane to navigate — a section screen over an empty desk, or a
+          // crumb clicked before the first workspace mounted. Open the target
+          // as a workspace rather than dropping the click on the floor.
+          // An EXPLICIT shape, like the sidebar's own folder rows build:
+          // loadWorkspace prefers actual_home_id/home_id over nid, and this
+          // node's row carries the workspace ROOT in both — spreading it would
+          // open Home instead of the folder that was clicked.
+          return this.loadWorkspace({
+            hub_id,
+            nid: attrs.nid || nid,
+            area: attrs.area || data.area,
+            filename: attrs.filename || data.filename,
+          });
+        }
         currentFolder.refreshContent(attrs);
         // refreshContent can't infer the ancestor chain for a deep jump, so the
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
         // get_path, as loadWorkspace does.
         const deepNid = attrs.nid || nid;
-        getPath(this, { nid: deepNid, hub_id })
-          .then((path) => {
+        // Deferred for the same reason as in loadWorkspace: refreshContent()
+        // above kicks off this folder's media.show_node_by, and get_path issued
+        // in the same tick would reach the endpoint first and hold the listing
+        // behind its temporary-table build (see libs/path-request).
+        _.defer(() => {
+          // Painted at once from the session's last answer for this node, and
+          // again only if the server's differs (path-request).
+          const paint = (path) => {
             if (_.isEmpty(path)) return;
             if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
               currentFolder.refreshBreadcrumbsUI(path);
@@ -769,10 +1536,13 @@ class __window_manager extends push {
             // workspace window; this explicit broadcast covers the case where it
             // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
             this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
-          })
-          .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+          };
+          getPath(this, { nid: deepNid, hub_id }, paint)
+            .then(paint)
+            .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+        });
       })
-      .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+      .catch((e) => this.warn("openWorkspaceFolder: get_attributes failed", e));
 
   }
 
@@ -1090,6 +1860,15 @@ class __window_manager extends push {
    * No-op once the user has navigated into a sub-workspace.
    */
   onPartReady(child, pn) {
+    if (pn === _a.list) {
+      // Warm BOTH of folder_task's steps while the grid that triggers it
+      // renders, so neither the first tile click nor the step boundary inside
+      // the tour pays a round trip.
+      if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
+        Promise.resolve(Kind.waitFor("tutorial_folder")).catch(() => {});
+        Promise.resolve(Kind.waitFor("tutorial_task")).catch(() => {});
+      }
+    }
     if (pn === _a.list && child && !child._homeGridFilterInstalled) {
       child._homeGridFilterInstalled = 1;
       const original = child.prepareData.bind(child);
@@ -1124,7 +1903,26 @@ class __window_manager extends push {
       location.href = _ssReturn;
       return;
     }
+    // THE HOME GRID DOES NOT PAINT ON BOOT UNTIL SOMEONE DECIDES IT SHOULD.
+    //
+    // Stamped BEFORE feed(), so the grid is `display:none` from the frame it
+    // is created in. It used to render visible and stay visible for the whole
+    // restore — _waitForWm, a 300ms settle, the workspace list, then
+    // media.attributes — roughly a second of the old home screen before
+    // loadWorkspace's own _syncHomeGrid(1) finally stamped it away. That
+    // second IS the flash on every reload.
+    //
+    // Hidden is the safe default here because the grid is no longer a landing
+    // screen in the 2.0 shell: boot ends on a workspace, on a deep-link
+    // target, or on desk/home-empty. settleHomeGrid() below is what brings the
+    // grid back if none of those claims the canvas, so "hidden" can never
+    // become "blank".
+    this._syncHomeGrid(1, true);
     this.feed(require("./skeleton")(this));
+    // Safety net for a boot that claims nothing — see settleHomeGrid. The desk
+    // calls it directly at the end of its restore; this covers a Wm mounted
+    // without one (or a restore that throws before it can).
+    this._armHomeGridSettle();
     // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
     //
     // ONLY the explicit hash form opens immediately: #/desk/wm/hub?hub_id=… is an
@@ -1439,8 +2237,107 @@ class __window_manager extends push {
    *
    * @param {*} view
    */
+  /**
+   * Show or hide the home workspace-tile grid.
+   *
+   * A data flag rather than a CSS :has() on the headless pane: during a
+   * workspace SWITCH the pane is momentarily absent, and a structural selector
+   * would blink the grid back for exactly that frame — which is the flash this
+   * exists to remove.
+   *
+   * @param {0|1} open whether a workspace occupies the canvas
+   * @param {Boolean} [boot] the boot hold, which hides the grid WITHOUT
+   *   claiming the canvas — see settleHomeGrid
+   */
+  _syncHomeGrid(open, boot) {
+    if (!this.el) return;
+    this.el.dataset.workspace = open ? "1" : "0";
+    // Every other hide comes from something taking the canvas, and it is
+    // stamped SYNCHRONOUSLY at the top of loadWorkspace — before the
+    // media.attributes round trip that sets _curWorkspace and before the pane
+    // feeds. That gap is exactly where a slow connection would otherwise let
+    // settleHomeGrid mistake "still opening" for "nothing opened".
+    if (open) this._homeGridClaimed = !boot;
+    else this._homeGridClaimed = false;
+  }
+
+  /** True when `layer` currently holds at least one live window. */
+  _layerHasWindow(layer) {
+    if (!layer || (layer.isDestroyed && layer.isDestroyed())) return false;
+    return !!(layer.collection && layer.collection.length);
+  }
+
+  /**
+   * REVEAL THE HOME GRID ONLY IF NOTHING ELSE CLAIMED THE CANVAS.
+   *
+   * The counterpart to the boot stamp in onDomRefresh: the grid starts hidden,
+   * and this is the single place that can decide otherwise. It never reveals
+   * on a guess — it reveals on the ABSENCE of every other claim:
+   *
+   *   _homeGridClaimed       loadWorkspace has been entered — stamped before
+   *                          its round trip, so "still opening" is never read
+   *                          as "nothing opened"
+   *   _curWorkspace          that open has landed
+   *   headlessLayer          a pane is docked on the canvas
+   *   desk[data-no-workspace]    the account has none, and desk/home-empty is up
+   *
+   * windowsLayer is deliberately NOT a claim. A floating window sits ABOVE the
+   * canvas rather than occupying it — a deep-linked file that docks no
+   * workspace (`#/desk/file?…`, the shapes openDeepLinkHash leaves alone) still
+   * wants the grid behind it, and closing that window must not leave a blank
+   * desk.
+   *
+   * With none of those, home really is the screen — a failed workspace list, a
+   * restore that threw — and the grid is the right thing to show, exactly as
+   * before this existed.
+   *
+   * While the desk's restore is still in flight the verdict is not in yet, so
+   * this re-arms rather than answering; `retries` bounds that so a restore flag
+   * left standing (a throw between raise and clear) cannot strand the canvas
+   * blank — after ~12s the grid wins, because an empty screen is worse than a
+   * late one.
+   *
+   * @param {Number} [retries] remaining deferrals while the restore runs
+   */
+  settleHomeGrid(retries = 12) {
+    this._cancelHomeGridSettle();
+    if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
+    // Already showing — nothing to decide.
+    if (this.el.dataset.workspace !== "1") return;
+
+    const deskEl = window.Desk && window.Desk.el;
+    const claimed =
+      !!this._homeGridClaimed ||
+      !!this._curWorkspace ||
+      this._layerHasWindow(this.headlessLayer) ||
+      !!(deskEl && deskEl.dataset && deskEl.dataset.noWorkspace === "1");
+    if (claimed) return;
+
+    const restoring = !!(window.Desk && window.Desk._restoreInFlight);
+    if (restoring && retries > 0) return this._armHomeGridSettle(retries - 1);
+
+    this._syncHomeGrid(0);
+  }
+
+  /** @param {Number} [retries] see settleHomeGrid */
+  _armHomeGridSettle(retries = 12) {
+    this._cancelHomeGridSettle();
+    this._homeGridSettleTimer = setTimeout(() => {
+      this._homeGridSettleTimer = null;
+      this.settleHomeGrid(retries);
+    }, 1000);
+  }
+
+  _cancelHomeGridSettle() {
+    if (!this._homeGridSettleTimer) return;
+    clearTimeout(this._homeGridSettleTimer);
+    this._homeGridSettleTimer = null;
+  }
+
   reload() {
     this._cleanupPartition();
+    // Back to the home view — the grid is the screen again.
+    this._syncHomeGrid(0);
     // Clear the per-workspace context so the topbar's + Add new button
     // reverts to the workspace creation flow on the home view.
     this._curWorkspace = null;
@@ -1450,7 +2347,67 @@ class __window_manager extends push {
       nodeId: Visitor.get(_a.home_id),
       area: _a.personal,
     });
+    // Re-feeding the skeleton rebuilds EVERY layer, so it destroys every
+    // window in them — including a live call, which released the room and
+    // dropped the user out of the meeting the moment they clicked Home. With a
+    // call up, reset the home view in place instead.
+    if (this.hasLiveCall && this.hasLiveCall()) {
+      this.parkLiveCall();
+      return this._resetHomeInPlace();
+    }
     this.feed(require("./skeleton")(this));
+  }
+
+  /**
+   * Ask a live call to shrink into its corner tile (window/meeting setCallTile).
+   * Broadcast rather than a direct call so this stays a no-op when nothing is
+   * live and Wm keeps no reference to the call window.
+   */
+  parkLiveCall() {
+    try {
+      if (!this.hasLiveCall()) return;
+      RADIO_BROADCAST.trigger("call:minimize");
+    } catch (e) { /* non-fatal */ }
+  }
+
+  /**
+   * Home, without rebuilding the skeleton: close the workspace pane and the
+   * floating windows (what the re-feed did anyway) and point the grid back at
+   * the user's home, leaving the layers themselves — and the live call inside
+   * the call layer — standing.
+   *
+   * The grid reset is the same sequence the breadcrumb's retired "load-home"
+   * used, and exists for the same reason: navigate the main container without
+   * taking the open windows down with it. (That crumb is gone — the only way
+   * back here now is Desk.loadHome via the over-limit popup's "free up space"
+   * destination.) The upload
+   * floater is spared too; it lives in its own layer and an upload in flight is
+   * no more disposable than a call.
+   */
+  _resetHomeInPlace() {
+    for (const layer of [this.headlessLayer, this.windowsLayer]) {
+      if (!layer || (layer.isDestroyed && layer.isDestroyed())) continue;
+      if (_.isFunction(layer.clear)) layer.clear();
+    }
+    this.ensurePart("wrapper-modal").then((p) => {
+      if (p && _.isFunction(p.clear)) p.clear();
+    });
+    return this.ensurePart(_a.list).then((l) => {
+      if (!l || (l.isDestroyed && l.isDestroyed())) return;
+      // SERVICE.desk.home, not media.show_node_by: this is the API the
+      // skeleton's own grid is built with (wm/skeleton/index.js _icons_list),
+      // so the in-place path lands on exactly the view the re-feed produced.
+      l.setApi({ service: SERVICE.desk.home, hub_id: Visitor.id });
+      if (l.collection) l.collection.reset();
+      l.el.style.visibility = "hidden";
+      const scrollEl = l.el.querySelector(".smart-container");
+      if (scrollEl) {
+        scrollEl.dataset.partitioning = 1;
+        scrollEl.style.visibility = "hidden";
+      }
+      l.restart();
+      this._prepareListPartition(l);
+    });
   }
 
   /**
@@ -1545,7 +2502,316 @@ class __window_manager extends push {
    * NOT unselect. select() is `setState(1)` followed by `mset(opt)`, so it sets
    * state to 1 whatever it is passed. The scoped undo is `media.unselect()`.
    */
+  /**
+   * DELETE A WORKSPACE KNOWING ONLY ITS ID.
+   *
+   * confirmRemoveHub beside this needs a media VIEW — the workspace's tile in
+   * the home grid — for its filename, its attributes, its suppress() and its
+   * trash animation. That is fine when the delete starts from the grid, and it
+   * is the wrong requirement everywhere else: the switcher's ⋯ menu deletes the
+   * workspace the user currently has OPEN, and in the 2.0 shell that grid is
+   * `display: none` for the whole time a workspace is open
+   * (_syncHomeGrid → the [data-workspace="1"] rule in wm/skin), so whether its
+   * children have loaded at all is a timing question nobody should have to win.
+   *
+   * Depending on the tile is what produced "Could not delete the workspace" on
+   * a workspace that was perfectly deletable: the lookup found nothing and the
+   * caller refused rather than doing the wrong thing.
+   *
+   * SO THE TILE IS OPTIONAL HERE. `hub_id` is all the request needs, and — since
+   * removeContent now closes a window on `hub_id` + `filetype: hub` rather than
+   * on a path prefix — all the echo needs either. A tile, when there is one,
+   * only buys the animation and the optimistic removal.
+   *
+   * Everything else is confirmRemoveHub's, deliberately: the same confirm copy,
+   * the same optimistic ordering (fire the request in PARALLEL with the
+   * animation, because dropping a big workspace's database holds the response
+   * for seconds), the same local echo, and the same reload-and-explain on
+   * failure.
+   *
+   * @param {String} hub_id
+   * @param {String} [filename] for the confirm copy
+   * @param {Object} [media] the tile, when the caller has one
+   * @returns {Promise}
+   */
+  confirmRemoveWorkspace(hub_id, filename, media) {
+    return new Promise((resolve) => {
+      if (!hub_id) {
+        this.warn("confirmRemoveWorkspace: no hub_id");
+        return resolve({ error: "no hub_id" });
+      }
+      // NEVER delete_hub THE USER'S OWN ENTITY.
+      //
+      // `hub_id === Visitor.id` does not name a workspace at all — it is the
+      // user's own drumate, which every PERSONAL workspace reports as its
+      // hub_id because a personal workspace is a folder in the user's home,
+      // not a hub. hub.delete_hub answers such a request with
+      // WRONG_ENTITY_TYPE (400, service/private/hub.js delete_hub tests
+      // `entity.type !== 'hub'`), and the caller then said "Could not delete
+      // the workspace. The listing has been restored."
+      //
+      // That 400 is on stage's access log for vowaw91171@robustq.com at
+      // 02:38:54 and 02:39:30 on 2026-09-04, both while the personal workspace
+      // `rrr` was open, and both followed by the reload this failure triggers.
+      //
+      // Guarded HERE rather than at the caller because this is the only place
+      // that can be sure: whichever of the four routes into a workspace delete
+      // ran, the request is about to go out from this line, and one glance at
+      // hub_id is enough to know it cannot be a hub. Callers that already
+      // branch correctly never reach this.
+      if (`${hub_id}` === `${Visitor.id}`) {
+        this.warn(
+          "confirmRemoveWorkspace: hub_id is the user's own entity —"
+            + " this is a PERSONAL workspace, routing to media.trash",
+          { hub_id, filename },
+        );
+        const nid = this._personalWorkspaceNid(media);
+        if (!nid) {
+          this.warn("confirmRemoveWorkspace: no node for the personal workspace");
+          Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+          return resolve({ error: "no personal node" });
+        }
+        return resolve(
+          this.confirmRemovePersonalWorkspace(
+            { nid, hub_id, filename, filepath: this._personalWorkspacePath(media) },
+            media,
+          ),
+        );
+      }
+      const tile =
+        media && !(media.isDestroyed && media.isDestroyed()) ? media : null;
+      this.ensurePart("wrapper-modal").then(async (p) => {
+        await Kind.waitFor("window_confirm");
+        p.feed({
+          kind: "window_confirm",
+          maxsize: 2,
+          title: LOCALE.DELETE,
+          message: LOCALE.MSG_DELETE_HUB.format(
+            filename || (tile && tile.mget(_a.filename)) || "",
+          ),
+          confirm: LOCALE.DELETE,
+        })
+          .ask()
+          .then(() => {
+            // Full node attrs when a tile can supply them, so any window
+            // matching on filepath still recognises itself. Without one the
+            // four fields below are enough — see removeContent's hub branch.
+            const echoData = {
+              ...(tile ? tile.getAttr() : {}),
+              hub_id,
+              home_id: hub_id,
+              nid: hub_id,
+              filetype: _a.hub,
+            };
+            const request = this.postService({
+              service: SERVICE.hub.delete_hub,
+              hub_id,
+            });
+            // No tile, no animation to wait for — but the echo must still be
+            // deferred the same way, so resolve immediately instead.
+            const animation = tile
+              ? this.animateMediaToTrash(tile).catch(() => { })
+              : Promise.resolve();
+            animation.then(() => {
+              if (tile && _.isFunction(tile.suppress)) tile.suppress();
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "hub.delete_hub" },
+              });
+            });
+            request
+              .then((data) => {
+                // A failed request resolves UNDEFINED (doRequest swallows the
+                // throw via onServerComplain) — treat no-data as failure too.
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                await animation;
+                this.warn(`delete_hub failed for ${hub_id}`, e);
+                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
+            p.clear();
+          })
+          .catch(() => resolve({}));
+      });
+    });
+  }
+
+  /**
+   * DELETE A PERSONAL WORKSPACE — a home-root FOLDER, not a hub.
+   *
+   * The sibling above removes a hub with `hub.delete_hub` and needs only its
+   * id. A personal workspace has no hub of its own — it is one folder in the
+   * user's home — so it goes out through `media.trash` on its node, which is
+   * what the grid tile's own trash() has always posted (media/core.js
+   * makeTrashOptions). What is NOT borrowed from the tile is the requirement to
+   * have one: see confirmRemoveWorkspace's note, which applies here word for
+   * word, and the caller's.
+   *
+   * Same shape as its two siblings on purpose: the same confirm copy, the same
+   * optimistic ordering (request in PARALLEL with the animation), the same
+   * local echo so the grid tile and any window inside the workspace go without
+   * waiting for the server's, and the same reload-and-explain on failure.
+   *
+   * @param {Object} node {nid, hub_id, filename, filepath} — the WORKSPACE's
+   *   own node, not whatever folder a pane is browsing
+   * @param {Object} [media] the tile, when the caller has one
+   * @returns {Promise}
+   */
+  /**
+   * The node of the personal workspace a misrouted hub delete was about.
+   *
+   * The tile when the caller has one — it carries the folder's real nid. With
+   * no tile, `_curWorkspace`, which loadWorkspace pins to the workspace root
+   * and which navigation never moves. Both are checked because the two routes
+   * into a workspace delete supply different things: the grid passes a tile,
+   * the switcher's menu passes none.
+   */
+  _personalWorkspaceNid(media) {
+    const fromTile = media && _.isFunction(media.mget) ? media.mget(_a.nid) : null;
+    if (fromTile != null && fromTile !== "") return fromTile;
+    const cur = this._curWorkspace;
+    if (cur && `${cur.hub_id}` === `${Visitor.id}` && cur.nid != null) {
+      return cur.nid;
+    }
+    return null;
+  }
+
+  /** The workspace's path, for the removal echo — see the node's docblock. */
+  _personalWorkspacePath(media) {
+    const fromTile =
+      media && _.isFunction(media.mget)
+        ? media.mget(_a.filepath) || media.mget(_a.ownpath)
+        : null;
+    if (fromTile) return fromTile;
+    try {
+      return this.mget(_a.filepath) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  confirmRemovePersonalWorkspace(node, media) {
+    return new Promise((resolve) => {
+      const { nid, filename, filepath } = node || {};
+      if (!nid) {
+        this.warn("confirmRemovePersonalWorkspace: no nid");
+        return resolve({ error: "no nid" });
+      }
+      // A personal workspace lives in the user's own home, so this is always
+      // Visitor.id — taken from the node rather than assumed, because that is
+      // the field the request and the echo must agree on.
+      const hub_id = node.hub_id || Visitor.id;
+      const tile =
+        media && !(media.isDestroyed && media.isDestroyed()) ? media : null;
+      this.ensurePart("wrapper-modal").then(async (p) => {
+        await Kind.waitFor("window_confirm");
+        p.feed({
+          kind: "window_confirm",
+          maxsize: 2,
+          title: LOCALE.DELETE,
+          message: LOCALE.MSG_DELETE_HUB.format(
+            filename || (tile && tile.mget(_a.filename)) || "",
+          ),
+          confirm: LOCALE.DELETE,
+        })
+          .ask()
+          .then(() => {
+            const echoData = {
+              ...(tile ? tile.getAttr() : {}),
+              nid,
+              hub_id,
+              // The path is what closes an open window of this workspace —
+              // removeContent's hub short-circuit is for `filetype: hub` and
+              // this is a folder. Without one the request still runs and the
+              // tile still goes; only the pane would linger.
+              ...(filepath ? { filepath } : {}),
+              filetype: _a.folder,
+            };
+            // Exactly the request media/core.js makeTrashOptions builds for a
+            // folder, so the server sees the same delete whichever surface it
+            // was asked from.
+            const request = this.postService({
+              service: SERVICE.media.trash,
+              nid: [{ nid, hub_id }],
+              hub_id,
+            });
+            const animation = tile
+              ? this.animateMediaToTrash(tile).catch(() => { })
+              : Promise.resolve();
+            animation.then(() => {
+              if (tile && _.isFunction(tile.suppress)) tile.suppress();
+              // `media.remove`, NOT `media.trash`. media.trash is the REQUEST
+              // name; the server answers it by broadcasting media.remove, so
+              // that is the only name a client ever sees on the wire and the
+              // only one the switcher's own listener whitelists
+              // (desk/index.js _onWorkspaceWsEvent). Echoing the request name
+              // would have every subscriber that filters by service ignore
+              // this until the server's copy arrived.
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "media.remove" },
+              });
+            });
+            request
+              .then((data) => {
+                // doRequest swallows a failed request's throw and resolves
+                // UNDEFINED, so no-data is a failure too — same as the hubs.
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                await animation;
+                this.warn(`media.trash failed for personal workspace ${nid}`, e);
+                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
+            p.clear();
+          })
+          .catch(() => resolve({}));
+      });
+    });
+  }
+
   confirmRemoveHub(media) {
+    // Same guard as its sibling, for the same reason: this posts delete_hub
+    // with `media.mget(hub_id)`, and for anything living in the user's own
+    // home that field IS the user's entity id. A media view bucketed here is
+    // supposed to be a hub (libs/media-selection bucketFor keys on isHub), so
+    // reaching this with the user's own id means the classification was wrong
+    // upstream — and the request would come back 400 WRONG_ENTITY_TYPE.
+    // A hub delete with NO id is the other shape of the same mistake, and it is
+    // the other reading of the 400 on stage: the ACL resolves `scope: "hub"`
+    // from hub_id before delete_hub ever runs, so an absent one fails there
+    // instead of at the WRONG_ENTITY_TYPE test. Nothing useful can follow, so
+    // this stops rather than posting it.
+    if (media && !media.mget(_a.hub_id)) {
+      this.warn("confirmRemoveHub: no hub_id on the media item", {
+        nid: media.mget(_a.nid),
+      });
+      Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+      return Promise.resolve({ error: "no hub_id" });
+    }
+    if (media && `${media.mget(_a.hub_id)}` === `${Visitor.id}`) {
+      this.warn(
+        "confirmRemoveHub: asked to delete the user's own entity — routing"
+          + " to the personal-workspace path",
+        { nid: media.mget(_a.nid) },
+      );
+      return this.confirmRemoveWorkspace(
+        Visitor.id,
+        media.mget(_a.filename),
+        media,
+      );
+    }
     return new Promise((resolve, reject) => {
       this.ensurePart("wrapper-modal").then(async (p) => {
         await Kind.waitFor("window_confirm");
@@ -2024,7 +3290,62 @@ class __window_manager extends push {
           return;
         }
         this._lastOpenNode = { key: nodeKey, at: now };
-        this.openContent(cmd, args);
+        // A WORKSPACE tile loads the full-screen pane — the same thing the
+        // sidebar and the topbar switcher do — instead of opening a floating
+        // window with its own topbar tab.
+        //
+        // DEPRECATED: the window-tab route. The new shell (Figma 43:23955) has
+        // no window-tab model (a workspace fills the canvas and subfolders
+        // navigate inside it), and the home grid was the last entry point that
+        // still reached it.
+        //
+        // Done HERE and not in openContent, even though that is where the hub
+        // branch lives: window/share sets its OWN model to filetype:hub and
+        // calls Wm.openContent(this) to open inbound share content, so
+        // rerouting openContent would have sent shares to loadWorkspace.
+        // `open-node` is unambiguous — it is the home grid's tile click.
+        //
+        // wait(0) releases the tile's spinner latch: media defaultTrigger sets
+        // it before this handler runs and loadWorkspace never touches the tile,
+        // so the tile would keep spinning after the workspace opened.
+        //
+        // FOLDER tiles count too. Everything the home grid lists is a
+        // workspace: the grid and the switcher are fed from the same
+        // SERVICE.desk.home payload (server-side mfs_show_node_by on the user's
+        // home root), so a hub tile is a hub workspace and a folder tile is a
+        // PERSONAL one — and clicking that folder's row in the switcher already
+        // opened it as a pane. The grid disagreeing with the switcher about the
+        // same item was the inconsistency; both now go through loadWorkspace.
+        //
+        // The target is SHAPED, never the raw tile: a home-root folder carries
+        // a home_id pointing at the user's home, and loadWorkspace prefers
+        // home_id over nid — so passing the model straight through opens Home
+        // instead of the folder. libs/workspace-target owns that rule and the
+        // switcher resolves rows through the same helper.
+        const _ftile = cmd.mget && cmd.mget(_a.filetype);
+        const _isWorkspaceTile =
+          cmd.mget &&
+          (_ftile === _a.hub || _ftile === _a.folder) &&
+          cmd.mget(_a.status) !== _a.deleted;
+        if (_isWorkspaceTile) {
+          if (cmd.wait) cmd.wait(0);
+          const { workspaceTarget } = require("libs/workspace-target");
+          this.loadWorkspace(workspaceTarget(cmd.model.toJSON()));
+        } else {
+          this.openContent(cmd, args);
+        }
+        // Contextual tour: the first workspace or folder a user opens explains
+        // what a folder is. Raised AFTER openContent so the navigation the user
+        // asked for always happens — the tour never swallows the action — and
+        // after the per-node debounce above, so a swallowed double click cannot
+        // fire it. The model's filetype is the discriminator, never the section
+        // <div> the tile sits in: _doPartition re-appends tiles into those under
+        // a live MutationObserver, so the DOM says nothing reliable about what a
+        // tile IS.
+        const _ft = cmd.mget && cmd.mget(_a.filetype);
+        if (_ft === _a.hub || _ft === _a.folder) {
+          require("libs/tutorial-tours").fire("folder_task", this);
+        }
         return this.unselect();
       }
 
@@ -2055,8 +3376,15 @@ class __window_manager extends push {
           p.clear();
           p.el.dataset.state = "open";
           p.el.dataset.overlay = "none";
+          // `force_workspace` is how a caller says "I mean a WORKSPACE",
+          // whatever is open — the switcher's "New workspaces" button. Absent
+          // for every other caller, so the context rule below is unchanged:
+          // the topbar's "+ New → Folder" inside a workspace still means a
+          // subfolder.
           const skel =
-            this._curWorkspace && this._curWorkspace.hub_id
+            !args.force_workspace &&
+            this._curWorkspace &&
+            this._curWorkspace.hub_id
               ? {
                 kind: "folder_form",
                 hub_id: this._curWorkspace.hub_id,
@@ -2422,6 +3750,18 @@ class __window_manager extends push {
       anchor = anchor.closest("a");
     }
     if (anchor && anchor.tagName == "A") {
+      // A modified click is the browser's to serve: ctrl/cmd (new tab), shift
+      // (new window), alt (download). preventDefault() below used to run
+      // unconditionally, which is why Ctrl+click on a chat link did nothing at
+      // all. Still stop propagation so no other chat handler (selection,
+      // message services) sees the click — stopPropagation does not cancel the
+      // anchor's default action, so the browser still opens the link.
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
+
       e.stopPropagation();
       e.stopImmediatePropagation();
       e.preventDefault();
@@ -2503,14 +3843,34 @@ class __window_manager extends push {
       let re = new RegExp(_K.module.desk + "/wm/");
       let text = anchor.innerText;
       let href;
-      if (/^http/.test(text)) {
+      // Prefer the anchor's own href. Autolinker renders a SHORTENED label —
+      // it strips the scheme, a leading "www." and any trailing slash — so
+      // innerText is a lossy source to rebuild a URL from, and it turned
+      // "mailto:"/"tel:" links into bogus https:// ones. The innerText path
+      // stays as the fallback for anchors that carry no usable href.
+      const raw = anchor.getAttribute("href");
+      if (raw && raw.trim() && !/^#/.test(raw)) {
+        href = anchor.href; // browser-resolved, absolute, lossless
+      } else if (/^http/.test(text)) {
         href = text;
       } else {
         const { protocol } = bootstrap();
         href = `${protocol}://${text}`;
       }
+      // Deliberately still parsed from the label: this is the routing path that
+      // already works (Autolinker keeps the whole "#/…/kind=…&nid=…" hash in
+      // the label), and feeding it the href instead would only add junk keys.
       let opt = Visitor.parseModuleArgs(text);
-      const url = new URL(href);
+      let url;
+      try {
+        url = new URL(href);
+      } catch (err) {
+        // An unparseable URL used to throw here — AFTER preventDefault() — so
+        // the click died silently. Hand it to the browser instead.
+        this.warn("Unparseable anchor href", href, err);
+        window.open(href, "_blank");
+        return true;
+      }
       let host = new RegExp(`${bootstrap().main_domain}$`)
       this.debug("AAA:1933", host.test(url.host), url.host, bootstrap().main_domain)
       if (!host.test(url.host) || /\#\/plugins/.test(url.hash)) {
@@ -2521,6 +3881,14 @@ class __window_manager extends push {
         this.openSharedLink(opt);
         return true;
       }
+      // Same-domain link with no routable `kind` — e.g. the desk deep links
+      // Autolinker produces for "…/#/desk/wm/o/<hub>/<nid>/<name>", whose hash
+      // carries no "key=value" pair for parseModuleArgs to pick up. Execution
+      // used to fall off the end here with preventDefault() already applied,
+      // so the link was simply dead — for plain AND ctrl clicks. Open it rather
+      // than swallowing the click.
+      window.open(href, "_blank");
+      return true;
     }
   }
 

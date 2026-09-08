@@ -638,6 +638,17 @@
     }
   }
 
+  // Live-call pulse on the parked tile's mark.
+  @keyframes meeting-call-tile-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+  }
+
   // ── Background-effect "applying" overlay on a participant tile ────────────
   // Shown while a background effect is being applied: on your own self-view
   // (endpoint-local__main) as you update it, and on a peer's tile
@@ -2178,6 +2189,299 @@
 
     &:hover {
       background: #c0433e;
+    }
+  }
+
+  // ── Return-to-call tile ─────────────────────────────────────────────────
+  // The window parked in the bottom-right corner while the user is elsewhere
+  // in the desk (window/meeting setCallTile). The call keeps running — only the
+  // chrome is dropped, since none of it is usable at 300px — and the cover
+  // below takes the click that brings the call back.
+  &__call-tile-cover {
+    // !important both here and in the tile rule below: this is a Box.Z, so it
+    // renders as .drumee-widget[data-flow="z"], which container.css gives
+    // display:flex at 0,2,0 — a plain single-class hide (0,1,0) loses and the
+    // cover would sit over the call at full size. Same trap as &__more-menu.
+    display: none !important;
+  }
+
+  // Parked call. The desk dock (desk/skin __call-dock) owns the box while the
+  // window is docked there — these rules are about what the window SHOWS at
+  // that size, plus the geometry the no-dock fallback (DMZ) needs.
+  &__ui[data-call-tile="1"] {
+    // The stylesheet floor (600x320 in window/skin/window.scss) would win over
+    // the inline size; setCallTile pins the inline minimums too, this keeps the
+    // cascade honest for the class-based floor.
+    min-width: 0;
+    min-height: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+    cursor: pointer;
+    // Keep the tile's internal reflow out of the page's: the desk is navigating
+    // while this resizes, and without containment that layout work landed in
+    // the same frame as the screen the user just asked for.
+    contain: layout paint;
+
+    // No control cluster, no side panel, no resize handles at this size — and
+    // no continuously-animating decoration either: the per-participant sound
+    // analyzers each drive their own canvas loop, which is pure cost behind a
+    // 300px preview.
+    .#{$pfx}__in-topbar,
+    .#{$pfx}__chat-panel,
+    .#{$pfx}__reactions-picker,
+    .#{$pfx}__party-toasts,
+    .#{$pfx}__reaction-stack,
+    .sound-analyzer__ui,
+    .ui-resizable-handle {
+      display: none !important;
+    }
+
+    // Always-on "this call is live" mark, so the tile reads as a call at a
+    // glance instead of only on hover.
+    .#{$pfx}__call-tile-live {
+      display: flex !important;
+    }
+
+    .#{$pfx}__call-tile-cover {
+      display: flex !important;
+      position: absolute;
+      inset: 0;
+      z-index: 400;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(11, 10, 33, 0.55);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+
+      // The cover IS the click target (service: restore-call) — keep its icon
+      // and label from taking the press. See &__leave-item for the same guard.
+      * {
+        pointer-events: none;
+      }
+    }
+
+    // The label is a hover affordance: the tile shows the call, and explains
+    // itself the moment the pointer is on it.
+    &:hover .#{$pfx}__call-tile-cover {
+      opacity: 1;
+    }
+
+    &:hover .#{$pfx}__call-tile-live {
+      opacity: 0;
+    }
+  }
+
+  // Live mark — hidden at full size, shown by the tile rule above.
+  &__call-tile-live {
+    display: none !important;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 401;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 6px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 10px;
+    background: rgba(11, 10, 33, 0.6);
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+
+    &-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--signal-error, #d74e49);
+      animation: meeting-call-tile-pulse 1.6s ease-in-out infinite;
+    }
+
+    &-label .note-content {
+      @include drumee.typo($size: 10px, $line: 14px, $color: #fff);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+  }
+
+  &__call-tile-ico {
+    width: 22px;
+    height: 22px;
+    fill: #fff;
+  }
+
+  &__call-tile-label .note-content {
+    @include drumee.typo($size: 13px, $line: 18px, $color: #fff);
+    font-weight: 600;
+    text-align: center;
+  }
+
+  // ── Host leave split button: [ Leave | v ] ──────────────────────────────
+  // The container paints the red pill; both halves sit transparent inside it
+  // with a hairline divider, so they read as one button (Teams). It must NOT
+  // clip — the caret's dropdown hangs out of it.
+  &__leave-split {
+    position: relative;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    align-items: center;
+    height: 36px;
+    background: var(--signal-error, #d74e49);
+    border-radius: 8px;
+  }
+
+  &__leave-split &__leave-btn {
+    background: transparent;
+    border-radius: 8px 0 0 8px;
+    height: 100%;
+    padding: 0 12px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.14);
+    }
+  }
+
+  &__leave-caret {
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 36px;
+    border-radius: 0 8px 8px 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.28);
+    cursor: pointer;
+    color: #fff;
+    transition: background 0.15s ease;
+
+    svg {
+      width: 13px;
+      height: 13px;
+      fill: currentColor;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.14);
+    }
+  }
+
+  &__leave-menu {
+    position: relative;
+    flex-shrink: 0;
+    align-self: stretch;
+
+    .menu-topic-trigger {
+      display: flex;
+      align-items: center;
+      height: 100%;
+    }
+
+    // Right-aligned: the button is the last control in the bar, so a
+    // left-anchored panel would hang past the window edge. The wrapper is
+    // overflow:hidden for the slide-in, hence the padding — without it the
+    // panel's own shadow is clipped away.
+    .menu-topic-items__wrapper {
+      right: 0;
+      left: auto;
+      padding: 0 6px 10px;
+      margin: 0 -6px;
+    }
+
+    .menu-topic-items {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+      z-index: 300;
+    }
+  }
+
+  &__leave-items {
+    width: 248px;
+    padding: 8px;
+    gap: 2px;
+  }
+
+  &__leave-item {
+    box-sizing: border-box;
+    align-items: center;
+    gap: 10px;
+    // Full-width rows with a real hit area: the pointer lands on the label and
+    // the empty space to its right, not only on the icon.
+    padding: 10px 8px;
+    min-height: 44px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--primary-purple-100, #0b0a21);
+    transition: background 0.12s ease;
+
+    // Belt and braces with `active: 0` in the skeleton: even if a child ever
+    // ends up with a click handler of its own, the row stays the hit target.
+    * {
+      pointer-events: none;
+    }
+
+    svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    // Ends the call for everyone — read as destructive, like the pill itself.
+    &.danger {
+      color: var(--signal-error, #d74e49);
+    }
+  }
+
+  &__leave-item-label .note-content {
+    @include drumee.typo($size: 13px, $line: 18px, $color: currentColor);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__leave-item-hint .note-content {
+    @include drumee.typo($size: 11px, $line: 15px, $weight: 400, $color: rgba(11, 10, 33, 0.55));
+    white-space: nowrap;
+  }
+
+  // ── "End the meeting for everyone?" dialog ───────────────────────────────
+  // The shared confirm box (webrtc/skin/index.scss) is a fixed 260x150 built
+  // for a single line; this one carries a consequence line too, so it sizes to
+  // its content and the End button is the destructive one.
+  &__confirm-container.end-meeting {
+    width: 320px;
+    height: auto;
+    padding: 20px;
+
+    .confirm-hint {
+      text-align: center;
+      padding: 6px 10px 0;
+      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
+    }
+
+    .buttons.danger {
+      background-color: var(--signal-error, #d74e49);
+      border-color: var(--signal-error, #d74e49);
+
+      .note-content,
+      .#{$pfx}__button-confirm {
+        color: #fff;
+      }
+
+      &:hover {
+        background-color: #c0433e;
+      }
     }
   }
 

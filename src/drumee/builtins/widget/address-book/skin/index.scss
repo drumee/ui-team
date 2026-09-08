@@ -3,17 +3,25 @@
 .address-book {
   &__ui {
     width: 720px;
-    height: 100vh;
-    top: 0;
-    right: 0;
+    // Sits INSIDE the padded canvas (43:23955), not over the whole viewport.
+    // It used to be height:100vh at top:0/right:0, which covered the top bar
+    // and ran past both gutters. --desk-* are published by the desk root; the
+    // fallbacks keep this correct if the panel is ever mounted outside it.
+    top: var(--desk-canvas-top, 54px);
+    right: var(--desk-gutter, 8px);
+    bottom: var(--desk-gutter, 8px);
+    height: auto;
+    border-radius: 8px;
     // See chat-p2p skin for the rationale: position:fixed + transform
     // is the only combination that keeps the closed panel out of every
     // ancestor's scroll box. position:absolute leaks into
     // __body.scrollWidth and lets touchpad gesture reveal the panel.
     position: fixed;
-    transform: translateX(100%);
+    // Parked clear of the right gutter as well as its own width.
+    transform: translateX(calc(100% + var(--desk-gutter, 8px)));
     background-color: var(--normal-bg-90, #fff);
-    border-left: 1px solid var(--border-muted, #e5e5e5);
+    border: 1px solid var(--border-muted, #e5e5e5);
+    overflow: hidden;
     transition: transform 0.5s;
     box-shadow: var(--shadow-left-big);
 
@@ -21,7 +29,7 @@
       transform: translateX(0);
     }
     &[data-anim="out"] {
-      transform: translateX(100%);
+      transform: translateX(calc(100% + var(--desk-gutter, 8px)));
     }
   }
 

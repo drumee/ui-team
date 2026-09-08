@@ -1,0 +1,124 @@
+@use "mixins/drumee";
+
+// Feature-lock upsell — body of the tier-gate modal (builtins/widget/
+// feature-lock, rendered inside window_confirm).
+//
+// Ported verbatim from `.desk-module__admin-unlock`, which is where this card
+// lived while Admin Console was its only caller. Standalone class selectors,
+// with no `.desk-module` ancestor, so they match wherever the confirm modal
+// mounts — including the tasks panel and the meeting window, neither of which
+// is inside the desk module's subtree.
+.feature-lock {
+  position: relative; // anchors the close X below
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 8px 8px 4px;
+  // Full width on purpose: this box is what the close X is positioned
+  // against, so capping it (it used to be max-width: 360px + margin auto)
+  // parked the X ~49px short of the modal's right edge instead of in its
+  // corner. The narrow text column is kept by capping the copy itself
+  // below — the card's own width is fixed by .window-confirm regardless.
+  width: 100%;
+  box-sizing: border-box;
+
+  // Dismiss affordance. It lives in the card because mode:"b" drops the
+  // shared confirm header that normally carries the X — see the comment at
+  // the top of builtins/widget/feature-lock/index.js.
+  &__close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--normal-bg-10, rgba(0, 0, 0, 0.06));
+    }
+
+    &-ico {
+      width: 12px;
+      height: 12px;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+
+  &__icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  // Two things the obvious CSS does NOT do here:
+  //
+  // 1. Centering. Note renders as a FLEX container whose text sits in an
+  //    inner .note-content child, so `text-align` only centers text INSIDE
+  //    that child — it never moves the child itself. A short line (the
+  //    title) makes the child content-width, and it stays parked at
+  //    flex-start, i.e. visually left-aligned. `justify-content: center` is
+  //    what actually centers it. (The desc looked fine only by accident: its
+  //    text is long enough to fill the full width.)
+  //
+  // 2. Weight. drumee.typo's $weight only picks a font-FAMILY var
+  //    (--font-main / --font-bold …), and those all resolve to the same
+  //    "Armin Grotesk" face — it never emits font-weight, so $weight: 700
+  //    alone renders regular. The explicit font-weight is what makes it bold.
+  &__title {
+    width: 100%;
+    max-width: 360px; // keeps the narrow copy column now that the box is full width
+    justify-content: center;
+    text-align: center;
+    @include drumee.typo($size: 17px, $line: 24px, $weight: 700, $color: var(--normal-fg));
+    font-weight: 700;
+  }
+
+  &__desc {
+    width: 100%;
+    max-width: 360px;
+    justify-content: center;
+    text-align: center;
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--normal-fg-10));
+    font-weight: 400;
+
+    // The "ask your workspace owner" line, shown INSTEAD of the CTA to a
+    // reader who cannot buy. Recedes from the description above it: it is a
+    // footnote about who to talk to, not part of the explanation.
+    &--muted {
+      @include drumee.typo($size: 12px, $line: 18px, $weight: 400, $color: var(--normal-fg-20, var(--normal-fg-10)));
+      font-weight: 400;
+    }
+  }
+
+  &__cta {
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    min-width: 160px;
+    height: 34px;
+    padding: 0 18px;
+    box-sizing: border-box;
+    border-radius: var(--corner-radius-2, 8px);
+    background-color: var(--primary-50, #433cc5);
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #fff);
+    font-weight: 600; // see the note on &__title — the mixin emits no font-weight
+
+    &:hover {
+      background-color: var(--primary-40, #5950ff);
+    }
+  }
+}

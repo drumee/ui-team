@@ -19,6 +19,9 @@
  */
 
 const POLL_INTERVAL_MS = 2000;
+// How long the card's exit animation is given before the widget goes away.
+// Matches the 0.16s in the skin, and the folder window's create dialog.
+const CLOSE_MS = 160;
 
 class __migrate_gdrive_popup extends LetcBox {
   static initClass() {
@@ -31,6 +34,14 @@ class __migrate_gdrive_popup extends LetcBox {
     this._hub_id = opt.hub_id || Visitor.id;
     this._nid = opt.nid || Visitor.get(_a.home_id);
     this._destinationName = opt.destinationName || LOCALE.MY_HOME || 'My home';
+    // What the destination LOOKS like, for the card's glyph — the same two
+    // fields the desk breadcrumb draws a folder from. A launcher that knows
+    // (the folder window, which read the destination off itself) passes them;
+    // the ones that always mean the user's own home — settings, onboarding,
+    // the desk — leave them out and get the personal workspace shape, which is
+    // what that home is.
+    this._destArea = opt.destArea || _a.personal;
+    this._destFiletype = opt.destFiletype || _a.hub;
     // direct=1 (folder-window launch): the import lands IN the destination
     // folder itself — the user picked it by standing in it. Without it (the
     // settings / Home / onboarding launches) the importer keeps its
@@ -860,6 +871,34 @@ class __migrate_gdrive_popup extends LetcBox {
       this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId })
         .catch(() => {});
     }
+    // Mark, then tear down on a timer, so the exit gets frames.
+    //
+    // Removing the element on the spot destroys it before a single frame of
+    // the animation is painted — which is why this card had an entrance and
+    // no exit for its whole life. Same idiom, and the same 160ms, as the
+    // folder window's create dialog.
+    //
+    // A TIMER, NOT `animationend`. Reduced motion disables the animation
+    // outright, and that event would then never fire — the popup would simply
+    // refuse to close for anyone who asked for less motion.
+    //
+    // The flag also guards re-entry: a second click on × while the first is
+    // still playing must not schedule a second teardown.
+    const el = this.el;
+    if (el && el.dataset && !el.dataset.closing) {
+      el.dataset.closing = '1';
+      _.delay(() => this._teardown(), CLOSE_MS);
+      return;
+    }
+    return this._teardown();
+  }
+
+  /**
+   * Actually remove the popup. Split out of _close() so the exit animation has
+   * something to run in front of.
+   */
+  _teardown() {
+    if (this.isDestroyed && this.isDestroyed()) return;
     // parent.clear() is only right when the parent is a single-widget modal
     // host (clearing resets its data-state — the stuck-overlay rule). Under
     // Wm.launch the parent is the shared windowsLayer: clear() there wipes

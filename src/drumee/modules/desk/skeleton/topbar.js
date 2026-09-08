@@ -3,6 +3,12 @@
  * breadcrumb | [new | search | invite]
  */
 
+const { createEntries } = require("./create-items");
+// The mute cache and endpoint probe both live with the notification panel that
+// owns this state; importing them keeps one source of truth for what "muted"
+// means rather than a second copy that can disagree.
+const { muteState, muteService } = require("builtins/panel/activity/mute");
+
 const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
   Skeletons.Button.Label({
     ico,
@@ -14,18 +20,16 @@ const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
     uiHandler: [ui],
   });
 
-// The tablet "more" menu splices these in. Same rule as the "+ New" dropdown:
-// only "Workspace" is account-level and always stays; the four file entries
-// write into the CURRENT workspace and follow its privilege.
-const addItems = (pfx, ui, mayWrite) => [
-  addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", "", { highlight: 1, iconClass: "ico-workspace" }),
-  ...(!mayWrite ? [] : [
-  addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", "", { iconClass: "ico-note" }),
-  addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", "document.docx", { iconClass: "ico-document" }),
-  addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
-  addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
-  ]),
-];
+// The tablet "more" menu splices these in. Rows come from ./create-items, the
+// one list this menu, the "+ New" dropdown below and the mobile drawer's
+// `create` mode all read — see that file for the mayWrite rule.
+const addItems = (pfx, ui, mayWrite) =>
+  createEntries(mayWrite).map((e) =>
+    addMenuItem(pfx, ui, e.ico, e.label, e.service, e.name, {
+      highlight: e.highlight,
+      iconClass: e.iconClass,
+    }),
+  );
 
 const newMenuRow = (pfx, ui, {
   ico,
@@ -66,43 +70,17 @@ const newMenuRow = (pfx, ui, {
 // topbar when the answer flips, so the menu follows navigation into and out of a
 // workspace.
 const deskNewMenu = (pfx, ui, mayWrite) => {
-  const createItems = [
+  const createItems = createEntries(mayWrite).map((e) =>
     newMenuRow(pfx, ui, {
-      ico: "addmenu-folder",
-      label: LOCALE.WORKSPACE || "Workspace",
-      service: "new-workspace",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-workspace`,
+      ico: e.ico,
+      label: e.label,
+      service: e.service,
+      // undefined, not "": these rows previously passed no `name` at all, and
+      // the framework treats an empty string as a set-but-blank attribute.
+      name: e.name || undefined,
+      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ${e.iconClass}`,
     }),
-    ...(!mayWrite ? [] : [
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-note",
-      label: LOCALE.NOTE || "Note",
-      service: "new-note",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-note`,
-    }),
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-document",
-      label: LOCALE.DOCUMENT || "Document",
-      service: "new-document",
-      name: "document.docx",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-document`,
-    }),
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-spreadsheet",
-      label: LOCALE.SPREADSHEET || "Spreadsheet",
-      service: "new-spreadsheet",
-      name: "spreadsheet.xlsx",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-spreadsheet`,
-    }),
-    newMenuRow(pfx, ui, {
-      ico: "addmenu-presentation",
-      label: LOCALE.PRESENTATION || "Presentation",
-      service: "new-presentation",
-      name: "presentation.pptx",
-      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-presentation`,
-    }),
-    ]),
-  ];
+  );
 
   const createGroup = Skeletons.Box.X({
     className: `${pfx}__new-menu-item ${pfx}__new-menu-create-group`,
@@ -178,6 +156,7 @@ module.exports = function (ui) {
   // topbar: may this viewer create things in the workspace they are in, and may
   // they manage its members? Both fail open when there is no workspace context
   // (the user's own desk) or the privilege cannot be read.
+  // (utilityCluster is defined below this component — hoisted function.)
   const mayWrite =
     typeof ui._curWorkspaceCanWrite === "function" ? ui._curWorkspaceCanWrite() : true;
   const mayManage =
@@ -192,12 +171,81 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${pfx}__left-cluster`,
         kids: [
-          {
-            kind: "desk_breadcrumb",
-            sys_pn: "breadcrumb",
-            className: `${pfx}__breadcrumb`,
-            uiHandler: [ui],
-          },
+          // Organisation chip + dropdown (Figma 104:33055), ahead of the
+          // breadcrumb exactly as the frame orders them.
+          //
+          // orgFeature(), not inOrganization(): the chip is absent both for an
+          // account with no organisation (domain 1 — the majority) AND on a
+          // deployment whose server has not shipped the org endpoints yet. In
+          // the second case the chip would otherwise look fine (name and plan
+          // come from the boot payload) while its dropdown reported "0
+          // departments, 0 members" — a number it never actually learned.
+          require("libs/org-overview").orgFeature()
+            ? { kind: "desk_org_tab", className: `${pfx}__org-tab`, uiHandler: [ui] }
+            : null,
+          // The address chip: crumb track + the switcher's caret, in one box.
+          //
+          // They were adjacent siblings and merely LOOKED like one control —
+          // the crumb painted its own rounded ground and hover, the caret sat
+          // outside it, and the two drifted apart whenever either one's padding
+          // changed. The chip now belongs to this container: it carries the
+          // radius, the inset and the hover ground, and .breadcrumb-item__tab
+          // no longer paints one of its own (breadcrumb/item/skin).
+          //
+          // The switcher stays the breadcrumb's IMMEDIATE next sibling inside
+          // here, which is load-bearing: topbar.scss hides the caret on section
+          // screens through `.desk-breadcrumb__ui[data-section="1"] + …`, and
+          // an element between the two would break that selector silently.
+          Skeletons.Box.X({
+            className: `${pfx}__crumb-group`,
+            // THE WHOLE CHIP OPENS THE SWITCHER, not the caret alone.
+            //
+            // The caret is 16px of glyph at the end of an address that reads as
+            // one control, so the target was a fraction of what looked like the
+            // button.
+            //
+            // NOT a `service` on this box. A service here is raised by
+            // el.onclick, and every widget between it and the pointer binds one
+            // of those too — the breadcrumb root, the menu root, and the menu's
+            // own `.menu-trigger` part (ui-core menu/skeleton, which sets no
+            // `active: 0`) — each of which calls stopPropagation in
+            // __handleClick. A click on the caret or on the workspace name is
+            // therefore consumed before it can reach this box, and only the few
+            // pixels of bare padding ever fired. The desk binds a CAPTURE-phase
+            // listener on this element instead; see _bindCrumbGroupTrigger.
+            sys_pn: "crumb-group",
+            partHandler: ui,
+            kids: [
+              {
+                kind: "desk_breadcrumb",
+                sys_pn: "breadcrumb",
+                className: `${pfx}__breadcrumb`,
+                uiHandler: [ui],
+              },
+              workspaceSwitcher(pfx, ui),
+              // Inline workspace rename (the ⋯ menu's Rename row). Empty until
+              // desk._renameWorkspaceInline feeds an editor into it, and
+              // `&:empty { display: none }` in the skin keeps an empty one out
+              // of the chip entirely.
+              //
+              // AFTER the switcher, never between it and the breadcrumb: the
+              // section-screen caret rule noted above depends on those two
+              // staying adjacent siblings.
+              //
+              // Here rather than on the switcher card's own header, where the
+              // name is also drawn: picking Rename in the ⋯ flyout is a click
+              // OUTSIDE the card, so ui-core's menu closes the card on it
+              // (RADIO_CLICK -> _onOutsideClick -> _closeItems). An editor in
+              // the header is therefore hidden the instant it is created —
+              // measured on the endpoint, which is why it lives out here in the
+              // part of the chip that is always on screen.
+              Skeletons.Box.X({
+                className: `${pfx}__ws-rename`,
+                sys_pn: "ws-rename",
+                partHandler: ui,
+              }),
+            ],
+          }),
           Skeletons.Box.X({
             className: `${pfx}__folder-tabs`,
             sys_pn: "folder-tabs",
@@ -211,88 +259,14 @@ module.exports = function (ui) {
         className: `${pfx}__actions-cluster`,
         sys_pn :"action-cluster",
         kids: [
-          // Downgrade over-limit: creating anything is a write — while the
-          // workspace is read-only the whole "+ New" menu goes, rather than
-          // offering five entries that each end in a server refusal. The
-          // desk re-feeds this part on over-limit:changed, so it comes back
-          // the moment the org is within limits again.
-          ...(require("libs/over-limit").isLocked() ? [] : [deskNewMenu(pfx, ui, mayWrite)]),
-
-          // Search bar + suggestions
-          Skeletons.Box.Y({
-            className: `${pfx}__search-container`,
-            sys_pn: "search-container",
-            partHandler: ui,
-            kids: [
-              Skeletons.Box.X({
-                className: `${pfx}__search-bar`,
-                kids: [
-                  Skeletons.Image.Svg({
-                    ico: "magnifying-glass",
-                    className: `${pfx}__search-icon`,
-                  }),
-                  Skeletons.Entry({
-                    className: `${pfx}__search-input`,
-                    sys_pn: "search-box",
-                    uiHandler: [ui],
-                    partHandler: ui,
-                    placeholder: LOCALE.SEARCH || "Search...",
-                    service: "search-files",
-                    type: _a.text,
-                    autocomplete: _a.off,
-                    interactive: 1,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}__search-kbd`,
-                    content: "⌘K",
-                  }),
-                ],
-              }),
-
-              // Suggestions dropdown — shown on search bar focus
-              Skeletons.Box.Y({
-                className: `${pfx}__search-suggestions`,
-                sys_pn: "search-suggestions",
-                partHandler: ui,
-                state: 0,
-                kids: [
-                  Skeletons.List.Smart({
-                    className: `${pfx}__suggestions-list`,
-                    sys_pn: "suggestions-list",
-                    partHandler: ui,
-                    flow: _a.none,
-                    spinner: true,
-                    spinnerWait: 300,
-                    vendorOpt: Preset.List.Orange_e,
-                    itemsOpt: {
-                      kind: "workspace_item",
-                      uiHandler: [ui],
-                      // Clicking a search hit reveals it in context: files open
-                      // their host folder with the file highlighted, folders open
-                      // themselves, messages open the hosting chat. Handled by
-                      // desk/index.js onUiEvent → "open-search-hit".
-                      service: "open-search-hit",
-                    },
-                  }),
-                ],
-              }),
-            ],
-          }),
-
-          // Invite button — gone while the workspace is over its plan
-          // limits: invites are paused (the seat guard and the REST clamp
-          // both refuse them), and a button that only ever answers with a
-          // refusal toast should not be offered. Same re-feed as "+ New".
-          // Also gone for a member who cannot manage this workspace's members:
-          // hub.invite / set_privilege ask for the ADMIN bit server-side, so
-          // view / chat / edit would only ever meet a refusal.
-          ...(require("libs/over-limit").isLocked() || !mayManage ? [] : [Skeletons.Button.Label({
-            ico: "topbar-invite",
-            className: `${pfx}__invite-btn`,
-            label: LOCALE.INVITE || "Invite",
-            service: "invite-member",
-            uiHandler: [ui],
-          })]),
+          // Per 43:23955 the top bar carries only the org tab, the breadcrumb
+          // and the utility icons. "+ New" and Search moved to the WORKSPACE
+          // toolbar (fileFilterControls, window/skeleton/toolkit) and Invite is
+          // a left-rail item, so none of the three is duplicated here.
+          //
+          // "New workspace" — the one thing the old New menu offered that the
+          // workspace toolbar does not — lives in the workspace switcher
+          // dropdown instead.
 
           // Tablet-only consolidated menu (768px ≤ width < 1024px).
           // Flattened: nesting Skeletons.Menu inside another Menu's `items`
@@ -333,6 +307,402 @@ module.exports = function (ui) {
           }),
         ],
       }),
+
+      utilityCluster(pfx, ui),
     ],
   });
 };
+
+/**
+ * Utility icon cluster — the top-right group in Figma 43:23955 / 43:29418 /
+ * 43:32209: notifications (with unread dot), calendar, inbox, contacts, trash
+ * and the admin console, sitting between the actions cluster and the avatar.
+ *
+ * These fire the SAME services the left rail fires today (toggle-activity,
+ * toggle-calendar, …), so this adds a second trigger site rather than any new
+ * behaviour — the panels, their mutual exclusion and their reload-restore are
+ * untouched. That is deliberate: the rail can only give these up once the
+ * cluster is carrying them.
+ *
+ * @param {String} pfx  topbar BEM prefix
+ * @param {Object} ui   desk module
+ */
+function utilityCluster(pfx, ui) {
+  const item = ({ ico, label, service, badgePn }) =>
+    Skeletons.Box.X({
+      className: `${pfx}__utility-btn`,
+      service,
+      uiHandler: [ui],
+      // Grouped on one radio so the pressed icon reflects which panel is open,
+      // the same way the rail rows already do.
+      radio: "topbar-utility-radio",
+      // MUST be {content, className}, never a bare string. The framework
+      // mounts the tooltip as a real child element; without a class of its own
+      // it has no styling and no positioning, so it renders as plain inline
+      // text INSIDE the 30x30 button — which both looked like stray oversized
+      // text on hover and pushed the icons off the row. The className is what
+      // lets __utility-tip below take it out of flow. Same contract
+      // chat-item/skeleton/menu.js uses.
+      tooltips: { content: label, className: `${pfx}__utility-tip` },
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Button.Svg({ ico, className: `${pfx}__utility-ico` }),
+        badgePn
+          ? Skeletons.Note({
+              className: `${pfx}__utility-badge`,
+              sys_pn: badgePn,
+              partHandler: ui,
+              content: "",
+              // attrOpt, not dataset: a bare `dataset` is dropped at render,
+              // so the badge would start life with no data-count for the skin
+              // to hide it by.
+              attrOpt: { "data-count": 0 },
+            })
+          : null,
+      ].filter(Boolean),
+    });
+
+  return Skeletons.Box.X({
+    className: `${pfx}__utility-cluster`,
+    sys_pn: "utility-cluster",
+    kids: [
+      item({
+        ico: "top-bell",
+        label: LOCALE.NOTIFICATIONS,
+        service: "toggle-activity",
+        badgePn: "activity-count-top",
+      }),
+      item({
+        ico: "top-calendar",
+        label: LOCALE.CALENDAR,
+        service: "toggle-calendar",
+      }),
+      item({
+        ico: "top-inbox",
+        label: LOCALE.INBOX,
+        service: "toggle-inbox",
+      }),
+      item({
+        ico: "top-contacts",
+        label: LOCALE.CONTACTS,
+        service: "toggle-contacts",
+      }),
+      item({
+        ico: "top-trash",
+        label: LOCALE.TRASH,
+        service: "toggle-trash",
+      }),
+      item({
+        ico: "top-apps",
+        label: LOCALE.ADMIN_CONSOLE,
+        service: "toggle-apps",
+      }),
+      userMenu(pfx, ui),
+    ],
+  });
+}
+
+/**
+ * Avatar + its dropdown — Figma 59:55943. Sits last in the utility cluster.
+ *
+ * This is where Settings, Get Help and Log out live in the new shell: the
+ * design's left rail has no footer, so the rail can only give those up once
+ * this menu carries them. Every row fires a service the desk already handles,
+ * so nothing here is new behaviour.
+ *
+ * "Mute notifications" mutes popup cards for EVERY workspace — an empty
+ * hub_id is what activity/mute.js calls the global scope. It suppresses the
+ * interrupting card and nothing else: a muted user keeps every row in the
+ * Notification Center, keeps the unread badge and keeps the tab counts. Muting
+ * is "stop talking to me", not "stop recording".
+ *
+ * The row reflects state, so it reads Unmute once muted. State comes from the
+ * cache activity/mute.js already keeps (loaded at panel boot and refreshed
+ * from the return value of every write), so opening this menu costs no
+ * request. Before the schema is applied, or against a server with no such
+ * endpoint, muteState() reports nothing muted and the row is simply hidden —
+ * the same fail-open the popup path takes, because a control that silently
+ * does nothing is worse than one that is absent.
+ *
+ * @param {String} pfx  topbar BEM prefix
+ * @param {Object} ui   desk module
+ */
+function userMenu(pfx, ui) {
+  // The viewer's own identity. UserProfile renders an avatar from `id` and
+  // falls back to initials from the name fields — given NEITHER it renders an
+  // empty circle, which is what the topbar was showing.
+  const firstname = Visitor.firstname ? Visitor.firstname() : "";
+  const lastname = Visitor.lastname ? Visitor.lastname() : "";
+  const fullname =
+    (Visitor.fullname ? Visitor.fullname() : "") ||
+    `${firstname} ${lastname}`.trim();
+  const identity = {
+    id: Visitor.id,
+    firstname,
+    lastname,
+    fullname,
+    auto_color: 1,
+  };
+
+  // Cached, never fetched here: activity/mute.js loads it at panel boot and
+  // refreshes it from every write, so rendering this menu costs no round trip.
+  const muted = !!(muteState() || {}).global;
+
+  const row = ({ ico, label, service, on_click, modifier }) =>
+    Skeletons.Button.Label({
+      ico,
+      className: `${pfx}__account-menu-item${modifier ? ` ${pfx}__account-menu-item--${modifier}` : ""}`,
+      label,
+      service,
+      on_click,
+      uiHandler: [ui],
+    });
+
+  return Skeletons.Menu({
+    className: `${pfx}__account-wrapper`,
+    direction: _a.down,
+    // duration MUST be set explicitly. Without it the menu widget falls back to
+    // Visitor.timeout() -> 2000, which is MILLISECONDS, while gsap reads
+    // duration in SECONDS — a 2000-second open animation. The panel then sits
+    // frozen at its start offset, which for direction:down is translated UP by
+    // (items_height + trigger_height): the menu appears to drop upwards.
+    // 0.01 matches deskNewMenu, the one menu here that already passed it.
+    duration: 0.01,
+    opening: _e.click,
+    persistence: _a.once,
+    sys_pn: "account-menu",
+    partHandler: [ui],
+    // Same requirement as the switcher: the trigger must RAISE an event, or
+    // the menu's own onUiEvent never runs. Giving the avatar a `service` is
+    // what makes it interactive — no uiHandler is needed, because the menu
+    // declares itself a ui handler for its descendants (declareHandlers in
+    // widgets/menu). The service name is never handled anywhere; it exists
+    // solely to make the widget emit.
+    // A Box that CARRIES the service, wrapping a NON-active UserProfile.
+    //
+    // UserProfile cannot be the trigger itself. Its own skeleton feeds an
+    // inner Box.Y with `active: ui.mget(active)`, and ui-core binds a click to
+    // every widget whose `active` is not 0, whose handler calls
+    // e.stopPropagation() BEFORE triggerHandlers. The inner box therefore ate
+    // the click and the menu never opened. Setting active:0 on the profile
+    // silences the inner box AND the profile's own root, so the service has to
+    // live on a wrapper that is still active.
+    //
+    // The wrapper is also what makes the avatar round and centred: it owns the
+    // 30px box, the radius and the ring, so none of that depends on which
+    // internal element UserProfile happens to render (picture, initials, or an
+    // empty placeholder).
+    trigger: Skeletons.Box.X({
+      className: `${pfx}__account-avatar`,
+      sys_pn: "topbar-avatar",
+      partHandler: ui,
+      service: "open-account-menu",
+      kids: [
+        Skeletons.UserProfile({
+          ...identity,
+          className: `${pfx}__account-avatar-img`,
+          active: 0,
+          // The frame draws a presence dot on the menu's 40px avatar, not on
+          // the 30px trigger — at that size it would sit on the initials.
+          live_status: 0,
+          oneLetter: 1,
+        }),
+      ],
+    }),
+    items: Skeletons.Box.Y({
+      className: `${pfx}__account-menu`,
+      kids: [
+        // Identity header — name over presence, matching the frame.
+        Skeletons.Box.X({
+          className: `${pfx}__account-menu-head`,
+          kidsOpt: { active: 0 },
+          kids: [
+            Skeletons.UserProfile({
+              ...identity,
+              className: `${pfx}__account-menu-avatar`,
+              // 40x40 with the 8px online dot, per the frame.
+              online: 1,
+              live_status: 1,
+              oneLetter: 1,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__account-menu-id`,
+              kidsOpt: { active: 0 },
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__account-menu-name`,
+                  content: Visitor.fullname
+                    ? Visitor.fullname()
+                    : Visitor.firstname() || "",
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__account-menu-status`,
+                  content: LOCALE.ACTIVE_NOW || "Online",
+                }),
+              ],
+            }),
+          ],
+        }),
+        // Hidden when the endpoint is absent — see the note above.
+        muteService("mute_set")
+          ? row({
+              ico: muted ? "bell-simple" : "bell-simple-slash",
+              label: muted ? LOCALE.UNMUTE : LOCALE.MUTE_NOTIFICATIONS,
+              service: "toggle-mute-all",
+              modifier: muted ? "muted" : null,
+            })
+          : null,
+        row({
+          ico: "sidebar_settings",
+          label: LOCALE.SETTINGS,
+          service: "toggle-settings",
+        }),
+        row({
+          ico: "ph-info",
+          label: LOCALE.GET_HELP,
+          service: "toggle-help",
+        }),
+        // Log out is a direct call, not a service — same as the rail's row.
+        row({
+          ico: "sidebar_signout",
+          label: LOCALE.SIGN_OUT,
+          on_click: Butler.logout,
+          modifier: "signout",
+        }),
+      ].filter(Boolean),
+    }),
+  });
+}
+
+/**
+ * Workspace switcher — Figma 48:36522.
+ *
+ * REQUIRED, not decorative: the rail used to carry the workspace list and the
+ * new rail (Files/Chat/Task/Meet/Access) has no room for it, so without this
+ * there is no way to change workspace at all.
+ *
+ * Rows are fed by the desk (see _renderWorkspaceMenu) from the SAME
+ * `desk.home type=node` payload the sidebar list used, rather than mounting
+ * the `workspace_list` widget in here. That widget is a List.Smart with its
+ * own fetch and its own radio group; nesting it inside a Menu meant it only
+ * mounted when the menu first opened and its rows dispatched to a handler the
+ * menu had already torn down. Plain rows fed from the desk have neither
+ * problem, and the desk needs that payload anyway to pick the boot workspace.
+ *
+ * The trigger shows the CURRENT workspace name (the frame's "Workspace-name
+ * v"), refreshed on every switch by _setWorkspaceLabel.
+ *
+ * The frame's "Department-name" group header is omitted — departments are
+ * deferred, so grouping by one would render an empty or invented level.
+ *
+ * @param {String} pfx  topbar BEM prefix
+ * @param {Object} ui   desk module
+ */
+function workspaceSwitcher(pfx, ui) {
+  return Skeletons.Menu({
+    className: `${pfx}__ws-wrapper`,
+    direction: _a.down,
+    // duration MUST be set explicitly. Without it the menu widget falls back to
+    // Visitor.timeout() -> 2000, which is MILLISECONDS, while gsap reads
+    // duration in SECONDS — a 2000-second open animation. The panel then sits
+    // frozen at its start offset, which for direction:down is translated UP by
+    // (items_height + trigger_height): the menu appears to drop upwards.
+    // 0.01 matches deskNewMenu, the one menu here that already passed it.
+    duration: 0.01,
+    opening: _e.click,
+    // Clicking a row does NOT close the panel. menu_topic closes on an item
+    // click only through _onItemClicked, whose switch falls to
+    // `default: this._closeItems()` for every persistence it does not name —
+    // `once` among them. `always` is the sole value that returns early, so it
+    // is what disables the auto-close. The "+ New" menu above already does
+    // this.
+    //
+    // The two other ways out are untouched, because neither reads persistence:
+    // a click outside (_onOutsideClick, bound to RADIO_CLICK in the widget's
+    // initialize) and the caret (onUiEvent -> _onTriggerClicked ->
+    // _triggerToggle -> _closeItems). So the panel cannot strand open.
+    persistence: _a.always,
+    sys_pn: "wsmenu",
+    // NO `service` here. The menu opens itself from its own onUiEvent when a
+    // widget inside its trigger part raises an event — that is how
+    // deskNewMenu works. Putting a service on the menu routes the click to the
+    // DESK's onUiEvent instead (the pattern the legacy user menu uses, where
+    // the desk toggles it by hand), so the menu never saw its own event. The
+    // Button.Label trigger is what makes it interactive.
+    partHandler: [ui],
+    // Caret ONLY — deliberately no label.
+    //
+    // desk_breadcrumb already renders the workspace as [folder icon] + name
+    // (breadcrumb/item/skeleton builds an area-tinted raw-drumee-folder-*
+    // glyph), which IS the chip 43:23955 draws. A trigger that repeated the
+    // name printed the workspace twice in the bar. The caret sits immediately
+    // after the crumb so the two read as one control — icon, name, caret.
+    //
+    // Still a Button, not a Box: the menu opens from its own onUiEvent, which
+    // only fires when a widget inside the trigger part raises an event, and a
+    // Box with inert kids raises nothing.
+    // INERT. The caret is drawn, not pressed: __crumb-group around it is the
+    // trigger now, and a widget that answered its own click would call
+    // stopPropagation and keep the click from ever reaching the chip — the
+    // caret would open the menu and the rest of the chip would not.
+    //
+    // `active: 0` rather than deleting it: the glyph is part of the address
+    // (icon, name, caret) and the frame draws it.
+    //
+    // No tooltip either. It named a control that is no longer here, and a tip
+    // hanging off one corner of a chip that is clickable end to end explains
+    // the wrong thing.
+    trigger: Skeletons.Button.Svg({
+      className: `${pfx}__ws-btn`,
+      ico: "ph-caret-down",
+      active: 0,
+    }),
+    // Figma 48:36991. Three stacked blocks, 12px apart: the current-workspace
+    // header, the scrolling list, and the pinned "New workspaces" button.
+    //
+    // The button is a SIBLING of the list, not a child of it — the frame lists
+    // it outside the 191px overflow-clip box, so it stays put while the list
+    // scrolls. That is why __ws-list, not __ws-menu, carries the max-height and
+    // the overflow (see the skin): a scroller wrapping both would carry the
+    // button off the bottom with the rows.
+    items: Skeletons.Box.Y({
+      className: `${pfx}__ws-menu`,
+      kids: [
+        // Current workspace: icon + name + rename, then link / overflow.
+        // Fed by desk._renderWorkspaceMenu, which already resolves the open
+        // workspace and builds the area-tinted folder glyph for the rows.
+        Skeletons.Box.X({
+          className: `${pfx}__ws-head`,
+          sys_pn: "ws-head",
+          partHandler: ui,
+        }),
+        // Fed by desk._renderWorkspaceMenu once desk.home resolves.
+        Skeletons.Box.Y({
+          className: `${pfx}__ws-list`,
+          sys_pn: "ws-list",
+          partHandler: ui,
+        }),
+        // Its OWN service, not the shared `new-workspace`. Wm picks that one's
+        // form from context — with a workspace open it feeds folder_form, a
+        // SUBFOLDER form — which is right for the topbar's "+ New" but wrong
+        // for a button labelled "New workspaces" in a panel listing workspaces.
+        Skeletons.Button.Label({
+          ico: "ph-plus",
+          className: `${pfx}__ws-new`,
+          label: LOCALE.NEW_WORKSPACE,
+          service: "new-workspace-form",
+          uiHandler: [ui],
+        }),
+      ],
+    }),
+  });
+}
+
+// The desk's own file-search box used to be built here (`deskSearchBox`) and
+// mounted by the workspace toolbar, which made that field the GLOBAL search —
+// `desk.search` across every hub, and the list of workspaces for an empty query.
+// The workspace toolbar owns a workspace-scoped field now
+// (window/skeleton/toolkit workspaceSearchBox), so this builder is gone. The
+// desk still owns the MOBILE search card, which is global on purpose and builds
+// its own field in skeleton/index.js.
+

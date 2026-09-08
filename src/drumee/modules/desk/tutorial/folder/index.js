@@ -1,5 +1,6 @@
 const { folder } = require('../skeleton/toolkit');
-const { chatScreen, threadsScreen, menuScreen } = require('./skeleton');
+const { chatScreen, threadHintScreen, menuScreen } = require('./skeleton');
+const { stepProgress, isLastScreen, entryScreen } = require('../tours');
 
 /**
  * Step 2 runs three internal screens behind ONE parent step, the same way
@@ -19,24 +20,37 @@ const SCREENS = [
     target: 'chat-link',
     // Keeps the hole over the whole chat panel (260×533), the way the panel's
     // own rect used to size it — the chip alone would clamp it to ~150.
-    radius: 336,
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/6',
       title: 'Chat lives in folder',
       desc: 'Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.',
     },
   },
   {
-    skeleton: threadsScreen,
-    // The whole thread panel is lit — its own rect sizes the hole, so no
-    // radius here — but the callout points at the Drumee_Strategy_Q2 card
-    // inside it, as the design does.
+    // Figma 3202:3732 — the hover toolbar that starts a thread. Same view and
+    // same copy as the screen after it: the pair reads as one idea, shown then
+    // explained, which is how the design frames it.
+    skeleton: threadHintScreen,
+    // Lit area taken from the design's own vignette (Figma 3202:3811): a
+    // radialGradient at (1297.5, 374) of the 1440x1024 frame whose gradient
+    // transform works out to radii of 729 x 1279 — so horizontally it reaches
+    // about 730px, and vertically it exceeds the frame, i.e. full height.
+    //
+    // Ours is a circle, so it is centred on the panel and given that 730. That
+    // one hole covers BOTH things this screen is about: the panel is at its
+    // centre, and the hover tooltip + action bar sit 368px away, inside the
+    // 402px clear core (55% of the radius — see spotlight/skin). Targeting the
+    // hint group instead, as this did before, lit a ~230x50 strip at the bottom
+    // of the screen and left the panel in the fade.
     target: 'thread-panel',
+    // The hole is sized from the panel; the callout is placed against the
+    // Drumee_Strategy_Q2 card at the top of it, which is where the design puts
+    // it (card top 182 of 1024, level with the thread card — not the panel's
+    // mid-height, ~220px lower). target and anchor exist precisely so the lit
+    // area and the callout can be measured from different elements.
     anchor: 'thread-card',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/6',
       title: 'Chat in threads',
       desc: 'Drop a file, chat in the threads without context loss',
     },
@@ -50,7 +64,6 @@ const SCREENS = [
     anchor: 'ctx-focus',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/6',
       title: 'View and download chat threads',
       desc: 'View and download whenever you want in one click',
     },
@@ -73,7 +86,7 @@ class __tutorial_folder extends LetcBox {
       return;
     }
     // Re-entered via Back from Step 3: resume on the screen we left off on.
-    if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
+    this._screenIndex = entryScreen(this, SCREENS.length);
     this._showScreen();
   }
 
@@ -105,11 +118,19 @@ class __tutorial_folder extends LetcBox {
       service: 'spotlight:focus',
       target: target.el,
       anchor: anchor && anchor.el,
-      // Back is live on all three screens: from the first one it walks out to
-      // Step 1, so there is never a dead end to hide it for.
-      tooltip: { ...screen.badge, variant: 'figma' },
+      // Numbering, the Back button and the Done wording all come from the tour: these three screens
+      // read "STEP 1/3 … 3/3" and end with Done when this is the `folder`
+      // tour, and "STEP 2/6" with Next throughout as step two of the full one.
+      tooltip: {
+        ...screen.badge,
+        ...stepProgress(this, this._screenIndex),
+        // Live whenever a previous step exists (step two of the full tour);
+        // hidden on screen 1 of its own tour, where back-step would reach the
+        // host with nowhere to go.
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+        done: isLastScreen(this, this._screenIndex, SCREENS.length),
+      },
       direction: screen.direction,
-      radius: screen.radius,
       owner: this,
     });
   }
@@ -118,9 +139,10 @@ class __tutorial_folder extends LetcBox {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        // Only the last screen hands the tour back to tutorial_main; the bare
-        // triggerHandlers() lets it read this widget's own service attribute.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers();
+        // Only the last screen hands the tour back to tutorial_main, and it
+        // NAMES the service. The step widget carries no `service` of its own
+        // any more — see _buildWidgets in ../index.js.
+        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':

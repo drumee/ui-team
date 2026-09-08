@@ -3,7 +3,7 @@
 // (priority dot, title, description, file chips, status pill).
 //   Figma: monthly 2042-20730, weekly 2045-132117, task cards 2045-131475.
 // Globals Skeletons/LOCALE/Dayjs are injected at runtime.
-const { priorityMeta, statusMeta } = require("./helpers");
+const { priorityMeta, statusMeta, subtaskBadge } = require("./helpers");
 const { stripMarkers } = require("../mention-markers");
 
 const ymd = (d) => d.format("YYYY-MM-DD");
@@ -39,7 +39,7 @@ module.exports = function (ui) {
 
   // Group filtered tasks by due-date. Tasks with no due_date never appear.
   const byDay = {};
-  (ui.getFilteredTasks() || []).forEach((t) => {
+  (ui.getTopLevelTasks() || []).forEach((t) => {
     if (!t.due_date) return;
     let k;
     try {
@@ -78,7 +78,12 @@ module.exports = function (ui) {
       service: "open-detail",
       uiHandler: [ui],
       taskId: t.id,
-      dataset: { status: t.status || "todo" },
+      // data-theme carries the chip tint — a custom column's status IS its DB
+      // id, so the old per-status rules only ever matched the four built-ins.
+      dataset: {
+        status: t.status || "",
+        theme: statusMeta(ui, t.status || ui.getDefaultStatus()).theme,
+      },
       kids: [
         Skeletons.Note({
           className: `${pfx}__cal-chip-dot`,
@@ -88,6 +93,10 @@ module.exports = function (ui) {
           className: `${pfx}__cal-chip-title`,
           content: t.title || "",
         }),
+        // Count only — Calendar gets no expand this round. A subtask never
+        // earns its own cell even when its due date differs from the parent's;
+        // getTopLevelTasks above is what enforces that.
+        subtaskBadge(ui, t, `${pfx}__cal-chip-subcount`),
         // Hover delete; bubble:0 so it doesn't also open the detail panel.
         Skeletons.Button.Svg({
           className: `${pfx}__cal-chip-remove`,
@@ -103,7 +112,7 @@ module.exports = function (ui) {
 
   const card = (t) => {
     const pm = priorityMeta(ui, t.priority || "medium");
-    const sm = statusMeta(ui, t.status || "todo");
+    const sm = statusMeta(ui, t.status || ui.getDefaultStatus());
     const files = Array.isArray(t.linked_files) ? t.linked_files : [];
     const shownFiles = files.slice(0, 2);
     const moreFiles = files.length - shownFiles.length;
@@ -127,7 +136,11 @@ module.exports = function (ui) {
       service: "open-detail",
       uiHandler: [ui],
       taskId: t.id,
-      dataset: { priority: t.priority || "medium", status: t.status || "todo" },
+      dataset: {
+        priority: t.priority || "medium",
+        status: t.status || "",
+        theme: sm.theme || "default",
+      },
       kids: [
         // Hover delete; bubble:0 so it doesn't also open the detail panel.
         Skeletons.Button.Svg({
@@ -155,14 +168,19 @@ module.exports = function (ui) {
         filesNode,
         Skeletons.Box.X({
           className: `${pfx}__cal-card-status`,
-          dataset: { status: t.status || "todo" },
+          dataset: { status: t.status || "", theme: sm.theme || "default" },
           kids: [
-            Skeletons.Note({ className: `${pfx}__cal-card-status-dot` }),
+            Skeletons.Note({
+              className: `${pfx}__cal-card-status-dot`,
+              styleOpt: { background: sm.color || "#AEAEB2" },
+            }),
             Skeletons.Note({
               className: `${pfx}__cal-card-status-label`,
               content: sm.name || LOCALE[sm.label] || sm.key,
             }),
-          ],
+            // Week-mode card carries the same count as the month chip.
+            subtaskBadge(ui, t, `${pfx}__cal-card-subcount`),
+          ].filter(Boolean),
         }),
       ].filter(Boolean),
     });

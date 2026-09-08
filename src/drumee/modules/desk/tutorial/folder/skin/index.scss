@@ -889,6 +889,125 @@
     white-space: nowrap;
   }
 
+  // ── Screen 2: the hover toolbar on the file message (Figma 3202:3732) ──
+  // Stacked above the bubble rather than absolutely positioned over it: the
+  // stream is a flex column that scrolls, and an absolute overlay would drift
+  // off the message the moment anything above it changed height.
+  &__th-hint {
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  // Tooltip + bar as one group, so the spotlight can light them together and
+  // the tip can align to the bar's first slot instead of guessing an offset.
+  &__th-hint-bar {
+    position: relative;
+    align-items: flex-start;
+    gap: 4px;
+    align-self: flex-end;
+  }
+
+  &__th-tip {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: #282538;      // Primary/90
+    // Centred over the FIRST icon (8px bar padding + half of a 16px icon),
+    // which is the one it labels. translateX pulls its own width back.
+    margin-left: 16px;
+    transform: translateX(-50%);
+  }
+
+  &__th-tip-label {
+    font-family: var(--font-main);
+    font-size: 10px;          // Body/Tiny Body
+    line-height: 1.4;
+    color: #e4e3ff;           // Primary/10
+    white-space: nowrap;
+  }
+
+  // Downward caret. A rotated square rather than a drawn triangle — no path
+  // data to get wrong, and it inherits the bubble colour.
+  &__th-tip-caret {
+    position: absolute;
+    bottom: -3px;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    transform: translateX(-50%) rotate(45deg);
+    background: #282538;
+    border-radius: 1px;
+  }
+
+  &__th-actions {
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    padding: 4px 8px;
+    border-radius: 48px;
+    background: var(--normal-bg-0, #fff);
+    align-self: flex-end;
+    // Blur + Shadow Small
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(50px);
+  }
+
+  // One slot per action, so the cursor can be positioned against the icon it
+  // points at rather than against the bar.
+  &__th-actions-slot {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+
+    // The screen's subject — the one the tooltip and the cursor point at.
+    &.thread .tutorial-folder__th-actions-icon svg {
+      fill: #5950ff;          // brand overlay
+    }
+  }
+
+  &__th-actions-icon {
+    width: 16px;
+    height: 16px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--normal-fg);
+    }
+  }
+
+  // The pointer, from the design's own vector. Sits below-right of the icon
+  // with its tip on it, and is inert — it illustrates the click, it is not one.
+  &__th-actions-cursor {
+    position: absolute;
+    top: 9px;
+    left: 7px;
+    width: 13px;
+    height: 18px;
+    pointer-events: none;
+    transform: rotate(-7.54deg);   // the angle the design draws it at
+
+    svg {
+      width: 13px;
+      height: 18px;
+    }
+  }
+
+  &__th-actions-divider {
+    width: 1px;
+    height: 16px;
+    flex: 0 0 auto;
+    background: var(--grey-30, #e5e5ea);
+  }
+
   &__th-bubble-wrap {
     align-items: flex-end;
     gap: 4px;
@@ -1124,6 +1243,14 @@
       padding: 0 4px;
       border-radius: 6px;
       background: #f2f2f7;
+
+      // The design paints the fill as a pill that stops short of the rows
+      // above and below (47px of a 56px pitch on the 1:1 render), not as a
+      // full-height block. Transparent borders inset the paint without
+      // touching the 32px row pitch, which the menu height depends on.
+      border-top: 3px solid transparent;
+      border-bottom: 3px solid transparent;
+      background-clip: padding-box;
     }
   }
 

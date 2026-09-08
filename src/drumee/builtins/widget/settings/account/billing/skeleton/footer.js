@@ -1,50 +1,60 @@
 /**
- * Create footer item with title, content and email link (if available)
+ * "Enterprise & custom plans" contact card — the page's one sales-led exit.
+ *
+ * Replaces the run-on line this footer used to render ("Enterprise: Custom
+ * pricing for your team size. Contact: contact@drumee.org"), which was built
+ * from nested Box.X rows carrying generic leaked class names (`item`,
+ * `content`), spaced with margin hacks and a leading space inside the label,
+ * and ended in an underlined mailto that read as a legal footnote rather than
+ * an offer. Everything above it on this page is a card with a pill CTA; this
+ * is now one too — icon, title, one line of copy, the address kept visible
+ * and copyable, and a real button.
+ *
+ * The button posts "contact-sales" rather than carrying its own mailto href:
+ * settings_billing._openSalesMail already writes the subject line and, on a
+ * machine with no mail client (where a mailto silently does nothing), falls
+ * back to showing the address. A raw href would have neither.
  * @param {Object} ui - UI instance
- * @param {string} title - Item title
- * @param {string} content - Item content
- * @param {string} email - Email address (optional)
  * @returns {Object} Skeletons component
  */
-function item(ui, title, content, email) {
-  const fig = `${ui.fig.family}__footer`;
-
-  let emailItem = "";
-  if (email) {
-    emailItem = Skeletons.Box.X({
-      className: `${fig} item`,
-      kids: [
-        Skeletons.Note({
-          className: `${fig}-email-title`,
-          content: ` ${LOCALE.CONTACT}: `,
-        }),
-        Skeletons.Note({
-          className: `${fig}-email`,
-          content: email,
-          tagName: _K.tag.a,
-          attrOpt: {
-            href: `mailto:${email}`,
-          },
-        }),
-      ],
-    });
-  }
+function contactCard(ui) {
+  const fig = `${ui.fig.family}__contact`;
+  const email = LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org";
 
   return Skeletons.Box.X({
-    className: `${fig} item`,
+    className: `${fig}-card${ui._motionClass()}`,
     kids: [
-      Skeletons.Note({
-        className: `${fig}-title`,
-        content: title,
-      }),
       Skeletons.Box.X({
-        className: `${fig} content`,
+        className: `${fig}-icon`,
+        kids: [Skeletons.Image.Svg({ ico: "email", className: `${fig}-icon-svg` })],
+      }),
+      Skeletons.Box.Y({
+        className: `${fig}-text`,
         kids: [
           Skeletons.Note({
-            content: content,
+            className: `${fig}-title`,
+            content: LOCALE.FOOTER_ENTERPRISE_TITLE,
           }),
-          emailItem,
+          Skeletons.Note({
+            className: `${fig}-desc`,
+            content: LOCALE.FOOTER_ENTERPRISE_DESC,
+          }),
+          // Kept as a real mailto link, not decoration: someone who wants to
+          // write from another client copies the address from here.
+          Skeletons.Note({
+            className: `${fig}-mail`,
+            content: email,
+            tagName: _K.tag.a,
+            attrOpt: { href: `mailto:${email}` },
+          }),
         ],
+      }),
+      Skeletons.Note({
+        className: `${fig}-cta`,
+        content: LOCALE.CONTACT_SALES,
+        service: "contact-sales",
+        uiHandler: [ui],
+        bubble: false,
       }),
     ],
   });
@@ -75,12 +85,7 @@ function billing_footer(ui) {
             bubble: false,
           })
         : null,
-      item(
-        ui,
-        `${LOCALE.ENTERPRISE}:`,
-        LOCALE.FOOTER_ENTERPRISE_DESC,
-        LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org"
-      ),
+      contactCard(ui),
     ].filter(Boolean),
   });
 }

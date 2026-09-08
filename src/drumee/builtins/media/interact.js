@@ -24,6 +24,9 @@ function _vignetteRemember(url, entry) {
 require("./skin");
 const media_core = require("./core");
 const { copyToClipboard } = require("@drumee/ui-essentials")
+// Shortens the "Designation link" URL only. Falls back to the long form for
+// anything it cannot round-trip — see the module header.
+const { toCompactUrl } = require("libs/compact-deep-link");
 class __media_interact extends media_core {
   constructor(...args) {
     super(...args);
@@ -648,6 +651,47 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Create a copy beside this media item. The live update owns grid insertion so the
+   * HTTP response and WebSocket broadcast cannot add the same copy twice.
+   */
+  duplicateInPlace() {
+    // A WORKSPACE is not a node, so Make a copy on one is not a node copy. It
+    // has its own service. media.copy cannot do it and never could: its root
+    // insert filters `category <> 'hub'`, so before that service existed this
+    // row answered 403 with the workspace's own scope, and 200-with-nothing-
+    // created once the scope was corrected.
+    //
+    // Keyed on `filetype`, NOT on `isHub` - media/grid initContainer() raises
+    // isHub on any FOLDER that merely CONTAINS hubs, and routing one here would
+    // send a folder's copy to the workspace service. Same rule as move().
+    if (this.mget(_a.filetype) === _a.hub) {
+      return this._copyWorkspace();
+    }
+    const echoId = Visitor.get(_a.echoId);
+    return this.postService(
+      SERVICE.media.copy,
+      {
+        service: SERVICE.media.copy,
+        nid: this.mget(_a.nodeId),
+        pid: this.mget(_a.pid),
+        action: _a.copy,
+        recipient_id: this.mget(_a.hub_id),
+        hub_id: this.mget(_a.hub_id),
+        echoId,
+      },
+      { async: 1 },
+    )
+      .then((data) => {
+        if (data && data.error) {
+          const message = data.reason || data.error.message || data.error;
+          return Wm.alert(message || LOCALE.TRY_AGAIN);
+        }
+        Wm.unselect && Wm.unselect();
+      })
+      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+  }
+
+  /**
    * @param {Letc} cmd
    * @param {Object} args
    */
@@ -688,6 +732,22 @@ class __media_interact extends media_core {
       case "direct-rename":
         return this.rename();
 
+      // The workspace ... menu asks for THIS instead of direct-rename. Its
+      // rows are built from the home-grid tile, and that grid is display:none
+      // while a workspace is open, so rename()'s inline editor was appended
+      // into an invisible element: created, pre-filled, and unreachable. The
+      // grid's own menus still ask for direct-rename and are untouched.
+      case "workspace-rename":
+        return this._renameWorkspacePrompt();
+
+      // Value events from that dialog's field. The inline path reads its text
+      // through checkSanity() -> this.entry, which only sees a textarea this
+      // widget owns; the dialog's field belongs to the dialog, so its value is
+      // kept here instead.
+      case "workspace-rename-input":
+        this.__wsRenameValue = cmd.mget(_a.value);
+        return;
+
       case "organize":
         // Organize: shows submenu with Move + Link to task tracker.
         // Submenu rendering handled by contextmenu skin (hover state).
@@ -702,19 +762,7 @@ class __media_interact extends media_core {
         return this.linkToTaskTracker();
 
       case _a.duplicate:
-        let opt = {
-          service: SERVICE.media.copy,
-          nid: this.mget(_a.nodeId),
-          pid: this.mget(_a.pid),
-          action: _a.copy,
-          recipient_id: this.mget(_a.hub_id),
-          hub_id: this.mget(_a.hub_id),
-        };
-        this.postService(SERVICE.media.copy, opt, { async: 1 }).then((data) => {
-          data.kind = this._getKind();
-          this.getLogicalParent().append(data)
-        })
-        return
+        return this.duplicateInPlace();
 
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
@@ -815,10 +863,94 @@ class __media_interact extends media_core {
         return this.triggerHandlers({ trigger: this, service });
 
       case 'secure-share': {
+        // Contextual tour, first statement in the case. Everything below races
+        // three outcomes through a once() latch — wrapper resolved, wrapper
+        // rejected, 600ms timeout — and the share panel appears either as a
+        // drawer or as a floating window. The tour is about sharing, not about
+        // which of those won, so it is raised before the race starts rather
+        // than inside any branch of it.
+        //
+        // The tour's first screen names WHAT IS BEING SHARED, and only this
+        // click knows it (Figma 148:41197 a file, 180:51964 a folder,
+        // 180:52963 a workspace). So the item rides along as fire()'s third
+        // argument. The folder window no longer broadcasts through fire() for
+        // this — it mounts its own in-window tour and hands `opt` straight to
+        // its own showTutorial, same shape as here. Sharing a file still goes
+        // through fire() to the desk host, which is this call site.
+        //
+        // RAW FIELDS, not a formatted string. The panel is matching a frame and
+        // owns how the row reads; handing it `name` + `Update 2 hour ago •
+        // 1.2 MB` from here would put that frame's typography in a media
+        // widget, and every other trigger would have to reproduce it.
+        //
+        // `filetype` decides the shape rather than the area does: a hub draws
+        // the workspace variant, a folder the folder variant, everything else
+        // the file icon.
+        const _ft = this.mget(_a.filetype);
+        // `_tourDone` marks the RE-ENTRY below, after the tour has finished.
+        // Without it this line would fire again — and a tour the user escaped
+        // is not marked seen, so it would be raised, deferred, re-entered and
+        // raised again, forever.
+        const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
+          subject: _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file"),
+          subject_data: {
+            name: this.mget(_a.filename),
+            filetype: _ft,
+            // _fileExt() is the canonical read — `ext` is an SQL alias and
+            // `extension` the field, and only one of them is present.
+            ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
+            filesize: this.mget(_a.filesize),
+            ctime: this.mget(_a.ctime),
+            mtime: this.mget(_a.mtime),
+            area: this.mget(_a.area),
+          },
+        });
+        // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
+        // tour teaches the secure-share panel, and the panel was opening while
+        // the walkthrough about it was still on screen — visible only once the
+        // tour came down, already filled in.
+        //
+        // `fire` answers whether the tour actually went up: false for every
+        // gate — already completed, mobile, the kill switch, another tour in
+        // flight — and that is what decides the order. Not done → the tour
+        // plays and the panel opens as it comes down. Done → the panel opens
+        // now, which is every click after the first walkthrough.
+        //
+        // whenDone runs its callback synchronously when nothing is in flight,
+        // so the second case is the same code path it always was.
+        if (_raised) {
+          const Tours = require("libs/tutorial-tours");
+          return Tours.whenDone("share", () => {
+            if (this.isDestroyed && this.isDestroyed()) return;
+              // THE PANEL IS THE REWARD FOR FINISHING, so a tour the user walked
+            // out of does not get one. Three outcomes, and they are not
+            // interchangeable:
+            //
+            //   completed   isSeen — this tour is `mark_on: "success"`, so its
+            //               flag is written only when the last screen is reached.
+            //               Open the panel.
+            //   abandoned   it appeared and the user closed it. They answered;
+            //               opening the panel anyway is what this rule exists to
+            //               stop.
+            //   never ran   claimed and released without reaching the screen — a
+            //               window it could not be drawn on, a chunk that failed.
+            //               Nothing was taught and nothing was declined, so the
+            //               click must still do what it was for; swallowing it
+            //               would make Share a dead control.
+            if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            this.onUiEvent(cmd, { ...args, _tourDone: 1 });
+          });
+        }
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
         const launchFloating = () => Wm.launch(item, { explicit: 1, singleton: 1 });
+        // Opt-in, and only players pass it (player/widget/share): they are
+        // windows stacked above the host folder window, so the drawer below
+        // would render underneath them and read as a dead click. Everything
+        // else keeps the drawer. The tour above still fires either way — it
+        // is about sharing, not about how the panel is presented.
+        if (args.floating) return launchFloating();
         // Figma: render the panel as a right drawer INSIDE the host workspace
         // window (the same dialog-wrapper mechanism as folder settings) so it
         // reads as part of the folder, not a detached floating window. Walk up to
@@ -855,7 +987,15 @@ class __media_interact extends media_core {
       case "designation-link":
         this.viewerLink().then((url) => {
           setTimeout(async () => {
-            url = `${bootstrap().protocol}://${bootstrap().main_domain}${url}`
+            // Shortened for the human who pastes it (Lexis, 2026-08-18): ~103
+            // chars down to ~62. Applied HERE and not inside viewerLink(),
+            // which lives in @drumee/ui-core and is shared by the folder
+            // window's "Share link" (window/core.js), send-by-email and
+            // share-qrcode (widget/settings/hub) — none of which asked for a
+            // different format. toCompactUrl() returns its input untouched for
+            // anything it cannot round-trip losslessly, so this can never
+            // produce a link that resolves to less than it does today.
+            url = `${bootstrap().protocol}://${bootstrap().main_domain}${toCompactUrl(url)}`
             await copyToClipboard(url);
             Wm.acknowledge();
           }, 0);
@@ -1312,6 +1452,302 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Rename a WORKSPACE from the desk topbar menu, through a dialog.
+   *
+   * rename() cannot serve that menu. It appends its editor INTO this widget
+   * (interact.js _createInput -> this.append), and this widget is the
+   * workspace's home-grid tile, which is display:none whenever a workspace is
+   * open — which is the only time that menu can be reached. The textarea was
+   * being created and pre-filled with the right name, in a place nobody could
+   * see or type into, so the row looked dead.
+   *
+   * The dialog only collects the text. Everything after it — validation of the
+   * empty and unchanged cases, the payload, the holder-scoped hub_id, the post
+   * and afterRename — is _commitRename, shared verbatim with the inline path.
+   *
+   * The typed value is read from the field ELEMENT rather than from the
+   * dialog: window_confirm resolves and then destroys itself in the same tick,
+   * so anything that reads the DOM afterwards finds nothing. A detached node
+   * still answers .value, and the ui event above keeps a copy either way.
+   */
+  async _renameWorkspacePrompt() {
+    const current = this.mget(_a.filename) || "";
+    this.__wsRenameValue = current;
+
+    // Dressed as a form, not as a bare box: a label above a bordered field, in
+    // the confirm dialog's own namespace so it is styled beside the buttons it
+    // sits with (window/confirm/skin __field-label / __field) and matches the
+    // create-workspace form field. `message` takes an ARRAY of skeletons —
+    // window/confirm/skeleton/body spreads one straight into the body.
+    const cn = "window-confirm__field";
+    const answered = Wm.confirm({
+      title: LOCALE.RENAME,
+      message: [
+        Skeletons.Note({
+          content: LOCALE.WORKSPACE_NAME,
+          className: "window-confirm__field-label",
+        }),
+        Skeletons.Textarea({
+          className: cn,
+          name: _a.lastname,
+          value: current,
+          rows: 1,
+          require: _a.any,
+          bubble: 0,
+          mode: _a.commit,
+          preselect: 1,
+          // Enter must not commit: the dialog's own button is what confirms,
+          // and a stray Enter would submit a half-typed name.
+          ignoreEnter: true,
+          service: "workspace-rename-input",
+          uiHandler: [this],
+        }),
+      ],
+      confirm: LOCALE.RENAME,
+    });
+
+    const field = await this._waitForRenameField(cn);
+    if (field) {
+      try {
+        field.focus();
+        if (_.isFunction(field.select)) field.select();
+      } catch (e) { }
+      field.addEventListener("input", () => {
+        this.__wsRenameValue = field.value;
+      });
+    }
+
+    try {
+      await answered;
+    } catch (e) {
+      // cancelled or closed — not a failure, and nothing to say about it
+      this.__wsRenameValue = null;
+      return;
+    }
+
+    const typed = field ? field.value : this.__wsRenameValue;
+    this.__wsRenameValue = null;
+    const value = String(typed == null ? "" : typed).trim();
+    if (!value || value === current) return;
+
+    const done = await this._commitRename(value);
+
+    // The desk BREADCRUMB still names the workspace by its old alias. It is
+    // not fed by the rename path at all: it listens for the RADIO_BROADCAST
+    // "breadcrumb:content" and only follows one whose source IS Wm, then
+    // re-resolves the path from the server (desk/breadcrumb _onBrowse ->
+    // _updatePath -> libs/path-request getPath). That request is de-duplicated
+    // only while in flight and never cached, so a fresh one answers the NEW
+    // name — its own header says a rename "is picked up by the next call".
+    //
+    // The pane's own refreshBreadcrumbsUI cannot do this: it returns early for
+    // a headless workspace pane, which is exactly what a workspace is here.
+    //
+    // Never allowed to fail the rename: the name is already saved by now, and
+    // a stale crumb is one navigation away from correct.
+    try {
+      const hubId = this.mget(_a.hub_id);
+      const pane = _.isFunction(Wm._findWorkspaceWindow)
+        && Wm._findWorkspaceWindow(hubId);
+      // The pane's own nid, not the workspace root: the user may have browsed
+      // into a subfolder, and the crumb has to keep that trail.
+      const nid = pane && pane.mget(_a.nid);
+      if (nid && hubId && _.isFunction(Wm.updateBreadcrumb)) {
+        Wm.updateBreadcrumb({ nid, hub_id: hubId }, Wm);
+      }
+    } catch (e) {
+      this.warn("Workspace renamed, but the breadcrumb kept the old name", e);
+    }
+    return done;
+  }
+
+  /**
+   * The dialog mounts asynchronously; give it a few frames to appear rather
+   * than assume it is there. Returns null instead of throwing, so a slow or
+   * failed mount degrades to the ui-event copy rather than to an exception.
+   */
+  async _waitForRenameField(className) {
+    for (let i = 0; i < 40; i++) {
+      const el = document.querySelector(`.${className} textarea, textarea.${className}`);
+      if (el) return el;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    this.warn("Rename dialog field never appeared", { className });
+    return null;
+  }
+
+  /**
+   * Make a copy of a WORKSPACE: a new workspace holding a copy of this one's
+   * files and folders, through media.copy_workspace.
+   *
+   * The source is never touched, so unlike the move this cannot damage
+   * anything - the worst outcome is an extra workspace the owner deletes.
+   *
+   * The confirmation exists for the expectation gap rather than for danger:
+   * somebody duplicating a workspace with members and a year of chat needs to
+   * be told, before it happens, that neither travels.
+   *
+   * Every outcome is spoken, including the two quiet ones - a source with
+   * nothing in it, and a copy that received less than it asked for.
+   */
+  async _copyWorkspace() {
+    const workspaceId = this.mget(_a.hub_id);
+    const sourceName = this.mget(_a.filename) || LOCALE.WORKSPACE;
+    if (!workspaceId) {
+      return Wm.alert(LOCALE.COPY_WORKSPACE_FAILED);
+    }
+
+    // Built outside the try below: only the confirmation's own rejection means
+    // the user said no, and a throw while composing the text must not pass for
+    // one - that is how a button ends up pressed and silently doing nothing.
+    const prompt = {
+      title: LOCALE.COPY_WORKSPACE_TITLE.format(sourceName),
+      message: LOCALE.COPY_WORKSPACE_CONFIRM.format(sourceName),
+      submessage: LOCALE.COPY_WORKSPACE_KEEPS,
+      confirm: LOCALE.MAKE_A_COPY,
+    };
+    try {
+      await Wm.confirm(prompt);
+    } catch (e) {
+      return;
+    }
+
+    const service = (SERVICE.media && SERVICE.media.copy_workspace)
+      || "media.copy_workspace";
+    try {
+      const data = await this.postService({ service, hub_id: workspaceId });
+      if (!data || data.error || !data.hub_id) {
+        const message = (data && (data.reason || data.error))
+          || LOCALE.COPY_WORKSPACE_FAILED;
+        return Wm.alert(message);
+      }
+      const name = data.filename || sourceName;
+
+      // Tell the desk the workspace exists, exactly as a create does. Nothing
+      // else does it for us: the switcher and the home grid are refreshed off
+      // the client-side "workspace:refresh" broadcast, which the create form
+      // raises after desk.create_hub returns - not off any websocket - so
+      // without this the copy is only there after a reload. The descriptor
+      // carries the ROOT node as `nid`, never the hub id, because that is what
+      // a listener reopens from.
+      const { announceWorkspace } = require("libs/create-workspace");
+      const announced = announceWorkspace({
+        hub_id: data.hub_id,
+        nid: data.home_id,
+        area: data.area,
+        filename: name,
+      });
+      if (!announced) {
+        this.warn("Workspace copied but not announced to the desk", {
+          hub_id: data.hub_id, home_id: data.home_id,
+        });
+      }
+
+      if (!data.requested) {
+        return Wm.alert(LOCALE.COPY_WORKSPACE_EMPTY.format(name, sourceName));
+      }
+      if (data.copied !== data.requested) {
+        return Wm.alert(
+          LOCALE.COPY_WORKSPACE_PARTIAL.format(name, data.copied, data.requested)
+        );
+      }
+      if (typeof Butler !== "undefined" && Butler.say) {
+        Butler.say(LOCALE.COPY_WORKSPACE_DONE.format(name));
+      }
+    } catch (e) {
+      this.warn("Workspace copy failed", e);
+      return Wm.alert(
+        (e && (e.reason || e.error)) || LOCALE.COPY_WORKSPACE_FAILED
+      );
+    }
+  }
+
+  /**
+   * Move on a WORKSPACE: its content becomes a folder inside another
+   * workspace, through media.merge_workspace.
+   *
+   * hub_id is the workspace ITSELF here, not holder_id. That differs from
+   * Move to trash, which scopes a hub node by holder_id because it acts on the
+   * card sitting on your desk. This acts on the workspace, and the service is
+   * scope:hub on the SOURCE, so it needs the workspace as its scope to check
+   * `owner` there.
+   *
+   * The source workspace SURVIVES, emptied - nothing is deleted here.
+   *
+   * Every outcome is spoken. A merge that moved nothing used to be
+   * indistinguishable from one that worked, which is the whole reason this row
+   * sat dead for so long, so SOURCE_EMPTY and a partial move each get their
+   * own message rather than a silent success.
+   */
+  async _mergeWorkspaceInto(targetDestinations = []) {
+    const workspaceId = this.mget(_a.hub_id);
+    const sourceName = this.mget(_a.filename) || LOCALE.WORKSPACE;
+
+    if (targetDestinations.length !== 1) {
+      return Wm.alert(LOCALE.MERGE_WORKSPACE_ONE_DESTINATION);
+    }
+    const dest = targetDestinations[0];
+    if (!dest || !dest.hub_id || !dest.nid) {
+      return Wm.alert(LOCALE.MOVE_FAILED);
+    }
+    if (String(dest.hub_id) === String(workspaceId)) {
+      return Wm.alert(LOCALE.MERGE_WORKSPACE_SAME);
+    }
+    const destName = dest.wsName || dest.filename || LOCALE.WORKSPACE;
+
+    // Built OUTSIDE the try below. Only the confirmation's own rejection means
+    // "the user said no"; a throw while composing the text does not, and
+    // swallowing one as a cancellation would put this button straight back
+    // where it started - pressed, and silently doing nothing.
+    const prompt = {
+      title: LOCALE.MERGE_WORKSPACE_TITLE.format(sourceName, destName),
+      message: LOCALE.MERGE_WORKSPACE_CONFIRM.format(sourceName, destName),
+      submessage: LOCALE.MERGE_WORKSPACE_KEEPS.format(sourceName),
+      confirm: LOCALE.MOVE,
+    };
+    try {
+      await Wm.confirm(prompt);
+    } catch (e) {
+      // cancelled or closed - not a failure, and nothing to say about it
+      return;
+    }
+
+    // Same defensive shape workspace_move uses: SERVICE is merged at bootstrap
+    // from what the server actually exposes, so the key is only there once the
+    // backend advertises the service.
+    const service = (SERVICE.media && SERVICE.media.merge_workspace)
+      || "media.merge_workspace";
+
+    try {
+      const data = await this.postService({
+        service,
+        hub_id: workspaceId,
+        nid: "0",
+        recipient_id: dest.hub_id,
+        pid: dest.nid,
+      });
+      if (!data || data.error) {
+        const message = (data && (data.reason || data.error)) || LOCALE.MOVE_FAILED;
+        return Wm.alert(message);
+      }
+      if (data.status === "SOURCE_EMPTY") {
+        return Wm.alert(LOCALE.MERGE_WORKSPACE_EMPTY.format(sourceName));
+      }
+      if (data.remaining) {
+        return Wm.alert(
+          LOCALE.MERGE_WORKSPACE_PARTIAL.format(sourceName, data.remaining)
+        );
+      }
+      if (typeof Butler !== "undefined" && Butler.say) {
+        Butler.say(LOCALE.MERGE_WORKSPACE_DONE.format(sourceName, destName));
+      }
+    } catch (e) {
+      this.warn("Workspace merge failed", e);
+      return Wm.alert((e && (e.reason || e.error)) || LOCALE.MOVE_FAILED);
+    }
+  }
+
+  /**
    * Open move popup, execute move, then refresh grid
    */
   move() {
@@ -1330,6 +1766,26 @@ class __media_interact extends media_core {
     }).then((result) => {
       const { destination, destinations, items } = result;
       const targetDestinations = destinations || [destination];
+      // A WORKSPACE is not a node, so Move on one is not a node move. It has
+      // its own service, and none of the node machinery below applies: a hub
+      // root is exactly what mfs_move_all refuses, returning an empty plan,
+      // which is why this menu row did nothing at all before that service
+      // existed. Branch out here so the file/folder path stays untouched.
+      //
+      // Keyed on `filetype`, NOT on `isHub`. A FOLDER THAT CONTAINS HUBS IS
+      // NOT A HUB: media/grid initContainer() raises `isHub` on any node whose
+      // `hubs` attribute is non-empty, which for a folder means "there are hubs
+      // somewhere inside me". That overload is what sent folders-with-
+      // workspaces to hub.delete_hub and got 400 WRONG_ENTITY_TYPE back, and
+      // why libs/media-selection bucketFor now tests hubs_inside FIRST. Read
+      // through `isHub`, this branch would hijack the move of any such folder:
+      // it would post merge_workspace with the folder's hub_id - the user's own
+      // entity for anything in their home - and the server would refuse it,
+      // leaving a folder that used to move just fine unable to. `filetype` is
+      // the flag that means "I am one", and it is what the move picker keys on.
+      if (this.mget(_a.filetype) === _a.hub) {
+        return this._mergeWorkspaceInto(targetDestinations);
+      }
       // A true cross-workspace move needs one destination. The move dialog can
       // intentionally select several destinations, which is a copy-to-many
       // operation followed by source removal; keep that legacy flow unchanged.

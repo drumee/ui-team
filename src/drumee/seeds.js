@@ -8,6 +8,11 @@ module.exports = {
   panel_activity_item: function () {
     return import("./builtins/panel/activity/item");
   },
+  // Personal Calendar — full-canvas screen, mounted by the desk into
+  // settings-main-slot (the slot Settings / Get help / Billing already share).
+  calendar_main: function () {
+    return import("./builtins/panel/calendar");
+  },
   addressbook_widget_notification: function () {
     return import("./builtins/window/addressbook/widget/notification");
   },
@@ -128,11 +133,17 @@ module.exports = {
   tutorial_folder: function () {
     return import("./modules/desk/tutorial/folder");
   },
+  tutorial_chat: function () {
+    return import("./modules/desk/tutorial/chat");
+  },
   tutorial_task: function () {
     return import("./modules/desk/tutorial/task");
   },
   tutorial_meeting: function () {
     return import("./modules/desk/tutorial/meeting");
+  },
+  tutorial_schedule: function () {
+    return import("./modules/desk/tutorial/schedule");
   },
   tutorial_share: function () {
     return import("./modules/desk/tutorial/share");
@@ -140,14 +151,23 @@ module.exports = {
   tutorial_migrate: function () {
     return import("./modules/desk/tutorial/migrate");
   },
-  tutorial_settings: function () {
-    return import("./modules/desk/tutorial/settings");
+  window_tutorial: function () {
+    return import("./builtins/window/tutorial");
   },
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");
   },
+  desk_home_empty: function () {
+    return import("./modules/desk/home-empty");
+  },
   desk_breadcrumb_item: function () {
     return import("./modules/desk/breadcrumb/item");
+  },
+  desk_org_tab: function () {
+    return import("./modules/desk/org-tab");
+  },
+  desk_org_view: function () {
+    return import("./modules/desk/org-view");
   },
   workspace_item: function () {
     return import("./modules/desk/workspace-item");
@@ -242,6 +262,9 @@ module.exports = {
   migrate_gdrive_popup: function () {
     return import("./builtins/widget/migrate-gdrive-popup");
   },
+  daily_reminder_popup: function () {
+    return import("./builtins/widget/daily-reminder-popup");
+  },
   rating_survey_popup: function () {
     return import("./builtins/widget/rating-survey-popup");
   },
@@ -253,6 +276,12 @@ module.exports = {
   },
   over_limit_banner: function () {
     return import("./builtins/widget/over-limit-banner");
+  },
+  nudge_lab: function () {
+    return import("./builtins/widget/nudge-lab");
+  },
+  upgrade_nudge_popup: function () {
+    return import("./builtins/widget/upgrade-nudge-popup");
   },
   reward_flow: function () {
     return import("./builtins/widget/reward-flow");

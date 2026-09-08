@@ -349,17 +349,106 @@ module.exports = function (_ui_) {
     dataset: { muted: 1 },
   });
 
-  // ctrl-line contract: close → leave confirmation.
+  // Leaving is a HOST decision with two outcomes, so the host gets a Teams-style
+  // split button: the main half always just leaves (the room stays live for
+  // everyone else) and the caret opens the two explicit choices. Ending the
+  // meeting for all is therefore never something a single click can do by
+  // accident — see window/meeting/index.js `_endForAll`.
+  // A guest has only one outcome, so it keeps the plain pill and the legacy
+  // `close` → leave-confirmation path.
+  const isHost = !!_ui_._isHost;
+
+  // ctrl-line contract: close → leave confirmation (guest) / leave-only (host).
   const leaveBtn = Skeletons.Button.Label({
     className: `${pfx}__leave-btn`,
     ico: "meet-leave",
-    label: LOCALE.LEAVE_MEETING,
+    label: isHost ? LOCALE.LEAVE : LOCALE.LEAVE_MEETING,
     labelClass: `${pfx}__leave-label`,
     sys_pn: "ctrl-line",
-    service: _e.close,
+    service: isHost ? "leave-meeting" : _e.close,
     uiHandler: [_ui_],
     bubble: 0,
   });
+
+  // Two-line menu row: the labels alone don't say who is affected, so each
+  // carries the consequence underneath it.
+  // The ROW carries the service, so every descendant has to be inert —
+  // `active: 0`, which is what stops letc.js binding a click handler on it at
+  // all. A descendant left active does bind one, and __handleClick
+  // unconditionally stopPropagation()s: the row then never fires and only the
+  // gaps between the children are clickable. `kidsOpt` reaches DIRECT kids
+  // only, so the nested text box has to pass it on to its own Notes.
+  const inert = { active: 0 };
+  const leaveMenuItem = (ico, label, hint, service, cls) =>
+    Skeletons.Box.X({
+      className: `${pfx}__leave-item${cls ? ` ${cls}` : ""}`,
+      service,
+      uiHandler: [_ui_],
+      kidsOpt: inert,
+      kids: [
+        Skeletons.Image.Svg({
+          ico,
+          className: `${pfx}__leave-item-ico`,
+          ...inert,
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__leave-item-text`,
+          ...inert,
+          kidsOpt: inert,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__leave-item-label`,
+              content: label,
+              ...inert,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__leave-item-hint`,
+              content: hint,
+              ...inert,
+            }),
+          ],
+        }),
+      ],
+    });
+
+  const leaveMenu = {
+    kind: KIND.menu.topic,
+    className: `${pfx}__leave-menu`,
+    flow: _a.y,
+    opening: _e.click,
+    persistence: _a.once,
+    offsetY: 8,
+    trigger: Skeletons.Button.Svg({
+      ico: "meet-caret-down",
+      className: `${pfx}__leave-caret`,
+      attrOpt: { "data-tip": LOCALE.MORE_OPTIONS },
+    }),
+    items: Skeletons.Box.Y({
+      className: `${pfx}__leave-items`,
+      kids: [
+        leaveMenuItem(
+          "meet-leave",
+          LOCALE.LEAVE_MEETING,
+          LOCALE.LEAVE_MEETING_HINT,
+          "leave-meeting",
+        ),
+        leaveMenuItem(
+          "app-call-end",
+          LOCALE.END_MEETING,
+          LOCALE.END_MEETING_HINT,
+          "end-meeting",
+          "danger",
+        ),
+      ],
+    }),
+  };
+
+  const leaveControl = isHost
+    ? Skeletons.Box.X({
+        className: `${pfx}__leave-split`,
+        kids: [leaveBtn, leaveMenu],
+      })
+    : leaveBtn;
 
   return Skeletons.Box.X({
     // window__header marks the bar as the window drag handle.
@@ -383,7 +472,7 @@ module.exports = function (_ui_) {
           cameraPill,
           micPill,
           screenBtn,
-          leaveBtn,
+          leaveControl,
         ],
       }),
     ],

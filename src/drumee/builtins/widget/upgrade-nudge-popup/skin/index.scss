@@ -1,0 +1,240 @@
+// Upgrade-nudge popup — the Figma "Upgrade Trigger" card on Drumee tokens.
+// Same shell mechanics as over-limit-popup/promo-launch30 (portalled to
+// <body>, fixed + high z-index). Figma: 398px sheet, 32px padding, radius
+// 12, centered headline, amber warning badge (red at the 90% threshold),
+// meter, check-circle benefit list, full-width brand CTA.
+.upgrade-nudge-popup {
+  &__ui {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    font-family: var(--font-main);
+  }
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-6);
+    background: var(--overlay-bg);
+    backdrop-filter: blur(2px);
+  }
+
+  &__card {
+    position: relative;
+    width: min(398px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--normal-bg-80);
+    border-radius: var(--corner-radius-4); // Figma 12px
+    padding: 32px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    align-items: stretch;
+  }
+
+  &__close {
+    position: absolute;
+    top: 28px;
+    right: 28px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--normal-fg-50);
+    }
+    &:hover {
+      background: var(--normal-bg-90);
+    }
+  }
+
+  // Warning badge — tinted rounded square, centered. Amber wash for the
+  // early thresholds, the red ramp once the 90% one fires.
+  &__badge {
+    align-self: center;
+    width: 48px;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-4); // Figma 12px
+    // Figma Overlay/Orange = Signal/Warning at 15% — derived from the token
+    // rather than a pasted rgba, so a palette change follows through.
+    background: color-mix(in srgb, var(--warning) 15%, transparent);
+    margin-bottom: 12px;
+
+    &--danger {
+      background: color-mix(in srgb, var(--signal-error) 15%, transparent);
+      .upgrade-nudge-popup__badge-ico svg {
+        fill: var(--signal-error);
+      }
+    }
+  }
+
+  &__badge-ico svg {
+    width: 32px;
+    height: 32px;
+    fill: var(--warning);
+  }
+
+  // Notes are flex boxes: text-align centres the glyphs inside the span but
+  // the span itself hugs its text, so the row needs justify-content too.
+  &__title {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+    justify-content: center;
+    text-align: center;
+  }
+
+  &__lead {
+    margin-top: 8px;
+    align-items: center;
+  }
+
+  &__lead-line {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--normal-fg-20);
+    justify-content: center;
+    text-align: center;
+  }
+
+  // "Used ......... 70 GB / 100 GB" + track
+  &__meter {
+    margin-top: 32px;
+    gap: 8px;
+  }
+
+  &__meter-labels {
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  &__meter-left {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--normal-fg-20);
+  }
+
+  &__meter-right {
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--normal-fg-20);
+  }
+
+  &__meter-track {
+    height: 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--normal-fg-800) 6%, transparent); // Figma Overlay/light mode (5% black)
+    overflow: hidden;
+  }
+
+  &__meter-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--warning);
+
+    &--danger {
+      background: var(--signal-error);
+    }
+  }
+
+  &__benefits {
+    margin-top: 32px;
+    gap: 8px;
+
+    // Directly under the meter the Figma gap is 24, not 32.
+    .upgrade-nudge-popup__meter + & {
+      margin-top: 24px;
+    }
+  }
+
+  &__benefits-title {
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+  }
+
+  &__benefit-row {
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  &__benefit-tick {
+    flex: none;
+    margin-top: 1px;
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--primary-50);
+    }
+  }
+
+  &__benefit-text {
+    gap: 0;
+  }
+
+  &__benefit-title {
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--normal-fg-800);
+  }
+
+  &__benefit-sub {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--normal-fg-20);
+  }
+
+  &__cta-stack {
+    margin-top: 32px;
+    gap: 12px;
+  }
+
+  &__cta {
+    min-height: 40px; // Figma: 8px 24px padding around a 20px label
+    padding: 8px 24px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-1); // Figma 4px
+    background: var(--primary-50);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--primary-60);
+    }
+
+    &--ghost {
+      min-height: 44px;
+      padding: 12px 24px;
+      background: transparent;
+
+      &:hover {
+        background: var(--normal-bg-90);
+      }
+
+      .upgrade-nudge-popup__cta-label {
+        color: var(--normal-fg-20);
+      }
+    }
+  }
+
+  &__cta-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--white);
+  }
+}

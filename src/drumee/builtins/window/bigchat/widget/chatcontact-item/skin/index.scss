@@ -9,17 +9,22 @@
     padding: 16px;
     border-radius: 8px;
     @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+    // Selection and hover both change this, and clicking down a list of
+    // conversations without it flicks between flat colours.
+    transition: background-color 0.14s ease;
 
     &:hover {
       background-color: var(--overlay-bg-05);
     }
 
+    // Selected row. A brand tint, not a raised white card: the list column is
+    // white in the new inbox (Figma 43:32209), so `--normal-bg` + a heavy drop
+    // shadow was white-on-white with a shadow floating under it — which is
+    // what made switching between conversations look broken.
     &[data-active="active"],
     &[data-radio="on"] {
-      background-color: var(--normal-bg);
-      box-shadow:
-        0px 10px 15px -3px rgba(0, 0, 0, 0.1),
-        0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+      background-color: var(--radio-on-bg);
+      box-shadow: none;
     }
   }
 
@@ -51,6 +56,38 @@
     justify-content: space-between;
     gap: 8px;
     width: 100%;
+  }
+
+  // Same product mark the chat header shows, at the inbox row's 48px avatar
+  // size — see libs/support.supportAvatar and the chat-p2p skin. No background
+  // of its own: the asset carries one.
+  &__support-avatar {
+    align-items: center;
+    flex-shrink: 0;
+    height: 48px;
+    justify-content: center;
+    width: 48px;
+  }
+
+  &__support-avatar-ico {
+    height: 38px;
+    width: 38px;
+  }
+
+  // Marks a support conversation in the inbox list. Sits between the name
+  // (flex:1, so it absorbs the row's free space and truncates) and the
+  // timestamp, which keeps the pill against the end of the name.
+  &__support-pill {
+    @include drumee.typo($size: 9px, $color: var(--active-border));
+    font-weight: 700;
+    background-color: var(--primary-30);
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.6px;
+    line-height: 14px;
+    padding: 0 5px;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   &__icon {

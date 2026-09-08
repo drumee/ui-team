@@ -1,3 +1,5 @@
+const WORKSPACE_MEMBER_ID_RE = /^[0-9a-zA-Z_-]{1,32}$/;
+
 class ___chat_item_forward extends LetcBox {
 // ===========================================================
 //
@@ -21,6 +23,11 @@ class ___chat_item_forward extends LetcBox {
     this._registerShareRoom = this._registerShareRoom.bind(this);
     this._flushShareEligibility = this._flushShareEligibility.bind(this);
     this._isShareRoomEligible = this._isShareRoomEligible.bind(this);
+    this._usesWorkspaceMembers = this._usesWorkspaceMembers.bind(this);
+    this._cacheWorkspaceMembers = this._cacheWorkspaceMembers.bind(this);
+    this._cacheEmptyWorkspaceMembers = this._cacheEmptyWorkspaceMembers.bind(this);
+    this.memberSearchRows = this.memberSearchRows.bind(this);
+    this._svcPayload = this._svcPayload.bind(this);
   }
 
   initialize(opt) {
@@ -41,6 +48,9 @@ class ___chat_item_forward extends LetcBox {
     this._eligibilityRows = new Map();
     this._eligibilityTimer = null;
     this._eligibilityInFlight = null;
+    // Rows of the workspace-member tab, cached so its search filters them
+    // locally. null until the first page lands (see _cacheWorkspaceMembers).
+    this._workspaceMembers = null;
     return this.declareHandlers();
   }
 
@@ -49,9 +59,22 @@ class ___chat_item_forward extends LetcBox {
 // ===========================================================
   onPartReady(child, pn, section) {
     switch (pn) {
+      case 'forward-room-list': {
+        // Only the workspace-member tab caches its rows; the paged room lists
+        // are searched by the server and need nothing here. SmartList keeps
+        // row options on its own model, then emits the raw rows before prepare.
+        const itemsOpt = child && child.mget && child.mget(_a.itemsOpt);
+        if (child && child.on
+          && this._usesWorkspaceMembers(itemsOpt && itemsOpt[_a.type])) {
+          child.on(_e.data, this._cacheWorkspaceMembers);
+          child.on(_e.eod, this._cacheEmptyWorkspaceMembers);
+        }
+        return;
+      }
+
       case _a.none:
         return this.debug("Created by kind builder");
-      
+
       default:
         return this.debug("Created by kind builder");
     }
@@ -98,6 +121,34 @@ class ___chat_item_forward extends LetcBox {
   }
 
 // ===========================================================
+// Is this tab listing the source workspace's members rather than chat rooms?
+// True only for the people tab of a workspace forward — the one place the row
+// source is hub.get_members_by_type, which behaves differently from the paged
+// room lists (see getContactList and the max_page note in skeleton/content).
+// ===========================================================
+  _usesWorkspaceMembers(type) {
+    return type === _a.privateRoom && !!this._sourceHubId();
+  }
+
+// ===========================================================
+// Strip an async acknowledgement envelope if the promise resolved with one.
+//
+// An {async:1} postService can resolve with the FULL body
+// ({__ack__, __status__, data:{...}}) instead of the bare payload — observed
+// live on stage, where chat.forward_eligibility answered {"id":1,...} inside
+// `data` while every row still read disabled: apply() indexed the envelope,
+// got undefined for every recipient id, and fail-closed to 0. A real payload
+// never carries `__ack__`, so the discriminator cannot strip a genuine map.
+// ===========================================================
+  _svcPayload(response) {
+    if (response && response.__ack__ && response.data != null
+      && typeof response.data === "object" && !_.isArray(response.data)) {
+      return response.data;
+    }
+    return response;
+  }
+
+// ===========================================================
 // SmartList loads each page (and search result) independently. Rows register
 // their IDs here and are resolved in one batch per emitted page, never one
 // request per row. This covers all three callers through their shared picker.
@@ -124,7 +175,8 @@ class ___chat_item_forward extends LetcBox {
     for (const hubId of hubIds) this._pendingEligibility.delete(hubId);
     const service = (SERVICE.chat && SERVICE.chat.forward_eligibility)
       || 'chat.forward_eligibility';
-    const apply = (result) => {
+    const apply = (response) => {
+      const result = this._svcPayload(response);
       for (const hubId of hubIds) {
         this._shareEligibility[hubId] = Number(result && result[hubId]) === 1 ? 1 : 0;
         const rows = this._eligibilityRows.get(hubId) || [];
@@ -230,7 +282,8 @@ class ___chat_item_forward extends LetcBox {
     const peerId = this.mget(_a.peer_id);
     if (peerId) payload.peer_id = peerId;
 
-    return this.postService(payload).then((data) => {
+    return this.postService(payload).then((response) => {
+      const data = this._svcPayload(response);
       if (data && (data.status === 'INVALID_RECIPIENT'
         || data.status === 'INVALID_SOURCE')) {
         Wm.alert(LOCALE.FORWARD_REJECTED || LOCALE.TRY_AGAIN);
@@ -388,14 +441,31 @@ class ___chat_item_forward extends LetcBox {
   }
 
 // ===========================================================
-// 
+// The people a forward may reach, which is NOT the same list in both contexts.
+//
+// From a workspace conversation the recipients are that workspace's MEMBERS.
+// The personal contact book is the wrong source there: joining a workspace does
+// not create a contact for anyone (drumate/hubs/join_hub.sql only files the hub
+// as a media node), so colleagues the server would happily accept never even
+// appeared in the picker — every row was greyed out.
+//
+// A P2P chat belongs to no workspace, so it keeps the contact book.
 // ===========================================================
   getContactList() {
+    const sourceHubId = this._sourceHubId();
+    if (sourceHubId) {
+      return {
+        service : SERVICE.hub.get_members_by_type,
+        hub_id  : sourceHubId,
+        type    : _a.all
+      };
+    }
+
     const api = {
       service : SERVICE.chat.contact_rooms,
       hub_id  : Visitor.get(_a.id)
     };
-    
+
     return api;
   }
 
@@ -412,22 +482,122 @@ class ___chat_item_forward extends LetcBox {
   }
 
 // ===========================================================
-// 
+// The search list mirrors whatever the tab underneath it is listing, so the
+// people tab of a workspace forward searches that workspace's MEMBERS.
+//
+// hub_get_members_by_type takes no search key, so the filtering happens on the
+// rendered rows instead (see filterSearchRows) — the same approach the mention
+// popup uses for its member list.
 // ===========================================================
   getRoomSearchApi() {
+    const type = this.mget(_a.type);
+    if (this._usesWorkspaceMembers(type)) {
+      return {};
+    }
+
     let _service = SERVICE.chat.contact_rooms;
-    if (this.mget(_a.type) === _a.shareRoom) {
+    if (type === _a.shareRoom) {
       _service = SERVICE.chat.share_rooms;
     }
-    
+
     const api = {
       service : _service,
       key     : this.mget(_a.search),
       order   : 'desc',
       hub_id  : Visitor.get(_a.id)
     };
-    
+
     return api;
+  }
+
+// ===========================================================
+// Search rows for the member tab.
+//
+// hub_get_members_by_type takes no search key and the list's own `skip` filter
+// tests one field at a time, so neither can express "name OR email contains X".
+// The member set is unpaged and small, so it is fetched once and filtered here
+// on the fields the row actually displays — the same approach the mention popup
+// takes for its member list.
+//
+// Returns rows ready to be rendered as list kids, or null while the fetch is
+// still in flight (the caller then renders safe empty kids until cache arrival).
+// ===========================================================
+  memberSearchRows() {
+    const rows = this._workspaceMembers;
+    if (!_.isArray(rows)) return null;
+    const key = `${this.mget(_a.search) || ''}`.trim().toLowerCase();
+    if (!key) return rows;
+    return rows.filter((row) => [
+      row.fullname, row.firstname, row.lastname, row.surname, row.email
+    ].some((value) => `${value || ''}`.toLowerCase().includes(key)));
+  }
+
+// ===========================================================
+// Pick the same canonical identity used by the other hub-member views. The
+// service normally aliases all three fields to the same user id, but older/raw
+// responses may omit aliases. Populated aliases must be non-empty strings and
+// must agree; a malformed or conflicting row is unsafe to select.
+// ===========================================================
+  _workspaceMemberId(row) {
+    if (!row || typeof row !== 'object') return null;
+    const ids = [];
+    for (const key of [_a.entity_id, _a.drumate_id, _a.id]) {
+      const value = row[key];
+      if (value == null) continue;
+      if (!_.isString(value)) return null;
+      const id = value.trim();
+      if (id && !WORKSPACE_MEMBER_ID_RE.test(id)) return null;
+      if (id) ids.push(id);
+    }
+    if (!ids.length || ids.some((id) => id !== ids[0])) return null;
+    return ids[0];
+  }
+
+// ===========================================================
+// Keep the member rows the tab already loaded, so the search filters them
+// without a second round trip. SmartList emits this same array before prepare,
+// so replacing that array in place also gives the rendered rows canonical ids.
+// Invalid identities are removed before the list can render or select them.
+// ===========================================================
+  _cacheWorkspaceMembers(rows) {
+    if (!_.isArray(rows)) return;
+    const normalized = [];
+    for (const row of rows) {
+      if (!row || typeof row !== 'object' || _.isArray(row)) continue;
+      const id = this._workspaceMemberId(row);
+      if (!id) continue;
+      normalized.push({ ...row, [_a.id]: id });
+    }
+    rows.splice(0, rows.length, ...normalized);
+    this._workspaceMembers = rows;
+    this._refreshWorkspaceMemberSearch();
+  }
+
+// ===========================================================
+// Empty SmartList responses skip the data event and report only end-of-data.
+// Cache [] only before any member payload; short nonempty pages emit data and
+// then eod, so their normalized rows must not be erased here.
+// ===========================================================
+  _cacheEmptyWorkspaceMembers() {
+    if (this._workspaceMembers !== null) return;
+    this._workspaceMembers = [];
+    this._refreshWorkspaceMemberSearch();
+  }
+
+// ===========================================================
+// A search may open before the underlying member request settles. It is first
+// rendered with safe empty kids; when the member cache arrives, rebuild only an
+// active workspace-member search so its local filter can show the real matches.
+// ===========================================================
+  _refreshWorkspaceMemberSearch() {
+    if (!this._usesWorkspaceMembers(this.mget(_a.type))) return;
+    const key = `${this.mget(_a.search) || ''}`.trim();
+    if (key.length < 2) return;
+    const result = this.getPart && this.getPart('search-result');
+    if (!result || typeof result.feed !== 'function') return;
+    if (result.el && result.el.dataset
+      && result.el.dataset.mode !== _a.open) return;
+    result.feed(require('./skeleton/search')(this));
   }
 
 
@@ -439,6 +609,10 @@ class ___chat_item_forward extends LetcBox {
       case SERVICE.chat.forward:
         // handleResponse dispatches before postService's promise resolves. Let
         // forwardMessage inspect INVALID_RECIPIENT before deciding to close.
+        return data;
+      case SERVICE.chat.forward_eligibility:
+        // Same reasoning as chat.forward: hand back the payload so a dispatch
+        // consumer sees the map, not an ack envelope.
         return data;
     }
   }
