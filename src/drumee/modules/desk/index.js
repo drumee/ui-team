@@ -57,6 +57,21 @@ const KEEP_ALIVE_MAIN_KINDS = new Set(["settings_main", "calendar_main", "help_m
 // switcher repeatedly costs nothing.
 const WS_CACHE_TTL = 60000;
 
+// Rows `desk.home` returns per page. MIRRORS THE SERVER: mfs_show_node_by pages
+// through the pageToLimits UDF, which is a hard `offset = (page-1)*45,
+// range = 45`. A page shorter than this is the last one, which is what lets
+// _fetchWorkspacePages stop without paying for an extra empty request — so a
+// desk under the cap still costs exactly one call, as it always did.
+// ⚠️ If the server ever LOWERS its page size, this must follow it down or the
+// list truncates again; raising it server-side is harmless (the pager just
+// reads one more page).
+const WS_PAGE_SIZE = 45;
+
+// Safety stop for that pager. 20 pages is 900 home items — far past any real
+// desk — and it guarantees a malformed answer (a server that keeps returning
+// full pages) cannot spin forever.
+const WS_MAX_PAGES = 20;
+
 
 // Which rail tab a window tour is about.
 //
@@ -2350,31 +2365,11 @@ class desk_module extends LetcBox {
     }
     let rows = [];
     try {
-      rows = await this.fetchService(SERVICE.desk.home, {
-        hub_id: Visitor.id,
-        type: "node",
-        // Cache-buster, on the FORCED path only.
-        //
-        // `fetchService` is a GET and ui-essentials builds it with
-        // `cache: "default"` (socket/utils.js), so a repeat of this exact URL
-        // can be answered from the browser's HTTP cache. Every forced refetch
-        // here is a read-after-WRITE — a workspace was just created — which is
-        // precisely the case that gets served the pre-create response and
-        // leaves the new workspace missing from the switcher until a reload.
-        // A scalar param makes the URL unique and forces the miss.
-        //
-        // Only when forced: the boot read wants the cache, and busting it there
-        // would cost a request on every desk mount for nothing.
-        ...(force ? { _ts: Date.now() } : {}),
-      });
+      rows = await this._fetchWorkspacePages(force);
     } catch (e) {
       this.warn && this.warn("[workspaces] desk.home failed", e);
       return [];
     }
-    // A list service with exactly one row answers with the object itself, not
-    // a one-element array — normalise before filtering or the switcher empties.
-    if (rows && !_.isArray(rows)) rows = [rows];
-    if (!_.isArray(rows)) rows = [];
 
     const list = rows
       .filter((it) => {
@@ -2427,6 +2422,71 @@ class desk_module extends LetcBox {
     // keeps the last good list rather than emptying the switcher.
     this._workspacesAt = Date.now();
     return this._workspaces;
+  }
+
+  /**
+   * Read EVERY page of `desk.home`, not just the first.
+   *
+   * 🚨 `desk.home` IS PAGINATED AND THE CAP IS 45. The service takes a `page`
+   * param and runs `mfs_show_node_by`, whose `pageToLimits` UDF is a hard
+   * `offset = (page-1)*45, range = 45` — the same trap `desk_my_workspaces`
+   * carries a comment about ("mfs_show_node_by would hand back 45 at a time
+   * ... turning a 46-workspace user's total into a silent undercount").
+   *
+   * This request never sent `page`, so it always got page 1. A home listing
+   * is ordered `rank asc`, and a workspace just created or just joined ranks
+   * LAST — so for anyone holding 45 or more home items the newest workspace
+   * landed on page 2 and never appeared in the switcher. Not until it aged
+   * out, not on the cache-busted forced refetch, not after a full reload:
+   * this menu is the only global way to change workspace, so the workspace
+   * was simply unreachable once the user navigated away from it. Reproduced
+   * on the test endpoint: a 46-item account, the new workspace alone on
+   * page 2, absent from the menu.
+   *
+   * Costs NOTHING for the common case: a desk under WS_PAGE_SIZE comes back
+   * short on page 1 and no second request is made — the same single call this
+   * has always cost. Only a desk that actually fills a page pays for the next
+   * one.
+   *
+   * @param {Boolean} force cache-bust the GET (see the caller)
+   * @returns {Promise<Array>} every row, in server order
+   */
+  async _fetchWorkspacePages(force) {
+    // A list service with exactly one row answers with the object itself, not
+    // a one-element array — normalise before filtering or the switcher empties.
+    const asRows = (r) => (r == null ? [] : _.isArray(r) ? r : [r]);
+    const all = [];
+    for (let page = 1; page <= WS_MAX_PAGES; page++) {
+      const rows = asRows(
+        await this.fetchService(SERVICE.desk.home, {
+          hub_id: Visitor.id,
+          type: "node",
+          page,
+          // Cache-buster, on the FORCED path only.
+          //
+          // `fetchService` is a GET and ui-essentials builds it with
+          // `cache: "default"` (socket/utils.js), so a repeat of this exact URL
+          // can be answered from the browser's HTTP cache. Every forced refetch
+          // here is a read-after-WRITE — a workspace was just created — which is
+          // precisely the case that gets served the pre-create response and
+          // leaves the new workspace missing from the switcher until a reload.
+          // A scalar param makes the URL unique and forces the miss.
+          //
+          // Only when forced: the boot read wants the cache, and busting it there
+          // would cost a request on every desk mount for nothing.
+          ...(force ? { _ts: Date.now() } : {}),
+        }),
+      );
+      if (!rows.length) break;
+      all.push(...rows);
+      // A short page is the last page. Checked against the server's own page
+      // size (WS_PAGE_SIZE) rather than against the previous page's length:
+      // page 1 can never be "shorter than page 1", so a relative test would
+      // read a second page on every desk, including the small ones that were
+      // never broken.
+      if (rows.length < WS_PAGE_SIZE) break;
+    }
+    return all;
   }
 
   /**
