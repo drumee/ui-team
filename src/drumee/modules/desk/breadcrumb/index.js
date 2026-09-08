@@ -71,10 +71,12 @@ class __desk_breadcrumb extends LetcBox {
    * @param {Boolean} [opt.section] the track is a SECTION LABEL (Settings /
    *   Get help / Plan / Trash / Inbox…), not a filesystem path — see
    *   _setSectionMode. Every path caller leaves it off.
+   * @param {Boolean} [opt.hideAddress] that label is redundant — draw no chip.
+   *   Only the organisation view asks for this; see _setSectionMode.
    */
   _buildContent(data, opt = {}) {
     const section = !!opt.section;
-    this._setSectionMode(section);
+    this._setSectionMode(section, opt.hideAddress);
     if (_.isEmpty(data)) {
       this._data = [];
       // Forget what is on screen, or the guard below would skip the repaint
@@ -169,11 +171,30 @@ class __desk_breadcrumb extends LetcBox {
    * left cluster (desk/skeleton/topbar.js) — which is the only handle CSS has
    * on it from here.
    *
+   * `hideAddress` is a section whose name is ALREADY on screen beside the
+   * chip — the organisation view, announced by the org chip two elements to the
+   * left. There the address chip is not drawn at all rather than repeating the
+   * word: see desk/skin/topbar.scss. It stays a section in every other
+   * respect, which is what keeps Desk._leaveSectionScreen rebuilding the
+   * workspace path on the way out.
+   *
+   * SELF-CLEARING, and that is why it lives here rather than on the desk: every
+   * repaint of this track runs through _buildContent, so the next path (or the
+   * next section) drops the stamp without anyone having to remember to. A flag
+   * the desk raised would need clearing on each of the ways out of a section
+   * screen, and one missed path is a top bar with no address for the rest of
+   * the session.
+   *
    * @param {Boolean} section
+   * @param {Boolean} [hideAddress] draw no chip at all — the label is redundant
    */
-  _setSectionMode(section) {
+  _setSectionMode(section, hideAddress) {
     this._section = !!section;
-    if (this.el) this.el.dataset.section = section ? 1 : 0;
+    if (this.el) {
+      this.el.dataset.section = section ? 1 : 0;
+      if (section && hideAddress) this.el.dataset.hideAddress = 1;
+      else delete this.el.dataset.hideAddress;
+    }
     // NOTHING ELSE TO DO. Whether the chip shows its spinner, its crumbs and
     // its caret is decided in desk/skin/topbar.scss from whether the CRUMBS
     // are present, asked directly with `:has()` — there is no flag here to
@@ -389,6 +410,11 @@ class __desk_breadcrumb extends LetcBox {
    * @param {Object} context data
    */
   _updateContext(data) {
+    // Read off the RAW payload, before _normalizeData: that keeps only
+    // PROPERTIES, which are a crumb's own node fields, and this is a rendering
+    // instruction rather than one of them.
+    const raw = (_.isArray(data) ? data[0] : data) || {};
+    const hideAddress = !!raw.hideAddress;
     this._context = this._normalizeData(data)[0];
     const filename = this._context && (this._context.filename || this._context.name);
     if (!filename) return this.loadDefault();
@@ -397,7 +423,7 @@ class __desk_breadcrumb extends LetcBox {
     // the folder glyph and the caret. Only a bare label is a section screen;
     // every desk trigger of "breadcrumb:context" sends exactly {filename}.
     const section = !this._context.filetype && !this._context.nid;
-    this._buildContent([{ ...this._context, filename }], { section });
+    this._buildContent([{ ...this._context, filename }], { section, hideAddress });
   }
 
   /**

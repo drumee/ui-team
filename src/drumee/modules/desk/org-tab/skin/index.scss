@@ -24,6 +24,33 @@
     position: relative;
   }
 
+  // ── Letting the panel's tooltips out of the card ───────────────────────
+  // THE BOX THAT CLIPPED THEM IS NOT __panel, which declares no `overflow` at
+  // all. It is ui-core's own menu chrome: the widget writes
+  //
+  //   child.$el.css({ position: 'absolute', overflow: 'hidden' })
+  //
+  // onto .menu-topic-items__wrapper (letc/widgets/menu/index.js, onPartReady
+  // case 'items-wrapper'). The wrapper shrink-wraps the panel, so its clip
+  // rect and the panel's border coincide and the cut reads as the panel's.
+  // Being INLINE it outranks any stylesheet, hence `!important` — the same
+  // override desk/skin/topbar.scss already makes for __add-wrapper and
+  // __ws-wrapper, whose menus escape the bar for the same reason.
+  //
+  // GATED ON THE OPEN STATE, because that clip is load-bearing while closed:
+  // a `direction: down` menu is shut by translating .menu-topic-items up by
+  // (items + trigger) height and letting the wrapper's overflow swallow it
+  // (menu/index.js _closeItems). Lifted unconditionally, the shut panel is
+  // painted over the topbar.
+  //
+  // The gate is the MENU ROOT's data-state — this element — which _onOpen sets
+  // to 1 and _close/_onClosed set to 0. NOT the wrapper's own data-state: that
+  // is written "open" in _openItems and never written back, so it reports
+  // "open" for the rest of the session and would take the closed clip with it.
+  &__wrapper[data-state="1"] .menu-topic-items__wrapper {
+    overflow: visible !important;
+  }
+
   // ── The chip in the bar ────────────────────────────────────────────────
   // Figma 48:37106 org-tab: 191x30, fill #f2f2f7, r8, padding [4 12 4 4], gap 8.
   // The tint is PERMANENT, not a hover state — the chip reads as a pill in the
@@ -136,7 +163,7 @@
     padding: 12px;
     border-radius: var(--corner-radius-4);
     background-color: var(--normal-bg-elevated);
-    border: 1px solid var(--border-muted);
+    border: 1px solid var(--border-default);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   }
 

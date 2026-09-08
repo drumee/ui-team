@@ -3838,6 +3838,91 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * A workspace opened from a listing that is not the switcher's — the org
+   * view's cards (Figma 104:33055).
+   *
+   * THE SAME GESTURE, so the same path: a card is a switcher row drawn
+   * somewhere else, and the work around the open is what the card was missing.
+   * `Wm.loadWorkspace` alone (which is what the card called) opens the pane and
+   * closes the screen over it, but leaves the rail lit on the tab the PREVIOUS
+   * workspace was on, the switcher's label and its `data-current` mark reading
+   * the old workspace, and a tour still painted on the pane being replaced.
+   * _switchWorkspaceAndOffer is where all of that lives, and none of it is
+   * worth a second copy.
+   *
+   * A ROW, not a wsKey. The org view is fed `org_workspaces`, whose rows the
+   * switcher has never seen; _workspaceKey is the desk's own rule for turning
+   * one into an identity, so deriving it here keeps a single definition rather
+   * than teaching another widget to spell it. (Those rows are always
+   * `filetype: 'hub'`, so they cannot hit the personal-workspace collision the
+   * key rule exists for — but they go through it anyway, because that is the
+   * rule and this is not the place to decide it does not apply.)
+   *
+   * THE FALLBACK IS NOT A DETAIL. The org view lists every workspace in the
+   * ORGANISATION, deliberately including private ones the caller is not a
+   * member of — per-workspace membership lives in each hub's own database, so
+   * yp cannot say which those are (see acl/organization.json) and the cards
+   * cannot be greyed. _switchWorkspaceAndOffer resolves against the caller's
+   * OWN list and returns in silence for anything absent from it, which would
+   * turn those cards into dead clicks. So a row the switcher does not know is
+   * opened directly, exactly as the card did before: the server refuses at
+   * media.attributes and says so, which is a worse outcome than opening and a
+   * much better one than nothing happening.
+   *
+   * @param {Object} row an org_workspaces row
+   * @returns {Promise}
+   */
+  async _switchWorkspaceRow(row) {
+    if (!row) return;
+    const wsKey = this._workspaceKey(row);
+
+    // THE CARD FOR THE WORKSPACE THAT IS ALREADY OPEN, which is a click that
+    // did nothing at all. Wm.loadWorkspace early-returns for the workspace it
+    // is already on (same hub_id + nid) and that return sits ABOVE its panel
+    // cleanup, deliberately and with the reason written there: "Only close when
+    // actually opening a NEW workspace (not when raising an existing tab) —
+    // otherwise switching tabs would close shared panels."
+    //
+    // That is right for the sidebar and the switcher, where the open panel has
+    // nothing to do with the gesture. From a CARD it is inverted: the panel IS
+    // the screen the click came from, and the click means "take me to that
+    // workspace". With the org screen also hiding the address chip and the
+    // rail, a desk left on it looked stuck — there was nothing else to press.
+    //
+    // So the exit is made here, through the desk's own _leaveSectionScreen —
+    // the call the rail uses (_railTab). It closes the three main slots AND, if
+    // the bar was showing a section label, rebuilds the workspace path from the
+    // pane's own model; that second half is what brings the address chip back
+    // (breadcrumb._setSectionMode drops its `hideAddress` stamp on any repaint).
+    //
+    // `wsKey &&` is load-bearing: _leavesWorkspace answers FALSE for a falsy
+    // key — "nothing to leave" — which reads identically to "already open", so
+    // an unkeyable row would close the screen and open nothing.
+    if (wsKey && !this._leavesWorkspace(wsKey)) {
+      // The pane BEFORE the exit, and _railWorkspace rather than the active
+      // window: a pane that is open but not raised must not read as "no
+      // workspace" (see that helper).
+      const w = this._railWorkspace();
+      // Still handed to loadWorkspace. Its early return RAISES a pane that a
+      // popup folder window is covering, which is the other half of "open the
+      // workspace I clicked".
+      if (window.Wm && _.isFunction(window.Wm.loadWorkspace)) {
+        window.Wm.loadWorkspace(this._workspaceTarget(row));
+      }
+      return this._leaveSectionScreen(w);
+    }
+
+    // The caller's own workspaces, which is what _switchWorkspace can resolve.
+    // Cached, so this is a microtask in practice.
+    const rows = await this._fetchWorkspaces().catch(() => null);
+    const known = !!wsKey
+      && (rows || []).some((r) => this._workspaceKey(r) === wsKey);
+    if (known) return this._switchWorkspaceAndOffer(wsKey);
+    if (!window.Wm || !_.isFunction(window.Wm.loadWorkspace)) return;
+    return window.Wm.loadWorkspace(this._workspaceTarget(row));
+  }
+
+  /**
    * Open a workspace on boot when nothing else claimed the screen.
    *
    * The desk used to land on an empty home grid, which the new shell has no
@@ -7008,6 +7093,18 @@ class desk_module extends LetcBox {
     if (!require("libs/org-overview").orgFeature()) return;
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: Organization.name() || LOCALE.ORGANIZATION,
+      // NO ADDRESS CHIP FOR THIS ONE. The org chip is two elements to the left
+      // in the same cluster and already reads "Acme Corporation"; the address
+      // chip would print the same words again, right next to it, with a "/"
+      // and a cursor that go nowhere. So the chip is not drawn at all here —
+      // the only section screen that asks for this, because it is the only one
+      // whose name is already in the bar.
+      //
+      // Still a SECTION in every other respect, which is what matters on the
+      // way out: _leaveSectionScreen reads breadcrumb.isSectionMode() to
+      // decide whether to rebuild the workspace path, and a screen that was
+      // never a section would leave the bar reading nothing.
+      hideAddress: 1,
     });
     return this.togglePanel("desk_org_view", "settings-main-slot", true, opt);
   }
@@ -7945,6 +8042,14 @@ class desk_module extends LetcBox {
         // it opens begins on. See _switchWorkspaceAndOffer for why only this
         // gesture does the second half.
         return this._switchWorkspaceAndOffer(cmd.mget("wsKey"));
+
+      // An org view CARD — the same gesture as a switcher row, from a screen
+      // whose listing is not the switcher's. It arrives with the ROW rather
+      // than a wsKey because the org view is fed org_workspaces, which the
+      // desk's own key rule has never seen; deriving the key here is what
+      // keeps one definition of "which workspace is this".
+      case "switch-workspace-row":
+        return this._switchWorkspaceRow(args.row);
 
       // ── Workspace rail (Figma 43:23955) ────────────────────────────────
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
