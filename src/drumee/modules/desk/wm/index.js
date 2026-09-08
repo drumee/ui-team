@@ -1903,7 +1903,26 @@ class __window_manager extends push {
       location.href = _ssReturn;
       return;
     }
+    // THE HOME GRID DOES NOT PAINT ON BOOT UNTIL SOMEONE DECIDES IT SHOULD.
+    //
+    // Stamped BEFORE feed(), so the grid is `display:none` from the frame it
+    // is created in. It used to render visible and stay visible for the whole
+    // restore — _waitForWm, a 300ms settle, the workspace list, then
+    // media.attributes — roughly a second of the old home screen before
+    // loadWorkspace's own _syncHomeGrid(1) finally stamped it away. That
+    // second IS the flash on every reload.
+    //
+    // Hidden is the safe default here because the grid is no longer a landing
+    // screen in the 2.0 shell: boot ends on a workspace, on a deep-link
+    // target, or on desk/home-empty. settleHomeGrid() below is what brings the
+    // grid back if none of those claims the canvas, so "hidden" can never
+    // become "blank".
+    this._syncHomeGrid(1, true);
     this.feed(require("./skeleton")(this));
+    // Safety net for a boot that claims nothing — see settleHomeGrid. The desk
+    // calls it directly at the end of its restore; this covers a Wm mounted
+    // without one (or a restore that throws before it can).
+    this._armHomeGridSettle();
     // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
     //
     // ONLY the explicit hash form opens immediately: #/desk/wm/hub?hub_id=… is an
@@ -2227,10 +2246,92 @@ class __window_manager extends push {
    * exists to remove.
    *
    * @param {0|1} open whether a workspace occupies the canvas
+   * @param {Boolean} [boot] the boot hold, which hides the grid WITHOUT
+   *   claiming the canvas — see settleHomeGrid
    */
-  _syncHomeGrid(open) {
+  _syncHomeGrid(open, boot) {
     if (!this.el) return;
     this.el.dataset.workspace = open ? "1" : "0";
+    // Every other hide comes from something taking the canvas, and it is
+    // stamped SYNCHRONOUSLY at the top of loadWorkspace — before the
+    // media.attributes round trip that sets _curWorkspace and before the pane
+    // feeds. That gap is exactly where a slow connection would otherwise let
+    // settleHomeGrid mistake "still opening" for "nothing opened".
+    if (open) this._homeGridClaimed = !boot;
+    else this._homeGridClaimed = false;
+  }
+
+  /** True when `layer` currently holds at least one live window. */
+  _layerHasWindow(layer) {
+    if (!layer || (layer.isDestroyed && layer.isDestroyed())) return false;
+    return !!(layer.collection && layer.collection.length);
+  }
+
+  /**
+   * REVEAL THE HOME GRID ONLY IF NOTHING ELSE CLAIMED THE CANVAS.
+   *
+   * The counterpart to the boot stamp in onDomRefresh: the grid starts hidden,
+   * and this is the single place that can decide otherwise. It never reveals
+   * on a guess — it reveals on the ABSENCE of every other claim:
+   *
+   *   _homeGridClaimed       loadWorkspace has been entered — stamped before
+   *                          its round trip, so "still opening" is never read
+   *                          as "nothing opened"
+   *   _curWorkspace          that open has landed
+   *   headlessLayer          a pane is docked on the canvas
+   *   desk[data-no-workspace]    the account has none, and desk/home-empty is up
+   *
+   * windowsLayer is deliberately NOT a claim. A floating window sits ABOVE the
+   * canvas rather than occupying it — a deep-linked file that docks no
+   * workspace (`#/desk/file?…`, the shapes openDeepLinkHash leaves alone) still
+   * wants the grid behind it, and closing that window must not leave a blank
+   * desk.
+   *
+   * With none of those, home really is the screen — a failed workspace list, a
+   * restore that threw — and the grid is the right thing to show, exactly as
+   * before this existed.
+   *
+   * While the desk's restore is still in flight the verdict is not in yet, so
+   * this re-arms rather than answering; `retries` bounds that so a restore flag
+   * left standing (a throw between raise and clear) cannot strand the canvas
+   * blank — after ~12s the grid wins, because an empty screen is worse than a
+   * late one.
+   *
+   * @param {Number} [retries] remaining deferrals while the restore runs
+   */
+  settleHomeGrid(retries = 12) {
+    this._cancelHomeGridSettle();
+    if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
+    // Already showing — nothing to decide.
+    if (this.el.dataset.workspace !== "1") return;
+
+    const deskEl = window.Desk && window.Desk.el;
+    const claimed =
+      !!this._homeGridClaimed ||
+      !!this._curWorkspace ||
+      this._layerHasWindow(this.headlessLayer) ||
+      !!(deskEl && deskEl.dataset && deskEl.dataset.noWorkspace === "1");
+    if (claimed) return;
+
+    const restoring = !!(window.Desk && window.Desk._restoreInFlight);
+    if (restoring && retries > 0) return this._armHomeGridSettle(retries - 1);
+
+    this._syncHomeGrid(0);
+  }
+
+  /** @param {Number} [retries] see settleHomeGrid */
+  _armHomeGridSettle(retries = 12) {
+    this._cancelHomeGridSettle();
+    this._homeGridSettleTimer = setTimeout(() => {
+      this._homeGridSettleTimer = null;
+      this.settleHomeGrid(retries);
+    }, 1000);
+  }
+
+  _cancelHomeGridSettle() {
+    if (!this._homeGridSettleTimer) return;
+    clearTimeout(this._homeGridSettleTimer);
+    this._homeGridSettleTimer = null;
   }
 
   reload() {

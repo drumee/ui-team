@@ -1903,6 +1903,7 @@ class desk_module extends LetcBox {
       // A second loadDefault in the same page must not leave the suppress
       // flag stuck true (which would permanently no-op loadHome).
       this._clearRestoreInFlight(0);
+      this._settleHomeGrid();
       return;
     }
     this._screenRestored = true;
@@ -1919,6 +1920,10 @@ class desk_module extends LetcBox {
       // mount-time loadHome() fires Wm.reload() and wipes it.
       const opened = await this._openDefaultWorkspace();
       this._clearRestoreInFlight(opened ? 2500 : 0);
+      // Nothing opened — either the account has none (home-empty is up, and
+      // settleHomeGrid sees it) or the list could not be read, which is the
+      // one case the home grid is still the right answer for.
+      if (!opened) this._settleHomeGrid();
       return;
     }
 
@@ -1970,6 +1975,27 @@ class desk_module extends LetcBox {
       // Hold the flag a beat longer than the feed so late mount-time
       // loadHome stragglers (breadcrumb renders async) stay suppressed.
       this._clearRestoreInFlight(2000);
+      // Boot has finished deciding. The grid has been hidden since Wm mounted
+      // (wm/index.js onDomRefresh) precisely so this restore could paint over
+      // it without the old home screen showing through first; now say whether
+      // it comes back. It defers itself until the flag above clears, and
+      // stays hidden unless nothing at all claimed the canvas.
+      this._settleHomeGrid();
+    }
+  }
+
+  /**
+   * Hand the home workspace-tile grid its verdict once boot has stopped
+   * deciding. Safe to call from any restore path, including the ones that
+   * failed: Wm.settleHomeGrid only reveals the grid when nothing else — a
+   * workspace, a restored window, the no-workspace screen — is on the canvas.
+   */
+  _settleHomeGrid() {
+    try {
+      if (typeof Wm === "undefined" || !Wm) return;
+      if (_.isFunction(Wm.settleHomeGrid)) Wm.settleHomeGrid();
+    } catch (e) {
+      /* the grid's own safety net still runs — never block the restore */
     }
   }
 

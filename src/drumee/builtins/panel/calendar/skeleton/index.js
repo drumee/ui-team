@@ -30,20 +30,16 @@ module.exports = function (ui) {
   const view = ui.getView();
   const grid = (GRIDS[view] || monthGrid)(ui);
 
-  // Three different nothings, and they must not read alike:
-  //   not loaded yet  → say nothing; an unfetched month and an empty one look
-  //                     identical, and "Nothing scheduled" is a claim we cannot
-  //                     make before the answer arrives
-  //   load failed     → say so, rather than reporting an empty calendar for a
-  //                     read that never landed (the state while calendar.list
-  //                     is unimplemented)
-  //   genuinely empty → "Nothing scheduled"
+  // A genuinely empty calendar says nothing — the month frame with no chips
+  // already reads as "nothing scheduled", and an overlay in the middle of the
+  // grid only covers the cells the user is about to click.
+  // A failed read still speaks up: reporting an empty calendar for an answer
+  // that never landed would be a lie (the state while calendar.list is
+  // unimplemented). Not-loaded-yet stays silent too — an unfetched month and
+  // an empty one look identical.
   const items = ui.getVisibleItems();
   const empty = !items.length;
-  let emptyText = null;
-  if (empty && ui.hasLoaded()) {
-    emptyText = ui.hasLoadFailed() ? LOCALE.TRY_AGAIN : LOCALE.CAL_NOTHING_SCHEDULED;
-  }
+  const emptyText = empty && ui.hasLoaded() && ui.hasLoadFailed() ? LOCALE.TRY_AGAIN : null;
 
   return Skeletons.Box.Y({
     className: `${pfx}__page`,
@@ -67,12 +63,12 @@ module.exports = function (ui) {
         kids: [
           grid,
           // Sits over the grid rather than replacing it: the month frame keeps
-          // its cells (and their quick-add "+") on an empty month.
+          // its cells (and their quick-add "+") while the failure shows.
           emptyText
             ? Skeletons.Note({
                 className: `${pfx}__empty`,
                 content: emptyText,
-                attrOpt: { "data-failed": ui.hasLoadFailed() ? "1" : "0" },
+                attrOpt: { "data-failed": "1" },
               })
             : null,
         ].filter(Boolean),
