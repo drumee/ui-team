@@ -4,6 +4,64 @@
   @include meeting-shell;
 }
 
+// ── THE CALL IS A SCREEN, NOT A POPUP ───────────────────────────────────────
+//
+// The desk meeting used to open as a 960x600 centered popup with the whole
+// window vocabulary attached: a drag handle on the top bar, resize handles on
+// all eight edges, a size + close cluster, and a Full-screen / Tile / Reframe
+// menu. A call is the thing you are doing, not a document you arrange next to
+// other documents — so it fills the desk canvas exactly like Settings or the
+// Calendar do.
+//
+// DELIBERATELY HERE AND NOT IN THE SHARED MIXIN. meeting-shell's
+// `[data-standalone="1"]` block is included by window/connect too, and the 1:1
+// call IS still a floating window (its own Figma design: 12px radius, hairline
+// border, big shadow, draggable header). Putting the fill in the mixin
+// full-frames that as well.
+//
+// The box comes from the layer — wm/skin `&__layer.call-layer` is the whole
+// work area — which is what makes the call follow the canvas for free as the
+// sidebar pins/collapses or the browser resizes. Nothing here computes a size,
+// and window/meeting _lockGeometry strips every inline dimension the window
+// base class writes, because an inline `width` would beat all of this.
+//
+// `top`/`left` explicitly rather than `inset: 0`: the desk dock overrides
+// top/left/width/height with !important while the call is parked (desk/skin
+// `__call-dock > *`) and sets right/bottom to `auto`, and the DMZ corner-park
+// writes only those four. Declaring right/bottom `auto` keeps both from being
+// over-constrained.
+//
+// Same specificity as the mixin's rule (0,2,0) and later in the file, so it
+// wins on order.
+.window-meeting__ui[data-standalone="1"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  height: 100%;
+  // window/skin/window.scss floors every `.window__ui` at 600x320, and its
+  // `[data-device="mobile"]` variant at 300px — both at the same specificity as
+  // this rule (0,2,0), so which one wins would come down to the order the two
+  // skins happen to be required in at runtime. A screen takes the canvas it is
+  // given, phone included, so don't leave that to chance.
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+
+  // The base class still installs jQuery-UI resizable (webrtc/room/jitsi
+  // prepareConference) and _lockGeometry disables it — but the handles are in
+  // the DOM either way, and an 18px corner target sitting over the video is
+  // exactly the kind of thing that eats a click on a control near the edge.
+  // !important to beat the mixin's per-edge sizing rules.
+  .ui-resizable-handle {
+    display: none !important;
+  }
+}
+
 .window__message-container {
   position: absolute;
   background-color: var(--normal-bg-80);

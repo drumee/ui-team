@@ -31,7 +31,12 @@ const __window_meeting_topbar = function (_ui_) {
     sys_pn: "devices-list"
   });
 
-  const controls = _ui_.get('controls') || 'sc';
+  // Window control cluster: sizing + close for a DMZ room (which is still a
+  // free-floating window in the dmz module's own layer and passes controls
+  // "sf"), NOTHING for the desk meeting. A team call fills the desk canvas now
+  // — there is no size to toggle and no window to close, only the in-call
+  // "Leave meeting" button. See window/skeleton/topbar/control for the letters.
+  const controls = _ui_.get('controls') || '';
   const attendees = require('builtins/webrtc/skeleton/attendees')(_ui_);
 
   const videoPill = Skeletons.Box.X({
@@ -81,7 +86,7 @@ const __window_meeting_topbar = function (_ui_) {
       attendees,
       devices,
       timerPill,
-      require('window/skeleton/topbar/control')(_ui_, controls)
+      controls ? require('window/skeleton/topbar/control')(_ui_, controls) : ''
     ]
   });
 

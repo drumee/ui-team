@@ -855,8 +855,11 @@ class __window_manager extends push {
       this._curWorkspace.nid == nid
     ) {
       // Already the current workspace — but its pane may be covered by a
-      // popup folder window (the active window fully occludes the rest).
-      // Raise it so re-clicking the sidebar item always brings it back.
+      // popup folder window (the active window fully occludes the rest), or by
+      // a live call, which fills the whole canvas now (window/meeting
+      // _lockGeometry). Re-clicking the sidebar item is the gesture for "bring
+      // my workspace back", so it has to lift both.
+      this.parkLiveCall();
       const pane = this._findWorkspaceWindow(hub_id);
       if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;

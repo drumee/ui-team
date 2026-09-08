@@ -126,11 +126,10 @@ class __window_team extends __hub {
   }
 
   /**
-   * Launch the native team call as its own top-level window so it gets the
-   * full screen real-estate instead of a cramped side panel. window_meeting
-   * already renders standalone chrome (header/resizable) and honors the
-   * _meeting_standalone flag for default sizing. A singleton guard prevents
-   * a second concurrent call — we just refocus the running one.
+   * Launch the native team call as a full-frame desk screen (the call layer,
+   * filling the canvas — see window/meeting _lockGeometry) rather than a
+   * cramped side panel or a floating popup. A singleton guard prevents a second
+   * concurrent call — we just refocus the running one.
    */
   startTeamCall() {
     const existing =
@@ -140,12 +139,6 @@ class __window_team extends __hub {
       return Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
     }
     const room_id = this.mget(_a.nid) || this.mget(_a.actual_home_id);
-
-    // Center a free-floating popup via an explicit `style` so it floats
-    // correctly instead of docking to the team window. Center within the WM
-    // content area (right of the sidebar), not the raw viewport — see
-    // Wm.centeredPopupGeometry.
-    const { top, left, width, height } = Wm.centeredPopupGeometry();
 
     return Wm.launch(
       {
@@ -167,7 +160,9 @@ class __window_team extends __hub {
         video: 1,
         standalone: 1,
         wm_unique_id: `window_meeting-${this.mget(_a.hub_id)}`,
-        style: { top, left, width, height, minWidth: 480, minHeight: 420, margin: 0 },
+        // No geometry: a call is a full-frame desk screen now and CSS fills the
+        // call layer with it. See folder/index.js _launchMeetingStandalone.
+        style: { margin: 0 },
       },
       { explicit: 1, singleton: 1 },
     );

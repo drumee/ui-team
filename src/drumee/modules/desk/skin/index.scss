@@ -162,6 +162,25 @@ html {
     }
   }
 
+  // A WM WRAPPER-MODAL RELEASES THE WINDOW LAYERS OVER THIS DOCK.
+  //
+  // Opening one DISSOLVES `.window-manager__ui`'s stacking context (see the
+  // `__wm-container:has(...)` block further down — that is what lets the modal
+  // clear the full-page slot). Its window layers then resolve at the document
+  // root, at 50000 and — for the layer holding the focused window — 50001
+  // !important (wm/skin), both of which are above this dock's 20002. So the
+  // workspace pane paints over the parked call, and the focused window's
+  // transparent full-area `dialog__wrapper` takes the click that was meant for
+  // the tile: the call is on screen, running, and unreachable.
+  //
+  // Past the layers, deliberately still below the modal itself (100000). The
+  // dialog is what has the user's attention; the call is a corner affordance
+  // that has to stay visible and clickable, not one that outranks a question
+  // the user is being asked.
+  &__body:has(.window-manager__wrapper-modal[data-state="open"]) &__call-dock {
+    z-index: 50002;
+  }
+
   &__overlay {
     position: absolute;
     width: 100%;
