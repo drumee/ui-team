@@ -11,59 +11,59 @@ const { STATUSES } = require('./data');
 const statusOf = (key) => STATUSES.find((s) => s.key === key) || STATUSES[0];
 
 /** Coloured dot + label, e.g. "● In Progress". */
-export function statusPill(pfx, key, opt = {}) {
+function statusPill(pfx, key, opt = {}) {
   const s = statusOf(key);
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__pill status${opt.plain ? ' plain' : ''}`,
     dataset: { status: s.key },
     kids: [
-      Skeletons.Box.Y({ className: `${pfx}__pill-dot` }),
-      Skeletons.Note({ className: `${pfx}__pill-label`, content: s.label }),
+      Skeletons.Box.Y({ active: 0, className: `${pfx}__pill-dot` }),
+      Skeletons.Note({ active: 0, className: `${pfx}__pill-label`, content: s.label }),
     ],
   });
 }
 
 /** Priority pill, or the muted "Priority ⌄" placeholder when unset. */
-export function priorityPill(pfx, key) {
+function priorityPill(pfx, key) {
   if (!key) {
-    return Skeletons.Box.X({
+    return Skeletons.Box.X({ active: 0,
       className: `${pfx}__pill priority unset`,
       kids: [
-        Skeletons.Note({ className: `${pfx}__pill-label`, content: 'Priority' }),
-        Skeletons.Image.Svg({ ico: 'carret-down', className: `${pfx}__pill-caret` }),
+        Skeletons.Note({ active: 0, className: `${pfx}__pill-label`, content: 'Priority' }),
+        Skeletons.Image.Svg({ active: 0, ico: 'carret-down', className: `${pfx}__pill-caret` }),
       ],
     });
   }
   const label = key.charAt(0).toUpperCase() + key.slice(1);
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__pill priority`,
     dataset: { priority: key },
-    kids: [Skeletons.Note({ className: `${pfx}__pill-label`, content: label })],
+    kids: [Skeletons.Note({ active: 0, className: `${pfx}__pill-label`, content: label })],
   });
 }
 
-export function dateChip(pfx, date) {
+function dateChip(pfx, date) {
   if (!date) {
-    return Skeletons.Box.X({
+    return Skeletons.Box.X({ active: 0,
       className: `${pfx}__chip date unset`,
       kids: [
-        Skeletons.Note({ className: `${pfx}__chip-label`, content: 'Due date' }),
-        Skeletons.Image.Svg({ ico: 'calendar', className: `${pfx}__chip-icon` }),
+        Skeletons.Note({ active: 0, className: `${pfx}__chip-label`, content: 'Due date' }),
+        Skeletons.Image.Svg({ active: 0, ico: 'calendar', className: `${pfx}__chip-icon` }),
       ],
     });
   }
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__chip date`,
-    kids: [Skeletons.Note({ className: `${pfx}__chip-label`, content: date })],
+    kids: [Skeletons.Note({ active: 0, className: `${pfx}__chip-label`, content: date })],
   });
 }
 
-export function fileChip(pfx, name) {
-  return Skeletons.Box.X({
+function fileChip(pfx, name) {
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__chip file`,
     kids: [
-      Skeletons.Image.Svg({ ico: 'app-attachment', className: `${pfx}__chip-icon` }),
-      Skeletons.Note({ className: `${pfx}__chip-label`, content: name }),
+      Skeletons.Image.Svg({ active: 0, ico: 'app-attachment', className: `${pfx}__chip-icon` }),
+      Skeletons.Note({ active: 0, className: `${pfx}__chip-label`, content: name }),
     ],
   });
 }
@@ -73,32 +73,38 @@ export function fileChip(pfx, name) {
  * No photography in the tour, so each is a tinted disc — the tones cycle so a
  * stack reads as different people.
  */
-export function avatars(pfx, count, opt = {}) {
+function avatars(pfx, count, opt = {}) {
   if (!count) {
     if (!opt.unassigned) return null;
-    return Skeletons.Box.X({
+    return Skeletons.Box.X({ active: 0,
       className: `${pfx}__unassigned`,
       kids: [
-        Skeletons.Image.Svg({ ico: 'account', className: `${pfx}__unassigned-icon` }),
-        Skeletons.Note({ className: `${pfx}__unassigned-label`, content: 'Unassigned' }),
+        Skeletons.Image.Svg({ active: 0, ico: 'account', className: `${pfx}__unassigned-icon` }),
+        Skeletons.Note({ active: 0, className: `${pfx}__unassigned-label`, content: 'Unassigned' }),
       ],
     });
   }
   const shown = Math.min(count, 3);
   const kids = [];
   for (let i = 0; i < shown; i++) {
-    kids.push(Skeletons.Box.Y({ className: `${pfx}__avatar`, dataset: { tone: i % 3 } }));
+    kids.push(Skeletons.Box.Y({ active: 0, className: `${pfx}__avatar`, dataset: { tone: i % 3 } }));
   }
   if (count > shown) {
-    kids.push(Skeletons.Note({ className: `${pfx}__avatar more`, content: `+${count - shown}` }));
+    kids.push(Skeletons.Note({ active: 0, className: `${pfx}__avatar more`, content: `+${count - shown}` }));
   }
-  return Skeletons.Box.X({ className: `${pfx}__avatars`, kids });
+  return Skeletons.Box.X({ active: 0, className: `${pfx}__avatars`, kids });
 }
 
 /** Small square icon button (bell-off on column headers, chevrons, …). */
-export function iconBtn(pfx, ico, extra = '') {
-  return Skeletons.Box.Y({
+function iconBtn(pfx, ico, extra = '') {
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__icon-btn ${extra}`.trim(),
-    kids: [Skeletons.Image.Svg({ ico, className: `${pfx}__icon-btn-svg` })],
+    kids: [Skeletons.Image.Svg({ active: 0, ico, className: `${pfx}__icon-btn-svg` })],
   });
 }
+
+// CommonJS, like the rest of the tour's toolkit reads it. It was `export`
+// alongside a `require` in the same file, which webpack accepts and node does
+// not — so nothing here could be rendered by a test or a harness, which is a
+// large part of how this whole view set went stale unnoticed.
+module.exports = { statusPill, priorityPill, dateChip, fileChip, avatars, iconBtn };

@@ -25,23 +25,29 @@
  *     its destruction to the orchestrator, so the only thing left to watch is
  *     the confirmation that replaces it — awaitToastDismissed.
  *
- * WHAT COUNTS AS SUCCESS is deliberately not "a confirmation appeared". A FAILED
- * invite raises a window_info of its own (permission_restricted's error path
- * calls Wm.alert), so sniffing for one reads a failure as a completed step. The
+ * WHAT COUNTS AS SUCCESS is deliberately not "a confirmation appeared". The
  * signal is permission_restricted's own "invitation:sent" broadcast, which it
- * only fires once the server has said yes.
+ * only fires once the server has said yes — and that is now the ONLY signal
+ * Route A has: the panel reports success inline at the field and stays open,
+ * so nothing appears or disappears to sniff for. (The rule predates that: a
+ * FAILED invite used to raise a window_info of its own, so sniffing for one
+ * read a failure as a completed step. Route B's popup still raises one.)
  */
 
 // The surfaces Step 2 hands the user to, all fed into the shared wrapper-modal:
-// the internal permission panel Step 1 ends on OR the invite popup, then the
-// invite-sent confirmation that REPLACES either of them on a successful send
-// (Wm.alert → window_info). A click on any of them is the user working; a click
-// beside them is the abandon gesture the flow guards.
+// the internal permission panel Step 1 ends on OR the invite popup, plus the
+// invite-sent confirmation the POPUP still replaces itself with on a successful
+// send (Wm.alert → window_info). ⚠️ THE PANEL NO LONGER DOES: it reports the
+// send inline and stays open, so on Route A the toast simply never matches.
+// A click on any of them is the user working; a click beside them is the
+// abandon gesture the flow guards.
 const INVITE_POPUP = ".invite-popup__container";
 const INVITE_PANEL = ".permission-restricted__main";
 const INVITE_TOAST = ".window-info__ui, .window-info__main";
 const STEP2_SURFACES = `${INVITE_POPUP}, ${INVITE_PANEL}, ${INVITE_TOAST}`;
-// What Route A waits on: the panel itself, or the confirmation that replaced it.
+// What Route A waits on. In practice just the panel now — it is no longer
+// replaced on a successful send — but the toast stays in the selector so a
+// confirmation raised by anything else still counts as the surface being up.
 // Both gone = the step is over.
 const PANEL_SURFACES = `${INVITE_PANEL}, ${INVITE_TOAST}`;
 // The same pair for Route B. This is what the cutout spotlights while that route
@@ -147,8 +153,10 @@ class InviteSurfaces {
         return finish(this._sent ? onSent : onClosed);
       }
       seen = true;
-      // The panel gone with something still up means the invite-sent
-      // confirmation has replaced it — step the card aside for it.
+      // The panel gone with something still up means a confirmation has
+      // replaced it — step the card aside for it. An INVITE no longer does
+      // this (it reports inline and leaves the panel), so on the normal Route A
+      // path this stays false and the card simply remains over the panel.
       this._ui.markInviteToast(!document.querySelector(INVITE_PANEL));
       // Still there — keep the hole on it. TRACK rather than measure once: this
       // fires when the panel is inserted, which is before it has slid into

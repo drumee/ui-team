@@ -309,7 +309,20 @@ class __promo_launch30 extends LetcBox {
     this._track("trial_upgrade_clicked", { plan: "team" });
     await this._markEndedAnswered();
     this._close();
-    RADIO_BROADCAST.trigger("desk:open-billing-page", { plan: "team" });
+    // Straight to CHECKOUT, not to the plans grid. The gate has already
+    // pitched Team at its monthly price and the owner answered "upgrade" —
+    // landing them on the ladder makes them pick the same plan a second time.
+    // `tab`/`cycle` ride the existing #/desk/billing deep-link contract
+    // (settings_billing._applyDeepLink), and the cycle is pinned to the one
+    // this modal quoted (TEAM_PRICE is the monthly figure) so the checkout
+    // cannot open on a price the user was never shown. An account that turns
+    // out not to be able to check out is stepped back down to the plans view
+    // by _settleDeepLinkTab, so this can never dead-end.
+    RADIO_BROADCAST.trigger("desk:open-billing-page", {
+      plan: "team",
+      cycle: "monthly",
+      tab: "checkout",
+    });
   }
 
   /**

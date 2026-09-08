@@ -129,7 +129,15 @@ function open() {
  */
 function click(ui, cmd) {
   if (!isExternal(ui)) return open();
-  if (_.isFunction(ui._delegate) && ui._delegate(cmd)) return;
+  // `floating` is what makes the panel visible. The MFS view's own Share row
+  // renders it as a drawer INSIDE the host folder window (Figma), but a player
+  // is a sibling window painted OVER that folder window — same window-manager
+  // layer, z 10000 against the folder's 1000 — so the drawer opened correctly
+  // and stayed completely hidden behind the player, looking like a dead click.
+  // Players therefore ask for the standalone window, which lands above them.
+  if (_.isFunction(ui._delegate) && ui._delegate(cmd, { service: "secure-share", floating: 1 })) {
+    return;
+  }
 }
 
 module.exports = { click, open, close, isExternal };

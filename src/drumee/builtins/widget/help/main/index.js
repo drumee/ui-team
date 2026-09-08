@@ -133,6 +133,19 @@ class help_main extends LetcBox {
     this._render();
   }
 
+  /**
+   * The desk keeps this screen mounted when the user navigates away and
+   * reveals it again on the next Get help press (desk/index.js
+   * _slotKeepsChild). Its content is static, so nothing to refresh on the way
+   * back — but a tutorial video must not keep playing behind a hidden panel.
+   * Rebuilding the content column is how this widget stops one (see _render):
+   * the <video> goes with the column and the frame comes back on its poster.
+   */
+  onPanelHidden() {
+    if (!this._playing) return;
+    return this._renderContent();
+  }
+
   _render() {
     // Any rebuild of the content column throws the <video> away, so the
     // player state has to go with it: an hls.js left attached to a detached
@@ -157,6 +170,22 @@ class help_main extends LetcBox {
   loadPage(id) {
     if (!id || id === this._page) return;
     this._page = id;
+    // Extended page -> "Opened self-hosted setup". Placed AFTER the early
+    // return above, which is what stops a repeat click on the already-active
+    // nav item from marking twice -- a property inherited free from that
+    // guard, so do not move this line above it.
+    //
+    // Fire-and-forget: the page switch is what the user asked for.
+    //
+    // Ship-ahead guard: `desk` services arrive from the server's ACL via
+    // Platform.get('services') -- lex/services.json has no `desk` key -- so
+    // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
+    // postService is async and its promise rejection is swallowed by .catch,
+    // but without this guard the call POSTs to a path built from `undefined`.
+    if (id === "self-hosting" && SERVICE.desk && SERVICE.desk.cta_click) {
+      this.postService(SERVICE.desk.cta_click, { cta: "selfhosted", hub_id: Visitor.id },
+        { async: 1 }).catch(() => {});
+    }
     this._faqQuery = "";
     this._faqCategory = "*";
     this._openFaq.clear();

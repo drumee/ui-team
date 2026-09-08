@@ -67,9 +67,33 @@ module.exports = function (ui) {
     uiHandler: ui,
   });
 
+  // Unreads moved out of the tab row and into the header (Figma 43:32209) —
+  // it is orthogonal to WHICH conversations you are looking at, so it composes
+  // with the Direct/Workspace tabs instead of competing with them for the same
+  // radio group. Mirrors the notifications panel's toggle.
+  const unreadToggle = Skeletons.Box.X({
+    className: `${fig}__unread-toggle`,
+    sys_pn: "unread-toggle",
+    service: "toggle-unreads",
+    state: ui._unreadOnly ? 1 : 0,
+    uiHandler: [ui],
+    partHandler: ui,
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Note({
+        className: `${fig}__unread-label`,
+        content: LOCALE.UNREADS,
+      }),
+      Skeletons.Box.X({
+        className: `${fig}__toggle-track`,
+        kids: [Skeletons.Box.X({ className: `${fig}__toggle-thumb` })],
+      }),
+    ],
+  });
+
   const sidebarActions = Skeletons.Box.X({
     className: `${fig}__sidebar-actions`,
-    kids: [composeWrapper, closeBtn],
+    kids: [unreadToggle, composeWrapper, closeBtn],
   });
 
   const sidebarHeader = Skeletons.Box.X({
@@ -93,36 +117,66 @@ module.exports = function (ui) {
     _.isFunction(Desk.isSupportContact) &&
     Desk.isSupportContact();
 
+  // Direct Chat / Workspace chat (Figma 43:32209). Unlike the old
+  // All / Unread / Support row these are not a client-side show/hide over one
+  // list — they are two different QUERIES (chat.chat_rooms with flag=contact
+  // vs chat.share_rooms / group_chat_rooms), so picking one restarts the list.
+  // See getCurrentApi + _setRoomScope in ../index.js.
+  const scope = ui._roomScope || "direct";
+  const scopeTab = ({ label, key, service, countPn }) =>
+    Skeletons.Box.X({
+      className: `${fig}__filter-btn`,
+      radio: filterRadio,
+      state: key === scope ? 1 : 0,
+      service,
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Note({
+          className: `${fig}__filter-label`,
+          content: label,
+        }),
+        // Per-tab unread count. Built here and hidden until filled; nothing
+        // populates it yet — chat_rooms carries per-ROOM counts, not a
+        // per-scope total.
+        Skeletons.Note({
+          className: `${fig}__filter-count`,
+          sys_pn: countPn,
+          partHandler: ui,
+          content: "",
+          attrOpt: { "data-count": 0 },
+        }),
+      ],
+    });
+
   const filters = Skeletons.Box.X({
     className: `${fig}__filters`,
     kids: [
-      Skeletons.Button.Label({
-        className: `${fig}__filter-btn`,
-        label: LOCALE.ALL || "All",
-        radio: filterRadio,
-        initialState: 1,
-        service: "filter-all",
-        uiHandler: ui,
+      scopeTab({
+        label: LOCALE.DIRECT_CHAT,
+        key: "direct",
+        service: "filter-direct",
+        countPn: "count-direct",
       }),
-      Skeletons.Button.Label({
-        className: `${fig}__filter-btn`,
-        label: LOCALE.UNREADS || "Unread",
-        radio: filterRadio,
-        initialState: 0,
-        service: "filter-unread",
-        uiHandler: ui,
+      scopeTab({
+        label: LOCALE.WORKSPACE_CHAT,
+        key: "workspace",
+        service: "filter-workspace",
+        countPn: "count-workspace",
       }),
+      // Kept beyond the design: the account that ANSWERS support needs to
+      // separate support requests from colleague chats, and 43:32209 is drawn
+      // for an ordinary user who has at most one support conversation. Hidden
+      // for everyone else, so it costs the designed layout nothing.
       answersSupport
-        ? Skeletons.Button.Label({
-            className: `${fig}__filter-btn`,
+        ? scopeTab({
             label: LOCALE.SUPPORT_LABEL,
-            radio: filterRadio,
-            initialState: 0,
+            key: "support",
             service: "filter-support",
-            uiHandler: ui,
+            countPn: "count-support",
           })
         : null,
-    ],
+    ].filter(Boolean),
   });
 
   const contactList = Skeletons.List.Smart({
@@ -148,9 +202,39 @@ module.exports = function (ui) {
     content: LOCALE.ALL_READ || "All read",
   });
 
+  // Conversation search — Figma 43:32209, between the scope tabs and the list:
+  // a 33px pill on 5% black (r=12) with a 16px magnifier and "Search...".
+  //
+  // `watch` rather than a per-keystroke `service`: the Entry's <input> is
+  // created asynchronously, so a listener wired in onPartReady would run
+  // before it exists. watch is the framework's own hook — it attaches once the
+  // field is ready and fires onUiEvent("inbox-search-typed", { value }) on
+  // every change. Same mechanism the folder window's chat search uses.
+  const searchBar = Skeletons.Box.X({
+    className: `${fig}__list-search`,
+    kids: [
+      Skeletons.Image.Svg({
+        className: `${fig}__list-search-icon`,
+        ico: "magnifying-glass",
+      }),
+      Skeletons.Entry({
+        className: `${fig}__list-search-input`,
+        sys_pn: "list-search",
+        partHandler: ui,
+        placeholder: LOCALE.SEARCH || "Search...",
+        require: "any",
+        mode: "interactive",
+        interactive: 1,
+        bubble: 0,
+        watch: "inbox-search-typed",
+        uiHandler: [ui],
+      }),
+    ],
+  });
+
   const sidebar = Skeletons.Box.Y({
     className: `${fig}__sidebar`,
-    kids: [sidebarHeader, filters, contactList, allReadEmpty],
+    kids: [sidebarHeader, filters, searchBar, contactList, allReadEmpty],
   });
 
   // ── Right panel: chat area ───────────────────────────────────────

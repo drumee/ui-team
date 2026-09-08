@@ -76,7 +76,10 @@ function billing_tabs_trigger(ui) {
   }
 
   return Skeletons.Box.X({
-    className: `${figTrigger}-main`,
+    // is-anim only on a render the user asked for (see
+    // settings_billing._motionClass) — the active pill's little settle-in
+    // animation must not replay on a background subscription re-sync.
+    className: `${figTrigger}-main${ui._motionClass()}`,
     sys_pn: `${fig}__tabs-trigger`,
     kids,
   });

@@ -1,23 +1,45 @@
 @use 'mixins/drumee';
 
+// Round 3 notification row — Figma component set 58187:90482
+// (`notification card feed`), variants Unread=yes|no.
+//
+// Token notes:
+//  * Figma Primary/100 (#0b0a21) is `--primary-purple-100`, NOT `--primary-100`:
+//    revamp.scss declares --primary-100 twice and the winning value is #f4e7ff,
+//    a near-white lavender that would render the row text invisible.
+//  * Overlay/brand is rgba(89, 80, 255, .1) — the 10% brand wash used by both
+//    the file-type chip and the folder-name chip.
 .activity-item {
   &__group {
     width: 100%;
+    // In Figma the day caption and the cards are siblings in one 8px-gap
+    // column. Here the caption is nested with its card (so it scrolls with the
+    // group it opens), so the same 8px is repeated inside the group; the feed
+    // list supplies the 8px between groups.
+    gap: 8px;
   }
 
+  // Day-group caption ("Today" / "Yesterday" / "Aug 13"). Body/Mini Body on
+  // Grey/80, flush with the card's left edge. Spacing comes from the gaps
+  // above — the previous padding predated them and would now double up.
+  &__day {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 1.4em, $color: var(--tertiary-grey-80));
+    cursor: default;
+    user-select: none;
+  }
+
+  // The card. Unread carries the Grey/white fill; read has none.
   &__row {
     align-items: center;
     border-radius: 8px;
     cursor: pointer;
     gap: 12px;
-    min-height: 48px;
-    padding: 8px 12px;
+    padding: 12px;
     transition: background-color 0.12s;
     width: 100%;
 
-    &.share {
-      min-height: 52px;
-      padding-top: 4px;
+    &[data-unread="1"] {
+      background-color: var(--tertiary-grey-10);
     }
 
     &:hover {
@@ -25,7 +47,8 @@
     }
   }
 
-  &__avatar-wrap {
+  // 32px leading element; the badge is pinned inside it at (22, 22).
+  &__leading {
     flex-shrink: 0;
     height: 32px;
     position: relative;
@@ -40,56 +63,83 @@
     width: 32px;
   }
 
+  // File-type chip — the actor-less alternative to the avatar.
+  &__chip {
+    align-items: center;
+    background: rgba(89, 80, 255, 0.1);
+    border-radius: 12px;
+    flex-shrink: 0;
+    height: 32px;
+    justify-content: center;
+    width: 32px;
+  }
+
+  &__chip-ico {
+    color: var(--primary-40);
+    height: 18px;
+    width: 18px;
+
+    svg {
+      fill: currentColor;
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  // 14x14 action badge. `data-tone` picks the fill; the glyph is always white.
   &__badge {
     align-items: center;
-    border-radius: 12px;
-    bottom: -4px;
-    display: flex;
+    border-radius: 50%;
+    box-sizing: border-box;
     height: 14px;
     justify-content: center;
+    left: 22px;
+    padding: 2px;
     position: absolute;
-    right: -4px;
+    top: 22px;
     width: 14px;
 
-    &::after {
-      background: #fff;
-      content: "";
+    &[data-tone="brand"] {
+      background: var(--primary-40);
+    }
+
+    &[data-tone="error"] {
+      background: var(--signal-error);
+    }
+
+    &[data-tone="success"] {
+      background: var(--success);
+    }
+
+    &[data-tone="warning"] {
+      background: var(--warning);
+    }
+  }
+
+  &__badge-ico {
+    color: #fff;
+    height: 10px;
+    width: 10px;
+
+    svg {
       display: block;
-      height: 6px;
-      width: 7px;
-    }
-
-    &.mention {
-      background: #5950ff;
-      border: 2px solid rgba(0, 0, 0, 0.05);
-
-      &::after {
-        background: transparent;
-        border: 1.5px solid #fff;
-        border-radius: 50%;
-        height: 5px;
-        width: 5px;
-      }
-    }
-
-    &.share {
-      background: #d65f59;
-
-      &::after {
-        clip-path: polygon(0 35%, 58% 35%, 58% 0, 100% 50%, 58% 100%, 58% 65%, 0 65%);
-      }
+      fill: currentColor;
+      height: 100%;
+      width: 100%;
     }
   }
 
   &__text-block {
     flex: 1;
+    gap: 4px;
     justify-content: center;
     min-width: 0;
     overflow: hidden;
   }
 
+  // Body/Small Body 14px / 1.4em on Primary/100.
   &__text {
-    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 14px, $weight: 400, $line: 1.4em, $color: var(--primary-purple-100));
     max-width: 100%;
     overflow: hidden;
 
@@ -104,35 +154,61 @@
     }
   }
 
+  // {ts1} highlight spans. `mention` is the design's Primary/40; `restricted`
+  // keeps a red for "Restricted Link", promoted to the exact Signal/Error token.
   &__link {
     margin: 0 3px;
 
     &.mention {
-      color: #5950ff;
+      color: var(--primary-40);
     }
 
     &.restricted {
-      color: #d65f59;
+      color: var(--signal-error);
     }
 
+    // Was an off-palette pink (#ffa8dc). The design has one highlight colour.
     &.link-share {
-      color: #ffa8dc;
+      color: var(--primary-40);
+    }
+  }
+
+  // Second line: optional folder chip, then the relative time.
+  &__meta {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__folder {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 1.4em, $color: var(--primary-40));
+    background: rgba(89, 80, 255, 0.1);
+    border-radius: 4px;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 8px;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
   &__time {
-    @include drumee.typo($color: #65656c, $size: 10px, $weight: 400, $line: 14px);
-    margin-top: 1px;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 1.4em, $color: var(--tertiary-grey-80));
+    flex-shrink: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 100%;
   }
 
   &__actions {
     align-items: center;
     flex-shrink: 0;
-    gap: 8px;
+    gap: 6px;
     justify-content: flex-end;
   }
 
@@ -188,7 +264,7 @@
   }
 
   &__trash {
-    color: #d74e49;
+    color: var(--signal-error);
     cursor: pointer;
     transition: opacity 0.15s ease;
 
@@ -199,8 +275,16 @@
 }
 
 // ── Dark mode overrides ─────────────────────────────────────────
+// The brand/signal badge fills are fixed-palette in both themes; only the
+// surfaces and body copy flip. --normal-bg-80 (#333042) sits one step LIGHTER
+// than the panel's --normal-bg-90 (#282538), so an unread card still reads as
+// raised — --normal-bg-100 would be darker than the panel and invert that.
 html[data-theme="dark"] {
   .activity-item {
+    &__row[data-unread="1"] {
+      background-color: var(--normal-bg-80);
+    }
+
     &__row:hover {
       background-color: var(--hover-bg-40);
     }
@@ -209,16 +293,13 @@ html[data-theme="dark"] {
       color: var(--normal-fg-10);
     }
 
+    &__day,
     &__time {
       color: var(--normal-fg-50);
     }
 
     &__bookmark {
       color: var(--normal-fg-50);
-    }
-
-    &__badge.mention {
-      border-color: var(--border-muted);
     }
   }
 }

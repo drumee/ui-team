@@ -16,54 +16,100 @@
  */
 @use '../../../skin/mixins/drumee.scss';
 
-.router-buler-goodbye {
+/* The disconnect screen.
+ *
+ * THE SELECTOR MATTERS. Butler's fig.family is "router-butler", so the
+ * skeleton emits router-butler-goodbye__*. This block said
+ * ".router-buler-goodbye" — no `t` — so nothing here matched and the screen
+ * rendered with no styling at all. tests/goodbye-screen.test.js derives the
+ * family the way ui-core does and fails if the two drift again.
+ *
+ * ONE TEMPLATE with modules/plugins (the loading screen) and analytics-ui's
+ * authorization screen: the sign-in page's backdrop, the sign-in card, the
+ * lockup top-left, the message centred. Written in three places — three
+ * repos, no shared package — so each pins the same values.
+ *
+ * LIGHT IN BOTH THEMES, deliberately: the sign-in card has no dark variant,
+ * and looking like it is the point. Hence literals, not tokens. */
+.router-butler-goodbye {
   &__main {
     width: 100vw;
     min-height: 100vh;
-    font-family: var(font-main);
+    box-sizing: border-box;
+    padding: 40px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    font-family: var(--font-main);
+    /* Verbatim from signin/src/widgets/router/skin/index.scss. */
+    background-color: #f2f2f7;
+    background-image: radial-gradient(
+      120% 62% at 50% 116%,
+      rgba(89, 80, 255, 0.45) 0%,
+      rgba(89, 80, 255, 0.12) 34%,
+      rgba(242, 242, 247, 0) 68%
+    );
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  /* The sign-in card's own metrics. */
+  &__card {
+    width: 100%;
+    max-width: 520px;
+    box-sizing: border-box;
+    padding: 24px 40px;
+    gap: 20px;
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 12px;
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
+  }
+
+  /* Top-left: the card centres its children, so the lockup opts out. Sized
+     by height alone — 120.723 x 24 is a 5.03:1 lockup, and two hand-picked
+     side lengths are how that gets quietly squashed. */
+  &__logo {
+    align-self: flex-start;
+    display: flex;
+
+    img {
+      display: block;
+      width: auto;
+      height: 32px;
+    }
   }
 
   &__header {
-    align-items: flex-end;
-    height: 100%;
+    width: 100%;
     justify-content: center;
-    min-height: 200px;
-    width: 100%;
-  }
-
-  &__container.content {
-    height: 100%;
-    position: absolute;
-    width: 100%;
-  }
-
-  &__bg.smart-image {
-    height: 100%;
-    left: 0;
-    position: absolute;
-    top: 0;
-    width: 100%;
   }
 
   &__note {
-    &.header {
-      @include drumee.typo($size: 18px, $line: 45px, $color: var(--ewhite));
-    }
+    width: 100%;
+    text-align: center;
+    font-size: 20px;
+    line-height: 1.5;
+    /* --an-purple is ANALYTICS-UI's token: it is declared in that plugin's
+       stylesheet, not here, so on this screen it is usually undefined. An
+       unresolved var() is invalid at computed-value time and `color` would
+       fall back to inherited, leaving the message looking unstyled with
+       nothing logged. Hence the literal — that token's own value. */
+    color: var(--an-purple, #534ab7);
   }
 
-  &__disconnecting {
+  /* The spinner sits under the message, inside the card.
+     80px, not 60: .drumee-loading-wrapper is absolutely positioned at
+     top:50% with a -1.25rem margin, and its bars are 50px tall, so a 60px
+     box clipped them at the bottom. */
+  &__container {
     width: 100%;
-    height: 100%;
-    align-items: center;
+    min-height: 80px;
+    position: relative;
     justify-content: center;
-    text-align: center;
-    @include drumee.typo($size: 18px, $line: 45px, $color: var(--ewhite));
-
-    .drumee-text.inner {
-      background-color: rgb(0, 0, 0, 0.1);
-      padding: 20px;
-      border-radius: 6px;
-      width: 90%;
-    }
+    align-items: center;
   }
 }

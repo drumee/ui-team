@@ -1,0 +1,45 @@
+@use "mixins/drumee";
+
+// THE PLATE THE FIVE TRACKER CARDS SIT ON — the same composition the workspace
+// preview uses, at the carousel card's own size.
+//
+// Measured off the frames, which all agree: the card is 391x381 (the `view`
+// carousel variant, skin/empty-state.scss) and the window's top-left corner is
+// at 39,36 inside it. The window then runs off the right and the bottom, so the
+// plate reads as a band down the left and along the bottom. The gradient is the
+// workspace plate's, verbatim: the frames' own top-left pixel is 5% ink and
+// their bottom-left is solid.
+//
+// Keyed on the STEP's family, unlike ./views.scss's neighbours in the shared
+// toolkit, because only this step draws these cards.
+
+.tutorial-task {
+  &__tp-plate {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    // Where the window sits on the plate — 39 left, 36 top, verbatim.
+    padding: 36px 0 0 39px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100.03%);
+  }
+
+  // The crop. The card already rounds and clips its own corners
+  // (`__es-card-art`), so this only rounds the corner the window shows.
+  &__tp-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+    border-radius: 10px 0 0 0;
+    overflow: hidden;
+    background: var(--normal-bg-elevated);
+  }
+
+  // 0.62, which is what the frames measure: their view tab is 21px tall
+  // against the 34 this draws. transform-origin top-left plus the fixed
+  // viewport above is what crops the window rather than shrinking it to fit.
+  &__tp-scale {
+    flex: 0 0 auto;
+    transform: scale(0.62);
+    transform-origin: top left;
+  }
+}

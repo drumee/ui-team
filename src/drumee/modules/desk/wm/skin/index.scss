@@ -115,6 +115,18 @@
     overflow: visible;
   }
 
+  // While a workspace occupies the canvas the home grid is not just covered —
+  // it is REMOVED. It sits in a layer below headlessLayer, so during a
+  // workspace switch (old pane destroyed, new one fed) it was briefly the only
+  // thing painted and the old home screen flashed through.
+  //
+  // Driven by data-workspace, stamped in wm/index.js _syncHomeGrid across the
+  // whole transition. display:none also stops the grid doing layout and
+  // loading thumbnails for a screen nobody can see.
+  &__ui[data-workspace="1"] &__icons-list {
+    display: none !important;
+  }
+
   &__icons-list {
     display: flex;
     flex-direction: row;
@@ -534,6 +546,35 @@
       height: 100%;
     }
 
+    // The call layer hosts a FULL-FRAME meeting: window_meeting no longer
+    // carries any geometry of its own (see window/meeting _lockGeometry), it
+    // just fills this layer — which is what makes the call track the canvas as
+    // the sidebar pins/collapses and the browser resizes, with no clamping and
+    // no reflow bookkeeping. A 0x0 anchor cannot do that: `width: 100%` on the
+    // window would resolve to 0.
+    //
+    // So the layer is a real box, and therefore MUST be click-through: it spans
+    // the whole canvas whether or not a call is up, and a transparent
+    // full-canvas div swallows every click on the workspace behind it. Only the
+    // call windows opt back in — never ui-core's `widget-blank` emptyView,
+    // which is present even with the layer empty (the same trap the desk's
+    // __call-dock documents).
+    &.call-layer {
+      // `+ 10px` for the same reason the headless pane gets it: `__ui` is
+      // `calc(100% - 10px)` (a right gutter for the home grid's scrollbar) and a
+      // screen should be full-bleed to the container's right edge, not stop
+      // short of it. Unconditional here — a pointer-events:none box costs
+      // nothing when no call is up, and the layer is not a positioning anchor
+      // for anything but calls.
+      width: calc(100% + 10px);
+      height: 100%;
+      pointer-events: none;
+
+      > *:not(.widget-blank) {
+        pointer-events: auto;
+      }
+    }
+
     // When both layers are non-empty they resolve to the same z-index (the
     // global [data-state="open"] lift), so paint order falls back to DOM
     // order and headless-layer — later in the DOM — fully covers windowsLayer
@@ -545,7 +586,7 @@
     // !important to out-cascade the global [data-state="open"] lift;
     // upload-progress is excluded because it carries its own fixed z-index,
     // set ABOVE this one so the floater stays visible over any raised window.
-    &:not(.upload-progress-layer):has(> [data-state="1"]) {
+    &:not(.upload-progress-layer):not(.meeting-toast-layer):has(> [data-state="1"]) {
       z-index: 50001 !important;
     }
 
@@ -597,6 +638,24 @@
       .window-upload-progress__ui {
         pointer-events: auto;
       }
+    }
+
+    // Meeting popup layer. Above every window layer INCLUDING the
+    // active-window lift (50001), so a card can never be buried by the
+    // workspace pane again — that is the whole bug this layer exists for.
+    //
+    // `!important` for the same reason upload-progress needs it: this is a
+    // Wrapper, so `data-state="open"` is stamped on it the moment it holds a
+    // card, and skin/lib/utils.scss carries a global
+    // `[data-state="open"] { z-index: var(--z-index-context) !important }`
+    // (50000). A plain declaration loses to that and the layer would sit at
+    // 50000 — below the lift, i.e. exactly where it started.
+    //
+    // The card itself is `position: fixed` and centres on the viewport
+    // (skin/meeting-toast.scss), so this layer stays a 0x0 anchor and never
+    // covers or blocks anything beneath it.
+    &.meeting-toast-layer {
+      z-index: calc(var(--z-index-upload-progress, 50002) + 2) !important;
     }
 
     &.creating-hub {

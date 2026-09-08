@@ -1,15 +1,120 @@
 @use "mixins/drumee";
 
+// The workspace folder glyph, at whatever box size the caller needs.
+//
+// Recipe from desk/workspace-item — the one place that renders this icon
+// correctly. It is NOT a plain <svg> to stretch: media/grid/template/folder
+// emits a `.folder-shape` path whose AREA CLASS supplies the fill (the colour
+// is the fill, not a currentColor tint), an absolutely positioned `.badge`, and
+// a context-menu trigger. Every line below is load-bearing:
+//   - scaling the container alone drew an unfilled, clipped fragment;
+//   - an unsized `.badge` is an <svg> with no width/height, so it falls back to
+//     its INTRINSIC size and swallows the row — a failure this codebase has
+//     shipped before;
+//   - the trigger is a hover affordance for the file grid and has no business
+//     in a menu row.
+//
+// A mixin rather than a second copy: the switcher draws this glyph at two sizes
+// now (22px rows, 27px header), and the previous copy silently dropped the
+// badge and trigger rules — which is exactly the drift this prevents.
+//
+// $size is the square box; $art-h is the folder art's height inside it (the
+// source art is wider than it is tall, so it is not square).
+@mixin ws-folder-icon($size, $art-h) {
+  width: $size;
+  height: $size;
+  align-items: center;
+  display: flex !important;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: visible;
+  position: relative;
+
+  .media-grid__folder-art {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    width: $size;
+    height: $art-h;
+  }
+
+  .folder-shape {
+    width: $size;
+    height: $art-h;
+    fill: #885eff;
+
+    &.personal,
+    &.inner-folder { fill: var(--area-personal); }
+    &.public       { fill: var(--area-public); }
+    &.share,
+    &.dmz          { fill: var(--area-share); }
+    &.private      { fill: var(--area-private); }
+  }
+
+  .badge {
+    position: absolute;
+    bottom: -3px;
+    left: -3px;
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--grid-color-folder-badge);
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+  }
+
+  .media-context-menu__folder-trigger {
+    display: none !important;
+  }
+}
+
+// Spin for the switcher header's action icons while their panel's chunk loads.
+// At the top level: keyframes are not scoped by nesting, and declaring them
+// inside the block would read as though they were.
+@keyframes ws-head-action-spin {
+  to { transform: rotate(360deg); }
+}
+
+// The address chip's spinner, while the breadcrumb resolves — or while its
+// lazy chunk is still downloading. Declared HERE rather than in
+// breadcrumb/skin, which is required inside that very chunk and so is not
+// loaded when this first runs.
+@keyframes crumb-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-module-topbar__ws-head-action[data-loading="1"] svg {
+    animation: none;
+  }
+
+  // The chip still reads as busy through the hidden crumbs and caret.
+  .desk-module-topbar__crumb-group:not(:has(.breadcrumb-item__filename))::after {
+    animation: none;
+  }
+}
+
 .desk-module-topbar {
+  // 43:23955: the top bar is a 30px row, TRANSPARENT, with r=8 and no bottom
+  // border — it floats on the white canvas alongside the other rounded panels
+  // rather than being a filled chrome strip.
+  //
+  // Height matters for more than looks: at 44px with 8px vertical padding the
+  // content box was 28px, while every control in it (icon buttons, avatar,
+  // switcher, New) is 30px. The row had to overflow its own line box, which is
+  // what made the icons look off-line. 46px keeps the 30px content box the
+  // controls actually need, with the 8px inset above and below.
   &__main {
     width: 100%;
-    height: 44px;
+    height: 46px;
+    min-height: 46px;
     box-sizing: border-box;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 24px;
-    background-color: var(--normal-bg-90);
-    border-bottom: 1px solid var(--border-muted);
+    padding: 8px 16px;
+    background-color: transparent;
+    border-bottom: none;
+    border-radius: 8px;
   }
 
   &__logo {
@@ -48,22 +153,345 @@
   // `__ui` root (from breadcrumb/skin/index.scss), which would otherwise
   // stretch it to fill the row and push the tabs all the way right.
   // Override that inside the cluster so the breadcrumb hugs its content.
+  // THE ADDRESS CHIP: the crumb track and the switcher's caret as one control.
+  //
+  // The chip used to be drawn by .breadcrumb-item__tab, one per crumb, with the
+  // caret outside all of them — so "icon, name, caret" only looked like a unit
+  // as long as nothing moved. It is drawn here now, once, around both.
+  //
+  // The --crumb-* ramp is the breadcrumb's own (breadcrumb/skin publishes it),
+  // reused rather than restated so the chip cannot drift from the type and
+  // baseline it wraps.
+  &__crumb-group {
+    align-items: center;
+    min-width: 0;
+    flex: 0 1 auto;
+    box-sizing: border-box;
+    // THE SWITCHER PANEL HANGS OFF THE CHIP, not off the caret.
+    //
+    // .menu-topic-items__wrapper is absolute at `left: 0`, so it lands on the
+    // left edge of whatever positions it. That used to be __ws-wrapper — the
+    // caret alone, at the far RIGHT of the address — so a 260px panel dropped
+    // from the chip's right-hand end and hung out past it. The frame drops it
+    // from the chip's left edge, which is also where the chip is now clicked.
+    //
+    // __ws-wrapper gives up `position: relative` for this (see below); the two
+    // rules are a pair.
+    position: relative;
+    // The chip is only 30px tall and the panel is absolute inside it, so
+    // anything clipping here would take the panel with it.
+    overflow: visible;
+    height: var(--crumb-height, 30px);
+    padding: 0 var(--crumb-pad-x, 6px);
+    border-radius: var(--crumb-radius, 8px);
+    // NO GROUND AT ALL — resting OR hover. The address sits directly on the bar
+    // and each PART of it answers the pointer on its own.
+    //
+    // The resting ground went first: --normal-bg-90 put a grey slab around the
+    // path, and the org chip beside it already carries one, so the bar read as
+    // two competing pills rather than an identity chip followed by a location.
+    //
+    // The hover ground has now gone the same way. It painted the whole chip —
+    // every crumb AND the caret — so the address lit up as ONE button wherever
+    // the pointer landed, which is not what a click does: an ancestor crumb
+    // walks the pane back to that folder, while the current crumb, the caret
+    // and the bare inset open the workspace switcher (desk
+    // _crumbClickOpensSwitcher draws exactly that line). Nothing in a single
+    // ground said which of the two was under the pointer, and the crumbs in
+    // particular gave no sign they were separately clickable — the report this
+    // fixes.
+    //
+    // Each target lights itself instead: the crumb tab in
+    // breadcrumb/item/skin, and the caret in __ws-btn below. Both are painted
+    // on boxes that already have their size, so nothing shifts on hover.
+    background-color: transparent;
+
+    // A SECTION screen — Settings, Get help, Plan, Calendar, Inbox, Contacts,
+    // Trash, Admin console — is a label with nothing behind it, and its caret
+    // is hidden (see __left-cluster below), so the chip is not a control at
+    // all there and must not offer a hand.
+    //
+    // The ground it also used to reset is gone from every state above; what
+    // this still buys is the CURSOR. (The crumb itself gives up the pointer in
+    // breadcrumb/item/skin, on __main--section — this covers the inset around
+    // it, which belongs to no crumb.)
+    //
+    // `:has()` because the flag is stamped on the breadcrumb root by
+    // desk_breadcrumb._setSectionMode, which is a CHILD of this box — the same
+    // flag the sibling rule below reads, read from the other direction.
+    &:has(> .desk-breadcrumb__ui[data-section="1"]) {
+      cursor: default;
+    }
+  }
+
+  // INLINE WORKSPACE RENAME — the ⋯ menu's Rename row (Lexis, 2026-09-05: no
+  // dialog). desk._renameWorkspaceInline feeds an editor in here and stamps
+  // `data-renaming` on the chip; the crumb and the caret step aside for it, so
+  // the field takes the NAME'S place rather than appearing beside it.
+  //
+  // Empty the rest of the time, and an empty flex item would still eat the
+  // chip's padding — hence `:empty`.
+  &__ws-rename {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    // The global `textarea { min-height: 100px }` in the reset beats a plain
+    // height on the control (a min- always does), so the box has to be
+    // released here as well as sized below.
+    min-height: 0;
+
+    &:empty {
+      display: none;
+    }
+
+    textarea,
+    input {
+      display: block;
+      box-sizing: border-box;
+      // Wide enough to type a real name into, and capped so a rename cannot
+      // push the utility icons off the right of the bar.
+      width: 220px;
+      max-width: 100%;
+      // Must come with the height: the global `textarea` rule sets
+      // min-width: 90px and min-height: 100px, which would otherwise win and
+      // leave a 100px box hanging out of the 30px chip.
+      min-width: 0;
+      min-height: 0;
+      height: 22px;
+      line-height: 20px;
+      padding: 0 6px;
+      resize: none;
+      overflow: hidden;
+      white-space: nowrap;
+      background: var(--normal-bg-elevated);
+      // inset, never a border or an outline: a border adds to the box and
+      // re-flows the 30px chip, and an outline is painted outside it and would
+      // spill over the icon beside it.
+      border: 0;
+      outline: none;
+      box-shadow: inset 0 0 0 1px var(--border-default);
+      border-radius: 6px;
+      // The crumb's own ramp, so the name does not change shape when it
+      // becomes editable. drumee.typo() emits no font-weight.
+      @include drumee.typo(
+        $color: var(--normal-fg-10),
+        $size: 13px,
+        $line: 18px
+      );
+      font-weight: 400;
+
+      &:focus {
+        box-shadow: inset 0 0 0 1px var(--primary-purple-40);
+      }
+    }
+  }
+
+  // While the editor is up. The crumb and the caret are taken out of the row so
+  // the field stands where the name did; the chip is sized by the field's own
+  // 220px, which is close enough to a normal address that the bar does not
+  // visibly jump when editing starts.
+  //
+  // Beats `&:hover` above on source order (same specificity), which is what
+  // stops the chip painting its switcher-button ground under a text field.
+  &__crumb-group[data-renaming="1"] {
+    background-color: transparent;
+
+    > .desk-breadcrumb__ui,
+    > .desk-module-topbar__ws-wrapper {
+      display: none;
+    }
+  }
+
   &__left-cluster {
     align-items: center;
     gap: 20px;
     min-width: 0;
     flex: 0 1 auto;
-    overflow: hidden;
+    // MUST be visible: the workspace switcher lives in this cluster and its
+    // dropdown is absolutely positioned BELOW the 46px bar, so `hidden` here
+    // clipped the panel away entirely — the menu was opening, there was just
+    // nothing left to see. The clipping was here to stop a long breadcrumb
+    // widening the bar; that job moves to the breadcrumb itself below.
+    overflow: visible;
+    // __main is space-between and now has THREE children (left, actions,
+    // utility). Without this the actions cluster is stranded mid-bar; the auto
+    // margin absorbs the slack so actions and utility pack together on the
+    // right, as in 43:23955.
+    margin-right: auto;
 
+    // Takes over the truncation the cluster's overflow:hidden used to do.
     .desk-breadcrumb__ui {
       flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    // The switcher's caret belongs to the WORKSPACE crumb: it reads as one
+    // chip with the crumb's glyph and name (see workspaceSwitcher). While the
+    // bar is showing a section label instead — Settings, Get help, Plan,
+    // Calendar, Inbox, Contacts, Trash, Admin console — there is no workspace
+    // in the bar to hang it off, so a caret there offered a workspace dropdown
+    // attached to the word "Get help".
+    //
+    // `+`, because the switcher is authored as the breadcrumb's next sibling
+    // in this cluster (desk/skeleton/topbar.js), and the section flag is
+    // stamped on the breadcrumb's own root (desk_breadcrumb._setSectionMode) —
+    // the only handle it has on the caret from there.
+    //
+    // !important: Box children are forced display:flex inline by the
+    // framework, the same reason __actions-cluster[data-state="0"] needs it.
+    .desk-breadcrumb__ui[data-section="1"] + .desk-module-topbar__ws-wrapper {
+      display: none !important;
+    }
+
+  }
+
+  // ── The chip is waiting for its address ─────────────────────────────────
+  //
+  // NO JS STATE. The caret, the spinner and the crumbs are decided by whether
+  // the CRUMBS THEMSELVES are in the chip — asked directly, in CSS, with
+  // `:has()` (already used in this file, for the section cursor above).
+  //
+  // Three attempts keyed this on a flag instead, and each failed in the app
+  // while passing every test: `data-loading` on the breadcrumb root, then
+  // `data-address` on it, then `data-address` on this chip. A flag has to be
+  // written by someone, at the right moment, and cleared by someone, at the
+  // right moment — and here that meant a widget which does not exist for the
+  // whole of its own lazy chunk load (seeds.js -> e.e(345)), a `_buildContent`
+  // that paints inside an `ensurePart` promise, ~10 broadcast paths into
+  // `_updateContext`/`loadDefault` that can declare "no address", and a chip
+  // that outlives the widget across a topbar re-feed and so can hold a stale
+  // answer. Every one of those is a way for the caret to be revealed while the
+  // address is missing, and no amount of care about WHEN to stamp removes the
+  // category.
+  //
+  // Asking the DOM removes it. There is nothing to go stale, nothing to be
+  // stamped early, nothing to be missed on an unmount, and no dependency on
+  // the breadcrumb widget existing yet — an absent breadcrumb simply has no
+  // crumbs in it. It is also literally the specified condition: hidden until
+  // the icon and the filename are both up.
+  //
+  // FAILS CLOSED BY CONSTRUCTION: the caret is hidden by the base rule, and
+  // only the `:has()` rule reveals it. Should `:has()` ever not apply, the
+  // selector is dropped and the caret stays hidden — never the other way.
+  &__crumb-group {
+    // Hidden until proven otherwise. visibility, not display: the caret keeps
+    // its 22px box, so the address does not shift sideways at the moment it
+    // lands — which is exactly when the user is looking at it. And not on
+    // __ws-wrapper: the open panel lives inside that, so hiding it would yank
+    // a dropdown out from under the pointer when a workspace row is clicked.
+    .desk-module-topbar__ws-btn {
+      visibility: hidden;
+    }
+
+    // The spinner, for the same "no complete crumb" condition. Drawn on a
+    // pseudo-element rather than a fed widget: ui-core's own `view.spinner(1)`
+    // injects `.drumee-loading-wrapper` markup whose base rules do not exist
+    // in this app (only per-site positional overrides do), and its bars are
+    // 50px tall against this chip's 30px. A border spinner is the pattern this
+    // bar already uses — see ws-head-action-spin above.
+    //
+    // On the CHIP, which is a plain Skeletons.Box in desk/skeleton/topbar.js
+    // and so is in the bar's first frame — the breadcrumb is not, and neither
+    // is breadcrumb/skin, which is required inside that same lazy chunk.
+    &::after {
+      content: "";
+      display: block;
+      // FIRST, whatever else the chip holds. A pseudo-element is the LAST flex
+      // item by source order, which would put the spinner after the caret; the
+      // address it stands in for is at the left.
+      order: -1;
+      flex: 0 0 auto;
+      box-sizing: border-box;
+      width: 14px;
+      height: 14px;
+      // 4px matches .desk-breadcrumb__main's padding-left, so the spinner sits
+      // where the workspace glyph is about to appear and the chip does not
+      // shift sideways as it resolves.
+      margin-left: 4px;
+      border-radius: 50%;
+      // currentColor, so the spinner cannot drift from the text it stands in
+      // for, in either theme.
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      opacity: 0.55;
+      animation: crumb-loading-spin 0.7s linear infinite;
+    }
+
+    // A HALF-DRAWN ADDRESS IS WORSE THAN NO ADDRESS: a crumb that has its
+    // glyph but not yet its name is hidden with the rest, so the track appears
+    // whole or not at all.
+    .desk-breadcrumb__main {
+      display: none;
+    }
+  }
+
+  // THE ADDRESS IS UP: an icon AND a filename are both in the chip. Two
+  // chained `:has()`, not one with a descendant combinator, because the glyph
+  // and the name are SIBLINGS inside .breadcrumb-item__tab — neither contains
+  // the other.
+  //
+  // A SECTION LABEL IS UP, which is the second selector and is not the same
+  // condition. Organization / Settings / Get help / Trash / Inbox / Contacts /
+  // Admin console / Plan render a name and NO GLYPH — breadcrumb/item/skeleton
+  // pushes the folder art only `if (!isSection)`, because a label has no node
+  // behind it to draw. Asking those for an icon asks for something that is
+  // never coming: the chip spun forever with its own label hidden underneath,
+  // for every section screen (the org view's "Open" is where it was found).
+  //
+  // Here a DESCENDANT combinator is right, where the pair above needed two
+  // chained `:has()`: the name is INSIDE .breadcrumb-item__main--section, not
+  // a sibling of it. And it still asks for the name — a section crumb with no
+  // label yet is as unfinished as a glyph with no name, and stays hidden.
+  //
+  // The caret does not come back with the track: __left-cluster above hides
+  // the whole __ws-wrapper next to a `[data-section="1"]` breadcrumb, so there
+  // is no workspace dropdown hanging off the word "Organization".
+  // THE ADDRESS IS ALREADY IN THE BAR — the organisation screen, and only it.
+  // The org chip sits two elements to the left in this same cluster and reads
+  // the organisation's name; an address chip beside it printing the same words
+  // again, with a "/" and a dead cursor, is noise. desk._openOrgView asks for
+  // this with `hideAddress` on its breadcrumb:context, which
+  // desk_breadcrumb._setSectionMode stamps here.
+  //
+  // The WHOLE chip, spinner and caret included — hence its placement after the
+  // rules above, and `display: none` rather than hiding the track inside it:
+  // an empty chip still eats its own padding and still draws its ground on
+  // hover. `!important` for the same reason __left-cluster's caret rule needs
+  // it — a Box child's display is forced by the framework.
+  //
+  // `:has(>)`, the same direction the section cursor rule above reads: the flag
+  // is on the breadcrumb root, which is this box's own child.
+  &__crumb-group:has(> .desk-breadcrumb__ui[data-hide-address="1"]) {
+    display: none !important;
+  }
+
+  &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename),
+  &__crumb-group:has(.breadcrumb-item__main--section .breadcrumb-item__filename) {
+    .desk-module-topbar__ws-btn {
+      visibility: visible;
+    }
+
+    .desk-breadcrumb__main {
+      display: flex;
+    }
+
+    &::after {
+      content: none;
+      animation: none;
     }
   }
 
   // Chrome-style folder tabs — sit immediately right of the home
   // breadcrumb. One tab per open folder window. data-state="1" = visible;
   // data-state="0" = minimized. Empty until at least one folder opens.
+  // Chrome-style folder tabs. The new shell (Figma 43:23955) has no tab strip
+  // — a workspace fills the canvas and subfolders navigate INSIDE it, so a
+  // per-window tab has nothing to represent. Hidden rather than removed: the
+  // desk still renders tabs for any window opened explicitly ("Open in
+  // Window"), and that path is not being deleted in this pass.
   &__folder-tabs {
+    display: none !important;
     align-items: center;
     gap: 4px;
     flex: 0 1 auto;
@@ -980,6 +1408,717 @@
       color: var(--white);
     }
   }
+
+  // ── Utility icon cluster (Figma 43:23955) ─────────────────────────────────
+  // Notifications / Calendar / Inbox / Contacts / Trash / Admin, top-right.
+  // A SIBLING of __actions-cluster, so it survives that cluster's
+  // data-state="0" display:none on the full-canvas screens.
+  // 43:23955: six 30x30 buttons with NO gap (they sit edge to edge at 30px
+  // pitch), then a 4px gap before the 30px avatar.
+  &__utility-cluster {
+    align-items: center;
+    gap: 0;
+    height: 30px;
+    padding-left: 12px;
+    flex: 0 0 auto;
+    // The tooltip hangs outside the bar; a clipped cluster would cut it off.
+    overflow: visible;
+  }
+
+  &__utility-btn {
+    position: relative; // anchor for the absolute tooltip (&__utility-tip)
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    // Box.X is a flex row; without this a 30px-tall button in a taller line
+    // box gets stretched by align-items:stretch and the glyphs stop sharing a
+    // baseline with their neighbours.
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: visible;
+    color: var(--normal-fg-20);
+
+    &:hover {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg);
+    }
+
+    // The radio group marks the open panel's icon.
+    &[data-state="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
+    }
+  }
+
+  &__utility-ico {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    color: currentColor;
+    pointer-events: none;
+  }
+
+  // Unread marker: a 6px dot rather than a number — the design shows presence,
+  // not a count, and the rail badge already carries the figure.
+  // ── Workspace switcher (Figma 48:36522) ───────────────────────────────────
+  // Carries workspace switching now that the rail no longer lists workspaces.
+  // Mirrors the __add-wrapper contract below: Skeletons.Menu renders
+  // .menu-topic > .menu-trigger + .menu-topic-items__wrapper > .menu-topic-items,
+  // and the FED `items:` box is a CHILD of that surface. Styling only the fed
+  // box (as this did) left the wrapper unpositioned and never hidden when
+  // closed — which is why the panel glitched and came up empty.
+  &__ws-wrapper {
+    // STATIC on purpose — the pair of the `position: relative` on
+    // __crumb-group above. A positioned wrapper here would capture
+    // .menu-topic-items__wrapper again and put the panel back under the caret.
+    position: static;
+    flex: 0 0 auto;
+    align-self: center;
+    overflow: visible;
+
+    .menu-topic,
+    .menu-topic__ui,
+    .menu-trigger {
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items__wrapper {
+      position: absolute;
+      // Both resolve against __crumb-group now: 100% is the chip's height, so
+      // the panel clears the whole chip rather than just the caret, and 0 is
+      // the chip's left edge.
+      top: calc(100% + 6px);
+      left: 0;
+      right: auto;
+      width: max-content;
+      min-width: 260px;
+      z-index: 99999;
+    }
+
+    .menu-topic-items__wrapper[data-state="open"] {
+      overflow: visible !important;
+    }
+
+    // Chrome only — NOT a scroll container. The scrolling happens one level in,
+    // on the fed __ws-menu box, which owns the max-height. Bounding this card
+    // as well only clips __ws-menu below its own limit and buys nothing.
+    .menu-topic-items,
+    .menu-items {
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 6px;
+      width: max-content;
+      min-width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: visible;
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    // Without this the panel is always in the DOM flow — the "glitch".
+    .menu-topic-items__wrapper[data-state="closed"],
+    .menu-topic-items__wrapper[data-state="0"],
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      display: none;
+    }
+  }
+
+  // Caret-only trigger, sitting immediately after the workspace crumb so the
+  // crumb's icon + name and this caret read as one chip (43:23955).
+  &__ws-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+    background-color: transparent;
+    transition: background-color 0.12s ease;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    // The caret's own hover, now that the chip no longer paints one for the
+    // whole address (see __crumb-group). It is the switcher's glyph, so this
+    // is the part of the chip that should answer when the pointer is on it.
+    //
+    // ON THE BUTTON, not on __ws-wrapper: the dropdown is a DESCENDANT of that
+    // wrapper (absolutely positioned, not detached), so a hover there would
+    // stay lit the whole time the pointer is anywhere in the open panel. The
+    // 22px box and its radius are already here, so the ground needs no
+    // geometry of its own.
+    //
+    // `active: 0` on the trigger (desk/skeleton/topbar workspaceSwitcher) makes
+    // the caret inert to CLICKS — the chip's capture listener opens the menu —
+    // but hover is CSS and reaches it either way.
+    &:hover {
+      background-color: var(--overlay-bg-05);
+    }
+  }
+
+
+  // Group heading — "Workspaces" / "Personal". Small, uppercase and muted so
+  // it labels the list without competing with the rows it introduces.
+  &__ws-section {
+    padding: 10px 10px 4px;
+    font-family: "Geist", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--normal-fg-50);
+
+    // No dead space above the first heading.
+    &:first-child {
+      padding-top: 2px;
+    }
+  }
+
+  // Geometry and colours copied from __new-menu-item — the app's established
+  // dropdown row — so the switcher reads as the same component family as the
+  // "+ New" menu rather than a bespoke panel: 36px min-height, 8/10 padding,
+  // r=4, Geist 13/500 on --normal-fg-10, --normal-bg-90 hover.
+  &__ws-item {
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    box-sizing: border-box;
+    width: 100%;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+
+    // The workspace currently open. Tint AND tick: the tint alone is
+    // indistinguishable from the hover state once the pointer is in the list.
+    &[data-current="1"] {
+      background-color: var(--radio-on-bg);
+
+      .desk-module-topbar__ws-item-name {
+        color: var(--primary-40);
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__ws-item-icon {
+    @include ws-folder-icon(22px, 18px);
+  }
+
+  &__ws-item-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: "Geist", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-10);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__ws-empty {
+    padding: 10px;
+    font-size: 12px;
+    color: var(--normal-fg-50);
+  }
+
+  // Child of .menu-topic-items, which paints the surface — this only lays out.
+  // Header / list / button, 12px apart (Figma 48:36991).
+  //
+  // IT OWNS THE CAP, AND IT IS NOT THE SCROLLER. Those are two different jobs
+  // and they sit one level apart on purpose: 300px bounds the WHOLE dropdown
+  // here, while the overflow lives on __ws-list so the header above and the
+  // pinned "New workspaces" button below stay put and only the rows move.
+  // Putting `overflow` on this box instead would scroll all three, which sends
+  // the create button off the bottom edge — it is the only way to make a
+  // workspace from this panel, so it must never need scrolling to reach.
+  &__ws-menu {
+    width: 100%;
+    box-sizing: border-box;
+    gap: 12px;
+    max-height: 300px;
+    // Load-bearing. A flex item's default `min-height` is `auto`, i.e. its
+    // content height, so __ws-list would refuse to shrink, this column would
+    // grow past 300px, and the max-height would quietly do nothing.
+    min-height: 0;
+  }
+
+  // ── Header: the open workspace (Figma 48:37074, 270x27) ───────────────
+  // No height here on purpose. The row is 27px because its children are, and
+  // the 12px below is padding — pinning the row to 27px instead makes that
+  // padding eat the CONTENT box, so a child asking for `height: 100%` gets 15px.
+  &__ws-head {
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    // Chrome, not content: inside __ws-menu's 300px cap the list is the only
+    // thing that may shrink. Without this the header would give up height too
+    // (a flex item shrinks by default) and the workspace name would be squeezed
+    // before the rows ever started scrolling.
+    flex-shrink: 0;
+    // The 12px below the row is the divider's own clearance: 12px, rule, 12px,
+    // and __ws-menu's gap supplies the second half.
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-muted);
+
+    // Empty until _renderWorkspaceMenu fills it (and cleared when there is no
+    // open workspace). Without this the border and the 39px of box would still
+    // be drawn over nothing.
+    &:empty {
+      display: none !important;
+    }
+  }
+
+  // The same glyph as the rows, at the header's 27px (Figma 48:37069 is a
+  // 27x27 box). 22px keeps the rows' 22:18 art ratio.
+  &__ws-head-icon {
+    @include ws-folder-icon(27px, 22px);
+  }
+
+  // The open workspace's name. Borderless — the field reads as a label, not
+  // an input; the radius and padding are kept so the row's metrics do not
+  // shift.
+  &__ws-head-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 27px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 8px;
+  }
+
+  &__ws-head-name-text {
+    min-width: 0;
+    font-family: "Geist", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--normal-fg-10);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__ws-head-actions {
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  // 27px chips. The ⋯ one carries the grey fill in the Figma component itself
+  // (a rx=8 rect at black/5%), so it is a resting style here, not a hover.
+  // Inert for now — no service, hence no pointer and no hover.
+  &__ws-head-action {
+    width: 27px;
+    height: 27px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--normal-fg-10);
+    // Both actions open something now — the link opens Manage access, the ⋯
+    // the workspace menu — so the affordance belongs on the shared rule.
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    // Working. The panel behind this icon is a lazy chunk, so the first click
+    // has a real wait — the glyph dims and spins in place rather than injecting
+    // the framework's five-dot loader, which does not fit a 27px button.
+    &[data-loading="1"] {
+      cursor: progress;
+      pointer-events: none;
+
+      svg {
+        opacity: 0.45;
+        animation: ws-head-action-spin 0.7s linear infinite;
+      }
+    }
+
+    // The ⋯ carries the Figma component's own resting grey — that fill is its
+    // normal state, not a hover — so its hover has to be a DARKER step rather
+    // than the one introduced above.
+    &--more {
+      background: var(--overlay-bg-05);
+
+      &:hover {
+        background: var(--normal-bg-80);
+      }
+
+      // NO styling for the open state on purpose. setState still writes
+      // data-state="1" while the menu is up, and the menu's own destroy still
+      // clears it — so the hook is there if a lit look is wanted later. It is
+      // simply not drawn.
+    }
+  }
+
+  // THE scroll container for the switcher: _renderWorkspaceMenu feeds every
+  // workspace with no cap and the rows are 36px, so past a handful of
+  // workspaces this is what moves. The card outside it stays
+  // `overflow: visible` — bounding that too would just clip this box below its
+  // own height, and would scroll the card's border out of view with it.
+  //
+  // The scroll sits HERE rather than on __ws-menu so the pinned "New
+  // workspaces" button, a sibling below, does not travel with the rows.
+  //
+  // NO max-height of its own any more. It used to carry `60vh`, which is a
+  // second, competing cap: on a tall screen 60vh is ~650px and __ws-menu's
+  // 300px decided the height, while on a short one 60vh decided it and the
+  // 300px never applied — so the panel's size depended on the viewport for no
+  // reason anyone asked for. `flex: 1 1 auto` + `min-height: 0` makes it take
+  // exactly what the header and the button leave inside the 300px instead.
+  &__ws-list {
+    gap: 1px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    // A VISIBLE bar — this used to be the hide-the-scrollbar idiom
+    // (`scrollbar-width: none` + `-ms-overflow-style` + a `display: none`
+    // pseudo), so a capped list gave no sign there was more below it.
+    //
+    // Same shape the sidebar nav and the folder-tab strip already use: 4px,
+    // faint track, rounded thumb. `scrollbar-color` is the addition — those two
+    // set only `scrollbar-width: thin`, which leaves Firefox drawing its
+    // DEFAULT grey while Chrome gets the brand colour. Both halves are needed
+    // for the thumb to be --primary-70 in both engines.
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-70) rgba(0, 0, 0, 0.05);
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--primary-70);
+      border-radius: 4px;
+    }
+  }
+
+  // Footer action. Separated by a rule and given the full menu width so it
+  // reads as an action on the list rather than another workspace in it.
+  // Footer action. Full-bleed to the surface edges (the menu's own padding is
+  // 6px, hence the negative margin) with a rule above, so it reads as an
+  // action ON the list rather than another workspace IN it.
+  // Figma 48:37026 "Button Lightmode", 270x36. A SOLID primary button now, not
+  // the old bottom-rule text link — so it no longer bleeds past the card's
+  // padding (the negative margins and the 0 0 5px 5px radius are gone with it)
+  // and it no longer scrolls, being a sibling of __ws-list rather than a row
+  // inside it.
+  &__ws-new {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 36px;
+    // Same reason as __ws-head: only the list shrinks inside the 300px cap.
+    // `min-height` already stops it collapsing, but shrink:0 is what keeps it
+    // at its full 36 rather than letting flex take the padding first.
+    flex-shrink: 0;
+    padding: 8px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: "Geist", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: var(--primary-50);
+    color: var(--white, #fff);
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    // The frame draws no hover. --primary-40 is the token's own brighter
+    // sibling (#5950ff over #433cc5), which keeps the state inside the ramp
+    // instead of inventing a shade.
+    &:hover {
+      background: var(--primary-40);
+    }
+  }
+
+  // ── Avatar + user menu (Figma 59:55943) ───────────────────────────────────
+  // Same menu shell as the workspace switcher; anchored to the right edge
+  // since the avatar is the last item in the bar.
+  &__account-wrapper {
+    position: relative;
+    flex: 0 0 auto;
+    align-self: center; // share the row's centre line with the icon buttons
+    margin-left: 4px;
+    overflow: visible;
+
+    .menu-topic,
+    .menu-topic__ui,
+    .menu-trigger {
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items__wrapper {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      left: auto;
+      width: max-content;
+      min-width: 240px;
+      z-index: 99999;
+    }
+
+    .menu-topic-items__wrapper[data-state="open"] {
+      overflow: visible !important;
+    }
+
+    .menu-topic-items,
+    .menu-items {
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 6px;
+      width: max-content;
+      min-width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: visible;
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    // Without this the panel is always in the DOM flow — the "glitch".
+    .menu-topic-items__wrapper[data-state="closed"],
+    .menu-topic-items__wrapper[data-state="0"],
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      display: none;
+    }
+  }
+
+  // UserProfile renders its own inner picture/initials box. Pin the whole
+  // subtree to 30px, or its intrinsic height sets the row's line box and the
+  // icon buttons beside it stop sharing a centre line.
+  // The trigger: a real 30px circle that OWNS the round mask and the centring,
+  // so neither depends on what UserProfile renders inside (a picture, initials,
+  // or an empty placeholder — it was square because the radius sat on an inner
+  // element that did not always exist).
+  &__account-avatar {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    // Box.X sets display:flex; these centre whatever lands inside it.
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    box-sizing: border-box;
+    background-color: var(--primary-30);
+    // The ring is drawn OUTSIDE the circle so it never eats into the avatar or
+    // shifts the row: a border would be part of the box and change the layout
+    // width. The 2px inner spread matches the bar, so it reads as a detached
+    // halo rather than a thick outline.
+    box-shadow: 0 0 0 2px var(--normal-bg), 0 0 0 3px var(--border-default);
+    // Room for the ring, or the neighbouring icon clips it.
+    margin-left: 3px;
+    transition: box-shadow 0.15s ease;
+
+    &:hover,
+    &[data-state="1"],
+    &[data-open="1"] {
+      box-shadow: 0 0 0 2px var(--normal-bg), 0 0 0 3px var(--active-border);
+    }
+  }
+
+  // The profile inside the trigger. Inert (active:0 in the skeleton) so it
+  // cannot swallow the click, and stretched edge to edge so the wrapper's round
+  // mask clips it into a circle.
+  &__account-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+
+    &.user-profile__ui {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      border: none;
+    }
+
+    .user-profile__main,
+    .user-profile__icon,
+    .user-profile__picture,
+    img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    // Initials fallback — centred, and sized to fit a 30px circle.
+    .user-profile__main {
+      align-items: center;
+      justify-content: center;
+      @include drumee.typo($size: 12px, $line: 1, $color: var(--gray-white));
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+  }
+
+  // Child of .menu-topic-items, which paints the surface — this only lays out.
+  &__account-menu {
+    width: 100%;
+    gap: 2px;
+  }
+
+  &__account-menu-head {
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px 10px;
+    border-bottom: 1px solid var(--border-muted);
+    margin-bottom: 6px;
+  }
+
+  &__account-menu-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    overflow: hidden;
+  }
+
+  &__account-menu-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  // Presence, so it reads as status rather than a second name line.
+  &__account-menu-status {
+    font-size: 12px;
+    color: var(--signal-success, #3f8f63);
+  }
+
+  &__account-menu-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--normal-fg);
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--radio-on-bg);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__account-menu-item--signout {
+    border-top: 1px solid var(--border-muted);
+    margin-top: 6px;
+    padding-top: 12px;
+  }
+
+  // Hover tooltip for the icon-only utility buttons. Taken OUT OF FLOW — the
+  // framework mounts it as a child of the button, so in normal flow it widens
+  // the 30px button and breaks the row. Dark bubble below the icon, matching
+  // the chat-item action tooltips.
+  &__utility-tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-bg-100, #ffffff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 400;
+
+    // Caret pointing UP at the icon (the bubble hangs below the bar).
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-bottom-color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__utility-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--signal-error, #d74e49);
+    font-size: 0;
+    pointer-events: none;
+
+    &[data-count="0"] {
+      display: none !important;
+    }
+  }
+
 }
 
 // ── Dark mode overrides ─────────────────────────────────────────

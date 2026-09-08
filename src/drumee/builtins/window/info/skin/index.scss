@@ -339,7 +339,17 @@
   min-width: unset;
   min-height: 0 !important;
   width: 500px;
-  height: auto;
+  // 🚨 !important, like every other geometry property in this block, and for
+  // the same reason the comment above gives: the window manager writes INLINE
+  // geometry onto the instance. The viewport-resize handler animates windows to
+  // a computed size, and for this card the height it writes is the INNER
+  // content height — 190px, the __main box — which leaves out the card's own
+  // 20px + 24px of padding. With `overflow: hidden` below, those 44px come off
+  // the bottom and cut the action button in half. Reported 2026-09-08 with a
+  // screenshot; reproduced exactly by setting an inline height here, and fixed
+  // by this line. A notice card is never resized on purpose, so pinning it to
+  // its content costs nothing.
+  height: auto !important;
   max-width: 100%;
   padding: 20px 24px 24px;
   border-radius: var(--corner-radius-4, 16px);

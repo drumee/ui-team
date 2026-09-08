@@ -1,132 +1,62 @@
 /**
- * Step 6 bodies — Google Drive migration.
+ * Step body for the `migrate` tour.
  *
- * Figma 3314:86172 (the + New menu), 3314:86343 (the import dialog) and
- * 3314:86542 (its Verify & import button). Those frames are real vector, so the
- * metrics are the design's own: a 195x96 menu of 24px rows at (1396,40), and a
- * centred import dialog.
+ * Two screens of the Files pane (Figma 142:34981, and 142:35805 with the
+ * + New dropdown open), then the import dialog at three points in the form
+ * (176:47527 / 180:49109 / 180:49990) over the same pane, which the dialog
+ * frames hold back behind the card.
  *
- * The desk behind these comes from the step's faded workspace backdrop
- * (tutorial/index.js `_widgets`), so this widget renders only what the step is
- * about: the menu, then the dialog.
+ * So the pane is drawn on all five screens — as the SUBJECT on the first two
+ * and as the ground on the last three — which is why this composes it here
+ * rather than taking it as a backdrop from somewhere else.
  *
- * Visual only — no services. Spotlight targets: `menu`, `address`, `verify`.
- */
-
-// ── "+ New" menu ──────────────────────────────────────────────────────────────
-const ITEMS = [
-  { ico: 'desktop_upload', label: () => LOCALE.FROM_DEVICE || 'From device' },
-  {
-    ico: 'logo-google',
-    label: () => LOCALE.MIGRATE_FROM_GOOGLE_DRIVE || 'Migrate from Google Drive',
-    on: true,
-  },
-  { ico: 'topbar-add', label: () => LOCALE.ADD_NEW || 'Add new' },
-];
-
-function menu(ui, pfx) {
-  return Skeletons.Box.Y({
-    className: `${pfx}__menu`,
-    // Screen 1's spotlight target — the design's connector rises to it.
-    sys_pn: 'menu',
-    partHandler: ui,
-    kids: ITEMS.map((it) =>
-      Skeletons.Box.X({
-        className: `${pfx}__menu-item${it.on ? ' on' : ''}`,
-        kids: [
-          Skeletons.Image.Svg({ ico: it.ico, className: `${pfx}__menu-icon` }),
-          Skeletons.Note({ className: `${pfx}__menu-label`, content: it.label() }),
-        ],
-      }),
-    ),
-  });
-}
-
-// ── "Import a folder or file" dialog ──────────────────────────────────────────
-const SERVICE_ACCOUNT =
-  'drumee-drive-import@growth-hacking-491411.iam.gserviceaccount.c…';
-
-/**
  * @param {Object} ui
- * @param {String} pfx
- * @param {Boolean} [verifying] highlight the Verify & import button, as the
- *   third frame does
+ * @param {Object} [screen] the SCREENS entry — `menu` opens the + New
+ *   dropdown, `dialog` lays the import card over the pane, and `live` makes
+ *   the hero's two buttons real controls (screen 1, which has no callout to
+ *   carry a Next)
  */
-function dialog(ui, pfx, verifying) {
-  return Skeletons.Box.Y({
-    className: `${pfx}__dialog`,
+
+const { filesPane } = require('../../skeleton/toolkit/files');
+const dialog = require('./dialog');
+
+module.exports = function (ui, screen = {}, state = {}) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({ active: 0,
+    className: `${pfx}__stage`,
     kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__dialog-head`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__dialog-title`,
-            content: LOCALE.IMPORT_FOLDER_OR_FILE || 'Import a folder or file',
-          }),
-          Skeletons.Image.Svg({ ico: 'cross', className: `${pfx}__dialog-close` }),
-        ],
+      filesPane(ui, {
+        // Open only while the user has opened it — the + New buttons toggle it
+        // now rather than the tour drawing it open on a screen of its own.
+        //
+        // The KEY of the button it hangs off ("toolbar" or "hero"), because the
+        // pane draws that button twice and the menu is a child of whichever one
+        // was pressed.
+        menu: screen.menu ? state.menuOpen : null,
+        // `live_menu` is what turns the dropdown's rows from a drawing into
+        // controls that really create. Without it they stay inert, which is
+        // what every other tour drawing this pane wants.
+        live_menu: screen.live_menu,
+        // Only where the screen asks for them. Everywhere else these are the
+        // drawing the frames show, and a stray click on the pane must not move
+        // the tour.
+        cta_service: screen.live ? 'mg-open-dialog' : null,
+        // Makes BOTH + New buttons controls — the toolbar's and the hero's.
+        new_service: screen.live ? 'mg-toggle-menu' : null,
+        upload_service: screen.live ? 'mg-do-upload' : null,
       }),
-      Skeletons.Box.Y({
-        className: `${pfx}__dialog-body`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__step`,
-            content: LOCALE.MIGRATE_STEP_SHARE
-              || '1. In Google Drive, share the folder or file with this address (Viewer access is enough):',
-          }),
-          // Screen 2's spotlight target: the address the user has to copy.
-          Skeletons.Box.X({
-            className: `${pfx}__address`,
-            sys_pn: 'address',
-            partHandler: ui,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}__address-value`,
-                content: SERVICE_ACCOUNT,
-              }),
-              Skeletons.Note({
-                className: `${pfx}__address-copy`,
-                content: LOCALE.COPY || 'Copy',
-              }),
-            ],
-          }),
-          Skeletons.Note({
-            className: `${pfx}__step`,
-            content: LOCALE.MIGRATE_STEP_PASTE
-              || "2. Paste the folder's or file's link (or ID) here:",
-          }),
-          Skeletons.Note({
-            className: `${pfx}__input`,
-            content: 'https://drive.google.con',
-          }),
-          // Screen 3's spotlight target: the button that starts the import.
-          Skeletons.Box.X({
-            className: `${pfx}__verify${verifying ? ' focused' : ''}`,
-            sys_pn: 'verify',
-            partHandler: ui,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}__verify-label`,
-                content: LOCALE.VERIFY_AND_IMPORT || 'Verify & import',
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
+      screen.dialog
+        ? Skeletons.Box.Y({ active: 0,
+            className: `${pfx}__overlay`,
+            kids: [dialog(ui, {
+            copied: screen.copied,
+            linked: screen.linked,
+            // Set only on the screen where the card ARRIVES — see _transition
+            // and the `enter` note in ../index.js.
+            enter: state.enter,
+          })],
+          })
+        : null,
+    ].filter(Boolean),
   });
-}
-
-const stage = (pfx, kid) =>
-  Skeletons.Box.Y({ className: `${pfx}__stage`, kids: [kid] });
-
-/** Screen 1 — the + New menu, with Migrate from Google Drive under the cursor. */
-const menuScreen = (ui) => stage(ui.fig.family, menu(ui, ui.fig.family));
-
-/** Screen 2 — the import dialog, waiting for the address to be copied. */
-const dialogScreen = (ui) => stage(ui.fig.family, dialog(ui, ui.fig.family, false));
-
-/** Screen 3 — the same dialog with Verify & import ready to go. */
-const verifyScreen = (ui) => stage(ui.fig.family, dialog(ui, ui.fig.family, true));
-
-module.exports = { menuScreen, dialogScreen, verifyScreen };
+};

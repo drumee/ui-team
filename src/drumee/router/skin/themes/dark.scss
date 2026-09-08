@@ -40,7 +40,9 @@ html[data-theme="dark"] {
   /* Scrollbar — darker track + thumb so the bar reads on dark surfaces instead
      of the light defaults (consumed by the global override in
      router/skin/index.scss). */
-  --scrollbar-thumb: var(--border-strong);
+  // --border-strong is #4642a9 in dark (--primary-60, a retired brand purple),
+  // so the dark bar had the same problem as light. Light film instead.
+  --scrollbar-thumb: rgba(255, 255, 255, 0.24);
   --scrollbar-track: var(--normal-bg-90);
 
   /* Accent / state */
@@ -49,6 +51,18 @@ html[data-theme="dark"] {
   --radio-on-border: #5950ff;
   --hover-bg-40: rgba(89, 80, 255, 0.15);
   --active-item-bg: rgba(89, 80, 255, 0.1);
+
+  // The brand at 10%, as a SURFACE — Figma's "Overlay/brand" style laid over a
+  // ground (Drumee 2.0, org view card 104:33154). Both themes already carried
+  // this exact value twice, as --radio-on-bg and --active-item-bg; this is the
+  // same wash named for what it is rather than for a STATE, so a resting
+  // surface does not change colour the day someone retunes the selected item.
+  //
+  // Translucent on purpose, not the composited hex: it sits correctly on the
+  // light and dark grounds without a second value, which a flat #eeeeff would
+  // not. (Note --primary-10 is NOT this wash despite the comment on the org
+  // chip's plan tag: #e4e3ff is the brand at ~16%, visibly stronger.)
+  --brand-tint: rgba(89, 80, 255, 0.1);
   --folder-fill: #884eff;
   --signout-fg: #d74e49;
 

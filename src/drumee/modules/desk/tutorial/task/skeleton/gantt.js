@@ -18,20 +18,20 @@ const TODAY = 10;
 const pctOf = (day) => ((day - FIRST_DAY) / DAYS.length) * 100;
 
 function taskRow(pfx, task) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__gt-row${task.selected ? ' selected' : ''}`,
     kids: [
-      Skeletons.Box.Y({ className: `${pfx}__gt-check` }),
-      Skeletons.Image.Svg({
+      Skeletons.Box.Y({ active: 0, className: `${pfx}__gt-check` }),
+      Skeletons.Image.Svg({ active: 0,
         ico: task.selected ? 'carret-down' : 'apps-caret-down',
         className: `${pfx}__gt-caret${task.selected ? ' open' : ''}`,
       }),
       task.priority
-        ? Skeletons.Box.Y({ className: `${pfx}__gt-dot`, dataset: { priority: task.priority } })
+        ? Skeletons.Box.Y({ active: 0, className: `${pfx}__gt-dot`, dataset: { priority: task.priority } })
         : null,
-      Skeletons.Note({ className: `${pfx}__gt-name`, content: task.name }),
-      Skeletons.Note({ className: `${pfx}__gt-plus`, content: '+' }),
-      Skeletons.Image.Svg({ ico: 'cross', className: `${pfx}__gt-remove` }),
+      Skeletons.Note({ active: 0, className: `${pfx}__gt-name`, content: task.name }),
+      Skeletons.Note({ active: 0, className: `${pfx}__gt-plus`, content: '+' }),
+      Skeletons.Image.Svg({ active: 0, ico: 'cross', className: `${pfx}__gt-remove` }),
     ].filter(Boolean),
   });
 }
@@ -46,22 +46,22 @@ function bar(ui, pfx, task) {
   // bar itself. A bar already past today keeps a stub band so the badge lands
   // just after it.
   const lateWidth = task.late ? Math.max(pctOf(TODAY) - ends, 3) : 0;
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__gt-lane${task.selected ? ' selected' : ''}`,
     kids: [
       task.late
-        ? Skeletons.Box.X({
+        ? Skeletons.Box.X({ active: 0,
           className: `${pfx}__gt-late`,
           styleOpt: { left: `${ends}%`, width: `${lateWidth}%` },
           kids: [
-            Skeletons.Box.Y({
+            Skeletons.Box.Y({ active: 0,
               className: `${pfx}__gt-late-badge`,
               
             }),
           ],
         })
         : null,
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__gt-bar`,
         // Percentage geometry: the lane is the ruler's width, whatever the
         // window ends up being.
@@ -74,52 +74,52 @@ function bar(ui, pfx, task) {
 }
 
 module.exports = function gantt(ui, pfx) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__gt`,
     kids: [
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__gt-list`,
         kids: [
-          Skeletons.Box.X({
+          Skeletons.Box.X({ active: 0,
             className: `${pfx}__gt-list-head`,
             kids: [
-              Skeletons.Note({
+              Skeletons.Note({ active: 0,
                 className: `${pfx}__gt-add`,
                 content: `+ ${LOCALE.WORK || 'Work'}`,
               }),
-              Skeletons.Note({
+              Skeletons.Note({ active: 0,
                 className: `${pfx}__gt-delete`,
                 content: LOCALE.DELETE_SELECTED || 'Delete selected',
               }),
             ],
           }),
-          Skeletons.Box.Y({
+          Skeletons.Box.Y({ active: 0,
             className: `${pfx}__gt-rows`,
             kids: TASKS.map((t) => taskRow(pfx, t)),
           }),
         ],
       }),
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__gt-chart`,
         kids: [
-          Skeletons.Box.X({
+          Skeletons.Box.X({ active: 0,
             className: `${pfx}__gt-ruler`,
             kids: DAYS.map((d) =>
-              Skeletons.Box.Y({
+              Skeletons.Box.Y({ active: 0,
                 className: `${pfx}__gt-tick`,
                 kids: [
                   d === FIRST_DAY || d === 8
-                    ? Skeletons.Note({ className: `${pfx}__gt-month`, content: 'Jun' })
+                    ? Skeletons.Note({ active: 0, className: `${pfx}__gt-month`, content: 'Jun' })
                     : null,
-                  Skeletons.Note({ className: `${pfx}__gt-tick-day`, content: String(d) }),
+                  Skeletons.Note({ active: 0, className: `${pfx}__gt-tick-day`, content: String(d) }),
                 ].filter(Boolean),
               }),
             ),
           }),
-          Skeletons.Box.Y({
+          Skeletons.Box.Y({ active: 0,
             className: `${pfx}__gt-lanes`,
             kids: [
-              Skeletons.Box.Y({
+              Skeletons.Box.Y({ active: 0,
                 className: `${pfx}__gt-today`,
                 styleOpt: { left: `${pctOf(TODAY)}%` },
               }),

@@ -528,3 +528,56 @@
     width: 24px;
   }
 }
+
+// ── The Files grid's empty view (window__icons-list) ──────────────────────
+// The "No Folders or Files yet" note ui-core mounts when the listing comes
+// back with nothing (skeleton/toolkit gridFilesBrowser `evArgs`).
+//
+// Scoped on `.no-content` — the className that call passes — rather than on
+// `.widget-blank`. Those are two DIFFERENT elements: ui-core only reaches for
+// the blank widget when a list declares NO evArgs at all (collection-view
+// emptyViewOptions defaults `opt.kind` to KIND.blank). This list DOES declare
+// one, built by Skeletons.Note, which carries `kind: 'note'` → kind/seeds
+// maps `note` to widgets/text → the element is `.drumee-widget.note-reader`,
+// and `.widget-blank` never appears here. `.no-content` is the only class the
+// two paths share, so it is the hook that survives either.
+//
+// Gated behind `:has(> .no-content)` so the populated grid is untouched. That
+// also makes the rule independent of whatever display the scroll container
+// normally carries: it is a bare template div (ui-core list/smart/template)
+// with no data-flow, so it computes to `display: block` and the
+// `grid-template-columns` the folder skin sets on it are inert — the real
+// grids are the sections inside it. Overriding `display` only in the empty
+// case avoids having to be right about any of that.
+.window__icons-list .smart-container:has(> .no-content) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  // 100% of the list, which IS definite: the files panel gives
+  // `.window__icons-list { flex: 1 1 auto; min-height: 0 }` (folder skin), so
+  // the note centres in the whole pane rather than in a band at the top.
+  //
+  // min-height, not height: on any surface where that chain is absent the
+  // percentage resolves against an auto parent and drops out, and the floor
+  // below still gives the note somewhere to sit instead of collapsing it onto
+  // the container's top padding.
+  min-height: 100%;
+}
+
+.window__icons-list .smart-container:has(> .no-content) > .no-content {
+  min-height: 96px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  // The note widget sets its content with innerHTML on a flex row
+  // (widgets/text, `flow: wrap`), so the string is an anonymous flex item —
+  // it needs the box centred, not just the text.
+  max-width: 320px;
+  padding: 0 24px;
+  box-sizing: border-box;
+  color: var(--normal-fg-20);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}

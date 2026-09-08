@@ -17,6 +17,7 @@
  */
 
 const EDITABLE = require("../editable");
+const share = require("builtins/player/widget/share");
 
 const cnWindowButton = "window-button";
 
@@ -170,8 +171,8 @@ module.exports = function (ui) {
 /**
  * The gear menu, as MenuItem data for the widget's folder-settings default.
  *
- * Default set, in both modes: Copy, Rename, Chat threads, Share, Get info,
- * Move to trash.
+ * Default set, in both modes: Copy, Rename, Chat threads, Get info, Move to
+ * trash — plus Share, but only for a file in an external workspace.
  *
  * Preview mode adds the three export rows on top — Download, Download a PDF
  * version, Print. They are absent while editing because they serve the
@@ -252,11 +253,16 @@ module.exports.menu = function (ui) {
 
   const details = [];
 
-  // Share is offered wherever the file lives, as in the Figma; widget/share
-  // decides whether it opens the real flow or explains that an external
-  // workspace is needed first. Gating it on the area would leave that
-  // explanation unreachable.
-  if (editable) {
+  // Share only where a file can actually be shared out — an EXTERNAL
+  // workspace. This row used to be offered wherever the file lived, with
+  // widget/share explaining that an external workspace is needed first;
+  // Lexis dropped that for office files (2026-09-05). In an internal
+  // workspace the row led nowhere but to that explanation, and the
+  // Designation link below already covers sharing there.
+  //
+  // Deliberately the SAME test widget/share applies on click, so the row and
+  // its handler can never disagree about what "external" means.
+  if (editable && share.isExternal(ui)) {
     details.push({
       id: "secure-share",
       label: LOCALE.SHARE,

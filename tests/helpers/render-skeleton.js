@@ -17,14 +17,18 @@ function installGlobals() {
     global[k] = v;
   };
 
-  const Box = node("box");
+  // `flow` is what ui-core stamps as data-flow, and it is the only thing that
+  // tells a Box.X from a Box.Y — the descriptor is otherwise identical.
+  const boxNode = (flow) => (props = {}) => ({ __kind: "box", __flow: flow, ...props });
   set("Skeletons", {
-    Box: Object.assign(node("box"), {
-      X: Box, Y: Box, Z: Box, G: Box,
+    Box: Object.assign(boxNode("y"), {
+      X: boxNode("x"), Y: boxNode("y"), Z: boxNode("y"), G: boxNode("y"),
     }),
     Note: node("note"),
     Element: node("element"),
     Entry: node("entry"),
+    // The reminder-style entry (ui-core toolkit maps EntryBox -> entry/reminder).
+    EntryBox: node("entrybox"),
     Textarea: node("textarea"),
     Button: { Svg: node("button.svg"), Label: node("button.label") },
     Image: { Svg: node("image.svg") },
@@ -33,6 +37,9 @@ function installGlobals() {
     FileSelector: node("fileselector"),
   });
   set("LOCALE", new Proxy({}, { get: (_t, k) => String(k) }));
+  // Reached by the workspace preview's topbar (toolkit/app-preview.js), which
+  // names the org on its pill.
+  set("Organization", { name: () => "Org-name", id: "org", get: () => "" });
   set("Visitor", {
     id: "me",
     get: () => "",
@@ -60,7 +67,59 @@ function installGlobals() {
   set("Dayjs", dayjs);
   set("_a", new Proxy({}, { get: (_t, k) => String(k) }));
   set("_e", new Proxy({}, { get: (_t, k) => String(k) }));
-  set("_K", { order: { descending: "desc" }, char: { empty: "" }, tag: { div: "div" } });
+  // `privilege` mirrors lex/constants — skeleton/toolkit/permission builds its
+  // role table from it at MODULE load, so any skeleton reaching that toolkit
+  // (the workspace-members panels) cannot even be required without it.
+  set("_K", {
+    order: { descending: "desc" },
+    char: { empty: "" },
+    tag: { div: "div" },
+    privilege: {
+      owner: 0b0111111,
+      admin: 0b0011111,
+      delete: 0b0001111,
+      write: 0b0001111,
+      modify: 0b0001111,
+      upload: 0b0001111,
+      get: 0b0000111,
+      download: 0b0000111,
+      chat: 0b0000111,
+      read: 0b0000011,
+      view: 0b0000011,
+      anonymous: 0b0000001,
+    },
+    // The single BITS, as opposed to the cumulative words above — the role
+    // table tests a privilege word against these.
+    permission: {
+      owner: 0b0100000,
+      admin: 0b0010000,
+      delete: 0b0001000,
+      write: 0b0001000,
+      modify: 0b0001000,
+      upload: 0b0001000,
+      get: 0b0000100,
+      download: 0b0000100,
+      chat: 0b0000110,
+      read: 0b0000010,
+      view: 0b0000010,
+      anonymous: 0b0000001,
+      anyone: 0b0000001,
+      guest: 0b0000001,
+    },
+  });
+  // Kind registry lookups. Widgets name kinds two levels deep (KIND.menu.topic)
+  // and the real registry answers with the snake_case seed key, so this returns
+  // `menu_topic`; a one-level read (KIND.menu) still stringifies to `menu`.
+  const kindLeaf = (name) =>
+    new Proxy({}, {
+      get: (_t, k) => {
+        if (k === Symbol.toPrimitive || k === "toString" || k === "valueOf") {
+          return () => name;
+        }
+        return `${name}_${String(k)}`;
+      },
+    });
+  set("KIND", new Proxy({}, { get: (_t, k) => kindLeaf(String(k)) }));
   set("bootstrap", () => ({ endpoint: "", keysel: "" }));
   set("_", require("lodash"));
   // A few descriptors touch the DOM while building (date pickers, editors).
@@ -93,10 +152,18 @@ function installGlobals() {
   };
 }
 
-// webpack aliases `media/...` and `libs/...`; stub them for node.
+// webpack aliases `media/...`, `libs/...` and `assets/...`; stub them for node.
+// `desk/...` is aliased to a real directory (webpack/resolve.js) and is
+// resolved for real, because the tour registry it points at is pure JS and is
+// exactly what the caller wants to assert against.
 function installResolver() {
+  const { join } = require("node:path");
+  const DESK = join(__dirname, "..", "..", "src", "drumee", "modules", "desk");
   const orig = Module._resolveFilename;
   Module._resolveFilename = function (request, ...rest) {
+    if (/^desk\//.test(request)) {
+      return orig.call(this, join(DESK, request.replace(/^desk\//, "")), ...rest);
+    }
     if (/^media\//.test(request) || /^libs\//.test(request) || /^assets\//.test(request)) {
       return require.resolve("./alias-stub.js");
     }
@@ -166,6 +233,10 @@ function makeUi(over = {}) {
     getActivityTab: () => "comments",
     getTaskHistory: () => [],
     getRowUploads: () => [],
+    // Child items drafted while the parent is still being created — the create
+    // modal reads this whenever it draws, so a fixture without it cannot render
+    // that modal at all.
+    getPendingSubtasks: () => [],
   };
   return { ...base, ...over };
 }
@@ -181,6 +252,31 @@ function render(over = {}) {
     delete require.cache[path];
     const make = require(path);
     return make(makeUi(over));
+  } finally {
+    restoreResolver();
+    restoreGlobals();
+  }
+}
+
+// Render ANY skeleton module, with a caller-supplied ui stub.
+//
+// `render()` above is the tasks panel with its own large stub; this is the same
+// machinery for every other skeleton in the app, where the ui a skeleton needs
+// is usually two or three methods.
+//
+// @param {String} relPath  from the repo root
+// @param {Object} ui       the stub the skeleton will be called with
+// @param {...*}   rest     further arguments the skeleton takes — a step
+//   skeleton's SCREENS entry and its state, say, which decide what it draws
+function renderModule(relPath, ui, ...rest) {
+  const { join } = require("node:path");
+  const restoreGlobals = installGlobals();
+  const restoreResolver = installResolver();
+  try {
+    const path = require.resolve(join(__dirname, "..", "..", relPath));
+    delete require.cache[path];
+    const make = require(path);
+    return make(ui, ...rest);
   } finally {
     restoreResolver();
     restoreGlobals();
@@ -212,14 +308,43 @@ function findAll(tree, cls) {
 const childrenWithClass = (n, cls) =>
   [].concat((n && n.kids) || []).filter((k) => k && hasClass(k, cls));
 
-module.exports = { render, walk, find, findAll, hasClass, childrenWithClass, DEFAULT_COMMENT };
+module.exports = {
+  render,
+  renderModule,
+  installGlobals,
+  installResolver,
+  walk,
+  find,
+  findAll,
+  hasClass,
+  childrenWithClass,
+  DEFAULT_COMMENT,
+};
 
 // Descriptor tree → HTML, so a browser can lay out what the skeleton really
 // emits. Only the attributes layout and hit-testing depend on.
+//
+// A BOX MUST CARRY ITS AXIS OR NOTHING LAYS OUT. ui-core renders every Box as
+// `.box[data-flow=x|y]`, and skin/lib/container.scss is what turns that into
+// `display:flex` with a direction — without it a Box.X stacks its children
+// vertically and any `flex: 1` child collapses to zero. Measurements taken
+// that way look like a broken layout and are simply a broken fixture.
+//
+// The axis is not on the descriptor (Skeletons.Box.X and .Y are the same
+// factory), so `flow` is stamped by the factory itself — see installGlobals.
 function toHtml(n) {
   if (n == null || typeof n !== "object") return "";
-  const cls = n.className ? ` class="${n.className}"` : "";
-  const attrs = Object.entries(n.attrOpt || {})
+  const box = n.__flow ? ` data-flow="${n.__flow}"` : "";
+  const cls = n.className
+    ? ` class="${n.__flow ? "box " : ""}${n.className}"`
+    : (n.__flow ? ' class="box"' : "");
+  // BOTH ATTRIBUTE CHANNELS. ui-core takes plain HTML attributes through
+  // `attribute` (that is how Skeletons.Element carries an <img>'s src — see
+  // card() in tutorial/skeleton/toolkit/empty-state.js) and data-* through
+  // `attrOpt`. A harness that emitted only the second could never render an
+  // image at all, which is how a carousel of photographs measured as a
+  // carousel of empty boxes.
+  const attrs = Object.entries({ ...(n.attribute || {}), ...(n.attrOpt || {}) })
     .filter(([, v]) => v != null)
     .map(([k, v]) => ` ${k}="${String(v)}"`)
     .join("");
@@ -227,8 +352,40 @@ function toHtml(n) {
     .filter(([, v]) => v != null)
     .map(([k, v]) => ` data-${k}="${String(v)}"`)
     .join("");
+  // INLINE STYLE IS PART OF THE LAYOUT, not decoration. The workspace preview
+  // composes its window at the app's real width by setting `style.width` on
+  // one box and scaling the result down; dropped, that box shrink-to-fits its
+  // container and the miniature is measured at the wrong size — which looks
+  // like a broken component and is a broken fixture.
+  // BOTH CHANNELS. ui-core reads `opt.style || opt.styleOpt` (letc.js), and the
+  // tour's tracker views use the second one for everything that is computed —
+  // the donut's conic-gradient, the gantt's bar offsets, the board's progress
+  // fill. A harness that honours only the first draws them all as empty boxes.
+  const style = Object.entries({ ...(n.styleOpt || {}), ...(n.style || {}) })
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => `${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${v}`)
+    .join(";");
+  const css = style ? ` style="${style}"` : "";
   const kids = [].concat(n.kids || []).map(toHtml).join("");
   const text = n.content != null && !kids ? String(n.content) : "";
-  return `<div${cls}${attrs}${ds}>${text}${kids}</div>`;
+  // `tagName` is what an Element uses to be something other than a div — an
+  // <img>, mostly. A void element takes no children and no text.
+  if (n.__kind === "element" && n.tagName) {
+    const tag = String(n.tagName).toLowerCase();
+    const open = `<${tag}${cls}${box}${attrs}${ds}${css}>`;
+    return /^(img|br|hr|input)$/.test(tag) ? open : `${open}${text}${kids}</${tag}>`;
+  }
+  // AN ICON IS AN <svg><use>, not a div. ui-core renders Image.Svg as a
+  // reference into the sprite (`#--icon-<name>`), and emitting a bare box for
+  // it left every glyph out of the picture — which is fine for a descriptor
+  // test and useless for a harness that is comparing a rendering to a design.
+  // The caller inlines icons/sprites/normalized.sprite.svg for these to
+  // resolve against; with no sprite on the page they render as nothing, which
+  // is what they did before anyway.
+  if (n.__kind === "image.svg" && n.ico) {
+    return `<div${cls}${box}${attrs}${ds}${css}>`
+      + `<svg><use href="#--icon-${n.ico}" xlink:href="#--icon-${n.ico}"></use></svg></div>`;
+  }
+  return `<div${cls}${box}${attrs}${ds}${css}>${text}${kids}</div>`;
 }
 module.exports.toHtml = toHtml;

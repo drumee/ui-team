@@ -1,0 +1,104 @@
+@use "mixins/drumee";
+
+// Logo, title, button — centred in the work area.
+//
+// Token-only: this is the first thing a new account sees and the screen an
+// emptied account lands on, so it has to be right on both themes without
+// anyone remembering to check.
+.desk-home-empty {
+  &__ui {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  &__main {
+    width: 100%;
+    min-height: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 48px 24px;
+    text-align: center;
+  }
+
+  // Sized explicitly: the symbol is authored at its own dimensions and would
+  // otherwise paint at that intrinsic size.
+  //
+  // THE WORDMARK IS NOT THEME-SAFE ON ITS OWN. assets/drumee-logo.svg paints
+  // the letters with a hardcoded `fill="#0B0A21"`, which is --normal-fg on the
+  // light theme (fine) and almost exactly --normal-bg on the dark one
+  // (#0b0a21) — so on dark the word "drumee" all but disappears and only the
+  // purple mark is left. The sidebar hit this too and answered it by swapping
+  // in `rail-logo` for the indigo rail; here the surface is the work area, so
+  // the wordmark stays and its letters are re-pointed at the token instead.
+  //
+  // Matched on the literal fill because that is what the asset carries, and CSS
+  // beats a presentation attribute. The mark's own #433CC5 is left alone — it
+  // is brand purple and reads on both themes.
+  &__logo {
+    width: 148px;
+    height: 40px;
+    flex: 0 0 auto;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    [fill="#0B0A21"],
+    [fill="#0b0a21"] {
+      fill: var(--normal-fg);
+    }
+  }
+
+  &__title {
+    // drumee.typo() emits no font-weight ($weight only selects a family), so
+    // the weight is written out — same as the create dialog's heading.
+    @include drumee.typo($size: 28px, $line: 1.25, $color: var(--normal-fg));
+    font-weight: 600;
+    max-width: 520px;
+  }
+
+  // Same ramp as the switcher's pinned "New workspaces" button and the create
+  // dialog's submit, so all three read as the same action.
+  //
+  // A FIXED white label, not --reverse-fg: that token flips with the theme
+  // (#ffffff light, #282538 dark) while --primary-purple-50 does not, which
+  // would put near-black text on brand purple at about 1.9:1 on dark.
+  &__cta {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 12px 24px;
+    margin-top: 4px;
+    border-radius: 12px;
+    @include drumee.typo($size: 15px, $line: 1.2, $color: #fff);
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--primary-purple-50);
+    transition: background-color 220ms ease;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      background: var(--primary-purple-40);
+    }
+  }
+
+  @media (max-width: 600px) {
+    &__title {
+      @include drumee.typo($size: 22px, $line: 1.3, $color: var(--normal-fg));
+      font-weight: 600;
+    }
+  }
+}

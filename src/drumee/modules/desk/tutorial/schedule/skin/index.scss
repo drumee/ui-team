@@ -45,7 +45,7 @@ $slot: 35px;
   }
 
   // The window is the bottom layer of the step: it must stay under the tutorial
-  // callout (.tutorial__s1-tooltip, z-index 10010), which is what is being read.
+  // callout (.tutorial__bubble-card, z-index 10010), which is what is being read.
   &__main {
     position: relative;
     z-index: 1;

@@ -84,7 +84,25 @@
   // OUTRIGHT: drumee.typo emits font-size / line-height / color only — it never
   // emits font-weight, and 600 is not even a branch of its $weight chain — so
   // passing $weight there would silently drop this title to regular.
+  // Title + workspace on one line.
+  //
+  // The row is the constrained one, not the header: the close button is the
+  // header's other child, so letting this grow would push it off the edge.
+  // At the dock's 360px there is not room for both at full width, and what
+  // gives is the workspace name — the title is fixed copy and reads as the
+  // heading, so it holds its size and the chip ellipsizes beside it.
+  &__title-row {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
   &__title {
+    // Never squeezed: it is three fixed words, and a wrapped or clipped
+    // heading beside an intact chip reads as the wrong thing having given way.
+    flex: 0 0 auto;
+
     @include drumee.typo(
       $size: 18px,
       $line: 24px,
@@ -100,6 +118,143 @@
       $weight: 400,
       $color: var(--neutral-600)
     );
+  }
+
+  // WHICH workspace, under the title. Modelled on `.breadcrumb-item__tab` in
+  // the topbar so the same workspace reads the same way in both places.
+  //
+  // The numbers are COPIED, not inherited, and that is not laziness: the
+  // --crumb-* ramp those values come from is declared on `.desk-breadcrumb`
+  // (breadcrumb/skin) and therefore cascades only to crumbs. Writing
+  // `var(--crumb-gap, 6px)` here would read as a live link to that ramp while
+  // always resolving to the fallback — a comment's worth of fiction in the
+  // code itself. If the ramp moves, this has to be moved with it.
+  //
+  //   gap 6px · height 30px · radius 8px · pad-x 6px · icon 20px · 13px/18px
+  //
+  // It carries the ground the crumb tab gave up when the topbar's chip moved to
+  // .desk-module-topbar__crumb-group: there, the chip wraps the whole address
+  // and its caret; here this is the only thing in the row, so it draws its own.
+  //
+  // Inert — no cursor, no hover. It names the workspace, it does not navigate.
+  &__ws-tab {
+    align-items: center;
+    gap: 6px;
+    // Shrinks, and is the only thing in the row that does — see __title-row.
+    // `min-width: 0` is what actually permits it: a flex item's default
+    // min-width is its content, so without this the name refuses to ellipsize
+    // and the row overflows instead.
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0 6px;
+    height: 30px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    // ELEVATED, not --normal-bg-90: the panel itself is already that colour
+    // (see __main), so a chip in the same tone is a chip you cannot see. This
+    // sits ON the panel, the way the create dialog's type rows sit on its card.
+    background-color: var(--normal-bg-elevated);
+    border: 1px solid var(--border-default);
+  }
+
+  // Same recipe as the breadcrumb's __icon: folderArt emits a `.folder-shape`
+  // whose AREA CLASS supplies the fill plus an absolutely positioned `.badge`,
+  // authored at 105x86 — without an explicit box it paints at that intrinsic
+  // size, and without `position: relative` the badge anchors to whatever
+  // positioned ancestor it finds.
+  &__ws-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
+
+    .media-grid__folder-art {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 16px;
+    }
+
+    .folder-shape {
+      width: 20px;
+      height: 16px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public { fill: var(--area-public); }
+      &.share,
+      &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+
+    // At 20px a proportional emblem is a smudge, so it is oversized and hangs
+    // off the corner — the desk breadcrumb's own answer, same numbers.
+    //
+    // THE STOPS HAVE TO BE COLOURED. The template draws the emblem in two
+    // layers: white glyph detail, then a path filled `url(#paint-<id>)` whose
+    // gradient stops carry classes `gradient-start-<area>` /
+    // `gradient-end-<area>` and no colour of their own. No stylesheet in this
+    // repo defines those, so left alone the stops fall back to the SVG default
+    // of black and the emblem paints as a dark blob over its own glyph.
+    //
+    // `fill: currentColor` on the <svg> root does NOT reach it: fill inherits,
+    // and an inherited value loses to the presentation attribute on the path
+    // itself. Same values as the create dialog's type rows, so one workspace
+    // wears one emblem wherever it appears.
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      color: var(--grid-color-folder-badge);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+
+      [class^="gradient-start-"] { stop-color: var(--primary-purple-40); }
+      [class^="gradient-end-"] { stop-color: var(--primary-purple-50); }
+      stop.gradient-start-private { stop-color: var(--orange-400); }
+      stop.gradient-end-private { stop-color: var(--orange-600); }
+      stop.gradient-start-share,
+      stop.gradient-end-share { stop-color: var(--area-share, #ffa8dc); }
+    }
+
+    .media-context-menu__folder-trigger {
+      display: none !important;
+    }
+  }
+
+  &__ws-name {
+    @include drumee.typo(
+      $size: 13px,
+      $line: 18px,
+      $color: var(--normal-fg)
+    );
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+
+    // THE TRUNCATION HAS TO BE ON THE INNER NODE. A Skeletons.Note renders its
+    // copy inside a `.note-content` div, so that div — not this box — is the
+    // element whose inline content overflows, and `text-overflow` only acts on
+    // the element that owns the overflowing text. Set on the outside alone it
+    // never fires: the box clips the name mid-glyph with no ellipsis, which is
+    // exactly how it rendered.
+    //
+    // Same family as the note that a Note is never CSS `:empty` for the same
+    // structural reason.
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   // ── Scrollable body ───────────────────────────────────────────
@@ -288,9 +443,11 @@
     color: var(--normal-fg-50);
   }
 
-  // Inline email-validation message, directly under the invite input row.
-  // Toggled via data-state (see index.js _setInviteError) so it takes no
-  // vertical space — and adds no section gap — while there is nothing to show.
+  // Inline message directly under the invite input row: a validation error, or
+  // the confirmation that an invitation went out (the invite-sent modal that
+  // used to replace this whole panel is gone — see index.js _sendInvitation).
+  // Toggled via data-state so it takes no vertical space — and adds no section
+  // gap — while there is nothing to show.
   &__invite-error {
     &[data-state="closed"] {
       display: none;
@@ -299,8 +456,17 @@
     &[data-state="open"] {
       display: flex;
     }
+
+    // Success reads green. Scoped to the wrapper's data-tone rather than a
+    // modifier class on the message, so the one place index.js already writes
+    // (_setInviteNotice) drives both the visibility and the colour.
+    &[data-tone="success"] .permission-restricted__invite-error-message {
+      color: var(--green-500);
+    }
   }
 
+  // Default tone is the error one: every path except the invite confirmation
+  // is a problem with the address.
   &__invite-error-message {
     @include drumee.typo(
       $size: 12px,
@@ -490,6 +656,39 @@
     width: 100%;
     position: relative;
     overflow: visible;
+    // Fallback stacking context for the hover tint below. The skeleton already
+    // stamps an inline `1000 - index` on every row (skeleton/index.js
+    // styleOpt), which is what keeps an open role popover above the rows under
+    // it; declaring 0 here — inline wins, so the popover order is untouched —
+    // keeps the tint working if a row is ever built without that style.
+    z-index: 0;
+
+    // Painted by a pseudo-element rather than a background on the row itself:
+    // the row carries no padding of its own (the section's 24px gutter is what
+    // spaces it), so a plain background would sit flush against the avatar and
+    // the trash icon. `inset` bleeds the tint 8px/12px past the row box to give
+    // it that breathing room WITHOUT changing the resting layout — the rows
+    // keep the height and the 16px rhythm they have today.
+    //
+    // z-index -1 puts it above the row's own background and below its content,
+    // so it never covers the avatar, the name or the actions.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -8px -12px;
+      border-radius: 8px;
+      z-index: -1;
+      pointer-events: none;
+      background-color: transparent;
+      transition: background-color 120ms ease;
+    }
+
+    // The neutral row hover, same token as __invite-suggestion — the closest
+    // analogue in this panel. The blue tint stays reserved for the role menu's
+    // options, which are a choice rather than a row.
+    &:hover::before {
+      background-color: var(--default-bg-hover, #f5f5fa);
+    }
   }
 
   &__member-info,
@@ -567,10 +766,23 @@
     width: 21px;
     height: 22px;
     color: #d74e49;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 120ms ease, color 120ms ease;
 
     svg {
       width: 13.33px;
       height: 15px;
+    }
+
+    // Tinted from the icon's OWN red (#d74e49 = 215 78 73), not the neutral row
+    // hover: the row tint is already under it, and a second neutral wash on top
+    // would read as the row highlighting twice rather than as the destructive
+    // control answering the pointer. Darkened text keeps the glyph legible on
+    // the blended background.
+    &:hover {
+      background-color: rgba(215, 78, 73, 0.14);
+      color: #b23b36;
     }
   }
 
@@ -645,6 +857,17 @@ html[data-theme="dark"] {
         background-color: var(--active-item-bg);
         color: var(--normal-fg-800);
       }
+    }
+
+    &__member-row:hover::before {
+      background-color: var(--hover-bg-40);
+    }
+
+    // Stronger tint and a lighter glyph: the same red at 0.14 disappears into
+    // the dark surface, and #b23b36 is unreadable on it.
+    &__member-remove:hover {
+      background-color: rgba(215, 78, 73, 0.24);
+      color: #ff8b86;
     }
   }
 }

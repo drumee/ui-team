@@ -1,6 +1,7 @@
 const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const { timestamp } = require("@drumee/ui-essentials")
 const { mediaErrorMessage } = require("builtins/webrtc/media-error");
+const DevicePrefs = require("builtins/webrtc/device-prefs");
 
 const __interact = require("window/interact/webrtc");
 class __webrtc_room extends __interact {
@@ -13,6 +14,13 @@ class __webrtc_room extends __interact {
     this.attendees = {};
     this.selectedInputDevice = "";
     this.selectedOutputDevice = "";
+    // Start from the mic / speaker the user picked in an earlier meeting
+    // (browser localStorage) instead of the OS default every time. The room
+    // (webrtc/room/jitsi) checks the device is still plugged in before using
+    // it; confirmDeviceSelection updates the memory on every confirmed pick.
+    const prefs = DevicePrefs.load();
+    this.preferredInputDevice = prefs.input;
+    this.preferredOutputDevice = prefs.output;
     RADIO_NETWORK.once(_e.offline, this.handleError.bind(this));
     this.model.set({
       mode: "normal",
@@ -464,9 +472,22 @@ class __webrtc_room extends __interact {
   async recreateLocalTrackOnDeviceChange() {
     let reqDevices = [_a.audio];
     if (this.isVideo) reqDevices = [...reqDevices, _a.video];
+    // A pending pick wins; otherwise keep the remembered mic. This also runs
+    // on DEVICE_LIST_CHANGED (headset plugged / unplugged), where nothing was
+    // picked: without the fallback the recreate handed an empty id to
+    // getUserMedia and silently moved the call back to the OS default mic.
+    const micId =
+      this.selectedInputDevice || this.preferredInputDevice || "default";
+    // The new mic must keep the CURRENT track's mute state: a fresh
+    // getUserMedia track is live, and swapping it in unmuted behind an "off"
+    // mic button is a hot mic. Read the state off the track itself, not the
+    // isAudio flag — that flag can lag the track (a room launched without an
+    // explicit audio option starts with isAudio false and a live mic).
+    const current = this.getLocalTrack(_a.audio);
+    const muted = !!(current && current.isMuted());
     // replaceTrack inside createLocalTracks is async — await so the swap
     // completes deterministically before the promise settles.
-    await this.createLocalTracks(reqDevices, this.selectedInputDevice);
+    await this.createLocalTracks(reqDevices, micId, { muted });
   }
 
   /**
@@ -539,11 +560,19 @@ class __webrtc_room extends __interact {
     try {
       if (this.selectedInputDevice) {
         await this.recreateLocalTrackOnDeviceChange();
+        // Remember only a pick that actually took (the recreate above throws
+        // when the device cannot be opened), so the next meeting starts on
+        // this microphone instead of the OS default.
+        DevicePrefs.saveInput(this.selectedInputDevice);
+        if (typeof this.postAudioDiagnostics === "function") {
+          this.postAudioDiagnostics("input-device-changed");
+        }
       }
       if (this.selectedOutputDevice) {
         await JitsiMeetJS.mediaDevices.setAudioOutputDevice(
           this.selectedOutputDevice
         );
+        DevicePrefs.saveOutput(this.selectedOutputDevice);
         // setAudioOutputDevice only affects FUTURE attaches; remote audio
         // elements attached before the flag flipped keep their old sink.
         const sinkId = JitsiMeetJS.mediaDevices.getAudioOutputDevice();

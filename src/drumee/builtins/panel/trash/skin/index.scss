@@ -11,12 +11,19 @@
     // never does.
     position: fixed;
     width: 500px;
-    height: 100vh;
-    top: 0;
-    right: 0;
+    // Sits INSIDE the padded canvas (43:23955), not over the whole viewport.
+    // It used to be height:100vh at top:0/right:0, which covered the top bar
+    // and ran past both gutters. --desk-* are published by the desk root; the
+    // fallbacks keep this correct if the panel is ever mounted outside it.
+    top: var(--desk-canvas-top, 54px);
+    right: var(--desk-gutter, 8px);
+    bottom: var(--desk-gutter, 8px);
+    height: auto;
+    border-radius: 8px;
     background-color: var(--normal-bg-90);
     border: 1px solid var(--border-muted);
-    transform: translateX(100%);
+    // Parked clear of the right gutter as well as its own width.
+    transform: translateX(calc(100% + var(--desk-gutter, 8px)));
     transition: transform 0.25s ease-out;
     will-change: transform;
     box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
@@ -26,7 +33,7 @@
     }
 
     &[data-anim="out"] {
-      transform: translateX(100%);
+      transform: translateX(calc(100% + var(--desk-gutter, 8px)));
     }
 
     // Mobile: a centered card instead of the full-height left drawer.

@@ -158,7 +158,7 @@ function checkout(ui) {
   const rightPanelTree = rightPanel(ui);
 
   return Skeletons.Box.X({
-    className: `${pfx}-main`,
+    className: `${pfx}-main${ui._motionClass()}`,
     kids: [leftPanel, rightPanelTree],
   });
 }

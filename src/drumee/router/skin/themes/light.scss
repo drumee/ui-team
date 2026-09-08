@@ -36,7 +36,12 @@ html[data-theme="light"],
   /* Scrollbar — consumed by the global .list-smart__container override in
      router/skin/index.scss. Light keeps the current purple thumb on a clear
      track. */
-  --scrollbar-thumb: var(--primary-400);
+  // Neutral, NOT --primary-400 (#c781ff). That lavender came from the vendored
+  // .list-smart__container rule in @drumee/ui-core and was carried over
+  // verbatim when these tokens were introduced — it is not a current brand
+  // colour, and it made every list in the app (inbox, contacts, notifications)
+  // scroll with a purple bar. A scrollbar is chrome; it should recede.
+  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
   --scrollbar-track: transparent;
 
   /* Accent / state */
@@ -45,6 +50,18 @@ html[data-theme="light"],
   --radio-on-border: #5950ff;
   --hover-bg-40: rgba(89, 80, 255, 0.08);
   --active-item-bg: rgba(89, 80, 255, 0.1);
+
+  // The brand at 10%, as a SURFACE — Figma's "Overlay/brand" style laid over a
+  // ground (Drumee 2.0, org view card 104:33154). Both themes already carried
+  // this exact value twice, as --radio-on-bg and --active-item-bg; this is the
+  // same wash named for what it is rather than for a STATE, so a resting
+  // surface does not change colour the day someone retunes the selected item.
+  //
+  // Translucent on purpose, not the composited hex: it sits correctly on the
+  // light and dark grounds without a second value, which a flat #eeeeff would
+  // not. (Note --primary-10 is NOT this wash despite the comment on the org
+  // chip's plan tag: #e4e3ff is the brand at ~16%, visibly stronger.)
+  --brand-tint: rgba(89, 80, 255, 0.1);
   --folder-fill: #884eff;
   --signout-fg: #eb6159;
 

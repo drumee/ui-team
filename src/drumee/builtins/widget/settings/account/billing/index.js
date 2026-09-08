@@ -1,4 +1,4 @@
-const { canUpgradePlan, billingAvailable } = require("libs/billing");
+const { canUpgradePlan, billingAvailable, planRank } = require("libs/billing");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
@@ -77,6 +77,7 @@ class settings_billing extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    clearTimeout(this._motionTimer);
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
@@ -208,7 +209,19 @@ class settings_billing extends LetcBox {
     const c = opt.cycle != null ? String(opt.cycle).toLowerCase() : "";
     const cycle = /^year/.test(c) ? "yearly" : (/^month/.test(c) ? "monthly" : null);
     const tab = opt.tab != null ? String(opt.tab).toLowerCase() : "";
-    if (!plan && !cycle && !tab) return;
+    // The coupon a campaign CTA carries (analytics-server SEGMENT_COUPON).
+    //
+    // SHAPE-CHECKED HERE because billing-deep-link.js deliberately does not:
+    // that lib runs before a module exists and stays dumb so a malformed param
+    // cannot break the boot. `[A-Za-z0-9_-]` and 64 chars are what
+    // yp.mkt_coupon.code actually stores (ascii, and the dashboard's own
+    // field); anything else is dropped silently, which degrades to "no coupon"
+    // rather than posting junk to preview_coupon.
+    const rawPromo = opt.promo != null ? String(opt.promo).trim() : "";
+    const promo = /^[A-Za-z0-9_-]{1,64}$/.test(rawPromo) ? rawPromo : null;
+    // `promo` joins the guard, or a promo-only link would return here and the
+    // code would be dropped one hop after the lib was taught to carry it.
+    if (!plan && !cycle && !tab && !promo) return;
 
     if (cycle) {
       this.state.plansTab.cycle = cycle;
@@ -228,6 +241,60 @@ class settings_billing extends LetcBox {
       this._deepLinkCheckout = true;
       this.state.currentTab = TAB_CHECKOUT;
     }
+    if (promo) {
+      // SEEDS THE FIELD ONLY. skeleton/checkout.js renders the input from
+      // `promoCode`, so this makes the code appear in the box — and nothing
+      // more.
+      //
+      // `checkout.promo` is deliberately NOT written. That object means
+      // "previewed and accepted by the server", and it is what draws the
+      // Applied chip and the discounted total. Setting it here would show a
+      // reader a discount the server has never seen, and the first they would
+      // learn otherwise is the amount they are charged. Only _applyPromoCode,
+      // via payment.preview_coupon, may write it.
+      this.state.checkout.promoCode = promo;
+      this._deepLinkPromo = promo;
+    }
+  }
+
+  /**
+   * Apply the coupon a campaign CTA arrived with, once the screen has settled.
+   *
+   * SEEDING THE FIELD IS NOT APPLYING THE CODE — see _applyDeepLink. This is
+   * the half that asks the server, and it is separate from the seed because it
+   * can only run once three things are true, none of which hold when the
+   * preselect is read:
+   *
+   *   the plan is known      _applyPromoCode posts checkout.selectedPlan, which
+   *                          _applyDeepLink seeds from plan=team;
+   *   the subscription is    a checkout deep link opens the tab BEFORE
+   *   known                  _loadSubscription answers, and _settleDeepLinkTab
+   *                          then bounces an account that cannot buy back to
+   *                          the plans view — previewing a coupon on that
+   *                          screen offers a discount with nothing to spend it
+   *                          on;
+   *   exactly once           preview_coupon is a POST, and renderContent runs
+   *                          on every tab change, seat tweak and WS
+   *                          plan_updated.
+   *
+   * Called from the END of _settleDeepLinkTab, which is the one moment all
+   * three hold, and which already owns the once-latch for the tab decision.
+   * This keeps its own latch so the two concerns stay separable.
+   *
+   * ARMED ONLY BY A LINK. A user who opens billing normally with a stale
+   * promoCode in state must never have it silently re-applied — the flag is
+   * set in _applyDeepLink and nowhere else.
+   */
+  _autoApplyDeepLinkPromo() {
+    if (!this._deepLinkPromo || this._deepLinkPromoApplied) return;
+    // The tab has settled by now; honour its verdict rather than overriding it.
+    if (this.state.currentTab !== TAB_CHECKOUT) return;
+    this._deepLinkPromoApplied = true;
+    // Reused unchanged: it already reads checkout.promoCode when the input is
+    // not yet bound, already posts plan + hub_id, already maps every server
+    // refusal to a readable message, and already repaints the summary. A second
+    // apply path here would be a second copy of all of that.
+    return this._applyPromoCode();
   }
 
   /**
@@ -245,6 +312,9 @@ class settings_billing extends LetcBox {
       this.state.currentTab = cycle === "yearly" ? TAB_YEARLY : TAB_MONTHLY;
       this.tab = this.state.currentTab;
     }
+    // AFTER the tab decision above, never before: a coupon must not be
+    // previewed onto a screen this method just decided has no checkout on it.
+    this._autoApplyDeepLinkPromo();
   }
 
   // Human-readable consequence list for the cancel-confirm modal.
@@ -492,7 +562,6 @@ class settings_billing extends LetcBox {
     const currentTitle = label(current);
     const targetTitle = label(targetPlan);
     const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
-    const rank = { free: 0, pro: 1, team: 2, business: 3, sovereign: 4 };
 
     // Three shapes for three different situations (product spec 2026-07-29):
     //  - same plan, other cycle  → DEFERRED: the current cycle runs to its
@@ -523,7 +592,7 @@ class settings_billing extends LetcBox {
           || "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {4} {5} subscription will be canceled immediately, and any remaining subscription time will not be carried over. Your {0} {1} plan will start right away.")
           .format(targetTitle, cycleWord(period), price, per, currentTitle, cycleWord(currentPeriod)),
       ];
-      if ((rank[targetPlan] ?? 0) < (rank[current] ?? 0)) {
+      if (planRank(targetPlan) < planRank(current)) {
         lines.push(this._downgradeConsequences(targetPlan));
       }
       title = (LOCALE.PLAN_SWITCH_CYCLE_TITLE || "Switch to {0} {1}")
@@ -534,7 +603,7 @@ class settings_billing extends LetcBox {
       // quoted — "for $X/month or $Y/year" — because the plan card the user
       // clicked sells the plan, not a cycle; the checkout tab still lets them
       // pick either before paying.
-      const down = (rank[targetPlan] ?? 0) < (rank[current] ?? 0);
+      const down = planRank(targetPlan) < planRank(current);
       const mPrice = this._money(this._catPrice(targetPlan, "month"));
       const yPrice = this._money(this._catPrice(targetPlan, "year"));
       if (down) {
@@ -587,6 +656,37 @@ class settings_billing extends LetcBox {
   }
 
   /**
+   * Arm the entrance animations for the NEXT render pass only.
+   *
+   * Every surface on this page is rebuilt by a full feed(), and feed() runs on
+   * background events too — the catalog landing a few hundred ms after first
+   * paint, a payment.plan_updated WS message, the visibilitychange re-sync.
+   * Ungated, the cards would replay their entrance on each of those, seconds
+   * apart, with the user having done nothing. So motion is opt-in per render:
+   * the skeletons read _motion while they are BUILT (synchronously, in the
+   * same task as the feed() call that follows), and the timeout below clears
+   * it before any later render can see it. Armed only where a person actually
+   * changed what is on screen — first paint, a Monthly/Yearly switch, entering
+   * Checkout.
+   */
+  _armMotion() {
+    this._motion = true;
+    clearTimeout(this._motionTimer);
+    this._motionTimer = setTimeout(() => {
+      this._motion = false;
+    }, 0);
+  }
+
+  /**
+   * Class suffix the skeletons append to a container whose entrance should
+   * animate on this render.
+   * @returns {string} " is-anim" while a render is armed, "" otherwise
+   */
+  _motionClass() {
+    return this._motion ? " is-anim" : "";
+  }
+
+  /**
    * Re-initialize UI when DOM is refreshed
    */
   async onDomRefresh() {
@@ -599,6 +699,8 @@ class settings_billing extends LetcBox {
       this.state.currentTab = TAB_MONTHLY;
     }
     this.tab = this.state.currentTab;
+    // First paint is the one render nobody has to ask for — let it animate in.
+    this._armMotion();
     // Render immediately with Visitor.quota()'s cached plan/seats/storage and
     // the hardcoded fallback catalog prices — was two sequential awaited
     // fetches (catalog, then subscription) BEFORE the first feed(), so the
@@ -608,19 +710,37 @@ class settings_billing extends LetcBox {
     this.fetchPlanData();
     // Catalog (live Stripe prices) and subscription mirror (status,
     // period_end, seats — also computes the pending-cancel banner flags) are
-    // independent reads; fetch them concurrently instead of one after the
-    // other and re-render once both are in.
-    const [catalog] = await Promise.all([
-      this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
-        .then((d) => (d && d.plans) || null)
-        .catch(() => null),
-      this._loadSubscription(),
-    ]);
-    this._catalog = catalog;
+    // independent reads, so both are in flight at once. They are NOT awaited
+    // together, though: `Promise.all` used to gate the correcting render on
+    // the SLOWER of the two, and they are nothing alike. The mirror is a DB
+    // read (~250 ms); the catalog walks the plan rows and asks Stripe for each
+    // price one after another (payment.catalog: 8 sequential prices.retrieve
+    // calls — measured ~2 s on stage, and it is a live third-party round trip,
+    // so several seconds is normal).
+    //
+    // That mattered because the mirror is what settles the two things first
+    // paint can only guess: which plan is actually current, and whether the
+    // Checkout tab may be entered at all. Waiting on the catalog left a
+    // subscriber reading "You are on the Free plan" beside a live Checkout tab
+    // for seconds — and then watched the plan change and the tab vanish under
+    // them ("open Billing, 5 s later the checkout button disappears",
+    // 2026-09-08). The prices need no such wait: _catPrice already renders
+    // from its offline fallback map until the catalog lands.
+    const catalogRead = this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
+      .then((d) => (d && d.plans) || null)
+      .catch(() => null);
+    await this._loadSubscription();
+    if (this.isDestroyed()) return;
     // The subscription is now loaded, so checkout eligibility is knowable:
     // settle any checkout deep link (stepping down to the plans view if this
     // account can't buy) before the render below.
     this._settleDeepLinkTab();
+    // Correct the screen NOW rather than at the end of the method: everything
+    // this render fixes is already known, and the awaits that follow are the
+    // slow ones. The final fetchPlanData() below still runs, with the prices.
+    this.fetchPlanData();
+    this._catalog = await catalogRead;
+    if (this.isDestroyed()) return;
     // LAUNCH30 (design doc 2026-07-30) trigger B: "Opens Billing page".
     // Self-gated server-side (SERVICE.promo.get_state) — safe to call
     // unconditionally on every mount, including a re-render after tab focus.
@@ -1568,6 +1688,9 @@ class settings_billing extends LetcBox {
           this.state.plansTab.cycle =
             posNum === TAB_MONTHLY ? "monthly" : "yearly";
           this.tab = posNum;
+          // Every price on screen is about to change: animate the cards back
+          // in so the switch reads as one movement instead of a hard cut.
+          this._armMotion();
           this.renderContent();
         }
       }
@@ -1892,6 +2015,7 @@ class settings_billing extends LetcBox {
         if (this.state.currentTab !== TAB_CHECKOUT) {
           this.state.currentTab = TAB_CHECKOUT;
           this.tab = TAB_CHECKOUT;
+          this._armMotion();
           this.renderContent();
         }
         return false;
@@ -1960,6 +2084,13 @@ class settings_billing extends LetcBox {
       case "resume-subscription":
         // Undo a scheduled cancellation.
         this._resumeSubscription();
+        return false;
+
+      // Footer contact card. Reuses the sales-led plans' own handler so the
+      // enquiry arrives identified and the no-mail-client fallback (the
+      // address in an alert) is the same one the Sovereign CTA already has.
+      case "contact-sales":
+        this._openSalesMail(LOCALE.ENTERPRISE || "enterprise");
         return false;
 
       case "manage-billing":

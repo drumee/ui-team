@@ -2,13 +2,13 @@
  * Tour registry — the ONE place a tour is defined.
  *
  * `desk_tutorial` is a single kind (seeds.js) parameterised by a `tour` model
- * attribute, so adding or retiring a tour is an edit to this file rather than a
- * new widget, a new seeds entry and a new webpack chunk.
+ * attribute, so adding or retiring a tour is an edit to this file rather than
+ * a new widget, a new seeds entry and a new webpack chunk.
  *
- * Each step names the widget kind that renders it, how many internal screens
- * that widget walks, and which backdrop composers sit inert behind it. The host
- * (tutorial/index.js) turns that into the feed payload; the step widgets
- * themselves know nothing about which tour they are in.
+ * Each step names the widget kind that renders it and how many internal
+ * screens that widget walks. The host (tutorial/index.js) turns that into the
+ * feed payload; the step widgets themselves know nothing about which tour they
+ * are in.
  *
  * WIRE CONTRACT: the keys of the flagged tours are posted to the server and
  * validated there. Nothing in this stack shares a constant across the two
@@ -20,115 +20,235 @@
  *   - server-team service/private/drumate.js      (__TUTORIAL_TOURS)
  */
 
-// `badge` — how "STEP n/m" is counted. Declared per tour, never inferred.
+// Progress counts SCREENS, cumulatively across a tour's steps — the step's
+// `screen_offset` is what carries the count over a step boundary.
 //
-//   'screens'  m is the step's own screen count. Every single-step contextual
-//              tour uses this: deriving from steps.length would make all three
-//              screens of `migrate` read "STEP 1/1", which is worse than the
-//              hardcoded strings this replaced.
-//   'steps'    m is the number of steps. Used by `full`, which is the only
-//              multi-step tour, and by `meeting`.
+// There used to be a second mode that counted STEPS instead, used by `full`
+// on the grounds that 23 dashes would be a ruler rather than a progress bar.
+// That was true of dashes and false of the pill, and it had a cost that only
+// showed up in use: every screen of a multi-step step carried the SAME number,
+// so `full`'s four chat screens all read "STEP 2/6" and none of them could be
+// named. A tour you cannot point at is a tour you cannot report bugs against.
+// One mode now, and every screen has its own number.
+
+// `chrome` — the shell around a step, which is NOT constant across a tour.
 //
-// A multi-step tour must use 'steps'. 'screens' on one would number screen 4 of
-// step 2 as "4/5" with no error, so the host refuses it out loud instead.
-// 'flow'  — count every SCREEN in the tour, cumulatively across its steps.
-//           folder_task runs 3 folder screens then 5 tracker views and reads
-//           "STEP 1/8 … 8/8" straight through, because to the person being
-//           shown it that is one continuous thing. For a single-step tour this
-//           is just its own screen count (migrate 1/3 … 3/3).
-// 'steps' — count STEPS, so every screen of a step carries that step's number.
-//           `full` reads 1/6 … 6/6 with all three folder screens on 2/6, which
-//           is what the six-step tour has always shown.
-const BADGE_BY_FLOW = "flow";
-const BADGE_BY_STEPS = "steps";
+//   rail   the workspace tab the rail lights, or null for the org-home rail,
+//          which has no workspace tabs at all (nothing is open yet).
+//
+// Declared per step rather than per tour because `full` crosses the boundary:
+// it opens on the create-workspace dialog with no workspace, then spends every
+// later step inside one.
+const DEFAULT_CHROME = { rail: "files" };
 
 const TOURS = {
+  // Post-signup. In 2.0 this is no longer three workspace tiles on the desk —
+  // it is the home canvas and then the Create-new-workspace dialog itself,
+  // walked field by field (Figma 140:22684, then 176:40762 → 176:41391).
   workspace: {
     id: "workspace",
     flag: "workspace",
-    badge: BADGE_BY_FLOW,
-    steps: [{ kind: "tutorial_workspace", screens: 3 }],
+    // No workspace exists yet on these screens, so the rail has no tabs —
+    // which is what the org-home frames show.
+    //
+    // `live_screens` is the tail of this step that stops being a mock: a real
+    // create-workspace form and the invite screen after it. They run ONLY on
+    // the post-signup run of this tour — see _liveScreens in tutorial/index.js
+    // for the gate and why it is there rather than here. Declared as a COUNT
+    // off the end so the registry still says what the whole step is, and the
+    // host subtracts rather than the step guessing.
+    steps: [{
+      kind: "tutorial_workspace",
+      // SEVEN. The personal workspace type is no longer offered by the dialog
+      // the tour draws, so the screen that taught it is gone with it — five
+      // mock screens (home, name, internal, external, create) and the two live
+      // ones below.
+      screens: 7,
+      live_screens: 2,
+      chrome: { rail: null },
+    }],
   },
 
-  // Folders and the tracker inside them are one tour, reached by opening a
-  // workspace or a folder. They were split for one revision — the tracker
-  // hung off the Tasks tab — because eight screens behind the desk's primary
-  // navigation gesture is a lot to put in front of someone who just wanted to
-  // open a folder. Merged back on request: the two steps teach one thing, and
-  // the Tasks tab is not where a first-time user goes looking for it.
+  // The tracker inside a workspace, reached by opening one.
   //
-  // Badged as one continuous flow: 3 folder screens, then 5 tracker views, then
-  // the scheduler, reading "STEP 1/9 … 9/9" straight through. Step numbering
-  // ("1/3", "2/3", "3/3") is what `full` does, and it is wrong here — to someone
-  // opening a folder this is one thing, not three, and a counter that sits on
-  // "1/3" for three screens tells them nothing about how much is left.
+  // `tutorial_folder` is NOT here any more. Its three screens were chat in a
+  // folder, threads, and downloading a thread — which 2.0 promotes to the
+  // `chat` tour below. The widget is left in place rather than deleted: the
+  // design has a Files flow ("1. Files -> Migrate", frames 176:42043 /
+  // 142:35805) whose callout-bearing frames were not captured in this pass, and
+  // that is where a Files step would come back.
+  //
+  // ONE screen: the tracker's empty state, whose carousel walks five cards on a
+  // timer without being a step each (146:40534).
+  //
+  // It declared six while the cards were steps — which made the pill count to
+  // six through one screen, and cost four presses of a CTA labelled "Create
+  // your first task" before it created anything. Then two, when the cards
+  // stopped being steps and a mock of the New task dialog followed them. Now
+  // one: that mock is gone and the CTA opens the REAL dialog as the tour ends,
+  // which is what its label promised all along.
   folder_task: {
     id: "folder_task",
     flag: "folder_task",
-    badge: BADGE_BY_FLOW,
-    steps: [
-      { kind: "tutorial_folder", screens: 3, backdrop: ["workspaceFaded"] },
-      { kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] },
-      // Closes the tour where a folder's work ends up: the Meeting tab, with
-      // the week ahead on it. Figma 5:75093 badges this screen "STEP 9/9",
-      // which is what 3 folder screens + 5 tracker views + this one comes to —
-      // the design and the registry agree on the count, so a change to either
-      // shows up as a mismatch here.
-      { kind: "tutorial_schedule", screens: 1, backdrop: ["workspaceFaded"] },
-    ],
+    // The scheduler is no longer a step of its own: 2.0 puts it at the end of
+    // the MEET flow (156:19597), which is where anyone would reach it.
+    // `tutorial_schedule` stays on disk but is out of every tour.
+    steps: [{ kind: "tutorial_task", screens: 1, chrome: { rail: "task" } }],
+    // RECORDED ON THE CTA, not on sight — the third tour to be, with `migrate`
+    // and `chat`.
+    //
+    // This tour is one screen and one button, and that button is the whole
+    // point of it: pressing "Create your first task" is both the completion and
+    // the hand-off to the real form. Marking on mount would spend the tour on
+    // someone who glanced at the carousel and clicked away, and there is no
+    // second screen left for them to have seen.
+    //
+    // `mark_on: "success"` is what keeps both hosts from marking it on mount;
+    // they record it from _nextStep instead, where the step list runs out —
+    // which for this tour is the CTA. Escape and skip still leave it armed.
+    mark_on: "success",
+  },
+
+  // Chat was three screens INSIDE the folder step. 2.0 pulls it out: four
+  // screens of its own about threads (Figma 142:39178, 169:39799, 142:39530,
+  // 169:40101), fired the first time someone opens a workspace's Chat.
+  //
+  // A new id, so it is also a new entry in the three other wire-contract
+  // sites listed above.
+  chat: {
+    id: "chat",
+    flag: "chat",
+    steps: [{ kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } }],
+    // RECORDED ON COMPLETION, not on sight — the second tour to be, after
+    // `migrate`, and for a related reason.
+    //
+    // Five screens about threads is more than a glance: someone who opens Chat,
+    // meets the tour and clicks away has not been taught what a thread is, and
+    // marking it there would spend the one chance this tour gets. So it is
+    // written only when the user reaches the last Done — which is what
+    // `mark_on: "success"` means for a tour with nothing to create: both hosts
+    // record it from _nextStep, where the step list runs out.
+    //
+    // Escape and the callout's skip still leave it armed, which is the
+    // difference between finishing something and getting out of it. The cost is
+    // the one migrate accepts too: someone who keeps declining keeps being
+    // offered. Five screens on the rail's Chat button is a small enough price
+    // for the tour landing at all.
+    mark_on: "success",
   },
 
   share: {
     id: "share",
     flag: "share",
-    badge: BADGE_BY_FLOW,
-    steps: [
-      { kind: "tutorial_share", screens: 3, backdrop: ["workspaceFaded"] },
-    ],
+    // Six, and the frames number them "STEP 1/6" … "STEP 6/6" in a pill.
+    steps: [{ kind: "tutorial_share", screens: 6, chrome: { rail: "access" } }],
+    // RECORDED ON THE LAST STEP, not on sight — the fifth tour to be.
+    //
+    // Six screens with a numbered pill is the longest walkthrough in the set,
+    // and marking it on mount spent it the instant it appeared: someone who
+    // opened the access panel, met screen 1 and closed it never saw the other
+    // five again. Its own pill says "STEP 1/6", which is a promise the tour was
+    // not keeping.
+    //
+    // Nothing in it acts on the window — unlike migrate, task and meeting, it
+    // has no closing CTA — so "success" here means exactly what the pill counts
+    // to: the last screen hands back, the step list runs out, and both hosts
+    // record it from _nextStep. Escape and skip leave it armed, so a tour
+    // abandoned at 2/6 is offered again.
+    mark_on: "success",
   },
 
+  // Importing from Google Drive — how the import dialog is reached, and then
+  // the dialog.
   migrate: {
     id: "migrate",
     flag: "migrate",
-    badge: BADGE_BY_FLOW,
-    // The step's own menu and dialog sit OVER the desk, so the workspace grid
-    // behind them is this step's subject matter and is not faded.
-    steps: [
-      { kind: "tutorial_migrate", screens: 3, backdrop: ["workspaceGrid"] },
-    ],
+    // Six, and the tour BRANCHES: screen 1 is the Files pane (142:34981) whose
+    // three hero buttons each open something, and screens 2-3 are two of those
+    // branches — the + New dropdown (142:35805) and the Upload button — while
+    // the Migrate CTA goes straight to the import dialog at screens 4-6.
+    //
+    // So no single run visits all six, which is why this tour draws no
+    // progress pill (see ../migrate/index.js). The count is still the whole
+    // table: it is what the host slices `screen_count` from, and what `full`
+    // adds into its own total.
+    // FOUR, not six. The `+ New` and `Upload` branches were screens of their
+    // own that drew the gesture and described it; those buttons now perform it
+    // for real on screen 1, so the table is the Files pane and the three import
+    // dialog screens the Migrate CTA leads to.
+    steps: [{ kind: "tutorial_migrate", screens: 4, chrome: { rail: "files" } }],
+    // MARKED ON SUCCESS, not on mount — the only tour that is.
+    //
+    // Every other tour records itself the moment it appears, because a tour is
+    // something you are shown and being shown it once is the whole of it. This
+    // one asks the user to DO something: create a file or a folder, or upload
+    // one. Someone who opens it and does neither has not been taught anything,
+    // so it is offered again next time.
+    //
+    // The cost is the reason the mount rule exists elsewhere (see
+    // libs/tutorial-tours): a tour that is only recorded on completion can be
+    // offered indefinitely to someone who keeps declining it. That is accepted
+    // here deliberately — this tour is about getting the first file into a
+    // workspace, and a workspace with no files has not outgrown the prompt.
+    mark_on: "success",
   },
 
-  // Reachable only from the `full` tour: no contextual trigger, no flag, and
-  // therefore never suppressed and never recorded. `full` is permanent for the
-  // same reason — retiring it would make tutorial_meeting dead code.
+  // Contextual, on the first press of Meet in the rail (desk/index.js,
+  // case "rail-meet"). It was reachable only from `full`, which meant the one
+  // tour about meetings never ran for anyone who did not ask for the whole
+  // product tour.
+  //
+  // Flagged, so it is suppressed once seen and recorded server-side — which is
+  // why the WIRE CONTRACT at the top of this file has four sites and not two.
+  // ONE screen: the Meet empty state, whose carousel walks two previews on a
+  // timer (148:44759). The mock of the Schedule dialog that followed it is gone
+  // — the CTA opens the REAL scheduler as the tour ends, which is what
+  // "Schedule your first meeting" promised.
   meeting: {
     id: "meeting",
-    flag: null,
-    badge: BADGE_BY_STEPS,
-    steps: [
-      { kind: "tutorial_meeting", screens: 1, backdrop: ["workspaceFaded"] },
-    ],
+    flag: "meeting",
+    steps: [{ kind: "tutorial_meeting", screens: 1, chrome: { rail: "meet" } }],
+    // RECORDED ON THE CTA, not on sight — the fourth tour to be, with migrate,
+    // chat and folder_task.
+    //
+    // One screen and one button, and that button is the whole point of it:
+    // pressing it is both the completion and the hand-off to the real form.
+    // Marking on mount would spend the tour on someone who glanced at the
+    // previews, with no second screen left for them to have seen.
+    mark_on: "success",
   },
 
-  // The original six-step tour, unchanged in order and in badge numbering
-  // (1/6 … 6/6). Run by ?tutorial=1 and by Get help -> Product Tour, both of
-  // which are explicit requests and are never gated on the seen-set.
+  // Everything, in product order. Run by ?tutorial=1 and by Get help ->
+  // Product Tour, both of which are explicit requests and are never gated on
+  // the seen-set.
   full: {
     id: "full",
     flag: null,
-    badge: BADGE_BY_STEPS,
     steps: [
-      { kind: "tutorial_workspace", screens: 3 },
-      { kind: "tutorial_folder", screens: 3, backdrop: ["workspaceFaded"] },
-      { kind: "tutorial_meeting", screens: 1, backdrop: ["workspaceFaded"] },
-      { kind: "tutorial_task", screens: 5, backdrop: ["workspaceFaded"] },
-      { kind: "tutorial_share", screens: 3, backdrop: ["workspaceFaded"] },
-      { kind: "tutorial_migrate", screens: 3, backdrop: ["workspaceGrid"] },
+      // Five, not seven: no `live_screens`, so the create form is not part of
+      // the full tour. Someone re-watching the tour from Get help already has
+      // workspaces and asked to see the product, not to make another one.
+      { kind: "tutorial_workspace", screens: 5, chrome: { rail: null } },
+      { kind: "tutorial_chat", screens: 5, chrome: { rail: "chat" } },
+      { kind: "tutorial_meeting", screens: 1, chrome: { rail: "meet" } },
+      { kind: "tutorial_task", screens: 1, chrome: { rail: "task" } },
+      { kind: "tutorial_share", screens: 6, chrome: { rail: "access" } },
+      { kind: "tutorial_migrate", screens: 6, chrome: { rail: "files" } },
     ],
   },
 };
 
 const DEFAULT_TOUR = "full";
+
+/**
+ * The shell a step wants around it.
+ *
+ * @param {Object} step a TOURS step
+ * @returns {{rail: String|null}}
+ */
+function stepChrome(step) {
+  return { ...DEFAULT_CHROME, ...((step && step.chrome) || {}) };
+}
 
 /** @returns {Object} the tour definition, falling back to the full tour */
 function tour(id) {
@@ -141,28 +261,30 @@ function flaggedIds() {
 }
 
 /**
- * The badge a step widget should show for the screen it is on.
+ * The progress a step should show for the screen it is on.
+ *
+ * Returns the two numbers rather than a formatted string — the callout decides
+ * whether to draw them as a pill or a dash bar.
  *
  * Called by the step from its own _showScreen, because the step is the only
  * object that knows its screen index — the host knows the step index and hands
- * down everything else as model attributes.
+ * everything else down as model attributes.
+ *
+ * Steps OPT IN by spreading the result into the tooltip. The design does not
+ * put dashes on every callout (the workspace and migrate screens have none),
+ * and a callout that wants them says so rather than having them imposed.
  *
  * @param {Object} ui          the step widget
  * @param {Number} screenIndex 0-based
- * @returns {String}
+ * @returns {{step: Number, steps: Number}} both 0-based / total
  */
-function stepBadge(ui, screenIndex) {
-  const fmt = LOCALE.TUTORIAL_STEP || "STEP {0}/{1}";
-  if (ui.mget("badge_mode") === BADGE_BY_FLOW) {
-    // screen_offset is how many screens the earlier steps of this tour ran, so
-    // the counter continues across a step boundary instead of restarting. Both
-    // are stamped by the host, which is the only object that can see the whole
-    // tour — a step widget knows its own screens and nothing else.
-    const offset = ~~ui.mget("screen_offset");
-    const total = ~~ui.mget("tour_screens") || ~~ui.mget("screen_count") || 1;
-    return fmt.format(offset + ~~screenIndex + 1, total);
-  }
-  return ui.mget("badge_text");
+function stepProgress(ui, screenIndex) {
+  // screen_offset is how many screens the earlier steps of this tour ran, so
+  // the count continues across a step boundary instead of restarting. Both are
+  // stamped by the host, which is the only object that can see the whole tour.
+  const offset = ~~ui.mget("screen_offset");
+  const total = ~~ui.mget("tour_screens") || ~~ui.mget("screen_count") || 1;
+  return { step: offset + ~~screenIndex, steps: total };
 }
 
 /**
@@ -181,9 +303,9 @@ function isLastScreen(ui, screenIndex, screenCount) {
  *   enter_at_last    Back from a later step — resume where the user left off.
  *   enter_at_screen  `?tutorial=<id>&screen=<n>` — land straight on a screen so
  *                    a callout's geometry can be checked without clicking
- *                    through the ones before it. 1-based in the URL because
- *                    that is what the badge shows; clamped, so a nonsense value
- *                    lands somewhere real instead of rendering nothing.
+ *                    through the ones before it. 1-based in the URL, clamped,
+ *                    so a nonsense value lands somewhere real instead of
+ *                    rendering nothing.
  *
  * @param {Object} ui    the step widget
  * @param {Number} count how many screens it has
@@ -202,12 +324,11 @@ function entryScreen(ui, count) {
 
 module.exports = {
   entryScreen,
+  stepChrome,
   TOURS,
   DEFAULT_TOUR,
-  BADGE_BY_FLOW,
-  BADGE_BY_STEPS,
   tour,
   flaggedIds,
-  stepBadge,
+  stepProgress,
   isLastScreen,
 };

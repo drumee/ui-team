@@ -150,6 +150,8 @@ class ___window_move extends mfsInteract {
   // A destination is invalid when it is the folder being moved, or any node
   // inside that folder's subtree (would create a cyclic move).
   _isBlockedDest(node = {}) {
+    const blockedHubs = this._blockedHubIds || new Set();
+    if (node.hub_id && blockedHubs.has(String(node.hub_id))) return true;
     if (!this._blockedNids.size) return false;
     if (node.nid && this._blockedNids.has(String(node.nid))) return true;
     return this._navStack.some((lvl) => lvl.nid && this._blockedNids.has(String(lvl.nid)));
@@ -199,6 +201,23 @@ class ___window_move extends mfsInteract {
           return ft === _a.folder || ft === _a.hub;
         })
         .map((it) => String(it.mget ? it.mget(_a.nid) : it.nid))
+        .filter(Boolean)
+    );
+
+    // A WORKSPACE has to be blocked by hub_id, not by nid. Its media row is a
+    // card on the desk whose id IS the hub id, while _normalizeWorkspace gives
+    // a destination row the hub's ROOT node (actual_home_id) as its nid - two
+    // different ids, so the nid set above never matches and the workspace being
+    // moved would offer itself as a destination. The server refuses that with
+    // INVALID_DATA, so this is not a safety hole; it is a dead end the user
+    // should not be able to walk into.
+    this._blockedHubIds = new Set(
+      this._items
+        .filter((it) => {
+          const ft = it.mget ? it.mget(_a.filetype) : it.filetype;
+          return ft === _a.hub;
+        })
+        .map((it) => String(it.mget ? it.mget(_a.hub_id) : it.hub_id))
         .filter(Boolean)
     );
 
