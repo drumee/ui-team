@@ -267,14 +267,14 @@ class __permission_restricted extends DrumeeMFS {
         privilege,
       });
       if (res && (res.error || res.error_code)) {
-        return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
       }
       // Trust the POST and redraw from local state: get_members_by_type can
       // still answer with the pre-write row on an immediate read-after-write.
       raw.privilege = privilege;
       this._render();
     } catch (e) {
-      Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
+      this._notice(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
       this._confirmInFlight = false;
     }
@@ -303,6 +303,11 @@ class __permission_restricted extends DrumeeMFS {
         cancel: LOCALE.CANCEL || "Cancel",
         cancel_type: "secondary",
         mode: "hbf",
+        // No backdrop. The prompt names the member being dropped, and the row
+        // it names is right there in the matrix behind it — scrimming the
+        // panel hides the one thing the user would check before answering.
+        // Wm.confirm defaults to "scrim"; every other confirm keeps it.
+        overlay: "none",
       });
     } catch (_) {
       this._confirmInFlight = false;
@@ -322,7 +327,7 @@ class __permission_restricted extends DrumeeMFS {
         users: [memberId],
       });
       if (res && (res.error || res.error_code)) {
-        return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
       }
       // A rejected POST (403 for a non-admin, DB error) resolves to `undefined`
       // — doRequest hands non-200 to onServerComplain, which only warns. On
@@ -330,7 +335,7 @@ class __permission_restricted extends DrumeeMFS {
       // is the only proof the write happened; without this test the row below
       // would vanish from a removal the server refused.
       if (!Array.isArray(res)) {
-        return Wm.alert(LOCALE.TRY_AGAIN);
+        return this._notice(LOCALE.TRY_AGAIN);
       }
       // Splice locally rather than re-reading: hub.get_members_by_type still
       // answers with the pre-write rows on an immediate read-after-write (the
@@ -343,10 +348,40 @@ class __permission_restricted extends DrumeeMFS {
       );
       this._render();
     } catch (e) {
-      Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
+      this._notice(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
       this._confirmInFlight = false;
     }
+  }
+
+  /**
+   * Everything this panel says, said on the SAME card.
+   *
+   * `Wm.alert(someString)` builds a bare `{kind:"window_info", message}` with
+   * no `variant`, and the notice block in window/info/skin is what sets
+   * `min-width: unset` on the card. Without it `.window__ui`'s `min-width:
+   * 600px` floors the dialog, so a plain-string alert renders 600px wide and
+   * unpadded while the invite-sent toast beside it renders 500px + 24px of
+   * padding. Two messages from one panel, two different cards.
+   *
+   * Passing the object form (with `kind` set, so alert feeds it verbatim
+   * rather than wrapping it as a body) puts every message on the notice card.
+   *
+   * Still Wm.alert and not Wm.info, for the reason the sent toast carried: on
+   * the create-workspace route this panel lives in the wrapper-modal, and
+   * alert REPLACES it with the card. Wm.info leaves the two coexisting, and
+   * the panel's full-viewport wrapper then swallows the card's X / Close
+   * clicks.
+   */
+  _notice(message) {
+    return Wm.alert({
+      kind: "window_info",
+      message: message || LOCALE.TRY_AGAIN,
+      variant: "notice",
+      actions: [
+        { label: LOCALE.CLOSE, priority: "primary", service: _e.close },
+      ],
+    });
   }
 
   /**
@@ -385,11 +420,11 @@ class __permission_restricted extends DrumeeMFS {
     })
       .then((res) => {
         if (res && (res.error || res.error_code)) {
-          return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+          return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
         }
         const r = (res && res.results && res.results[0]) || {};
         if (r.status === "failed") {
-          return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
+          return this._notice(r.reason || LOCALE.TRY_AGAIN);
         }
         // A member was really invited from this panel. Broadcast it so
         // flows that only observe the desk can react — the reward flow's
@@ -400,29 +435,9 @@ class __permission_restricted extends DrumeeMFS {
         RADIO_BROADCAST.trigger("invitation:sent", {
           hub_id: this.mget(_a.hub_id),
         });
-        // Branded "notice" toast — the compact drumee-logo card with a
-        // single primary Close button. Feed it through Wm.alert (into the
-        // wrapper-modal) rather than Wm.info (the windows pool): alert
-        // REPLACES this permission panel with the toast, so the toast is the
-        // sole thing in the modal. Wm.info instead leaves the toast
-        // coexisting with the still-open panel, where the panel's
-        // full-viewport wrapper sat over the toast and swallowed its
-        // X / Close clicks. `kind` is set so alert feeds the object verbatim
-        // (variant + actions) instead of wrapping it as a plain body.
-        Wm.alert({
-          kind: "window_info",
-          message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
-          variant: "notice",
-          actions: [
-            {
-              label: LOCALE.CLOSE,
-              priority: "primary",
-              service: _e.close,
-            },
-          ],
-        });
+        this._notice(LOCALE.INVITATION_SENT_SUCCESSFULLY);
       })
-      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
+      .catch((e) => this._notice(e.reason || e.error || LOCALE.TRY_AGAIN))
       .finally(() => {
         if (btn) delete btn.dataset.pending;
       });
