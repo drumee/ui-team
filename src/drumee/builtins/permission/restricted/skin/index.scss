@@ -443,9 +443,11 @@
     color: var(--normal-fg-50);
   }
 
-  // Inline email-validation message, directly under the invite input row.
-  // Toggled via data-state (see index.js _setInviteError) so it takes no
-  // vertical space — and adds no section gap — while there is nothing to show.
+  // Inline message directly under the invite input row: a validation error, or
+  // the confirmation that an invitation went out (the invite-sent modal that
+  // used to replace this whole panel is gone — see index.js _sendInvitation).
+  // Toggled via data-state so it takes no vertical space — and adds no section
+  // gap — while there is nothing to show.
   &__invite-error {
     &[data-state="closed"] {
       display: none;
@@ -454,8 +456,17 @@
     &[data-state="open"] {
       display: flex;
     }
+
+    // Success reads green. Scoped to the wrapper's data-tone rather than a
+    // modifier class on the message, so the one place index.js already writes
+    // (_setInviteNotice) drives both the visibility and the colour.
+    &[data-tone="success"] .permission-restricted__invite-error-message {
+      color: var(--green-500);
+    }
   }
 
+  // Default tone is the error one: every path except the invite confirmation
+  // is a problem with the address.
   &__invite-error-message {
     @include drumee.typo(
       $size: 12px,

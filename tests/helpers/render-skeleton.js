@@ -67,7 +67,59 @@ function installGlobals() {
   set("Dayjs", dayjs);
   set("_a", new Proxy({}, { get: (_t, k) => String(k) }));
   set("_e", new Proxy({}, { get: (_t, k) => String(k) }));
-  set("_K", { order: { descending: "desc" }, char: { empty: "" }, tag: { div: "div" } });
+  // `privilege` mirrors lex/constants — skeleton/toolkit/permission builds its
+  // role table from it at MODULE load, so any skeleton reaching that toolkit
+  // (the workspace-members panels) cannot even be required without it.
+  set("_K", {
+    order: { descending: "desc" },
+    char: { empty: "" },
+    tag: { div: "div" },
+    privilege: {
+      owner: 0b0111111,
+      admin: 0b0011111,
+      delete: 0b0001111,
+      write: 0b0001111,
+      modify: 0b0001111,
+      upload: 0b0001111,
+      get: 0b0000111,
+      download: 0b0000111,
+      chat: 0b0000111,
+      read: 0b0000011,
+      view: 0b0000011,
+      anonymous: 0b0000001,
+    },
+    // The single BITS, as opposed to the cumulative words above — the role
+    // table tests a privilege word against these.
+    permission: {
+      owner: 0b0100000,
+      admin: 0b0010000,
+      delete: 0b0001000,
+      write: 0b0001000,
+      modify: 0b0001000,
+      upload: 0b0001000,
+      get: 0b0000100,
+      download: 0b0000100,
+      chat: 0b0000110,
+      read: 0b0000010,
+      view: 0b0000010,
+      anonymous: 0b0000001,
+      anyone: 0b0000001,
+      guest: 0b0000001,
+    },
+  });
+  // Kind registry lookups. Widgets name kinds two levels deep (KIND.menu.topic)
+  // and the real registry answers with the snake_case seed key, so this returns
+  // `menu_topic`; a one-level read (KIND.menu) still stringifies to `menu`.
+  const kindLeaf = (name) =>
+    new Proxy({}, {
+      get: (_t, k) => {
+        if (k === Symbol.toPrimitive || k === "toString" || k === "valueOf") {
+          return () => name;
+        }
+        return `${name}_${String(k)}`;
+      },
+    });
+  set("KIND", new Proxy({}, { get: (_t, k) => kindLeaf(String(k)) }));
   set("bootstrap", () => ({ endpoint: "", keysel: "" }));
   set("_", require("lodash"));
   // A few descriptors touch the DOM while building (date pickers, editors).

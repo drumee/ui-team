@@ -29,6 +29,11 @@ class __permission_restricted extends DrumeeMFS {
     this._inviteRole = roleByValue("edit");
     this._members = [];
     this._membersLoaded = false;
+    // The inline message under the invite field, as STATE rather than a DOM
+    // write alone: _loadMembers re-feeds the whole skeleton, and the
+    // hub.member_joined push lands within a second of a successful invite —
+    // an imperative-only notice would be wiped by its own success.
+    this._inviteNotice = null;
     // Registered BEFORE the `opt.media` early return below: this panel is fed
     // without a media from the creation flow (media/form) and from Wm's own
     // wrapper-modal, and the matrix has to stay live in those too.
@@ -56,8 +61,34 @@ class __permission_restricted extends DrumeeMFS {
     this._loadMembers();
   }
 
+  /**
+   * Repaint the panel.
+   *
+   * Carries the half-typed address across the feed. The matrix repaints on the
+   * server's `hub.member_joined` push, and that lands a second or two after a
+   * successful invite — precisely when an admin adding two people in a row is
+   * already typing the second address into a field this would otherwise
+   * recreate empty. `_inviteNotice` survives for the same reason, by being
+   * read from state in the skeleton.
+   *
+   * Restored through fillEntry, so the input's model value is updated too and
+   * `_getInviteEmail` cannot disagree with what is on screen. It refocuses the
+   * field, which is correct here: a draft exists only because the user was
+   * typing in it. With no draft nothing is touched and focus stays put.
+   */
   _render() {
+    const draft = this._inviteDraft();
     this.feed(require("./skeleton")(this));
+    if (draft) {
+      this.ensurePart("invite-email").then((p) => fillEntry(p, draft));
+    }
+  }
+
+  /** What is currently typed in the invite field, "" when there is nothing
+   *  (or no field at all — a non-admin viewer gets no invite section). */
+  _inviteDraft() {
+    const input = this.getPart?.("invite-email")?.el?.querySelector?.("input");
+    return String(input?.value || "").trim();
   }
 
   /**
@@ -177,20 +208,42 @@ class __permission_restricted extends DrumeeMFS {
     this._setInviteError();
   }
 
-  /** Show / clear the inline message in the invite-error slot under the input,
-   *  the way the base panel does — errors belong at the field, not in a modal
-   *  the user has to dismiss before fixing the address. */
-  _setInviteError(reason) {
+  /**
+   * Show / clear the inline message in the slot under the invite input — the
+   * way the base panel does, because a message about the address belongs at
+   * the address, not in a modal the user has to dismiss before fixing it.
+   *
+   * Written to `_inviteNotice` AND to the DOM: the state is what survives the
+   * next `_render()`, the DOM write is what makes it appear without one.
+   *
+   * `tone` picks the colour (see the skin's data-tone) and decides whether the
+   * input itself is put in its error state — a success must not leave a red
+   * ring around a field the user typed correctly.
+   *
+   * @param {String} [text] message; falsy clears the slot
+   * @param {String} [tone] "error" (default) or "success"
+   */
+  _setInviteNotice(text, tone = "error") {
+    this._inviteNotice = text ? { text, tone } : null;
     const wrapper = this.getPart?.("invite-error");
     const note = this.getPart?.("invite-error-message");
     const entry = this.getPart?.("invite-email");
-    if (wrapper?.el) wrapper.el.dataset.state = reason ? _a.open : _a.closed;
-    if (note?.set) note.set({ content: reason || "" });
-    if (reason) {
+    if (wrapper?.el) {
+      wrapper.el.dataset.state = text ? _a.open : _a.closed;
+      wrapper.el.dataset.tone = tone;
+    }
+    if (note?.set) note.set({ content: text || "" });
+    if (text && tone === "error") {
       if (entry?.showError) entry.showError();
     } else if (entry?.hideError) {
       entry.hideError();
     }
+  }
+
+  /** The error tone of _setInviteNotice. Kept as its own name because every
+   *  validation path reads as "set the invite error". */
+  _setInviteError(reason) {
+    return this._setInviteNotice(reason, "error");
   }
 
   /**
@@ -350,8 +403,23 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   /**
-   * Send button. Validation happens inline at the field (see _setInviteError);
-   * only server-side failures still surface as a modal.
+   * Send button. EVERY outcome is reported inline at the field, success and
+   * failure alike (see _setInviteNotice) — nothing here opens a modal.
+   *
+   * 🚨 THE CONFIRMATION USED TO BE A MODAL, AND IT TOOK THE PANEL WITH IT.
+   * A successful send fed `Wm.alert({kind:"window_info"})` into the shared
+   * wrapper-modal, and alert REPLACES what is in there — so the panel the user
+   * was working in vanished and the matrix they had just changed went with it.
+   * Reported 2026-09-08: "invite xong panel không cập nhật".
+   *
+   * The obvious repair — `Wm.info` instead, leaving both on screen — is the
+   * one thing that must NOT be done, and the old comment here said why: the
+   * panel's full-viewport wrapper sits over the toast and swallows its
+   * X / Close clicks, stranding the user. So the second surface is dropped
+   * altogether rather than restacked. Inline has neither failure mode: there
+   * is only ever one thing on screen, and it is the panel.
+   *
+   * Duy approved this route 2026-09-08.
    */
   _sendInvitation(cmd) {
     const email = this._getInviteEmail(cmd);
@@ -385,11 +453,19 @@ class __permission_restricted extends DrumeeMFS {
     })
       .then((res) => {
         if (res && (res.error || res.error_code)) {
-          return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+          return this._setInviteError(
+            res.reason || res.error || LOCALE.TRY_AGAIN,
+          );
         }
         const r = (res && res.results && res.results[0]) || {};
         if (r.status === "failed") {
-          return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
+          return this._setInviteError(r.reason || LOCALE.TRY_AGAIN);
+        }
+        // A rejected POST resolves `undefined` — doRequest hands a non-200 to
+        // onServerComplain, which only warns — so a falsy answer is a failure
+        // and must not be reported as a sent invitation.
+        if (!res) {
+          return this._setInviteError(LOCALE.TRY_AGAIN);
         }
         // A member was really invited from this panel. Broadcast it so
         // flows that only observe the desk can react — the reward flow's
@@ -400,29 +476,20 @@ class __permission_restricted extends DrumeeMFS {
         RADIO_BROADCAST.trigger("invitation:sent", {
           hub_id: this.mget(_a.hub_id),
         });
-        // Branded "notice" toast — the compact drumee-logo card with a
-        // single primary Close button. Feed it through Wm.alert (into the
-        // wrapper-modal) rather than Wm.info (the windows pool): alert
-        // REPLACES this permission panel with the toast, so the toast is the
-        // sole thing in the modal. Wm.info instead leaves the toast
-        // coexisting with the still-open panel, where the panel's
-        // full-viewport wrapper sat over the toast and swallowed its
-        // X / Close clicks. `kind` is set so alert feeds the object verbatim
-        // (variant + actions) instead of wrapping it as a plain body.
-        Wm.alert({
-          kind: "window_info",
-          message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
-          variant: "notice",
-          actions: [
-            {
-              label: LOCALE.CLOSE,
-              priority: "primary",
-              service: _e.close,
-            },
-          ],
-        });
+        // Empty the field before the notice, not after: the address is now a
+        // member, so leaving it there would fail this panel's own
+        // _emailIsMember check on a second click and answer a successful
+        // invitation with "already has access". Clearing also readies the row
+        // for the next one — fillEntry refocuses the input.
+        fillEntry(this.getPart?.("invite-email"), "");
+        this._setInviteNotice(
+          LOCALE.INVITATION_SENT_SUCCESSFULLY,
+          "success",
+        );
       })
-      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
+      .catch((e) =>
+        this._setInviteError(e?.reason || e?.error || LOCALE.TRY_AGAIN),
+      )
       .finally(() => {
         if (btn) delete btn.dataset.pending;
       });

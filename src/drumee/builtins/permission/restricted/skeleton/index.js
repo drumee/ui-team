@@ -306,6 +306,9 @@ const header = Skeletons.Box.X({
     ],
   });
 
+  // The inline invite message (see index.js _setInviteNotice), or null.
+  const notice = ui._inviteNotice || null;
+
   // Only an admin can invite, matching the base panel — a non-admin viewer
   // gets the matrix alone rather than a form the server would reject.
   const inviteSection = isAdmin
@@ -342,18 +345,27 @@ const header = Skeletons.Box.X({
           attrOpt: { "data-state": 0 },
           active: 0,
         }),
-        // Inline validation message under the input. Hidden by data-state
-        // until _setInviteError opens it, so it costs no vertical space (and
-        // no section gap) while there is nothing to say.
+        // Inline message under the input — a validation error, or the
+        // confirmation that an invitation went out. Hidden by data-state until
+        // there is something to say, so it costs no vertical space (and no
+        // section gap) while empty; data-tone picks the colour.
+        //
+        // DRAWN FROM STATE, not left to _setInviteNotice's DOM write alone:
+        // a successful invite is followed within a second by the server's
+        // hub.member_joined push, which re-feeds this whole skeleton — an
+        // imperative-only notice would be erased by its own success.
         Skeletons.Box.Y({
           className: `${pfx}__invite-error`,
           sys_pn: "invite-error",
-          dataset: { state: _a.closed },
+          dataset: {
+            state: notice ? _a.open : _a.closed,
+            tone: notice ? notice.tone : "error",
+          },
           kids: [
             Skeletons.Note({
               className: `${pfx}__invite-error-message`,
               sys_pn: "invite-error-message",
-              content: "",
+              content: notice ? notice.text : "",
             }),
           ],
         }),
