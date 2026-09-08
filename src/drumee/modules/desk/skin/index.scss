@@ -525,6 +525,56 @@ html {
   }
 }
 
+// ── While the organisation screen is up ──────────────────────────────────────
+//
+// desk_org_view is a full-canvas screen with its own header, and the chrome
+// listed below either points at where the user already is or acts on something
+// that screen has covered. Each is hidden rather than made inert: a control
+// that looks pressable and does nothing is worse than one that is not drawn.
+//
+//   __open       the org dropdown's "Open" pill, which leads to THIS screen.
+//   __nav-main   the workspace rail (Files / Chat / Task / Meet / Access).
+//                Every item drives the ACTIVE WORKSPACE WINDOW
+//                (Wm.getActiveWindow at click time), and the org screen is not
+//                a workspace.
+//
+// __nav-main, NOT its parent __nav. __nav also holds the logo row — the
+// wordmark, the organisation's name and the collapse/pin toggle — which is
+// chrome the screen has no quarrel with: the sidebar keeps its identity and its
+// pin control, and only the five rail items go. Hiding __nav took the logo with
+// them and left the column empty above the footer.
+//
+// ONE RULE, TWO SUBJECTS, and one home for the condition. Both were about to
+// key off the same `:has()` in two different skins — this file already reaches
+// across the desk this way (see the topbar lift above), and it is loaded with
+// the desk rather than with a widget's own lazy chunk, so the answer cannot
+// depend on which skin arrived first. The next piece of chrome that has no
+// business on this screen joins the list here.
+//
+// ASKED OF THE DOM, not stamped. The alternative is a flag raised and cleared
+// on every way into and out of that screen, which is the mistake the address
+// chip's own history in this desk records three times over (see
+// tests/crumb-loading.test.js).
+//
+// NOT PARKED, not merely present. `desk_org_view` is destroyed on close today —
+// it is absent from KEEP_ALIVE_MAIN_KINDS — so `:has(__main)` alone would be
+// correct. But a screen that joins that set is parked in the DOM with
+// `data-anim="out"`, and this would then hide the rail for the rest of the
+// session. `data-anim !== "out"` is the desk's own liveness test (see the
+// `topChild` read in _sectionScreenService); this is that test in CSS.
+//
+// `__main` INSIDE the root, not the root alone: the widget root mounts a moment
+// before its skeleton is fed, and __main is the screen actually being drawn.
+// During the lazy chunk's own load neither exists and nothing is hidden, which
+// is harmless — the dropdown has just closed itself, and a second Open hits
+// togglePanel's already-pending guard.
+.desk-module:has(.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main) {
+  .desk-org-tab__open,
+  .desk-module-sidebar__nav-main {
+    display: none;
+  }
+}
+
 // ── While an in-window tour is up ─────────────────────────────────────────────
 //
 // The `overlay` slot hosts FULL-SCREEN guests — desk_tutorial, the reward flow,

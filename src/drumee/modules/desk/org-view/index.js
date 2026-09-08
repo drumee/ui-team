@@ -7,7 +7,6 @@
  * their destroy-on-close.
  * ==================================================================== */
 const { orgOverview, groupByDepartment, EMPTY } = require("libs/org-overview");
-const { workspaceTarget } = require("libs/workspace-target");
 
 /**
  * How long a department stays armed for the workspace being created into it.
@@ -383,18 +382,30 @@ class __desk_org_view extends LetcBox {
   /**
    * Open a workspace card.
    *
-   * Through workspaceTarget, never the raw row: that helper owns the rules for
-   * turning a listing row into what loadWorkspace wants, and the desk's home
-   * grid and the topbar switcher already resolve the same rows through it. The
-   * org_workspaces payload carries desk.home column names precisely so this
-   * could be the same call.
+   * THE DESK'S GESTURE, NOT THIS SCREEN'S. A card is a switcher row drawn
+   * somewhere else, so it goes where a switcher row goes — up to the desk,
+   * which owns everything that has to happen AROUND the open: the rail reset
+   * (only on a real change of workspace), the switcher's label and its
+   * `data-current` mark, and handing over any tour painted on the pane being
+   * replaced. See Desk._switchWorkspaceRow.
+   *
+   * This used to call `Wm.loadWorkspace(workspaceTarget(row))` itself. That
+   * opens the pane and closes this screen over it, so it LOOKED complete —
+   * what it left behind was a rail lit on the previous workspace's tab and a
+   * switcher still naming the workspace the user just left.
+   *
+   * The ROW goes up, not the hub_id: the desk resolves identity with its own
+   * `_workspaceKey`, and a widget that spelled that rule itself would be a
+   * second definition of it. `_rows` holds the row because the card carries
+   * only the key — spreading a server row onto a skeleton collides with the
+   * props the renderer reads (see the skeleton's `card`).
    *
    * @param {View} cmd
    */
   _openWorkspace(cmd) {
     const row = this._rows.get(String(cmd.mget("wsHubId")));
-    if (!row || typeof Wm === "undefined") return;
-    return Wm.loadWorkspace(workspaceTarget(row));
+    if (!row) return;
+    return this.triggerHandlers({ service: "switch-workspace-row", row });
   }
 
   /**

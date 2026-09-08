@@ -203,6 +203,21 @@
   --area-share: #ffa8dc;
   --area-dmz: #ffa8dc;
 
+  // AREA TINTS — a workspace card's fill on the org screen, at alpha 0x26
+  // (15%). The card is tinted by the same signal its folder glyph is drawn
+  // from, so a share workspace reads pink and a private one amber at a glance.
+  //
+  // 8-digit hex, like --primary-100-5 above: translucent on purpose, so one
+  // value sits correctly on both themes' grounds.
+  //
+  // --area-tint-private is NOT a tint of --area-private (#eb6159, coral). The
+  // design specifies amber here — the value is #e8a13b, which is also what
+  // --warning carries. Referencing --warning for a private workspace would
+  // borrow a token whose MEANING is unrelated (and which would follow the
+  // signal palette the day that is retuned), so the area keeps its own name.
+  --area-tint-share: #ffa8dc26;
+  --area-tint-private: #e8a13b26;
+
   // Own ("me") chat-bubble fills — lighter, fresher tints of the folder AREA
   // colours above. The raw --area-* are too dark/saturated to carry the pinned
   // near-black text (--primary-purple-100 #0b0a21), so each own bubble in the

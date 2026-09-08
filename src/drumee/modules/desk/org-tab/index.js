@@ -80,7 +80,38 @@ class __desk_org_tab extends LetcBox {
    */
   onPartReady(child, pn) {
     if (pn === "org-panel") return this._feedPanel();
+    // The Menu widget ITSELF, not a box holding one: the skeleton puts
+    // `sys_pn` on the Skeletons.Menu descriptor, so this part is the menu.
+    // Kept because "Open" has to close it — see _closeMenu.
+    if (pn === "org-menu") this._menu = child;
     if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  /**
+   * Shut the dropdown.
+   *
+   * IT DOES NOT SHUT ITSELF. `persistence: _a.always` (see the skeleton) is
+   * what stops a click inside the panel from closing it, and that is there for
+   * the inline rename — an entry the user is typing in must not be yanked out
+   * from under them. "Open" is the one row where that protection is wrong: it
+   * navigates away, so the panel was left hanging over the screen it had just
+   * opened, to be dismissed by hand.
+   *
+   * _triggerToggle, not _closeItems: it is the entry the desk's own switcher
+   * close goes through (Desk._toggleWorkspaceSwitcher) and it reads the menu's
+   * `state`, so a panel that is already shut is left alone rather than animated
+   * closed a second time.
+   *
+   * NB menu_topic carries a `brake` latch that makes _closeItems refuse
+   * outright. Only its `_close()` sets it, and nothing in this ui-core calls
+   * `_close()` — it is dead code there, which is asserted in
+   * tests/org-tab-open-closes-panel.test.js so that a ui-core upgrade wiring it
+   * up shows here rather than as a panel that silently stops closing.
+   */
+  _closeMenu() {
+    const menu = this._menu;
+    if (!menu || !menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
+    if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
   }
 
   /**
@@ -161,6 +192,10 @@ class __desk_org_tab extends LetcBox {
       // opening one does. triggerHandlers walks up to the desk, which is where
       // every other section screen is opened from.
       case "open-org-view":
+        // CLOSED FIRST, and only for this row — see _closeMenu. Before the
+        // raise, so the panel is on its way out as the screen mounts rather
+        // than blinking away after it; neither call awaits the other.
+        this._closeMenu();
         return this.triggerHandlers({ service });
 
       default:
