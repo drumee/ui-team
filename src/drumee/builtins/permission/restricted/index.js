@@ -78,23 +78,6 @@ class __permission_restricted extends DrumeeMFS {
     }
   }
 
-  /** Re-read the list after a mutation and redraw. */
-  async _refreshMembers() {
-    const hub_id = this.mget(_a.hub_id);
-    if (!hub_id) return;
-    try {
-      const rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
-        hub_id,
-        type: "all",
-      });
-      this._members = Array.isArray(rows) ? rows : [];
-    } catch (e) {
-      this.warn("Failed to refresh workspace members", e);
-    } finally {
-      this._render();
-    }
-  }
-
   /** Slide the dock in. Was driven by the members list's `eod`; the list is
    *  gone, so the fetch that replaced it drives it. */
   _reveal() {
@@ -284,15 +267,38 @@ class __permission_restricted extends DrumeeMFS {
     }
 
     try {
-      const res = await this.postService({
-        service: SERVICE.hub.remove_member,
+      // hub.delete_contributor, NOT hub.remove_member: `remove_member` is not a
+      // registered service (acl/hub.json), so SERVICE.hub.remove_member was
+      // undefined, the POST went to `<svc>undefined`, and the rejection was
+      // swallowed by the default onServerComplain — the click did nothing at
+      // all. Same call and same `users: []` payload the folder Settings panel's
+      // removeFolderMember uses; it is workspace-scoped, so the member loses
+      // access to the whole workspace.
+      const res = await this.postService(SERVICE.hub.delete_contributor, {
         hub_id: this.mget(_a.hub_id),
-        uid: memberId,
+        users: [memberId],
       });
       if (res && (res.error || res.error_code)) {
         return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
       }
-      await this._refreshMembers();
+      // A rejected POST (403 for a non-admin, DB error) resolves to `undefined`
+      // — doRequest hands non-200 to onServerComplain, which only warns. On
+      // success the service answers with the remaining member list, so an array
+      // is the only proof the write happened; without this test the row below
+      // would vanish from a removal the server refused.
+      if (!Array.isArray(res)) {
+        return Wm.alert(LOCALE.TRY_AGAIN);
+      }
+      // Splice locally rather than re-reading: hub.get_members_by_type still
+      // answers with the pre-write rows on an immediate read-after-write (the
+      // same reason _selectMemberRole above redraws from local state), so the
+      // refetch this used to do put the removed member straight back on screen.
+      this._members = (this._members || []).filter(
+        (r) =>
+          String(r.entity_id || r.drumate_id || r.id || "")
+          !== String(memberId),
+      );
+      this._render();
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
