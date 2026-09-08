@@ -1151,6 +1151,17 @@ $theme-colors: (
     }
   }
 
+  // Persistent per-column part the "⋮" popover is fed into (see
+  // buildColumnMenuContent). Collapsed while closed so the column's 12px gap
+  // does not double up around an empty box.
+  &__col-menu-slot {
+    flex: 0 0 auto;
+    &:empty,
+    &[data-open="0"] {
+      display: none;
+    }
+  }
+
   &__col-menu {
     // Sits between the pinned header and the scroller — keep its natural height.
     flex: 0 0 auto;

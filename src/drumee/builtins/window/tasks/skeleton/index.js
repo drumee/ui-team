@@ -394,106 +394,6 @@ const make = function (ui) {
       ],
     });
 
-  // Menu popover for a CUSTOM column: rename entry + palette swatches + delete.
-  const columnMenu = (col) =>
-    Skeletons.Box.Y({
-      className: `${pfx}__col-menu`,
-      bubble: 0,
-      kids: [
-        Skeletons.Entry({
-          className: `${pfx}__col-menu-name`,
-          name: "col_rename",
-          // Bound to a draft so an in-place re-render keeps the typed name
-          // (mirrors the board-title input).
-          value: ui.getColRenameDraft() != null ? ui.getColRenameDraft() : col.name,
-          placeholder: LOCALE.COLUMN_NAME,
-          mode: "commit",
-          service: "col-rename-submit",
-          watch: "col-rename-changed",
-          taskColumn: col.key,
-          uiHandler: [ui],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__col-swatches`,
-          kids: Object.keys(ui.getColumnThemes()).map((t) =>
-            Skeletons.Note({
-              className: `${pfx}__col-swatch`,
-              styleOpt: { background: ui.getColumnThemes()[t] },
-              dataset: { active: col.theme === t ? 1 : 0 },
-              bubble: 0,
-              service: "col-theme-set",
-              uiHandler: [ui],
-              taskColumn: col.key,
-              colTheme: t,
-            }),
-          ),
-        }),
-        // "Tasks here are done". is_done is what completion is keyed on
-        // everywhere — completed_at, the subtask done/total badge, the
-        // completion filters — but until this toggle existed only the seeded
-        // built-in `complete` ever carried it, so a board whose columns were
-        // renamed or replaced had no finished column at all. More than one
-        // column may carry it; this is a per-column flag, not a radio.
-        // The click service sits on the ROW, so every descendant in the click
-        // path carries `active: 0` — WITHOUT it ui-core binds an onclick to
-        // each of them (letc.js: `active` defaults to 1 when unset) and
-        // __handleClick calls e.stopPropagation() BEFORE triggerHandlers, so a
-        // click landing on the label or the knob — i.e. almost every real
-        // click — would die there and never reach this row. `active` does not
-        // cascade and `kidsOpt: {active: 0}` is a no-op, so it must be written
-        // on each node.
-        Skeletons.Box.X({
-          className: `${pfx}__col-done-row`,
-          bubble: 0,
-          service: "col-done-toggle",
-          uiHandler: [ui],
-          taskColumn: col.key,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__col-done-label`,
-              content: LOCALE.COLUMN_MARK_DONE,
-              active: 0,
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}__col-done-toggle`,
-              dataset: { on: col.is_done ? 1 : 0 },
-              active: 0,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__col-done-knob`,
-                  active: 0,
-                }),
-              ],
-            }),
-          ],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__col-menu-actions`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__col-menu-rename`,
-              content: LOCALE.SAVE,
-              bubble: 0,
-              service: "col-rename-submit",
-              uiHandler: [ui],
-              taskColumn: col.key,
-            }),
-            // A board must keep at least one column — hide delete on the last.
-            ui.getColumns().length > 1
-              ? Skeletons.Note({
-                  className: `${pfx}__col-menu-delete`,
-                  content: LOCALE.DELETE,
-                  bubble: 0,
-                  service: "col-delete",
-                  uiHandler: [ui],
-                  taskColumn: col.key,
-                })
-              : null,
-          ].filter(Boolean),
-        }),
-      ],
-    });
-
   const column = (col) =>
     Skeletons.Box.Y({
       className: `${pfx}__column`,
@@ -580,11 +480,22 @@ const make = function (ui) {
             }),
           ].filter(Boolean),
         }),
-        // Belt: the trigger above is already hidden, but a stale
-        // getColMenuFor() (set before a live role change) must not leave the
-        // rename popover mounted.
-        col.custom && mayCreateTask(ui) && ui.getColMenuFor() === col.key
-          ? columnMenu(col)
+        // Persistent slot for the "⋮" popover. The col-menu click feeds only
+        // this part (index.js _refreshColMenu) instead of re-rendering the
+        // whole board. buildColumnMenuContent gates on custom + mayCreateTask
+        // too, so a stale getColMenuFor() (set before a live role change)
+        // never leaves the rename popover mounted.
+        col.custom && mayCreateTask(ui)
+          ? Skeletons.Box.Y({
+              className: `${pfx}__col-menu-slot`,
+              sys_pn: `col-menu-${col.key}`,
+              partHandler: ui,
+              // dataset is dropped at render unless attrOpt is also set.
+              attrOpt: {
+                "data-open": ui.getColMenuFor() === col.key ? "1" : "0",
+              },
+              kids: buildColumnMenuContent(ui, col.key),
+            })
           : null,
         Skeletons.Box.Y({
           className: `${pfx}__column-body`,
@@ -4159,6 +4070,121 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
   ].filter(Boolean);
 }
 
+// Menu popover for a CUSTOM column: rename entry + palette swatches + done
+// toggle + delete. A standalone builder (not a closure of make) so the col-menu
+// click can feed ONLY that column's `col-menu-<key>` slot — a full _render()
+// rebuilds every column and card, ~1.5 s of blocked main thread on a 150-task
+// board, to show or hide one popover. Returns [] whenever the popover must not
+// show (closed, built-in column, or a member without write rights), so feeding
+// the result into the slot also clears it.
+function buildColumnMenuContent(ui, colKey) {
+  const pfx = ui.fig.family;
+  const col = (ui.getColumns() || []).find(
+    (c) => String(c.key) === String(colKey),
+  );
+  if (!col || !col.custom || !mayCreateTask(ui)) return [];
+  if (ui.getColMenuFor() !== col.key) return [];
+  return [
+    Skeletons.Box.Y({
+      className: `${pfx}__col-menu`,
+      bubble: 0,
+      kids: [
+        Skeletons.Entry({
+          className: `${pfx}__col-menu-name`,
+          name: "col_rename",
+          // Bound to a draft so an in-place re-render keeps the typed name
+          // (mirrors the board-title input).
+          value: ui.getColRenameDraft() != null ? ui.getColRenameDraft() : col.name,
+          placeholder: LOCALE.COLUMN_NAME,
+          mode: "commit",
+          service: "col-rename-submit",
+          watch: "col-rename-changed",
+          taskColumn: col.key,
+          uiHandler: [ui],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-swatches`,
+          kids: Object.keys(ui.getColumnThemes()).map((t) =>
+            Skeletons.Note({
+              className: `${pfx}__col-swatch`,
+              styleOpt: { background: ui.getColumnThemes()[t] },
+              dataset: { active: col.theme === t ? 1 : 0 },
+              bubble: 0,
+              service: "col-theme-set",
+              uiHandler: [ui],
+              taskColumn: col.key,
+              colTheme: t,
+            }),
+          ),
+        }),
+        // "Tasks here are done". is_done is what completion is keyed on
+        // everywhere — completed_at, the subtask done/total badge, the
+        // completion filters — but until this toggle existed only the seeded
+        // built-in `complete` ever carried it, so a board whose columns were
+        // renamed or replaced had no finished column at all. More than one
+        // column may carry it; this is a per-column flag, not a radio.
+        // The click service sits on the ROW, so every descendant in the click
+        // path carries `active: 0` — WITHOUT it ui-core binds an onclick to
+        // each of them (letc.js: `active` defaults to 1 when unset) and
+        // __handleClick calls e.stopPropagation() BEFORE triggerHandlers, so a
+        // click landing on the label or the knob — i.e. almost every real
+        // click — would die there and never reach this row. `active` does not
+        // cascade and `kidsOpt: {active: 0}` is a no-op, so it must be written
+        // on each node.
+        Skeletons.Box.X({
+          className: `${pfx}__col-done-row`,
+          bubble: 0,
+          service: "col-done-toggle",
+          uiHandler: [ui],
+          taskColumn: col.key,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-done-label`,
+              content: LOCALE.COLUMN_MARK_DONE,
+              active: 0,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__col-done-toggle`,
+              dataset: { on: col.is_done ? 1 : 0 },
+              active: 0,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__col-done-knob`,
+                  active: 0,
+                }),
+              ],
+            }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-menu-actions`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-menu-rename`,
+              content: LOCALE.SAVE,
+              bubble: 0,
+              service: "col-rename-submit",
+              uiHandler: [ui],
+              taskColumn: col.key,
+            }),
+            // A board must keep at least one column — hide delete on the last.
+            ui.getColumns().length > 1
+              ? Skeletons.Note({
+                  className: `${pfx}__col-menu-delete`,
+                  content: LOCALE.DELETE,
+                  bubble: 0,
+                  service: "col-delete",
+                  uiHandler: [ui],
+                  taskColumn: col.key,
+                })
+              : null,
+          ].filter(Boolean),
+        }),
+      ],
+    }),
+  ];
+}
+
 make.buildSubtaskRowsContent = buildSubtaskRowsContent;
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeChips = buildAssigneeChips;
@@ -4171,5 +4197,6 @@ make.buildHistoryListContent = buildHistoryListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 make.buildDueSectionContent = buildDueSectionContent;
+make.buildColumnMenuContent = buildColumnMenuContent;
 make.dueSummaryText = dueSummaryText;
 module.exports = make;

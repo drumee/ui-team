@@ -1918,13 +1918,18 @@ class __tasks_panel extends LetcBox {
 
       case "col-menu": {
         const key = trigger.mget("taskColumn");
-        const opening = this._colMenuFor !== key;
+        const prev = this._colMenuFor;
+        const opening = prev !== key;
         this._colMenuFor = opening ? key : null;
         // Seed the draft with the current name on open; clear on close.
         this._colRenameDraft = opening
           ? (this._customColumns.find((c) => c.id === key) || {}).name || ""
           : null;
-        return this._render();
+        // Only the popover slot(s) change — feed those, never _render(): a
+        // full re-render rebuilds every column and card (~1.5 s of blocked
+        // main thread on a 150-task board) to show or hide one popover.
+        if (prev != null && prev !== key) this._refreshColMenu(prev);
+        return this._refreshColMenu(key);
       }
 
       case "col-watch-toggle":
@@ -3764,6 +3769,25 @@ class __tasks_panel extends LetcBox {
     this._boardTitle = "";
     this._boardDefault = true;
     this._render();
+  }
+
+  // Re-feed one column's `col-menu-<key>` slot from getColMenuFor(): mounts
+  // the popover when that column is the open one, clears it otherwise.
+  // Mirrors _closeAssigneeList — the slot is a persistent part of the column
+  // skeleton, so this never touches the cards.
+  _refreshColMenu(key) {
+    if (key == null) return Promise.resolve();
+    return this._withPart(`col-menu-${key}`)
+      .then((part) => {
+        if (!part || part.isDestroyed?.()) return;
+        part.feed(require("./skeleton").buildColumnMenuContent(this, key));
+        if (part.el) {
+          part.el.dataset.open = this._colMenuFor === key ? "1" : "0";
+        }
+      })
+      .catch(() => {
+        /* not mounted (list / calendar / gantt view) */
+      });
   }
 
   async _renameColumn(trigger) {
