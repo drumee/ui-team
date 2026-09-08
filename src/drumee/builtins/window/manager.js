@@ -1729,9 +1729,24 @@ class __window_manager extends mfsInteract {
       };
     }
     let w = opt.wrapper || this.__wrapperModal;
+    // Backdrop treatment, overridable per call. "scrim" is the default so every
+    // existing caller keeps the dim it has today; a caller confirming an action
+    // ON a panel the user is reading can ask for "none" instead — dimming the
+    // surface the prompt is about makes it harder to check, not easier.
+    //
+    // "none" rather than dropping the attribute, matching wm/index.js
+    // openQuotaExceeded: this host is SHARED, so a value left behind by a
+    // previous dialog would dim the desk behind a card that never asked for it.
+    // Explicitly off, not merely not-on.
+    //
+    // Pulled OUT of the skeleton (`rest`) rather than passed through: it
+    // addresses the host, not the card, and the window model has no `overlay`
+    // prop to receive it.
+    const { overlay: overlayOpt, ...rest } = skl;
+    const overlay = overlayOpt == null ? "scrim" : overlayOpt;
     return new Promise(function (resolve, reject) {
       Kind.waitFor(kind).then((a) => {
-        const s = w.feed({ ...skl, kind });
+        const s = w.feed({ ...rest, kind });
         // The host is only SIZED by its [data-state="open"] rule (wm/skin:
         // position:absolute, inset:0, 100%x100%). Without the attribute it is an
         // auto-sized box, and the dialog inside resolves max-width:100% /
@@ -1747,14 +1762,19 @@ class __window_manager extends mfsInteract {
         // The wrapper's own behavior clears it again when it empties.
         if (w && w.el) {
           w.el.dataset.state = "open";
-          // Backdrop behind the card. "scrim", not the "blur" glass the other
-          // modals through this host use (openRequestAccessModal,
-          // reward-flow, create-folder): the confirm takes the flat
-          // `--overlay-bg` treatment the activity panel puts behind its mobile
-          // card. The skin does the work — wm/skin's `[data-overlay="scrim"]`
+          // Backdrop behind the card. The default "scrim" is not the "blur"
+          // glass the other modals through this host use
+          // (openRequestAccessModal, reward-flow, create-folder): the confirm
+          // takes the flat `--overlay-bg` treatment the activity panel puts
+          // behind its mobile card. The skin does the work — wm/skin's
+          // `[data-overlay="scrim"]`
           // includes drumee.scrim-overlay, and --overlay-bg is theme-aware on
           // its own, so there is no dark-mode branch to keep in step here.
-          w.el.dataset.overlay = "scrim";
+          //
+          // "none" matches neither that rule nor the blur one, so the host
+          // keeps its [data-state="open"] `background: transparent;
+          // backdrop-filter: none` — sized and centring, but not painting.
+          w.el.dataset.overlay = overlay;
         }
         // Clear the backdrop when the prompt settles, whichever way it goes.
         //
