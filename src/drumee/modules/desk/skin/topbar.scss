@@ -75,8 +75,21 @@
   to { transform: rotate(360deg); }
 }
 
+// The address chip's spinner, while the breadcrumb resolves — or while its
+// lazy chunk is still downloading. Declared HERE rather than in
+// breadcrumb/skin, which is required inside that very chunk and so is not
+// loaded when this first runs.
+@keyframes crumb-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .desk-module-topbar__ws-head-action[data-loading="1"] svg {
+    animation: none;
+  }
+
+  // The chip still reads as busy through the hidden crumbs and caret.
+  .desk-module-topbar__crumb-group:not(:has(.breadcrumb-item__filename))::after {
     animation: none;
   }
 }
@@ -329,6 +342,106 @@
     // framework, the same reason __actions-cluster[data-state="0"] needs it.
     .desk-breadcrumb__ui[data-section="1"] + .desk-module-topbar__ws-wrapper {
       display: none !important;
+    }
+
+  }
+
+  // ── The chip is waiting for its address ─────────────────────────────────
+  //
+  // NO JS STATE. The caret, the spinner and the crumbs are decided by whether
+  // the CRUMBS THEMSELVES are in the chip — asked directly, in CSS, with
+  // `:has()` (already used in this file, for the section cursor above).
+  //
+  // Three attempts keyed this on a flag instead, and each failed in the app
+  // while passing every test: `data-loading` on the breadcrumb root, then
+  // `data-address` on it, then `data-address` on this chip. A flag has to be
+  // written by someone, at the right moment, and cleared by someone, at the
+  // right moment — and here that meant a widget which does not exist for the
+  // whole of its own lazy chunk load (seeds.js -> e.e(345)), a `_buildContent`
+  // that paints inside an `ensurePart` promise, ~10 broadcast paths into
+  // `_updateContext`/`loadDefault` that can declare "no address", and a chip
+  // that outlives the widget across a topbar re-feed and so can hold a stale
+  // answer. Every one of those is a way for the caret to be revealed while the
+  // address is missing, and no amount of care about WHEN to stamp removes the
+  // category.
+  //
+  // Asking the DOM removes it. There is nothing to go stale, nothing to be
+  // stamped early, nothing to be missed on an unmount, and no dependency on
+  // the breadcrumb widget existing yet — an absent breadcrumb simply has no
+  // crumbs in it. It is also literally the specified condition: hidden until
+  // the icon and the filename are both up.
+  //
+  // FAILS CLOSED BY CONSTRUCTION: the caret is hidden by the base rule, and
+  // only the `:has()` rule reveals it. Should `:has()` ever not apply, the
+  // selector is dropped and the caret stays hidden — never the other way.
+  &__crumb-group {
+    // Hidden until proven otherwise. visibility, not display: the caret keeps
+    // its 22px box, so the address does not shift sideways at the moment it
+    // lands — which is exactly when the user is looking at it. And not on
+    // __ws-wrapper: the open panel lives inside that, so hiding it would yank
+    // a dropdown out from under the pointer when a workspace row is clicked.
+    .desk-module-topbar__ws-btn {
+      visibility: hidden;
+    }
+
+    // The spinner, for the same "no complete crumb" condition. Drawn on a
+    // pseudo-element rather than a fed widget: ui-core's own `view.spinner(1)`
+    // injects `.drumee-loading-wrapper` markup whose base rules do not exist
+    // in this app (only per-site positional overrides do), and its bars are
+    // 50px tall against this chip's 30px. A border spinner is the pattern this
+    // bar already uses — see ws-head-action-spin above.
+    //
+    // On the CHIP, which is a plain Skeletons.Box in desk/skeleton/topbar.js
+    // and so is in the bar's first frame — the breadcrumb is not, and neither
+    // is breadcrumb/skin, which is required inside that same lazy chunk.
+    &::after {
+      content: "";
+      display: block;
+      // FIRST, whatever else the chip holds. A pseudo-element is the LAST flex
+      // item by source order, which would put the spinner after the caret; the
+      // address it stands in for is at the left.
+      order: -1;
+      flex: 0 0 auto;
+      box-sizing: border-box;
+      width: 14px;
+      height: 14px;
+      // 4px matches .desk-breadcrumb__main's padding-left, so the spinner sits
+      // where the workspace glyph is about to appear and the chip does not
+      // shift sideways as it resolves.
+      margin-left: 4px;
+      border-radius: 50%;
+      // currentColor, so the spinner cannot drift from the text it stands in
+      // for, in either theme.
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      opacity: 0.55;
+      animation: crumb-loading-spin 0.7s linear infinite;
+    }
+
+    // A HALF-DRAWN ADDRESS IS WORSE THAN NO ADDRESS: a crumb that has its
+    // glyph but not yet its name is hidden with the rest, so the track appears
+    // whole or not at all.
+    .desk-breadcrumb__main {
+      display: none;
+    }
+  }
+
+  // THE ADDRESS IS UP: an icon AND a filename are both in the chip. Two
+  // chained `:has()`, not one with a descendant combinator, because the glyph
+  // and the name are SIBLINGS inside .breadcrumb-item__tab — neither contains
+  // the other.
+  &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename) {
+    .desk-module-topbar__ws-btn {
+      visibility: visible;
+    }
+
+    .desk-breadcrumb__main {
+      display: flex;
+    }
+
+    &::after {
+      content: none;
+      animation: none;
     }
   }
 
