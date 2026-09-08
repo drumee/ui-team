@@ -442,6 +442,42 @@ class __push_manager extends winman {
       Desk
     ) {
       Desk.onWorkspaceClosed();
+      this._openAnotherWorkspaceAfterRevoke();
+    }
+  }
+
+  /**
+   * Land the user somewhere real after they acknowledge being removed.
+   *
+   * onWorkspaceClosed() above resets the chrome and clears headlessLayer, which
+   * used to reveal the desk's home grid. That grid is retired, so what is left
+   * is a blank white page — the user acknowledges the notice and the app looks
+   * broken. Reported 2026-09-08.
+   *
+   * `_openDefaultWorkspace` is the desk's OWN answer to "which workspace should
+   * be open", the one it uses on boot: it opens rows[0] of the switcher list —
+   * literally the first workspace in the dropdown — and falls back to the empty
+   * -workspace screen for an account that now has none. Reusing it is what
+   * keeps this landing identical to a refresh, rather than inventing a second
+   * idea of "default" that could drift from the menu.
+   *
+   * 🔑 force:1 is REQUIRED, not defensive: that list is cached for 60s and the
+   * workspace we were just removed from is still in it. Without the refetch
+   * rows[0] can be the very hub the user has just lost, and the landing would
+   * be a 403.
+   *
+   * Failure is swallowed and left as-is: a blank desk is a poor landing, but an
+   * unreachable list is not a reason to throw an error at someone who has just
+   * been removed from a workspace.
+   */
+  _openAnotherWorkspaceAfterRevoke() {
+    try {
+      if (typeof Desk === "undefined" || !Desk) return;
+      if (!_.isFunction(Desk._openDefaultWorkspace)) return;
+      const r = Desk._openDefaultWorkspace({ force: 1 });
+      if (r && _.isFunction(r.catch)) r.catch(() => { });
+    } catch (e) {
+      this.warn && this.warn("[revoked] could not open a default workspace", e);
     }
   }
 
