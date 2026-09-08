@@ -6391,7 +6391,7 @@ class __window_folder extends mfsInteract {
   // once(_e.destroy) handler and flip isShowSettings off — detach it first,
   // then re-attach an identical handler to the freshly mounted child.
   _refeedFolderMembersPanel() {
-    if (!this.dialogWrapper) return;
+    if (!this._folderSettingsPanelIsOpen()) return;
     const oldChild = this.dialogWrapper.children?.last?.();
     if (oldChild) oldChild.off(_e.destroy);
     this.dialogWrapper.feed(
@@ -6408,7 +6408,7 @@ class __window_folder extends mfsInteract {
   }
 
   async _refreshFolderMembers() {
-    if (!this.isShowSettings || !this.dialogWrapper) return;
+    if (!this._folderSettingsPanelIsOpen()) return;
     const { hub_id } = this.actualNode();
     if (!hub_id) return;
     try {
@@ -6420,12 +6420,47 @@ class __window_folder extends mfsInteract {
     } catch (e) {
       if (this.warn) this.warn("Failed to refresh folder members", e);
     } finally {
-      if (this.isShowSettings && this.dialogWrapper) {
+      // Re-checked, not assumed: the fetch above is a round-trip, and the user
+      // can have closed the drawer or opened a different one meanwhile.
+      if (this._folderSettingsPanelIsOpen()) {
         this.dialogWrapper.feed(
           require("./skeleton/settings-action-panel")(this),
         );
       }
     }
+  }
+
+  /**
+   * Is the drawer showing THIS window's Folder Settings panel right now?
+   *
+   * 🚨 `dialogWrapper` AND `isShowSettings` ARE SHARED BY THREE PANELS.
+   * switchShowFolderSettings feeds the Folder Settings panel, and
+   * openManageAccess feeds either `permission_restricted` ("Who has access")
+   * or `window_secure_share` into the SAME wrapper, each setting the SAME
+   * `isShowSettings` flag. So the flag means "some drawer is open", never
+   * "the Folder Settings panel is open".
+   *
+   * The member refreshers below re-feed the Folder Settings skeleton, and
+   * reading the flag alone made them do that on top of whichever drawer was
+   * actually open. The visible bug: invite somebody from "Who has access" and
+   * the server's `hub.member_joined` push (added FOR this panel — see
+   * server-team/service/lib/notify-member-joined.js) turned the drawer into the
+   * Folder Settings panel mid-flight, Download / Rename / Organize / Duplicate
+   * / Delete rows and all, under a "Folder Setting" title. Reported 2026-09-08
+   * with a screenshot.
+   *
+   * Tested by looking for the panel's own root class in the mounted DOM rather
+   * than by listing the kinds that are NOT it. That fails CLOSED — rename the
+   * class and the matrix merely stops auto-refreshing — where a deny-list
+   * fails OPEN and goes back to replacing a panel it does not own.
+   *
+   * @returns {Boolean}
+   */
+  _folderSettingsPanelIsOpen() {
+    if (!this.isShowSettings || !this.dialogWrapper) return false;
+    const root = this.dialogWrapper.el;
+    if (!root || !root.querySelector) return false;
+    return !!root.querySelector(`.${this.fig.family}__settings-action-panel`);
   }
 
   openAdvancedSettings(cmd) {

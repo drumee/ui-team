@@ -1,6 +1,11 @@
 const { roleByValue } = require("../../../builtins/skeleton/toolkit");
 const { attachEmailLookup, fillEntry } = require("libs/contact-lookup");
 
+// Wm's inbound-websocket bus. Same name and same channel window/utils.js and
+// modules/desk use; wm/push.js re-emits every push it does not itself consume
+// onto it, carrying the service in `options.service`.
+const WS_EVENT = "ws:event";
+
 /**
  * Workspace-members panel (private/team workspaces).
  *
@@ -24,6 +29,11 @@ class __permission_restricted extends DrumeeMFS {
     this._inviteRole = roleByValue("edit");
     this._members = [];
     this._membersLoaded = false;
+    // Registered BEFORE the `opt.media` early return below: this panel is fed
+    // without a media from the creation flow (media/form) and from Wm's own
+    // wrapper-modal, and the matrix has to stay live in those too.
+    this._onWsEvent = this._onWsEvent.bind(this);
+    Wm.on(WS_EVENT, this._onWsEvent);
     let m = opt.media;
     if (!m) return;
     this.media = m;
@@ -55,6 +65,11 @@ class __permission_restricted extends DrumeeMFS {
    * list used to make on this panel's behalf. The panel slides in once it
    * settles — success or not, so a failed fetch shows the empty matrix rather
    * than a panel that never arrives.
+   *
+   * Also the live refresh (_onWsEvent), which is why a failure no longer
+   * clears `_members`: on the FIRST call the list is `[]` anyway, so the
+   * empty-matrix behaviour above is unchanged, but a network blip during a
+   * refresh must not wipe a matrix that is currently correct.
    */
   async _loadMembers() {
     const hub_id = this.mget(_a.hub_id);
@@ -70,12 +85,40 @@ class __permission_restricted extends DrumeeMFS {
       this._members = Array.isArray(rows) ? rows : [];
     } catch (e) {
       this.warn("Failed to load workspace members", e);
-      this._members = [];
     } finally {
       this._membersLoaded = true;
       this._render();
       this._reveal();
     }
+  }
+
+  /**
+   * Somebody was added to a workspace: the server pushes `hub.member_joined`
+   * to every online member of it (server-team/service/lib/notify-member-joined
+   * — fired from the single `_grantMembership` choke point, so it covers
+   * hub.invite's existing-account branch and add_contributors alike).
+   *
+   * That push already existed, and its own comment says it is there so an
+   * admin with the permission matrix open sees the new member without a
+   * reload — but only the folder window's Folder Settings panel had ever been
+   * wired to it. This panel shows the same matrix and was left out, so it sat
+   * stale while the invite it had just sent landed.
+   *
+   * Covers the invite this admin just sent AND one sent by somebody else.
+   */
+  _onWsEvent(args = {}) {
+    const { data, options } = args || {};
+    if (!options || options.service !== "hub.member_joined") return;
+    const hub_id = this.mget(_a.hub_id);
+    if (!hub_id) return;
+    // Several panels can be open on different workspaces — only ours reacts.
+    if (data && data.hub_id && `${data.hub_id}` !== `${hub_id}`) return;
+    this._loadMembers();
+  }
+
+  onBeforeDestroy(opt) {
+    Wm.off(WS_EVENT, this._onWsEvent);
+    if (super.onBeforeDestroy) super.onBeforeDestroy(opt);
   }
 
   /** Slide the dock in. Was driven by the members list's `eod`; the list is
