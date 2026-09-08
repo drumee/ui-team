@@ -337,10 +337,25 @@
     gap: 24px;
   }
 
-  // Figma 104:33973 card: 215x128, r16, padding 24, gap 8, NO fill — white on
-  // the white page, separated only by a rgba(0,0,0,.05) hairline. An earlier
-  // revision filled them with --normal-bg-90 and bordered them with the heavier
-  // --border-default, which turned a light tile grid into rows of grey blocks.
+  // Figma 104:33154 card: 215x128, r16, padding 24, gap 8, fill
+  // `rgba(89,80,255,0.1)` — the brand at 10%, Figma's "Overlay/brand" style —
+  // over a rgba(0,0,0,.05) hairline.
+  //
+  // THE FILL WAS WHITE HERE, read from an earlier revision of the frame that
+  // drew the tiles unfilled. The tiles are a lavender wash in the current
+  // design, which is what separates them from the white section frame they sit
+  // in — the hairline alone is nearly invisible by intent, so unfilled tiles on
+  // a white section had almost no edge at all.
+  //
+  // --brand-tint, not --primary-10. The two are NOT the same wash: --primary-10
+  // is #e4e3ff, the brand at roughly 16% and visibly stronger, and it is one
+  // flat light-mode hex. --brand-tint is the 10% the frame specifies, and being
+  // translucent it sits correctly on either theme's ground (themes/light.scss,
+  // themes/dark.scss).
+  //
+  // An even earlier revision filled them with --normal-bg-90 and bordered them
+  // with the heavier --border-default, which turned a light tile grid into rows
+  // of grey blocks.
   &__card {
     gap: 8px;
     padding: 24px;
@@ -349,18 +364,45 @@
     // half height and read as a dense table rather than the tile grid drawn.
     min-height: 128px;
     border-radius: var(--corner-radius-5);
-    background-color: var(--normal-bg);
+    background-color: var(--brand-tint);
+    // ALREADY THE FRAME'S VALUE: --border-muted is rgba(0, 0, 0, 0.05) in
+    // themes/light.scss, which is the stroke Figma reports. Left as it was.
     border: 1px solid var(--border-muted);
     cursor: pointer;
     min-width: 0;
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
 
-    // The frame draws no hover. A hairline lift is the least it can do to say
-    // the tile is clickable, without inventing a fill the design does not have.
+    // The frame draws no hover state. A hairline lift and a shadow are the
+    // least this can do to say the tile is clickable, without inventing a
+    // SECOND fill on top of the one the frame does specify.
     &:hover {
       border-color: var(--border-default);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
+  }
+
+  // ── The tint follows the workspace's AREA ──────────────────────────────
+  //
+  // The same signal the folder glyph beside it is drawn from, so a share
+  // workspace reads pink and a private one amber without reading the name.
+  //
+  // KEYED ON THE CARD'S OWN `data-area`, which the skeleton already stamps for
+  // exactly this (see the attrOpt note in card()). The glyph carries the area
+  // as a CLASS too, and an earlier reading of this asked for the tint to follow
+  // that — but the two come from one field on one row, and asking the parent
+  // for its own attribute needs no `:has()` and cannot disagree with itself.
+  //
+  // RESTRICTED IS DELIBERATELY ABSENT. org_workspaces returns three areas —
+  // `private`, `share` and `restricted` (yellow_page/procedures/organization/
+  // org_workspaces.sql) — and the design names a colour for two. The third
+  // keeps the base --brand-tint above rather than being given an invented
+  // colour, and so does a row whose area is null.
+  &__card[data-area="share"] {
+    background-color: var(--area-tint-share);
+  }
+
+  &__card[data-area="private"] {
+    background-color: var(--area-tint-private);
   }
 
   // Icon at the top, name and member count together at the foot — the frame

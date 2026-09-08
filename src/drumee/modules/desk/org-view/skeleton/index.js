@@ -28,12 +28,24 @@ const folderArt = require("media/grid/template/folder");
 function members(pfx, value, tip) {
   return Skeletons.Box.X({
     className: `${pfx}__members`,
+    // INERT, so a click here reaches whatever is behind it — on a card, that is
+    // the card. See card() for the whole story.
+    active: 0,
     kids: [
-      Skeletons.Note({ className: `${pfx}__members-value`, content: String(~~value) }),
+      Skeletons.Note({ active: 0, className: `${pfx}__members-value`, content: String(~~value) }),
       Skeletons.Image.Svg({
         ico: "ph-users",
         className: `${pfx}__members-ico`,
-        ...(tip ? { tooltips: { content: tip, className: `${pfx}__tip` } } : {}),
+        // LIVE ONLY WHEN IT HAS A TOOLTIP, and that is not a free choice:
+        // ui-core's `active` gate returns BEFORE __addTooltips(), so
+        // `active: 0` on a widget silently takes its tooltip with it
+        // (letc.js — `if (!active) return;` sits above the tooltips read).
+        //
+        // The department header's count is a bare number that needs the label;
+        // the card's does not ask for one, and there the glyph must not eat the
+        // click. So the two callers differ by exactly the flag that already
+        // told them apart.
+        ...(tip ? { tooltips: { content: tip, className: `${pfx}__tip` } } : { active: 0 }),
       }),
     ],
   });
@@ -62,8 +74,24 @@ function card(pfx, ui, ws) {
     wsHubId: ws.hub_id,
     service: "open-workspace",
     uiHandler: [ui],
+    // EVERY DESCENDANT IS active: 0, or the card only opens from its padding.
+    //
+    // ui-core binds a click to any widget whose `active` is not 0, and that
+    // handler calls `e.stopPropagation()` BEFORE it dispatches
+    // (letc.js __handleClick). So a live child swallows the press: its own
+    // triggerHandlers finds no ui handler and returns, the event never reaches
+    // this box, and the glyph, the name and the member count were all dead
+    // spots — which is most of the card's surface.
+    //
+    // `kidsOpt: { active: 0 }` IS NOT A SHORTCUT FOR THIS. It looks like one
+    // and the org chip's chip() appears to use it, but mergeKidsOptions
+    // rebuilds each kid into a LOCAL inside a `.map()` and never writes it back
+    // (letc.js) — so the option is silently discarded and only an explicit flag
+    // on each widget does anything. The chip works because it also sets
+    // `active: 0` on every kid by hand.
     kids: [
       Skeletons.Element({
+        active: 0,
         className: `${pfx}__card-icon ${ws.area || ""}`,
         content: folderArt({
           area: ws.area,
@@ -74,7 +102,12 @@ function card(pfx, ui, ws) {
           isAttachment: 1,
         }),
       }),
-      Skeletons.Note({ className: `${pfx}__card-name`, content: ws.filename || ws.name || "" }),
+      Skeletons.Note({
+        active: 0,
+        className: `${pfx}__card-name`,
+        content: ws.filename || ws.name || "",
+      }),
+      // Inert on both counts — see members(), which is why it takes no tip here.
       members(pfx, ws.members),
     ],
   });

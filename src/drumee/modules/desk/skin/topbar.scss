@@ -430,7 +430,44 @@
   // chained `:has()`, not one with a descendant combinator, because the glyph
   // and the name are SIBLINGS inside .breadcrumb-item__tab — neither contains
   // the other.
-  &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename) {
+  //
+  // A SECTION LABEL IS UP, which is the second selector and is not the same
+  // condition. Organization / Settings / Get help / Trash / Inbox / Contacts /
+  // Admin console / Plan render a name and NO GLYPH — breadcrumb/item/skeleton
+  // pushes the folder art only `if (!isSection)`, because a label has no node
+  // behind it to draw. Asking those for an icon asks for something that is
+  // never coming: the chip spun forever with its own label hidden underneath,
+  // for every section screen (the org view's "Open" is where it was found).
+  //
+  // Here a DESCENDANT combinator is right, where the pair above needed two
+  // chained `:has()`: the name is INSIDE .breadcrumb-item__main--section, not
+  // a sibling of it. And it still asks for the name — a section crumb with no
+  // label yet is as unfinished as a glyph with no name, and stays hidden.
+  //
+  // The caret does not come back with the track: __left-cluster above hides
+  // the whole __ws-wrapper next to a `[data-section="1"]` breadcrumb, so there
+  // is no workspace dropdown hanging off the word "Organization".
+  // THE ADDRESS IS ALREADY IN THE BAR — the organisation screen, and only it.
+  // The org chip sits two elements to the left in this same cluster and reads
+  // the organisation's name; an address chip beside it printing the same words
+  // again, with a "/" and a dead cursor, is noise. desk._openOrgView asks for
+  // this with `hideAddress` on its breadcrumb:context, which
+  // desk_breadcrumb._setSectionMode stamps here.
+  //
+  // The WHOLE chip, spinner and caret included — hence its placement after the
+  // rules above, and `display: none` rather than hiding the track inside it:
+  // an empty chip still eats its own padding and still draws its ground on
+  // hover. `!important` for the same reason __left-cluster's caret rule needs
+  // it — a Box child's display is forced by the framework.
+  //
+  // `:has(>)`, the same direction the section cursor rule above reads: the flag
+  // is on the breadcrumb root, which is this box's own child.
+  &__crumb-group:has(> .desk-breadcrumb__ui[data-hide-address="1"]) {
+    display: none !important;
+  }
+
+  &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename),
+  &__crumb-group:has(.breadcrumb-item__main--section .breadcrumb-item__filename) {
     .desk-module-topbar__ws-btn {
       visibility: visible;
     }
