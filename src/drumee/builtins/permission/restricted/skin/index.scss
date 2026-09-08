@@ -645,6 +645,39 @@
     width: 100%;
     position: relative;
     overflow: visible;
+    // Fallback stacking context for the hover tint below. The skeleton already
+    // stamps an inline `1000 - index` on every row (skeleton/index.js
+    // styleOpt), which is what keeps an open role popover above the rows under
+    // it; declaring 0 here — inline wins, so the popover order is untouched —
+    // keeps the tint working if a row is ever built without that style.
+    z-index: 0;
+
+    // Painted by a pseudo-element rather than a background on the row itself:
+    // the row carries no padding of its own (the section's 24px gutter is what
+    // spaces it), so a plain background would sit flush against the avatar and
+    // the trash icon. `inset` bleeds the tint 8px/12px past the row box to give
+    // it that breathing room WITHOUT changing the resting layout — the rows
+    // keep the height and the 16px rhythm they have today.
+    //
+    // z-index -1 puts it above the row's own background and below its content,
+    // so it never covers the avatar, the name or the actions.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -8px -12px;
+      border-radius: 8px;
+      z-index: -1;
+      pointer-events: none;
+      background-color: transparent;
+      transition: background-color 120ms ease;
+    }
+
+    // The neutral row hover, same token as __invite-suggestion — the closest
+    // analogue in this panel. The blue tint stays reserved for the role menu's
+    // options, which are a choice rather than a row.
+    &:hover::before {
+      background-color: var(--default-bg-hover, #f5f5fa);
+    }
   }
 
   &__member-info,
@@ -722,10 +755,23 @@
     width: 21px;
     height: 22px;
     color: #d74e49;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 120ms ease, color 120ms ease;
 
     svg {
       width: 13.33px;
       height: 15px;
+    }
+
+    // Tinted from the icon's OWN red (#d74e49 = 215 78 73), not the neutral row
+    // hover: the row tint is already under it, and a second neutral wash on top
+    // would read as the row highlighting twice rather than as the destructive
+    // control answering the pointer. Darkened text keeps the glyph legible on
+    // the blended background.
+    &:hover {
+      background-color: rgba(215, 78, 73, 0.14);
+      color: #b23b36;
     }
   }
 
@@ -800,6 +846,17 @@ html[data-theme="dark"] {
         background-color: var(--active-item-bg);
         color: var(--normal-fg-800);
       }
+    }
+
+    &__member-row:hover::before {
+      background-color: var(--hover-bg-40);
+    }
+
+    // Stronger tint and a lighter glyph: the same red at 0.14 disappears into
+    // the dark surface, and #b23b36 is unreadable on it.
+    &__member-remove:hover {
+      background-color: rgba(215, 78, 73, 0.24);
+      color: #ff8b86;
     }
   }
 }
