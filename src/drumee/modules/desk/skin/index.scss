@@ -552,9 +552,10 @@ html {
 // business on this screen joins the list here.
 //
 // ASKED OF THE DOM, not stamped. The alternative is a flag raised and cleared
-// on every way into and out of that screen, which is the mistake the address
-// chip's own history in this desk records three times over (see
-// tests/crumb-loading.test.js).
+// on every way into and out of that screen, and three attempts at exactly that
+// shipped and failed for the address chip next door — see the commentary on
+// __crumb-group in topbar.scss, which records why that condition is asked in
+// CSS rather than carried in JS.
 //
 // NOT PARKED, not merely present. `desk_org_view` is destroyed on close today —
 // it is absent from KEEP_ALIVE_MAIN_KINDS — so `:has(__main)` alone would be

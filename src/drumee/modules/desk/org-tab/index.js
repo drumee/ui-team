@@ -104,9 +104,9 @@ class __desk_org_tab extends LetcBox {
    *
    * NB menu_topic carries a `brake` latch that makes _closeItems refuse
    * outright. Only its `_close()` sets it, and nothing in this ui-core calls
-   * `_close()` — it is dead code there, which is asserted in
-   * tests/org-tab-open-closes-panel.test.js so that a ui-core upgrade wiring it
-   * up shows here rather than as a panel that silently stops closing.
+   * `_close()` — verified dead code there at the time of writing. A ui-core
+   * upgrade that wires it up would show as a panel which silently stops
+   * closing, and this is the first place to look.
    */
   _closeMenu() {
     const menu = this._menu;
