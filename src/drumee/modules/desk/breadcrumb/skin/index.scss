@@ -63,9 +63,20 @@
   // was the legacy all-workspaces grid, which is retired (see the breadcrumb
   // skeleton). Its rules went with it — the track now starts at the workspace
   // crumb, styled by breadcrumb/item/skin.
+
+  // WHILE THE ADDRESS IS STILL ON ITS WAY, nothing is styled from here.
+  //
+  // The spinner, the hidden crumbs and the hidden caret are all decided in
+  // desk/skin/topbar.scss, on `.desk-module-topbar__crumb-group`, from whether
+  // the CRUMBS are present — asked with `:has()`, with no flag anywhere. The
+  // chip is an ancestor of all three and is in the bar's first frame, while
+  // this widget is a lazily import()ed kind that does not exist until its
+  // chunk lands — and neither does this stylesheet, which is required inside
+  // that same chunk. Keying any of it here is what let the caret come up ahead
+  // of the address.
 }
 
-// ── Dark mode ───────────────────────────────────────────────────────────
+
 html[data-theme="dark"] {
   .desk-breadcrumb {
     &__ui {

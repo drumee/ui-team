@@ -3692,6 +3692,47 @@ class desk_module extends LetcBox {
    * @returns {Boolean} true when the switcher should open
    */
   _crumbClickOpensSwitcher(target) {
+    // AN UNRESOLVED ADDRESS IS NOT A CONTROL.
+    //
+    // Until the crumbs are up the chip held no icon and no name, yet it opened
+    // a workspace switcher over the blank. desk_breadcrumb._syncPathLoading
+    // stamps `data-address` once it has an answer — `ready`, or `none` for an
+    // address that cannot resolve, which still opens because the switcher is
+    // then the only way off it.
+    //
+    // ASK THE CRUMBS, exactly as the skin does — the same condition, on the
+    // same element, so the click and the caret cannot disagree.
+    //
+    // NO FLAG. Three attempts gated this on one (`data-loading`, then
+    // `data-address` on the breadcrumb, then on this chip) and each could be
+    // wrong at the moment of the click: the breadcrumb does not exist for the
+    // whole of its own lazy chunk load, its crumbs are painted inside an
+    // `ensurePart` promise, and the chip outlives the widget across a topbar
+    // re-feed and so can hold a stale answer. Reading the DOM at click time
+    // cannot be stale — the question is answered when it is asked.
+    //
+    // Both parts, because a crumb with a glyph and no name yet is not an
+    // address; the skin's `:has(.breadcrumb-item__icon):has(…__filename)`
+    // pair is the same test.
+    //
+    // FAILS CLOSED: a missing chip, a missing querySelector, or a chip with no
+    // crumbs in it all refuse.
+    //
+    // Returning false is a COMPLETE disable, not a deferral to something
+    // underneath: the capture listener bails without preventDefault, and the
+    // crumbs are display:none until they are complete, so nothing beneath is
+    // there to receive the click either.
+    //
+    // NOT `pointer-events: none` on the chip, which is the obvious CSS answer
+    // and the wrong one: the switcher's panel is a DESCENDANT of
+    // __crumb-group (see the note below), so that would kill an open dropdown
+    // along with the chip.
+    const chip = this._crumbGroupPart;
+    if (!chip || !chip.el || !chip.el.querySelector) return false;
+    if (!chip.el.querySelector(".breadcrumb-item__icon")
+      || !chip.el.querySelector(".breadcrumb-item__filename")) {
+      return false;
+    }
     if (!target || !_.isFunction(target.closest)) return true;
     // THE PANEL IS NOT THE CHIP, even though it is inside it.
     //

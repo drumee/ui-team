@@ -174,6 +174,11 @@ class __desk_breadcrumb extends LetcBox {
   _setSectionMode(section) {
     this._section = !!section;
     if (this.el) this.el.dataset.section = section ? 1 : 0;
+    // NOTHING ELSE TO DO. Whether the chip shows its spinner, its crumbs and
+    // its caret is decided in desk/skin/topbar.scss from whether the CRUMBS
+    // are present, asked directly with `:has()` — there is no flag here to
+    // keep in step with them. See that file for why three flag-based attempts
+    // were replaced by one structural rule.
   }
 
   /**
@@ -267,8 +272,12 @@ class __desk_breadcrumb extends LetcBox {
     } else if (wm._curWorkspace) {
       ({ hub_id, nid } = wm._curWorkspace);
     }
-    // No workspace open (boot, or the desk with nothing loaded) — an empty
-    // track is the right answer, exactly as before.
+    // No workspace open — which at BOOT means "not open YET": no pane is up
+    // and _curWorkspace is unset until Desk._restoreDeskState lands on one,
+    // and this is the branch it passes through on the way. The track is
+    // emptied, and because the chip's spinner and caret are decided by whether
+    // CRUMBS are present (desk/skin/topbar.scss `:has()`), an empty track is
+    // already the waiting state — there is nothing to signal.
     if (!nid || !hub_id) return this.loadDefault();
     this._updatePath(nid, hub_id);
   }
