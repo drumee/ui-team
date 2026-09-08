@@ -240,6 +240,37 @@ class __permission_restricted extends DrumeeMFS {
     }
   }
 
+  /**
+   * The panel's remaining MODAL messages, all on the same card.
+   *
+   * Invite outcomes report inline now (_setInviteNotice). What still has to
+   * interrupt is a member mutation that FAILED — a role change or a removal
+   * the server refused — because the row on screen no longer matches what the
+   * user just asked for.
+   *
+   * Those went through `Wm.alert(someString)`, which builds a bare
+   * `{kind:"window_info", message}` with no `variant`. The notice block in
+   * window/info/skin is what sets `min-width: unset`; without it the card
+   * inherits `.window__ui`'s `min-width: 600px`, which floors its declared
+   * 500px. Measured against the compiled skin:
+   *
+   *   plain    rendered=600px  width=600px  min-width=600px  padding=0px
+   *   notice   rendered=550px  width=500px  min-width=0px    padding=20px 24px 24px
+   *
+   * `kind` is set so alert feeds the object verbatim (variant + actions)
+   * instead of wrapping it as a plain body.
+   */
+  _notice(message) {
+    return Wm.alert({
+      kind: "window_info",
+      message: message || LOCALE.TRY_AGAIN,
+      variant: "notice",
+      actions: [
+        { label: LOCALE.CLOSE, priority: "primary", service: _e.close },
+      ],
+    });
+  }
+
   /** The error tone of _setInviteNotice. Kept as its own name because every
    *  validation path reads as "set the invite error". */
   _setInviteError(reason) {
@@ -320,14 +351,14 @@ class __permission_restricted extends DrumeeMFS {
         privilege,
       });
       if (res && (res.error || res.error_code)) {
-        return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
       }
       // Trust the POST and redraw from local state: get_members_by_type can
       // still answer with the pre-write row on an immediate read-after-write.
       raw.privilege = privilege;
       this._render();
     } catch (e) {
-      Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
+      this._notice(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
       this._confirmInFlight = false;
     }
@@ -356,6 +387,11 @@ class __permission_restricted extends DrumeeMFS {
         cancel: LOCALE.CANCEL || "Cancel",
         cancel_type: "secondary",
         mode: "hbf",
+        // No backdrop. The prompt names the member being dropped, and the row
+        // it names is right there in the matrix behind it — scrimming the
+        // panel hides the one thing the user would check before answering.
+        // Wm.confirm defaults to "scrim"; every other confirm keeps it.
+        overlay: "none",
       });
     } catch (_) {
       this._confirmInFlight = false;
@@ -375,7 +411,7 @@ class __permission_restricted extends DrumeeMFS {
         users: [memberId],
       });
       if (res && (res.error || res.error_code)) {
-        return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
       }
       // A rejected POST (403 for a non-admin, DB error) resolves to `undefined`
       // — doRequest hands non-200 to onServerComplain, which only warns. On
@@ -383,7 +419,7 @@ class __permission_restricted extends DrumeeMFS {
       // is the only proof the write happened; without this test the row below
       // would vanish from a removal the server refused.
       if (!Array.isArray(res)) {
-        return Wm.alert(LOCALE.TRY_AGAIN);
+        return this._notice(LOCALE.TRY_AGAIN);
       }
       // Splice locally rather than re-reading: hub.get_members_by_type still
       // answers with the pre-write rows on an immediate read-after-write (the
@@ -396,7 +432,7 @@ class __permission_restricted extends DrumeeMFS {
       );
       this._render();
     } catch (e) {
-      Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
+      this._notice(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
       this._confirmInFlight = false;
     }

@@ -70,6 +70,14 @@ function panel(postService) {
       return this._members.find((r) => String(r.entity_id) === String(id)) || null;
     },
     _formatMemberName: (row) => row.fullname,
+    // _removeMember reports through the panel's own _notice rather than
+    // Wm.alert directly: a bare string alert renders on the 600px unpadded
+    // card, the notice variant on the 550px one, and this panel raises both
+    // kinds of message. The assertions below read what it was handed.
+    notices: [],
+    _notice(m) {
+      this.notices.push(m);
+    },
   };
 }
 
@@ -82,7 +90,7 @@ const confirmYes = () => {
 };
 
 test("removing a member calls hub.delete_contributor with a users array", async () => {
-  const [Wm, alerts] = confirmYes();
+  const [Wm] = confirmYes();
   const calls = [];
   const p = panel(function (service, payload) {
     calls.push({ service, payload });
@@ -94,7 +102,7 @@ test("removing a member calls hub.delete_contributor with a users array", async 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].service, "hub.delete_contributor");
   assert.deepEqual(calls[0].payload, { hub_id: "hub42", users: ["u2"] });
-  assert.deepEqual(alerts, []);
+  assert.deepEqual(p.notices, []);
 });
 
 test("the removed row is spliced locally, never re-read from the server", async () => {
@@ -110,23 +118,23 @@ test("the removed row is spliced locally, never re-read from the server", async 
 });
 
 test("a swallowed rejection keeps the member and reports it", async () => {
-  const [Wm, alerts] = confirmYes();
+  const [Wm] = confirmYes();
   // doRequest hands a non-200 to onServerComplain and resolves undefined.
   const p = panel(() => Promise.resolve(undefined));
   await loadRemoveMember(Wm, { id: "u1" }).call(p, cmd("u2"));
 
   assert.deepEqual(ids(p), ["u1", "u2"]);
-  assert.deepEqual(alerts, [LOCALE.TRY_AGAIN]);
+  assert.deepEqual(p.notices, [LOCALE.TRY_AGAIN]);
   assert.equal(p.renders, 0);
 });
 
 test("a 200 carrying an error payload keeps the member and reports it", async () => {
-  const [Wm, alerts] = confirmYes();
+  const [Wm] = confirmYes();
   const p = panel(() => Promise.resolve({ error: "NOT_ALLOWED", reason: "nope" }));
   await loadRemoveMember(Wm, { id: "u1" }).call(p, cmd("u2"));
 
   assert.deepEqual(ids(p), ["u1", "u2"]);
-  assert.deepEqual(alerts, ["nope"]);
+  assert.deepEqual(p.notices, ["nope"]);
 });
 
 test("cancelling the confirmation removes nobody", async () => {
