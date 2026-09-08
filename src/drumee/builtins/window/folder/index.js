@@ -9,12 +9,10 @@ const {
 } = require("../skeleton/toolkit/file-group");
 
 const { overMeetingCap } = require("libs/billing");
+const readCache = require("libs/read-cache");
 
 
 const {
-
-  
-  folderFilesView,
   fileTypeFilterBar,
   gridFilesBrowser,
   chatHeaderBar,
@@ -1470,11 +1468,14 @@ class __window_folder extends mfsInteract {
     this._titleResolving = 1;
     // Wm.loadWorkspace is very likely asking for this same path right now —
     // share its request rather than adding a second one (libs/path-request).
-    require("libs/path-request").getPath(this, { nid, hub_id })
-      .then((data) => {
-        if (this.isDestroyed && this.isDestroyed()) return;
-        if (!_.isEmpty(data)) this.refreshBreadcrumbsUI(data);
-      })
+    // This resolver runs once per window, so it must also take the
+    // revalidated answer: a cached path may name a since-renamed workspace.
+    const paint = (data) => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (!_.isEmpty(data)) this.refreshBreadcrumbsUI(data);
+    };
+    require("libs/path-request").getPath(this, { nid, hub_id }, paint)
+      .then(paint)
       .catch((e) => {
         if (this.warn) this.warn("_resolveMissingTitle: get_path failed", e);
       });
@@ -2964,16 +2965,55 @@ class __window_folder extends mfsInteract {
   // (state lives in this._sched — see skeleton/meeting-schedule.js). Refetches
   // the hub's meetings for the (possibly changed) visible range first, so the
   // grid always reflects the current window.
-  _refreshSchedule() {
+  //
+  // @param {Object} [opt]
+  // @param {Boolean} [opt.quiet]  the grid on screen already shows `_meetings`
+  //   for this range (a reopened tab): skip the pre-fetch paint and repaint
+  //   only if the fetch changes something.
+  _refreshSchedule(opt = {}) {
+    // The Meeting tab stays mounted when another tab is up (showFolderTab).
+    // Don't fetch or rebuild a 24×7 grid nobody can see — remember that its
+    // state moved on so the next open redraws instead of trusting the DOM.
+    if (this._meetingPanelMounted && this.activeTab !== "meeting") {
+      this._schedStale = 1;
+      return Promise.resolve();
+    }
     // Render immediately from view state (so nav/toggle work even if the fetch
-    // fails), then re-render when the fetch resolves.
+    // fails), then re-render when the fetch resolves — but only if it changed
+    // anything. Weekly is ~170 cells, each a widget; the second build used to
+    // run unconditionally.
     const feed = () => {
       const part = this.getPart && this.getPart("meeting-panel");
       if (!part || !part.el) return;
+      this._schedPaintedDay = Dayjs().format("YYYY-MM-DD");
       part.feed(require("./skeleton/meeting-schedule")(this).kids);
     };
-    feed();
-    return this._fetchMeetings().then(feed, feed);
+    // Nothing known yet for this window: start from the last answer the
+    // session saw for this range, so a reopened workspace's calendar is never
+    // blank while the fetch runs. In-memory rows win when present — they may
+    // carry a local optimistic edit (_upsertLocalMeeting).
+    if (this._meetings == null) {
+      const known = readCache.peek(this._meetingsCacheKey());
+      // A copy: _upsertLocalMeeting edits this array in place, and the
+      // cached one is shared with every other window on this hub.
+      if (Array.isArray(known)) this._meetings = known.slice();
+    }
+    // `quiet` trusts the grid on screen — but the "today" stamps in it were
+    // computed when it was built, so a reopen on a later day must redraw.
+    const today = Dayjs().format("YYYY-MM-DD");
+    const quiet = !!opt.quiet && this._schedPaintedDay === today;
+    const before = readCache.signature(this._meetings);
+    if (!quiet) feed();
+    return this._fetchMeetings().then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (readCache.signature(this._meetings) !== before) feed();
+    });
+  }
+
+  _meetingsCacheKey() {
+    const { stime, etime } = this._meetingRange();
+    const { hub_id } = this._meetingScope();
+    return `room.list:${hub_id || ""}:${stime}:${etime}`;
   }
 
   // Week/day grids render all 24 hours, so an unscrolled grid opens on empty
@@ -3045,10 +3085,14 @@ class __window_folder extends mfsInteract {
     // the plain service name so this never throws synchronously.
     const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
     const { stime, etime } = this._meetingRange();
+    // Keyed at request time: the range can move while the answer is in flight.
+    const cacheKey = this._meetingsCacheKey();
     return Promise.resolve()
       .then(() => this.fetchService(svc, { stime, etime, ...this._meetingScope() }))
       .then((rows) => {
         this._meetings = this._asMeetingRows(rows);
+        // A copy, not the live array — see _refreshSchedule.
+        readCache.set(cacheKey, this._meetings.slice());
       })
       .catch(() => {
         this._meetings = this._meetings || [];
@@ -4071,29 +4115,36 @@ class __window_folder extends mfsInteract {
   // the window never appears. Same-document lookup — Wm windows share the page.
   _awaitMeetingReady(btnEl) {
     this._stopAwaitMeetingReady();
-    let sawWindow = false;
+    this._meetingLiveWindow = null;
     this._meetingReadyPoll = setInterval(() => {
-      if (this._meetingWindowLive()) {
-        if (!sawWindow) {
-          // Window mounted → the user is joining. Drop the spinner and lock the
-          // button into its "Joined" state.
-          sawWindow = true;
-          this._setMeetingStartLoading(false, btnEl);
-          this._setMeetingJoined(true);
-        }
-        return;
-      }
-      if (sawWindow) {
+      const w = Wm.getItemByKind("window_meeting");
+      if (!w || (w.isDestroyed && w.isDestroyed())) return;
+      // Window mounted → the user is joining. Drop the spinner, lock the
+      // button into its "Joined" state, and STOP POLLING: the window itself
+      // says when it goes. This used to keep a 200ms DOM query running for
+      // the whole length of every meeting just to notice the close.
+      this._stopAwaitMeetingReady();
+      this._setMeetingStartLoading(false, btnEl);
+      this._setMeetingJoined(true);
+      this._meetingLiveWindow = w;
+      // Marionette's own teardown event (View.destroy → triggerMethod
+      // "destroy"), the same one Wm listens to on a workspace pane. Bound
+      // with listenToOnce so this window's own destroy (stopListening)
+      // releases it — a meeting outlives a workspace switch, and a plain
+      // once() would keep the dead folder view reachable for the whole call.
+      this.listenToOnce(w, "destroy", () => {
+        if (this._meetingLiveWindow !== w) return;
+        this._meetingLiveWindow = null;
+        if (this.isDestroyed && this.isDestroyed()) return;
         // The meeting window we were tracking has closed → restore the button.
-        this._stopAwaitMeetingReady();
         this._setMeetingJoined(false);
-      }
+      });
     }, 200);
     // Safety cap — if the window never mounts, clear the spinner so it can't
-    // stick. Once joined, the poll keeps running to watch for the close.
+    // stick.
     this._meetingReadyCap = setTimeout(() => {
       this._meetingReadyCap = null;
-      if (!sawWindow) {
+      if (!this._meetingLiveWindow) {
         this._stopAwaitMeetingReady();
         this._setMeetingStartLoading(false, btnEl);
       }
@@ -4104,6 +4155,10 @@ class __window_folder extends mfsInteract {
     if (this._meetingReadyPoll) {
       clearInterval(this._meetingReadyPoll);
       this._meetingReadyPoll = null;
+    }
+    if (this._meetingLiveWindow) {
+      this.stopListening(this._meetingLiveWindow, "destroy");
+      this._meetingLiveWindow = null;
     }
     if (this._meetingReadyCap) {
       clearTimeout(this._meetingReadyCap);
@@ -4955,14 +5010,23 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_list_by_folder) ||
       "channel.file_thread_list_by_folder";
+    // Keyed at request time: the folder can change while this is in flight.
+    const cacheKey = this._threadListCacheKey();
     return this.fetchService(
       { service: svc, folder_nid, hub_id, page: 1 },
       { async: 1 },
     )
-      .then((res) =>
-        _.isArray(res) ? res : (res && (res.data || res.rows)) || [],
-      )
+      .then((res) => {
+        const items = _.isArray(res) ? res : (res && (res.data || res.rows)) || [];
+        readCache.set(cacheKey, items);
+        return items;
+      })
       .catch(() => []);
+  }
+
+  _threadListCacheKey() {
+    const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    return `channel.threads:${hub_id || ""}:${this.mget(_a.nid)}`;
   }
 
   // ── Full Chat-tab thread rail (Figma 2328-115485) ─────────────────────
@@ -4986,13 +5050,10 @@ class __window_folder extends mfsInteract {
       this._threadRailPart = rail;
       return this.ensurePart("folder-chat").then((chat) => {
         const scopedNid = chat && chat.scopedFileNid ? chat.scopedFileNid : "";
-        return this._fetchThreadList().then((items) => {
-          if (this.isDestroyed && this.isDestroyed()) return;
-          if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
-          // Folder changed mid-fetch → discard this stale response.
-          if (`${this.mget(_a.nid)}` !== folderNid) return;
-          if (generation !== this._ftThreadRequestGeneration()) return;
+        const paint = (items) => {
           this._threadRailItems = items;
+          this._threadRailFolder = folderNid;
+          this._threadRailGeneration = generation;
           rail.feed(
             require("./skeleton/thread-menu")(this, {
               items,
@@ -5000,6 +5061,35 @@ class __window_folder extends mfsInteract {
               variant: "rail",
             }),
           );
+        };
+        // Paint what is already known for THIS folder first — the rows this
+        // window last rendered (same folder, same access generation), else the
+        // session's last answer for it — so reopening the Chat tab shows the
+        // rail at once instead of a blank column for the round trip. The fetch
+        // below then repaints only if the list actually changed. Gated on chat
+        // access exactly like the fetch: no filenames for a member who may
+        // not see them.
+        let painted = null;
+        if (this._privilegeGrantsChat(this.mget(_a.privilege))) {
+          const known =
+            this._threadRailFolder === folderNid &&
+            this._threadRailGeneration === generation &&
+            _.isArray(this._threadRailItems)
+              ? this._threadRailItems
+              : readCache.peek(this._threadListCacheKey());
+          if (_.isArray(known)) {
+            paint(known);
+            painted = readCache.signature(known);
+          }
+        }
+        return this._fetchThreadList().then((items) => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
+          // Folder changed mid-fetch → discard this stale response.
+          if (`${this.mget(_a.nid)}` !== folderNid) return;
+          if (generation !== this._ftThreadRequestGeneration()) return;
+          if (painted !== null && painted === readCache.signature(items)) return;
+          paint(items);
         });
       });
     });
@@ -5146,8 +5236,8 @@ class __window_folder extends mfsInteract {
       if (p && !(p.isDestroyed && p.isDestroyed()) && _.isFunction(p.openTaskById)) {
         p.openTaskById(task_id);
       }
-      // Consumed: a later remount of the panel (the Meeting view resets it)
-      // must not reopen this task out of the blue.
+      // Consumed: a later remount of the panel (a workspace switch rebuilds
+      // the window) must not reopen this task out of the blue.
       if (!mounted) this.mset("open_task_id", null);
     });
   }
@@ -5197,6 +5287,88 @@ class __window_folder extends mfsInteract {
     this.syncNewCtrlVisibility();
   }
 
+  // The scrollers the tab switch has to preserve, by panel. Each resolver
+  // answers the live element or null; a panel that is not mounted (task board
+  // before its first open, meeting grid likewise) simply has nothing to keep.
+  // The chat keeps its DISTANCE FROM THE BOTTOM, not its offset: messages that
+  // arrive while it is hidden must not push it away from the tail it was on.
+  _panelScrollers() {
+    const fig = this.fig.family;
+    return {
+      files: () => (this.iconsList && this.iconsList.__container) || null,
+      chat: () => (this.el && this.getChatScrollElement()) || null,
+      meeting: () =>
+        (this.el && this.el.querySelector(`.${fig}__meeting-sched-body`)) || null,
+    };
+  }
+
+  // display:none (how the skin hides a tab) resets a scroller to 0 when it is
+  // shown again. Note every VISIBLE scroller before the data-view stamp…
+  _stashPanelScroll() {
+    if (!this._panelScroll) this._panelScroll = {};
+    const scrollers = this._panelScrollers();
+    for (const name of Object.keys(scrollers)) {
+      const el = scrollers[name]();
+      // getClientRects() is empty for display:none — a hidden panel reads 0
+      // and must not overwrite the value we kept for it.
+      if (!el || !el.getClientRects().length) continue;
+      this._panelScroll[name] =
+        name === "chat"
+          ? { bottom: el.scrollHeight - el.clientHeight - el.scrollTop }
+          : { top: el.scrollTop, left: el.scrollLeft };
+    }
+    // The board keeps its own (per column, per view) — hand it the same cue.
+    const board = this._taskPanel;
+    if (
+      board &&
+      !(board.isDestroyed && board.isDestroyed()) &&
+      board.el &&
+      board.el.getClientRects().length &&
+      _.isFunction(board._captureViewScroll)
+    ) {
+      this._panelScroll.task = board._captureViewScroll();
+    }
+  }
+
+  // …and put it back on the ones that just became visible. Twice: once now,
+  // for the common case, and once next frame for a panel whose full
+  // scrollHeight only exists after layout (images, late-mounting children).
+  _restorePanelScroll() {
+    const saved = this._panelScroll;
+    if (!saved) return;
+    const restore = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const scrollers = this._panelScrollers();
+      for (const name of Object.keys(scrollers)) {
+        const s = saved[name];
+        if (!s) continue;
+        const el = scrollers[name]();
+        if (!el || !el.getClientRects().length) continue;
+        if (name === "chat") {
+          el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight - s.bottom);
+        } else {
+          if (s.top && el.scrollTop !== s.top) el.scrollTop = s.top;
+          if (s.left && el.scrollLeft !== s.left) el.scrollLeft = s.left;
+        }
+      }
+      const board = this._taskPanel;
+      if (
+        saved.task &&
+        board &&
+        !(board.isDestroyed && board.isDestroyed()) &&
+        board.el &&
+        board.el.getClientRects().length &&
+        _.isFunction(board._restoreViewScroll)
+      ) {
+        board._restoreViewScroll(saved.task);
+      }
+    };
+    restore();
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(restore);
+    }
+  }
+
   showFolderTab(tab) {
     if (this.activeTab === tab) {
       this.syncNewCtrlVisibility();
@@ -5204,10 +5376,16 @@ class __window_folder extends mfsInteract {
     }
     const prevTab = this.activeTab;
     this.activeTab = tab;
-    this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
-    this.$el
-      .find(`.window-folder__tab-bar-item[data-tab='${tab}']`)
-      .attr("data-state", 1);
+    // Native queries, not $el.find: this runs on every rail click, and the
+    // window subtree holds the whole file grid, the team chat and the board.
+    if (this.el) {
+      this.el
+        .querySelectorAll(".window-folder__tab-bar-item")
+        .forEach((item) => item.setAttribute("data-state", 0));
+      this.el
+        .querySelectorAll(`.window-folder__tab-bar-item[data-tab='${tab}']`)
+        .forEach((item) => item.setAttribute("data-state", 1));
+    }
     // Full Chat-tab layout: entering sets up [rail | #General | side panel] and
     // forces the middle chat to General; leaving restores the Files-tab header
     // and closes the side panel.
@@ -5228,12 +5406,23 @@ class __window_folder extends mfsInteract {
     this.syncNewCtrlVisibility();
 
     const switchView = (view) => {
-      if (this._meetingViewActive && tab !== "meeting") {
-        view.feed(folderFilesView(this));
-        this._meetingViewActive = 0;
-        this._taskPanelMounted = 0;
-      }
+      // Every tab is a SIBLING inside the split body, shown and hidden by the
+      // `data-view` stamp the skin keys on (skin/index.scss &__split-body).
+      // Nothing here feeds the view: a feed() destroys the file grid, the team
+      // chat and the task board together, and coming back then pays all their
+      // mounts again — media.show_node_by alone is ~800ms of server time
+      // (skeleton/toolkit gridFilesBrowser), which was the lag on Meeting →
+      // Files, and the task board re-ran its six loads on Meeting → Task. The
+      // Meeting tab was the one tab that did this; it now appends once, like
+      // the Task tab below, and is revealed by CSS.
+      //
+      // display:none drops a scroller's position, so the panels going out of
+      // view are noted before the stamp and the ones coming in are put back
+      // after it — a user who scrolled deep into a folder and glanced at the
+      // board should land where they were.
+      this._stashPanelScroll();
       view.el.dataset.view = tab;
+      this._restorePanelScroll();
       switch (tab) {
         case _a.chat:
           // Rail + side-panel layout is set up by _enterChatTabLayout (called
@@ -5242,12 +5431,21 @@ class __window_folder extends mfsInteract {
         case "files":
           return;
         case "meeting":
-          this._meetingViewActive = 1;
-          this._taskPanelMounted = 0;
-          view.feed(require("./skeleton/meeting-panel")(this));
-          // Then fetch the hub's meetings for the visible range and re-feed the
-          // grid with schedule cards.
-          this._refreshSchedule();
+          if (!this._meetingPanelMounted) {
+            this._meetingPanelMounted = 1;
+            view.append(require("./skeleton/meeting-panel")(this));
+            // First open: paint the grid at once (from any rows the session
+            // cache already holds for this range), then fetch the hub's
+            // meetings and repaint with the cards if they changed.
+            this._refreshSchedule();
+            return;
+          }
+          // Reopened: the grid is still there, showing the rows it was last
+          // fed. Revalidate quietly — repaint only on a change — unless the
+          // view state moved while it was hidden (_applyScheduleBreakpoint
+          // flags that), in which case it must be redrawn now.
+          this._refreshSchedule({ quiet: !this._schedStale });
+          this._schedStale = 0;
           return;
         case _a.task:
           if (!this._taskPanelMounted) {

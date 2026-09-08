@@ -1,6 +1,7 @@
 const { uploadFile } = require("@drumee/ui-essentials");
 const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
+const readCache = require("libs/read-cache");
 const { resolveZone } = require("./drop-zones");
 const {
   markerRe,
@@ -455,32 +456,56 @@ class __tasks_panel extends LetcBox {
     this._installFileSearchFocus();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
-    // TWO PHASES, so the board is on screen as soon as it can be drawn.
+    // PAINT AS SOON AS THERE IS SOMETHING TO PAINT, then revalidate.
     //
-    // All six of these used to be awaited together, which made the SLOWEST of
-    // them decide when anything appeared at all. Only two of the six decide
-    // whether a board can be drawn: the tasks and the columns. The other four
-    // decorate it — watches are a per-column flag, activity feeds the detail
-    // panel, members are assignee avatars and labels are chips — and every one
-    // of them reads its own state, none of them reads `_tasks` or `_columns`,
-    // so none has to be in before the first paint.
+    // Two passes of this method met here, and both reasons are kept.
     //
-    // Their state is initialised empty in initialize(), and the skeleton draws
-    // from those empty lists without complaint, so the first pass renders a
-    // real board rather than a placeholder.
+    // FROM THE CACHE (this side): every reopen of the Task tab — a workspace
+    // switched back to, a window reopened — used to hold the first paint on
+    // six round trips, task.list for the whole workspace among them, and the
+    // board sat blank for the slowest of them. A board this session has
+    // already seen is drawn at once from the last rows it saw.
     //
-    // _render is built to be called repeatedly — it captures and restores the
-    // focused input, the cursor and the scroll position around the DOM swap —
-    // so the second pass is what that machinery is for, not a workaround for it.
-    await Promise.all([this._loadTasks(), this._loadColumns()]);
-    this._render();
-    await Promise.all([
+    // FROM THE FIRST TWO LOADS (upstream): a board this session has NOT seen
+    // has nothing to draw from, and only two of the six loads decide whether
+    // it can be drawn at all — the tasks and the columns. The other three
+    // DECORATE it: watches are a per-column flag, members are assignee
+    // avatars, labels are chips. None of them reads `_tasks` or `_columns`,
+    // and initialize() starts them empty, so the skeleton draws a real board
+    // without them and they must not gate the first paint.
+    //
+    // Activity gates nothing at all: only the Health (summary) view and the
+    // detail panel read it, so it repaints those and nothing else.
+    //
+    // Every repaint after the first is gated on _boardSignature, which covers
+    // all five lists — so an answer that matches what is already on screen
+    // costs no second render. _render captures and restores focus, caret and
+    // scroll around the DOM swap, which is what makes repainting safe at all.
+    const seeded = this._seedFromCache();
+    const core = Promise.all([this._loadTasks(), this._loadColumns()]);
+    const decorations = Promise.all([
       this._loadColumnWatches(),
-      this._loadActivity(),
       this._loadMembers(),
       this._loadLabels(),
     ]);
-    this._render();
+    this._loadActivity().then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.getView() === "summary" || this._detailId) this._render();
+    });
+    let painted = null;
+    if (seeded) {
+      this._render();
+      painted = this._boardSignature();
+    }
+    await core;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!seeded || this._boardSignature() !== painted) {
+      this._render();
+      painted = this._boardSignature();
+    }
+    await decorations;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this._boardSignature() !== painted) this._render();
     // Deep-link: a mention/assignment notification asked to open a specific
     // task. Routed through openTaskById so this path also recovers when the
     // task is missing from the load that just finished (it can be newer than
@@ -2666,6 +2691,53 @@ class __tasks_panel extends LetcBox {
     );
   }
 
+  // ── Session cache of this workspace's board (libs/read-cache) ──────────
+  // Written by every _load* below on a good answer, read once at mount by
+  // _seedFromCache. Never a substitute for the fetch: the mount always
+  // revalidates, so the cache is at most one round trip behind.
+  _cacheKey(what) {
+    return `tasks:${this._hubId}:${what}`;
+  }
+
+  // Seed the panel's state from the session cache. Answers whether the BOARD
+  // (tasks) was known — the one thing worth a first paint; the rest is filled
+  // in when present so that paint carries assignees, labels and columns too.
+  _seedFromCache() {
+    const tasks = readCache.peek(this._cacheKey("tasks"));
+    if (!Array.isArray(tasks)) return false;
+    this._tasks = tasks.map(this._normalizeTask);
+    const columns = readCache.peek(this._cacheKey("columns"));
+    if (Array.isArray(columns)) this._customColumns = columns;
+    const watches = readCache.peek(this._cacheKey("column_watches"));
+    if (Array.isArray(watches)) this._columnWatches = new Set(watches.map(String));
+    const members = readCache.peek(this._cacheKey("members"));
+    if (Array.isArray(members) && members.length) {
+      this._members = members;
+      this._membersLoaded = true;
+    }
+    const labels = readCache.peek(this._cacheKey("labels"));
+    if (Array.isArray(labels)) this._labels = labels;
+    return true;
+  }
+
+  // Everything the board paints from, as one string — compared around the
+  // revalidating loads so an unchanged answer costs no second render.
+  _boardSignature() {
+    return readCache.signature([
+      this._tasks,
+      this._customColumns,
+      Array.from(this._columnWatches || []),
+      this._members,
+      this._labels,
+    ]);
+  }
+
+  // The bell toggles optimistically and never re-reads the list, so the cache
+  // has to follow the flip (and the revert) by hand.
+  _syncWatchCache() {
+    readCache.set(this._cacheKey("column_watches"), Array.from(this._columnWatches));
+  }
+
   async _loadTasks() {
     try {
       const rows = await this.fetchService({
@@ -2689,6 +2761,7 @@ class __tasks_panel extends LetcBox {
       if (Array.isArray(rows)) {
         this._tasks = rows.map(this._normalizeTask);
         this._loadFailed = 0;
+        readCache.set(this._cacheKey("tasks"), rows);
       } else {
         this._loadFailed = 1;
         if (!Array.isArray(this._tasks)) this._tasks = [];
@@ -2712,6 +2785,7 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
       });
       this._customColumns = Array.isArray(rows) ? rows : [];
+      if (Array.isArray(rows)) readCache.set(this._cacheKey("columns"), rows);
     } catch (err) {
       this._customColumns = [];
     }
@@ -2726,6 +2800,7 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
       });
       this._columnWatches = new Set((Array.isArray(rows) ? rows : []).map(String));
+      if (Array.isArray(rows)) this._syncWatchCache();
     } catch (err) {
       this._columnWatches = new Set();
     }
@@ -2744,6 +2819,7 @@ class __tasks_panel extends LetcBox {
     const on = !this._columnWatches.has(k);
     if (on) this._columnWatches.add(k);
     else this._columnWatches.delete(k);
+    this._syncWatchCache();
     if (trigger.el) trigger.el.dataset.active = on ? "1" : "0";
     try {
       await this.postService({
@@ -2757,6 +2833,7 @@ class __tasks_panel extends LetcBox {
       // Revert the optimistic flip on failure.
       if (on) this._columnWatches.delete(k);
       else this._columnWatches.add(k);
+      this._syncWatchCache();
       if (trigger.el) trigger.el.dataset.active = on ? "0" : "1";
     }
   }
@@ -2877,6 +2954,7 @@ class __tasks_panel extends LetcBox {
       if (Array.isArray(rows) && rows.length) {
         this._members = rows;
         this._membersLoaded = true;
+        readCache.set(this._cacheKey("members"), rows);
       } else if (!this._membersLoaded) {
         this._members = Array.isArray(rows) ? rows : [];
       }
@@ -2892,6 +2970,7 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
       });
       this._labels = Array.isArray(rows) ? rows : [];
+      if (Array.isArray(rows)) readCache.set(this._cacheKey("labels"), rows);
     } catch (err) {
       this._labels = [];
     }

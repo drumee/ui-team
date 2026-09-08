@@ -386,6 +386,13 @@ html {
       pointer-events: auto;
     }
 
+    // A section screen the desk keeps alive (index.js _slotKeepsChild) is
+    // parked with data-anim="out" and revealed with "in". Nothing in this slot
+    // animates, so parked means gone: no layout, no hit-testing, no paint.
+    > [data-anim="out"] {
+      display: none !important;
+    }
+
     &:empty {
       display: none;
     }

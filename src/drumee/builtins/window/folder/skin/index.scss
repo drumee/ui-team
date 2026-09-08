@@ -2582,12 +2582,33 @@
     // frame. The cards carry their own fills (white / #F2F2F7).
     background: transparent;
 
-    .tasks-panel__ui {
+    // The task board and the Meeting schedule stay MOUNTED beside the file
+    // grid and the chat once opened (window/folder showFolderTab appends them
+    // once and never feeds the split body again), so each tab is revealed by
+    // its data-view below rather than rebuilt. Hidden here by default.
+    .tasks-panel__ui,
+    .window-folder__meeting-schedule {
       display: none;
     }
 
     &[data-view="meeting"] {
       grid-template-columns: 1fr;
+      // minmax(0, …) so the cell can shrink below the grid's content height
+      // and the 24-hour body scrolls inside the schedule instead of
+      // stretching the window (same reason the task view clamps its row).
+      grid-template-rows: minmax(0, 1fr);
+
+      .window__files-panel,
+      .window__chat-panel,
+      .window__thread-rail,
+      .window__file-thread-panel {
+        display: none;
+      }
+
+      .window-folder__meeting-schedule {
+        display: flex;
+        min-height: 0;
+      }
     }
   }
 

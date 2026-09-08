@@ -40,6 +40,17 @@ const folderIcon = require("media/grid/template/folder");
 
 const INBOX_SLOT = "settings-main-slot";
 
+// Section screens the desk KEEPS MOUNTED (hidden, data-anim="out") when the
+// user navigates away, so the next press is a reveal rather than a rebuild
+// plus every load the screen does at mount — see _slotKeepsChild. Only kinds
+// that put their data back in order on re-show belong here: each implements
+// onPanelShown() (Settings re-runs its loads, Calendar re-reads its window)
+// or has nothing to refresh (Get help). Deliberately absent: settings_billing,
+// apps_main and desk_org_view, which open with options that describe a
+// different screen each time, and chat_p2p, whose conversation pane decides
+// what counts as read — a hidden inbox must not do that behind the user.
+const KEEP_ALIVE_MAIN_KINDS = new Set(["settings_main", "calendar_main", "help_main"]);
+
 // How long the cached workspace list may be served before it is refreshed in
 // the background. Short enough that a workspace shared with the user, or one
 // renamed elsewhere, shows up within a minute; long enough that opening the
@@ -1459,8 +1470,9 @@ class desk_module extends LetcBox {
       (child && child.el && child.el.dataset && child.el.dataset.kind) ||
       kinds[pendingKey];
 
-    // Full-page slot (Apps / Settings / Billing) — destroyed on close, so a
-    // live child that isn't animating out means the screen is showing.
+    // Full-page slot (Apps / Settings / Billing). Most kinds are destroyed on
+    // close; the KEEP_ALIVE_MAIN_KINDS are parked with data-anim="out" — so a
+    // live child that isn't out means the screen is showing, either way.
     const mainChild = topChild("settings-main-slot");
     if (mainChild && mainChild.el.dataset.anim !== "out") {
       switch (childKind(mainChild, "settings-main-slot")) {
@@ -5754,8 +5766,9 @@ class desk_module extends LetcBox {
    *
    * Shared by the sidebar entry (`toggle-help`) and by the return trip after a
    * product tour, so both land on the same screen with the same breadcrumb.
-   * The panel is destroyed on close, so it always re-opens on help_main's
-   * default page — Product tour, which is the page the button was on.
+   * The panel is KEPT when closed (KEEP_ALIVE_MAIN_KINDS), so it re-opens on
+   * the page it was left on — for the return trip that is the Product tour
+   * page the button was pressed from.
    */
   _openGetHelp() {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
@@ -6882,11 +6895,44 @@ class desk_module extends LetcBox {
     return pn === "trash-panel" || pn === "chat-panel";
   }
 
+  /**
+   * Does the child mounted in slot `pn` stay alive when the slot is closed?
+   * True for a keep-alive SLOT's child always, and for a section screen whose
+   * KIND is in KEEP_ALIVE_MAIN_KINDS. The screen is then parked with
+   * data-anim="out" (skin/index.scss hides it) instead of being destroyed, and
+   * togglePanel's mounted-widget branch reveals it on the next open — the same
+   * mechanism the Trash and Contacts panels have always used.
+   *
+   * @param {String} pn   slot part name
+   * @param {Object} p    the slot part (already resolved)
+   * @returns {Boolean}
+   */
+  _slotKeepsChild(pn, p) {
+    if (this._isKeepAliveSlot(pn)) return true;
+    if (pn !== "settings-main-slot" || !p || p.isEmpty()) return false;
+    const child = p.children.last();
+    if (!child || (child.isDestroyed && child.isDestroyed()) || !child.el) {
+      return false;
+    }
+    // A kind still being fetched is the lazy-loader placeholder (ui-core
+    // letc/kind/loader.js), whose model already answers the real kind. It
+    // must NOT be parked: when its import lands, renew() swaps in the real
+    // view with no data-anim, and that would paint full-canvas over whatever
+    // the user navigated to meanwhile. Clearing it makes renew() a no-op.
+    if (child.isLazyClass) return false;
+    const kind =
+      (child.mget && child.mget(_a.kind)) ||
+      (child.el.dataset && child.el.dataset.kind);
+    return KEEP_ALIVE_MAIN_KINDS.has(kind);
+  }
+
   _hidePanel(p) {
     if (!p || p.isEmpty()) return;
     const child = p.children.last();
     if (child && child.el && child.el.dataset.anim !== "out") {
       child.el.dataset.anim = "out";
+      // A kept screen hears it left the screen (Get help stops its video).
+      if (_.isFunction(child.onPanelHidden)) child.onPanelHidden();
     }
   }
 
@@ -6934,7 +6980,12 @@ class desk_module extends LetcBox {
     if (!p || p.isEmpty()) return false;
     const child = p.children.last();
     if (child && child.el) {
+      const wasParked = child.el.dataset.anim === "out";
       child.el.dataset.anim = "in";
+      // A kept screen coming back refreshes what it showed (Settings re-runs
+      // its loads, Calendar re-reads its window). Only on a RE-show: the
+      // first show follows the mount, whose own loads are still landing.
+      if (wasParked && _.isFunction(child.onPanelShown)) child.onPanelShown();
       return true;
     }
     return false;
@@ -7123,7 +7174,14 @@ class desk_module extends LetcBox {
         this._pendingKinds[pn] = null;
       }
 
-      const keepAlive = this._isKeepAliveSlot(pn);
+      // Kept alive because the SLOT is (side panels), or because the KIND
+      // parked in it is (section screens that refresh on re-show) — and only
+      // for a plain open: options describe a different screen (a billing
+      // preselect, an armed department form), and only a fresh mount reads
+      // them.
+      const keepAlive =
+        this._isKeepAliveSlot(pn) ||
+        (_.isEmpty(opt) && this._slotKeepsChild(pn, p));
       const sameKindMounted = this._pendingKinds[pn] === kind && !p.isEmpty();
 
       if (sameKindMounted && keepAlive) {
@@ -7139,6 +7197,21 @@ class desk_module extends LetcBox {
           this._showPanel(p);
         }
         return;
+      }
+
+      // A PARKED kept screen asked for again WITH options: the options
+      // describe a different screen (see keepAlive above), so the parked one
+      // is dropped and a fresh mount reads them — never the close branch
+      // below, which would only re-stamp "out" and swallow the click.
+      if (sameKindMounted && !keepAlive) {
+        const parked = p.children.last();
+        if (parked && parked.el && parked.el.dataset.anim === "out") {
+          p.clear();
+          this._pendingKinds[pn] = null;
+          this.closeOtherSidebarPanels(pn);
+          this._loadKind(p, kind, pn, opt);
+          return;
+        }
       }
 
       // Slot has no slide-out CSS — fall back to animate-then-destroy.
@@ -7369,7 +7442,7 @@ class desk_module extends LetcBox {
         }
         return this.ensurePart(pn).then((p) => {
           if (!p || p.isEmpty()) return;
-          if (this._isKeepAliveSlot(pn)) {
+          if (this._slotKeepsChild(pn, p)) {
             this._hidePanel(p);
           } else {
             this._pendingKinds[pn] = null;
@@ -7405,7 +7478,7 @@ class desk_module extends LetcBox {
         }
         return this.ensurePart(pn).then((p) => {
           if (!p || p.isEmpty()) return;
-          if (this._isKeepAliveSlot(pn)) {
+          if (this._slotKeepsChild(pn, p)) {
             this._hidePanel(p);
           } else {
             this._pendingKinds[pn] = null;
@@ -7718,9 +7791,10 @@ class desk_module extends LetcBox {
         return this.togglePanel("settings_main", "settings-main-slot", true);
 
       // Personal Calendar — full-canvas screen in the same slot as Settings /
-      // Get help / Billing, so it inherits their mutual exclusion, their
-      // reload-restore and their destroy-on-close. Open-only, matching its
-      // sidebar neighbours.
+      // Get help / Billing, so it inherits their mutual exclusion and their
+      // reload-restore; like Settings and Get help it is kept mounted when
+      // closed (KEEP_ALIVE_MAIN_KINDS) and re-reads its window on re-show.
+      // Open-only, matching its sidebar neighbours.
       case "toggle-calendar":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CALENDAR,

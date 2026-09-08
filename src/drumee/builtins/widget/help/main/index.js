@@ -133,6 +133,19 @@ class help_main extends LetcBox {
     this._render();
   }
 
+  /**
+   * The desk keeps this screen mounted when the user navigates away and
+   * reveals it again on the next Get help press (desk/index.js
+   * _slotKeepsChild). Its content is static, so nothing to refresh on the way
+   * back — but a tutorial video must not keep playing behind a hidden panel.
+   * Rebuilding the content column is how this widget stops one (see _render):
+   * the <video> goes with the column and the frame comes back on its poster.
+   */
+  onPanelHidden() {
+    if (!this._playing) return;
+    return this._renderContent();
+  }
+
   _render() {
     // Any rebuild of the content column throws the <video> away, so the
     // player state has to go with it: an hls.js left attached to a detached

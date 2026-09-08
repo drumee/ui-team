@@ -696,16 +696,19 @@ class __window_manager extends push {
         // listing behind its temporary-table build (libs/path-request).
         const deepNid = attrs.nid;
         _.defer(() => {
-          getPath(this, { nid: deepNid, hub_id })
-            .then((path) => {
-              if (_.isEmpty(path)) return;
-              if (_.isFunction(win.refreshBreadcrumbsUI))
-                win.refreshBreadcrumbsUI(path);
-              this.updateBreadcrumb(
-                { ...attrs, service: "change-workspace" },
-                this,
-              );
-            })
+          // Painted twice at most: at once from the session's last answer for
+          // this node, and again only if the server's differs (path-request).
+          const paint = (path) => {
+            if (_.isEmpty(path)) return;
+            if (_.isFunction(win.refreshBreadcrumbsUI))
+              win.refreshBreadcrumbsUI(path);
+            this.updateBreadcrumb(
+              { ...attrs, service: "change-workspace" },
+              this,
+            );
+          };
+          getPath(this, { nid: deepNid, hub_id }, paint)
+            .then(paint)
             .catch((e) =>
               this.warn("openNotificationLocation: breadcrumb refresh failed", e),
             );
@@ -1002,18 +1005,22 @@ class __window_manager extends push {
       // The breadcrumb is cosmetic and already got its immediate local update
       // from updateBreadcrumb() above, so it can afford to go last.
       _.defer(() => {
-        getPath(this, { nid: data.nid || nid, hub_id })
-          .then((path) => {
-            if (_.isEmpty(path)) return;
-            // Resolved again HERE, not reused from above: feed() may not have
-            // mounted the new pane yet when this callback was set up, and a
-            // second switch may have replaced it while the path was in flight.
-            // The PANE, not the last window_folder in the layer: a folder popup
-            // launched during the round trip would otherwise take this
-            // workspace's crumbs (Wm.headlessPane).
-            const w = this.headlessPane();
-            if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
-          })
+        // Painted at once from the session's last answer for this node when
+        // there is one, and again only if the server's differs (path-request)
+        // — the switch no longer waits on mfs_get_path to name itself.
+        const paint = (path) => {
+          if (_.isEmpty(path)) return;
+          // Resolved again HERE, not reused from above: feed() may not have
+          // mounted the new pane yet when this callback was set up, and a
+          // second switch may have replaced it while the path was in flight.
+          // The PANE, not the last window_folder in the layer: a folder popup
+          // launched during the round trip would otherwise take this
+          // workspace's crumbs (Wm.headlessPane).
+          const w = this.headlessPane();
+          if (w && _.isFunction(w.refreshBreadcrumbsUI)) w.refreshBreadcrumbsUI(path);
+        };
+        getPath(this, { nid: data.nid || nid, hub_id }, paint)
+          .then(paint)
           // Without this the throw above escaped as an unhandledrejection —
           // which is exactly how it reached production unnoticed.
           .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
@@ -1496,7 +1503,6 @@ class __window_manager extends push {
           // No pane to navigate — a section screen over an empty desk, or a
           // crumb clicked before the first workspace mounted. Open the target
           // as a workspace rather than dropping the click on the floor.
-          //
           // An EXPLICIT shape, like the sidebar's own folder rows build:
           // loadWorkspace prefers actual_home_id/home_id over nid, and this
           // node's row carries the workspace ROOT in both — spreading it would
@@ -1518,22 +1524,25 @@ class __window_manager extends push {
         // in the same tick would reach the endpoint first and hold the listing
         // behind its temporary-table build (see libs/path-request).
         _.defer(() => {
-          getPath(this, { nid: deepNid, hub_id })
-            .then((path) => {
-              if (_.isEmpty(path)) return;
-              if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
-                currentFolder.refreshBreadcrumbsUI(path);
-              // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
-              // folder navigation. refreshBreadcrumbsUI above also mirrors into the
-              // topbar, but only when `currentFolder` is the focused headless
-              // workspace window; this explicit broadcast covers the case where it
-              // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
-              this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
-            })
+          // Painted at once from the session's last answer for this node, and
+          // again only if the server's differs (path-request).
+          const paint = (path) => {
+            if (_.isEmpty(path)) return;
+            if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
+              currentFolder.refreshBreadcrumbsUI(path);
+            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+            // topbar, but only when `currentFolder` is the focused headless
+            // workspace window; this explicit broadcast covers the case where it
+            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
+            this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
+          };
+          getPath(this, { nid: deepNid, hub_id }, paint)
+            .then(paint)
             .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
         });
       })
-      .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+      .catch((e) => this.warn("openWorkspaceFolder: get_attributes failed", e));
 
   }
 

@@ -28,6 +28,9 @@ const {
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
+// A parked calendar (desk keep-alive) revealed after this long re-reads its
+// window even if no push arrived meanwhile — a missed push is plausible by then.
+const PARKED_REFRESH_MS = 60 * 1000;
 
 class __calendar_main extends LetcBox {
   initialize(opt = {}) {
@@ -82,6 +85,36 @@ class __calendar_main extends LetcBox {
       if (this.isDestroyed && this.isDestroyed()) return;
       this._render();
     });
+  }
+
+  /**
+   * The desk keeps this screen mounted when the user navigates away and
+   * reveals it again on the next Calendar press (desk/index.js
+   * _slotKeepsChild), so coming back is instant. What was on screen is then
+   * the last window this instance loaded: live pushes kept it current while
+   * hidden, and this re-read closes any gap they left. Same shape as
+   * onDomRefresh minus the first paint, which is already up.
+   */
+  onPanelShown() {
+    this._parked = false;
+    // Only when something happened while parked (a push was deferred) or the
+    // window on screen is old enough that a missed push is plausible.
+    const stale = Date.now() - (this._loadedAt || 0) > PARKED_REFRESH_MS;
+    if (!this._dirty && !stale) return;
+    this._dirty = false;
+    this._loadItems().then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._render();
+    });
+  }
+
+  /**
+   * Parked by the desk. The live subscription stays bound (it is what makes
+   * the reveal cheap), but a push must not fetch and rebuild a display:none
+   * page — note it and let onPanelShown do one reload.
+   */
+  onPanelHidden() {
+    this._parked = true;
   }
 
   // ── state readers used by the skeletons ────────────────────────────────────
@@ -211,6 +244,7 @@ class __calendar_main extends LetcBox {
       rows = null;
     }
     this._loading = false;
+    this._loadedAt = Date.now();
 
     // Single-row collapse: a result set holding exactly one row answers `{...}`
     // where every other count answers `[...]`. This has already emptied a
@@ -311,6 +345,10 @@ class __calendar_main extends LetcBox {
    * the window several times for one user action.
    */
   _scheduleReload() {
+    if (this._parked) {
+      this._dirty = true;
+      return;
+    }
     if (this._reloadTimer) return;
     this._reloadTimer = setTimeout(() => {
       this._reloadTimer = null;

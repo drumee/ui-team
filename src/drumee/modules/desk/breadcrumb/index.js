@@ -283,8 +283,10 @@ class __desk_breadcrumb extends LetcBox {
       return;
     }
     // Shared in-flight request: Wm.loadWorkspace asks for this exact path in
-    // the same instant on a folder open (libs/path-request).
-    getPath(this, { nid, hub_id }).then((data) => {
+    // the same instant on a folder open (libs/path-request). A path this
+    // session has already resolved paints at once and is repainted only if the
+    // server's answer differs — the crumbs no longer sit blank for the call.
+    const paint = (data) => {
       // A destroyed instance must not paint. get_path takes long enough that a
       // topbar re-feed can land in the middle of it (see _restoreCurrentPath),
       // and the old instance was rendering its crumbs into a detached element —
@@ -294,7 +296,8 @@ class __desk_breadcrumb extends LetcBox {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (_.isEmpty(data)) return;
       this._buildContent(data)
-    })
+    };
+    getPath(this, { nid, hub_id }, paint).then(paint)
   }
 
   /**
