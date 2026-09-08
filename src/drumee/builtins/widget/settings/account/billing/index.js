@@ -710,19 +710,37 @@ class settings_billing extends LetcBox {
     this.fetchPlanData();
     // Catalog (live Stripe prices) and subscription mirror (status,
     // period_end, seats — also computes the pending-cancel banner flags) are
-    // independent reads; fetch them concurrently instead of one after the
-    // other and re-render once both are in.
-    const [catalog] = await Promise.all([
-      this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
-        .then((d) => (d && d.plans) || null)
-        .catch(() => null),
-      this._loadSubscription(),
-    ]);
-    this._catalog = catalog;
+    // independent reads, so both are in flight at once. They are NOT awaited
+    // together, though: `Promise.all` used to gate the correcting render on
+    // the SLOWER of the two, and they are nothing alike. The mirror is a DB
+    // read (~250 ms); the catalog walks the plan rows and asks Stripe for each
+    // price one after another (payment.catalog: 8 sequential prices.retrieve
+    // calls — measured ~2 s on stage, and it is a live third-party round trip,
+    // so several seconds is normal).
+    //
+    // That mattered because the mirror is what settles the two things first
+    // paint can only guess: which plan is actually current, and whether the
+    // Checkout tab may be entered at all. Waiting on the catalog left a
+    // subscriber reading "You are on the Free plan" beside a live Checkout tab
+    // for seconds — and then watched the plan change and the tab vanish under
+    // them ("open Billing, 5 s later the checkout button disappears",
+    // 2026-09-08). The prices need no such wait: _catPrice already renders
+    // from its offline fallback map until the catalog lands.
+    const catalogRead = this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
+      .then((d) => (d && d.plans) || null)
+      .catch(() => null);
+    await this._loadSubscription();
+    if (this.isDestroyed()) return;
     // The subscription is now loaded, so checkout eligibility is knowable:
     // settle any checkout deep link (stepping down to the plans view if this
     // account can't buy) before the render below.
     this._settleDeepLinkTab();
+    // Correct the screen NOW rather than at the end of the method: everything
+    // this render fixes is already known, and the awaits that follow are the
+    // slow ones. The final fetchPlanData() below still runs, with the prices.
+    this.fetchPlanData();
+    this._catalog = await catalogRead;
+    if (this.isDestroyed()) return;
     // LAUNCH30 (design doc 2026-07-30) trigger B: "Opens Billing page".
     // Self-gated server-side (SERVICE.promo.get_state) — safe to call
     // unconditionally on every mount, including a re-render after tab focus.
