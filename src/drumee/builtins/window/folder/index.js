@@ -2877,6 +2877,20 @@ class __window_folder extends mfsInteract {
     return this._launchMeetingStandalone();
   }
 
+  /**
+   * Ask a live call to step aside into the desk's bottom-right dock.
+   *
+   * Delegates to Wm.parkLiveCall (desk/wm/index.js), which owns both the "is
+   * there actually a call?" test and the broadcast — this window deliberately
+   * keeps no reference to the call window, the same way the desk does not.
+   * No-op with no call up, and on a Wm without that method (DMZ / share).
+   */
+  _parkLiveCall() {
+    try {
+      if (window.Wm && _.isFunction(Wm.parkLiveCall)) Wm.parkLiveCall();
+    } catch (e) { /* non-fatal */ }
+  }
+
   // ── Meeting schedule: responsive view breakpoint ─────────────────────────
   // A 7-day hourly grid does not fit a phone. Rather than build a third
   // rendering path, this switches the panel to the DAILY view that already
@@ -3850,10 +3864,12 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * Open the folder/workspace meeting as its own top-level window (Wm pool),
-   * centered and resizable — never embedded in the folder body. Mirrors the
-   * team window's startTeamCall. Singleton-guarded so a second click refocuses
-   * the running call instead of launching a duplicate.
+   * Open the folder/workspace meeting as a FULL-FRAME desk screen in the call
+   * layer — never embedded in the folder body, and no longer a centered popup:
+   * the call fills the desk canvas like Settings or the Calendar, and the
+   * stylesheet owns its box (window/meeting/skin `[data-standalone="1"]`).
+   * Mirrors the team window's startTeamCall. Singleton-guarded so a second
+   * click refocuses the running call instead of launching a duplicate.
    */
   _launchMeetingStandalone() {
     if (this._launchingMeeting) return;
@@ -3873,9 +3889,6 @@ class __window_folder extends mfsInteract {
       if (switchcall && !switchcall.isDestroyed()) switchcall.goodbye();
 
       const room_id = this.mget(_a.actual_home_id) || this.mget(_a.nid);
-      // Center within the WM content area (right of the sidebar), not the raw
-      // viewport — see Wm.centeredPopupGeometry.
-      const { top, left, width, height } = Wm.centeredPopupGeometry();
 
       // Immediate click feedback: spin the Start button until the meeting
       // window is live (or we time out) — see _awaitMeetingReady.
@@ -3905,7 +3918,13 @@ class __window_folder extends mfsInteract {
           video: 1,
           standalone: 1,
           wm_unique_id: `window_meeting-${this.mget(_a.hub_id)}`,
-          style: { top, left, width, height, minWidth: 480, minHeight: 420, margin: 0 },
+          // NO GEOMETRY ON PURPOSE. A full-frame call is positioned by CSS
+          // (window/meeting/skin fills the full-size call layer), and an inline
+          // dimension beats the stylesheet — passing a size here is what would
+          // make the call open as a box in the corner of the canvas and then
+          // snap out to fill it. window_meeting._lockGeometry strips any that
+          // the base window writes later.
+          style: { margin: 0 },
         },
         { explicit: 1, singleton: 1 },
       );
@@ -5376,6 +5395,15 @@ class __window_folder extends mfsInteract {
     }
     const prevTab = this.activeTab;
     this.activeTab = tab;
+    // A live call fills the desk canvas (window/meeting _lockGeometry), so it
+    // covers this pane entirely — switching tab under it would change a screen
+    // nobody can see. Park it in the desk's corner dock, exactly as opening a
+    // section screen or another workspace does.
+    //
+    // Not conditional on which tab: leaving the Meeting tab is the obvious
+    // case, but the call is launched from the Meeting tab and then stays up
+    // whatever tab you are on, so Files → Chat has to park it too.
+    this._parkLiveCall();
     // Native queries, not $el.find: this runs on every rail click, and the
     // window subtree holds the whole file grid, the team chat and the board.
     if (this.el) {

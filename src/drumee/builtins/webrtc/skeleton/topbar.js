@@ -197,41 +197,6 @@ module.exports = function (_ui_) {
     attrOpt: { "data-tip": LOCALE.PARTICIPANTS },
   });
 
-  // Window-resize dropdown: Full screen / Tile left / Tile right / Reframe.
-  // KIND.menu.topic gives the trigger open-on-click + click-outside dismissal.
-  const resizeItem = (ico, label, service) =>
-    Skeletons.Button.Label({
-      className: `${pfx}__resize-item`,
-      ico,
-      label,
-      labelClass: `${pfx}__resize-item-label`,
-      service,
-      uiHandler: [_ui_],
-    });
-
-  const fullscreenBtn = {
-    kind: KIND.menu.topic,
-    className: `${pfx}__resize-menu`,
-    flow: _a.y,
-    opening: _e.click,
-    persistence: _a.once,
-    offsetY: 8,
-    trigger: Skeletons.Button.Svg({
-      ico: "meet-expand",
-      className: `${pfx}__ctrl-btn fullscreen`,
-      attrOpt: { "data-tip": LOCALE.FULL_SCREEN },
-    }),
-    items: Skeletons.Box.Y({
-      className: `${pfx}__resize-items`,
-      kids: [
-        resizeItem("meet-expand", LOCALE.FULL_SCREEN, "toggle-fullscreen"),
-        resizeItem("meet-tile", LOCALE.TILE_WINDOW_LEFT, "tile-window-left"),
-        resizeItem("meet-tile", LOCALE.TILE_WINDOW_RIGHT, "tile-window-right"),
-        resizeItem("meet-reframe", LOCALE.REFRAME, "reframe-window"),
-      ],
-    }),
-  };
-
   // Overflow menu for the controls the narrow layout drops. Chat and
   // Participants are hidden from the bar below the data-narrow breakpoint (see
   // meeting-shell.scss) and reachable here instead; this trigger is itself
@@ -451,8 +416,14 @@ module.exports = function (_ui_) {
     : leaveBtn;
 
   return Skeletons.Box.X({
-    // window__header marks the bar as the window drag handle.
-    className: `${pfx}__in-topbar window__header`,
+    // NO `window__header` here, unlike every other window's top bar: that class
+    // is the drag handle selector window/interact passes to jQuery-UI
+    // draggable, and a team meeting is a full-frame desk screen — there is
+    // nothing to drag it to. (It also carried the inactive-window dim from
+    // window/skin `[data-state="0"] .window__header`, which a screen filling
+    // the canvas has no business showing.) The 1:1 connect call is still a
+    // floating window and keeps it — see ./p2p-header.
+    className: `${pfx}__in-topbar`,
     kids: [
       brand,
       hostLabel,
@@ -467,7 +438,6 @@ module.exports = function (_ui_) {
           peopleBtn,
           // Stands in for chat + people once those are hidden (data-narrow).
           moreBtn,
-          fullscreenBtn,
           divider,
           cameraPill,
           micPill,

@@ -61,6 +61,10 @@
     // inline top/left/width/height from `style` actually positions it as a
     // free window in the Wm pool (the relative default above is for the
     // embedded folder-tab case). Marker set in onDomRefresh.
+    //
+    // SHARED WITH window_connect, which is still a floating 1:1 call window.
+    // The team meeting is NOT — it fills the desk canvas, and overrides all of
+    // this in window/meeting/skin/index.scss. Don't move that override in here.
     &[data-standalone="1"] {
       position: absolute;
       border-radius: 8px;
@@ -483,10 +487,9 @@
   }
   }
 
-  // Narrow window: fold chat + people into the "more" overflow menu so the
-  // primary controls (hand, reactions, fullscreen, camera, mic, screen, leave)
-  // still fit. Reactions and fullscreen stay in the bar; only the two controls
-  // the overflow menu can stand in for are dropped.
+  // Narrow canvas: fold chat + people into the "more" overflow menu so the
+  // primary controls (hand, reactions, camera, mic, screen, leave) still fit.
+  // Only the two controls the overflow menu can stand in for are dropped.
   &__ui[data-narrow="1"] {
     @include meeting-overflow-fold($pfx);
   }
@@ -1016,68 +1019,6 @@
 
     span {
       cursor: pointer;
-    }
-  }
-
-  // ── Window-resize dropdown ─────────────────────────────────────────────
-  &__resize-menu {
-    position: relative;
-    flex-shrink: 0;
-
-    // The menu widget wraps the trigger; keep it inline with the buttons.
-    .menu-topic-trigger {
-      display: flex;
-      align-items: center;
-    }
-
-    .menu-topic-items {
-      background: #ffffff;
-      border-radius: 8px;
-      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-      z-index: 300;
-    }
-  }
-
-  &__resize-items {
-    width: 180px;
-    padding: 12px;
-    gap: 0;
-  }
-
-  &__resize-item {
-    display: flex;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border-radius: 8px;
-    cursor: pointer;
-    color: var(--primary-purple-100, #0b0a21);
-    transition: background 0.12s ease;
-
-    svg {
-      width: 17px;
-      height: 17px;
-      flex-shrink: 0;
-      fill: currentColor;
-    }
-
-    .note-content {
-      @include drumee.typo(
-        $size: 12px,
-        $line: 17px,
-        $weight: 400,
-        $color: #0b0a21
-      );
-      white-space: nowrap;
-
-      section {
-        white-space: nowrap;
-      }
-    }
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.05);
     }
   }
 
@@ -1992,7 +1933,7 @@
     margin: 0 4px;
   }
 
-  // Generic square icon buttons: hand / reactions / chat / people / fullscreen.
+  // Generic square icon buttons: hand / reactions / chat / people / more.
   // Button.Svg roots are plain divs (no framework flex) — display:flex is
   // required or the inner svg sits top-left instead of centered.
   &__ctrl-btn {
@@ -2020,11 +1961,6 @@
     }
 
     &:hover {
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    // Fullscreen sits on a subtle filled chip (Figma Overlay/light mode).
-    &.fullscreen {
       background: rgba(0, 0, 0, 0.05);
     }
 

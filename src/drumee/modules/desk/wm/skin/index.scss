@@ -546,6 +546,35 @@
       height: 100%;
     }
 
+    // The call layer hosts a FULL-FRAME meeting: window_meeting no longer
+    // carries any geometry of its own (see window/meeting _lockGeometry), it
+    // just fills this layer — which is what makes the call track the canvas as
+    // the sidebar pins/collapses and the browser resizes, with no clamping and
+    // no reflow bookkeeping. A 0x0 anchor cannot do that: `width: 100%` on the
+    // window would resolve to 0.
+    //
+    // So the layer is a real box, and therefore MUST be click-through: it spans
+    // the whole canvas whether or not a call is up, and a transparent
+    // full-canvas div swallows every click on the workspace behind it. Only the
+    // call windows opt back in — never ui-core's `widget-blank` emptyView,
+    // which is present even with the layer empty (the same trap the desk's
+    // __call-dock documents).
+    &.call-layer {
+      // `+ 10px` for the same reason the headless pane gets it: `__ui` is
+      // `calc(100% - 10px)` (a right gutter for the home grid's scrollbar) and a
+      // screen should be full-bleed to the container's right edge, not stop
+      // short of it. Unconditional here — a pointer-events:none box costs
+      // nothing when no call is up, and the layer is not a positioning anchor
+      // for anything but calls.
+      width: calc(100% + 10px);
+      height: 100%;
+      pointer-events: none;
+
+      > *:not(.widget-blank) {
+        pointer-events: auto;
+      }
+    }
+
     // When both layers are non-empty they resolve to the same z-index (the
     // global [data-state="open"] lift), so paint order falls back to DOM
     // order and headless-layer — later in the DOM — fully covers windowsLayer
