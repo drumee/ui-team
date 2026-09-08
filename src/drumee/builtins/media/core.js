@@ -2117,31 +2117,54 @@ class __media_core extends DrumeeMFS {
         window.prevElem.dataset.service = "rename";
       }
     } catch (e) { }
-    let data;
     const value = this.checkSanity();
     this._renaming = 0;
     if (_.isEmpty(value)) {
       return;
     }
+    return this._commitRename(value);
+  }
 
+  /**
+   * Send the rename, whatever collected the name.
+   *
+   * Split out of requestRename so a caller that did NOT type into this
+   * widget's own inline entry can still rename it. checkSanity() reads
+   * `this.entry` — the textarea _createInput appends INTO this tile — so the
+   * value has to be handed in by anyone who collected it elsewhere. The
+   * workspace ... menu is exactly that caller: it is built from the home-grid
+   * tile, and that grid is display:none while a workspace is open, so the
+   * inline editor it used to open was created, pre-filled and invisible.
+   *
+   * Behaviour is unchanged for the inline path: this is the same body, moved.
+   *
+   * @param {String} value the new name, already sanity-checked
+   */
+  _commitRename(value) {
+    if (_.isEmpty(value)) {
+      return;
+    }
     if (value === this.mget(_a.filename)) {
       try {
         this.entry.softDestroy();
       } catch (error) { }
       return;
     }
-    data = {
+    const data = {
       filename: value,
       nid: this.mget(_a.nodeId),
       service: SERVICE.media.rename,
       hub_id: this.mget(_a.hub_id),
       echoId: this.mget(ECHO_ID)
     };
+    // A hub node lives on the CALLER'S DESK, not inside the workspace it names
+    // — the same holder scope makeTrashOptions() uses, and the reason Trash
+    // works where the untouched move() answered 403.
     if (this.isHub) {
       data.hub_id = Visitor.id;
     }
 
-    this.postService(SERVICE.media.rename, data).then(this.afterRename.bind(this));
+    return this.postService(SERVICE.media.rename, data).then(this.afterRename.bind(this));
   }
 
   /**

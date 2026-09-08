@@ -44,7 +44,7 @@ const CHANNEL = "tutorial:trigger";
 // A mismatch fails as a silently rejected write with NO client-side symptom:
 // the tour runs, the mirror suppresses it locally, the server never records
 // it, and it returns on the user's next device.
-const TOUR_IDS = ["workspace", "folder_task", "share", "migrate"];
+const TOUR_IDS = ["workspace", "folder_task", "chat", "share", "migrate", "meeting"];
 
 // The mirror belongs to an ACCOUNT, not to a browser.
 //
@@ -93,6 +93,13 @@ let _inFlight = null;
 let _guardTimer = null;
 let _seen = null; // Set, lazily built
 let _reconciled = false;
+// Continuations waiting on a running tour — tour id -> [fn]. Drained by
+// release(), which the desk wires to the tour widget's destroy for EVERY tour
+// (modules/desk/index.js, onPartReady "desk-tutorial"). See whenDone().
+const _done = new Map();
+
+// Which tour last reached the screen — see armed().
+let _shown = null;
 
 // ── environment ──────────────────────────────────────────────────────────────
 
@@ -288,27 +295,76 @@ function isSeen(tourId, host) {
 }
 
 /**
- * Ask for a tour. The ONLY entry point a trigger site uses.
+ * Take a tour, without saying who will show it.
  *
- * Writes nothing to the seen-set — that is markSeen()'s job, once the tour has
- * proved it can mount.
+ * Every gate fire() applies, and the single-flight latch, but no broadcast: the
+ * CALLER mounts the tour itself. That is what a host which is not the desk
+ * needs — going through fire() would broadcast, and the desk's own listener
+ * would mount a second, full-screen copy of the same tour.
  *
- * @returns {Boolean} whether the tour was broadcast
+ * A true return is a DEBT: single-flight is held from here until the mounted
+ * tour is destroyed and release() runs. A caller that claims and then fails to
+ * mount must release, or every later tour is dropped in silence until the
+ * guard timer fires.
+ *
+ * @param {String} tourId
+ * @param {Object} host the widget asking, for the seen-set lookup
+ * @returns {Boolean} whether the caller may show the tour
  */
-function fire(tourId, host) {
+/**
+ * Would this tour be offered, if nothing else were running?
+ *
+ * Every gate claim() applies EXCEPT single-flight, and it takes no lock and
+ * leaves nothing behind — so a caller can ask before committing to anything.
+ *
+ * WHAT IT IS FOR: a surface that has work to do BEFORE it can raise a tour —
+ * waiting out a restore, polling for a workspace — and something to show while
+ * it does. The desk raises its curtain on this answer, so a user who has
+ * finished the tour never sees one flash over the screen they asked for.
+ *
+ * NOT a substitute for claim(). It is deliberately racy about single-flight:
+ * true here does not promise the claim will succeed, only that this tour is not
+ * ruled out on its own merits.
+ */
+function offerable(tourId, host) {
   if (!enabled()) return false;
   if (isMobile()) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
   if (isSeen(tourId, host)) return false;
+  return true;
+}
+
+function claim(tourId, host) {
+  // One definition of the gates, so a second caller cannot drift from it.
+  if (!offerable(tourId, host)) return false;
   if (_inFlight) return false;
 
   _inFlight = tourId;
   clearTimeout(_guardTimer);
   _guardTimer = setTimeout(() => release(tourId), GUARD_TIMEOUT_MS);
+  return true;
+}
+
+/**
+ * Ask for a tour on the desk. The entry point a trigger site uses when it is
+ * not going to mount the tour itself.
+ *
+ * Writes nothing to the seen-set — that is markSeen()'s job, once the tour has
+ * proved it can mount.
+ *
+ * @param {String} tourId
+ * @param {Object} host  the widget asking, for the seen-set lookup
+ * @param {Object} [opt] extra model attributes for the tour widget, for a
+ *   trigger that knows something the tour cannot work out for itself. Rides in
+ *   the broadcast under its own key so it can never collide with `tour`.
+ * @returns {Boolean} whether the tour was broadcast
+ */
+function fire(tourId, host, opt) {
+  if (!claim(tourId, host)) return false;
 
   try {
     if (typeof RADIO_BROADCAST !== "undefined") {
-      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId });
+      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId, opt: opt || null });
     }
   } catch (e) {
     // A listener that throws must not leave the guard latched for the session.
@@ -321,10 +377,29 @@ function fire(tourId, host) {
 /**
  * The tour is on screen. Cancels the fetch guard; from here only destroy
  * releases single-flight.
+ *
+ * ALSO THE ONE HONEST RECORD OF "the user actually saw it". Both hosts call
+ * this from their own onDomRefresh, so it means the tour reached the screen —
+ * unlike a claim, which a tour whose chunk never loaded also satisfies, and
+ * unlike the seen-set, which for an earned tour is only written on completion.
  */
 function armed() {
   clearTimeout(_guardTimer);
   _guardTimer = null;
+  _shown = _inFlight;
+}
+
+/**
+ * Did this tour reach the screen in its most recent run?
+ *
+ * For a caller deciding what to do after `whenDone`: the three outcomes are
+ * COMPLETED (isSeen, for an earned tour), ABANDONED (appeared but not seen) and
+ * NEVER RAN (claimed, released, never appeared). They are not interchangeable —
+ * a user who closed a tour has answered, and a tour that failed to arrive has
+ * not, so a click that waited on it must not be swallowed.
+ */
+function appeared(tourId) {
+  return _shown === tourId;
 }
 
 /**
@@ -333,9 +408,59 @@ function armed() {
  */
 function release(tourId) {
   if (tourId && _inFlight && _inFlight !== tourId) return;
+  // Whose continuations this release settles. Read BEFORE _inFlight is
+  // cleared, so a bare release() still names the tour it just ended.
+  const id = tourId || _inFlight;
   clearTimeout(_guardTimer);
   _guardTimer = null;
   _inFlight = null;
+  const waiting = id && _done.get(id);
+  if (!waiting) return;
+  // Dropped before running: a callback that throws must not be retried on the
+  // next release, and one that fires the same tour again must not re-enter
+  // this list while it is being walked.
+  _done.delete(id);
+  for (const cb of waiting) {
+    try {
+      cb();
+    } catch (e) { /* a continuation is never load-bearing for the tour */ }
+  }
+}
+
+/**
+ * Do something once a tour is out of the way — or right now, if it is not
+ * running.
+ *
+ * For a trigger whose gesture has a REAL destination behind the tour: the
+ * migrate popup is the case (the folder window's "+ New" gdrive row and the
+ * Files hero button both ask for the import dialog, and the tour is what
+ * teaches it). Launching that dialog underneath a full-screen tour meant it
+ * arrived unseen and had to survive the whole walkthrough; deferring it to the
+ * tour's teardown hands it over at the moment the user is looking for it.
+ *
+ * The wait is only for THIS tour. A migrate click while some other tour is on
+ * screen runs now, which is right: single-flight means the migrate tour is not
+ * being shown, so there is nothing to wait for.
+ *
+ * Settled by release(), so it covers both endings a tour has — the widget's
+ * destroy (Done, Escape, the callout's skip) and the fetch guard when the
+ * chunk never loads at all. That second path is the 30s worst case, and it is
+ * the right answer over dropping the user's request entirely.
+ *
+ * @param {String} tourId
+ * @param {Function} cb
+ * @returns {Boolean} true when the call was deferred, false when cb ran now
+ */
+function whenDone(tourId, cb) {
+  if (typeof cb !== "function") return false;
+  if (_inFlight !== tourId) {
+    cb();
+    return false;
+  }
+  const waiting = _done.get(tourId);
+  if (waiting) waiting.push(cb);
+  else _done.set(tourId, [cb]);
+  return true;
 }
 
 /** Which tour is currently held, if any. */
@@ -390,6 +515,8 @@ function __resetModuleState() {
   _guardTimer = null;
   _seen = null;
   _reconciled = false;
+  _shown = null;
+  _done.clear();
 }
 
 module.exports = {
@@ -401,10 +528,14 @@ module.exports = {
   enabled,
   serverState,
   isSeen,
+  offerable,
+  claim,
   fire,
   armed,
+  appeared,
   release,
   inFlight,
+  whenDone,
   markSeen,
   reconcile,
   reset,

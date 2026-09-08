@@ -1,0 +1,330 @@
+/**
+ * Creating a workspace, in one place.
+ *
+ * Lifted out of builtins/media/form (the create-workspace dialog) so a second
+ * caller — the post-signup tutorial, which walks a brand-new account through
+ * making its first workspace — can do it without restating any of it. What is
+ * here is everything that is true whatever surface asked: which service each
+ * type goes through, what gets tracked, and what gets broadcast. What is NOT
+ * here is anything a surface decides for itself — validation copy, where the
+ * error goes, what opens afterwards.
+ *
+ * THE THREE TYPES ARE NOT THREE FLAVOURS OF ONE CALL.
+ *
+ *   team      desk.create_hub, area `private`
+ *   share     desk.create_hub, area `share`
+ *   personal  NOT a hub at all. It is the legacy private folder at the home
+ *             root, only PRESENTED as a workspace type, and it goes through
+ *             the window manager's create-folder flow (media.make_dir). Using
+ *             create_hub for it would give it membership and sidebar semantics
+ *             this type must not have.
+ *
+ * That last one is why this file exists rather than a `area` lookup at the call
+ * site: the branch carries its own service, its own tracking type, its own
+ * broadcast shape and its own filename rules, and every one of those was
+ * learned the hard way in the form this came from.
+ */
+
+// Hub types only. `personal` is deliberately absent — it has no area because
+// it is not a hub, and putting it here invites someone to add a third row.
+const HUB_AREA = {
+  team: "private",
+  share: "share",
+};
+
+/**
+ * Report it to the analytics Referral users table. Never awaited, never throws
+ * — see libs/track-workspace for why the client reports this at all.
+ */
+function track(host, type, opt) {
+  return require("libs/track-workspace").trackWorkspace(host, type, opt);
+}
+
+/**
+ * Tell the desk a workspace now exists.
+ *
+ * The descriptor is what listeners REOPEN the workspace from (the reward flow's
+ * Step 3 does), so its shape matters per type:
+ *
+ *   hub       `nid` is the workspace ROOT node (actual_home_id). A hub's own
+ *             `nid` is the hub/0 placeholder and would not open anything.
+ *   personal  the user's own hub_id plus the folder's nid, which is the shape
+ *             the sidebar builds for a folder row. A hub home_id here would
+ *             reopen Home instead.
+ *
+ * `personal: 1` also tells listeners this type has no follow-up permission
+ * panel, so they should finish rather than wait for one.
+ *
+ * `open: 1` is the calling SURFACE asking whoever owns navigation to take the
+ * user INTO the workspace once it exists. A request, not an instruction — the
+ * desk is the only listener that acts on it, and it declines while a guided
+ * walkthrough is running. It is threaded through from `opt.open` rather than
+ * assumed here because the surfaces genuinely disagree: the create dialog wants
+ * it, and the tour's own create screen does not — that one opens the workspace
+ * itself when the walkthrough ends, and two navigations would fight.
+ */
+function announce(workspace, personal, open) {
+  const payload = { workspace };
+  if (personal) payload.personal = 1;
+  if (open) payload.open = 1;
+  RADIO_BROADCAST.trigger("workspace:refresh", payload);
+}
+
+/**
+ * Announce a workspace that arrived some other way than a create.
+ *
+ * Duplicating one (media.copy_workspace) produces a workspace exactly like a
+ * created one as far as the desk is concerned, and it needs the same
+ * announcement or it stays missing from the switcher and from the home grid
+ * until a reload. Exported rather than re-triggered at the call site so the
+ * broadcast name and the descriptor shape keep living in this one file, which
+ * is the point of it.
+ *
+ * `nid` MUST be the workspace's ROOT node - see announce() above on why a
+ * hub's own nid opens nothing.
+ */
+function announceWorkspace(workspace) {
+  if (!workspace || !workspace.hub_id || !workspace.nid) return false;
+  announce(workspace, false);
+  return true;
+}
+
+/**
+ * A home-root folder wearing a workspace's clothes.
+ *
+ * Wm owns the filename rules and the make_dir call. `home: 1` is what pins the
+ * parent: left to itself that method creates the folder inside whatever
+ * workspace is open, which is correct for "+ New -> Folder" and never correct
+ * here — a personal workspace lives at the home root by definition.
+ *
+ * Without it, creating one while an internal or external workspace was open
+ * nested it in that workspace AND stamped it with that workspace's area, so it
+ * stopped being personal in two ways and read as a plain subfolder. It only
+ * ever looked right because the paths that exercised it — the post-signup
+ * tutorial, and the desk with nothing open — had no workspace to inherit from.
+ *
+ * @returns {Promise<Object>} a normalised result
+ */
+function createPersonal(host, filename, open) {
+  return Promise.resolve(
+    Wm.createFolderFromDialog({ getValue: () => filename }, { home: 1 }),
+  )
+    .then((created) => {
+      // createFolderFromDialog resolves to the folder on success and undefined
+      // on its own handled failures (invalid name, server error), having
+      // already told the user. Anything but a real folder is a no-op here, or
+      // callers would advance though nothing was created.
+      if (!created || created.error) return { ok: false, handled: true };
+      const workspace = {
+        hub_id: Visitor.id,
+        nid: created.nid || created.id,
+        area: _a.personal,
+        filename,
+      };
+      // A personal workspace is absent from yp.hub, so no amount of
+      // server-side counting can find it. `type` is a literal, not _a.personal:
+      // the ACL enum-checks it, and the lexicon would turn a missing key into a
+      // silently dropped row.
+      track(host, "personal", { wid: workspace.nid, area: _a.personal, filename });
+      announce(workspace, true, open);
+      return { ok: true, personal: true, workspace };
+    });
+}
+
+/**
+ * A real hub, private or shared.
+ *
+ * @returns {Promise<Object>} a normalised result — `{ok, hub, workspace}` on
+ *   success, `{ok: false, quota: true}` when the server refused on quota, or
+ *   `{ok: false, message}` with something worth showing the user.
+ */
+function createHub(host, type, filename, open) {
+  const area = HUB_AREA[type] || HUB_AREA.team;
+  return host
+    .postService(SERVICE.desk.create_hub, {
+      area,
+      filename,
+      hub_id: Visitor.id,
+      // NO `pid`. A workspace belongs at the user's home root, full stop, and
+      // omitting it is how you say so: desk.create_hub does
+      // `pid = input.use(pid) || this.home_id`, and then
+      //
+      //   if (pid && pid != this.get(Attr.home_id)) mfs_move(hub.id, pid)
+      //
+      // — so ANY pid that is not the home id MOVES the freshly created hub
+      // under it.
+      //
+      // This used to send `target.getCurrentNid()`, the node the active window
+      // was showing. Create a workspace while one is open and the new
+      // workspace was moved inside it. With a PERSONAL workspace open the
+      // effect was plainest: that is a home-root folder, so the new workspace
+      // landed inside it and read as a folder there — which is how it was
+      // reported.
+      //
+      // The fallback was wrong too, just harmlessly: `Visitor.id` is the user's
+      // ENTITY id, not their home node, so it also failed `pid != home_id` and
+      // called mfs_move against something that is not a media node — a no-op
+      // that hid the real defect next to it.
+      //
+      // Nesting a hub inside a folder is a thing the server supports, but it is
+      // not what this dialog does, and nothing here should decide it from
+      // whatever happens to be on screen.
+    })
+    .then((res) => {
+      // TAKE THE REFUSAL ROW, NOT THE FIRST ROW.
+      //
+      // desk_create_hub emits TWO result sets when it rolls back, in this
+      // order:
+      //
+      //   SELECT *, 0 as failed, ... FROM yp.entity WHERE db_name=_hub_db;
+      //   IF _rollback THEN
+      //     ROLLBACK;
+      //     SELECT 1 as failed, IFNULL(_reason, @full_error) AS reason;
+      //
+      // That first SELECT runs on the rollback path too (the note below has
+      // said so all along), and it describes the pool entity that was picked up
+      // and is about to be released — complete with a real `hub_id`. So `res[0]`
+      // is success-shaped even when the create failed, and every guard after
+      // this line passes: `failed` is 0, there is no `error`, and `hub_id` is
+      // present. The client then tracked the workspace and announced it, and
+      // the workspace did not exist. Observed on stage 2026-09-03: an account
+      // whose create_hub and track_workspace both logged, with no hub row to
+      // show for it.
+      //
+      // So scan for a refusal anywhere in the array rather than trusting the
+      // position. A `failed: 1` row is the proc's verdict on the whole call.
+      const rows = _.isArray(res) ? res.filter((r) => r) : [];
+      const refusal = rows.find((r) => ~~r.failed === 1);
+      const hub = refusal || (rows.length ? rows[0] : res);
+
+      // desk_create_hub reports a refusal in its OWN shape, and it is not the
+      // one below. The proc ends:
+      //
+      //   SELECT *, 0 as failed, ... FROM yp.entity WHERE db_name=_hub_db;
+      //   IF _rollback THEN
+      //     ROLLBACK;
+      //     SELECT 1 as failed, IFNULL(_reason, @full_error) AS reason;
+      //
+      // so a refusal carries `failed: 1` and `reason` — never `error` or
+      // `error_code`. And that first SELECT runs even on the rollback path,
+      // where _hub_db is NULL and it therefore matches NO ROWS, so the caller
+      // can equally well receive nothing at all.
+      //
+      // Both used to read as success. `hub_id` then came out undefined, the
+      // caller advanced as though a workspace existed, and nothing was ever
+      // shown to say otherwise — the tutorial reached its invite screen with
+      // nothing to invite to and a host that quietly declined to open
+      // anything. Personal workspaces were unaffected because they never call
+      // this proc, which is exactly how it presented: personal fine, internal
+      // and external silently dead.
+      //
+      // The live cause on stage was an exhausted hub pool — pickupEntity found
+      // no entity with pool_state='clean', so EVERY internal and external
+      // create took the rollback branch.
+      const reason = (hub && hub.reason) || "";
+      if (!hub || ~~hub.failed === 1) {
+        if (host && host.warn) {
+          host.warn(`create_hub refused: ${reason || "(no reason given)"}`);
+        }
+        // The legacy quota answer arrives as a reason naming the area, and it
+        // arrives on THIS branch — so the check has to live here too.
+        if (/_hub_limit_reached$/.test(reason)) return { ok: false, quota: true };
+        // `reason` is a server diagnostic ("Pool private is empty. Considerer
+        // runing factory"), not something to put in a name field. It is warned
+        // above for whoever debugs this next; the user gets prose.
+        return { ok: false, message: LOCALE.TRY_AGAIN };
+      }
+
+      // A THIRD refusal shape, and the one that reaches the browser when the
+      // hubs factory has fallen over: `desk.create_hub` answers a bare
+      // `{status: "CREATION_FAILED"}` whenever its `_createHub` came back
+      // without a hub id. It carries no `failed`, no `reason` and no `error`,
+      // so it used to land in the "no hub id" branch below and be reported as
+      // a malformed success. The server-side reason is in the endpoint log —
+      // "Pool <area> is empty. Considerer runing factory" means no prebuilt
+      // entity was left in the pool for this area, which no retry and no
+      // different name will fix.
+      if (hub.status === "CREATION_FAILED") {
+        if (host && host.warn) {
+          host.warn(
+            "create_hub answered CREATION_FAILED — the server could not " +
+            "allocate a hub (check the hubs factory and the entity pool)",
+          );
+        }
+        return { ok: false, message: LOCALE.TRY_AGAIN };
+      }
+
+      // desk.create_hub can also resolve with an in-band error payload instead
+      // of rejecting.
+      if (hub.error || hub.error_code) {
+        // LEGACY PATH. There is no workspace-count limit: the server's
+        // check_quota preproc was removed on 2026-08-08 because it read the
+        // plan's per-area capability flags as counts and refused a second
+        // workspace to everyone, paying customers included. An updated endpoint
+        // never sends this. Kept while endpoints roll out at their own pace: an
+        // old service answers QUOTA_EXCEEDED with a `reason` naming the area
+        // (_private_hub_limit_reached), which has no translation in any locale
+        // file — so without this branch the code itself lands in the name field.
+        if (hub.error === "QUOTA_EXCEEDED" || /_hub_limit_reached$/.test(hub.reason || "")) {
+          return { ok: false, quota: true };
+        }
+        return { ok: false, message: LOCALE[hub.error] || hub.reason || hub.error };
+      }
+      const hub_id = hub.hub_id || hub.id;
+      // Nothing downstream survives a missing hub_id: it cannot be opened,
+      // invited to, or reported to analytics. Refusing here is the difference
+      // between an error the user sees and a workspace that silently is not
+      // one.
+      if (!hub_id) {
+        if (host && host.warn) host.warn("create_hub returned no hub id", hub);
+        return { ok: false, message: LOCALE.TRY_AGAIN };
+      }
+      const workspace = {
+        hub_id,
+        nid: hub.actual_home_id || hub.home_id,
+        area: hub.area || area,
+        filename,
+      };
+      // `wid` is the hub id, not actual_home_id: the backfill that seeds the
+      // analytics table from yp.hub keys on hub id, and the two must agree or a
+      // backfilled workspace is counted twice.
+      track(host, type, { wid: workspace.hub_id, area: workspace.area, filename });
+      announce(workspace, false, open);
+      return { ok: true, hub, workspace };
+    });
+}
+
+/**
+ * Create a workspace.
+ *
+ * Does the create, the tracking and the broadcast. Does NOT validate the name
+ * beyond refusing an empty one, does not show anything, and does not decide
+ * what happens next — every caller wants those differently, and the form and
+ * the tutorial disagree about all three.
+ *
+ * @param {Object} host          a widget, for postService and warn
+ * @param {String} type          "team" | "share" | "personal"
+ * @param {String} name          the workspace name, untrimmed is fine
+ * @param {Object} [opt]
+ * @param {Boolean} [opt.open]  ask navigation to switch to the new workspace
+ *   once it exists — broadcast as `open: 1`, see announce(). A hub's parent is
+ *   always the home root, so there is nothing else to pass here.
+ * @returns {Promise<Object>} `{ok: true, workspace, hub?, personal?}` or
+ *   `{ok: false, ...}` — `handled` when the failure has already been shown to
+ *   the user, `quota` when the server refused on quota, `message` otherwise.
+ *   Rejections are converted, so this settles rather than throws.
+ */
+function createWorkspace(host, type, name, opt = {}) {
+  const filename = String(name || "").trim();
+  if (!filename) return Promise.resolve({ ok: false, empty: true });
+  const open = !!opt.open;
+  const run = type === "personal"
+    ? createPersonal(host, filename, open)
+    : createHub(host, type, filename, open);
+  return run.catch((e) => {
+    if (host && host.warn) host.warn("Failed to create workspace", e);
+    return { ok: false, error: e };
+  });
+}
+
+module.exports = { createWorkspace, announceWorkspace, HUB_AREA };

@@ -195,6 +195,34 @@ index e035048..43c1c6a 100644
      explain: LOCALE.REQUIRE_TEXT
    },
    gender: {
+diff --git a/node_modules/@drumee/ui-core/letc/widgets/list/index.js b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
+index 838406c..74e1bcd 100644
+--- a/node_modules/@drumee/ui-core/letc/widgets/list/index.js
++++ b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
+@@ -218,9 +218,21 @@ class __list extends LetcBox {
+    * 
+    * @returns 
+    */
+-  initContent() {
++  initContent(resolved) {
+     const id = `${this._id}-container`;
+-    const c = document.getElementById(id);
++    // Use the node ensureElement already resolved. Looking the id up again
++    // here can come back null even though ensureElement had just found it --
++    // the container is re-fed while this is queued -- and every line below
++    // dereferences it, so the widget threw partway through initialisation
++    // after having already set __container and fired `ready`. The lookup is
++    // kept as the fallback for a caller that passes nothing.
++    const c = (resolved && resolved.nodeType === 1) ? resolved : document.getElementById(id);
++    if (!c) {
++      // Nothing to bind to. Leave the widget uninitialised rather than half
++      // initialised: onDomRefresh runs again on the next feed.
++      this.warn(`initContent: no container for id=${id}`);
++      return;
++    }
+     this.__container = c;
+     //this.trigger(_e.ready);
+     let kids = this.mget(_a.kids) || [];
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 index 13edb44..e8df4bc 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js

@@ -529,6 +529,56 @@ class __window_core extends __utils {
       return;
     }
     const fType = media.mget(_a.filetype);
+    // A WORKSPACE TILE OPENS THE DESK PANE, not a second window on top of it.
+    //
+    // A pane's listing can hold workspace rows — a hub symlink dropped in a
+    // folder, a workspace reached through a share. Opening one fell through to
+    // Wm.openContent, whose hub branch LAUNCHES a window_folder with no
+    // `headless` flag: that window renders the WINDOWED shape (its own title
+    // row and its own tab bar — window/folder/skeleton) and launch() puts it in
+    // getWindowsPool(), which is headlessLayer while a workspace is open. It
+    // therefore landed over the pane, showing a second header right under the
+    // desk topbar — the old pre-2.0 header position, saying the same thing
+    // twice. It also became the LAST window_folder in that layer, so
+    // Wm.folderWindowIn() answered it instead of the pane, and later breadcrumb
+    // clicks drove the window nobody was looking at.
+    //
+    // loadWorkspace is what the sidebar rows and the home grid's tiles already
+    // use (desk/wm "open-node"), so a workspace opens the same way wherever it
+    // is clicked.
+    //
+    // SCOPED TO THE HEADLESS PANE, which is the only window that IS the desk.
+    // window/core is the base of nearly every window (share, sharebox, search,
+    // trash, dmz…) and in a popup the desk sits BEHIND it, so switching a pane
+    // the user cannot see would read as the click doing nothing — those keep
+    // the behaviour they had. Wm.loadWorkspace is checked for the same reason:
+    // the DMZ window manager has no pane to switch.
+    if (
+      fType === _a.hub &&
+      this.mget(_a.headless) &&
+      media.model &&
+      media.mget(_a.status) !== _a.deleted &&
+      window.Wm &&
+      _.isFunction(Wm.loadWorkspace)
+    ) {
+      // wait(0) releases the tile's open latch: media/interact sets it on the
+      // click for an opener that is expected to clear it, and loadWorkspace
+      // opens a pane rather than a window bound to this tile.
+      if (_.isFunction(media.wait)) media.wait(0);
+      const row = media.model.toJSON();
+      return Wm.loadWorkspace({
+        hub_id: row.hub_id,
+        // The workspace ROOT, never the row's own nid: a hub row lives in the
+        // PARENT hub's media table, so its nid names nothing inside the
+        // workspace it points at. actual_home_id is that root (the same field
+        // Wm.getWindowPreset read for hubs); 0 is the server's own "this hub's
+        // root" input when the row does not carry it (Wm._rootNid).
+        nid: row.actual_home_id || 0,
+        filename: row.filename || row.name,
+        hub_name: row.hub_name,
+        area: row.area,
+      });
+    }
     if (this.mget(_a.kind) == "window_search" || fType != _a.folder) {
       Wm.openContent(media, args);
       return;

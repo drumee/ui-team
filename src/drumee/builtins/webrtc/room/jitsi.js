@@ -6,6 +6,16 @@ const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const { events: JEVENTS } = JitsiMeetJS;
 const { fitBoxes } = require("@drumee/ui-essentials")
 const AudioMixerEffect = require("./audio-mixer-effect");
+const DevicePrefs = require("builtins/webrtc/device-prefs");
+// How long the local microphone may report a flat zero level, while unmuted,
+// before the user is told that nothing is coming from it (see
+// _checkMicSilence). Long enough for a normal pause, short enough that the
+// first "can you hear me?" gets an answer on screen.
+const MIC_SILENCE_MS = 6000;
+// Audio diagnostics cadence (postAudioDiagnostics): once shortly after join,
+// then periodically. They go to the service log via conference.update.
+const DIAG_FIRST_MS = 10000;
+const DIAG_PERIOD_MS = 30000;
 // localTracks slot for the tab/system audio captured alongside a screen share.
 // Deliberately NOT `audio` (that slot is the microphone) and NOT `desktop` (that
 // is the screen VIDEO track). unload() iterates localTracks, so parking it here
@@ -38,6 +48,11 @@ class __webrtc_room extends __room {
     this.loadRemotePresentation = this.loadRemotePresentation.bind(this);
     this.leaveRoom = this.leaveRoom.bind(this);
     this.onDominantSpeaker = this.onDominantSpeaker.bind(this);
+    this.onNoAudioInput = this.onNoAudioInput.bind(this);
+    this.onAudioInputStateChange = this.onAudioInputStateChange.bind(this);
+    this.onTalkWhileMuted = this.onTalkWhileMuted.bind(this);
+    this.onNoDataFromMic = this.onNoDataFromMic.bind(this);
+    this.onLocalMicLevel = this.onLocalMicLevel.bind(this);
   }
 
   /**
@@ -244,6 +259,15 @@ class __webrtc_room extends __room {
       JEVENTS.conference.DOMINANT_SPEAKER_CHANGED,
       this.onDominantSpeaker
     );
+    // Local microphone health (configs/conference enableNoAudioDetection +
+    // enableTalkWhileMuted). Tells the user when their mic delivers nothing
+    // rather than letting the others discover it.
+    this.room.on(JEVENTS.conference.NO_AUDIO_INPUT, this.onNoAudioInput);
+    this.room.on(
+      JEVENTS.conference.AUDIO_INPUT_STATE_CHANGE,
+      this.onAudioInputStateChange
+    );
+    this.room.on(JEVENTS.conference.TALK_WHILE_MUTED, this.onTalkWhileMuted);
 
     // Add tracks before join so they ride the initial Jingle offer.
     if (this.localTracks.audio) {
@@ -319,6 +343,12 @@ class __webrtc_room extends __room {
         JEVENTS.conference.DOMINANT_SPEAKER_CHANGED,
         this.onDominantSpeaker
       );
+      this.room.off(JEVENTS.conference.NO_AUDIO_INPUT, this.onNoAudioInput);
+      this.room.off(
+        JEVENTS.conference.AUDIO_INPUT_STATE_CHANGE,
+        this.onAudioInputStateChange
+      );
+      this.room.off(JEVENTS.conference.TALK_WHILE_MUTED, this.onTalkWhileMuted);
     }
   }
 
@@ -402,7 +432,12 @@ class __webrtc_room extends __room {
                   JEVENTS.track.TRACK_MUTE_CHANGED,
                   this.onTrackMuteChange
                 );
+                displaced.removeEventListener(
+                  JEVENTS.track.NO_DATA_FROM_SOURCE,
+                  this.onNoDataFromMic
+                );
               }
+              this._unwatchMicLevel(displaced);
               this.idleStreams.push(displaced.stream);
             }
             this.localTracks[slot] = track;
@@ -433,6 +468,23 @@ class __webrtc_room extends __room {
                   JEVENTS.track.LOCAL_TRACK_STOPPED,
                   this.onLocaAudioStopped
                 );
+                // The device delivers no frames at all (OS-level mute, dead
+                // Bluetooth link) — distinct from a device delivering silence,
+                // which the level watch below catches.
+                track.on(
+                  JEVENTS.track.NO_DATA_FROM_SOURCE,
+                  this.onNoDataFromMic
+                );
+                this._watchMicLevel(track);
+                // A microphone recreated while the user is muted (device
+                // change, recovery after the device was pulled) must come back
+                // muted: a fresh getUserMedia track is live, and sending it
+                // unmuted would open a hot mic behind a mic button that says
+                // "off". Explicit intent only — the unmute path passes false.
+                if (createOpt.muted === true && !track.isMuted()) {
+                  try { await track.mute(); }
+                  catch (e) { this.warn("could not mute the new mic", e); }
+                }
                 break;
             }
             if (!this.room || !this.room.isJoined()) continue;
@@ -680,6 +732,13 @@ class __webrtc_room extends __room {
     });
     await this.getLocalParts();
     this.stateMachine("getUserDevices");
+    // Speaker remembered from an earlier meeting (device-prefs). Applied
+    // before any remote audio element exists, so lib-jitsi-meet sets the sink
+    // on every element it attaches from now on. Not awaited: a slow
+    // enumerateDevices must not delay the join.
+    this._applyPreferredOutput().catch((e) =>
+      this.warn("remembered speaker not applied", e)
+    );
     // Acquire local media and open the XMPP signaling connection IN PARALLEL
     // (they were strictly serialized: getUserMedia audio → getUserMedia video
     // → connect — each step hundreds of ms to seconds). The tracks-before-join
@@ -717,11 +776,16 @@ class __webrtc_room extends __room {
    */
   async _createStartupTracks() {
     let tracks = null;
+    // The microphone the user picked last time, if it is still plugged in,
+    // instead of whatever the OS currently calls "default" (which may be a
+    // device that captures silence — a dropped headset, a phone's continuity
+    // mic, a virtual audio device). See device-prefs.
+    const micId = await this._preferredMicId();
     if (this.isVideo) {
       try {
         tracks = await this.createLocalTracks(
           [_a.audio, _a.video],
-          "default",
+          micId,
           { silent: 1 }
         );
       } catch (e) {
@@ -733,7 +797,7 @@ class __webrtc_room extends __room {
     }
     if (!tracks || !tracks.length) {
       try {
-        tracks = await this.createLocalTracks(_a.audio);
+        tracks = await this.createLocalTracks(_a.audio, micId);
       } catch (e) {
         this._startupMediaFailed = 1;
         // Remember WHY, so the terminal panel can say "your browser is
@@ -748,10 +812,343 @@ class __webrtc_room extends __room {
   }
 
   /**
-   *
+   * The local microphone track ended. Only a mic that ended ON ITS OWN matters
+   * here (the OS pulled the device: headset unplugged, Bluetooth dropped,
+   * permission revoked) — that used to leave the user silent for the rest of
+   * the call with the mic button still "on". A track we displaced or disposed
+   * ourselves is already out of the mic slot or flagged disposed, and teardown
+   * stops everything anyway.
    */
   onLocaAudioStopped(track) {
     track.off(JEVENTS.track.LOCAL_TRACK_STOPPED, this.onLocaAudioStopped);
+    if (this.isLeaving || this.isDestroyed() || !this.room) return;
+    if (track.disposed || this.localTracks.audio !== track) return;
+    this.warn("local microphone track ended on its own, re-acquiring");
+    this.postAudioDiagnostics("mic-track-ended");
+    this._recoverMicrophone(track).catch((e) =>
+      this.warn("microphone recovery failed", e)
+    );
+  }
+
+  /**
+   * Microphone to open: the remembered pick while it is still plugged in,
+   * otherwise the OS default (the stale preference is dropped).
+   */
+  async _preferredMicId() {
+    const id = await DevicePrefs.resolve("input", this.preferredInputDevice);
+    if (!id) this.preferredInputDevice = null;
+    return id || "default";
+  }
+
+  /**
+   * Apply the remembered speaker (setSinkId via lib-jitsi-meet) when it is
+   * still present; forget it otherwise. Peers already attached keep their
+   * sink unless re-applied, hence reapplyRemoteAudioSink.
+   */
+  async _applyPreferredOutput() {
+    const id = await DevicePrefs.resolve("output", this.preferredOutputDevice);
+    if (!id) {
+      this.preferredOutputDevice = null;
+      return;
+    }
+    if (this.isLeaving || this.isDestroyed()) return;
+    try {
+      await JitsiMeetJS.mediaDevices.setAudioOutputDevice(id);
+      await this.reapplyRemoteAudioSink(id);
+    } catch (e) {
+      this.warn("remembered speaker could not be applied", e);
+      this.preferredOutputDevice = null;
+      DevicePrefs.saveOutput(null);
+    }
+  }
+
+  /**
+   * Re-acquire the microphone after the track ended by itself. Waits a beat
+   * first: an unplugged device also fires DEVICE_LIST_CHANGED, and that path
+   * (room/index recreateLocalTrackOnDeviceChange) already recreates the mic —
+   * only step in when nothing replaced the dead track. The dead track still
+   * carries the user's mute intent (isMuted reads the enabled flag, which the
+   * device going away does not touch), so a muted mic comes back muted.
+   */
+  async _recoverMicrophone(deadTrack) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (this.isLeaving || this.isDestroyed() || !this.room) return;
+    if (this.localTracks.audio !== deadTrack) return;
+    const muted = !!deadTrack.isMuted();
+    const micId = await this._preferredMicId();
+    await this.createLocalTracks(_a.audio, micId, { muted });
+    this.stateMessage(LOCALE.MICROPHONE_RECONNECTED, PARTY_NOTICE_MS);
+    this.postAudioDiagnostics("mic-recovered");
+  }
+
+  // ── Local microphone health ─────────────────────────────────────────────
+  // Why a watch of our own on top of lib-jitsi-meet's NoAudioSignalDetection:
+  // that detector fires NO_AUDIO_INPUT once per track and never re-arms, so a
+  // user who joins muted burns the one shot and gets no warning when they
+  // later unmute a dead mic. TRACK_AUDIO_LEVEL_CHANGED only fires when the
+  // level CHANGES, so a flat zero produces a single event — the 1 s tick
+  // below is what turns "still zero" into a warning.
+
+  _watchMicLevel(track) {
+    this._unwatchMicLevel();
+    if (!track || typeof track.on !== "function") return;
+    track.on(JEVENTS.track.TRACK_AUDIO_LEVEL_CHANGED, this.onLocalMicLevel);
+    this._micWatch = track;
+    this._micLastLevel = null;
+    this._micSilentSince = null;
+    this._micWatchTimer = setInterval(() => this._checkMicSilence(), 1000);
+  }
+
+  _unwatchMicLevel(track) {
+    const w = this._micWatch;
+    if (!w || (track && w !== track)) return;
+    if (typeof w.off === "function") {
+      w.off(JEVENTS.track.TRACK_AUDIO_LEVEL_CHANGED, this.onLocalMicLevel);
+    }
+    if (this._micWatchTimer) clearInterval(this._micWatchTimer);
+    this._micWatchTimer = null;
+    this._micWatch = null;
+    this._micLastLevel = null;
+    this._micSilentSince = null;
+  }
+
+  onLocalMicLevel(level) {
+    if (!this._micWatch || this._micWatch !== this.localTracks.audio) return;
+    this._micLastLevel = level;
+    if (level > 0) {
+      this._micSilentSince = null;
+      if (this._micWarning) this.clearMicWarning();
+    }
+  }
+
+  _checkMicSilence() {
+    const track = this._micWatch;
+    if (!track || this.isDestroyed() || track !== this.localTracks.audio) return;
+    this._reassertMicWarning();
+    // No level report yet: the stats path may still be warming up (or is not
+    // available in this browser) — say nothing rather than cry wolf.
+    if (this._micLastLevel == null) return;
+    if (track.isMuted() || this._micLastLevel > 0) {
+      this._micSilentSince = null;
+      return;
+    }
+    const now = Date.now();
+    if (!this._micSilentSince) {
+      this._micSilentSince = now;
+      return;
+    }
+    if (now - this._micSilentSince >= MIC_SILENCE_MS) this.onNoAudioInput();
+  }
+
+  /**
+   * The microphone is open and unmuted but delivers a flat zero level: the
+   * user is inaudible and nothing else on screen says so.
+   */
+  onNoAudioInput() {
+    if (this.isDestroyed() || this._micWarning) return;
+    if (this.isLocalAudioMuted()) return;
+    this.warn("no audio input detected from the local microphone");
+    this.showMicWarning(LOCALE.NO_AUDIO_INPUT_DETECTED);
+    this.postAudioDiagnostics("no-audio-input");
+  }
+
+  onAudioInputStateChange(hasAudio) {
+    if (hasAudio && this._micWarning) this.clearMicWarning();
+  }
+
+  onTalkWhileMuted() {
+    if (this.isDestroyed() || this._micWarning) return;
+    this.stateMessage(LOCALE.TALKING_WHILE_MUTED, PARTY_NOTICE_MS);
+  }
+
+  /**
+   * NO_DATA_FROM_SOURCE: the MediaStreamTrack itself reports muted, i.e. the
+   * device stopped delivering frames (OS mute switch, dead Bluetooth link).
+   */
+  onNoDataFromMic(noData) {
+    if (this.isDestroyed()) return;
+    if (noData) {
+      this.warn("the microphone delivers no data");
+      this.postAudioDiagnostics("mic-no-data");
+      if (!this.isLocalAudioMuted()) {
+        this.showMicWarning(LOCALE.NO_AUDIO_INPUT_DETECTED);
+      }
+    } else if (this._micWarning) {
+      this.clearMicWarning();
+    }
+  }
+
+  /**
+   * Sticky notice in the message container with a shortcut to the device
+   * picker. Other notices (someone joined, ...) take the container over for a
+   * few seconds; _reassertMicWarning puts this back once they are gone.
+   */
+  showMicWarning(text) {
+    this._micWarning = text;
+    this.ensurePart("message-container").then((c) => {
+      if (this.isDestroyed() || this._micWarning !== text) return;
+      c.feed(
+        Skeletons.Box.X({
+          className: "message-text message-mic-warning",
+          kids: [
+            Skeletons.Note({
+              className: "message-mic-warning__text",
+              content: text,
+            }),
+            Skeletons.Note({
+              className: "message-mic-warning__action",
+              content: LOCALE.CHECK_AUDIO_DEVICES,
+              service: "device-setting",
+              uiHandler: [this],
+            }),
+          ],
+        })
+      );
+    });
+  }
+
+  _reassertMicWarning() {
+    if (!this._micWarning) return;
+    const c = this.getPart("message-container");
+    if (!c || !c.el) return;
+    if (c.el.querySelector(".message-mic-warning")) return;
+    // Another notice is on screen; wait for its timeout to clear it.
+    if (c.el.children.length) return;
+    this.showMicWarning(this._micWarning);
+  }
+
+  clearMicWarning() {
+    if (!this._micWarning) return;
+    this._micWarning = null;
+    this.stateMessage();
+  }
+
+  // ── Audio diagnostics ────────────────────────────────────────────────────
+  // What the server needs to answer "why could they not hear me?" after the
+  // call, since yp.conference rows vanish on leave and the JVB only knows
+  // whether audible audio reached it: which mic was open, whether it was
+  // muted / ended / delivering data, the last local level, outbound and
+  // inbound RTP counters, the ICE pair in use, the browser. Logged by
+  // server-team conference.update under [conference.diag].
+
+  async collectAudioDiagnostics(reason) {
+    const diag = {
+      reason,
+      at: new Date().toISOString(),
+      ua: navigator.userAgent,
+      build: typeof __VERSION__ !== "undefined" ? __VERSION__ : undefined,
+    };
+    try {
+      const t = this.localTracks.audio;
+      if (t && !t.disposed) {
+        const mst = typeof t.getTrack === "function" ? t.getTrack() : null;
+        diag.mic = {
+          deviceId: typeof t.getDeviceId === "function" ? t.getDeviceId() : t.deviceId,
+          label: typeof t.getTrackLabel === "function" ? t.getTrackLabel() : undefined,
+          muted: t.isMuted(),
+          ended: typeof t.isEnded === "function" ? t.isEnded() : undefined,
+          active: t.isActive(),
+          receiving: typeof t.isReceivingData === "function" ? t.isReceivingData() : undefined,
+          enabled: mst ? mst.enabled : undefined,
+          trackMuted: mst ? mst.muted : undefined,
+          readyState: mst ? mst.readyState : undefined,
+          level: this._micLastLevel,
+          mixed: !!this._mixedMic,
+          inRoom: !!(this.room && this.room.getLocalAudioTrack() === t),
+        };
+      } else {
+        diag.mic = null;
+      }
+      diag.micCtrl = this.isAudio ? 1 : 0;
+      diag.warning = this._micWarning ? 1 : 0;
+      diag.output = JitsiMeetJS.mediaDevices.getAudioOutputDevice();
+      diag.prefs = {
+        input: this.preferredInputDevice || null,
+        output: this.preferredOutputDevice || null,
+      };
+      diag.peers = Object.keys(this.endpoints || {}).length;
+      const tpc = this.room && typeof this.room.getActivePeerConnection === "function"
+        ? this.room.getActivePeerConnection()
+        : null;
+      const pc = tpc && tpc.peerconnection;
+      if (pc && typeof pc.getStats === "function") {
+        const stats = await pc.getStats();
+        const inbound = [];
+        let pair = null;
+        stats.forEach((r) => {
+          if (r.type === "outbound-rtp" && r.kind === "audio") {
+            diag.out = { ssrc: r.ssrc, bytes: r.bytesSent, packets: r.packetsSent };
+          } else if (r.type === "media-source" && r.kind === "audio") {
+            diag.src = {
+              level: r.audioLevel,
+              energy: r.totalAudioEnergy,
+              duration: r.totalSamplesDuration,
+            };
+          } else if (r.type === "inbound-rtp" && r.kind === "audio") {
+            inbound.push({
+              ssrc: r.ssrc,
+              bytes: r.bytesReceived,
+              packets: r.packetsReceived,
+              lost: r.packetsLost,
+              level: r.audioLevel,
+              energy: r.totalAudioEnergy,
+              jitter: r.jitter,
+            });
+          } else if (r.type === "candidate-pair" && r.nominated && r.state === "succeeded") {
+            pair = r;
+          }
+        });
+        diag.in = inbound.slice(0, 10);
+        if (pair) {
+          const lc = stats.get(pair.localCandidateId) || {};
+          const rc = stats.get(pair.remoteCandidateId) || {};
+          diag.ice = {
+            local: lc.candidateType,
+            remote: rc.candidateType,
+            proto: lc.protocol,
+            rtt: pair.currentRoundTripTime,
+            bytesSent: pair.bytesSent,
+            bytesReceived: pair.bytesReceived,
+          };
+        }
+      }
+    } catch (e) {
+      diag.error = String((e && e.message) || e);
+    }
+    return diag;
+  }
+
+  postAudioDiagnostics(reason) {
+    if (!this.room || !this.room.isJoined() || this.isLeaving || this.isDestroyed()) {
+      return Promise.resolve();
+    }
+    return this.collectAudioDiagnostics(reason)
+      .then((diag) =>
+        this.sendRoomSignaling(SERVICE.conference.update, {
+          event: "diag",
+          metadata: { ...this.metadata(), diag },
+        })
+      )
+      .catch((e) => this.warn("audio diagnostics failed", e));
+  }
+
+  _startDiagnostics() {
+    this._stopDiagnostics();
+    this._diagTimer = setTimeout(() => {
+      this._diagTimer = null;
+      this.postAudioDiagnostics("join");
+      this._diagInterval = setInterval(
+        () => this.postAudioDiagnostics("periodic"),
+        DIAG_PERIOD_MS
+      );
+    }, DIAG_FIRST_MS);
+  }
+
+  _stopDiagnostics() {
+    if (this._diagTimer) clearTimeout(this._diagTimer);
+    if (this._diagInterval) clearInterval(this._diagInterval);
+    this._diagTimer = null;
+    this._diagInterval = null;
   }
 
   /**
@@ -780,6 +1177,11 @@ class __webrtc_room extends __room {
       case _a.audio:
         this.isAudio = !track.isMuted();
         this.__ctrlAudio.setState(this.isAudio);
+        // A mic warning only makes sense while unmuted. Re-arm the silence
+        // watch from the moment of unmute, so a dead mic is reported a few
+        // seconds after the user expects to be heard.
+        this._micSilentSince = null;
+        if (!this.isAudio) this.clearMicWarning();
         break;
     }
     // NOTE: do NOT remove the listener here. Audio mute/unmute reuses the SAME
@@ -933,6 +1335,7 @@ class __webrtc_room extends __room {
     }
 
     await this.broadcastJoining(args);
+    this._startDiagnostics();
 
     if (this.__participants.collection.length <= 1) {
       this.stateMessage("waiting");
@@ -1420,6 +1823,9 @@ class __webrtc_room extends __room {
    *
    */
   async unload() {
+    this._stopDiagnostics();
+    this._unwatchMicLevel();
+    this._micWarning = null;
     // Let go of any captured tab/system audio before the generic dispose loop
     // below: that loop would dispose it with its LOCAL_TRACK_STOPPED listener
     // still attached, queueing a release on _trackOp after the room is already
@@ -1563,17 +1969,21 @@ class __webrtc_room extends __room {
       // Recreate the mic with the user's last confirmed device, not the
       // implicit "default" — otherwise toggling mute/unmute after picking a
       // specific microphone silently reverts capture to the default device.
-      const micId = this.preferredInputDevice || "default";
+      const micId = await this._preferredMicId();
       if (!t) {
-        await this.createLocalTracks(_a.audio, micId);
-      } else if (t.isActive()) {
+        await this.createLocalTracks(_a.audio, micId, { muted: false });
+      } else if (t.isActive() && !t.isEnded()) {
         await t.unmute();
       } else {
+        // Dead track (device pulled, stream ended): unmute() would only flip
+        // a flag on a track that no longer captures. Start over.
         await t.dispose();
-        await this.createLocalTracks(_a.audio, micId);
+        await this.createLocalTracks(_a.audio, micId, { muted: false });
       }
+      this.postAudioDiagnostics("unmute");
     } else {
       t && (await t.mute());
+      this.clearMicWarning();
     }
   }
 

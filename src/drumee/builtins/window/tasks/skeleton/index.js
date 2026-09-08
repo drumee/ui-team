@@ -1,5 +1,29 @@
 const { isTaskViewAllowed } = require("libs/billing");
 
+/**
+ * The `data-entered` stamp that gates an overlay's entrance animation.
+ *
+ * Every overlay in this panel animates in, and _render() rebuilds the whole
+ * subtree through feed() — a newly created element runs its animation again.
+ * So while an overlay was open, any later render replayed its entrance: a
+ * second card popping in over the first, and another, and another.
+ *
+ * The element cannot remember it has been painted, being a new element each
+ * time, so the panel remembers (`_painted` / hasPainted in ../index.js) and the
+ * skin gates on `[data-entered="0"]`.
+ *
+ * BOTH channels, because they are not interchangeable: the skin selects on the
+ * ATTRIBUTE, and a Skeletons node needs the dataset for the DOM side. Shipping
+ * one without the other fails silently.
+ *
+ * @param {Object} ui  the panel
+ * @param {String} key which overlay — create | detail | board
+ */
+const entered = (ui, key) => {
+  const on = ui.hasPainted && ui.hasPainted(key) ? 1 : 0;
+  return { dataset: { entered: on }, attrOpt: { "data-entered": on } };
+};
+
 function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   const pfx = ui.fig.family;
   const fileSearch = ui.getFileSearch();
@@ -404,6 +428,45 @@ const make = function (ui) {
             }),
           ),
         }),
+        // "Tasks here are done". is_done is what completion is keyed on
+        // everywhere — completed_at, the subtask done/total badge, the
+        // completion filters — but until this toggle existed only the seeded
+        // built-in `complete` ever carried it, so a board whose columns were
+        // renamed or replaced had no finished column at all. More than one
+        // column may carry it; this is a per-column flag, not a radio.
+        // The click service sits on the ROW, so every descendant in the click
+        // path carries `active: 0` — WITHOUT it ui-core binds an onclick to
+        // each of them (letc.js: `active` defaults to 1 when unset) and
+        // __handleClick calls e.stopPropagation() BEFORE triggerHandlers, so a
+        // click landing on the label or the knob — i.e. almost every real
+        // click — would die there and never reach this row. `active` does not
+        // cascade and `kidsOpt: {active: 0}` is a no-op, so it must be written
+        // on each node.
+        Skeletons.Box.X({
+          className: `${pfx}__col-done-row`,
+          bubble: 0,
+          service: "col-done-toggle",
+          uiHandler: [ui],
+          taskColumn: col.key,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-done-label`,
+              content: LOCALE.COLUMN_MARK_DONE,
+              active: 0,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__col-done-toggle`,
+              dataset: { on: col.is_done ? 1 : 0 },
+              active: 0,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__col-done-knob`,
+                  active: 0,
+                }),
+              ],
+            }),
+          ],
+        }),
         Skeletons.Box.X({
           className: `${pfx}__col-menu-actions`,
           kids: [
@@ -636,10 +699,12 @@ const make = function (ui) {
   // Reporter control — the assignee picker in single-select mode. Same shell
   // (chips row + combobox + suggestions part), so it inherits the delegated
   // focus/blur handling, the caret and the live member filter for free; the
-  // differences are that picking REPLACES instead of appending, and the chip
-  // has no ✕ because a task always reads as reported by somebody (it falls back
-  // to created_by). `scope` is "create-reporter" | "detail-reporter".
-  const reporterPicker = (uid, scope) =>
+  // differences are that picking REPLACES instead of appending, and the chip's
+  // ✕ resets rather than clears — a task always reads as reported by somebody
+  // (it falls back to created_by). `scope` is "create-reporter" |
+  // "detail-reporter".
+  // `resetTo` is the uid the chip's ✕ restores (task creator / current user).
+  const reporterPicker = (uid, scope, resetTo) =>
     Skeletons.Box.Y({
       // Same classes as the multi-select picker on purpose: it is the same
       // control, and the single-select difference is behavioural (replace, not
@@ -653,7 +718,7 @@ const make = function (ui) {
               className: `${pfx}__assignee-chips`,
               sys_pn: `${scope}-assignee-chips`,
               partHandler: ui,
-              kids: buildReporterChip(ui, uid),
+              kids: buildReporterChip(ui, uid, { scope, resetTo }),
             }),
             Skeletons.Entry({
               className: `${pfx}__assignee-search`,
@@ -1033,7 +1098,7 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.REPORTER,
         }),
-        reporterPicker(dReporter, "detail-reporter"),
+        reporterPicker(dReporter, "detail-reporter", detail.created_by),
         originParts.length
           ? Skeletons.Note({
               className: `${pfx}__detail-reporter-time`,
@@ -1077,7 +1142,7 @@ const make = function (ui) {
           className: `${pfx}__subtasks`,
           sys_pn: "subtask-rows",
           partHandler: ui,
-          kids: buildSubtaskRowsContent(ui, detail.id),
+          kids: buildSubtaskRowsContent(ui, detail.id, "detail"),
         });
 
     const attachmentsList = Skeletons.Box.Y({
@@ -1339,6 +1404,7 @@ const make = function (ui) {
     // on the left, the metadata sidebar on the right.
     return Skeletons.Box.Y({
       className: `${pfx}__detail-backdrop`,
+      ...entered(ui, "detail"),
       // No backdrop service — closing is explicit (X or Cancel), matching the
       // create modal and guarding against accidental loss of unsaved edits.
       bubble: 0,
@@ -1413,6 +1479,7 @@ const make = function (ui) {
     const themes = ui.getColumnThemes();
     return Skeletons.Box.Y({
       className: `${pfx}__board-backdrop`,
+      ...entered(ui, "board"),
       bubble: 0,
       kids: [
         Skeletons.Box.Y({
@@ -1501,16 +1568,29 @@ const make = function (ui) {
               bubble: 0,
               service: "board-default",
               uiHandler: [ui],
+              // active: 0 on every child. ui-core defaults `active` to 1 when
+              // it is not set (letc.js: `if (a == null) a = 1`), binds an
+              // onclick to each such widget, and __handleClick calls
+              // e.stopPropagation() BEFORE triggerHandlers — so a click on the
+              // label or on the switch itself died there and never reached the
+              // row's "board-default" service. Only the row's padding actually
+              // toggled, which is almost nowhere. `active` does not cascade and
+              // kidsOpt is a no-op for it, so it goes on each node.
               kids: [
                 Skeletons.Note({
                   className: `${pfx}__board-default-label`,
                   content: LOCALE.SET_AS_DEFAULT,
+                  active: 0,
                 }),
                 Skeletons.Box.X({
                   className: `${pfx}__board-toggle`,
                   dataset: { on: st.isDefault ? 1 : 0 },
+                  active: 0,
                   kids: [
-                    Skeletons.Note({ className: `${pfx}__board-toggle-knob` }),
+                    Skeletons.Note({
+                      className: `${pfx}__board-toggle-knob`,
+                      active: 0,
+                    }),
                   ],
                 }),
               ],
@@ -1638,7 +1718,11 @@ const make = function (ui) {
           className: `${pfx}__create-label`,
           content: LOCALE.REPORTER,
         }),
-        reporterPicker(draft?.reporter_uid || Visitor.id, "create-reporter"),
+        reporterPicker(
+          draft?.reporter_uid || Visitor.id,
+          "create-reporter",
+          Visitor.id,
+        ),
       ],
     });
 
@@ -1706,6 +1790,18 @@ const make = function (ui) {
                   partHandler: ui,
                   kids: buildDueSectionContent(ui, "create"),
                 }),
+                // "Child task items", same block the detail panel carries —
+                // here it queues children on the draft instead of posting them,
+                // and _commitTask creates them once the parent has an id. Its
+                // own re-feedable part for the same reason as the detail one:
+                // adding a child must not rebuild the title / description
+                // editors the user is typing into.
+                Skeletons.Box.Y({
+                  className: `${pfx}__subtasks`,
+                  sys_pn: "create-subtask-rows",
+                  partHandler: ui,
+                  kids: buildSubtaskRowsContent(ui, null, "create"),
+                }),
                 // Pinned to the column foot (see skin __create-actions) so it
                 // lines up with the file search/upload bar in the left column.
                 Skeletons.Box.X({
@@ -1739,6 +1835,9 @@ const make = function (ui) {
       // No service on the backdrop — closing the modal must be explicit
       // (the X button or the Cancel link in the form footer).
       bubble: 0,
+      // The entrance runs on the OPENING render only — see `entered` below and
+      // `_painted` in ../index.js.
+      ...entered(ui, "create"),
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__create-modal`,
@@ -2196,8 +2295,9 @@ const memberLabel = (m) =>
   "";
 
 /**
- * The reporter as a single, non-removable chip. Exported so the panel can
- * re-feed just the chips row after a pick.
+ * The reporter as a single chip — the whole chip opens the picker, and its ✕
+ * resets the field to the task's creator rather than clearing it. Exported so
+ * the panel can re-feed just the chips row after a pick.
  *
  * Deliberately NOT buildAssigneeChips: that one runs the uids through
  * getKnownAssignees, which drops anybody who has left the workspace. That is
@@ -2209,9 +2309,16 @@ const memberLabel = (m) =>
  * Returns [] only when there is genuinely no uid, which the SPs make impossible
  * for a live task (reporter_uid falls back to created_by).
  */
-function buildReporterChip(ui, uid) {
+function buildReporterChip(ui, uid, opt = {}) {
   const pfx = ui.fig.family;
   if (!uid) return [];
+  // Scope of the picker this chip belongs to ("create-reporter" |
+  // "detail-reporter") and the uid the ✕ resets to (the task's creator, or the
+  // current user on a create). Both are optional so an older call site still
+  // renders a plain, inert chip.
+  const scope = opt.scope || "";
+  const resetTo = opt.resetTo ? String(opt.resetTo) : "";
+  const resettable = !!(scope && resetTo && resetTo !== String(uid));
   // Visitor fallback: the member list loads asynchronously, and until it lands
   // getMember answers null for everybody — including the current user, who is
   // the default reporter on every create. Without this the field would open
@@ -2227,7 +2334,19 @@ function buildReporterChip(ui, uid) {
   return [
     Skeletons.Box.X({
       className: `${pfx}__assignee-chip`,
-      attrOpt: { "data-uid": uid },
+      attrOpt: { "data-uid": uid, "data-role": "reporter" },
+      // ui-core only stops a click when bubble is 0 — without this the chip's
+      // click would keep travelling up through every ancestor widget after it
+      // has already opened the list.
+      bubble: 0,
+      // The chip itself opens the member list. Without this the ONLY way into
+      // the picker was the caret or the sliver of input beside the chip, which
+      // on a wide name is a few pixels — the field read as a static label.
+      // A click on the avatar/name has no service of its own and walks up to
+      // this node (see onUiEvent's parent walk).
+      service: scope ? "toggle-assignee-list" : null,
+      uiHandler: scope ? [ui] : null,
+      assigneeScope: scope,
       kids: [
         Skeletons.UserProfile({
           className: `${pfx}__assignee-chip-avatar`,
@@ -2241,7 +2360,23 @@ function buildReporterChip(ui, uid) {
           className: `${pfx}__assignee-chip-name`,
           content: authorName(m),
         }),
-      ],
+        // ✕ — "undo my reassignment": puts the reporter back to the task's
+        // creator (the current user in the create modal). It is NOT a clear:
+        // a task always reads as reported by somebody, so there is nothing to
+        // reset to while the reporter already IS the creator, and the button is
+        // then omitted rather than rendered as a dead control.
+        resettable
+          ? Skeletons.Button.Svg({
+              className: `${pfx}__assignee-chip-remove`,
+              ico: "cross",
+              bubble: 0,
+              service: "reset-reporter",
+              uiHandler: [ui],
+              assigneeScope: scope,
+              tooltips: LOCALE.RESET,
+            })
+          : null,
+      ].filter(Boolean),
     }),
   ];
 }
@@ -2287,19 +2422,27 @@ function buildAssigneeChips(ui, assignees, service) {
   });
 }
 
-// Members matching `query`, minus the already-selected ones. An empty query
-// lists every remaining member (the dropdown half of the combobox) — the
-// container scrolls, so no result cap is needed.
-function buildAssigneeSuggestions(ui, query, selected, service) {
+// Members matching `query`. An empty query lists every member (the dropdown
+// half of the combobox) — the container scrolls, so no result cap is needed.
+//
+// `opt.keepSelected` keeps the already-selected member(s) in the list instead of
+// hiding them. Multi-select (assignees) hides them, because a chip with a ✕ is
+// already the "you have this one" affordance. SINGLE-select (reporter) must NOT:
+// hiding the only other member of a two-person workspace leaves an empty list,
+// and an empty list is force-closed below — which is what made the Reporter
+// field look like a dead control that could not be changed at all.
+function buildAssigneeSuggestions(ui, query, selected, service, opt = {}) {
   const pfx = ui.fig.family;
   const q = String(query || "")
     .trim()
     .toLowerCase();
   const chosen = new Set((selected || []).map(String));
+  const keepSelected = !!opt.keepSelected;
   return (ui.getMembers() || [])
     .filter((m) => {
       const uid = String(m.id || m.uid || "");
-      if (!uid || chosen.has(uid)) return false;
+      if (!uid) return false;
+      if (!keepSelected && chosen.has(uid)) return false;
       if (!q) return true;
       return (
         memberLabel(m).toLowerCase().includes(q) ||
@@ -2312,7 +2455,10 @@ function buildAssigneeSuggestions(ui, query, selected, service) {
       const uid = String(m.id || m.uid);
       return Skeletons.Box.X({
         className: `${pfx}__assignee-option`,
-        attrOpt: { "data-uid": uid },
+        // data-selected marks the row that is already picked (single-select
+        // keeps it listed) so the skin can tick it — re-picking it is a no-op,
+        // never a silent clear.
+        attrOpt: { "data-uid": uid, "data-selected": chosen.has(uid) ? "1" : "0" },
         bubble: 0,
         service,
         uiHandler: [ui],
@@ -2979,6 +3125,9 @@ function buildCommentListContent(ui) {
         // read from one place — the panel's isCommentRowBusy — rather than
         // written onto the DOM by whoever happens to notice a status change.
         "data-busy": ui.isCommentRowBusy(c.id) ? "1" : "0",
+        // Optimistic row: shown the instant Enter is pressed, replaced by the
+        // server's row when the create answers. The skin dims it.
+        "data-pending": c._pending ? "1" : "0",
       },
       kids: [
         avatar,
@@ -2999,12 +3148,17 @@ function buildCommentListContent(ui) {
             // Files attached to this comment, between the body and the footer.
             commentAttachments(ui, c, isOwn),
             // Reaction chips + action icons share one horizontal footer row.
-            Skeletons.Box.X({
-              className: `${pfx}__comment-footer`,
-              kids: [reactBar(c), commentActions(c, isOwn)].filter(Boolean),
-            }),
+            // An optimistic row gets none of them: react / reply / edit /
+            // delete all address the comment by id, and it has no server id
+            // yet — the footer comes back with the real row a moment later.
+            c._pending
+              ? null
+              : Skeletons.Box.X({
+                  className: `${pfx}__comment-footer`,
+                  kids: [reactBar(c), commentActions(c, isOwn)].filter(Boolean),
+                }),
             // Emoji palette opens on its own row below the icons.
-            pickerRow(c),
+            c._pending ? null : pickerRow(c),
           ].filter(Boolean),
         }),
         // Every row is a drop target now, not just the one being edited, so
@@ -3612,30 +3766,85 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
 }
 
 /**
+ * Service names for the child-item block, per scope.
+ *
+ * "detail" edits children that already exist on the server; "create" edits the
+ * queue held on the create modal's draft, which is only posted once the PARENT
+ * has an id. Same markup, same skin, different verbs — hence one table rather
+ * than a second copy of the builder.
+ */
+const SUBTASK_SERVICES = {
+  detail: {
+    add: "add-subtask",
+    cancel: "cancel-subtask",
+    commit: "create-subtask",
+    menu: "toggle-subtask-menu",
+    priority: "set-subtask-priority",
+    status: "set-subtask-status",
+    toggleDone: "toggle-subtask-complete",
+    open: "open-detail",
+    remove: "remove-task",
+    titleField: "subtask-title",
+  },
+  create: {
+    add: "add-create-subtask",
+    cancel: "cancel-create-subtask",
+    commit: "commit-create-subtask",
+    menu: "toggle-create-subtask-menu",
+    priority: "set-create-subtask-priority",
+    status: "set-create-subtask-status",
+    toggleDone: "toggle-create-subtask-done",
+    // A queued child has no id yet, so there is nothing to open.
+    open: null,
+    remove: "remove-create-subtask",
+    titleField: "create-subtask-title",
+  },
+};
+
+/**
  * "Child task items" block — Figma 58471:222398 / 58471:222650.
  *
- * Lives in the detail panel's RIGHT sidebar, under Due date (that is where the
- * design puts it; the earlier written spec had said between Description and
- * Attachments). Header, then the existing children, then the inline creator
- * card when one is open.
+ * Lives in the RIGHT sidebar, under Due date (that is where the design puts it;
+ * the earlier written spec had said between Description and Attachments).
+ * Header, then the existing children, then the inline creator card when one is
+ * open.
  *
- * The whole block is one re-feedable part (sys_pn "subtask-rows") for the same
- * reason attachments and comments are: a full _render() steals focus from the
- * title/description editors and drops unsaved edits. Re-feeding THIS block is
- * safe even mid-typing, because the card's title Entry is seeded from the draft
- * and kept in sync by the `task-input-changed` watch.
+ * Two scopes share it:
+ *  - "detail" (default) — the children of the open task, straight from the
+ *    loaded rows; every control posts to the server.
+ *  - "create" — the children QUEUED on the create modal's draft. They do not
+ *    exist server-side yet: _commitTask posts them, with the new parent's id,
+ *    immediately after the parent itself.
+ *
+ * Either way the whole block is one re-feedable part (sys_pn "subtask-rows" /
+ * "create-subtask-rows") for the same reason attachments and comments are: a
+ * full _render() steals focus from the title/description editors and drops
+ * unsaved edits. Re-feeding THIS block is safe even mid-typing, because the
+ * card's title Entry is seeded from the draft and kept in sync by the
+ * `task-input-changed` watch.
  */
-function buildSubtaskRowsContent(ui, parentId) {
+function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
   const pfx = ui.fig.family;
-  const parent = ui.getTaskById(parentId);
-  const subs = ui.getSubtasks(parentId);
-  const draft = ui.getSubtaskDraft();
+  const isCreate = scope === "create";
+  const svc = SUBTASK_SERVICES[isCreate ? "create" : "detail"];
+  const parent = isCreate ? null : ui.getTaskById(parentId);
+  const subs = isCreate ? ui.getPendingSubtasks() : ui.getSubtasks(parentId);
+  const draft = ui.getSubtaskDraft(scope);
   const priorities = ui.getPriorities() || [];
   const cols = ui.getColumns() || [];
-  const { done, total } = ui.getSubtaskCount(parent || { id: parentId });
+  // Queued rows are not on the board yet, so the server counters do not know
+  // about them — count them here off the same done-status test the board uses.
+  const { done, total } = isCreate
+    ? {
+        done: subs.filter((t) => ui.isDoneStatus(t.status)).length,
+        total: subs.length,
+      }
+    : ui.getSubtaskCount(parent || { id: parentId });
   // One level of nesting: a child never offers a child of its own. Enforced
   // server-side too (SUBTASK_NESTING_DENIED); this only stops it being offered.
-  const canAdd = mayCreateTask(ui) && !ui.isSubtask(parent);
+  // A task being created is by definition top-level, so create scope only has
+  // to check the write privilege.
+  const canAdd = mayCreateTask(ui) && (isCreate || !ui.isSubtask(parent));
 
   const metaOf = (list, key) => list.find((x) => x.key === key) || null;
 
@@ -3673,7 +3882,7 @@ function buildSubtaskRowsContent(ui, parentId) {
             // circle. app-add is the bare 12px plus stroke.
             ico: "app-add",
             bubble: 0,
-            service: "add-subtask",
+            service: svc.add,
             uiHandler: [ui],
             // See gantt.js: the bare string form renders the tooltip as
             // inline text inside the button and hides the icon.
@@ -3697,8 +3906,10 @@ function buildSubtaskRowsContent(ui, parentId) {
     return Skeletons.Box.X({
       className: `${pfx}__subtask-row`,
       bubble: 0,
-      service: "open-detail",
-      uiHandler: [ui],
+      // Queued rows have nowhere to open to, so create scope leaves the row
+      // itself inert — its ✕ and its checkbox are the only controls.
+      service: svc.open,
+      uiHandler: svc.open ? [ui] : null,
       taskId: t.id,
       attrOpt: { "data-done": isDone ? "1" : "0" },
       kids: [
@@ -3706,7 +3917,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           className: `${pfx}__subtask-check`,
           ico: "app-check",
           bubble: 0,
-          service: "toggle-subtask-complete",
+          service: svc.toggleDone,
           uiHandler: [ui],
           taskId: t.id,
           attrOpt: { "data-done": isDone ? "1" : "0" },
@@ -3739,7 +3950,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           className: `${pfx}__subtask-del`,
           ico: "cross",
           bubble: 0,
-          service: "remove-task",
+          service: svc.remove,
           uiHandler: [ui],
           taskId: t.id,
         }),
@@ -3761,7 +3972,7 @@ function buildSubtaskRowsContent(ui, parentId) {
         "data-open": draft && draft.menu === kind ? "1" : "0",
       },
       bubble: 0,
-      service: kind === "date" ? null : "toggle-subtask-menu",
+      service: kind === "date" ? null : svc.menu,
       uiHandler: kind === "date" ? null : [ui],
       menuKind: kind,
       kids: [
@@ -3787,7 +3998,14 @@ function buildSubtaskRowsContent(ui, parentId) {
           ? Skeletons.Element({
               tagName: "input",
               className: `${pfx}__subtask-date-input`,
-              attrOpt: { type: "date", value: (draft && draft.due_date) || "" },
+              // data-scope: the change listener is delegated on the panel root
+              // (the card is rebuilt on every re-feed), so it has to read off
+              // the node which of the two drafts it is editing.
+              attrOpt: {
+                type: "date",
+                value: (draft && draft.due_date) || "",
+                "data-scope": scope,
+              },
             })
           : null,
         // The dropdown is a child of the chip that opened it, not of the card:
@@ -3823,7 +4041,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           className: `${pfx}__subtask-menu-item`,
           attrOpt: { "data-selected": i.selected ? "1" : "0" },
           bubble: 0,
-          service: isPriority ? "set-subtask-priority" : "set-subtask-status",
+          service: isPriority ? svc.priority : svc.status,
           uiHandler: [ui],
           taskPriority: i.key,
           taskStatus: i.key,
@@ -3854,7 +4072,7 @@ function buildSubtaskRowsContent(ui, parentId) {
           kids: [
             Skeletons.Entry({
               className: `${pfx}__subtask-card-title`,
-              name: "subtask-title",
+              name: svc.titleField,
               // Explicit "" matters: the entry template interpolates
               // value="${m.value}" straight from model.toJSON(), so an omitted
               // value renders the literal string "undefined" in the field.
@@ -3864,7 +4082,7 @@ function buildSubtaskRowsContent(ui, parentId) {
               watch: "task-input-changed",
               placeholder: LOCALE.SUBTASK_PLACEHOLDER,
               mode: "commit",
-              service: "create-subtask",
+              service: svc.commit,
               bubble: 0,
               uiHandler: [ui],
             }),
@@ -3872,7 +4090,7 @@ function buildSubtaskRowsContent(ui, parentId) {
               className: `${pfx}__subtask-card-close`,
               ico: "cross",
               bubble: 0,
-              service: "cancel-subtask",
+              service: svc.cancel,
               uiHandler: [ui],
             }),
           ],
@@ -3912,9 +4130,12 @@ function buildSubtaskRowsContent(ui, parentId) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__subtask-create-submit`,
-              content: LOCALE.CREATE,
+              // "Add" in create scope: nothing is created until the parent is,
+              // so a "Create" button that only queues a row would lie about
+              // what pressing it does.
+              content: isCreate ? LOCALE.ADD : LOCALE.CREATE,
               bubble: 0,
-              service: "create-subtask",
+              service: svc.commit,
               uiHandler: [ui],
             }),
           ],

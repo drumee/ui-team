@@ -63,9 +63,13 @@ const SEL = {
   // members are invited, so the flow counts it as Step 2 — see the handoff in
   // _resolveSub.
   permInternal: ".permission-restricted__main",
-  // The confirmation shown after an action inside those panels — e.g. sending
-  // an invitation in permission_restricted pops Wm.alert → window_info, which
-  // REPLACES the panel in the wrapper-modal. Spotlight the card ROOT (__ui) —
+  // The confirmation shown after an action inside those panels, which REPLACES
+  // the panel in the wrapper-modal. ⚠️ NO LONGER RAISED BY AN INVITE from
+  // permission_restricted: that panel reports every outcome inline at the field
+  // now and stays open (see its _sendInvitation), so the perm phase ends on the
+  // panel being closed — the _permSeen branch of _resolveSub, not _infoSeen.
+  // Kept because other actions in these panels still raise one. Spotlight the
+  // card ROOT (__ui) —
   // it carries the notice card's real width, background, rounding and shadow;
   // __main is an inner box, so cutting it out leaves the visible card edges
   // outside the hole. (Same rationale as formCard above.)
@@ -177,11 +181,12 @@ class RewardGuide extends GuideCore {
    * Post-creation: spotlight the follow-up panel(s), complete when the user has
    * closed the relevant one. Two panel kinds can appear:
    *   - the permission panel (permission_restricted / secure_share)
-   *   - a window_info confirmation popped ON TOP after an action inside it
-   *     (e.g. sending an invitation), which stays until closed.
-   * The window_info takes priority: once it has been shown and then closed, the
-   * step is done — the permission panel may still be open behind it, and
-   * closing the confirmation is what advances to Step 2.
+   *   - a window_info confirmation popped ON TOP after an action inside it,
+   *     which stays until closed. An INVITE no longer raises one — that path
+   *     is inline now — so a team/share flow normally ends on the panel alone.
+   * The window_info takes priority when there is one: once it has been shown
+   * and then closed, the step is done — the permission panel may still be open
+   * behind it, and closing the confirmation is what advances to Step 2.
    */
   _resolveSub() {
     if (this._created) {
@@ -238,8 +243,8 @@ class RewardGuide extends GuideCore {
    * stop() resets every flag.
    *
    * Latched all the same — a reconcile can land between the handover and the
-   * teardown, and the invitation's confirmation REPLACES the panel in the
-   * wrapper-modal, so a second call must not fire.
+   * teardown, and the panel repaints itself on the server's hub.member_joined
+   * push, so a second call must not fire.
    *
    * Fires for BOTH hub types now. External (share) creation used to open a
    * secure-share dock, which never matched this selector, so it ran the perm

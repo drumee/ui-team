@@ -169,6 +169,37 @@ function planLabel(plan) {
   );
 }
 
+/**
+ * Where a plan sits on the ladder. The ONLY ordering of the tiers in the
+ * client: the billing cards read it to decide which column carries the single
+ * primary CTA, and _confirmReplacePlan reads it to tell an upgrade from a
+ * downgrade. Two copies of this map would eventually disagree about which
+ * direction a plan change goes, which is the one thing neither caller may get
+ * wrong.
+ *
+ * Unknown names rank as free — same rule planKey() applies, for the same
+ * reason: an unrecognised name must never imply a higher tier.
+ */
+const PLAN_RANK = { free: 0, pro: 1, team: 2, business: 3, sovereign: 4 };
+
+function planRank(plan) {
+  return PLAN_RANK[planKey(plan)] || 0;
+}
+
+/**
+ * The tier directly above `plan`, or null at the top of the ladder.
+ *
+ * Drives the billing page's single blue CTA: exactly one column — the next
+ * step up from what the caller holds — is primary, every other column is
+ * dark (product rule 2026-09-06). Derived from PLAN_RANK rather than written
+ * out as its own free→pro→team→… map, so inserting a tier cannot leave the
+ * two halves pointing at different columns.
+ */
+function nextPlan(plan) {
+  const next = planRank(plan) + 1;
+  return Object.keys(PLAN_RANK).find((k) => PLAN_RANK[k] === next) || null;
+}
+
 /** Does this plan sit on a paid tier? */
 function isPaidPlan(plan) {
   return planKey(plan) !== "free";
@@ -519,6 +550,8 @@ module.exports = {
   needsAdminConsoleUpgrade,
   planKey,
   planLabel,
+  planRank,
+  nextPlan,
   isPaidPlan,
   isFreeSoloPlan,
   isOrgSeatLimitReached,

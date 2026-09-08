@@ -39,3 +39,6 @@ desk-current.png
 plans-after.png
 .playwright-mcp/
 progress/
+
+# Subagent-driven-development scratch (ledgers, briefs, review packages)
+.superpowers/

@@ -298,7 +298,8 @@ const __button = function (ui, trigger, k) {
 
     update: button({ content: LOCALE.UPDATE, service: _e.update }),
 
-    upload: button({ content: LOCALE.UPLOAD, service: _e.upload })
+    upload: button({ content: LOCALE.UPLOAD, service: _e.upload }),
+
 
   };
 

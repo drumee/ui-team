@@ -87,6 +87,19 @@ const ___window_manager = function (ui) {
         sortWithCollection: false,
       }),
 
+      // Meeting popup ("starting now" / invitation card, wm/push.js). Its own
+      // layer for the same reason upload-progress has one, and it is NOT
+      // optional: the card used to be appended to windowsLayer, and whenever a
+      // workspace pane was open the headless layer took the active-window lift
+      // (50001) and painted straight over it. The card's own z-index (100000,
+      // skin/meeting-toast.scss) could not save it — a z-index cannot cross a
+      // sibling stacking context, which is exactly what the two layers are.
+      Skeletons.Wrapper.Y({
+        sys_pn: "meeting-toast-layer",
+        className: `${ui.fig.family}__layer ${ui.fig.group}__layer meeting-toast-layer`,
+        sortWithCollection: false,
+      }),
+
       // Live audio/video calls (window_meeting / window_connect) get a layer of
       // their own, for the same reason upload-progress has one: it must survive
       // everything the desk does to the other layers. headlessLayer — where a

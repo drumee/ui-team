@@ -15,7 +15,20 @@ class __chat_p2p extends LetcBox {
     // `mview` drives the single-pane mobile/tablet layout (≤ 1024px):
     // "sidebar" shows the inbox, "chat" shows the conversation. On wider
     // screens both panes show side-by-side and the attribute is ignored.
-    opt.dataset = { ...opt.dataset, anim: "out", mview: "sidebar" };
+    //
+    // anim starts "in", NOT "out". As a slide-out this mounted parked
+    // off-screen and slid in later, so "out" was the right initial state. It
+    // is now a full-canvas screen mounted on demand into settings-main-slot
+    // (desk INBOX_SLOT) — it is created precisely because the user asked to
+    // see it, so it must be visible from the first frame.
+    //
+    // Load-bearing: the skin maps data-anim="out" to display:none, and in
+    // that slot nothing flips it to "in" — _loadKind only feeds the kind.
+    // Mounting "out" left the Inbox rendered but invisible; the only thing
+    // that ever revealed it was the contact list's `eod`, so an empty or slow
+    // list showed a blank screen. "out" now means only one thing: the desk is
+    // closing this screen (_hidePanel / togglePanel's animate-then-destroy).
+    opt.dataset = { ...opt.dataset, anim: "in", mview: "sidebar" };
     super.initialize(opt);
     this.declareHandlers();
     this._radioId = `peer-${this.mget(_a.widgetId)}`;
@@ -67,12 +80,17 @@ class __chat_p2p extends LetcBox {
       )
         return;
     }
-    if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      this.el.dataset.anim = "out";
-    }
+    // Deliberately NOT self-hiding any more. As a slide-out this panel closed
+    // itself on an outside click; as a FULL-CANVAS screen (Figma 43:32209) it
+    // owns the whole centre column, so a click on the rail or the top bar —
+    // both "outside" — would have blanked the screen the user is working in.
+    // The desk opens and closes this slot now (INBOX_SLOT), the same way it
+    // does Settings and Calendar.
   }
 
   onBeforeDestroy() {
+    clearTimeout(this._searchDebounce);
+    clearTimeout(this._settleTimer);
     this.unbindEvent(_a.live);
     document.removeEventListener("mousedown", this._onDocClick);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
@@ -131,13 +149,80 @@ class __chat_p2p extends LetcBox {
   /**
    * Returns the API config for the contact list.
    */
+  /**
+   * The inbox list source, chosen by the active scope tab (Figma 43:32209).
+   *
+   * Direct Chat  → chat.chat_rooms with flag=contact — person-to-person rooms.
+   * Workspace chat → chat.share_rooms (group_chat_rooms) — the group rooms
+   *   that belong to workspaces rather than to a contact pair.
+   *
+   * Support keeps the direct query: a support conversation IS a contact room;
+   * that tab narrows it client-side in _applyFilter, exactly as before.
+   */
   getCurrentApi() {
+    if (this._roomScope === "workspace") {
+      return {
+        service: SERVICE.chat.share_rooms,
+        hub_id: Visitor.get(_a.id),
+      };
+    }
     return {
       service: SERVICE.chat.chat_rooms,
       flag: _a.contact,
       option: _a.active,
       hub_id: Visitor.get(_a.id),
     };
+  }
+
+  /**
+   * Switch the list SOURCE. Unlike the old filter tabs this is a refetch, not
+   * a show/hide — the two scopes come from different services. No-op when the
+   * scope is unchanged, so re-clicking the active tab doesn't refetch.
+   */
+  async _setRoomScope(scope) {
+    const next = scope || "direct";
+    if (this._roomScope === next) return;
+    this._roomScope = next;
+    // Support narrows the direct list, so it shares that query.
+    this._activeFilter = next === "support" ? "support" : "all";
+    // Warm the desk's workspace index BEFORE the list restarts.
+    // group_chat_rooms returns no area/kind, so the per-workspace icon is
+    // resolved by joining on that index (see _workspaceMeta). prepareData is
+    // synchronous, so the cache has to be populated by the time rows arrive or
+    // every row falls back to the generic room glyph for that render.
+    if (next === "workspace" && typeof Desk !== "undefined" && _.isFunction(Desk._fetchWorkspaces)) {
+      try {
+        await Desk._fetchWorkspaces();
+      } catch (e) {
+        this.warn && this.warn("[inbox] workspace index unavailable", e);
+      }
+    }
+    const list = await this.ensurePart("contact-list");
+    if (list && _.isFunction(list.restart)) list.restart();
+  }
+
+  /**
+   * The desk's cached desk.home row for a hub, or null.
+   *
+   * That payload is where `area` and `kind` live — the two fields the
+   * workspace glyph is chosen from, and the two group_chat_rooms does not
+   * return.
+   */
+  _workspaceMeta(hubId) {
+    if (typeof Desk === "undefined" || !Desk || !hubId) return null;
+    const rows = Desk._workspaces || [];
+    // Indexed, not scanned. This is called once PER ROW while normalising a
+    // page, so a linear find made it O(rows x workspaces). The index is
+    // rebuilt only when the underlying array identity changes, which is
+    // whenever the desk refetches.
+    if (this._wsIndexSrc !== rows) {
+      this._wsIndexSrc = rows;
+      this._wsIndex = new Map();
+      rows.forEach((r) => {
+        if (r) this._wsIndex.set(String(r.hub_id || r.id), r);
+      });
+    }
+    return this._wsIndex.get(String(hubId)) || null;
   }
 
   /**
@@ -167,6 +252,49 @@ class __chat_p2p extends LetcBox {
     switch (pn) {
       case "contact-list":
         this._contactList = child;
+        // Workspace-chat rows arrive in a DIFFERENT shape from contact rows.
+        // chat.share_rooms -> group_chat_rooms returns one row per hub
+        // { id, group_name, room_count, message, ctime }, while every consumer
+        // downstream (chat_contact_item, openChat, _openConversation) speaks
+        // the contact shape { entity_id, fullname, flag, ... }.
+        //
+        // Normalised HERE, by wrapping prepareData, rather than by teaching
+        // the shared row widget a second shape or by adding an itemsMap to the
+        // list: itemsMap assigns unconditionally, so mapping id -> entity_id
+        // would blank entity_id on ordinary contact rows. Same technique
+        // desk/workspace-list uses to reshape its own mixed payload.
+        if (!child._wsRowShapeInstalled) {
+          child._wsRowShapeInstalled = 1;
+          const original = child.prepareData.bind(child);
+          child.prepareData = (data) => {
+            let rows = original(data) || [];
+            // A list service with exactly ONE row answers with the object
+            // itself, not a one-element array — a user in a single workspace
+            // would otherwise get an empty Workspace-chat tab.
+            if (!_.isArray(rows)) rows = rows ? [rows] : [];
+            return rows.map((r) => {
+              if (!r || r.entity_id || !r.group_name) return r;
+              // area/kind come from the desk's workspace index, not from the
+              // chat payload — group_chat_rooms returns neither, so without
+              // this join every workspace drew the same generic room glyph.
+              const meta = this._workspaceMeta(r.id) || {};
+              return {
+                ...r,
+                entity_id: r.id,
+                fullname: r.group_name,
+                display: r.group_name,
+                // `share` is what makes _openConversation resolve the hub's
+                // home node (media.home -> home_id) and mount the conversation
+                // rooted at the workspace — which IS its team chat.
+                flag: _a.share,
+                is_workspace: 1,
+                area: meta.area,
+                ws_kind: meta.kind,
+                ws_filetype: meta.filetype,
+              };
+            });
+          };
+        }
         if (child.collection) {
           child.collection.comparator = (item) => -item.get(_a.ctime);
         }
@@ -177,7 +305,11 @@ class __chat_p2p extends LetcBox {
           // network call, and putting it in front of the landing below would
           // mean a slow or hanging lookup leaves the inbox with nothing open.
           // It pins its own row and opens it only if nothing else did.
-          this._ensureSupportRow();
+          // Direct Chat only. This pins the Drumee Support conversation into
+          // the list, and `eod` fires again on every restart — including the
+          // one _setRoomScope triggers — so without the guard switching to
+          // Workspace chat injected a person into a list of workspaces.
+          if (this._roomScope !== "workspace") this._ensureSupportRow();
           await Kind.waitFor("widget_chat");
           // Mounted with a conversation to open (Contact Support): honour it
           // instead of landing on the first row, on every screen size — the
@@ -355,6 +487,11 @@ class __chat_p2p extends LetcBox {
     delete peer.kids;
     delete peer.uiHandler;
 
+    // toLETC filters fields, so anything the header or the conversation needs
+    // is re-read from the model below. `area` joins them: it is what tints a
+    // workspace row's folder icon, and a peer built by _peerShim reads it
+    // straight off this object.
+    if (contact.mget && contact.mget(_a.area)) peer.area = contact.mget(_a.area);
     // Ensure flag survives toLETC filtering — read directly from model
     const flag = (contact.mget && contact.mget(_a.flag)) || peer.flag;
     peer.flag = flag;
@@ -855,6 +992,43 @@ class __chat_p2p extends LetcBox {
         this.el.dataset.mview = "sidebar";
         break;
 
+      // Scope tabs (Figma 43:32209) — these switch the QUERY, see _setRoomScope.
+      case "filter-direct":
+        this._setRoomScope("direct");
+        break;
+
+      case "filter-workspace":
+        this._setRoomScope("workspace");
+        break;
+
+      // Live conversation search (Figma 43:32209). Filters the ALREADY-LOADED
+      // rows rather than refetching: the list is a paged smart list, so a
+      // server round-trip per keystroke would fight pagination and flicker.
+      case "inbox-search-typed": {
+        const next = String((args && args.value) || "").trim().toLowerCase();
+        if (next === this._searchTerm) break;   // key that changed nothing
+        this._searchTerm = next;
+        // Debounced: `watch` fires per keystroke and _applyFilter walks every
+        // loaded row writing style.display. Typing "marketing" would run that
+        // nine times in ~400ms, each pass forcing a style recalc over the list.
+        // One pass 120ms after the user stops is indistinguishable to them and
+        // an order of magnitude less work.
+        clearTimeout(this._searchDebounce);
+        this._searchDebounce = setTimeout(() => this._applyFilter(), 120);
+        break;
+      }
+
+      // Unreads is now a header toggle rather than a tab, so it layers on top
+      // of whichever scope is showing instead of replacing it.
+      case "toggle-unreads":
+        this._unreadOnly = this._unreadOnly ? 0 : 1;
+        this.ensurePart("unread-toggle").then((p) => {
+          if (p && p.el) p.el.dataset.state = this._unreadOnly ? "1" : "0";
+        });
+        this._applyFilter();
+        break;
+
+      // Retained for callers outside the tab row (deep links, tests).
       case "filter-all":
         this._activeFilter = "all";
         this._applyFilter();
@@ -871,7 +1045,10 @@ class __chat_p2p extends LetcBox {
         break;
 
       case "filter-support":
-        this._activeFilter = "support";
+        // A support room is a contact room, so this shares the direct query
+        // and narrows it in _applyFilter — but it is still a scope TAB, so it
+        // goes through _setRoomScope to keep the tab state coherent.
+        this._setRoomScope("support");
         this._applyFilter();
         break;
 
@@ -930,8 +1107,18 @@ class __chat_p2p extends LetcBox {
     }
   }
 
-  onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
+  onWsMessage(service, data, options = {}) {
+    // The dispatcher calls onWsMessage(service, model, options) — the SERVICE
+    // IS THE FIRST ARGUMENT (router/websocket/index.js:41).
+    //
+    // This read it as `const { service } = options || svc`. `options` defaults
+    // to {} and {} is truthy, so it destructured the empty object every time:
+    // `service` came out undefined, the switch always fell to default, and
+    // NEITHER case ever ran. Live inbox updates were dead — an incoming
+    // message never moved a conversation up the list, never refreshed its
+    // preview line and never bumped its unread badge, so the inbox looked
+    // frozen until a reload. Same trap the project's framework-invariants
+    // rule §7 calls out by name.
     switch (service) {
       case SERVICE.chat.post:
       case SERVICE.channel.post:
@@ -942,7 +1129,7 @@ class __chat_p2p extends LetcBox {
         this._resetContactItemCount(data);
         break;
       default:
-        if (super.onWsMessage) super.onWsMessage(svc, data, options);
+        if (super.onWsMessage) super.onWsMessage(service, data, options);
     }
   }
 
@@ -1013,8 +1200,31 @@ class __chat_p2p extends LetcBox {
     }
     if (_.isFunction(item.updateNotification)) item.updateNotification();
 
-    if (list.collection && list.collection.sort) list.collection.sort();
-    this._applyFilter();
+    this._scheduleListSettle(list);
+  }
+
+  /**
+   * Coalesce the re-sort + re-filter that follows an incoming message.
+   *
+   * Both are whole-list operations (sort is O(n log n), _applyFilter walks
+   * every row), and chat traffic is BURSTY — a busy workspace delivers several
+   * posts in the same tick, and each one used to trigger its own pass. Now the
+   * last event in a burst pays for all of them, one frame later.
+   *
+   * This only started to matter once the WS handler was fixed: with the
+   * service misread the whole path was dead, so the cost never showed up.
+   */
+  _scheduleListSettle(list) {
+    this._pendingSettle = list;
+    if (this._settleTimer) return;
+    this._settleTimer = setTimeout(() => {
+      this._settleTimer = null;
+      const l = this._pendingSettle;
+      this._pendingSettle = null;
+      if (!l || (this.isDestroyed && this.isDestroyed())) return;
+      if (l.collection && l.collection.sort) l.collection.sort();
+      this._applyFilter();
+    }, 80);
   }
 
   /**
@@ -1059,8 +1269,31 @@ class __chat_p2p extends LetcBox {
       is_attachment: data.is_attachment === 1 ? 1 : 0,
     });
 
-    if (list.collection && list.collection.sort) list.collection.sort();
-    this._applyFilter();
+    this._scheduleListSettle(list);
+  }
+
+  /**
+   * Coalesce the re-sort + re-filter that follows an incoming message.
+   *
+   * Both are whole-list operations (sort is O(n log n), _applyFilter walks
+   * every row), and chat traffic is BURSTY — a busy workspace delivers several
+   * posts in the same tick, and each one used to trigger its own pass. Now the
+   * last event in a burst pays for all of them, one frame later.
+   *
+   * This only started to matter once the WS handler was fixed: with the
+   * service misread the whole path was dead, so the cost never showed up.
+   */
+  _scheduleListSettle(list) {
+    this._pendingSettle = list;
+    if (this._settleTimer) return;
+    this._settleTimer = setTimeout(() => {
+      this._settleTimer = null;
+      const l = this._pendingSettle;
+      this._pendingSettle = null;
+      if (!l || (this.isDestroyed && this.isDestroyed())) return;
+      if (l.collection && l.collection.sort) l.collection.sort();
+      this._applyFilter();
+    }, 80);
   }
 
   /**
@@ -1093,34 +1326,77 @@ class __chat_p2p extends LetcBox {
     const list = this._contactList;
     if (!list || !list.children) return;
     const filter = this._activeFilter || "all";
+    // The Unreads header toggle layers on top of the scope tab: a row must
+    // satisfy BOTH to stay visible. Applied first so every branch below sees
+    // the same gate rather than each re-implementing it.
+    const unreadGate = (item) =>
+      !this._unreadOnly || ~~(item.mget("room_count") || 0) > 0;
+    // Name match, case-insensitive. Reads the same fields the row DISPLAYS
+    // (display / fullname / first+last), so what you type matches what you see
+    // — including workspace rows, whose name arrives as group_name and is
+    // normalised onto fullname/display in prepareData.
+    const term = this._searchTerm || "";
+    const searchGate = (item) => {
+      if (!term) return true;
+      // Built once per row and cached on the view. The name does not change
+      // while the user types, so recomputing four mget()s, a join and a
+      // toLowerCase for every row on every keystroke was pure waste.
+      // _updateContactItemOnPost clears it if a row is renamed.
+      if (item._searchName == null) {
+        item._searchName = [
+          item.mget("display"),
+          item.mget(_a.fullname),
+          `${item.mget(_a.firstname) || ""} ${item.mget(_a.lastname) || ""}`,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+      }
+      return item._searchName.indexOf(term) !== -1;
+    };
+    // Write only on CHANGE. Assigning style.display invalidates style for the
+    // element even when the value is identical, so the old unconditional
+    // writes dirtied every row on every pass — including the common case where
+    // nothing moved.
+    const show = (item, on) => {
+      const want = on ? "" : "none";
+      if (item.el.style.display !== want) item.el.style.display = want;
+      return on;
+    };
     let visible = 0;
     list.children.forEach((item) => {
       if (!item.el) return;
+      if (!unreadGate(item) || !searchGate(item)) {
+        show(item, false);
+        return;
+      }
       if (filter === "all") {
-        item.el.style.display = "";
+        show(item, true);
         visible += 1;
         return;
       }
       const count = ~~(item.mget("room_count") || 0);
       if (filter === "unread") {
-        const show = count > 0;
-        item.el.style.display = show ? "" : "none";
-        if (show) visible += 1;
+        if (show(item, count > 0)) visible += 1;
       } else if (filter === "mentions") {
         const hasMention = ~~(item.mget("has_mention") || 0) > 0;
-        item.el.style.display = hasMention ? "" : "none";
+        show(item, hasMention);
         if (hasMention) visible += 1;
       } else if (filter === "support") {
-        const show = this._isSupportRow(item);
-        item.el.style.display = show ? "" : "none";
-        if (show) visible += 1;
+        // Named isSupport, not `show`: that shadowed the show() helper above
+        // and bypassed its write-on-change guard for this branch.
+        const isSupport = this._isSupportRow(item);
+        if (show(item, isSupport)) visible += 1;
       }
     });
-    // Show "All read" only when the user is on the Unread tab and nothing
-    // matches (i.e. there ARE rooms, just none with unread messages).
+    // Show "All read" only while unread-only is in force and nothing matches
+    // (i.e. there ARE rooms, just none with unread messages). Now keyed on the
+    // header toggle as well as the retained 'unread' filter value, since the
+    // Unread tab became a toggle.
     if (this._allReadEmpty && this._allReadEmpty.el) {
+      const unreadMode = !!this._unreadOnly || filter === "unread";
       const showAllRead =
-        filter === "unread" && visible === 0 && list.children.length > 0;
+        unreadMode && visible === 0 && list.children.length > 0;
       this._allReadEmpty.el.dataset.state = showAllRead ? 1 : 0;
     }
   }

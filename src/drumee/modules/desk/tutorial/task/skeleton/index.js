@@ -1,121 +1,56 @@
 /**
- * Step 4 bodies — the folder window with the Tasks tab open, one builder per
- * tracker view.
+ * Step bodies for the `task` tour — Figma 146:40534 and 162:20161.
  *
- * The window chrome (header + Files/Chat/Tasks/Meeting tabs) comes from the
- * shared toolkit, so the tracker sits in the same frame as the folder step. On
- * top of it the tracker adds its own bar: the five-view switcher on the left
- * and the per-view controls the design shows on the right.
+ * Screen 1 is the Task empty state, whose carousel walks the five views on a
+ * timer; screen 2 is the Board with the New task dialog open. `screen.index`
+ * says which card the track starts on — it is a CARD number, not a step (see
+ * `_card` in ../index.js).
+ *
+ * The five 1.x tracker view builders (./board, ./calendar, ./gantt, ./list,
+ * ./health) are left on disk — they are the only drawings of those views the
+ * repo has, and the populated Task frames may want them back.
  */
 
-const { folderHeader, tabBar } = require('../../skeleton/toolkit');
-
-const VIEWS = [
-  { key: 'board', label: 'Board', ico: 'square-split-horizontal', build: require('./board') },
-  { key: 'calendar', label: 'Calendar', ico: 'calendar', build: require('./calendar') },
-  { key: 'gantt', label: 'Gantt', ico: 'app-task-grant', build: require('./gantt') },
-  { key: 'list', label: 'List', ico: 'app-task-list', build: require('./list') },
-  { key: 'health', label: 'Project Health', ico: 'app-task-project-health', build: require('./health') },
-];
-
-/** Right-hand controls, which differ per view in the design. */
-function controls(pfx, view) {
-  const btn = (label, ico, extra = '') =>
-    Skeletons.Box.X({
-      className: `${pfx}__ctl ${extra}`.trim(),
-      kids: [
-        ico ? Skeletons.Image.Svg({ ico, className: `${pfx}__ctl-icon` }) : null,
-        Skeletons.Note({ className: `${pfx}__ctl-label`, content: label }),
-      ].filter(Boolean),
-    });
-
-  const toggle = (left, right) =>
-    Skeletons.Box.X({
-      className: `${pfx}__toggle`,
-      kids: [
-        Skeletons.Note({ className: `${pfx}__toggle-label`, content: left }),
-        Skeletons.Box.Y({
-          className: `${pfx}__toggle-switch`,
-          kids: [Skeletons.Box.Y({ className: `${pfx}__toggle-knob` })],
-        }),
-        Skeletons.Note({ className: `${pfx}__toggle-label`, content: right }),
-      ],
-    });
-
-  const kids = [];
-  switch (view.key) {
-    case 'board':
-      kids.push(btn(LOCALE.NEW_BOARD || 'New board', 'topbar-add'));
-      break;
-    case 'calendar':
-      kids.push(toggle(LOCALE.WEEKLY || 'Weekly', LOCALE.MONTHLY || 'Monthly'));
-      kids.push(
-        Skeletons.Box.X({
-          className: `${pfx}__ctl nav`,
-          kids: [
-            Skeletons.Image.Svg({ ico: 'arrow-left', className: `${pfx}__ctl-icon` }),
-            Skeletons.Note({ className: `${pfx}__ctl-label`, content: LOCALE.TODAY || 'Today' }),
-            Skeletons.Image.Svg({ ico: 'arrow-right', className: `${pfx}__ctl-icon` }),
-          ],
-        }),
-      );
-      break;
-    case 'gantt':
-      kids.push(toggle(LOCALE.WEEKS || 'Weeks', LOCALE.MONTHS || 'Months'));
-      kids.push(btn(LOCALE.DETAIL || 'Detail', 'ctxmenu-info'));
-      break;
-    case 'health':
-      kids.push(btn(LOCALE.DURATION || 'Duration', null, 'caret'));
-      break;
-    default:
-      break;
-  }
-  kids.push(btn(LOCALE.FILTER || 'Filter', 'meet-sort'));
-  return Skeletons.Box.X({ className: `${pfx}__controls`, kids });
-}
-
-function switcher(pfx, active) {
-  return Skeletons.Box.X({
-    className: `${pfx}__switcher`,
-    kids: VIEWS.map((v) =>
-      Skeletons.Box.X({
-        className: `${pfx}__view${v.key === active ? ' active' : ''}`,
-        kids: [
-          Skeletons.Image.Svg({ ico: v.ico, className: `${pfx}__view-icon` }),
-          Skeletons.Note({ className: `${pfx}__view-label`, content: v.label }),
-        ],
-      }),
-    ),
-  });
-}
+const { emptyState } = require('../../skeleton/toolkit/empty-state');
+const newTask = require('./new-task');
+const { taskPreview } = require('./preview');
 
 /**
- * @param {Object} ui
- * @param {String} key one of VIEWS
- * @returns {Object} the whole window for that view
+ * The five cards, in the frame's order (146:40547, 146:40652, 146:40677,
+ * 146:40646, 146:40683).
+ *
+ * COMPOSED, not exported. Each was a PNG of a tracker view this repo already
+ * draws — ./board, ./calendar, ./gantt, ./list and ./health were on disk the
+ * whole time, left there when the tour moved onto the 2.0 shell and the
+ * bitmaps took over. Five screenshots cannot follow the theme, cannot agree
+ * with one another once the panel moves, and cost 386KB to say what those
+ * builders say from one dataset. See ./preview.js.
  */
-function screen(ui, key) {
-  const pfx = ui.fig.family;
-  const view = VIEWS.find((v) => v.key === key) || VIEWS[0];
-  const aspect = ui.mget('aspect') || 'normal';
-  return Skeletons.Box.Y({
-    className: `${pfx}__main`,
-    dataset: { aspect, view: view.key },
-    kids: [
-      // The tracker's folder is a shared one in the design — EXTERNAL badge,
-      // pink folder (see task/skin __header-icon / __header-restricted).
-      folderHeader(ui, pfx, { badge: LOCALE.EXTERNAL || 'EXTERNAL' }),
-      tabBar(ui, pfx, { active: 'tasks', meeting: true }),
-      Skeletons.Box.X({
-        className: `${pfx}__bar`,
-        kids: [switcher(pfx, view.key), controls(pfx, view)],
-      }),
-      Skeletons.Box.Y({
-        className: `${pfx}__view-body`,
-        kids: [view.build(ui, pfx)],
-      }),
-    ],
-  });
-}
+const VIEWS = [
+  { key: 'board', title: () => LOCALE.TASK_CARD_BOARD },
+  { key: 'calendar', title: () => LOCALE.TASK_CARD_CALENDAR },
+  { key: 'gantt', title: () => LOCALE.TASK_CARD_GANTT },
+  { key: 'list', title: () => LOCALE.TASK_CARD_LIST },
+  { key: 'health', title: () => LOCALE.TASK_CARD_HEALTH },
+];
 
-module.exports = { VIEWS, screen };
+module.exports = function (ui, screen = {}) {
+  if (screen.dialog) return newTask(ui);
+  return emptyState(ui, {
+    title: LOCALE.TASK_HERO_TITLE,
+    desc: LOCALE.TASK_HERO_DESC,
+    cta: LOCALE.CREATE_FIRST_TASK,
+    // Narrow, so the headline's three hard lines have room to be three lines.
+    hero: 'narrow',
+    items: VIEWS.map((v) => ({ title: v.title(), node: taskPreview(ui, v.key) })),
+    index: screen.index || 0,
+    dots: true,
+    // The carousel screen carries no callout (see ../index.js), so this button
+    // is its only way forward — and it goes where its label says, straight to
+    // the New task dialog. The dot row above is inert scenery, as it is in the
+    // frames: the track moves on a timer and under a drag, not by being poked.
+    cta_service: 'next-step',
+  });
+};
+
+module.exports.VIEWS = VIEWS;

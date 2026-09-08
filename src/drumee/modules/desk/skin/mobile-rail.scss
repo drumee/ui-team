@@ -1,0 +1,114 @@
+@use "mixins/drumee";
+
+// The phone's workspace navigation — the Drumee 2.0 rail as a bottom bar.
+//
+// Rendered on mobile only (skeleton/index.js), so every rule here assumes it.
+//
+// This is the desktop rail translated, not a new invention. It keeps the
+// rail's own treatment from 43:23955 and sidebar.scss:
+//
+//   ground        --primary-70, the navy the desktop rail column wears (#3C3989)
+//   tile          40x40, r=8, transparent until active, then --primary-40
+//   glyph         28px on desktop; 24px here, where the row is shorter
+//   label         600 weight, --tertiary-grey-40 idle / --gray-white active
+//
+// What changes is the AXIS and nothing else: five tiles across instead of
+// down, because a phone reads its primary navigation along the bottom edge
+// where a thumb reaches.
+.desk-module {
+  &__mrail {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    align-items: stretch;
+    justify-content: space-around;
+    background-color: var(--primary-70);
+    // The home-indicator strip on a notched phone. Without this the last row
+    // of tiles sits under the system gesture bar.
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    // Hairline in the rail's own idle ink rather than a black rule, so it
+    // reads as part of the navy rather than a border drawn on top of it.
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  &__mrail-item {
+    align-items: center;
+    justify-content: flex-start;
+    gap: 3px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 2px 0;
+    cursor: pointer;
+    color: var(--tertiary-grey-40);
+    background-color: transparent;
+    // The whole item is the target, so the 44px minimum is met by the row
+    // rather than by the 32px tile inside it.
+    min-height: 46px;
+
+    &[data-radio="on"],
+    &[data-state="1"] {
+      color: var(--gray-white);
+
+      .desk-module__mrail-tile {
+        background-color: var(--primary-40);
+      }
+    }
+  }
+
+  &__mrail-tile {
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 32px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    color: currentColor;
+    transition: background-color 0.12s ease;
+  }
+
+  &__mrail-glyph {
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  &__mrail-label {
+    @include drumee.typo($size: 11px, $line: 13px, $color: currentColor);
+    // drumee.typo() emits no font-weight at all, so it is written out — the
+    // rail's labels are 600 and these must match.
+    font-weight: 600;
+    width: 100%;
+    max-width: 100%;
+    pointer-events: none;
+    // A Note is a FLEX ROW (its model defaults flow "wrap" → data-flow →
+    // lib/container.scss makes it flex-direction: row), so text-align on this
+    // wrapper never moves the inner .note-content — it sat packed LEFT, which
+    // put "Files" beside-left of its glyph instead of under it. Centre the
+    // flex child, then centre + truncate the text inside it. Same fix the
+    // desktop rail labels needed (sidebar.scss __item-text).
+    justify-content: center;
+
+    .note-content {
+      max-width: 100%;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // The bar is fixed, so it covers content unless the scroll box reserves the
+  // space. __body owns the scrolling area on mobile.
+  &__body[data-device="mobile"] {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+}

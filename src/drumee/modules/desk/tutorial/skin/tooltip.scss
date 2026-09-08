@@ -1,177 +1,377 @@
+@use 'sass:math';
+@use 'mixins/drumee';
 
-// ── Shared tutorial badge (tutorial__s1-*) ────────────────────────────────
-// The toolkit uses ui.fig.group ("tutorial") as the BEM root for badge
-// elements so all tutorial widgets share these rules.
+// ── The tutorial callout (tutorial__bubble-*) ─────────────────────────────
+// Drumee 2.0, Figma canvas 129:13815. A white speech bubble with a beak on
+// the edge facing its target. The toolkit uses ui.fig.group ("tutorial") as
+// the BEM root so every step widget shares these rules.
+//
+// Metrics read off the frame's own node geometry (142:40285, via Figma
+// metadata — not eyeballed): card 297x230.875, 24px insets, 12px radius,
+// content column 249 wide. The card is a column of TWO at 24px (body, footer);
+// the body a column of three at 17px (dashes, title, desc). Dashes are 24x6 at
+// 4px, radius 12. Back/Next are 118.5 each at 12px — equal halves of the 249.
+//
+// The shadow stays 0 1px 11px: the frame's effect style is
+// `DROP_SHADOW radius 11`, and Figma's radius is the box-shadow blur. (The
+// design-context export writes it as `drop-shadow(... 5.5px)` because a CSS
+// FILTER shadow is stdDeviation-based, i.e. half the radius — which is exactly
+// what the beak below uses, since a filter is what follows its clipped
+// silhouette. Same shadow, two correct spellings.)
+
+// Half-diagonal of the rotated square that forms the tail.
+$beak: 9px;
+
+// The tail's real shape, measured where it counts: how far it reaches out from
+// the card, and how wide it sits at the card's edge.
+//
+// Sized off the CHAT callout's own nodes, which is the card these numbers were
+// last checked against (Figma 142:40283/84/85, read via metadata rather than
+// eyeballed):
+//
+//   depth   the outer frame 142:40283 is 248.875 tall and the card 142:40285 is
+//           230.875 — the tail accounts for the 18px difference.
+//   across  the tail is Polygon 1 (142:40284), a 40x40 regular polygon centred
+//           on the card, whose visible triangle sits at 14% insets — ~29px.
+//
+// The older polygon 200:9166 measures ~14 deep and ~15.5 across, and 17/9.5
+// was set from it. The two frames disagree; this follows the chat frame, whose
+// card every other metric in this file is also matched against.
+//
+// Shaped by SCALING after the rotation instead of swapping in a clip-path or a
+// mask: the square keeps `background: inherit` and `box-shadow: inherit`, so
+// the tail still takes the card's own surface and edge in either theme, and the
+// scale is symmetric about the element's centre — which already sits on the
+// card's edge, so every offset and inset below goes on meaning what it meant.
+//
+// These are the wedge BEFORE its tip is rounded off and before the 1px it is
+// pushed back into the card — both of which eat into the silhouette, so the
+// declared numbers run larger than the rendered ones. Picked by measuring the
+// render: 21/16.25 comes out at ~17 deep x ~28 across.
+$beak-out: 21px;
+$beak-half: 16.25px;
+// Half-extent of the 45deg-rotated square, before scaling: side / sqrt(2).
+$beak-diag: $beak * 1.41421356;
+$beak-scale-out: math.div($beak-out, $beak-diag);
+$beak-scale-across: math.div($beak-half, $beak-diag);
+// Also in spotlight/index.js as BEAK_INSET — it caps how far the card may be
+// nudged before the tail would leave it.
+$beak-inset: 26px;
+
+// The floating-surface shadow, declared once and used by BOTH the card and its
+// tail — which is what "the beak has the same shadow as the card" has to mean
+// structurally, rather than the same numbers typed twice.
+$card-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+
+// How far the card has been pushed back inside the tour, set by the spotlight
+// when the anchor put it over an edge (spotlight/index.js _keepInView). It is
+// composed into the placement transform below rather than replacing it, and
+// the beak is offset by the SAME amount in the opposite direction so the tail
+// stays on the anchor while the card moves.
+$nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
+
 .tutorial {
-  // ── Step tooltip ──────────────────────────────────────────────────────────
-  &__s1-tooltip {
+  &__bubble-card {
     position: absolute;
-    transform: translateX(-50%);
-    align-items: center;
+    box-sizing: border-box;
+    width: 297px;
+    padding: 24px;
+    gap: 24px;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    box-shadow: $card-shadow;
     pointer-events: all;
-    // Above any step's content, not merely above the vignette it sits on. The
-    // callout used to win only because the spotlight layer happens to be the
-    // last child of the tutorial layout; a step that declares a stacking order
-    // of its own (the tracker window does — see task/skin __main) would
-    // otherwise be able to draw over the card the user is reading.
+    // Above any step's own content, not merely above the scrim it sits on.
     z-index: 10010;
 
-    &[data-direction="east"],
-    &[data-direction="west"] {
-      transform: translateY(-50%);
+    // ── Beak ──────────────────────────────────────────────────────────────
+    // Still a rotated square, and still `background: inherit`, so the tail
+    // takes the card's own surface in either theme instead of being a wedge
+    // that has to be recoloured per theme. What it is NOT any more is a whole
+    // square with half of it "behind" the card.
+    //
+    // That half was never behind anything. A negative z-index child paints in
+    // its parent's stacking context AFTER the parent's background (CSS 2.1
+    // Appendix E, step 2 follows step 1), so the inner half sat ON the card —
+    // invisible while both were white, but its inherited box-shadow was not,
+    // and it drew a grey seam straight across the card's face beside the tail.
+    // Widening the wedge to the frame's 58 degrees is what made that seam
+    // impossible to miss.
+    //
+    // So only the half that shows is drawn. `clip-path` cuts the square along
+    // the diagonal that separates the outward corner from the other three, in
+    // the element's own coordinates — before the transform, which is why one
+    // polygon per direction is enough and the rotation still does the work.
+    // The rounded corner survives the cut and becomes the tail's rounded tip.
+    //
+    // The tail carries the CARD'S OWN `box-shadow`, from the shared
+    // $card-shadow above — not a `filter: drop-shadow` equivalent of it.
+    //
+    // A box-shadow paints outside the border box, so the clip below would
+    // normally delete it: measured, the same declaration reaches 9px past the
+    // tip unclipped and 1px clipped. The clip is therefore WIDENED rather than
+    // dropped — a `clip-path` polygon may sit outside the element's box, so
+    // each one below keeps its cut line exactly where it was and pushes the
+    // other three vertices out to ±100/200%. The half-plane that is kept is
+    // unchanged, so the inner half and any shadow on that side are still cut
+    // and the card's face stays clean; the shadow simply has room to land on
+    // the outward side.
+    //
+    // Dropping the clip instead is what the note above describes: the whole
+    // square draws, its shadow with it, and a grey seam appears across the
+    // card beside the tail.
+    &::after {
+      content: "";
+      position: absolute;
+      width: $beak * 2;
+      height: $beak * 2;
+      background: inherit;
+      box-shadow: $card-shadow;
+      // Overridden per direction below, which is where the wedge gets its
+      // angle; this is the shared 45deg the scale is applied on top of.
+      transform: rotate(45deg);
+      // ~4px on the frame's polygon. It lands elliptical once the scale is on,
+      // which is what a tapered tail's tip looks like anyway.
+      border-radius: 3px;
     }
+
+    // Each polygon's HYPOTENUSE is the cut line and is unchanged: north/south
+    // both run along x + y = 100%, east/west along y = x. Only the far vertices
+    // moved, from the box's corners out to ±100/200%, which is what gives the
+    // box-shadow somewhere to paint. Verify by substitution — (200%,-100%) and
+    // (-100%,200%) both satisfy x + y = 100%, as (100%,0) and (0,100%) did.
+    //
+    // rotate(45deg) sends the square's top-left corner to the top, top-right to
+    // the right, bottom-right to the bottom and bottom-left to the left. The
+    // kept half is the triangle holding whichever corner points away from the
+    // card.
+    &[data-direction="north"]::after { clip-path: polygon(-100% -100%, 200% -100%, -100% 200%); }
+    &[data-direction="south"]::after { clip-path: polygon(200% -100%, 200% 200%, -100% 200%); }
+    &[data-direction="east"]::after { clip-path: polygon(-100% -100%, 200% -100%, 200% 200%); }
+    &[data-direction="west"]::after { clip-path: polygon(-100% -100%, -100% 200%, 200% 200%); }
   }
 
-  &__s1-connector {
-    align-items: center;
+  // Progress + copy. 17px apart, which is the frame's own spacing between the
+  // dash row, the heading and the paragraph — see the note above on why this is
+  // a box of its own rather than three more children of the card.
+  &__bubble-body {
+    gap: 17px;
   }
 
-  &__s1-connector-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #7b6ef0;
-    flex-shrink: 0;
-  }
-
-  &__s1-connector-line {
-    width: 2px;
-    height: 22px;
-    background: #7b6ef0;
-    flex-shrink: 0;
-
-    &[data-direction="east"],
-    &[data-direction="west"] {
-      width: 22px;
-      height: 2px;
-    }
-  }
-
-  &__s1-card {
-    width: 284px;
-    background: #f4f4f8;
-    border-radius: 16px;
+  // Bare bubble — 200:9167, the callout on the create-workspace frames.
+  //
+  // It HUGS its sentence: the frame's card is a flex column of one nowrap line
+  // at 24px insets, and it is 343px wide because that is how wide "Type your
+  // workspace name here" is at 20px SemiBold. Pinned to the standard 296 it
+  // wrapped to two lines and stopped being the shape the design draws.
+  //
+  // ONE WIDTH FOR EVERY CARD IN EVERY STEP. This used to hug its content
+  // (`width: max-content`, capped at `min(420px, 60vw)`), which is what the
+  // frames draw — but a tour alternates bare and standard screens, so the
+  // callout changed size as the user pressed Next and the eye had to find it
+  // again each time. A `text` screen and a `title`/`desc` screen are the same
+  // component saying different things, and they now measure the same.
+  //
+  // Only the insets differ, which is the part of the design that was about the
+  // bare shape rather than about its length.
+  //
+  // The window host carried this fix for its own tours already; it is the
+  // shared rule now, and that override is gone.
+  &__bubble-card--bare {
+    width: 297px;
     padding: 24px;
-    gap: 14px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
-    border: 1px solid var(--border-muted);
+    gap: 16px;
   }
 
-  // Header: step pill left, skip right. The pill keeps align-self:flex-start so
-  // it stays pill-shaped; the row is what spans the card.
-  &__s1-header {
+  // 20/1.1 SemiBold, from the frame's `Body/Sub tittle` style. The card's own
+  // hug is measured off this, so the two move together.
+  &__bubble-text {
+    @include drumee.typo($size: 20px, $line: 1.1);
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  // A card that had to travel further than its own tail could follow — see
+  // _keepInView. The beak would be pointing somewhere the card no longer is.
+  &[data-tail="off"]::after { display: none; }
+
+  // ── Placement + beak side ────────────────────────────────────────────────
+  // `direction` is the way the callout REACHES OUT, so the beak sits on the
+  // opposite edge to the travel: reaching north (card below the target) puts
+  // the beak on the card's top edge.
+  //
+  // `beak` slides the tail along that edge — and the card slides with it, so
+  // the tail stays on the anchor point rather than drifting off it.
+  &__bubble-card[data-direction="north"],
+  &__bubble-card[data-direction="south"] {
+    // Deep on the vertical axis, narrow on the horizontal: the tail runs out
+    // of the card's top or bottom edge.
+    &::after { transform: scale($beak-scale-across, $beak-scale-out) rotate(45deg); }
+
+    &[data-beak="center"] { transform: translateX(-50%) $nudge; }
+    &[data-beak="start"]  { transform: translateX(-#{$beak-inset}) $nudge; }
+    &[data-beak="end"]    { transform: translateX(calc(-100% + #{$beak-inset})) $nudge; }
+
+    // Half the rotated square pokes out; the other half hides behind the card.
+    // The nudge is subtracted so the tail holds its place on the anchor.
+    &::after { margin-left: calc(-1 * #{$beak} - var(--bubble-nudge-x, 0px)); }
+
+    &[data-beak="center"]::after { left: 50%; }
+    &[data-beak="start"]::after  { left: $beak-inset; }
+    &[data-beak="end"]::after    { left: auto; right: $beak-inset - $beak; }
+  }
+
+  &__bubble-card[data-direction="east"],
+  &__bubble-card[data-direction="west"] {
+    // The same wedge, turned a quarter: out of the left or right edge.
+    &::after { transform: scale($beak-scale-out, $beak-scale-across) rotate(45deg); }
+
+    &[data-beak="center"] { transform: translateY(-50%) $nudge; }
+    &[data-beak="start"]  { transform: translateY(-#{$beak-inset}) $nudge; }
+    &[data-beak="end"]    { transform: translateY(calc(-100% + #{$beak-inset})) $nudge; }
+
+    &::after { margin-top: calc(-1 * #{$beak} - var(--bubble-nudge-y, 0px)); }
+
+    &[data-beak="center"]::after { top: 50%; }
+    &[data-beak="start"]::after  { top: $beak-inset; }
+    &[data-beak="end"]::after    { top: auto; bottom: $beak-inset - $beak; }
+  }
+
+  // The element's CENTRE lands on the card's edge, which is what puts the kept
+  // half wholly outside it — and then 1px back in, so the cut edge and the
+  // card's own edge cannot leave a hairline between them at fractional zooms.
+  &__bubble-card[data-direction="north"]::after { top: -$beak + 1px; }
+  &__bubble-card[data-direction="south"]::after { bottom: -$beak + 1px; }
+  // Reaching east = the card is to the target's LEFT, so the tail is on its
+  // right edge.
+  &__bubble-card[data-direction="east"]::after { right: -$beak + 1px; }
+  &__bubble-card[data-direction="west"]::after { left: -$beak + 1px; }
+
+  // ── Progress: the "STEP n/m" pill ────────────────────────────────────────
+  // The share flow's form (148:41197 onward): a dot and an uppercase count in
+  // a tinted pill, sitting at the card's top-left.
+  &__bubble-pill {
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
     gap: 8px;
-  }
-
-  &__s1-skip {
-    width: 20px;
-    height: 20px;
-    flex: 0 0 auto;
-    cursor: pointer;
-    opacity: 0.45;
-    transition: opacity 0.15s ease;
-
-    &:hover,
-    &:focus-visible {
-      opacity: 1;
-    }
-
-    svg {
-      width: 12px;
-      height: 12px;
-      fill: var(--normal-fg);
-    }
-  }
-
-  &__s1-badge {
-    align-items: center;
-    gap: 6px;
-    background: #e8e5fa;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 4px 10px;
     border-radius: 99px;
-    padding: 4px 10px 4px 8px;
+    background: var(--primary-purple-10);
     align-self: flex-start;
   }
 
-  &__s1-badge-dot {
+  &__bubble-pill-dot {
     width: 7px;
     height: 7px;
+    flex: 0 0 auto;
     border-radius: 50%;
-    background: #7b6ef0;
-    flex-shrink: 0;
+    background: var(--primary-purple-50);
   }
 
-  &__s1-badge-text {
-    font-family: var(--font-main);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #7b6ef0;
+  &__bubble-pill-text {
+    @include drumee.typo($size: 11px, $line: 1.2, $letter: 0.04em);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-purple-50);
   }
 
-  &__s1-title {
-    font-family: var(--font-main);
-    font-size: 20px;
-    font-weight: 700;
-    color: #1a1a2e;
-    line-height: 1.25;
-  }
-
-  &__s1-desc {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 400;
-    color: #5a5a72;
-    line-height: 1.55;
-  }
-
-  &__s1-footer {
+  // ── Progress: dashes ─────────────────────────────────────────────────────
+  &__bubble-dashes {
     align-items: center;
-    justify-content: space-between;
-    margin-top: 8px;
+    // 4px, from the dash x-positions in 169:39401: 0, 28, 56, 84 at 24 wide.
+    gap: 4px;
   }
 
-  &__s1-back {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    color: #5a5a72;
-    cursor: pointer;
+  &__bubble-dash {
+    width: 24px;
+    // 6px tall and fully rounded — a 24x6 stadium, not the 24x4 hairline this
+    // drew. radius 12 is the frame's value and exceeds half the height, which
+    // is what makes the ends semicircular.
+    height: 6px;
+    border-radius: 12px;
+    // Grey/30.
+    background: var(--normal-bg-80);
+    flex: 0 0 auto;
 
-    &:hover {
-      color: #1a1a2e;
+    &[data-on="1"] {
+      // Primary/40 #5950ff, NOT Primary/50 #433cc5 — which is the Next
+      // button's fill and is what this used. The two are a visibly different
+      // purple side by side in the same card.
+      background: var(--primary-purple-40);
     }
   }
 
-  &__s1-next {
-    font-family: var(--font-main);
-    font-size: 13px;
+  // Body/Sub tittle: Geist SemiBold 20/1.1.
+  &__bubble-title {
+    @include drumee.typo($size: 20px, $line: 1.1);
     font-weight: 600;
-    color: #fff;
-    background: #7b6ef0;
+    color: var(--normal-fg);
+  }
+
+  // Body/Small Body: Geist Regular 14/1.4, Grey/80.
+  &__bubble-desc {
+    @include drumee.typo($size: 14px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  // No margin-top: the card's own 24px gap is the space the frame puts between
+  // the copy and the buttons. The 8px here used to be added ON TOP of a 12px
+  // gap, which came to 20 rather than 24.
+  &__bubble-footer {
+    align-items: center;
+    gap: 12px;
+  }
+
+  // Back and Next are equal halves. A lone Next (the migrate screens) spans
+  // the footer, which is what the design shows there.
+  // Buttons/Small Button: Geist SemiBold 14 on a 20px line, 8/24 insets — a
+  // 36px box, which is the height the frame's instances measure.
+  &__bubble-back,
+  &__bubble-next {
+    @include drumee.typo($size: 14px, $line: 20px);
+    flex: 1 1 0;
+    box-sizing: border-box;
+    padding: 8px 24px;
     border-radius: 8px;
-    padding: 8px 18px;
+    // See the note on __wsd-submit: a Note's copy sits in an inner block, so
+    // the box needs centring too, not just the text.
+    text-align: center;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background-color 0.15s ease;
+  }
+
+  &__bubble-back {
+    // SemiBold like its neighbour, and Grey/70 rather than the near-black this
+    // had: the frame's Back reads as the quieter of the pair through COLOUR,
+    // with both buttons at the same weight.
+    font-weight: 600;
+    color: var(--normal-fg-50);
+    background: var(--normal-bg-90);
+
+    &:hover { background: var(--normal-bg-80); }
+  }
+
+  &__bubble-next {
+    font-weight: 600;
+    color: var(--reverse-fg);
+    background: var(--primary-purple-50);
     // The spinner below is centred on this box.
     position: relative;
 
-    &:hover {
-      background: #6558d6;
-    }
+    &:hover { background: var(--primary-purple-40); }
 
     // Set by spotlight.busy() while the tour's closing write is in flight.
-    // Only the last screen's button can reach this state — it is the only one
-    // that waits on anything.
+    // Only the last screen's button can reach this state.
     &.loading {
-      // Not just cosmetic: the host also guards re-entry, but taking the
-      // button out of the event stream is what stops the press registering at
-      // all rather than being swallowed one frame later.
+      // Not just cosmetic: taking the button out of the event stream is what
+      // stops a second press registering at all.
       pointer-events: none;
-      // The label is hidden rather than replaced so the button keeps its width
-      // and the footer does not reflow under the user's cursor.
+      // The label is hidden rather than replaced so the button keeps its
+      // width and the footer does not reflow under the user's cursor.
       color: transparent;
 
       &::after {
@@ -188,120 +388,79 @@
         animation: tutorial-spin 0.6s linear infinite;
       }
 
-      // A spinner that cannot spin still has to read as "working", so it stays
-      // as a static ring rather than disappearing.
+      // A spinner that cannot spin still has to read as "working", so it
+      // stays as a static ring rather than disappearing.
       @media (prefers-reduced-motion: reduce) {
         &::after { animation: none; }
       }
     }
   }
 
-  &__tooltip-anchor {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    overflow: visible;
-    width: 0;
-    height: 0;
+  // ── Dimming inside a lit surface ─────────────────────────────────────────
+  // The design does not only dim the desk behind the callout — inside the lit
+  // surface it holds back the rows the screen is not about (the create-
+  // workspace dialog lights the name field, then the type rows, then Create).
+  // Steps mark those with data-dim, so the rule lives here once rather than
+  // in each step's skin.
+  [data-dim="1"] {
+    opacity: 0.35;
+    transition: opacity 220ms ease;
   }
-
-  // ── Redesigned callout card (opt-in: tooltipBadge({variant:'figma'})) ──────
-  // Measured from the Step 2 designs (Figma 5:75074 / 3202:3732 / 3202:76934):
-  // card 320×291 with 24px insets, badge at y24, title at y64, footer pinned
-  // at y227, connector 40px from the card edge to the target.
-  //
-  // Scoped to the variant so the steps that were not part of that redesign
-  // keep rendering the card above, unchanged.
-  &__s1-tooltip[data-variant="figma"] {
-
-    .tutorial__s1-card {
-      width: 320px;
-      box-sizing: border-box;
-      min-height: 291px;
-      background: #f2f2f7;
-      border: none;
-      border-radius: 16px;
-      padding: 24px 24px 28px;
-      gap: 16px;
-      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    }
-
-    .tutorial__s1-badge {
-      height: 24px;
-      box-sizing: border-box;
-      gap: 8px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: rgba(89, 80, 255, 0.1);
-    }
-
-    .tutorial__s1-badge-dot {
-      width: 8px;
-      height: 8px;
-      background: #433cc5;
-    }
-
-    .tutorial__s1-badge-text {
-      font-family: "Geist Mono", monospace;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.48px;
-      line-height: 1.4;
-      text-transform: uppercase;
-      color: #433cc5;
-    }
-
-    .tutorial__s1-title {
-      font-size: 20px;
-      font-weight: 600;
-      line-height: 1.1;
-      color: #0b0a21;
-    }
-
-    .tutorial__s1-desc {
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 1.4;
-      color: #65656c;
-    }
-
-    // Only the bottom-pinning is variant-specific — the card is a fixed 291px
-    // and the footer sits on its bottom inset. Back and Next themselves are
-    // deliberately NOT restyled here: they inherit the shared rules above so
-    // the buttons read the same on every step of the tour.
-    .tutorial__s1-footer {
-      margin-top: auto;
-    }
-
-    // 40px from the card edge to the target: 12px GAP (spotlight anchorFor)
-    // + 20px line + 8px dot.
-    .tutorial__s1-connector-dot {
-      width: 8px;
-      height: 8px;
-      background: #b1adff;
-    }
-
-    .tutorial__s1-connector-line {
-      background: #b1adff;
-
-      &[data-direction="east"],
-      &[data-direction="west"] {
-        width: 20px;
-        height: 2px;
-      }
-
-      &[data-direction="north"],
-      &[data-direction="south"] {
-        width: 2px;
-        height: 20px;
-      }
-    }
-  }
-
 }
+
 // Outside .tutorial: @keyframes is not scoped by the selector it sits under,
 // so nesting it there would only make the name harder to find.
 @keyframes tutorial-spin {
   to { transform: rotate(360deg); }
+}
+
+// ── Size tiers ───────────────────────────────────────────────────────────────
+//
+// Stamped on the tour root by _applySize (tutorial/index.js).
+
+// NARROW: the card keeps its anchored placement — there is still room to point
+// at things — but stops being wider than the space it has to fit in.
+.tutorial-main[data-size="narrow"] .tutorial__bubble-card {
+  width: 268px;
+  padding: 18px;
+}
+
+// MOBILE: a bottom sheet, not a pointer.
+//
+// 296px of card anchored to a target on a 390px screen has nowhere to go: it
+// covers the thing it is describing, and _keepInView can only push it back
+// inside by moving it over something else. A sheet pinned to the bottom is the
+// pattern the platform already uses for this, and it keeps Back and Next in the
+// one place a thumb reaches — which is what the last two rounds of this bug
+// were about.
+//
+// !important because anchorFor writes left/top/right/bottom inline, per screen,
+// as the whole mechanism of pointing at something. There is no specificity that
+// beats an inline style, and the alternative — teaching the JS about tiers and
+// branching the placement there — would put the same decision in two places and
+// let them disagree. The card is the one element in the tour whose position is
+// worth overriding this way.
+.tutorial-main[data-size="mobile"] .tutorial__bubble-card {
+  left: 12px !important;
+  right: 12px !important;
+  top: auto !important;
+  bottom: 12px !important;
+  width: auto !important;
+  max-width: none !important;
+  // Placement transforms carry the beak offset and the keep-in-view nudge; a
+  // sheet is where it is put.
+  transform: none !important;
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.18);
+
+  // The tail pointed at an anchor the sheet no longer sits beside.
+  &::after { display: none; }
+}
+
+// SHORT: the card is competing with the pane for height, so it gives up padding
+// before it gives up its buttons.
+.tutorial-main[data-short="1"] .tutorial__bubble-card {
+  padding: 16px;
+  gap: 8px;
 }

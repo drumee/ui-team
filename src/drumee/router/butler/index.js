@@ -411,6 +411,8 @@ class __router_butler extends LetcBox {
       return setTimeout(() => {
         Visitor.clear();
         Host.clear();
+        // The session read cache goes with the session (libs/read-cache).
+        require("libs/read-cache").clear();
         const { main_domain } = bootstrap()
         if (main_domain == location.hostname) {
           Drumee.start();

@@ -9,7 +9,12 @@ module.exports = function (opt = {}) {
 		disableAP: false,
 		disableAudioLevels: false,
 		disableSimulcast: false,
-		enableNoAudioDetection: false,
+		// Fire NO_AUDIO_INPUT / AUDIO_INPUT_STATE_CHANGE when the local mic
+		// delivers a flat zero level (lib-jitsi-meet NoAudioSignalDetection,
+		// 4 s of silence). This is how the room can tell the user "your
+		// microphone is not picking up sound" instead of leaving them
+		// inaudible with no clue, see webrtc/room/jitsi.js onNoAudioInput.
+		enableNoAudioDetection: true,
 		enableNoisyMicDetection: false,
 		enableOpusRed: false,
 		enableTalkWhileMuted: true,

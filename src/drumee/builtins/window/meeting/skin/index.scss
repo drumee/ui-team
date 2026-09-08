@@ -201,3 +201,23 @@
     transform: translate(-50%, -220px) scale(1.1);
   }
 }
+
+// "No sound is coming from your microphone" notice (webrtc/room/jitsi
+// showMicWarning). The message container is click-through by design (see
+// pointer-events above), so the notice's action has to opt back in to be
+// clickable; it opens the mic/speaker picker (service device-setting).
+.window__message-container .message-mic-warning {
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacer-2) var(--spacer-3);
+  max-width: none;
+
+  .message-mic-warning__action {
+    pointer-events: auto;
+    cursor: pointer;
+    text-decoration: underline;
+    white-space: nowrap;
+    color: #0b0a21;
+  }
+}

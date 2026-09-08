@@ -30,6 +30,69 @@
 const KEY = "drumee_billingDeepLink";
 
 /**
+ * The opaque marker naming who a campaign CTA was written for.
+ *
+ * A mail link ends up forwarded, screenshotted, and opened on machines already
+ * signed in as somebody else. Without this, any of those walks that person into
+ * a discounted checkout with a partner code applied that was never offered to
+ * them. With it, the desk drops the destination when the signed-in account does
+ * not match, and they land on an ordinary desk.
+ *
+ * A UX GUARD, NOT A SECURITY CONTROL. mkt_coupon_reserve has no recipient
+ * allowlist, so anyone who learns the code can type it into the promo field.
+ * What this stops is the AUTOMATIC path, not redemption. Restricting the code
+ * itself belongs in the proc.
+ *
+ * FNV-1a, matching analytics-server's _recipientTag byte for byte — the two
+ * must agree or every link is refused. Not cryptographic and not required to
+ * be: it is computed here synchronously (SubtleCrypto is async, and this runs
+ * inside a routing decision), and it protects nothing a determined person could
+ * not do by hand.
+ *
+ * @param {String} email
+ * @returns {String|null} 8 hex chars, or null for an unusable address
+ */
+function recipientTag(email) {
+  const s = String(email || "").trim().toLowerCase();
+  if (!s) return null;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
+/**
+ * Is this destination addressed to the account now signed in?
+ *
+ * TRUE WHEN THE LINK NAMES NOBODY, deliberately: every link written before this
+ * existed carries no marker, and so does one a caller built by hand. An absent
+ * marker means "not bound", not "refuse".
+ *
+ * TRUE WHEN THE SESSION HAS NO ADDRESS TO COMPARE. Refusing there would turn a
+ * missing profile field into a silently dead campaign link, which is a worse
+ * failure than the one this guards against.
+ *
+ * @param {Object} preselect from consume()
+ * @returns {Boolean}
+ */
+function isForCurrentUser(preselect) {
+  const want = preselect && preselect.for;
+  if (!want) return true;
+  let email = "";
+  try {
+    email = (typeof Visitor !== "undefined" && Visitor && Visitor.profile
+      ? (Visitor.profile() || {}).email
+      : "") || "";
+  } catch (e) {
+    return true;
+  }
+  if (!email) return true;
+  return recipientTag(email) === String(want).trim().toLowerCase();
+}
+
+/**
  * Shapes that mean "open billing".
  *
  * Two of them, because they survive different things:
@@ -66,13 +129,30 @@ function urlWantsBilling() {
 }
 
 /**
- * Pull the preselect out of the hash's query string, e.g.
- * `#/desk/billing?plan=pro&cycle=yearly&tab=checkout`. Only the keys actually
- * present are returned; validating the VALUES is the billing widget's job (this
- * lib stays dumb so a malformed param can never break the boot). Returns {}
- * when the link carries no preselect.
+ * Pull the preselect out of the hash's query string, e.g. the link the segment
+ * campaign mails carry:
  *
- * @returns {{plan?:string, cycle?:string, tab?:string}}
+ *   #/desk/billing?plan=team&cycle=monthly&tab=checkout&promo=EMAILMKT270826_2
+ *
+ * Only the keys actually present are returned; validating the VALUES is the
+ * billing widget's job (this lib stays dumb so a malformed param can never
+ * break the boot). Returns {} when the link carries no preselect.
+ *
+ * AN ALLOWLIST, NOT A PASSTHROUGH, and it has to stay one. This runs from the
+ * router's initialize, before a module — and therefore before anything that
+ * could sanitise a value — is in play, and whatever it returns is handed
+ * straight to sessionStorage by arm(). Forwarding arbitrary keys would put
+ * unread link content into storage and then into a widget's options.
+ *
+ * `promo` is the coupon the CTA carries into checkout. It is on this list
+ * rather than read from the URL later for the reason the whole module exists:
+ * arm() stores what THIS function returns, so a key missing here is a key lost
+ * across the sign-in reload as well — and a mail recipient is very often
+ * signed out.
+ *
+ * `for` is the recipient marker — see recipientTag below.
+ *
+ * @returns {{plan?:string, cycle?:string, tab?:string, promo?:string, for?:string}}
  */
 function parseParams() {
   const out = {};
@@ -81,7 +161,7 @@ function parseParams() {
     const q = hash.indexOf("?");
     if (q === -1) return out;
     const usp = new URLSearchParams(hash.slice(q + 1));
-    for (const k of ["plan", "cycle", "tab"]) {
+    for (const k of ["plan", "cycle", "tab", "promo", "for"]) {
       const v = usp.get(k);
       if (v) out[k] = v;
     }
@@ -95,7 +175,7 @@ function parseParams() {
  * Remember that this visit should end on the billing screen, with whatever
  * plan/cycle/tab preselect the link carried.
  *
- * @param {Object} [params] preselect from parseParams()
+ * @param {Object} [params] preselect from parseParams() — {plan,cycle,tab,promo}
  */
 function arm(params) {
   try {
@@ -120,21 +200,89 @@ function captureFromUrl() {
 }
 
 /**
- * Take the intent, if there is one. Reading CLEARS the stored copy — an intent
- * acted on twice would reopen billing over whatever the user did next.
+ * Drop the intent on THIS origin, without acting on it.
+ *
+ * For the one moment the URL takes over as the carrier: the router is about to
+ * set location.host, which keeps path and hash, so the destination travels to
+ * the new origin and is re-armed there by captureFromUrl. The copy left behind
+ * is then pure liability — Butler.logout brings the visitor back to this very
+ * origin, and a copy sitting here is read at the NEXT sign-in and replays the
+ * whole flow for somebody who never clicked anything.
+ *
+ * NOT consume(). That means "I am acting on this now" and returns the value;
+ * this means "somebody else is carrying it from here".
+ *
+ * Clearing at the sign-in form instead does not work, and the reason is worth
+ * recording: the value is cleared there, then written into the URL, and the
+ * reload's own captureFromUrl immediately re-arms it from that URL. Measured
+ * against the live site. The only place the copy can be dropped for good is
+ * after the URL has demonstrably taken over.
+ */
+/**
+ * Is the CURRENT url a hand-off — a destination signin put there so it would
+ * survive the host switch?
+ *
+ * NOT the same question as urlWantsBilling(), and the difference is a bug that
+ * shipped. That one is true for BOTH url shapes, and the two mean opposite
+ * things here:
+ *
+ *   #/desk/billing?…   A CLICK. The CTA itself, as the visitor arrived on it.
+ *                      changeHost keeps path and hash, so it rides to the org
+ *                      host under its own steam — and this origin's stored copy
+ *                      is still the only one that survives a later sign-out.
+ *   ?billing=1&…       A HAND-OFF. Written only by signin's billingReturnUrl,
+ *                      for exactly one purpose: to carry the destination across
+ *                      the switch on behalf of the account it belongs to.
+ *
+ * Disarming on the first form drops the destination while a REFUSED visitor is
+ * being switched to their own org host — measured: a wrong-account sign-in
+ * landed on `…#/desk/billing?…&for=…`, having taken the recipient's copy with
+ * it, and the recipient's own sign-in afterwards found nothing.
+ *
+ * @returns {Boolean}
+ */
+function urlIsHandoff() {
+  try {
+    return ARG.test(String(window.location.hash || ""));
+  } catch (e) {
+    return false;
+  }
+}
+
+function disarm() {
+  try {
+    sessionStorage.removeItem(KEY);
+  } catch (e) {
+    // Blocked storage — there was nothing to drop.
+  }
+}
+
+/**
+ * Read the intent without taking it.
+ *
+ * THE READ HALF of consume(), split out because a caller has to be able to
+ * decide BEFORE it commits. Refusing after consuming throws away a destination
+ * nobody used: a wrong-account sign-in, or an account that cannot buy yet,
+ * permanently destroyed a link written for somebody else — who then signed in
+ * and found nothing.
+ *
+ * Three functions, one decision:
+ *   peek     read, take nothing     — for a caller that might refuse
+ *   consume  read and take          — for the caller that is acting on it
+ *   disarm   take without reading   — when the URL is carrying it onward
  *
  * The url is accepted as a second source so the signed-in case does not depend
  * on storage at all: there, the hash is still intact by the time the desk boots.
  *
- * @returns {Object|null} the preselect object ({plan?,cycle?,tab?}, possibly
- *   empty) when this boot should open billing, else null. An empty object is
- *   still truthy, so callers that only test truthiness keep working unchanged.
+ * @returns {Object|null} the preselect object
+ *   ({plan?,cycle?,tab?,promo?,for?}, possibly empty) when this boot should open
+ *   billing, else null. An empty object is still truthy, so callers that only
+ *   test truthiness keep working unchanged.
  */
-function consume() {
+function peek() {
   try {
     const raw = sessionStorage.getItem(KEY);
     if (raw != null) {
-      sessionStorage.removeItem(KEY);
       try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
     }
   } catch (e) {
@@ -145,4 +293,30 @@ function consume() {
   return urlWantsBilling() ? parseParams() : null;
 }
 
-module.exports = { arm, consume, captureFromUrl, urlWantsBilling, parseParams, KEY };
+/**
+ * Take the intent, if there is one.
+ *
+ * ONLY CALL THIS WHEN YOU ARE GOING TO ACT ON IT. A caller that reads here and
+ * then refuses has destroyed a destination nobody used — see peek().
+ *
+ * Consuming IS what makes the destination single-use, and that is not being
+ * relaxed: the matching account still takes it, so it cannot replay after a
+ * later sign-out.
+ *
+ * Defined in terms of peek() so the two cannot answer differently — the URL
+ * fallback especially, where a direct click and a stored intent would otherwise
+ * be able to take different paths.
+ *
+ * @returns {Object|null} as peek()
+ */
+function consume() {
+  const found = peek();
+  if (found) disarm();
+  return found;
+}
+
+module.exports = {
+  arm, disarm, peek, consume, captureFromUrl, urlWantsBilling, urlIsHandoff,
+  parseParams,
+  recipientTag, isForCurrentUser, KEY,
+};

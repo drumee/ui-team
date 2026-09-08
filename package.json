@@ -94,6 +94,7 @@
     "backbone.radio": "^2.0.0",
     "buffer": "^6.0.3",
     "c3": "^0.4.24",
+    "canvas-confetti": "^1.9.4",
     "cheerio": "^1.2.0",
     "color": "^4.2.3",
     "createjs": "^1.0.1",

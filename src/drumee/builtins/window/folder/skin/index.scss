@@ -163,6 +163,18 @@
   }
 }
 
+
+// Entrance / exit for the create-folder card, mirroring media/form's pair.
+@keyframes window-folder-dialog-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes window-folder-dialog-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.96); }
+}
+
 .window-folder {
   &__ui {
     // Container query anchor. The folder window registers itself as a
@@ -211,13 +223,71 @@
     // the pane overflows right and its top-right icons get clipped. Headless
     // panes aren't draggable/resizable (interact base returns early), so the
     // `!important` overrides of the inline geometry are safe.
+    // 43:23955: the workspace ("file space") is a rounded CARD, not a
+    // full-bleed region — 992x1026 at x=80 with r=8 and a 5%-black hairline,
+    // sitting in the canvas's 8px gutter next to the rail. It used to flatten
+    // its corners here precisely because it WAS full-bleed; the frame says
+    // otherwise, and the desk now supplies the gutter (skin/index.scss
+    // __main / __wm-container).
+    //
+    // The 100%/!important geometry stays: the pane still fills whatever box
+    // the layer gives it, and that box is now inset by the canvas padding.
+    // 43:23955 puts the workspace ("file space", 992x1026 at x=80) and the
+    // chat panel (512x1026 at x=1080) side by side as SIBLING cards with an
+    // 8px gutter — not two flush columns inside one container. So the headless
+    // pane is the ROW: transparent and unrounded, with the cards on its two
+    // children (.window__files-panel / .window__chat-panel below).
     &[data-headless="1"] {
       border-radius: 0;
+      border: none;
+      background-color: transparent;
       box-shadow: none;
       left: 0 !important;
+
+      // The shared popup surface (window/skin/group/body/main.scss
+      // `.window__main`) paints --normal-bg-90 with a border and radius —
+      // right for a real popup window, wrong for the workspace row.
+      //
+      // It gets the CANVAS colour rather than `transparent`, and that matters:
+      // the window manager still renders the desk home grid in the layer BELOW
+      // this pane, so a transparent row let those workspace/folder tiles show
+      // through the 8px gutter between the two cards. Painting the row white
+      // both matches the frame (the gutter is white canvas there) and occludes
+      // the grid behind it.
+      .window-folder__main,
+      .window__main {
+        background-color: var(--normal-bg);
+        border: none;
+        border-radius: 0;
+      }
       top: 0 !important;
       width: 100% !important;
       height: 100% !important;
+
+      // 43:23955's content frame carries 12px padding, and the toolbar and the
+      // file grid share that left edge — the filter tabs and the "Folders"
+      // heading both start 12px inside the card. The shared grid rule uses
+      // 24px, which is right for a popup window but left the grid indented
+      // past the toolbar here. Scoped to the workspace pane so real popups
+      // keep their own spacing.
+      .window__icons-list .smart-container {
+        padding: 12px;
+      }
+
+      // Gutter between the two cards. DESCENDANT, not `>`: data-headless is
+      // stamped on the widget ROOT (.window-folder__ui) while split-body is a
+      // grandchild (__ui > __main > __split-body), so a child combinator
+      // matched nothing and the panels stayed flush.
+      //
+      // 4px, not the canvas's 8px. The frame uses 8px here too, but both cards
+      // carry 12px of inner padding, so an 8px gutter reads far wider than the
+      // rail-to-workspace gap where only one side is padded. Half it so the
+      // two gutters look equal, which is what the frame looks like even though
+      // the numbers differ.
+      .window-folder__split-body,
+      .window__split-body {
+        gap: 4px;
+      }
     }
   }
 
@@ -518,7 +588,7 @@
         min-height: 30px;
         min-width: 82px;
         padding: 0 14px;
-        background-color: #b2adfa;
+        background-color: var(--primary-40);
         border: 0;
         border-radius: 8px;
         box-shadow: none;
@@ -526,7 +596,7 @@
         font-weight: 500;
         font-size: 14px;
         line-height: 16px;
-        color: #0b0a20;
+        color: var(--white);
         cursor: pointer;
         white-space: nowrap;
         display: flex;
@@ -554,7 +624,7 @@
         }
 
         &:hover {
-          background-color: #a7a2f0;
+          background-color: var(--primary-50);
         }
 
         &:active {
@@ -741,30 +811,9 @@
         min-height: 34px;
       }
 
-      .window-button__dropdown-menu__item--add-folder svg {
-        fill: #5950ff;
-        color: #5950ff;
-      }
-
-      .window-button__dropdown-menu__item--add-note svg {
-        fill: #e8a13b;
-        color: #e8a13b;
-      }
-
-      .window-button__dropdown-menu__item--document svg {
-        fill: #847eff;
-        color: #847eff;
-      }
-
-      .window-button__dropdown-menu__item--spreadsheet svg {
-        fill: #54b684;
-        color: #54b684;
-      }
-
-      .window-button__dropdown-menu__item--presentation svg {
-        fill: #ffa8dc;
-        color: #ffa8dc;
-      }
+      // Shared with the Files empty-state hero's copy of these rows, which is
+      // scoped where this block cannot reach it (window/skin/common.scss).
+      @include drumee.new-menu-icon-tints;
 
       // ── Mobile: centred card instead of an anchored dropdown ────────
       // Both flags, for the reason spelled out on the mixin.
@@ -816,14 +865,18 @@
     }
 
     // File view toggle — compact segmented control (group | list | grid).
+    // Figma 85:36284 "filter-bar": a white pill, hairline border, r=12, holding
+    // three 36px squares. 108 = 3 x 36; the segments are square in the frame so
+    // the container's width follows from their count.
     &__view-toggle {
       display: inline-flex;
       align-items: stretch;
-      width: 90px;
-      height: 30px;
-      flex: 0 0 90px;
-      border: 0;
-      border-radius: 8px;
+      width: 108px;
+      flex: 0 0 108px;
+      // rgba(0, 0, 0, 0.05) in the frame — which is exactly --border-muted in
+      // the light theme, so the token keeps dark mode working.
+      border: 1px solid var(--border-muted);
+      border-radius: 12px;
       background-color: #fff;
       box-shadow: none;
       overflow: hidden;
@@ -840,9 +893,12 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 30px;
-      height: 30px;
-      flex: 0 0 30px;
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+      // The frame's own value. The ACTIVE segment overrides this to 12px so its
+      // corners meet the container's — see the [data-state] rules below.
+      border-radius: 5.833px;
       gap: 0;
       padding: 0;
       border: 0;
@@ -867,10 +923,18 @@
       }
     }
 
+    // List and SquaresFour are 17.5px in the frame; TreeView is 17px, half a
+    // pixel smaller, and gets its own rule below rather than being rounded to
+    // match — the ask was the frame's icon sizes.
     &__view-toggle-glyph {
-      width: 14px;
-      height: 14px;
+      width: 17.5px;
+      height: 17.5px;
       flex-shrink: 0;
+    }
+
+    &__view-toggle-seg--group .window-folder-topbar__view-toggle-glyph {
+      width: 17px;
+      height: 17px;
     }
 
     // The shared Skeleton retains this glyph for DMZ; the folder presentation
@@ -885,8 +949,11 @@
       .window-folder-topbar__view-toggle-seg--list,
     &__view-toggle[data-state="grid"]
       .window-folder-topbar__view-toggle-seg--grid {
-      background-color: #b2adfa;
-      color: #65656c;
+      background-color: var(--primary-40);
+      color: var(--white);
+      // 12px, not the inactive 5.833px: in the frame the selected square's
+      // corners line up with the container's own radius.
+      border-radius: 12px;
     }
 
     &__view-toggle[data-state="group"]
@@ -895,7 +962,7 @@
       .window-folder-topbar__view-toggle-seg--list:hover,
     &__view-toggle[data-state="grid"]
       .window-folder-topbar__view-toggle-seg--grid:hover {
-      background-color: #a7a2f0;
+      background-color: var(--primary-50);
     }
 
     &__view-toggle[data-state="group"]
@@ -1534,7 +1601,51 @@
     pointer-events: none;
   }
 
-  &__create-folder-dialog,
+  // ── The create-folder card ──────────────────────────────────────────────
+  //
+  // The create-WORKSPACE dialog's ramp (builtins/media/form/skin), which is
+  // itself the workspace tour's `__wsd-*` card (Figma 176:40762). These two are
+  // the same act one level apart — make a container, name it — and they were
+  // visibly different objects: 360px against 460, a flat `--normal-bg-90`
+  // against an elevated surface with a hairline, and a 1px shadow against a
+  // real ambient one.
+  //
+  // Written out rather than shared: webpack injects a widget's stylesheet only
+  // when that widget loads, so a common partial would have to be @use'd from
+  // both sides anyway — the same reasoning media/form gives for copying the
+  // ramp off the tour rather than importing it.
+  //
+  // `__rename-folder-dialog` keeps its own smaller treatment below; only the
+  // create card is promoted.
+  &__create-folder-dialog {
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    gap: 24px;
+    padding: 32px;
+    border-radius: 24px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.15),
+      0 7px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+
+    // Entrance, matching media/form's.
+    //
+    // `backwards`, never `both`: a filling animation keeps its last keyframe
+    // forever and outranks inline styles, so anything positioning this element
+    // in JS afterwards would be silently overridden.
+    animation: window-folder-dialog-in 0.18s ease-out backwards;
+  }
+
+  // Set by whoever closes the dialog, which then defers the teardown so the
+  // exit actually gets frames. Without the flag the card is simply removed and
+  // there is no close animation at all — the entrance would be the only half.
+  &__create-folder-dialog[data-closing="1"] {
+    animation: window-folder-dialog-out 0.16s ease-in forwards;
+  }
+
   &__rename-folder-dialog {
     width: 360px;
     background: var(--normal-bg-90);
@@ -1688,6 +1799,88 @@
 
   &__create-folder-button {
     width: 100%;
+  }
+
+  // ── The create card's interior ──────────────────────────────────────────
+  //
+  // The CARD owns the rhythm now — 32px insets and a 24px stack, from
+  // media/form's ramp above. Everything below used to supply its own, from when
+  // this was a plain 360px box with no padding of its own, so each block added
+  // 24px inside the card's 32 and the card's gap added again between them: a
+  // dialog that was mostly empty space.
+  //
+  // Written as overrides after the shared rules rather than by editing them,
+  // because every one of those selectors is shared with `__rename-folder-*`,
+  // which keeps its own smaller treatment.
+  &__create-folder-header,
+  &__create-folder-content,
+  &__create-folder-footer {
+    padding: 0;
+  }
+
+  &__create-folder-header {
+    // No rule under the header. media/form dropped its own for the same reason:
+    // a title, a line of explanation and a cross do not need a border to read as
+    // a header, and the 24px stack already separates them from the field.
+    border-bottom: 0;
+  }
+
+  &__create-folder-content {
+    // Label to field. Tighter than the card's 24px stack because these two are
+    // one thing — the same relationship the heading's 4px expresses.
+    gap: 8px;
+  }
+
+  &__create-folder-close {
+    // media/form's close, which this card's ramp comes from. It had neither a
+    // cursor nor a hover state: the only thing saying the ✕ was a control was
+    // that it looks like one, and on a card the user is meant to answer, the
+    // way out should say so under the pointer.
+    cursor: pointer;
+    // A hit target the pointer can actually find. 14x24 is the glyph's own box
+    // and reads as a sliver off-centre; media/form uses a square, and the icon
+    // scales to it rather than being stretched.
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover {
+      color: var(--normal-fg);
+    }
+  }
+
+  &__create-folder-entry {
+    input {
+      // VISIBLE. The card is `--normal-bg-elevated` now and this input was the
+      // same colour with `border: 0`, so the field was invisible: the typed name
+      // floated on the card as bare text with no box around it.
+      //
+      // media/form's own input, which has always had to sit on that surface.
+      min-height: 44px;
+      padding: 0 14px;
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      background: var(--normal-bg-elevated);
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--normal-fg)
+      );
+
+      // NO focus style, by request.
+      //
+      // Worth knowing what that costs: `skin/lib/input.scss` already kills the
+      // native ring app-wide (`input { outline: none !important }`), so with the
+      // border change gone this field gives a keyboard user nothing at all to
+      // say where they are. There is one field on this card, so the cost is
+      // small here — but it is a cost, not a no-op.
+    }
   }
 
   &__rename-folder-button {
@@ -2382,14 +2575,40 @@
   &__split-body {
     grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 360px);
     height: 100%;
-    background: var(--normal-bg-90);
+    // Transparent: this is the ROW that holds the two cards, and in 43:23955
+    // the 8px gutter between them shows the white canvas. A grey ground here
+    // painted the gutter — and everything behind the cards — the wrong colour,
+    // which is what made the file space read as a different shade than the
+    // frame. The cards carry their own fills (white / #F2F2F7).
+    background: transparent;
 
-    .tasks-panel__ui {
+    // The task board and the Meeting schedule stay MOUNTED beside the file
+    // grid and the chat once opened (window/folder showFolderTab appends them
+    // once and never feeds the split body again), so each tab is revealed by
+    // its data-view below rather than rebuilt. Hidden here by default.
+    .tasks-panel__ui,
+    .window-folder__meeting-schedule {
       display: none;
     }
 
     &[data-view="meeting"] {
       grid-template-columns: 1fr;
+      // minmax(0, …) so the cell can shrink below the grid's content height
+      // and the 24-hour body scrolls inside the schedule instead of
+      // stretching the window (same reason the task view clamps its row).
+      grid-template-rows: minmax(0, 1fr);
+
+      .window__files-panel,
+      .window__chat-panel,
+      .window__thread-rail,
+      .window__file-thread-panel {
+        display: none;
+      }
+
+      .window-folder__meeting-schedule {
+        display: flex;
+        min-height: 0;
+      }
     }
   }
 
@@ -2497,9 +2716,13 @@
     max-width: 380px;
   }
 
+  // Card, per 43:23955: r=8 with a 5%-black hairline on white. It was square
+  // and grey because it used to butt against the chat column.
   .window__files-panel {
-    border-radius: 0;
-    background: var(--normal-bg-90);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--normal-bg-elevated, #fff);
+    overflow: hidden;
   }
 
   // The New cascade now starts inside the Files column. Lift that column above
@@ -2519,100 +2742,269 @@
     min-height: 0;
   }
 
+  // Card too — #F2F2F7 in the frame, which is exactly --normal-bg-90. The
+  // border-left divider goes: the 8px gutter separates the two cards now, so a
+  // divider on top of it reads as a seam.
   .window__chat-panel {
-    border-left: 1px solid var(--border-muted);
-    border-radius: 0;
+    border-left: none;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
     background: var(--normal-bg-90);
+    overflow: hidden;
   }
 
+  // ── Workspace toolbar search (43:23955) ───────────────────────────────────
+  // 245x36 white pill, r=12, 5%-black hairline, 12px padding, 8px between the
+  // glyph and the field. Built by fileFilterControls from the desk's own
+  // search builder, so it carries the window-folder-topbar__* prefix rather
+  // than the desk's — these rules are the folder-side half of that move.
+  &-topbar__search-container {
+    position: relative;
+    flex: 0 1 245px;
+    min-width: 160px;
+    max-width: 245px;
+  }
+
+  &-topbar__search-bar {
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  &-topbar__search-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: var(--normal-fg);
+  }
+
+  &-topbar__search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      line-height: 17px;
+      color: var(--normal-fg);
+    }
+  }
+
+  // Suggestions hang below the field, over the file grid.
+  &-topbar__search-suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 120;
+    max-height: 60vh;
+    overflow: auto;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+    &[data-state="0"] {
+      display: none !important;
+    }
+  }
+
+  // The hit rows. workspace_item is a SIDEBAR row by default — 32px tall, with
+  // tree indentation and a 14px label — so as a search hit it gets the same
+  // compact treatment the desk's own dropdown gives it (desk/skin/topbar.scss
+  // __suggestions-list). Without this the dropdown reads as a nested sidebar.
+  &-topbar__search-results {
+    width: 100%;
+    gap: 2px;
+
+    .workspace-item {
+      padding: 4px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+
+      &__row {
+        min-height: auto;
+        gap: 8px;
+        padding: 0;
+        font-size: 13px;
+
+        // Every hit is a flat result, never a level in a tree: kill the
+        // depth-indexed padding the sidebar rows carry.
+        &[data-level="0"],
+        &[data-radio="on"][data-level="0"] {
+          padding-left: 0;
+        }
+      }
+
+      // Icons keep the item skin's own sizing (22px box, folder art at its
+      // real 22x18 aspect, file glyphs at 18px) — overriding it here squashed
+      // the folder shape, which carries fixed SVG dimensions.
+      //
+      // A Note is a flex row, so the ellipsis has to go on the inner content
+      // element; `__name` itself only has to stop growing past the dropdown.
+      &__name {
+        min-width: 0;
+
+        .note-content {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      &:hover {
+        background: var(--hover-bg-40);
+      }
+    }
+  }
+
+  &-topbar__search-empty {
+    padding: 8px 6px;
+    color: var(--normal-fg-20);
+    font-size: 13px;
+  }
+
+  // 43:23955: the workspace toolbar sits on the file card's own WHITE ground
+  // with no divider — the filter tabs and the search/New group are the only
+  // painted things on it. It was a grey band with a bottom rule, which read as
+  // a second chrome strip under the top bar and made the file space look a
+  // different colour from the frame.
+  //
+  // The gap is the TRACK's now, not the bar's: with a painted segmented control
+  // on one side and the search/New/view group on the other, 24px between those
+  // two groups is right and 24px between the five tabs would stretch the track
+  // across the toolbar.
   &__filter-bar {
     align-items: center;
     gap: 24px;
-    padding: 8px 24px 8.5px;
-    border-bottom: 1px solid var(--border-default, #d1d1d6);
-    background: var(--normal-bg-90);
+    padding: 12px;
+    border-bottom: none;
+    background: transparent;
   }
 
-  &__filter-tab-main {
+  // The segmented control's ground — a grey pill holding the five tabs, with
+  // the active one filled (base image).
+  //
+  // The workspace toolbar wraps its tabs in `__filter-track` (skeleton/toolkit
+  // fileTypeFilterBar) rather than painting the bar, because the bar also holds
+  // search, "+ New" and the view toggle, and those must not sit on the track.
+  //
+  // The segment rules are NESTED in here, not left as a bare
+  // `&__filter-tab-main`, and that scoping is load-bearing. The other producer
+  // of these tabs — the plain grid bar in skeleton/content/grid — names them
+  // `window-filter__tab window-folder__filter-tab` and `button()` builds the
+  // root by suffixing the LAST class only, so its segments come out carrying
+  // `window-folder__filter-tab-main` too. That surface is not an unstyled
+  // orphan: `.window-filter__*` is a whole design of its own in
+  // window/skin/common.scss (grey bar, bottom divider, underline tabs), and a
+  // bare `&__filter-tab-main` here would land on it at EQUAL specificity to
+  // its own `.window-filter__tab` rules — leaving which look wins to
+  // stylesheet order, and painting pills inside a bar that still has a
+  // divider. Anchoring to the track keeps this change to the surface it is
+  // for.
+  //
+  // `flex: 0 0 auto` is what makes the track hug its five tabs — stretched, it
+  // would run the full width of the toolbar and stop reading as a group. Not
+  // the `display` below, which ui-core wins anyway: its own
+  // `.box[data-flow=x]` (container.css) is a class+attribute selector and
+  // beats a bare class, so the track computes to `flex`. Harmless — as a flex
+  // item of the bar, the basis decides the width either way.
+  &__filter-track {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    // #f2f2f7 in the light theme, which is the base image's track; the token
+    // carries the dark theme's #282538 with it.
+    background-color: var(--normal-bg-90);
+    box-sizing: border-box;
+  }
+
+  // One segment. Was an underline tab — 2px bottom border, area-tinted when
+  // active, 700/800 weight. The base image replaces the whole treatment with a
+  // filled pill, so the border, the weight jump and the four area tints are
+  // gone: the active segment is brand purple in every area, the way the "+ New"
+  // button beside it already is. (`--area-private` was the default underline
+  // colour, so an internal workspace's active tab used to be coral.)
+  &__filter-track &__filter-tab-main {
     align-items: center;
     justify-content: center;
-    min-height: 24px;
-    padding: 0 0 4px;
-    border-bottom: 2px solid transparent;
+    min-height: 32px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
     background: transparent;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+    // `font-weight` is declared here, NOT through typo()'s `$weight`: that
+    // argument only picks a `font-family` branch and emits no weight at all
+    // (skin/mixins/typo.scss). The underline tabs this replaces asked it for
+    // 700, and 800 when active, and rendered 400 both times. 500 is passed
+    // only because it is a branch the mixin recognises, so the family still
+    // lands.
+    font-weight: 500;
     @include drumee.typo(
       $size: 13px,
       $line: 1,
-      $weight: 700,
+      $weight: 500,
       $color: var(--normal-fg-10)
     );
 
     .window-folder__filter-tab,
     .note-content {
+      font-weight: 500;
       @include drumee.typo(
         $size: 13px,
         $line: 1,
-        $weight: 700,
+        $weight: 500,
         $color: var(--normal-fg-10)
       );
       cursor: pointer;
     }
 
-    &:hover[data-area="personal"] {
-      border-bottom-color: var(--area-personal);
-    }
-
-    &:hover[data-area="share"] {
-      border-bottom-color: var(--area-share);
-    }
-
-    &:hover[data-area="private"] {
-      border-bottom-color: var(--area-private);
-    }
-
-    &:hover[data-area="public"] {
-      border-bottom-color: var(--area-public);
+    // Hover only where it means something. On the active segment it would
+    // darken a filled pill for no reason, and the selector has to exclude BOTH
+    // active flags because the radiotoggle drives one and the initial render
+    // the other.
+    &:hover:not([data-state="1"]):not([data-radiotoggle="on"]) {
+      background-color: rgba(0, 0, 0, 0.04);
     }
 
     &[data-state="1"],
     &[data-radiotoggle="on"] {
-      padding-bottom: 6px;
-      border-bottom-color: var(--area-private);
+      background-color: var(--primary-40, #5950ff);
+      font-weight: 600;
       @include drumee.typo(
         $size: 13px,
         $line: 1,
-        $weight: 800,
-        $color: var(--normal-fg-10)
+        $weight: 500,
+        $color: var(--white)
       );
 
       .window-folder__filter-tab,
       .note-content {
+        font-weight: 600;
         @include drumee.typo(
           $size: 13px,
           $line: 1,
-          $weight: 800,
-          $color: var(--normal-fg-10)
+          $weight: 500,
+          $color: var(--white)
         );
       }
     }
-  }
-
-  &__filter-bar[data-area="personal"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="personal"]
-    &__filter-tab-main[data-radiotoggle="on"] {
-    border-bottom-color: var(--area-personal);
-  }
-
-  &__filter-bar[data-area="share"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="share"] &__filter-tab-main[data-radiotoggle="on"],
-  &__filter-bar[data-area="dmz"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="dmz"] &__filter-tab-main[data-radiotoggle="on"] {
-    border-bottom-color: var(--area-share);
-  }
-
-  &__filter-bar[data-area="public"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="public"] &__filter-tab-main[data-radiotoggle="on"] {
-    border-bottom-color: var(--area-public);
   }
 
   .window__icons-list {
@@ -4857,5 +5249,19 @@ html[data-theme="dark"] {
     .widget-chatItem-reply__note.name .note-content {
       color: var(--primary-purple-100);
     }
+  }
+}
+
+// ── reduced motion ───────────────────────────────────────────────────────────
+// Motion is decoration here: the card's job is to be answered, and someone who
+// has asked for less of it should still get the dialog instantly.
+//
+// LAST IN THE FILE, and that is load-bearing. This block used to sit near the
+// top, a thousand lines above the rules it cancels — and a media query adds no
+// specificity, so the later rule simply won and the setting did nothing at all.
+@media (prefers-reduced-motion: reduce) {
+  .window-folder__create-folder-dialog,
+  .window-folder__create-folder-dialog[data-closing="1"] {
+    animation: none;
   }
 }

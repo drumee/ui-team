@@ -1,4 +1,5 @@
 const { supportAvatar, isSupportEntity } = require("libs/support");
+const folderIcon = require("media/grid/template/folder");
 
 /**
  * Header for the selected contact's chat panel.
@@ -83,9 +84,24 @@ module.exports = function (ui, contact) {
         live_status: 1,
         sys_pn: 'header-profile'
       })
-      : Skeletons.Button.Svg({
-        ico: 'raw-drumee_projectroom',
-        className: `${fig}__header-profile icon raw-drumee_projectroom`
+      : Skeletons.Element({
+        // A workspace team chat. Draw the WORKSPACE'S own icon — the same
+        // area-tinted folder shape the conversation row on the left uses — so
+        // the header and the selected row show the same object. It used to be
+        // the generic raw-drumee_projectroom glyph, which matched neither.
+        //
+        // folderIcon returns an HTML string, hence Element + content.
+        // contact is a chat_contact_item VIEW, so fields are read with mget —
+        // `contact.area` is undefined on a view and the icon rendered with no
+        // area class, i.e. untinted.
+        className: `${fig}__header-profile ${fig}__header-profile--workspace ${contact.mget(_a.area) || ''}`,
+        content: folderIcon({
+          area: contact.mget(_a.area),
+          filetype: _a.hub,
+          role: 'desk',
+          widgetId: _.uniqueId('ws-header-icon-'),
+          isAttachment: 1,
+        }),
       });
 
   const statusNote = talkingToSupport

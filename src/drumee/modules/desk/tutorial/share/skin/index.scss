@@ -1,758 +1,806 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
-// BEM root: .tutorial-share
-// Step 5 — the folder's secure-share panel (Figma 3314:86712 / 3314:86722 /
-// 3314:140345). Those frames are real vector, so these are the design's own
-// metrics: 450px panel, 24px gutters, 401px blocks, 55px option rows, 36px
-// primary button. Tokens: Primary/40 #5950ff, Signal/Error #d74e49.
+// The Secure Share panel — Figma 148:41197 → 148:44198.
 //
-// The folder window behind the panel is the shared toolkit's, rendered with
-// pfx = tutorial-share, so the header/tabs/grid rules mirror the folder step's.
+// The tour rings one block per screen. `data-lit` is the design's own focus
+// treatment for this flow: a 2px brand outline, not the opacity dip the
+// create-workspace dialog uses. Both are the callout's business to ask for;
+// this file only draws the panel.
 
 .tutorial-share {
-
-  // ── Root ────────────────────────────────────────────────────────────────────
   &__ui {
-    position: absolute;
-    flex: 1;
-    min-height: 0;
     width: 100%;
     height: 100%;
-    max-width: 1242px;
-    max-height: 700px;
-    transform: translate(-50%, -50%);
-    top: 50%;
-    left: 50%;
-    border: 1px solid var(--neutral-300);
-    border-radius: var(--corner-radius-2, 8px);
-    overflow: hidden;
-
-    &[data-aspect="faded"] {
-      opacity: .45;
-    }
+    min-height: 0;
   }
 
-  // The panel is absolutely placed over the chat rail, which is where the
-  // design slides it in from.
-  &__main {
-    position: relative;
-    flex: 1;
-    min-height: 0;
+  &__pane {
     width: 100%;
     height: 100%;
-    background: var(--normal-bg);
-  }
-
-  // ── Folder chrome (toolkit) ─────────────────────────────────────────────────
-  &__header {
-    width: 100%;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--spacer-4) var(--spacer-6);
-    background: var(--normal-bg-90);
-    border-bottom: 1px solid var(--border-muted);
-    flex-shrink: 0;
-  }
-
-  &__header-left { align-items: center; gap: 8px; }
-
-  // Shared folder: pink, like the tracker step's.
-  &__header-icon {
-    width: 22px;
-    height: 22px;
-    color: var(--area-share, #ffa8dc);
-    flex-shrink: 0;
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__header-name {
-    font-family: var(--font-main);
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--normal-fg);
-  }
-
-  &__header-restricted {
-    font-family: var(--font-main);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #d6479c;
-    background: rgba(255, 168, 220, 0.18);
-    border: 1px solid rgba(255, 168, 220, 0.45);
-    border-radius: 4px;
-    padding: 2px 7px;
-  }
-
-  &__header-actions { align-items: center; gap: 8px; }
-
-  &__header-upload,
-  &__header-add {
-    display: inline-flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    height: 28px;
-    padding: 0 12px;
-    gap: 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    flex-shrink: 0;
-
-    svg { width: 13px; height: 13px; }
-
-    span.label, section.label { font-size: 13px; font-weight: 600; white-space: nowrap; }
-  }
-
-  &__header-upload {
-    background: var(--normal-bg);
-    border: 1px solid var(--border-muted);
-
-    svg { fill: var(--normal-fg); }
-    span.label, section.label { color: var(--normal-fg); }
-  }
-
-  &__header-add {
-    background: #b1adff;
-
-    svg { fill: #0b0a21; }
-    span.label, section.label { color: #0b0a21; }
-  }
-
-  &__header-settings,
-  &__header-close {
-    width: 28px;
-    height: 28px;
-    padding: 6px;
-    border-radius: 4px;
-    color: var(--normal-fg-50);
-    flex-shrink: 0;
-
-    svg { width: 100%; height: 100%; }
-  }
-
-  &__tabs {
-    width: 100%;
-    height: 44px;
-    align-items: center;
-    padding: 0 16px;
+    min-height: 0;
     gap: 8px;
-    border-bottom: 1px solid var(--border-muted);
-    flex-shrink: 0;
-    background: var(--normal-bg);
-  }
-
-  &__tab {
-    display: inline-flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    height: 30px;
-    padding: 0 12px;
-    gap: 6px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--normal-fg-50);
     background: var(--normal-bg-90);
-    cursor: pointer;
-    box-sizing: border-box;
-    border: 1px solid transparent;
-
-    svg { width: 14px; height: 14px; fill: currentColor; }
-
-    span.label, section.label { font-size: 13px; font-weight: 500; color: inherit; }
-
-    // Shared folder, so the live tab is outlined in the same pink.
-    &.active {
-      color: var(--normal-fg);
-      border-color: var(--area-share, #ffa8dc);
-      font-weight: 600;
-
-      span.label, section.label { font-weight: 600; color: var(--normal-fg); }
-    }
   }
 
-  &__content {
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-  }
-
-  &__files {
-    flex: 1;
-    min-height: 0;
-    overflow: visible;
-  }
-
-  &__filter {
-    align-items: center;
-    gap: 4px;
-    padding: 8px 24px 0;
-    border-bottom: 1px solid var(--border-muted);
-    flex-shrink: 0;
-    background-color: var(--normal-bg);
-  }
-
-  &__filter-item {
-    padding: 6px 12px;
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--normal-fg-50);
-    border-bottom: 2px solid transparent;
-    box-sizing: border-box;
-
-    &.active {
-      color: var(--primary-40, #5950ff);
-      border-bottom-color: var(--primary-40, #5950ff);
-      font-weight: 600;
-    }
-  }
-
-  &__grid {
-    flex-wrap: wrap;
-    gap: 24px;
-    padding: 24px;
-    flex: 1;
-    min-height: 0;
-    align-content: flex-start;
-    pointer-events: none;
-    overflow: visible;
-  }
-
-  &__grid-file { align-items: center; gap: 6px; width: 110px; opacity: .55; }
-
-  &__grid-file-icon-wrap {
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
-    background: var(--normal-bg-90);
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  &__grid-file-icon {
-    width: 40px;
-    height: 40px;
-
-    svg { width: 100%; height: 100%; }
-  }
-
-  &__grid-file-name {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--normal-fg);
-    max-width: 110px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-  }
-
-  &__grid-file-date {
-    font-family: var(--font-main);
-    font-size: 10px;
-    color: var(--normal-fg-50);
-    text-align: center;
-  }
-
-  // Team chat rail: the panel covers it, so it only has to hold the space.
-  &__chat-panel {
-    width: 450px;
-    min-width: 450px;
-    flex-shrink: 0;
-    border-left: 1px solid var(--border-muted);
-    background: var(--normal-bg);
-  }
-
-  &__chat-header,
-  &__chat-messages,
-  &__chat-input-bar { display: none !important; }
-
-  // ══ Secure share panel ═════════════════════════════════════════════════════
+  // ── Panel ─────────────────────────────────────────────────────────────────
+  // ── Panel ─────────────────────────────────────────────────────────────────
+  // 148:41771 — 512 wide on a 13px gutter, so the content column is 486.
   &__panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 450px;
+    flex: 0 0 512px;
+    width: 512px;
     box-sizing: border-box;
-    background: var(--normal-bg);
-    border-left: 1px solid var(--border-muted);
-    box-shadow: -1px 0 11px rgba(0, 0, 0, 0.08);
-    z-index: 2;
+    min-height: 0;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+    overflow: hidden;
   }
 
-  &__panel-head {
-    height: 49px;
-    flex-shrink: 0;
+  // 148:41940 — the heading row and the file, one group at 12.
+  // No bottom padding: the frame puts 24 between the file row and the first
+  // block (head content ends at y103.4, the container starts at 127.4), and
+  // that 24 belongs to the scrolling box below — so it scrolls away with the
+  // content instead of leaving a gap the blocks slide under.
+  &__head {
+    flex: 0 0 auto;
     box-sizing: border-box;
+    gap: 12px;
+    padding: 13px 13px 0;
+  }
+
+  &__head-row {
+    width: 100%;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
-    border-bottom: 1px solid var(--border-muted);
   }
 
-  &__panel-title {
-    font-family: var(--font-main);
-    font-size: 16px;
+  &__title {
+    @include drumee.typo($size: 20px, $line: 1.2);
     font-weight: 600;
     color: var(--normal-fg);
   }
 
-  &__panel-close {
+  &__close {
     width: 14px;
     height: 14px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
+    flex: 0 0 auto;
+    color: var(--normal-fg);
 
-    svg { width: 100%; height: 100%; fill: currentColor; }
+    svg { width: 100%; height: 100%; }
   }
 
-  &__panel-body {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    padding: 16px 24px;
-    gap: 22px;
+  // ── The file being shared — 148:41930 ─────────────────────────────────────
+  &__file {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--border-muted);
   }
 
+  &__file-ico {
+    width: 38.4px;
+    height: 38.4px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+  }
 
-  &__block { gap: 10px; flex-shrink: 0; }
+  &__file-glyph {
+    width: 25.6px;
+    height: 25.6px;
+    color: var(--normal-fg-20);
 
-  &__label {
-    font-family: var(--font-main);
-    font-size: 14px;
+    svg { width: 100%; height: 100%; }
+  }
+
+  // The workspace variant. 180:52523 is an aspect-48 box at the row's own
+  // content height, and the shape inside it keeps its 105:86 — so the box is
+  // the 38.4 square the file icon occupies and the folder sits centred in it,
+  // 38.4 wide by 31.4 tall. Sized on the container AND on the inner nodes the
+  // template emits, which carry their own width/height attributes (the same
+  // shape the Files grid has to force, ../../skin/files-grid.scss).
+  &__file-art {
+    width: 38.4px;
+    height: 38.4px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    .media-grid__folder-art { width: 38.4px; height: 31.4px; }
+    svg { width: 38.4px; height: 31.4px; }
+  }
+
+  &__file-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 8px;
+  }
+
+  &__file-name {
+    @include drumee.typo($size: 14px, $line: 20px);
     font-weight: 600;
     color: var(--normal-fg);
   }
 
-  &__label-row { align-items: center; justify-content: space-between; }
-
-  &__hint {
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-    line-height: 1.4;
+  &__file-meta {
+    @include drumee.typo($size: 12px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg-20);
   }
 
-  &__rows { gap: 8px; }
-
-  // ── Permission rows ─────────────────────────────────────────────────────────
-  &__row {
-    height: 44px;
+  // Scrolls: the panel is taller than the window, and the last two screens
+  // ring blocks below the fold (share/index.js _scrollTo).
+  //
+  // `auto`, not `hidden`. The step has always scrolled this box by hand —
+  // scrollTop works on a hidden overflow too — but that made the panel a thing
+  // that moved on its own and could not be moved: a reader who wanted to see
+  // what was under the fold on screen 1 had no way to get there. It scrolls by
+  // wheel and by drag now, and _scrollTo still places the rung block.
+  //
+  // The BAR is hidden, because this is a mock of a panel rather than a real
+  // one — a scrollbar down the middle of the tour would be chrome the frames
+  // do not have, and it would reflow the 486 content column by its own width.
+  // Hiding it costs the only affordance that says "this scrolls", which is why
+  // the wheel is left working rather than the whole thing being a picture.
+  //
+  // `overscroll-behavior: contain` so reaching the end does not hand the
+  // gesture to the desk behind the tour.
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
     box-sizing: border-box;
-    align-items: center;
-    gap: 10px;
-    padding: 0 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border-muted);
-    background: var(--normal-bg);
+    gap: 24px;
+    // 24 on top is the frame's gap under the file row (see __head). It also
+    // gives the first block's ring somewhere to be drawn: the ring sits 10px
+    // outside the block, and with no padding here the scroll box clipped its
+    // top edge flat.
+    padding: 24px 13px 13px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    // Firefox, and old Edge.
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 
-    &.selected {
-      border-color: var(--primary-40, #5950ff);
-      background: #f5f4ff;
+    &::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
   }
 
-  &__row-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
+  // ── The ringed blocks ─────────────────────────────────────────────────────
+  //
+  // The ring is an OUTLINE, not a border: 148:42519 sits 12px outside the block
+  // on every side and the block itself does not move between screens, so the
+  // ring must cost no layout. It carries no fill either — the frame rings the
+  // block and leaves its ground alone; tinting it as well made the lit block
+  // read as selected rather than pointed at.
+  &__block {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 8px;
 
-    svg { width: 100%; height: 100%; fill: currentColor; }
+    // The ring, as a pseudo-element rather than an `outline`.
+    //
+    // An outline can only trace the whole box, and on one screen the ring has
+    // to stop SHORT of it: step 2 rings the "Access Management" label and the
+    // two choice heads, and leaves the email and password cards nested under
+    // Secure Share outside it (148:42515) — they are what the choice leads to,
+    // not part of making it. `--lit-h` is measured and set by _sizeRing in
+    // ../index.js on that screen; every other screen falls back to the block's
+    // own height and the ring behaves exactly as the outline did.
+    //
+    // 12px outset, from the frames: step 1's ring is 511x229 around a 486x205
+    // block, so 12 a side plus the 1px the stroke itself takes.
+    &[data-lit="1"]::after {
+      content: "";
+      position: absolute;
+      left: -12px;
+      right: -12px;
+      top: -12px;
+      height: var(--lit-h, calc(100% + 24px));
+      border: 2px solid var(--primary-purple-40);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    // Everything the screen is NOT about is filmed back, with the same overlay
+    // the tour puts over the desk: 60% of the page ground, from
+    // ../../spotlight/skin/index.scss `__scrim`. It was a 3px blur, which is a
+    // different language from the one the rest of the tour speaks.
+    //
+    // Stamped per block by focus() in ../skeleton/panel.js rather than derived
+    // from `data-lit` here, because the lit element is sometimes NESTED (the
+    // email and password cards) — so the block that HOLDS the lit card has to
+    // be told to stay clear, which CSS alone cannot express.
+    //
+    // A film per block, not one over the body, because the body SCROLLS: an
+    // absolutely-positioned child of a scroll container sizes to the padding
+    // box and then scrolls away with the content, so a single overlay would
+    // cover one screenful and leave the rest bare. A film on each block
+    // travels with it. The 24px gutters between blocks are left unfilmed and
+    // it does not show — they are the panel's own ground, and 60% white over
+    // white is white. That is also why this cannot be done the spotlight's way
+    // (one scrim, lit surface promoted above it): there is nothing here to
+    // promote a lit block over.
+    &[data-blur="1"]::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    html[data-theme="dark"] &[data-blur="1"]::before {
+      background: rgba(11, 10, 33, 0.6);
+    }
   }
 
-  &__row-label {
-    flex: 1;
-    font-family: var(--font-main);
-    font-size: 13px;
+  &__block--row {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  // 148:41781 — the Recipient mode block. Its own gap is the 16 between the
+  // header and the rows; the other two live on the groups inside it.
+  &__block--recipient { gap: 16px; }
+
+  // 148:41782 — label, then the choices at 16.
+  &__block--access { gap: 16px; }
+
+  // 148:41787 — the expiry controls and the link controls, 16 apart.
+  &__block--expiry { gap: 16px; }
+
+  &__block-head {
+    width: 100%;
+    gap: 4px;
+  }
+
+  &__perms {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__label {
+    @include drumee.typo($size: 14px, $line: 1.4);
+    font-weight: 600;
     color: var(--normal-fg);
   }
 
-  // ── Controls ────────────────────────────────────────────────────────────────
-  &__check {
-    width: 18px;
-    height: 18px;
-    box-sizing: border-box;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    border: 1px solid var(--neutral-300);
-    background: var(--normal-bg);
+  // Same near-black as the label in the frame, not a grey subtitle: the header
+  // group carries one colour and the hint does not override it.
+  &__hint {
+    @include drumee.typo($size: 12px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg);
+  }
 
-    &.on {
-      border-color: var(--primary-40, #5950ff);
-      background: var(--primary-40, #5950ff);
+  // ── Permission rows — 148:41781 ───────────────────────────────────────────
+  &__perm {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+
+    &[data-on="1"] {
+      // The frame's brand overlay: #5950ff at 10%, lighter than
+      // --primary-purple-10 (#e4e3ff, opaque) and reading as a wash, not a fill.
+      background: rgba(89, 80, 255, 0.1);
+      // An INSET ring, not a border. Figma strokes frames on the inside, so the
+      // checked row is the same 44px tall as the two below it.
+      box-shadow: inset 0 0 0 1px var(--primary-purple-40);
     }
   }
 
-  &__check-icon {
-    width: 11px;
-    height: 11px;
-    color: #fff;
+  &__perm-ico {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-20);
 
-    svg { width: 100%; height: 100%; fill: currentColor; }
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__perm[data-on="1"] &__perm-ico {
+    color: var(--primary-purple-40);
+  }
+
+  &__perm-label {
+    @include drumee.typo($size: 12px, $line: 1.4);
+    flex: 1 1 auto;
+    font-weight: 400;
+    color: var(--normal-fg);
+  }
+
+  // ── Checkbox ──────────────────────────────────────────────────────────────
+  // 20px in the permission rows, 16 inside the white cards.
+  &__check {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    // rgba(0, 0, 0, 0.05) in the frame, which is exactly --border-muted in the
+    // light theme — so the token keeps dark mode working.
+    border: 1px solid var(--border-muted);
+
+    &[data-on="1"] {
+      border-color: var(--primary-purple-40);
+      background: var(--primary-purple-40);
+    }
+  }
+
+  &__check--sm {
+    width: 16px;
+    height: 16px;
+  }
+
+  // Sized to the GLYPH, not the box. `desktop_check` is a 10x8 viewBox, so at
+  // 100% of a 20px square it scaled to fit at 20x16 and the tick ran edge to
+  // edge; the frame draws it about half the box wide.
+  //
+  // 50/40 is the glyph's own 10:8 ratio, so it renders unletterboxed at either
+  // size. Percentages resolve against the CONTENT box, and the checkbox is
+  // border-box with a 1px border, so the tick comes out 9x7.2 in the 20px
+  // permission checkbox and 7x5.6 in the 16px card one — one rule that stays
+  // proportional if a third size ever appears. The frame gives no tick size to
+  // match: there the checked box is a single flat svg, border and mark
+  // together.
+  &__check-tick {
+    width: 80%;
+    height: 80%;
+    flex: 0 0 auto;
+    color: var(--gray-white, #fff);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__check:not([data-on="1"]) &__check-tick {
+    display: none;
+  }
+
+  // ── A setting's head: icon, title over subtitle, one control ──────────────
+  &__setting {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__setting-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__setting-ico {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-20);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__setting-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__setting-title {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 400;
+    color: var(--normal-fg);
+  }
+
+  &__setting-desc {
+    @include drumee.typo($size: 12px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  // ── Public / Secure choice — 148:41785, 148:41786 ─────────────────────────
+  //
+  // The selected choice is a CONTAINER: the email and password cards live
+  // inside it, because they are conditions of it rather than settings beside it.
+  &__choices {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__choice {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--border-muted);
+    // 148:41785 carries a border of its own at the same value as its fill —
+    // inset, so both choices stay the height the frame gives them.
+    box-shadow: inset 0 0 0 1px var(--border-muted);
+
+    &[data-on="1"] {
+      background: rgba(89, 80, 255, 0.1);
+      box-shadow: inset 0 0 0 1px var(--primary-purple-40);
+    }
+  }
+
+  // Only the CHOICE's own icon takes the brand when selected — the cards
+  // nested inside it keep their grey glyphs, so the path is spelled out rather
+  // than left as a descendant match.
+  &__choice[data-on="1"] > &__setting > &__setting-main > &__setting-ico {
+    color: var(--primary-purple-40);
   }
 
   &__radio {
-    width: 16px;
-    height: 16px;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
     box-sizing: border-box;
-    flex-shrink: 0;
     border-radius: 50%;
-    border: 1px solid var(--neutral-300);
-    background: var(--normal-bg);
+    // Grey/60 in the frame, not the checkbox's rgba(0,0,0,0.05): that value on
+    // the row's own grey ground is invisible, and the frame draws a legible
+    // ring. Same token and width the real secure-share panel uses for this
+    // control (builtins/window/secure-share).
+    border: 1.5px solid var(--tertiary-grey-60, #aeaeb2);
+    align-items: center;
+    justify-content: center;
 
-    &.on {
-      border: 5px solid var(--primary-40, #5950ff);
+    &[data-on="1"] {
+      border-color: var(--primary-purple-40);
+
+      &::after {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--primary-purple-40);
+      }
     }
   }
 
+  // ── The white cards inside Secure Share ───────────────────────────────────
+  &__card {
+    width: 100%;
+    box-sizing: border-box;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-elevated);
+
+    // Offset 0, unlike the top-level blocks: 148:42637 is 462x167 at x25 y520,
+    // which is the card's own box to the pixel.
+    //
+    // Lifted over its BLOCK's film. On the two screens whose subject is one of
+    // these cards, the access block is filmed like any other non-lit block —
+    // its label, Public Share and the Secure Share head included — and this
+    // card is the single thing raised out of it, the way the tour's lit surface
+    // comes out from under the scrim (LIT_Z in ../../spotlight/index.js).
+    //
+    // The film is z-index 1 on the block, and neither the block nor the choice
+    // opens a stacking context (both are `position: relative` at `z-index:
+    // auto`), so a 2 here really does out-rank it. z-index needs a position to
+    // act on, hence `relative`.
+    &[data-lit="1"] {
+      position: relative;
+      z-index: 2;
+      outline: 2px solid var(--primary-purple-40);
+      outline-offset: 0;
+      border-radius: 8px;
+    }
+  }
+
+  &__restrict {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__restrict-top {
+    width: 100%;
+    gap: 12px;
+  }
+
+  &__restrict-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__restrict-label {
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__restrict-text {
+    @include drumee.typo($size: 12px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  &__restrict-info {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-20);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  // ── Toggle — 43:29961 ─────────────────────────────────────────────────────
   &__toggle {
     width: 40px;
     height: 20px;
+    flex: 0 0 auto;
     box-sizing: border-box;
-    flex-shrink: 0;
     padding: 2px;
-    border-radius: 99px;
-    background: var(--normal-bg-80, #e5e5ea);
+    border-radius: 12px;
+    background: var(--normal-bg-40);
+    justify-content: flex-start;
 
-    &.on {
-      background: var(--primary-40, #5950ff);
-      align-items: flex-end;
+    &[data-on="1"] {
+      background: var(--primary-purple-30, #847eff);
+      justify-content: flex-end;
     }
   }
 
   &__toggle-knob {
     width: 16px;
     height: 16px;
-    border-radius: 50%;
-    background: #fff;
-  }
-
-  // ── Access modes ────────────────────────────────────────────────────────────
-  // Unselected reads as a filled pill; the chosen one is a white card outlined
-  // in brand purple, holding the controls it unfolds.
-  &__mode {
-    box-sizing: border-box;
-    padding: 12px;
-    gap: 12px;
     border-radius: 12px;
-    border: 1.5px solid transparent;
-    background: var(--normal-bg-90);
-
-    &.selected {
-      border-color: var(--primary-40, #5950ff);
-      background: var(--primary-10);
-    }
+    background: var(--gray-white, #fff);
   }
 
-  // The two white cards inside the chosen mode: who may open the link, and
-  // how it is locked.
-  &__group {
-    box-sizing: border-box;
-    gap: 10px;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border-muted);
-    background: var(--normal-bg);
+  // ── Chips ─────────────────────────────────────────────────────────────────
+  &__chips {
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
-
-  &__mode-head { align-items: center; gap: 10px; }
-
-  &__opt { align-items: center; gap: 10px; }
-
-  &__opt-icon {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__opt-info {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  &__opt-body { flex: 1; min-width: 0; gap: 2px; }
-
-  &__opt-label {
-    font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--normal-fg);
-
-    &.grow { flex: 1; }
-  }
-
-  &__opt-hint {
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: var(--normal-fg-50);
-  }
-
-  &__secure-body {
-    gap: 10px;
-  }
-
-  // ── Email chips + fields ────────────────────────────────────────────────────
-  &__chips { flex-wrap: wrap; gap: 6px; }
 
   &__chip {
-    height: 24px;
-    box-sizing: border-box;
     align-items: center;
-    gap: 6px;
-    padding: 0 8px;
-    border-radius: 6px;
-    background: var(--normal-bg-90);
-    flex-shrink: 0;
-
-    &.more {
-      font-family: var(--font-main);
-      font-size: 11px;
-      color: var(--normal-fg-50);
-      line-height: 22px;
-      padding: 0 8px;
-    }
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--border-muted);
   }
 
-  &__chip-label {
-    font-family: var(--font-main);
-    font-size: 11px;
-    color: var(--normal-fg);
+  &__chip-text {
+    @include drumee.typo($size: 10px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg-20);
+  }
+
+  // The "+3" chip is a column with its text centred and no X to sit beside —
+  // 148:41786's own distinction between it and the two named chips.
+  &__chip--more {
+    align-items: center;
+    gap: 0;
   }
 
   &__chip-x {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-20);
 
-    svg { width: 100%; height: 100%; fill: currentColor; }
+    svg { width: 100%; height: 100%; }
   }
 
-  &__field {
-    height: 36px;
+  // ── The email entry, and the password field ───────────────────────────────
+  &__entry {
+    width: 100%;
     box-sizing: border-box;
     align-items: center;
-    gap: 8px;
-    padding: 0 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border-muted);
-    background: var(--normal-bg);
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg-50);
-    line-height: 34px;
-
-    &.pw,
-    &.link { background: var(--normal-bg-90); line-height: normal; }
-
-    &.link { flex: 1; min-width: 0; }
+    padding: 8px 8px 8px 12px;
+    border-radius: 4px;
+    background: var(--border-muted);
   }
 
-  &__field-value {
-    flex: 1;
-    min-width: 0;
-    font-family: var(--font-main);
-    font-size: 12px;
-    color: var(--normal-fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  &__entry-text {
+    @include drumee.typo($size: 12px, $line: 1.4);
+    font-weight: 400;
+    color: var(--normal-fg-20);
   }
 
-  &__field-icon {
-    width: 13px;
-    height: 13px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
-
-    &.edit { color: var(--primary-40, #5950ff); }
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  // ── Expiry + link ───────────────────────────────────────────────────────────
-  &__segments {
-    height: 33px;
+  &__pass {
+    width: 100%;
     box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--border-muted);
+    // Inside stroke, like the checked rows: a real border would add 2px and
+    // make the password card taller than the frame's 113.4.
+    box-shadow: inset 0 0 0 1px var(--normal-bg-elevated);
+  }
+
+  &__pass-text {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 400;
+    color: var(--normal-fg);
+  }
+
+  &__pass-ico {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-20);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  // ── Expiry — 148:41788 ────────────────────────────────────────────────────
+  &__expiry {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__segments {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: stretch;
     padding: 4px;
-    gap: 0;
     border-radius: 8px;
     background: var(--normal-bg-90);
   }
 
   &__segment {
-    flex: 1;
+    flex: 1 0 0;
+    min-width: 0;
+    box-sizing: border-box;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    border-radius: 6px;
+    gap: 10px;
+    padding: 4px;
+    border-radius: 4px;
 
-    &.selected {
-      background: var(--normal-bg);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    &[data-on="1"] {
+      background: var(--normal-bg-elevated);
     }
   }
 
   &__segment-label {
-    font-family: var(--font-main);
-    font-size: 12px;
+    @include drumee.typo($size: 14px, $line: 1.2);
+    font-weight: 400;
     color: var(--normal-fg);
   }
 
-  &__segment-icon {
-    width: 11px;
-    height: 11px;
-    color: var(--normal-fg-50);
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
+  // ── Get link / issued link — 148:41804 ────────────────────────────────────
+  &__linkgroup {
+    width: 100%;
+    gap: 8px;
   }
 
   &__cta {
-    height: 36px;
+    width: 100%;
     box-sizing: border-box;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    padding: 8px 24px;
     border-radius: 8px;
-    background: var(--primary-40, #5950ff);
-    cursor: pointer;
+    background: var(--primary-purple-50);
   }
 
-  &__cta-icon {
-    width: 14px;
-    height: 14px;
-    color: #fff;
+  &__cta-ico {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    color: var(--gray-white, #fff);
 
-    svg { width: 100%; height: 100%; fill: currentColor; }
+    svg { width: 100%; height: 100%; }
   }
 
   &__cta-label {
-    font-family: var(--font-main);
-    font-size: 14px;
+    @include drumee.typo($size: 14px, $line: 20px);
     font-weight: 600;
-    color: #fff;
+    color: var(--gray-white, #fff);
   }
 
-  &__link-row { align-items: center; gap: 8px; }
+  &__linkrow {
+    width: 100%;
+    height: 40px;
+    align-items: stretch;
+    gap: 8px;
+  }
 
-  &__revoke {
-    height: 36px;
+  &__link {
+    flex: 1 0 0;
+    min-width: 0;
     box-sizing: border-box;
     align-items: center;
-    gap: 6px;
-    padding: 0 14px;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
     border-radius: 8px;
-    flex-shrink: 0;
-    background: #d74e49;
-    cursor: pointer;
+    background: rgba(89, 80, 255, 0.1);
   }
 
-  &__revoke-icon {
-    width: 13px;
-    height: 13px;
-    color: #fff;
+  &__link-ico {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: var(--normal-fg);
 
-    svg { width: 100%; height: 100%; fill: currentColor; }
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__link-text {
+    @include drumee.typo($size: 14px, $line: 1.2);
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 400;
+    color: var(--normal-fg);
+    opacity: 0.6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__link-copy {
+    width: 14px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: var(--normal-fg);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__revoke {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    // Signal/Error in the frame. No token carries it — the theme files define
+    // no error colour — so the hex is stated rather than borrowed from an
+    // unrelated one.
+    background: #d74e49;
+  }
+
+  &__revoke-ico {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    color: var(--gray-white, #fff);
+
+    svg { width: 100%; height: 100%; }
   }
 
   &__revoke-label {
-    font-family: var(--font-main);
-    font-size: 13px;
+    @include drumee.typo($size: 14px, $line: 20px);
     font-weight: 600;
-    color: #fff;
+    color: var(--gray-white, #fff);
   }
-
-  // ── Access log ──────────────────────────────────────────────────────────────
-  &__log {
-    box-sizing: border-box;
-    padding: 12px;
-    gap: 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border-muted);
-    overflow: hidden;
-  }
-
-  &__log-row {
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-
-    &.head .tutorial-share__cell {
-      font-weight: 600;
-      color: var(--normal-fg-50);
-    }
-  }
-
-  &__cell {
-    font-family: var(--font-main);
-    font-size: 10px;
-    color: var(--normal-fg);
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-
-    &[data-col="email"]    { flex: 0 0 125px; }
-    &[data-col="when"]     { flex: 0 0 90px; }
-    &[data-col="duration"] { flex: 0 0 50px; }
-    &[data-col="action"]   { flex: 1; align-items: flex-end; }
-  }
-
-  &__log-avatar {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: linear-gradient(140deg, #d9d5f2, #efe7e4);
-  }
-
-  &__log-email {
-    font-family: var(--font-main);
-    font-size: 10px;
-    color: var(--normal-fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__log-remove {
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border: 1px solid #d74e49;
-    color: #d74e49;
-  }
-
-  &__log-remove-icon {
-    width: 7px;
-    height: 7px;
-
-    svg { width: 100%; height: 100%; fill: currentColor; }
-  }
-
-  // ── tooltip anchor ──────────────────────────────────────────────────────────
-  &__tooltip-anchor {
-    top: 26px;
-    left: -300px;
-  }
-
 }

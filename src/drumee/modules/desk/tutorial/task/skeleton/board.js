@@ -18,17 +18,17 @@ function taskCard(ui, pfx, task) {
     avatars(pfx, task.people),
   ].filter(Boolean);
 
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__card`,
     // Screen 1's spotlight target — the card the design's connector points at.
     ...(task.focus ? { sys_pn: 'board-card', partHandler: ui } : {}),
     kids: [
-      Skeletons.Note({ className: `${pfx}__card-title`, content: task.name }),
+      Skeletons.Note({ active: 0, className: `${pfx}__card-title`, content: task.name }),
       task.desc
-        ? Skeletons.Note({ className: `${pfx}__card-desc`, content: task.desc })
+        ? Skeletons.Note({ active: 0, className: `${pfx}__card-desc`, content: task.desc })
         : null,
       files.length
-        ? Skeletons.Box.X({
+        ? Skeletons.Box.X({ active: 0,
           className: `${pfx}__card-files`,
           // Two chips per row. The "+n" is not a cell of its own — it rides
           // along in the LAST cell, beside the last filename, so it can never
@@ -37,11 +37,11 @@ function taskCard(ui, pfx, task) {
             const chip = fileChip(pfx, f);
             const last = i === files.length - 1;
             if (!last || !task.more) return chip;
-            return Skeletons.Box.X({
+            return Skeletons.Box.X({ active: 0,
               className: `${pfx}__card-files-cell`,
               kids: [
                 chip,
-                Skeletons.Note({
+                Skeletons.Note({ active: 0,
                   className: `${pfx}__chip file more`,
                   content: `+${task.more}`,
                 }),
@@ -51,10 +51,10 @@ function taskCard(ui, pfx, task) {
         })
         : null,
       task.progress
-        ? Skeletons.Box.Y({
+        ? Skeletons.Box.Y({ active: 0,
           className: `${pfx}__card-progress`,
           kids: [
-            Skeletons.Box.Y({
+            Skeletons.Box.Y({ active: 0,
               className: `${pfx}__card-progress-fill`,
               styleOpt: { width: `${Math.round(task.progress * 100)}%` },
             }),
@@ -62,7 +62,7 @@ function taskCard(ui, pfx, task) {
         })
         : null,
       footer.length
-        ? Skeletons.Box.X({ className: `${pfx}__card-footer`, kids: footer })
+        ? Skeletons.Box.X({ active: 0, className: `${pfx}__card-footer`, kids: footer })
         : null,
     ].filter(Boolean),
   });
@@ -70,23 +70,23 @@ function taskCard(ui, pfx, task) {
 
 function column(ui, pfx, status) {
   const tasks = byStatus(status.key);
-  return Skeletons.Box.Y({
+  return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__col`,
     dataset: { status: status.key },
     kids: [
-      Skeletons.Box.X({
+      Skeletons.Box.X({ active: 0,
         className: `${pfx}__col-head`,
         kids: [
           statusPill(pfx, status.key),
-          Skeletons.Note({ className: `${pfx}__col-count`, content: String(tasks.length) }),
+          Skeletons.Note({ active: 0, className: `${pfx}__col-count`, content: String(tasks.length) }),
           iconBtn(pfx, 'bell', 'mute'),
         ],
       }),
-      Skeletons.Box.Y({
+      Skeletons.Box.Y({ active: 0,
         className: `${pfx}__col-body`,
         kids: tasks.map((t) => taskCard(ui, pfx, t)),
       }),
-      Skeletons.Note({
+      Skeletons.Note({ active: 0,
         className: `${pfx}__col-add`,
         content: `+ ${LOCALE.NEW_TASK || 'New task'}`,
       }),
@@ -95,7 +95,7 @@ function column(ui, pfx, status) {
 }
 
 module.exports = function board(ui, pfx) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.X({ active: 0,
     className: `${pfx}__board`,
     kids: STATUSES.map((s) => column(ui, pfx, s)),
   });

@@ -1,6 +1,6 @@
 const { folder } = require('../skeleton/toolkit');
 const { chatScreen, threadHintScreen, menuScreen } = require('./skeleton');
-const { stepBadge, isLastScreen, entryScreen } = require('../tours');
+const { stepProgress, isLastScreen, entryScreen } = require('../tours');
 
 /**
  * Step 2 runs three internal screens behind ONE parent step, the same way
@@ -20,7 +20,6 @@ const SCREENS = [
     target: 'chat-link',
     // Keeps the hole over the whole chat panel (260×533), the way the panel's
     // own rect used to size it — the chip alone would clamp it to ~150.
-    radius: 336,
     direction: 'east',
     badge: {
       title: 'Chat lives in folder',
@@ -50,7 +49,6 @@ const SCREENS = [
     // mid-height, ~220px lower). target and anchor exist precisely so the lit
     // area and the callout can be measured from different elements.
     anchor: 'thread-card',
-    radius: 730,
     direction: 'east',
     badge: {
       title: 'Chat in threads',
@@ -125,16 +123,14 @@ class __tutorial_folder extends LetcBox {
       // tour, and "STEP 2/6" with Next throughout as step two of the full one.
       tooltip: {
         ...screen.badge,
-        badge_text: stepBadge(this, this._screenIndex),
+        ...stepProgress(this, this._screenIndex),
         // Live whenever a previous step exists (step two of the full tour);
         // hidden on screen 1 of its own tour, where back-step would reach the
         // host with nowhere to go.
         hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-        variant: 'figma',
         done: isLastScreen(this, this._screenIndex, SCREENS.length),
       },
       direction: screen.direction,
-      radius: screen.radius,
       owner: this,
     });
   }
@@ -143,9 +139,10 @@ class __tutorial_folder extends LetcBox {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        // Only the last screen hands the tour back to tutorial_main; the bare
-        // triggerHandlers() lets it read this widget's own service attribute.
-        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers();
+        // Only the last screen hands the tour back to tutorial_main, and it
+        // NAMES the service. The step widget carries no `service` of its own
+        // any more — see _buildWidgets in ../index.js.
+        if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers({ service: 'next-step' });
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
       case 'back-step':

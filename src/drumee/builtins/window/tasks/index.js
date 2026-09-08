@@ -1,6 +1,7 @@
 const { uploadFile } = require("@drumee/ui-essentials");
 const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
+const readCache = require("libs/read-cache");
 const { resolveZone } = require("./drop-zones");
 const {
   markerRe,
@@ -154,10 +155,15 @@ class __tasks_panel extends LetcBox {
     // Upload destination — must be a real folder/home node, not the hub_id.
     // The folder window passes `actual_home_id || nid` when launching us.
     this._destNid = this.mget(_a.actual_home_id) || this.mget(_a.nid) || 0;
-    // Folder scope for the task list/create. `scope_nid` is the canonical
-    // current-directory node (root window → actual_home_id, subfolder → own
-    // nid); `scope_is_root` makes the root view also show legacy nid-less
-    // tasks. Falls back to _destNid for safety if not supplied.
+    // The board is WORKSPACE-level: it lists every task in the workspace no
+    // matter which folder each was created in (Figma 43:23955 — Task is a
+    // workspace rail item, not a per-folder tab), and there is one set of
+    // columns per workspace.
+    //
+    // `scope_nid` therefore no longer selects what is LISTED. It survives as
+    // the folder a NEW task records as its origin — `scope_is_root` alongside
+    // it — so navigating into a subfolder still files new tasks under it and
+    // the Personal Calendar can still say where a task came from.
     this._scopeNid = this.mget("scope_nid") || this._destNid || null;
     this._scopeIsRoot = this.mget("scope_is_root") ? 1 : 0;
     // Deep-link target from a task mention/assignment notification (forwarded by
@@ -168,6 +174,24 @@ class __tasks_panel extends LetcBox {
     this._labels = [];
     this._creating = false;
     this._createDefaults = null;
+    // Which overlays have already been PAINTED in their current opening.
+    //
+    // Every overlay in this panel has an entrance — the create card pops in,
+    // its backdrop fades, and so do the detail panel and the board modal — and
+    // _render() rebuilds the whole subtree through feed(). A newly created
+    // element runs its animation again, so while an overlay was open ANY later
+    // render played its entrance afresh: a second card popping in over the
+    // first, and again, and again. That is what "it renders a lot of cards at
+    // the same time" was.
+    //
+    // The elements cannot remember it — they are new elements every time — so
+    // the panel remembers for them, and it rides out on `data-entered`.
+    //
+    // Recomputed at the END of every render from what is open at that moment
+    // (see _render), which is what makes it self-maintaining: an overlay that
+    // closes clears its own flag, so its next opening animates again without a
+    // single handler having to remember to reset anything.
+    this._painted = {};
     this._detailId = null;
     this._detailDraft = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
@@ -184,6 +208,11 @@ class __tasks_panel extends LetcBox {
     // Inline subtask creator in the detail panel. null = the "+ Add subtask"
     // row is showing; an object = the creator is open on that draft.
     this._subtaskDraft = null;
+    // Same creator, but in the create modal: it queues children onto
+    // _createDefaults.subtasks instead of posting them, because the parent has
+    // no id until Create is pressed. Separate field so the two overlays cannot
+    // clobber each other's half-typed row.
+    this._createSubtaskDraft = null;
     this._attachments = {};
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings. Shared across
@@ -384,42 +413,30 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  // Re-point the panel at a different folder when the host window navigates
-  // (breadcrumb / into a child). Mirrors the chat panel's setScopedFolderNid.
+  // Follow the host window as it navigates (breadcrumb / into a child).
+  //
+  // The BOARD does not change: it shows the whole workspace from whichever
+  // folder you are standing in. All this updates is where a new task and its
+  // uploads are filed. So — unlike the folder-scoped version this replaces —
+  // it does NOT drop the loaded rows, close an open draft, or refetch on
+  // navigation; doing that would tear the board down and rebuild it identical
+  // every time the user clicked into a subfolder.
   setScope({ scopeNid = null, isRoot = 0, destNid } = {}) {
-    const nextScope = scopeNid != null ? scopeNid : null;
-    const nextRoot = isRoot ? 1 : 0;
-    const nextDest = destNid != null ? destNid : this._destNid;
-    const sameScope =
-      this._scopeNid === nextScope &&
-      this._scopeIsRoot === nextRoot &&
-      this._destNid === nextDest;
-    // Same scope and the last fetch succeeded: nothing to do. When the last
-    // list fetch failed silently, fall through to refetch — otherwise
-    // reopening the Tasks tab (which re-calls setScope with identical args)
-    // would latch the empty board until page reload.
-    if (sameScope && !this._loadFailed) {
-      return;
-    }
-    this._scopeNid = nextScope;
-    this._scopeIsRoot = nextRoot;
-    this._destNid = nextDest;
-    if (!sameScope) {
-      // The create/detail popups, pending file search AND the loaded rows
-      // belong to the folder we just left — close/drop them so nothing
-      // commits into (or renders on) the new scope. On a failed-load RETRY
-      // of the SAME scope, keep all of it: wiping here would discard the
-      // user's open draft just because the board needed a refetch.
-      this._creating = false;
-      this._createDefaults = null;
-      this._detailId = null;
-      this._detailDraft = null;
-      this._detailReturnTo = null;
-      this._pickerOpen = null;
-      this._tasks = [];
-      if (typeof this._resetFileSearch === "function") this._resetFileSearch();
+    this._scopeNid = scopeNid != null ? scopeNid : null;
+    this._scopeIsRoot = isRoot ? 1 : 0;
+    if (destNid != null && `${destNid}` !== `${this._destNid}`) {
+      this._destNid = destNid;
+      // _folderFilenames caches the DESTINATION folder's names, for the
+      // a → a(1) collision preview on an attachment. It is the one piece of
+      // per-folder state the board keeps, so it has to follow the move even
+      // though nothing else here does.
+      this._folderFilenames = null;
     }
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
+    // The one case that still needs a fetch: the previous load failed
+    // silently, and reopening the Tasks tab re-calls setScope. Without this
+    // the board would latch empty until a page reload.
+    if (!this._loadFailed) return;
     Promise.all([
       this._loadTasks(),
       this._loadColumns(),
@@ -439,15 +456,56 @@ class __tasks_panel extends LetcBox {
     this._installFileSearchFocus();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
-    await Promise.all([
-      this._loadTasks(),
-      this._loadColumns(),
+    // PAINT AS SOON AS THERE IS SOMETHING TO PAINT, then revalidate.
+    //
+    // Two passes of this method met here, and both reasons are kept.
+    //
+    // FROM THE CACHE (this side): every reopen of the Task tab — a workspace
+    // switched back to, a window reopened — used to hold the first paint on
+    // six round trips, task.list for the whole workspace among them, and the
+    // board sat blank for the slowest of them. A board this session has
+    // already seen is drawn at once from the last rows it saw.
+    //
+    // FROM THE FIRST TWO LOADS (upstream): a board this session has NOT seen
+    // has nothing to draw from, and only two of the six loads decide whether
+    // it can be drawn at all — the tasks and the columns. The other three
+    // DECORATE it: watches are a per-column flag, members are assignee
+    // avatars, labels are chips. None of them reads `_tasks` or `_columns`,
+    // and initialize() starts them empty, so the skeleton draws a real board
+    // without them and they must not gate the first paint.
+    //
+    // Activity gates nothing at all: only the Health (summary) view and the
+    // detail panel read it, so it repaints those and nothing else.
+    //
+    // Every repaint after the first is gated on _boardSignature, which covers
+    // all five lists — so an answer that matches what is already on screen
+    // costs no second render. _render captures and restores focus, caret and
+    // scroll around the DOM swap, which is what makes repainting safe at all.
+    const seeded = this._seedFromCache();
+    const core = Promise.all([this._loadTasks(), this._loadColumns()]);
+    const decorations = Promise.all([
       this._loadColumnWatches(),
-      this._loadActivity(),
       this._loadMembers(),
       this._loadLabels(),
     ]);
-    this._render();
+    this._loadActivity().then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.getView() === "summary" || this._detailId) this._render();
+    });
+    let painted = null;
+    if (seeded) {
+      this._render();
+      painted = this._boardSignature();
+    }
+    await core;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!seeded || this._boardSignature() !== painted) {
+      this._render();
+      painted = this._boardSignature();
+    }
+    await decorations;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this._boardSignature() !== painted) this._render();
     // Deep-link: a mention/assignment notification asked to open a specific
     // task. Routed through openTaskById so this path also recovers when the
     // task is missing from the load that just finished (it can be newer than
@@ -568,7 +626,8 @@ class __tasks_panel extends LetcBox {
       "task.delete", "task.link_file", "task.unlink_file", "task.link_label",
       "task.unlink_label", "task.comment_create", "task.comment_update",
       "task.comment_delete", "task.comment_react", "task.column_create",
-      "task.column_update", "task.column_delete", "task.column_reorder",
+      "task.column_update", "task.column_set_done", "task.column_delete",
+      "task.column_reorder",
       // Both comment-file services were missing from this list while being
       // `src: write` server-side. _zoneFor already refuses a viewer without
       // task rights, but that is UX — this is the boundary, and nothing stops
@@ -1285,7 +1344,11 @@ class __tasks_panel extends LetcBox {
           assignees: [],
           labels: [],
           pending_files: [],
+          // Children queued before the parent exists. Posted with
+          // parent_task_id right after the parent is created (_commitTask).
+          subtasks: [],
         };
+        this._createSubtaskDraft = null;
         // Force a fresh fetch on first attachment pick so name-collision
         // preview reflects whatever the folder body holds right now.
         this._folderFilenames = null;
@@ -1309,6 +1372,7 @@ class __tasks_panel extends LetcBox {
       case "cancel-add":
         this._creating = false;
         this._createDefaults = null;
+        this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
         this._dismissOverlayNow("create-backdrop");
@@ -1363,6 +1427,23 @@ class __tasks_panel extends LetcBox {
         // with no uid can only come from a stale dropdown, so ignore it.
         if (!draft || !uid) return;
         draft.reporter_uid = String(uid);
+        return this._applyReporterChange(scope);
+      }
+
+      // The reporter chip's ✕. Not a clear — a task always reads as reported by
+      // somebody — but an undo: it puts the field back to the task's creator
+      // (the current user in the create modal), which is what the field shows
+      // before anybody reassigns it.
+      case "reset-reporter": {
+        const scope =
+          trigger.mget("assigneeScope") === "create-reporter"
+            ? "create-reporter"
+            : "detail-reporter";
+        const draft = this._pickerDraft(scope);
+        if (!draft) return;
+        const back = this._reporterFallback(scope);
+        if (!back) return;
+        draft.reporter_uid = String(back);
         return this._applyReporterChange(scope);
       }
 
@@ -1532,6 +1613,47 @@ class __tasks_panel extends LetcBox {
         this._subtaskDraft.menu = null;
         this._refreshSubtaskSection();
         return;
+      }
+
+      // ── Subtasks queued on the create modal ─────────────────────
+      // Same block, same skin, but the parent does not exist yet: these edit
+      // _createDefaults.subtasks, and _commitTask posts them once it has an id.
+      case "add-create-subtask":
+        return this._openCreateSubtaskDraft();
+
+      case "cancel-create-subtask":
+        this._createSubtaskDraft = null;
+        return this._refreshCreateSubtaskSection();
+
+      case "commit-create-subtask":
+        return this._queueCreateSubtask();
+
+      case "remove-create-subtask":
+        return this._removeCreateSubtask(trigger);
+
+      case "toggle-create-subtask-done":
+        return this._toggleCreateSubtaskDone(trigger);
+
+      case "toggle-create-subtask-menu": {
+        if (!this._createSubtaskDraft) return;
+        const kind = trigger.mget("menuKind");
+        this._createSubtaskDraft.menu =
+          this._createSubtaskDraft.menu === kind ? null : kind;
+        return this._refreshCreateSubtaskSection();
+      }
+
+      case "set-create-subtask-priority": {
+        if (!this._createSubtaskDraft) return;
+        this._createSubtaskDraft.priority = trigger.mget("taskPriority");
+        this._createSubtaskDraft.menu = null;
+        return this._refreshCreateSubtaskSection();
+      }
+
+      case "set-create-subtask-status": {
+        if (!this._createSubtaskDraft) return;
+        this._createSubtaskDraft.status = trigger.mget("taskStatus");
+        this._createSubtaskDraft.menu = null;
+        return this._refreshCreateSubtaskSection();
       }
 
       case "commit-description":
@@ -1719,7 +1841,11 @@ class __tasks_panel extends LetcBox {
           assignees: [],
           labels: [],
           pending_files: [],
+          // Children queued before the parent exists. Posted with
+          // parent_task_id right after the parent is created (_commitTask).
+          subtasks: [],
         };
+        this._createSubtaskDraft = null;
         this._folderFilenames = null;
         this._resetFileSearch();
         return this._render();
@@ -1828,6 +1954,9 @@ class __tasks_panel extends LetcBox {
 
       case "col-theme-set":
         return this._themeColumn(trigger);
+
+      case "col-done-toggle":
+        return this._toggleColumnDone(trigger);
 
       case "col-delete":
         return this._deleteColumn(trigger);
@@ -2154,23 +2283,40 @@ class __tasks_panel extends LetcBox {
   // current open state is preserved — a chip removal must re-feed the rows
   // without popping a list the user had closed.
   _filterAssignees(scope, query, opt = {}) {
+    const single = this._isSinglePicker(scope);
     const rows = require("./skeleton").buildAssigneeSuggestions(
       this,
       query,
       this._assigneeSelection(scope),
       this._assigneeScopeService(scope),
+      // A reporter is one person, so the current one stays listed (ticked)
+      // rather than being hidden — see buildAssigneeSuggestions.
+      { keepSelected: single },
     );
     const list = this._assigneeListEl(scope);
     const open =
       opt.open != null ? !!opt.open : !!(list && list.dataset.open === "1");
+    // No match is an ANSWER, not a reason to swallow the dropdown. Forcing it
+    // shut on an empty result set is what made a picker read as broken: the
+    // caret did nothing, and there was no way to tell "nobody matches that"
+    // from "this control is dead".
+    const content = rows.length
+      ? rows
+      : [
+          Skeletons.Note({
+            className: `${this.fig.family}__assignee-empty`,
+            content: LOCALE.NO_MEMBERS_FOUND,
+            bubble: 0,
+          }),
+        ];
     this._withPart(`${scope}-assignee-suggestions`)
       .then((part) => {
         if (!part || part.isDestroyed?.()) return;
-        part.feed(rows);
+        part.feed(content);
         // A press on a row must not blur the search field, or the 200 ms
         // focusout teardown below fires mid-click and the pick is lost.
         keepListThroughClick(part.el, `.${this.fig.family}__assignee-option`);
-        if (part.el) part.el.dataset.open = open && rows.length ? "1" : "0";
+        if (part.el) part.el.dataset.open = open ? "1" : "0";
       })
       .catch(() => {
         /* not mounted yet */
@@ -2197,10 +2343,15 @@ class __tasks_panel extends LetcBox {
       if (!t || !t.matches || !t.matches(`.${this.fig.family}__subtask-date-input`)) {
         return;
       }
-      if (!this._subtaskDraft) return;
+      // data-scope says which of the two creators this input belongs to (the
+      // create modal's or the detail panel's) — they use the same class.
+      const isCreate = t.getAttribute("data-scope") === "create";
+      const draft = isCreate ? this._createSubtaskDraft : this._subtaskDraft;
+      if (!draft) return;
       // "" when the user clears the field — a child with no due date is valid.
-      this._subtaskDraft.due_date = t.value || "";
-      this._refreshSubtaskSection();
+      draft.due_date = t.value || "";
+      if (isCreate) this._refreshCreateSubtaskSection();
+      else this._refreshSubtaskSection();
     });
   }
 
@@ -2340,6 +2491,13 @@ class __tasks_panel extends LetcBox {
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
+      // A peer flipped which column means finished. Completion is read from
+      // is_done all over this window (the subtask badge, the completed
+      // filters, where a new task lands), so a stale flag silently
+      // mis-reports — reload the columns exactly like a rename.
+      // SERVICE.task.column_set_done is defined in lex/services.json, so this
+      // is never `case undefined:` even if the backend map lacks it.
+      case SERVICE.task.column_set_done:
         Promise.all([this._loadColumns(), this._loadTasks()]).then(() =>
           this._render(),
         );
@@ -2356,10 +2514,20 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.comment_create:
       case SERVICE.task.comment_update:
       case SERVICE.task.comment_delete:
-      case SERVICE.task.comment_react:
+      case SERVICE.task.comment_react: {
+        // Our OWN comment comes back on the socket too, and the row it names is
+        // already in the feed (the create response put it there). Re-reading
+        // the whole thread for it costs a second round trip per comment sent
+        // and repaints the feed a beat after the row landed, which reads as a
+        // flicker. A peer's change still refreshes, below.
+        const echoOfOurs =
+          service === SERVICE.task.comment_create &&
+          data &&
+          data.id &&
+          (this._comments || []).some((c) => String(c.id) === String(data.id));
         // A peer changed a comment. Surgically refresh the open task's feed so
         // an in-progress composer/edit isn't disturbed.
-        if (this._detailId) {
+        if (this._detailId && !echoOfOurs) {
           this._loadComments(this._detailId).then(() => {
             if (this._detailId) this._refreshCommentList();
           });
@@ -2369,6 +2537,7 @@ class __tasks_panel extends LetcBox {
           this._loadActivity().then(() => this._render());
         }
         return;
+      }
       default:
         if (super.onWsMessage) super.onWsMessage(svc, data, options);
     }
@@ -2477,6 +2646,12 @@ class __tasks_panel extends LetcBox {
     if (this._detailId && this._detailDraft) drafts.push(this._detailDraft);
     if (this._creating && this._createDefaults)
       drafts.push(this._createDefaults);
+    // The children queued in the create modal carry a status of their own, so
+    // they can be stranded on the dead column independently of their parent.
+    if (this._creating) {
+      drafts.push(...this.getPendingSubtasks());
+      if (this._createSubtaskDraft) drafts.push(this._createSubtaskDraft);
+    }
     const affected = drafts.filter((d) => String(d.status) === String(key));
     if (!affected.length) return;
 
@@ -2505,6 +2680,9 @@ class __tasks_panel extends LetcBox {
     affected.forEach((d) => {
       d.status = target.key;
     });
+    // Repointed rows are drawn from the draft, so the queued list has to be
+    // redrawn for the new column to show on the chips.
+    if (this._creating) this._refreshCreateSubtaskSection();
     const where = this._plainText(target.name || target.key);
     this._notifyPeerChange(
       who
@@ -2513,11 +2691,65 @@ class __tasks_panel extends LetcBox {
     );
   }
 
+  // ── Session cache of this workspace's board (libs/read-cache) ──────────
+  // Written by every _load* below on a good answer, read once at mount by
+  // _seedFromCache. Never a substitute for the fetch: the mount always
+  // revalidates, so the cache is at most one round trip behind.
+  _cacheKey(what) {
+    return `tasks:${this._hubId}:${what}`;
+  }
+
+  // Seed the panel's state from the session cache. Answers whether the BOARD
+  // (tasks) was known — the one thing worth a first paint; the rest is filled
+  // in when present so that paint carries assignees, labels and columns too.
+  _seedFromCache() {
+    const tasks = readCache.peek(this._cacheKey("tasks"));
+    if (!Array.isArray(tasks)) return false;
+    this._tasks = tasks.map(this._normalizeTask);
+    const columns = readCache.peek(this._cacheKey("columns"));
+    if (Array.isArray(columns)) this._customColumns = columns;
+    const watches = readCache.peek(this._cacheKey("column_watches"));
+    if (Array.isArray(watches)) this._columnWatches = new Set(watches.map(String));
+    const members = readCache.peek(this._cacheKey("members"));
+    if (Array.isArray(members) && members.length) {
+      this._members = members;
+      this._membersLoaded = true;
+    }
+    const labels = readCache.peek(this._cacheKey("labels"));
+    if (Array.isArray(labels)) this._labels = labels;
+    return true;
+  }
+
+  // Everything the board paints from, as one string — compared around the
+  // revalidating loads so an unchanged answer costs no second render.
+  _boardSignature() {
+    return readCache.signature([
+      this._tasks,
+      this._customColumns,
+      Array.from(this._columnWatches || []),
+      this._members,
+      this._labels,
+    ]);
+  }
+
+  // The bell toggles optimistically and never re-reads the list, so the cache
+  // has to follow the flip (and the revert) by hand.
+  _syncWatchCache() {
+    readCache.set(this._cacheKey("column_watches"), Array.from(this._columnWatches));
+  }
+
   async _loadTasks() {
     try {
       const rows = await this.fetchService({
         service: SERVICE.task.list,
         hub_id: this._hubId,
+        // Whole workspace, every folder. See _scopeNid in initialize.
+        workspace: 1,
+        // Deliberate redundancy for a staggered deploy. A server that predates
+        // the workspace flag ignores it and reads these instead, so the board
+        // falls back to the old folder-scoped list rather than coming back
+        // EMPTY — which is what "workspace only" would look like there. A
+        // current server ignores them.
         nid: this._scopeNid,
         include_unscoped: this._scopeIsRoot,
       });
@@ -2529,6 +2761,7 @@ class __tasks_panel extends LetcBox {
       if (Array.isArray(rows)) {
         this._tasks = rows.map(this._normalizeTask);
         this._loadFailed = 0;
+        readCache.set(this._cacheKey("tasks"), rows);
       } else {
         this._loadFailed = 1;
         if (!Array.isArray(this._tasks)) this._tasks = [];
@@ -2539,31 +2772,35 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  // Custom Kanban columns for the current folder scope. Best-effort — a
-  // failure (e.g. server without the task_column procs yet) just leaves the
-  // four built-in columns.
+  // The workspace's Kanban columns — one set per workspace, shared by every
+  // folder in it. Best-effort: a failure (e.g. a server without the
+  // task_column procs yet) just leaves the four built-in columns.
+  //
+  // No nid: the column procs resolve the workspace scope themselves. Sending
+  // one would only suggest it still selects something.
   async _loadColumns() {
     try {
       const rows = await this.fetchService({
         service: SERVICE.task.column_list,
         hub_id: this._hubId,
-        nid: this._scopeNid,
       });
       this._customColumns = Array.isArray(rows) ? rows : [];
+      if (Array.isArray(rows)) readCache.set(this._cacheKey("columns"), rows);
     } catch (err) {
       this._customColumns = [];
     }
   }
 
-  // Load which columns the user has the bell on for, in this folder scope.
+  // Which columns the user has the bell on for. Workspace-wide, like the
+  // columns themselves.
   async _loadColumnWatches() {
     try {
       const rows = await this.fetchService({
         service: SERVICE.task.column_watch_list,
         hub_id: this._hubId,
-        nid: this._scopeNid,
       });
       this._columnWatches = new Set((Array.isArray(rows) ? rows : []).map(String));
+      if (Array.isArray(rows)) this._syncWatchCache();
     } catch (err) {
       this._columnWatches = new Set();
     }
@@ -2582,6 +2819,7 @@ class __tasks_panel extends LetcBox {
     const on = !this._columnWatches.has(k);
     if (on) this._columnWatches.add(k);
     else this._columnWatches.delete(k);
+    this._syncWatchCache();
     if (trigger.el) trigger.el.dataset.active = on ? "1" : "0";
     try {
       await this.postService({
@@ -2589,13 +2827,13 @@ class __tasks_panel extends LetcBox {
           ? SERVICE.task.column_watch_set
           : SERVICE.task.column_watch_unset,
         hub_id: this._hubId,
-        nid: this._scopeNid,
         column_key: k,
       });
     } catch (err) {
       // Revert the optimistic flip on failure.
       if (on) this._columnWatches.delete(k);
       else this._columnWatches.add(k);
+      this._syncWatchCache();
       if (trigger.el) trigger.el.dataset.active = on ? "0" : "1";
     }
   }
@@ -2607,6 +2845,8 @@ class __tasks_panel extends LetcBox {
       const rows = await this.fetchService({
         service: SERVICE.task.activity,
         hub_id: this._hubId,
+        workspace: 1,
+        // Same deploy-skew fallback as _loadTasks.
         nid: this._scopeNid,
         include_unscoped: this._scopeIsRoot,
         limit: 30,
@@ -2714,6 +2954,7 @@ class __tasks_panel extends LetcBox {
       if (Array.isArray(rows) && rows.length) {
         this._members = rows;
         this._membersLoaded = true;
+        readCache.set(this._cacheKey("members"), rows);
       } else if (!this._membersLoaded) {
         this._members = Array.isArray(rows) ? rows : [];
       }
@@ -2729,6 +2970,7 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
       });
       this._labels = Array.isArray(rows) ? rows : [];
+      if (Array.isArray(rows)) readCache.set(this._cacheKey("labels"), rows);
     } catch (err) {
       this._labels = [];
     }
@@ -2941,6 +3183,14 @@ class __tasks_panel extends LetcBox {
       if (this._subtaskDraft) this._subtaskDraft.title = value;
       return;
     }
+    // Same, for the creator inside the create modal — its draft is a different
+    // field, and the generic tail below would write the child's title onto the
+    // PARENT draft (`_createDefaults.title`), silently renaming the task being
+    // created.
+    if (name === "create-subtask-title") {
+      if (this._createSubtaskDraft) this._createSubtaskDraft.title = value;
+      return;
+    }
 
     const inCreate = this.el.querySelector(".tasks-panel__create-modal");
     const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
@@ -2973,6 +3223,16 @@ class __tasks_panel extends LetcBox {
     const labels = Array.isArray(draft.labels) ? draft.labels.slice() : [];
     const pendingFiles = Array.isArray(draft.pending_files)
       ? draft.pending_files.slice()
+      : [];
+    // A child left half-typed in the creator card counts as one the user meant
+    // to create — fold it in before the snapshot, or pressing Create discards
+    // it without a word.
+    this._flushCreateSubtaskDraft();
+    // Children queued in the modal. Snapshotted before the await, like the
+    // labels and files above, so the teardown below cannot empty the list out
+    // from under the loop that posts them.
+    const queuedSubtasks = Array.isArray(draft.subtasks)
+      ? draft.subtasks.slice()
       : [];
 
     try {
@@ -3030,15 +3290,28 @@ class __tasks_panel extends LetcBox {
           ),
           ...pendingFiles.map(linkPending),
         ]);
+        // Children last, and NOT inside the Promise.all above: they are
+        // ordered (the loop is sequential so they land as entered), and unlike
+        // a label or a file link a failure here leaves a task the user meant to
+        // have children without them — worth saying so rather than swallowing.
+        // The parent exists either way, so this can never fail the create.
+        const subtasksFailed = queuedSubtasks.length
+          ? await this._createQueuedSubtasks(row.id, queuedSubtasks)
+          : 0;
         // Tear down the form only after a successful create — postService
         // resolves undefined (or an error payload with no id) on failure, so
         // the teardown must live INSIDE this success branch or a failed
         // create silently closes the modal and discards the user's draft.
         this._creating = false;
         this._createDefaults = null;
+        this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
         await this._loadTasks();
+        // After the reload, so the board already shows the children that DID
+        // make it and the alert reads as a partial result rather than a total
+        // failure.
+        if (subtasksFailed) Wm.alert(LOCALE.ERROR_NETWORK);
       } else {
         Wm.alert(LOCALE.ERROR_NETWORK);
       }
@@ -3447,6 +3720,7 @@ class __tasks_panel extends LetcBox {
       const rows = await this.fetchService({
         service: SERVICE.task.activity,
         hub_id: this._hubId,
+        workspace: 1,
         nid: this._scopeNid,
         include_unscoped: this._scopeIsRoot,
         limit: HISTORY_SCAN,
@@ -3474,7 +3748,6 @@ class __tasks_panel extends LetcBox {
       const row = await this.postService({
         service: SERVICE.task.column_create,
         hub_id: this._hubId,
-        nid: this._scopeNid,
         name,
         theme: this._boardTheme || "default",
         // "Set as default" — sent for forward-compat; the server ignores it
@@ -3509,10 +3782,9 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_update,
         hub_id: this._hubId,
-        // Column ids are folder-scoped: the built-ins share their status keys
-        // across boards, so without nid the server would rename this column on
-        // every board in the workspace.
-        nid: this._scopeNid,
+        // No nid: there is one board per workspace now, so a rename applying
+        // workspace-wide is the intended effect rather than the accident it
+        // would have been while columns were per-folder.
         id,
         name,
       });
@@ -3534,8 +3806,7 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_update,
         hub_id: this._hubId,
-        // Folder-scoped — see _renameColumn.
-        nid: this._scopeNid,
+        // Workspace-wide — see _renameColumn.
         id,
         theme,
       });
@@ -3547,6 +3818,52 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
+  /**
+   * Flip "tasks in this column are done".
+   *
+   * is_done is what completion is actually keyed on everywhere in this window
+   * (_doneKeys, the subtask badge, the completed filters) — but until now only
+   * the seeded built-in `complete` ever carried it, so a board whose columns
+   * were renamed or replaced had no finished column at all.
+   *
+   * The row is only mutated locally AFTER the server confirms: getColumns()
+   * caches on a signature that includes is_done, so writing it optimistically
+   * would flip every completion read in the window on a call that may not have
+   * landed. postService resolves undefined when a call does not complete (the
+   * write guard above does exactly that for a viewer), so an empty response is
+   * a failure, not a success with no body.
+   */
+  async _toggleColumnDone(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    if (!id) return;
+    const rec = this._customColumns.find((c) => c.id === id);
+    if (!rec) return;
+    const next = Number(rec.is_done) ? 0 : 1;
+    try {
+      const resp = await this.postService({
+        service: SERVICE.task.column_set_done,
+        hub_id: this._hubId,
+        // Workspace-wide — see _renameColumn.
+        id,
+        is_done: next,
+      });
+      const row = Array.isArray(resp) ? resp[0] : resp;
+      if (!row || row.id == null) return; // refused or not applied — keep the old value
+      rec.is_done = Number(row.is_done) ? 1 : 0;
+    } catch (err) {
+      console.error("[tasks_panel] column.set_done failed:", err);
+      return;
+    }
+    // The done/total subtask badge is `subtask_done` from task.list, counted
+    // SERVER-side over the columns flagged is_done — so it does not follow
+    // from the local row and is stale the moment the flag moves. Reload the
+    // tasks, exactly as the peer branch of onWsMessage does; without it the
+    // person who flipped the switch is the only one seeing the old counts.
+    // _loadTasks never rejects and keeps the previous rows on failure.
+    await this._loadTasks();
+    this._render();
+  }
+
   async _deleteColumn(trigger) {
     const id = trigger.mget("taskColumn") || this._colMenuFor;
     if (!id) return;
@@ -3554,9 +3871,7 @@ class __tasks_panel extends LetcBox {
       const resp = await this.postService({
         service: SERVICE.task.column_delete,
         hub_id: this._hubId,
-        // Folder-scoped — without nid the server would delete this column from
-        // every board in the workspace (see _renameColumn).
-        nid: this._scopeNid,
+        // Workspace-wide — see _renameColumn.
         id,
       });
       const row = Array.isArray(resp) ? resp[0] : resp;
@@ -3597,7 +3912,6 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_reorder,
         hub_id: this._hubId,
-        nid: this._scopeNid,
         order: (this._customColumns || []).map((c) => c.id).join(","),
       });
     } catch (err) {
@@ -3672,11 +3986,20 @@ class __tasks_panel extends LetcBox {
         }
         return Array.isArray(out) ? out : [];
       };
-      this._comments = (Array.isArray(rows) ? rows : []).map((r) => ({
+      const fresh = (Array.isArray(rows) ? rows : []).map((r) => ({
         ...r,
         reactions: jsonList(r.reactions),
         attachments: jsonList(r.attachments),
       }));
+      // Carry over any optimistic row still awaiting its create response. A
+      // peer's comment lands on the socket and re-reads the whole thread; if
+      // that read overtakes our own create, a wholesale replace would drop the
+      // row the user is looking at — and the create's own reconciliation would
+      // then find nothing to replace.
+      const stillPending = (this._comments || []).filter(
+        (c) => c && c._pending && !fresh.some((f) => String(f.id) === String(c.id)),
+      );
+      this._comments = fresh.concat(stillPending);
     } catch (err) {
       // Don't silently blank an already-populated feed on a transient failure —
       // that reads to the user as "others' comments disappeared". Log so the
@@ -3686,22 +4009,124 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  /**
+   * Swap one comment row for another (or drop it, with `next` omitted) and
+   * repaint the feed. Used to reconcile an optimistic row with the server's.
+   */
+  _replaceComment(id, next) {
+    const list = this._comments || [];
+    const i = list.findIndex((c) => String(c.id) === String(id));
+    if (i === -1) {
+      // The row we meant to replace is gone (a concurrent _loadComments), so
+      // there is nothing to swap — but the comment itself is real and must not
+      // disappear. Append it unless that read already brought it back.
+      if (!next) return false;
+      if (list.some((c) => String(c.id) === String(next.id))) return false;
+      list.push(next);
+      this._comments = list;
+      return true;
+    }
+    if (next) list[i] = next;
+    else list.splice(i, 1);
+    return true;
+  }
+
+  /**
+   * Post the composer's comment.
+   *
+   * A plain text comment is rendered OPTIMISTICALLY: the composer empties and
+   * the row appears on the same tick as the Enter key, then the server's row
+   * replaces it. The round trip behind it is not short — comment_create writes
+   * the row, logs the activity and fans out mention / reply / assignee
+   * notifications before it answers — and the old flow waited for all of that
+   * AND a full comment_list re-read before the typed text left the box, which
+   * is what made Enter feel like it had not registered.
+   *
+   * A comment carrying attachments keeps the blocking flow: its staged strip is
+   * the upload progress UI, so the composer cannot be torn down under it, and
+   * the attachment rows only exist once the links are written.
+   */
   async _submitComment() {
     if (!this._detailId) return;
     const draft = this._commentDraft;
     const body = String((draft && draft.body) || "").trim();
     // Files queued on the composer count as content, exactly as in a reply — a
     // comment that is only an attachment is still worth posting.
-    if (!body && !((draft && draft.pending_files) || []).length) return;
+    const pending = (draft && draft.pending_files) || [];
+    if (!body && !pending.length) return;
     const taskId = this._detailId;
-    try {
-      const created = await this.postService({
+    const mention_uids = Array.isArray(draft.mention_uids)
+      ? draft.mention_uids
+      : [];
+    const post = () =>
+      this.postService({
         service: SERVICE.task.comment_create,
         hub_id: this._hubId,
         task_id: taskId,
         body,
-        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+        mention_uids,
       });
+
+    if (!pending.length) {
+      const tempId = `pending-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+      const now = Math.floor(Date.now() / 1000);
+      this._comments = (this._comments || []).concat({
+        id: tempId,
+        task_id: taskId,
+        author_uid: Visitor.id,
+        parent_id: null,
+        body,
+        edited: 0,
+        ctime: now,
+        mtime: now,
+        reactions: [],
+        attachments: [],
+        // The skin dims the row and the actions are withheld: reacting to or
+        // deleting a comment the server has not acknowledged has no id to act
+        // on yet.
+        _pending: 1,
+      });
+      this._commentDraft = null;
+      this._refreshCommentList();
+      this._refreshPendingList("comment");
+      const ed = this._descEditorEl("comment");
+      if (ed) this._renderEditorContent(ed, "");
+
+      let row = null;
+      try {
+        const created = await post();
+        row = Array.isArray(created) ? created[0] : created;
+      } catch (err) {
+        console.error("[tasks_panel] comment.create failed:", err);
+      }
+      const newId = row && (row.id || row.comment_id);
+      if (newId) {
+        // A fresh comment has no reactions and no attachments — comment_create
+        // returns the row without those columns, so fill the shapes the
+        // renderer expects rather than re-reading the whole feed.
+        this._replaceComment(tempId, {
+          ...row,
+          reactions: [],
+          attachments: [],
+        });
+      } else {
+        // Failed (postService resolves rather than rejects on a refusal): take
+        // the row back out and hand the text back to the composer instead of
+        // losing what was typed.
+        this._replaceComment(tempId, null);
+        this._commentDraft = draft;
+        this._refreshPendingList("comment");
+        const back = this._descEditorEl("comment");
+        if (back) this._renderEditorContent(back, body);
+      }
+      if (this._detailId === taskId) this._refreshCommentList();
+      return;
+    }
+
+    try {
+      const created = await post();
       // The row doesn't exist until now — its id comes back on the create, and
       // only then can the queued files be attached to it.
       const row = Array.isArray(created) ? created[0] : created;
@@ -4580,6 +5005,17 @@ class __tasks_panel extends LetcBox {
    */
   async _dropOnCommentRow(commentId, items) {
     const taskId = this._detailId;
+    // An optimistic row carries a local id the server has never seen, so
+    // comment_link_file would have nothing to attach to. Every row is a drop
+    // target, including the one still in flight — refuse this one until its
+    // create answers and the real row takes its place.
+    if (
+      (this._comments || []).some(
+        (c) => c && c._pending && String(c.id) === String(commentId),
+      )
+    ) {
+      return;
+    }
     const staged = await this._stageRowItems(commentId, items);
     if (!staged.length) return;
     // Busy for the length of THIS run, not for as long as entries happen to sit
@@ -6265,6 +6701,22 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
+   * Who the reporter falls back to in one picker scope: the task's creator in
+   * the detail panel, the current user in the create modal — the person the
+   * field names until somebody reassigns it, and what the chip's ✕ restores.
+   *
+   * Answers "" for a task with no creator recorded, rather than falling back to
+   * the current user: the skeleton passes detail.created_by verbatim, so both
+   * places must resolve the same way — otherwise the ✕ would be absent on the
+   * first render and appear after a pick, offering a reset to the wrong person.
+   */
+  _reporterFallback(scope) {
+    if (/^create/.test(String(scope || ""))) return Visitor.id;
+    const task = this.getDetailTask();
+    return (task && task.created_by) || "";
+  }
+
+  /**
    * Repaint one reporter picker in place after a pick.
    *
    * Mirrors _applyAssigneeChange, with the two single-select differences: the
@@ -6275,10 +6727,13 @@ class __tasks_panel extends LetcBox {
     if (!this.el) return;
     const draft = this._pickerDraft(scope);
     const uid = draft && draft.reporter_uid;
+    const resetTo = this._reporterFallback(scope);
     this._withPart(`${scope}-assignee-chips`)
       .then((chips) => {
         if (!chips || chips.isDestroyed?.()) return;
-        chips.feed(require("./skeleton").buildReporterChip(this, uid));
+        chips.feed(
+          require("./skeleton").buildReporterChip(this, uid, { scope, resetTo }),
+        );
       })
       .catch(() => {
         /* not mounted yet */
@@ -7358,6 +7813,15 @@ class __tasks_panel extends LetcBox {
         ".tasks-panel__create-modal .tasks-panel__desc-editor",
         "create",
       );
+      // Same 200ms gap on the child-item creator's title: it is rebuilt by
+      // every full render (a peer's WS event, say), and without this it blinks
+      // empty before ui-core re-seeds it from the skeleton.
+      if (this._createSubtaskDraft) {
+        setVal(
+          ".tasks-panel__create-modal .tasks-panel__subtask-card-title input",
+          this._createSubtaskDraft.title,
+        );
+      }
     }
     if (this._detailDraft) {
       setVal(
@@ -7368,6 +7832,12 @@ class __tasks_panel extends LetcBox {
         ".tasks-panel__detail-panel .tasks-panel__desc-editor",
         "detail",
       );
+      if (this._subtaskDraft) {
+        setVal(
+          ".tasks-panel__detail-panel .tasks-panel__subtask-card-title input",
+          this._subtaskDraft.title,
+        );
+      }
       initEditor(
         ".tasks-panel__detail-panel .tasks-panel__comment-input",
         "comment",
@@ -7467,6 +7937,19 @@ class __tasks_panel extends LetcBox {
     const savedScroll = this._captureViewScroll();
 
     this.feed(require("./skeleton")(this));
+    // Whatever was open has now been painted, so the NEXT render must not play
+    // its entrance again. Recorded AFTER the build, because the skeleton reads
+    // these while assembling — see hasPainted.
+    //
+    // Read from the live state rather than set by each open/close handler:
+    // there are several ways into and out of each of these overlays, and a
+    // flag maintained by hand at every one of them is a flag that will be
+    // missed at one of them.
+    this._painted = {
+      create: !!this._creating,
+      detail: !!this._detailId,
+      board: !!this._boardModalOpen,
+    };
     // ui-core sets <input> values through a 200ms `waitElement` poll, so
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).
@@ -8094,8 +8577,25 @@ class __tasks_panel extends LetcBox {
     return this._subtasksOpen.has(id);
   }
 
-  getSubtaskDraft() {
-    return this._subtaskDraft;
+  /**
+   * The open child-item creator card, per scope.
+   *
+   * "detail" is the one on an existing task (posts straight away); "create" is
+   * the one in the create modal, which only queues onto the parent's draft.
+   * Two fields rather than one because the create modal and the detail panel
+   * are independent overlays — sharing a draft would let one wipe the other's.
+   */
+  getSubtaskDraft(scope = "detail") {
+    return scope === "create" ? this._createSubtaskDraft : this._subtaskDraft;
+  }
+
+  /**
+   * Children queued on the create modal's draft — rows that do not exist
+   * server-side yet. Posted, with the new parent's id, by _commitTask.
+   */
+  getPendingSubtasks() {
+    const draft = this._createDefaults;
+    return (draft && Array.isArray(draft.subtasks) && draft.subtasks) || [];
   }
 
   // List / Gantt chevron. Local-only toggle, but it changes how many rows the
@@ -8156,6 +8656,184 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  // ── Children queued in the create modal ─────────────────────────
+  //
+  // Everything below mirrors the detail-panel creator, minus the server: the
+  // parent has no id until Create is pressed, so a child can only be held on
+  // the draft and posted afterwards by _commitTask.
+
+  /**
+   * "+ Add child work item" in the create modal.
+   *
+   * Pre-fills the due date from the parent DRAFT (captured first, since the
+   * date lives in the DOM until something reads it), exactly as the detail-panel
+   * creator pre-fills from the saved parent.
+   */
+  _openCreateSubtaskDraft() {
+    if (!this._createDefaults) return;
+    this._captureCreateDraft();
+    const cols = this.getColumns();
+    const firstOpen = cols.find((c) => !c.is_done) || cols[0];
+    this._createSubtaskDraft = {
+      title: "",
+      due_date: this._createDefaults.due_date || "",
+      priority: "medium",
+      status: firstOpen ? firstOpen.key : "todo",
+      menu: null,
+    };
+    this._refreshCreateSubtaskSection();
+  }
+
+  /**
+   * Re-feed ONLY the create modal's child-item block.
+   *
+   * A full _render() would rebuild the title textarea and the description
+   * editor alongside it, stealing focus mid-compose — the same reason the due
+   * section and the detail panel's own child block are separate parts.
+   */
+  _refreshCreateSubtaskSection() {
+    if (!this._creating) return;
+    this._withPart("create-subtask-rows")
+      .then((part) => {
+        if (!this._creating || !part || part.isDestroyed?.()) return;
+        part.feed(
+          require("./skeleton").buildSubtaskRowsContent(this, null, "create"),
+        );
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
+  }
+
+  _createSubtaskInput() {
+    return (
+      this.el &&
+      this.el.querySelector(
+        `.${this.fig.family}__create-modal .${this.fig.family}__subtask-card-title input`,
+      )
+    );
+  }
+
+  // Live <input> first, draft second: the value is bound asynchronously, so on
+  // a fast type-then-click the draft can still be a keystroke behind.
+  _readCreateSubtaskTitle() {
+    const draft = this._createSubtaskDraft;
+    if (!draft) return "";
+    const input = this._createSubtaskInput();
+    return String((input && input.value) || draft.title || "").trim();
+  }
+
+  /**
+   * Fold a half-typed child into the queue before the parent is committed.
+   *
+   * The parent's Create button sits directly below the creator card, so "type
+   * the child, press Create" is the natural gesture — and without this the row
+   * the user just typed is silently dropped. Exactly the trap the detail
+   * panel's explicit Create button was added for, one level up.
+   *
+   * Only ever ADDS: an empty card is left alone rather than stealing focus the
+   * way pressing Add on it would.
+   */
+  _flushCreateSubtaskDraft() {
+    if (!this._createSubtaskDraft || !this._readCreateSubtaskTitle()) return;
+    this._queueCreateSubtask();
+  }
+
+  /**
+   * Queue the creator card's row onto the draft. Purely local — nothing is
+   * posted until the parent is.
+   *
+   * Reads the title off the live <input> first for the same reason
+   * _commitSubtask does: the value is bound asynchronously, so on a fast
+   * type-then-click the draft can still be a keystroke behind.
+   */
+  _queueCreateSubtask() {
+    const parentDraft = this._createDefaults;
+    const draft = this._createSubtaskDraft;
+    if (!parentDraft || !draft) return;
+    const input = this._createSubtaskInput();
+    const title = this._readCreateSubtaskTitle();
+    if (!title) {
+      if (input && typeof input.focus === "function") input.focus();
+      return;
+    }
+    if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
+    parentDraft.subtasks.push({
+      // Local key, not a server id. Named `id` so the shared row skeleton can
+      // keep passing `taskId` and the handlers below can look rows up the same
+      // way the detail scope does.
+      id: `pending:${(this._pendingSubtaskSeq = (this._pendingSubtaskSeq || 0) + 1)}`,
+      title,
+      priority: draft.priority || "medium",
+      status: draft.status || this.getDefaultStatus(),
+      due_date: draft.due_date || "",
+    });
+    // Stay open with only the title cleared, matching the detail-panel creator:
+    // breaking a task down means adding several children in a row.
+    this._createSubtaskDraft = { ...draft, title: "", menu: null };
+    if (input) input.value = "";
+    this._refreshCreateSubtaskSection();
+  }
+
+  _removeCreateSubtask(trigger) {
+    const id = trigger.mget("taskId");
+    const draft = this._createDefaults;
+    if (!id || !draft || !Array.isArray(draft.subtasks)) return;
+    draft.subtasks = draft.subtasks.filter((t) => t.id !== id);
+    this._refreshCreateSubtaskSection();
+  }
+
+  // The queued row's checkbox. No server round-trip and no rollup to apply —
+  // it just moves the row between the first done and first open column, which
+  // is the status it will be created with.
+  _toggleCreateSubtaskDone(trigger) {
+    const id = trigger.mget("taskId");
+    const row = this.getPendingSubtasks().find((t) => t.id === id);
+    if (!row) return;
+    const cols = this.getColumns();
+    const target = this.isDoneStatus(row.status)
+      ? cols.find((c) => !c.is_done)
+      : cols.find((c) => c.is_done);
+    if (!target) return;
+    row.status = target.key;
+    this._refreshCreateSubtaskSection();
+  }
+
+  /**
+   * Post the children queued on the create modal, now that the parent has an
+   * id. Sequential, so they land in the order they were entered.
+   *
+   * Never throws: the parent is already created by the time this runs, so a
+   * child that fails must not roll the create back or take the modal down with
+   * it. Returns how many failed, for the caller to report.
+   */
+  async _createQueuedSubtasks(parentId, queued) {
+    let failed = 0;
+    for (const sub of queued) {
+      try {
+        const created = await this.postService({
+          service: SERVICE.task.create,
+          hub_id: this._hubId,
+          // Sent for parity with a normal create; the server ignores it for a
+          // child and inherits the parent's folder instead.
+          nid: this._scopeNid,
+          parent_task_id: parentId,
+          title: sub.title,
+          priority: sub.priority || "medium",
+          status: sub.status || undefined,
+          due_date: sub.due_date || null,
+        });
+        const row = Array.isArray(created) ? created[0] : created;
+        // postService resolves falsy on failure rather than rejecting.
+        if (!row || !row.id) failed += 1;
+      } catch (err) {
+        console.error("[tasks_panel] queued subtask create failed:", err);
+        failed += 1;
+      }
+    }
+    return failed;
+  }
+
   /**
    * Create a subtask under the currently open task.
    *
@@ -8172,9 +8850,13 @@ class __tasks_panel extends LetcBox {
     // `__subtask-create-input` selector no longer matched anything, which left
     // this reading the draft alone — fine while the watch keeps up, but the
     // empty-title branch below then focused nothing and the create looked dead.
+    // Scoped to the detail panel: the create modal now carries a creator card
+    // with the same class, so an unscoped lookup could read the wrong one.
     const input =
       this.el &&
-      this.el.querySelector(`.${this.fig.family}__subtask-card-title input`);
+      this.el.querySelector(
+        `.${this.fig.family}__detail-panel .${this.fig.family}__subtask-card-title input`,
+      );
     const title = String((input && input.value) || draft.title || "").trim();
     if (!title) {
       if (input && typeof input.focus === "function") input.focus();
@@ -8187,7 +8869,9 @@ class __tasks_panel extends LetcBox {
     // button (same reasoning as the comment actions above).
     const submitBtn =
       this.el &&
-      this.el.querySelector(`.${this.fig.family}__subtask-create-submit`);
+      this.el.querySelector(
+        `.${this.fig.family}__detail-panel .${this.fig.family}__subtask-create-submit`,
+      );
     this._setControlBusy(submitBtn, true, { swapLabel: true });
     try {
       const created = await this.postService({
@@ -8471,6 +9155,18 @@ class __tasks_panel extends LetcBox {
   }
   getGanttSelected() {
     return this._ganttSelected;
+  }
+
+  /**
+   * Has this overlay already been painted in its current opening?
+   *
+   * The skeleton asks so it can stamp `data-entered`, which is what the skin
+   * gates every entrance animation on. See `_painted` in initialize.
+   *
+   * @param {String} key one of the keys _render records
+   */
+  hasPainted(key) {
+    return !!(this._painted && this._painted[key]);
   }
 
   isCreating() {

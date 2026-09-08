@@ -1,9 +1,43 @@
-const { stepBadge, isLastScreen } = require('../tours');
+const skeleton = require('./skeleton');
+const { isLastScreen, entryScreen } = require('../tours');
 
-const BADGE = {
-  title: 'Meeting in folder',
-  desc: `Every folder has its own meeting space. Start a call directly from the folder you're working in, your files and conversations stay in the same place.`,
-};
+/**
+ * The `meeting` tour — Figma 148:44759, 149:44974, 156:19597.
+ *
+ * ONE screen: the Meet empty state, whose carousel walks the two previews by
+ * itself. Its CTA — "Schedule your first meeting" — ends the tour and opens the
+ * REAL scheduler on the window underneath.
+ *
+ * There used to be a second screen drawing a mock of that dialog. It is gone,
+ * for the reason the task tour's went: the tour showed a picture of the form
+ * and then left the user to find the real one, when the CTA is named for
+ * exactly the thing it can now do.
+ *
+ * The two previews used to be two STEPS, which made the card index and the step
+ * number the same value — pressing Next only slid the track. They are content
+ * this screen animates through (`_card`), not steps of the flow
+ * (`_screenIndex`). The timer moves the first; the CTA and the callout's
+ * Next/Back move the second. Same split as the task tour, for the same reason.
+ *
+ * The scheduler used to be `tutorial_schedule`, a step of its own inside
+ * folder_task. 2.0 puts it at the end of the MEET flow, which is where anyone
+ * would actually reach it.
+ */
+const SCREENS = [
+  // The empty state. No `desc` — it carries no callout (see _showScreen), and
+  // each preview names itself through the caption under the track.
+  { target: 'es-viewport', anchor: 'es-cta', direction: 'north' },
+];
+
+// How long each preview holds before the track moves on. The same 2s the task
+// tour's carousel uses, and for the same reason: with the CTA now ending the
+// tour outright, both previews have to have been seen before someone reaches
+// for it.
+const AUTO_SLIDE_MS = 2000;
+
+// The last card, from the skeleton's own list so the two cannot drift: a cursor
+// that thinks there is a third preview would slide the track into blank space.
+const LAST_CARD = Math.max(0, skeleton.ITEMS.length - 1);
 
 class __tutorial_meeting extends LetcBox {
 
@@ -11,52 +45,227 @@ class __tutorial_meeting extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    this._screenIndex = 0;
+    // Which preview the carousel is resting on. Survives a walk into the
+    // dialog and back, so Back returns to the card the user left.
+    this._card = 0;
   }
 
   async onDomRefresh() {
-    this.feed(require('./skeleton')(this));
-    // The design lands the connector on the left edge of the top-right tile,
-    // which is what anchorFor('east') produces for that tile — the card comes
-    // out at x 230..550 against the design's 228..548.
-    const tile = await this.ensurePart('meeting-tile');
-    this.triggerHandlers({
-      service: 'spotlight:focus',
-      target: tile.el,
-      // The last hardcoded badge to go. meeting is a single-screen step, so
-      // both modes give the same shape: "STEP 3/6" as step three of the full
-      // tour (its only route — D7), and "STEP 1/1" if it were ever run alone,
-      // which is honest for one screen.
-      tooltip: {
-        ...BADGE,
-        badge_text: stepBadge(this, 0),
-        hide_back: !!this.mget('is_first'),
-        variant: 'figma',
-        done: isLastScreen(this, 0, 1),
-      },
-      direction: 'east',
-      // The design lights the whole room, not just the tile: its vignette is
-      // an ellipse whose clear zone (610x836) is taller than the room itself.
-      // Our hole is circular and clear to 55% of the radius, so ~600 puts the
-      // room's full height inside it and leaves the fade at the edges.
-      radius: 600,
-      owner: this,
-    });
+    this._screenIndex = entryScreen(this, SCREENS.length);
+    this._showScreen();
   }
 
   onPartReady(child, pn) {
-    switch (pn) {
-      default:
-        if (super.onPartReady) super.onPartReady(child, pn);
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  async _showScreen() {
+    const s = SCREENS[this._screenIndex];
+    if (!s) {
+      this.warn(`Data not found for screen ${this._screenIndex}`);
+      return;
     }
+    // `index` is the card, not the step — the dialog screen ignores it.
+    this.feed(skeleton(this, { ...s, index: this._card }));
+    const [target, anchor] = await Promise.all([
+      this.ensurePart(s.target),
+      this.ensurePart(s.anchor),
+    ]);
+    // The callout appears on the DIALOG screen only. The carousel screen is a
+    // landscape screenshot of the product with a caption under it — a card over
+    // that was covering the thing it was describing.
+    //
+    // That leaves the carousel with no Next, since the callout footer was its
+    // only control. The CTA carries the flow instead (`cta_service` in
+    // skeleton/index.js), the arrangement the task and chat tours already use.
+    const tooltip = s.dialog
+      ? {
+          title: LOCALE.MEET_HERO_TITLE_SHORT,
+          desc: s.desc(),
+          // NO stepProgress spread: without `step`/`steps` the callout draws no
+          // progress pill at all (progress() in
+          // ../skeleton/toolkit/tooltip.js needs both, and the header collapses
+          // rather than leaving an empty band). The tour is one carousel and
+          // one dialog; a "STEP 2/2" badge counted screens the user never
+          // experienced as steps. Same as the task and workspace tours.
+          hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+          done: isLastScreen(this, this._screenIndex, SCREENS.length),
+        }
+      : null;
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: target.el,
+      anchor: anchor && anchor.el,
+      tooltip,
+      direction: s.direction,
+      // No film on either screen. The carousel is about the screenshot in the
+      // track, and dimming the pane to light the viewport held back the only
+      // thing worth looking at; the scheduler then follows suit, so the flow
+      // does not fade a scrim in at the end of a tour that has not shown one.
+      // The callout's beak is what points at the form being described.
+      dim: false,
+      owner: this,
+    });
+    this._armAutoSlide();
+  }
+
+  /** Motion the user has not asked for; honour the platform preference. */
+  _mayAnimate() {
+    try {
+      return !(typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /** Queue the next slide, or stand down on the dialog / under reduced motion. */
+  _armAutoSlide() {
+    clearTimeout(this._slideTimer);
+    this._slideTimer = null;
+    if (!this._mayAnimate()) return;
+    const s = SCREENS[this._screenIndex];
+    // The carousel wraps, so there is no last card to stop on.
+    if (!s || s.dialog) return;
+    this._slideTimer = setTimeout(() => this._slideOn(), AUTO_SLIDE_MS);
+  }
+
+  /**
+   * Move the track one preview on, IN PLACE.
+   *
+   * Not through _showScreen: that re-feeds the whole empty state, which
+   * rebuilds the track element — and a freshly mounted node has no previous
+   * transform to transition from, so the skin's `transition: transform` never
+   * runs and the carousel jumps. Setting the transform on the node that is
+   * already there is what makes it a slide.
+   *
+   * Safe to bypass a re-render only because the previews are not steps: there
+   * is no spotlight focus to re-raise and no callout copy to swap.
+   */
+  async _slideOn() {
+    // Past the last card, back to the first. With two of them the wrap is the
+    // same distance as the step, so the loop reads as a shuttle between the
+    // two previews.
+    const next = this._card >= LAST_CARD ? 0 : this._card + 1;
+    if (!(await this._moveTrack(next))) return;
+    this._armAutoSlide();
+  }
+
+  /**
+   * Put the track on card `i` without re-rendering, moving the caption with it.
+   *
+   * Returns false when it could not — the step is gone, or the screen changed
+   * while the part was being awaited and there is no track on show any more.
+   *
+   * `--es-pitch` is read rather than recomputed: the skin sets it per variant
+   * AND per size tier, so a distance worked out here would desync on a narrow
+   * pane (see the note on PITCH in ../skeleton/toolkit/empty-state.js).
+   */
+  async _moveTrack(i) {
+    const track = await this.ensurePart('es-track');
+    if (this.isDestroyed && this.isDestroyed()) return false;
+    const s = SCREENS[this._screenIndex];
+    if (!s || s.dialog) return false;
+    if (!track || !track.el) return false;
+
+    this._card = i;
+    track.el.style.transform = `translateX(calc(var(--es-pitch) * -${i}))`;
+    this._syncCaption(i);
+    return true;
+  }
+
+  /**
+   * The caption names the card, so it moves with it. Both are in the DOM and
+   * the active one is shown — see the caption deck in
+   * ../skeleton/toolkit/empty-state.js for why it is not one row being rewritten.
+   */
+  async _syncCaption(i) {
+    const deck = await this.ensurePart('es-captions');
+    if (!deck || !deck.el) return;
+    const row = deck.el.children;
+    for (let k = 0; k < row.length; k++) {
+      row[k].dataset.on = k === i ? '1' : '0';
+    }
+  }
+
+  /**
+   * An arrow was pressed: move one card that way, wrapping at both ends.
+   *
+   * The timer is PAUSED rather than stopped — it is re-armed from wherever the
+   * press left the track, so the carousel carries on afterwards. Someone
+   * stepping through the previews by hand has not asked for the showcase to
+   * end, and the two previews wrap, so there is no end for it to stop at.
+   */
+  async _stepCard(delta) {
+    const n = LAST_CARD + 1;
+    const to = ((this._card + delta) % n + n) % n;
+    clearTimeout(this._slideTimer);
+    this._slideTimer = null;
+    if (!(await this._moveTrack(to))) return;
+    this._armAutoSlide();
+  }
+
+  onBeforeDestroy() {
+    clearTimeout(this._slideTimer);
+    this._slideTimer = null;
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
+   * Hand the user the REAL scheduler as the tour lets go.
+   *
+   * "Schedule your first meeting" is what the CTA says, and until now it did
+   * not: it walked to a drawing of the form and stopped. `open-schedule` is the
+   * folder window's own service — the same one its Schedule button raises
+   * (skeleton/meeting-schedule.js) — so the form is the product's, not a copy.
+   *
+   * Raised at the HOST, which dispatches at the window: a step does not know
+   * which window it is drawn on. That window defers the modal until this tour
+   * is off the screen — it opens inside the window the tour is covering, and
+   * `isolation: isolate` on the window manager's root means no z-index in
+   * there can lift it over a desk-level screen.
+   *
+   * BEFORE the hand-back, because that deferral only queues while the tour is
+   * still claimed. With no host window — the desk-level `full` run — the host
+   * declines and the tour simply ends, as it did before.
+   *
+   * ONLY WHEN THIS SCREEN REALLY ENDS THE TOUR: inside `full` the same press
+   * hands over to the tour after this one, and a dialog would interrupt the
+   * run. `isLastScreen` is the same test the callout uses for its Done.
+   */
+  _openTheRealThing() {
+    if (!isLastScreen(this, this._screenIndex, SCREENS.length)) return;
+    this.triggerHandlers({ service: 'window-tutorial:act', action: 'open-schedule' });
   }
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        return this.triggerHandlers();
+        // Raised by the empty state's CTA. With the mock dialog screen gone
+        // this is the only screen, so the CTA ends the tour — and opens the
+        // scheduler it is named after on the way out.
+        if (this._screenIndex >= SCREENS.length - 1) {
+          this._openTheRealThing();
+          return this.triggerHandlers({ service: 'next-step' });
+        }
+        this._screenIndex = this._screenIndex + 1;
+        return this._showScreen();
       case 'back-step':
-        return this.triggerHandlers({ service: 'back-step' });
+        if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });
+        this._screenIndex = this._screenIndex - 1;
+        return this._showScreen();
+      // The caption arrows. They move the CARD, never the step — pressing
+      // "previous" on the first preview wraps to the last rather than walking
+      // out of the tour, which is what a back-step would do.
+      case 'prev-card':
+        return this._stepCard(-1);
+      case 'next-card':
+        return this._stepCard(1);
+      default:
+        if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
   }
 }
