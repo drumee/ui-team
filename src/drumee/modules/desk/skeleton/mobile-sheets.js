@@ -74,26 +74,31 @@ function workspaceSheet(ui, rows, curHubId) {
   // a switch lands on FILES and the rail is reset to Files, but ONLY on a real
   // change of workspace.
   //
-  // ⚠️ MOBILE, KNOWN GAP — these rows do not switch anything today.
+  // Each row carries BOTH ids, and they are not interchangeable.
   //
-  // They re-dispatch to "switch-workspace", and desk/index.js answers that with
-  // `this._switchWorkspace(cmd.mget("wsKey"))` — but `extra` below carries only
-  // `wsHubId`, so wsKey is undefined and _switchWorkspace returns on its first
-  // line. Nothing throws; the sheet just closes.
+  // `wsKey` is what actually switches: desk/index.js answers "switch-workspace"
+  // with `this._switchWorkspaceAndOffer(cmd.mget("wsKey"))`, and
+  // `_switchWorkspace` both bails on a falsy key and matches rows by it.
+  // hub_id alone is NOT enough, which is the whole reason the key exists —
+  // every PERSONAL workspace carries the user's own hub_id, so id-matching
+  // opens the first one whichever row was tapped (the same collision that lit
+  // the entire "Personal" section at once).
   //
-  // `wsKey` is desk_module._workspaceKey(row): "hub:<id>" or "folder:<nid>".
-  // hub_id alone is NOT enough and that is the whole point of the key — every
-  // personal workspace carries the user's own hub_id, so id-matching opens the
-  // first one whichever row was tapped. Whoever owns mobile: add
-  // `wsKey: ui._workspaceKey(r)` alongside wsHubId (keep wsHubId — other
-  // per-row consumers read it). Desktop is unaffected; its rows already set it.
+  // `wsHubId` stays because other per-row consumers read it; it is not what
+  // the switch resolves on.
+  //
+  // This closes the gap this comment used to only describe: the rows
+  // re-dispatched "switch-workspace" with wsKey undefined, so
+  // `_switchWorkspace` returned on its first line — nothing threw, the sheet
+  // just closed and the workspace never changed. Desktop was always fine; its
+  // rows already set the key.
   const wsRow = (r) => {
     const hubId = r.hub_id || r.id;
     return row(fig, ui, {
       icon: wsIcon(fig, r.area, r.filetype),
       label: r.filename || r.name || "",
       go: "switch-workspace",
-      extra: { wsHubId: hubId },
+      extra: { wsHubId: hubId, wsKey: ui._workspaceKey(r) },
       trailing:
         curHubId && curHubId == hubId
           ? Skeletons.Image.Svg({
