@@ -419,7 +419,26 @@ html {
     // When an overlay/modal inside the settings page is open, lift the
     // slot above the sidebar (z-index 10002) and side-panel containers
     // (10001) so its full-viewport backdrop blur covers everything.
-    &:has([data-state="open"]) {
+    //
+    // A MENU IS NOT A MODAL, and menu chrome is excluded for two reasons.
+    //
+    // The first is intent: a dropdown inside a section screen asks for no
+    // backdrop and has no business raising the whole screen over the top bar.
+    //
+    // The second is that its stamp is a LIE. menu_topic writes
+    // `data-state="open"` onto .menu-topic-items__wrapper in _openItems and
+    // never writes it back — _onClosed resets the items box and the menu root,
+    // not the wrapper (ui-core letc/widgets/menu/index.js; the writes are at
+    // 313/314 and 355/356). So one press of the org screen's "+ New" left this
+    // `:has()` true for the rest of the session, pinning the slot at 20001 —
+    // above the top bar's 10003 — and from then on every dropdown the bar hangs
+    // DOWN into the body region was painted underneath the screen: the org
+    // chip's panel and the account menu both vanished behind it.
+    //
+    // Excluding the wrapper rather than lifting the bar: the bar's 10003 is
+    // deliberately below this slot ("the full-page slot should still cover the
+    // bar"), and a real modal here still gets to cover the bar's menus.
+    &:has([data-state="open"]:not(.menu-topic-items__wrapper):not(.menu-topic-items)) {
       z-index: 20001;
     }
   }
