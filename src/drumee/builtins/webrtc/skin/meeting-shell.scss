@@ -163,38 +163,16 @@
     background: #ffffff;
   }
 
-  &__chat-close {
-    width: 32px;
-    height: 32px;
-    padding: 9px;
-    border-radius: 6px;
-    cursor: pointer;
-    color: #65656c;
-    flex-shrink: 0;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
-
-    svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.06);
-      color: #0b0a21;
-    }
-  }
-
   &__chat-widget {
     flex: 1;
     min-height: 0;
   }
 
   // ── Side-panel tabs (Participants | Chat) ───────────────────────────────
-  // The header holds the tab switch (flex:1) and the close button. Active tab
-  // is reflected via [data-state="1"]; the panel root's [data-tab] flips which
-  // pane is visible (see below).
+  // The header holds the tab switch (flex:1) and nothing else — the ✕ that sat
+  // beside it is gone, the panel is collapsed from the topbar pill that opened
+  // it. Active tab is reflected via [data-state="1"]; the panel root's
+  // [data-tab] flips which pane is visible (see below).
   &__chat-tabs {
     flex: 1;
     min-width: 0;
