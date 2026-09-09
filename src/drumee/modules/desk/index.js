@@ -7261,6 +7261,37 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Show/hide the shared `__overlay` as the mobile search card's tap-to-close
+   * backdrop (the skin drives it off `data-state`, and pins it to the viewport
+   * under `[data-device="mobile"]`).
+   *
+   * RESTORED. This is drawer-era machinery that the 2.0 mobile shell deleted
+   * along with the drawer itself (1c503a32), but the search card is the OTHER
+   * caller and it was left behind: `_openMobileSearch` and `_closeMobileSearch`
+   * both still call this, so on a phone every one of those paths threw
+   * "this._setMobileBackdrop is not a function" — which is a real crash on the
+   * default screen, since the search pill sits in the mobile action row.
+   *
+   * What it cost, in the order the user meets it: the card opened (setState(1)
+   * runs first) but never focused its input and never fetched, so it read as a
+   * dead blank sheet; Escape threw out of `_onEscape` before
+   * `_closeEscapeModal`; and tapping a result threw out of `open-search-hit`
+   * before the hit was opened.
+   *
+   * The sheets do NOT come through here — the sheet host carries its own
+   * `__msheet-dim` (skeleton/index.js) — so this stayed single-purpose and the
+   * drawer's `keepBackdrop` handoff argument is gone with the drawer.
+   *
+   * @param {Boolean} visible
+   */
+  _setMobileBackdrop(visible) {
+    return this.ensurePart("overlay").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = visible ? "open" : "closed";
+    });
+  }
+
+  /**
    * Open the mobile search card (skeleton/index.js). The caller closes the
    * drawer first; the card then re-lights the SAME backdrop, so the two never
    * show together and one tap outside dismisses whichever is up.
@@ -7997,6 +8028,18 @@ class desk_module extends LetcBox {
         return this._openMobileSearch();
 
       case "close-mobile-search":
+        return this._closeMobileSearch();
+
+      // A tap on the shared __overlay backdrop, which on mobile is lit only by
+      // the search card (skeleton/index.js wires this service onto it). Without
+      // a handler the backdrop was inert, so the card could be dismissed only
+      // by its own X — the tap-outside the backdrop exists for did nothing.
+      //
+      // The service KEEPS its drawer-era name: widget/chat-p2p and
+      // widget/address-book each test for "mobile-close-drawer" by name to stop
+      // a backdrop tap from also closing the panel standing behind the card.
+      // Renaming it here would silently re-break those two.
+      case "mobile-close-drawer":
         return this._closeMobileSearch();
 
       case "toggle-sidebar-pin":
