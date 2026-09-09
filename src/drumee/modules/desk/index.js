@@ -1485,26 +1485,12 @@ class desk_module extends LetcBox {
       (child && child.el && child.el.dataset && child.el.dataset.kind) ||
       kinds[pendingKey];
 
-    // Full-page slot (Apps / Settings / Billing). Most kinds are destroyed on
-    // close; the KEEP_ALIVE_MAIN_KINDS are parked with data-anim="out" — so a
-    // live child that isn't out means the screen is showing, either way.
-    const mainChild = topChild("settings-main-slot");
-    if (mainChild && mainChild.el.dataset.anim !== "out") {
-      switch (childKind(mainChild, "settings-main-slot")) {
-        case "apps_main":
-          return "toggle-apps";
-        case "settings_main":
-          return "toggle-settings";
-        case "help_main":
-          return "toggle-help";
-        case "settings_billing":
-          return "upgrade-plan";
-        // The Inbox is a full-canvas screen now (Figma 43:32209), so it is
-        // detected here with its slot-mates rather than among the slide-outs.
-        case "chat_p2p":
-          return "toggle-inbox";
-      }
-    }
+    // TOP SURFACE FIRST. The slide-outs are asked about before the full-canvas
+    // slot because they paint over it (z 10001 vs 1500) and, since
+    // closeOtherSidebarPanels stopped closing that slot, the two are now
+    // routinely open together. Answering with the screen UNDERNEATH would
+    // light the wrong sidebar row and remember the wrong destination across a
+    // reload.
 
     // Keep-alive slots — widget stays mounted when hidden; only
     // data-anim="in" means visible.
@@ -1520,11 +1506,39 @@ class desk_module extends LetcBox {
       if (kind === "address_book") return "toggle-contacts";
     }
 
-
     // Notifications side panel (predates the anim pattern, uses data-state).
     const act = this.getPart && this.getPart("activity-panel");
     if (act && ~~act.mget(_a.state) === 1) {
       return "toggle-activity";
+    }
+
+    // Full-page slot (Apps / Settings / Billing). Most kinds are destroyed on
+    // close; the KEEP_ALIVE_MAIN_KINDS are parked with data-anim="out" — so a
+    // live child that isn't out means the screen is showing, either way.
+    const mainChild = topChild("settings-main-slot");
+    if (mainChild && mainChild.el.dataset.anim !== "out") {
+      switch (childKind(mainChild, "settings-main-slot")) {
+        case "apps_main":
+          return "toggle-apps";
+        case "settings_main":
+          return "toggle-settings";
+        case "help_main":
+          return "toggle-help";
+        case "settings_billing":
+          return "upgrade-plan";
+        // The Personal Calendar. _RESTORABLE_SCREENS has carried
+        // "toggle-calendar" since the screen shipped, but nothing ever
+        // ANSWERED it here — so the calendar was never persisted across a
+        // reload and never re-lit its sidebar row, and now that a slide-out
+        // leaves it standing, closing that slide-out lit Home over a visible
+        // calendar.
+        case "calendar_main":
+          return "toggle-calendar";
+        // The Inbox is a full-canvas screen now (Figma 43:32209), so it is
+        // detected here with its slot-mates rather than among the slide-outs.
+        case "chat_p2p":
+          return "toggle-inbox";
+      }
     }
 
     return null;
@@ -7649,14 +7663,29 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * Enforce mutual exclusion between sidebar panels. Keep-alive slots
+   * Enforce mutual exclusion between THE SLIDE-OUT PANELS. Keep-alive slots
    * just flip `data-anim` to "out"; other slots get cleared. Activity
    * panel uses `setState` because it predates the anim pattern.
+   *
+   * settings-main-slot is deliberately NOT in this list. Contacts, Trash and
+   * Notifications live in the right panel-container at z 10001 and the
+   * full-canvas slot sits at 1500, so a slide-out already paints OVER a
+   * section screen — closing that screen was policy, not a stacking
+   * requirement, and it is the wrong policy: pressing Contacts from the
+   * Personal Calendar tore the calendar down and slid the panel over whatever
+   * the desk canvas happened to hold underneath. Usually the workspace pane,
+   * which looks deliberate; sometimes nothing at all, which reads as a blank
+   * background (see Wm._releaseCanvas for how the canvas got emptied).
+   *
+   * A full-canvas screen still replaces the OTHER full-canvas screens — that
+   * is togglePanel feeding one slot — and navigating to a workspace or Home
+   * still clears it through closeMainPanels(), which is what closeAllPanels()
+   * pairs this with.
    */
   closeOtherSidebarPanels(except) {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
-    const slots = ["chat-panel", "settings-main-slot", "trash-panel"];
+    const slots = ["chat-panel", "trash-panel"];
     const tasks = slots
       .filter((pn) => pn !== except)
       .map((pn) => {
