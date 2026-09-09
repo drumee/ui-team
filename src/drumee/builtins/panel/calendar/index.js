@@ -46,8 +46,9 @@ class __calendar_main extends LetcBox {
     this._form = null;
     this._viewMenuOpen = false;
     this._newMenuOpen = false;
-    // The range label carries a caret in Figma 43:31159, so it is a control
-    // rather than a caption: it opens a month jump list for the cursor's year.
+    // The range label is a control rather than a caption: it opens a month
+    // jump list for the cursor's year. It shows no caret of its own (Lexis,
+    // 2026-09-08) — the label itself is the affordance.
     this._rangeMenuOpen = false;
     this._loading = false;
 
@@ -63,6 +64,9 @@ class __calendar_main extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    // The dropdown dismisser lives on `document`, so it outlives this widget
+    // unless it is taken down here.
+    this._unbindMenuDismiss();
     if (this._reloadTimer) {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
@@ -313,6 +317,10 @@ class __calendar_main extends LetcBox {
    * the GRID reads — the view, the cursor, the filter — still needs _render().
    */
   _renderToolbar() {
+    // Every open and close of a dropdown comes through here, so this is the one
+    // place that has to keep the outside-click dismisser in step.
+    this._syncMenuDismiss();
+
     // SYNCHRONOUS, and it falls back rather than failing.
     //
     // The first cut used ensurePart(...).then(...).catch(() => {}). ensurePart
@@ -394,6 +402,60 @@ class __calendar_main extends LetcBox {
     this._viewMenuOpen = false;
     this._newMenuOpen = false;
     this._rangeMenuOpen = false;
+    this._unbindMenuDismiss();
+  }
+
+  // ── outside-click dismissal for the toolbar dropdowns ──────────────────────
+  //
+  // A dropdown used to close ONLY by clicking its own trigger a second time
+  // (Lexis, 2026-09-08, about the [month, year] picker). Any click that lands
+  // outside the toolbar row closes it now.
+  //
+  // 🔑 The guard is the WHOLE toolbar row, not "the menu plus its trigger", and
+  // that is deliberate. This runs in the CAPTURE phase, so closing repaints the
+  // toolbar BEFORE the click reaches whatever it was aimed at — and a repaint
+  // destroys the toolbar's children. With a narrower guard, clicking ‹ Today ›,
+  // a filter chip or another picker while a menu was open would have destroyed
+  // that button mid-click and the click would have done nothing. Every control
+  // in the row already calls _closeMenus() in its own handler, so leaving the
+  // row alone loses nothing.
+  //
+  // Capture phase and a `document` listener both follow the folder window's
+  // thread menu (window/folder/index.js _bindThreadMenuOutside). Listening on
+  // `document` rather than on the menu element is what lets it survive
+  // _renderToolbar() rebuilding that element on every open and close.
+  //
+  // Repaint via _renderToolbar(), NEVER _render(): a full render rebuilds the
+  // month grid, i.e. the very element the click is still travelling to.
+  _syncMenuDismiss() {
+    if (this._viewMenuOpen || this._newMenuOpen || this._rangeMenuOpen) {
+      this._bindMenuDismiss();
+    } else {
+      this._unbindMenuDismiss();
+    }
+  }
+
+  _bindMenuDismiss() {
+    if (this._menuDismiss) return;
+    const toolbar = `.${this.fig.family}__toolbar`;
+    this._menuDismiss = (ev) => {
+      const t = ev && ev.target;
+      // No `closest` means no element to reason about (a text node, a click
+      // synthesised on the document itself) — leave the menu alone rather than
+      // guess.
+      if (!t || !t.closest) return;
+      if (t.closest(toolbar)) return;
+      if (this.isDestroyed && this.isDestroyed()) return this._unbindMenuDismiss();
+      this._closeMenus();
+      this._renderToolbar();
+    };
+    document.addEventListener("click", this._menuDismiss, true);
+  }
+
+  _unbindMenuDismiss() {
+    if (!this._menuDismiss) return;
+    document.removeEventListener("click", this._menuDismiss, true);
+    this._menuDismiss = null;
   }
 
   // ── forms ──────────────────────────────────────────────────────────────────
