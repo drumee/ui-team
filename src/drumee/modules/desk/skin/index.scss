@@ -115,6 +115,48 @@ html {
     width: 300px;
     height: 180px;
 
+    // The dock's own frame, so the parked call reads as a raised card sitting
+    // on the desk rather than a video rectangle pasted into the corner.
+    //
+    // THEME TOKENS, not the tile's white hairline. The window inside carries
+    // `border: 1px solid rgba(255,255,255,.14)` (webrtc/skin/meeting-shell,
+    // `&__ui[data-call-tile="1"]`) and that works there because it is drawn
+    // against dark video — out here the ring lands on the desk canvas, where a
+    // translucent white line is invisible in light mode. --border-default is
+    // the desk's hairline in both themes (router/skin/themes).
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    // WITHOUT THIS THE RADIUS ABOVE DOES NOTHING VISIBLE. The parked window is
+    // forced to fill this box (`> *` below: 100%/100%, inset 0) and paints its
+    // own opaque background and video right into the corners, so a radius on
+    // the container alone leaves square corners on screen — the container is
+    // rounded, its content is not. The dock has to CLIP.
+    //
+    // Safe to clip here: everything the tile would want to overflow is already
+    // hidden at this size (meeting-shell `&__ui[data-call-tile="1"]` drops the
+    // topbar, chat panel, reactions picker, toasts, analyzers and the resize
+    // handles), and the two things that stay — __call-tile-live and
+    // __call-tile-cover — are both inset inside the tile.
+    overflow: hidden;
+
+    // STAND OUT FROM WHAT IS BEHIND IT. The dock floats over whatever the user
+    // navigated to — usually a busy light panel — and a single soft grey
+    // shadow disappeared into it.
+    //
+    // Three layers, and the first is the one doing the separating: a solid
+    // ring in the page background colour reads as a cutout, so the tile keeps
+    // a clean edge against any content. Same idiom, same token, as the topbar
+    // avatar's focus ring. The other two are the desk's popover elevation
+    // (topbar.scss), deepened for a surface that sits above every desk layer.
+    //
+    // rgba black rather than --neutral-300 for the shadows: that token is
+    // #dddfe4, which is nearly invisible over a light panel and is not defined
+    // per-theme, while the ring's --normal-bg flips (#fff / #0b0a21) on its own.
+    box-shadow:
+      0 0 0 3px var(--normal-bg),
+      0 8px 12px -6px rgba(0, 0, 0, 0.18),
+      0 20px 32px -8px rgba(0, 0, 0, 0.28);
+
     // Shown only while it actually holds the call.
     //
     // NOT `:not(:empty)`: ui-core renders a `widget-blank` placeholder as the
@@ -153,6 +195,15 @@ html {
       margin: 0 !important;
       // The parked call itself must stay clickable.
       pointer-events: auto;
+      // ROUND WITH THE DOCK. `overflow: hidden` above is what actually clips,
+      // and this is the belt to that brace: the child paints an opaque
+      // background to its own edges, so if the clip is ever defeated — a
+      // transform or filter on a descendant, a future `contain` change — the
+      // corners stay round instead of silently going square again.
+      //
+      // `inherit`, not a literal 12px: the dock owns the number, and the two
+      // cannot drift.
+      border-radius: inherit;
     }
 
     // ...but ui-core's emptyView placeholder must not be. Higher specificity

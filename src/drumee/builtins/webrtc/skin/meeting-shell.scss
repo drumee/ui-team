@@ -2168,6 +2168,19 @@
       justify-content: center;
       gap: 8px;
       background: rgba(11, 10, 33, 0.55);
+      // The scrim is `inset: 0` with an opaque-ish background, so it paints a
+      // SQUARE sheet over the tile's rounded corners the moment it fades in —
+      // the tile is round at rest and square on hover, which is the tell.
+      //
+      // The tile's own `overflow: hidden` normally clips this; the radius here
+      // makes it correct on its own too.
+      //
+      // A LITERAL, NOT `inherit`: this element's PARENT is `__main`, which
+      // carries no radius of its own — the 12px lives two levels up, on
+      // `__ui[data-call-tile="1"]`. `border-radius: inherit` reads the parent's
+      // computed value, so it would resolve to 0 here and quietly do nothing.
+      // Keep this in step with the tile radius in that block.
+      border-radius: 12px;
       opacity: 0;
       transition: opacity 0.15s ease;
 
@@ -2226,6 +2239,18 @@
   &__call-tile-ico {
     width: 22px;
     height: 22px;
+    // BOTH, and `color` is the one that does the work for the current glyph.
+    //
+    // The sprite has two kinds of symbol. --icon-meet-expand (the old glyph)
+    // carries no paint attribute at all, so its paths inherit this `fill`.
+    // --icon-rail-meet paints with `fill="currentColor"`, and a presentation
+    // attribute on the path beats a `fill` inherited from the <svg> — so
+    // `fill: #fff` alone leaves it whatever colour `color` happens to resolve
+    // to. `color` is what currentColor reads.
+    //
+    // Keep the pair: it renders white for either kind of symbol, so swapping
+    // the ico again cannot silently change the colour.
+    color: #fff;
     fill: #fff;
   }
 

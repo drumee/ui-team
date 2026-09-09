@@ -267,7 +267,7 @@ const __skl_window_meeting = function (_ui_, localUser) {
       kidsOpt: { active: 0 },
       kids: [
         Skeletons.Image.Svg({
-          ico: "meet-expand",
+          ico: "rail-meet",
           className: `${_ui_.fig.family}__call-tile-ico`,
         }),
         Skeletons.Note({
