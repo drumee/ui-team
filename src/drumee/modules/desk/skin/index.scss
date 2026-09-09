@@ -211,6 +211,96 @@ html {
     > .widget-blank {
       pointer-events: none;
     }
+
+    // ── "Connection lost" inside the parked tile ────────────────────────────
+    //
+    // The room's status surface (webrtc/room stateMessage -> the
+    // `message-container` part) is the one thing that MUST stay readable while
+    // the call is docked: it is how the user learns the call dropped while they
+    // are off doing something else. The tile rule hides the topbar, the chat
+    // panel, the toasts and the analyzers at this size — deliberately not this.
+    //
+    // But it is authored for a full-frame call (window/meeting/skin):
+    // `width: 300px` with `padding: var(--spacer-5)` — 16px — so a 332px box in
+    // a 300px tile. It used to hang out over the corner; now that the dock
+    // CLIPS to its radius, it is cut off instead, and on a phone (168px) barely
+    // a word of it survives. So it has to be re-fitted, not merely re-styled.
+    //
+    // Scoped to the dock rather than to `__ui[data-call-tile="1"]`, because the
+    // two sizes being fitted to are the DOCK's (300x180, 168x100). The DMZ's
+    // no-dock park writes its own 300x180 geometry from JS and is not covered
+    // here — it has no dock to scope to.
+    .window__message-container {
+      // Fit the tile instead of imposing a width on it. The 8px inset on each
+      // side matches __call-tile-live's.
+      //
+      // BOTH `left` AND `right`, and the base rule's `right: 50%` centring
+      // trick has to go. That trick pairs a fixed `width: 300px` with
+      // translateX(50%), and it is actively harmful once the width is auto: for
+      // an absolutely positioned box with `left: auto`, the space available for
+      // shrink-to-fit runs from the containing block's left edge to the `right`
+      // offset — i.e. HALF the tile. The pill then wrapped "Connection lost !"
+      // across two lines inside 84px while 152px sat unused, and no max-width
+      // could fix it because max-width was never the binding constraint.
+      //
+      // With both offsets set, the available band is the full tile minus the
+      // insets; `fit-content` keeps the pill hugging its text inside that band,
+      // and `margin: 0 auto` is what re-centres it.
+      left: 8px;
+      right: 8px;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
+      box-sizing: border-box;
+      // CENTRED, not `top: 40px`. That offset is measured for a full-height
+      // call; 40px down a 100px tile puts the notice on the bottom edge.
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 8px 10px;
+      gap: 4px;
+      border-radius: 8px;
+      text-align: center;
+      // Stays informational: the whole tile is one click target (restore-call),
+      // and the base rule's pointer-events:none is what keeps this from eating
+      // that click. Restated because this block resets its box entirely.
+      pointer-events: none;
+
+      // Long messages wrap rather than force the box wider than the tile.
+      // RECONNECTION_IN_PROGRESS is the long one — "Connection lost !" fits on
+      // one line at both sizes.
+      .message-text {
+        font-size: 12px;
+        line-height: 1.35;
+        // The full-frame rule caps this at 320px, which is wider than the tile
+        // itself. Nothing to cap here — the container is already fitted.
+        max-width: none;
+        padding: 0;
+        // `break-word`, NOT `anywhere`. They look interchangeable and are not:
+        // `anywhere` counts toward intrinsic sizing, so it drops this box's
+        // min-content width to one character and the shrink-to-fit container
+        // then settles NARROWER than the text needs — measured 95px of the
+        // 156px available on a phone, breaking "Connection lost !" across two
+        // lines for no reason. `break-word` only breaks a word that would
+        // actually overflow, which is the whole intent here.
+        overflow-wrap: break-word;
+      }
+    }
+
+    // The phone dock is 168x100: the same notice, tightened again so a
+    // two-word message still fits on one line.
+    @media (max-width: 650px) {
+      .window__message-container {
+        left: 6px;
+        right: 6px;
+        padding: 6px 8px;
+        border-radius: 6px;
+
+        .message-text {
+          font-size: 11px;
+          line-height: 1.3;
+        }
+      }
+    }
   }
 
   // A WM WRAPPER-MODAL RELEASES THE WINDOW LAYERS OVER THIS DOCK.
