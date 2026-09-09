@@ -211,8 +211,12 @@ function workspaceSearchBox(ui, pfx) {
       Skeletons.Box.X({
         className: `${pfx}__search-bar`,
         kids: [
+          // The Phosphor magnifier. Note this is `ph-magnifying-glass`, NOT the
+          // bare `magnifying-glass` that was here originally — that one is a
+          // 53.6-unit filled glyph from the legacy set, while the ph-* symbols
+          // are the stroked 20-unit family the rest of this toolbar draws from.
           Skeletons.Image.Svg({
-            ico: "magnifying-glass",
+            ico: "ph-magnifying-glass",
             className: `${pfx}__search-icon`,
           }),
           Skeletons.Entry({
