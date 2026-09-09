@@ -81,6 +81,8 @@ class settings_main extends LetcBox {
     const signature = readCache.signature([links, gdrive, referral, Visitor.profile()]);
     if (!opt.force && signature === this._pageSignature) return;
     this._pageSignature = signature;
+    // New feed, new billing card: let the status line resolve itself again.
+    this._subStatusText = null;
     this.feed(require("./skeleton").default(this));
   }
 
@@ -699,25 +701,53 @@ class settings_main extends LetcBox {
    */
   onPartReady(child, pn) {
     if (pn === "billing-sub-status") {
+      // A Note re-renders on set() (ui-core text.set -> mould -> render), and
+      // every render of a sys_pn part fires onPartReady again. Setting the
+      // status line from here therefore re-enters this handler: without the
+      // guards below each pass fetched subscription_status and set the same
+      // text again, an unbounded loop at ~10 req/s that froze the whole tab
+      // for any subscriber who opened Settings (only subscribers reach the
+      // set — a caller with no subscription_id returns before it).
+      if (this._subStatusText != null && child.mget(_a.content) === this._subStatusText) return;
       this._fillSubscriptionStatus(child);
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
   }
 
+  /**
+   * Resolve the status line ONCE per page feed (cached in _subStatusText,
+   * cleared by _refreshPage before it feeds) and write it only when the part
+   * does not already show it — the write itself re-renders the part and
+   * re-enters onPartReady, which is where the loop lived.
+   */
   async _fillSubscriptionStatus(part) {
+    if (this._subStatusPending) return;
+    this._subStatusPending = true;
     try {
-      const sub = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id });
-      if (!part || !part.el || !sub || !sub.subscription_id) return;
-      const when = sub.period_end ? Dayjs(Number(sub.period_end) * 1000).format("MMM D, YYYY") : "";
-      if (!when) return;
-      const canceled = ["canceled", "unpaid", "incomplete_expired"].includes(sub.status);
-      const text = canceled
-        ? (LOCALE.SUBSCRIPTION_CANCELS_ON || "Your subscription will be canceled on {0}").format(when)
-        : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when);
+      let text = this._subStatusText;
+      if (text == null) {
+        text = "";
+        const sub = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id });
+        if (sub && sub.subscription_id) {
+          const when = sub.period_end ? Dayjs(Number(sub.period_end) * 1000).format("MMM D, YYYY") : "";
+          if (when) {
+            const canceled = ["canceled", "unpaid", "incomplete_expired"].includes(sub.status);
+            text = canceled
+              ? (LOCALE.SUBSCRIPTION_CANCELS_ON || "Your subscription will be canceled on {0}").format(when)
+              : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when);
+          }
+        }
+        this._subStatusText = text;
+      }
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (!part || !part.el || (part.isDestroyed && part.isDestroyed())) return;
+      if (!text || part.mget(_a.content) === text) return;
       part.set({ content: text });
     } catch (e) {
       /* status line is cosmetic — leave empty on failure */
+    } finally {
+      this._subStatusPending = false;
     }
   }
 
