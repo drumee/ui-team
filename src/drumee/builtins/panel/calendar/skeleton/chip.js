@@ -174,6 +174,11 @@ function chip(ui, row, opt = {}) {
       // lands in the DOM as the literal string "undefined".
       ...(compact && originText ? { title: originText } : {}),
       "data-kind": row.kind,
+      // The month cell and the week/day all-day strip get a one-line card; the
+      // hour block gets the full one. Stamped rather than inferred from the
+      // grid's data-view, because the all-day strip is compact inside a
+      // week/day grid — keying the skin on the view would size those wrong.
+      "data-compact": compact ? "1" : "0",
       "data-scope": row.scope,
       "data-status": row.status || "todo",
       "data-priority": row.priority || "medium",

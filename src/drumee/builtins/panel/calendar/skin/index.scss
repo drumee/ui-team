@@ -1,5 +1,36 @@
 @use "mixins/drumee";
 
+// A scroll region small enough that the desk's standard scrollbar would be
+// furniture: the month day cell (~164px wide, ~91px on mobile) and the week/day
+// all-day strip.
+//
+// Standard properties only, no ::-webkit-scrollbar. Two reasons. Chrome (152
+// here) gives `scrollbar-width` precedence over the legacy pseudo-element, so a
+// `::-webkit-scrollbar { width: 4px }` written alongside it is dead code — but
+// that same precedence is what silently suppresses the permanent 5px bar
+// skin/lib/container.scss puts on every `.drumee-box`, a grey track with an
+// orange thumb that 42 day cells would each have worn. And `scrollbar-color`
+// is the only way to reach the thumb in Firefox at all.
+//
+// `thin` reserves ~10px, and only on a region that actually overflows — a quiet
+// cell keeps its full width and a busy one spends 10px on the bar that earns it.
+//
+// $rest is the thumb at rest, $thumb on hover. A month cell passes rest:
+// transparent — 42 of them would stripe the grid, and the cell has the pinned
+// "+N" as its standing overflow signal. A region with no such label (the
+// all-day strip) keeps the bar inked, because then it is the only thing saying
+// "there is more below".
+@mixin quiet-scroll($thumb: var(--primary-40), $rest: transparent) {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: $rest transparent;
+
+  &:hover {
+    scrollbar-color: $thumb transparent;
+  }
+}
+
 // Personal Calendar — full-canvas screen in the desk's settings-main-slot.
 // Figma 58222:173474 (month), 58222:171611 (week), 58222:172317 (day).
 //
@@ -16,8 +47,12 @@
   // Chip / cell geometry in one place, so the three grids stay in step.
   --cal-gap: 4px;
   --cal-radius: 8px;
-  // 43:31159 gives a month row ~150px and lets it grow with its fullest cell.
-  --cal-cell-min: 140px;
+  // 43:31159 gives a month row ~150px. It does NOT "grow with its fullest cell":
+  // an explicit min-height replaces the row's content-based `min-height: auto`,
+  // so this is the row height, full stop, and the cell has to work within it.
+  // 160px is what leaves room for three compact chips (26px + 4px gaps) plus the
+  // pinned "+N" footer — see skeleton/month.js MONTH_FIT.
+  --cal-cell-min: 160px;
   --cal-hour-height: 56px;
 
   &__ui {
@@ -392,6 +427,18 @@
     border-top: 1px solid var(--overlay-bg-05);
     border-left: 1px solid var(--overlay-bg-05);
     overflow: auto;
+
+    // The screen's primary scroll — always inked, unlike the cell's. Declared
+    // here for the same reason as quiet-scroll: left alone, this Box.Y takes
+    // skin/lib/container.scss's global `.drumee-box` bar, which is the desk's
+    // old 5px orange. That reads as a foreign object on a screen whose accent
+    // is indigo, and it left the calendar wearing three unrelated scrollbars.
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+
+    &:hover {
+      scrollbar-color: var(--primary-40) transparent;
+    }
   }
 
   &__empty {
@@ -456,6 +503,13 @@
     // Today's column tinted brand, per the frames.
     &[data-today="1"] {
       background: var(--radio-on-bg);
+
+      // The pinned footer paints its own ground so chips scroll under it
+      // rather than through it — on today's cell that ground is the tint,
+      // otherwise it would read as a white band across the wash.
+      .calendar-main__day-more {
+        background: var(--radio-on-bg);
+      }
     }
 
     &:hover .calendar-main__day-add {
@@ -496,17 +550,39 @@
     @include drumee.typo($size: 15px, $line: 15px, $color: var(--normal-fg-20));
   }
 
+  // The cell's scroll container. Every item for the day renders — a busy day is
+  // read by scrolling here or by following the "+N" into Day view, never by
+  // being silently truncated (which is what the old `overflow: hidden` plus a
+  // four-item slice did).
+  //
+  // No `overscroll-behavior` on purpose: chaining is what makes a wheel over a
+  // busy cell scroll the cell and THEN carry on scrolling the month. `contain`
+  // would pin the month grid in place for as long as the pointer sat over a
+  // full cell, which reads as a frozen page.
   &__day-body {
     flex: 1 1 auto;
     min-height: 0;
     gap: var(--cal-gap);
-    overflow: hidden;
+    @include quiet-scroll;
   }
 
+  // Pinned to the bottom of the scroller, so the one affordance that leads to
+  // the full day is the one thing that can never scroll out of reach. It was
+  // previously the last child of a clipped stack — i.e. the first thing lost.
+  //
+  // The negative margin swallows the flex gap above it so its background covers
+  // that 4px too; without it a chip stays visible in the sliver between the
+  // last gap and the footer.
   &__day-more {
     @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
     font-weight: 600;
-    padding-left: 4px;
+    flex: 0 0 auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: calc(-1 * var(--cal-gap));
+    padding: var(--cal-gap) 0 0 4px;
+    background: var(--normal-bg);
     cursor: pointer;
   }
 
@@ -541,6 +617,16 @@
       border: 1px solid var(--border-default);
       border-radius: 8px;
       padding: 12px;
+
+      // 12px of padding belongs to the week/day hour block, which is a
+      // full-height card with a description and a status pill. On the one-line
+      // compact chip it made a 42px slab — three of them overflowed the cell on
+      // their own, which is how a task-heavy month cell ended up showing a
+      // single item. Matched to the meeting chip's 4px so the two kinds share
+      // one rhythm down the cell (43:31159 draws them the same height).
+      &[data-compact="1"] {
+        padding: 4px 12px;
+      }
     }
 
     &[data-kind="meeting"] {
@@ -708,13 +794,28 @@
 
   // All-day strip. Tasks live here rather than at an invented hour: due_date
   // carries no time (see skeleton/hours.js).
+  //
+  // Bounded, because this strip sits inside the sticky header and had neither a
+  // cap nor an overflow: twelve all-day tasks grew the header to 593px and
+  // squeezed the hour canvas to 106px, and thirty made the header taller than
+  // the scroll viewport — pinned at top:0, so its own lower half became
+  // unreachable. Two hour-rows' worth shows ~4 chips and scrolls for the rest.
   &__allday {
     gap: var(--cal-gap);
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: calc(var(--cal-hour-height) * 2);
+    // Inked at rest: this strip has no "+N" label, so with a hidden bar a
+    // twelve-task day would show four and say nothing about the other eight.
+    @include quiet-scroll($rest: var(--border-strong));
   }
 
+  // `1 0 auto`, never `1 1 auto` + `min-height: 0`: the hour rules are
+  // fixed-height and shrink-proof, so a squeezed body did not compress them —
+  // it let them spill past the column's own borders. Now the canvas keeps its
+  // intrinsic height and __grid scrolls, which is where the scrolling belongs.
   &__hours-body {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 1 0 auto;
     align-items: stretch;
   }
 

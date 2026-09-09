@@ -1,17 +1,35 @@
 // Month grid — 6 rows × 7 day cells, Sun…Sat, matching Figma 58222:69628.
 //
-// Ported from the folder-scoped board calendar (window/tasks/skeleton/calendar.js)
-// so the two read identically: same day-cell head with a hover "+", same capped
-// chip list with a "+N" that jumps to that day, same outside-month dimming.
-// What is new here is that a cell holds BOTH tasks and meetings, and that every
-// chip carries provenance.
+// Ported from the folder-scoped board calendar (window/tasks/skeleton/calendar.js):
+// same day-cell head with a hover "+", the same chip list with a "+N" that jumps
+// to that day. What is new here is that a cell holds BOTH tasks and meetings,
+// and that every chip carries provenance.
+//
+// The two no longer behave identically, though. That one still slices its cell
+// to MONTH_MAX and drops the remainder, so a busy day there is still unreadable
+// — it has its own skin (window/tasks/skin/index.scss, __cal-day-*), so fixing
+// it is a separate change along the lines of this one.
 const { chip } = require("./chip");
 const { ymd, day, rowStart } = require("./helpers");
 
-// Beyond this a cell would grow the row; the overflow jumps to Day view for
-// that date, which is the only place the full list is legible. 43:31159 draws
-// four (Jun 11, Jun 13) in its tallest row, which --cal-cell-min accommodates.
-const MONTH_MAX = 4;
+// A busy day renders EVERY item and the cell scrolls — skin/index.scss makes
+// __day-body the scroll container.
+//
+// It used to slice to four and drop the rest, and the rest was unreachable two
+// ways at once. --cal-cell-min replaces the row's content-based `min-height`,
+// so a row never grows to fit its fullest cell; and four chips did not fit what
+// that leaves, because the compact chip was inheriting the hour block's 12px
+// padding and standing 42px tall. Measured in the old geometry: an 87px cell
+// body showed ONE of four task chips, and clipped the "+N" that was supposed to
+// rescue it — the last child of a hidden-overflow stack is the first thing lost.
+//
+// MONTH_FIT is how many compact chips stand in a cell at rest, and it only
+// labels the "+N". Measured in the shipped geometry: a 160px row leaves a 107px
+// body, three chips (26px + 4px gaps = 86px) plus the pinned footer. Nothing is
+// hidden now, so the number reads as "this day runs past the fold" — and the
+// footer is sticky, so the one affordance that leads to the whole day cannot
+// itself scroll out of reach.
+const MONTH_FIT = 3;
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -40,9 +58,8 @@ module.exports = function (ui) {
 
   const dayBody = (list, key) => {
     if (!list.length) return null;
-    const shown = list.slice(0, MONTH_MAX);
-    const more = list.length - shown.length;
-    const kids = shown.map((row) => chip(ui, row, { compact: 1 }));
+    const kids = list.map((row) => chip(ui, row, { compact: 1 }));
+    const more = list.length - MONTH_FIT;
     if (more > 0) {
       kids.push(
         Skeletons.Note({
