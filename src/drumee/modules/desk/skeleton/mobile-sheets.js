@@ -184,6 +184,34 @@ function accountSheet(ui) {
   const iconOf = (ico) =>
     Skeletons.Image.Svg({ ico, className: `${fig}__msheet-ico` });
 
+  // locale/supported, NOT locale/lang: the latter statically requires every
+  // string table, so requiring it here would duplicate all of them into the
+  // desk chunk just to read a two-letter code.
+  const uiLang = require("locale/supported");
+  const currentLanguage = uiLang.current();
+
+  // Same group the desktop account menu carries, so a phone user is not the
+  // only one who cannot change language. Labels come from `LOCALE[code]` —
+  // the established lookup for language names — so the list reads
+  // "English / French" in English and "Anglais / Français" in French.
+  const languageRows = uiLang.SUPPORTED.map((code) => {
+    const active = code === currentLanguage;
+    return row(fig, ui, {
+      icon: iconOf("apps-globe"),
+      label: LOCALE[code] || code.toUpperCase(),
+      // Selecting the language already in use would reload the app for no
+      // change; an empty goTarget closes the sheet and stops there.
+      go: active ? null : "set-ui-language",
+      extra: { langCode: code },
+      trailing: active
+        ? Skeletons.Image.Svg({
+            ico: "desktop_check",
+            className: `${fig}__msheet-check`,
+          })
+        : null,
+    });
+  });
+
   return [
     Skeletons.Box.X({
       className: `${fig}__msheet-identity`,
@@ -230,6 +258,9 @@ function accountSheet(ui) {
     divider(fig),
     row(fig, ui, { icon: iconOf("sidebar_settings"), label: LOCALE.SETTINGS, go: "toggle-settings" }),
     row(fig, ui, { icon: iconOf("ph-info"), label: LOCALE.GET_HELP, go: "toggle-help" }),
+    divider(fig),
+    heading(fig, LOCALE.LANGUAGE),
+    ...languageRows,
     divider(fig),
     row(fig, ui, { icon: iconOf("sidebar_signout"), label: LOCALE.SIGN_OUT, go: "do-logout" }),
   ].filter(Boolean);

@@ -25,7 +25,7 @@ function otp(ui, url) {
         priority: "secondary",
       }),
       button(ui, {
-        label: "Click here to pay",
+        label: LOCALE.CLICK_HERE_TO_PAY,
         type: _a.toggle,
         className: `${group}__button`,
         service: "open-payment-link",

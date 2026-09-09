@@ -84,7 +84,7 @@ class Drumee extends Marionette.Application {
           return location.host = bootstrap().main_domain;
         } else {
           const a = document.getElementById('--router');
-          return a.innerHTML = require("./template/page/error")();
+          return a.innerHTML = require("./template/page")("error")();
         }
       default:
         return this.failover(data);
@@ -126,18 +126,18 @@ class Drumee extends Marionette.Application {
     console.trace()
     switch (data.status) {
       case 403:
-        return a.innerHTML = require("./template/page/403")(b, data, style);
+        return a.innerHTML = require("./template/page")("403")(b, data, style);
       case 404:
-        return a.innerHTML = require("./template/page/404")(b, data, style);
+        return a.innerHTML = require("./template/page")("404")(b, data, style);
       case 500:
       case 501:
       case 502:
       case 503:
       case 504:
       case 505:
-        return a.innerHTML = require("./template/page/500")(b, data, style);
+        return a.innerHTML = require("./template/page")("500")(b, data, style);
       default:
-        return a.innerHTML = require("./template/page/failover")(b, data, style);
+        return a.innerHTML = require("./template/page")("failover")(b, data, style);
     }
   }
 
@@ -177,27 +177,43 @@ class Drumee extends Marionette.Application {
     Visitor.listenChanges();
     Organization.listenChanges();
     if (user.id) {
-      // Self-heal the language storage. Older builds persisted the
-      // navigator-derived language here (French on a French OS/browser), and
-      // localStorage.pagelang outranks the served <html lang> in
-      // Visitor.pagelang() forever once written. For a signed-in user the
-      // server profile is the source of truth: mirror an explicit stored
-      // choice into both keys, and drop residue when the profile has none.
+      // Reconcile the recorded language with the signed-in profile.
+      // `drumate.set_lang` — written only by the account menu's switcher —
+      // is the source of truth WHEN IT CARRIES A VALUE: store() records it
+      // and brings the ui-core keys along.
+      //
+      // An empty profile does not revoke a choice made in this browser. The
+      // switcher writes storage before POSTing, so revoking here would
+      // silently undo any switch whose server write failed. It is safe to
+      // keep, because the recorded choice lives in its own key
+      // (locale/supported CHOICE_KEY) that no earlier build ever wrote —
+      // navigator-derived residue cannot masquerade as a choice.
+      //
+      // With no choice on record and no profile value, forget() purges that
+      // residue and pins everything back to English, which is the guarantee
+      // the older clear-both-keys version was reaching for.
+      //
+      // The table itself was already picked by locale/index.js from that
+      // same key, before this response existed. When the profile disagrees
+      // (a switch made on another device, or storage the browser cleared)
+      // swap LOCALE here rather than reloading: the router is constructed a
+      // few lines below and nothing has rendered yet, so the whole UI still
+      // comes up in one language.
       try {
+        const uiLang = require('locale/supported');
         let plang = user.lang;
         if (!plang && user.profile) {
           const p = typeof user.profile === 'string' ? JSON.parse(user.profile) : user.profile;
           plang = p && p.lang;
         }
-        if (plang && !/^(en|fr|es|km|ru|zh)$/.test(plang)) plang = null;
-        if (plang) {
-          localStorage.pagelang = plang;
-          localStorage.setItem('UIlanguage', plang);
-        } else {
-          delete localStorage.pagelang;
-          localStorage.removeItem('UIlanguage');
-        }
-      } catch (e) { /* storage unavailable — nothing to heal */ }
+        // Only a language we ship a complete table for counts as a choice —
+        // a legacy es/km/ru/zh profile value must land on English, not on a
+        // half-translated table that renders the key names back at the user.
+        const chosen = plang ? uiLang.normalize(plang) : null;
+        if (chosen) uiLang.store(chosen);
+        else if (!uiLang.stored()) uiLang.forget();
+        this.locale(uiLang.stored() || uiLang.DEFAULT_LANGUAGE);
+      } catch (e) { /* storage unavailable — nothing to reconcile */ }
       Visitor.respawn(user);
     }
     const gw = require('./router');
@@ -213,14 +229,34 @@ class Drumee extends Marionette.Application {
   }
 
   /**
-   * 
+   * Read, or swap, the live string table.
+   *
+   * Called with no argument this is a getter. Called with a language it
+   * installs that table on `window.LOCALE` — the whole point being that
+   * `LOCALE` is read at render time, never captured, so replacing the object
+   * is enough for everything rendered after this call. It used to be a stub
+   * that returned the English table whatever it was handed, which is why the
+   * account-preferences switcher appeared to do nothing.
+   *
+   * Swapping mid-session does NOT retranslate what is already on screen;
+   * callers that need a visible change reload (see `set-ui-language` in the
+   * desk module). This exists for the boot path, where nothing has rendered.
+   *
+   * @param {string} [lang] language to install
+   * @returns {Object} the live LOCALE table
    */
   locale(lang) {
     if (!lang) {
       return LOCALE;
     }
-    // LOCALE = require("locale")(lang);
-    // LOCALE.__currentLanguage = lang;
+    // locale/supported, not locale/lang: `locale/` is its own webpack entry
+    // and lang.js statically requires every string table, so requiring it
+    // from `main` would duplicate ~380 KB of JSON into this chunk. The table
+    // itself comes from window.setUiLanguage, which the locale bundle
+    // publishes precisely so this swap needs no copy of the tables.
+    const l = require('locale/supported').normalize(lang);
+    if (l === window.UI_LANGUAGE) return LOCALE;
+    if (_.isFunction(window.setUiLanguage)) window.setUiLanguage(l);
     return LOCALE;
   }
 

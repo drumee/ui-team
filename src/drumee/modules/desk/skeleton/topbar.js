@@ -448,6 +448,20 @@ function userMenu(pfx, ui) {
   // refreshes it from every write, so rendering this menu costs no round trip.
   const muted = !!(muteState() || {}).global;
 
+  // locale/supported, NOT locale/lang: the latter statically requires every
+  // string table, so requiring it here would duplicate all of them into the
+  // desk chunk just to read a two-letter code.
+  const uiLang = require("locale/supported");
+  const currentLanguage = uiLang.current();
+  // Labels come from the table itself — `LOCALE[code]` is the established
+  // lookup for language names (locale/en.json carries lowercase `en`/`fr`
+  // keys purely for this), so the list reads "English / French" in English
+  // and "Anglais / Français" in French, no mixing either way.
+  const LANGUAGES = uiLang.SUPPORTED.map((code) => ({
+    code,
+    label: LOCALE[code] || code.toUpperCase(),
+  }));
+
   const row = ({ ico, label, service, on_click, modifier }) =>
     Skeletons.Button.Label({
       ico,
@@ -457,6 +471,50 @@ function userMenu(pfx, ui) {
       on_click,
       uiHandler: [ui],
     });
+
+  // ── Language ─────────────────────────────────────────────────────────────
+  // One row per shipped table, the active one ticked, rather than a single
+  // row that toggles: a toggle labelled "Français" is ambiguous about
+  // whether it reports the current state or the action, and with a third
+  // table it stops working entirely. The tick is Box-composed instead of
+  // Button.Label because Button.Label renders ico + label and nothing after
+  // it, and the mark has to sit at the END of the row.
+  //
+  // Every descendant is active:0, via kidsOpt. A Box that carries a `service`
+  // has ui-core bind the click on the Box itself, and any active descendant
+  // would stopPropagation() before it ever got there — the row would simply
+  // not respond. kidsOpt reaches direct kids only, which is all there is
+  // here: icon, label and tick are leaves, no nesting.
+  const languageRow = (code, label) => {
+    const active = code === currentLanguage;
+    return Skeletons.Box.X({
+      className:
+        `${pfx}__account-menu-item ${pfx}__account-menu-lang` +
+        (active ? ` ${pfx}__account-menu-lang--active` : ""),
+      // Selecting the language already in use would reload the app for no
+      // change, so the active row is inert.
+      service: active ? null : "set-ui-language",
+      langCode: code,
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Image.Svg({
+          ico: "apps-globe",
+          className: `${pfx}__account-menu-lang-ico`,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__account-menu-lang-label`,
+          content: label,
+        }),
+        active
+          ? Skeletons.Image.Svg({
+              ico: "checked",
+              className: `${pfx}__account-menu-lang-check`,
+            })
+          : null,
+      ].filter(Boolean),
+    });
+  };
 
   return Skeletons.Menu({
     className: `${pfx}__account-wrapper`,
@@ -562,6 +620,20 @@ function userMenu(pfx, ui) {
           label: LOCALE.GET_HELP,
           service: "toggle-help",
         }),
+        // Language sits under Settings/Get help: it is a preference, so it
+        // belongs with them rather than above the identity or next to Log
+        // out. Rendered as a labelled group because two bare rows reading
+        // "English"/"Français" give no clue what they do.
+        Skeletons.Note({
+          className: `${pfx}__account-menu-section`,
+          content: LOCALE.LANGUAGE,
+          // A label, not a row: ui-core binds a click to every widget whose
+          // `active` is not 0, and the menu closes on any item click
+          // (persistence: once), so without this the caption would dismiss
+          // the menu it is captioning.
+          active: 0,
+        }),
+        ...LANGUAGES.map((l) => languageRow(l.code, l.label)),
         // Log out is a direct call, not a service — same as the rail's row.
         row({
           ico: "sidebar_signout",

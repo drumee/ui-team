@@ -219,7 +219,7 @@ class settings_account extends LetcBox {
       Visitor.set({ settings: updatedSettings });
       
       this.__overlay.feed(
-        require("./skeleton/ack").default(this, "Date & Time settings updated successfully")
+        require("./skeleton/ack").default(this, LOCALE.ACK_DATETIME_UPDATED)
       );
     }).catch((err) => {
       this.warn('Error updating date settings:', err);

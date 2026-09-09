@@ -235,7 +235,7 @@ function getActivityMeta(ui, data) {
   // 1. Mention is special — overrides any category branch.
   if (mentioned) {
     return {
-      before: 'mentioned you in ',
+      before: LOCALE.ACT_MENTIONED_YOU_IN,
       label: name,
       after: '',
       colorClass: 'mention',
@@ -465,7 +465,7 @@ function getActivityMeta(ui, data) {
 
     case 'chat':
       return {
-        before: 'sent you a message',
+        before: LOCALE.ACT_SENT_YOU_A_MESSAGE,
         label: COUNT_SUFFIX(cnt),
         after: '',
         colorClass: 'mention',
@@ -538,7 +538,7 @@ function getActivityMeta(ui, data) {
 
     case 'ticket':
       return {
-        before: 'updated ticket ',
+        before: LOCALE.ACT_UPDATED_TICKET,
         label: name,
         after: COUNT_SUFFIX(cnt),
         colorClass: 'mention',
@@ -558,9 +558,9 @@ function getActivityMeta(ui, data) {
         // `ui.mget(...)` — that commit spells mget correctly three times over.
         if (ui.mget(_a.accessibility) === 'restricted') {
           return {
-            before: 'shared a ',
-            label: 'Restricted Link',
-            after: ' with you',
+            before: LOCALE.ACT_SHARED_A,
+            label: LOCALE.ACT_RESTRICTED_LINK,
+            after: LOCALE.ACT_WITH_YOU,
             colorClass: 'restricted',
             badge: 'share',
             // Figma: Tab=files, Action=File shared.
@@ -569,9 +569,9 @@ function getActivityMeta(ui, data) {
           };
         }
         return {
-          before: 'shared a ',
-          label: ui.mget(_a.filetype) === 'link' ? 'Shared Link' : name,
-          after: ' with you',
+          before: LOCALE.ACT_SHARED_A,
+          label: ui.mget(_a.filetype) === 'link' ? LOCALE.ACT_SHARED_LINK : name,
+          after: LOCALE.ACT_WITH_YOU,
           colorClass: 'link-share',
           badge: 'share',
           // Figma: Tab=files, Action=File shared.
@@ -581,7 +581,7 @@ function getActivityMeta(ui, data) {
       }
       if (data.event === 'media.remove') {
         return {
-          before: ui.isFolder() ? 'removed folder ' : 'removed file ',
+          before: ui.isFolder() ? LOCALE.ACT_REMOVED_FOLDER : LOCALE.ACT_REMOVED_FILE,
           label: name,
           after: '',
           colorClass: 'restricted',
@@ -600,7 +600,7 @@ function getActivityMeta(ui, data) {
       }
       if (data.event === 'media.view') {
         return {
-          before: 'viewed ',
+          before: LOCALE.ACT_VIEWED,
           label: name,
           after: '',
           colorClass: 'mention',
@@ -612,7 +612,7 @@ function getActivityMeta(ui, data) {
       }
       if (ui.hasAttachment() && data.event !== 'media.new') {
         return {
-          before: 'shared a file in ',
+          before: LOCALE.ACT_SHARED_A_FILE_IN,
           label: name,
           after: '',
           colorClass: 'link-share',
@@ -708,7 +708,7 @@ function getActivityMeta(ui, data) {
     case 'meeting': {
       const meetingName = (data.details && (data.details.filename || data.details.user_filename)) || data.hub_name || '';
       return {
-        before: 'started a meeting in ',
+        before: LOCALE.ACT_STARTED_A_MEETING_IN,
         label: meetingName,
         after: '',
         colorClass: 'mention',

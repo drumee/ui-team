@@ -164,7 +164,7 @@ export function user_form(ui, opt) {
                 name: 'country_code',
                 service: "select-country",
                 refAttribute: 'locale_name',
-                placeholder: 'Select a country',
+                placeholder: LOCALE.SELECT_COUNTRY,
                 value: country_code,
               }),
             ]
