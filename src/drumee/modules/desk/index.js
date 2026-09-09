@@ -8226,6 +8226,39 @@ class desk_module extends LetcBox {
       case "toggle-help":
         return this._openGetHelp();
 
+      // Language switch from the account menu / mobile account sheet.
+      //
+      // Reload, not a live re-render. LOCALE is read at render time so
+      // swapping the table is cheap, but nothing re-renders itself on a
+      // language change: every window, panel and skeleton already on screen
+      // keeps the strings it was built with, and there is no invalidation
+      // channel for them. A reload is the only way the WHOLE UI comes up in
+      // one language — which is the actual requirement here, since a
+      // half-switched desk is worse than no switch at all.
+      //
+      // localStorage is written BEFORE the request, and the reload happens
+      // whether or not the request lands: storage is what the boot path
+      // reads (locale/index.js runs long before yp.get_env answers), so the
+      // switch must work offline, in the DMZ and for an account whose
+      // profile write fails. `drumate.set_lang` is the durable half — it
+      // persists profile.lang so the choice follows the user to another
+      // browser, and drumee.js reconciles storage from it on every boot.
+      case "set-ui-language": {
+        const uiLang = require("locale/supported");
+        const next = uiLang.normalize(cmd.mget("langCode"));
+        if (next === uiLang.current()) return;
+        uiLang.store(next);
+        const done = () => location.reload();
+        // A signed-out/DMZ desk has no drumate endpoint; don't block the
+        // switch on it, and don't let a rejection swallow the reload.
+        if (!SERVICE.drumate || !SERVICE.drumate.set_lang) return done();
+        return this.postService({
+          service: SERVICE.drumate.set_lang,
+          Xlang: next,
+          hub_id: Visitor.id,
+        }).then(done, done);
+      }
+
       // "Contact Support" on the Get help screen — opens a live conversation
       // with the support account. help_main handles the false return by
       // falling back to its mail link.

@@ -93,7 +93,7 @@ class settings_export_data extends LetcBox {
         progress.feed(
           Skeletons.Note({
             className: `${this.fig.family}__progress-message`,
-            content: "An error has occurred",
+            content: LOCALE.AN_ERROR_OCCURRED,
           })
         );
       }

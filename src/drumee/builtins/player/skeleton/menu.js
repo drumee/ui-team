@@ -35,7 +35,7 @@ const __skl_document_topbar_common_menu = function (_ui_) {
 
       Skeletons.Note({
         className: `${menuFig}__name `,
-        content: "Download the original file",
+        content: LOCALE.DOWNLOAD_ORIGINAL_FILE,
       }),
     ],
   });
@@ -53,7 +53,7 @@ const __skl_document_topbar_common_menu = function (_ui_) {
 
       Skeletons.Note({
         className: `${menuFig}__name`,
-        content: "Download a PDF version",
+        content: LOCALE.DOWNLOAD_PDF_VERSION,
       }),
     ],
   });
