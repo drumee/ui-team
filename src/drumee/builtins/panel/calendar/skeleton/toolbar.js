@@ -1,9 +1,12 @@
 // View toolbar: ‹ Today › + range label on the left; view dropdown, All/Task/
 // Meet filter and "+ New" on the right. Figma 43:31159.
 //
-// The range label is a control, not a caption — 43:31159 draws it with a caret,
-// which opens a month jump list for the cursor's year (year stepped from the
-// list's own header). Dropdown mechanics are shared with the view and New menus.
+// The range label is a control, not a caption: clicking it opens a month jump
+// list for the cursor's year (year stepped from the list's own header). It
+// carries NO caret of its own — the label IS the affordance (Lexis, 2026-09-08);
+// the open state is shown by the wash __range keeps while data-open="1". The
+// view and New pickers still show theirs, so the caret stays in the skin for
+// them. Dropdown mechanics are shared with the view and New menus.
 const { VIEWS, FILTERS, rangeLabel, day } = require("./helpers");
 
 module.exports = function (ui) {
@@ -115,10 +118,6 @@ module.exports = function (ui) {
           Skeletons.Note({
             className: `${pfx}__range-label`,
             content: rangeLabel(view, ui.getCursor()),
-          }),
-          Skeletons.Image.Svg({
-            ico: "ph-caret-down",
-            className: `${pfx}__range-caret`,
           }),
         ],
       }),

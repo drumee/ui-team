@@ -136,6 +136,9 @@
     position: relative;
   }
 
+  // Caretless by design (Lexis, 2026-09-08): the label itself opens the month
+  // picker, so the only open-state cue is the wash below. `gap` is kept because
+  // __range is still a Box.X — it just has a single kid today.
   &__range {
     align-items: center;
     gap: 6px;
@@ -156,18 +159,6 @@
     @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg));
     font-weight: 600;
     white-space: nowrap;
-  }
-
-  &__range-caret {
-    width: 12px;
-    height: 12px;
-    flex: 0 0 auto;
-    color: var(--normal-fg);
-    transition: transform 0.15s ease-out;
-  }
-
-  &__range[data-open="1"] &__range-caret {
-    transform: rotate(180deg);
   }
 
   &__range-menu {
