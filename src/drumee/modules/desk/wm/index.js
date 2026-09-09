@@ -982,6 +982,14 @@ class __window_manager extends push {
           if (this._curWorkspacePane !== pane) return;
           this._curWorkspacePane = null;
           this._curWorkspace = null;
+          // The canvas is empty again — give the home grid back (see
+          // _releaseCanvas). Without this the grid stayed hidden behind
+          // nothing: data-workspace is still "1" from the loadWorkspace that
+          // opened this pane, so a workspace deleted underneath the user, or a
+          // headlessLayer.clear(), left the desk showing a blank canvas. It
+          // goes unnoticed while a full-canvas screen covers it, and shows up
+          // the moment that screen closes.
+          this._releaseCanvas();
         });
       }
       // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
@@ -1335,6 +1343,9 @@ class __window_manager extends push {
       this._curWorkspace.nid == nid
     ) {
       this._curWorkspace = null;
+      // The pane never mounted, so nothing occupies the canvas — same reason
+      // as the destroy hook in loadWorkspace.
+      this._releaseCanvas();
     }
   }
 
@@ -2264,12 +2275,6 @@ class __window_manager extends push {
     else this._homeGridClaimed = false;
   }
 
-  /** True when `layer` currently holds at least one live window. */
-  _layerHasWindow(layer) {
-    if (!layer || (layer.isDestroyed && layer.isDestroyed())) return false;
-    return !!(layer.collection && layer.collection.length);
-  }
-
   /**
    * REVEAL THE HOME GRID ONLY IF NOTHING ELSE CLAIMED THE CANVAS.
    *
@@ -2281,14 +2286,15 @@ class __window_manager extends push {
    *                          its round trip, so "still opening" is never read
    *                          as "nothing opened"
    *   _curWorkspace          that open has landed
-   *   headlessLayer          a pane is docked on the canvas
+   *   headlessPane()         a workspace pane is docked on the canvas
    *   desk[data-no-workspace]    the account has none, and desk/home-empty is up
    *
-   * windowsLayer is deliberately NOT a claim. A floating window sits ABOVE the
-   * canvas rather than occupying it — a deep-linked file that docks no
-   * workspace (`#/desk/file?…`, the shapes openDeepLinkHash leaves alone) still
-   * wants the grid behind it, and closing that window must not leave a blank
-   * desk.
+   * A WINDOW is deliberately not a claim — headlessPane() asks for the docked
+   * pane specifically, not for whatever else the layers hold. A floating file,
+   * a player or a folder popup sits ABOVE the canvas rather than occupying it
+   * (and players land in headlessLayer too, see getWindowsPool), so the grid
+   * belongs behind them: a deep-linked file that docks no workspace still wants
+   * a backdrop, and closing it must not leave a blank desk.
    *
    * With none of those, home really is the screen — a failed workspace list, a
    * restore that threw — and the grid is the right thing to show, exactly as
@@ -2312,7 +2318,7 @@ class __window_manager extends push {
     const claimed =
       !!this._homeGridClaimed ||
       !!this._curWorkspace ||
-      this._layerHasWindow(this.headlessLayer) ||
+      !!this.headlessPane() ||
       !!(deskEl && deskEl.dataset && deskEl.dataset.noWorkspace === "1");
     if (claimed) return;
 
@@ -2320,6 +2326,25 @@ class __window_manager extends push {
     if (restoring && retries > 0) return this._armHomeGridSettle(retries - 1);
 
     this._syncHomeGrid(0);
+  }
+
+  /**
+   * NOTHING OCCUPIES THE CANVAS ANY MORE.
+   *
+   * loadWorkspace stamps the hide the moment it is entered and nothing used to
+   * take it back except reload(), so every way of losing a pane WITHOUT going
+   * home — the workspace deleted under the user, a headlessLayer.clear(), an
+   * attributes fetch that never resolved a root — left `data-workspace="1"`
+   * over an empty canvas. Dropping the claim and re-deciding is what turns
+   * that state back into the home grid.
+   *
+   * Deferred because a pane being destroyed is still in headlessLayer's
+   * collection for the rest of the tick, and settleHomeGrid would read it as a
+   * claim on a canvas that is on its way to empty.
+   */
+  _releaseCanvas() {
+    this._homeGridClaimed = false;
+    _.defer(() => this.settleHomeGrid());
   }
 
   /** @param {Number} [retries] see settleHomeGrid */
