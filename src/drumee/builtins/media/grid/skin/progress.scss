@@ -1,5 +1,16 @@
 @use "mixins/drumee";
 
+// Transfer ring — brand indigo, the colour of the current logo (Lexis, 2026-09-08).
+//
+// 🚨 NEVER --primary-400/-500/-600/-800 here: skin/vars/revamp.scss declares a
+// SECOND, LILAC `--primary-*` scale further down the same :root, and the later
+// block wins — so those names resolve to the OLD lilac brand (#c781ff/#b251fb/
+// #9821ee/#731dac), which is exactly what this ring was showing. The indigo
+// scale is declared once, as `--primary-purple-NN`. Same note in
+// window/downloader/skin/index.scss:173 and window/folder/skin/index.scss:2800.
+$ring-brand: var(--primary-purple-50); // #433cc5 — the logo fill
+$ring-track: var(--neutral-300); // unfilled arc; neutral so the fill reads
+
 .drumee-spinner {
   width: 60px;
   height: 60px;
@@ -60,12 +71,12 @@
   &__value {
     &-filesize {
       letter-spacing: 0.09px;
-      @include drumee.typo($line: 12px, $size: 10px, $weight: 300, $color: var(--primary-500));
+      @include drumee.typo($line: 12px, $size: 10px, $weight: 300, $color: $ring-brand);
     }
 
     &-percent {
       letter-spacing: 0.09px;
-      @include drumee.typo($line: 12px, $size: 10px, $weight: 300, $color: var(--primary-500));
+      @include drumee.typo($line: 12px, $size: 10px, $weight: 300, $color: $ring-brand);
     }
 
     &-filename {
@@ -78,7 +89,7 @@
         padding: 0 4px;
         overflow: hidden;
         text-overflow: ellipsis;
-        @include drumee.typo($line: 12px, $size: 10px, $weight: 300, $color: var(--primary-500));
+        @include drumee.typo($line: 12px, $size: 10px, $weight: 300, $color: $ring-brand);
         letter-spacing: 0.1px;
         text-align: center;
         box-sizing: border-box;
@@ -99,12 +110,12 @@
     }
 
     &--bg {
-      stroke: var(--neutral-300);
+      stroke: $ring-track;
       stroke-width: 20;
     }
 
     &--fg {
-      stroke: var(--primary-500);
+      stroke: $ring-brand;
       stroke-width: 20;
       stroke-linecap: round;
       transition: stroke-dashoffset 1s linear;
@@ -126,7 +137,51 @@
     svg {
       width: 100%;
       height: 100%;
-      fill: var(--primary-400);
+      fill: $ring-brand;
     }
+  }
+}
+
+// ── The same colours again, one level deeper, for `.svg-progress` ────────────
+//
+// Why this block has to exist at all: the block above is the ONLY skin the
+// upload widget (`media/uploader`, family `media-uploader`) has, so it lands.
+// The DOWNLOAD ring is @drumee/ui-core's `svg_progress`, and that widget
+// `require`s its own skin from inside initialize() —
+// letc/widgets/progress/media/skin/grid.scss — which styles these very same
+// flat classes at the very same specificity. style-loader appends in module
+// EVALUATION order, and ui-core's runs the first time a transfer starts, i.e.
+// always after media/grid/skin (required from the grid's own initialize(), at
+// folder-open). Last one in wins, so on `.svg-progress` every colour above was
+// silently losing and the ring stayed lilac.
+//
+// Re-stating only the COLOURS one level deeper takes them back while leaving
+// ui-core the geometry it also owns (its ring is 80px, the block above says
+// 50px — do NOT let this block start winning that too, or the ring resizes).
+//
+// The ancestors used here — __container-header / __container-body /
+// __container-footer / __chart — come from ui-core's own skeleton/grid.js and
+// exist ONLY in grid mode. The row skeleton has __container-name/-progress/
+// -size instead, so none of this can reach the list-view bar (teal by design).
+.svg-progress {
+  &__container-header &__value-filesize,
+  &__container-header &__value-percent {
+    color: $ring-brand;
+  }
+
+  &__container-footer &__value-filename .drumee-text {
+    color: $ring-brand;
+  }
+
+  &__chart &__chart--bg {
+    stroke: $ring-track;
+  }
+
+  &__chart &__chart--fg {
+    stroke: $ring-brand;
+  }
+
+  &__container-body &__close svg {
+    fill: $ring-brand;
   }
 }
