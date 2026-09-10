@@ -16,6 +16,11 @@ const {
 const MAX_AVATARS = 3; // avatars shown before collapsing to a "+N" chip
 const MAX_FILES = 1; // file chips shown before collapsing to a "+N" chip
 
+// The list is one flat scroller, not per-column, so it needs a window key that
+// cannot collide with a real column key. Kept in step with the literal in
+// index.js `_installCardWindow`.
+const LIST_WINDOW_KEY = "__list";
+
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const cols = ui.getColumns();
@@ -334,8 +339,15 @@ module.exports = function (ui) {
       header,
       Skeletons.Box.Y({
         className: `${pfx}__list-body`,
+        // WINDOWED, for the same reason the board's columns are — see the note
+        // at skeleton/index.js's taskCard map. `rowGroup` emits the parent row
+        // plus every expanded subtask, so an unpaginated workspace list built
+        // more rows than it has tasks, all in one synchronous burst.
+        //
+        // `tasks.length` still gates the empty state, so a non-empty list can
+        // never render the "no tasks" note.
         kids: tasks.length
-          ? tasks.flatMap(rowGroup)
+          ? tasks.slice(0, ui.cardWindow(LIST_WINDOW_KEY)).flatMap(rowGroup)
           : [
               Skeletons.Note({
                 className: `${pfx}__list-empty`,

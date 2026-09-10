@@ -18,6 +18,16 @@ const {
 // submit action of their own — a description is saved by its panel — so Enter
 // keeps inserting a newline there. Each target re-checks its own draft, so
 // Enter on an empty box is a no-op.
+// How many task cards a column builds before the user has scrolled it.
+//
+// A card is ~19 skeleton nodes, and `_loadTasks` fetches the WHOLE workspace in
+// one unpaginated request, so without a cap a busy board mounts thousands of
+// Marionette views in a single burst. 60 comfortably overflows the tallest
+// column, which is what keeps the scroll affordance — and therefore the path to
+// the rest — discoverable.
+const CARD_WINDOW = 60;
+const CARD_WINDOW_STEP = 60;
+
 const COMMENT_SUBMIT_BY_SCOPE = {
   comment: "_submitComment",
   "comment-edit": "_saveCommentEdit",
@@ -477,6 +487,7 @@ class __tasks_panel extends LetcBox {
     this._trackPointer();
     this._installPasteAttach();
     this._installFileSearchFocus();
+    this._installCardWindow();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
     this._watchVisibility();
@@ -2394,6 +2405,67 @@ class __tasks_panel extends LetcBox {
       if (isCreate) this._refreshCreateSubtaskSection();
       else this._refreshSubtaskSection();
     });
+  }
+
+  /**
+   * How many cards a column may build right now.
+   *
+   * Starts at CARD_WINDOW and grows by CARD_WINDOW_STEP each time the user
+   * scrolls that column near its bottom (_installCardWindow). Per column, so a
+   * long "To do" does not force every other column to build its whole list.
+   */
+  cardWindow(key) {
+    if (!this._cardWindow) this._cardWindow = {};
+    return this._cardWindow[key] || CARD_WINDOW;
+  }
+
+  /**
+   * Grow a column's window as it is scrolled.
+   *
+   * `scroll` does not bubble, so this is a CAPTURE listener on the panel root —
+   * the same shape the file-search dropdown uses below. One listener for every
+   * column rather than one per column, and it early-returns on anything that is
+   * not a column body.
+   *
+   * Repaints through `_refreshViewBody()`, never `_render()`: that path feeds
+   * only the view host and puts every scroll offset back (it snapshots
+   * `.tasks-panel__column-body[data-dropcol=…]` by selector), so the column
+   * stays exactly where the user left it and the newly built cards simply
+   * appear below.
+   */
+  _installCardWindow() {
+    if (!this.el || this._cardWindowBound) return;
+    this._cardWindowBound = 1;
+    this.el.addEventListener(
+      "scroll",
+      (e) => {
+        const body = e.target;
+        if (!body || !body.classList) return;
+        // Two windowed views, two scrollers: the board has one per column, the
+        // list is a single flat one. "__list" matches skeleton/list.js.
+        let key, total;
+        if (body.classList.contains("tasks-panel__column-body")) {
+          key = body.dataset && body.dataset.dropcol;
+          if (!key) return;
+          // getState() is the same bucketing the skeleton renders from, so
+          // this asks "are there tasks in this column I have not built yet?".
+          total = (this.getState() || {})[key];
+        } else if (body.classList.contains("tasks-panel__list")) {
+          key = "__list";
+          total = this.getTopLevelTasks();
+        } else {
+          return;
+        }
+        const have = this.cardWindow(key);
+        // Nothing left to build for this column.
+        if (!Array.isArray(total) || total.length <= have) return;
+        if (body.scrollTop + body.clientHeight < body.scrollHeight - 240) return;
+        if (!this._cardWindow) this._cardWindow = {};
+        this._cardWindow[key] = have + CARD_WINDOW_STEP;
+        this._refreshViewBody();
+      },
+      true,
+    );
   }
 
   _installFileSearchFocus() {
