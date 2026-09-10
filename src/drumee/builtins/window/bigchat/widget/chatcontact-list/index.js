@@ -1,4 +1,11 @@
 const { timestamp } = require("@drumee/ui-essentials")
+// Preview text for a row's last message — shared with the row's own skeleton so
+// a system card cannot read one way on load and another way after a WS push.
+const {
+  chatPreview,
+  parseMeetingSentinel,
+  meetingStatusOf,
+} = require("libs/chat-preview");
 const EOD = "end:of:data";
 class ___widget_chatcontactList extends LetcBox {
 
@@ -243,23 +250,44 @@ class ___widget_chatcontactList extends LetcBox {
       case 'channel.roominfo':
         item = this.selectItem(data, 'entity_id', 'hub_id');
         if (!item) return;
-        msg = data.message;
-        if (_.isEmpty(msg) && !_.isEmpty(data.attachment)) {
-          msg = LOCALE.ATTACHMENT;
-        }
-        if (_.isEmpty(msg)) {
-          msg = '_';
-        }
-        if (msg && typeof msg === 'string') {
-          // Lazy label (.+?) so a filename containing "]" still strips to @name.
-          msg = msg.replace(/\[@(.+?)\]\((?:user|mention)[^)]*\)/g, '@$1');
-        }
+        // The row keeps the RAW body (that is what the meeting-end flip below
+        // matches on); only the Note gets the derived text. '_' stands in for a
+        // room with nothing to preview, as it always has.
+        msg = chatPreview(data.message, {
+          metadata: data.metadata,
+          messageType: data.message_type,
+          isAttachment: !_.isEmpty(data.attachment),
+        });
 
-        item.mset(_a.message, msg);
-        item.__message.set(_a.content, msg);
+        item.mset(_a.message, data.message);
+        item.mset('meeting_status', meetingStatusOf(data));
+        item.__message.set(_a.content, msg || '_');
 
         item.mset('room_count', data.room_count);
         item.updateNotification();
+        break;
+
+      // A meeting that ends does NOT post a second message: channel.meeting_end
+      // flips the start card's metadata and re-broadcasts that same row, which
+      // is how the chat card turns into "Meeting ended". Without this the row
+      // beside it went on advertising "started a meeting" until something else
+      // was said. Literal service name — SERVICE.channel.meeting_end is
+      // undefined against an older server (same as widget_chat's handler).
+      case 'channel.meeting_end':
+        item = this.selectItem(data, 'entity_id', 'hub_id');
+        if (!item || !item.__message) return;
+        if (!parseMeetingSentinel(data.message)) return;
+        // Only while that card is still the row's LAST message — an older
+        // meeting ending must not overwrite what has been said since.
+        if (`${item.mget(_a.message) || ''}` !== `${data.message || ''}`) return;
+        item.mset('meeting_status', 'ended');
+        item.__message.set(
+          _a.content,
+          chatPreview(data.message, {
+            metadata: data.metadata,
+            meetingStatus: 'ended',
+          })
+        );
         break;
 
       case SERVICE.contact.invite_accept:
@@ -310,17 +338,17 @@ class ___widget_chatcontactList extends LetcBox {
           room_count = room_count + 1;
         }
 
-        msg = data.message;
-        if (_.isEmpty(msg) && (data.is_attachment === 1)) {
-          msg = LOCALE.ATTACHMENT;
-        }
-        if (msg && typeof msg === 'string') {
-          // Lazy label (.+?) so a filename containing "]" still strips to @name.
-          msg = msg.replace(/\[@(.+?)\]\((?:user|mention)[^)]*\)/g, '@$1');
-        }
+        msg = chatPreview(data.message, {
+          metadata: data.metadata,
+          messageType: data.message_type,
+          isAttachment: data.is_attachment === 1,
+        });
 
         item.mset('room_count', room_count);
-        item.mset(_a.message, msg);
+        // RAW body on the model, derived text on the Note — see the roominfo
+        // case above.
+        item.mset(_a.message, data.message);
+        item.mset('meeting_status', meetingStatusOf(data));
         item.mset(_a.ctime, data.ctime);
 
         const msgTime = Dayjs.unix(data.ctime).locale(Visitor.language()).format("HH:mm");
