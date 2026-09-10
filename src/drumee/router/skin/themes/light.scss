@@ -5,10 +5,12 @@ html[data-theme="light"],
   --normal-bg-100: #ffffff;
   --normal-bg-90: #f2f2f7;
   --normal-bg-80: #e5e5ea;
+  --normal-bg-50: #e5e5ea;
   --normal-bg-40: #d1d1d6;
   --normal-bg-elevated: #ffffff;
   --overlay-bg: rgba(0, 0, 0, 0.4);
   --overlay-bg-05: rgba(0, 0, 0, 0.05);
+  --overlay-fg: #2d2a6a;
 
   /* Foreground */
   --normal-fg: #0b0a21;
@@ -22,6 +24,7 @@ html[data-theme="light"],
   --reverse-bg: #2d2a6a;
   --reverse-fg: #ffffff;
   --reverse-lb: #433cc5;
+  --reverse-lb-hover: var(--primary-40);
 
   /* Border */
   --border-default: #e5e5ea;
@@ -42,6 +45,7 @@ html[data-theme="light"],
   --scrollbar-track: transparent;
 
   /* Accent / state */
+  --avatar-bg: #5950ff;
   --radio-on-bg: rgba(89, 80, 255, 0.1);
   --radio-on-border: #5950ff;
   --hover-bg-40: rgba(89, 80, 255, 0.08);
