@@ -2672,9 +2672,15 @@ class __media_core extends DrumeeMFS {
         break;
       case SERVICE.media.make_dir:
       case SERVICE.media.get_node_attr:
+      case SERVICE.media.archive_info:
+      case SERVICE.media.unzip:
         // Consumed via the postService() return value (folder creation during
         // make_dir-first folder upload / node refresh) — no REST-dispatch action
         // needed. Explicit no-op avoids the "unexpected service" console noise.
+        //
+        // archive_info / unzip are the same shape: openArchive awaits the
+        // fetchService/postService promise itself, and the real outcome of an
+        // unzip arrives later over the socket, not in this reply.
         return;
       case null:
       case undefined:

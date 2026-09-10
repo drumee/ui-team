@@ -1669,14 +1669,55 @@ class __window_mfs extends DrumeeMFS {
   _highlightNode(nid, tries = 24) {
     if (!nid || `${nid}` === "0") return;
     const seek = (n) => {
-      const item = this._findMediaByNid(nid);
-      // Only a real grid cell can be revealed — never the container window
-      // (which shares the folder's nid). Cells expose _setNotifyHighlight.
-      if (item && item._setNotifyHighlight) return this._applyReveal([item], true);
-      if (n <= 0) return;
+      const item = this._findMediaCellByNid(nid);
+      if (item) return this._applyReveal([item], true);
+      if (n <= 0) {
+        // Give up loudly enough to be diagnosable. Silence here is what made
+        // the unzip reveal take four wrong theories to find: no highlight, no
+        // error, nothing in the console to say a reveal had even been asked
+        // for. Still only a warn — a missed highlight must never look like a
+        // failed operation to the user.
+        return this.warn(`[reveal] no cell for nid=${nid} after ${tries} tries`);
+      }
       setTimeout(() => seek(n - 1), 150);
     };
     seek(tries);
+  }
+
+  /**
+   * The revealable grid CELL for a nid — not merely the first widget holding
+   * it.
+   *
+   * More than one widget can carry the same nid: measured on a live desk right
+   * after an unzip, `Wm.getItemsByAttr(nid, …)` answered TWO for the new
+   * folder while the pane held exactly one media_grid. _findMediaByNid returns
+   * `[0]`, and the caller then tested only that one for _setNotifyHighlight —
+   * so whenever the non-cell sorted first the reveal could never succeed. It
+   * did not fail loudly either: the poll simply re-read the same `[0]` 24
+   * times and gave up, which is why an unzip finished with no highlight and no
+   * error.
+   *
+   * Scanning for the first item that IS a cell fixes that for every caller —
+   * the notification deep link has the same exposure, it just needs a second
+   * widget to share the nid to hit it.
+   *
+   * _findMediaByNid is left alone: the deep-link path deliberately wants the
+   * WINDOW when the nid names one.
+   */
+  _findMediaCellByNid(nid) {
+    const key = `${nid}`;
+    const num = Number(key);
+    // Same string/number tolerance as _findMediaByNid — a grid cell's nid may
+    // be a number from the JSON listing while ours arrived as a string.
+    const forms = [nid, key];
+    if (key !== "" && !isNaN(num)) forms.push(num);
+    for (const form of forms) {
+      const hit = Wm.getItemsByAttr(_a.nid, form).find(
+        (c) => c && _.isFunction(c._setNotifyHighlight),
+      );
+      if (hit) return hit;
+    }
+    return null;
   }
 
   /**
