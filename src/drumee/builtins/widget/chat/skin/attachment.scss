@@ -1,7 +1,20 @@
 @use "mixins/drumee";
 
+
 .widget-chat {
 
+  // Queued-file CHIPS (icon + filename + remove), the same card the tasks
+  // panel draws for a comment's attachments. It is a media_grid widget with
+  // `isAttachment`, whose filename / size / "Show in folder" meta row has
+  // always rendered — the old 64px thumbnail tile was this block HIDING that
+  // meta row and forcing the card square. So most of what follows un-does
+  // that rather than adding anything new.
+  //
+  // The glyph in place of a thumbnail is NOT done here: for an image the
+  // template emits only a div with an inline background-image, and the sprite
+  // is a <symbol> sheet with no url() form, so there is no icon on the page
+  // for CSS to reveal. media-wrapper stamps `iconOnly` and the grid template
+  // draws `chipGlyph` — see builtins/media/grid/template/index.js.
   &__attachment-wrapper {
     // Collapse entirely unless `chat.checkPendingContent` has flagged a
     // pending upload via `data-has-attachment="1"`. !important is required
@@ -14,26 +27,89 @@
     &[data-has-attachment="1"] {
       display: flex !important;
       flex-direction: row;
+      // NOT wrap: the inner list is a List.Smart on `axis: x` (see
+      // media-wrapper/skeleton) — a scrolling horizontal strip. Wrapping the
+      // outer box would not wrap its items, it would only hide the ones the
+      // strip scrolls to.
       flex-wrap: nowrap;
       align-items: center;
       background-color: var(--default-bg);
       width: 100%;
-      height: 80px;
-      flex: 0 0 80px;
+      // Was a hard 80px for the 64px tile. A chip row is ~28px, so the strip
+      // sizes to content and keeps a floor rather than a fixed height.
+      height: auto;
+      min-height: 28px;
+      flex: 0 0 auto;
       overflow: hidden;
       padding: 8px;
       gap: 8px;
 
-      // Inner skeleton has inline style="height: 100" on its list, plus
-      // default rules at 100% — both would overflow the 64px slot. Force
-      // a uniform 64px height inside the visible preview only.
+      // Inner skeleton carries inline style="height: 100" on its list plus
+      // default rules at 100%; both fought the old fixed slot and both would
+      // now stretch the auto-height strip. Size to content instead.
       .media-wrapper__ui,
       .list-smart,
       .smart-container {
-        height: 64px !important;
-        max-height: 64px !important;
+        height: auto !important;
+        max-height: none !important;
         min-height: 0 !important;
-        width: auto !important;
+        // Width is CONSTRAINED, not `auto`. The strip can only scroll if it is
+        // narrower than its content; left to size itself it just grows past
+        // the wrapper, and since the wrapper clips (`overflow: hidden`) every
+        // chip beyond the fold would be invisible AND unreachable — no bar, no
+        // scroll, no file. min-width: 0 is what lets a flex child actually be
+        // narrower than its contents.
+        max-width: 100%;
+        min-width: 0;
+        width: 100% !important;
+      }
+
+      // The strip is the scroller — it is the element ui-core puts
+      // `overflow-x: auto` on for `data-axis="x"` — and the chips are its
+      // direct children, so the gap belongs here. The wrapper's own `gap`
+      // cannot do it: the strip is the wrapper's only child, so there is
+      // nothing there for a gap to separate.
+      .smart-container {
+        column-gap: 8px;
+        // Clearance between the chips and the bar. It has to be padding on the
+        // SCROLLER: the bar is laid out below the scrollport, so padding here
+        // is the space between the last row of content and the rail — a margin
+        // on the chips would move them relative to each other instead.
+        padding-bottom: 6px;
+
+        // Safe to show at all because the grid's ::before halo is suppressed
+        // at the top of this block: the bar used to pop in and out on HOVER,
+        // and each appearance grew the wrapper and shortened __body. It now
+        // appears only when there are genuinely more files than fit.
+        //
+        // The bar ws-list draws, which in Chrome is the ENGINE's scrollbar
+        // tinted by `scrollbar-color` — arrow buttons and all — not the
+        // ::-webkit- bar. Since Chrome 121 setting either standard property
+        // switches the element to the standard scrollbar and ignores the
+        // ::-webkit- block entirely, so these two lines are what is actually
+        // seen here; the ::-webkit- rules below are Safari's and Chrome <121's
+        // copy of the same colours.
+        //
+        // ui-core's `.list-smart__container` already sets `scrollbar-width` and
+        // a grey `scrollbar-color`; both are restated here so the strip takes
+        // the brand pair rather than that default.
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary-70) var(--primary-10);
+
+        &::-webkit-scrollbar {
+          height: 10px;
+          // ui-core caps a horizontal smart list's bar at `max-height: 3px`.
+          max-height: none;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: var(--primary-10);
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: var(--primary-70);
+          border-radius: 6px;
+        }
       }
     }
 
@@ -44,18 +120,51 @@
     }
 
     & .media-grid {
+      // Kill the folder-grid hover "halo". media-grid draws a ::before through
+      // the `grid-cell-fill` mixin at `top/left: -6px` and
+      // `calc(100% + 12px)` square — a soft backdrop sized for a 119px tile
+      // sitting in a padded grid with room around it. A chip strip has no such
+      // room, so those 6px become real overflow: `.smart-container` is the
+      // strip's `overflow-x: auto` scroller, so it grows a horizontal
+      // scrollbar the moment the pointer lands on a chip, and the scrollbar's
+      // own height then grows the wrapper, shortens `__body` (flex: 1) and
+      // makes the message list overflow into a second scrollbar. Two
+      // scrollbars appearing on hover, from one decorative pseudo-element.
+      //
+      // Measured: hovering one chip took the strip from 0 to 6px of horizontal
+      // overflow and the wrapper from 50px to 60px.
+      //
+      // Nothing is lost by removing it — __container carries its own hover
+      // background, which is the feedback this card actually wants. chat-item
+      // kills the same pseudo-element for the same reason.
+      &[data-hover="on"]::before,
+      &__ui[data-hover="on"]::before,
+      &__container[data-hover="on"]::before,
+      &__content[data-hover="on"]::before {
+        display: none !important;
+      }
+
+      // The chip itself: matches tasks-panel __comment-attachment — 1px
+      // border, radius 8, 4px/8px padding, 6px gap, sized to its content.
       &__ui {
-        background-color: inherit;
+        background-color: transparent;
         border-radius: var(--border-radius-small);
         box-shadow: none;
-        height: 64px !important;
-        max-height: 64px !important;
-        min-height: unset !important;
+        display: flex;
+        // Keep its own width instead of being squeezed. A flex item shrinks by
+        // default, so eight queued files silently compressed themselves to fit
+        // the strip — every name truncated to a few characters and, because
+        // nothing ever exceeded the strip, nothing ever scrolled either. Chips
+        // hold their size; the strip scrolls. That is what makes the overflow
+        // real rather than absorbed.
+        flex: 0 0 auto;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
         margin: 0;
-        min-width: unset;
-        width: 64px !important;
-        max-width: 64px !important;
-        flex: 0 0 64px;
+        min-width: 0;
+        width: auto !important;
+        max-width: 220px;
 
         &[data-drag="on"] {
           .media-grid__remove {
@@ -63,98 +172,256 @@
           }
         }
 
+        // The document drop-shadow belonged to the square tile; a bordered
+        // chip does not carry one.
         &.document {
-          box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 0px 3px 0 rgba(86, 65, 113, 0.08), 0 2px 8px 0 rgba(194, 185, 203, 0);
+          box-shadow: none;
         }
       }
 
-      &__container {
-        background-color: var(--default-bg);
+      // Row: glyph (left) + filename (right) + remove slot. Same shape as
+      // chat-item's sent-message card, which is this widget laid out
+      // horizontally already.
+      // Row layout is shared; the chip's BOX is not. __content is the
+      // template's own wrapper (`<div class="full media-grid__content">`)
+      // nested inside __container, so anything with a size — padding, border,
+      // radius — applied to the pair lands twice. Padding did, and 34px of
+      // horizontal padding at each level left the filename a 128px lane inside
+      // a 220px chip and truncated names that had room to spare.
+      &__container,
+      &__content {
+        align-items: center;
+        background-color: transparent;
+        column-gap: 6px;
+        flex-direction: row;
+        height: auto;
+        justify-content: flex-start;
+        // Part of the ellipsis chain — see __meta-row's min-width note.
+        min-width: 0;
         overflow: hidden;
 
         &[data-hover="on"] {
           box-shadow: none;
         }
+      }
+
+      // The chip's visible box, on the outer element only.
+      &__container {
+        border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+        // 8px, matching tasks-panel __comment-attachment.
+        border-radius: 8px;
+        // Right padding reserves the remove control's lane. It is placed
+        // absolutely (see __remove), so nothing in the flex row accounts for
+        // it and a long filename would otherwise run under it.
+        padding: 4px 26px 4px 8px;
+        width: auto;
+
+        &:hover {
+          background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
+        }
 
         &[data-icontype="vignette"] {
           background: transparent;
-
-          & .filename {
-            display: none;
-          }
         }
+      }
 
-        & .icon {
-          height: 20px;
-          margin: auto;
-          top: 8px;
-          width: 16px; // 15px;
-        }
+      // Pure layout: it carries the row, never the box.
+      &__content {
+        padding: 0;
+        width: 100%;
+      }
+
+      // Glyph slot — 16px, matching __comment-attachment-ico. No tile behind
+      // it: the chip's own border is the container now.
+      &__background {
+        align-items: center;
+        background-color: transparent;
+        display: flex;
+        flex: 0 0 16px;
+        height: 16px !important;
+        justify-content: center;
+        max-width: 16px;
+        min-width: 16px;
+        overflow: visible;
+        position: static;
+        width: 16px !important;
+      }
+
+      & .preview-container,
+      & .preview-content,
+      & .preview-icon {
+        height: 16px !important;
+        margin: 0;
+        max-height: 16px;
+        max-width: 16px;
+        position: static;
+        top: auto;
+        width: 16px !important;
+        // The grid card's 8px corner (`.media-grid__content .preview-container`,
+        // --grid-card-radius) is meant for a 119px tile; on a 16px glyph it
+        // rounds half the icon away and clips its corners. A chip's glyph is
+        // the artwork itself, with no card behind it to round.
+        border-radius: 0;
+        overflow: visible;
+      }
+
+      & .icon {
+        height: 16px;
+        margin: 0;
+        position: static;
+        top: auto;
+        width: 16px;
+      }
+
+      // Paint the glyph the chip's own text colour. `lib/svg.scss` only sets
+      // `fill: currentcolor` for .svg-wrapper / .drumee-picto, so a
+      // .preview-icon left alone falls back to the SVG default of black —
+      // close enough to be missed against #0b0a21 text, and wrong in dark
+      // mode. The office rule below deliberately comes after this one and
+      // overrides the single path it needs to.
+      & .preview-icon {
+        color: var(--normal-fg-10, #0b0a21);
+        fill: currentColor;
+      }
+
+      // Office glyphs come from the raw sprite, where every detail path
+      // carries its own colour EXCEPT the page body, which has no fill and
+      // would take the SVG default of black behind the blue/green/orange
+      // detail. Paint that one path white. Same rule, same attribute and the
+      // same reason as tasks-panel __comment-attachment-ico — keyed on the
+      // extension because the class never names the sprite.
+      & .preview-icon[data-ext="doc"],
+      & .preview-icon[data-ext="docx"],
+      & .preview-icon[data-ext="xls"],
+      & .preview-icon[data-ext="xlsx"],
+      & .preview-icon[data-ext="ppt"],
+      & .preview-icon[data-ext="pptx"] {
+        color: var(--white, #ffffff);
+        fill: var(--white, #ffffff);
       }
 
       &__content {
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
       }
 
       &-notify__container {
         display: none;
       }
 
-      & .preview.image-capable {
-        height: 64px;
-        width: 64px;
-        object-fit: cover;
+      // Text column. Was `display: none !important` — this is the un-hiding
+      // that turns the tile into a chip.
+      &__meta-row {
+        align-items: center;
+        display: flex !important;
+        flex: 0 1 auto;
+        flex-direction: row;
+        margin: 0;
+        // container.scss floors this at --grid-meta-row-h (32px) and caps it at
+        // --grid-meta-row-h-max (64px): the room a vertical card needs for a
+        // two-line filename plus a date. A chip has one line and no date, so
+        // the floor was simply padding the row out to 32px and taking the chip
+        // to 50px tall for a 16px name. Both go.
+        min-height: 0;
+        max-height: none;
+        // The text lane, and the only thing that decides where a long name is
+        // cut: 220 (__ui max-width) - 34 (container padding) - 2 (border)
+        //  - 16 (glyph) - 6 (column-gap) = 162.
+        max-width: 162px;
+        // min-width: 0 is what actually lets the ellipsis happen — a flex item
+        // defaults to min-width: auto, i.e. "never shrink below your content",
+        // so without it the name would push the chip wider instead of
+        // truncating. It is needed on EVERY flex ancestor between the chip and
+        // the text, which is why __container and __content carry it too.
+        min-width: 0;
+        overflow: hidden;
+        width: auto;
       }
 
-      // Preview ở chat input chỉ cần thumb nhận diện — ẩn mọi filename/meta
-      // overlay để tránh bị clip nửa text dưới ảnh.
+      &__meta-row-top {
+        display: block;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      // Filename on one line, ellipsised. media-grid's filename.scss forces a
+      // 2-line -webkit-box clamp; a chip is one line.
       & .filename,
-      & .filename-wrapper,
-      &__meta-row,
-      &__meta-row-top,
+      & .filename-wrapper {
+        @include drumee.typo(
+          $size: 12px,
+          $weight: 400,
+          $line: 16px,
+          $color: var(--normal-fg-10, #0b0a21)
+        );
+        -webkit-line-clamp: unset;
+        display: block !important;
+        // Fills the lane the meta-row defines rather than carrying a second,
+        // independent width that has to be kept in step with it.
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        text-align: left;
+        text-overflow: ellipsis;
+        white-space: nowrap !important;
+        width: auto;
+      }
+
+      // A comment chip is icon + name + control, with no second line. The
+      // grid template renders "<size> · Show in folder" for every
+      // isAttachment card (chat-item's sent-message card uses it); the
+      // pre-send chip does not show it.
+      &__chatmeta,
+      &__filesize,
+      &__meta-sep,
+      &__reveal,
       &__date {
         display: none !important;
       }
 
-      // Remove ("X") button — drops a queued attachment before the message is
-      // sent. Dark filled circle + white ring so it stays visible on the light
-      // card tint AND on image thumbnails; ALWAYS shown (no hover gate) and
-      // pinned above the preview. Turns alert-red on hover to signal delete.
+      // Remove ("X") — drops a queued attachment before the message is sent.
+      // Was a filled circle pinned over the thumbnail's top-right corner;
+      // it is now the chip's trailing control, mirroring
+      // __comment-attachment-slot: a fixed 12px slot that is always the same
+      // width, so chips never resize as files come and go.
       &__remove {
-        // Neutral grey chip that blends with the theme — soft ring + light
-        // shadow keep it legible over both the card tint and image thumbnails
-        // without the heavy black look. Always visible; hover flips to alert.
-        background-color: var(--default-icon-neutral);
-        border-radius: 50%;
-        border: 1px solid var(--default-text-reverse);
-        box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
-        color: var(--default-text-reverse);
-        height: 18px;
-        width: 18px;
-        position: absolute;
-        right: 3px;
-        top: 3px;
-        z-index: 10;
-        opacity: 0.85;
-        visibility: visible;
+        align-items: center;
+        background-color: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        color: var(--normal-fg-10, #0b0a21);
         cursor: pointer;
         display: flex;
-        align-items: center;
+        height: 12px;
         justify-content: center;
-        transition: opacity 0.15s ease, background-color 0.15s ease;
+        opacity: 0.5;
+        // The template nests this INSIDE __background (`{preview}{removeBtn}`),
+        // a 16px box — so it cannot be reordered into a trailing flex slot the
+        // way tasks-panel's __comment-attachment-slot is; laid out in flow it
+        // simply overlaps the glyph. Positioning it against the chip (.box is
+        // `position: relative`) puts it where the comment chip's ✕ sits without
+        // needing the markup changed.
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        visibility: visible;
+        width: 12px;
+        z-index: 2;
 
         &--icon {
-          color: var(--default-text-reverse);
-          fill: var(--default-text-reverse);
+          color: currentColor;
+          fill: currentColor;
           height: 8px;
           width: 8px;
         }
 
         &:hover {
+          background-color: transparent;
+          border-color: transparent;
           opacity: 1;
-          background-color: var(--default-bg-alert);
-          border-color: var(--default-bg-alert);
         }
       }
 
@@ -178,7 +445,6 @@
           left: calc(50% - 11px);
           top: calc(50% - 8px);
           position: absolute;
-          // margin-top: 2px;
         }
 
         &__close {
@@ -189,6 +455,36 @@
           left: calc(50% - 5px);
           top: calc(50% - 7px);
         }
+      }
+    }
+
+    // ── Specificity lift ────────────────────────────────────────────
+    // container.scss styles the filename through
+    // `.media-grid.media-grid .media-grid__meta-row .filename` — a doubled
+    // class, 0,4,0 — which outranks every selector above and was still
+    // deciding the weight (600), the line box (1.4 -> 16.8px) and the
+    // meta-row's top margin. Matching its trick and adding this block's own
+    // root wins on specificity rather than on load order, which between two
+    // skins pulled in by separate `require`s is not something to rely on.
+    & .media-grid.media-grid .media-grid__meta-row {
+      margin: 0;
+      // container.scss gives the meta row `padding: 8px 0 0` to separate the
+      // name from the thumbnail ABOVE it in the vertical card. Laid out as a
+      // row that padding is not a gap, it is a 8px shim that made the box 24px
+      // tall around a 16px name and dropped its centre 4px below the glyph's.
+      padding: 0;
+
+      .filename,
+      .filename-wrapper {
+        // A chip's name is body text, not a title: the grid card bolds it to
+        // stand against a 119px thumbnail, and at 12px in a pill that reads
+        // as shouting. Same weight as tasks-panel __comment-attachment-name.
+        font-weight: 400;
+        // 16px flat, matching the glyph and the ✕, so all three share a
+        // centre line. The inherited 1.4 gave the name a 16.8px box that sat
+        // 4px below the glyph — the misalignment this pass fixes.
+        line-height: 16px;
+        max-height: none;
       }
     }
   }
@@ -210,23 +506,41 @@ html[data-theme="dark"] {
       background-color: transparent !important;
     }
 
+    // --primary-10 is defined once, as a light lavender, so the light-mode
+    // track would sit on the dark strip as a bright band. A translucent white
+    // gives the same "rail belongs to the thumb" reading against --normal-bg-90,
+    // and the thumb lifts to a step that is actually visible on it.
+    .smart-container {
+      // Unconditional, unlike the light-mode note's ::-webkit- rules: this is
+      // the property Chrome actually renders, so gating it on anything would
+      // leave the light lavender rail sitting on the dark strip.
+      scrollbar-color: var(--primary-30, #847eff) rgba(255, 255, 255, 0.12);
+
+      &::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: var(--primary-30, #847eff);
+      }
+    }
+
     .media-grid {
+      // The chip is a bordered pill, so it needs a ring that reads on the dark
+      // strip rather than the light theme's near-black hairline. The fill stays
+      // a shade above the strip so the chip lifts off it.
       &__container {
         background-color: var(--normal-bg-80, #333042);
+        border-color: var(--overlay-bg-05, rgba(255, 255, 255, 0.14));
       }
 
-      // Dark surface + light ring/icon so the always-visible X reads on the
-      // dark card. Hover still flips to alert-red (inherited from light rule).
-      &__remove {
-        background-color: var(--normal-fg-10, #e4e3ff);
-        border-color: var(--normal-bg-80, #333042);
-        color: var(--normal-bg-90, #282538);
-
-        &--icon {
-          color: var(--normal-bg-90, #282538);
-          fill: var(--normal-bg-90, #282538);
-        }
-      }
+      // Nothing to override for the X or the glyph any more: both take
+      // `--normal-fg-10`, which is already theme-aware (near-black on light,
+      // #e4e3ff on dark). The light-mode rules only needed a dark-mode twin
+      // while the X was a FILLED CIRCLE pinned over the thumbnail — a light
+      // disc with a dark glyph inside it. A 12px bare glyph in the chip's
+      // trailing lane inherits the right colour on its own, and re-stating a
+      // background here would paint a light blob behind it.
     }
   }
 }
