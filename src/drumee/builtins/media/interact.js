@@ -1,6 +1,6 @@
 
 
-const { timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
+const { filesize, timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
 const Rectangle = require('rectangle-node');
 const OPEN_NODE = "open-node";
 const ECHO_ID = "echoId";
@@ -674,13 +674,56 @@ class __media_interact extends media_core {
    * deliberately does NOT poll or wait: the toast says work started, and the
    * folder appears on its own.
    */
-  unzipArchive() {
-    // Same capability gate as the menu row, repeated rather than trusted:
-    // the row is built once, and a keyboard or scripted path could reach the
-    // service name after the menu was drawn. Without media.unzip the POST
-    // would go to `<svc>undefined` and be swallowed by onServerComplain.
-    if (!SERVICE.media || !SERVICE.media.unzip) return;
+  openArchive() {
+    // Same capability gate as the menu row, repeated rather than trusted: the
+    // row is built once, and this path is also reached by a plain click.
+    if (!this.canUnzip()) return;
     const { nid, hub_id } = this.actualNode();
+
+    // Ask the server what is inside BEFORE offering anything. Reading an
+    // archive's table of contents is cheap (the central directory, not the
+    // payload), and it buys both halves of the decision: the counts the
+    // confirmation quotes, and whether this one is small enough to finish
+    // without a progress bar.
+    return this.fetchService(
+      { service: SERVICE.media.archive_info, nid, hub_id },
+      { async: 1 },
+    )
+      .then((info) => {
+        // The latch set by the click is released here, whatever happens next:
+        // a modal is the feedback from this point on, and for a big archive
+        // handleUnzip takes over and clears it again at completion.
+        this.wait(0);
+        if (!info || info.error) return this._unzipFailed(info && info.error);
+        return Wm.confirm(
+          LOCALE.UNZIP_CONFIRM.format(
+            this.fullname(),
+            info.files,
+            filesize(info.size),
+          ),
+        )
+          .then(() => this.unzipArchive(info))
+          .catch(() => { });
+      })
+      .catch((e) => {
+        this.wait(0);
+        this._unzipFailed((e && (e.reason || e.error)) || e);
+      });
+  }
+
+  /**
+   * Start the extraction. `info` comes from archive_info; its `small` flag is
+   * the SERVER's verdict on whether this finishes fast enough that a progress
+   * bar would be more flicker than information.
+   */
+  unzipArchive(info = {}) {
+    if (!this.canUnzip()) return;
+    const { nid, hub_id } = this.actualNode();
+    // Hold the tile's latch for the duration when a bar is coming, so the
+    // archive cannot be started twice while it extracts. handleUnzip clears it
+    // on completed/failed. A small archive gets no bar and no latch — it is
+    // over in about the time the dialog takes to close.
+    if (!info.small) this.wait(1);
     return this.postService(
       SERVICE.media.unzip,
       {
@@ -694,7 +737,10 @@ class __media_interact extends media_core {
       { async: 1 },
     )
       .then((data) => {
-        if (!data || data.error) return this._unzipFailed(data && data.error);
+        if (!data || data.error) {
+          this.wait(0);
+          return this._unzipFailed(data && data.error);
+        }
         // Same guard the workspace-copy toast uses: Butler is a bootstrap
         // global and is not present in every context a media tile renders in
         // (the DMZ share view has no assistant).
@@ -702,7 +748,10 @@ class __media_interact extends media_core {
           Butler.say(LOCALE.UNZIP_STARTED.format(this.fullname()));
         }
       })
-      .catch((e) => this._unzipFailed((e && (e.reason || e.error)) || e));
+      .catch((e) => {
+        this.wait(0);
+        this._unzipFailed((e && (e.reason || e.error)) || e);
+      });
   }
 
   /**
@@ -838,7 +887,7 @@ class __media_interact extends media_core {
         return this.duplicateInPlace();
 
       case "unzip":
-        return this.unzipArchive();
+        return this.openArchive();
 
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));

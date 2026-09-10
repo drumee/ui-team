@@ -3176,5 +3176,6 @@
   "ARCHIVE_EMPTY": "Cette archive ne contient aucun fichier.",
   "ARCHIVE_TOO_MANY_ENTRIES": "Cette archive contient trop de fichiers pour être extraite. Veuillez l'extraire sur votre ordinateur et téléverser le dossier.",
   "ARCHIVE_TOO_LARGE": "Cette archive est trop volumineuse pour être extraite. Veuillez l'extraire sur votre ordinateur et téléverser le dossier.",
-  "ARCHIVE_UNSAFE_PATH": "Cette archive contient des entrées qui pointent en dehors du dossier de destination ; elle n'a pas été extraite."
+  "ARCHIVE_UNSAFE_PATH": "Cette archive contient des entrées qui pointent en dehors du dossier de destination ; elle n'a pas été extraite.",
+  "UNZIP_CONFIRM": "Décompresser {0} ? Un dossier contenant ses {1} fichiers ({2}) sera ajouté au dossier actuel."
 }

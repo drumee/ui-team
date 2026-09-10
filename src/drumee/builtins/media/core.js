@@ -10,6 +10,13 @@ const UPLOADER = "media_uploader";
 const SEEDING = "seeding";
 const IGNORED_FILES = /Thumbs.db|.DS_Store|__MACOSX|.thumbnails|\~+/;
 const MAX_BLOB_SIZE = 100000000;
+/**
+ * filecap.category for EVERY archive extension — zip/rar/7z/tar/gz/tgz/bz2/xz
+ * all land on this one value, which is what `media.filetype` carries. Not the
+ * extension: the server gates media.unzip on the same category, so the two
+ * ends agree by construction.
+ */
+const ARCHIVE_FILETYPE = "zip";
 // Office formats that get content posters (thumb.png) via the SEO index worker.
 const DOC_EDITABLE = require('player/document/editable');
 
@@ -275,6 +282,25 @@ class __media_core extends DrumeeMFS {
   /**
    *
    */
+  /**
+   * Whether this node can be extracted here and now.
+   *
+   * Extracting CREATES files, so it needs the same standing as uploading them
+   * — `canOrganize() || isMediaOwner()` is the `editable` test the duplicate
+   * and rename rows use. It also needs the SERVER to publish both halves of
+   * the flow: SERVICE is the ACL list sent through yp.get_env, ui and server
+   * ship separately, and a missing name would POST to `<svc>undefined`, an
+   * error onServerComplain swallows. One definition, because the kebab row and
+   * the click path must never disagree about whether unzip is on offer.
+   */
+  canUnzip() {
+    if (this.mget(_a.filetype) !== ARCHIVE_FILETYPE) return false;
+    if (!SERVICE.media || !SERVICE.media.unzip || !SERVICE.media.archive_info) {
+      return false;
+    }
+    return !!(this.canOrganize() || this.isMediaOwner());
+  }
+
   contextmenuItemsForFiles() {
     const fileType = this.mget(_a.filetype);
     const editable = this.canOrganize() || this.isMediaOwner();
@@ -335,19 +361,9 @@ class __media_core extends DrumeeMFS {
       case _a.web:
         extra.push("setAsHomepage");
         break;
-      case "zip":
+      case ARCHIVE_FILETYPE:
         // Archives (zip/rar/7z/tar/gz…) all carry filecap category `zip`.
-        // Extracting CREATES files, so it is offered only to a member who
-        // could have uploaded them in the first place — `editable` above is
-        // the same test the duplicate and rename rows use.
-        //
-        // Gated on the SERVICE EXISTING, not on the version we hope is
-        // deployed. SERVICE is the ACL list the server publishes through
-        // yp.get_env, so on a server without media.unzip the name is
-        // undefined and the row would POST to `<svc>undefined` — an error
-        // onServerComplain swallows, leaving a menu item that silently does
-        // nothing. Absent capability, absent row.
-        if (editable && SERVICE.media && SERVICE.media.unzip) extra.push("unzip");
+        if (this.canUnzip()) extra.push("unzip");
         break;
       case _a.script:
         if (Visitor.profile().devel) {
@@ -2362,6 +2378,46 @@ class __media_core extends DrumeeMFS {
    */
   refreshNotification() {
 
+  }
+
+  /**
+   * Draw an unzip's progress on this tile.
+   *
+   * Deliberately the same surface as handleDownload below — the `progress`
+   * widget appended to the tile itself — because it is the same situation: a
+   * job running on the SERVER, reporting percentages over the socket, about a
+   * file that already has a tile on screen. (The upload progress is a floating
+   * window instead, for the opposite reason: an upload has no tile yet.)
+   *
+   * Created lazily on the first message rather than at click time, so a small
+   * archive that finishes before any progress arrives never flashes a bar, and
+   * so a stray message for a tile that is not extracting cannot leave one
+   * behind.
+   */
+  handleUnzip(data = {}) {
+    const done = data.phase === "completed" || data.phase === "failed";
+    if (!this._unzipProgress || this._unzipProgress.isDestroyed()) {
+      // Nothing to update and nothing to build: the run is already over.
+      if (done) return;
+      let mode = "grid";
+      if (this.getLogicalParent) {
+        try { mode = this.getLogicalParent().getViewMode(); } catch (e) { /* default */ }
+      }
+      this.append({
+        kind: "progress",
+        mode,
+        filename: this.mget(_a.filename),
+      });
+      this._unzipProgress = this.children.last();
+    }
+    if (done) {
+      this._unzipProgress.suppress();
+      this._unzipProgress = null;
+      // The tile's open latch is held from the click that started this.
+      this.wait(0);
+      return;
+    }
+    this._unzipProgress.update(data.progress || 0);
   }
 
   /**

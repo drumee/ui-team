@@ -3175,5 +3175,6 @@
   "ARCHIVE_EMPTY": "This archive holds no files.",
   "ARCHIVE_TOO_MANY_ENTRIES": "This archive holds too many files to extract. Please extract it on your computer and upload the folder.",
   "ARCHIVE_TOO_LARGE": "This archive is too large to extract. Please extract it on your computer and upload the folder.",
-  "ARCHIVE_UNSAFE_PATH": "This archive contains entries that point outside the destination folder, so it was not extracted."
+  "ARCHIVE_UNSAFE_PATH": "This archive contains entries that point outside the destination folder, so it was not extracted.",
+  "UNZIP_CONFIRM": "Unzip {0}? This will add a folder with its {1} files ({2}) to the current folder."
 }

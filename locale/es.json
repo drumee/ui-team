@@ -2967,5 +2967,6 @@
   "ARCHIVE_EMPTY": "Este archivo comprimido no contiene ningún archivo.",
   "ARCHIVE_TOO_MANY_ENTRIES": "Este archivo comprimido contiene demasiados archivos para extraerlo. Extráigalo en su ordenador y suba la carpeta.",
   "ARCHIVE_TOO_LARGE": "Este archivo comprimido es demasiado grande para extraerlo. Extráigalo en su ordenador y suba la carpeta.",
-  "ARCHIVE_UNSAFE_PATH": "Este archivo comprimido contiene entradas que apuntan fuera de la carpeta de destino, por lo que no se extrajo."
+  "ARCHIVE_UNSAFE_PATH": "Este archivo comprimido contiene entradas que apuntan fuera de la carpeta de destino, por lo que no se extrajo.",
+  "UNZIP_CONFIRM": "¿Descomprimir {0}? Se añadirá al directorio actual una carpeta con sus {1} archivos ({2})."
 }
