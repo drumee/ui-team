@@ -67,6 +67,24 @@
       height: 100%;
       fill: #885EFF;
 
+      // The folder's drop shadow, as ONE shared rule.
+      //
+      // It used to be an inline `<filter>` inside every folder tile's own SVG:
+      // feFlood + 2×feColorMatrix + feOffset + feGaussianBlur + feComposite +
+      // 2×feBlend, wrapped in <defs>, with an id unique per tile
+      // (`filter-${widgetId}`) so nothing could be shared between them. A DOM
+      // census on production 2026-09-10 found feColorMatrix ×328, feBlend ×322,
+      // feOffset ×164 and feGaussianBlur ×164 — roughly 1,500 elements, about a
+      // fifth of the entire ~7,000-element document, existing only to draw the
+      // same shadow over and over. Every full-document style recalculation (and
+      // there were 1,481 of them) walked all of it.
+      //
+      // Equivalent to the filter it replaces: feOffset dy=1.5, feGaussianBlur
+      // stdDeviation=1.5 — and CSS drop-shadow's blur radius is 2×stdDeviation,
+      // hence 3px — over rgb(0.133333 0.152941 0.196078) at alpha .32, i.e.
+      // #222732.
+      filter: drop-shadow(0 1.5px 3px rgba(34, 39, 50, 0.32));
+
       &.personal {
         fill: var(--area-personal);
       }
