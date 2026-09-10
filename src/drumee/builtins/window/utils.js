@@ -1154,6 +1154,22 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
+   * Progress for an unzip, routed to the archive's own tile.
+   *
+   * Keyed on `nid` rather than on a transaction id because the tile is what
+   * draws the bar and `nid` is what identifies it — the same lookup
+   * downloadContent does with zipid. The worker puts nid on every message for
+   * exactly this.
+   */
+  unzipContent(args = {}) {
+    if (!args.nid) return;
+    this.getItemsByAttr(_a.nid, args.nid).filter((c) => {
+      if (!c || !_.isFunction(c.handleUnzip)) return false;
+      c.handleUnzip(args);
+    });
+  }
+
+  /**
    * Folders can contain hubs. This funtion show hubs symboles whenever there are some hubs
    * down the tree
    * @param {*} src
@@ -1279,6 +1295,10 @@ class __window_mfs extends DrumeeMFS {
 
       case SERVICE.hub.update_name:
         this.updateSettings(data);
+        break;
+
+      case "media.unzip":
+        this.unzipContent(data);
         break;
 
       case "media.status":

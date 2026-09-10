@@ -57,6 +57,13 @@ const __icon = function (_ui_) {
     showHidden: "eye",
     trash: "ctxmenu-delete",
     unlock: "protected-unlock",
+    // Archive box with the contents coming back out. Its own sprite rather
+    // than a reuse of `app-archive`, which is the same glyph hard-filled
+    // #5950FF: every other row here inherits the row's colour through
+    // `fill: currentColor` (skin __icon), so the brand tint would read as a
+    // different KIND of row — and would stay indigo on the hover and disabled
+    // states the rest of the menu tracks.
+    unzip: "ctxmenu-unzip",
     update: "editbox_pencil",
     upload: "desktop_upload",
 

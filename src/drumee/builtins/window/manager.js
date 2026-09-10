@@ -14,6 +14,8 @@ const pseudo_media = require("media/pseudo");
 const { xhRequest, dataTransfer } = require("@drumee/ui-essentials");
 const { createQrcode } = require("@drumee/ui-essentials");
 const { filesize } = require("@drumee/ui-essentials");
+/** filecap.category shared by every archive extension (see media/core). */
+const ARCHIVE_FILETYPE = "zip";
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
 // Live call windows. They are the one kind that has to outlive desk
@@ -1430,6 +1432,20 @@ class __window_manager extends mfsInteract {
         }
         window.open(media.srcUrl(), "_blank");
         break;
+
+      // An archive has no viewer, and what a user wants from one is its
+      // contents — so a click offers to extract it rather than dead-ending in
+      // the download prompt. Confirmed first, always: extracting writes files
+      // into the folder, and a single click should not do that unasked
+      // (Natrix, 2026-09-10). openArchive owns the whole flow, including
+      // releasing the tile's wait latch.
+      case ARCHIVE_FILETYPE:
+        if (media.canUnzip && media.canUnzip()) return media.openArchive();
+        // No unzip on offer — no permission to write here, or a server that
+        // does not publish the service. Fall through to what a viewer-less
+        // file has always done: offer the download.
+        this._launchApp(media, args);
+        return;
 
       case _a.skeleton:
         xhRequest(media.actualNode().url)

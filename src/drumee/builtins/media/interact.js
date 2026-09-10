@@ -1,6 +1,6 @@
 
 
-const { timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
+const { filesize, timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
 const Rectangle = require('rectangle-node');
 const OPEN_NODE = "open-node";
 const ECHO_ID = "echoId";
@@ -664,6 +664,115 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Extract this archive into the folder it sits in.
+   *
+   * The response is an ACKNOWLEDGEMENT, not a result: media.unzip inspects the
+   * archive inline (so a refusal arrives here, with a reason) and then hands
+   * the extraction to an offline worker. Completion therefore arrives the same
+   * way an upload's does — the worker broadcasts `media.new` for the folder it
+   * created, and window/utils already turns that into a tile. So this method
+   * deliberately does NOT poll or wait: the toast says work started, and the
+   * folder appears on its own.
+   */
+  openArchive() {
+    // Same capability gate as the menu row, repeated rather than trusted: the
+    // row is built once, and this path is also reached by a plain click.
+    if (!this.canUnzip()) return;
+    const { nid, hub_id } = this.actualNode();
+
+    // Ask the server what is inside BEFORE offering anything. Reading an
+    // archive's table of contents is cheap (the central directory, not the
+    // payload), and it buys both halves of the decision: the counts the
+    // confirmation quotes, and whether this one is small enough to finish
+    // without a progress bar.
+    return this.fetchService(
+      { service: SERVICE.media.archive_info, nid, hub_id },
+      { async: 1 },
+    )
+      .then((info) => {
+        // The latch set by the click is released here, whatever happens next:
+        // a modal is the feedback from this point on, and for a big archive
+        // handleUnzip takes over and clears it again at completion.
+        this.wait(0);
+        if (!info || info.error) return this._unzipFailed(info && info.error);
+        return Wm.confirm(
+          LOCALE.UNZIP_CONFIRM.format(
+            this.fullname(),
+            info.files,
+            filesize(info.size),
+          ),
+        )
+          .then(() => this.unzipArchive(info))
+          .catch(() => { });
+      })
+      .catch((e) => {
+        this.wait(0);
+        this._unzipFailed((e && (e.reason || e.error)) || e);
+      });
+  }
+
+  /**
+   * Start the extraction. `info` comes from archive_info; its `small` flag is
+   * the SERVER's verdict on whether this finishes fast enough that a progress
+   * bar would be more flicker than information.
+   */
+  unzipArchive(info = {}) {
+    if (!this.canUnzip()) return;
+    const { nid, hub_id } = this.actualNode();
+    // Hold the tile's latch for the duration when a bar is coming, so the
+    // archive cannot be started twice while it extracts. handleUnzip clears it
+    // on completed/failed. A small archive gets no bar and no latch — it is
+    // over in about the time the dialog takes to close.
+    if (!info.small) this.wait(1);
+    return this.postService(
+      SERVICE.media.unzip,
+      {
+        service: SERVICE.media.unzip,
+        nid,
+        // The destination the server checks WRITE on, and the one it extracts
+        // into — media.unzip requires it precisely so those cannot diverge.
+        pid: this.mget(_a.pid),
+        hub_id,
+      },
+      { async: 1 },
+    )
+      .then((data) => {
+        if (!data || data.error) {
+          this.wait(0);
+          return this._unzipFailed(data && data.error);
+        }
+        // Same guard the workspace-copy toast uses: Butler is a bootstrap
+        // global and is not present in every context a media tile renders in
+        // (the DMZ share view has no assistant).
+        if (typeof Butler !== "undefined" && Butler.say) {
+          Butler.say(LOCALE.UNZIP_STARTED.format(this.fullname()));
+        }
+      })
+      .catch((e) => {
+        this.wait(0);
+        this._unzipFailed((e && (e.reason || e.error)) || e);
+      });
+  }
+
+  /**
+   * Turn a media.unzip refusal into something a person can act on.
+   *
+   * The server answers with a CODE (the ACL documents all of them) rather than
+   * prose, because the reason has to survive into six locales. An unmapped
+   * code — a newer server, an unrelated failure — falls back to the generic
+   * retry line rather than showing the raw token.
+   */
+  _unzipFailed(code) {
+    const key = `${code}`.toUpperCase();
+    const known = [
+      "NOT_AN_ARCHIVE", "NODE_NOT_FOUND", "ARCHIVE_UNREADABLE",
+      "ARCHIVE_ENCRYPTED", "ARCHIVE_EMPTY", "ARCHIVE_TOO_MANY_ENTRIES",
+      "ARCHIVE_TOO_LARGE", "ARCHIVE_UNSAFE_PATH",
+    ];
+    Wm.alert(known.includes(key) ? LOCALE[key] : LOCALE.TRY_AGAIN);
+  }
+
+  /**
    * Create a copy beside this media item. The live update owns grid insertion so the
    * HTTP response and WebSocket broadcast cannot add the same copy twice.
    */
@@ -776,6 +885,9 @@ class __media_interact extends media_core {
 
       case _a.duplicate:
         return this.duplicateInPlace();
+
+      case "unzip":
+        return this.openArchive();
 
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));

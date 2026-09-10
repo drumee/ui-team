@@ -2957,5 +2957,15 @@
   "NO_INPUT_DEVICE": "No input device",
   "PAGE_TITLE": "Drumee",
   "PAGE_DESCRIPTION": "Drumee — a collaborative workspace where files, chat, tasks and meetings live in one place.",
-  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again."
+  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again.",
+  "UNZIP": "ពន្លា",
+  "UNZIP_STARTED": "កំពុងពន្លា {0}។ ថតឯកសារនឹងបង្ហាញនៅពេលរួចរាល់។",
+  "NOT_AN_ARCHIVE": "ឯកសារនេះមិនមែនជាឯកសារបង្ហាប់ដែល Drumee អាចពន្លាបានទេ។",
+  "ARCHIVE_UNREADABLE": "ឯកសារបង្ហាប់នេះខូច ឬមិនមែនជាទម្រង់ដែល Drumee អាចអានបានទេ។",
+  "ARCHIVE_ENCRYPTED": "ឯកសារបង្ហាប់នេះការពារដោយពាក្យសម្ងាត់។ Drumee មិនអាចពន្លាបានទេ។",
+  "ARCHIVE_EMPTY": "ឯកសារបង្ហាប់នេះគ្មានឯកសារទេ។",
+  "ARCHIVE_TOO_MANY_ENTRIES": "ឯកសារបង្ហាប់នេះមានឯកសារច្រើនពេកមិនអាចពន្លាបានទេ។ សូមពន្លានៅលើកុំព្យូទ័ររបស់អ្នក រួចផ្ទុកឡើងថតឯកសារ។",
+  "ARCHIVE_TOO_LARGE": "ឯកសារបង្ហាប់នេះធំពេកមិនអាចពន្លាបានទេ។ សូមពន្លានៅលើកុំព្យូទ័ររបស់អ្នក រួចផ្ទុកឡើងថតឯកសារ។",
+  "ARCHIVE_UNSAFE_PATH": "ឯកសារបង្ហាប់នេះមានធាតុដែលចង្អុលទៅក្រៅថតគោលដៅ ដូច្នេះវាមិនត្រូវបានពន្លាទេ។",
+  "UNZIP_CONFIRM": "ពន្លា {0}? វានឹងបន្ថែមថតឯកសារមួយដែលមានឯកសារ {1} ({2}) ទៅក្នុងថតបច្ចុប្បន្ន។"
 }
