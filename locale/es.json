@@ -2958,5 +2958,14 @@
   "NO_INPUT_DEVICE": "No input device",
   "PAGE_TITLE": "Drumee",
   "PAGE_DESCRIPTION": "Drumee — a collaborative workspace where files, chat, tasks and meetings live in one place.",
-  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again."
+  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again.",
+  "UNZIP": "Descomprimir",
+  "UNZIP_STARTED": "Extrayendo {0}. La carpeta aparecerá cuando esté lista.",
+  "NOT_AN_ARCHIVE": "Este archivo no es un archivo comprimido que Drumee pueda extraer.",
+  "ARCHIVE_UNREADABLE": "Este archivo comprimido está dañado o no es un formato que Drumee pueda leer.",
+  "ARCHIVE_ENCRYPTED": "Este archivo comprimido está protegido con contraseña. Drumee no puede extraerlo.",
+  "ARCHIVE_EMPTY": "Este archivo comprimido no contiene ningún archivo.",
+  "ARCHIVE_TOO_MANY_ENTRIES": "Este archivo comprimido contiene demasiados archivos para extraerlo. Extráigalo en su ordenador y suba la carpeta.",
+  "ARCHIVE_TOO_LARGE": "Este archivo comprimido es demasiado grande para extraerlo. Extráigalo en su ordenador y suba la carpeta.",
+  "ARCHIVE_UNSAFE_PATH": "Este archivo comprimido contiene entradas que apuntan fuera de la carpeta de destino, por lo que no se extrajo."
 }

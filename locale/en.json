@@ -3166,5 +3166,14 @@
   "NO_INPUT_DEVICE": "No input device",
   "PAGE_TITLE": "Drumee",
   "PAGE_DESCRIPTION": "Drumee — a collaborative workspace where files, chat, tasks and meetings live in one place.",
-  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again."
+  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again.",
+  "UNZIP": "Unzip",
+  "UNZIP_STARTED": "Extracting {0}. The folder will appear when it is ready.",
+  "NOT_AN_ARCHIVE": "This file is not an archive Drumee can extract.",
+  "ARCHIVE_UNREADABLE": "This archive is damaged, or is not a format Drumee can read.",
+  "ARCHIVE_ENCRYPTED": "This archive is password protected. Drumee cannot extract it.",
+  "ARCHIVE_EMPTY": "This archive holds no files.",
+  "ARCHIVE_TOO_MANY_ENTRIES": "This archive holds too many files to extract. Please extract it on your computer and upload the folder.",
+  "ARCHIVE_TOO_LARGE": "This archive is too large to extract. Please extract it on your computer and upload the folder.",
+  "ARCHIVE_UNSAFE_PATH": "This archive contains entries that point outside the destination folder, so it was not extracted."
 }

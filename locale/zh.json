@@ -2957,5 +2957,14 @@
   "NO_INPUT_DEVICE": "No input device",
   "PAGE_TITLE": "Drumee",
   "PAGE_DESCRIPTION": "Drumee — a collaborative workspace where files, chat, tasks and meetings live in one place.",
-  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again."
+  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again.",
+  "UNZIP": "解压",
+  "UNZIP_STARTED": "正在解压 {0}。文件夹准备好后将会显示。",
+  "NOT_AN_ARCHIVE": "此文件不是 Drumee 可以解压的压缩包。",
+  "ARCHIVE_UNREADABLE": "此压缩包已损坏，或不是 Drumee 可读取的格式。",
+  "ARCHIVE_ENCRYPTED": "此压缩包受密码保护，Drumee 无法解压。",
+  "ARCHIVE_EMPTY": "此压缩包中没有文件。",
+  "ARCHIVE_TOO_MANY_ENTRIES": "此压缩包中的文件过多，无法解压。请在您的电脑上解压后再上传文件夹。",
+  "ARCHIVE_TOO_LARGE": "此压缩包过大，无法解压。请在您的电脑上解压后再上传文件夹。",
+  "ARCHIVE_UNSAFE_PATH": "此压缩包中包含指向目标文件夹之外的条目，因此未被解压。"
 }

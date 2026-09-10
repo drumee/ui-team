@@ -664,6 +664,66 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Extract this archive into the folder it sits in.
+   *
+   * The response is an ACKNOWLEDGEMENT, not a result: media.unzip inspects the
+   * archive inline (so a refusal arrives here, with a reason) and then hands
+   * the extraction to an offline worker. Completion therefore arrives the same
+   * way an upload's does — the worker broadcasts `media.new` for the folder it
+   * created, and window/utils already turns that into a tile. So this method
+   * deliberately does NOT poll or wait: the toast says work started, and the
+   * folder appears on its own.
+   */
+  unzipArchive() {
+    // Same capability gate as the menu row, repeated rather than trusted:
+    // the row is built once, and a keyboard or scripted path could reach the
+    // service name after the menu was drawn. Without media.unzip the POST
+    // would go to `<svc>undefined` and be swallowed by onServerComplain.
+    if (!SERVICE.media || !SERVICE.media.unzip) return;
+    const { nid, hub_id } = this.actualNode();
+    return this.postService(
+      SERVICE.media.unzip,
+      {
+        service: SERVICE.media.unzip,
+        nid,
+        // The destination the server checks WRITE on, and the one it extracts
+        // into — media.unzip requires it precisely so those cannot diverge.
+        pid: this.mget(_a.pid),
+        hub_id,
+      },
+      { async: 1 },
+    )
+      .then((data) => {
+        if (!data || data.error) return this._unzipFailed(data && data.error);
+        // Same guard the workspace-copy toast uses: Butler is a bootstrap
+        // global and is not present in every context a media tile renders in
+        // (the DMZ share view has no assistant).
+        if (typeof Butler !== "undefined" && Butler.say) {
+          Butler.say(LOCALE.UNZIP_STARTED.format(this.fullname()));
+        }
+      })
+      .catch((e) => this._unzipFailed((e && (e.reason || e.error)) || e));
+  }
+
+  /**
+   * Turn a media.unzip refusal into something a person can act on.
+   *
+   * The server answers with a CODE (the ACL documents all of them) rather than
+   * prose, because the reason has to survive into six locales. An unmapped
+   * code — a newer server, an unrelated failure — falls back to the generic
+   * retry line rather than showing the raw token.
+   */
+  _unzipFailed(code) {
+    const key = `${code}`.toUpperCase();
+    const known = [
+      "NOT_AN_ARCHIVE", "NODE_NOT_FOUND", "ARCHIVE_UNREADABLE",
+      "ARCHIVE_ENCRYPTED", "ARCHIVE_EMPTY", "ARCHIVE_TOO_MANY_ENTRIES",
+      "ARCHIVE_TOO_LARGE", "ARCHIVE_UNSAFE_PATH",
+    ];
+    Wm.alert(known.includes(key) ? LOCALE[key] : LOCALE.TRY_AGAIN);
+  }
+
+  /**
    * Create a copy beside this media item. The live update owns grid insertion so the
    * HTTP response and WebSocket broadcast cannot add the same copy twice.
    */
@@ -776,6 +836,9 @@ class __media_interact extends media_core {
 
       case _a.duplicate:
         return this.duplicateInPlace();
+
+      case "unzip":
+        return this.unzipArchive();
 
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
