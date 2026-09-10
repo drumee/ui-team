@@ -46,22 +46,14 @@ class __support_ticket_widget_notification extends LetcBox {
    * @param {*} cmd 
    */
    onDestroy() {
-    // Guarded — off(name, undefined) removes EVERY listener for the event.
-    if (this._onNotificationCounts) {
-      RADIO_BROADCAST.off('notification:counts', this._onNotificationCounts);
-      this._onNotificationCounts = null;
-    }
+    RADIO_BROADCAST.off('notification:counts', this.updateNotificationCount.bind(this));
   }
 
   /**
    * 
    */
   bindActivityHandlerEvent() {
-    // Bound once and kept: Backbone matches listeners by identity, so the
-    // paired off() below built a SECOND bound function and removed nothing.
-    this._onNotificationCounts =
-      this._onNotificationCounts || this.updateNotificationCount.bind(this);
-    RADIO_BROADCAST.on('notification:counts', this._onNotificationCounts);
+    RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
   }
 
 

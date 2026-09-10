@@ -518,26 +518,7 @@ const make = function (ui) {
           // hyphen-aware mapping which a single token can't satisfy.)
           dataset: { dropcol: col.key },
           kids: [
-            // WINDOWED. Only the first `cardWindow()` cards are built; the rest
-            // arrive as the column is scrolled (index.js _installCardWindow).
-            //
-            // A card is ~19 skeleton nodes, so a column holding every task of a
-            // busy workspace mounted thousands of Marionette views in one
-            // synchronous burst. Measured on production 2026-09-11 with ~500
-            // tasks: listeners went 23,155 -> 124,160 and the heap 60 MB ->
-            // 167 MB inside a single 2,985 ms microtask checkpoint, and the tab
-            // stopped responding to input entirely.
-            //
-            // `_loadTasks` fetches the whole workspace in ONE request with no
-            // pagination, so the row count here is unbounded by design — the
-            // render is the only place that can bound it.
-            //
-            // Slicing only what is BUILT: `state[col.key]` stays whole, so the
-            // column count badge, drag/drop bookkeeping and the empty-state
-            // test below all still see every task.
-            ...(state[col.key] || [])
-              .slice(0, ui.cardWindow(col.key))
-              .map((t) => taskCard(col.key, t)),
+            ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
             // Empty-state drop hint. Keeps an empty column an obvious, valid
             // drop target. The surgical drag handler (_syncColumn) adds/removes
             // an equivalent node as cards enter/leave without a full re-render.

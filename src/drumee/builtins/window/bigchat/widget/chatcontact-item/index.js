@@ -15,25 +15,20 @@ class ___widget_chatcontactItem extends LetcBox {
     super.initialize();
     this.declareHandlers();
     this.mset({ escapeContextmenu: true });
-    // Bound once — `off` matches by function identity, so subscribing and
-    // unsubscribing with two separate `.bind(this)` calls never detached
-    // anything and every contact row leaked its subscription. Same defect as
-    // media/core.js.
-    this._onNotificationDetails = this.updateNotificationCount.bind(this);
-    RADIO_BROADCAST.on("notification:details", this._onNotificationDetails);
+    RADIO_BROADCAST.on(
+      "notification:details",
+      this.updateNotificationCount.bind(this)
+    );
   }
 
   /**
    * 
    */
   onBeforeDestroy() {
-    // Guarded: `off(name, undefined)` in Backbone removes EVERY listener for
-    // the event, so a row destroyed before initialize completed would
-    // unsubscribe the whole app.
-    if (this._onNotificationDetails) {
-      RADIO_BROADCAST.off("notification:details", this._onNotificationDetails);
-      this._onNotificationDetails = null;
-    }
+    RADIO_BROADCAST.off(
+      "notification:details",
+      this.updateNotificationCount.bind(this)
+    );
   }
 
   /**

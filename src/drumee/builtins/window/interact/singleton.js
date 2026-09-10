@@ -85,11 +85,7 @@ class __window_interact_singleton extends __window_chatInteract {
    */
   onDestroy() {
     if (this.updateNotificationCount) {
-      // Guarded — off(name, undefined) removes EVERY listener for the event.
-      if (this._onNotificationCounts) {
-        RADIO_BROADCAST.off('notification:counts', this._onNotificationCounts);
-        this._onNotificationCounts = null;
-      }
+      RADIO_BROADCAST.off('notification:counts', this.updateNotificationCount.bind(this));
     }
     if (super.onDestroy) super.onDestroy();
   }
@@ -99,11 +95,7 @@ class __window_interact_singleton extends __window_chatInteract {
    */
   bindActivityHandlerEvent() {
     if (this.updateNotificationCount) {
-      // Bound once and kept: Backbone matches listeners by identity, so the
-      // paired off() below built a SECOND bound function and removed nothing.
-      this._onNotificationCounts =
-        this._onNotificationCounts || this.updateNotificationCount.bind(this);
-      RADIO_BROADCAST.on('notification:counts', this._onNotificationCounts);
+      RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
     }
     // RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
   }

@@ -4,10 +4,12 @@ html[data-theme="dark"] {
   --normal-bg-100: #0b0a21;
   --normal-bg-90: #282538;
   --normal-bg-80: #333042;
+  --normal-bg-50: #2d2a6a;
   --normal-bg-40: #3c3989;
   --normal-bg-elevated: #333042;
   --overlay-bg: rgba(20, 17, 35, 0.4);
   --overlay-bg-05: rgba(255, 255, 255, 0.05);
+  --overlay-fg: #2d2a6a;
 
   /* Foreground */
   --normal-fg: #e4e3ff;
@@ -26,6 +28,7 @@ html[data-theme="dark"] {
   --reverse-bg: #e4e3ff;
   --reverse-fg: #282538;
   --reverse-lb: #b1adff;
+  --reverse-lb-hover: var(--primary-10);
 
   /* Border */
   --border-default: rgba(71, 69, 84, 0.4);
@@ -43,6 +46,7 @@ html[data-theme="dark"] {
   --scrollbar-track: var(--normal-bg-90);
 
   /* Accent / state */
+  --avatar-bg: #5950ff;
   --radio-on-bg: rgba(89, 80, 255, 0.2);
   --radio-on-border: #5950ff;
   --hover-bg-40: rgba(89, 80, 255, 0.15);

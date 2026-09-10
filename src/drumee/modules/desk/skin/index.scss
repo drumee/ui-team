@@ -719,46 +719,12 @@ html {
 // Gated on the switcher being OPEN as well as the modal: the rest of the time
 // the bar has no business above a dialog, where its controls would invite
 // clicks on things the modal is meant to block.
-// THE SECOND CONDITION IS SCOPED TO THE TOPBAR, AND THAT IS A PERFORMANCE FIX,
-// not a cosmetic one. Same two conditions, same result — only the `:has()`
-// SUBJECTS differ.
-//
-// This used to read `.desk-module:has(A):has(B) .desk-module__topbar`. Chrome
-// marks the subject of a `:has()` as "affected by :has()", and re-evaluates it
-// whenever anything matching an argument changes ANYWHERE inside it — so with
-// `.desk-module` (the application root) as the subject, every change to a
-// `[data-state]` on any `.menu-topic-items__wrapper` invalidated the entire
-// document. That class is used by 54 rules: it is every menu in the app, and
-// `Skeletons.Wrapper` stamps `data-state="open"` on all of them (see the
-// wrapper note in wrapper-behavior). So routine menu opening restyled all
-// ~9,000 elements against ~20,000 rules in ~94 stylesheets.
-//
-// Measured on production 2026-09-11: pointer interactions on
-// `.desk-module-topbar__main` — the workspace switcher, i.e. the exact element
-// named in the second argument — took 1,144ms, 1,312ms, 1,608ms, 7,040ms and
-// 7,160ms.
-//
-// Splitting it moves the high-frequency argument onto a small subject: menu
-// state now invalidates only `.desk-module__topbar`. `.desk-module` keeps a
-// `:has()` for the MODAL, which opens and closes rarely.
-//
-// Semantics are preserved: argument B is
-// `.desk-module-topbar__ws-wrapper .menu-topic-items__wrapper`, and
-// `__ws-wrapper` lives in the topbar by construction, so "somewhere in
-// .desk-module" and "somewhere in .desk-module__topbar" select the same thing.
-//
-// The modal half now reads the root's `data-wm-modal` mirror
-// (Wm._installWmModalMirror) — the last `:has()` anchored on `.desk-module`
-// itself. The doubled `.desk-module__topbar.desk-module__topbar` is not a
-// typo: replacing `.desk-module:has(M)` (0,3,0) with `.desk-module[attr]`
-// (0,2,0) would have dropped this rule one class-level, and the same idiom is
-// already used on `.window-manager__wrapper-modal` for the same reason. It
-// keeps the total at the original (0,7,0).
-.desk-module[data-wm-modal="open"]
-  .desk-module__topbar.desk-module__topbar:has(
+.desk-module:has(.window-manager__wrapper-modal[data-state="open"]):has(
     .desk-module-topbar__ws-wrapper .menu-topic-items__wrapper[data-state="open"]
   ) {
-  z-index: 100001;
+  .desk-module__topbar {
+    z-index: 100001;
+  }
 }
 
 // ── While the organisation screen is up ──────────────────────────────────────

@@ -21,63 +21,6 @@ function _vignetteRemember(url, entry) {
   }
   _vignetteCache.set(url, entry);
 }
-
-// ── Load thumbnails only for tiles the user can actually see ─────────────────
-//
-// Opening a folder used to fire ONE vignette request per tile, immediately, for
-// every tile in the listing. Measured on production 2026-09-10: 479 of the 665
-// requests in the session were vignettes — 72% — three of them taking 7.7s, and
-// the app's own service calls (media.show_node_by, task.list, label.list) were
-// pushed out to ~1.8s queued behind the flood.
-//
-// Each resolved thumbnail also becomes a blob URL and a rendered tile, so the
-// eager fetch is what inflates the DOM: 598,604 nodes at peak, which is the
-// multiplier on every style recalculation in the app.
-//
-// One observer for every tile on the page — an observer per tile would cost
-// more than it saves. `rootMargin` starts the fetch before the tile is on
-// screen, so normal scrolling still finds the thumbnail already there.
-//
-// root: null (the viewport) is correct even though the grid scrolls in its own
-// container: intersection is computed against the viewport WITH ancestor
-// clipping applied, so a tile scrolled out of the pane does not intersect. It
-// also means a pane that is hidden during a workspace switch loads nothing
-// until it is actually shown.
-const VIGNETTE_ROOT_MARGIN = "600px";
-let _vignetteObserver = null;
-const _vignettePending = new WeakMap();
-
-function _observeVignette(el, run) {
-  // No IntersectionObserver (or no element to measure): behave exactly as
-  // before and fetch straight away, rather than leaving a tile blank forever.
-  if (typeof IntersectionObserver !== "function" || !el) {
-    run();
-    return null;
-  }
-  if (!_vignetteObserver) {
-    _vignetteObserver = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          const fn = _vignettePending.get(e.target);
-          _vignetteObserver.unobserve(e.target);
-          _vignettePending.delete(e.target);
-          if (fn) fn();
-        }
-      },
-      { rootMargin: VIGNETTE_ROOT_MARGIN }
-    );
-  }
-  _vignettePending.set(el, run);
-  _vignetteObserver.observe(el);
-  return el;
-}
-
-function _unobserveVignette(el) {
-  if (!el || !_vignetteObserver) return;
-  _vignetteObserver.unobserve(el);
-  _vignettePending.delete(el);
-}
 require("./skin");
 const media_core = require("./core");
 const { copyToClipboard } = require("@drumee/ui-essentials")
@@ -324,40 +267,8 @@ class __media_interact extends media_core {
     this.feed(this.container);
     this.el.dataset.selected = this.mget(_a.state);
     this.el.setAttribute(_a.id, `media-${this._id}`);
-    // THE SINGLE MOST EXPENSIVE SUBSCRIPTION IN THE APP — see the production
-    // trace of 2026-09-10, where `offset < initBounds` accounted for 38.2s of
-    // forced style+layout across 376 calls (101ms each).
-    //
-    // Two bugs compounded here. First, `off(ev, this.initBounds.bind(this))`
-    // built a NEW bound function, and Backbone matches listeners by identity,
-    // so it removed nothing — every re-render of a tile added another
-    // subscription on top of the last. Second, nothing ever unsubscribed on
-    // destroy (there was no destroy hook at all), so every tile ever created
-    // kept listening to its parent's scroll for the life of the page. The
-    // parent list outlives its tiles by design, so the subscriptions only ever
-    // accumulated.
-    //
-    // Each of those callbacks runs initBounds, which does `$el.offset()`,
-    // `$el.width()` and `$el.height()` — three synchronous style+layout
-    // flushes. Multiplied by every tile that has ever existed, on every scroll
-    // event, over a DOM that reached 428,000 nodes.
-    //
-    // Stored on the instance so both sides use the SAME reference. Note the
-    // grid/row subclasses already pre-bind `initBounds` in their constructors,
-    // which is exactly why the `.bind(this)` here was redundant as well as
-    // broken.
-    if (!this._onParentScroll) {
-      this._onParentScroll = () => this.initBounds();
-    }
-    // Remembered so the destroy hook detaches from the SAME object it attached
-    // to — a re-parented tile would otherwise leave the subscription behind on
-    // its old parent, which is the leak this fix exists to close.
-    if (this._scrollParent && this._scrollParent !== this.parent) {
-      this._scrollParent.off(_e.scroll, this._onParentScroll);
-    }
-    this._scrollParent = this.parent;
-    this.parent.off(_e.scroll, this._onParentScroll);
-    this.parent.on(_e.scroll, this._onParentScroll);
+    this.parent.off(_e.scroll, this.initBounds.bind(this));
+    this.parent.on(_e.scroll, this.initBounds.bind(this));
 
     if (this.mget(_a.file)) {
       return;
@@ -368,44 +279,6 @@ class __media_interact extends media_core {
     });
     this.initURL();
     this.syncData();
-  }
-
-  /**
-   * Release the parent's scroll subscription.
-   *
-   * There was no destroy hook on this class at all, which is the other half of
-   * the leak documented in onDomRefresh: the parent list outlives its tiles, so
-   * a tile that was destroyed (scrolled out, folder changed, grid re-fed) kept
-   * running initBounds — three forced style+layout flushes — on every scroll
-   * event, forever, against a detached element.
-   *
-   * `super.onBeforeDestroy()` is not optional: media_core's own hook releases
-   * the RADIO_MEDIA icon-type and notification subscriptions, and dropping it
-   * would trade one leak for another.
-   */
-  onBeforeDestroy() {
-    // A tile destroyed before it ever scrolled into view must stop being
-    // watched, or the observer holds its element (and the closure holds the
-    // widget) for the life of the page.
-    //
-    // RESTORED after the preview->test merge (bdeba8d8) dropped it. preview
-    // carried a CHERRY-PICKED copy of 61569db8 under a different SHA, so git
-    // had no shared ancestry for this function and raised a conflict here; it
-    // was resolved to preview's older side, which predates lazy vignette
-    // loading and therefore has no observer to release.
-    _unobserveVignette(this._vignetteObserved);
-    this._vignetteObserved = null;
-    if (this._onParentScroll) {
-      const p = this._scrollParent || this.parent;
-      try {
-        if (p && _.isFunction(p.off)) p.off(_e.scroll, this._onParentScroll);
-      } catch (e) {
-        /* parent already torn down — nothing to detach from */
-      }
-      this._onParentScroll = null;
-      this._scrollParent = null;
-    }
-    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
@@ -638,13 +511,7 @@ class __media_interact extends media_core {
             return showMissing();
           _vignetteCache.delete(url);
         }
-        // Deferred until the tile is near the viewport (see _observeVignette).
-        // A cache HIT above still resolves synchronously, so nothing that was
-        // already fetched starts waiting on scroll.
-        const fetchThumb = () => {
-          this._vignetteObserved = null;
-          if (this.isDestroyed && this.isDestroyed()) return;
-          this.fetchFile({ url })
+        this.fetchFile({ url })
           .then(async (blob) => {
             if (!blob) {
               this.warn(`Got no blob from ${url}`);
@@ -672,10 +539,6 @@ class __media_interact extends media_core {
             this.content.el.innerHTML = this.innerContent(this);
             this._setupInteract();
           });
-        };
-        // A re-render must not leave the previous observation behind.
-        _unobserveVignette(this._vignetteObserved);
-        this._vignetteObserved = _observeVignette(this.el, fetchThumb);
         break;
       }
       default:
