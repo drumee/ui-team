@@ -3167,5 +3167,14 @@
   "NO_INPUT_DEVICE": "Aucun périphérique d'entrée",
   "PAGE_TITLE": "Drumee",
   "PAGE_DESCRIPTION": "Drumee — un espace de travail collaboratif où fichiers, discussions, tâches et réunions vivent au même endroit.",
-  "LANGUAGE_SWITCH_FAILED": "Impossible d'enregistrer la langue pour ce navigateur. Vérifiez que les données de site sont autorisées, puis réessayez."
+  "LANGUAGE_SWITCH_FAILED": "Impossible d'enregistrer la langue pour ce navigateur. Vérifiez que les données de site sont autorisées, puis réessayez.",
+  "UNZIP": "Décompresser",
+  "UNZIP_STARTED": "Extraction de {0}. Le dossier apparaîtra une fois prêt.",
+  "NOT_AN_ARCHIVE": "Ce fichier n'est pas une archive que Drumee peut extraire.",
+  "ARCHIVE_UNREADABLE": "Cette archive est endommagée ou n'est pas un format que Drumee peut lire.",
+  "ARCHIVE_ENCRYPTED": "Cette archive est protégée par un mot de passe. Drumee ne peut pas l'extraire.",
+  "ARCHIVE_EMPTY": "Cette archive ne contient aucun fichier.",
+  "ARCHIVE_TOO_MANY_ENTRIES": "Cette archive contient trop de fichiers pour être extraite. Veuillez l'extraire sur votre ordinateur et téléverser le dossier.",
+  "ARCHIVE_TOO_LARGE": "Cette archive est trop volumineuse pour être extraite. Veuillez l'extraire sur votre ordinateur et téléverser le dossier.",
+  "ARCHIVE_UNSAFE_PATH": "Cette archive contient des entrées qui pointent en dehors du dossier de destination ; elle n'a pas été extraite."
 }

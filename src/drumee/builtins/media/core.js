@@ -335,6 +335,20 @@ class __media_core extends DrumeeMFS {
       case _a.web:
         extra.push("setAsHomepage");
         break;
+      case "zip":
+        // Archives (zip/rar/7z/tar/gz…) all carry filecap category `zip`.
+        // Extracting CREATES files, so it is offered only to a member who
+        // could have uploaded them in the first place — `editable` above is
+        // the same test the duplicate and rename rows use.
+        //
+        // Gated on the SERVICE EXISTING, not on the version we hope is
+        // deployed. SERVICE is the ACL list the server publishes through
+        // yp.get_env, so on a server without media.unzip the name is
+        // undefined and the row would POST to `<svc>undefined` — an error
+        // onServerComplain swallows, leaving a menu item that silently does
+        // nothing. Absent capability, absent row.
+        if (editable && SERVICE.media && SERVICE.media.unzip) extra.push("unzip");
+        break;
       case _a.script:
         if (Visitor.profile().devel) {
           extra.push("execute");
