@@ -128,10 +128,15 @@ class __media_core extends DrumeeMFS {
    */
   onBeforeDestroy() {
     // this.unbindEvent(_a.live);
-    RADIO_BROADCAST.off(
-      "notification:details",
-      this.updateNotificationCount.bind(this)
-    );
+    // Guarded on the handler EXISTING, not just on truthiness for tidiness:
+    // bindActivityHandlerEvent only runs for hubs/folders, so most tiles never
+    // subscribed — and `off(name, undefined)` in Backbone means "remove EVERY
+    // listener for this event", which would unsubscribe the whole application
+    // from notification:details on the first plain file tile destroyed.
+    if (this._onNotificationDetails) {
+      RADIO_BROADCAST.off("notification:details", this._onNotificationDetails);
+      this._onNotificationDetails = null;
+    }
     //RADIO_BROADCAST.off("moved:away", this._onPeerMovedAway.bind(this));
     if (this._setIconType) {
       return RADIO_MEDIA.off(SET_ICON_TYPE, this._setIconType);
@@ -404,10 +409,16 @@ class __media_core extends DrumeeMFS {
    *
    */
   bindActivityHandlerEvent() {
-    RADIO_BROADCAST.on(
-      "notification:details",
-      this.updateNotificationCount.bind(this)
-    );
+    // Bound ONCE and kept, so onBeforeDestroy can actually unsubscribe.
+    // Backbone.Radio matches listeners by function identity: subscribing with
+    // `this.updateNotificationCount.bind(this)` and unsubscribing with a
+    // SECOND `.bind(this)` produces two different objects, so the `off` removed
+    // nothing and every media tile ever rendered stayed subscribed for the life
+    // of the page.
+    if (!this._onNotificationDetails) {
+      this._onNotificationDetails = this.updateNotificationCount.bind(this);
+    }
+    RADIO_BROADCAST.on("notification:details", this._onNotificationDetails);
   }
 
   /**
