@@ -203,61 +203,113 @@
     }
   }
 
-  // ── Weekly / Monthly toggle ─────────────────────────────────────────────
-  &__meeting-sched-toggle {
+  // ── Month / Week / Day picker ───────────────────────────────────────────
+  // Same control as the Personal Calendar's view picker
+  // (panel/calendar/skin/index.scss → &__view-button / &__menu): a rounded
+  // trigger carrying icon + current view + caret, over a floating list. The
+  // metrics are that panel's, resolved to this file's fixed light palette —
+  // trough #f2f2f7 = --normal-bg-90, hover #e5e5ea = --normal-bg-80, the
+  // active row on --primary-40 (#5950ff).
+  &__meeting-sched-view-picker {
+    // Anchors the dropdown.
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__meeting-sched-view-button {
     align-items: center;
     gap: 8px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  &__meeting-sched-toggle-label {
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: #84848c);
-    // Bigger, easy-to-hit target.
-    padding: 4px 6px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  // `daily` highlights WEEKLY on purpose. The switch has two positions and
-  // daily is a drill-down of the week (same hourly grid, nDays = 1), so it is
-  // the weekly side of the toggle, not a third state. Without this the daily
-  // view lit NEITHER label — which read as a broken control the moment a narrow
-  // panel started defaulting to daily (see _applyScheduleBreakpoint).
-  //
-  // The knob needs no rule: only [data-view="monthly"] moves it, so daily
-  // already leaves it in the weekly position.
-  &__meeting-sched-toggle[data-view="weekly"] &__meeting-sched-toggle-label.weekly,
-  &__meeting-sched-toggle[data-view="daily"] &__meeting-sched-toggle-label.weekly,
-  &__meeting-sched-toggle[data-view="monthly"] &__meeting-sched-toggle-label.monthly {
+    padding: 8px 14px;
+    border-radius: 12px;
+    background: #f2f2f7;
     color: #0b0a21;
-    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+
+    &:hover,
+    &[data-open="1"] {
+      background: #e5e5ea;
+    }
   }
 
-  &__meeting-sched-toggle-switch {
-    width: 36px;
-    height: 20px;
-    border-radius: 10px;
-    background: #d1d1d6;
-    align-items: center;
-    padding: 2px;
-    flex-shrink: 0;
-    transition: background 0.15s ease;
-  }
-
-  &__meeting-sched-toggle-knob {
+  // Sprite icons render as `<svg class="full">` — width/height 100% — so both
+  // the wrapper AND the svg need pinning or the icon eats the whole button.
+  &__meeting-sched-view-ico,
+  &__meeting-sched-view-caret {
+    display: flex;
+    flex: 0 0 auto;
     width: 16px;
     height: 16px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-    transition: transform 0.15s ease;
-    // Purely visual — let clicks on the knob reach the switch's toggle service.
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+    // Purely visual — clicks must reach the button's own service.
+    pointer-events: none;
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  }
+
+  &__meeting-sched-view-caret {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.15s ease-out;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__meeting-sched-view-button[data-open="1"] &__meeting-sched-view-caret {
+    transform: rotate(180deg);
+  }
+
+  &__meeting-sched-view-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    font-weight: 400;
     pointer-events: none;
   }
 
-  &__meeting-sched-toggle[data-view="monthly"] &__meeting-sched-toggle-knob {
-    transform: translateX(16px);
+  &__meeting-sched-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    // Right-anchored: the picker sits in the toolbar's right-hand group, and
+    // a left-anchored 150px list would hang off a narrow panel.
+    right: 0;
+    z-index: 120;
+    min-width: 150px;
+    padding: 8px;
+    gap: 4px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  &__meeting-sched-menu-item {
+    @include drumee.typo($size: 13px, $line: 18px, $color: #0b0a21);
+    align-items: center;
+    min-height: 34px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &[data-active="1"] {
+      background: rgba(89, 80, 255, 0.08);
+      color: #5950ff;
+      font-weight: 600;
+    }
   }
 
   // ── CTAs ────────────────────────────────────────────────────────────────
@@ -672,7 +724,7 @@
       flex-wrap: wrap !important;
       gap: 8px 12px;
       // Same reasoning one level in: these groups wrap internally too (the
-      // right one carries the toggle plus both CTAs), and their own children
+      // right one carries the view picker plus both CTAs), and their own children
       // were left-aligned inside a row that spans the bar.
       //
       // Safe for the mini-calendar dropdown, which is `position: absolute;
@@ -682,23 +734,34 @@
       justify-content: center;
     }
 
-    // Give the Weekly/Monthly toggle its own line so the two CTAs pair up on
-    // the next one.
+    // Give the view picker its own line so the two CTAs pair up on the next
+    // one.
     //
     // Without this the right group wrapped wherever it happened to run out of
     // room, which split the pair at exactly the widths that matter most —
-    // measured: 390px and 430px both produced [toggle, "Start a Meeting"] on
+    // measured: 390px and 430px both produced [picker, "Start a Meeting"] on
     // one line and "Schedule" stranded alone below it. (320px already paired
-    // them, purely because the toggle did not fit beside Start there — the
+    // them, purely because the picker did not fit beside Start there — the
     // right result by accident, which is what made this look fine on the
     // narrowest phone and wrong on the common one.)
     //
     // The pair costs 235px together (Start 137 + gap 12 + Schedule 86), so it
     // clears even the 296px of inner width a 320px window leaves. Nothing
     // needs a media query below this one.
-    &__meeting-sched-toggle {
+    &__meeting-sched-view-picker {
       flex: 1 1 100%;
-      justify-content: center;
+      // Centre the trigger INSIDE the box rather than stretching it: a
+      // full-width button would read as a third CTA.
+      align-items: center;
+    }
+
+    // The picker box now spans the whole line, so `right: 0` would pin the
+    // dropdown to the toolbar's right edge while the trigger sits centred.
+    // Re-anchor it on the trigger.
+    &__meeting-sched-view-picker &__meeting-sched-menu {
+      right: auto;
+      left: 50%;
+      transform: translateX(-50%);
     }
 
     &__meeting-sched-schedule-btn,

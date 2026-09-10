@@ -698,6 +698,7 @@ class __window_folder extends mfsInteract {
     this._stopAwaitMeetingReady();
     this._ftTeardown();
     this._unbindThreadMenuOutside();
+    this._unbindSchedMenuDismiss();
     // A tour is holding the account-wide single-flight latch. Closing the
     // window it is drawn on must hand that back, or no tour runs again this
     // session.
@@ -2370,17 +2371,17 @@ class __window_folder extends mfsInteract {
         return this._refreshSchedule();
       }
 
-      case "sched-toggle-view": {
+      // ── Month / Week / Day dropdown on the toolbar ────────────────────
+      // Replaced the two-position Weekly/Monthly switch, which could not
+      // express "daily" at all — that view was reachable only by picking a
+      // day out of the mini-calendar.
+      case "sched-toggle-view-menu": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
-        // Explicit pick: from here on this view is the user's, so widening the
-        // panel must not revert it (see _applyScheduleBreakpoint).
-        st.autoDaily = false;
-        // NOTE: from "daily" this lands on "monthly", not "weekly" — the knob
-        // has only two positions and daily is a drill-down of weekly. Existing
-        // behaviour, left as-is; it is simply reachable more often now that a
-        // narrow panel starts in daily.
-        st.view = st.view === "monthly" ? "weekly" : "monthly";
-        return this._refreshSchedule();
+        const open = !st.viewMenuOpen;
+        this._closeSchedMenus();
+        st.viewMenuOpen = open;
+        this._syncSchedMenuDismiss();
+        return this._renderSchedToolbar();
       }
 
       case "sched-set-view": {
@@ -2388,24 +2389,32 @@ class __window_folder extends mfsInteract {
         const v =
           (cmd.mget && (cmd.mget("schedView") || cmd.mget("view"))) ||
           (cmd.el && cmd.el.dataset.view);
-        // Cleared even when the view does not change: tapping "Weekly" while
+        // Cleared even when the view does not change: tapping "Week" while
         // already weekly is still the user claiming the choice, and it should
         // survive the next resize.
         if (v) st.autoDaily = false;
+        this._closeSchedMenus();
         if (v && v !== st.view) {
           st.view = v;
           return this._refreshSchedule();
         }
-        return;
+        // Same view re-picked: the menu still has to shut, and that is a
+        // toolbar repaint — not a 170-cell grid rebuild.
+        return this._renderSchedToolbar();
       }
 
       // ── Mini-calendar dropdown on the range label's caret ──────────────
       case "sched-toggle-picker": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
-        st.pickerOpen = !st.pickerOpen;
+        const open = !st.pickerOpen;
+        this._closeSchedMenus();
+        st.pickerOpen = open;
         // Re-open on the month currently in view, not where it was left.
-        if (st.pickerOpen) st.pickerCursor = st.anchor;
-        return this._refreshSchedule();
+        if (open) st.pickerCursor = st.anchor;
+        this._syncSchedMenuDismiss();
+        // Toolbar only: nothing below the bar changed, and re-feeding the
+        // panel here would rebuild the grid on every open and close.
+        return this._renderSchedToolbar();
       }
 
       case "sched-picker-prev":
@@ -2415,12 +2424,12 @@ class __window_folder extends mfsInteract {
           service === "sched-picker-next" ? 1 : -1,
           "month",
         );
-        return this._refreshSchedule();
+        return this._renderSchedToolbar();
       }
 
       case "sched-pick-day": {
         // Picking a day drills into the single-day hourly view of that day
-        // (Google-Calendar style); the Weekly/Monthly toggle exits it.
+        // (Google-Calendar style); the view dropdown exits it.
         const st = require("./skeleton/meeting-schedule").schedState(this);
         const d =
           (cmd.mget && cmd.mget("schedDay")) || (cmd.el && cmd.el.dataset.day);
@@ -2430,7 +2439,7 @@ class __window_folder extends mfsInteract {
           // Drilling into a day is an explicit choice too — widening the panel
           // afterwards should leave the user on that day, not snap to weekly.
           st.autoDaily = false;
-          st.pickerOpen = false;
+          this._closeSchedMenus();
           return this._refreshSchedule();
         }
         return;
@@ -2972,6 +2981,9 @@ class __window_folder extends mfsInteract {
     }
     if (next === st.view) return;
     st.view = next;
+    // The picker's active row just changed under the user's cursor without
+    // them touching it — shut the dropdowns rather than repaint them.
+    this._closeSchedMenus();
     this._refreshSchedule();
   }
 
@@ -3022,6 +3034,67 @@ class __window_folder extends mfsInteract {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (readCache.signature(this._meetings) !== before) feed();
     });
+  }
+
+  // Repaint ONLY the schedule toolbar row (sys_pn "sched-toolbar"). Opening or
+  // closing one of its dropdowns changes nothing below the bar, and re-feeding
+  // the whole panel here would be actively wrong: the outside-click dismisser
+  // runs in the CAPTURE phase, so a full re-feed destroys the grid — including
+  // the card or slot the click is still travelling to — before it lands. Same
+  // rule the Personal Calendar's toolbar states (panel/calendar/index.js).
+  _renderSchedToolbar() {
+    const part = this.getPart && this.getPart("sched-toolbar");
+    if (!part || !part.el) return;
+    if (part.isDestroyed && part.isDestroyed()) return;
+    part.feed(require("./skeleton/meeting-schedule").toolbarKids(this));
+  }
+
+  // Both toolbar dropdowns (view picker, mini-calendar) are mutually
+  // exclusive and share one dismisser.
+  _closeSchedMenus() {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    st.viewMenuOpen = false;
+    st.pickerOpen = false;
+    this._unbindSchedMenuDismiss();
+  }
+
+  _syncSchedMenuDismiss() {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    if (st.viewMenuOpen || st.pickerOpen) this._bindSchedMenuDismiss();
+    else this._unbindSchedMenuDismiss();
+  }
+
+  // Any click outside the toolbar row closes the open dropdown. The guard is
+  // the WHOLE row, not "the menu plus its trigger": every control in the bar
+  // closes the menus in its own handler anyway, and a narrower guard would
+  // repaint the row mid-click and swallow the press that was aimed at it.
+  //
+  // And the row has to be THIS WINDOW's. The class is shared by every open
+  // workspace, so a bare selector match would let a click on a second
+  // workspace's meeting toolbar count as "inside" here and leave this
+  // window's dropdown hanging open.
+  _bindSchedMenuDismiss() {
+    if (this._schedMenuDismiss) return;
+    const toolbar = `.${this.fig.family}__meeting-sched-toolbar`;
+    this._schedMenuDismiss = (ev) => {
+      const t = ev && ev.target;
+      // No `closest` means no element to reason about (a text node, a click
+      // synthesised on the document): leave the menu alone rather than guess.
+      if (!t || !t.closest) return;
+      if (this.isDestroyed && this.isDestroyed())
+        return this._unbindSchedMenuDismiss();
+      const bar = t.closest(toolbar);
+      if (bar && this.el && this.el.contains(bar)) return;
+      this._closeSchedMenus();
+      this._renderSchedToolbar();
+    };
+    document.addEventListener("click", this._schedMenuDismiss, true);
+  }
+
+  _unbindSchedMenuDismiss() {
+    if (!this._schedMenuDismiss) return;
+    document.removeEventListener("click", this._schedMenuDismiss, true);
+    this._schedMenuDismiss = null;
   }
 
   _meetingsCacheKey() {
