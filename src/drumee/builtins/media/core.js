@@ -17,6 +17,18 @@ const MAX_BLOB_SIZE = 100000000;
  * ends agree by construction.
  */
 const ARCHIVE_FILETYPE = "zip";
+/**
+ * Archives the server can read but not extract, so the row is not offered.
+ *
+ * MIRRORS UNEXTRACTABLE_EXTENSIONS in server-team service/lib/archive.js — see
+ * the reasoning there. Short version: RAR's decoder is a separate non-free
+ * codec and it is absent from both deployed 7z builds, so a real (compressed)
+ * rar fails at extraction time. Duplicated rather than fetched because the
+ * kebab has to decide before any server call; if the two ever drift, the
+ * server still refuses with ARCHIVE_FORMAT_UNSUPPORTED and the user gets a
+ * real message instead of a dead row.
+ */
+const UNEXTRACTABLE_EXTENSIONS = ["rar", "r00"];
 // Office formats that get content posters (thumb.png) via the SEO index worker.
 const DOC_EDITABLE = require('player/document/editable');
 
@@ -295,6 +307,7 @@ class __media_core extends DrumeeMFS {
    */
   canUnzip() {
     if (this.mget(_a.filetype) !== ARCHIVE_FILETYPE) return false;
+    if (UNEXTRACTABLE_EXTENSIONS.includes(this._fileExt())) return false;
     if (!SERVICE.media || !SERVICE.media.unzip || !SERVICE.media.archive_info) {
       return false;
     }
@@ -2395,10 +2408,30 @@ class __media_core extends DrumeeMFS {
    * behind.
    */
   handleUnzip(data = {}) {
-    const done = data.phase === "completed" || data.phase === "failed";
+    const failed = data.phase === "failed";
+    const done = failed || data.phase === "completed";
+
+    if (done) {
+      if (this._unzipProgress && !this._unzipProgress.isDestroyed()) {
+        this._unzipProgress.suppress();
+      }
+      this._unzipProgress = null;
+      // The tile's open latch is held from the click that started a big
+      // extraction; a small one never took it and wait(0) is a no-op.
+      this.wait(0);
+      // A FAILURE HAS TO SAY SO. The worker reports one for a corrupt
+      // archive, a full disk, a format 7z opened but could not decode — and
+      // for a small archive there is no progress bar to remove, so without
+      // this the whole thing is indistinguishable from nothing happening.
+      // That was the original zip complaint, and it would have come straight
+      // back in a new shape.
+      if (failed && _.isFunction(this._unzipFailed)) {
+        this._unzipFailed(data.error);
+      }
+      return;
+    }
+
     if (!this._unzipProgress || this._unzipProgress.isDestroyed()) {
-      // Nothing to update and nothing to build: the run is already over.
-      if (done) return;
       let mode = "grid";
       if (this.getLogicalParent) {
         try { mode = this.getLogicalParent().getViewMode(); } catch (e) { /* default */ }
@@ -2409,13 +2442,6 @@ class __media_core extends DrumeeMFS {
         filename: this.mget(_a.filename),
       });
       this._unzipProgress = this.children.last();
-    }
-    if (done) {
-      this._unzipProgress.suppress();
-      this._unzipProgress = null;
-      // The tile's open latch is held from the click that started this.
-      this.wait(0);
-      return;
     }
     this._unzipProgress.update(data.progress || 0);
   }
