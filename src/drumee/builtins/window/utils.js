@@ -1685,21 +1685,26 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
-   * The revealable grid CELL for a nid — not merely the first widget holding
-   * it.
+   * The ON-SCREEN cell for a nid.
    *
-   * More than one widget can carry the same nid: measured on a live desk right
-   * after an unzip, `Wm.getItemsByAttr(nid, …)` answered TWO for the new
-   * folder while the pane held exactly one media_grid. _findMediaByNid returns
-   * `[0]`, and the caller then tested only that one for _setNotifyHighlight —
-   * so whenever the non-cell sorted first the reveal could never succeed. It
-   * did not fail loudly either: the poll simply re-read the same `[0]` 24
-   * times and gave up, which is why an unzip finished with no highlight and no
-   * error.
+   * The pane renders BOTH view modes at once — `.window-manager__icons-list`
+   * and the grid — and hides the inactive one with `display:none`. So a single
+   * node has TWO media cells, identical in kind and both exposing
+   * _setNotifyHighlight; only one is laid out. Measured on a live desk after
+   * an unzip: `[0]` was the hidden one at 0x0 with a null offsetParent, `[1]`
+   * the visible one at 120x144.
    *
-   * Scanning for the first item that IS a cell fixes that for every caller —
-   * the notification deep link has the same exposure, it just needs a second
-   * widget to share the nid to hit it.
+   * That is why revealing appeared to do nothing. Every attribute and class
+   * landed correctly — data-ui-highlight set, the flash animation resolved,
+   * the ::before fill computed to rgb(228,227,255) — on an element with no
+   * box. Picking `[0]`, or "the first that is a cell", both choose the hidden
+   * twin about half the time; being a cell was never the property that
+   * mattered. Being VISIBLE is.
+   *
+   * Returns null rather than falling back to a hidden twin, so _highlightNode
+   * keeps polling: right after an insert the visible cell may not have laid
+   * out yet, and settling for the invisible one would end the poll on a
+   * highlight nobody can see.
    *
    * _findMediaByNid is left alone: the deep-link path deliberately wants the
    * WINDOW when the nid names one.
@@ -1713,7 +1718,13 @@ class __window_mfs extends DrumeeMFS {
     if (key !== "" && !isNaN(num)) forms.push(num);
     for (const form of forms) {
       const hit = Wm.getItemsByAttr(_a.nid, form).find(
-        (c) => c && _.isFunction(c._setNotifyHighlight),
+        (c) =>
+          c &&
+          _.isFunction(c._setNotifyHighlight) &&
+          c.el &&
+          // offsetWidth/Height are 0 for anything under display:none, which is
+          // exactly how the inactive view mode is parked.
+          (c.el.offsetWidth > 0 || c.el.offsetHeight > 0),
       );
       if (hit) return hit;
     }
