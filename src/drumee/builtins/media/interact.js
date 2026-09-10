@@ -475,6 +475,19 @@ class __media_interact extends media_core {
     let f = filetype == _a.vector ? _a.orig : _a.vignette;
     const { url } = this.actualNode(f);
     this.model.atLeast({ url });
+    // A card that shows a TYPE GLYPH has no use for a vignette, and must not
+    // wait on one. For image/video/vector the branch below sets innerHTML only
+    // inside the fetch callbacks, so the card stays EMPTY until the thumbnail
+    // resolves — and permanently empty on the two paths that return without
+    // rendering (`if (!blob) return` and any non-404 `blob.error`). A freshly
+    // uploaded video is exactly that case: its vignette does not exist yet.
+    // Render now from the glyph the template already draws.
+    if (this.mget("iconOnly")) {
+      this.content.el.innerHTML = this.innerContent(this);
+      this._setupInteract();
+      this.trigger("content-ready");
+      return;
+    }
     switch (filetype) {
       case _a.video:
       case _a.image:

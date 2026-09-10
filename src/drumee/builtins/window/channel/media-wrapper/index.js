@@ -23,6 +23,10 @@ class __media_wrapper extends LetcBox {
   * 
   */
   onBeforeDestroy() {
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
     /** Prevent updating on reload */
     if (this.__content) {
       this.__content.onRemoveChild = null;
@@ -50,6 +54,15 @@ class __media_wrapper extends LetcBox {
     // the card until a reload re-read it.
     items.forEach((i) => this._markIconOnly(i));
     const result = this.__content.append(items);
+    // Opening is part of ADDING. updateAttachment() sets this too, but that only
+    // runs when a card is REMOVED — so a strip filled by upload or by a
+    // workspace pick stayed `closed`, and the global
+    // `[data-state="closed"] { visibility: hidden !important; height: 0 }` rule
+    // (skin/lib/utils.scss) hid every card in it. The symptom was chips that
+    // looked EMPTY rather than absent — the markup was all there, sized to
+    // nothing — and removing one made the rest appear, because that was the
+    // first thing to call updateAttachment().
+    this._openStrip();
     // Notify listeners (chat widget's checkPendingContent) so the
     // attachment-wrapper data-state flips to "has attachment" and CSS
     // expands the preview slot. Matches the trigger in clearAttachment().
@@ -128,6 +141,22 @@ class __media_wrapper extends LetcBox {
    * @param {Object} item  a media_grid descriptor, mutated in place
    * @returns {Object} the same item, for use in a map()
    */
+  /**
+   * Show the strip, and call off any close that was already scheduled.
+   *
+   * onPartReady arms a 1s timer to close an empty strip. A file that arrives
+   * inside that second would otherwise be hidden by a timer that fired after
+   * it landed — a race that reads as "the first attachment never shows, later
+   * ones do", which is worse to diagnose than a plain failure.
+   */
+  _openStrip() {
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
+    if (this.el) this.el.dataset.state = _a.open;
+  }
+
   _markIconOnly(item) {
     if (item) item.iconOnly = 1;
     return item;
@@ -263,12 +292,13 @@ class __media_wrapper extends LetcBox {
       case _a.content:
         let attachment = this.getAttachment();
         if (_.isEmpty(attachment)) {
-          setTimeout(() => {
-            this.el.dataset.state = _a.closed;
+          this._closeTimer = setTimeout(() => {
+            this._closeTimer = null;
+            if (this.el) this.el.dataset.state = _a.closed;
           }, 1000)
         } else {
           this.addNewMedia(attachment);
-          this.el.dataset.state = _a.open;
+          this._openStrip();
         }
         /**  */
         child.onRemoveChild = (parent, c) => {
