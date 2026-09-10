@@ -924,6 +924,7 @@ class __widget_chat extends LetcBox {
       this.feed(require("./skeleton")(this));
       this._bindMentionKeyboard();
       this._bindClipboardPaste();
+      this._installMediaDroppable();
     });
   }
 
@@ -1136,6 +1137,142 @@ class __widget_chat extends LetcBox {
         this.triggerHandlers(args);
         return (this.service = "");
     }
+  }
+
+  /**
+   * Accept files dragged out of the folder's Files panel onto the composer.
+   *
+   * A jQuery-UI droppable, not a native `drop` listener, because the grid's
+   * cards are dragged by jQuery-UI (media/interact._setupInteract) and that
+   * drag carries no dataTransfer and no DOM target: the helper is appended to
+   * <body> and parked under the cursor, so `e.target` and elementFromPoint both
+   * report the helper rather than whatever is beneath it. The droppable is the
+   * only thing that sees the drop at all.
+   *
+   * Scoped to the messenger — the drop zone the affordance draws — rather than
+   * the whole widget, so a drag over the message list does not claim the file.
+   */
+  _installMediaDroppable() {
+    if (this._mediaDroppableInstalled) return;
+    if (typeof $ === "undefined" || !$.fn || !$.fn.droppable) return;
+    // Claim the slot before awaiting, so two calls cannot both get past the
+    // guard while the chunk is loading and install two droppables on one node.
+    this._mediaDroppableInstalled = true;
+    // ensurePart, NOT a querySelector on this.el. `messenger` is a lazy kind
+    // (seeds.js -> import("./builtins/messenger")), so its element does not
+    // exist when onDomRefresh's feed() returns — a query there finds nothing,
+    // and this used to bail out silently and never retry, which is why the
+    // drop zone never appeared. Every other path into the messenger here goes
+    // through ensurePart for the same reason.
+    this.ensurePart(_a.message)
+      .then((messenger) => {
+        const el = messenger && messenger.el;
+        if (!el) {
+          this._mediaDroppableInstalled = false;
+          return;
+        }
+        this._dropZoneEl = el;
+        this._bindDropZone(el);
+      })
+      .catch(() => {
+        this._mediaDroppableInstalled = false;
+      });
+  }
+
+  /**
+   * The droppable itself, split out so the wiring above is only about WHEN.
+   */
+  _bindDropZone(el) {
+    $(el).droppable({
+      tolerance: "pointer",
+      greedy: true,
+      // activate/deactivate fire on every compatible droppable when a drag
+      // STARTS and ENDS, wherever the pointer happens to be. That is what makes
+      // the zone an invitation rather than a confirmation: it appears the
+      // moment a file is picked up, so the user can see where it may go before
+      // aiming at it. over/out then only choose between armed and active.
+      activate: (e, ui) => this._setDropState(this._armedFor(ui)),
+      deactivate: () => this._setDropState("off"),
+      over: (e, ui) =>
+        this._setDropState(this._armedFor(ui) === "armed" ? "active" : "off"),
+      out: (e, ui) => this._setDropState(this._armedFor(ui)),
+      drop: (e, ui) => {
+        this._setDropState("off");
+        if (!this.canAttachExisting()) return;
+        // Selection first, the dragged card second: dragging one of several
+        // selected files moves the whole selection everywhere else in the app,
+        // and the composer should not be the exception. `helper.moving` is the
+        // single-card case, where nothing is selected at all.
+        const selection =
+          (typeof Wm !== "undefined" &&
+            Wm.getGlobalSelection &&
+            Wm.getGlobalSelection()) ||
+          [];
+        const moving = ui && ui.helper && ui.helper.moving;
+        const nodes = selection.length ? selection : moving ? [moving] : [];
+        this.attachExistingNodes(nodes);
+      },
+    });
+  }
+
+  /**
+   * Should THIS drag light the zone at all?
+   *
+   * jQuery-UI activates every droppable for every draggable — windows drag,
+   * chat items drag — so without a test the composer would offer itself as a
+   * target for things it cannot take. `media` is the group class shared by both
+   * file kinds (media_grid in the grid view, media_row in the list view), so it
+   * is one check rather than one per view.
+   */
+  _armedFor(ui) {
+    const d = ui && ui.draggable;
+    if (!d || typeof d.hasClass !== "function" || !d.hasClass("media")) {
+      return "off";
+    }
+    return this.canAttachExisting() ? "armed" : "off";
+  }
+
+  // off | armed (a file is in flight) | active (it is over the composer)
+  _setDropState(state) {
+    const el = this._dropZoneEl;
+    if (el && el.dataset) el.dataset.dropState = state || "off";
+  }
+
+  /**
+   * Does the composer CLAIM a dropped workspace file?
+   *
+   * This is what stops the folder window inserting the same file into its own
+   * body (folder/index.js insertMedia) — the drop would otherwise land twice.
+   * Refused while an upload is running, because the composer is inert then and
+   * a claim it cannot act on would drop the file on the floor.
+   */
+  canAttachExisting() {
+    if (this.isUploadInFlight()) return false;
+    if (this.isScopeHardFrozen()) return false;
+    if (Visitor.isMimicUser() || this.mget("isReadOnly")) return false;
+    return !!this.attachmentList && !this.attachmentList.isDestroyed();
+  }
+
+  /**
+   * Stage each dropped workspace node onto the composer.
+   *
+   * Reuses _pickDeskFile, which is the desk picker's own handler: it already
+   * refuses folders/hubs/.lnk, copies into the chat staging folder so the
+   * original stays where it is, and shows the indeterminate progress row. A
+   * drop and a pick are the same operation reached two ways, so they run the
+   * same code rather than two that have to be kept in step.
+   */
+  attachExistingNodes(nodes) {
+    const list = Array.isArray(nodes) ? nodes : [nodes];
+    let claimed = 0;
+    for (const node of list) {
+      // _pickDeskFile reads cmd.model — a dragged card is a widget and has one;
+      // anything else here is not something this composer can stage.
+      if (!node || !node.model) continue;
+      claimed++;
+      this._pickDeskFile(node);
+    }
+    return claimed > 0;
   }
 
   /**

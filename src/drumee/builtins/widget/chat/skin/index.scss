@@ -374,6 +374,69 @@
     }
   }
 
+  // Drop zone. The messenger is the target; the overlay is its child (see
+  // builtins/messenger/skeleton) and this supplies the theme.
+  //
+  // Revealed by `data-drop-active`, which chat's droppable stamps on the
+  // messenger element — not by :hover or a CSS drag state. A jQuery-UI drag
+  // appends its helper to <body> under the cursor, so the pointer never
+  // "enters" the messenger as far as the DOM is concerned and no CSS state
+  // exists to key on.
+  // Two states, as in the reference: ARMED the moment a file is picked up
+  // anywhere, so the target is visible before the user aims at it, and ACTIVE
+  // once the pointer is actually over it. Armed is deliberately quieter — it is
+  // an offer, and at full strength it would compete with the file being dragged.
+  //
+  // Descendant, not `>`: the overlay is fed as one of the messenger's kids and
+  // whether ui-core appends those to the root or to an inner content node is
+  // not something this skin should depend on. There is never a nested
+  // messenger for a loose selector to catch by mistake.
+  &__messenger[data-drop-state="armed"] .lib-messenger__drop-overlay,
+  &__messenger[data-drop-state="active"] .lib-messenger__drop-overlay {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  &__messenger[data-drop-state="armed"] .lib-messenger__drop-overlay {
+    border-color: rgba(89, 80, 255, 0.45);
+    background:
+      linear-gradient(rgba(89, 80, 255, 0.04), rgba(89, 80, 255, 0.04)),
+      var(--normal-bg, #ffffff);
+
+    .lib-messenger__drop-overlay-ico,
+    .lib-messenger__drop-overlay-text {
+      opacity: 0.65;
+    }
+  }
+
+  &__messenger .lib-messenger__drop-overlay {
+    // Two layers: the tint, over an OPAQUE surface. A single 8% wash let the
+    // input's placeholder read straight through the drop zone, so the overlay
+    // said "drop files to attach" and "Type A Message…" at the same time. The
+    // base is the composer's own background, so the zone masks the input in
+    // both themes without hard-coding a colour.
+    background:
+      linear-gradient(rgba(89, 80, 255, 0.08), rgba(89, 80, 255, 0.08)),
+      var(--normal-bg, #ffffff);
+    border: 1px dashed var(--primary-40, #5950ff);
+    border-radius: 12px;
+
+    .lib-messenger__drop-overlay-ico {
+      color: var(--primary-40, #5950ff);
+      fill: currentColor;
+    }
+
+    .lib-messenger__drop-overlay-text {
+      @include drumee.typo(
+        $size: 13px,
+        $weight: 500,
+        $line: 18px,
+        $color: var(--primary-40, #5950ff)
+      );
+      text-align: center;
+    }
+  }
+
   &__messenger {
     // Remove all focus/active borders in chat input
     .rich-text,

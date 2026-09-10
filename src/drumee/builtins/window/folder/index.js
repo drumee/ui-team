@@ -1069,6 +1069,24 @@ class __window_folder extends mfsInteract {
       if (typeof this.resetShift === "function") this.resetShift();
       return;
     }
+    // Same rule for the Chat tab: a file dropped on the composer belongs to the
+    // message being written, not to the folder body. The composer's droppable
+    // has usually staged it already by the time this runs, so falling through
+    // would insert a SECOND copy into the folder — the duplication the task
+    // branch above exists to prevent.
+    if (this.activeTab === _a.chat) {
+      const chat = this.getItemsByKind("widget_chat")[0];
+      if (
+        chat &&
+        !(chat.isDestroyed && chat.isDestroyed()) &&
+        typeof chat.canAttachExisting === "function" &&
+        chat.canAttachExisting()
+      ) {
+        chat.attachExistingNodes(files);
+        if (typeof this.resetShift === "function") this.resetShift();
+        return;
+      }
+    }
     return super.insertMedia(files, position);
   }
 
