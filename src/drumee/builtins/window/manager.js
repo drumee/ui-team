@@ -1350,13 +1350,40 @@ class __window_manager extends mfsInteract {
     const item = this.getWindowPreset(media, args);
     const fType = media.mget(_a.filetype);
     let app = require("./configs/application")(fType, item);
+    // NO PLAYER FOR THIS FILE TYPE — offer the download instead of spinning.
+    //
+    // configs/application answers `{kind: undefined}` for every filetype it
+    // doesn't map: `zip` (zip/rar/7z/tar/gz/tgz/bz2 — filecap.category), plus
+    // `application` (exe/deb/dmg/xz) and `other` (iso/pkg). The old fallback
+    // named "props_viewer", a kind NO seed registers — so Kind.waitFor()
+    // warned and RESOLVED (with null, it never rejects), append() rendered the
+    // "Snippet not found" failover into the windows pool, the catch below never
+    // ran, and nothing ever called media.wait(0). The tile's spinner therefore
+    // ran forever and the file looked broken: reported by Lexis 2026-09-09 for
+    // zip uploads, but every viewer-less type had it since the gitlab import.
     if (_.isEmpty(app) || !app.kind) {
-      app = { ...app, kind: "props_viewer", media };
+      this.showProperties(media);
+      return true;
     }
     app.style = this.getWindowPosition(media);
     if (app) {
       let launchTag = _.uniqueId();
-      Kind.waitFor(app.kind).then(() => {
+      const onDeadEnd = (e) => {
+        // Same dead end one level down. `schedule_viewer` and `editor_diagram`
+        // ARE named by configs/application yet registered by no seed, and a
+        // lazy chunk can also fail to load — both land here, where waitFor
+        // hands back null (or rejects) rather than throwing inside the try.
+        this.warn(`No widget for kind=${app.kind}`, e);
+        this.showProperties(media);
+      };
+      Kind.waitFor(app.kind).then((widgetClass) => {
+        // Ask the registry the same question the pool is about to ask:
+        // CollectionView.childView() swaps in the "Snippet not found" failover
+        // whenever Kind.get() comes back empty. Only then is appending
+        // pointless. Deliberately NOT `!widgetClass` alone — waitFor reads
+        // `.default` off the loaded chunk, and a widget whose module shape
+        // doesn't expose one would be perfectly launchable yet answer null.
+        if (!widgetClass && !Kind.get(app.kind)) return onDeadEnd();
         try {
           app.launchTag = launchTag;
           this.getWindowsPool().append(app);
@@ -1369,7 +1396,7 @@ class __window_manager extends mfsInteract {
           Wm.alert(LOCALE.INTERNAL_ERROR);
           media.wait(0);
         }
-      });
+      }, onDeadEnd);
       return true;
     }
     return false;
@@ -1455,11 +1482,26 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * Dead end for a file no player can open: release the tile's open latch,
+   * then offer the one thing such a file is good for — the download.
    *
-   * @param {*} media
+   * Written at the gitlab import but never called until _launchApp's
+   * "props_viewer" dead end was routed here, so it needed three guards it
+   * never had: mget(extension) is undefined on rows that alias the column as
+   * `ext` (and `.printf` on undefined throws, which would have swapped one
+   * stuck spinner for another), the wait latch has to be cleared whichever
+   * way the user answers, and a read-only member has no download to be
+   * offered — asking them would only produce a 403.
    */
   showProperties(media) {
-    this.confirm(media.mget(_a.extension).printf(LOCALE.NO_PLAYER_FOR_X_FILE))
+    if (media && _.isFunction(media.wait)) media.wait(0);
+    if (!media || !_.isFunction(media.download)) return;
+    const ext = (media.mget(_a.ext) || media.mget(_a.extension) || "").toString();
+    if (_.isFunction(media.canDownload) && !media.canDownload()) {
+      this.alert(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
+      return;
+    }
+    this.confirm(ext.printf(LOCALE.NO_PLAYER_FOR_X_FILE))
       .then(() => {
         media.download();
       })
