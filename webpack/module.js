@@ -1,5 +1,4 @@
 const { resolve } = require("path");
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const drumee_path = 'src/drumee/';
 
 module.exports = function (basedir) {
@@ -8,24 +7,8 @@ module.exports = function (basedir) {
       test: /\.(sa|sc|c)ss$/,
 
       use: [
-        // REAL STYLESHEETS, NOT RUNTIME <style> INJECTION.
-        //
-        // style-loader shipped all 719 SCSS files inside the JS and injected
-        // them as separate <style> tags — 92 of them live, 200 stylesheets in
-        // a longer session. Chrome consults one RuleSet per stylesheet for
-        // every element it restyles, so a ~5,800-element recalc did ~1.2M
-        // rule-set consultations. Measured on production 2026-09-11: 12-30us
-        // per element, against well under 1us for a normal document, and 33.4s
-        // of style recalculation in one session.
-        //
-        // Paired with the `styles` cacheGroup in webpack.js, which merges every
-        // chunk's CSS into ONE file: 200 stylesheets -> 1.
-        //
-        // REQUIRES THE SERVER TO LINK IT. The HTML shell (server-team
-        // client/page.js + client/templates/bootstrap.js.tpl) lists the JS
-        // bundles from manifest.json and links no app CSS; with this loader and
-        // no <link>, the app renders completely unstyled. Ship both together.
-        MiniCssExtractPlugin.loader,
+        'style-loader',
+        //MiniCssExtractPlugin.loader,
         {
           loader: 'css-loader',
           options: {

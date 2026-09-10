@@ -59,21 +59,6 @@ function makeOptions(entry, opt) {
     optimization: {
       splitChunks: {
         minSize: 20000, // Minimum size for a chunk to be generated
-        cacheGroups: {
-          // ONE stylesheet for the whole app.
-          //
-          // MiniCssExtract alone emits CSS per chunk — 200 files here, which
-          // is the same 200 stylesheets the runtime was injecting and so keeps
-          // the per-element cost. `enforce` + `chunks: 'all'` merges them into
-          // a single `styles.<hash>.css` (2.15 MB, 295 KB gzipped), which is
-          // what actually removes the multiplier.
-          styles: {
-            name: 'styles',
-            type: 'css/mini-extract',
-            chunks: 'all',
-            enforce: true,
-          },
-        },
       },
       runtimeChunk: 'single', // Extracts webpack runtime code into a separate file (e.g., runtime~main.[hash].js)
       moduleIds: 'deterministic', // (Webpack 5+) Stable module IDs
