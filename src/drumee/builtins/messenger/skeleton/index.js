@@ -66,6 +66,37 @@ const __skl_messenger = function (ui) {
     kids: kids
   });
 
+  // Drop affordance, rendered only for hosts that ask for it (the chat
+  // composer). It lives INSIDE the messenger because the messenger is the drop
+  // zone, and a sibling could not cover it: `inset: 0` resolves against the
+  // nearest positioned ancestor, which for a sibling is the wrapper — that
+  // would tint the reply box and the attachment strip too.
+  //
+  // Inert to the pointer. A jQuery-UI drag is tracked by the droppable, not by
+  // hit-testing, and an overlay that swallowed the pointer would break the
+  // clicks that follow a cancelled drag.
+  const dropOverlay = ui.mget('drop_overlay')
+    ? Skeletons.Box.X({
+        // A ROW, not the reference image's stack. The composer is a ~48px bar
+        // (chat skin: min-height 32 + 8px padding), and a stacked 24px glyph
+        // over an 18px label needs ~50px before it can be centred in anything.
+        // Same elements and the same dashed-indigo language, laid out to fit
+        // the box it actually has to live in.
+        className: `${ui.fig.family}__drop-overlay`,
+        bubble: 0,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: 'arrow-down',
+            className: `${ui.fig.family}__drop-overlay-ico`
+          }),
+          Skeletons.Note({
+            className: `${ui.fig.family}__drop-overlay-text`,
+            content: LOCALE.DROP_FILES_TO_ATTACH
+          })
+        ]
+      })
+    : null;
+
   return [
     Skeletons.Box.Y({
       className: `${ui.fig.family}__main`,
@@ -81,9 +112,11 @@ const __skl_messenger = function (ui) {
     Skeletons.Wrapper.Y({
       className: `${ui.fig.family}__attach-menu`,
       name: "attach-menu"
-    })
+    }),
 
-  ];
+    dropOverlay
+
+  ].filter(Boolean);
 };
 
 module.exports = __skl_messenger;

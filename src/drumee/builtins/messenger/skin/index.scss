@@ -5,6 +5,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    // Containing block for __drop-overlay's `inset: 0`.
+    position: relative;
   }
 
   &__container {
@@ -199,6 +201,33 @@
 
   &__emojis-roll {
     height: 170px;
+  }
+
+  // Base geometry only — a host that opts in supplies the colours. Hidden by
+  // `visibility` as well as `opacity` so it cannot be read out or hit while
+  // idle, and NOT by `display: none`, which would kill the fade.
+  &__drop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    // Explicit, not inherited from the framework's `[data-flow]` rule: that one
+    // is scoped to `.box`/`.drumee-box`, and an overlay that loses it silently
+    // becomes a block — the glyph drops to the left edge instead of centring,
+    // which is easy to miss because everything else still looks right.
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease;
+  }
+
+  &__drop-overlay-ico {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
   }
 
   &__attach-menu.dialog__wrapper {
