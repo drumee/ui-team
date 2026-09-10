@@ -21,6 +21,63 @@ function _vignetteRemember(url, entry) {
   }
   _vignetteCache.set(url, entry);
 }
+
+// ── Load thumbnails only for tiles the user can actually see ─────────────────
+//
+// Opening a folder used to fire ONE vignette request per tile, immediately, for
+// every tile in the listing. Measured on production 2026-09-10: 479 of the 665
+// requests in the session were vignettes — 72% — three of them taking 7.7s, and
+// the app's own service calls (media.show_node_by, task.list, label.list) were
+// pushed out to ~1.8s queued behind the flood.
+//
+// Each resolved thumbnail also becomes a blob URL and a rendered tile, so the
+// eager fetch is what inflates the DOM: 598,604 nodes at peak, which is the
+// multiplier on every style recalculation in the app.
+//
+// One observer for every tile on the page — an observer per tile would cost
+// more than it saves. `rootMargin` starts the fetch before the tile is on
+// screen, so normal scrolling still finds the thumbnail already there.
+//
+// root: null (the viewport) is correct even though the grid scrolls in its own
+// container: intersection is computed against the viewport WITH ancestor
+// clipping applied, so a tile scrolled out of the pane does not intersect. It
+// also means a pane that is hidden during a workspace switch loads nothing
+// until it is actually shown.
+const VIGNETTE_ROOT_MARGIN = "600px";
+let _vignetteObserver = null;
+const _vignettePending = new WeakMap();
+
+function _observeVignette(el, run) {
+  // No IntersectionObserver (or no element to measure): behave exactly as
+  // before and fetch straight away, rather than leaving a tile blank forever.
+  if (typeof IntersectionObserver !== "function" || !el) {
+    run();
+    return null;
+  }
+  if (!_vignetteObserver) {
+    _vignetteObserver = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const fn = _vignettePending.get(e.target);
+          _vignetteObserver.unobserve(e.target);
+          _vignettePending.delete(e.target);
+          if (fn) fn();
+        }
+      },
+      { rootMargin: VIGNETTE_ROOT_MARGIN }
+    );
+  }
+  _vignettePending.set(el, run);
+  _vignetteObserver.observe(el);
+  return el;
+}
+
+function _unobserveVignette(el) {
+  if (!el || !_vignetteObserver) return;
+  _vignetteObserver.unobserve(el);
+  _vignettePending.delete(el);
+}
 require("./skin");
 const media_core = require("./core");
 const { copyToClipboard } = require("@drumee/ui-essentials")
@@ -570,7 +627,13 @@ class __media_interact extends media_core {
             return showMissing();
           _vignetteCache.delete(url);
         }
-        this.fetchFile({ url })
+        // Deferred until the tile is near the viewport (see _observeVignette).
+        // A cache HIT above still resolves synchronously, so nothing that was
+        // already fetched starts waiting on scroll.
+        const fetchThumb = () => {
+          this._vignetteObserved = null;
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.fetchFile({ url })
           .then(async (blob) => {
             if (!blob) {
               this.warn(`Got no blob from ${url}`);
@@ -598,6 +661,10 @@ class __media_interact extends media_core {
             this.content.el.innerHTML = this.innerContent(this);
             this._setupInteract();
           });
+        };
+        // A re-render must not leave the previous observation behind.
+        _unobserveVignette(this._vignetteObserved);
+        this._vignetteObserved = _observeVignette(this.el, fetchThumb);
         break;
       }
       default:
