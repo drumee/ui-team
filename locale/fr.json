@@ -3177,5 +3177,7 @@
   "ARCHIVE_TOO_MANY_ENTRIES": "Cette archive contient trop de fichiers pour être extraite. Veuillez l'extraire sur votre ordinateur et téléverser le dossier.",
   "ARCHIVE_TOO_LARGE": "Cette archive est trop volumineuse pour être extraite. Veuillez l'extraire sur votre ordinateur et téléverser le dossier.",
   "ARCHIVE_UNSAFE_PATH": "Cette archive contient des entrées qui pointent en dehors du dossier de destination ; elle n'a pas été extraite.",
-  "UNZIP_CONFIRM": "Décompresser {0} ? Un dossier contenant ses {1} fichiers ({2}) sera ajouté au dossier actuel."
+  "UNZIP_CONFIRM": "Décompresser {0} ? Un dossier contenant ses {1} fichiers ({2}) sera ajouté au dossier actuel.",
+  "ARCHIVE_FORMAT_UNSUPPORTED": "Drumee ne peut pas extraire ce format d'archive. Téléchargez-la, ou téléversez le dossier au format ZIP.",
+  "UNZIP_FAILED": "L'archive n'a pas pu être extraite. Veuillez réessayer."
 }

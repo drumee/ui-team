@@ -2968,5 +2968,7 @@
   "ARCHIVE_TOO_MANY_ENTRIES": "Este archivo comprimido contiene demasiados archivos para extraerlo. Extráigalo en su ordenador y suba la carpeta.",
   "ARCHIVE_TOO_LARGE": "Este archivo comprimido es demasiado grande para extraerlo. Extráigalo en su ordenador y suba la carpeta.",
   "ARCHIVE_UNSAFE_PATH": "Este archivo comprimido contiene entradas que apuntan fuera de la carpeta de destino, por lo que no se extrajo.",
-  "UNZIP_CONFIRM": "¿Descomprimir {0}? Se añadirá al directorio actual una carpeta con sus {1} archivos ({2})."
+  "UNZIP_CONFIRM": "¿Descomprimir {0}? Se añadirá al directorio actual una carpeta con sus {1} archivos ({2}).",
+  "ARCHIVE_FORMAT_UNSUPPORTED": "Drumee no puede extraer este formato de archivo comprimido. Descárguelo o suba la carpeta en formato ZIP.",
+  "UNZIP_FAILED": "No se pudo extraer el archivo comprimido. Inténtelo de nuevo."
 }

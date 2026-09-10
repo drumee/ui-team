@@ -768,6 +768,7 @@ class __media_interact extends media_core {
       "NOT_AN_ARCHIVE", "NODE_NOT_FOUND", "ARCHIVE_UNREADABLE",
       "ARCHIVE_ENCRYPTED", "ARCHIVE_EMPTY", "ARCHIVE_TOO_MANY_ENTRIES",
       "ARCHIVE_TOO_LARGE", "ARCHIVE_UNSAFE_PATH",
+      "ARCHIVE_FORMAT_UNSUPPORTED", "UNZIP_FAILED",
     ];
     Wm.alert(known.includes(key) ? LOCALE[key] : LOCALE.TRY_AGAIN);
   }
