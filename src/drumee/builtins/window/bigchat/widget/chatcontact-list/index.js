@@ -3,7 +3,7 @@ const { timestamp } = require("@drumee/ui-essentials")
 // a system card cannot read one way on load and another way after a WS push.
 const {
   chatPreview,
-  parseMeetingSentinel,
+  findMeetingRow,
   meetingStatusOf,
 } = require("libs/chat-preview");
 const EOD = "end:of:data";
@@ -221,12 +221,18 @@ class ___widget_chatcontactList extends LetcBox {
   /**
    * 
    */
-  onWsMessage(service, data, options) {
+  onWsMessage(service, data, options = {}) {
     let item = null;
     let list = this.__listContacts;
     let newContact;
     let msg;
-    switch (options.service) {
+    // `options.service` first: a push built with `payload(data, {service})`
+    // carries the name there and the push router stamps the envelope name
+    // ("live.update") at the top level, which is what arrives as the first
+    // argument. The fallback covers a sender that labels the frame itself.
+    // Same form as widget_chat / window_tasks / panel_calendar.
+    const svc = (options && options.service) || service;
+    switch (svc) {
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
         item = this.selectItem(data, 'entity_id');
@@ -250,18 +256,33 @@ class ___widget_chatcontactList extends LetcBox {
       case 'channel.roominfo':
         item = this.selectItem(data, 'entity_id', 'hub_id');
         if (!item) return;
-        // The row keeps the RAW body (that is what the meeting-end flip below
-        // matches on); only the Note gets the derived text. '_' stands in for a
-        // room with nothing to preview, as it always has.
-        msg = chatPreview(data.message, {
-          metadata: data.metadata,
-          messageType: data.message_type,
-          isAttachment: !_.isEmpty(data.attachment),
-        });
-
-        item.mset(_a.message, data.message);
-        item.mset('meeting_status', meetingStatusOf(data));
-        item.__message.set(_a.content, msg || '_');
+        // THE BODY ON THIS SERVICE IS CUT TO 100 CHARS — the row comes from
+        // `_last_node` in channel_delete.sql, whose message column is
+        // VARCHAR(100) filled with LEFT(message, 100). So when the incoming
+        // body is a PREFIX of the one already on the row, the row keeps its
+        // own: the stored one is whole (a meeting card is ~146 chars), it is
+        // what the meeting-end flip matches on, and re-deriving the preview
+        // from the cut one would drop the card's author. The row also keeps a
+        // lifecycle status it already knows, because this payload carries no
+        // metadata at all and would otherwise re-open a finished meeting.
+        {
+          const stored = `${item.mget(_a.message) || ''}`;
+          const incoming = `${data.message || ''}`;
+          const isCut = !!incoming && stored.startsWith(incoming);
+          const body = isCut ? stored : incoming;
+          msg = chatPreview(body, {
+            metadata: data.metadata,
+            messageType: data.message_type,
+            meetingStatus: isCut ? item.mget('meeting_status') : null,
+            isAttachment: !_.isEmpty(data.attachment),
+          });
+          if (!isCut) {
+            item.mset(_a.message, data.message);
+            item.mset('meeting_status', meetingStatusOf(data));
+          }
+          // '_' stands in for a room with nothing to preview, as it always has.
+          item.__message.set(_a.content, msg || '_');
+        }
 
         item.mset('room_count', data.room_count);
         item.updateNotification();
@@ -274,12 +295,11 @@ class ___widget_chatcontactList extends LetcBox {
       // was said. Literal service name — SERVICE.channel.meeting_end is
       // undefined against an older server (same as widget_chat's handler).
       case 'channel.meeting_end':
-        item = this.selectItem(data, 'entity_id', 'hub_id');
+        // NOT selectItem: this payload is a bare channel row, so the hub is in
+        // `key_id` (selectItem only knows entity_id/hub_id) and the right row
+        // is the one whose body IS this card — see libs/chat-preview.
+        item = findMeetingRow(list, data);
         if (!item || !item.__message) return;
-        if (!parseMeetingSentinel(data.message)) return;
-        // Only while that card is still the row's LAST message — an older
-        // meeting ending must not overwrite what has been said since.
-        if (`${item.mget(_a.message) || ''}` !== `${data.message || ''}`) return;
         item.mset('meeting_status', 'ended');
         item.__message.set(
           _a.content,

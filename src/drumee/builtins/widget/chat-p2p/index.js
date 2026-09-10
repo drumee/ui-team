@@ -3,7 +3,7 @@ const { supportContactId, isSupportEntity } = require("libs/support");
 // skeleton so the line reads the same on load and on a live push.
 const {
   chatPreview,
-  parseMeetingSentinel,
+  findMeetingRow,
   meetingStatusOf,
 } = require("libs/chat-preview");
 
@@ -1115,18 +1115,26 @@ class __chat_p2p extends LetcBox {
   }
 
   onWsMessage(service, data, options = {}) {
-    // The dispatcher calls onWsMessage(service, model, options) — the SERVICE
-    // IS THE FIRST ARGUMENT (router/websocket/index.js:41).
+    // THE REAL SERVICE IS IN `options.service`, WITH THE FIRST ARG AS FALLBACK.
     //
-    // This read it as `const { service } = options || svc`. `options` defaults
-    // to {} and {} is truthy, so it destructured the empty object every time:
-    // `service` came out undefined, the switch always fell to default, and
-    // NEITHER case ever ran. Live inbox updates were dead — an incoming
-    // message never moved a conversation up the list, never refreshed its
-    // preview line and never bumped its unread badge, so the inbox looked
-    // frozen until a reload. Same trap the project's framework-invariants
-    // rule §7 calls out by name.
-    switch (service) {
+    // A server push built with `payload(data, {service})` carries the service
+    // inside `options` and NOTHING at the top level, so the push router stamps
+    // the envelope name there instead — `payload.service = "live.update"`
+    // (server-team router/push/index.js) — and that envelope name is exactly
+    // what the dispatcher hands over as the first argument
+    // (router/websocket/index.js reads `payload.service || msg.service`).
+    //
+    // So switching on the first argument alone matched "live.update" every
+    // time: chat.post, channel.post AND the acknowledge cases all fell to
+    // `default`, and live inbox updates were dead — an incoming message never
+    // moved a conversation up the list, never refreshed its preview line and
+    // never bumped its unread badge, so the inbox stayed frozen until a
+    // reload. (The earlier `const { service } = options || svc` was broken for
+    // its own reason: it destructured `options` and dropped the fallback, so a
+    // sender that DOES label the frame itself was missed.) This form is the one
+    // widget_chat, window_tasks, panel_calendar and window_folder all use.
+    const svc = (options && options.service) || service;
+    switch (svc) {
       case SERVICE.chat.post:
       case SERVICE.channel.post:
         this._updateContactItemOnPost(data);
@@ -1158,21 +1166,10 @@ class __chat_p2p extends LetcBox {
    * @param {Object} data the re-broadcast message row
    */
   _endMeetingPreview(data) {
-    if (!data || !parseMeetingSentinel(data.message)) return;
     const list = this.getPart && this.getPart("contact-list");
-    if (!list || !_.isFunction(list.getItemsByAttr)) return;
-    // Both keys, and then the row whose stored body IS this card: the workspace
-    // row is keyed by entity_id (see _updateContactItemOnPost), a hub_id can
-    // land on an unrelated contact row, and the body test is what settles it —
-    // it doubles as the "still the row's LAST message" guard, so an older
-    // meeting ending cannot overwrite what has been said since.
-    const candidates = [
-      ...(list.getItemsByAttr(_a.entity_id, data.hub_id) || []),
-      ...(list.getItemsByAttr("hub_id", data.hub_id) || []),
-    ];
-    const item = candidates.find(
-      (r) => r && `${r.mget(_a.message) || ""}` === `${data.message || ""}`
-    );
+    // findMeetingRow owns the payload's shape (the hub is in `key_id` on this
+    // service) and picks the row by body — see libs/chat-preview.
+    const item = findMeetingRow(list, data);
     if (!item) return;
     item.mset("meeting_status", "ended");
     if (item.__message) {
@@ -1205,12 +1202,17 @@ class __chat_p2p extends LetcBox {
     // hub, so a post into the PERSONAL workspace (whose hub is that same hub)
     // matches an arbitrary contact row. An entity_id equal to the posting hub
     // can only be that hub's own row.
-    if (!item && data.hub_id) {
-      item = list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, data.hub_id);
+    // `key_id` is the same hub under another name on the services that answer
+    // with a bare channel row (see findMeetingRow); channel.post stamps hub_id.
+    // NEVER pass an absent key to getItemsByAttr: it compares strict-equal, so
+    // `undefined` collects every row that merely lacks the attribute.
+    const hub = data.hub_id || data.key_id;
+    if (!item && hub) {
+      item = list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, hub);
       item = item && item[0];
     }
-    if (!item && data.hub_id) {
-      item = list.getItemsByAttr && list.getItemsByAttr("hub_id", data.hub_id);
+    if (!item && hub) {
+      item = list.getItemsByAttr && list.getItemsByAttr("hub_id", hub);
       item = item && item[0];
     }
     if (!item) return this._addContactItemOnPost(list, data);

@@ -35,8 +35,23 @@
  * custom message_type/metadata. Only ":start:" is ever posted — a meeting that
  * ends flips THAT row's metadata (channel.meeting_end) instead of posting a
  * second card — but both forms are accepted, older rows included.
+ *
+ * THE CLOSING `]]` IS OPTIONAL, because one of the paths that feeds a preview
+ * truncates the body: `channel.roominfo` rows come from `_last_node` in
+ * channel_delete.sql, whose `message` column is VARCHAR(100) filled with
+ * LEFT(message, 100). A real card is ~146 chars (two 16-char ids, a room_id, a
+ * filename and a name), so what arrives there is a HEADLESS sentinel — and
+ * requiring the terminator made it fall through to the raw-text branch, which
+ * put `[[MEETING:start:{"hub_id":"…` back on the inbox line for anyone who
+ * deleted a message in a chat whose previous message was a meeting card.
  */
-const MEETING_SENTINEL = /^\s*\[\[MEETING:(start|end):([\s\S]*)\]\]\s*$/;
+const MEETING_SENTINEL = /^\s*\[\[MEETING:(start|end):([\s\S]*?)(?:\]\])?\s*$/;
+
+/** Recover one string field from a JSON payload the 100-char cut broke. */
+const RECOVER = (src, key) => {
+  const m = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(src);
+  return m ? m[1] : "";
+};
 
 /**
  * Mention markup the messenger writes: `[@Name](user:uid)` and
@@ -70,20 +85,37 @@ function asObject(md) {
 /**
  * The meeting card's payload, or null when this is an ordinary message.
  *
+ * A truncated body (see MEETING_SENTINEL) still answers a card: the JSON no
+ * longer parses, so the fields are recovered by name from whatever survived —
+ * usually nothing past `room_id`, which is why the label falls back to the
+ * subject-less wording rather than inventing an author.
+ *
  * @param {String} message raw message body
- * @returns {{kind: String, payload: Object}|null}
+ * @returns {{kind: String, payload: Object, truncated: Boolean}|null}
  */
 function parseMeetingSentinel(message) {
   if (typeof message !== "string") return null;
   const m = message.match(MEETING_SENTINEL);
   if (!m) return null;
-  let payload = {};
+  const body = m[2] || "";
+  let payload = null;
   try {
-    payload = JSON.parse(m[2]) || {};
+    payload = JSON.parse(body);
   } catch (e) {
-    payload = {};
+    payload = null;
   }
-  return { kind: m[1], payload };
+  if (payload && typeof payload === "object") {
+    return { kind: m[1], payload, truncated: false };
+  }
+  return {
+    kind: m[1],
+    payload: {
+      by: RECOVER(body, "by"),
+      filename: RECOVER(body, "filename"),
+      meeting_status: RECOVER(body, "meeting_status"),
+    },
+    truncated: true,
+  };
 }
 
 /**
@@ -174,6 +206,49 @@ function chatPreview(message, opt = {}) {
 }
 
 /**
+ * The inbox row a `channel.meeting_end` broadcast belongs to, or null.
+ *
+ * THE HUB IS IN `key_id` ON THAT SERVICE, not in hub_id: the broadcast is
+ * channel_get's row (a `SELECT *` over the hub's own `channel` table, which has
+ * neither a hub_id nor an entity_id column) and channel.meeting_end stamps
+ * `message.key_id = hub.id` on it, where channel.post stamps `data.hub_id`.
+ * Reading only hub_id left the key UNDEFINED — and getItemsByAttr compares
+ * `mget(attr) === val` (ui-core box/index.js), so an undefined value collects
+ * every descendant widget that merely LACKS that attribute. Hence the explicit
+ * bail: no key, no search.
+ *
+ * Which row, among the hits, is settled by the body: a workspace row is keyed
+ * by entity_id (its hub IS the conversation) while hub_id can land on an
+ * unrelated contact row, and the body test doubles as the "this card is still
+ * the row's last message" guard, so an older meeting ending cannot overwrite
+ * what has been said since.
+ *
+ * @param {Object} list the contact-list widget
+ * @param {Object} data the re-broadcast message row
+ * @returns {Object|null} the row view
+ */
+function findMeetingRow(list, data) {
+  const key = data && (data.key_id || data.hub_id);
+  if (!key || !list || !_.isFunction(list.getItemsByAttr)) return null;
+  // The body must BE a card. Without this the body test alone would match any
+  // row whose last message happens to equal the payload's, and stamp a
+  // meeting_status on a conversation that has no meeting in it.
+  if (!parseMeetingSentinel(data.message)) return null;
+  const rows = [
+    ...(list.getItemsByAttr(_a.entity_id, key) || []),
+    ...(list.getItemsByAttr("hub_id", key) || []),
+  ];
+  return (
+    rows.find(
+      (r) =>
+        r &&
+        _.isFunction(r.mget) &&
+        `${r.mget(_a.message) || ""}` === `${data.message || ""}`
+    ) || null
+  );
+}
+
+/**
  * The meeting lifecycle status a live payload carries, or null.
  *
  * Worth keeping on the inbox row because nothing else there has it: a workspace
@@ -194,5 +269,6 @@ function meetingStatusOf(data) {
 module.exports = {
   chatPreview,
   parseMeetingSentinel,
+  findMeetingRow,
   meetingStatusOf,
 };
