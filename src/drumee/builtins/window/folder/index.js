@@ -698,6 +698,7 @@ class __window_folder extends mfsInteract {
     this._stopAwaitMeetingReady();
     this._ftTeardown();
     this._unbindThreadMenuOutside();
+    this._unbindSchedMenuDismiss();
     // A tour is holding the account-wide single-flight latch. Closing the
     // window it is drawn on must hand that back, or no tour runs again this
     // session.
@@ -836,10 +837,33 @@ class __window_folder extends mfsInteract {
       }
     }
     const initialTab = this.mget("activeTab");
+    // THE TAB THE USER WAS STANDING ON IN THE WORKSPACE THEY JUST LEFT.
+    //
+    // Switching workspace mounts a BRAND NEW pane (Wm.loadWorkspace re-feeds
+    // headlessLayer), so a fresh window used to start with no tab at all —
+    // which showFolderTab, the `data-view` stamp and syncNewCtrlVisibility all
+    // read as Files. Someone working in the tracker or in a thread was dropped
+    // back on the file grid on every switch. `restore_tab` is Wm handing the
+    // outgoing pane's tab over (see wm/index.js paneTabToCarry).
+    //
+    // A SEPARATE KEY FROM `activeTab`, and it must stay separate: a launch-time
+    // `activeTab` of "meeting" means START/JOIN THE CALL (the branch below),
+    // while carrying a Meet tab across a switch may only ever show the new
+    // workspace's CALENDAR. Everything here goes through showFolderTab, which
+    // cannot start a call.
+    //
+    // An explicit request wins — a deep link, a notification landing or a
+    // meeting join asked for a specific tab, the carry-over is only the
+    // fallback for a plain switch. Consumed either way, so nothing re-applies
+    // it later.
+    const carriedTab = this.mget("restore_tab");
+    if (carriedTab) this.mset("restore_tab", null);
     if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
       this._launchMeetingStandalone();
     } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
+    } else if (!initialTab && carriedTab && carriedTab !== "files") {
+      this.ensurePart("folder-view").then(() => this.showFolderTab(carriedTab));
     }
     // Launched by "Link to task tracker" from outside a folder window. Consumed
     // once, so a later remount doesn't reopen the draft out of the blue.
@@ -1067,6 +1091,24 @@ class __window_folder extends mfsInteract {
       this._taskPanel.attachExistingNodes(files);
       if (typeof this.resetShift === "function") this.resetShift();
       return;
+    }
+    // Same rule for the Chat tab: a file dropped on the composer belongs to the
+    // message being written, not to the folder body. The composer's droppable
+    // has usually staged it already by the time this runs, so falling through
+    // would insert a SECOND copy into the folder — the duplication the task
+    // branch above exists to prevent.
+    if (this.activeTab === _a.chat) {
+      const chat = this.getItemsByKind("widget_chat")[0];
+      if (
+        chat &&
+        !(chat.isDestroyed && chat.isDestroyed()) &&
+        typeof chat.canAttachExisting === "function" &&
+        chat.canAttachExisting()
+      ) {
+        chat.attachExistingNodes(files);
+        if (typeof this.resetShift === "function") this.resetShift();
+        return;
+      }
     }
     return super.insertMedia(files, position);
   }
@@ -2370,17 +2412,17 @@ class __window_folder extends mfsInteract {
         return this._refreshSchedule();
       }
 
-      case "sched-toggle-view": {
+      // ── Month / Week / Day dropdown on the toolbar ────────────────────
+      // Replaced the two-position Weekly/Monthly switch, which could not
+      // express "daily" at all — that view was reachable only by picking a
+      // day out of the mini-calendar.
+      case "sched-toggle-view-menu": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
-        // Explicit pick: from here on this view is the user's, so widening the
-        // panel must not revert it (see _applyScheduleBreakpoint).
-        st.autoDaily = false;
-        // NOTE: from "daily" this lands on "monthly", not "weekly" — the knob
-        // has only two positions and daily is a drill-down of weekly. Existing
-        // behaviour, left as-is; it is simply reachable more often now that a
-        // narrow panel starts in daily.
-        st.view = st.view === "monthly" ? "weekly" : "monthly";
-        return this._refreshSchedule();
+        const open = !st.viewMenuOpen;
+        this._closeSchedMenus();
+        st.viewMenuOpen = open;
+        this._syncSchedMenuDismiss();
+        return this._renderSchedToolbar();
       }
 
       case "sched-set-view": {
@@ -2388,24 +2430,32 @@ class __window_folder extends mfsInteract {
         const v =
           (cmd.mget && (cmd.mget("schedView") || cmd.mget("view"))) ||
           (cmd.el && cmd.el.dataset.view);
-        // Cleared even when the view does not change: tapping "Weekly" while
+        // Cleared even when the view does not change: tapping "Week" while
         // already weekly is still the user claiming the choice, and it should
         // survive the next resize.
         if (v) st.autoDaily = false;
+        this._closeSchedMenus();
         if (v && v !== st.view) {
           st.view = v;
           return this._refreshSchedule();
         }
-        return;
+        // Same view re-picked: the menu still has to shut, and that is a
+        // toolbar repaint — not a 170-cell grid rebuild.
+        return this._renderSchedToolbar();
       }
 
-      // ── Mini-calendar dropdown on the range label's caret ──────────────
+      // ── Mini-calendar dropdown, opened from the range label itself ─────
       case "sched-toggle-picker": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
-        st.pickerOpen = !st.pickerOpen;
+        const open = !st.pickerOpen;
+        this._closeSchedMenus();
+        st.pickerOpen = open;
         // Re-open on the month currently in view, not where it was left.
-        if (st.pickerOpen) st.pickerCursor = st.anchor;
-        return this._refreshSchedule();
+        if (open) st.pickerCursor = st.anchor;
+        this._syncSchedMenuDismiss();
+        // Toolbar only: nothing below the bar changed, and re-feeding the
+        // panel here would rebuild the grid on every open and close.
+        return this._renderSchedToolbar();
       }
 
       case "sched-picker-prev":
@@ -2415,12 +2465,12 @@ class __window_folder extends mfsInteract {
           service === "sched-picker-next" ? 1 : -1,
           "month",
         );
-        return this._refreshSchedule();
+        return this._renderSchedToolbar();
       }
 
       case "sched-pick-day": {
         // Picking a day drills into the single-day hourly view of that day
-        // (Google-Calendar style); the Weekly/Monthly toggle exits it.
+        // (Google-Calendar style); the view dropdown exits it.
         const st = require("./skeleton/meeting-schedule").schedState(this);
         const d =
           (cmd.mget && cmd.mget("schedDay")) || (cmd.el && cmd.el.dataset.day);
@@ -2430,7 +2480,7 @@ class __window_folder extends mfsInteract {
           // Drilling into a day is an explicit choice too — widening the panel
           // afterwards should leave the user on that day, not snap to weekly.
           st.autoDaily = false;
-          st.pickerOpen = false;
+          this._closeSchedMenus();
           return this._refreshSchedule();
         }
         return;
@@ -2972,6 +3022,9 @@ class __window_folder extends mfsInteract {
     }
     if (next === st.view) return;
     st.view = next;
+    // The picker's active row just changed under the user's cursor without
+    // them touching it — shut the dropdowns rather than repaint them.
+    this._closeSchedMenus();
     this._refreshSchedule();
   }
 
@@ -3022,6 +3075,67 @@ class __window_folder extends mfsInteract {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (readCache.signature(this._meetings) !== before) feed();
     });
+  }
+
+  // Repaint ONLY the schedule toolbar row (sys_pn "sched-toolbar"). Opening or
+  // closing one of its dropdowns changes nothing below the bar, and re-feeding
+  // the whole panel here would be actively wrong: the outside-click dismisser
+  // runs in the CAPTURE phase, so a full re-feed destroys the grid — including
+  // the card or slot the click is still travelling to — before it lands. Same
+  // rule the Personal Calendar's toolbar states (panel/calendar/index.js).
+  _renderSchedToolbar() {
+    const part = this.getPart && this.getPart("sched-toolbar");
+    if (!part || !part.el) return;
+    if (part.isDestroyed && part.isDestroyed()) return;
+    part.feed(require("./skeleton/meeting-schedule").toolbarKids(this));
+  }
+
+  // Both toolbar dropdowns (view picker, mini-calendar) are mutually
+  // exclusive and share one dismisser.
+  _closeSchedMenus() {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    st.viewMenuOpen = false;
+    st.pickerOpen = false;
+    this._unbindSchedMenuDismiss();
+  }
+
+  _syncSchedMenuDismiss() {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    if (st.viewMenuOpen || st.pickerOpen) this._bindSchedMenuDismiss();
+    else this._unbindSchedMenuDismiss();
+  }
+
+  // Any click outside the toolbar row closes the open dropdown. The guard is
+  // the WHOLE row, not "the menu plus its trigger": every control in the bar
+  // closes the menus in its own handler anyway, and a narrower guard would
+  // repaint the row mid-click and swallow the press that was aimed at it.
+  //
+  // And the row has to be THIS WINDOW's. The class is shared by every open
+  // workspace, so a bare selector match would let a click on a second
+  // workspace's meeting toolbar count as "inside" here and leave this
+  // window's dropdown hanging open.
+  _bindSchedMenuDismiss() {
+    if (this._schedMenuDismiss) return;
+    const toolbar = `.${this.fig.family}__meeting-sched-toolbar`;
+    this._schedMenuDismiss = (ev) => {
+      const t = ev && ev.target;
+      // No `closest` means no element to reason about (a text node, a click
+      // synthesised on the document): leave the menu alone rather than guess.
+      if (!t || !t.closest) return;
+      if (this.isDestroyed && this.isDestroyed())
+        return this._unbindSchedMenuDismiss();
+      const bar = t.closest(toolbar);
+      if (bar && this.el && this.el.contains(bar)) return;
+      this._closeSchedMenus();
+      this._renderSchedToolbar();
+    };
+    document.addEventListener("click", this._schedMenuDismiss, true);
+  }
+
+  _unbindSchedMenuDismiss() {
+    if (!this._schedMenuDismiss) return;
+    document.removeEventListener("click", this._schedMenuDismiss, true);
+    this._schedMenuDismiss = null;
   }
 
   _meetingsCacheKey() {
@@ -5261,6 +5375,99 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  /**
+   * The meeting twin of openTaskDeepLink: show the Meeting tab and open that
+   * meeting's Information modal. Used by the Personal Calendar, whose chips
+   * name a meeting in a workspace the user may not even have open.
+   *
+   * NOT a launch-time option, and it must never become one. window_folder's
+   * onDomRefresh reads a launch-time `activeTab` of "meeting" as
+   * `_launchMeetingStandalone()` — i.e. START/JOIN THE CALL, not show the tab
+   * — so a meeting deep link is only safe on a window that is already mounted.
+   * That is the docked route (Wm.openNotificationLocation), which mounts the
+   * pane with no activeTab and calls this afterwards.
+   *
+   * @param {String} nid    the meeting node
+   * @param {Number} [stime] its start, epoch SECONDS — the calendar row
+   *   already carries it, so the grid can be anchored without a lookup
+   */
+  async openMeetingDeepLink(nid, stime) {
+    if (!nid) return;
+    const sched = require("./skeleton/meeting-schedule");
+    const at = Number(stime) ? Dayjs.unix(Number(stime)) : null;
+    // ANCHORED BEFORE THE TAB IS SHOWN, and that order is the whole point.
+    // `_meetingRange()` derives room.list's [stime, etime] from this anchor,
+    // which starts at TODAY — so a meeting three weeks out is simply not in
+    // the range the tab fetches on open, `_meetings` never holds it, and
+    // `_prefillMeeting(undefined)` returns null. openMeetingModal then falls
+    // back to CREATE mode: an empty "New meeting" form where the user asked to
+    // see an existing one, one submit away from booking a duplicate.
+    //
+    // Setting it here means the ONE fetch showFolderTab makes is already the
+    // right range, rather than today's followed by a corrective second read.
+    if (at && at.isValid()) {
+      sched.schedState(this).anchor = at;
+      // The picker is anchor-relative; leaving it open would reopen it on a
+      // month the user never navigated to.
+      sched.schedState(this).pickerOpen = false;
+    }
+    // A grid already on screen was painted for the OLD anchor, so the reopen
+    // branch of showFolderTab must redraw rather than trust the DOM.
+    this._schedStale = 1;
+    const wasOpen = this.activeTab === "meeting";
+    await Promise.resolve(this.showFolderTab("meeting"));
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // Wait on the range read. showFolderTab does not: it parks the fetch on
+    // `_schedRefresh` and returns. And when the Meeting tab was ALREADY the
+    // active one it early-returns without fetching at all, so the moved anchor
+    // has to be applied by hand here.
+    if (wasOpen) {
+      this._schedStale = 0;
+      await this._refreshSchedule();
+    } else {
+      await Promise.resolve(this._schedRefresh);
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+
+    let meeting = (this._meetings || []).find((m) => `${m.id}` === `${nid}`);
+    // Not in the anchored range: a timeless row (the calendar sends stime 0
+    // for an all-day meeting), or a stored stime the caller's copy disagrees
+    // with. One rangeless read settles it — see _fetchMeetingById.
+    if (!meeting) meeting = await this._fetchMeetingById(nid);
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // REFUSED, not opened blank. See the anchor note above: with no row the
+    // modal is a create form, and the user is looking at what they believe is
+    // their meeting. The tab is still switched, so they land on the calendar.
+    if (!meeting) return Wm.alert(LOCALE.MEETING_NOT_FOUND);
+    return this.openMeetingModal({ meeting });
+  }
+
+  /**
+   * One meeting by nid, ignoring the visible range.
+   *
+   * `room_list_scheduled` treats a MISSING bound as "no bound"
+   * (`_stime IS NULL OR _etime IS NULL` → every scheduled node), and
+   * `room.list` reads both with `input.use(..., null)` — so the bounds are
+   * OMITTED here rather than sent empty. fetchService writes a plain scalar
+   * straight into the query string, so an undefined one would arrive as the
+   * four-character string "undefined" and cast to 0, matching nothing.
+   *
+   * Resolves null rather than rejecting: a failed lookup is answered with
+   * MEETING_NOT_FOUND by the caller, which is the honest outcome either way.
+   *
+   * @param {String} nid
+   * @returns {Promise<Object|null>} a raw room.list row, or null
+   */
+  async _fetchMeetingById(nid) {
+    const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
+    const rows = await Promise.resolve()
+      .then(() => this.fetchService(svc, { ...this._meetingScope() }))
+      .catch(() => null);
+    return (
+      this._asMeetingRows(rows).find((m) => `${m.id}` === `${nid}`) || null
+    );
+  }
+
   // Keep folder-chat scope in sync with the navigated folder so the right-side
   // chat panel reflects the current folder's messages even on the Files tab.
   // Snapshot must run before super (which overwrites the model via
@@ -5465,14 +5672,20 @@ class __window_folder extends mfsInteract {
             // First open: paint the grid at once (from any rows the session
             // cache already holds for this range), then fetch the hub's
             // meetings and repaint with the cards if they changed.
-            this._refreshSchedule();
+            //
+            // Kept on the window rather than discarded so a caller that needs
+            // the ROWS — openMeetingDeepLink, which has to find one in
+            // `_meetings` before it can open its modal — can wait on this
+            // fetch instead of issuing a second one. Nothing else reads it,
+            // and showing the tab still does not wait on it.
+            this._schedRefresh = this._refreshSchedule();
             return;
           }
           // Reopened: the grid is still there, showing the rows it was last
           // fed. Revalidate quietly — repaint only on a change — unless the
           // view state moved while it was hidden (_applyScheduleBreakpoint
           // flags that), in which case it must be redrawn now.
-          this._refreshSchedule({ quiet: !this._schedStale });
+          this._schedRefresh = this._refreshSchedule({ quiet: !this._schedStale });
           this._schedStale = 0;
           return;
         case _a.task:

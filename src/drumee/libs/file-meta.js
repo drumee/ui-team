@@ -118,4 +118,63 @@ function fileMeta(node = {}, opt = {}) {
   return parts.join(" • ");
 }
 
-module.exports = { humanFileSize, fileGlyph, fileMeta };
+// The chip icon set's explicit exceptions. `media/template/map` only knows
+// office/code types and returns the RAW EXTENSION for anything else
+// ("png" -> "png"), which is not a sprite id, so the common media types drew a
+// missing icon; these are named here and everything else goes through that map.
+const CHIP_ICONS = {
+  txt: "app-txt-file",
+  png: "bg-image",
+  jpg: "bg-image",
+  jpeg: "bg-image",
+  mp4: "app-video-file",
+  mp3: "app-audio-file",
+  // Office types use the RAW sprite (raw-*), which keeps each icon's own
+  // colours rather than the normalized single-colour glyphs used above. Both
+  // sprites are loaded (src/sprite.js). Legacy extensions map to the same icon
+  // as their x-suffixed twin.
+  doc: "raw-documents_word",
+  docx: "raw-documents_word",
+  xls: "raw-documents_excel",
+  xlsx: "raw-documents_excel",
+  ppt: "raw-documents_powerpoint",
+  pptx: "raw-documents_powerpoint",
+};
+
+/**
+ * Icon per file type for an ATTACHMENT CHIP — the tasks panel's comment
+ * attachments and the chat composer's queued files, which are the same card in
+ * two places and must not drift into two icon sets.
+ *
+ * NOT `fileGlyph` above, and the two are not interchangeable: that one draws
+ * the flat `app-*` family for workspace lists, while a chip uses the RAW
+ * sprite for office types (`raw-documents_word`) so Word keeps its blue, Excel
+ * its green and PowerPoint its orange, matching the file icon shown everywhere
+ * else in the product.
+ *
+ * Accepts `extension` or `ext` because the two callers disagree: a comment
+ * attachment carries `extension` (task_comment_list), a media node carries
+ * `ext`. Taking both here is cheaper than normalising at each call site.
+ *
+ * @param {Object} node  `{iconChartId?, extension?, ext?}`
+ * @returns {String} sprite name
+ */
+function chipGlyph(node) {
+  // A cross-hub placeholder resolves its own icon from the source hub before
+  // the bytes arrive; honour it rather than re-deriving from an extension it
+  // may not have yet.
+  if (node && node.iconChartId) return node.iconChartId;
+  const ext = String(
+    (node && (node.extension || node.ext)) || ""
+  ).toLowerCase();
+  if (CHIP_ICONS[ext]) return CHIP_ICONS[ext];
+  let mapped;
+  try {
+    mapped = require("media/template/map")(ext, "app-file");
+  } catch (_) {
+    /* alias unavailable (tests) - fall through to the generic icon */
+  }
+  return mapped || "app-file";
+}
+
+module.exports = { humanFileSize, fileGlyph, fileMeta, chipGlyph };

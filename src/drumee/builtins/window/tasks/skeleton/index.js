@@ -1,4 +1,5 @@
 const { isTaskViewAllowed } = require("libs/billing");
+const { chipGlyph } = require("libs/file-meta");
 
 /**
  * The `data-entered` stamp that gates an overlay's entrance animation.
@@ -141,10 +142,14 @@ const make = function (ui) {
       ? `${formatDue(task.start_date)} → ${formatDue(task.due_date)}`
       : formatDue(task && task.due_date);
 
+  // "Now" is resolved ONCE per render rather than per card. It was two Dayjs
+  // objects per card (one for the date, one for today), and every card on the
+  // board judged itself against a slightly different instant.
+  const nowDay = Dayjs();
   const isOverdue = (d) => {
     if (!d) return false;
     try {
-      return Dayjs(d).isBefore(Dayjs(), "day");
+      return Dayjs(d).isBefore(nowDay, "day");
     } catch {
       return false;
     }
@@ -152,6 +157,15 @@ const make = function (ui) {
 
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
+
+  // Column by key. Built once per render: the card footer's status pill used to
+  // run `getColumns().find(...)` for every card, which is O(cards x columns) on
+  // a board whose column count is user-controlled. First-wins, exactly as the
+  // `.find` it replaces.
+  const colByKey = new Map();
+  for (const c of ui.getColumns()) {
+    if (!colByKey.has(c.key)) colByKey.set(c.key, c);
+  }
 
   // @-mention support for the description fields. The description is a
   // contenteditable editor (not a textarea) so tagged members render as styled
@@ -306,8 +320,7 @@ const make = function (ui) {
     // Status pill row (Figma 2040-106090: "● In Progress" + avatars at the
     // card bottom). Dot color comes from the live column set so custom
     // columns tint correctly.
-    const cardCol =
-      ui.getColumns().find((c) => c.key === (task.status || colKey)) || {};
+    const cardCol = colByKey.get(task.status || colKey) || {};
     const statusPill = Skeletons.Box.X({
       className: `${pfx}__task-status`,
       dataset: { theme: cardCol.theme || "default" },
@@ -1942,7 +1955,12 @@ const make = function (ui) {
       ],
     });
 
-  const filterDropdown = Skeletons.Box.Y({
+  // A THUNK, not a value. This popup is only in the tree while it is open, but
+  // as a plain const it was assembled on every single render regardless — and
+  // its member category builds a row (avatar + name) per workspace member, so
+  // a 100-member workspace paid ~600 discarded skeleton nodes on every repaint
+  // of a board whose filter was shut.
+  const filterDropdown = () => Skeletons.Box.Y({
     className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
     kids: [
       Skeletons.Box.X({
@@ -2165,7 +2183,7 @@ const make = function (ui) {
         : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       // Every view gets the same multi-dimension accordion.
-      filterOpen ? filterDropdown : null,
+      filterOpen ? filterDropdown() : null,
       Skeletons.Wrapper.Y({
         className: `${pfx}__detail-wrapper`,
         name: "task-detail",
@@ -2614,44 +2632,11 @@ function pendingStrip(ui, scope) {
   });
 }
 
-// Icon per file type for a comment's attachment card. media/template/map only
-// knows office/code types and returns the RAW EXTENSION for anything else
-// ("png" → "png"), which is not a sprite id — so the common media types drew a
-// missing icon. These four are named explicitly; everything else still goes
-// through the shared map, now with a real fallback id instead of a made-up one.
-const ATTACHMENT_ICONS = {
-  txt: "app-txt-file",
-  png: "bg-image",
-  jpg: "bg-image",
-  jpeg: "bg-image",
-  mp4: "app-video-file",
-  mp3: "app-audio-file",
-  // Office types use the RAW sprite (raw-*), which keeps each icon's own
-  // colours — Word blue, Excel green, PowerPoint orange — rather than the
-  // normalized single-colour glyphs used above. Both sprites are loaded
-  // (src/sprite.js), and the same names come out of media/template/map, so a
-  // comment's attachment matches the file icon shown everywhere else.
-  // Legacy extensions map to the same icon as their x-suffixed twin.
-  doc: "raw-documents_word",
-  docx: "raw-documents_word",
-  xls: "raw-documents_excel",
-  xlsx: "raw-documents_excel",
-  ppt: "raw-documents_powerpoint",
-  pptx: "raw-documents_powerpoint",
-};
-
-function attachmentIcon(f) {
-  if (f && f.iconChartId) return f.iconChartId;
-  const ext = String((f && f.extension) || "").toLowerCase();
-  if (ATTACHMENT_ICONS[ext]) return ATTACHMENT_ICONS[ext];
-  let mapped;
-  try {
-    mapped = require("media/template/map")(ext, "app-file");
-  } catch (_) {
-    /* alias unavailable (tests) — fall through to the generic icon */
-  }
-  return mapped || "app-file";
-}
+// Icon per file type for a comment's attachment card. Shared with the chat
+// composer's queued-file chips via libs/file-meta `chipGlyph` - the same card
+// in two places, so the map lives in one. Kept as a local alias because this
+// file calls it in several spots and `attachmentIcon(f)` reads better here.
+const attachmentIcon = chipGlyph;
 
 // Files already attached to a saved comment (task_comment_file, delivered by
 // task_comment_list). The ✕ detaches the file; the media node stays put.

@@ -1154,6 +1154,35 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
+   * Progress for an unzip, routed to the archive's own tile.
+   *
+   * Keyed on `nid` rather than on a transaction id because the tile is what
+   * draws the bar and `nid` is what identifies it — the same lookup
+   * downloadContent does with zipid. The worker puts nid on every message for
+   * exactly this.
+   */
+  unzipContent(args = {}) {
+    if (!args.nid) return;
+    this.getItemsByAttr(_a.nid, args.nid).filter((c) => {
+      if (!c || !_.isFunction(c.handleUnzip)) return false;
+      c.handleUnzip(args);
+    });
+    // SHOW the user where the files went (Lexis, 2026-09-10). Highlight and
+    // scroll to the new folder — deliberately NOT open it; she asked for the
+    // pointer, not the trip.
+    //
+    // _highlightNode is the same reveal a notification deep link uses, and it
+    // already solves the hard part: the cell is created by the `media.new`
+    // broadcast, which is a DIFFERENT Redis delivery from this completion
+    // message, so it may not have rendered yet. That helper polls by nid for
+    // ~3.6s and gives up quietly, which is the right failure — a missing
+    // highlight is a missed nicety, never a broken unzip.
+    if (args.phase === "completed" && args.folder_nid) {
+      this._highlightNode(args.folder_nid);
+    }
+  }
+
+  /**
    * Folders can contain hubs. This funtion show hubs symboles whenever there are some hubs
    * down the tree
    * @param {*} src
@@ -1279,6 +1308,10 @@ class __window_mfs extends DrumeeMFS {
 
       case SERVICE.hub.update_name:
         this.updateSettings(data);
+        break;
+
+      case "media.unzip":
+        this.unzipContent(data);
         break;
 
       case "media.status":
@@ -1636,14 +1669,66 @@ class __window_mfs extends DrumeeMFS {
   _highlightNode(nid, tries = 24) {
     if (!nid || `${nid}` === "0") return;
     const seek = (n) => {
-      const item = this._findMediaByNid(nid);
-      // Only a real grid cell can be revealed — never the container window
-      // (which shares the folder's nid). Cells expose _setNotifyHighlight.
-      if (item && item._setNotifyHighlight) return this._applyReveal([item], true);
-      if (n <= 0) return;
+      const item = this._findMediaCellByNid(nid);
+      if (item) return this._applyReveal([item], true);
+      if (n <= 0) {
+        // Give up loudly enough to be diagnosable. Silence here is what made
+        // the unzip reveal take four wrong theories to find: no highlight, no
+        // error, nothing in the console to say a reveal had even been asked
+        // for. Still only a warn — a missed highlight must never look like a
+        // failed operation to the user.
+        return this.warn(`[reveal] no cell for nid=${nid} after ${tries} tries`);
+      }
       setTimeout(() => seek(n - 1), 150);
     };
     seek(tries);
+  }
+
+  /**
+   * The ON-SCREEN cell for a nid.
+   *
+   * The pane renders BOTH view modes at once — `.window-manager__icons-list`
+   * and the grid — and hides the inactive one with `display:none`. So a single
+   * node has TWO media cells, identical in kind and both exposing
+   * _setNotifyHighlight; only one is laid out. Measured on a live desk after
+   * an unzip: `[0]` was the hidden one at 0x0 with a null offsetParent, `[1]`
+   * the visible one at 120x144.
+   *
+   * That is why revealing appeared to do nothing. Every attribute and class
+   * landed correctly — data-ui-highlight set, the flash animation resolved,
+   * the ::before fill computed to rgb(228,227,255) — on an element with no
+   * box. Picking `[0]`, or "the first that is a cell", both choose the hidden
+   * twin about half the time; being a cell was never the property that
+   * mattered. Being VISIBLE is.
+   *
+   * Returns null rather than falling back to a hidden twin, so _highlightNode
+   * keeps polling: right after an insert the visible cell may not have laid
+   * out yet, and settling for the invisible one would end the poll on a
+   * highlight nobody can see.
+   *
+   * _findMediaByNid is left alone: the deep-link path deliberately wants the
+   * WINDOW when the nid names one.
+   */
+  _findMediaCellByNid(nid) {
+    const key = `${nid}`;
+    const num = Number(key);
+    // Same string/number tolerance as _findMediaByNid — a grid cell's nid may
+    // be a number from the JSON listing while ours arrived as a string.
+    const forms = [nid, key];
+    if (key !== "" && !isNaN(num)) forms.push(num);
+    for (const form of forms) {
+      const hit = Wm.getItemsByAttr(_a.nid, form).find(
+        (c) =>
+          c &&
+          _.isFunction(c._setNotifyHighlight) &&
+          c.el &&
+          // offsetWidth/Height are 0 for anything under display:none, which is
+          // exactly how the inactive view mode is parked.
+          (c.el.offsetWidth > 0 || c.el.offsetHeight > 0),
+      );
+      if (hit) return hit;
+    }
+    return null;
   }
 
   /**

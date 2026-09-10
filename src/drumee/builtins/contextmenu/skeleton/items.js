@@ -296,6 +296,8 @@ const __button = function (ui, trigger, k) {
 
     unlock: button({ content: LOCALE.UNPROTECTED, service: _e.lock }),
 
+    unzip: button({ content: LOCALE.UNZIP, service: 'unzip' }),
+
     update: button({ content: LOCALE.UPDATE, service: _e.update }),
 
     upload: button({ content: LOCALE.UPLOAD, service: _e.upload }),

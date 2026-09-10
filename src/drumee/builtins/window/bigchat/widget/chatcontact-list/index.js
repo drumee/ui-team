@@ -1,4 +1,11 @@
 const { timestamp } = require("@drumee/ui-essentials")
+// Preview text for a row's last message — shared with the row's own skeleton so
+// a system card cannot read one way on load and another way after a WS push.
+const {
+  chatPreview,
+  findMeetingRow,
+  meetingStatusOf,
+} = require("libs/chat-preview");
 const EOD = "end:of:data";
 class ___widget_chatcontactList extends LetcBox {
 
@@ -214,12 +221,18 @@ class ___widget_chatcontactList extends LetcBox {
   /**
    * 
    */
-  onWsMessage(service, data, options) {
+  onWsMessage(service, data, options = {}) {
     let item = null;
     let list = this.__listContacts;
     let newContact;
     let msg;
-    switch (options.service) {
+    // `options.service` first: a push built with `payload(data, {service})`
+    // carries the name there and the push router stamps the envelope name
+    // ("live.update") at the top level, which is what arrives as the first
+    // argument. The fallback covers a sender that labels the frame itself.
+    // Same form as widget_chat / window_tasks / panel_calendar.
+    const svc = (options && options.service) || service;
+    switch (svc) {
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
         item = this.selectItem(data, 'entity_id');
@@ -243,23 +256,58 @@ class ___widget_chatcontactList extends LetcBox {
       case 'channel.roominfo':
         item = this.selectItem(data, 'entity_id', 'hub_id');
         if (!item) return;
-        msg = data.message;
-        if (_.isEmpty(msg) && !_.isEmpty(data.attachment)) {
-          msg = LOCALE.ATTACHMENT;
+        // THE BODY ON THIS SERVICE IS CUT TO 100 CHARS — the row comes from
+        // `_last_node` in channel_delete.sql, whose message column is
+        // VARCHAR(100) filled with LEFT(message, 100). So when the incoming
+        // body is a PREFIX of the one already on the row, the row keeps its
+        // own: the stored one is whole (a meeting card is ~146 chars), it is
+        // what the meeting-end flip matches on, and re-deriving the preview
+        // from the cut one would drop the card's author. The row also keeps a
+        // lifecycle status it already knows, because this payload carries no
+        // metadata at all and would otherwise re-open a finished meeting.
+        {
+          const stored = `${item.mget(_a.message) || ''}`;
+          const incoming = `${data.message || ''}`;
+          const isCut = !!incoming && stored.startsWith(incoming);
+          const body = isCut ? stored : incoming;
+          msg = chatPreview(body, {
+            metadata: data.metadata,
+            messageType: data.message_type,
+            meetingStatus: isCut ? item.mget('meeting_status') : null,
+            isAttachment: !_.isEmpty(data.attachment),
+          });
+          if (!isCut) {
+            item.mset(_a.message, data.message);
+            item.mset('meeting_status', meetingStatusOf(data));
+          }
+          // '_' stands in for a room with nothing to preview, as it always has.
+          item.__message.set(_a.content, msg || '_');
         }
-        if (_.isEmpty(msg)) {
-          msg = '_';
-        }
-        if (msg && typeof msg === 'string') {
-          // Lazy label (.+?) so a filename containing "]" still strips to @name.
-          msg = msg.replace(/\[@(.+?)\]\((?:user|mention)[^)]*\)/g, '@$1');
-        }
-
-        item.mset(_a.message, msg);
-        item.__message.set(_a.content, msg);
 
         item.mset('room_count', data.room_count);
         item.updateNotification();
+        break;
+
+      // A meeting that ends does NOT post a second message: channel.meeting_end
+      // flips the start card's metadata and re-broadcasts that same row, which
+      // is how the chat card turns into "Meeting ended". Without this the row
+      // beside it went on advertising "started a meeting" until something else
+      // was said. Literal service name — SERVICE.channel.meeting_end is
+      // undefined against an older server (same as widget_chat's handler).
+      case 'channel.meeting_end':
+        // NOT selectItem: this payload is a bare channel row, so the hub is in
+        // `key_id` (selectItem only knows entity_id/hub_id) and the right row
+        // is the one whose body IS this card — see libs/chat-preview.
+        item = findMeetingRow(list, data);
+        if (!item || !item.__message) return;
+        item.mset('meeting_status', 'ended');
+        item.__message.set(
+          _a.content,
+          chatPreview(data.message, {
+            metadata: data.metadata,
+            meetingStatus: 'ended',
+          })
+        );
         break;
 
       case SERVICE.contact.invite_accept:
@@ -310,17 +358,17 @@ class ___widget_chatcontactList extends LetcBox {
           room_count = room_count + 1;
         }
 
-        msg = data.message;
-        if (_.isEmpty(msg) && (data.is_attachment === 1)) {
-          msg = LOCALE.ATTACHMENT;
-        }
-        if (msg && typeof msg === 'string') {
-          // Lazy label (.+?) so a filename containing "]" still strips to @name.
-          msg = msg.replace(/\[@(.+?)\]\((?:user|mention)[^)]*\)/g, '@$1');
-        }
+        msg = chatPreview(data.message, {
+          metadata: data.metadata,
+          messageType: data.message_type,
+          isAttachment: data.is_attachment === 1,
+        });
 
         item.mset('room_count', room_count);
-        item.mset(_a.message, msg);
+        // RAW body on the model, derived text on the Note — see the roominfo
+        // case above.
+        item.mset(_a.message, data.message);
+        item.mset('meeting_status', meetingStatusOf(data));
         item.mset(_a.ctime, data.ctime);
 
         const msgTime = Dayjs.unix(data.ctime).locale(Visitor.language()).format("HH:mm");

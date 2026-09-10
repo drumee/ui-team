@@ -1149,6 +1149,39 @@ $theme-colors: (
       color: #fff;
       background: var(--col-primary-40, #5950ff);
     }
+
+    // The flyover tooltip is appended as a CHILD of this button, and the shared
+    // rule opens it UPWARD and centred (bottom:100%+6px, left:50%). Both are
+    // wrong here, and `__column` is `overflow: hidden` (it carries the rounded
+    // board tint), so the tooltip was clipped instead of merely misplaced:
+    //   - upward: this button sits in the pinned __column-header, ~10px below
+    //     the column's top edge, so a 22px label above it ended up almost
+    //     entirely outside the column — all that survived the clip was the few
+    //     px of its bottom edge, reading as a small black smudge at the top of
+    //     the board.
+    //   - centred: the button is flush against the column's right padding, so
+    //     half a nowrap label hung past the right edge and was clipped too.
+    // Flip it BELOW and right-anchor it (same fix as __subtask-add /
+    // __gantt-add-child), and let it wrap inside the 260px column — the label
+    // is longer than the column in several locales, and a nowrap line would be
+    // clipped on the left instead.
+    .tasks-panel__tip {
+      top: calc(100% + 6px);
+      bottom: auto;
+      left: auto;
+      right: 0;
+      transform: none;
+      // `width: max-content` before the cap, not max-width alone: a
+      // right-anchored absolute box shrink-to-fits against its containing
+      // block, and that block is this 28px button — so simply unsetting
+      // `nowrap` collapsed the label to one word per line. max-content sizes it
+      // to the text, and the cap then wraps only what is longer than the
+      // column (the French label is ~250px against 240px of column).
+      width: max-content;
+      max-width: 200px;
+      white-space: normal;
+      text-align: right;
+    }
   }
 
   // Persistent per-column part the "⋮" popover is fed into (see

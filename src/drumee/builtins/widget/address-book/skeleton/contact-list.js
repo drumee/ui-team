@@ -143,7 +143,9 @@ module.exports = function (ui, contacts) {
     const name = fullName(c);
     const sub = subtitle(c, name);
     const status = c.status || "active";
-    const isReceived = status === "received";
+    // Both pending incoming statuses, same rule the detail panel applies —
+    // see contact-detail.js for why "invitation" counts as an invite.
+    const isReceived = status === "received" || status === "invitation";
     const isSent = status === "sent";
     const isArchived = c.is_archived === 1 || status === "archived";
     const isBlocked = c.is_blocked === 1 || status === "blocked";

@@ -279,7 +279,12 @@ module.exports = function (ui) {
               value: draft.title || "",
               placeholder: LOCALE.TITLE,
               require: "text",
-              interactive: 1,
+              // Deliberately NOT interactive, and this Entry must never be
+              // given a `service`. An interactive Entry re-fires its own
+              // service on every printable keyup, which is how the task
+              // modal's title used to create a task per letter typed. Here
+              // there is no service to fire, so nothing books a room — the
+              // footer button is the only way in. Keep both halves true.
               preselect: 1,
               bubble: 0,
               uiHandler: [ui],

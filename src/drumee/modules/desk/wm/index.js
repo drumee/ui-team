@@ -616,6 +616,11 @@ class __window_manager extends push {
    *                   added to the caller's object is silently dropped there.
    *  - `open_task_id` → openTaskDeepLink, which exists precisely for "a window
    *                   that is ALREADY open" and switches to the Task tab itself.
+   *  - `open_meeting_nid` (+ `open_meeting_stime`) → openMeetingDeepLink, the
+   *                   meeting twin, added for the Personal Calendar. A meeting
+   *                   deep link is ONLY safe on this route: window_folder reads
+   *                   a launch-time activeTab of "meeting" as "start the call",
+   *                   and this route never puts activeTab in the model.
    *  - `highlight`  → _revealFromNotification (window/utils.js). It polls
    *                   Wm by nid for the rendered grid CELL, so it never cared
    *                   which layer the folder window lives in — it works on the
@@ -624,7 +629,16 @@ class __window_manager extends push {
    * @param {Object} args parsed hash args from the activity item
    */
   async openNotificationLocation(args = {}) {
-    const { hub_id, nid, pid, filetype, activeTab, open_task_id } = args;
+    const {
+      hub_id,
+      nid,
+      pid,
+      filetype,
+      activeTab,
+      open_task_id,
+      open_meeting_nid,
+      open_meeting_stime,
+    } = args;
     if (!hub_id) {
       this.warn("openNotificationLocation: missing hub_id", args);
       return;
@@ -664,6 +678,27 @@ class __window_manager extends push {
     if (!win) {
       this.warn("openNotificationLocation: workspace pane never mounted", args);
       return;
+    }
+
+    // GET THE SECTION SCREEN OUT OF THE WAY. Calendar / Settings / Get help /
+    // Plan / Apps / the Admin console all mount in `settings-main-slot`, which
+    // is `position:absolute; inset:0; z-index:1500` and covers the pane
+    // completely — so the tab really does switch and the detail modal really
+    // does open, invisibly, behind the screen the click came from.
+    //
+    // loadWorkspace above closes them (Desk.closeAllPanels), but only when it
+    // RUNS: the branch is skipped for a workspace that is already docked, which
+    // is the common case for a Personal Calendar chip naming the workspace the
+    // user was last in. So the close has to happen here, on every branch.
+    //
+    // _leaveSectionScreen, not closeMainPanels: it is the call the rail already
+    // makes for exactly this transition, and it also dismisses a covering
+    // invite popup, puts the breadcrumb back on the workspace (the bar
+    // otherwise keeps reading "Calendar"), and restores the topbar's action
+    // cluster, which the section screens hide. A no-op when no screen is up,
+    // which is every notification click today.
+    if (window.Desk && _.isFunction(window.Desk._leaveSectionScreen)) {
+      window.Desk._leaveSectionScreen(win);
     }
     if (win.raise) win.raise();
 
@@ -718,8 +753,14 @@ class __window_manager extends push {
 
     // Tab LAST, after the navigation: showFolderTab and the task panel both
     // read the folder the window is on NOW.
+    //
+    // Each deep link switches to its own tab, so neither needs `activeTab`
+    // alongside it — a caller that sends both gets the deep link, which is the
+    // more specific request.
     if (open_task_id && _.isFunction(win.openTaskDeepLink)) {
       win.openTaskDeepLink(open_task_id);
+    } else if (open_meeting_nid && _.isFunction(win.openMeetingDeepLink)) {
+      win.openMeetingDeepLink(open_meeting_nid, open_meeting_stime);
     } else if (activeTab && _.isFunction(win.showFolderTab)) {
       win.showFolderTab(activeTab);
     }
@@ -727,7 +768,15 @@ class __window_manager extends push {
     // (it is desk chrome, rebuilt with nothing) — the defect Lexis reported for
     // the workspace switcher, which _resetRailToFiles fixed there.
     if (window.Desk && _.isFunction(window.Desk._railHighlight)) {
-      window.Desk._railHighlight(open_task_id ? _a.task : activeTab || "files");
+      // Same precedence as the dispatch above: the deep link decides the tab,
+      // so it decides the lit row. ("meeting" is the folder window's name for
+      // the row the rail calls "meet" — _railHighlight maps it.)
+      const lit = open_task_id
+        ? _a.task
+        : open_meeting_nid
+          ? _a.meeting
+          : activeTab || "files";
+      window.Desk._railHighlight(lit);
     }
 
     if (highlight) this._revealFromNotification(nid, filetype, pid);
@@ -805,6 +854,28 @@ class __window_manager extends push {
   }
 
   /**
+   * THE TAB A WORKSPACE SWITCH MUST HAND OVER — Chat, Task or Meet, or null.
+   *
+   * The docked pane the user is standing on right now, read from the LIVE
+   * window (`pane.activeTab`) rather than from its model: showFolderTab is
+   * what a tab click goes through and it only ever writes the instance
+   * property, so the model's `activeTab` is the LAUNCH-TIME request and is
+   * unset on every pane the sidebar or the switcher opened.
+   *
+   * Files answers null, not "files": there is nothing to restore for it — a
+   * fresh pane already lands there — and null is also what tells the callers
+   * (loadWorkspace's feed, the desk's rail highlight) that this is a plain
+   * arrival. Anything else unrecognised answers null for the same reason.
+   *
+   * @returns {String|null} "chat" | "task" | "meeting", or null for Files
+   */
+  paneTabToCarry() {
+    const pane = this.headlessPane();
+    const tab = pane && pane.activeTab;
+    return [_a.chat, _a.task, "meeting"].includes(tab) ? tab : null;
+  }
+
+  /**
    * Find a headless workspace window already open for the given hub_id.
    * Searches headlessLayer only — headless windows never live in windowsLayer.
    * Returns null if none is open or all are mid-destroy.
@@ -864,6 +935,15 @@ class __window_manager extends push {
       if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;
     }
+    // KEEP THE TAB THE USER IS ON. Read HERE — before anything below replaces
+    // the pane — because it is the OUTGOING pane that knows it, and this is the
+    // last point at which that pane is still the current one. Handed to the new
+    // window as `restore_tab` in apply()'s feed below.
+    //
+    // Past the same-workspace early return on purpose: that branch mounts
+    // nothing, so the pane keeps its own tab and there is nothing to carry.
+    const carryTab = this.paneTabToCarry();
+
     // WAIT FOR THE ACCESS PANEL. Nothing below this line runs while
     // `.permission-restricted__main` for THIS workspace is up.
     //
@@ -926,6 +1006,13 @@ class __window_manager extends push {
         // Seed the name synchronously so the title and root crumb are correct
         // from first paint, without waiting on get_path.
         hub_name: data.hub_name || workspaceName,
+        // The tab the outgoing pane was on (paneTabToCarry). Named explicitly
+        // here for the same reason `hub_name` is: `data` is the media.attributes
+        // response that shadows this method's own argument, so anything the
+        // CALLER added to its object is silently dropped by the time we get
+        // here. Read once by window_folder's onDomRefresh, which routes it
+        // through showFolderTab — never through the meeting launcher.
+        restore_tab: carryTab,
         // Headless workspace lives in its own singleton pool, which is headlessLayer.
         // subfolders or players open from the workspace shall go to this pool.
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.

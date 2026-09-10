@@ -178,27 +178,16 @@ class Drumee extends Marionette.Application {
     Organization.listenChanges();
     if (user.id) {
       // Reconcile the recorded language with the signed-in profile.
-      // `drumate.set_lang` — written only by the account menu's switcher —
-      // is the source of truth WHEN IT CARRIES A VALUE: store() records it
-      // and brings the ui-core keys along.
       //
-      // An empty profile does not revoke a choice made in this browser. The
-      // switcher writes storage before POSTing, so revoking here would
-      // silently undo any switch whose server write failed. It is safe to
-      // keep, because the recorded choice lives in its own key
-      // (locale/supported CHOICE_KEY) that no earlier build ever wrote —
-      // navigator-derived residue cannot masquerade as a choice.
+      // Precedence, in order: the choice recorded in THIS BROWSER, then the
+      // account profile, then English. That order is load-bearing — see the
+      // block below. The recorded choice is safe to trust because it lives in
+      // its own key (locale/supported CHOICE_KEY) that no earlier build ever
+      // wrote, so navigator-derived residue cannot masquerade as a choice;
+      // and with nothing on record anywhere, forget() purges that residue and
+      // pins everything back to English.
       //
-      // With no choice on record and no profile value, forget() purges that
-      // residue and pins everything back to English, which is the guarantee
-      // the older clear-both-keys version was reaching for.
-      //
-      // The table itself was already picked by locale/index.js from that
-      // same key, before this response existed. When the profile disagrees
-      // (a switch made on another device, or storage the browser cleared)
-      // swap LOCALE here rather than reloading: the router is constructed a
-      // few lines below and nothing has rendered yet, so the whole UI still
-      // comes up in one language.
+      let resolved = null;
       try {
         const uiLang = require('locale/supported');
         let plang = user.lang;
@@ -209,12 +198,67 @@ class Drumee extends Marionette.Application {
         // Only a language we ship a complete table for counts as a choice —
         // a legacy es/km/ru/zh profile value must land on English, not on a
         // half-translated table that renders the key names back at the user.
-        const chosen = plang ? uiLang.normalize(plang) : null;
-        if (chosen) uiLang.store(chosen);
-        else if (!uiLang.stored()) uiLang.forget();
-        this.locale(uiLang.stored() || uiLang.DEFAULT_LANGUAGE);
+        const fromProfile = plang ? uiLang.normalize(plang) : null;
+        const fromBrowser = uiLang.stored();
+
+        if (fromBrowser) {
+          // THE CHOICE MADE IN THIS BROWSER WINS, and that is the whole fix.
+          //
+          // It used to be the other way round — the profile overwrote the
+          // local choice unconditionally — and the profile lies in two
+          // ordinary situations: `drumate.set_lang` can fail (offline, DMZ,
+          // no endpoint), and the page render reads the SESSION's copy of the
+          // profile, which can still hold the previous value immediately
+          // after a successful write. Either way it answers 'fr' right after
+          // a switch back to English, and letting it win did three visible
+          // things: reverted the switch, re-declared <html lang="fr">
+          // mid-boot — which is what put Chrome's "translate from French?"
+          // bar on an English page — and swapped the table AFTER boot had
+          // already installed English, so the session rendered part English
+          // and part French.
+          //
+          // Boot already installed exactly this language (locale/index.js
+          // reads the same key), so there is nothing to swap here.
+          uiLang.store(fromBrowser);
+          resolved = fromBrowser;
+        } else if (fromProfile) {
+          // Nothing chosen in this browser, so adopt the account's choice —
+          // only the switcher can have written it.
+          //
+          // Reload rather than swapping in place: <title>, the meta
+          // description and keywords are server-rendered from this same
+          // profile language (client/page.js -> DrumeeCache.lex), and a
+          // swap here cannot correct them, so the whole document has to come
+          // back in one language. Guarded on the write having actually
+          // persisted, or a browser refusing storage would reload forever.
+          uiLang.store(fromProfile);
+          // `window.UI_LANGUAGE &&` matters: without a locale bundle to
+          // install one it is undefined, which would differ from every
+          // language and reload forever.
+          if (
+            window.UI_LANGUAGE &&
+            fromProfile !== window.UI_LANGUAGE &&
+            uiLang.stored() === fromProfile
+          ) {
+            return location.reload();
+          }
+          this.locale(fromProfile);
+          resolved = fromProfile;
+        } else {
+          // No choice anywhere: English, and purge older builds' residue.
+          uiLang.forget();
+          this.locale(uiLang.DEFAULT_LANGUAGE);
+          resolved = uiLang.DEFAULT_LANGUAGE;
+        }
       } catch (e) { /* storage unavailable — nothing to reconcile */ }
       Visitor.respawn(user);
+      // AFTER respawn, never before: respawn() re-reads `profile` straight
+      // out of this response and rewrites UIlanguage from Visitor.language(),
+      // so anything aligned earlier is undone here.
+      // `|| window.UI_LANGUAGE`: if the block above threw (storage refused)
+      // we still know which table boot installed, and the model should agree
+      // with it either way.
+      this._alignVisitorLanguage(resolved || window.UI_LANGUAGE);
     }
     const gw = require('./router');
     this.router = new gw();
@@ -227,6 +271,60 @@ class Drumee extends Marionette.Application {
       if (!Backbone.History.started) Backbone.history.start();
     }
   }
+
+  /**
+   * Make `Visitor.language()` agree with the table that is actually installed.
+   *
+   * THIS IS THE OTHER HALF OF THE MIXED-LANGUAGE BUG. `Visitor.language()`
+   * (ui-core letc/user.js) reads `profile().lang` BEFORE it looks at
+   * localStorage, and `profile()` spreads `get('user')` over `get('profile')`
+   * — so it answers with the server's copy, which is stale for exactly as
+   * long as `drumate.set_lang` has not landed or the session still holds the
+   * previous profile.
+   *
+   * That value is not cosmetic: 29 call sites read it. Every
+   * `Dayjs...locale(Visitor.language())`, the OnlyOffice editor UI
+   * (`editorConfig.lang`, player/document), the conference labels and the
+   * helpdesk content all follow it. A stale 'fr' therefore renders French
+   * dates and opens a French document editor inside an English UI — which is
+   * the half-French session this exists to stop, and it survives every
+   * reload because it is re-read from the profile each time.
+   *
+   * Only the in-memory model is touched. The server copy is the switcher's
+   * job (`drumate.set_lang`); this just refuses to let a lagging copy of it
+   * drive the UI.
+   *
+   * @param {string} l the installed language
+   */
+  _alignVisitorLanguage(l) {
+    if (!l) return;
+    try {
+      // Parse defensively, the way ui-core's own profile() does: a malformed
+      // profile string must not throw past the pin() below, which is the part
+      // that keeps Visitor.language() off a stale value.
+      const raw = Visitor.get(_a.profile);
+      let profile = {};
+      if (_.isString(raw)) {
+        try { profile = JSON.parse(raw) || {}; } catch (e) { profile = {}; }
+      } else if (raw) {
+        profile = { ...raw };
+      }
+      if (profile.lang !== l) {
+        profile.lang = l;
+        Visitor.set(_a.profile, profile);
+      }
+      // profile() spreads get('user') LAST, so a `lang` in there outranks
+      // what we just wrote.
+      const u = Visitor.get(_a.user);
+      if (u && _.isObject(u) && u.lang && u.lang !== l) {
+        Visitor.set(_a.user, { ...u, lang: l });
+      }
+      // respawn() has just written Visitor.language() into UIlanguage; put
+      // the mirrors back on the installed language.
+      require('locale/supported').pin(l);
+    } catch (e) { /* model shape unexpected — leave it alone */ }
+  }
+
 
   /**
    * Read, or swap, the live string table.
