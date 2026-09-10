@@ -598,11 +598,34 @@
     overflow: hidden;
     cursor: default;
 
-    // A folder-owned chip is read-only from the Calendar (decision C-10) —
-    // the cursor is the only affordance saying so, until the quick-preview
-    // frames land.
-    &[data-writable="1"] {
-      cursor: pointer;
+    // WHAT A CHIP DOES WHEN IT IS CLICKED decides the cursor, and these are
+    // the two branches of _openItem, not one rule written twice:
+    //
+    //   workspace scope        hands over to the workspace that owns the
+    //                          record (_openInWorkspace) — docks it, opens its
+    //                          Task/Meeting tab, opens the record. Both kinds,
+    //                          and regardless of can_write: the ACL is applied
+    //                          there, in the surface that owns it.
+    //   personal + task
+    //   + writable             opens this screen's own editable modal.
+    //
+    // A PERSONAL MEETING is deliberately in neither list. It has no workspace
+    // to go to, and _openMeetingForm is create-only — there is no edit form for
+    // it anywhere — so it opens nothing and must not offer a pointer. It did
+    // before this rule was split, which was the affordance lying about a dead
+    // click.
+    //
+    // SCOPED AWAY FROM AN OCCURRENCE, not overridden after it. A generated
+    // occurrence shares its series' id, so it is not its own record and opens
+    // nothing in either direction — but a trailing
+    // `&[data-occurrence="1"] { cursor: default }` could not undo this: it is
+    // two attributes deep and the personal-task selector below is four, so the
+    // pointer would win on a recurring personal task.
+    &:not([data-occurrence="1"]) {
+      &[data-scope="workspace"],
+      &[data-scope="personal"][data-kind="task"][data-writable="1"] {
+        cursor: pointer;
+      }
     }
 
     // 43:31159 gives the two kinds deliberately different silhouettes:

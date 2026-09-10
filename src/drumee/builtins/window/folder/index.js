@@ -5261,6 +5261,99 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  /**
+   * The meeting twin of openTaskDeepLink: show the Meeting tab and open that
+   * meeting's Information modal. Used by the Personal Calendar, whose chips
+   * name a meeting in a workspace the user may not even have open.
+   *
+   * NOT a launch-time option, and it must never become one. window_folder's
+   * onDomRefresh reads a launch-time `activeTab` of "meeting" as
+   * `_launchMeetingStandalone()` — i.e. START/JOIN THE CALL, not show the tab
+   * — so a meeting deep link is only safe on a window that is already mounted.
+   * That is the docked route (Wm.openNotificationLocation), which mounts the
+   * pane with no activeTab and calls this afterwards.
+   *
+   * @param {String} nid    the meeting node
+   * @param {Number} [stime] its start, epoch SECONDS — the calendar row
+   *   already carries it, so the grid can be anchored without a lookup
+   */
+  async openMeetingDeepLink(nid, stime) {
+    if (!nid) return;
+    const sched = require("./skeleton/meeting-schedule");
+    const at = Number(stime) ? Dayjs.unix(Number(stime)) : null;
+    // ANCHORED BEFORE THE TAB IS SHOWN, and that order is the whole point.
+    // `_meetingRange()` derives room.list's [stime, etime] from this anchor,
+    // which starts at TODAY — so a meeting three weeks out is simply not in
+    // the range the tab fetches on open, `_meetings` never holds it, and
+    // `_prefillMeeting(undefined)` returns null. openMeetingModal then falls
+    // back to CREATE mode: an empty "New meeting" form where the user asked to
+    // see an existing one, one submit away from booking a duplicate.
+    //
+    // Setting it here means the ONE fetch showFolderTab makes is already the
+    // right range, rather than today's followed by a corrective second read.
+    if (at && at.isValid()) {
+      sched.schedState(this).anchor = at;
+      // The picker is anchor-relative; leaving it open would reopen it on a
+      // month the user never navigated to.
+      sched.schedState(this).pickerOpen = false;
+    }
+    // A grid already on screen was painted for the OLD anchor, so the reopen
+    // branch of showFolderTab must redraw rather than trust the DOM.
+    this._schedStale = 1;
+    const wasOpen = this.activeTab === "meeting";
+    await Promise.resolve(this.showFolderTab("meeting"));
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // Wait on the range read. showFolderTab does not: it parks the fetch on
+    // `_schedRefresh` and returns. And when the Meeting tab was ALREADY the
+    // active one it early-returns without fetching at all, so the moved anchor
+    // has to be applied by hand here.
+    if (wasOpen) {
+      this._schedStale = 0;
+      await this._refreshSchedule();
+    } else {
+      await Promise.resolve(this._schedRefresh);
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+
+    let meeting = (this._meetings || []).find((m) => `${m.id}` === `${nid}`);
+    // Not in the anchored range: a timeless row (the calendar sends stime 0
+    // for an all-day meeting), or a stored stime the caller's copy disagrees
+    // with. One rangeless read settles it — see _fetchMeetingById.
+    if (!meeting) meeting = await this._fetchMeetingById(nid);
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // REFUSED, not opened blank. See the anchor note above: with no row the
+    // modal is a create form, and the user is looking at what they believe is
+    // their meeting. The tab is still switched, so they land on the calendar.
+    if (!meeting) return Wm.alert(LOCALE.MEETING_NOT_FOUND);
+    return this.openMeetingModal({ meeting });
+  }
+
+  /**
+   * One meeting by nid, ignoring the visible range.
+   *
+   * `room_list_scheduled` treats a MISSING bound as "no bound"
+   * (`_stime IS NULL OR _etime IS NULL` → every scheduled node), and
+   * `room.list` reads both with `input.use(..., null)` — so the bounds are
+   * OMITTED here rather than sent empty. fetchService writes a plain scalar
+   * straight into the query string, so an undefined one would arrive as the
+   * four-character string "undefined" and cast to 0, matching nothing.
+   *
+   * Resolves null rather than rejecting: a failed lookup is answered with
+   * MEETING_NOT_FOUND by the caller, which is the honest outcome either way.
+   *
+   * @param {String} nid
+   * @returns {Promise<Object|null>} a raw room.list row, or null
+   */
+  async _fetchMeetingById(nid) {
+    const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
+    const rows = await Promise.resolve()
+      .then(() => this.fetchService(svc, { ...this._meetingScope() }))
+      .catch(() => null);
+    return (
+      this._asMeetingRows(rows).find((m) => `${m.id}` === `${nid}`) || null
+    );
+  }
+
   // Keep folder-chat scope in sync with the navigated folder so the right-side
   // chat panel reflects the current folder's messages even on the Files tab.
   // Snapshot must run before super (which overwrites the model via
@@ -5465,14 +5558,20 @@ class __window_folder extends mfsInteract {
             // First open: paint the grid at once (from any rows the session
             // cache already holds for this range), then fetch the hub's
             // meetings and repaint with the cards if they changed.
-            this._refreshSchedule();
+            //
+            // Kept on the window rather than discarded so a caller that needs
+            // the ROWS — openMeetingDeepLink, which has to find one in
+            // `_meetings` before it can open its modal — can wait on this
+            // fetch instead of issuing a second one. Nothing else reads it,
+            // and showing the tab still does not wait on it.
+            this._schedRefresh = this._refreshSchedule();
             return;
           }
           // Reopened: the grid is still there, showing the rows it was last
           // fed. Revalidate quietly — repaint only on a change — unless the
           // view state moved while it was hidden (_applyScheduleBreakpoint
           // flags that), in which case it must be redrawn now.
-          this._refreshSchedule({ quiet: !this._schedStale });
+          this._schedRefresh = this._refreshSchedule({ quiet: !this._schedStale });
           this._schedStale = 0;
           return;
         case _a.task:

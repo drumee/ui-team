@@ -1017,6 +1017,7 @@
   "MEETING_TITLE_REQUIRED": "Please give the meeting a title.",
   "MEETING_SAVE_FAILED": "Could not save this meeting. Please try again.",
   "MEETING_DELETE_FAILED": "Could not delete this meeting. Please try again.",
+  "MEETING_NOT_FOUND": "That meeting no longer exists.",
   "MEETING_NOT_OWNER": "Only the meeting's organizer can change or delete it.",
   "JOIN": "Join",
   "OPEN": "Open",

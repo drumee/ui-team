@@ -761,11 +761,16 @@ class __calendar_main extends LetcBox {
   /**
    * Clicking an item.
    *
-   * Personal + writable → the editable modal. Anything folder-owned is
-   * READ-ONLY from here (decision C-10): the requirement permits write-back but
-   * the prototype spec's preview is explicitly read-only, and meeting edits are
-   * creator-only server-side anyway. Until the quick-preview frames land, a
-   * folder-owned chip opens nothing rather than pretending to be editable.
+   * A PERSONAL task is this screen's own record and opens the editable modal
+   * right here — there is no workspace to go to.
+   *
+   * A WORKSPACE task or meeting is owned by its folder, and the Calendar is
+   * only a renderer of it (see the note at the top of this file). So the click
+   * hands the user over to the surface that DOES own it: switch to that
+   * workspace, open its Task / Meeting tab, open that record's own panel. Which
+   * also settles the read-only question the earlier C-10 note left open — the
+   * item is fully editable, under its own ACL, in its own window, instead of
+   * half-editable in a preview card here.
    */
   _openItem(cmd) {
     // An occurrence is not its own record; editing one instance of a series is
@@ -781,10 +786,70 @@ class __calendar_main extends LetcBox {
       this._openTaskForm(row);
       return;
     }
-    // TODO(C-05): folder-owned quick-preview — 400px read-only card with a
-    // single "Open in folder →" CTA. Blocked on frames from Lexis; the deep
-    // link needs an `open_task` option on window_folder, whose tasks panel
-    // already exposes an `open-detail` service and a _detailId to target.
+    return this._openInWorkspace(row);
+  }
+
+  /**
+   * Hand a workspace-owned row over to its own workspace: dock that workspace,
+   * open the tab that owns the record, open the record.
+   *
+   * ONE ENTRY POINT, deliberately — Wm.openNotificationLocation. It is the
+   * DOCKED opener (`#/desk/wm/reveal/`), and every step this needs already
+   * lives there: mount-or-reuse the pane, wait for its folder view, release the
+   * section screen this Calendar is, navigate, switch tab, open the detail,
+   * light the rail. Building a second opener here would duplicate all of it and
+   * drift from it.
+   *
+   * NOT Wm.launch / openFileLocation, and not because they are merely
+   * different: a launch-time `activeTab` of "meeting" makes window_folder
+   * START A CALL (its onDomRefresh), so a meeting chip would place a video
+   * call instead of showing the meeting. Only the docked route sets the tab
+   * after the pane is mounted.
+   *
+   * PERSONAL rows never come here. A personal item lives in the user's own hub
+   * (hub_id = Visitor.id), which is not a workspace you switch to — its
+   * children ARE the desk's home grid — so there is nowhere to send the user.
+   * A personal task is handled by the caller; a personal meeting keeps today's
+   * behaviour of opening nothing.
+   */
+  _openInWorkspace(row) {
+    if (!row || row.scope === "personal") return;
+    if (!row.hub_id) return;
+    if (!window.Wm || !_.isFunction(Wm.openNotificationLocation)) return;
+
+    const args = {
+      hub_id: row.hub_id,
+      // filetype is stated rather than left out. openNotificationLocation
+      // decides whether the target IS the folder to show or a file to show
+      // INSIDE its parent from this key, and a calendar.list row carries no
+      // filetype of its own — so an omitted one would ride on that method's
+      // fallback instead of on what we actually mean.
+      filetype: _a.folder,
+      pid: 0,
+    };
+
+    if (row.kind === "meeting") {
+      // The workspace ROOT (nid 0), never row.nid. For a meeting row nid IS
+      // the meeting node — a `schedule` node, not a container — and navigating
+      // to it would resolve a file where a folder is expected. Meetings are
+      // hub-scoped anyway (room.* takes hub_id; one room per workspace), so the
+      // root is the right and only place to land. Same reason the activity
+      // panel's meeting_notice sends `meeting_pid` rather than the node.
+      args.nid = 0;
+      args.open_meeting_nid = row.id;
+      // Saves the window a lookup: it anchors its schedule on this so the
+      // meeting is inside the range room.list is asked for. 0 for an all-day
+      // row, which openMeetingDeepLink falls back from.
+      args.open_meeting_stime = row.stime || 0;
+    } else {
+      // The folder the task was filed in, so the pane lands where the task
+      // lives and a task created from the board afterwards is filed there too.
+      // Falsy → 0, the server's "this hub's root" shortcut.
+      args.nid = row.nid || 0;
+      args.open_task_id = row.id;
+    }
+
+    return Wm.openNotificationLocation(args);
   }
 
 

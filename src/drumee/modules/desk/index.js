@@ -4950,6 +4950,19 @@ class desk_module extends LetcBox {
     const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
     const wasSection = !!(crumb && _.isFunction(crumb.isSectionMode) && crumb.isSectionMode());
     this.closeMainPanels();
+    // GIVE THE TOPBAR BACK. togglePanel hides the action cluster for the four
+    // screens that carry their own "+ New" (apps_main, settings_main,
+    // calendar_main, desk_org_view) — and the close above only stamps
+    // data-anim="out" on a keep-alive child, so nothing put it back.
+    //
+    // The one path that did was the `workspace:focus` broadcast, and
+    // Wm.onWorkspaceRaised suppresses that when the raise does not change
+    // context — which is exactly this case, where the pane behind the screen is
+    // already the one being shown. So leaving the Calendar or Settings for
+    // Files / Task / Meet left the topbar's New button gone until the user
+    // switched workspace. Every caller here is about to show workspace content,
+    // where the cluster applies.
+    this.ensurePart("action-cluster").then((p) => p && p.setState(1));
     // Closing the panel does not un-stamp the crumbs — they still read
     // "Get help". Only a fresh `breadcrumb:content` whose SOURCE is Wm rebuilds
     // the workspace path (desk_breadcrumb._updateContent ignores every other

@@ -49,11 +49,12 @@ function chip(ui, row, opt = {}) {
   const isOccurrence = !!row.is_occurrence;
 
   // Month view suppresses the provenance pill (no room for it at four chips to
-  // a cell — 43:31159) and a workspace-owned item opens nothing yet (the C-05
-  // quick-preview TODO in _openItem). Between those two a month-view user had
-  // NO way to learn which workspace a task came from — on the one screen whose
-  // whole purpose is aggregating several. A native title costs no layout and
-  // needs no frame, so the compact chip carries it.
+  // a cell — 43:31159), so a month-view user would have NO way to read which
+  // workspace a task came from — on the one screen whose whole purpose is
+  // aggregating several. A native title costs no layout and needs no frame, so
+  // the compact chip carries it. Still worth it now that clicking a workspace
+  // chip DOES go there (_openInWorkspace): the title is what tells the user
+  // where the click is about to take them, before they make it.
   const originText = [
     row.title,
     row.scope === "personal" ? LOCALE.PERSONAL : row.origin_name,
@@ -182,8 +183,9 @@ function chip(ui, row, opt = {}) {
       "data-scope": row.scope,
       "data-status": row.status || "todo",
       "data-priority": row.priority || "medium",
-      // Drives the read-only vs editable affordance in the skin (cursor,
-      // hover treatment) without a second class.
+      // Drives the edit-here vs hand-over-to-the-workspace affordance in the
+      // skin (cursor, hover treatment) without a second class — read together
+      // with data-scope above, see the &__chip cursor rules.
       "data-writable": row.can_write ? "1" : "0",
       "data-occurrence": isOccurrence ? "1" : "0",
     },

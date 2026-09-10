@@ -1301,6 +1301,7 @@
   "MEETING_TITLE_REQUIRED": "Ponle un título a la reunión.",
   "MEETING_SAVE_FAILED": "No se pudo guardar esta reunión. Inténtalo de nuevo.",
   "MEETING_DELETE_FAILED": "No se pudo eliminar esta reunión. Inténtalo de nuevo.",
+  "MEETING_NOT_FOUND": "Esa reunión ya no existe.",
   "MEETING_NOT_OWNER": "Solo el organizador de la reunión puede modificarla o eliminarla.",
   "JOIN": "Join",
   "OPEN": "Abrir",

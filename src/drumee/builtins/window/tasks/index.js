@@ -536,7 +536,11 @@ class __tasks_panel extends LetcBox {
     // this panel last loaded is simply absent — it only appeared after a full
     // page reload, and the deep link below then found nothing to open. Refresh
     // once before concluding the task is not in this folder.
-    if (!Array.isArray(this._tasks) || !this._tasks.some((t) => t.id === id)) {
+    const seek = () =>
+      Array.isArray(this._tasks)
+        ? this._tasks.find((t) => `${t.id}` === `${id}`)
+        : null;
+    if (!seek()) {
       await this._loadTasks();
       // The window can be closed while the refetch is in flight.
       if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
@@ -544,7 +548,15 @@ class __tasks_panel extends LetcBox {
     }
     // Same guard as onDomRefresh — only open a task that really belongs to this
     // folder's list, never an empty detail panel.
-    if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
+    //
+    // Matched loosely, then opened with the BOARD's own id. _openDetail (and
+    // _detailId after it) compare with `===`, so an id that arrived as a
+    // different primitive type — this deep link is called from the Personal
+    // Calendar with a calendar.list id as well as from a notification — would
+    // pass a loose test here and then find no task there, rendering the detail
+    // panel with a null draft.
+    const task = seek();
+    if (task) this._openDetail(task.id);
   }
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not

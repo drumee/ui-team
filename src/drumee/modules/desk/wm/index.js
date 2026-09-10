@@ -616,6 +616,11 @@ class __window_manager extends push {
    *                   added to the caller's object is silently dropped there.
    *  - `open_task_id` → openTaskDeepLink, which exists precisely for "a window
    *                   that is ALREADY open" and switches to the Task tab itself.
+   *  - `open_meeting_nid` (+ `open_meeting_stime`) → openMeetingDeepLink, the
+   *                   meeting twin, added for the Personal Calendar. A meeting
+   *                   deep link is ONLY safe on this route: window_folder reads
+   *                   a launch-time activeTab of "meeting" as "start the call",
+   *                   and this route never puts activeTab in the model.
    *  - `highlight`  → _revealFromNotification (window/utils.js). It polls
    *                   Wm by nid for the rendered grid CELL, so it never cared
    *                   which layer the folder window lives in — it works on the
@@ -624,7 +629,16 @@ class __window_manager extends push {
    * @param {Object} args parsed hash args from the activity item
    */
   async openNotificationLocation(args = {}) {
-    const { hub_id, nid, pid, filetype, activeTab, open_task_id } = args;
+    const {
+      hub_id,
+      nid,
+      pid,
+      filetype,
+      activeTab,
+      open_task_id,
+      open_meeting_nid,
+      open_meeting_stime,
+    } = args;
     if (!hub_id) {
       this.warn("openNotificationLocation: missing hub_id", args);
       return;
@@ -664,6 +678,27 @@ class __window_manager extends push {
     if (!win) {
       this.warn("openNotificationLocation: workspace pane never mounted", args);
       return;
+    }
+
+    // GET THE SECTION SCREEN OUT OF THE WAY. Calendar / Settings / Get help /
+    // Plan / Apps / the Admin console all mount in `settings-main-slot`, which
+    // is `position:absolute; inset:0; z-index:1500` and covers the pane
+    // completely — so the tab really does switch and the detail modal really
+    // does open, invisibly, behind the screen the click came from.
+    //
+    // loadWorkspace above closes them (Desk.closeAllPanels), but only when it
+    // RUNS: the branch is skipped for a workspace that is already docked, which
+    // is the common case for a Personal Calendar chip naming the workspace the
+    // user was last in. So the close has to happen here, on every branch.
+    //
+    // _leaveSectionScreen, not closeMainPanels: it is the call the rail already
+    // makes for exactly this transition, and it also dismisses a covering
+    // invite popup, puts the breadcrumb back on the workspace (the bar
+    // otherwise keeps reading "Calendar"), and restores the topbar's action
+    // cluster, which the section screens hide. A no-op when no screen is up,
+    // which is every notification click today.
+    if (window.Desk && _.isFunction(window.Desk._leaveSectionScreen)) {
+      window.Desk._leaveSectionScreen(win);
     }
     if (win.raise) win.raise();
 
@@ -718,8 +753,14 @@ class __window_manager extends push {
 
     // Tab LAST, after the navigation: showFolderTab and the task panel both
     // read the folder the window is on NOW.
+    //
+    // Each deep link switches to its own tab, so neither needs `activeTab`
+    // alongside it — a caller that sends both gets the deep link, which is the
+    // more specific request.
     if (open_task_id && _.isFunction(win.openTaskDeepLink)) {
       win.openTaskDeepLink(open_task_id);
+    } else if (open_meeting_nid && _.isFunction(win.openMeetingDeepLink)) {
+      win.openMeetingDeepLink(open_meeting_nid, open_meeting_stime);
     } else if (activeTab && _.isFunction(win.showFolderTab)) {
       win.showFolderTab(activeTab);
     }
@@ -727,7 +768,15 @@ class __window_manager extends push {
     // (it is desk chrome, rebuilt with nothing) — the defect Lexis reported for
     // the workspace switcher, which _resetRailToFiles fixed there.
     if (window.Desk && _.isFunction(window.Desk._railHighlight)) {
-      window.Desk._railHighlight(open_task_id ? _a.task : activeTab || "files");
+      // Same precedence as the dispatch above: the deep link decides the tab,
+      // so it decides the lit row. ("meeting" is the folder window's name for
+      // the row the rail calls "meet" — _railHighlight maps it.)
+      const lit = open_task_id
+        ? _a.task
+        : open_meeting_nid
+          ? _a.meeting
+          : activeTab || "files";
+      window.Desk._railHighlight(lit);
     }
 
     if (highlight) this._revealFromNotification(nid, filetype, pid);
