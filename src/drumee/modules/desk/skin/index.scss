@@ -318,7 +318,16 @@ html {
   // dialog is what has the user's attention; the call is a corner affordance
   // that has to stay visible and clickable, not one that outranks a question
   // the user is being asked.
-  &__body:has(.window-manager__wrapper-modal[data-state="open"]) &__call-dock {
+  // `[data-wm-modal="open"]` on the desk root mirrors
+  // `.window-manager__wrapper-modal[data-state]` — Wm keeps it in sync
+  // (_installWmModalMirror). It replaces `&__body:has(…wrapper-modal[data-
+  // state="open"])`, whose :has() subject was the whole body: every modal
+  // open/close made Chrome re-evaluate and restyle everything under it, and
+  // on production 2026-09-11 one flip of that attribute froze the tab.
+  // `&__body` stays in the chain so the rule matches exactly when it did
+  // before, and specificity holds at (0,4,0) — an attribute selector counts
+  // at class level, the same as the :has(M) it replaces.
+  &[data-wm-modal="open"] &__body &__call-dock {
     z-index: 50002;
   }
 
@@ -661,9 +670,14 @@ html {
 // bleeding over the settings page. Then lift ONLY the modal (not the grid) so
 // it still clears the slot in every state, including the slot's own
 // overlay-open lift (20001).
-.desk-module__wm-container:has(
-  .window-manager__wrapper-modal[data-state="open"]
-) {
+// Read from the desk root's `data-wm-modal` mirror (Wm._installWmModalMirror)
+// instead of `:has(…wrapper-modal[data-state="open"])` on `__wm-container`:
+// that subject holds the whole window manager, so every modal open/close
+// re-evaluated and restyled all of it. Specificity is unchanged for both
+// nested rules — (0,4,0) for `__ui`, (0,5,0) for the modal — because
+// `[data-wm-modal="open"]` on the root contributes the same (0,2,0) the
+// :has() argument did.
+.desk-module[data-wm-modal="open"] .desk-module__wm-container {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;
