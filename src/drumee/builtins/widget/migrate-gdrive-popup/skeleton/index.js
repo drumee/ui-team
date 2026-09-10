@@ -509,7 +509,23 @@ module.exports = function (ui) {
     // full-width primary Cancel.
     const total = snap.total_files || 0;
     const done = snap.processed_files || 0;
-    const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    // Byte-weighted when the worker reports sizes: the bar then moves while a
+    // big file is still downloading instead of jumping only when it lands.
+    // Held under 100 until every file is counted done.
+    const bytesTotal = snap.bytes_total || 0;
+    const bytesSeen = Math.min(bytesTotal, (snap.bytes_done || 0) + (snap.bytes_in_flight || 0));
+    let pct;
+    if (total > 0 && done >= total) {
+      pct = 100;
+    } else if (bytesTotal > 0) {
+      pct = Math.min(99, Math.round((bytesSeen / bytesTotal) * 100));
+    } else {
+      pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    }
+    const { filesize } = require('@drumee/ui-essentials');
+    const countLabel = (LOCALE.MIGRATION_PROGRESS_X_OF_Y || '{0} of {1} files')
+      .replace('{0}', done).replace('{1}', total || '?')
+      + (bytesTotal > 0 ? ` \u00b7 ${filesize(bytesSeen)} / ${filesize(bytesTotal)}` : '');
     const log = (ui.getFileLog ? ui.getFileLog() : []).slice(-8);
     const chip = (kind, label) => Skeletons.Note({
       className: `${pfx}__chip`, dataset: { kind }, content: label,
@@ -539,8 +555,7 @@ module.exports = function (ui) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__progress-count`,
-              content: (LOCALE.MIGRATION_PROGRESS_X_OF_Y || '{0} of {1} files')
-                .replace('{0}', done).replace('{1}', total || '?'),
+              content: countLabel,
             }),
             Skeletons.Note({ className: `${pfx}__progress-pct`, content: `${pct}%` }),
           ],

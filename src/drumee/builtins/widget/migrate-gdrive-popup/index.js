@@ -613,7 +613,8 @@ class __migrate_gdrive_popup extends LetcBox {
         });
         if (!r) return;
         const sig = [r.status, r.processed_files, r.total_files,
-          r.errors_count, r.current_filename].join('|');
+          r.errors_count, r.current_filename,
+          r.bytes_done, r.bytes_in_flight].join('|');
         const changed = sig !== this._lastPollSig;
         this._lastPollSig = sig;
         this._jobSnap = r;
