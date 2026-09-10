@@ -999,6 +999,11 @@ class __widget_chat extends LetcBox {
     // copying text, closing the reply box — stay available so the user can
     // still read what is on screen until the window returns to General.
     if (this.isScopeHardFrozen() && this._isBlockedWhileFrozen(service)) return;
+    // Same shape as the freeze guard above, and here for the same reason: the
+    // skin makes the composer inert to the pointer, and this is the backstop
+    // behind it for everything that does not arrive as a click — Enter in the
+    // editor being the one that matters.
+    if (this.isUploadInFlight() && this._isBlockedWhileUploading(service)) return;
     switch (service) {
       case "react":
         return this._sendReaction(args);
@@ -1236,6 +1241,17 @@ class __widget_chat extends LetcBox {
 
     // Copy the file to the chat staging folder first, so the original stays on the desk.
     // move_attachemnt (in chat.post) will then move only the staging copy to the sbox.
+    //
+    // The copy is a single server round trip with no byte stream, so it has no
+    // percentage — but it is the same wait as an upload from the user's side,
+    // and it used to happen in total silence: nothing appeared anywhere until
+    // the copy returned. It gets an indeterminate row in the same window a
+    // device upload reports to, so both ways of attaching a file look alike.
+    const UploadProgress = require("window/upload-progress");
+    const progressName = o.filename || o.user_filename || o.name || LOCALE.FILE || "file";
+    UploadProgress.beginIndeterminate(progressName);
+    this._markUploading(1);
+
     let stagedNid;
     try {
       const copyResult = await this.postService({
@@ -1256,9 +1272,13 @@ class __widget_chat extends LetcBox {
     }
 
     if (!stagedNid) {
+      UploadProgress.endIndeterminate(progressName, false);
+      this._markUploading(-1);
       Wm.alert(LOCALE.ACTION_NOT_PERMITTED);
       return;
     }
+    UploadProgress.endIndeterminate(progressName, true, { name: progressName });
+    this._markUploading(-1);
 
     const item = {
       ...o,
@@ -1392,56 +1412,173 @@ class __widget_chat extends LetcBox {
    * @param {*} p
    * @param {*} token
    */
-  sendTo(target, e, p, token) {
-    let f, pm;
-    const a = [];
-    const r = dataTransfer(e);
+  async sendTo(target, e, p, token) {
+    const Entry = require("media/bundle/entry");
+    const UploadProgress = require("window/upload-progress");
     const destination = this._getUploadDestination();
     if (!destination.nid) {
       this.warn("[chat] upload before staging folder is known, ignoring");
       return;
     }
 
-    for (f of Array.from(r.files)) {
-      pm = {
+    // Read the transfer SYNCHRONOUSLY, before any await: the FileSystemEntry
+    // items on a drop are only live during the event, and a change event's
+    // FileList can be emptied by iOS/Android once the handler returns. Same
+    // reason Wm._bundleDrop captures first and resolves after.
+    let roots = [];
+    if (e && e.type === _e.change) {
+      const fileList = e.target && e.target.files;
+      if (!fileList || !fileList.length) return;
+      try {
+        roots = Entry.entriesFromFileList(Array.from(fileList));
+      } catch (err) {
+        this.warn("[chat] picker read failed", err);
+        return;
+      }
+    } else {
+      let transfer;
+      try {
+        transfer = dataTransfer(e);
+      } catch (err) {
+        transfer = null;
+      }
+      if (!transfer || (!transfer.files.length && !transfer.folders.length)) return;
+      // A folder tree cannot be staged and promoted as a chat attachment in a
+      // folder-scoped chat: remove_attachment rejects folders and a cross-hub
+      // tree move re-creates every nid. Refuse before uploading, not after.
+      if (transfer.folders.length && this.getScopedNid()) {
+        Wm.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED || LOCALE.ACTION_NOT_PERMITTED);
+        return;
+      }
+      try {
+        roots = await Entry.entriesFromDataTransfer(transfer);
+      } catch (err) {
+        this.warn("[chat] drop read failed", err);
+        return;
+      }
+    }
+    if (!roots.length) return;
+
+    // Progress lives in the upload-progress floater, which is the window that
+    // already owns this job for every other surface — rather than a second,
+    // chat-only progress UI inside a 26px chip. The strip gets a chip per file
+    // as it lands, which is why this needs the finished node back: the bundle
+    // orchestrator otherwise reports completion only into a folder grid.
+    this._markUploading(1);
+    UploadProgress.runBundle(
+      roots,
+      destination.nid,
+      destination.hub_id,
+      null,
+      {
+        onFileDone: (node) => this._onStagedFile(node, destination),
+        // One release per batch, whatever the outcome — done, canceled or
+        // failed. runBundle itself can resolve null (no window), which would
+        // never reach onDone, so that case is released below.
+        onDone: () => this._markUploading(-1),
+      }
+    ).then((win) => {
+      if (!win) this._markUploading(-1);
+    }).catch(() => this._markUploading(-1));
+  }
+
+  /**
+   * Raise (+1) or release (-1) one unit of in-flight upload work.
+   *
+   * A COUNT rather than a flag: a user can start a second batch, or pick a
+   * workspace file, while a first batch is still running, and the composer must
+   * stay disabled until BOTH have released it. Clamped at zero so a double
+   * release — an onDone that fires after an error path already ran — cannot
+   * take the count negative and leave the composer permanently dead.
+   */
+  _markUploading(delta) {
+    this._uploadsInFlight = Math.max(0, (this._uploadsInFlight || 0) + delta);
+    this._syncUploadingState();
+  }
+
+  isUploadInFlight() {
+    return (this._uploadsInFlight || 0) > 0;
+  }
+
+  /**
+   * Stamp the composer so the skin can disable it.
+   *
+   * The attribute goes on __messenger-wrapper, which holds the input, the reply
+   * box AND the attachment strip — so everything that composes a message is
+   * inert together. That includes the strip's own remove buttons: a file cannot
+   * be pulled out from under an upload that is still writing it.
+   *
+   * pointer-events alone is not enough. It stops the mouse, not the keyboard:
+   * focus is usually already inside the editor when an upload starts, so Enter
+   * would still send. `_isBlockedWhileUploading` closes that half.
+   */
+  _syncUploadingState() {
+    if (!this.el) return;
+    const wrapper = this.el.querySelector(
+      `.${this.fig.family}__messenger-wrapper`,
+    );
+    if (wrapper && wrapper.dataset) {
+      wrapper.dataset.uploading = this.isUploadInFlight() ? "1" : "0";
+    }
+  }
+
+  // onUiEvent services refused while an upload is running. Deliberately NOT
+  // `_e.upload` or the attach services: queueing more files during an upload is
+  // fine and is what the strip is for. What must not happen is a SEND — the
+  // message would go without the attachment that is still arriving.
+  _isBlockedWhileUploading(service) {
+    if (!service) return false;
+    if (!this._uploadBlockedServices) {
+      this._uploadBlockedServices = {
+        [_e.send]: 1,
+        [_e.commit]: 1,
+        "remove-upload": 1,
+      };
+    }
+    return !!this._uploadBlockedServices[service];
+  }
+
+  /**
+   * One uploaded file has landed in the chat staging folder — show it.
+   *
+   * `from_device: 1` is what marks it for promotion at send time (channel.post
+   * moves staged device uploads into the folder the post writes to), so it has
+   * to survive onto the descriptor here exactly as the old upload path set it.
+   */
+  _onStagedFile(node, destination) {
+    if (!node || node.nid == null) return;
+    if ([_a.hub, _a.folder].includes(node.filetype)) return;
+    const list = this.attachmentList;
+    if (!list || list.isDestroyed()) return;
+    list.addNewMedia([
+      {
+        ...node,
+        nid: node.nid,
+        // Required, and not always on the upload response: actualNode() builds
+        // every media URL as `file/<format>/<nid>/<hub_id>`, so without it the
+        // card fetches `.../undefined` and a video or image — which render only
+        // from a resolved vignette — never paint. media-wrapper's
+        // getAttachment() also drops any entry lacking it, so the attachment
+        // would not survive a reload either.
+        hub_id: destination.hub_id || this.hubId,
         kind: "media_grid",
-        phase: _a.upload,
         isAttachment: 1,
         from_device: 1,
         origin: _a.chat,
+        // `phase` is an INSTRUCTION to syncData(), not a statement about the
+        // past: `_a.copied` makes the card fire SERVICE.media.copy — a second,
+        // duplicate copy of a file that is already staged — and it reads the
+        // source from `nodeId`, which nothing sets here, so the card hangs
+        // mid-sync and renders empty. `_a.local` is the value that means
+        // "already where it belongs, sync nothing"; the workspace path uses it
+        // for the same reason.
+        phase: _a.local,
         uiHandler: [this],
-        file: f,
-        destination,
-      };
-      a.push(pm);
-    }
-
-    if (!_.isEmpty(Array.from(r.folders))) {
-      // Folder trees cannot be staged/promoted as chat attachments in a
-      // folder-scoped chat (remove_attachment rejects folders, and a
-      // cross-hub tree move re-creates every nid).
-      if (this.getScopedNid()) {
-        Wm.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED || LOCALE.ACTION_NOT_PERMITTED);
-      } else {
-        for (f of Array.from(r.folders)) {
-          pm = {
-            kind: "media_grid",
-            phase: _a.upload,
-            isAttachment: 1,
-            from_device: 1,
-            origin: _a.chat,
-            uiHandler: [this],
-            folder: f,
-            destination,
-          };
-          a.push(pm);
-        }
-      }
-    }
-
-    if (!_.isEmpty(a)) {
-      this.insertMedia(a);
-    }
+        logicalParent: this,
+      },
+    ]);
+    this.checkPendingContent();
+    this.showSend();
   }
 
   /**

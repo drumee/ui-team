@@ -353,6 +353,25 @@
     background: var(--normal-bg);
     width: 100%;
     position: relative;
+
+    // Inert while an upload is running (chat's _syncUploadingState stamps this,
+    // released by a COUNT so two overlapping batches both have to finish).
+    // The whole composer goes at once — input, reply box and the attachment
+    // strip — because a queued file must not be pulled out from under an
+    // upload that is still writing it.
+    //
+    // This only stops the POINTER. Focus is usually already inside the editor
+    // when an upload starts, so Enter would still send; `_isBlockedWhileUploading`
+    // refuses the send service for that half.
+    &[data-uploading="1"] {
+      pointer-events: none;
+      // Dimmed enough to read as unavailable, not so far that the filenames in
+      // the strip stop being legible — they are the thing the user is watching.
+      opacity: 0.55;
+      // The caret would otherwise keep blinking in an editor that ignores it.
+      caret-color: transparent;
+      user-select: none;
+    }
   }
 
   &__messenger {
