@@ -3599,8 +3599,13 @@ class desk_module extends LetcBox {
     // carries `area` instead — so say it, rather than letting a personal
     // workspace resolve as a hub and open Home.
     const row = ws.area === _a.personal ? { ...ws, filetype: _a.folder } : ws;
+    // Same as _switchWorkspace: read the tab the switch will carry BEFORE the
+    // pane is replaced, so the lit row is the one that comes up.
+    const landsOn = _.isFunction(window.Wm.paneTabToCarry)
+      ? window.Wm.paneTabToCarry()
+      : null;
     window.Wm.loadWorkspace(this._workspaceTarget(row));
-    this._resetRailToFiles();
+    this._railHighlight(landsOn || "files");
     this._setWorkspaceLabel(ws.filename);
     return this._renderWorkspaceMenu(this._wsListPart, true);
   }
@@ -3840,13 +3845,18 @@ class desk_module extends LetcBox {
     // so the personal-workspace collision _workspaceKey exists for (they all
     // carry the user's own hub_id) is not reintroduced here.
     const wasOpen = this._workspaceKey(window.Wm._curWorkspace) === wsKey;
+    // WHICH TAB THE NEW PANE WILL OPEN ON, asked BEFORE the call: a switch
+    // hands the outgoing pane's tab to the incoming one (Wm.loadWorkspace →
+    // `restore_tab`), and the pane that knows it is the one this call is about
+    // to replace. Null means Files.
+    const landsOn = _.isFunction(window.Wm.paneTabToCarry)
+      ? window.Wm.paneTabToCarry()
+      : null;
     window.Wm.loadWorkspace(this._workspaceTarget(row));
     // ONLY on a real change of workspace. Re-picking the open one makes
     // loadWorkspace an early return that merely raises the pane, so the window
-    // keeps the tab it was on — resetting the rail there would invent the very
-    // mismatch this removes, in the opposite direction (a Files-lit rail over a
-    // Task board).
-    if (!wasOpen) this._resetRailToFiles();
+    // keeps the tab it was on — restamping the rail there is at best a no-op.
+    if (!wasOpen) this._railHighlight(landsOn || "files");
     this._setWorkspaceLabel(row.filename || row.name);
     return this._renderWorkspaceMenu(this._wsListPart);
   }
@@ -4263,14 +4273,18 @@ class desk_module extends LetcBox {
    * 1. THE LIT ROW MUST ALWAYS MATCH WHAT IS ON SCREEN. Every bug below was
    *    the rail naming a screen that was not up.
    *
-   * 2. Switching workspace lands on FILES, so the rail is reset to Files
-   *    (_resetRailToFiles, which lights `sidebar-files` on desktop and
-   *    `mrail-files` on the phone). A new window_folder starts with
-   *    `activeTab` unset, which every reader treats as files — the screen
-   *    was always right, only the rail lagged.
+   * 2. Switching workspace KEEPS THE TAB the user is standing on, so the
+   *    rail is lit on that tab (_railHighlight; _resetRailToFiles is its
+   *    Files-only twin, still used by the paths that really do land there).
+   *    A new window_folder starts with `activeTab` unset, which every reader
+   *    treats as Files, so the tab is handed over explicitly:
+   *    Wm.paneTabToCarry() reads the outgoing pane and loadWorkspace passes
+   *    it to the new one as `restore_tab`. Both callers ask Wm the same
+   *    question BEFORE the switch — the pane that knows the answer is the
+   *    one about to be replaced — so the lit row and the screen still cannot
+   *    disagree, which is rule 1 and the whole point.
    *    ONLY ON A REAL CHANGE of workspace: re-picking the one already open
-   *    is a loadWorkspace early-return that keeps its tab, and resetting
-   *    there would invent the same mismatch backwards.
+   *    is a loadWorkspace early-return that keeps its tab anyway.
    *
    * 3. A rail click acts on the workspace that is OPEN, not on whatever
    *    window happens to be RAISED — see _railWorkspace. Reverting that to
@@ -4615,7 +4629,7 @@ class desk_module extends LetcBox {
    * NOT WHEN THE ROW IS THE OPEN WORKSPACE. Re-picking it makes loadWorkspace
    * an early return that merely raises the pane — the tour's own window, still
    * the one it is about — so there is nothing to leave. Same test, by the same
-   * key, that _switchWorkspace uses to decide whether the rail resets.
+   * key, that _switchWorkspace uses to decide whether it re-lights the rail.
    *
    * A real switch counts as a navigation (_navigated), which is what the two
    * places that have already committed to a workspace and finish
@@ -4757,7 +4771,7 @@ class desk_module extends LetcBox {
    * return that merely raises the pane — nothing is left and nothing arrives —
    * so neither the tour that is up nor the tour that would be offered has any
    * business reacting to it. By the same key the rows are marked `data-current`
-   * with, which is also the key _switchWorkspace resets the rail on.
+   * with, which is also the key _switchWorkspace re-lights the rail on.
    *
    * @param {String} wsKey the row pressed
    * @returns {Boolean}
@@ -4771,12 +4785,16 @@ class desk_module extends LetcBox {
   /**
    * SWITCHER ROW -> OPEN THAT WORKSPACE, AND OFFER THE TOUR IT LANDS ON.
    *
-   * A switch always arrives on Files (_switchWorkspace -> _resetRailToFiles),
-   * and Files is what the migrate tour is about — so this is the same moment
-   * the rail's Files button offers it (_railTabWithTour) and the same moment a
-   * refresh does (_maybeRunBootTour), reached by a third gesture. A user who
-   * has not been shown how to get files into a workspace has not been shown it
-   * in the workspace they just opened either.
+   * A switch that arrives on FILES is the same moment the rail's Files button
+   * offers this tour (_railTabWithTour) and the same moment a refresh does
+   * (_maybeRunBootTour), reached by a third gesture. A user who has not been
+   * shown how to get files into a workspace has not been shown it in the
+   * workspace they just opened either.
+   *
+   * "That arrives on Files" is now a real condition rather than a given: a
+   * switch keeps the tab the user was standing on (rail contract rule 2), so
+   * the offer below stands down when it lands on Chat, Task or Meet — see the
+   * `offerable` guard.
    *
    * ONLY FROM THE SWITCHER. _switchWorkspace itself is left alone because
    * _openCreatedWorkspace goes through it: the workspace tour creates a
@@ -4799,7 +4817,19 @@ class desk_module extends LetcBox {
     this._endWindowTourOnSwitch(wsKey);
     // Asked before the switch, and cheap: `offerable` takes no lock, so a user
     // who finished this tour long ago pays nothing for the question.
-    const offerable = Tours.offerable("migrate", this);
+    //
+    // NOT WHEN THE SWITCH DOES NOT LAND ON FILES. A switch now keeps the tab
+    // the user was standing on (Wm.loadWorkspace → `restore_tab`), and this
+    // tour's five screens are all about the file pane — raised over a task
+    // board or a thread it would be explaining a screen that is not up, the
+    // one thing the rail contract above forbids. The offer keeps its place for
+    // the arrival it was written for, which is the Files one.
+    const landsOnFiles = !(
+      window.Wm &&
+      _.isFunction(window.Wm.paneTabToCarry) &&
+      window.Wm.paneTabToCarry()
+    );
+    const offerable = Tours.offerable("migrate", this) && landsOnFiles;
     await this._switchWorkspace(wsKey);
     if (this.isDestroyed && this.isDestroyed()) return;
     if (!offerable) return;

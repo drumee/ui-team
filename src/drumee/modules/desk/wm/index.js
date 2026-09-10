@@ -854,6 +854,28 @@ class __window_manager extends push {
   }
 
   /**
+   * THE TAB A WORKSPACE SWITCH MUST HAND OVER — Chat, Task or Meet, or null.
+   *
+   * The docked pane the user is standing on right now, read from the LIVE
+   * window (`pane.activeTab`) rather than from its model: showFolderTab is
+   * what a tab click goes through and it only ever writes the instance
+   * property, so the model's `activeTab` is the LAUNCH-TIME request and is
+   * unset on every pane the sidebar or the switcher opened.
+   *
+   * Files answers null, not "files": there is nothing to restore for it — a
+   * fresh pane already lands there — and null is also what tells the callers
+   * (loadWorkspace's feed, the desk's rail highlight) that this is a plain
+   * arrival. Anything else unrecognised answers null for the same reason.
+   *
+   * @returns {String|null} "chat" | "task" | "meeting", or null for Files
+   */
+  paneTabToCarry() {
+    const pane = this.headlessPane();
+    const tab = pane && pane.activeTab;
+    return [_a.chat, _a.task, "meeting"].includes(tab) ? tab : null;
+  }
+
+  /**
    * Find a headless workspace window already open for the given hub_id.
    * Searches headlessLayer only — headless windows never live in windowsLayer.
    * Returns null if none is open or all are mid-destroy.
@@ -913,6 +935,15 @@ class __window_manager extends push {
       if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;
     }
+    // KEEP THE TAB THE USER IS ON. Read HERE — before anything below replaces
+    // the pane — because it is the OUTGOING pane that knows it, and this is the
+    // last point at which that pane is still the current one. Handed to the new
+    // window as `restore_tab` in apply()'s feed below.
+    //
+    // Past the same-workspace early return on purpose: that branch mounts
+    // nothing, so the pane keeps its own tab and there is nothing to carry.
+    const carryTab = this.paneTabToCarry();
+
     // WAIT FOR THE ACCESS PANEL. Nothing below this line runs while
     // `.permission-restricted__main` for THIS workspace is up.
     //
@@ -975,6 +1006,13 @@ class __window_manager extends push {
         // Seed the name synchronously so the title and root crumb are correct
         // from first paint, without waiting on get_path.
         hub_name: data.hub_name || workspaceName,
+        // The tab the outgoing pane was on (paneTabToCarry). Named explicitly
+        // here for the same reason `hub_name` is: `data` is the media.attributes
+        // response that shadows this method's own argument, so anything the
+        // CALLER added to its object is silently dropped by the time we get
+        // here. Read once by window_folder's onDomRefresh, which routes it
+        // through showFolderTab — never through the meeting launcher.
+        restore_tab: carryTab,
         // Headless workspace lives in its own singleton pool, which is headlessLayer.
         // subfolders or players open from the workspace shall go to this pool.
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.

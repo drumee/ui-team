@@ -837,10 +837,33 @@ class __window_folder extends mfsInteract {
       }
     }
     const initialTab = this.mget("activeTab");
+    // THE TAB THE USER WAS STANDING ON IN THE WORKSPACE THEY JUST LEFT.
+    //
+    // Switching workspace mounts a BRAND NEW pane (Wm.loadWorkspace re-feeds
+    // headlessLayer), so a fresh window used to start with no tab at all —
+    // which showFolderTab, the `data-view` stamp and syncNewCtrlVisibility all
+    // read as Files. Someone working in the tracker or in a thread was dropped
+    // back on the file grid on every switch. `restore_tab` is Wm handing the
+    // outgoing pane's tab over (see wm/index.js paneTabToCarry).
+    //
+    // A SEPARATE KEY FROM `activeTab`, and it must stay separate: a launch-time
+    // `activeTab` of "meeting" means START/JOIN THE CALL (the branch below),
+    // while carrying a Meet tab across a switch may only ever show the new
+    // workspace's CALENDAR. Everything here goes through showFolderTab, which
+    // cannot start a call.
+    //
+    // An explicit request wins — a deep link, a notification landing or a
+    // meeting join asked for a specific tab, the carry-over is only the
+    // fallback for a plain switch. Consumed either way, so nothing re-applies
+    // it later.
+    const carriedTab = this.mget("restore_tab");
+    if (carriedTab) this.mset("restore_tab", null);
     if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
       this._launchMeetingStandalone();
     } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
+    } else if (!initialTab && carriedTab && carriedTab !== "files") {
+      this.ensurePart("folder-view").then(() => this.showFolderTab(carriedTab));
     }
     // Launched by "Link to task tracker" from outside a folder window. Consumed
     // once, so a later remount doesn't reopen the draft out of the blue.
