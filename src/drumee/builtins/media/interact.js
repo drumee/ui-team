@@ -267,8 +267,40 @@ class __media_interact extends media_core {
     this.feed(this.container);
     this.el.dataset.selected = this.mget(_a.state);
     this.el.setAttribute(_a.id, `media-${this._id}`);
-    this.parent.off(_e.scroll, this.initBounds.bind(this));
-    this.parent.on(_e.scroll, this.initBounds.bind(this));
+    // THE SINGLE MOST EXPENSIVE SUBSCRIPTION IN THE APP — see the production
+    // trace of 2026-09-10, where `offset < initBounds` accounted for 38.2s of
+    // forced style+layout across 376 calls (101ms each).
+    //
+    // Two bugs compounded here. First, `off(ev, this.initBounds.bind(this))`
+    // built a NEW bound function, and Backbone matches listeners by identity,
+    // so it removed nothing — every re-render of a tile added another
+    // subscription on top of the last. Second, nothing ever unsubscribed on
+    // destroy (there was no destroy hook at all), so every tile ever created
+    // kept listening to its parent's scroll for the life of the page. The
+    // parent list outlives its tiles by design, so the subscriptions only ever
+    // accumulated.
+    //
+    // Each of those callbacks runs initBounds, which does `$el.offset()`,
+    // `$el.width()` and `$el.height()` — three synchronous style+layout
+    // flushes. Multiplied by every tile that has ever existed, on every scroll
+    // event, over a DOM that reached 428,000 nodes.
+    //
+    // Stored on the instance so both sides use the SAME reference. Note the
+    // grid/row subclasses already pre-bind `initBounds` in their constructors,
+    // which is exactly why the `.bind(this)` here was redundant as well as
+    // broken.
+    if (!this._onParentScroll) {
+      this._onParentScroll = () => this.initBounds();
+    }
+    // Remembered so the destroy hook detaches from the SAME object it attached
+    // to — a re-parented tile would otherwise leave the subscription behind on
+    // its old parent, which is the leak this fix exists to close.
+    if (this._scrollParent && this._scrollParent !== this.parent) {
+      this._scrollParent.off(_e.scroll, this._onParentScroll);
+    }
+    this._scrollParent = this.parent;
+    this.parent.off(_e.scroll, this._onParentScroll);
+    this.parent.on(_e.scroll, this._onParentScroll);
 
     if (this.mget(_a.file)) {
       return;
@@ -279,6 +311,33 @@ class __media_interact extends media_core {
     });
     this.initURL();
     this.syncData();
+  }
+
+  /**
+   * Release the parent's scroll subscription.
+   *
+   * There was no destroy hook on this class at all, which is the other half of
+   * the leak documented in onDomRefresh: the parent list outlives its tiles, so
+   * a tile that was destroyed (scrolled out, folder changed, grid re-fed) kept
+   * running initBounds — three forced style+layout flushes — on every scroll
+   * event, forever, against a detached element.
+   *
+   * `super.onBeforeDestroy()` is not optional: media_core's own hook releases
+   * the RADIO_MEDIA icon-type and notification subscriptions, and dropping it
+   * would trade one leak for another.
+   */
+  onBeforeDestroy() {
+    if (this._onParentScroll) {
+      const p = this._scrollParent || this.parent;
+      try {
+        if (p && _.isFunction(p.off)) p.off(_e.scroll, this._onParentScroll);
+      } catch (e) {
+        /* parent already torn down — nothing to detach from */
+      }
+      this._onParentScroll = null;
+      this._scrollParent = null;
+    }
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**

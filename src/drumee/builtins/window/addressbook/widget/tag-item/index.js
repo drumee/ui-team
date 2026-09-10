@@ -46,14 +46,22 @@ class __addressbook_widget_tag_item extends LetcBox {
   // ===========================================================
   onDestroy(e, origin) {
     RADIO_CLICK.off(_e.click, this._onOutsideClick.bind(this));
-    RADIO_BROADCAST.off('notification:counts', this.updateNotificationCount.bind(this));
+    // Guarded — off(name, undefined) removes EVERY listener for the event.
+    if (this._onNotificationCounts) {
+      RADIO_BROADCAST.off('notification:counts', this._onNotificationCounts);
+      this._onNotificationCounts = null;
+    }
   }
 
   /**
     * 
     */
   bindNotificationCenterEvent() {
-    RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
+    // Bound once and kept: Backbone matches listeners by identity, so the
+    // paired off() below built a SECOND bound function and removed nothing.
+    this._onNotificationCounts =
+      this._onNotificationCounts || this.updateNotificationCount.bind(this);
+    RADIO_BROADCAST.on('notification:counts', this._onNotificationCounts);
   }
 
 

@@ -36,7 +36,11 @@ class __bigchat_widget_notification extends LetcBox {
    * @param {Letc} cmd 
   */
   onDestroy(cmd) {
-    RADIO_BROADCAST.off('notification:counts', this.updateCount.bind(this));
+    // Guarded — off(name, undefined) removes EVERY listener for the event.
+    if (this._onNotificationCounts) {
+      RADIO_BROADCAST.off('notification:counts', this._onNotificationCounts);
+      this._onNotificationCounts = null;
+    }
   }
 
   /**
@@ -58,7 +62,11 @@ class __bigchat_widget_notification extends LetcBox {
    * 
    */
   bindActivityHandlerEvent() {
-    RADIO_BROADCAST.on('notification:counts', this.updateCount.bind(this));
+    // Bound once and kept: Backbone matches listeners by identity, so the
+    // paired off() below built a SECOND bound function and removed nothing.
+    this._onNotificationCounts =
+      this._onNotificationCounts || this.updateCount.bind(this);
+    RADIO_BROADCAST.on('notification:counts', this._onNotificationCounts);
   }
 
   /**
