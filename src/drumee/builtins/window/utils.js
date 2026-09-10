@@ -1167,6 +1167,19 @@ class __window_mfs extends DrumeeMFS {
       if (!c || !_.isFunction(c.handleUnzip)) return false;
       c.handleUnzip(args);
     });
+    // SHOW the user where the files went (Lexis, 2026-09-10). Highlight and
+    // scroll to the new folder — deliberately NOT open it; she asked for the
+    // pointer, not the trip.
+    //
+    // _highlightNode is the same reveal a notification deep link uses, and it
+    // already solves the hard part: the cell is created by the `media.new`
+    // broadcast, which is a DIFFERENT Redis delivery from this completion
+    // message, so it may not have rendered yet. That helper polls by nid for
+    // ~3.6s and gives up quietly, which is the right failure — a missing
+    // highlight is a missed nicety, never a broken unzip.
+    if (args.phase === "completed" && args.folder_nid) {
+      this._highlightNode(args.folder_nid);
+    }
   }
 
   /**
