@@ -424,7 +424,10 @@
 
   // Avatar sits next to the sender name (top of the column), not pushed down to
   // the bubble. `__profile` is already align-self:flex-start, so no top offset.
-  .widget-chatItem__message-container:has(.widget-chatItem__username-container) {
+  // `.has-username` is stamped by index.js from the rendered html; it replaced
+  // a `:has(.widget-chatItem__username-container)` whose subject was every
+  // chat message in the room.
+  .widget-chatItem__message-container.has-username {
     .widget-chatItem__profile {
       margin-top: 0;
     }
@@ -618,11 +621,27 @@
 }
 
 // Meeting / file-thread system messages: centered row, larger text, no timestamp
-// Dual approach: class-based (.meeting-event / .file-thread-event) + CSS :has() fallback
+//
+// CLASS-BASED ONLY. There used to be a `:has(…-card)` fallback beside each
+// class, and it was the single most expensive thing in the stylesheet: the
+// subject is `.widget-chatItem__ui`, i.e. EVERY chat message, so Chrome
+// descendant-walked every message in the room for each of these rules on every
+// style recalculation. Compiled, the two fallbacks here and the two below
+// expanded to 16 selectors.
+//
+// Measured on production 2026-09-11 by deleting every `:has()` rule live: a
+// forced full-document recalc went 65.5ms -> 14.3ms. The 71 `:has()` rules were
+// 78% of style cost, and this widget owned the largest share of them.
+//
+// Safe to drop because the classes are not a partial substitute — they are
+// applied on exactly the same conditions the cards render on (index.js
+// onDomRefresh): `_isFileThreadCard()` is `message_type === "file.thread"`,
+// identical to the template's test, and `_isMeeting()` accepts
+// meeting.start/meeting.end plus `/^\[\[MEETING:(start|end):/`, which is
+// BROADER than the template's sentinel (that one also requires the closing
+// `]]`). So every message that renders a card carries the class.
 .widget-chatItem__ui.meeting-event,
-.widget-chatItem__ui.file-thread-event,
-.widget-chatItem__ui:has(.widget-chatItem__meeting-card),
-.widget-chatItem__ui:has(.widget-chatItem__file-thread-card) {
+.widget-chatItem__ui.file-thread-event {
   align-items: center !important;
   margin-top: 16px;
 
@@ -672,12 +691,11 @@
 // / width:50% (full Chat tab) resolves against the real chat column and every
 // file-thread card renders the same shape. Scoped to file-thread only; meeting
 // notices intentionally stay content-width.
+// Class-based only, for the reason given on the meeting/file-thread block
+// above: a `:has()` whose subject is every chat message is the most expensive
+// selector shape in this stylesheet.
 .widget-chatItem__ui.file-thread-event .widget-chatItem__message-line,
-.widget-chatItem__ui:has(.widget-chatItem__file-thread-card)
-  .widget-chatItem__message-line,
-.widget-chatItem__ui.meeting-event .widget-chatItem__message-line,
-.widget-chatItem__ui:has(.widget-chatItem__meeting-card)
-  .widget-chatItem__message-line {
+.widget-chatItem__ui.meeting-event .widget-chatItem__message-line {
   width: 100%;
   display: flex;
   justify-content: center;

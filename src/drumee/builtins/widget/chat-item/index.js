@@ -259,10 +259,27 @@ class ___widget_chatItem extends LetcBox {
       }
 
       if (showBubble) {
+        // `has-username` replaces a `:has(.…__username-container)` rule in the
+        // skin. The subject there was `__message-container`, i.e. EVERY chat
+        // message, so Chrome descendant-walked the whole room on every style
+        // recalculation. Measured 2026-09-11: `:has()` rules were 78% of style
+        // cost (a forced full-document recalc, 65.5ms -> 14.3ms with them
+        // removed).
+        //
+        // Tested against the RENDERED html rather than by re-deriving the
+        // condition. The template emits the username only for a conversation
+        // message, from a non-P2P room, by someone other than me — three tests
+        // in two places — and a copy of that logic here would drift the first
+        // time any of them changed. This cannot: it asks the output.
+        const hasUsername =
+          typeof this.innerContent === "string" &&
+          this.innerContent.includes(`${fig}__username-container`);
         child.append(
           Skeletons.Element({
             flow: _a.x,
-            className: `${fig}__message-container ${author}`,
+            className:
+              `${fig}__message-container ${author}` +
+              (hasUsername ? " has-username" : ""),
             content: this.innerContent,
             escapeContextmenu: true,
           }),
