@@ -384,6 +384,17 @@ class __media_interact extends media_core {
    * would trade one leak for another.
    */
   onBeforeDestroy() {
+    // A tile destroyed before it ever scrolled into view must stop being
+    // watched, or the observer holds its element (and the closure holds the
+    // widget) for the life of the page.
+    //
+    // RESTORED after the preview->test merge (bdeba8d8) dropped it. preview
+    // carried a CHERRY-PICKED copy of 61569db8 under a different SHA, so git
+    // had no shared ancestry for this function and raised a conflict here; it
+    // was resolved to preview's older side, which predates lazy vignette
+    // loading and therefore has no observer to release.
+    _unobserveVignette(this._vignetteObserved);
+    this._vignetteObserved = null;
     if (this._onParentScroll) {
       const p = this._scrollParent || this.parent;
       try {
