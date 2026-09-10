@@ -51,6 +51,8 @@ class __calendar_main extends LetcBox {
     // 2026-09-08) — the label itself is the affordance.
     this._rangeMenuOpen = false;
     this._loading = false;
+    // One in-flight write per open modal — see _submitTask.
+    this._submitting = false;
 
     // Personal scope for every write this screen originates.
     this._personalHub = Visitor.id;
@@ -599,6 +601,21 @@ class __calendar_main extends LetcBox {
     const title = String(draft.title || "").trim();
     if (!title) return;
 
+    // The form is only cleared once the write comes back, so every trigger
+    // that lands while the request is in flight would post again — a second
+    // Enter (the Entry resets its own `_done` guard on each keyup), a
+    // double-clicked Create button, Enter followed by a click. One in-flight
+    // write per modal.
+    if (this._submitting) return;
+    this._submitting = true;
+    try {
+      await this._writeTask(draft, title);
+    } finally {
+      this._submitting = false;
+    }
+  }
+
+  async _writeTask(draft, title) {
     const form = this._form;
     const editing = form.mode === "edit";
     const svcCreate = (SERVICE.task && SERVICE.task.create) || "task.create";
@@ -652,6 +669,16 @@ class __calendar_main extends LetcBox {
   async _deleteTask() {
     const row = (this._form && this._form.row) || null;
     if (!row) return;
+    if (this._submitting) return;
+    this._submitting = true;
+    try {
+      await this._writeDelete(row);
+    } finally {
+      this._submitting = false;
+    }
+  }
+
+  async _writeDelete(row) {
     const svc = (SERVICE.task && SERVICE.task.delete) || "task.delete";
     await this.postService({
       service: svc,
@@ -667,6 +694,19 @@ class __calendar_main extends LetcBox {
     const title = String(draft.title || "").trim();
     if (!title || !draft.date) return;
 
+    // Same in-flight guard as _submitTask: room.book runs two round trips
+    // before the modal is replaced, and a second trigger in that window
+    // would book the room twice.
+    if (this._submitting) return;
+    this._submitting = true;
+    try {
+      await this._writeMeeting(draft, title);
+    } finally {
+      this._submitting = false;
+    }
+  }
+
+  async _writeMeeting(draft, title) {
     const stime = this._epochFor(draft.date, draft.start);
     const etime = this._epochFor(draft.date, draft.end);
     if (!stime) return;
@@ -1037,11 +1077,26 @@ class __calendar_main extends LetcBox {
         return this._renderForm();
       }
 
+      // The title Entry carries `service: "cal-submit-task"` so Enter commits.
+      // The base Entry reports through that same service on other statuses too
+      // — "interactive" on every printable keyup when interactive:1 is set,
+      // "cancel" on Escape — and a status that is not a commit must never
+      // reach task.create. Typing the title used to create one task per
+      // letter that way ("a", "ab", "abc"). The Entry no longer asks for
+      // interactive, and this keeps any status but an explicit commit out of
+      // the write regardless. A click on the Create button carries no
+      // __inputStatus at all, so it passes. Same guard as invite-popup.
       case "cal-submit-task":
+        if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
+          return;
+        }
         return this._submitTask();
       case "cal-delete-task":
         return this._deleteTask();
       case "cal-submit-meeting":
+        if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
+          return;
+        }
         return this._submitMeeting();
 
       case "cal-copy-link": {
