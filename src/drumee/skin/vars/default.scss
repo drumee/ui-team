@@ -7,37 +7,25 @@
   --default-bg: #fff;
   --default-bg-hover: var(--neutral-200);
   --default-bg-block: #f2f2f2;
-  --default-bg-error: #ea4d44;
   --default-bg-caution: #ea4d44;
-  --default-bg-inactive: #89929e;
   --default-bg-alert: #fd635b;
   --bg-tooltips: #e8e8e8;
-  --bg-button-active: rgb(137 146 158 / 35%);
 
   /**background-color**/
   --default-background: #ffffff;
   --default-background-hover: #879BFF;
   --default-block-background: #f2f2f2;
-  --default-background-error: #ea4d44;
-  --default-background-caution: #ea4d44;
-  --default-background-inactive: #89929e;
   --default-scrollbar-color: rgba(250, 133, 64, 0.6);
-  --default-transparent-bg: hsla(0, 0%, 78.4%, 0.5);
   --background-tooltips: #e8e8e8;
   --default-background-alert: #fd635b;
   --button-background-active: rgb(137 146 158 / 35%);
-  --background-chatmessenger: #f9f9f9;
   --multimedia-background: #262626;
   --multimedia-vdo-ctrl-button: #EA4D44;
   --multimedia-vdo-button-accept: #18AC72;
   --multimedia-vdo-icon: #89929e;
-  --dock-notification: #1D8AEA;
-  --background-invitation-success: #18A3AC;
 
   --default-transparent-black: rgb(0 0 0 / 33%);
   --transparency-container-overlay: rgb(137 146 158 / 40%);
-  --light-overlay: rgba(255, 255, 255, 0.05);
-  --modal-overlay-blur: 30px;
 
   /**text-color**/
   --default-text-color: #2F2F2F;
@@ -54,7 +42,6 @@
   --default-text-alert: #fd635b;
   --default-text-inactive: #89929e;
   --default-text-success: #18A3AC;
-  --security-text-color: #fd635b;
   --default-text-tooltips: #2F2F2F;
   --default-text-notification: #ffffff;
   --neutral-text-notification: #626262;
@@ -68,10 +55,7 @@
 
   /**icon**/
   --default-user-icon: #B6BFCA;
-  --background-user-icon: hsla(0, 0%, 78.4%, .5);
-  --transparent-background-desktop-icon: hsla(0, 0%, 78.4%, .5);
   --default-icon-neutral: #89929e;
-  --special-icon-setting: rgb(252 252 252 / 70%);
   --default-icon-reverse: #ffffff;
   --default-icon-hover: #879bff;
   --default-icon-active: #879bff;
@@ -81,7 +65,6 @@
   --special-tag-note-chat: #1187f6;
   --default-icon-menu-dropdown: #879bff;
   --contact-online-color: #32d89a;
-  --special-icon-emoji: #fa8540;
   --special-schedule-icon: #EF6500;
   --button-accept: #18AC72;
 
@@ -97,14 +80,9 @@
   --default-border-alert: #fd635b;
   --default-border-notification: rgb(137 146 158 / 70%);
   --default-border-caution: #EA4D44;
-  --default-border-popup: #dde2e8;
-  --default-border-radius: 6px;
   --default-border-radius-top: 6px 6px 0px 0px;
 
   /** toggle**/
-  --toggle-switch-on: #879BFF;
-  --toggle-switch-off: rgb(137 146 158 / 50%);
-  --toggle-switch-radio: #4040FF;
   --toggle-background: rgb(137 146 158 / 35%);
 
   /** checkbox **/
@@ -114,9 +92,7 @@
   --checkbox-checked-reverse: #ffffff;
   --checkbox-checked-border-reverse: #ffffff;
 
-  --default-radio-active: rgb(64 64 255 / 70%) --desk-scrollbar-color: rgba(250, 133, 64, 0.6);
   --default-scrollbar-color: rgba(250, 133, 64, 0.6);
-  --desk-scrollbar-color: --default-scrollbar-color;
 
   --x-small-width: 361px;
   --small-width: 650px;
@@ -131,15 +107,12 @@
 
   // var(--btn-commit-background:
   --btn-caution-text: #FFFFFF;
-  --btn-caution-backgroundless-text: #FF7479;
   --btn-caution-background: #FF7479;
   --btn-caution-border: #FF7479;
   --btn-caution-border-hover: #ea4d44;
-  --btn-caution-text-hover: #ea4d44;
   --btn-caution-background-hover: #ea4d44;
 
   --btn-commit-text: #FFFFFF;
-  --btn-commit-backgroundless-text: --primary-300;
   --btn-commit-background: -primary-500;
   --btn-commit-border: --primary-100;
   --btn-commit-border-hover: --primary-600;
@@ -148,92 +121,41 @@
 
   /************************ progress **********************/
   --progress-line-text: #879bff;
-  --progress-line-background: #879bff;
-  --progress-line-border: #879bff;
-  --progress-line-border-hover: #879bff;
 
-  --progress-circle-text: #879bff;
-  --progress-circle-background: #879bff;
-  --progress-circle-border: #879bff;
-  --progress-circle-border-hover: #879bff;
 
   /************************ default **********************/
-  --main-default-text: var(--default-text-color);
-  --main-default-typo: var(--default-text-color);
-  --main-default-border: #89929e;
-  --main-caution-text: var(--default-text-caution);
-  --main-caution-typo: var(--default-text-caution);
 
-  --main-caution-border: #FF7479;
-  --main-caution-background: #FFFFFF;
 
   /************************ toggle state **********************/
-  --state-0-text: #2F2F2F;
   --state-0-typo: #2F2F2F;
-  --state-0-border: #89929e;
-  --state-0-background: #FFFFFF;
   --state-1-typo: #18A3AC;
-  --state-1-text: #FFFFFF;
-  --state-1-border: #18A3AC;
-  --state-1-background: #18A3AC;
 
 
   /************************ popup **********************/
   --popup-text: #89929e;
-  --popup-typo: var(--popup-text);
-  --popup-background: #FFFFFF;
 
   /* *********** checkbox************** */
-  --checkbox-unselected-color: var(--state-0-typo);
-  --checkbox-selected-color: var(--state-1-typo);
 
-  --btn-primary-color: var(--btn-commit-text);
-  --btn-primary-background: var(--btn-commit-background);
-  --btn-primary-border: var(--btn-commit-border);
-  --btn-primary-border-hover: var(--btn-commit-border-hover);
-  --btn-primary-color-hover: var(--btn-commit-text-hover);
-  --btn-primary-background-hover: var(--btn-commit-background-hover);
 
   --btn-secondary-color: var(--btn-rollback-text);
-  --btn-secondary-border: var(--btn-rollback-border);
-  --btn-secondary-background: var(--btn-rollback-background);
-  --btn-secondary-border-hover: var(--btn-rollback-border-hover);
-  --btn-secondary-color-hover: var(--btn-rollback-text-hover);
 
-  --btn-tertiary-color: var(--btn-caution-text);
-  --btn-tertiary-background: var(--btn-caution-background);
-  --btn-tertiary-border: var(--btn-caution-border);
-  --btn-tertiary-border-hover: var(--btn-caution-border-hover);
-  --btn-tertiary-color-hover: #ea4d44;
-  --btn-tertiary-background-hover: var(--btn-caution-background-hover);
 
-  --text-btn-accept: var(--default-text-reverse);
   --btn-rollback-text: #89929e;
   --btn-rollback-text-hover: #879BFF;
-  --btn-signup: #18AC73;
 
   /*background*/
-  --btn-accept: #18AC72;
   --btn-commit: #18a3ac;
 
   --btn-commit-background-hover: #16959e;
-  --btn-signup-background-hover: #18AC72;
 
-  --btn-delete-background: #ff7479;
-  --btn-delete-background-hover: #f3595f;
-  --btn-delete-border-hover: #16959e;
 
   /*border*/
 
-  --action-btn-border-color: #FFFFFF;
   --btn-commit-border-hover: #16959e;
   --btn-rollback-border: #DDE2E8;
   --btn-rollback-border-hover: #879BFF;
-  --btn-signup-border-hover: #18AC72;
 
   /*shadow*/
-  --btn-box-shadow: rgb(169 186 255 / 50%);
-  --btn-cancel-box-shadow: rgb(168 255 255 / 50%);
 
   /* ******* switch ******/
   --switch-toggle-on: #18AC72;
@@ -242,13 +164,6 @@
   --switch-radion-toggle: #18AC72;
 
   /* ******* dock launcher ******/
-  --dock-launcher-text: #2F2F2F;
-  --dock-launcher-typo: #2F2F2F;
-  --dock-launcher-border: #89929e;
-  --dock-launcher-background: #FFFFFF;
-  --dock-launcher-border-hover: #879BFF;
-  --dock-launcher-text-hover: #879BFF;
-  --dock-launcher-background-hover: #879BFF;
 
   /* ******* dock colors ******/
   --dock-main-background: #222732;
