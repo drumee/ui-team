@@ -3163,5 +3163,8 @@
   "ACK_DATETIME_UPDATED": "Date & Time settings updated successfully",
   "DOWNLOAD_ORIGINAL_FILE": "Download the original file",
   "DOWNLOAD_PDF_VERSION": "Download a PDF version",
-  "NO_INPUT_DEVICE": "No input device"
+  "NO_INPUT_DEVICE": "No input device",
+  "PAGE_TITLE": "Drumee",
+  "PAGE_DESCRIPTION": "Drumee — a collaborative workspace where files, chat, tasks and meetings live in one place.",
+  "LANGUAGE_SWITCH_FAILED": "Could not save the language for this browser. Check that site data is allowed and try again."
 }

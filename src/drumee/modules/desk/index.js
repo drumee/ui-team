@@ -8333,9 +8333,17 @@ class desk_module extends LetcBox {
         const next = uiLang.normalize(cmd.mget("langCode"));
         if (next === uiLang.current()) return;
         uiLang.store(next);
+        // Reloading is only worth anything if the choice actually persisted:
+        // storage refused (private mode, site data blocked) means the next
+        // boot reads nothing and comes back in the OLD language, so a reload
+        // would look like the switch silently did nothing. Say so instead.
+        if (uiLang.stored() !== next) return Wm.alert(LOCALE.LANGUAGE_SWITCH_FAILED);
         const done = () => location.reload();
         // A signed-out/DMZ desk has no drumate endpoint; don't block the
-        // switch on it, and don't let a rejection swallow the reload.
+        // switch on it, and don't let a rejection swallow the reload. The
+        // profile is the durable half only — since drumee.js now lets the
+        // choice recorded here outrank it, a failed POST costs cross-device
+        // sync, not this browser's language.
         if (!SERVICE.drumate || !SERVICE.drumate.set_lang) return done();
         return this.postService({
           service: SERVICE.drumate.set_lang,

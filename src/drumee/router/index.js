@@ -243,12 +243,23 @@ class drumee_router extends LetcBox {
     switch (svc) {
       case "acknowledge":
         return this.getPart(_a.tooltips).clear();
-      case "set-lang":
-        // Visitor (ui-core __core_user) defines changePageLang — capital L;
-        // changePagelang exists only on Host. The old call threw TypeError,
-        // so a user flipped into the wrong language could never switch back
-        // through this control.
-        return Visitor.changePageLang(c.mget(_a.value));
+      case "set-lang": {
+        // Routed through locale/supported, NOT Visitor.changePageLang.
+        //
+        // changePageLang writes only the ui-core mirror keys
+        // (pagelang/UIlanguage) and reloads. Those keys are written by the
+        // language contract but never read by it — the recorded choice lives
+        // in its own key — so going through it would reload and come back in
+        // the SAME language, silently doing nothing, and install() would then
+        // pin the mirrors back over the write. No skeleton fires `set-lang`
+        // today; this keeps the control honest for whoever wires one up.
+        const uiLang = require('locale/supported');
+        const next = uiLang.normalize(c.mget(_a.value));
+        if (next === uiLang.current()) return;
+        uiLang.store(next);
+        if (uiLang.stored() !== next) return;
+        return location.reload();
+      }
     }
   }
 

@@ -3164,5 +3164,8 @@
   "ACK_DATETIME_UPDATED": "Paramètres de date et d'heure mis à jour",
   "DOWNLOAD_ORIGINAL_FILE": "Télécharger le fichier original",
   "DOWNLOAD_PDF_VERSION": "Télécharger une version PDF",
-  "NO_INPUT_DEVICE": "Aucun périphérique d'entrée"
+  "NO_INPUT_DEVICE": "Aucun périphérique d'entrée",
+  "PAGE_TITLE": "Drumee",
+  "PAGE_DESCRIPTION": "Drumee — un espace de travail collaboratif où fichiers, discussions, tâches et réunions vivent au même endroit.",
+  "LANGUAGE_SWITCH_FAILED": "Impossible d'enregistrer la langue pour ce navigateur. Vérifiez que les données de site sont autorisées, puis réessayez."
 }
