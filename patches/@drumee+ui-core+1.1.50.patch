@@ -196,10 +196,46 @@ index e035048..43c1c6a 100644
    },
    gender: {
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/list/index.js b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
-index 838406c..74e1bcd 100644
+index 838406c..aba8302 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/list/index.js
 +++ b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
-@@ -218,9 +218,21 @@ class __list extends LetcBox {
+@@ -54,7 +54,16 @@ class __list extends LetcBox {
+         }
+       });
+     }
+-    RADIO_BROADCAST.on(_e.responsive, this.responsive.bind(this));
++    // Bind ONCE and keep the reference. Backbone.Radio.off matches listeners by
++    // function identity, so subscribing with `this.responsive.bind(this)` and
++    // unsubscribing with a SECOND `this.responsive.bind(this)` (a different
++    // object) removed nothing: every List ever built stayed subscribed to
++    // RADIO_BROADCAST for the life of the page, and the closure kept the widget
++    // — and therefore its whole DOM subtree — alive with it. Measured on
++    // production 2026-09-10: listeners 10k -> 122k over one desk session, never
++    // returning below ~71k, with the DOM stuck above 100k nodes.
++    this._onResponsive = this.responsive.bind(this);
++    RADIO_BROADCAST.on(_e.responsive, this._onResponsive);
+     this._onMouseWheel = this._onMouseWheel.bind(this)
+     this._initApi();
+   }
+@@ -72,7 +81,16 @@ class __list extends LetcBox {
+     } catch (e) {
+ 
+     }
+-    RADIO_BROADCAST.off(_e.responsive, this.responsive.bind(this));
++    // GUARDED, and the guard is not paranoia. Backbone's `off(name, undefined)`
++    // means "remove EVERY handler for this event" — so a List whose initialize
++    // never ran to completion (a subclass that skips super, a throw partway)
++    // would, on destroy, silently unsubscribe every OTHER widget in the app
++    // from `responsive`. The old code passed a fresh bound function, which
++    // matched nothing and was merely useless; passing an undefined field here
++    // would be actively destructive.
++    if (this._onResponsive) {
++      RADIO_BROADCAST.off(_e.responsive, this._onResponsive);
++    }
+   }
+ 
+   /**
+@@ -218,9 +236,21 @@ class __list extends LetcBox {
     * 
     * @returns 
     */
@@ -340,4 +376,39 @@ index 13edb44..e8df4bc 100644
 +    __cache[this._avatarKey()] = 1;
      this.el.dataset.default = 1;
      return this._show('i');
+   }
+diff --git a/node_modules/@drumee/ui-core/letc/widgets/text/index.js b/node_modules/@drumee/ui-core/letc/widgets/text/index.js
+index 83c2dda..e96831d 100644
+--- a/node_modules/@drumee/ui-core/letc/widgets/text/index.js
++++ b/node_modules/@drumee/ui-core/letc/widgets/text/index.js
+@@ -103,9 +103,29 @@ class ___drumee_text extends Marionette.View {
+     let c = m.content || m.value || m.label || m.text || '';
+     let tags = this.mget(_a.tags) ||  _K.allowed_tag;
+ 
++    // THE SANITIZER IS THE MOST EXPENSIVE THING THIS APP DOES, so don't call it
++    // on content that cannot possibly need it.
++    //
++    // DOMPurify builds a THROWAWAY `Document` per sanitize() call
++    // (implementation.createHTMLDocument) and parses the string into it. Note is
++    // the most-used primitive in the UI — every label, filename, menu item and
++    // button caption is one — so this ran for essentially every piece of text on
++    // screen. A production trace of one 40 s desk session (2026-09-10) counted
++    // 986 sanitize calls, 983 live Documents and 22,008 ParseHTML events, with
++    // the heap going 36 MB -> 175 MB.
++    //
++    // Without `<` or `&` there is no markup and no entity to decode, so
++    // DOMPurify is an identity function on the string and the parse is pure
++    // waste. `>` and quotes are inert in a text position. Anything containing
++    // either character still takes the full path below, unchanged — this
++    // narrows WHEN the sanitizer runs, never WHAT it does.
++    const clean = (typeof c === 'string' && !/[<&]/.test(c))
++      ? c
++      : dompurify.sanitize(c, {ADD_ATTR: ['target'], ALLOWED_TAGS: tags});
++
+     this.el.innerHTML = `
+       <div id="${m.widgetId}-inner" class="${m.innerClass} ${this.fig.family} inner note-content">
+-        ${dompurify.sanitize(c, {ADD_ATTR: ['target'], ALLOWED_TAGS: tags})}
++        ${clean}
+       </div>`
+ 
    }

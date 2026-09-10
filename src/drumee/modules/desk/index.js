@@ -738,9 +738,16 @@ class desk_module extends LetcBox {
    */
   async loadDefault() {
     this._pending = { available: false };
-    await Kind.waitFor("window_manager");
-    await Kind.waitFor("panel_activity");
-    await Kind.waitFor("activity_item");
+    // In PARALLEL. Each waitFor triggers that kind's dynamic import, so three
+    // awaits in a row meant three chunk round-trips end to end before the desk
+    // skeleton could be fed — on a cold cache that is the whole boot latency,
+    // paid serially, for three independent downloads. None of them reads
+    // anything the others produce.
+    await Promise.all([
+      Kind.waitFor("window_manager"),
+      Kind.waitFor("panel_activity"),
+      Kind.waitFor("activity_item"),
+    ]);
     // Snapshot once before feed: Wm.onDomRefresh may consume hubDeepLink /
     // secure-share keys, and a second read later would wrongly treat a
     // deep-link boot as a plain restore.
@@ -2139,6 +2146,23 @@ class desk_module extends LetcBox {
     }
     const key = Popup.dayKey();
     if (Popup.alreadyShownToday(key)) return;
+
+    // WAIT FOR THE WINDOW MANAGER, and do it BEFORE marking the day consumed.
+    //
+    // This runs off a 2s timer from onDomRefresh, and on a slow boot `Wm` is
+    // simply not defined yet — the launch below then threw
+    // `ReferenceError: Wm is not defined` (seen in the production error log,
+    // both Chrome and Safari wordings). markShownToday used to run BEFORE that
+    // launch, so the throw did not merely log: it BURNED the reminder for the
+    // day, and the card silently never appeared. Slow boots are exactly when
+    // the timer loses the race, which is why this looked intermittent.
+    //
+    // Waiting first keeps the "mark before the request" ordering that stops two
+    // desk loads both fanning out the digest query, while only spending the day
+    // once there is somewhere to actually show the card.
+    const wm = await this._waitForWm();
+    if (!wm || (this.isDestroyed && this.isDestroyed())) return;
+
     Popup.markShownToday(key);
 
     // Local midnight → next local midnight. Built from the date parts rather
@@ -2214,6 +2238,10 @@ class desk_module extends LetcBox {
     if (skipped) return;
 
     await Kind.waitFor("migrate_gdrive_popup");
+    // Same 1.5s-timer race as _maybeShowDailyReminder — `Wm` may not exist yet
+    // on a slow boot, and a bare reference throws rather than returning
+    // undefined.
+    if (!(await this._waitForWm())) return;
     Wm.launch({
       kind: "migrate_gdrive_popup",
       hub_id: Visitor.id,
@@ -2277,6 +2305,10 @@ class desk_module extends LetcBox {
       if (!state || state.done) return;
       if (state.snooze_until && Number(state.snooze_until) > now) return;
       await Kind.waitFor("rating_survey_popup");
+      // `fire()` can run immediately on mount when the stored usage total is
+      // already past the threshold, so it races boot the same way the two
+      // popups above do.
+      if (!(await this._waitForWm())) return;
       Wm.launch({
         kind: "rating_survey_popup",
         hub_id: Visitor.id,
