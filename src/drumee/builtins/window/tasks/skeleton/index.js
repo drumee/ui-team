@@ -142,10 +142,14 @@ const make = function (ui) {
       ? `${formatDue(task.start_date)} → ${formatDue(task.due_date)}`
       : formatDue(task && task.due_date);
 
+  // "Now" is resolved ONCE per render rather than per card. It was two Dayjs
+  // objects per card (one for the date, one for today), and every card on the
+  // board judged itself against a slightly different instant.
+  const nowDay = Dayjs();
   const isOverdue = (d) => {
     if (!d) return false;
     try {
-      return Dayjs(d).isBefore(Dayjs(), "day");
+      return Dayjs(d).isBefore(nowDay, "day");
     } catch {
       return false;
     }
@@ -153,6 +157,15 @@ const make = function (ui) {
 
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
+
+  // Column by key. Built once per render: the card footer's status pill used to
+  // run `getColumns().find(...)` for every card, which is O(cards x columns) on
+  // a board whose column count is user-controlled. First-wins, exactly as the
+  // `.find` it replaces.
+  const colByKey = new Map();
+  for (const c of ui.getColumns()) {
+    if (!colByKey.has(c.key)) colByKey.set(c.key, c);
+  }
 
   // @-mention support for the description fields. The description is a
   // contenteditable editor (not a textarea) so tagged members render as styled
@@ -307,8 +320,7 @@ const make = function (ui) {
     // Status pill row (Figma 2040-106090: "● In Progress" + avatars at the
     // card bottom). Dot color comes from the live column set so custom
     // columns tint correctly.
-    const cardCol =
-      ui.getColumns().find((c) => c.key === (task.status || colKey)) || {};
+    const cardCol = colByKey.get(task.status || colKey) || {};
     const statusPill = Skeletons.Box.X({
       className: `${pfx}__task-status`,
       dataset: { theme: cardCol.theme || "default" },
@@ -1943,7 +1955,12 @@ const make = function (ui) {
       ],
     });
 
-  const filterDropdown = Skeletons.Box.Y({
+  // A THUNK, not a value. This popup is only in the tree while it is open, but
+  // as a plain const it was assembled on every single render regardless — and
+  // its member category builds a row (avatar + name) per workspace member, so
+  // a 100-member workspace paid ~600 discarded skeleton nodes on every repaint
+  // of a board whose filter was shut.
+  const filterDropdown = () => Skeletons.Box.Y({
     className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
     kids: [
       Skeletons.Box.X({
@@ -2166,7 +2183,7 @@ const make = function (ui) {
         : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       // Every view gets the same multi-dimension accordion.
-      filterOpen ? filterDropdown : null,
+      filterOpen ? filterDropdown() : null,
       Skeletons.Wrapper.Y({
         className: `${pfx}__detail-wrapper`,
         name: "task-detail",
