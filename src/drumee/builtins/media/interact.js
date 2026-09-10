@@ -384,11 +384,6 @@ class __media_interact extends media_core {
    * would trade one leak for another.
    */
   onBeforeDestroy() {
-    // A tile destroyed before it ever scrolled into view must stop being
-    // watched, or the observer holds its element (and the closure holds the
-    // widget) for the life of the page.
-    _unobserveVignette(this._vignetteObserved);
-    this._vignetteObserved = null;
     if (this._onParentScroll) {
       const p = this._scrollParent || this.parent;
       try {
