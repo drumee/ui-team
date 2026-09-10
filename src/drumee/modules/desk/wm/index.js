@@ -1960,6 +1960,57 @@ class __window_manager extends push {
    * is the UX "restricted" workspace, not the personal hub.
    * No-op once the user has navigated into a sub-workspace.
    */
+  /**
+   * Mirror the WM modal's open state onto the desk root as `data-wm-modal`.
+   *
+   * Three rules in desk/skin read
+   * `:has(.window-manager__wrapper-modal[data-state="open"])` with `.desk-module`,
+   * `__body` or `__wm-container` as the subject — in effect the whole
+   * application. Chrome re-evaluates a `:has()` subject whenever anything
+   * matching its argument changes, so every open or close of a modal restyled
+   * the entire document; on production 2026-09-11 a single flip of that one
+   * attribute froze the tab. Those rules now read a plain attribute on the root,
+   * which Chrome invalidates narrowly (only the descendants its invalidation
+   * set names), and this is what keeps that attribute exact.
+   *
+   * A MutationObserver on the ONE element, filtered to the ONE attribute, rather
+   * than a stamp beside each feed()/clear(): the modal is fed from seven call
+   * sites and cleared from as many, and it is Skeletons.Wrapper that stamps
+   * `data-state` in the first place — observing the attribute is the only route
+   * that cannot miss one. ensurePart, not onPartReady, because the wrapper is
+   * declared without a partHandler.
+   *
+   * No teardown hook, on purpose: Wm is session-lifetime and defines neither
+   * onDestroy nor onBeforeDestroy (see the note in _watchHomeGridSettle). A
+   * re-feed disconnects the previous observer below; the last one lives as
+   * long as the page does, which is exactly as long as it is needed.
+   */
+  _installWmModalMirror() {
+    this.ensurePart("wrapper-modal").then((p) => {
+      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+      const root =
+        this.el && _.isFunction(this.el.closest)
+          ? this.el.closest(".desk-module")
+          : null;
+      if (!root || typeof MutationObserver !== "function") return;
+      // A re-feed hands us a fresh part; drop the observer on the old one.
+      if (this._wmModalObserver) this._wmModalObserver.disconnect();
+      const sync = () => {
+        if (p.el.getAttribute("data-state") === "open") {
+          root.dataset.wmModal = "open";
+        } else {
+          delete root.dataset.wmModal;
+        }
+      };
+      this._wmModalObserver = new MutationObserver(sync);
+      this._wmModalObserver.observe(p.el, {
+        attributes: true,
+        attributeFilter: ["data-state"],
+      });
+      sync();
+    });
+  }
+
   onPartReady(child, pn) {
     if (pn === _a.list) {
       // Warm BOTH of folder_task's steps while the grid that triggers it
@@ -2020,6 +2071,7 @@ class __window_manager extends push {
     // become "blank".
     this._syncHomeGrid(1, true);
     this.feed(require("./skeleton")(this));
+    this._installWmModalMirror();
     // Safety net for a boot that claims nothing — see settleHomeGrid. The desk
     // calls it directly at the end of its restore; this covers a Wm mounted
     // without one (or a restore that throws before it can).
@@ -2471,6 +2523,7 @@ class __window_manager extends push {
       return this._resetHomeInPlace();
     }
     this.feed(require("./skeleton")(this));
+    this._installWmModalMirror();
   }
 
   /**
