@@ -387,7 +387,7 @@ function monthlyGrid(ui, pfx) {
   return [header, Skeletons.Box.Y({ className: `${pfx}-sched-body ${pfx}-sched-body--month`, kids: weeks })];
 }
 
-// ── Mini-calendar dropdown (caret next to the range label) ────────────────
+// ── Mini-calendar dropdown (opened from the range label) ──────────────────
 // One month (st.pickerCursor, ‹ › to move it) of pickable days. The current
 // selection is brand-tinted: the anchor week in weekly view, the anchor day in
 // monthly view. Picking a day re-anchors the schedule onto it.
@@ -480,6 +480,12 @@ function toolbarKids(ui) {
 
   // [ ‹ range-label › ] — the label sits between the arrows (Figma pass);
   // Today is hidden until the design brings it back.
+  //
+  // The label IS the mini-calendar's trigger (Lexis, 2026-09-09) — there is no
+  // separate caret button beside the pill any more. It carries the service
+  // itself rather than delegating to a wrapper, so the arrows on either side
+  // keep their own clicks: they are siblings inside the pill, and the pill
+  // carries no service of its own for anything to bubble into.
   const navPill = Skeletons.Box.X({
     className: `${pfx}-sched-nav`,
     kids: [
@@ -495,23 +501,19 @@ function toolbarKids(ui) {
       //   service: "sched-today",
       //   uiHandler: [ui],
       // }),
-      Skeletons.Note({ className: `${pfx}-sched-label`, content: rangeLabel(ui) }),
+      Skeletons.Note({
+        className: `${pfx}-sched-label`,
+        content: rangeLabel(ui),
+        attrOpt: { "data-open": pickerOpen ? "1" : "0" },
+        service: "sched-toggle-picker",
+        uiHandler: [ui],
+      }),
       Skeletons.Button.Svg({
         ico: "caret-left",
         className: `${pfx}-sched-nav-btn next`,
         service: "sched-next",
         uiHandler: [ui],
       }),
-    ],
-  });
-
-  const label = Skeletons.Box.X({
-    className: `${pfx}-sched-label-wrap`,
-    attrOpt: { "data-open": pickerOpen ? "1" : "0" },
-    service: "sched-toggle-picker",
-    uiHandler: [ui],
-    kids: [
-      Skeletons.Image.Svg({ ico: "meet-caret-down", className: `${pfx}-sched-label-caret` }),
     ],
   });
 
@@ -627,7 +629,11 @@ function toolbarKids(ui) {
   return [
     Skeletons.Box.X({
       className: `${pfx}-sched-toolbar-left`,
-      kids: [navPill, label, pickerOpen ? pickerCal(ui, pfx) : null].filter(Boolean),
+      // The picker stays a SIBLING of the pill, not a child of it: it is
+      // `position: absolute; left: 0` against -toolbar-left, which is the
+      // element carrying `position: relative`. Anchoring it under the label
+      // instead would re-point it at a box that moves with the text.
+      kids: [navPill, pickerOpen ? pickerCal(ui, pfx) : null].filter(Boolean),
     }),
     Skeletons.Box.X({
       className: `${pfx}-sched-toolbar-right`,

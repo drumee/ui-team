@@ -2421,7 +2421,7 @@ class __window_folder extends mfsInteract {
         return this._renderSchedToolbar();
       }
 
-      // ── Mini-calendar dropdown on the range label's caret ──────────────
+      // ── Mini-calendar dropdown, opened from the range label itself ─────
       case "sched-toggle-picker": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
         const open = !st.pickerOpen;

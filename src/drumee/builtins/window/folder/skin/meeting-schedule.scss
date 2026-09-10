@@ -75,45 +75,29 @@
     }
   }
 
-  &__meeting-sched-label-wrap {
-    align-items: center;
-    gap: 6px;
-    padding: 4px;
-    border-radius: 6px;
-    cursor: pointer;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    &[data-open="1"] .window-folder__meeting-sched-label-caret {
-      transform: rotate(180deg);
-    }
-  }
-
+  // The label is the mini-calendar's trigger (Lexis, 2026-09-09) — the caret
+  // button that used to sit outside the pill is gone, so the affordance it
+  // carried (pointer, hover wash, open state) moves here.
+  //
+  // 3px of vertical padding is deliberate: 20px line + 6px = 26px, exactly the
+  // height of the ‹ › buttons it sits between, so the pill does NOT grow taller
+  // than it is today. The hover value matches -sched-nav-btn rather than the
+  // old wrapper's, because the wash now lands ON the pill's own grey.
   &__meeting-sched-label {
     @include drumee.typo($size: 15px, $line: 20px, $weight: 600, $color: #0b0a21);
     white-space: nowrap;
-  }
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
 
-  &__meeting-sched-label-caret {
-    display: flex;
-    width: 14px;
-    height: 14px;
-    color: #0b0a21;
-    align-items: center;
-    justify-content: center;
-    // Purely visual — clicks must reach the wrap's picker-toggle service.
-    pointer-events: none;
-
-    svg {
-      width: 12px;
-      height: 12px;
-      fill: currentColor;
+    &:hover,
+    &[data-open="1"] {
+      background: rgba(0, 0, 0, 0.08);
     }
   }
 
-  // ── Mini-calendar dropdown (caret next to the range label) ──────────────
+  // ── Mini-calendar dropdown (opened from the range label) ────────────────
   &__meeting-sched-picker {
     position: absolute;
     top: calc(100% + 6px);
