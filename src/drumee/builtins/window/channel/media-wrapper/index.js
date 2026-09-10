@@ -42,6 +42,13 @@ class __media_wrapper extends LetcBox {
       this.saveAttachment(attachment);
     }
     if (_.isEmpty(items)) return;
+    // Stamp BEFORE the append, not only in saveAttachment: that one shapes what
+    // goes to sessionStorage, while this is the list actually rendered now. The
+    // two call sites in the chat widget (`_pickDeskFile`, the upload branch)
+    // build their own `{kind: 'media_grid', isAttachment: 1}` item and hand it
+    // straight here, so a flag added only on the persisted copy would not reach
+    // the card until a reload re-read it.
+    items.forEach((i) => this._markIconOnly(i));
     const result = this.__content.append(items);
     // Notify listeners (chat widget's checkPendingContent) so the
     // attachment-wrapper data-state flips to "has attachment" and CSS
@@ -105,6 +112,28 @@ class __media_wrapper extends LetcBox {
   }
 
   /**
+   * Mark one queued item as a composer chip.
+   *
+   * The chip shows a file-TYPE glyph where the card used to show a thumbnail,
+   * and `media/grid/template` reads this flag to decide that (it forces
+   * `imgCapable` off, which routes images down the icon branch `preview.js`
+   * already has for documents).
+   *
+   * Deliberately NOT keyed off `isAttachment`, which is the obvious-looking
+   * choice and is wrong: chat-item's sent-message cards and media/form's
+   * picker both set `isAttachment: 1` and both want the real thumbnail. Only
+   * the pre-send composer strip wants a glyph, and this wrapper is what owns
+   * it, so the flag is set here rather than inferred downstream.
+   *
+   * @param {Object} item  a media_grid descriptor, mutated in place
+   * @returns {Object} the same item, for use in a map()
+   */
+  _markIconOnly(item) {
+    if (item) item.iconOnly = 1;
+    return item;
+  }
+
+  /**
    * 
    * @returns 
    */
@@ -113,9 +142,9 @@ class __media_wrapper extends LetcBox {
     const items = attachment.map((row) => {
       let item;
       if (row.nid || row.destination) {
-        item = { ...row, kind: 'media_grid', isAttachment: 1 };
+        item = { ...row, kind: 'media_grid', isAttachment: 1, iconOnly: 1 };
       } else if (_.isFunction(row.toJSON)) {
-        item = { ...row.toJSON(), kind: 'media_grid', isAttachment: 1 };
+        item = { ...row.toJSON(), kind: 'media_grid', isAttachment: 1, iconOnly: 1 };
       }
       delete item.uiHandler;
       delete item.logicalParent;
@@ -274,7 +303,9 @@ class __media_wrapper extends LetcBox {
       } else {
         r.uiHandler = [uiHandler];
       }
-      return r;
+      // Restored from sessionStorage, which may predate the flag — an entry
+      // queued before this shipped would otherwise come back as a thumbnail.
+      return this._markIconOnly(r);
     });
     this.mset({ items });
   }

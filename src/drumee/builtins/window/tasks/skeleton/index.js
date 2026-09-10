@@ -1,4 +1,5 @@
 const { isTaskViewAllowed } = require("libs/billing");
+const { chipGlyph } = require("libs/file-meta");
 
 /**
  * The `data-entered` stamp that gates an overlay's entrance animation.
@@ -2614,44 +2615,11 @@ function pendingStrip(ui, scope) {
   });
 }
 
-// Icon per file type for a comment's attachment card. media/template/map only
-// knows office/code types and returns the RAW EXTENSION for anything else
-// ("png" → "png"), which is not a sprite id — so the common media types drew a
-// missing icon. These four are named explicitly; everything else still goes
-// through the shared map, now with a real fallback id instead of a made-up one.
-const ATTACHMENT_ICONS = {
-  txt: "app-txt-file",
-  png: "bg-image",
-  jpg: "bg-image",
-  jpeg: "bg-image",
-  mp4: "app-video-file",
-  mp3: "app-audio-file",
-  // Office types use the RAW sprite (raw-*), which keeps each icon's own
-  // colours — Word blue, Excel green, PowerPoint orange — rather than the
-  // normalized single-colour glyphs used above. Both sprites are loaded
-  // (src/sprite.js), and the same names come out of media/template/map, so a
-  // comment's attachment matches the file icon shown everywhere else.
-  // Legacy extensions map to the same icon as their x-suffixed twin.
-  doc: "raw-documents_word",
-  docx: "raw-documents_word",
-  xls: "raw-documents_excel",
-  xlsx: "raw-documents_excel",
-  ppt: "raw-documents_powerpoint",
-  pptx: "raw-documents_powerpoint",
-};
-
-function attachmentIcon(f) {
-  if (f && f.iconChartId) return f.iconChartId;
-  const ext = String((f && f.extension) || "").toLowerCase();
-  if (ATTACHMENT_ICONS[ext]) return ATTACHMENT_ICONS[ext];
-  let mapped;
-  try {
-    mapped = require("media/template/map")(ext, "app-file");
-  } catch (_) {
-    /* alias unavailable (tests) — fall through to the generic icon */
-  }
-  return mapped || "app-file";
-}
+// Icon per file type for a comment's attachment card. Shared with the chat
+// composer's queued-file chips via libs/file-meta `chipGlyph` - the same card
+// in two places, so the map lives in one. Kept as a local alias because this
+// file calls it in several spots and `attachmentIcon(f)` reads better here.
+const attachmentIcon = chipGlyph;
 
 // Files already attached to a saved comment (task_comment_file, delivered by
 // task_comment_list). The ✕ detaches the file; the media node stays put.
