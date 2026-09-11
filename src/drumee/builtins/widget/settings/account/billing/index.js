@@ -1371,7 +1371,7 @@ class settings_billing extends LetcBox {
 
   /** Is this caller already billed yearly? */
   _isOnYearlyPlan() {
-    return /^year/.test(String((this._subscription || {}).period || ""));
+    return String(this._subscription?.period || "").startsWith("year");
   }
 
   /**

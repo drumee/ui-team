@@ -19,7 +19,7 @@ function countdownNote(ui) {
   });
 }
 
-module.exports = function (ui) {
+module.exports = function promoYearlyModal(ui) {
   const pfx = ui.fig.family;
   const hero = require("assets/promo-yearly-hero.png");
 
