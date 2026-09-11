@@ -1,0 +1,193 @@
+// September 2026 campaign modal — Figma "Drumee 2.0" node 696-141463.
+//
+// Portalled to <body> like promo-launch30: fixed at a high z-index so it wins
+// over the desk chrome wherever Wm mounts the widget.
+//
+// ⚠️ Dark text is --primary-purple-100, NOT --primary-100. revamp.scss defines
+// --primary-100 TWICE (#0b0a21 at line 121, then #f4e7ff at 134) and the
+// second wins, so --primary-100 resolves to a pale lavender. The Figma layer
+// is named "Primary/100" and means the dark one.
+.promo-yearly {
+  &__ui {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    font-family: var(--font-main);
+  }
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-6);
+    background: var(--overlay-bg);
+    backdrop-filter: blur(2px);
+  }
+
+  &__card {
+    position: relative;
+    width: min(520px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    align-items: center;
+    gap: var(--spacer-7); // 32px
+    padding: var(--spacer-8) var(--spacer-7) var(--spacer-7); // 40 / 32 / 32
+    border-radius: var(--corner-radius-6); // 24px
+    background: var(--white);
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.15),
+      0 7px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  &__close {
+    position: absolute;
+    top: var(--spacer-7);
+    right: var(--spacer-7);
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+
+    svg {
+      width: 24px;
+      height: 24px;
+      color: var(--tertiary-grey-80);
+      fill: var(--tertiary-grey-80);
+    }
+  }
+
+  // ── "⚡ LIMITED-TIME 50% OFF" pill ─────────────────────────────────────────
+  &__badge {
+    align-items: center;
+    gap: var(--spacer-2);
+    padding: var(--spacer-3) var(--spacer-4);
+    border-radius: var(--corner-radius-4); // 12px
+    background: var(--primary-purple-100);
+
+    &-icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+
+      svg {
+        width: 24px;
+        height: 24px;
+        color: var(--signal-promo-bolt);
+        fill: var(--signal-promo-bolt);
+      }
+    }
+
+    &-text {
+      font-weight: 600;
+      font-size: 20px;
+      line-height: 1.2;
+      color: var(--white);
+      white-space: nowrap;
+    }
+  }
+
+  &__title {
+    font-weight: 600;
+    font-size: 32px;
+    line-height: 1.1;
+    text-align: center;
+    color: var(--primary-purple-100);
+  }
+
+  // ── "Time remaining: 21 DAYS 06:48:00" ────────────────────────────────────
+  &__countdown {
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacer-2);
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--primary-purple-100);
+
+    &-icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+
+      svg {
+        width: 24px;
+        height: 24px;
+        color: var(--primary-40);
+        fill: var(--primary-40);
+      }
+    }
+
+    &-slot {
+      align-items: center;
+    }
+
+    &-value {
+      // Underlined in the design, and the seconds tick — tabular figures stop
+      // the row shuffling sideways once a second.
+      text-decoration: underline;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+  }
+
+  &__hero {
+    width: 100%;
+    height: 232px;
+    object-fit: cover;
+    border-radius: var(--corner-radius-6); // 24px
+  }
+
+  &__cta {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--spacer-4) var(--spacer-6);
+    border-radius: var(--corner-radius-4); // 12px
+    background: var(--primary-50);
+    color: var(--white);
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+
+    &:hover {
+      background: var(--primary-60);
+    }
+  }
+
+  &__legal {
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacer-1);
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--tertiary-grey-80);
+
+    &-link {
+      color: inherit;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  }
+}
+
+// The card is taller than a short laptop viewport once the hero is in; let it
+// shrink rather than clip, and drop the type with it.
+@media screen and (max-height: 760px), screen and (max-width: 560px) {
+  .promo-yearly__card {
+    gap: var(--spacer-5);
+    padding: var(--spacer-7) var(--spacer-6) var(--spacer-6);
+  }
+
+  .promo-yearly__title {
+    font-size: 24px;
+  }
+
+  .promo-yearly__badge-text {
+    font-size: 16px;
+  }
+
+  .promo-yearly__hero {
+    height: 160px;
+  }
+}

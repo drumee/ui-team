@@ -1,45 +1,27 @@
-const { canUpgradePlan, billingAvailable, planRank } = require("libs/billing");
+const {
+  canUpgradePlan, billingAvailable, planRank,
+  PROMO_YEARLY_PCT, promoYearlyEndsAt, promoYearlySecondsLeft, promoYearlyCountdown,
+} = require("libs/billing");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
 
-// ── September 2026 campaign: 50% off the yearly plans ───────────────────────
-// MKT request (Lexis, 2026-09-10); Figma "Drumee 2.0" node 692-128029.
-//
-// The campaign ends at the end of September IN THE VIEWER'S OWN TIMEZONE.
-//
-// A single fixed instant cannot be right for everyone: whichever one you pick
-// is already October for every zone east of it. The first cut used 2026-09-30
-// 23:59:59 at UTC-12 — generous, nobody cut short — but it left the banner
-// counting down through the afternoon of October 1st in Vietnam, which reads
-// as a bug (Duy, 2026-09-11). So the deadline is computed per viewer instead:
-// local midnight at the start of October 1st, i.e. the last moment their own
-// calendar still says September. Everyone gets their whole September and
-// nobody watches a "September" offer tick over in October.
-//
-// Built with the local-parts Date constructor on purpose — it resolves the
-// browser's own zone and DST rules, which no fixed offset can.
-const PROMO_YEARLY_LOCAL_END = () =>
-  Math.floor(new Date(2026, 9, 1, 0, 0, 0, 0).getTime() / 1000);
+// The September 2026 campaign's window, percentage and countdown all live in
+// libs/billing.js: this page and the promo_yearly modal both count the same
+// campaign down and must never disagree about it.
 
-// Backstop: the instant September has ended EVERYWHERE (2026-09-30 23:59:59 at
-// UTC-12). A device clock set to a wrong or deliberately distant zone cannot
-// hold the banner open past this. It only ever binds at UTC-12 and further
-// west, which is uninhabited — every real viewer is governed by their own
-// local end above. The discount itself cannot be extended this way in any
-// case: the price lives in Stripe and the catalog gate re-checks it.
-const PROMO_YEARLY_HARD_END = 1790855999;
-
-// The saving the banner's copy and its artwork CLAIM. It is a floor, not a
-// label: the banner only renders once the catalog's REAL yearly discount is at
-// least this large, so the page can never advertise a cut Stripe is not
-// actually giving. See _promoYearlyActive().
+// Where the campaign modal records that it has been shown today.
 //
-// The prices behind it are Stripe Price objects (yp.plan holds only
-// stripe_price_id — there is no amount column), so this flips on by itself the
-// moment the yearly prices are halved, and off again when they are restored.
-const PROMO_YEARLY_PCT = 50;
+// localStorage, so it is PER BROWSER. promo-launch30 deliberately used a
+// server flag and its header says why — clearing the cache must not re-offer a
+// promo that was already claimed. That reasoning does not carry here: this
+// modal grants nothing and claims nothing, it is an advert, and the worst a
+// cleared cache can do is show an advert one extra time. Making it per account
+// would mean a new service and table in server-team + schemas, which is not a
+// trade worth making for a 19-day campaign. If it ever needs to be per
+// account, this is the single place that changes.
+const PROMO_YEARLY_SEEN_KEY = "drumee.promo.yearly.shown-on";
 
 const formatCurrency = (amount) => {
   return `$${amount.toFixed(2)}`;
@@ -801,6 +783,12 @@ class settings_billing extends LetcBox {
       };
       document.addEventListener("visibilitychange", this._onVisibility);
     }
+    // After the catalog AND the subscription mirror, never before: the gate
+    // reads both (is the discount real, is this caller already on yearly), and
+    // asking early would answer from the offline fallback prices and the
+    // not-yet-known plan. Not awaited — the modal is an overlay, and holding
+    // the page's last render behind a bundle fetch would be backwards.
+    this._maybeShowPromoYearly();
     return this.fetchPlanData();
   }
 
@@ -1326,17 +1314,8 @@ class settings_billing extends LetcBox {
    * @returns {boolean}
    */
   _promoYearlyActive() {
-    if (Math.floor(Date.now() / 1000) >= this._promoEndsAt()) return false;
+    if (Math.floor(Date.now() / 1000) >= promoYearlyEndsAt()) return false;
     return this._yearlySavingPct() >= PROMO_YEARLY_PCT;
-  }
-
-  /**
-   * When the campaign stops FOR THIS VIEWER: the end of September on their own
-   * calendar, capped at the moment September has ended everywhere.
-   * @returns {number} unix seconds
-   */
-  _promoEndsAt() {
-    return Math.min(PROMO_YEARLY_LOCAL_END(), PROMO_YEARLY_HARD_END);
   }
 
   /**
@@ -1344,7 +1323,7 @@ class settings_billing extends LetcBox {
    * @returns {number}
    */
   _promoSecondsLeft() {
-    return Math.max(0, this._promoEndsAt() - Math.floor(Date.now() / 1000));
+    return promoYearlySecondsLeft();
   }
 
   /**
@@ -1354,16 +1333,101 @@ class settings_billing extends LetcBox {
    * @returns {string}
    */
   _promoCountdownText() {
-    const total = this._promoSecondsLeft();
-    const days = Math.floor(total / 86400);
-    const rest = total % 86400;
-    const pad = (n) => String(n).padStart(2, "0");
-    const clock = `${pad(Math.floor(rest / 3600))}:${pad(Math.floor((rest % 3600) / 60))}:${pad(rest % 60)}`;
-    if (days <= 0) return clock;
-    return (days === 1
-      ? (LOCALE.PROMO_COUNTDOWN_DAY || "{0} DAY {1}")
-      : (LOCALE.PROMO_COUNTDOWN_DAYS || "{0} DAYS {1}")
-    ).format(days, clock);
+    return promoYearlyCountdown();
+  }
+
+  /**
+   * Local calendar day, as the throttle's stamp. Local rather than UTC so
+   * "once a day" turns over at the reader's midnight, which is also when the
+   * campaign's own countdown rolls.
+   * @returns {string}
+   */
+  _promoDayStamp() {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  }
+
+  /**
+   * Has the campaign modal already been shown today?
+   *
+   * Every localStorage access is wrapped: it throws in a private window and
+   * can be disabled outright, and the honest failure there is to SHOW the
+   * modal (an extra advert) rather than to suppress it silently.
+   * @returns {boolean}
+   */
+  _promoShownToday() {
+    try {
+      return window.localStorage.getItem(PROMO_YEARLY_SEEN_KEY) === this._promoDayStamp();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  _markPromoShownToday() {
+    try {
+      window.localStorage.setItem(PROMO_YEARLY_SEEN_KEY, this._promoDayStamp());
+    } catch (e) { /* storage unavailable — it simply shows again next visit */ }
+  }
+
+  /** Is this caller already billed yearly? */
+  _isOnYearlyPlan() {
+    return /^year/.test(String((this._subscription || {}).period || ""));
+  }
+
+  /**
+   * Open the campaign modal, at most once a day (Lexis, 2026-09-11: "auto
+   * hiện mỗi ngày 1 lần mỗi khi user click vào trang Plan").
+   *
+   * Who sees it, and why each exclusion:
+   *  - the campaign must be live AND the catalog must really be giving the
+   *    advertised cut — the same gate the banner uses, so the modal can never
+   *    be the one surface making a claim Stripe does not honour;
+   *  - _mayCheckout() — a member who cannot change the plan is being sold
+   *    something they are not allowed to buy;
+   *  - NOT already on yearly. Stripe pins a price per subscription item, so an
+   *    existing yearly subscriber's own renewal does NOT get cheaper. Offering
+   *    them "Get 50% OFF" would read as a discount on the plan they already
+   *    hold, which is the one thing it is not.
+   */
+  async _maybeShowPromoYearly() {
+    if (this.isDestroyed()) return;
+    if (!this._promoYearlyActive()) return;
+    if (!this._mayCheckout()) return;
+    if (this._isOnYearlyPlan()) return;
+    if (this._promoShownToday()) return;
+    try {
+      await Kind.waitFor("promo_yearly");
+    } catch (e) {
+      // Bundle did not load: nothing was shown, so nothing is marked — the
+      // next visit can still honour the campaign.
+      return;
+    }
+    if (this.isDestroyed() || !this._promoYearlyActive()) return;
+    // Marked as soon as it is actually launched, not on dismiss: closing it,
+    // clicking through, or navigating away all count as "shown today".
+    this._markPromoShownToday();
+    Wm.launch({
+      kind: "promo_yearly",
+      origin: this,
+      pct: this._yearlySavingPct(),
+      hub_id: Visitor.id,
+      wm_unique_id: "promo_yearly",
+    }, { explicit: 1, singleton: 1 });
+  }
+
+  /**
+   * The modal's CTA landed: show the yearly prices it was advertising.
+   * Mirrors handleSelectPlan's tab switch — renderContent() re-feeds the tab
+   * bar as well as the cards, so the pill moves with them.
+   */
+  showYearlyFromPromo() {
+    if (this.isDestroyed()) return;
+    if (this.state.currentTab === TAB_YEARLY) return;
+    this.state.currentTab = TAB_YEARLY;
+    this.state.plansTab.cycle = "yearly";
+    this.tab = TAB_YEARLY;
+    this._armMotion();
+    this.renderContent();
   }
 
   /**
