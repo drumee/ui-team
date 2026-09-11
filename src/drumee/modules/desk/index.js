@@ -3863,10 +3863,23 @@ class desk_module extends LetcBox {
    * would close it on those too, which is the regression this avoids — only
    * the one gesture that actually leaves for another workspace closes it.
    *
-   * `_closeItems`, not `_triggerToggle`: a toggle flips, so on an already
-   * closed panel it would OPEN one. This is the very method the outside-click
-   * handler calls, so the panel leaves exactly the way it does today when the
-   * user dismisses it by hand.
+   * 🚨 IT MUST NOT SLIDE. `_closeItems()` — the method the outside-click
+   * handler uses — is the ANIMATED close: `gsap.to(items.el, { y: -y })` with
+   * `y = items_width + trigger_width`, and this panel is `min-width: 260px`,
+   * so it visibly FLICKS UPWARD by ~300px on its way out. Duy, 2026-09-11:
+   * no push, it should just stop being there.
+   *
+   * `_onClosed` is the tail of that same close — the part that actually shuts
+   * the panel — and everything visible in it happens SYNCHRONOUSLY at the top:
+   * `data-state` goes to "closed" on the items and to 0 on the root, and the
+   * root is what the skin's `display: none` hangs off
+   * (`&:not([data-state="1"]) .menu-topic-items__wrapper`, desk/skin/topbar).
+   * So calling it directly is the same close, minus the tween. It ends by
+   * resetting `y` to 0, which is what leaves the geometry right for the next
+   * open — dropping the tween does not strand the panel off-position.
+   *
+   * Not `_triggerToggle` either: a toggle flips, so on an already closed panel
+   * it would OPEN one.
    */
   _closeWorkspaceSwitcher() {
     const menu = this._wsSwitcher;
@@ -3877,6 +3890,15 @@ class desk_module extends LetcBox {
     // completes, so either one saying "open" is enough.
     const open = menu.isOpen || (menu.mget && menu.mget(_a.state));
     if (!open) return;
+    // _onClosed is async only because of a trailing measure-and-reset; the
+    // shutting itself is done before it ever yields. Nothing here waits on it,
+    // and a rejection is swallowed rather than left unhandled.
+    if (_.isFunction(menu._onClosed)) {
+      Promise.resolve(menu._onClosed()).catch(() => {});
+      return;
+    }
+    // Fallback only if a future ui-core drops _onClosed: an animated close
+    // still beats a panel that will not go away.
     if (_.isFunction(menu._closeItems)) menu._closeItems();
   }
 
