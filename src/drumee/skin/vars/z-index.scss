@@ -17,6 +17,23 @@
   // them alone changes nothing.
   --z-index-upload-progress: 50002;
   --z-index-context: 50000;
+  // The jQuery-UI drag helper (media/interact.js `appendTo: body`), which
+  // therefore competes in the ROOT stacking context against everything below.
+  //
+  // Was 1450, in both helper skins, picked only to stay under
+  // `.desk-module__settings-main-slot` (1500) — a cap that predates this whole
+  // band and is now unreachable anyway: that slot paints nothing, is
+  // pointer-events:none, and when Settings IS showing it covers the workspace,
+  // so there is no tile left to drag behind it. Meanwhile anything from 50000
+  // up buried the helper mid-drag; the upload-progress popup is simply the one
+  // that is on screen WHILE dragging, which is how this was found.
+  //
+  // Placed above --z-index-context (50000) and the whole upload-progress band
+  // (50002, +1 file-created, +2 meeting-toast), because the helper tracks the
+  // pointer and is the thing the user is actively moving. Deliberately BELOW
+  // --always-visible (50010, the live-call overlay), --z-index-preview and
+  // --z-index-modal: a real interruption still outranks a drag.
+  --z-index-drag-helper: 50005;
   --always-visible: 50010;
   --z-index-context-upper: 50010;
   --z-index-preview: 80000;

@@ -5,8 +5,8 @@
     height: 75px;
     opacity: 1;
     transform: scale(0.75);
-    // See media-grid/skin/helper.scss — must stay below settings-main-slot (1500).
-    z-index: 1450;
+    // See media-grid/skin/helper.scss — same root-context problem, same token.
+    z-index: var(--z-index-drag-helper, 50005);
     box-shadow: none;
     background-color: transparent;
     overflow: visible;
