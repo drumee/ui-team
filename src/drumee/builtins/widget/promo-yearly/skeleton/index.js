@@ -25,9 +25,12 @@ module.exports = function (ui) {
 
   return Skeletons.Box.X({
     className: `${pfx}__backdrop`,
-    // Click-outside closes, like every other dismissible surface on the desk.
-    service: "promo-yearly-close",
-    uiHandler: [ui],
+    // NO click-to-close on the scrim, matching promo-launch30. The throttle is
+    // stamped when the modal LAUNCHES, so a stray click that lands on the
+    // backdrop costs the reader the whole day's showing — and one did, once,
+    // during verification: the click that opened the Plan page reached the
+    // backdrop as it was inserted and dismissed it on the spot. The design
+    // gives this modal an explicit X; that is the way out.
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__card`,
