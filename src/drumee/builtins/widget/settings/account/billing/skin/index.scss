@@ -235,8 +235,10 @@
       // room back on 2026-09-11, reading the September frame (Figma
       // 692-128029), which still draws this box at a FIXED 164px with
       // space-between — i.e. the design file never adopted the July tuning.
-      // Re-confirm with product before this reaches preview; reverting is one
-      // line (drop the `gap`, which is the only thing adding filler).
+      // ✅ Product signed off on 2026-09-11 (Duy relayed it), so the July
+      // tuning is superseded rather than overridden — this is the number now.
+      // Reverting would still be one line: drop the `gap`, which is the only
+      // thing adding filler.
       //
       // min-height stays 80 and is not what governs: the content alone
       // measured 97px, so the box was exactly its content and space-between
