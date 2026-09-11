@@ -31,16 +31,6 @@
   &__main {
     width: 100%;
 
-    &[data-preattachment="1"] {
-      &::before {
-        content: " ";
-        position: relative;
-        min-height: 100px;
-        height: 103px;
-        width: 100%;
-      }
-    }
-
     &.forward {
       background-color: var(--dgc-chat-reply-bg);
     }

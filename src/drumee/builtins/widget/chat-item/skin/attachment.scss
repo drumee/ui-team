@@ -218,6 +218,96 @@
       width: 38px;
     }
   }
+
+  // Placeholder rows shown while the cards are fetched (see
+  // template/attachment-skeleton.js). Laid out to the SAME geometry as the
+  // real card above — 44px tile, 9px column gap, 6px between rows — so the
+  // swap moves nothing.
+  &__attachment-skeleton {
+    width: 100%;
+
+    &-row {
+      align-items: center;
+      column-gap: 9px;
+      display: flex;
+      min-width: min(220px, 100%);
+      width: 100%;
+
+      // Matches `.media-grid__ui + .media-grid__ui` so a two-file message
+      // occupies the same height before and after the cards arrive.
+      & + & {
+        margin-top: 6px;
+      }
+    }
+
+    &-tile {
+      border-radius: 4px;
+      flex: 0 0 auto;
+      height: 44px;
+      width: 44px;
+    }
+
+    // Mirrors the card's text column: `__meta-row` is a 2px-gap flex column.
+    &-text {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-width: 0;
+      row-gap: 2px;
+    }
+
+    &-name {
+      height: 10px;
+      width: 60%;
+    }
+
+    &-meta {
+      height: 8px;
+      width: 35%;
+    }
+
+    &-name,
+    &-meta {
+      border-radius: 3px;
+    }
+
+    // currentColor, not a fixed grey: this sits INSIDE the bubble, and the
+    // bubble is brand-coloured for `me` and a light surface for `other`. A
+    // hardcoded tone would be invisible on one of them and heavy on the
+    // other; inheriting the bubble's own text colour is legible on both, in
+    // either theme, with nothing to keep in sync.
+    &-tile,
+    &-name,
+    &-meta {
+      animation: widget-chatItem-attachment-skeleton-pulse 1.4s ease-in-out infinite;
+      background-color: currentcolor;
+      opacity: 0.1;
+    }
+
+    // A pulse is decoration; the layout reservation is the part that matters,
+    // and that survives without it.
+    @media (prefers-reduced-motion: reduce) {
+      &-tile,
+      &-name,
+      &-meta {
+        animation: none;
+      }
+    }
+  }
+}
+
+// Namespaced: @keyframes is global no matter which selector it is nested
+// under, so an unprefixed `pulse` here would be reachable from every other
+// component on the page.
+@keyframes widget-chatItem-attachment-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.1;
+  }
+
+  50% {
+    opacity: 0.22;
+  }
 }
 
 // Dark mode — keep inner surfaces transparent so the freshly-sent attachment
