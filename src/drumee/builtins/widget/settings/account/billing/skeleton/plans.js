@@ -30,6 +30,32 @@ function getOptions(ui, cycle = "monthly") {
     ui._catPrice("business", period) ?? (isYear ? 990 : 99),
   );
 
+  // The struck-through list price on a discounted yearly card (Figma
+  // 692-128029: "$60 $348 $1,188" struck beside "$30 $174 $594"). The struck
+  // figure is twelve monthly payments — what the same year costs bought one
+  // month at a time — so it is DERIVED from the monthly price rather than
+  // written down, and the pair can never contradict each other.
+  //
+  // Returns null unless there is a real saving to show, which is what keeps
+  // this honest: on the monthly tab, on a plan with no yearly discount, and
+  // on any deployment whose catalog has no price for the plan, the card falls
+  // back to the plain single price it has always shown.
+  //
+  // Gated on the CAMPAIGN as well, not merely on "is yearly cheaper". Yearly
+  // is permanently cheaper — it is 10x monthly the rest of the year — so
+  // without this gate the cards would start advertising "was $60" the day
+  // this ships, months before anyone approved that framing, and keep doing it
+  // after the promotion ends. The strike and the campaign banner appear and
+  // disappear together, which is also how the design presents them.
+  const strike = (code) => {
+    if (!isYear) return null;
+    if (!ui._promoYearlyActive?.()) return null;
+    const list = ui._yearlyListPrice(code);
+    const actual = ui._catPrice(code, period);
+    if (list <= 0 || actual <= 0 || actual >= list) return null;
+    return money(list);
+  };
+
   const perMonth = LOCALE.PER_MONTH;
   const perYear = LOCALE.PER_YEAR;
   const per = isYear ? perYear : perMonth;
@@ -81,6 +107,7 @@ function getOptions(ui, cycle = "monthly") {
     // admin console — the card lists what it HAS, per the house style.
     pro: {
       title: LOCALE.PRO,
+      priceStrike: strike("pro"),
       priceAmount: proPrice,
       pricePeriod: per,
       buttonTitle: LOCALE.CTA_GO_PRO,
@@ -107,6 +134,7 @@ function getOptions(ui, cycle = "monthly") {
     // The entry ORG paid tier.
     team: {
       title: LOCALE.TEAM,
+      priceStrike: strike("team"),
       priceAmount: teamPrice,
       pricePeriod: per,
       buttonTitle: LOCALE.CTA_START_WORKSPACE,
@@ -129,6 +157,7 @@ function getOptions(ui, cycle = "monthly") {
     // live subscription) like Team instead of pointing at sales.
     business: {
       title: LOCALE.BUSINESS,
+      priceStrike: strike("business"),
       priceAmount: businessPrice,
       pricePeriod: per,
       buttonTitle: LOCALE.CTA_START_BUSINESS,
@@ -236,7 +265,7 @@ function ctaKind(ui, opt) {
  * @returns {Object} Skeletons component
  */
 function priceHeader(ui, fig, option, isCurrent) {
-  const { title, priceLabel, priceAmount, pricePeriod, priceText, badge } = option;
+  const { title, priceLabel, priceStrike, priceAmount, pricePeriod, priceText, badge } = option;
 
   const priceKids = [];
   // The label row is rendered on EVERY card, blank where the plan has none.
@@ -245,10 +274,24 @@ function priceHeader(ui, fig, option, isCurrent) {
   // line up and neither did the prices. Reserving the row equalises them by
   // construction, so it survives a change of font size or label; pinning
   // min-height to today's 97px would silently drift apart again.
+  //
+  // The struck-through list price takes this same reserved row (Figma
+  // 692-128029 puts it exactly there, directly above the amount). Reusing the
+  // row rather than adding a fourth element is what keeps the five tinted
+  // headers the same height while a promotion runs: a discounted card fills a
+  // line every other card already reserves, so nothing shifts when Pro, Team
+  // and Business gain a strike while Free and Sovereign do not.
+  //
+  // Three states for one row, so it reads as three cases rather than a
+  // ternary inside a ternary: a struck list price, a real label, or the
+  // invisible spacer that holds the row open.
+  let labelState = " is-placeholder";
+  if (priceStrike) labelState = " is-strike";
+  else if (priceLabel) labelState = "";
   priceKids.push(
     Skeletons.Note({
-      className: `${fig}-price-label${priceLabel ? "" : " is-placeholder"}`,
-      content: priceLabel || " ",
+      className: `${fig}-price-label${labelState}`,
+      content: priceStrike || priceLabel || " ",
     }),
   );
   if (priceAmount) {

@@ -1,8 +1,27 @@
-const { canUpgradePlan, billingAvailable, planRank } = require("libs/billing");
+const {
+  canUpgradePlan, billingAvailable, planRank,
+  PROMO_YEARLY_PCT, promoYearlyEndsAt, promoYearlySecondsLeft, promoYearlyCountdown,
+} = require("libs/billing");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
+
+// The September 2026 campaign's window, percentage and countdown all live in
+// libs/billing.js: this page and the promo_yearly modal both count the same
+// campaign down and must never disagree about it.
+
+// Where the campaign modal records that it has been shown today.
+//
+// localStorage, so it is PER BROWSER. promo-launch30 deliberately used a
+// server flag and its header says why — clearing the cache must not re-offer a
+// promo that was already claimed. That reasoning does not carry here: this
+// modal grants nothing and claims nothing, it is an advert, and the worst a
+// cleared cache can do is show an advert one extra time. Making it per account
+// would mean a new service and table in server-team + schemas, which is not a
+// trade worth making for a 19-day campaign. If it ever needs to be per
+// account, this is the single place that changes.
+const PROMO_YEARLY_SEEN_KEY = "drumee.promo.yearly.shown-on";
 
 const formatCurrency = (amount) => {
   return `$${amount.toFixed(2)}`;
@@ -78,6 +97,7 @@ class settings_billing extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     clearTimeout(this._motionTimer);
+    this._stopPromoCountdown();
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
@@ -763,6 +783,12 @@ class settings_billing extends LetcBox {
       };
       document.addEventListener("visibilitychange", this._onVisibility);
     }
+    // After the catalog AND the subscription mirror, never before: the gate
+    // reads both (is the discount real, is this caller already on yearly), and
+    // asking early would answer from the offline fallback prices and the
+    // not-yet-known plan. Not awaited — the modal is an overlay, and holding
+    // the page's last render behind a bundle fetch would be backwards.
+    this._maybeShowPromoYearly();
     return this.fetchPlanData();
   }
 
@@ -903,6 +929,13 @@ class settings_billing extends LetcBox {
         break;
       case `${this.fig.family}__redeem-code-input`:
         this.__redeemCodeInput = child;
+        break;
+      case `${this.fig.family}__promo-countdown`:
+        // Re-point at the freshly rendered chip (the old one's node is gone)
+        // and make sure exactly one interval is running — _startPromoCountdown
+        // is a no-op when it already is.
+        this.__promoCountdown = child;
+        this._startPromoCountdown();
         break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
@@ -1207,6 +1240,239 @@ class settings_billing extends LetcBox {
    */
   _money(n) {
     return formatCurrency(Number(n) || 0);
+  }
+
+  /**
+   * What twelve months of a plan cost when bought one month at a time.
+   *
+   * Nothing is ever SOLD at this figure — it is the reference the yearly
+   * saving is measured against, and the struck-through number on a discounted
+   * card (Figma 692-128029, which strikes $60/$348/$1,188 — exactly 12x the
+   * $5/$29/$99 monthly prices). Derived rather than stored so it cannot drift
+   * away from the monthly price it is a multiple of.
+   * @param {string} code - plan code ('pro' | 'team' | 'business')
+   * @returns {number} amount in currency units, 0 when the plan has no price
+   */
+  _yearlyListPrice(code) {
+    const monthly = this._catPrice(code, "month");
+    return monthly > 0 ? monthly * 12 : 0;
+  }
+
+  /**
+   * How much a yearly subscription saves against twelve monthly ones, as a
+   * whole percent.
+   *
+   * READ FROM THE CATALOG, never hardcoded. This used to be a literal 16.5 in
+   * skeleton/header.js, which was only true while yearly sat at 10x monthly:
+   * the moment a campaign moves the Stripe prices, a hardcoded badge either
+   * understates the offer or — far worse — advertises a discount the checkout
+   * does not honour. The amounts here come from the same _catPrice() the cards
+   * and the confirm dialog quote, so the badge, the strike and the price the
+   * buyer is actually charged cannot disagree.
+   *
+   * FLOORED, so the copy can only ever under-promise: the standing 10x deal is
+   * 16.67% and reads "16%". Same safe direction the published 16.5% figure
+   * chose.
+   *
+   * Across plans it takes the SMALLEST saving, and counts a plan that saves
+   * nothing as a real 0 rather than skipping it — the tab badge is one claim
+   * covering every plan, so it has to be true of the worst of them. Only plans
+   * with no price in this environment are ignored, because there is no claim
+   * to make about something that is not for sale here.
+   * @param {string} [code] - a single plan, or omit for the whole catalogue
+   * @returns {number} whole percent, 0 when there is no saving to report
+   */
+  _yearlySavingPct(code) {
+    const codes = code ? [code] : ["pro", "team", "business"];
+    const pcts = [];
+    for (const c of codes) {
+      const list = this._yearlyListPrice(c);
+      const yearly = this._catPrice(c, "year");
+      // Not priced in this deployment — no opinion, not a zero.
+      if (list <= 0 || yearly <= 0) continue;
+      pcts.push(yearly >= list ? 0 : Math.floor(((list - yearly) / list) * 100));
+    }
+    if (!pcts.length) return 0;
+    return Math.min(...pcts);
+  }
+
+  /**
+   * Is the September 50%-off-yearly campaign both LIVE and actually honoured?
+   *
+   * Two independent gates, and the catalog one is the important half: the
+   * banner claims a specific number ("50% OFF YEARLY PLAN", and the ticket
+   * artwork has "50%" baked into it), so it may only appear once Stripe is
+   * really giving at least that much. Before the prices are changed the page
+   * simply shows no banner instead of a false one; after they are restored it
+   * disappears on its own. The date is the backstop that retires the campaign
+   * even if the prices are left in place.
+   *
+   * Until the catalog lands, _catPrice() answers from its offline fallback map
+   * (the standing 10x prices), which scores 16% — so the first paint of a
+   * cold load shows nothing and the banner appears with the real prices. That
+   * is the right way round: never flash a claim we cannot yet stand behind.
+   * @returns {boolean}
+   */
+  _promoYearlyActive() {
+    if (Math.floor(Date.now() / 1000) >= promoYearlyEndsAt()) return false;
+    return this._yearlySavingPct() >= PROMO_YEARLY_PCT;
+  }
+
+  /**
+   * Whole seconds left in the campaign, floored at 0.
+   * @returns {number}
+   */
+  _promoSecondsLeft() {
+    return promoYearlySecondsLeft();
+  }
+
+  /**
+   * The countdown chip's text — "21 DAYS 06:48:00" (Figma 692-128029).
+   * Drops the day count entirely on the last day rather than printing
+   * "0 DAYS", which reads as an expired offer.
+   * @returns {string}
+   */
+  _promoCountdownText() {
+    return promoYearlyCountdown();
+  }
+
+  /**
+   * Local calendar day, as the throttle's stamp. Local rather than UTC so
+   * "once a day" turns over at the reader's midnight, which is also when the
+   * campaign's own countdown rolls.
+   * @returns {string}
+   */
+  _promoDayStamp() {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  }
+
+  /**
+   * Has the campaign modal already been shown today?
+   *
+   * Every localStorage access is wrapped: it throws in a private window and
+   * can be disabled outright, and the honest failure there is to SHOW the
+   * modal (an extra advert) rather than to suppress it silently.
+   * @returns {boolean}
+   */
+  _promoShownToday() {
+    try {
+      return window.localStorage.getItem(PROMO_YEARLY_SEEN_KEY) === this._promoDayStamp();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  _markPromoShownToday() {
+    try {
+      window.localStorage.setItem(PROMO_YEARLY_SEEN_KEY, this._promoDayStamp());
+    } catch (e) { /* storage unavailable — it simply shows again next visit */ }
+  }
+
+  /** Is this caller already billed yearly? */
+  _isOnYearlyPlan() {
+    return String(this._subscription?.period || "").startsWith("year");
+  }
+
+  /**
+   * Open the campaign modal, at most once a day (Lexis, 2026-09-11: "auto
+   * hiện mỗi ngày 1 lần mỗi khi user click vào trang Plan").
+   *
+   * Who sees it, and why each exclusion:
+   *  - the campaign must be live AND the catalog must really be giving the
+   *    advertised cut — the same gate the banner uses, so the modal can never
+   *    be the one surface making a claim Stripe does not honour;
+   *  - _mayCheckout() — a member who cannot change the plan is being sold
+   *    something they are not allowed to buy;
+   *  - NOT already on yearly. Stripe pins a price per subscription item, so an
+   *    existing yearly subscriber's own renewal does NOT get cheaper. Offering
+   *    them "Get 50% OFF" would read as a discount on the plan they already
+   *    hold, which is the one thing it is not.
+   */
+  async _maybeShowPromoYearly() {
+    if (this.isDestroyed()) return;
+    if (!this._promoYearlyActive()) return;
+    if (!this._mayCheckout()) return;
+    if (this._isOnYearlyPlan()) return;
+    if (this._promoShownToday()) return;
+    try {
+      await Kind.waitFor("promo_yearly");
+    } catch (e) {
+      // Bundle did not load: nothing was shown, so nothing is marked — the
+      // next visit can still honour the campaign.
+      return;
+    }
+    if (this.isDestroyed() || !this._promoYearlyActive()) return;
+    // Marked as soon as it is actually launched, not on dismiss: closing it,
+    // clicking through, or navigating away all count as "shown today".
+    this._markPromoShownToday();
+    Wm.launch({
+      kind: "promo_yearly",
+      origin: this,
+      pct: this._yearlySavingPct(),
+      hub_id: Visitor.id,
+      wm_unique_id: "promo_yearly",
+    }, { explicit: 1, singleton: 1 });
+  }
+
+  /**
+   * The modal's CTA landed: show the yearly prices it was advertising.
+   * Mirrors handleSelectPlan's tab switch — renderContent() re-feeds the tab
+   * bar as well as the cards, so the pill moves with them.
+   */
+  showYearlyFromPromo() {
+    if (this.isDestroyed()) return;
+    if (this.state.currentTab === TAB_YEARLY) return;
+    this.state.currentTab = TAB_YEARLY;
+    this.state.plansTab.cycle = "yearly";
+    this.tab = TAB_YEARLY;
+    this._armMotion();
+    this.renderContent();
+  }
+
+  /**
+   * Drive the countdown chip once a second.
+   *
+   * ONE interval for the whole widget lifetime, never one per render: every
+   * surface on this page is rebuilt by a full feed() (the catalog landing, a
+   * WS plan_updated, a tab switch), so the chip is destroyed and recreated
+   * constantly and starting a timer per part would stack them silently.
+   * onPartReady just re-points _promoCountdown at the live part.
+   */
+  _startPromoCountdown() {
+    if (this._promoTimer) return;
+    this._promoTimer = setInterval(() => this._tickPromoCountdown(), 1000);
+  }
+
+  _stopPromoCountdown() {
+    clearInterval(this._promoTimer);
+    this._promoTimer = null;
+  }
+
+  /**
+   * One tick. Stops itself whenever the chip is no longer on screen (the
+   * Checkout tab, or any render that dropped the banner) so a hidden page
+   * costs nothing; onPartReady starts it again when the chip comes back.
+   */
+  _tickPromoCountdown() {
+    const part = this.__promoCountdown;
+    // isConnected, not a stored flag: the part object outlives its DOM node
+    // across a re-render, and the node is the only thing that knows.
+    if (this.isDestroyed() || !part?.el?.isConnected) {
+      this._stopPromoCountdown();
+      return;
+    }
+    // The campaign ran out while the page sat open. Re-render once so the
+    // banner and the tab badge go with it, rather than freezing on 00:00:00.
+    if (!this._promoYearlyActive()) {
+      this._stopPromoCountdown();
+      this.__promoCountdown = null;
+      this.fetchPlanData();
+      return;
+    }
+    const { promoCountdownNote } = require("./skeleton");
+    if (typeof part.softClear === "function") part.softClear();
+    part.feed(promoCountdownNote(this));
   }
 
   /**
