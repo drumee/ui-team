@@ -3843,6 +3843,65 @@ class desk_module extends LetcBox {
     if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
   }
 
+  /**
+   * CLOSE THE WORKSPACE SWITCHER — the panel only, never the screen under it.
+   *
+   * Picking a row left the dropdown up, and the only way to be rid of it was
+   * to click somewhere else. Three things in menu_topic conspire to that, and
+   * it is worth naming them so this is not "fixed" again in the wrong place:
+   *
+   *  - `_onItemClicked` returns early for `persistence: _a.always`, which is
+   *    what the switcher is built with (desk/skeleton/topbar
+   *    workspaceSwitcher);
+   *  - `_onOutsideClick` stands down for any origin the menu `contains`, and a
+   *    row is inside it;
+   *  - the caret is inert, so the trigger is not pressed either.
+   *
+   * 🚨 `persistence` STAYS `always`. It is not decoration: the panel also
+   * holds the header's inline Rename editor and its ⋯ menu, and both are
+   * clicks INSIDE the panel that must leave it standing. Relaxing persistence
+   * would close it on those too, which is the regression this avoids — only
+   * the one gesture that actually leaves for another workspace closes it.
+   *
+   * 🚨 IT MUST NOT SLIDE. `_closeItems()` — the method the outside-click
+   * handler uses — is the ANIMATED close: `gsap.to(items.el, { y: -y })` with
+   * `y = items_width + trigger_width`, and this panel is `min-width: 260px`,
+   * so it visibly FLICKS UPWARD by ~300px on its way out. Duy, 2026-09-11:
+   * no push, it should just stop being there.
+   *
+   * `_onClosed` is the tail of that same close — the part that actually shuts
+   * the panel — and everything visible in it happens SYNCHRONOUSLY at the top:
+   * `data-state` goes to "closed" on the items and to 0 on the root, and the
+   * root is what the skin's `display: none` hangs off
+   * (`&:not([data-state="1"]) .menu-topic-items__wrapper`, desk/skin/topbar).
+   * So calling it directly is the same close, minus the tween. It ends by
+   * resetting `y` to 0, which is what leaves the geometry right for the next
+   * open — dropping the tween does not strand the panel off-position.
+   *
+   * Not `_triggerToggle` either: a toggle flips, so on an already closed panel
+   * it would OPEN one.
+   */
+  _closeWorkspaceSwitcher() {
+    const menu = this._wsSwitcher;
+    if (!menu || !menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
+    // Already shut — the org view's cards raise the same service from a screen
+    // where this panel was never open. `isOpen` is set synchronously by
+    // _openItems while `state` only lands in the model when the open animation
+    // completes, so either one saying "open" is enough.
+    const open = menu.isOpen || (menu.mget && menu.mget(_a.state));
+    if (!open) return;
+    // _onClosed is async only because of a trailing measure-and-reset; the
+    // shutting itself is done before it ever yields. Nothing here waits on it,
+    // and a rejection is swallowed rather than left unhandled.
+    if (_.isFunction(menu._onClosed)) {
+      Promise.resolve(menu._onClosed()).catch(() => {});
+      return;
+    }
+    // Fallback only if a future ui-core drops _onClosed: an animated close
+    // still beats a panel that will not go away.
+    if (_.isFunction(menu._closeItems)) menu._closeItems();
+  }
+
   _syncWorkspaceLabel() {
     const wm = window.Wm;
     const cur = wm && wm._curWorkspace;
@@ -7671,32 +7730,81 @@ class desk_module extends LetcBox {
   _showBillingLoader() {
     if (this._billingLoaderPending) return;
     this._billingLoaderPending = true;
+    // WHICH RAISE THIS IS. _hideBillingLoader can only cancel what it can
+    // reach — the timer — and the kind wait below is not cancellable, so the
+    // chain re-reads this on the other side. Without it, a close followed by
+    // a second Upgrade-plan click could have two chains alive at once and
+    // stack two spinners.
+    const run = (this._billingLoaderRun = (this._billingLoaderRun || 0) + 1);
     this._billingLoaderTimer = setTimeout(() => {
       this._billingLoaderTimer = null;
       // The wait ended while we were holding back — this is the cached path,
       // and nothing should appear.
-      if (!this._billingLoaderPending) return;
-      if (!window.Wm || !Wm.info) return;
-      const fig = "window-info";
-      Wm.info({
-        variant: "notice",
-        mode: "hb",
-        billing_loading: 1,
-        dismiss_after: 30000,
-        message: [
-          Skeletons.Box.X({
-            className: `${fig}__loader`,
-            kids: [
-              Skeletons.Element({ className: `${fig}__loader-spinner` }),
-              Skeletons.Note({
-                className: `${fig}__loader-label`,
-                content: LOCALE.LOADING_BILLING || "Loading plans…",
-              }),
-            ],
-          }),
-        ],
-      });
+      if (!this._billingLoaderPending || run !== this._billingLoaderRun) return;
+      this._raiseBillingLoader(run);
     }, DESK_BILLING_LOADER_DELAY);
+  }
+
+  /**
+   * Put the spinner on screen — but not until `window_info` is a REAL class.
+   *
+   * 🚨 THIS IS THE FIX FOR "the billing loading popup appears on the page I
+   * moved on to, and sits there" (Natrix, preview, 2026-09-09 night).
+   *
+   * Wm.info() does NOT reliably leave a window behind by the time it returns.
+   * `window_info` is a dynamic-import seed (seeds.js), so the FIRST one of a
+   * session resolves through Kind.get -> kind/loader.js, which hands the pool
+   * a lazy PLACEHOLDER view carrying this very model. _billingLoader() finds
+   * that placeholder and _hideBillingLoader() closes it — and then the import
+   * lands and the placeholder puts itself back as the real window_info
+   * (kind/loader.js `ok` -> View.renew, which re-adds the model with no
+   * destroyed/stopping guard). Nothing holds that second window, so the
+   * spinner appears AFTER the wait it belongs to has ended, over whatever
+   * screen the user clicked through to, and stays for the full dismiss_after
+   * — 30 seconds.
+   *
+   * Resolving the kind FIRST takes the placeholder out of the path: after the
+   * await, collection.add() builds the real view synchronously (Marionette
+   * _onCollectionUpdate), so the window exists the moment Wm.info returns and
+   * _hideBillingLoader can always find it. Nothing else changes — same
+   * window, same copy, same 220ms hold-back, same dismiss_after backstop.
+   *
+   * The pending flag is re-read after the await because that is the other
+   * half of the same race: the chunk can land while the kind is resolving,
+   * and then there is nothing left to explain a spinner, so none is raised.
+   *
+   * A rejected import resolves to null and simply raises nothing — the page
+   * is no worse off than before, and openBillingPage's `finally` still runs.
+   *
+   * @param {Number} run the raise this call belongs to (see _showBillingLoader)
+   */
+  _raiseBillingLoader(run) {
+    if (!window.Wm || !Wm.info) return;
+    return Kind.waitFor("window_info")
+      .catch(() => null)
+      .then(() => {
+        if (!this._billingLoaderPending || run !== this._billingLoaderRun) return;
+        if (!window.Wm || !Wm.info) return;
+        const fig = "window-info";
+        Wm.info({
+          variant: "notice",
+          mode: "hb",
+          billing_loading: 1,
+          dismiss_after: 30000,
+          message: [
+            Skeletons.Box.X({
+              className: `${fig}__loader`,
+              kids: [
+                Skeletons.Element({ className: `${fig}__loader-spinner` }),
+                Skeletons.Note({
+                  className: `${fig}__loader-label`,
+                  content: LOCALE.LOADING_BILLING || "Loading plans…",
+                }),
+              ],
+            }),
+          ],
+        });
+      });
   }
 
   /**
@@ -8184,6 +8292,12 @@ class desk_module extends LetcBox {
       // onUiEvent is not async, so the lookup is chained rather than awaited.
       // _fetchWorkspaces is cached, so this resolves immediately in practice.
       case "switch-workspace":
+        // THE PANEL GOES WITH THE GESTURE. Picking a row used to leave the
+        // dropdown standing over the workspace it had just opened, and the
+        // only way out was to click somewhere else. See
+        // _closeWorkspaceSwitcher for why this is done here rather than by
+        // relaxing the menu's `persistence`.
+        this._closeWorkspaceSwitcher();
         // NOT _switchWorkspace directly: a switcher row both ENDS the tour
         // drawn on the workspace being left and OFFERS the one the workspace
         // it opens begins on. See _switchWorkspaceAndOffer for why only this
