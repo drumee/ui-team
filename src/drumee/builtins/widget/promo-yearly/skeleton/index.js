@@ -108,7 +108,10 @@ module.exports = function (ui) {
           // Wording is the product's own (LOCALE.PRIVACY_POLICY /
           // TERMS_OF_SERVICE), not the design's "Terms of Use" — these name
           // specific documents, and the app already calls them that
-          // everywhere else.
+          // everywhere else. NOT LOCALE.TERM_OF_SERVICE: that one is stored
+          // pre-uppercased ("TERM OF SERVICE") for the sign-in footer, which
+          // upper-cases its links anyway, and it shouts next to "Privacy
+          // policy" here.
           Skeletons.Box.X({
             className: `${pfx}__legal`,
             kids: [
@@ -122,7 +125,7 @@ module.exports = function (ui) {
               Skeletons.Note({ className: `${pfx}__legal-sep`, content: "&" }),
               Skeletons.Note({
                 className: `${pfx}__legal-link`,
-                content: LOCALE.TERM_OF_SERVICE || LOCALE.TERMS_OF_SERVICE || "Terms of service",
+                content: LOCALE.TERMS_OF_SERVICE || "Terms of service",
                 service: "promo-yearly-terms",
                 uiHandler: [ui],
                 bubble: false,

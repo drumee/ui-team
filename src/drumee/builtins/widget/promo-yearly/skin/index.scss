@@ -22,7 +22,15 @@
     justify-content: center;
     padding: var(--spacer-6);
     background: var(--overlay-bg);
-    backdrop-filter: blur(2px);
+    // NO backdrop-filter, deliberately. The design asks for a blurred scrim
+    // and promo-launch30 does it with `backdrop-filter: blur(2px)`, but on the
+    // desk that renders BROKEN: the right-hand half of the page appears
+    // mirrored behind the card. Reproduced on the live test endpoint, and it
+    // disappears the moment the property is removed — a Chrome compositing
+    // bug that a full-viewport fixed overlay hits when the page underneath is
+    // full of transformed layers, which the desk's gsap-driven chrome is.
+    // --overlay-bg alone is a perfectly good scrim; a blur that corrupts what
+    // it is blurring is not worth having.
   }
 
   &__card {
