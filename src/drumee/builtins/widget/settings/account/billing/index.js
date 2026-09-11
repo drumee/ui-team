@@ -1291,7 +1291,7 @@ class settings_billing extends LetcBox {
       const list = this._yearlyListPrice(c);
       const yearly = this._catPrice(c, "year");
       // Not priced in this deployment — no opinion, not a zero.
-      if (!(list > 0) || !(yearly > 0)) continue;
+      if (list <= 0 || yearly <= 0) continue;
       pcts.push(yearly >= list ? 0 : Math.floor(((list - yearly) / list) * 100));
     }
     if (!pcts.length) return 0;
@@ -1375,7 +1375,7 @@ class settings_billing extends LetcBox {
     const part = this.__promoCountdown;
     // isConnected, not a stored flag: the part object outlives its DOM node
     // across a re-render, and the node is the only thing that knows.
-    if (this.isDestroyed() || !part || !part.el || !part.el.isConnected) {
+    if (this.isDestroyed() || !part?.el?.isConnected) {
       this._stopPromoCountdown();
       return;
     }
