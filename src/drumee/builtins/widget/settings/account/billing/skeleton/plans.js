@@ -49,10 +49,10 @@ function getOptions(ui, cycle = "monthly") {
   // disappear together, which is also how the design presents them.
   const strike = (code) => {
     if (!isYear) return null;
-    if (!ui._promoYearlyActive || !ui._promoYearlyActive()) return null;
+    if (!ui._promoYearlyActive?.()) return null;
     const list = ui._yearlyListPrice(code);
     const actual = ui._catPrice(code, period);
-    if (!(list > 0) || !(actual > 0) || actual >= list) return null;
+    if (list <= 0 || actual <= 0 || actual >= list) return null;
     return money(list);
   };
 
@@ -281,9 +281,16 @@ function priceHeader(ui, fig, option, isCurrent) {
   // headers the same height while a promotion runs: a discounted card fills a
   // line every other card already reserves, so nothing shifts when Pro, Team
   // and Business gain a strike while Free and Sovereign do not.
+  //
+  // Three states for one row, so it reads as three cases rather than a
+  // ternary inside a ternary: a struck list price, a real label, or the
+  // invisible spacer that holds the row open.
+  let labelState = " is-placeholder";
+  if (priceStrike) labelState = " is-strike";
+  else if (priceLabel) labelState = "";
   priceKids.push(
     Skeletons.Note({
-      className: `${fig}-price-label${priceStrike ? " is-strike" : (priceLabel ? "" : " is-placeholder")}`,
+      className: `${fig}-price-label${labelState}`,
       content: priceStrike || priceLabel || " ",
     }),
   );

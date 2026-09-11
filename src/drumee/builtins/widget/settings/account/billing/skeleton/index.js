@@ -224,7 +224,7 @@ function promoCountdownNote(ui) {
 function promoBanner(ui) {
   const tab = ui.state?.currentTab ?? ui.tab ?? 0;
   if (tab === 2) return null;
-  if (!ui._promoYearlyActive || !ui._promoYearlyActive()) return null;
+  if (!ui._promoYearlyActive?.()) return null;
 
   const fig = `${ui.fig.family}__promo-banner`;
   const ticket = require("assets/promo-yearly-ticket.png");
@@ -238,7 +238,7 @@ function promoBanner(ui) {
         tagName: "img",
         className: `${fig}-ticket`,
         // `.default` because this comes through webpack's asset loader.
-        attribute: { src: ticket && ticket.default ? ticket.default : ticket, alt: "" },
+        attribute: { src: ticket?.default ?? ticket, alt: "" },
       }),
       Skeletons.Note({
         className: `${fig}-title`,
