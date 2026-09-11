@@ -194,7 +194,11 @@
     &-item {
       border: 1px solid var(--tertiary-grey-30);
       border-radius: var(--corner-radius-6); // 24px
-      padding: var(--spacer-6);
+      // 16px, the design's own card padding (Figma 692-128029), not the 24px
+      // this carried. The card is ~238px wide at a normal desk width — Figma
+      // draws it at ~290px on a 1600px frame — so 8px a side is 7% of the
+      // usable width, and it was going into whitespace the design never had.
+      padding: var(--spacer-5);
       gap: var(--spacer-6);
       overflow: hidden;
 
@@ -391,7 +395,16 @@
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      padding: var(--spacer-3) var(--spacer-6);
+      // 12px sides, was 24px. This button is width:100% with its label
+      // centred, so side padding cannot change where it starts, ends or how
+      // tall it is — it only narrows the space the label may occupy. At a
+      // 238px card that left 140px for the text while "Get your sovereign
+      // node" measures 156px, so the Sovereign CTA wrapped to two lines at
+      // EVERY width, and the taller pill pushed its feature list out of line
+      // with the other four cards. Team measured 137px against the same
+      // 140px and fell over as soon as the window narrowed.
+      // Vertical padding is untouched, so the pill's height is unchanged.
+      padding: var(--spacer-3) var(--spacer-4);
       border-radius: var(--corner-radius-max);
       border: none;
       font-weight: 600;
