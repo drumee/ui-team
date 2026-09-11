@@ -139,6 +139,19 @@
         background-color: white;
         color: var(--neutral-900);
       }
+
+      // Campaign state (Figma 692-128029): the SELECTED Yearly pill goes
+      // coral with white text. Only the selected state — an unselected tab
+      // keeps the plain pill, so the colour marks where the user is rather
+      // than leaving a permanently shouting tab in the bar.
+      &.is-promo[data-state="1"] {
+        background-color: var(--signal-promo);
+        color: var(--white);
+
+        .settings-billing__tabs-trigger-discount {
+          color: var(--white);
+        }
+      }
     }
 
     &-discount {
@@ -148,6 +161,27 @@
       font-size: 12.25px;
       line-height: 18.38px;
       letter-spacing: -0.13px;
+
+      // "Yearly - Saved 50%" reads as one phrase in the design, so the label
+      // and the figure are joined by a dash rather than just spaced apart.
+      // In CSS because it is punctuation between two nodes, not copy: there
+      // is nothing here for a translator to change. Dropped at the narrow
+      // breakpoint, where the figure wraps onto its own line and a trailing
+      // dash would hang off the end of the first one.
+      //
+      // display:flex is REQUIRED, not styling. Skeletons.Note renders its
+      // text into a nested `div.note-content`, which is a block — so a
+      // ::before on this element is a sibling block and lands on its OWN
+      // LINE, printing the dash above "Saved 50%". Flex makes the two
+      // siblings share one line, which is the only reason this reads as one
+      // phrase. (Verified in a browser against the compiled skin.)
+      display: flex;
+      align-items: baseline;
+      gap: 0.25em;
+
+      &::before {
+        content: "-";
+      }
     }
   }
 
@@ -225,6 +259,32 @@
         // visibility, not display:none — the box has to keep occupying space.
         &.is-placeholder {
           visibility: hidden;
+        }
+
+        // The list price a running promotion is discounting from (Figma
+        // 692-128029, which strikes $60 above $30).
+        //
+        // NO font-size of its own, on purpose, and that is the whole trick.
+        // This row is the header's height equaliser (see the note in
+        // plans.js priceHeader): every card reserves it so the five big
+        // prices sit on one line. Give the strike its own size and a
+        // discounted card reserves a taller row than Free and Sovereign do,
+        // and the tint boxes stop lining up. Inheriting leaves the line box
+        // untouched, so a promotion cannot move the layout at all.
+        //
+        // It also lands on the right size by itself. The design sets the
+        // strike and the "/ year" suffix to the SAME 20px, and this file
+        // already sizes -price-label and -price-period together at every
+        // breakpoint — so inheriting reproduces the design's relationship
+        // wherever the card scale lands, instead of pinning a 20px that
+        // .plans-narrow would override to 12px anyway.
+        //
+        // --signal-promo, not --error: this is a saving, and a price in
+        // validation red reads as something being wrong with it.
+        &.is-strike {
+          font-weight: 600;
+          color: var(--signal-promo);
+          text-decoration: line-through;
         }
       }
 
@@ -450,7 +510,9 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--spacer-4);
-    margin-top: var(--spacer-4);
+    // No margin-top: this shares a row with the campaign strip now (see
+    // &__banner-row), and a margin on one half alone would drop it below the
+    // other. The row owns the spacing above, and sizes both halves.
     // 2026-07-29: the banner dwarfed the rest of the page (18px title in a
     // 16/24 padding box against 14px card text) — bring its type and box in
     // line with the plan cards.
@@ -512,6 +574,102 @@
       &:hover {
         background: var(--primary-90);
       }
+    }
+  }
+
+  // Subscription status and the campaign strip, side by side (Figma
+  // 692-128029 lays them out as one row with a 16px gap). Owns the spacing
+  // that used to sit on &__sub-banner, so the two halves align at the top
+  // whichever of them is present.
+  &__banner-row {
+    align-items: stretch;
+    gap: var(--spacer-5);
+    margin-top: var(--spacer-4);
+
+    // Equal halves while they share the row, and either one alone takes the
+    // full width. Declared HERE rather than on each banner because it is a
+    // fact about the row, not about them — which is also what lets the
+    // stacked state below undo it in one place.
+    > * {
+      flex: 1 1 0;
+      // Let a long renew date shrink rather than shove its neighbour out.
+      min-width: 0;
+    }
+  }
+
+  // ── September 2026 campaign strip: "50% OFF YEARLY PLAN" ─────────────────
+  // Figma 692-128029. The background there is a flattened raster; it is a
+  // diagonal indigo wash under a faint grid, so it is rebuilt here in CSS
+  // instead. That is not just asset thrift: the strip is full-width and
+  // fluid, and a stretched bitmap would smear the grid at every width the
+  // plan page can take. Gradient + repeating-linear-gradient stay crisp.
+  &__promo-banner {
+    align-items: center;
+    gap: var(--spacer-4);
+    padding: var(--spacer-5) var(--spacer-5) var(--spacer-5) var(--spacer-6);
+    border-radius: 16px;
+    overflow: hidden;
+    background-color: #1b1650;
+    background-image:
+      // The grid, first so it sits ON the wash below it.
+      repeating-linear-gradient(to right, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 88px),
+      repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 88px),
+      linear-gradient(107deg, #171243 0%, #241c68 52%, #14103c 100%);
+
+    &-ticket {
+      flex-shrink: 0;
+      width: 84px;
+      height: auto;
+    }
+
+    &-title {
+      // Takes the slack so the countdown is pinned to the right edge, the way
+      // the design's fill-width title frame does.
+      flex: 1 1 auto;
+      min-width: 0;
+      font-weight: 600;
+      font-size: 24px;
+      line-height: 1.1;
+      color: var(--white);
+    }
+
+    &-timer {
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--spacer-2);
+      padding: var(--spacer-3) var(--spacer-4);
+      border-radius: 12px;
+      background: var(--white);
+    }
+
+    &-timer-icon {
+      width: 24px;
+      height: 24px;
+
+      svg {
+        width: 24px;
+        height: 24px;
+        color: var(--primary-40);
+        fill: var(--primary-40);
+      }
+    }
+
+    // Layout only: settings_billing re-feeds this box once a second, so it
+    // is the stable wrapper and the text below is the part that is replaced.
+    &-timer-value {
+      align-items: center;
+    }
+
+    &-timer-text {
+      font-weight: 600;
+      font-size: 16px;
+      line-height: 24px;
+      color: var(--primary-purple-100);
+      // The seconds change every tick, so the chip must not resize on every
+      // one of them — a proportional font makes "11" narrower than "00" and
+      // the whole strip would twitch once a second.
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
   }
 
@@ -2338,6 +2496,7 @@
 
 // ── Banner / promo pill / redeem / checkout ──────────────────────────────────
 .settings-billing__sub-banner.is-anim,
+.settings-billing__promo-banner.is-anim,
 .settings-billing__promo-pill.is-anim,
 .settings-billing__redeem.is-anim,
 .settings-billing__checkout-main.is-anim {
@@ -2595,6 +2754,20 @@
 // and Checkout tabs. Put it back in the flow there; it sits between the banner
 // and the redeem box, which is where its DOM order already places it.
 @container billing-page (max-width: 900px) {
+  // Two banners cannot share a row this narrow: the campaign strip alone
+  // needs an 84px ticket, a 24px headline and a nowrap countdown chip. Stack
+  // them, keeping the same 16px gap between.
+  .settings-billing .settings-billing__banner-row[data-flow="x"] {
+    flex-direction: column;
+
+    // Undo the row's equal-halves sizing. `flex: 1 1 0` resolves against the
+    // MAIN axis, which is now the height — and this row has no height of its
+    // own to share out, so the halves must go back to sizing on content.
+    > * {
+      flex: 0 0 auto;
+    }
+  }
+
   .settings-billing .settings-billing__promo-pill[data-flow="z"] {
     position: relative;
     top: auto;
@@ -2610,6 +2783,22 @@
 }
 
 @container billing-page (max-width: 560px) {
+  // The countdown chip is nowrap and the headline is 24px — below this the
+  // strip has to give, so the ticket goes and the type steps down rather
+  // than the chip wrapping or the row scrolling sideways.
+  .settings-billing__promo-banner-ticket {
+    display: none;
+  }
+
+  .settings-billing__promo-banner-title {
+    font-size: 18px;
+  }
+
+  .settings-billing .settings-billing__promo-banner[data-flow="x"] {
+    padding: var(--spacer-4);
+    gap: var(--spacer-3);
+  }
+
   .settings-billing__page-title {
     font-size: 24px;
     line-height: 30px;
@@ -2640,6 +2829,12 @@
   .settings-billing__tabs-trigger-discount {
     font-size: 11px;
     line-height: 15px;
+
+    // The figure wraps onto its own line here (the item is flex-wrap), so the
+    // joining dash would be left hanging at the end of the line above.
+    &::before {
+      content: none;
+    }
   }
 
   // Banner: the title and the action stop competing for one row. Left as a
