@@ -3843,6 +3843,43 @@ class desk_module extends LetcBox {
     if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
   }
 
+  /**
+   * CLOSE THE WORKSPACE SWITCHER — the panel only, never the screen under it.
+   *
+   * Picking a row left the dropdown up, and the only way to be rid of it was
+   * to click somewhere else. Three things in menu_topic conspire to that, and
+   * it is worth naming them so this is not "fixed" again in the wrong place:
+   *
+   *  - `_onItemClicked` returns early for `persistence: _a.always`, which is
+   *    what the switcher is built with (desk/skeleton/topbar
+   *    workspaceSwitcher);
+   *  - `_onOutsideClick` stands down for any origin the menu `contains`, and a
+   *    row is inside it;
+   *  - the caret is inert, so the trigger is not pressed either.
+   *
+   * 🚨 `persistence` STAYS `always`. It is not decoration: the panel also
+   * holds the header's inline Rename editor and its ⋯ menu, and both are
+   * clicks INSIDE the panel that must leave it standing. Relaxing persistence
+   * would close it on those too, which is the regression this avoids — only
+   * the one gesture that actually leaves for another workspace closes it.
+   *
+   * `_closeItems`, not `_triggerToggle`: a toggle flips, so on an already
+   * closed panel it would OPEN one. This is the very method the outside-click
+   * handler calls, so the panel leaves exactly the way it does today when the
+   * user dismisses it by hand.
+   */
+  _closeWorkspaceSwitcher() {
+    const menu = this._wsSwitcher;
+    if (!menu || !menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
+    // Already shut — the org view's cards raise the same service from a screen
+    // where this panel was never open. `isOpen` is set synchronously by
+    // _openItems while `state` only lands in the model when the open animation
+    // completes, so either one saying "open" is enough.
+    const open = menu.isOpen || (menu.mget && menu.mget(_a.state));
+    if (!open) return;
+    if (_.isFunction(menu._closeItems)) menu._closeItems();
+  }
+
   _syncWorkspaceLabel() {
     const wm = window.Wm;
     const cur = wm && wm._curWorkspace;
@@ -8184,6 +8221,12 @@ class desk_module extends LetcBox {
       // onUiEvent is not async, so the lookup is chained rather than awaited.
       // _fetchWorkspaces is cached, so this resolves immediately in practice.
       case "switch-workspace":
+        // THE PANEL GOES WITH THE GESTURE. Picking a row used to leave the
+        // dropdown standing over the workspace it had just opened, and the
+        // only way out was to click somewhere else. See
+        // _closeWorkspaceSwitcher for why this is done here rather than by
+        // relaxing the menu's `persistence`.
+        this._closeWorkspaceSwitcher();
         // NOT _switchWorkspace directly: a switcher row both ENDS the tour
         // drawn on the workspace being left and OFFERS the one the workspace
         // it opens begins on. See _switchWorkspaceAndOffer for why only this
