@@ -200,9 +200,6 @@ class ___widget_chatItem extends LetcBox {
   buildContent(child) {
     let id = `content-${this.mget(_a.widgetId)}`;
     child.escapeContextmenu = true;
-    child.onAddKid = () => {
-      child.el.dataset.preattachment = "0";
-    };
     // Defer body appends so we can control order:
     //   1) Reply quote (if any)   — prepend
     //   2) Media attachment (if any)
@@ -235,6 +232,18 @@ class ___widget_chatItem extends LetcBox {
               hasMessageText ? "" : " no-text"
             }`,
             kids: [
+              // Placeholder rows, removed the moment the first real card
+              // lands (onPartReady) or the safety ceiling fires. Built here
+              // rather than by the list itself because the list cannot render
+              // anything until its fetch resolves, and for a just-sent message
+              // that fetch has not even been issued yet.
+              Skeletons.Element({
+                className: `${fig}__attachment-skeleton`,
+                content: require("./template/attachment-skeleton")({
+                  fig,
+                  count: this._attachmentCount(),
+                }),
+              }),
               Skeletons.List.Smart({
                 sys_pn: _a.list,
                 flow: _a.none,
@@ -256,6 +265,7 @@ class ___widget_chatItem extends LetcBox {
             ],
           }),
         );
+        this._armAttachmentSkeletonCeiling();
       }
 
       if (showBubble) {
@@ -360,6 +370,72 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
+   * How many attachment placeholder rows this message needs.
+   *
+   * The field arrives in two shapes, and both have to count: a locally-posted
+   * row carries the bare nid array the composer sent (chat/index.js
+   * getAttachmentIds), while a row from channel.messages carries the stored
+   * JSON column, which MariaDB may hand back as a string of `{nid, hub_id}`
+   * objects. Anything else — notably `is_attachment: 1` with no array at all —
+   * means the message has attachments but has not said how many, so draw one
+   * row: a single placeholder that grows into two cards is a smaller lie than
+   * no placeholder at all.
+   * @returns {Number} row count, at least 1
+   */
+  _attachmentCount() {
+    let a = this.mget("attachment");
+    if (_.isString(a)) {
+      try {
+        a = JSON.parse(a);
+      } catch (e) {
+        a = null;
+      }
+    }
+    const n = _.isArray(a) ? a.length : 0;
+    return n > 0 ? n : 1;
+  }
+
+  /**
+   * Remove the placeholder rows and disarm their ceiling.
+   *
+   * Safe to call more than once — both triggers (a card landing, the ceiling
+   * firing) race by design and whichever gets there first wins.
+   */
+  _clearAttachmentSkeleton() {
+    if (this._attachmentSkeletonTimer) {
+      clearTimeout(this._attachmentSkeletonTimer);
+      this._attachmentSkeletonTimer = null;
+    }
+    if (!this.el || !this.el.querySelectorAll) return;
+    // All of them, not the first: buildContent runs from onPartReady, which a
+    // re-feed can fire more than once, and a leftover second skeleton would
+    // pulse under the real cards forever with nothing left to clear it.
+    for (const skel of this.el.querySelectorAll(
+      `.${this.fig.family}__attachment-skeleton`,
+    )) {
+      skel.remove();
+    }
+  }
+
+  /**
+   * Stop the placeholder outliving what it stands for.
+   *
+   * `onAddKid` is the normal exit and fires as soon as a card renders. It does
+   * NOT fire when the fetch comes back empty or fails — the list simply calls
+   * _eod() and goes quiet — and a skeleton that pulses forever claims files are
+   * coming that never will. Fall back to the pre-existing behaviour (an empty
+   * bubble) rather than to a permanent lie.
+   */
+  _armAttachmentSkeletonCeiling() {
+    if (this._attachmentSkeletonTimer) return;
+    this._attachmentSkeletonTimer = setTimeout(() => {
+      this._attachmentSkeletonTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._clearAttachmentSkeleton();
+    }, 10000);
+  }
+
+  /**
    *
    * @param {*} child
    * @param {*} pn
@@ -379,6 +455,8 @@ class ___widget_chatItem extends LetcBox {
         // auto-scrolls on its OWN collection updates, never on an attachment
         // growing inside an existing row.
         child.onAddKid = () => {
+          // The real card is in the DOM — the placeholder has done its job.
+          this._clearAttachmentSkeleton();
           this.triggerHandlers({ service: "attachment-grown" });
         };
         break;
@@ -398,6 +476,25 @@ class ___widget_chatItem extends LetcBox {
         if (is_readed != null) readstatus.dataset.is_readed = is_readed;
         if (is_seen != null) readstatus.dataset.is_seen = is_seen;
       }
+    }
+    // The real message_id has just arrived on an optimistic bubble.
+    //
+    // A locally-posted row is appended before the server has minted its id
+    // (chat/index.js postMessageAPI -> __list.append, channel.post mints it),
+    // but the attachment cards are NOT rendered from the model: the list
+    // FETCHES them keyed on message_id (getAttachments below). ui-core's
+    // _initApi evaluates that descriptor exactly once at construction, so the
+    // request went out as message_id=undefined, matched no row, and the empty
+    // response ran _eod() — which sets _end_of_data and blocks every later
+    // fetch. The bubble stayed empty until a reload, where rows arrive from
+    // channel.messages with a real id already on them.
+    //
+    // The echo (handleReceivedMsg -> mset) is the first moment the id exists.
+    // restart() is the fix rather than fetch(): it re-runs _initApi — the only
+    // thing that re-reads message_id — and clears _end_of_data, without which
+    // the sealed list would refuse to fetch at all.
+    if (changed.message_id && this.__list && _.isFunction(this.__list.restart)) {
+      this.__list.restart();
     }
     // Re-render reaction chips whenever metadata changes (reactions live inside it).
     if (changed[_a.metadata] !== undefined) {
@@ -596,17 +693,19 @@ class ___widget_chatItem extends LetcBox {
     }
     const cb = require("./template/checkbox")(m);
     this.el.innerHTML = `${html}${cb}`;
-    let preattachment = 0;
-    if (this.mget("is_attachment")) preattachment = 1;
+    // `data-preattachment` used to reserve a blank 103px strip here while the
+    // attachment loaded. It could never work: the flag read `is_attachment`,
+    // which a just-sent row does not carry, and __main's onAddKid cleared it on
+    // the FIRST kid appended — the bubble, in the same tick. Its geometry was
+    // stale too, sized for a vertical thumbnail and reserved outside the bubble,
+    // while the card is now a horizontal row inside it. Replaced by the
+    // skeleton rows in buildContent, which sit where the cards actually land.
     this.feed(
       Skeletons.Box.Z({
         className: `${this.fig.family}__main ${author} ${area}`,
         sys_pn: _a.main,
         flow: _a.none,
         escapeContextmenu: true,
-        dataset: {
-          preattachment,
-        },
       }),
     );
     // Hover handlers are bound to the message bubble (conversation content) in
@@ -958,6 +1057,10 @@ class ___widget_chatItem extends LetcBox {
       this._pickerOutsideHandler = null;
     }
     this._closeThreadPicker();
+    if (this._attachmentSkeletonTimer) {
+      clearTimeout(this._attachmentSkeletonTimer);
+      this._attachmentSkeletonTimer = null;
+    }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
