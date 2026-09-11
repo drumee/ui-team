@@ -7,19 +7,29 @@ const TAB_CHECKOUT = 2;
 // ── September 2026 campaign: 50% off the yearly plans ───────────────────────
 // MKT request (Lexis, 2026-09-10); Figma "Drumee 2.0" node 692-128029.
 //
-// When the campaign STOPS, as a unix timestamp: 2026-09-30 23:59:59 in UTC-12,
-// the last timezone on earth still inside September. The brief was "the last
-// day of September, for every timezone", and this is the only instant that
-// satisfies it — nobody loses the offer while their own calendar still reads
-// September. The price is that a viewer east of UTC keeps seeing the banner a
-// few hours into their October 1st, which is the generous direction to be
-// wrong in and costs nothing: the discount itself lives in Stripe, not here.
+// The campaign ends at the end of September IN THE VIEWER'S OWN TIMEZONE.
 //
-// There is deliberately no matching START constant. The banner's real gate is
-// the catalog (below), not the calendar, so an early mount cannot advertise
-// anything — a start date would be a second number to keep correct for no
-// safety at all.
-const PROMO_YEARLY_ENDS_AT = 1790855999;
+// A single fixed instant cannot be right for everyone: whichever one you pick
+// is already October for every zone east of it. The first cut used 2026-09-30
+// 23:59:59 at UTC-12 — generous, nobody cut short — but it left the banner
+// counting down through the afternoon of October 1st in Vietnam, which reads
+// as a bug (Duy, 2026-09-11). So the deadline is computed per viewer instead:
+// local midnight at the start of October 1st, i.e. the last moment their own
+// calendar still says September. Everyone gets their whole September and
+// nobody watches a "September" offer tick over in October.
+//
+// Built with the local-parts Date constructor on purpose — it resolves the
+// browser's own zone and DST rules, which no fixed offset can.
+const PROMO_YEARLY_LOCAL_END = () =>
+  Math.floor(new Date(2026, 9, 1, 0, 0, 0, 0).getTime() / 1000);
+
+// Backstop: the instant September has ended EVERYWHERE (2026-09-30 23:59:59 at
+// UTC-12). A device clock set to a wrong or deliberately distant zone cannot
+// hold the banner open past this. It only ever binds at UTC-12 and further
+// west, which is uninhabited — every real viewer is governed by their own
+// local end above. The discount itself cannot be extended this way in any
+// case: the price lives in Stripe and the catalog gate re-checks it.
+const PROMO_YEARLY_HARD_END = 1790855999;
 
 // The saving the banner's copy and its artwork CLAIM. It is a floor, not a
 // label: the banner only renders once the catalog's REAL yearly discount is at
@@ -1316,8 +1326,17 @@ class settings_billing extends LetcBox {
    * @returns {boolean}
    */
   _promoYearlyActive() {
-    if (Math.floor(Date.now() / 1000) >= PROMO_YEARLY_ENDS_AT) return false;
+    if (Math.floor(Date.now() / 1000) >= this._promoEndsAt()) return false;
     return this._yearlySavingPct() >= PROMO_YEARLY_PCT;
+  }
+
+  /**
+   * When the campaign stops FOR THIS VIEWER: the end of September on their own
+   * calendar, capped at the moment September has ended everywhere.
+   * @returns {number} unix seconds
+   */
+  _promoEndsAt() {
+    return Math.min(PROMO_YEARLY_LOCAL_END(), PROMO_YEARLY_HARD_END);
   }
 
   /**
@@ -1325,7 +1344,7 @@ class settings_billing extends LetcBox {
    * @returns {number}
    */
   _promoSecondsLeft() {
-    return Math.max(0, PROMO_YEARLY_ENDS_AT - Math.floor(Date.now() / 1000));
+    return Math.max(0, this._promoEndsAt() - Math.floor(Date.now() / 1000));
   }
 
   /**
