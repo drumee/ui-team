@@ -135,9 +135,19 @@
       letter-spacing: -0.132px;
       border-radius: var(--corner-radius-2);
 
+      // Figma "filter box / selected=yes" (component 43:31729) fills
+      // Primary/40 #5950FF with white text. This painted it white, which is
+      // the unselected look of a lot of pill bars but not this one — on the
+      // Monthly and Checkout tabs there was no colour anywhere in the row.
       &[data-state="1"] {
-        background-color: white;
-        color: var(--neutral-900);
+        background-color: var(--primary-40);
+        color: var(--white);
+
+        // The saving reads green on the grey bar; on the filled pill it has
+        // to come with the label or it disappears into the purple.
+        .settings-billing__tabs-trigger-discount {
+          color: var(--white);
+        }
       }
 
       // Campaign state (Figma 692-128029): the SELECTED Yearly pill goes
@@ -219,12 +229,25 @@
     &-header {
       position: relative;
       width: 100%;
-      // Was 164px, which left ~68px of dead air between the title and the
-      // price (space-between does the distribution). Product first asked for
-      // 40% less (136), then hand-tuned it to 80 — content-height plus
-      // padding, no filler at all (2026-07-29).
+      // ⚠️ THIS PARTLY REVERSES 947a601a (Vu Dang, 2026-07-29), which took the
+      // box 164 → 136 → 80px on product's instruction: "content-height plus
+      // padding, no filler between title and price at all". Duy asked for the
+      // room back on 2026-09-11, reading the September frame (Figma
+      // 692-128029), which still draws this box at a FIXED 164px with
+      // space-between — i.e. the design file never adopted the July tuning.
+      // Re-confirm with product before this reaches preview; reverting is one
+      // line (drop the `gap`, which is the only thing adding filler).
+      //
+      // min-height stays 80 and is not what governs: the content alone
+      // measured 97px, so the box was exactly its content and space-between
+      // had nothing to distribute — the title sat directly on the price.
+      // 32px gap puts the box at 137px, between the 80 product asked for and
+      // the 164 the design draws, and scaled to our type (the card renders at
+      // 246px against Figma's ~290px, so a literal 164 would be dead air).
       min-height: 80px;
-      padding: var(--spacer-4);
+      gap: var(--spacer-7);
+      // 16px, the design's own figure for this box.
+      padding: var(--spacer-5);
       border-radius: var(--corner-radius-5); // 16px
       background-color: var(--tertiary-grey-20);
       justify-content: space-between;
