@@ -7708,32 +7708,81 @@ class desk_module extends LetcBox {
   _showBillingLoader() {
     if (this._billingLoaderPending) return;
     this._billingLoaderPending = true;
+    // WHICH RAISE THIS IS. _hideBillingLoader can only cancel what it can
+    // reach — the timer — and the kind wait below is not cancellable, so the
+    // chain re-reads this on the other side. Without it, a close followed by
+    // a second Upgrade-plan click could have two chains alive at once and
+    // stack two spinners.
+    const run = (this._billingLoaderRun = (this._billingLoaderRun || 0) + 1);
     this._billingLoaderTimer = setTimeout(() => {
       this._billingLoaderTimer = null;
       // The wait ended while we were holding back — this is the cached path,
       // and nothing should appear.
-      if (!this._billingLoaderPending) return;
-      if (!window.Wm || !Wm.info) return;
-      const fig = "window-info";
-      Wm.info({
-        variant: "notice",
-        mode: "hb",
-        billing_loading: 1,
-        dismiss_after: 30000,
-        message: [
-          Skeletons.Box.X({
-            className: `${fig}__loader`,
-            kids: [
-              Skeletons.Element({ className: `${fig}__loader-spinner` }),
-              Skeletons.Note({
-                className: `${fig}__loader-label`,
-                content: LOCALE.LOADING_BILLING || "Loading plans…",
-              }),
-            ],
-          }),
-        ],
-      });
+      if (!this._billingLoaderPending || run !== this._billingLoaderRun) return;
+      this._raiseBillingLoader(run);
     }, DESK_BILLING_LOADER_DELAY);
+  }
+
+  /**
+   * Put the spinner on screen — but not until `window_info` is a REAL class.
+   *
+   * 🚨 THIS IS THE FIX FOR "the billing loading popup appears on the page I
+   * moved on to, and sits there" (Natrix, preview, 2026-09-09 night).
+   *
+   * Wm.info() does NOT reliably leave a window behind by the time it returns.
+   * `window_info` is a dynamic-import seed (seeds.js), so the FIRST one of a
+   * session resolves through Kind.get -> kind/loader.js, which hands the pool
+   * a lazy PLACEHOLDER view carrying this very model. _billingLoader() finds
+   * that placeholder and _hideBillingLoader() closes it — and then the import
+   * lands and the placeholder puts itself back as the real window_info
+   * (kind/loader.js `ok` -> View.renew, which re-adds the model with no
+   * destroyed/stopping guard). Nothing holds that second window, so the
+   * spinner appears AFTER the wait it belongs to has ended, over whatever
+   * screen the user clicked through to, and stays for the full dismiss_after
+   * — 30 seconds.
+   *
+   * Resolving the kind FIRST takes the placeholder out of the path: after the
+   * await, collection.add() builds the real view synchronously (Marionette
+   * _onCollectionUpdate), so the window exists the moment Wm.info returns and
+   * _hideBillingLoader can always find it. Nothing else changes — same
+   * window, same copy, same 220ms hold-back, same dismiss_after backstop.
+   *
+   * The pending flag is re-read after the await because that is the other
+   * half of the same race: the chunk can land while the kind is resolving,
+   * and then there is nothing left to explain a spinner, so none is raised.
+   *
+   * A rejected import resolves to null and simply raises nothing — the page
+   * is no worse off than before, and openBillingPage's `finally` still runs.
+   *
+   * @param {Number} run the raise this call belongs to (see _showBillingLoader)
+   */
+  _raiseBillingLoader(run) {
+    if (!window.Wm || !Wm.info) return;
+    return Kind.waitFor("window_info")
+      .catch(() => null)
+      .then(() => {
+        if (!this._billingLoaderPending || run !== this._billingLoaderRun) return;
+        if (!window.Wm || !Wm.info) return;
+        const fig = "window-info";
+        Wm.info({
+          variant: "notice",
+          mode: "hb",
+          billing_loading: 1,
+          dismiss_after: 30000,
+          message: [
+            Skeletons.Box.X({
+              className: `${fig}__loader`,
+              kids: [
+                Skeletons.Element({ className: `${fig}__loader-spinner` }),
+                Skeletons.Note({
+                  className: `${fig}__loader-label`,
+                  content: LOCALE.LOADING_BILLING || "Loading plans…",
+                }),
+              ],
+            }),
+          ],
+        });
+      });
   }
 
   /**
