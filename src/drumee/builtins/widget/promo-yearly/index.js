@@ -31,7 +31,7 @@ class __promo_yearly extends LetcBox {
     // Billing banner does: the number has to be the one Stripe is actually
     // giving. The modal is only ever opened when that is >= the campaign's
     // advertised figure, so the artwork's baked-in "50%" cannot overstate.
-    this._pct = parseInt(opt.pct, 10) || 0;
+    this._pct = Number.parseInt(opt.pct, 10) || 0;
   }
 
   /** Wm.launch({singleton:1}) reuses the instance and calls .raise(). */
@@ -51,9 +51,9 @@ class __promo_yearly extends LetcBox {
 
   onBeforeDestroy() {
     this._stopCountdown();
-    if (this.el && this.el.parentElement === document.body) {
-      document.body.removeChild(this.el);
-    }
+    // Portalled to <body> in onDomRefresh, so it has to take itself back out;
+    // Wm only knows about the mount point it gave us.
+    if (this.el?.parentElement === document.body) this.el.remove();
   }
 
   _portalToBody() {
