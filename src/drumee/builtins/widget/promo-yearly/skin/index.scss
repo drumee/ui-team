@@ -94,7 +94,15 @@
     }
   }
 
+  // justify-content, NOT just text-align. Every Skeletons.Note renders as a
+  // FLEX container wrapping an inner .note-content block, so text-align only
+  // centres the lines INSIDE that block — and the block is a flex item sized
+  // to its content. This headline wraps to nearly the full width, so it looked
+  // centred by luck; a shorter translation would have sat against the left
+  // edge. Measured in the browser: Note display is `flex` with
+  // justify-content `normal`.
   &__title {
+    justify-content: center;
     font-weight: 600;
     font-size: 32px;
     line-height: 1.1;
@@ -147,6 +155,11 @@
   &__cta {
     width: 100%;
     box-sizing: border-box;
+    // See the note on &__title: the label is a flex item, so text-align alone
+    // left it hard against the button's left padding — 97px of text in a 456px
+    // pill. This is what actually centres it.
+    justify-content: center;
+    align-items: center;
     padding: var(--spacer-4) var(--spacer-6);
     border-radius: var(--corner-radius-4); // 12px
     background: var(--primary-50);
