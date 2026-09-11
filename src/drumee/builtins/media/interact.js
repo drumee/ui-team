@@ -14,6 +14,63 @@ const ECHO_ID = "echoId";
 const VIGNETTE_CACHE_MAX = 600;
 const VIGNETTE_MISS_TTL = 60000;
 const _vignetteCache = new Map();
+
+// ── Fetch thumbnails only for tiles the user can actually see ────────────────
+//
+// Opening a folder used to fire ONE vignette request per tile, immediately, for
+// every tile in the listing. The Drumee Dev Team workspace holds 1,055 media
+// nodes; a single production session there made 479 vignette requests — 72% of
+// ALL its traffic — three of them taking 7.7s, with the app's own service calls
+// (media.show_node_by, task.list) pushed out to ~1.8s queued behind the flood.
+//
+// It is not only network. Every resolved thumbnail becomes a blob URL and a
+// rendered tile, so the eager fetch is also what inflates the DOM, and DOM size
+// is the multiplier on every style recalculation in the app.
+//
+// ONE observer for every tile on the page — an observer per tile would cost
+// more than it saves. `rootMargin` starts the fetch before the tile is on
+// screen, so ordinary scrolling still finds the thumbnail already there.
+//
+// root: null (the viewport) is correct even though the grid scrolls inside its
+// own container: intersection is computed against the viewport WITH ancestor
+// clipping applied, so a tile scrolled out of the pane does not intersect. It
+// also means a pane hidden during a workspace switch fetches nothing until it
+// is actually shown.
+const VIGNETTE_ROOT_MARGIN = "600px";
+let _vignetteObserver = null;
+const _vignettePending = new WeakMap();
+
+function _observeVignette(el, run) {
+  // No IntersectionObserver, or no element to measure: behave exactly as before
+  // and fetch straight away, rather than leaving a tile blank forever.
+  if (typeof IntersectionObserver !== "function" || !el) {
+    run();
+    return null;
+  }
+  if (!_vignetteObserver) {
+    _vignetteObserver = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const fn = _vignettePending.get(e.target);
+          _vignetteObserver.unobserve(e.target);
+          _vignettePending.delete(e.target);
+          if (fn) fn();
+        }
+      },
+      { rootMargin: VIGNETTE_ROOT_MARGIN }
+    );
+  }
+  _vignettePending.set(el, run);
+  _vignetteObserver.observe(el);
+  return el;
+}
+
+function _unobserveVignette(el) {
+  if (!el || !_vignetteObserver) return;
+  _vignetteObserver.unobserve(el);
+  _vignettePending.delete(el);
+}
 function _vignetteRemember(url, entry) {
   if (_vignetteCache.size >= VIGNETTE_CACHE_MAX) {
     const first = _vignetteCache.keys().next().value;
@@ -282,6 +339,22 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Stop watching a tile that is destroyed before it ever scrolled into view.
+   *
+   * Without this the shared IntersectionObserver keeps a strong reference to the
+   * element, and the registered callback keeps the widget, for the life of the
+   * page — the observer would trade one cost for another.
+   *
+   * `super.onBeforeDestroy()` is not optional: media_core's hook releases the
+   * RADIO_MEDIA icon-type subscription and re-syncs the parent's bounds.
+   */
+  onBeforeDestroy() {
+    _unobserveVignette(this._vignetteObserved);
+    this._vignetteObserved = null;
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
    *
    */
   defaultTrigger(e) {
@@ -511,7 +584,13 @@ class __media_interact extends media_core {
             return showMissing();
           _vignetteCache.delete(url);
         }
-        this.fetchFile({ url })
+        // Deferred until the tile is near the viewport (see _observeVignette).
+        // A cache HIT above still resolves synchronously, so nothing already
+        // fetched starts waiting on scroll.
+        const fetchThumb = () => {
+          this._vignetteObserved = null;
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.fetchFile({ url })
           .then(async (blob) => {
             if (!blob) {
               this.warn(`Got no blob from ${url}`);
@@ -539,6 +618,10 @@ class __media_interact extends media_core {
             this.content.el.innerHTML = this.innerContent(this);
             this._setupInteract();
           });
+        };
+        // A re-render must not leave the previous observation behind.
+        _unobserveVignette(this._vignetteObserved);
+        this._vignetteObserved = _observeVignette(this.el, fetchThumb);
         break;
       }
       default:
