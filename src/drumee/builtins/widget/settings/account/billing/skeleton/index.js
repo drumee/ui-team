@@ -189,6 +189,101 @@ function subscriptionBanner(ui) {
 }
 
 /**
+ * The countdown chip's text node.
+ *
+ * Exported because settings_billing._tickPromoCountdown() re-feeds it once a
+ * second: one definition means the class and the formatting cannot drift
+ * between the first render and every render after it.
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
+function promoCountdownNote(ui) {
+  return Skeletons.Note({
+    className: `${ui.fig.family}__promo-banner-timer-text`,
+    content: ui._promoCountdownText(),
+  });
+}
+
+/**
+ * September 2026 campaign strip: "50% OFF YEARLY PLAN" + a live countdown
+ * (Figma "Drumee 2.0" node 692-128029).
+ *
+ * Rendered ONLY when settings_billing._promoYearlyActive() says the catalog is
+ * really giving at least the advertised cut — the headline and the ticket
+ * artwork both carry a hard "50%", so this must never appear on a deployment
+ * whose Stripe yearly prices have not moved. It also self-retires at the end
+ * of September without a deploy. See the constants in billing/index.js.
+ *
+ * Not shown on Checkout: that tab is a payment form for a plan already chosen,
+ * and an advert for a different billing cycle belongs before the choice, not
+ * during the transaction. It DOES show on Monthly, which is where the offer
+ * actually sells.
+ * @param {Object} ui - UI instance
+ * @returns {Object|null} Skeletons component
+ */
+function promoBanner(ui) {
+  const tab = ui.state?.currentTab ?? ui.tab ?? 0;
+  if (tab === 2) return null;
+  if (!ui._promoYearlyActive || !ui._promoYearlyActive()) return null;
+
+  const fig = `${ui.fig.family}__promo-banner`;
+  const ticket = require("assets/promo-yearly-ticket.png");
+
+  return Skeletons.Box.X({
+    className: `${fig}${ui._motionClass()}`,
+    kids: [
+      // Decorative: the headline beside it already carries the offer, so an
+      // alt would only repeat it to a screen reader.
+      Skeletons.Element({
+        tagName: "img",
+        className: `${fig}-ticket`,
+        // `.default` because this comes through webpack's asset loader.
+        attribute: { src: ticket && ticket.default ? ticket.default : ticket, alt: "" },
+      }),
+      Skeletons.Note({
+        className: `${fig}-title`,
+        content: (LOCALE.PROMO_YEARLY_OFF_TITLE || "{0}% OFF YEARLY PLAN")
+          .format(ui._yearlySavingPct()),
+      }),
+      Skeletons.Box.X({
+        className: `${fig}-timer`,
+        kids: [
+          Skeletons.Image.Svg({ ico: "alarm", className: `${fig}-timer-icon` }),
+          // A CONTAINER, not the text itself: settings_billing ticks this once
+          // a second by feed()-ing a fresh Note into it (the framework's own
+          // update path), which is why it needs a sys_pn of its own. Writing
+          // into a Note's element directly would fight the note widget, whose
+          // content lives in an inner .note-content div it rebuilds itself.
+          Skeletons.Box.X({
+            className: `${fig}-timer-value`,
+            sys_pn: `${ui.fig.family}__promo-countdown`,
+            partHandler: ui,
+            kids: [promoCountdownNote(ui)],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ * The banner row: subscription status and the campaign strip sit side by side
+ * (Figma 692-128029 lays them out as one 16px-gap row), and it collapses to a
+ * single column on a narrow page. Returns null when neither half is present,
+ * so a page with no banner keeps exactly the spacing it has today.
+ * @param {Object} ui - UI instance
+ * @returns {Object|null} Skeletons component
+ */
+function bannerRow(ui) {
+  const kids = [subscriptionBanner(ui), promoBanner(ui)].filter(Boolean);
+  if (!kids.length) return null;
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__banner-row`,
+    kids,
+  });
+}
+
+/**
  * LAUNCH30 persistent reminder (design doc 2026-07-30, tester feedback
  * 2026-07-31 #3: "don't spam the popup — a small pill lives here instead").
  * Floating card, top-right of the page (design mockup) — NOT an in-flow
@@ -429,7 +524,7 @@ function billing(ui) {
     kids: [
       ui._page ? pageHeader(ui) : null,
       header,
-      subscriptionBanner(ui),
+      bannerRow(ui),
       claimPill(ui),
       redeemBox(ui),
       contentWrapper,
@@ -446,4 +541,4 @@ function billing(ui) {
 }
 
 export default billing;
-export { getContent };
+export { getContent, promoCountdownNote };

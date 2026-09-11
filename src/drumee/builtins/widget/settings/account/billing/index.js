@@ -4,6 +4,33 @@ const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
 
+// ── September 2026 campaign: 50% off the yearly plans ───────────────────────
+// MKT request (Lexis, 2026-09-10); Figma "Drumee 2.0" node 692-128029.
+//
+// When the campaign STOPS, as a unix timestamp: 2026-09-30 23:59:59 in UTC-12,
+// the last timezone on earth still inside September. The brief was "the last
+// day of September, for every timezone", and this is the only instant that
+// satisfies it — nobody loses the offer while their own calendar still reads
+// September. The price is that a viewer east of UTC keeps seeing the banner a
+// few hours into their October 1st, which is the generous direction to be
+// wrong in and costs nothing: the discount itself lives in Stripe, not here.
+//
+// There is deliberately no matching START constant. The banner's real gate is
+// the catalog (below), not the calendar, so an early mount cannot advertise
+// anything — a start date would be a second number to keep correct for no
+// safety at all.
+const PROMO_YEARLY_ENDS_AT = 1790855999;
+
+// The saving the banner's copy and its artwork CLAIM. It is a floor, not a
+// label: the banner only renders once the catalog's REAL yearly discount is at
+// least this large, so the page can never advertise a cut Stripe is not
+// actually giving. See _promoYearlyActive().
+//
+// The prices behind it are Stripe Price objects (yp.plan holds only
+// stripe_price_id — there is no amount column), so this flips on by itself the
+// moment the yearly prices are halved, and off again when they are restored.
+const PROMO_YEARLY_PCT = 50;
+
 const formatCurrency = (amount) => {
   return `$${amount.toFixed(2)}`;
 };
@@ -78,6 +105,7 @@ class settings_billing extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     clearTimeout(this._motionTimer);
+    this._stopPromoCountdown();
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
@@ -904,6 +932,13 @@ class settings_billing extends LetcBox {
       case `${this.fig.family}__redeem-code-input`:
         this.__redeemCodeInput = child;
         break;
+      case `${this.fig.family}__promo-countdown`:
+        // Re-point at the freshly rendered chip (the old one's node is gone)
+        // and make sure exactly one interval is running — _startPromoCountdown
+        // is a no-op when it already is.
+        this.__promoCountdown = child;
+        this._startPromoCountdown();
+        break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
         //   this._restoreInputFocus(child, "storage");
@@ -1207,6 +1242,154 @@ class settings_billing extends LetcBox {
    */
   _money(n) {
     return formatCurrency(Number(n) || 0);
+  }
+
+  /**
+   * What twelve months of a plan cost when bought one month at a time.
+   *
+   * Nothing is ever SOLD at this figure — it is the reference the yearly
+   * saving is measured against, and the struck-through number on a discounted
+   * card (Figma 692-128029, which strikes $60/$348/$1,188 — exactly 12x the
+   * $5/$29/$99 monthly prices). Derived rather than stored so it cannot drift
+   * away from the monthly price it is a multiple of.
+   * @param {string} code - plan code ('pro' | 'team' | 'business')
+   * @returns {number} amount in currency units, 0 when the plan has no price
+   */
+  _yearlyListPrice(code) {
+    const monthly = this._catPrice(code, "month");
+    return monthly > 0 ? monthly * 12 : 0;
+  }
+
+  /**
+   * How much a yearly subscription saves against twelve monthly ones, as a
+   * whole percent.
+   *
+   * READ FROM THE CATALOG, never hardcoded. This used to be a literal 16.5 in
+   * skeleton/header.js, which was only true while yearly sat at 10x monthly:
+   * the moment a campaign moves the Stripe prices, a hardcoded badge either
+   * understates the offer or — far worse — advertises a discount the checkout
+   * does not honour. The amounts here come from the same _catPrice() the cards
+   * and the confirm dialog quote, so the badge, the strike and the price the
+   * buyer is actually charged cannot disagree.
+   *
+   * FLOORED, so the copy can only ever under-promise: the standing 10x deal is
+   * 16.67% and reads "16%". Same safe direction the published 16.5% figure
+   * chose.
+   *
+   * Across plans it takes the SMALLEST saving, and counts a plan that saves
+   * nothing as a real 0 rather than skipping it — the tab badge is one claim
+   * covering every plan, so it has to be true of the worst of them. Only plans
+   * with no price in this environment are ignored, because there is no claim
+   * to make about something that is not for sale here.
+   * @param {string} [code] - a single plan, or omit for the whole catalogue
+   * @returns {number} whole percent, 0 when there is no saving to report
+   */
+  _yearlySavingPct(code) {
+    const codes = code ? [code] : ["pro", "team", "business"];
+    const pcts = [];
+    for (const c of codes) {
+      const list = this._yearlyListPrice(c);
+      const yearly = this._catPrice(c, "year");
+      // Not priced in this deployment — no opinion, not a zero.
+      if (!(list > 0) || !(yearly > 0)) continue;
+      pcts.push(yearly >= list ? 0 : Math.floor(((list - yearly) / list) * 100));
+    }
+    if (!pcts.length) return 0;
+    return Math.min(...pcts);
+  }
+
+  /**
+   * Is the September 50%-off-yearly campaign both LIVE and actually honoured?
+   *
+   * Two independent gates, and the catalog one is the important half: the
+   * banner claims a specific number ("50% OFF YEARLY PLAN", and the ticket
+   * artwork has "50%" baked into it), so it may only appear once Stripe is
+   * really giving at least that much. Before the prices are changed the page
+   * simply shows no banner instead of a false one; after they are restored it
+   * disappears on its own. The date is the backstop that retires the campaign
+   * even if the prices are left in place.
+   *
+   * Until the catalog lands, _catPrice() answers from its offline fallback map
+   * (the standing 10x prices), which scores 16% — so the first paint of a
+   * cold load shows nothing and the banner appears with the real prices. That
+   * is the right way round: never flash a claim we cannot yet stand behind.
+   * @returns {boolean}
+   */
+  _promoYearlyActive() {
+    if (Math.floor(Date.now() / 1000) >= PROMO_YEARLY_ENDS_AT) return false;
+    return this._yearlySavingPct() >= PROMO_YEARLY_PCT;
+  }
+
+  /**
+   * Whole seconds left in the campaign, floored at 0.
+   * @returns {number}
+   */
+  _promoSecondsLeft() {
+    return Math.max(0, PROMO_YEARLY_ENDS_AT - Math.floor(Date.now() / 1000));
+  }
+
+  /**
+   * The countdown chip's text — "21 DAYS 06:48:00" (Figma 692-128029).
+   * Drops the day count entirely on the last day rather than printing
+   * "0 DAYS", which reads as an expired offer.
+   * @returns {string}
+   */
+  _promoCountdownText() {
+    const total = this._promoSecondsLeft();
+    const days = Math.floor(total / 86400);
+    const rest = total % 86400;
+    const pad = (n) => String(n).padStart(2, "0");
+    const clock = `${pad(Math.floor(rest / 3600))}:${pad(Math.floor((rest % 3600) / 60))}:${pad(rest % 60)}`;
+    if (days <= 0) return clock;
+    return (days === 1
+      ? (LOCALE.PROMO_COUNTDOWN_DAY || "{0} DAY {1}")
+      : (LOCALE.PROMO_COUNTDOWN_DAYS || "{0} DAYS {1}")
+    ).format(days, clock);
+  }
+
+  /**
+   * Drive the countdown chip once a second.
+   *
+   * ONE interval for the whole widget lifetime, never one per render: every
+   * surface on this page is rebuilt by a full feed() (the catalog landing, a
+   * WS plan_updated, a tab switch), so the chip is destroyed and recreated
+   * constantly and starting a timer per part would stack them silently.
+   * onPartReady just re-points _promoCountdown at the live part.
+   */
+  _startPromoCountdown() {
+    if (this._promoTimer) return;
+    this._promoTimer = setInterval(() => this._tickPromoCountdown(), 1000);
+  }
+
+  _stopPromoCountdown() {
+    clearInterval(this._promoTimer);
+    this._promoTimer = null;
+  }
+
+  /**
+   * One tick. Stops itself whenever the chip is no longer on screen (the
+   * Checkout tab, or any render that dropped the banner) so a hidden page
+   * costs nothing; onPartReady starts it again when the chip comes back.
+   */
+  _tickPromoCountdown() {
+    const part = this.__promoCountdown;
+    // isConnected, not a stored flag: the part object outlives its DOM node
+    // across a re-render, and the node is the only thing that knows.
+    if (this.isDestroyed() || !part || !part.el || !part.el.isConnected) {
+      this._stopPromoCountdown();
+      return;
+    }
+    // The campaign ran out while the page sat open. Re-render once so the
+    // banner and the tab badge go with it, rather than freezing on 00:00:00.
+    if (!this._promoYearlyActive()) {
+      this._stopPromoCountdown();
+      this.__promoCountdown = null;
+      this.fetchPlanData();
+      return;
+    }
+    const { promoCountdownNote } = require("./skeleton");
+    if (typeof part.softClear === "function") part.softClear();
+    part.feed(promoCountdownNote(this));
   }
 
   /**
