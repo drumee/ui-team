@@ -13,6 +13,14 @@ const {
   uidsFromText,
 } = require("./mention-markers");
 
+// How long an overlay is held on screen after its close is clicked, so its
+// exit animation can play. MUST MATCH the 0.14s the skin gives
+// tasks-panel-fade-out / -pop-out: too short and the node is torn out
+// mid-animation, too long and the card sits there finished, which is the
+// "click close → delay → popup finally disappears" this panel was already
+// bitten by once. See _dismissOverlay.
+const OVERLAY_EXIT_MS = 140;
+
 // Mention-editor scopes where a bare Enter posts, and the method it calls. The
 // description editors (create / detail) are deliberately absent: they have no
 // submit action of their own — a description is saved by its panel — so Enter
@@ -201,6 +209,19 @@ class __tasks_panel extends LetcBox {
     // closes clears its own flag, so its next opening animates again without a
     // single handler having to remember to reset anything.
     this._painted = {};
+    // Which of the detail card's sections are still in flight.
+    //
+    // The card opens instantly from the board row that was clicked, but its
+    // attachments, comments and change log are three separate fetches. Nothing
+    // could tell "not fetched yet" from "fetched, and there are none":
+    // getComments() answers [] for both, and getDetailAttachments() is
+    // `_attachments[id] || []`. So every one of those sections opened claiming
+    // to be EMPTY and then filled in underneath that claim. These flags are
+    // that missing bit; the skeleton reads them through isLoading().
+    this._loading = {};
+    // Handle of the teardown queued behind an overlay's exit animation, so any
+    // render arriving mid-exit can drop it. See _dismissOverlay.
+    this._closingTimer = null;
     this._detailId = null;
     this._detailDraft = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
@@ -313,6 +334,9 @@ class __tasks_panel extends LetcBox {
     if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
     if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
     if (this._submitWatchdog) clearTimeout(this._submitWatchdog);
+    // A panel destroyed mid-exit (the tab switched, the window closed) must not
+    // leave a teardown queued against its wrappers.
+    this._cancelPendingExit();
     if (this._wsCooldown) clearTimeout(this._wsCooldown);
     this._wsCooldown = null;
     this._wsPending = null;
@@ -1411,8 +1435,11 @@ class __tasks_panel extends LetcBox {
         this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
-        this._dismissOverlayNow("create-backdrop");
-        return this._renderOverlays();
+        // State is already cleared above, so the modal is shut as far as every
+        // handler is concerned; only its DOM waits for the exit to play.
+        return this._dismissOverlay("create-backdrop", () =>
+          this._renderOverlays(),
+        );
 
       case "create-status":
         if (this._createDefaults) {
@@ -1794,13 +1821,19 @@ class __tasks_panel extends LetcBox {
         // closing the child used to take the parent with it. Read the target
         // first: _closeDetailSilently clears it.
         const back = this._detailReturnTo;
-        this._closeDetailSilently();
-        // _openDetail renders on its own — a _renderDeferred() on top of it
-        // would be a second full rebuild of the panel just painted.
+        // Walking back is NAVIGATION, not a dismissal: the parent is drawn
+        // into this same element in the same tick, so an exit here would fade
+        // the child out underneath the parent arriving on top of it. Close it
+        // instantly and let _openDetail play its own entrance.
         if (back && this._tasks.some((t) => t.id === back)) {
+          this._closeDetailSilently();
+          // _openDetail renders on its own — a _renderDeferred() on top of it
+          // would be a second full rebuild of the panel just painted.
           return this._openDetail(back);
         }
-        return this._renderOverlays();
+        // A real dismissal: state is cleared now, the card animates away, and
+        // the wrappers are re-fed once it has gone.
+        return this._closeDetailSilently(() => this._renderOverlays());
       }
 
       case "open-detail":
@@ -2768,11 +2801,25 @@ class __tasks_panel extends LetcBox {
     Kind.waitFor("window_info").then(show).catch(show);
   }
 
-  // Tear the detail down without the click path's re-render — callers that
-  // close it in reaction to a peer's change are already re-rendering.
-  _closeDetailSilently() {
+  /**
+   * Tear the detail down without the click path's re-render — callers that
+   * close it in reaction to a peer's change are already re-rendering.
+   *
+   * Every field here is cleared SYNCHRONOUSLY, including on the animated path:
+   * from this point the panel is shut as far as any handler is concerned, and
+   * only the DOM lingers for the length of the exit.
+   *
+   * @param {Function} [done] the teardown to defer behind the exit animation.
+   *   Passed by a DISMISSAL (the X, Cancel, a successful Update); omitted by a
+   *   reaction (peer delete, walking back to a parent), which cuts instantly.
+   *   See _dismissOverlay.
+   */
+  _closeDetailSilently(done) {
     this._detailId = null;
     this._detailDraft = null;
+    // Section fetches belong to the task that was open; a flag left standing
+    // would greet the next task with a skeleton it never clears.
+    this._loading = {};
     // A silent close is a real close (peer delete, task switch, commit) — the
     // breadcrumb must not survive it and re-open a panel the user just left.
     this._detailReturnTo = null;
@@ -2790,7 +2837,7 @@ class __tasks_panel extends LetcBox {
     this._setDragAffordance(null);
     this._closeCommentReactionsPicker();
     this._resetFileSearch();
-    this._dismissOverlayNow("detail-backdrop");
+    this._dismissOverlay("detail-backdrop", done);
   }
 
   // A peer deleted the task this user has open. Their edits can no longer be
@@ -3505,7 +3552,13 @@ class __tasks_panel extends LetcBox {
       // true, which permanently disables commit-task / commit-detail.
       this._setSubmitting(".tasks-panel__create-submit", false);
     }
-    this._render();
+    // This render runs on BOTH outcomes, so it cannot animate unconditionally:
+    // a failed create deliberately leaves the modal open with the draft intact
+    // (see the note in the success branch above) and must simply repaint it.
+    // `_creating` is the record of which happened — only the success branch
+    // clears it.
+    if (this._creating) return this._render();
+    return this._dismissOverlay("create-backdrop", () => this._render());
   }
 
   async _removeTask(trigger) {
@@ -3785,10 +3838,16 @@ class __tasks_panel extends LetcBox {
     this._resetFileSearch();
     this._setSubmitting(".tasks-panel__detail-submit", false);
     if (back && this._tasks.some((t) => t.id === back)) {
-      // _openDetail renders on its own.
+      // Navigation, not a dismissal — the parent lands in this same element,
+      // so there is nothing to animate away. _openDetail renders on its own.
       return this._openDetail(back);
     }
-    this._render();
+    // A saved task is a dismissal like any other, so it leaves the same way
+    // the X does. The render behind it is a FULL one (the task list changed
+    // and the board has to repaint), and it is deferred with everything else:
+    // the card is covering the board while it fades, so nothing of the stale
+    // paint is visible during those few frames.
+    this._dismissOverlay("detail-backdrop", () => this._render());
   }
 
   // Render the detail panel immediately on click; refresh attachments async
@@ -3869,9 +3928,14 @@ class __tasks_panel extends LetcBox {
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
+    // Three fetches follow, and the card is about to be drawn without any of
+    // them. Flag all three BEFORE the render, or it paints the empty states
+    // for one frame before the skeleton could replace them.
+    this._loading = { attachments: 1, comments: 1, history: 1 };
     this._renderOverlays();
     this._refreshAttachments(id).then(() => {
       if (this._detailId !== id) return;
+      this._settleLoading("attachments", id);
       // Initial fetch came back — refeed just the rows, don't touch the
       // form fields the user may have already started editing.
       this._refreshAttachmentsList();
@@ -3880,12 +3944,14 @@ class __tasks_panel extends LetcBox {
     // Surgically feed the comment list when it arrives — a full _render() here
     // rebuilds the panel and replays its open animation (visible glitch).
     this._loadComments(id).then(() => {
+      this._settleLoading("comments", id);
       if (this._detailId === id) this._refreshCommentList();
     });
     // "All" (the default tab) shows the change log below the comments, so it is
     // fetched on open rather than on first switch. Feeds its own part — the
     // comment list is untouched by this.
     this._loadTaskHistory(id).then(() => {
+      this._settleLoading("history", id);
       if (this._detailId === id) this._refreshHistoryList();
     });
   }
@@ -8098,15 +8164,81 @@ class __tasks_panel extends LetcBox {
   // shows a veil + spinner over the current view), let that frame PAINT (double
   // rAF), then run the full render and clear the flag. The attribute lives on
   // this.el, which feed() never replaces, so the veil survives until cleared.
-  // Close an overlay (task detail / create modal) INSTANTLY: hide its DOM
-  // this frame, then rebuild the board deferred. The overlay is only truly
-  // removed by the full re-feed, which on a busy board takes long enough
-  // that the X felt stuck (tester 2026-07-30: click close → delay → popup
-  // finally disappears).
-  _dismissOverlayNow(cls) {
-    if (!this.el) return;
+  /**
+   * Close an overlay (task detail / create modal).
+   *
+   * This used to be `_dismissOverlayNow`, and it hid the backdrop outright —
+   * `display: none` this frame, rebuild deferred — because the overlay is only
+   * truly removed by the re-feed behind it, which on a busy board took long
+   * enough that the X felt stuck (tester 2026-07-30: "click close → delay →
+   * popup finally disappears").
+   *
+   * THAT COMPLAINT IS THE CONSTRAINT, not an argument against animating. What
+   * felt stuck was the overlay sitting there UNCHANGED while the board rebuilt
+   * underneath it — nothing acknowledged the click. So the state still clears
+   * synchronously in the caller (a second click cannot reopen or double-submit),
+   * the click is acknowledged on the very next frame by the exit itself, and
+   * only the DOM teardown waits the 140ms the animation needs.
+   *
+   * `done` is that teardown. WITHOUT IT THIS STAYS INSTANT, and that is the
+   * meaningful distinction rather than a convenience:
+   *
+   *   - a DISMISSAL (X, Cancel, a successful commit) passes one, and animates
+   *   - a REACTION passes none, and cuts. A peer deleted the task under the
+   *     user, or they walked back to a parent task — which re-uses this very
+   *     element to draw something else in the same tick, so a fading ghost
+   *     would sit under whatever replaced it.
+   *
+   * @param {String}   cls  backdrop class suffix, e.g. "detail-backdrop"
+   * @param {Function} done the teardown to run once the exit has played
+   */
+  _dismissOverlay(cls, done) {
+    // Every early return still runs the teardown. An exit that animates
+    // nothing AND tears down nothing leaves the overlay on screen for good,
+    // with the panel's own state already saying it is shut.
+    const run = () => {
+      this._closingTimer = null;
+      if (done) done();
+    };
+    if (!this.el) return run();
     const el = this.el.querySelector(`.${this.fig.family}__${cls}`);
-    if (el) el.style.display = "none";
+    if (!el) return run();
+    if (!done || this._prefersReducedMotion()) {
+      el.style.display = "none";
+      return run();
+    }
+    el.dataset.closing = "1";
+    this._cancelPendingExit();
+    this._closingTimer = setTimeout(run, OVERLAY_EXIT_MS);
+  }
+
+  /**
+   * Drop a queued teardown.
+   *
+   * Anything that re-renders during the exit window — a WS push landing, the
+   * user opening another task — rips the animating node out early. That is
+   * fine to look at; it is exactly what closing did before. But the queued
+   * teardown must not then fire against a panel that has moved on and re-feed
+   * wrappers it no longer owns, so every renderer drops it first.
+   */
+  _cancelPendingExit() {
+    if (!this._closingTimer) return;
+    clearTimeout(this._closingTimer);
+    this._closingTimer = null;
+  }
+
+  // Honoured by hand rather than left to the skin: the skin can stop the
+  // animation, but only this can stop the WAIT for one that will never play.
+  _prefersReducedMotion() {
+    try {
+      return !!(
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    } catch (_) {
+      return false;
+    }
   }
 
   _renderDeferred() {
@@ -8268,8 +8400,9 @@ class __tasks_panel extends LetcBox {
    * collection, so every card on the board was destroyed and rebuilt just to
    * put a modal on top of it. On a workspace-wide board that is thousands of
    * Marionette views and DOM elements per click, and it is the reason closing
-   * a modal needed _dismissOverlayNow to feel responsive at all (tester
-   * 2026-07-30: "click close -> delay -> popup finally disappears").
+   * a modal needed _dismissOverlay to hide the backdrop up front to feel
+   * responsive at all (tester 2026-07-30: "click close -> delay -> popup
+   * finally disappears").
    *
    * Nothing outside the wrappers changes on these transitions, so nothing
    * outside them is touched — the view keeps its DOM, its scroll offset and
@@ -8288,6 +8421,11 @@ class __tasks_panel extends LetcBox {
    * _refreshViewBody.
    */
   _renderOverlays() {
+    // Same reason as _render: this re-feeds the wrappers, so an exit still
+    // playing in one of them ends here. A teardown that is running RIGHT NOW
+    // has already cleared its own handle, so this is a no-op on that path —
+    // it only catches the renders that arrive from somewhere else mid-exit.
+    this._cancelPendingExit();
     if (this._chromeSig !== this._chromeSignature()) return this._render();
     const names = this.constructor.OVERLAY_PARTS;
     const parts = names.map((n) => this._mountedPart(n));
@@ -8313,6 +8451,10 @@ class __tasks_panel extends LetcBox {
   }
 
   _render() {
+    // This feed replaces the overlay wrappers outright, so any overlay that is
+    // mid-exit goes with it. Drop the queued teardown: it would otherwise fire
+    // a moment from now and re-feed wrappers this render has already settled.
+    this._cancelPendingExit();
     // Drafts stay in sync via the `task-input-changed` watch — do NOT add
     // a pre-feed DOM read here; it would race the Entry's async setter.
 
@@ -9559,6 +9701,32 @@ class __tasks_panel extends LetcBox {
    */
   hasPainted(key) {
     return !!(this._painted && this._painted[key]);
+  }
+
+  /**
+   * Is this detail-card section still waiting on its fetch?
+   *
+   * The skeleton asks so it can draw placeholder rows instead of an empty
+   * state that is not yet true. See `_loading` in initialize.
+   *
+   * @param {String} key attachments | comments | history
+   */
+  isLoading(key) {
+    return !!(this._loading && this._loading[key]);
+  }
+
+  /**
+   * Mark a section's fetch as finished. Ignores answers for a task the user
+   * has already navigated away from — the same guard the callers apply before
+   * feeding their rows, kept here too so a new caller cannot forget it and
+   * clear the flag for whatever is open NOW.
+   *
+   * @param {String} key    attachments | comments | history
+   * @param {String} taskId the task the answer belongs to
+   */
+  _settleLoading(key, taskId) {
+    if (taskId != null && `${taskId}` !== `${this._detailId}`) return;
+    if (this._loading) this._loading[key] = 0;
   }
 
   isCreating() {

@@ -1032,24 +1032,24 @@ const make = function (ui) {
       ].filter(Boolean),
     });
 
-    const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
-
     // Rows live in a stable sub-part so unlink can re-feed just this list
     // without re-rendering the whole detail panel (which would steal focus
     // and wipe any unsaved title/description edits).
+    // Built through the SHARED builder rather than inline. This list has two
+    // entry points — the opening render here, and _refreshAttachmentsList when
+    // the fetch lands — and only the second went through
+    // buildAttachmentRowsContent. So a rule added there (the loading skeleton)
+    // would have applied to every repaint EXCEPT the one that opens the card,
+    // which is the only moment the section is actually still loading.
+    const attachmentsLoading = !!(ui.isLoading && ui.isLoading("attachments"));
     const attachmentRowsContainer = Skeletons.Box.X({
       className: `${pfx}__attachment-rows`,
       sys_pn: "attachment-rows",
       partHandler: ui,
-      dataset: { empty: attachments.length ? 0 : 1 },
-      kids: attachments.length
-        ? attachments.map(attachmentRow)
-        : [
-            Skeletons.Note({
-              className: `${pfx}__attachments-empty`,
-              content: LOCALE.NO_ATTACHMENTS,
-            }),
-          ],
+      // A section holding skeleton rows is not empty — it has something to
+      // show, and the flag is what other rules key off.
+      dataset: { empty: attachments.length || attachmentsLoading ? 0 : 1 },
+      kids: buildAttachmentRowsContent(ui, attachments, detail.id),
     });
 
     // "Child task items" — the metadata sidebar, under Due date (Figma
@@ -2777,6 +2777,9 @@ function commentAttachments(ui, c, isOwn) {
 function buildCommentListContent(ui) {
   const pfx = ui.fig.family;
   const comments = ui.getComments() || [];
+  // Still fetching — see skelRows. Three rows: enough to read as a thread
+  // rather than as one stray row, without pushing the composer off-screen.
+  if (isLoading(ui, "comments")) return skelRows(pfx, "comments", 3);
   if (!comments.length) {
     return [
       Skeletons.Note({
@@ -3206,6 +3209,7 @@ const HISTORY_VERBS = {
 function buildHistoryListContent(ui) {
   const pfx = ui.fig.family;
   const history = ui.getTaskHistory ? ui.getTaskHistory() || [] : [];
+  if (isLoading(ui, "history")) return skelRows(pfx, "history", 2);
   if (!history.length) {
     return [
       Skeletons.Note({
@@ -3648,8 +3652,75 @@ function buildDueSectionContent(ui, scope = "detail") {
   ];
 }
 
+/**
+ * Placeholder rows for a detail section whose fetch is still in flight.
+ *
+ * WHY THIS EXISTS AT ALL: the card opens instantly from the board row that was
+ * clicked, but attachments, comments and the change log are three separate
+ * round trips (_openDetail in ../index.js). Until they land, getComments() and
+ * getDetailAttachments() both answer `[]` — the same value they answer with
+ * when the task genuinely has none — so every one of these sections used to
+ * open claiming to be EMPTY, and then filled in underneath the sentence
+ * denying it. `ui.isLoading(key)` is the bit that tells the two apart.
+ *
+ * Shapes match the rows they stand in for, so nothing jumps when the real
+ * content replaces them: a comment is an avatar plus two lines, a history
+ * entry an avatar plus one, an attachment a single chip.
+ *
+ * `shape` is deliberately the SAME word as the loading key it is drawn for
+ * (attachments | comments | history) rather than a singular of it. Two
+ * vocabularies for one thing is how a `[data-shape="comment"]` rule quietly
+ * stops matching the `comments` section it was written for.
+ *
+ * @param {String} pfx   the panel's BEM family
+ * @param {String} shape attachments | comments | history — the section's key
+ * @param {Number} n     how many rows
+ */
+function skelRows(pfx, shape, n) {
+  // Widths alternate so the block reads as text rather than as a grid. Inline
+  // rather than per-row classes: it is the only thing that differs.
+  const LINES = {
+    comments: ["38%", "82%"],
+    history: ["64%"],
+    attachments: ["100%"],
+  };
+  const withDot = shape !== "attachments";
+  return Array.from({ length: n }, (_, i) =>
+    Skeletons.Box.X({
+      className: `${pfx}__skel-row`,
+      // attrOpt, NOT dataset: dataset alone is dropped at render, and the skin
+      // selects on [data-shape]. Shipping one without the other fails silently
+      // — see the note on `entered` at the head of this file.
+      attrOpt: { "data-shape": shape },
+      kids: [
+        withDot ? Skeletons.Box.X({ className: `${pfx}__skel-dot` }) : null,
+        Skeletons.Box.Y({
+          className: `${pfx}__skel-lines`,
+          kids: (LINES[shape] || LINES.history).map((w, j) =>
+            Skeletons.Box.X({
+              className: `${pfx}__skel-bar`,
+              // Stagger the rows a little so they pulse as a group rather than
+              // blinking in lockstep.
+              styleOpt: {
+                width: w,
+                "animation-delay": `${(i * 2 + j) * 0.08}s`,
+              },
+            }),
+          ),
+        }),
+      ].filter(Boolean),
+    }),
+  );
+}
+
+// Optional call, like getTaskHistory beside it: a caller that predates the
+// flag still renders, and falls back to the honest empty state rather than an
+// eternal skeleton.
+const isLoading = (ui, key) => !!(ui.isLoading && ui.isLoading(key));
+
 function buildAttachmentRowsContent(ui, attachments, taskId) {
   const pfx = ui.fig.family;
+  if (isLoading(ui, "attachments")) return skelRows(pfx, "attachments", 2);
   if (!attachments || !attachments.length) {
     return [
       Skeletons.Note({
