@@ -1,4 +1,4 @@
-const { roleByValue } = require("../../../builtins/skeleton/toolkit");
+const { roleByValue, roleFromPrivilege } = require("../../../builtins/skeleton/toolkit");
 const { attachEmailLookup, fillEntry } = require("libs/contact-lookup");
 
 // Wm's inbound-websocket bus. Same name and same channel window/utils.js and
@@ -326,6 +326,33 @@ class __permission_restricted extends DrumeeMFS {
     if (menu?.changeState) menu.changeState(0);
   }
 
+  /**
+   * Put a member's role menu back on the role they actually hold.
+   *
+   * ui-core's radio behaviour moves the menu's highlight to the clicked row ON
+   * THE CLICK (behavior/radio.js _on_message), before _selectMemberRole has
+   * asked anything. So a change that did not happen — the confirm cancelled,
+   * or the server refusing it — left the menu marking the role that was picked
+   * instead of the one the member has: View member, pick Chat, Cancel, and the
+   * menu said Chat.
+   *
+   * The rows are the picked row's siblings; each carries its role's privilege
+   * as dataset, and roleFromPrivilege resolves the stored mask to the role the
+   * skeleton marks (owner 63 → Admin, and so on). Set in place rather than
+   * re-rendering: a re-feed would rebuild the whole panel and throw away its
+   * scroll position for a change that did not happen.
+   */
+  _restoreRolePick(cmd, raw) {
+    const held = roleFromPrivilege(raw?.privilege);
+    const rows = cmd?.parent?.children;
+    if (!held || !rows || !_.isFunction(rows.each)) return;
+    rows.each((row) => {
+      if (!_.isFunction(row?.setState)) return;
+      const privilege = Number(row.el?.dataset?.privilege);
+      row.setState(privilege === Number(held.privilege) ? 1 : 0);
+    });
+  }
+
   /** Menu pick on a member row — confirm, then persist across the workspace. */
   async _selectMemberRole(cmd) {
     if (this._confirmInFlight) return;
@@ -364,6 +391,8 @@ class __permission_restricted extends DrumeeMFS {
       });
     } catch (_) {
       this._confirmInFlight = false;
+      // Cancelled: nothing changed, so neither may the menu.
+      this._restoreRolePick(cmd, raw);
       return;
     }
 
@@ -376,6 +405,7 @@ class __permission_restricted extends DrumeeMFS {
         privilege,
       });
       if (res && (res.error || res.error_code)) {
+        this._restoreRolePick(cmd, raw);
         return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
       }
       // Trust the POST and redraw from local state: get_members_by_type can
@@ -383,6 +413,7 @@ class __permission_restricted extends DrumeeMFS {
       raw.privilege = privilege;
       this._render();
     } catch (e) {
+      this._restoreRolePick(cmd, raw);
       this._notice(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
       this._confirmInFlight = false;
