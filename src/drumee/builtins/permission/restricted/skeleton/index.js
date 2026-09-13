@@ -23,6 +23,8 @@ const {
   roleFromPrivilege,
   roleByValue,
 } = require("../../../skeleton/toolkit/permission");
+// The folder window's "+ New" menu builder — the role pill's menu is one.
+const { dropdownMenuButton } = require("../../../window/skeleton/toolkit");
 
 /**
  * Map a hub.get_members_by_type row to the row shape rendered below.
@@ -54,9 +56,13 @@ function mapMember(row) {
 }
 
 /**
- * The role pill: a KIND.menu.topic dropdown whose options carry the target
- * role as dataset, so picking one fires `service` with everything the handler
- * needs. Same construction as the base panel's roleDropdown.
+ * The role pill: a window-button dropdown — the same `dropdownMenuButton` the
+ * folder window's "+ New" menu is built with, so the card and its rows share
+ * that menu's look (skin: mixins/drumee window-button-dropdown-menu).
+ *
+ * Each row carries the target role as dataset, so picking one fires `service`
+ * with everything the handler needs; `radio` + `state` keep the held role
+ * marked. dropdownMenuButton passes those through to the row untouched.
  */
 function roleDropdown(pfx, role, service, extra = {}) {
   const ui = extra.uiHandler;
@@ -76,38 +82,40 @@ function roleDropdown(pfx, role, service, extra = {}) {
     ],
   });
 
-  const items = Skeletons.Box.Y({
-    className: `${pfx}__role-menu`,
-    kids: roleOptions.map((opt) =>
-      Skeletons.Note({
-        className: `${pfx}__role-option`,
-        content: opt.label,
-        service,
-        radio: radioGroup,
-        name: opt.label,
-        tooltips: opt.description
-          ? { content: opt.description, className: "role-option-tooltip" }
-          : undefined,
-        uiHandler: ui ? [ui] : undefined,
-        dataset: {
-          ...(memberId ? { member_id: memberId } : {}),
-          privilege: opt.privilege,
-          role_label: opt.label,
-        },
-        state: opt.label === role.label ? 1 : 0,
-      }),
-    ),
+  // `sys_pn` is dropped: dropdownMenuButton defaults it to one shared
+  // placeholder, and this panel mounts a menu per member row.
+  const { sys_pn, ...menu } = dropdownMenuButton(ui, {
+    className: "window-button",
+    trigger,
+    menuItems: roleOptions.map((opt) => ({
+      service,
+      // Every row gets the check so the labels line up; the skin shows it on
+      // the held role only.
+      ico: "desktop_check",
+      content: opt.label,
+      radio: radioGroup,
+      name: opt.label,
+      tooltips: opt.description
+        ? { content: opt.description, className: "role-option-tooltip" }
+        : undefined,
+      dataset: {
+        ...(memberId ? { member_id: memberId } : {}),
+        privilege: opt.privilege,
+        role_label: opt.label,
+      },
+      state: opt.label === role.label ? 1 : 0,
+    })),
   });
 
   return {
-    kind: KIND.menu.topic,
-    className: `${pfx}__role-dropdown`,
-    flow: _a.y,
-    opening: _e.click,
+    ...menu,
+    // The panel's own class beside the shared one — its skin anchors the menu
+    // to the pill and styles the selected row off it.
+    className: `${menu.className} ${pfx}__role-dropdown`,
+    // Kept from the menu this replaces: dropdownMenuButton's `none` would
+    // close on any click, where the invite row closes it explicitly.
     persistence: _a.once,
-    trigger,
     offsetY: 4,
-    items,
   };
 }
 
