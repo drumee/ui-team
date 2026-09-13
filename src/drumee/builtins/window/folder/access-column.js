@@ -33,10 +33,11 @@ function accessPanelSpec(win) {
 /**
  * Enter the Access view: mount the panel on first entry, refresh it after.
  *
- * An open Settings or secure-share drawer is cleared first. Both share the
- * window's dialog wrapper and its `isShowSettings` flag (see
- * _folderSettingsPanelIsOpen), and either would put a second copy of the
- * matrix over the file grid beside this one.
+ * An open Settings, secure-share or members drawer is cleared first. All
+ * three share the window's dialog wrapper and its `isShowSettings` flag —
+ * broader than `_folderSettingsPanelIsOpen`, which tests only for the Folder
+ * Settings panel specifically — and any of them would put a second copy of
+ * the matrix over the file grid beside this one.
  *
  * @param {Object} win   the folder window
  * @param {Object} view  the split body (part "folder-view")

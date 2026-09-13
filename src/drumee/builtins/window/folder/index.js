@@ -5638,8 +5638,8 @@ class __window_folder extends mfsInteract {
       viewCtrl.el.dataset.visible = showsFileGrid(tab) ? "1" : "0";
     }
     // The merged "+ New" button also lives in that row and only operates on
-    // Files (upload / create / gdrive-import) — hide it off the Files tab so it
-    // can't be mistaken for a Chat/Task/Meeting action.
+    // the file grid (upload / create / gdrive-import) — hide it off Files and
+    // Access so it can't be mistaken for a Chat/Task/Meeting action.
     this.syncNewCtrlVisibility();
 
     const switchView = (view) => {
@@ -6384,8 +6384,9 @@ class __window_folder extends mfsInteract {
   //   - walk in          → updateTopbar (a subfolder may grant other rights)
   //   - walk back        → _restoreNavState (so may an ancestor)
   //
-  // Off the Files tab it hides regardless of permission: the actions only apply
-  // to files, so showing it on Chat/Task/Meeting would misrepresent what it does.
+  // Off Files and Access it hides regardless of permission: the actions only
+  // apply to the file grid, so showing it on Chat/Task/Meeting would
+  // misrepresent what it does.
   syncNewCtrlVisibility() {
     const newCtrl = this.getPart && this.getPart("new-ctrl");
     if (!newCtrl || !newCtrl.el) return;

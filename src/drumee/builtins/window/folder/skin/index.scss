@@ -2564,6 +2564,9 @@
       display: none;
     }
 
+    // Compact (≤700px, the @container block below) re-hides this with the
+    // same selector and the same !important — equal specificity, so THAT rule
+    // wins purely because it comes later in the file. Keep it that way.
     > .window-folder__files-splitter {
       display: flex !important;
     }
