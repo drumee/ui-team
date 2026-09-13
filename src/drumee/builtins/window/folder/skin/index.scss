@@ -2526,12 +2526,21 @@
   // _wireFilesSplitter clamps & persists the `--files-w` % this grid reads).
   // The gutter is a REAL grid column (not an absolute overlay) so it never gets
   // covered by the chat panel's stacking context.
-  &__split-body[data-view="files"] {
+  //
+  // Access (the rail's Access, window/folder/access-column) is this same layout
+  // with the members panel in the chat panel's place, so it shares the block:
+  // the same grid, the same per-panel overrides and the same flex shares — and
+  // with them the chat panel's width, in grid layout and in the flex fallback.
+  // Without the shared flex share the fallback sized the members panel to its
+  // content (61px against the chat panel's 467px at a 1400px window).
+  &__split-body[data-view="files"],
+  &__split-body[data-view="access"] {
     grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
 
     > .window-folder__files-panel,
     > .window__files-panel,
-    > .window__chat-panel {
+    > .window__chat-panel,
+    > .permission-restricted__ui {
       margin: 0 !important;
       max-width: none !important;
       min-width: 0 !important;
@@ -2541,39 +2550,32 @@
     > .window__files-panel {
       flex: 2 1 0 !important;
     }
-    > .window__chat-panel {
+    > .window__chat-panel,
+    > .permission-restricted__ui {
       flex: 1 1 0 !important;
     }
-    // The drag gutter occupies the middle column only on the Files tab.
-    // !important beats the framework's Box.Y default display:flex (same reason
-    // the base hide below needs it).
+    // The drag gutter occupies the middle column only on the Files and Access
+    // tabs. !important beats the framework's Box.Y default display:flex (same
+    // reason the base hide below needs it).
+    //
+    // Compact (≤700px, the @container block below) re-hides it on Access with
+    // the same selector and the same !important — equal specificity, so THAT
+    // rule wins purely because it comes later in the file. Keep it that way.
     > .window-folder__files-splitter {
       display: flex !important;
     }
   }
 
-  // Access (the rail's Access, window/folder/access-column) keeps the Files
-  // layout — file grid, drag gutter, the same --files-w split — and puts the
-  // members panel where the team chat sits, drawn as the same card.
+  // Access draws the members panel in the chat panel's place, as the same card.
   &__split-body[data-view="access"] {
-    grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
-
     .window__chat-panel,
     .window__thread-rail,
     .window__file-thread-panel {
       display: none;
     }
 
-    // Compact (≤700px, the @container block below) re-hides this with the
-    // same selector and the same !important — equal specificity, so THAT rule
-    // wins purely because it comes later in the file. Keep it that way.
-    > .window-folder__files-splitter {
-      display: flex !important;
-    }
-
     > .permission-restricted__ui {
       display: flex;
-      min-width: 0;
       border-radius: 8px;
       border: 1px solid rgba(0, 0, 0, 0.05);
       background: var(--normal-bg-90);

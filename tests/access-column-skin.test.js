@@ -85,3 +85,18 @@ test("column mode drops the drawer's dock", () => {
     assert.ok(has(col, decl), decl);
   }
 });
+
+test("Access sizes the members panel exactly as Files sizes the chat panel", () => {
+  // Same column, same size: whatever the Files view forces on the chat panel —
+  // in grid layout and in the flex layout some states render — Access forces
+  // on the members panel, and the file grid gets the same share in both.
+  const FILES = ".window-folder__split-body[data-view=files]";
+  const sizing = ["margin: 0 !important", "max-width: none !important", "min-width: 0 !important", "width: auto !important"];
+  for (const decl of [...sizing, "flex: 1 1 0 !important"]) {
+    assert.ok(has(rulesFor(folder, `${FILES} > .window__chat-panel`), decl), `chat panel: ${decl}`);
+    assert.ok(has(rulesFor(folder, `${V} > .permission-restricted__ui`), decl), `members panel: ${decl}`);
+  }
+  for (const decl of [...sizing, "flex: 2 1 0 !important"]) {
+    assert.ok(has(rulesFor(folder, `${V} > .window__files-panel`), decl), `access file grid: ${decl}`);
+  }
+});
