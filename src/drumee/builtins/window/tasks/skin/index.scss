@@ -1645,6 +1645,23 @@ $theme-colors: (
     animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 
+  // The exit — twin of the detail card's, see the note there.
+  &__create-backdrop[data-closing="1"] {
+    animation: tasks-panel-fade-out 0.14s ease forwards;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__create-backdrop[data-closing="1"] &__create-modal {
+    animation: tasks-panel-pop-out 0.14s cubic-bezier(0.4, 0, 1, 1) forwards;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
   &__create-form {
     flex: 1 1 auto;
     min-height: 0;
@@ -2050,6 +2067,100 @@ $theme-colors: (
     }
   }
 
+  // The exits, mirroring the two entrances above. `forwards` on both: without
+  // it the last frame snaps back to full opacity and the overlay FLASHES right
+  // before the wrapper is re-fed empty, which reads as a glitch rather than a
+  // close. The curve is the reverse of the entrance's — slow out, fast away —
+  // so leaving feels quicker than arriving even at the same duration.
+  @keyframes tasks-panel-fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes tasks-panel-pop-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+
+  // ── Section skeletons (task detail card) ──────────────────────
+  // The board holds its whole shape with a masked layer while it waits on one
+  // service (see __ui above). The detail card is the other shape of that
+  // problem: it opens with real content already in hand — the board row it was
+  // clicked on — and only three SECTIONS are still in flight (attachments,
+  // comments, change log). So the skeleton goes in those sections, not over
+  // the card.
+  //
+  // Grey bars rather than an SVG mask. A mask earns its keep on an irregular
+  // composite like the board; a comment row is a dot and two bars, and a mask
+  // of that is harder to keep true to the rows it stands in for than simply
+  // drawing them.
+  &__skel-row {
+    // Full width in the two column lists (comments, history). The attachment
+    // strip is a WRAPPING row, so its rows take a chip's width instead — see
+    // the override below.
+    width: 100%;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 0;
+    // Scaffolding: never a drop target, never a click target.
+    pointer-events: none;
+  }
+
+  &__skel-lines {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  &__skel-bar {
+    height: 10px;
+    border-radius: 6px;
+    // Themed, like every other skeleton in the app, so the card matches the
+    // board it opened from in both light and dark.
+    background: var(--border-default, #e5e5ea);
+    animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__skel-dot {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--border-default, #e5e5ea);
+    animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  // An attachment row is a single chip, so it carries no avatar, takes a
+  // chip's width in the wrapping strip, and its bar stands in for the whole
+  // card rather than for a line of prose.
+  &__skel-row[data-shape="attachments"] {
+    width: 180px;
+    padding: 0;
+  }
+
+  &__skel-row[data-shape="attachments"] &__skel-bar {
+    height: 32px;
+    border-radius: 8px;
+  }
+
   // ── Detail popover ────────────────────────────────────────────
   &__detail-wrapper {
     position: absolute;
@@ -2105,6 +2216,26 @@ $theme-colors: (
   // ungated entrance here flashed the whole panel on each one.
   &__detail-backdrop[data-entered="0"] &__detail-panel {
     animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  // THE EXIT. Stamped by _dismissOverlay (../index.js) on the click, which then
+  // holds the node for exactly this long before the wrapper is re-fed empty.
+  // The panel's STATE is already cleared by then — only the teardown waits — so
+  // nothing here can be clicked back into life while it plays.
+  &__detail-backdrop[data-closing="1"] {
+    animation: tasks-panel-fade-out 0.14s ease forwards;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__detail-backdrop[data-closing="1"] &__detail-panel {
+    animation: tasks-panel-pop-out 0.14s cubic-bezier(0.4, 0, 1, 1) forwards;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
   }
 
   // Description | Files two-up row atop the detail main column.
