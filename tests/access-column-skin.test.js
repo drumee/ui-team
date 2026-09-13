@@ -127,9 +127,9 @@ test("entering Files, Chat, Task or Meet slides that view's panels in, not for r
   const ANIM = "animation: window-folder__column-in-from-right 0.2s ease-out backwards";
   const selectors = [
     `${E}[data-view=files]:not([data-from-view=access]) .window__files-panel`,
-    `${E}[data-view=files]:not([data-from-view=access]) .window__chat-panel:has(.window__chat-widget[data-painted="1"])`,
+    `${E}[data-view=files]:not([data-from-view=access]) .window__chat-panel`,
     `${E}[data-view=chat] .window__thread-rail`,
-    `${E}[data-view=chat] .window__chat-panel:has(.window__chat-widget[data-painted="1"])`,
+    `${E}[data-view=chat] .window__chat-panel`,
     `${E}[data-view=chat] .window__file-thread-panel`,
     `${E}[data-view=task] .tasks-panel__ui[data-painted="1"]`,
     `${E}[data-view=meeting] .window-folder__meeting-schedule`,
@@ -137,12 +137,28 @@ test("entering Files, Chat, Task or Meet slides that view's panels in, not for r
   for (const sel of selectors) assert.ok(has(rulesFor(folder, sel), ANIM), sel);
   // The board waits for its first paint: nothing on the bare, still-empty root.
   assert.ok(!has(rulesFor(folder, `${E}[data-view=task] .tasks-panel__ui`), ANIM), "task entrance must wait for data-painted");
-  // The chat column waits for its first page of messages, like the board.
-  assert.ok(!has(rulesFor(folder, `${E}[data-view=files]:not([data-from-view=access]) .window__chat-panel`), ANIM), "files: chat panel waits for data-painted");
-  assert.ok(!has(rulesFor(folder, `${E}[data-view=chat] .window__chat-panel`), ANIM), "chat: chat panel waits for data-painted");
-  assert.ok(has(rulesFor(folder, '.window-folder__split-body .window__chat-panel:not(:has(.window__chat-widget[data-painted="1"]))'), "visibility: hidden"), "chat column hidden until painted");
   // Reduced motion cancels EXACTLY the animated selectors — a less specific
   // selector loses to them even though it comes later in the file.
   const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
   for (const sel of selectors) assert.ok(has(rulesFor(reduced, sel), "animation: none"), `reduced: ${sel}`);
+});
+
+test("the team chat card shows a pulsing skeleton until its messages arrive, then fades its content in", () => {
+  const PANEL = ".window-folder__split-body .window__chat-panel";
+  const WAITING = `${PANEL}:not(:has(.window__chat-widget[data-painted="1"]))`;
+  const READY = `${PANEL}:has(.window__chat-widget[data-painted="1"])`;
+  assert.ok(has(rulesFor(folder, `${WAITING} > *`), "visibility: hidden"), "own content held back");
+  const skel = rulesFor(folder, `${WAITING}::after`);
+  assert.ok(has(skel, "animation: window-folder__chat-skeleton-pulse 1.2s ease-in-out infinite"));
+  assert.ok(has(skel, "background-color: var(--border-default, #e5e5ea)"));
+  assert.ok(skel.some((b) => /mask: url\("data:image\/svg\+xml/.test(b)), "skeleton shapes come from a mask");
+  assert.ok(!rulesFor(folder, PANEL).some((b) => /visibility:\s*hidden/.test(b)), "the card itself is no longer hidden");
+  for (const child of ["> .window__chat-label", "> .window__chat-widget"]) {
+    assert.ok(has(rulesFor(folder, `${READY} ${child}`), "animation: window-folder__chat-content-in 0.2s ease-out backwards"), child);
+  }
+  const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
+  assert.ok(has(rulesFor(reduced, `${WAITING}::after`), "animation: none"), "reduced: no pulse");
+  for (const child of ["> .window__chat-label", "> .window__chat-widget"]) {
+    assert.ok(has(rulesFor(reduced, `${READY} ${child}`), "animation: none"), `reduced: ${child}`);
+  }
 });
