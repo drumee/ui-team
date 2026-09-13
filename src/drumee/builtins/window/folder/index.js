@@ -3072,11 +3072,24 @@ class __window_folder extends mfsInteract {
     // computed when it was built, so a reopen on a later day must redraw.
     const today = Dayjs().format("YYYY-MM-DD");
     const quiet = !!opt.quiet && this._schedPaintedDay === today;
+    // Painted means "this grid reflects an answer": rows we already had, or a
+    // settled fetch. Until then the skin draws a skeleton over the panel
+    // instead of an empty week (window-folder__meeting-schedule). _fetchMeetings
+    // swallows its own failures, so the settled path below covers a lost
+    // request too — nothing can leave the panel pulsing forever.
+    const paint = () => {
+      const part = this.getPart && this.getPart("meeting-panel");
+      if (part && part.el && part.el.dataset) part.el.dataset.painted = "1";
+    };
     const before = readCache.signature(this._meetings);
     if (!quiet) feed();
+    // A quiet pass trusts the grid on screen, and known rows are real content
+    // the moment they are fed; only a first load with nothing cached waits.
+    if (quiet || (Array.isArray(this._meetings) && this._meetings.length)) paint();
     return this._fetchMeetings().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (readCache.signature(this._meetings) !== before) feed();
+      paint();
     });
   }
 

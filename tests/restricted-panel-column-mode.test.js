@@ -77,22 +77,14 @@ test("drawer mode stamps no data-mode", () => {
   assert.equal("mode" in p.el.dataset, false);
 });
 
-test("the first reveal in column mode stamps data-entering once, then clears it", (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
-  const p = panelWith({ kind: "permission_restricted", mode: "column" });
-  p.el.dataset.mode = "column";
-  p._reveal();
-  assert.equal(p.el.dataset.position, "1");
-  assert.equal(p.el.dataset.entering, "1");
-  t.mock.timers.tick(400);
-  assert.equal("entering" in p.el.dataset, false, "cleared once the entrance has run");
-  p._reveal();
-  assert.equal("entering" in p.el.dataset, false, "a member-list refresh does not replay it");
-});
-
-test("drawer mode reveals without data-entering", () => {
-  const p = panelWith({ kind: "permission_restricted" });
-  p._reveal();
-  assert.equal(p.el.dataset.position, "1");
-  assert.equal("entering" in p.el.dataset, false);
+// In column mode data-position is what says the members have LANDED — it ends
+// the panel's loading skeleton (permission/restricted/skin) — so the reveal
+// stamps that and nothing else. The entrance belongs to the view switch now.
+test("a reveal stamps data-position, in either mode", () => {
+  for (const opt of [{ kind: "permission_restricted", mode: "column" }, { kind: "permission_restricted" }]) {
+    const p = panelWith(opt);
+    p._reveal();
+    assert.equal(p.el.dataset.position, "1");
+    assert.equal("entering" in p.el.dataset, false, "the entrance stamp is gone");
+  }
 });

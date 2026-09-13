@@ -2613,16 +2613,9 @@
     }
   }
 
-  // Hidden until its member list has loaded (the panel's _reveal stamps
-  // data-position="1"), so it never slides in empty and then pops its rows.
-  &__split-body[data-view="access"] > .permission-restricted__ui:not([data-position="1"]) {
-    visibility: hidden;
-  }
-
-  // First load, wherever Access was opened from: _reveal stamps data-entering
-  // on the first reveal only. The switch from Files waits for that reveal too.
-  &__split-body[data-view="access"] > .permission-restricted__ui[data-entering="1"],
-  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui[data-position="1"] {
+  // The members card enters on the switch, with its loading skeleton inside
+  // (permission/restricted skin); its rows fade in when they land.
+  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
     animation: window-folder__column-in-from-right 0.2s ease-out backwards;
   }
 
@@ -2631,8 +2624,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &__split-body[data-view="access"] > .permission-restricted__ui[data-entering="1"],
-    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui[data-position="1"],
+    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui,
     &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel {
       animation: none;
     }
@@ -2647,72 +2639,57 @@
   // _playViewEntrance). Files <->
   // Access keeps its own motion above — the file grid stays put and only the
   // right column moves — so the Files rule skips arrivals from Access.
-  // ── Team chat loading skeleton ───────────────────────────────────────────
-  // Until its first page of messages is in (the chat widget stamps
-  // data-painted on its list's first ready, with a 4s fallback), the chat card
-  // keeps its place and its entrance, and shows a pulsing skeleton — a header
-  // bar and message bubbles — instead of a header over an empty column. Its own
-  // content is held back meanwhile and fades in when the messages arrive.
-  //
-  // The skeleton is a MASK over a theme colour, so it follows light and dark;
-  // the SVG only says where the shapes are, in percent widths, so it fits any
-  // column width.
+  // ── Loading skeletons ────────────────────────────────────────────────────
+  // A panel that cannot show its content yet keeps its card and shows the
+  // SHAPE of that content, pulsing, instead of sitting blank. Each one drops
+  // its skeleton on its own "painted" stamp and fades its content in:
+  //   team chat  — the chat widget stamps data-painted on its message list's
+  //                first ready (4s fallback); it is a lazy kind and fetches
+  //                media.home before it even builds that list;
+  //   Meet       — the folder window stamps data-painted on the schedule part
+  //                once the meetings fetch settles (_refreshSchedule).
+  // The task board and the members panel carry their own (tasks skin,
+  // permission/restricted skin).
   $chat-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='20' y='18' width='35%25' height='14' rx='7'/%3E%3Crect x='84%25' y='17' width='16' height='16' rx='4'/%3E%3Crect x='91%25' y='17' width='16' height='16' rx='4'/%3E%3Crect x='0' y='52' width='100%25' height='1'/%3E%3Crect x='20' y='80' width='55%25' height='40' rx='12'/%3E%3Crect x='20' y='132' width='70%25' height='58' rx='12'/%3E%3Crect x='42%25' y='202' width='50%25' height='40' rx='12'/%3E%3Crect x='20' y='254' width='60%25' height='40' rx='12'/%3E%3C/svg%3E");
+  $meet-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='16' y='14' width='25%25' height='14' rx='7'/%3E%3Crect x='66%25' y='10' width='14%25' height='28' rx='14'/%3E%3Crect x='82%25' y='10' width='16%25' height='28' rx='14'/%3E%3Crect x='0' y='56' width='100%25' height='1'/%3E%3Crect x='10%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='25%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='40%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='55%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='70%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='85%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='0' y='104' width='100%25' height='1'/%3E%3Crect x='0' y='144' width='100%25' height='1'/%3E%3Crect x='0' y='184' width='100%25' height='1'/%3E%3Crect x='0' y='224' width='100%25' height='1'/%3E%3Crect x='0' y='264' width='100%25' height='1'/%3E%3Crect x='0' y='304' width='100%25' height='1'/%3E%3Crect x='11%25' y='150' width='12%25' height='56' rx='8'/%3E%3Crect x='41%25' y='110' width='12%25' height='40' rx='8'/%3E%3Crect x='71%25' y='230' width='12%25' height='64' rx='8'/%3E%3C/svg%3E");
 
   &__split-body .window__chat-panel:not(:has(.window__chat-widget[data-painted="1"])) {
+    // The chat card is already relative under .window-folder, but the skeleton
+    // must not depend on a rule in another block to land on the card.
+    position: relative;
+
     > * {
       visibility: hidden;
     }
 
     &::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background-color: var(--border-default, #e5e5ea);
-      -webkit-mask: $chat-skeleton-mask no-repeat 0 0 / 100% 100%;
-      mask: $chat-skeleton-mask no-repeat 0 0 / 100% 100%;
-      animation: window-folder__chat-skeleton-pulse 1.2s ease-in-out infinite;
+      @include drumee.skeleton-layer($chat-skeleton-mask);
     }
   }
 
   &__split-body .window__chat-panel:has(.window__chat-widget[data-painted="1"]) {
     > .window__chat-label,
     > .window__chat-widget {
-      animation: window-folder__chat-content-in 0.2s ease-out backwards;
+      @include drumee.skeleton-content-in;
     }
   }
 
-  @keyframes window-folder__chat-skeleton-pulse {
-    0%,
-    100% {
-      opacity: 0.55;
+  &__meeting-schedule:not([data-painted="1"]) {
+    // The schedule declares no position of its own; without this the skeleton
+    // would size itself to the split body instead of the panel.
+    position: relative;
+
+    > * {
+      visibility: hidden;
     }
-    50% {
-      opacity: 1;
+
+    &::after {
+      @include drumee.skeleton-layer($meet-skeleton-mask);
     }
   }
 
-  @keyframes window-folder__chat-content-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &__split-body .window__chat-panel:not(:has(.window__chat-widget[data-painted="1"]))::after {
-      animation: none;
-    }
-
-    &__split-body .window__chat-panel:has(.window__chat-widget[data-painted="1"]) {
-      > .window__chat-label,
-      > .window__chat-widget {
-        animation: none;
-      }
-    }
+  &__meeting-schedule[data-painted="1"] > * {
+    @include drumee.skeleton-content-in;
   }
 
   &__split-body[data-view-entering="1"] {
@@ -2737,7 +2714,8 @@
     // then popped in. tasks/index.js _render stamps data-painted; later
     // switches restart the entrance as usual.
     &[data-view="task"] .tasks-panel__ui[data-painted="1"],
-    &[data-view="meeting"] .window-folder__meeting-schedule {
+    &[data-view="meeting"] .window-folder__meeting-schedule,
+    &[data-view="access"] > .permission-restricted__ui {
       animation: window-folder__column-in-from-right 0.2s ease-out backwards;
     }
   }
@@ -2763,7 +2741,8 @@
       }
 
       &[data-view="task"] .tasks-panel__ui[data-painted="1"],
-      &[data-view="meeting"] .window-folder__meeting-schedule {
+      &[data-view="meeting"] .window-folder__meeting-schedule,
+      &[data-view="access"] > .permission-restricted__ui {
         animation: none;
       }
     }

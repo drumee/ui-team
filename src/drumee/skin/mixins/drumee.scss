@@ -213,6 +213,66 @@
       }
 }
 
+// =====================================================================
+// Loading skeleton: the shape of a panel drawn while its data is in flight,
+// so a card that cannot show its content yet holds its place instead of
+// sitting blank (the team chat column, the task board, the Meet schedule,
+// the workspace-members panel).
+//
+// $mask is an SVG data URI that says only WHERE the shapes are — it is used
+// as a MASK over a theme colour, so the skeleton follows light and dark, and
+// its percent widths fit whatever width the panel has. Draw it on a ::after
+// over a panel whose own content is held back (visibility: hidden), and drop
+// both the moment the panel stamps its "painted" flag.
+//
+// The HOST must be a positioning context, or `inset: 0` sizes the skeleton to
+// some ancestor further up and the shapes land nowhere near the panel. Give it
+// `position: relative` on the waiting state — harmless there, since everything
+// inside is hidden anyway — unless it already has one.
+// =====================================================================
+@mixin skeleton-layer($mask) {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: var(--border-default, #e5e5ea);
+  -webkit-mask: $mask no-repeat 0 0 / 100% 100%;
+  mask: $mask no-repeat 0 0 / 100% 100%;
+  animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+// The content that replaces a skeleton, fading in over its place.
+@mixin skeleton-content-in {
+  animation: drumee-skeleton-content-in 0.2s ease-out backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes drumee-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes drumee-skeleton-content-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @mixin new-menu-icon-tints {
   .window-button__dropdown-menu__item--add-folder svg {
     fill: #5950ff;

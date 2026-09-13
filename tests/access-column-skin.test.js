@@ -102,7 +102,7 @@ test("Access sizes the members panel exactly as Files sizes the chat panel", () 
 });
 
 test("switching the column animates the incoming panel, and not for reduced motion", () => {
-  const TO_ACCESS = '.window-folder__split-body[data-view=access][data-from-view=files] > .permission-restricted__ui[data-position="1"]';
+  const TO_ACCESS = ".window-folder__split-body[data-view=access][data-from-view=files] > .permission-restricted__ui";
   const TO_CHAT = ".window-folder__split-body[data-view=files][data-from-view=access] > .window__chat-panel";
   assert.ok(has(rulesFor(folder, TO_ACCESS), "animation: window-folder__column-in-from-right 0.2s ease-out backwards"));
   assert.ok(has(rulesFor(folder, TO_CHAT), "animation: window-folder__column-in-from-left 0.2s ease-out backwards"));
@@ -111,15 +111,6 @@ test("switching the column animates the incoming panel, and not for reduced moti
   const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
   assert.ok(has(rulesFor(reduced, TO_ACCESS), "animation: none"));
   assert.ok(has(rulesFor(reduced, TO_CHAT), "animation: none"));
-});
-
-test("the members panel waits for its first reveal, then enters like the switch", () => {
-  const ACCESS = ".window-folder__split-body[data-view=access] > .permission-restricted__ui";
-  assert.ok(has(rulesFor(folder, `${ACCESS}:not([data-position="1"])`), "visibility: hidden"));
-  const ENTERING = `${ACCESS}[data-entering="1"]`;
-  assert.ok(has(rulesFor(folder, ENTERING), "animation: window-folder__column-in-from-right 0.2s ease-out backwards"));
-  const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
-  assert.ok(has(rulesFor(reduced, ENTERING), "animation: none"));
 });
 
 test("entering Files, Chat, Task or Meet slides that view's panels in, not for reduced motion", () => {
@@ -133,6 +124,9 @@ test("entering Files, Chat, Task or Meet slides that view's panels in, not for r
     `${E}[data-view=chat] .window__file-thread-panel`,
     `${E}[data-view=task] .tasks-panel__ui[data-painted="1"]`,
     `${E}[data-view=meeting] .window-folder__meeting-schedule`,
+    // Access enters with the switch like the rest; what it shows while its
+    // members load is the skeleton's job (panel-skeletons-skin.test.js).
+    `${E}[data-view=access] > .permission-restricted__ui`,
   ];
   for (const sel of selectors) assert.ok(has(rulesFor(folder, sel), ANIM), sel);
   // The board waits for its first paint: nothing on the bare, still-empty root.
@@ -143,22 +137,9 @@ test("entering Files, Chat, Task or Meet slides that view's panels in, not for r
   for (const sel of selectors) assert.ok(has(rulesFor(reduced, sel), "animation: none"), `reduced: ${sel}`);
 });
 
-test("the team chat card shows a pulsing skeleton until its messages arrive, then fades its content in", () => {
+// The chat card's own skeleton is asserted with the other three panels', in
+// panel-skeletons-skin.test.js: they share one implementation.
+test("the chat card is never blanked outright while it loads", () => {
   const PANEL = ".window-folder__split-body .window__chat-panel";
-  const WAITING = `${PANEL}:not(:has(.window__chat-widget[data-painted="1"]))`;
-  const READY = `${PANEL}:has(.window__chat-widget[data-painted="1"])`;
-  assert.ok(has(rulesFor(folder, `${WAITING} > *`), "visibility: hidden"), "own content held back");
-  const skel = rulesFor(folder, `${WAITING}::after`);
-  assert.ok(has(skel, "animation: window-folder__chat-skeleton-pulse 1.2s ease-in-out infinite"));
-  assert.ok(has(skel, "background-color: var(--border-default, #e5e5ea)"));
-  assert.ok(skel.some((b) => /mask: url\("data:image\/svg\+xml/.test(b)), "skeleton shapes come from a mask");
-  assert.ok(!rulesFor(folder, PANEL).some((b) => /visibility:\s*hidden/.test(b)), "the card itself is no longer hidden");
-  for (const child of ["> .window__chat-label", "> .window__chat-widget"]) {
-    assert.ok(has(rulesFor(folder, `${READY} ${child}`), "animation: window-folder__chat-content-in 0.2s ease-out backwards"), child);
-  }
-  const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
-  assert.ok(has(rulesFor(reduced, `${WAITING}::after`), "animation: none"), "reduced: no pulse");
-  for (const child of ["> .window__chat-label", "> .window__chat-widget"]) {
-    assert.ok(has(rulesFor(reduced, `${READY} ${child}`), "animation: none"), `reduced: ${child}`);
-  }
+  assert.ok(!rulesFor(folder, PANEL).some((b) => /visibility:\s*hidden/.test(b)));
 });

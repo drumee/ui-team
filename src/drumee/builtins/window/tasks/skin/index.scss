@@ -234,6 +234,30 @@ $theme-colors: (
     );
   }
 
+  // The board holds its place with a skeleton — three columns of cards — until
+  // its first render stamps data-painted (index.js _render). After a page
+  // refresh nothing is cached and it draws nothing until task.list and the
+  // columns return.
+  $board-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='16' y='16' width='18%25' height='12' rx='6'/%3E%3Crect x='16' y='44' width='30%25' height='72' rx='10'/%3E%3Crect x='16' y='128' width='30%25' height='56' rx='10'/%3E%3Crect x='16' y='196' width='30%25' height='64' rx='10'/%3E%3Crect x='35%25' y='16' width='18%25' height='12' rx='6'/%3E%3Crect x='35%25' y='44' width='30%25' height='56' rx='10'/%3E%3Crect x='35%25' y='112' width='30%25' height='72' rx='10'/%3E%3Crect x='35%25' y='196' width='30%25' height='48' rx='10'/%3E%3Crect x='69%25' y='16' width='18%25' height='12' rx='6'/%3E%3Crect x='69%25' y='44' width='29%25' height='64' rx='10'/%3E%3Crect x='69%25' y='120' width='29%25' height='56' rx='10'/%3E%3C/svg%3E");
+
+  &__ui:not([data-painted="1"]) {
+    // Same as the Meet schedule: the board is not a positioning context, so
+    // the skeleton needs one here or it sizes to an ancestor.
+    position: relative;
+
+    > * {
+      visibility: hidden;
+    }
+
+    &::after {
+      @include drumee.skeleton-layer($board-skeleton-mask);
+    }
+  }
+
+  &__ui[data-painted="1"] > .tasks-panel__root {
+    @include drumee.skeleton-content-in;
+  }
+
   &__root {
     width: 100%;
     height: 100%;
