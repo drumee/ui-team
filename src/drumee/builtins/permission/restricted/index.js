@@ -108,19 +108,32 @@ class __permission_restricted extends DrumeeMFS {
       this._membersLoaded = true;
       return this._reveal();
     }
+    // Refetches are push-driven now (_onWsEvent), and pushes can land back to
+    // back — a role change, then a removal — with their answers arriving out
+    // of order. Only the newest request may paint.
+    const seq = (this._membersSeq = (this._membersSeq || 0) + 1);
+    let rows;
+    let failed = false;
     try {
-      const rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
+      rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
         hub_id,
         type: "all",
+        // Cache-buster. fetchService GETs put the whole payload in the URL with
+        // `cache: "default"`, so they can be served from the browser HTTP
+        // cache and a refetch after a change can answer with the rows from
+        // before it — the likeliest cause of the "pre-write row" the mutation
+        // handlers below work around by redrawing from local state.
+        _ts: Date.now(),
       });
-      this._members = Array.isArray(rows) ? rows : [];
     } catch (e) {
+      failed = true;
       this.warn("Failed to load workspace members", e);
-    } finally {
-      this._membersLoaded = true;
-      this._render();
-      this._reveal();
     }
+    if (seq !== this._membersSeq) return;
+    if (!failed) this._members = Array.isArray(rows) ? rows : [];
+    this._membersLoaded = true;
+    this._render();
+    this._reveal();
   }
 
   /**
@@ -136,10 +149,18 @@ class __permission_restricted extends DrumeeMFS {
    * stale while the invite it had just sent landed.
    *
    * Covers the invite this admin just sent AND one sent by somebody else.
+   *
+   * `hub.members_changed` is the same refetch for EXISTING rows: another admin
+   * set a role (hub.set_privilege) or removed members (hub.delete_contributor).
+   * Both used to push only to the member being changed, so this matrix kept
+   * the old role, or the removed member, until the panel was reopened.
    */
   _onWsEvent(args = {}) {
     const { data, options } = args || {};
-    if (!options || options.service !== "hub.member_joined") return;
+    const service = options && options.service;
+    if (service !== "hub.member_joined" && service !== "hub.members_changed") {
+      return;
+    }
     const hub_id = this.mget(_a.hub_id);
     if (!hub_id) return;
     // Several panels can be open on different workspaces — only ours reacts.

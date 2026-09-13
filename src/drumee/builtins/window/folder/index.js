@@ -6247,7 +6247,12 @@ class __window_folder extends mfsInteract {
     // once there is. Refetch instead of leaving the admin looking at a member
     // list missing the person they just invited. _refreshFolderMembers
     // self-guards on the panel being open, so this is a no-op when closed.
-    else if (svc === "hub.member_joined") {
+    //
+    // hub.members_changed is the same refetch for rows that already exist —
+    // another admin set a role or removed members (server-team
+    // notifyMembersChanged). It carries no `uid`, so _onMemberJoined's echo
+    // guard lets it through for everyone, the acting admin included.
+    else if (svc === "hub.member_joined" || svc === "hub.members_changed") {
       this._onMemberJoined(data || {});
     }
     return super.handleWsEvent(args);
@@ -6652,18 +6657,27 @@ class __window_folder extends mfsInteract {
     if (!this._folderSettingsPanelIsOpen()) return;
     const { hub_id } = this.actualNode();
     if (!hub_id) return;
+    // Back-to-back pushes (hub.member_joined, hub.members_changed) can answer
+    // out of order — only the newest refresh may repaint.
+    const seq = (this._folderMembersSeq = (this._folderMembersSeq || 0) + 1);
     try {
       const rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
         hub_id,
         type: "all",
+        // Cache-buster: this GET can be served from the browser HTTP cache
+        // (fetchService uses `cache: "default"`), and a refresh after a role
+        // change or removal could otherwise repaint the rows from before it.
+        _ts: Date.now(),
       });
-      this._folderMembers = Array.isArray(rows) ? rows : [];
+      if (seq === this._folderMembersSeq) {
+        this._folderMembers = Array.isArray(rows) ? rows : [];
+      }
     } catch (e) {
       if (this.warn) this.warn("Failed to refresh folder members", e);
     } finally {
       // Re-checked, not assumed: the fetch above is a round-trip, and the user
       // can have closed the drawer or opened a different one meanwhile.
-      if (this._folderSettingsPanelIsOpen()) {
+      if (seq === this._folderMembersSeq && this._folderSettingsPanelIsOpen()) {
         this.dialogWrapper.feed(
           require("./skeleton/settings-action-panel")(this),
         );
