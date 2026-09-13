@@ -9495,7 +9495,6 @@ class desk_module extends LetcBox {
       "panel_activity",
       "chat_p2p",
       "address_book",
-      "apps_main",
       "settings_main",
     ]) {
       Kind.waitFor(k);
