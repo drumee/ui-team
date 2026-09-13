@@ -127,9 +127,9 @@ test("entering Files, Chat, Task or Meet slides that view's panels in, not for r
   const ANIM = "animation: window-folder__column-in-from-right 0.2s ease-out backwards";
   const selectors = [
     `${E}[data-view=files]:not([data-from-view=access]) .window__files-panel`,
-    `${E}[data-view=files]:not([data-from-view=access]) .window__chat-panel`,
+    `${E}[data-view=files]:not([data-from-view=access]) .window__chat-panel:has(.window__chat-widget[data-painted="1"])`,
     `${E}[data-view=chat] .window__thread-rail`,
-    `${E}[data-view=chat] .window__chat-panel`,
+    `${E}[data-view=chat] .window__chat-panel:has(.window__chat-widget[data-painted="1"])`,
     `${E}[data-view=chat] .window__file-thread-panel`,
     `${E}[data-view=task] .tasks-panel__ui[data-painted="1"]`,
     `${E}[data-view=meeting] .window-folder__meeting-schedule`,
@@ -137,6 +137,10 @@ test("entering Files, Chat, Task or Meet slides that view's panels in, not for r
   for (const sel of selectors) assert.ok(has(rulesFor(folder, sel), ANIM), sel);
   // The board waits for its first paint: nothing on the bare, still-empty root.
   assert.ok(!has(rulesFor(folder, `${E}[data-view=task] .tasks-panel__ui`), ANIM), "task entrance must wait for data-painted");
+  // The chat column waits for its first page of messages, like the board.
+  assert.ok(!has(rulesFor(folder, `${E}[data-view=files]:not([data-from-view=access]) .window__chat-panel`), ANIM), "files: chat panel waits for data-painted");
+  assert.ok(!has(rulesFor(folder, `${E}[data-view=chat] .window__chat-panel`), ANIM), "chat: chat panel waits for data-painted");
+  assert.ok(has(rulesFor(folder, '.window-folder__split-body .window__chat-panel:not(:has(.window__chat-widget[data-painted="1"]))'), "visibility: hidden"), "chat column hidden until painted");
   // Reduced motion cancels EXACTLY the animated selectors — a less specific
   // selector loses to them even though it comes later in the file.
   const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");

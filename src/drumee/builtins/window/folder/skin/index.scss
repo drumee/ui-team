@@ -2647,17 +2647,25 @@
   // _playViewEntrance). Files <->
   // Access keeps its own motion above — the file grid stays put and only the
   // right column moves — so the Files rule skips arrivals from Access.
+  // The team chat column stays hidden until its first page of messages is in
+  // (the chat widget stamps data-painted on its list's first ready, with a 4s
+  // fallback), so on a default load it slides in WITH its conversation rather
+  // than as a header over an empty column.
+  &__split-body .window__chat-panel:not(:has(.window__chat-widget[data-painted="1"])) {
+    visibility: hidden;
+  }
+
   &__split-body[data-view-entering="1"] {
     &[data-view="files"]:not([data-from-view="access"]) {
       .window__files-panel,
-      .window__chat-panel {
+      .window__chat-panel:has(.window__chat-widget[data-painted="1"]) {
         animation: window-folder__column-in-from-right 0.2s ease-out backwards;
       }
     }
 
     &[data-view="chat"] {
       .window__thread-rail,
-      .window__chat-panel,
+      .window__chat-panel:has(.window__chat-widget[data-painted="1"]),
       .window__file-thread-panel {
         animation: window-folder__column-in-from-right 0.2s ease-out backwards;
       }
@@ -2681,14 +2689,14 @@
     &__split-body[data-view-entering="1"] {
       &[data-view="files"]:not([data-from-view="access"]) {
         .window__files-panel,
-        .window__chat-panel {
+        .window__chat-panel:has(.window__chat-widget[data-painted="1"]) {
           animation: none;
         }
       }
 
       &[data-view="chat"] {
         .window__thread-rail,
-        .window__chat-panel,
+        .window__chat-panel:has(.window__chat-widget[data-painted="1"]),
         .window__file-thread-panel {
           animation: none;
         }
