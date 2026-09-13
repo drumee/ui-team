@@ -116,6 +116,12 @@ function roleDropdown(pfx, role, service, extra = {}) {
     // close on any click, where the invite row closes it explicitly.
     persistence: _a.once,
     offsetY: 4,
+    // No slide or fade: the menu appears and disappears at once. ui-core's
+    // menu tweens with `mget(duration) || Visitor.timeout(duration)` (0.4s by
+    // default), so 0 would fall through to Visitor.timeout — which answers a
+    // `?timeout=` URL argument when there is one. A 1ms tween is used as-is
+    // and still runs the open/close callbacks the menu's state hangs off.
+    duration: 0.001,
   };
 }
 
