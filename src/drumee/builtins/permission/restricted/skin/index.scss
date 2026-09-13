@@ -532,13 +532,14 @@
   // rule reaches the menu root as a descendant and would never match on the
   // root itself.
   //
-  // Sized to the pill it opens from rather than to "+ New": the card is the
-  // __role-select's 88px wide, and its rows below take the pill's own 22px
-  // height and 10px text. It opens right-aligned in a 360px dock that clips
-  // its overflow, and each row's description card hangs off the menu's LEFT
-  // edge, so a narrow menu also leaves that description the most room.
+  // Scaled to the pill it opens from rather than to "+ New": the rows below
+  // keep the pill's 10px text, on a 130px card with roomier rows than the
+  // 88px pill itself. It opens right-aligned in a 360px dock that clips its
+  // overflow, and each row's description card hangs off the menu's LEFT edge
+  // — every pixel of menu width comes out of the room that description has
+  // (see .role-option-tooltip below for the numbers).
   &__body {
-    @include drumee.window-button-dropdown-menu($min-width: 88px);
+    @include drumee.window-button-dropdown-menu($min-width: 130px);
   }
 
   // Wrapper around the KIND.menu.topic root — position:relative so the items
@@ -557,12 +558,12 @@
       z-index: 9999;
     }
 
-    // The card, pill-sized: border-box so the 88px floor is the card's outer
-    // width, exactly the trigger's, with a 2px inset and the pill's 4px radius.
+    // Border-box so the 130px floor is the card's outer width, with a 4px
+    // inset and the pill's 4px radius.
     .menu-topic-items,
     .menu-items {
       box-sizing: border-box;
-      padding: 2px;
+      padding: 4px;
       border-radius: 4px;
       gap: 0;
     }
@@ -610,12 +611,12 @@
     // Anchors the description card below.
     position: relative;
 
-    // The pill's own metrics: its label type (10px on a 14px line, main font)
-    // and its 22px height — 14px line plus 4px above and below. The radius is
-    // the card's 4px less its 2px inset, so a highlighted row sits concentric.
-    gap: 4px;
-    min-height: 22px;
-    padding: 4px 8px;
+    // The pill's label type (10px on a 14px line, main font) in a roomier row
+    // than the pill: 26px tall — 14px line plus 6px above and below — with
+    // 12px sides and 6px between the check and the label.
+    gap: 6px;
+    min-height: 26px;
+    padding: 6px 12px;
     border-radius: 2px;
     @include drumee.typo($size: 10px, $line: 14px, $weight: 400);
     // typo() sets the family, not the weight, and the shared row is 500. The
@@ -667,11 +668,11 @@
       white-space: normal;
       width: max-content;
       // The dock clips its overflow (__ui / __main), so the card has to fit in
-      // what the menu leaves on its left. Measured with the menu at the pill's
-      // 88px: a member row starts 225px in from the dock's edge, the invite
-      // row 238px, so 156px (border-box) keeps the description 61px clear. At
-      // 172px + padding beside the earlier 130px menu it lost its first
-      // letters ("n View, Chat & Edit…").
+      // what the menu leaves on its left. Measured with the 130px menu and its
+      // 4px inset: a member row starts 185px in from the dock's edge, the
+      // invite row 198px, so 156px (border-box) keeps the description 21px
+      // clear. At 172px + padding it lost its first letters ("n View, Chat &
+      // Edit…").
       box-sizing: border-box;
       max-width: 156px;
       pointer-events: none;
