@@ -613,7 +613,7 @@
 
     // The pill's label type (10px on a 14px line, main font) in a roomier row
     // than the pill: 26px tall — 14px line plus 6px above and below — with
-    // 12px sides and 6px between the check and the label.
+    // 12px sides and 6px between the role's icon and its label.
     gap: 6px;
     min-height: 26px;
     padding: 6px 12px;
@@ -628,14 +628,13 @@
       height: 12px;
     }
 
-    // Every row reserves the check's slot so the labels line up, and only the
-    // held role shows it.
+    // One glyph per role (skeleton ROLE_ICONS), muted like the pill's own
+    // caret; the held role's takes its row's blue.
     .window-button__dropdown-menu__icon {
       width: 12px;
       height: 12px;
       flex: 0 0 12px;
-      visibility: hidden;
-      color: #1065a2;
+      color: var(--normal-fg-20);
 
       svg {
         fill: currentColor;
@@ -643,7 +642,7 @@
     }
 
     &[data-state="1"] .window-button__dropdown-menu__icon {
-      visibility: visible;
+      color: #1065a2;
     }
 
     // Same hue and saturation as the base panel's #1d8aea, darkened to clear
