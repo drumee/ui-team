@@ -20,7 +20,14 @@ class __permission_restricted extends DrumeeMFS {
    * @param {Object} opt
    */
   initialize(opt = {}) {
-    opt.dataset = { ...opt.dataset, position: "0" };
+    opt.dataset = {
+      ...opt.dataset,
+      position: "0",
+      // Column mode: a view of the folder window's split body (the rail's
+      // Access, see window/folder/access-column), not a drawer. The skins key
+      // the layout on this.
+      ...(opt.mode === "column" ? { mode: "column" } : {}),
+    };
 
     require("./skin");
     super.initialize(opt);

@@ -320,13 +320,17 @@ const header = Skeletons.Box.X({
           }),
         ],
       }),
-      Skeletons.Button.Svg({
-        ico: "cross",
-        className: `${pfx}__close`,
-        service: _e.close,
-        uiHandler: [ui],
-      }),
-    ],
+      // No ✕ in column mode: the panel is a view of the split body there, and
+      // the rail is the way out.
+      ui.mget("mode") === "column"
+        ? null
+        : Skeletons.Button.Svg({
+          ico: "cross",
+          className: `${pfx}__close`,
+          service: _e.close,
+          uiHandler: [ui],
+        }),
+    ].filter(Boolean),
   });
 
   // The inline invite message (see index.js _setInviteNotice), or null.
