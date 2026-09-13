@@ -1335,6 +1335,8 @@ class __window_folder extends mfsInteract {
       this.__folderView = child;
       // Restore the user's persisted Files-tab split ratio (default 2:1).
       this._applyFilesSplit();
+      // First paint of the split body enters like every later view switch.
+      this._playViewEntrance(child);
       return;
     }
     if (pn === "files-splitter") {
@@ -5662,6 +5664,7 @@ class __window_folder extends mfsInteract {
       // Who has access switch animation (skin/index.scss). Empty on first show.
       view.el.dataset.fromView = prevTab || "";
       view.el.dataset.view = tab;
+      this._playViewEntrance(view);
       this._restorePanelScroll();
       switch (tab) {
         case _a.chat:
@@ -5756,6 +5759,31 @@ class __window_folder extends mfsInteract {
       this.__folderView = view;
       return switchView(view);
     });
+  }
+
+  /**
+   * Replay the split body's view entrance (skin: &__split-body[data-view-entering="1"]).
+   *
+   * Every press of Files / Chat / Task / Meet — and the split body's first
+   * paint — slides that view's panels in, the same motion as the Team Chat <->
+   * Who has access switch. A panel on screen in both views (the chat panel in
+   * Files and in Chat) does not replay a CSS animation just because data-view
+   * changed, so the stamp is REMOVED, a reflow is forced, and it is set again:
+   * the rule stops matching for one style pass and the animation restarts.
+   * Cleared a little past the 0.2s animation.
+   *
+   * @param {Object} view  the split body (part "folder-view")
+   */
+  _playViewEntrance(view) {
+    const el = view && view.el;
+    if (!el || !el.dataset) return;
+    clearTimeout(this._viewEntranceTimer);
+    delete el.dataset.viewEntering;
+    void el.offsetWidth;
+    el.dataset.viewEntering = "1";
+    this._viewEntranceTimer = setTimeout(() => {
+      if (el.dataset) delete el.dataset.viewEntering;
+    }, 400);
   }
 
   getFolderActionTarget() {

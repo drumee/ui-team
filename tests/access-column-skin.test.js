@@ -121,3 +121,22 @@ test("the members panel waits for its first reveal, then enters like the switch"
   const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
   assert.ok(has(rulesFor(reduced, ENTERING), "animation: none"));
 });
+
+test("entering Files, Chat, Task or Meet slides that view's panels in, not for reduced motion", () => {
+  const E = '.window-folder__split-body[data-view-entering="1"]';
+  const ANIM = "animation: window-folder__column-in-from-right 0.2s ease-out backwards";
+  const selectors = [
+    `${E}[data-view=files]:not([data-from-view=access]) .window__files-panel`,
+    `${E}[data-view=files]:not([data-from-view=access]) .window__chat-panel`,
+    `${E}[data-view=chat] .window__thread-rail`,
+    `${E}[data-view=chat] .window__chat-panel`,
+    `${E}[data-view=chat] .window__file-thread-panel`,
+    `${E}[data-view=task] .tasks-panel__ui`,
+    `${E}[data-view=meeting] .window-folder__meeting-schedule`,
+  ];
+  for (const sel of selectors) assert.ok(has(rulesFor(folder, sel), ANIM), sel);
+  const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
+  for (const panel of [".window__files-panel", ".window__chat-panel", ".window__thread-rail", ".window__file-thread-panel", ".tasks-panel__ui", ".window-folder__meeting-schedule"]) {
+    assert.ok(has(rulesFor(reduced, `${E} ${panel}`), "animation: none"), `reduced: ${panel}`);
+  }
+});

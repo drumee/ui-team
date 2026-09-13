@@ -2638,6 +2638,48 @@
     }
   }
 
+  // ── Entering Files, Chat, Task or Meet ────────────────────────────────
+  // Every press of one of those rail items replays the same slide + fade on
+  // the panels of the view it shows, first load included: showFolderTab and
+  // the split body's first paint stamp data-view-entering for 400ms,
+  // restarting it each time (window/folder _playViewEntrance). Files <->
+  // Access keeps its own motion above — the file grid stays put and only the
+  // right column moves — so the Files rule skips arrivals from Access.
+  &__split-body[data-view-entering="1"] {
+    &[data-view="files"]:not([data-from-view="access"]) {
+      .window__files-panel,
+      .window__chat-panel {
+        animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+      }
+    }
+
+    &[data-view="chat"] {
+      .window__thread-rail,
+      .window__chat-panel,
+      .window__file-thread-panel {
+        animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+      }
+    }
+
+    &[data-view="task"] .tasks-panel__ui,
+    &[data-view="meeting"] .window-folder__meeting-schedule {
+      animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__split-body[data-view-entering="1"] {
+      .window__files-panel,
+      .window__chat-panel,
+      .window__thread-rail,
+      .window__file-thread-panel,
+      .tasks-panel__ui,
+      .window-folder__meeting-schedule {
+        animation: none;
+      }
+    }
+  }
+
   // Resize gutter — a real middle grid column between the file grid and the chat
   // panel (so no overlap / stacking issues). Hidden by default; the
   // [data-view="files"] rule above reveals it; compact ≤700px hides it again.

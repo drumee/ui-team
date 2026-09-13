@@ -72,3 +72,29 @@ test("+ New stays on Access for a member who may create", () => {
 test("the split body records which view the column is switching from", () => {
   assert.match(SRC, /view\.el\.dataset\.fromView = prevTab \|\| "";\n\s*view\.el\.dataset\.view = tab;/);
 });
+
+test("every view switch and the split body's first paint replay the view entrance", () => {
+  assert.match(SRC, /view\.el\.dataset\.view = tab;\n\s*this\._playViewEntrance\(view\);/);
+  assert.match(SRC, /this\.__folderView = child;\n(?:\s*\/\/.*\n)*\s*this\._applyFilesSplit\(\);\n(?:\s*\/\/.*\n)*\s*this\._playViewEntrance\(child\);/);
+});
+
+test("_playViewEntrance restarts the stamp and clears it after the animation", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const run = new Function("view", methodBody("_playViewEntrance(view)"));
+  let reflows = 0;
+  const dataset = {};
+  const el = { dataset, get offsetWidth() { reflows++; return 0; } };
+  const win = {};
+  run.call(win, { el });
+  assert.equal(dataset.viewEntering, "1");
+  assert.equal(reflows, 1, "a reflow between removing and re-adding restarts the animation");
+  t.mock.timers.tick(200);
+  run.call(win, { el });
+  assert.equal(dataset.viewEntering, "1");
+  assert.equal(reflows, 2);
+  t.mock.timers.tick(399);
+  assert.equal(dataset.viewEntering, "1", "the first call's timer was cancelled");
+  t.mock.timers.tick(1);
+  assert.equal("viewEntering" in dataset, false);
+  run.call(win, {});
+});
