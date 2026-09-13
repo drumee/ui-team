@@ -10,6 +10,7 @@ const {
 
 const { overMeetingCap } = require("libs/billing");
 const readCache = require("libs/read-cache");
+const { ACCESS_TAB, showAccessColumn, showsFileGrid } = require("./access-column");
 
 
 const {
@@ -5633,7 +5634,8 @@ class __window_folder extends mfsInteract {
     // The list/grid view toggle lives in the Files filter row.
     const viewCtrl = this.getPart("view-ctrl");
     if (viewCtrl && viewCtrl.el) {
-      viewCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
+      // Access keeps the file grid on screen (./access-column), so its toggle too.
+      viewCtrl.el.dataset.visible = showsFileGrid(tab) ? "1" : "0";
     }
     // The merged "+ New" button also lives in that row and only operates on
     // Files (upload / create / gdrive-import) — hide it off the Files tab so it
@@ -5687,6 +5689,11 @@ class __window_folder extends mfsInteract {
           // flags that), in which case it must be redrawn now.
           this._schedRefresh = this._refreshSchedule({ quiet: !this._schedStale });
           this._schedStale = 0;
+          return;
+        case ACCESS_TAB:
+          // The rail's Access: the file grid and its gutter stay, and the
+          // members panel takes the chat panel's column (./access-column).
+          showAccessColumn(this, view);
           return;
         case _a.task:
           if (!this._taskPanelMounted) {
@@ -6382,7 +6389,8 @@ class __window_folder extends mfsInteract {
   syncNewCtrlVisibility() {
     const newCtrl = this.getPart && this.getPart("new-ctrl");
     if (!newCtrl || !newCtrl.el) return;
-    const onFiles = (this.activeTab || "files") === "files";
+    // Access keeps the file grid on screen, and "+ New" operates on that grid.
+    const onFiles = showsFileGrid(this.activeTab);
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
     // Over-limit read-only trumps the node privilege: creating adds bytes,
     // and the REST clamp refuses it regardless of what this node allows.
