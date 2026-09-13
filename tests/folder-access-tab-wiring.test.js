@@ -35,6 +35,20 @@ test("the list/grid toggle stays on Access", () => {
   assert.match(SRC, /viewCtrl\.el\.dataset\.visible = showsFileGrid\(tab\) \? "1" : "0";/);
 });
 
+test("the files-splitter gutter is draggable on Access, not just Files", () => {
+  const body = methodBody("_wireFilesSplitter(child)");
+  assert.doesNotMatch(
+    body,
+    /view\.el\.dataset\.view !== "files"/,
+    "must not gate the pointerdown handler on the Files tab alone",
+  );
+  assert.match(
+    body,
+    /!showsFileGrid\(view\.el\.dataset\.view\)/,
+    "must gate the pointerdown handler on showsFileGrid",
+  );
+});
+
 test("+ New stays on Access for a member who may create", () => {
   const run = new Function("require", "showsFileGrid", "_a", methodBody("syncNewCtrlVisibility()"));
   const fakeRequire = (name) => {

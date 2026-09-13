@@ -1306,8 +1306,8 @@ class __window_folder extends mfsInteract {
     };
     handle.addEventListener("pointerdown", (e) => {
       const view = this.__folderView;
-      // Only active on the Files tab (the only view that reads --files-w).
-      if (!view || !view.el || view.el.dataset.view !== "files") return;
+      // Active on Files and Access (both read --files-w; see showsFileGrid).
+      if (!view || !view.el || !showsFileGrid(view.el.dataset.view)) return;
       dragging = true;
       handle.dataset.dragging = "1";
       try { handle.setPointerCapture(e.pointerId); } catch (_) {}
