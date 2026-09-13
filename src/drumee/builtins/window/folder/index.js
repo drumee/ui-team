@@ -5770,20 +5770,23 @@ class __window_folder extends mfsInteract {
    * Files and in Chat) does not replay a CSS animation just because data-view
    * changed, so the stamp is REMOVED, a reflow is forced, and it is set again:
    * the rule stops matching for one style pass and the animation restarts.
-   * Cleared a little past the 0.2s animation.
+   *
+   * NOT cleared on a timer, and that is the point: the panels that need it
+   * most appear late. The task board is a lazy kind — a placeholder until its
+   * chunk loads, often well past any short timeout after a page refresh — and
+   * the Meet schedule's first build is one long task, after which a timed
+   * clear can run before the first paint. Either way the panel showed with no
+   * animation. The stamp now stays until the next switch restarts it, so a
+   * panel that arrives late still enters.
    *
    * @param {Object} view  the split body (part "folder-view")
    */
   _playViewEntrance(view) {
     const el = view && view.el;
     if (!el || !el.dataset) return;
-    clearTimeout(this._viewEntranceTimer);
     delete el.dataset.viewEntering;
     void el.offsetWidth;
     el.dataset.viewEntering = "1";
-    this._viewEntranceTimer = setTimeout(() => {
-      if (el.dataset) delete el.dataset.viewEntering;
-    }, 400);
   }
 
   getFolderActionTarget() {

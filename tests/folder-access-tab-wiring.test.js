@@ -78,7 +78,11 @@ test("every view switch and the split body's first paint replay the view entranc
   assert.match(SRC, /this\.__folderView = child;\n(?:\s*\/\/.*\n)*\s*this\._applyFilesSplit\(\);\n(?:\s*\/\/.*\n)*\s*this\._playViewEntrance\(child\);/);
 });
 
-test("_playViewEntrance restarts the stamp and clears it after the animation", (t) => {
+test("_playViewEntrance restarts the stamp on every call and never clears it on a timer", (t) => {
+  // The panels that need it most appear LATE: the task board is a lazy kind
+  // (a placeholder until its chunk loads) and the schedule's first build is a
+  // long task. A timed clear can run before either paints, so the stamp stays
+  // until the next switch restarts it.
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const run = new Function("view", methodBody("_playViewEntrance(view)"));
   let reflows = 0;
@@ -88,13 +92,10 @@ test("_playViewEntrance restarts the stamp and clears it after the animation", (
   run.call(win, { el });
   assert.equal(dataset.viewEntering, "1");
   assert.equal(reflows, 1, "a reflow between removing and re-adding restarts the animation");
-  t.mock.timers.tick(200);
+  t.mock.timers.tick(10000);
+  assert.equal(dataset.viewEntering, "1", "still set long after the old 400ms clear");
   run.call(win, { el });
   assert.equal(dataset.viewEntering, "1");
-  assert.equal(reflows, 2);
-  t.mock.timers.tick(399);
-  assert.equal(dataset.viewEntering, "1", "the first call's timer was cancelled");
-  t.mock.timers.tick(1);
-  assert.equal("viewEntering" in dataset, false);
+  assert.equal(reflows, 2, "every switch restarts it");
   run.call(win, {});
 });
