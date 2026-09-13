@@ -6178,6 +6178,10 @@ class __window_folder extends mfsInteract {
         cancel: LOCALE.CANCEL || "Cancel",
         cancel_type: "secondary",
         mode: "hbf",
+        // No backdrop: the member row this names is in the matrix behind the
+        // prompt, and dimming it hides what the user would check before
+        // confirming. Same as the "Who has access" panel's role prompt.
+        overlay: "none",
       });
     } catch (_) {
       this._folderConfirmInFlight = false;

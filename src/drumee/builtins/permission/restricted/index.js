@@ -357,6 +357,10 @@ class __permission_restricted extends DrumeeMFS {
         cancel: LOCALE.CANCEL || "Cancel",
         cancel_type: "secondary",
         mode: "hbf",
+        // No backdrop, as on the remove prompt below: the member row this
+        // names is right there in the matrix, and dimming it hides what the
+        // user would check before confirming.
+        overlay: "none",
       });
     } catch (_) {
       this._confirmInFlight = false;
