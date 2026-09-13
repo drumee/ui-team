@@ -5658,6 +5658,9 @@ class __window_folder extends mfsInteract {
       // after it — a user who scrolled deep into a folder and glanced at the
       // board should land where they were.
       this._stashPanelScroll();
+      // Where the column is switching FROM, for the skin's Team Chat <->
+      // Who has access switch animation (skin/index.scss). Empty on first show.
+      view.el.dataset.fromView = prevTab || "";
       view.el.dataset.view = tab;
       this._restorePanelScroll();
       switch (tab) {

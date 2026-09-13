@@ -68,3 +68,7 @@ test("+ New stays on Access for a member who may create", () => {
     assert.equal(el.dataset.visible, expected, `tab ${tab}`);
   }
 });
+
+test("the split body records which view the column is switching from", () => {
+  assert.match(SRC, /view\.el\.dataset\.fromView = prevTab \|\| "";\n\s*view\.el\.dataset\.view = tab;/);
+});

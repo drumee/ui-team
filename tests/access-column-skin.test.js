@@ -100,3 +100,15 @@ test("Access sizes the members panel exactly as Files sizes the chat panel", () 
     assert.ok(has(rulesFor(folder, `${V} > .window__files-panel`), decl), `access file grid: ${decl}`);
   }
 });
+
+test("switching the column animates the incoming panel, and not for reduced motion", () => {
+  const TO_ACCESS = ".window-folder__split-body[data-view=access][data-from-view=files] > .permission-restricted__ui";
+  const TO_CHAT = ".window-folder__split-body[data-view=files][data-from-view=access] > .window__chat-panel";
+  assert.ok(has(rulesFor(folder, TO_ACCESS), "animation: window-folder__column-in-from-right 0.2s ease-out backwards"));
+  assert.ok(has(rulesFor(folder, TO_CHAT), "animation: window-folder__column-in-from-left 0.2s ease-out backwards"));
+  assert.match(folder, /@keyframes window-folder__column-in-from-right\s*\{[^}]*translateX\(16px\)/);
+  assert.match(folder, /@keyframes window-folder__column-in-from-left\s*\{[^}]*translateX\(-16px\)/);
+  const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
+  assert.ok(has(rulesFor(reduced, TO_ACCESS), "animation: none"));
+  assert.ok(has(rulesFor(reduced, TO_CHAT), "animation: none"));
+});

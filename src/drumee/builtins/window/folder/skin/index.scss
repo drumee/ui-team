@@ -2583,6 +2583,51 @@
     }
   }
 
+  // ── Switching the right column: Team Chat <-> Who has access ────────────
+  // Both panels share the column (the blocks above), and display:none cannot
+  // transition, so the INCOMING panel animates as it appears: Who has access
+  // slides in from the right, Team Chat comes back from the left. Scoped to
+  // that pair through data-from-view (stamped by showFolderTab), so first
+  // paint, a workspace switch and the Chat / Task / Meet tabs do not animate.
+  // No `forwards`: the transform is gone once the animation ends, so nothing
+  // inside the panel is left under a transformed ancestor.
+  @keyframes window-folder__column-in-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes window-folder__column-in-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
+    animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+  }
+
+  &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel {
+    animation: window-folder__column-in-from-left 0.2s ease-out backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui,
+    &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel {
+      animation: none;
+    }
+  }
+
   // Resize gutter — a real middle grid column between the file grid and the chat
   // panel (so no overlap / stacking issues). Hidden by default; the
   // [data-view="files"] rule above reveals it; compact ≤700px hides it again.
