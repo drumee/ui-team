@@ -828,6 +828,12 @@ class __window_folder extends mfsInteract {
     if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
       for (const kind of [
         "tasks_panel",
+        // Access, the fourth rail view. Cold, pressing it spent a round trip
+        // downloading this chunk before the panel existed to ask the server
+        // anything — and the column has nothing to show meanwhile, not even
+        // the panel's loading skeleton, which lives on an element this chunk
+        // is what creates.
+        "permission_restricted",
         "window_tutorial",
         "tutorial_migrate",
         "tutorial_chat",

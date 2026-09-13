@@ -99,3 +99,16 @@ test("_playViewEntrance restarts the stamp on every call and never clears it on 
   assert.equal(reflows, 2, "every switch restarts it");
   run.call(win, {});
 });
+
+// Access is on the same rail as Task, Chat and Meet, whose kinds are all
+// warmed when the window opens — it was the only one left cold, so pressing it
+// paid a round trip for the chunk before anything could even be asked of the
+// server. The column shows nothing at all during that: the panel's loading
+// skeleton lives on an element the chunk has not created yet.
+test("the window warms the members panel's chunk with the rest of the rail", () => {
+  const warmed = SRC.match(/for \(const kind of \[([\s\S]*?)\]\) \{/);
+  assert.ok(warmed, "the rail warm-up list is gone");
+  const kinds = warmed[1].match(/"([^"]+)"/g).map((s) => s.replace(/"/g, ""));
+  assert.ok(kinds.includes("tasks_panel"), "sanity: the Task kind is warmed");
+  assert.ok(kinds.includes("permission_restricted"), "Access is still cold");
+});

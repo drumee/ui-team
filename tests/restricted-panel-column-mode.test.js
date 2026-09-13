@@ -38,6 +38,8 @@ let Panel;
 test.before(() => {
   Module._load = function (request, ...rest) {
     if (request === "libs/contact-lookup") return { attachEmailLookup() {}, fillEntry() {} };
+    // The real one: these tests are about the panel USING it.
+    if (request === "libs/members-prefetch") return require("../src/drumee/libs/members-prefetch");
     if (/builtins\/skeleton\/toolkit$/.test(request)) {
       return { roleByValue: () => ({}), roleFromPrivilege: () => ({}) };
     }
@@ -46,6 +48,8 @@ test.before(() => {
   };
   global.DrumeeMFS = class { initialize() {} declareHandlers() {} };
   global.Wm = { on() {}, off() {} };
+  global._a = { hub_id: "hub_id", media: "media" };
+  global.SERVICE = { hub: { get_members_by_type: "hub.get_members_by_type" } };
   delete require.cache[SRC];
   Panel = require(SRC);
 });
@@ -65,6 +69,20 @@ function panelWith(attrs) {
   return p;
 }
 
+// A panel ready to run _loadMembers: it records the requests IT makes, so a
+// test can tell the click's request from the panel's own.
+function loader(attrs) {
+  const p = panelWith(attrs);
+  p.own = [];
+  p.fetchService = (service, params) => {
+    p.own.push(params);
+    return Promise.resolve([{ entity_id: "own", email: "own@x.io" }]);
+  };
+  p._render = () => {};
+  p.warn = () => {};
+  return p;
+}
+
 test("column mode stamps data-mode on the element, from the model", () => {
   const p = panelWith({ kind: "permission_restricted", mode: "column" });
   p.initialize({ kind: "permission_restricted", mode: "column" });
@@ -80,6 +98,44 @@ test("drawer mode stamps no data-mode", () => {
 // In column mode data-position is what says the members have LANDED — it ends
 // the panel's loading skeleton (permission/restricted/skin) — so the reveal
 // stamps that and nothing else. The entrance belongs to the view switch now.
+// Opening Access starts the members read at the click, while the panel's own
+// chunk is still downloading (libs/members-prefetch). The panel must take that
+// answer — a second identical request would throw the head start away.
+test("the panel takes the answer the click already started", async () => {
+  const { prefetchMembers } = require("../src/drumee/libs/members-prefetch");
+  const clicked = [];
+  const opener = {
+    fetchService(service, params) {
+      clicked.push(params.hub_id);
+      return Promise.resolve([{ entity_id: "u1", email: "u1@x.io" }]);
+    },
+  };
+  prefetchMembers(opener, "hub-take");
+
+  const p = loader({ hub_id: "hub-take" });
+  await p._loadMembers();
+  assert.deepEqual(clicked, ["hub-take"], "the click's request was not the one used");
+  assert.equal(p.own.length, 0, "the panel started a second request");
+  assert.deepEqual(p._members, [{ entity_id: "u1", email: "u1@x.io" }]);
+  assert.equal(p.el.dataset.position, "1", "never revealed");
+});
+
+test("with no head start the panel asks for itself", async () => {
+  const p = loader({ hub_id: "hub-solo" });
+  await p._loadMembers();
+  assert.equal(p.own.length, 1);
+  assert.equal(p.own[0].hub_id, "hub-solo");
+  assert.equal(p.own[0].type, "all");
+  assert.ok(p.own[0]._ts, "no cache-buster");
+});
+
+test("a workspace-less panel reveals without asking anything", async () => {
+  const p = loader({});
+  await p._loadMembers();
+  assert.equal(p.own.length, 0);
+  assert.equal(p.el.dataset.position, "1");
+});
+
 test("a reveal stamps data-position, in either mode", () => {
   for (const opt of [{ kind: "permission_restricted", mode: "column" }, { kind: "permission_restricted" }]) {
     const p = panelWith(opt);

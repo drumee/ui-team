@@ -1,5 +1,6 @@
 const { roleByValue, roleFromPrivilege } = require("../../../builtins/skeleton/toolkit");
 const { attachEmailLookup, fillEntry } = require("libs/contact-lookup");
+const { membersFor } = require("libs/members-prefetch");
 
 // Wm's inbound-websocket bus. Same name and same channel window/utils.js and
 // modules/desk use; wm/push.js re-emits every push it does not itself consume
@@ -123,16 +124,12 @@ class __permission_restricted extends DrumeeMFS {
     let rows;
     let failed = false;
     try {
-      rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
-        hub_id,
-        type: "all",
-        // Cache-buster. fetchService GETs put the whole payload in the URL with
-        // `cache: "default"`, so they can be served from the browser HTTP
-        // cache and a refetch after a change can answer with the rows from
-        // before it — the likeliest cause of the "pre-write row" the mutation
-        // handlers below work around by redrawing from local state.
-        _ts: Date.now(),
-      });
+      // Whatever the click already started, else a read of our own — the
+      // request and the cache-buster are the same either way
+      // (libs/members-prefetch). On the first open the answer is usually
+      // already on its way: pressing Access starts it while this panel's own
+      // chunk is still downloading.
+      rows = await membersFor(this, hub_id);
     } catch (e) {
       failed = true;
       this.warn("Failed to load workspace members", e);

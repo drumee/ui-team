@@ -11,8 +11,11 @@
  * switchView appends it on first entry and only reveals it after that.
  *
  * Its own module so it can be required under plain node: `_a` is read inside
- * the functions, never at load.
+ * the functions, never at load — and the one import below is by relative path
+ * for the same reason, since the `libs/` alias is webpack's alone.
  */
+const { prefetchMembers } = require("../../../libs/members-prefetch");
+
 const ACCESS_TAB = "access";
 const ACCESS_PANEL_PN = "folder-access-panel";
 
@@ -39,6 +42,12 @@ function accessPanelSpec(win) {
  * Settings panel specifically — and any of them would put a second copy of
  * the matrix over the file grid beside this one.
  *
+ * FIRST ENTRY ASKS FOR THE MEMBERS HERE, before mounting anything. The mount
+ * is a dynamic import() of the panel's chunk — a full round trip during which
+ * the column has nothing to show and nothing has been asked of the server.
+ * Starting the read now overlaps the two, and the panel takes this answer
+ * rather than starting its own (libs/members-prefetch, _loadMembers).
+ *
  * @param {Object} win   the folder window
  * @param {Object} view  the split body (part "folder-view")
  * @returns {Object|null} the mounted panel on re-entry, null on first mount
@@ -50,6 +59,7 @@ function showAccessColumn(win, view) {
   }
   if (!win._accessPanelMounted) {
     win._accessPanelMounted = 1;
+    prefetchMembers(win, win.mget(_a.hub_id));
     view.append(accessPanelSpec(win));
     return null;
   }
