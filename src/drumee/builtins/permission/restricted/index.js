@@ -182,9 +182,24 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   /** Slide the dock in. Was driven by the members list's `eod`; the list is
-   *  gone, so the fetch that replaced it drives it. */
+   *  gone, so the fetch that replaced it drives it.
+   *
+   *  Column mode (the rail's Access): the folder skin keeps the panel hidden
+   *  until this first reveal, so it never shows empty, and `data-entering`
+   *  plays its entrance once — the same slide as the Team Chat <-> Who has
+   *  access switch, wherever Access was opened from. Later reveals are
+   *  member-list refreshes and must not replay it. */
   _reveal() {
-    if (this.el?.dataset) this.el.dataset.position = "1";
+    const el = this.el;
+    if (!el?.dataset) return;
+    const first = el.dataset.position !== "1";
+    el.dataset.position = "1";
+    if (!first || el.dataset.mode !== "column") return;
+    el.dataset.entering = "1";
+    // A little past the 0.2s entrance; removing it restarts nothing.
+    setTimeout(() => {
+      if (el.dataset) delete el.dataset.entering;
+    }, 400);
   }
 
   _findMemberRow(memberId) {

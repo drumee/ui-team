@@ -102,7 +102,7 @@ test("Access sizes the members panel exactly as Files sizes the chat panel", () 
 });
 
 test("switching the column animates the incoming panel, and not for reduced motion", () => {
-  const TO_ACCESS = ".window-folder__split-body[data-view=access][data-from-view=files] > .permission-restricted__ui";
+  const TO_ACCESS = '.window-folder__split-body[data-view=access][data-from-view=files] > .permission-restricted__ui[data-position="1"]';
   const TO_CHAT = ".window-folder__split-body[data-view=files][data-from-view=access] > .window__chat-panel";
   assert.ok(has(rulesFor(folder, TO_ACCESS), "animation: window-folder__column-in-from-right 0.2s ease-out backwards"));
   assert.ok(has(rulesFor(folder, TO_CHAT), "animation: window-folder__column-in-from-left 0.2s ease-out backwards"));
@@ -111,4 +111,13 @@ test("switching the column animates the incoming panel, and not for reduced moti
   const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
   assert.ok(has(rulesFor(reduced, TO_ACCESS), "animation: none"));
   assert.ok(has(rulesFor(reduced, TO_CHAT), "animation: none"));
+});
+
+test("the members panel waits for its first reveal, then enters like the switch", () => {
+  const ACCESS = ".window-folder__split-body[data-view=access] > .permission-restricted__ui";
+  assert.ok(has(rulesFor(folder, `${ACCESS}:not([data-position="1"])`), "visibility: hidden"));
+  const ENTERING = `${ACCESS}[data-entering="1"]`;
+  assert.ok(has(rulesFor(folder, ENTERING), "animation: window-folder__column-in-from-right 0.2s ease-out backwards"));
+  const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
+  assert.ok(has(rulesFor(reduced, ENTERING), "animation: none"));
 });

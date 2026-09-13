@@ -2587,8 +2587,8 @@
   // Both panels share the column (the blocks above), and display:none cannot
   // transition, so the INCOMING panel animates as it appears: Who has access
   // slides in from the right, Team Chat comes back from the left. Scoped to
-  // that pair through data-from-view (stamped by showFolderTab), so first
-  // paint, a workspace switch and the Chat / Task / Meet tabs do not animate.
+  // that pair through data-from-view (stamped by showFolderTab); the members
+  // panel's first load enters the same way wherever it came from (below).
   // No `forwards`: the transform is gone once the animation ends, so nothing
   // inside the panel is left under a transformed ancestor.
   @keyframes window-folder__column-in-from-right {
@@ -2613,7 +2613,16 @@
     }
   }
 
-  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
+  // Hidden until its member list has loaded (the panel's _reveal stamps
+  // data-position="1"), so it never slides in empty and then pops its rows.
+  &__split-body[data-view="access"] > .permission-restricted__ui:not([data-position="1"]) {
+    visibility: hidden;
+  }
+
+  // First load, wherever Access was opened from: _reveal stamps data-entering
+  // on the first reveal only. The switch from Files waits for that reveal too.
+  &__split-body[data-view="access"] > .permission-restricted__ui[data-entering="1"],
+  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui[data-position="1"] {
     animation: window-folder__column-in-from-right 0.2s ease-out backwards;
   }
 
@@ -2622,7 +2631,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui,
+    &__split-body[data-view="access"] > .permission-restricted__ui[data-entering="1"],
+    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui[data-position="1"],
     &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel {
       animation: none;
     }
