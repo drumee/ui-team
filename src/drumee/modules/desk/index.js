@@ -5194,6 +5194,14 @@ class desk_module extends LetcBox {
     if (this.isDestroyed && this.isDestroyed()) return;
     // Re-read: the wait is long enough for the window to have gone.
     if (w.isDestroyed && w.isDestroyed()) return;
+    // The rail's Access (opt.members) is a VIEW of the workspace, like Files /
+    // Chat / Task: the members panel takes the split body's chat column
+    // (window/folder/access-column). The header's link icon calls this without
+    // `members` and keeps its secure-share drawer below.
+    if (opt && opt.members && _.isFunction(w.showFolderTab)) {
+      w.showFolderTab("access");
+      return w.raise && w.raise();
+    }
     if (_.isFunction(w.onUiEvent)) {
       return w.onUiEvent(w, {
         service: "folder-manage-access",
