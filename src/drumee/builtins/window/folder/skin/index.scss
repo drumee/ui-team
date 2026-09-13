@@ -2663,20 +2663,39 @@
       }
     }
 
-    &[data-view="task"] .tasks-panel__ui,
+    // The board enters on its FIRST PAINT, not on mount: after a page refresh
+    // it has nothing cached and draws nothing until task.list and the columns
+    // return, so an entrance on mount ran on an empty panel and the columns
+    // then popped in. tasks/index.js _render stamps data-painted; later
+    // switches restart the entrance as usual.
+    &[data-view="task"] .tasks-panel__ui[data-painted="1"],
     &[data-view="meeting"] .window-folder__meeting-schedule {
       animation: window-folder__column-in-from-right 0.2s ease-out backwards;
     }
   }
 
+  // The SAME selectors as the entrance above, so reduced motion wins on
+  // specificity and not just on order: a shorter, unqualified list here lost
+  // to the view-qualified rules and left the motion on.
   @media (prefers-reduced-motion: reduce) {
     &__split-body[data-view-entering="1"] {
-      .window__files-panel,
-      .window__chat-panel,
-      .window__thread-rail,
-      .window__file-thread-panel,
-      .tasks-panel__ui,
-      .window-folder__meeting-schedule {
+      &[data-view="files"]:not([data-from-view="access"]) {
+        .window__files-panel,
+        .window__chat-panel {
+          animation: none;
+        }
+      }
+
+      &[data-view="chat"] {
+        .window__thread-rail,
+        .window__chat-panel,
+        .window__file-thread-panel {
+          animation: none;
+        }
+      }
+
+      &[data-view="task"] .tasks-panel__ui[data-painted="1"],
+      &[data-view="meeting"] .window-folder__meeting-schedule {
         animation: none;
       }
     }

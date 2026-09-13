@@ -8326,6 +8326,11 @@ class __tasks_panel extends LetcBox {
 
     this.feed(require("./skeleton")(this));
     this._markPainted();
+    // The board has drawn: the folder window's Task entrance keys on this
+    // (window/folder/skin, data-view="task"), so it slides in WITH its columns.
+    // After a page refresh nothing is cached and the first render waits on
+    // task.list — an entrance on mount ran on an empty panel instead.
+    if (this.el && this.el.dataset) this.el.dataset.painted = "1";
     // ui-core sets <input> values through a 200ms `waitElement` poll, so
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).

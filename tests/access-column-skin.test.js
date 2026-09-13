@@ -131,12 +131,14 @@ test("entering Files, Chat, Task or Meet slides that view's panels in, not for r
     `${E}[data-view=chat] .window__thread-rail`,
     `${E}[data-view=chat] .window__chat-panel`,
     `${E}[data-view=chat] .window__file-thread-panel`,
-    `${E}[data-view=task] .tasks-panel__ui`,
+    `${E}[data-view=task] .tasks-panel__ui[data-painted="1"]`,
     `${E}[data-view=meeting] .window-folder__meeting-schedule`,
   ];
   for (const sel of selectors) assert.ok(has(rulesFor(folder, sel), ANIM), sel);
+  // The board waits for its first paint: nothing on the bare, still-empty root.
+  assert.ok(!has(rulesFor(folder, `${E}[data-view=task] .tasks-panel__ui`), ANIM), "task entrance must wait for data-painted");
+  // Reduced motion cancels EXACTLY the animated selectors — a less specific
+  // selector loses to them even though it comes later in the file.
   const reduced = blocks(folder, "@media (prefers-reduced-motion: reduce)");
-  for (const panel of [".window__files-panel", ".window__chat-panel", ".window__thread-rail", ".window__file-thread-panel", ".tasks-panel__ui", ".window-folder__meeting-schedule"]) {
-    assert.ok(has(rulesFor(reduced, `${E} ${panel}`), "animation: none"), `reduced: ${panel}`);
-  }
+  for (const sel of selectors) assert.ok(has(rulesFor(reduced, sel), "animation: none"), `reduced: ${sel}`);
 });
