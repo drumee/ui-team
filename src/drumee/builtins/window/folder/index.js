@@ -10,6 +10,7 @@ const {
 
 const { overMeetingCap } = require("libs/billing");
 const readCache = require("libs/read-cache");
+const { ACCESS_TAB, showAccessColumn, showsFileGrid } = require("./access-column");
 
 
 const {
@@ -827,6 +828,12 @@ class __window_folder extends mfsInteract {
     if (typeof Kind !== "undefined" && _.isFunction(Kind.waitFor)) {
       for (const kind of [
         "tasks_panel",
+        // Access, the fourth rail view. Cold, pressing it spent a round trip
+        // downloading this chunk before the panel existed to ask the server
+        // anything — and the column has nothing to show meanwhile, not even
+        // the panel's loading skeleton, which lives on an element this chunk
+        // is what creates.
+        "permission_restricted",
         "window_tutorial",
         "tutorial_migrate",
         "tutorial_chat",
@@ -1305,8 +1312,8 @@ class __window_folder extends mfsInteract {
     };
     handle.addEventListener("pointerdown", (e) => {
       const view = this.__folderView;
-      // Only active on the Files tab (the only view that reads --files-w).
-      if (!view || !view.el || view.el.dataset.view !== "files") return;
+      // Active on Files and Access (both read --files-w; see showsFileGrid).
+      if (!view || !view.el || !showsFileGrid(view.el.dataset.view)) return;
       dragging = true;
       handle.dataset.dragging = "1";
       try { handle.setPointerCapture(e.pointerId); } catch (_) {}
@@ -1334,6 +1341,8 @@ class __window_folder extends mfsInteract {
       this.__folderView = child;
       // Restore the user's persisted Files-tab split ratio (default 2:1).
       this._applyFilesSplit();
+      // First paint of the split body enters like every later view switch.
+      this._playViewEntrance(child);
       return;
     }
     if (pn === "files-splitter") {
@@ -3069,11 +3078,24 @@ class __window_folder extends mfsInteract {
     // computed when it was built, so a reopen on a later day must redraw.
     const today = Dayjs().format("YYYY-MM-DD");
     const quiet = !!opt.quiet && this._schedPaintedDay === today;
+    // Painted means "this grid reflects an answer": rows we already had, or a
+    // settled fetch. Until then the skin draws a skeleton over the panel
+    // instead of an empty week (window-folder__meeting-schedule). _fetchMeetings
+    // swallows its own failures, so the settled path below covers a lost
+    // request too — nothing can leave the panel pulsing forever.
+    const paint = () => {
+      const part = this.getPart && this.getPart("meeting-panel");
+      if (part && part.el && part.el.dataset) part.el.dataset.painted = "1";
+    };
     const before = readCache.signature(this._meetings);
     if (!quiet) feed();
+    // A quiet pass trusts the grid on screen, and known rows are real content
+    // the moment they are fed; only a first load with nothing cached waits.
+    if (quiet || (Array.isArray(this._meetings) && this._meetings.length)) paint();
     return this._fetchMeetings().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (readCache.signature(this._meetings) !== before) feed();
+      paint();
     });
   }
 
@@ -5633,11 +5655,12 @@ class __window_folder extends mfsInteract {
     // The list/grid view toggle lives in the Files filter row.
     const viewCtrl = this.getPart("view-ctrl");
     if (viewCtrl && viewCtrl.el) {
-      viewCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
+      // Access keeps the file grid on screen (./access-column), so its toggle too.
+      viewCtrl.el.dataset.visible = showsFileGrid(tab) ? "1" : "0";
     }
     // The merged "+ New" button also lives in that row and only operates on
-    // Files (upload / create / gdrive-import) — hide it off the Files tab so it
-    // can't be mistaken for a Chat/Task/Meeting action.
+    // the file grid (upload / create / gdrive-import) — hide it off Files and
+    // Access so it can't be mistaken for a Chat/Task/Meeting action.
     this.syncNewCtrlVisibility();
 
     const switchView = (view) => {
@@ -5656,7 +5679,11 @@ class __window_folder extends mfsInteract {
       // after it — a user who scrolled deep into a folder and glanced at the
       // board should land where they were.
       this._stashPanelScroll();
+      // Where the column is switching FROM, for the skin's Team Chat <->
+      // Who has access switch animation (skin/index.scss). Empty on first show.
+      view.el.dataset.fromView = prevTab || "";
       view.el.dataset.view = tab;
+      this._playViewEntrance(view);
       this._restorePanelScroll();
       switch (tab) {
         case _a.chat:
@@ -5687,6 +5714,11 @@ class __window_folder extends mfsInteract {
           // flags that), in which case it must be redrawn now.
           this._schedRefresh = this._refreshSchedule({ quiet: !this._schedStale });
           this._schedStale = 0;
+          return;
+        case ACCESS_TAB:
+          // The rail's Access: the file grid and its gutter stay, and the
+          // members panel takes the chat panel's column (./access-column).
+          showAccessColumn(this, view);
           return;
         case _a.task:
           if (!this._taskPanelMounted) {
@@ -5746,6 +5778,34 @@ class __window_folder extends mfsInteract {
       this.__folderView = view;
       return switchView(view);
     });
+  }
+
+  /**
+   * Replay the split body's view entrance (skin: &__split-body[data-view-entering="1"]).
+   *
+   * Every press of Files / Chat / Task / Meet — and the split body's first
+   * paint — slides that view's panels in, the same motion as the Team Chat <->
+   * Who has access switch. A panel on screen in both views (the chat panel in
+   * Files and in Chat) does not replay a CSS animation just because data-view
+   * changed, so the stamp is REMOVED, a reflow is forced, and it is set again:
+   * the rule stops matching for one style pass and the animation restarts.
+   *
+   * NOT cleared on a timer, and that is the point: the panels that need it
+   * most appear late. The task board is a lazy kind — a placeholder until its
+   * chunk loads, often well past any short timeout after a page refresh — and
+   * the Meet schedule's first build is one long task, after which a timed
+   * clear can run before the first paint. Either way the panel showed with no
+   * animation. The stamp now stays until the next switch restarts it, so a
+   * panel that arrives late still enters.
+   *
+   * @param {Object} view  the split body (part "folder-view")
+   */
+  _playViewEntrance(view) {
+    const el = view && view.el;
+    if (!el || !el.dataset) return;
+    delete el.dataset.viewEntering;
+    void el.offsetWidth;
+    el.dataset.viewEntering = "1";
   }
 
   getFolderActionTarget() {
@@ -6178,6 +6238,10 @@ class __window_folder extends mfsInteract {
         cancel: LOCALE.CANCEL || "Cancel",
         cancel_type: "secondary",
         mode: "hbf",
+        // No backdrop: the member row this names is in the matrix behind the
+        // prompt, and dimming it hides what the user would check before
+        // confirming. Same as the "Who has access" panel's role prompt.
+        overlay: "none",
       });
     } catch (_) {
       this._folderConfirmInFlight = false;
@@ -6247,7 +6311,12 @@ class __window_folder extends mfsInteract {
     // once there is. Refetch instead of leaving the admin looking at a member
     // list missing the person they just invited. _refreshFolderMembers
     // self-guards on the panel being open, so this is a no-op when closed.
-    else if (svc === "hub.member_joined") {
+    //
+    // hub.members_changed is the same refetch for rows that already exist —
+    // another admin set a role or removed members (server-team
+    // notifyMembersChanged). It carries no `uid`, so _onMemberJoined's echo
+    // guard lets it through for everyone, the acting admin included.
+    else if (svc === "hub.member_joined" || svc === "hub.members_changed") {
       this._onMemberJoined(data || {});
     }
     return super.handleWsEvent(args);
@@ -6368,12 +6437,14 @@ class __window_folder extends mfsInteract {
   //   - walk in          → updateTopbar (a subfolder may grant other rights)
   //   - walk back        → _restoreNavState (so may an ancestor)
   //
-  // Off the Files tab it hides regardless of permission: the actions only apply
-  // to files, so showing it on Chat/Task/Meeting would misrepresent what it does.
+  // Off Files and Access it hides regardless of permission: the actions only
+  // apply to the file grid, so showing it on Chat/Task/Meeting would
+  // misrepresent what it does.
   syncNewCtrlVisibility() {
     const newCtrl = this.getPart && this.getPart("new-ctrl");
     if (!newCtrl || !newCtrl.el) return;
-    const onFiles = (this.activeTab || "files") === "files";
+    // Access keeps the file grid on screen, and "+ New" operates on that grid.
+    const onFiles = showsFileGrid(this.activeTab);
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
     // Over-limit read-only trumps the node privilege: creating adds bytes,
     // and the REST clamp refuses it regardless of what this node allows.
@@ -6652,18 +6723,27 @@ class __window_folder extends mfsInteract {
     if (!this._folderSettingsPanelIsOpen()) return;
     const { hub_id } = this.actualNode();
     if (!hub_id) return;
+    // Back-to-back pushes (hub.member_joined, hub.members_changed) can answer
+    // out of order — only the newest refresh may repaint.
+    const seq = (this._folderMembersSeq = (this._folderMembersSeq || 0) + 1);
     try {
       const rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
         hub_id,
         type: "all",
+        // Cache-buster: this GET can be served from the browser HTTP cache
+        // (fetchService uses `cache: "default"`), and a refresh after a role
+        // change or removal could otherwise repaint the rows from before it.
+        _ts: Date.now(),
       });
-      this._folderMembers = Array.isArray(rows) ? rows : [];
+      if (seq === this._folderMembersSeq) {
+        this._folderMembers = Array.isArray(rows) ? rows : [];
+      }
     } catch (e) {
       if (this.warn) this.warn("Failed to refresh folder members", e);
     } finally {
       // Re-checked, not assumed: the fetch above is a round-trip, and the user
       // can have closed the drawer or opened a different one meanwhile.
-      if (this._folderSettingsPanelIsOpen()) {
+      if (seq === this._folderMembersSeq && this._folderSettingsPanelIsOpen()) {
         this.dialogWrapper.feed(
           require("./skeleton/settings-action-panel")(this),
         );

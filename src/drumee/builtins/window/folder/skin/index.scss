@@ -638,116 +638,9 @@
         }
       }
 
-      // dropdownMenuButton doesn't pass direction:"down", so the
-      // framework leaves the popup wrapper unpositioned. Anchor it
-      // below the trigger ourselves. max-content so the panel sizes to its
-      // widest row ("Migrate from Google Drive") instead of shrinking to the
-      // narrow trigger's width and clipping that label.
-      .menu-topic-items__wrapper {
-        position: absolute;
-        top: calc(100% + 6px);
-        right: 0;
-        z-index: 1000;
-        width: max-content;
-        min-width: 242px;
-      }
-
-      // ui-core writes overflow:hidden inline on this wrapper. The cascade is
-      // allowed to escape only while this folder-local menu is open.
-      .menu-topic-items__wrapper[data-state="open"] {
-        overflow: visible !important;
-      }
-
-      .menu-topic-items,
-      .menu-items {
-        background-color: var(--normal-bg-elevated);
-        border-radius: 6px;
-        box-shadow:
-          0 4px 6px -4px rgba(0, 0, 0, 0.1),
-          0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        padding: 6px;
-        // max-content so the panel itself grows to its widest row ("Migrate
-        // from Google Drive"). Without this the panel stays at min-width and
-        // the nowrap label overflows, then gets clipped by items-wrapper's
-        // inline overflow:hidden (set by the menu widget). min-width is the
-        // floor for short menus.
-        width: max-content;
-        min-width: 242px;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      // skin/lib/menu.scss only hides the inner .menu-items via
-      // display:none on data-state. Hide the absolute wrapper too so
-      // it doesn't intercept clicks while closed.
-      //
-      // These two selectors are kept for the pre-open case, but they cannot
-      // carry this on their own — see the menu-root rule below.
-      .menu-topic-items__wrapper[data-state="closed"],
-      .menu-topic-items__wrapper[data-state="0"] {
-        display: none;
-      }
-
-      // The wrapper is stamped data-state="open" by _openItems and is NEVER
-      // reset: ui-core's _onClosed resets the inner .menu-items and the menu
-      // root, but not the wrapper (widgets/menu/index.js). So the two rules
-      // above stop matching the moment the menu has been opened once, and the
-      // wrapper stays "open" for the rest of the session.
-      //
-      // On desktop that leftover is invisible: the inner items are display:none,
-      // so the absolutely positioned wrapper collapses to 0x0 under the trigger
-      // — which is also why the click-interception it was written to prevent
-      // went unnoticed. The mobile card below gives the same wrapper an explicit
-      // width and fixed, centred placement, so after dismissing the menu it
-      // stays on screen as an empty 320px panel over the file grid.
-      //
-      // Key the hide on the MENU ROOT, which _onClosed does reset to 0. That is
-      // the same signal the create-submenu rule further down already trusts, so
-      // both now agree on one source of truth for "this menu is closed".
-      .window-button__dropdown-menu__wrapper:not([data-state="1"])
-        .menu-topic-items__wrapper {
-        display: none;
-      }
-
-      // Style each menu item row.
-      .window-button__dropdown-menu__item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-family: "Geist", sans-serif;
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--normal-fg-10);
-        white-space: nowrap;
-        box-sizing: border-box;
-
-        &:hover {
-          background-color: var(--normal-bg-90);
-        }
-
-        svg {
-          width: 16px;
-          height: 16px;
-          flex-shrink: 0;
-        }
-      }
-
-      .window-button__dropdown-menu__name {
-        flex: 1;
-      }
-
-      .window-button__dropdown-menu__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 20px;
-        height: 20px;
-        flex: 0 0 20px;
-      }
+      // The card, its rows and the closed-state hides — shared with every
+      // window-button dropdown (mixins/drumee window-button-dropdown-menu).
+      @include drumee.window-button-dropdown-menu;
 
       .window-button__dropdown-menu__item--create-group {
         position: relative;
@@ -2586,8 +2479,11 @@
     // grid and the chat once opened (window/folder showFolderTab appends them
     // once and never feeds the split body again), so each tab is revealed by
     // its data-view below rather than rebuilt. Hidden here by default.
+    // The rail's Access members panel too (window/folder/access-column): it
+    // is mounted once and revealed by [data-view="access"] below.
     .tasks-panel__ui,
-    .window-folder__meeting-schedule {
+    .window-folder__meeting-schedule,
+    .permission-restricted__ui {
       display: none;
     }
 
@@ -2630,12 +2526,21 @@
   // _wireFilesSplitter clamps & persists the `--files-w` % this grid reads).
   // The gutter is a REAL grid column (not an absolute overlay) so it never gets
   // covered by the chat panel's stacking context.
-  &__split-body[data-view="files"] {
+  //
+  // Access (the rail's Access, window/folder/access-column) is this same layout
+  // with the members panel in the chat panel's place, so it shares the block:
+  // the same grid, the same per-panel overrides and the same flex shares — and
+  // with them the chat panel's width, in grid layout and in the flex fallback.
+  // Without the shared flex share the fallback sized the members panel to its
+  // content (61px against the chat panel's 467px at a 1400px window).
+  &__split-body[data-view="files"],
+  &__split-body[data-view="access"] {
     grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
 
     > .window-folder__files-panel,
     > .window__files-panel,
-    > .window__chat-panel {
+    > .window__chat-panel,
+    > .permission-restricted__ui {
       margin: 0 !important;
       max-width: none !important;
       min-width: 0 !important;
@@ -2645,14 +2550,201 @@
     > .window__files-panel {
       flex: 2 1 0 !important;
     }
-    > .window__chat-panel {
+    > .window__chat-panel,
+    > .permission-restricted__ui {
       flex: 1 1 0 !important;
     }
-    // The drag gutter occupies the middle column only on the Files tab.
-    // !important beats the framework's Box.Y default display:flex (same reason
-    // the base hide below needs it).
+    // The drag gutter occupies the middle column only on the Files and Access
+    // tabs. !important beats the framework's Box.Y default display:flex (same
+    // reason the base hide below needs it).
+    //
+    // Compact (≤700px, the @container block below) re-hides it on Access with
+    // the same selector and the same !important — equal specificity, so THAT
+    // rule wins purely because it comes later in the file. Keep it that way.
     > .window-folder__files-splitter {
       display: flex !important;
+    }
+  }
+
+  // Access draws the members panel in the chat panel's place, as the same card.
+  &__split-body[data-view="access"] {
+    .window__chat-panel,
+    .window__thread-rail,
+    .window__file-thread-panel {
+      display: none;
+    }
+
+    > .permission-restricted__ui {
+      display: flex;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      background: var(--normal-bg-90);
+      overflow: hidden;
+    }
+  }
+
+  // ── Switching the right column: Team Chat <-> Who has access ────────────
+  // Both panels share the column (the blocks above), and display:none cannot
+  // transition, so the INCOMING panel animates as it appears: Who has access
+  // slides in from the right, Team Chat comes back from the left. Scoped to
+  // that pair through data-from-view (stamped by showFolderTab); the members
+  // panel's first load enters the same way wherever it came from (below).
+  // No `forwards`: the transform is gone once the animation ends, so nothing
+  // inside the panel is left under a transformed ancestor.
+  @keyframes window-folder__column-in-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes window-folder__column-in-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  // The members card enters on the switch, with its loading skeleton inside
+  // (permission/restricted skin); its rows fade in when they land.
+  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
+    animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+  }
+
+  &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel {
+    animation: window-folder__column-in-from-left 0.2s ease-out backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui,
+    &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel {
+      animation: none;
+    }
+  }
+
+  // ── Entering Files, Chat, Task or Meet ────────────────────────────────
+  // Every press of one of those rail items replays the same slide + fade on
+  // the panels of the view it shows, first load included: showFolderTab and
+  // the split body's first paint restart data-view-entering, which stays set
+  // until the next switch so a late panel — the lazy task board, the Meet
+  // schedule's long first build — still enters (window/folder
+  // _playViewEntrance). Files <->
+  // Access keeps its own motion above — the file grid stays put and only the
+  // right column moves — so the Files rule skips arrivals from Access.
+  // ── Loading skeletons ────────────────────────────────────────────────────
+  // A panel that cannot show its content yet keeps its card and shows the
+  // SHAPE of that content, pulsing, instead of sitting blank. Each one drops
+  // its skeleton on its own "painted" stamp and fades its content in:
+  //   team chat  — the chat widget stamps data-painted on its message list's
+  //                first ready (4s fallback); it is a lazy kind and fetches
+  //                media.home before it even builds that list;
+  //   Meet       — the folder window stamps data-painted on the schedule part
+  //                once the meetings fetch settles (_refreshSchedule).
+  // The task board and the members panel carry their own (tasks skin,
+  // permission/restricted skin).
+  $chat-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='20' y='18' width='35%25' height='14' rx='7'/%3E%3Crect x='84%25' y='17' width='16' height='16' rx='4'/%3E%3Crect x='91%25' y='17' width='16' height='16' rx='4'/%3E%3Crect x='0' y='52' width='100%25' height='1'/%3E%3Crect x='20' y='80' width='55%25' height='40' rx='12'/%3E%3Crect x='20' y='132' width='70%25' height='58' rx='12'/%3E%3Crect x='42%25' y='202' width='50%25' height='40' rx='12'/%3E%3Crect x='20' y='254' width='60%25' height='40' rx='12'/%3E%3C/svg%3E");
+  $meet-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='16' y='14' width='25%25' height='14' rx='7'/%3E%3Crect x='66%25' y='10' width='14%25' height='28' rx='14'/%3E%3Crect x='82%25' y='10' width='16%25' height='28' rx='14'/%3E%3Crect x='0' y='56' width='100%25' height='1'/%3E%3Crect x='10%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='25%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='40%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='55%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='70%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='85%25' y='72' width='9%25' height='10' rx='5'/%3E%3Crect x='0' y='104' width='100%25' height='1'/%3E%3Crect x='0' y='144' width='100%25' height='1'/%3E%3Crect x='0' y='184' width='100%25' height='1'/%3E%3Crect x='0' y='224' width='100%25' height='1'/%3E%3Crect x='0' y='264' width='100%25' height='1'/%3E%3Crect x='0' y='304' width='100%25' height='1'/%3E%3Crect x='11%25' y='150' width='12%25' height='56' rx='8'/%3E%3Crect x='41%25' y='110' width='12%25' height='40' rx='8'/%3E%3Crect x='71%25' y='230' width='12%25' height='64' rx='8'/%3E%3C/svg%3E");
+
+  &__split-body .window__chat-panel:not(:has(.window__chat-widget[data-painted="1"])) {
+    // The chat card is already relative under .window-folder, but the skeleton
+    // must not depend on a rule in another block to land on the card.
+    position: relative;
+
+    > * {
+      visibility: hidden;
+    }
+
+    &::after {
+      @include drumee.skeleton-layer($chat-skeleton-mask);
+    }
+  }
+
+  &__split-body .window__chat-panel:has(.window__chat-widget[data-painted="1"]) {
+    > .window__chat-label,
+    > .window__chat-widget {
+      @include drumee.skeleton-content-in;
+    }
+  }
+
+  &__meeting-schedule:not([data-painted="1"]) {
+    // The schedule declares no position of its own; without this the skeleton
+    // would size itself to the split body instead of the panel.
+    position: relative;
+
+    > * {
+      visibility: hidden;
+    }
+
+    &::after {
+      @include drumee.skeleton-layer($meet-skeleton-mask);
+    }
+  }
+
+  &__meeting-schedule[data-painted="1"] > * {
+    @include drumee.skeleton-content-in;
+  }
+
+  &__split-body[data-view-entering="1"] {
+    &[data-view="files"]:not([data-from-view="access"]) {
+      .window__files-panel,
+      .window__chat-panel {
+        animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+      }
+    }
+
+    &[data-view="chat"] {
+      .window__thread-rail,
+      .window__chat-panel,
+      .window__file-thread-panel {
+        animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+      }
+    }
+
+    // The board enters on its FIRST PAINT, not on mount: after a page refresh
+    // it has nothing cached and draws nothing until task.list and the columns
+    // return, so an entrance on mount ran on an empty panel and the columns
+    // then popped in. tasks/index.js _render stamps data-painted; later
+    // switches restart the entrance as usual.
+    &[data-view="task"] .tasks-panel__ui[data-painted="1"],
+    &[data-view="meeting"] .window-folder__meeting-schedule,
+    &[data-view="access"] > .permission-restricted__ui {
+      animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+    }
+  }
+
+  // The SAME selectors as the entrance above, so reduced motion wins on
+  // specificity and not just on order: a shorter, unqualified list here lost
+  // to the view-qualified rules and left the motion on.
+  @media (prefers-reduced-motion: reduce) {
+    &__split-body[data-view-entering="1"] {
+      &[data-view="files"]:not([data-from-view="access"]) {
+        .window__files-panel,
+        .window__chat-panel {
+          animation: none;
+        }
+      }
+
+      &[data-view="chat"] {
+        .window__thread-rail,
+        .window__chat-panel,
+        .window__file-thread-panel {
+          animation: none;
+        }
+      }
+
+      &[data-view="task"] .tasks-panel__ui[data-painted="1"],
+      &[data-view="meeting"] .window-folder__meeting-schedule,
+      &[data-view="access"] > .permission-restricted__ui {
+        animation: none;
+      }
     }
   }
 
@@ -4256,6 +4348,33 @@
 
         .window__tasks-panel {
           display: flex;
+        }
+      }
+
+      &[data-view="access"] {
+        // Compact: no room for the file grid beside the members panel — it
+        // goes full width, as the chat does on the Chat tab.
+        .window__files-panel,
+        .window__chat-panel,
+        .window__meeting-panel,
+        .window__tasks-panel,
+        .window__thread-rail,
+        .window__file-thread-panel {
+          display: none;
+        }
+
+        .permission-restricted__ui {
+          display: flex;
+          max-width: none;
+          min-width: 0;
+          width: 100%;
+        }
+
+        // The desktop Access rule shows the drag gutter with a stronger
+        // selector than this block's generic gutter hide; with no file grid
+        // beside it on compact there is nothing to drag.
+        > .window-folder__files-splitter {
+          display: none !important;
         }
       }
 

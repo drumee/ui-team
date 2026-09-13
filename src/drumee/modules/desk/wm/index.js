@@ -854,7 +854,8 @@ class __window_manager extends push {
   }
 
   /**
-   * THE TAB A WORKSPACE SWITCH MUST HAND OVER — Chat, Task or Meet, or null.
+   * THE TAB A WORKSPACE SWITCH MUST HAND OVER — Chat, Task, Meet or Access, or
+   * null.
    *
    * The docked pane the user is standing on right now, read from the LIVE
    * window (`pane.activeTab`) rather than from its model: showFolderTab is
@@ -867,12 +868,13 @@ class __window_manager extends push {
    * (loadWorkspace's feed, the desk's rail highlight) that this is a plain
    * arrival. Anything else unrecognised answers null for the same reason.
    *
-   * @returns {String|null} "chat" | "task" | "meeting", or null for Files
+   * @returns {String|null} "chat" | "task" | "meeting" | "access", or null for
+   *   Files
    */
   paneTabToCarry() {
     const pane = this.headlessPane();
     const tab = pane && pane.activeTab;
-    return [_a.chat, _a.task, "meeting"].includes(tab) ? tab : null;
+    return [_a.chat, _a.task, "meeting", "access"].includes(tab) ? tab : null;
   }
 
   /**

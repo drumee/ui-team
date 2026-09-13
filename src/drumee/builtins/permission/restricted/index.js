@@ -1,5 +1,6 @@
-const { roleByValue } = require("../../../builtins/skeleton/toolkit");
+const { roleByValue, roleFromPrivilege } = require("../../../builtins/skeleton/toolkit");
 const { attachEmailLookup, fillEntry } = require("libs/contact-lookup");
+const { membersFor } = require("libs/members-prefetch");
 
 // Wm's inbound-websocket bus. Same name and same channel window/utils.js and
 // modules/desk use; wm/push.js re-emits every push it does not itself consume
@@ -24,6 +25,14 @@ class __permission_restricted extends DrumeeMFS {
 
     require("./skin");
     super.initialize(opt);
+    // Column mode: a view of the folder window's split body (the rail's Access,
+    // see window/folder/access-column), not a drawer; the skins key the layout
+    // on data-mode. Written to the element, NOT into opt.dataset: this widget is
+    // always fed as a kid, so its model is the descriptor its parent built, and
+    // ui-core's View.initialize only makes a model from `opt` when there is
+    // none — an opt.dataset edit here never reaches onRender's data-* stamp.
+    // That is how the panel came up in column mode drawn as the 360px drawer.
+    if (this.mget("mode") === "column") this.el.dataset.mode = "column";
     this.declareHandlers();
     // Pending-invite role, same default as the base panel's invite row.
     this._inviteRole = roleByValue("edit");
@@ -108,19 +117,28 @@ class __permission_restricted extends DrumeeMFS {
       this._membersLoaded = true;
       return this._reveal();
     }
+    // Refetches are push-driven now (_onWsEvent), and pushes can land back to
+    // back — a role change, then a removal — with their answers arriving out
+    // of order. Only the newest request may paint.
+    const seq = (this._membersSeq = (this._membersSeq || 0) + 1);
+    let rows;
+    let failed = false;
     try {
-      const rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
-        hub_id,
-        type: "all",
-      });
-      this._members = Array.isArray(rows) ? rows : [];
+      // Whatever the click already started, else a read of our own — the
+      // request and the cache-buster are the same either way
+      // (libs/members-prefetch). On the first open the answer is usually
+      // already on its way: pressing Access starts it while this panel's own
+      // chunk is still downloading.
+      rows = await membersFor(this, hub_id);
     } catch (e) {
+      failed = true;
       this.warn("Failed to load workspace members", e);
-    } finally {
-      this._membersLoaded = true;
-      this._render();
-      this._reveal();
     }
+    if (seq !== this._membersSeq) return;
+    if (!failed) this._members = Array.isArray(rows) ? rows : [];
+    this._membersLoaded = true;
+    this._render();
+    this._reveal();
   }
 
   /**
@@ -136,10 +154,18 @@ class __permission_restricted extends DrumeeMFS {
    * stale while the invite it had just sent landed.
    *
    * Covers the invite this admin just sent AND one sent by somebody else.
+   *
+   * `hub.members_changed` is the same refetch for EXISTING rows: another admin
+   * set a role (hub.set_privilege) or removed members (hub.delete_contributor).
+   * Both used to push only to the member being changed, so this matrix kept
+   * the old role, or the removed member, until the panel was reopened.
    */
   _onWsEvent(args = {}) {
     const { data, options } = args || {};
-    if (!options || options.service !== "hub.member_joined") return;
+    const service = options && options.service;
+    if (service !== "hub.member_joined" && service !== "hub.members_changed") {
+      return;
+    }
     const hub_id = this.mget(_a.hub_id);
     if (!hub_id) return;
     // Several panels can be open on different workspaces — only ours reacts.
@@ -153,9 +179,16 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   /** Slide the dock in. Was driven by the members list's `eod`; the list is
-   *  gone, so the fetch that replaced it drives it. */
+   *  gone, so the fetch that replaced it drives it.
+   *
+   *  Column mode (the rail's Access): nothing slides — the panel is a view of
+   *  the split body and enters with the switch. There data-position is what
+   *  says the members have LANDED, and the skin holds the panel's loading
+   *  skeleton until it does. */
   _reveal() {
-    if (this.el?.dataset) this.el.dataset.position = "1";
+    const el = this.el;
+    if (!el?.dataset) return;
+    el.dataset.position = "1";
   }
 
   _findMemberRow(memberId) {
@@ -305,6 +338,33 @@ class __permission_restricted extends DrumeeMFS {
     if (menu?.changeState) menu.changeState(0);
   }
 
+  /**
+   * Put a member's role menu back on the role they actually hold.
+   *
+   * ui-core's radio behaviour moves the menu's highlight to the clicked row ON
+   * THE CLICK (behavior/radio.js _on_message), before _selectMemberRole has
+   * asked anything. So a change that did not happen — the confirm cancelled,
+   * or the server refusing it — left the menu marking the role that was picked
+   * instead of the one the member has: View member, pick Chat, Cancel, and the
+   * menu said Chat.
+   *
+   * The rows are the picked row's siblings; each carries its role's privilege
+   * as dataset, and roleFromPrivilege resolves the stored mask to the role the
+   * skeleton marks (owner 63 → Admin, and so on). Set in place rather than
+   * re-rendering: a re-feed would rebuild the whole panel and throw away its
+   * scroll position for a change that did not happen.
+   */
+  _restoreRolePick(cmd, raw) {
+    const held = roleFromPrivilege(raw?.privilege);
+    const rows = cmd?.parent?.children;
+    if (!held || !rows || !_.isFunction(rows.each)) return;
+    rows.each((row) => {
+      if (!_.isFunction(row?.setState)) return;
+      const privilege = Number(row.el?.dataset?.privilege);
+      row.setState(privilege === Number(held.privilege) ? 1 : 0);
+    });
+  }
+
   /** Menu pick on a member row — confirm, then persist across the workspace. */
   async _selectMemberRole(cmd) {
     if (this._confirmInFlight) return;
@@ -336,9 +396,15 @@ class __permission_restricted extends DrumeeMFS {
         cancel: LOCALE.CANCEL || "Cancel",
         cancel_type: "secondary",
         mode: "hbf",
+        // No backdrop, as on the remove prompt below: the member row this
+        // names is right there in the matrix, and dimming it hides what the
+        // user would check before confirming.
+        overlay: "none",
       });
     } catch (_) {
       this._confirmInFlight = false;
+      // Cancelled: nothing changed, so neither may the menu.
+      this._restoreRolePick(cmd, raw);
       return;
     }
 
@@ -351,6 +417,7 @@ class __permission_restricted extends DrumeeMFS {
         privilege,
       });
       if (res && (res.error || res.error_code)) {
+        this._restoreRolePick(cmd, raw);
         return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
       }
       // Trust the POST and redraw from local state: get_members_by_type can
@@ -358,6 +425,7 @@ class __permission_restricted extends DrumeeMFS {
       raw.privilege = privilege;
       this._render();
     } catch (e) {
+      this._restoreRolePick(cmd, raw);
       this._notice(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
       this._confirmInFlight = false;

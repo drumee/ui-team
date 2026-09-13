@@ -776,6 +776,12 @@ class __widget_chat extends LetcBox {
         child.onAddKid = this.handleScroll.bind(this);
         child.once(_e.ready, () => {
           this.scrollMessagesToBottom(child);
+          // First page of messages is in: the folder window's chat card swaps
+          // its loading skeleton for the conversation on this stamp
+          // (window/folder/skin, :has(.window__chat-widget[data-painted])) —
+          // this widget is a lazy kind and fetches media.home before it even
+          // builds this list.
+          if (this.el && this.el.dataset) this.el.dataset.painted = "1";
           // Track whether the user is parked at the bottom. Content growth
           // (an attachment card loading inside an existing row) does NOT fire a
           // scroll event, so this flag keeps reflecting the user's last intent —
@@ -907,6 +913,15 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   onDomRefresh() {
+    // Never leave the folder chat card on its loading skeleton: it waits for
+    // data-painted (stamped on the message list's first ready, see
+    // onPartReady), and a load that never readies must not keep it there.
+    clearTimeout(this._paintedFallback);
+    this._paintedFallback = setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const el = this.el;
+      if (el && el.dataset && el.dataset.painted !== "1") el.dataset.painted = "1";
+    }, 4000);
     this.fetchService({
       service: SERVICE.media.home,
       hub_id: this.hubId,

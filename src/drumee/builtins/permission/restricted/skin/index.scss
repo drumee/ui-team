@@ -39,6 +39,40 @@
     &[data-position="1"] {
       right: 0;
     }
+
+    // Column mode (the rail's Access): a view of the folder window's split
+    // body, not a drawer. It fills its grid cell — the folder skin places it
+    // and draws its card — so the dock's offset, width, slide and shadow go.
+    &[data-mode="column"] {
+      position: relative;
+      top: auto;
+      right: auto;
+      bottom: auto;
+      width: auto;
+      height: 100%;
+      min-width: 0;
+      box-shadow: none;
+      transition: none;
+    }
+  }
+
+  // In column mode the panel holds its place with a skeleton — header, invite
+  // row and member rows — until _reveal stamps data-position="1", which it
+  // does once hub.get_members_by_type settles. The matrix then fades in.
+  $members-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='24' y='20' width='45%25' height='16' rx='8'/%3E%3Crect x='24' y='46' width='60%25' height='10' rx='5'/%3E%3Crect x='0' y='72' width='100%25' height='1'/%3E%3Crect x='24' y='96' width='28%25' height='10' rx='5'/%3E%3Crect x='24' y='116' width='88%25' height='40' rx='8'/%3E%3Crect x='24' y='168' width='88%25' height='40' rx='8'/%3E%3Crect x='24' y='226' width='34%25' height='10' rx='5'/%3E%3Crect x='24' y='252' width='32' height='32' rx='16'/%3E%3Crect x='68' y='262' width='34%25' height='12' rx='6'/%3E%3Crect x='68%25' y='257' width='24%25' height='22' rx='11'/%3E%3Crect x='24' y='304' width='32' height='32' rx='16'/%3E%3Crect x='68' y='314' width='34%25' height='12' rx='6'/%3E%3Crect x='68%25' y='309' width='24%25' height='22' rx='11'/%3E%3Crect x='24' y='356' width='32' height='32' rx='16'/%3E%3Crect x='68' y='366' width='34%25' height='12' rx='6'/%3E%3Crect x='68%25' y='361' width='24%25' height='22' rx='11'/%3E%3C/svg%3E");
+
+  &__ui[data-mode="column"]:not([data-position="1"]) {
+    > * {
+      visibility: hidden;
+    }
+
+    &::after {
+      @include drumee.skeleton-layer($members-skeleton-mask);
+    }
+  }
+
+  &__ui[data-mode="column"][data-position="1"] > &__main {
+    @include drumee.skeleton-content-in;
   }
 
   // ── Main wrapper ──────────────────────────────────────────────
@@ -523,6 +557,25 @@
   }
 
   // ── Role pill + its popover ───────────────────────────────────
+  // The menu is a window-button dropdown (window/skeleton/toolkit
+  // dropdownMenuButton), so its card, rows, open-state overflow and
+  // closed-state hides come from the shared mixin — the look of the folder
+  // window's "+ New" menu.
+  //
+  // Included on the BODY, an ancestor of every role menu: the mixin's closed
+  // rule reaches the menu root as a descendant and would never match on the
+  // root itself.
+  //
+  // Scaled to the pill it opens from rather than to "+ New": the rows below
+  // keep the pill's 10px text, on a 130px card with roomier rows than the
+  // 88px pill itself. It opens right-aligned in a 360px dock that clips its
+  // overflow, and each row's description card hangs off the menu's LEFT edge
+  // — every pixel of menu width comes out of the room that description has
+  // (see .role-option-tooltip below for the numbers).
+  &__body {
+    @include drumee.window-button-dropdown-menu($min-width: 130px);
+  }
+
   // Wrapper around the KIND.menu.topic root — position:relative so the items
   // wrapper anchors to the trigger, overflow:visible so the popover can leave
   // its row, and the menu right-aligned so it grows LEFT into the panel rather
@@ -532,18 +585,21 @@
     overflow: visible;
 
     .menu-topic-items__wrapper {
+      // 4px under the pill, the gap the skeleton's offsetY asks for.
+      top: calc(100% + 4px);
       right: 0;
       left: auto;
       z-index: 9999;
     }
 
-    // The framework sets overflow:hidden INLINE on that wrapper to hide the
-    // pre-rendered items while closed (the closed wrapper is zero-height, so
-    // un-clipping it globally would reveal every closed menu). The OPEN state
-    // needs visible, or the hover description card — which hangs outside the
-    // wrapper's box — is clipped away entirely.
-    .menu-topic-items__wrapper[data-state="open"] {
-      overflow: visible !important;
+    // Border-box so the 130px floor is the card's outer width, with a 4px
+    // inset and the pill's 4px radius.
+    .menu-topic-items,
+    .menu-items {
+      box-sizing: border-box;
+      padding: 4px;
+      border-radius: 4px;
+      gap: 0;
     }
   }
 
@@ -582,34 +638,45 @@
     background: transparent;
   }
 
-  &__role-menu {
-    background-color: var(--default-bg, #ffffff);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 6px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-    min-width: 130px;
-    padding: 4px;
-  }
-
-  // Selected state is a background highlight, no radio dot (keeps the menu
-  // narrow enough to stay inside the panel).
-  &__role-option {
-    align-items: center;
-    cursor: pointer;
-    border-radius: 4px;
-    padding: 8px 12px;
-    transition: background-color 120ms ease;
-    white-space: nowrap;
+  // Role rows. The card's row look (padding, radius, hover, 13px text) comes
+  // from the shared mixin above; what is left here is what only a role menu
+  // has — a held role, and a description card per row.
+  &__role-dropdown .window-button__dropdown-menu__item {
+    // Anchors the description card below.
     position: relative;
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $weight: 400,
-      $color: var(--default-text-color)
-    );
 
-    &:hover {
-      background-color: rgba(29, 138, 234, 0.08);
+    // The pill's label type (10px on a 14px line, main font) in a roomier row
+    // than the pill: 26px tall — 14px line plus 6px above and below — with
+    // 12px sides and 6px between the role's icon and its label.
+    gap: 6px;
+    min-height: 26px;
+    padding: 6px 12px;
+    border-radius: 2px;
+    @include drumee.typo($size: 10px, $line: 14px, $weight: 400);
+    // typo() sets the family, not the weight, and the shared row is 500. The
+    // pill's label is 400; the held role below keeps its 500.
+    font-weight: 400;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    // One glyph per role (skeleton ROLE_ICONS), muted like the pill's own
+    // caret; the held role's takes its row's blue.
+    .window-button__dropdown-menu__icon {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 12px;
+      color: var(--normal-fg-20);
+
+      svg {
+        fill: currentColor;
+      }
+    }
+
+    &[data-state="1"] .window-button__dropdown-menu__icon {
+      color: #1065a2;
     }
 
     // Same hue and saturation as the base panel's #1d8aea, darkened to clear
@@ -633,7 +700,14 @@
       right: calc(100% + 8px);
       white-space: normal;
       width: max-content;
-      max-width: 172px;
+      // The dock clips its overflow (__ui / __main), so the card has to fit in
+      // what the menu leaves on its left. Measured with the 130px menu and its
+      // 4px inset: a member row starts 185px in from the dock's edge, the
+      // invite row 198px, so 156px (border-box) keeps the description 21px
+      // clear. At 172px + padding it lost its first letters ("n View, Chat &
+      // Edit…").
+      box-sizing: border-box;
+      max-width: 156px;
       pointer-events: none;
       padding: 6px 10px;
       border-radius: 6px;
@@ -840,21 +914,14 @@ html[data-theme="dark"] {
       }
     }
 
-    &__role-menu {
-      background-color: var(--normal-bg-elevated);
-      border-color: var(--border-default);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-    }
+    // The role menu's card, row text and hover come from the shared
+    // window-button dropdown mixin, on tokens that already switch with the
+    // theme. Only the held role carries light-only colours of its own.
+    &__role-dropdown .window-button__dropdown-menu__item[data-state="1"] {
+      background-color: var(--active-item-bg);
+      color: var(--normal-fg-800);
 
-    &__role-option {
-      color: var(--normal-fg-10);
-
-      &:hover {
-        background-color: var(--hover-bg-40);
-      }
-
-      &[data-state="1"] {
-        background-color: var(--active-item-bg);
+      .window-button__dropdown-menu__icon {
         color: var(--normal-fg-800);
       }
     }

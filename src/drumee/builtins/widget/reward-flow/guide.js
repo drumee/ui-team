@@ -55,14 +55,17 @@ const SEL = {
   // secure-share selector is kept alongside it: creation no longer opens that
   // dock, but it is still how a share dock opened any other way would be
   // spotlighted rather than left dark under the overlay.
-  permPanels: ".permission-restricted__main, .window-secure-share__main",
+  // :not([data-mode="column"]) excludes the rail's Access column panel (see
+  // window/folder/access-column): a user sitting on the Access view of their
+  // CURRENT workspace would otherwise count as this follow-up panel being up.
+  permPanels: '.permission-restricted__ui:not([data-mode="column"]) .permission-restricted__main, .window-secure-share__main',
   // A secure-share dock, whatever opened it — used to pick the perm-phase coach
   // text. No longer reached from creation (see permPanels).
   permShare: ".window-secure-share__main",
   // The members panel, reached by team AND share creation. This panel is where
   // members are invited, so the flow counts it as Step 2 — see the handoff in
-  // _resolveSub.
-  permInternal: ".permission-restricted__main",
+  // _resolveSub. Column mode excluded — see permPanels above.
+  permInternal: '.permission-restricted__ui:not([data-mode="column"]) .permission-restricted__main',
   // The confirmation shown after an action inside those panels, which REPLACES
   // the panel in the wrapper-modal. ⚠️ NO LONGER RAISED BY AN INVITE from
   // permission_restricted: that panel reports every outcome inline at the field

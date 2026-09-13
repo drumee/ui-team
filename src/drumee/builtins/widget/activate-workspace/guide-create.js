@@ -61,12 +61,16 @@ const SEL = {
   formCard: ".form-folder__ui",
   // Follow-up permission panels: internal (team) → permission_restricted fed
   // into the wrapper-modal; external (share) → window_secure_share window.
-  permPanels: ".permission-restricted__main, .window-secure-share__main",
+  // :not([data-mode="column"]) excludes the rail's Access column panel (see
+  // window/folder/access-column): a user sitting on the Access view of their
+  // CURRENT workspace would otherwise count as this follow-up panel being up.
+  permPanels: '.permission-restricted__ui:not([data-mode="column"]) .permission-restricted__main, .window-secure-share__main',
   // External (share) branch only — used to pick the perm-phase coach text.
   permShare: ".window-secure-share__main",
   // Internal (team) branch only. This panel is where members are invited, so
   // the flow counts it as Step 2 — see the handoff in _checkInvitePanel.
-  permInternal: ".permission-restricted__main",
+  // Column mode excluded — see permPanels above.
+  permInternal: '.permission-restricted__ui:not([data-mode="column"]) .permission-restricted__main',
   // The confirmation shown after an action inside those panels — e.g. sending
   // an invitation in permission_restricted pops Wm.alert → window_info, which
   // REPLACES the panel in the wrapper-modal. Spotlight the card ROOT (__ui) —
