@@ -2479,8 +2479,11 @@
     // grid and the chat once opened (window/folder showFolderTab appends them
     // once and never feeds the split body again), so each tab is revealed by
     // its data-view below rather than rebuilt. Hidden here by default.
+    // The rail's Access members panel too (window/folder/access-column): it
+    // is mounted once and revealed by [data-view="access"] below.
     .tasks-panel__ui,
-    .window-folder__meeting-schedule {
+    .window-folder__meeting-schedule,
+    .permission-restricted__ui {
       display: none;
     }
 
@@ -2546,6 +2549,32 @@
     // the base hide below needs it).
     > .window-folder__files-splitter {
       display: flex !important;
+    }
+  }
+
+  // Access (the rail's Access, window/folder/access-column) keeps the Files
+  // layout — file grid, drag gutter, the same --files-w split — and puts the
+  // members panel where the team chat sits, drawn as the same card.
+  &__split-body[data-view="access"] {
+    grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
+
+    .window__chat-panel,
+    .window__thread-rail,
+    .window__file-thread-panel {
+      display: none;
+    }
+
+    > .window-folder__files-splitter {
+      display: flex !important;
+    }
+
+    > .permission-restricted__ui {
+      display: flex;
+      min-width: 0;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      background: var(--normal-bg-90);
+      overflow: hidden;
     }
   }
 
@@ -4149,6 +4178,33 @@
 
         .window__tasks-panel {
           display: flex;
+        }
+      }
+
+      &[data-view="access"] {
+        // Compact: no room for the file grid beside the members panel — it
+        // goes full width, as the chat does on the Chat tab.
+        .window__files-panel,
+        .window__chat-panel,
+        .window__meeting-panel,
+        .window__tasks-panel,
+        .window__thread-rail,
+        .window__file-thread-panel {
+          display: none;
+        }
+
+        .permission-restricted__ui {
+          display: flex;
+          max-width: none;
+          min-width: 0;
+          width: 100%;
+        }
+
+        // The desktop Access rule shows the drag gutter with a stronger
+        // selector than this block's generic gutter hide; with no file grid
+        // beside it on compact there is nothing to drag.
+        > .window-folder__files-splitter {
+          display: none !important;
         }
       }
 

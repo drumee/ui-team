@@ -39,6 +39,21 @@
     &[data-position="1"] {
       right: 0;
     }
+
+    // Column mode (the rail's Access): a view of the folder window's split
+    // body, not a drawer. It fills its grid cell — the folder skin places it
+    // and draws its card — so the dock's offset, width, slide and shadow go.
+    &[data-mode="column"] {
+      position: relative;
+      top: auto;
+      right: auto;
+      bottom: auto;
+      width: auto;
+      height: 100%;
+      min-width: 0;
+      box-shadow: none;
+      transition: none;
+    }
   }
 
   // ── Main wrapper ──────────────────────────────────────────────
