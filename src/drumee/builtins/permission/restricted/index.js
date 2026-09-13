@@ -20,17 +20,18 @@ class __permission_restricted extends DrumeeMFS {
    * @param {Object} opt
    */
   initialize(opt = {}) {
-    opt.dataset = {
-      ...opt.dataset,
-      position: "0",
-      // Column mode: a view of the folder window's split body (the rail's
-      // Access, see window/folder/access-column), not a drawer. The skins key
-      // the layout on this.
-      ...(opt.mode === "column" ? { mode: "column" } : {}),
-    };
+    opt.dataset = { ...opt.dataset, position: "0" };
 
     require("./skin");
     super.initialize(opt);
+    // Column mode: a view of the folder window's split body (the rail's Access,
+    // see window/folder/access-column), not a drawer; the skins key the layout
+    // on data-mode. Written to the element, NOT into opt.dataset: this widget is
+    // always fed as a kid, so its model is the descriptor its parent built, and
+    // ui-core's View.initialize only makes a model from `opt` when there is
+    // none — an opt.dataset edit here never reaches onRender's data-* stamp.
+    // That is how the panel came up in column mode drawn as the 360px drawer.
+    if (this.mget("mode") === "column") this.el.dataset.mode = "column";
     this.declareHandlers();
     // Pending-invite role, same default as the base panel's invite row.
     this._inviteRole = roleByValue("edit");

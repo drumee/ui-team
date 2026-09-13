@@ -53,16 +53,26 @@ test.after(() => {
   Module._load = origLoad;
 });
 
-test("column mode stamps data-mode on the root", () => {
-  const opt = { mode: "column" };
-  Object.create(Panel.prototype).initialize(opt);
-  assert.equal(opt.dataset.mode, "column");
-  assert.equal(opt.dataset.position, "0");
+// A fed widget's model is the DESCRIPTOR its parent collection built: ui-core's
+// View.initialize only makes a model from `opt` when none exists. So an edit to
+// `opt.dataset` inside initialize() never reaches the element — the model is
+// kept apart from `opt` here, exactly as it is at runtime.
+function panelWith(attrs) {
+  const p = Object.create(Panel.prototype);
+  p.el = { dataset: {} };
+  p.model = { get: (k) => attrs[k] };
+  p.mget = (k) => attrs[k];
+  return p;
+}
+
+test("column mode stamps data-mode on the element, from the model", () => {
+  const p = panelWith({ kind: "permission_restricted", mode: "column" });
+  p.initialize({ kind: "permission_restricted", mode: "column" });
+  assert.equal(p.el.dataset.mode, "column");
 });
 
 test("drawer mode stamps no data-mode", () => {
-  const opt = {};
-  Object.create(Panel.prototype).initialize(opt);
-  assert.equal("mode" in opt.dataset, false);
-  assert.equal(opt.dataset.position, "0");
+  const p = panelWith({ kind: "permission_restricted" });
+  p.initialize({ kind: "permission_restricted" });
+  assert.equal("mode" in p.el.dataset, false);
 });
