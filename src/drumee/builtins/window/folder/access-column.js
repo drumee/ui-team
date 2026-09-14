@@ -27,6 +27,25 @@ function accessPanelSpec(win) {
     className: "",
     media: win.mget(_a.media) || win.media,
     hub_id: win.mget(_a.hub_id),
+    // NAME THE WORKSPACE, OFF THE WINDOW'S OWN MODEL.
+    //
+    // `media` above is undefined for a WORKSPACE window and always was.
+    // __window_mfs.initialize only assigns `this.media` when it is fed one
+    // (`let m = opt.media; if (!m) return;` — window/utils.js), and
+    // Wm.loadWorkspace feeds headlessLayer a descriptor with no `media` key at
+    // all: `{kind:"window_folder", hub_id, ...data, headless:1, filename,
+    // hub_name, ...}`, built straight from the media.attributes response. So
+    // both halves of the `||` are undefined here, and the panel's header — which
+    // reads the media first and its own model second — had nothing to read from
+    // either. That is why Access showed the generic "Who has access" heading
+    // instead of the workspace.
+    //
+    // The name was never missing, only unasked for: loadWorkspace puts
+    // `filename` and `hub_name` on the window itself. Same order the header
+    // tries them in, so the two cannot disagree about which one wins.
+    [_a.filename]:
+      win.mget(_a.filename) || win.mget("hub_name") || win.mget(_a.name),
+    [_a.area]: win.mget(_a.area),
     sys_pn: ACCESS_PANEL_PN,
     partHandler: win,
     uiHandler: [win],

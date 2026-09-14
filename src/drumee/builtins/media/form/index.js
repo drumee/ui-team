@@ -212,6 +212,41 @@ class __form_folder extends LetcBox {
         parent.feed({
           kind: post,
           hub_id: res.workspace.hub_id,
+          // NAME THE WORKSPACE THE PANEL IS ABOUT.
+          //
+          // permission_restricted's header IS the workspace now — the
+          // area-tinted folder shape and the name, laid out like the switcher's
+          // ws-item (skeleton/index.js, workspaceTab). Without a name it falls
+          // back to the old generic "Who has access" heading, which on THIS
+          // path is the worst place for it: there is nothing behind the panel
+          // yet to say which workspace it means.
+          //
+          // The rail's Access never had the problem — it feeds the folder
+          // window's bound media, which carries filename and area
+          // (window/folder/access-column). This path could not: `mediaShim`
+          // wraps the raw desk_create_hub row, and that row is
+          // `SELECT * FROM yp.entity` — an entity has `area` but no `filename`,
+          // no `name` and no `hub_name`, because the workspace name is written
+          // into a profile JSON rather than a column.
+          //
+          // Read off `res.workspace`, which libs/create-workspace builds for
+          // exactly this kind of consumer — the name is the one the user just
+          // typed, so it needs no round trip. The descriptor IS the fed
+          // widget's model, so `ui.mget` reads these, which is the fallback
+          // workspaceTab tries after the media.
+          //
+          // `area` only tints the folder shape and the entity row already
+          // carries it — copyPropertiesFrom even re-copies it over this one.
+          // Passed anyway because `res.workspace.area` is the better source:
+          // create-workspace falls back to the area that was REQUESTED when the
+          // row omits it, and a shape tinted wrong names the wrong kind of
+          // workspace.
+          //
+          // Computed keys: `_a` is a createSafeObject proxy, so `_a.filename`
+          // is the string "filename" whether or not the lex defines it — the
+          // same spelling the reader uses, with no literal to drift from it.
+          [_a.filename]: res.workspace.filename,
+          [_a.area]: res.workspace.area,
           media: mediaShim,
           source: this,
           persistence: _a.once,
