@@ -6984,6 +6984,13 @@ class __window_folder extends mfsInteract {
       className : "",
       media     : this.mget(_a.media) || this.media,
       hub_id    : this.mget(_a.hub_id),
+      // The name, off this window's own model — `media` above is undefined for
+      // a workspace window. See access-column.js accessPanelSpec, which carries
+      // the same two fields for the same reason and spells out why; the drawer
+      // and the column are the same panel and must head themselves alike.
+      [_a.filename]:
+        this.mget(_a.filename) || this.mget("hub_name") || this.mget(_a.name),
+      [_a.area]  : this.mget(_a.area),
       uiHandler : [this],
     };
   }

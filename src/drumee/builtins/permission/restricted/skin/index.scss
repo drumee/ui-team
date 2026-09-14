@@ -132,9 +132,33 @@
     width: 100%;
   }
 
+  // THE TITLE IS A ROW OF THREE: the area-tinted folder shape, the workspace
+  // name, then "Who has access". The glyph and the name are laid out like
+  // `.desk-module-topbar__ws-item` — the switcher row the user last picked this
+  // workspace from — so one workspace reads the same in both places: same 10px
+  // gap, same 22/18 glyph, same ellipsising name.
+  //
+  // NO TYPOGRAPHY HERE. It used to carry the 18/600 heading ramp because it WAS
+  // the heading; the copy now lives in __title-text and the name in
+  // __title-name, and they are deliberately not the same size. Leaving the ramp
+  // on this row would set it on the glyph's box too and inherit into the
+  // folder art.
   &__title {
-    // Never squeezed: it is three fixed words, and a wrapped or clipped
-    // heading beside an intact chip reads as the wrong thing having given way.
+    align-items: center;
+    gap: 10px;
+    // Bounded, and the only thing in the header that is: the close button is
+    // the header's other child, so an unbounded title pushes it off the edge.
+    // The NAME inside is what gives, by ellipsising — see __title-text, which
+    // refuses to.
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  // The heading itself. Never squeezed: it is three fixed words, and a wrapped
+  // or clipped heading beside an intact workspace name reads as the wrong thing
+  // having given way. It is also what remains when there is no name to show, so
+  // it carries the panel on its own.
+  &__title-text {
     flex: 0 0 auto;
 
     @include drumee.typo(
@@ -145,61 +169,19 @@
     font-weight: 600;
   }
 
-  &__subtitle {
-    @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
-      $weight: 400,
-      $color: var(--neutral-600)
-    );
-  }
-
-  // WHICH workspace, under the title. Modelled on `.breadcrumb-item__tab` in
-  // the topbar so the same workspace reads the same way in both places.
+  // Same recipe as the switcher's __ws-item-icon (ws-folder-icon(22px, 18px)),
+  // written out rather than shared: that mixin is declared in
+  // modules/desk/skin/topbar.scss, which this panel does not — and should not —
+  // reach into. If the switcher's geometry moves, move these with it.
   //
-  // The numbers are COPIED, not inherited, and that is not laziness: the
-  // --crumb-* ramp those values come from is declared on `.desk-breadcrumb`
-  // (breadcrumb/skin) and therefore cascades only to crumbs. Writing
-  // `var(--crumb-gap, 6px)` here would read as a live link to that ramp while
-  // always resolving to the fallback — a comment's worth of fiction in the
-  // code itself. If the ramp moves, this has to be moved with it.
-  //
-  //   gap 6px · height 30px · radius 8px · pad-x 6px · icon 20px · 13px/18px
-  //
-  // It carries the ground the crumb tab gave up when the topbar's chip moved to
-  // .desk-module-topbar__crumb-group: there, the chip wraps the whole address
-  // and its caret; here this is the only thing in the row, so it draws its own.
-  //
-  // Inert — no cursor, no hover. It names the workspace, it does not navigate.
-  &__ws-tab {
-    align-items: center;
-    gap: 6px;
-    // Shrinks, and is the only thing in the row that does — see __title-row.
-    // `min-width: 0` is what actually permits it: a flex item's default
-    // min-width is its content, so without this the name refuses to ellipsize
-    // and the row overflows instead.
-    flex: 0 1 auto;
-    min-width: 0;
-    padding: 0 6px;
-    height: 30px;
-    box-sizing: border-box;
-    border-radius: 8px;
-    // ELEVATED, not --normal-bg-90: the panel itself is already that colour
-    // (see __main), so a chip in the same tone is a chip you cannot see. This
-    // sits ON the panel, the way the create dialog's type rows sit on its card.
-    background-color: var(--normal-bg-elevated);
-    border: 1px solid var(--border-default);
-  }
-
-  // Same recipe as the breadcrumb's __icon: folderArt emits a `.folder-shape`
-  // whose AREA CLASS supplies the fill plus an absolutely positioned `.badge`,
-  // authored at 105x86 — without an explicit box it paints at that intrinsic
-  // size, and without `position: relative` the badge anchors to whatever
-  // positioned ancestor it finds.
-  &__ws-icon {
-    width: 20px;
-    height: 20px;
-    min-width: 20px;
+  // folderArt emits a `.folder-shape` whose AREA CLASS supplies the fill plus
+  // an absolutely positioned `.badge`, authored at 105x86 — without an explicit
+  // box it paints at that intrinsic size, and without `position: relative` the
+  // badge anchors to whatever positioned ancestor it finds.
+  &__title-icon {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
     flex: 0 0 auto;
     display: flex !important;
     align-items: center;
@@ -212,13 +194,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 20px;
-      height: 16px;
+      width: 22px;
+      height: 18px;
     }
 
     .folder-shape {
-      width: 20px;
-      height: 16px;
+      width: 22px;
+      height: 18px;
       fill: #885eff;
 
       &.personal,
@@ -229,8 +211,9 @@
       &.private { fill: var(--area-private); }
     }
 
-    // At 20px a proportional emblem is a smudge, so it is oversized and hangs
-    // off the corner — the desk breadcrumb's own answer, same numbers.
+    // Oversized and hanging off the corner — at this size a proportional
+    // emblem is a smudge. Same answer the desk breadcrumb and the switcher
+    // give.
     //
     // THE STOPS HAVE TO BE COLOURED. The template draws the emblem in two
     // layers: white glyph detail, then a path filled `url(#paint-<id>)` whose
@@ -241,14 +224,13 @@
     //
     // `fill: currentColor` on the <svg> root does NOT reach it: fill inherits,
     // and an inherited value loses to the presentation attribute on the path
-    // itself. Same values as the create dialog's type rows, so one workspace
-    // wears one emblem wherever it appears.
+    // itself.
     .badge {
       position: absolute;
-      bottom: -2px;
-      left: -2px;
-      width: 13px !important;
-      height: 13px !important;
+      bottom: -3px;
+      left: -3px;
+      width: 14px !important;
+      height: 14px !important;
       color: var(--grid-color-folder-badge);
       filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
 
@@ -265,15 +247,25 @@
     }
   }
 
-  &__ws-name {
+  // The switcher's __ws-item-name treatment: 13/500-ish weight, ellipsising.
+  // Smaller than the heading on purpose — it is the subject being named, not
+  // the sentence, and matching the heading's 18/600 made the row read as two
+  // competing titles.
+  //
+  // `flex: 0 1 auto` + `min-width: 0`: this is the one item in the row allowed
+  // to shrink. A flex item's default min-width is its content, so without the
+  // zero it refuses to ellipsize and pushes the heading out instead.
+  &__title-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+
     @include drumee.typo(
       $size: 13px,
       $line: 18px,
       $color: var(--normal-fg)
     );
     font-weight: 600;
-    min-width: 0;
-    overflow: hidden;
 
     // THE TRUNCATION HAS TO BE ON THE INNER NODE. A Skeletons.Note renders its
     // copy inside a `.note-content` div, so that div — not this box — is the
@@ -290,6 +282,16 @@
       white-space: nowrap;
     }
   }
+
+  &__subtitle {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $weight: 400,
+      $color: var(--neutral-600)
+    );
+  }
+
 
   // ── Scrollable body ───────────────────────────────────────────
   // Mirrors __settings-action-scroll: the sections carry the side padding, so
