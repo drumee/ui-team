@@ -294,7 +294,11 @@ function newMenu(pfx, ui) {
     sys_pn: "new-menu",
     partHandler: [ui],
     trigger: Skeletons.Button.Label({
-      ico: "ph-plus",
+      // The app's own plus, not the Phosphor one. Both are square symbols, but
+      // `topbar-add` is drawn on a 12x12 viewBox against ph-plus's 20x20 — the
+      // skin's `svg { width: 20px; height: 20px }` scales either to the same
+      // box, so the stroke reads a touch heavier, which is the point.
+      ico: "topbar-add",
       className: `${pfx}__new-btn`,
       label: LOCALE.NEW,
     }),

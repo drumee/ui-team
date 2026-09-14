@@ -92,7 +92,7 @@ function form(ui) {
                 name: 'country_code',
                 items,
                 service: "select-country",
-                placeholder: 'Select a country',
+                placeholder: LOCALE.SELECT_COUNTRY,
                 value: Visitor.profile().country_code,
               }),
             ]

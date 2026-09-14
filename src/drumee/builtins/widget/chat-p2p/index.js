@@ -1,4 +1,11 @@
 const { supportContactId, isSupportEntity } = require("libs/support");
+// Preview text for a row's last message — shared with chat_contact_item's
+// skeleton so the line reads the same on load and on a live push.
+const {
+  chatPreview,
+  findMeetingRow,
+  meetingStatusOf,
+} = require("libs/chat-preview");
 
 class __chat_p2p extends LetcBox {
   constructor(...args) {
@@ -1108,18 +1115,26 @@ class __chat_p2p extends LetcBox {
   }
 
   onWsMessage(service, data, options = {}) {
-    // The dispatcher calls onWsMessage(service, model, options) — the SERVICE
-    // IS THE FIRST ARGUMENT (router/websocket/index.js:41).
+    // THE REAL SERVICE IS IN `options.service`, WITH THE FIRST ARG AS FALLBACK.
     //
-    // This read it as `const { service } = options || svc`. `options` defaults
-    // to {} and {} is truthy, so it destructured the empty object every time:
-    // `service` came out undefined, the switch always fell to default, and
-    // NEITHER case ever ran. Live inbox updates were dead — an incoming
-    // message never moved a conversation up the list, never refreshed its
-    // preview line and never bumped its unread badge, so the inbox looked
-    // frozen until a reload. Same trap the project's framework-invariants
-    // rule §7 calls out by name.
-    switch (service) {
+    // A server push built with `payload(data, {service})` carries the service
+    // inside `options` and NOTHING at the top level, so the push router stamps
+    // the envelope name there instead — `payload.service = "live.update"`
+    // (server-team router/push/index.js) — and that envelope name is exactly
+    // what the dispatcher hands over as the first argument
+    // (router/websocket/index.js reads `payload.service || msg.service`).
+    //
+    // So switching on the first argument alone matched "live.update" every
+    // time: chat.post, channel.post AND the acknowledge cases all fell to
+    // `default`, and live inbox updates were dead — an incoming message never
+    // moved a conversation up the list, never refreshed its preview line and
+    // never bumped its unread badge, so the inbox stayed frozen until a
+    // reload. (The earlier `const { service } = options || svc` was broken for
+    // its own reason: it destructured `options` and dropped the fallback, so a
+    // sender that DOES label the frame itself was missed.) This form is the one
+    // widget_chat, window_tasks, panel_calendar and window_folder all use.
+    const svc = (options && options.service) || service;
+    switch (svc) {
       case SERVICE.chat.post:
       case SERVICE.channel.post:
         this._updateContactItemOnPost(data);
@@ -1128,8 +1143,43 @@ class __chat_p2p extends LetcBox {
       case SERVICE.channel.acknowledge:
         this._resetContactItemCount(data);
         break;
+      // A meeting that ends posts nothing: channel.meeting_end flips the start
+      // card's metadata and re-broadcasts that same row. Literal service name —
+      // SERVICE.channel.meeting_end is undefined against an older server.
+      case "channel.meeting_end":
+        this._endMeetingPreview(data);
+        break;
       default:
         if (super.onWsMessage) super.onWsMessage(service, data, options);
+    }
+  }
+
+  /**
+   * Turn a row's preview from "X started a meeting" into "X ended the meeting"
+   * when the card it is previewing is the one that just ended.
+   *
+   * The status is stored on the row as well as painted: the workspace rows are
+   * reloaded from group_chat_rooms, which returns only
+   * {id, group_name, room_count, message, ctime}, so a re-render with nothing
+   * kept would resurrect the "started" wording.
+   *
+   * @param {Object} data the re-broadcast message row
+   */
+  _endMeetingPreview(data) {
+    const list = this.getPart && this.getPart("contact-list");
+    // findMeetingRow owns the payload's shape (the hub is in `key_id` on this
+    // service) and picks the row by body — see libs/chat-preview.
+    const item = findMeetingRow(list, data);
+    if (!item) return;
+    item.mset("meeting_status", "ended");
+    if (item.__message) {
+      item.__message.set(
+        _a.content,
+        chatPreview(data.message, {
+          metadata: data.metadata,
+          meetingStatus: "ended",
+        })
+      );
     }
   }
 
@@ -1142,8 +1192,27 @@ class __chat_p2p extends LetcBox {
     let item =
       list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, data.peer_id);
     item = item && item[0];
-    if (!item && data.hub_id) {
-      item = list.getItemsByAttr && list.getItemsByAttr("hub_id", data.hub_id);
+    // A WORKSPACE row is keyed by the hub ITSELF — the group_chat_rooms
+    // normaliser in onPartReady maps its `id` onto entity_id, and the row
+    // carries no hub_id of its own — so neither key below could ever find one:
+    // a workspace post moved nothing in the inbox until it was remounted.
+    //
+    // Asked BEFORE the hub_id sweep, because that one is the loose match: the
+    // only rows carrying a hub_id are CONTACT rows, and it is the visitor's own
+    // hub, so a post into the PERSONAL workspace (whose hub is that same hub)
+    // matches an arbitrary contact row. An entity_id equal to the posting hub
+    // can only be that hub's own row.
+    // `key_id` is the same hub under another name on the services that answer
+    // with a bare channel row (see findMeetingRow); channel.post stamps hub_id.
+    // NEVER pass an absent key to getItemsByAttr: it compares strict-equal, so
+    // `undefined` collects every row that merely lacks the attribute.
+    const hub = data.hub_id || data.key_id;
+    if (!item && hub) {
+      item = list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, hub);
+      item = item && item[0];
+    }
+    if (!item && hub) {
+      item = list.getItemsByAttr && list.getItemsByAttr("hub_id", hub);
       item = item && item[0];
     }
     if (!item) return this._addContactItemOnPost(list, data);
@@ -1155,13 +1224,23 @@ class __chat_p2p extends LetcBox {
       room_count += 1;
     }
 
-    let msg = data.message;
-    if (_.isEmpty(msg) && data.is_attachment === 1) {
-      msg = LOCALE.ATTACHMENT;
-    }
+    // Preview text, not the raw body: a meeting posts a
+    // [[MEETING:start:{json}]] sentinel (channel.post drops a custom
+    // message_type, so the payload rides in the body) and this path used to
+    // print it verbatim next to the workspace whose chat renders it as a card.
+    // Same helper the row's own skeleton uses, so the line reads the same on
+    // load and on a push — which also gets this path the mention strip it never
+    // had ("[@Bob](user:xxx)" previewed literally).
+    const msg = chatPreview(data.message, {
+      metadata: data.metadata,
+      messageType: data.message_type,
+      isAttachment: data.is_attachment === 1,
+    });
 
     item.mset("room_count", room_count);
-    item.mset(_a.message, msg);
+    // The model keeps the RAW body — _endMeetingPreview matches on it.
+    item.mset(_a.message, data.message);
+    item.mset("meeting_status", meetingStatusOf(data));
     item.mset(_a.ctime, data.ctime);
     // The pinned support row stops being a placeholder the moment it carries
     // a real message, so it can be landed on like any other conversation.
@@ -1244,9 +1323,6 @@ class __chat_p2p extends LetcBox {
     if (!peer_id || peer_id === Visitor.id || data.author_id === Visitor.id) return;
     if (!_.isFunction(list.prepend)) return;
 
-    let msg = data.message;
-    if (_.isEmpty(msg) && data.is_attachment === 1) msg = LOCALE.ATTACHMENT;
-
     const firstname = data.firstname || "";
     const lastname = data.lastname || "";
     const display = `${firstname} ${lastname}`.trim() || peer_id;
@@ -1263,7 +1339,9 @@ class __chat_p2p extends LetcBox {
       // Not in the address book — this is what marks it a support request
       // on the admin's side (see _isSupportRow).
       status: "nocontact",
-      message: msg,
+      // Raw body: chat_contact_item's skeleton derives the preview from it.
+      message: data.message,
+      meeting_status: meetingStatusOf(data),
       ctime: data.ctime,
       room_count: ~~(data.room || 1),
       is_attachment: data.is_attachment === 1 ? 1 : 0,

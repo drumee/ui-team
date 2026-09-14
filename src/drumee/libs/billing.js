@@ -538,6 +538,77 @@ function overMeetingCap(seconds) {
   return cap;
 }
 
+// ── September 2026 campaign: 50% off the yearly plans ───────────────────────
+// MKT request (Lexis, 2026-09-10); Figma "Drumee 2.0" nodes 692-128029 (the
+// Billing page) and 696-141463 (the modal).
+//
+// These live here, not in settings_billing, because the Billing page and the
+// promo_yearly modal both count the same campaign down and must never show
+// two different numbers for it.
+
+// The campaign ends at the end of September IN THE VIEWER'S OWN TIMEZONE.
+//
+// A single fixed instant cannot be right for everyone: whichever one you pick
+// is already October for every zone east of it. The first cut used 2026-09-30
+// 23:59:59 at UTC-12 — generous, nobody cut short — but it left the banner
+// counting down through the afternoon of October 1st in Vietnam, which reads
+// as a bug (Duy, 2026-09-11). Local midnight at the start of October 1st is
+// the last moment the viewer's own calendar still says September.
+//
+// Built with the local-parts Date constructor on purpose — it resolves the
+// browser's own zone and DST rules, which no fixed offset can.
+const PROMO_YEARLY_LOCAL_END = () =>
+  Math.floor(new Date(2026, 9, 1, 0, 0, 0, 0).getTime() / 1000);
+
+// Backstop: the instant September has ended EVERYWHERE (2026-09-30 23:59:59 at
+// UTC-12). A device clock set to a wrong or distant zone cannot hold the offer
+// open past this. It only ever binds at UTC-12 and further west, which is
+// uninhabited. The discount itself cannot be extended by a clock in any case:
+// the price lives in Stripe and the catalog gate re-checks it.
+const PROMO_YEARLY_HARD_END = 1790855999;
+
+// The saving the copy and the artwork CLAIM. A floor, not a label: the banner
+// and the modal only render once the catalog's REAL yearly discount is at
+// least this large, so the page can never advertise a cut Stripe is not
+// giving. See settings_billing._promoYearlyActive().
+const PROMO_YEARLY_PCT = 50;
+
+/**
+ * When the campaign stops FOR THIS VIEWER: the end of September on their own
+ * calendar, capped at the moment September has ended everywhere.
+ * @returns {number} unix seconds
+ */
+function promoYearlyEndsAt() {
+  return Math.min(PROMO_YEARLY_LOCAL_END(), PROMO_YEARLY_HARD_END);
+}
+
+/**
+ * Whole seconds left in the campaign for this viewer, floored at 0.
+ * @returns {number}
+ */
+function promoYearlySecondsLeft() {
+  return Math.max(0, promoYearlyEndsAt() - Math.floor(Date.now() / 1000));
+}
+
+/**
+ * The countdown text — "21 DAYS 06:48:00" (Figma 692-128029 / 696-141463).
+ * Drops the day count on the last day rather than printing "0 DAYS", which
+ * reads as an offer that has already expired.
+ * @returns {string}
+ */
+function promoYearlyCountdown() {
+  const total = promoYearlySecondsLeft();
+  const days = Math.floor(total / 86400);
+  const rest = total % 86400;
+  const pad = (n) => String(n).padStart(2, "0");
+  const clock = `${pad(Math.floor(rest / 3600))}:${pad(Math.floor((rest % 3600) / 60))}:${pad(rest % 60)}`;
+  if (days <= 0) return clock;
+  return (days === 1
+    ? (LOCALE.PROMO_COUNTDOWN_DAY || "{0} DAY {1}")
+    : (LOCALE.PROMO_COUNTDOWN_DAYS || "{0} DAYS {1}")
+  ).format(days, clock);
+}
+
 module.exports = {
   billingAvailable,
   canUpgradePlan,
@@ -558,4 +629,8 @@ module.exports = {
   checkOrgSeatLimit,
   canShowSeatLimitPopup,
   showFreeSoloLimit,
+  PROMO_YEARLY_PCT,
+  promoYearlyEndsAt,
+  promoYearlySecondsLeft,
+  promoYearlyCountdown,
 };

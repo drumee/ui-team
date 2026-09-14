@@ -23,6 +23,10 @@ class __media_wrapper extends LetcBox {
   * 
   */
   onBeforeDestroy() {
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
     /** Prevent updating on reload */
     if (this.__content) {
       this.__content.onRemoveChild = null;
@@ -42,7 +46,23 @@ class __media_wrapper extends LetcBox {
       this.saveAttachment(attachment);
     }
     if (_.isEmpty(items)) return;
+    // Stamp BEFORE the append, not only in saveAttachment: that one shapes what
+    // goes to sessionStorage, while this is the list actually rendered now. The
+    // two call sites in the chat widget (`_pickDeskFile`, the upload branch)
+    // build their own `{kind: 'media_grid', isAttachment: 1}` item and hand it
+    // straight here, so a flag added only on the persisted copy would not reach
+    // the card until a reload re-read it.
+    items.forEach((i) => this._markIconOnly(i));
     const result = this.__content.append(items);
+    // Opening is part of ADDING. updateAttachment() sets this too, but that only
+    // runs when a card is REMOVED — so a strip filled by upload or by a
+    // workspace pick stayed `closed`, and the global
+    // `[data-state="closed"] { visibility: hidden !important; height: 0 }` rule
+    // (skin/lib/utils.scss) hid every card in it. The symptom was chips that
+    // looked EMPTY rather than absent — the markup was all there, sized to
+    // nothing — and removing one made the rest appear, because that was the
+    // first thing to call updateAttachment().
+    this._openStrip();
     // Notify listeners (chat widget's checkPendingContent) so the
     // attachment-wrapper data-state flips to "has attachment" and CSS
     // expands the preview slot. Matches the trigger in clearAttachment().
@@ -105,6 +125,44 @@ class __media_wrapper extends LetcBox {
   }
 
   /**
+   * Mark one queued item as a composer chip.
+   *
+   * The chip shows a file-TYPE glyph where the card used to show a thumbnail,
+   * and `media/grid/template` reads this flag to decide that (it forces
+   * `imgCapable` off, which routes images down the icon branch `preview.js`
+   * already has for documents).
+   *
+   * Deliberately NOT keyed off `isAttachment`, which is the obvious-looking
+   * choice and is wrong: chat-item's sent-message cards and media/form's
+   * picker both set `isAttachment: 1` and both want the real thumbnail. Only
+   * the pre-send composer strip wants a glyph, and this wrapper is what owns
+   * it, so the flag is set here rather than inferred downstream.
+   *
+   * @param {Object} item  a media_grid descriptor, mutated in place
+   * @returns {Object} the same item, for use in a map()
+   */
+  /**
+   * Show the strip, and call off any close that was already scheduled.
+   *
+   * onPartReady arms a 1s timer to close an empty strip. A file that arrives
+   * inside that second would otherwise be hidden by a timer that fired after
+   * it landed — a race that reads as "the first attachment never shows, later
+   * ones do", which is worse to diagnose than a plain failure.
+   */
+  _openStrip() {
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
+    if (this.el) this.el.dataset.state = _a.open;
+  }
+
+  _markIconOnly(item) {
+    if (item) item.iconOnly = 1;
+    return item;
+  }
+
+  /**
    * 
    * @returns 
    */
@@ -113,9 +171,9 @@ class __media_wrapper extends LetcBox {
     const items = attachment.map((row) => {
       let item;
       if (row.nid || row.destination) {
-        item = { ...row, kind: 'media_grid', isAttachment: 1 };
+        item = { ...row, kind: 'media_grid', isAttachment: 1, iconOnly: 1 };
       } else if (_.isFunction(row.toJSON)) {
-        item = { ...row.toJSON(), kind: 'media_grid', isAttachment: 1 };
+        item = { ...row.toJSON(), kind: 'media_grid', isAttachment: 1, iconOnly: 1 };
       }
       delete item.uiHandler;
       delete item.logicalParent;
@@ -234,12 +292,13 @@ class __media_wrapper extends LetcBox {
       case _a.content:
         let attachment = this.getAttachment();
         if (_.isEmpty(attachment)) {
-          setTimeout(() => {
-            this.el.dataset.state = _a.closed;
+          this._closeTimer = setTimeout(() => {
+            this._closeTimer = null;
+            if (this.el) this.el.dataset.state = _a.closed;
           }, 1000)
         } else {
           this.addNewMedia(attachment);
-          this.el.dataset.state = _a.open;
+          this._openStrip();
         }
         /**  */
         child.onRemoveChild = (parent, c) => {
@@ -274,7 +333,9 @@ class __media_wrapper extends LetcBox {
       } else {
         r.uiHandler = [uiHandler];
       }
-      return r;
+      // Restored from sessionStorage, which may predate the flag — an entry
+      // queued before this shipped would otherwise come back as a thumbnail.
+      return this._markIconOnly(r);
     });
     this.mset({ items });
   }

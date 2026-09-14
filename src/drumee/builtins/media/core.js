@@ -10,6 +10,25 @@ const UPLOADER = "media_uploader";
 const SEEDING = "seeding";
 const IGNORED_FILES = /Thumbs.db|.DS_Store|__MACOSX|.thumbnails|\~+/;
 const MAX_BLOB_SIZE = 100000000;
+/**
+ * filecap.category for EVERY archive extension — zip/rar/7z/tar/gz/tgz/bz2/xz
+ * all land on this one value, which is what `media.filetype` carries. Not the
+ * extension: the server gates media.unzip on the same category, so the two
+ * ends agree by construction.
+ */
+const ARCHIVE_FILETYPE = "zip";
+/**
+ * Archives the server can read but not extract, so the row is not offered.
+ *
+ * MIRRORS UNEXTRACTABLE_EXTENSIONS in server-team service/lib/archive.js — see
+ * the reasoning there. Short version: RAR's decoder is a separate non-free
+ * codec and it is absent from both deployed 7z builds, so a real (compressed)
+ * rar fails at extraction time. Duplicated rather than fetched because the
+ * kebab has to decide before any server call; if the two ever drift, the
+ * server still refuses with ARCHIVE_FORMAT_UNSUPPORTED and the user gets a
+ * real message instead of a dead row.
+ */
+const UNEXTRACTABLE_EXTENSIONS = ["rar", "r00"];
 // Office formats that get content posters (thumb.png) via the SEO index worker.
 const DOC_EDITABLE = require('player/document/editable');
 
@@ -275,6 +294,26 @@ class __media_core extends DrumeeMFS {
   /**
    *
    */
+  /**
+   * Whether this node can be extracted here and now.
+   *
+   * Extracting CREATES files, so it needs the same standing as uploading them
+   * — `canOrganize() || isMediaOwner()` is the `editable` test the duplicate
+   * and rename rows use. It also needs the SERVER to publish both halves of
+   * the flow: SERVICE is the ACL list sent through yp.get_env, ui and server
+   * ship separately, and a missing name would POST to `<svc>undefined`, an
+   * error onServerComplain swallows. One definition, because the kebab row and
+   * the click path must never disagree about whether unzip is on offer.
+   */
+  canUnzip() {
+    if (this.mget(_a.filetype) !== ARCHIVE_FILETYPE) return false;
+    if (UNEXTRACTABLE_EXTENSIONS.includes(this._fileExt())) return false;
+    if (!SERVICE.media || !SERVICE.media.unzip || !SERVICE.media.archive_info) {
+      return false;
+    }
+    return !!(this.canOrganize() || this.isMediaOwner());
+  }
+
   contextmenuItemsForFiles() {
     const fileType = this.mget(_a.filetype);
     const editable = this.canOrganize() || this.isMediaOwner();
@@ -334,6 +373,10 @@ class __media_core extends DrumeeMFS {
         break;
       case _a.web:
         extra.push("setAsHomepage");
+        break;
+      case ARCHIVE_FILETYPE:
+        // Archives (zip/rar/7z/tar/gz…) all carry filecap category `zip`.
+        if (this.canUnzip()) extra.push("unzip");
         break;
       case _a.script:
         if (Visitor.profile().devel) {
@@ -2351,6 +2394,59 @@ class __media_core extends DrumeeMFS {
   }
 
   /**
+   * Draw an unzip's progress on this tile.
+   *
+   * Deliberately the same surface as handleDownload below — the `progress`
+   * widget appended to the tile itself — because it is the same situation: a
+   * job running on the SERVER, reporting percentages over the socket, about a
+   * file that already has a tile on screen. (The upload progress is a floating
+   * window instead, for the opposite reason: an upload has no tile yet.)
+   *
+   * Created lazily on the first message rather than at click time, so a small
+   * archive that finishes before any progress arrives never flashes a bar, and
+   * so a stray message for a tile that is not extracting cannot leave one
+   * behind.
+   */
+  handleUnzip(data = {}) {
+    const failed = data.phase === "failed";
+    const done = failed || data.phase === "completed";
+
+    if (done) {
+      if (this._unzipProgress && !this._unzipProgress.isDestroyed()) {
+        this._unzipProgress.suppress();
+      }
+      this._unzipProgress = null;
+      // The tile's open latch is held from the click that started a big
+      // extraction; a small one never took it and wait(0) is a no-op.
+      this.wait(0);
+      // A FAILURE HAS TO SAY SO. The worker reports one for a corrupt
+      // archive, a full disk, a format 7z opened but could not decode — and
+      // for a small archive there is no progress bar to remove, so without
+      // this the whole thing is indistinguishable from nothing happening.
+      // That was the original zip complaint, and it would have come straight
+      // back in a new shape.
+      if (failed && _.isFunction(this._unzipFailed)) {
+        this._unzipFailed(data.error);
+      }
+      return;
+    }
+
+    if (!this._unzipProgress || this._unzipProgress.isDestroyed()) {
+      let mode = "grid";
+      if (this.getLogicalParent) {
+        try { mode = this.getLogicalParent().getViewMode(); } catch (e) { /* default */ }
+      }
+      this.append({
+        kind: "progress",
+        mode,
+        filename: this.mget(_a.filename),
+      });
+      this._unzipProgress = this.children.last();
+    }
+    this._unzipProgress.update(data.progress || 0);
+  }
+
+  /**
    *
    */
   handleDownload(data) {
@@ -2576,9 +2672,15 @@ class __media_core extends DrumeeMFS {
         break;
       case SERVICE.media.make_dir:
       case SERVICE.media.get_node_attr:
+      case SERVICE.media.archive_info:
+      case SERVICE.media.unzip:
         // Consumed via the postService() return value (folder creation during
         // make_dir-first folder upload / node refresh) — no REST-dispatch action
         // needed. Explicit no-op avoids the "unexpected service" console noise.
+        //
+        // archive_info / unzip are the same shape: openArchive awaits the
+        // fetchService/postService promise itself, and the real outcome of an
+        // unzip arrives later over the socket, not in this reply.
         return;
       case null:
       case undefined:

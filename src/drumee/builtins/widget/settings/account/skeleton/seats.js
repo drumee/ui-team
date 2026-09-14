@@ -40,7 +40,7 @@ export default function (ui) {
       item(ui, "Total seat", total_seat),
       item(ui, "Available seats", available_seat),
       button(ui, {
-        label: "Manage seats",
+        label: LOCALE.MANAGE_SEATS,
         className: `${pfx}__button`,
         service: "manage-seats",
         state: 1,

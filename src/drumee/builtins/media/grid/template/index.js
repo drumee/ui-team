@@ -6,7 +6,7 @@
 // a formatter with two definitions drifts, and this one is the only correct
 // answer for these cards: @drumee/ui-essentials `filesize()` is SI and
 // two-decimal, which turns "1.2 MB" into "1.26 MB" and "1.5 KB" into "1.54 kB".
-const { humanFileSize } = require('libs/file-meta');
+const { humanFileSize, chipGlyph } = require('libs/file-meta');
 
 /**
  *
@@ -22,6 +22,21 @@ const __media_tpl_grid = function (ui) {
   m.imgCapable = ui.imgCapable();
   m._id = ui._id;
   m.fig = ui.fig;
+  // Composer chip (chat's attachment-wrapper, flagged by media-wrapper's
+  // _markIconOnly): a file-TYPE glyph, never a thumbnail, so the queued files
+  // read as a list of names rather than a row of pictures.
+  //
+  // CSS cannot do this: for an image, preview.js emits only a div with an
+  // inline background-image, and the sprite is a <symbol> sheet with no
+  // url()-addressable form, so there is no glyph on the page to reveal.
+  //
+  // imgCapable goes off so nothing downstream still treats the card as
+  // previewable; the icon itself comes from `chipGlyph` rather than from
+  // preview.js's own icon branch, because those two disagree on exactly the
+  // types a chip shows most (png -> desktop_picture vs bg-image, txt -> the
+  // literal text "txt" vs app-txt-file) and this card has to match the tasks
+  // panel's comment chips, which is the same card in another place.
+  if (m.iconOnly) m.imgCapable = false;
   switch (m.filetype) {
     case _a.folder:
     case _a.hub:
@@ -37,6 +52,25 @@ const __media_tpl_grid = function (ui) {
       break;
     default:
       preview = require('./preview')(m);
+  }
+
+  // Applied AFTER the switch so every non-folder type is covered — a queued
+  // .mp3 or .md takes the audio / note branch above and would otherwise keep
+  // its own artwork while its neighbours turned into glyphs.
+  if (m.iconOnly && !isFolder) {
+    // data-ext, not a class naming the glyph: the skin needs to single out the
+    // office icons (their page body has no fill and would take the SVG default
+    // of black behind the coloured detail), and `preview.js` puts only
+    // filetype / area in the class — never the sprite name — so there would be
+    // nothing there to match on. The tasks panel's comment chip carries the
+    // same attribute for the same rule.
+    const chipExt = String(m.extension || m.ext || '').toLowerCase();
+    preview =
+      `<div class="preview-container ${m.filetype}">` +
+        `<svg id="${m._id}-preview" class="preview-icon ${m.filetype}" data-ext="${chipExt}">` +
+          Template.Xmlns(chipGlyph(m)) +
+        `</svg>` +
+      `</div>`;
   }
 
   const filenameHtml = require('./filename')(m);

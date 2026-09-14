@@ -338,7 +338,7 @@ class __webrtc_room extends __interact {
       }),
       Skeletons.Note({
         className: `device-label`,
-        content: "No input device",
+        content: LOCALE.NO_INPUT_DEVICE,
       }),
     ];
 

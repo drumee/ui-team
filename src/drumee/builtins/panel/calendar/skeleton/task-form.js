@@ -98,7 +98,14 @@ module.exports = function (ui) {
               value: draft.title || "",
               placeholder: LOCALE.TITLE,
               require: "text",
-              interactive: 1,
+              // NO `interactive: 1` here. With mode:"commit" the base Entry
+              // still fires its own `service` on EVERY printable keyup when
+              // interactive is on (widgets/entry/input `_onKeyup` falls
+              // through to triggerHandlers with __inputStatus:"interactive").
+              // That turned each letter typed into the title into a
+              // `cal-submit-task`, so typing "abc" posted task.create three
+              // times and the user ended up with tasks "a", "ab" and "abc"
+              // without ever pressing Enter. Enter alone still commits.
               preselect: 1,
               mode: "commit",
               service: "cal-submit-task",

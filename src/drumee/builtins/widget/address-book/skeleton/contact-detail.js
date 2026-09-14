@@ -2,7 +2,16 @@ const { iconTextBtn } = require("./action-buttons");
 
 module.exports = function (ui, contact) {
   const fig = ui.fig.family;
-  const isReceivedInvite = contact.status === "received";
+  // A pending incoming invitation reaches us under two statuses, not one:
+  // "received" when the sender had no row in our address book, "invitation"
+  // when they already did (a workspace invite auto-adds them, for instance).
+  // `contact_notification_get` returns both, and `contact_invite_accept` /
+  // `contact_invite_refuse` both act on `status IN ('received','invitation')`
+  // — so both must offer Accept/Refuse. Matching only "received" sent an
+  // "invitation" down the ordinary-contact branch below, which answered a
+  // click on a pending invite with Archive/Edit/Block/Delete.
+  const isReceivedInvite =
+    contact.status === "received" || contact.status === "invitation";
   const isSentInvite = contact.status === "sent";
   const isArchived = contact.is_archived === 1 || contact.status === "archived";
   const isBlocked = contact.is_blocked === 1 || contact.status === "blocked";

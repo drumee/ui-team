@@ -86,7 +86,7 @@ class settings_delete_account extends LetcBox {
       if (progress && !progress.isDestroyed()) {
         progress.feed(Skeletons.Note({
           className: `${this.fig.family}__progress-message`,
-          content: "An error has occured",
+          content: LOCALE.AN_ERROR_OCCURRED,
         }));
       }
       return;

@@ -49,6 +49,10 @@ function checkout(ui) {
   const summary = ui.calculateCheckoutSummary();
 
   const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
+  // Whole-percent yearly saving, off the catalog — the same call the
+  // Monthly/Yearly tabs use, so the cycle selector below cannot quote a
+  // different number from the tab directly above it.
+  const yearlySaving = ui._yearlySavingPct ? ui._yearlySavingPct() : 0;
   let { seats, selectedPlan, storage, billingCycle } = summary
   let min, max;
   if (seats > 1) {
@@ -138,7 +142,15 @@ function checkout(ui) {
           }),
           pillBar(ui, [
             { content: LOCALE.MONTHLY, state: billingCycle === "monthly" ? 1 : 0, service: "select-billing-cycle", value: "monthly", radio: `checkout-billing-cycle-${ui._id}` },
-            { content: `${LOCALE.YEARLY} - `, discount: LOCALE.TWO_MONTHS_FREE || "2 months free", state: billingCycle === "yearly" ? 1 : 0, service: "select-billing-cycle", value: "yearly", radio: `checkout-billing-cycle-${ui._id}` },
+            // The saving is MEASURED, like the Monthly/Yearly tabs above it —
+            // this was a hardcoded "2 months free". That is the 10x-monthly
+            // deal, so during the September 50%-off campaign the cycle
+            // selector understated the offer by a third while the tab two
+            // rows up read "Saved 50%": one page, two different numbers for
+            // the same thing. Same _yearlySavingPct() as the tab, so they
+            // cannot disagree again, and the dash only appears when there is
+            // actually a figure to hang on it.
+            { content: `${LOCALE.YEARLY}${yearlySaving ? " - " : ""}`, discount: yearlySaving ? `${LOCALE.SAVED} ${yearlySaving}%` : "", state: billingCycle === "yearly" ? 1 : 0, service: "select-billing-cycle", value: "yearly", radio: `checkout-billing-cycle-${ui._id}` },
           ]),
         ],
       }),

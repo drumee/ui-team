@@ -271,6 +271,9 @@ module.exports = {
   promo_launch30: function () {
     return import("./builtins/widget/promo-launch30");
   },
+  promo_yearly: function () {
+    return import("./builtins/widget/promo-yearly");
+  },
   over_limit_popup: function () {
     return import("./builtins/widget/over-limit-popup");
   },

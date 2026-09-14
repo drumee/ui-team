@@ -52,11 +52,12 @@ function initialize() {
   // locale/index.js stopped exporting a selector function when the entries
   // were split into separate bundles (commit 2eeeb731) — require("locale")(l)
   // has thrown TypeError ever since, killing everything below this line on
-  // the embed arch. English table per the product default; the desk app gets
-  // its table from the locale entry bundle, not from here.
-  const { createSafeObject } = require("@drumee/ui-essentials");
-  window.LOCALE = createSafeObject(require("locale/en.json"));
-  require("locale/declare-lang")('en');
+  // the embed arch. locale/lang is the replacement: it resolves the explicit
+  // in-app choice (English unless one was made) and hands back the matching
+  // table, so an embedded widget renders in the same language as the desk
+  // app that set it, instead of being pinned to English.
+  const lang = require("locale/lang");
+  lang.install(lang.current());
 
   let nodes = __parse();
   for (let node of nodes) {

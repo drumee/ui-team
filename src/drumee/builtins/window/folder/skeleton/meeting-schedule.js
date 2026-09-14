@@ -1,5 +1,5 @@
-// Meeting-tab schedule view: Today/week navigation, Weekly/Monthly toggle,
-// "Start a Meeting" + "Schedule" CTAs, and a week/month grid populated from the
+// Meeting-tab schedule view: Today/week navigation, a Month/Week/Day view
+// picker, "Start a Meeting" + "Schedule" CTAs, and a day/week/month grid from the
 // hub's scheduled meetings (ui._meetings, fetched via room.list). View state
 // lives on the folder window (ui._sched); nav/toggle services are handled in
 // window/folder/index.js, which re-feeds this.
@@ -7,15 +7,30 @@ const { stripMarkers } = require("../meeting-markers");
 
 // `autoDaily` marks a `view` that the RESPONSIVE rule chose, not the user:
 // _applyScheduleBreakpoint sets it when a narrow panel switches weekly → daily,
-// and every explicit view service (sched-set-view / sched-toggle-view /
-// sched-pick-day) clears it. That one bit is what lets widening the panel undo
-// an automatic switch without ever undoing a deliberate one.
+// and every explicit view service (sched-set-view / sched-pick-day) clears it.
+// That one bit is what lets widening the panel undo an automatic switch
+// without ever undoing a deliberate one.
 function schedState(ui) {
   if (!ui._sched) {
-    ui._sched = { anchor: Dayjs(), view: "weekly", autoDaily: false };
+    ui._sched = {
+      anchor: Dayjs(),
+      view: "weekly",
+      autoDaily: false,
+      viewMenuOpen: false,
+    };
   }
   return ui._sched;
 }
+
+// The three views the grid can draw, in the Personal Calendar's own order.
+// Labels are that panel's locale keys (CAL_VIEW_*) so one word never differs
+// between the two calendars; the KEYS stay this view's own vocabulary
+// (monthly/weekly/daily), which the anchor maths and _meetingRange read.
+const VIEWS = [
+  { key: "monthly", label: "CAL_VIEW_MONTH" },
+  { key: "weekly", label: "CAL_VIEW_WEEK" },
+  { key: "daily", label: "CAL_VIEW_DAY" },
+];
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -372,7 +387,7 @@ function monthlyGrid(ui, pfx) {
   return [header, Skeletons.Box.Y({ className: `${pfx}-sched-body ${pfx}-sched-body--month`, kids: weeks })];
 }
 
-// ── Mini-calendar dropdown (caret next to the range label) ────────────────
+// ── Mini-calendar dropdown (opened from the range label) ──────────────────
 // One month (st.pickerCursor, ‹ › to move it) of pickable days. The current
 // selection is brand-tinted: the anchor week in weekly view, the anchor day in
 // monthly view. Picking a day re-anchors the schedule onto it.
@@ -453,12 +468,24 @@ function pickerCal(ui, pfx) {
   });
 }
 
-module.exports = function meetingSchedule(ui) {
+// ── Toolbar ───────────────────────────────────────────────────────────────
+// The toolbar is fed on its own (sys_pn "sched-toolbar", see below), so it is
+// built apart from the panel: opening one of its dropdowns has to repaint the
+// bar and NOTHING else. Re-feeding the whole panel would tear down the grid —
+// including whatever the click was still travelling to — the same trap the
+// Personal Calendar's toolbar documents (panel/calendar/index.js).
+function toolbarKids(ui) {
   const pfx = `${ui.fig.family}__meeting`;
-  const { view, pickerOpen } = schedState(ui);
+  const { view, pickerOpen, viewMenuOpen } = schedState(ui);
 
   // [ ‹ range-label › ] — the label sits between the arrows (Figma pass);
   // Today is hidden until the design brings it back.
+  //
+  // The label IS the mini-calendar's trigger (Lexis, 2026-09-09) — there is no
+  // separate caret button beside the pill any more. It carries the service
+  // itself rather than delegating to a wrapper, so the arrows on either side
+  // keep their own clicks: they are siblings inside the pill, and the pill
+  // carries no service of its own for anything to bubble into.
   const navPill = Skeletons.Box.X({
     className: `${pfx}-sched-nav`,
     kids: [
@@ -474,7 +501,13 @@ module.exports = function meetingSchedule(ui) {
       //   service: "sched-today",
       //   uiHandler: [ui],
       // }),
-      Skeletons.Note({ className: `${pfx}-sched-label`, content: rangeLabel(ui) }),
+      Skeletons.Note({
+        className: `${pfx}-sched-label`,
+        content: rangeLabel(ui),
+        attrOpt: { "data-open": pickerOpen ? "1" : "0" },
+        service: "sched-toggle-picker",
+        uiHandler: [ui],
+      }),
       Skeletons.Button.Svg({
         ico: "caret-left",
         className: `${pfx}-sched-nav-btn next`,
@@ -484,50 +517,66 @@ module.exports = function meetingSchedule(ui) {
     ],
   });
 
-  const label = Skeletons.Box.X({
-    className: `${pfx}-sched-label-wrap`,
-    attrOpt: { "data-open": pickerOpen ? "1" : "0" },
-    service: "sched-toggle-picker",
-    uiHandler: [ui],
-    kids: [
-      Skeletons.Image.Svg({ ico: "meet-caret-down", className: `${pfx}-sched-label-caret` }),
-    ],
-  });
+  // ── Month / Week / Day picker ───────────────────────────────────────────
+  // Same control as the Personal Calendar's (panel/calendar/skeleton/toolbar.js
+  // → viewPicker): a calendar-icon button carrying the current view, a caret
+  // that flips while open, and a dropdown of the three views. It replaced a
+  // two-position Weekly/Monthly switch, which had no room for "daily" — a view
+  // this grid has always been able to draw (weeklyGrid with nDays = 1), but
+  // which was only reachable by picking a day out of the mini-calendar.
+  //
+  // `schedView`, not `view`: the widget factory consumes `view`, so it would
+  // never reach the handler's mget.
+  const current = VIEWS.find((v) => v.key === view) || VIEWS[0];
+  const viewMenu = viewMenuOpen
+    ? Skeletons.Box.Y({
+        className: `${pfx}-sched-menu`,
+        attrOpt: { "data-anchor": "view" },
+        kids: VIEWS.map((v) =>
+          Skeletons.Note({
+            className: `${pfx}-sched-menu-item`,
+            content: LOCALE[v.label],
+            attrOpt: { "data-active": v.key === view ? "1" : "0" },
+            bubble: 0,
+            service: "sched-set-view",
+            schedView: v.key,
+            uiHandler: [ui],
+          }),
+        ),
+      })
+    : null;
 
-  // Each label sets its view explicitly (click Monthly → monthly); the pill —
-  // and any other spot of the toggle (container catches the leftovers) —
-  // toggles. `schedView`, not `view`: the widget factory consumes `view`, so
-  // it never reaches the handler's mget.
-  const viewToggle = Skeletons.Box.X({
-    className: `${pfx}-sched-toggle`,
-    attrOpt: { "data-view": view },
-    service: "sched-toggle-view",
-    uiHandler: [ui],
+  const viewPicker = Skeletons.Box.Y({
+    className: `${pfx}-sched-view-picker`,
     kids: [
-      Skeletons.Note({
-        className: `${pfx}-sched-toggle-label weekly`,
-        content: LOCALE.WEEKLY,
-        bubble: 0,
-        service: "sched-set-view",
-        schedView: "weekly",
-        uiHandler: [ui],
-      }),
       Skeletons.Box.X({
-        className: `${pfx}-sched-toggle-switch`,
+        className: `${pfx}-sched-view-button`,
+        attrOpt: { "data-open": viewMenuOpen ? "1" : "0" },
         bubble: 0,
-        service: "sched-toggle-view",
+        service: "sched-toggle-view-menu",
         uiHandler: [ui],
-        kids: [Skeletons.Note({ className: `${pfx}-sched-toggle-knob` })],
+        // ui-core binds a click to EVERY widget that does not set active:0, and
+        // its handler stops propagation before triggerHandlers — so a kid left
+        // interactive eats the click and this service never fires. Only the
+        // button's padding would open the menu.
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "sidebar_calendar",
+            className: `${pfx}-sched-view-ico`,
+          }),
+          Skeletons.Note({
+            className: `${pfx}-sched-view-label`,
+            content: LOCALE[current.label],
+          }),
+          Skeletons.Image.Svg({
+            ico: "ph-caret-down",
+            className: `${pfx}-sched-view-caret`,
+          }),
+        ],
       }),
-      Skeletons.Note({
-        className: `${pfx}-sched-toggle-label monthly`,
-        content: LOCALE.MONTHLY,
-        bubble: 0,
-        service: "sched-set-view",
-        schedView: "monthly",
-        uiHandler: [ui],
-      }),
-    ],
+      viewMenu,
+    ].filter(Boolean),
   });
 
   // Render the button state up-front so a schedule re-render (fetch resolve,
@@ -577,18 +626,33 @@ module.exports = function meetingSchedule(ui) {
     uiHandler: [ui],
   });
 
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}-sched-toolbar-left`,
+      // The picker stays a SIBLING of the pill, not a child of it: it is
+      // `position: absolute; left: 0` against -toolbar-left, which is the
+      // element carrying `position: relative`. Anchoring it under the label
+      // instead would re-point it at a box that moves with the text.
+      kids: [navPill, pickerOpen ? pickerCal(ui, pfx) : null].filter(Boolean),
+    }),
+    Skeletons.Box.X({
+      className: `${pfx}-sched-toolbar-right`,
+      kids: [viewPicker, startBtn, scheduleBtn],
+    }),
+  ];
+}
+
+module.exports = function meetingSchedule(ui) {
+  const pfx = `${ui.fig.family}__meeting`;
+  const { view } = schedState(ui);
+
+  // sys_pn "sched-toolbar": the window re-feeds JUST this row when a dropdown
+  // opens or closes (_renderSchedToolbar in window/folder/index.js).
   const toolbar = Skeletons.Box.X({
     className: `${pfx}-sched-toolbar`,
-    kids: [
-      Skeletons.Box.X({
-        className: `${pfx}-sched-toolbar-left`,
-        kids: [navPill, label, pickerOpen ? pickerCal(ui, pfx) : null].filter(Boolean),
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}-sched-toolbar-right`,
-        kids: [viewToggle, startBtn, scheduleBtn],
-      }),
-    ],
+    sys_pn: "sched-toolbar",
+    partHandler: ui,
+    kids: toolbarKids(ui),
   });
 
   const grid = Skeletons.Box.Y({
@@ -610,6 +674,8 @@ module.exports = function meetingSchedule(ui) {
   });
 };
 
+module.exports.toolbarKids = toolbarKids;
+module.exports.VIEWS = VIEWS;
 module.exports.rangeLabel = rangeLabel;
 module.exports.schedState = schedState;
 module.exports.HOUR_PX = HOUR_PX;

@@ -1011,10 +1011,6 @@ class __window_meeting extends __room {
         this.toggleMeetingChat();
         break;
 
-      case "close-chat":
-        this.closeMeetingChat();
-        break;
-
       case _a.invite:
         if (typeof cmd.callInitiated === "function") cmd.callInitiated();
         this.postService(SERVICE.hub.poke, {
@@ -1222,10 +1218,6 @@ class __window_meeting extends __room {
   // it's already open on Chat (so the one button toggles).
   toggleMeetingChat() {
     this._toggleSidePanel("chat");
-  }
-
-  closeMeetingChat() {
-    this._setChatOpen(false);
   }
 
   _toggleSidePanel(tab) {

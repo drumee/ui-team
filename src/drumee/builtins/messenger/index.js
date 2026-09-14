@@ -80,6 +80,10 @@ class __lib_messenger extends LetcBox {
     if (this._onInputFocus) {
       this.el.removeEventListener('focusin', this._onInputFocus);
     }
+    if (this._attachMenuOutsideHandler) {
+      document.removeEventListener('click', this._attachMenuOutsideHandler, true);
+      this._attachMenuOutsideHandler = null;
+    }
   }
 
   /**
@@ -174,11 +178,27 @@ class __lib_messenger extends LetcBox {
     this.service = '';
   }
 
+  /**
+   * Close the attach menu and unbind its outside-click listener.
+   *
+   * Every close goes through here so the listener cannot outlive the menu it
+   * watches — a stray one would keep firing on every click in the app for a
+   * menu that is no longer on screen. Same shape as chat-item's
+   * _closeEmojiPicker, for the same reason.
+   */
+  _closeAttachMenu() {
+    if (this.__wrapperAttachMenu) this.__wrapperAttachMenu.clear();
+    if (this._attachMenuOutsideHandler) {
+      document.removeEventListener('click', this._attachMenuOutsideHandler, true);
+      this._attachMenuOutsideHandler = null;
+    }
+  }
+
   _showAttachMenu() {
     const menu = this.__wrapperAttachMenu;
     if (!menu) return;
     if (!menu.isEmpty()) {
-      menu.clear();
+      this._closeAttachMenu();
       return;
     }
     const fig = this.fig.family;
@@ -196,6 +216,29 @@ class __lib_messenger extends LetcBox {
         uiHandler: [this]
       })
     ]);
+
+    // "Inside" is the menu plus the button that toggles it — deliberately NOT
+    // the whole composer. The button has its own toggle, so treating it as
+    // outside would close the menu here and reopen it there on one click; and
+    // scoping to the composer would leave the menu hanging open when the user
+    // clicks into the message input, which is exactly the click that should
+    // dismiss it.
+    const closeOnOutside = (ev) => {
+      const target = ev && ev.target;
+      if (!target) return;
+      if (menu.el && menu.el.contains(target)) return;
+      if (this.__attach && this.__attach.el && this.__attach.el.contains(target)) return;
+      this._closeAttachMenu();
+    };
+    // Armed a tick late, on purpose: the click that OPENED the menu is still
+    // propagating, and a capture-phase listener bound now would catch it and
+    // shut the menu before the user ever saw it.
+    setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (menu.isEmpty()) return;
+      document.addEventListener('click', closeOnOutside, true);
+      this._attachMenuOutsideHandler = closeOnOutside;
+    }, 0);
   }
 
   /**
@@ -261,11 +304,11 @@ class __lib_messenger extends LetcBox {
         return this._showAttachMenu();
 
       case 'attach-from-device':
-        if (this.__wrapperAttachMenu) this.__wrapperAttachMenu.clear();
+        this._closeAttachMenu();
         return this.__fileselector.open(this._upload.bind(this));
 
       case 'attach-from-workspace':
-        if (this.__wrapperAttachMenu) this.__wrapperAttachMenu.clear();
+        this._closeAttachMenu();
         return this.triggerHandlers({ service: 'attach-from-desk' });
 
       case _e.submit:

@@ -1,20 +1,12 @@
-// Product copy (pricing table 2026-07-29): yearly is 10 x monthly — two
-// months free — and the badge states the table's published figure, 16.5%.
-// (The exact arithmetic is 2/12 = 16.7%; the copy under-promises by 0.2pt,
-// which is the safe direction.) The Stripe yearly prices were moved to
-// 10 x monthly ($290/$990) the same day, so the figure is no longer a claim
-// the checkout contradicts.
-const YEARLY_SAVING = 16.5;
-
 /**
  * Create tab item for header (Monthly, Yearly, Checkout)
  * Display content and discount rate (if available)
  * @param {Object} ui - UI instance
- * @param {Object} opt - Options: content, discountRate, pos, service
+ * @param {Object} opt - Options: content, discountRate, promo, pos, service
  * @returns {Object} Skeletons component
  */
 function item(ui, opt) {
-  const {content, discountRate, pos, service} = opt;
+  const {content, discountRate, promo, pos, service} = opt;
   const fig = `${ui.fig.family}__tabs-trigger`;
 
   let discountItem = "";
@@ -39,7 +31,11 @@ function item(ui, opt) {
   ];
   if (discountItem) tabs.push(discountItem)
   return Skeletons.Box.X({
-    className: `${fig}-item`,
+    // is-promo repaints the SELECTED pill in the campaign coral with white
+    // text (Figma 692-128029). Only the selected state changes: an unselected
+    // tab keeps the plain pill and the green saving, so the promo colour marks
+    // where the user IS, not one tab shouting over the other two.
+    className: `${fig}-item${promo ? " is-promo" : ""}`,
     state,
     kidsOpt: { active: 0 },
     radio: `billing-radio-${ui._id}`,
@@ -61,6 +57,18 @@ function billing_tabs_trigger(ui) {
   const fig = ui.fig.family;
   const figTrigger = `${fig}__tabs-trigger`;
 
+  // The saving is MEASURED against the catalog, not stated here.
+  //
+  // This was a hardcoded `YEARLY_SAVING = 16.5`, the figure published with the
+  // 2026-07-29 table when yearly was pinned at 10 x monthly. A hardcoded badge
+  // is only ever right until the next time the prices move — and the failure
+  // is asymmetric: understating the offer costs a sale, but OVERstating it
+  // advertises a discount the checkout will not honour. Both halves now come
+  // from the same _catPrice() the cards and the confirm dialog quote, so the
+  // badge tracks the September campaign (and its end) with no code change.
+  const saving = ui._yearlySavingPct ? ui._yearlySavingPct() : 0;
+  const promo = ui._promoYearlyActive ? ui._promoYearlyActive() : false;
+
   // The Checkout tab only exists while there is something to buy. Once a
   // subscription is live the caller is already on the only self-serve tier
   // (free < team < business|sovereign, the last two sales-led), so the tab
@@ -69,7 +77,7 @@ function billing_tabs_trigger(ui) {
   // month<->year switch is a subscription update, not a new checkout.
   const kids = [
     item(ui, {content:LOCALE.MONTHLY, discountRate:0, pos:0, service:"select-plan"}),
-    item(ui, {content:LOCALE.YEARLY, discountRate:YEARLY_SAVING, pos:1, service:"select-plan"}),
+    item(ui, {content:LOCALE.YEARLY, discountRate:saving, promo, pos:1, service:"select-plan"}),
   ];
   if (!ui._checkoutTabAllowed || ui._checkoutTabAllowed()) {
     kids.push(item(ui, {content:LOCALE.CHECKOUT, discountRate:0, pos:2, service:"checkout"}));

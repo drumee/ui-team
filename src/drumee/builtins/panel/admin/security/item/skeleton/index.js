@@ -1,8 +1,12 @@
-const SECURITY_TAGS = [
-  { key: 'ip_geo',       ico: 'globe',    label: 'IP/GEO'       },
-  { key: 'vpn_required', ico: 'lock',     label: 'VPN Required' },
-  { key: 'one_time',     ico: 'clock',    label: 'One-time'     },
-  { key: 'managed',      ico: 'monitor',  label: 'Managed'      },
+// Resolved per render, NOT at module scope. A module-level `LOCALE.*` read
+// would freeze the strings at import time — which is fine while this module
+// is only reached through a lazy import(), but silently ships key names the
+// day anything requires it earlier, and there is no reason to depend on that.
+const securityTags = () => [
+  { key: 'ip_geo',       ico: 'globe',    label: LOCALE.IP_GEO       },
+  { key: 'vpn_required', ico: 'lock',     label: LOCALE.VPN_REQUIRED },
+  { key: 'one_time',     ico: 'clock',    label: LOCALE.ONE_TIME     },
+  { key: 'managed',      ico: 'monitor',  label: LOCALE.MANAGED      },
 ];
 
 module.exports = function (ui) {
@@ -11,7 +15,7 @@ module.exports = function (ui) {
   const updated  = ui.mget('updated')    || '';
   const size     = ui.mget('size')       || '';
 
-  const tags = SECURITY_TAGS.map((t) =>
+  const tags = securityTags().map((t) =>
     Skeletons.Box.X({
       className: `${pfx}__tag`,
       kids: [

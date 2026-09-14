@@ -85,8 +85,8 @@
     width: 180px;
     min-height: 36px;
     padding: 4px 4px 4px 12px;
-    border-radius: var(--corner-radius-4);
-    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    border: 1px solid var(--border-default);
     background-color: var(--normal-bg);
 
     &:focus-within { border-color: var(--active-border); }
@@ -138,20 +138,81 @@
     min-height: 36px;
     box-sizing: border-box;
     padding: 8px 14px;
-    border-radius: var(--corner-radius-4);
+    border-radius: 8px;
     background-color: var(--primary-40);
     cursor: pointer;
     white-space: nowrap;
     @include drumee.typo($color: var(--white), $size: 14px, $line: 20px);
     font-weight: 600;
 
+    // THE FOLDER TOOLBAR'S PRIMARY "New" BUTTON, verbatim — see
+    // `.window-button__label-button` inside window/folder/skin/index.scss.
+    // Both buttons now draw the same `topbar-add` glyph, and it is sized 14px
+    // there, not the 20px this asked for.
+    //
+    // ALL THREE SELECTORS, as the reference has them, because the icon's DOM
+    // shape depends on how the widget renders it: ui-core stamps
+    // `svg-wrapper drumee-widget` on an Image.Svg's ROOT
+    // (letc/widgets/image/svg/index.js), some paths emit `.drumee-svg`, and a
+    // bare `<svg>` is the third. Sizing only the leaf leaves the wrapper at its
+    // own size, which is what makes an icon look the wrong size while the glyph
+    // inside it measures correctly.
+    //
+    // `currentColor` on both fill and color, again from the reference: the
+    // button paints white text, and the glyph has no fill of its own to fall
+    // back on.
+    .svg-wrapper,
+    .drumee-svg,
     svg {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
+      color: currentColor;
+      fill: currentColor;
     }
 
     &:hover { background-color: var(--primary-50); }
+  }
+
+  // ── The "+ New" dropdown has to fit inside the pane ────────────────────
+  //
+  // Nothing positioned this wrapper, so it took its static position: the panel
+  // began at the BUTTON'S LEFT EDGE and ran 249px to the right — 142px past the
+  // pane. And __main is a real scroll container, so it cut it off: `overflow-y:
+  // auto` with the other axis unset computes `overflow-x` to `auto` as well
+  // (CSS Overflow — a `visible` paired with anything else becomes `auto`), so
+  // the clip is on BOTH axes even though only one was asked for.
+  //
+  // `right: 0` is the whole fix for that: the panel now hangs leftward from the
+  // button's right edge, where there is room. Same contract as the topbar's
+  // __add-wrapper and __ws-wrapper (desk/skin/topbar.scss), which solved this
+  // first for the bar's own menus.
+  &__new-wrapper {
+    position: relative;
+
+    .menu-topic-items__wrapper {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      left: auto;
+      width: max-content;
+      min-width: 237px;
+    }
+  }
+
+  // The panel's own shadow was cut off too: the menu widget writes
+  // `overflow: hidden` onto that wrapper as an INLINE style, so only
+  // `!important` lifts it (letc/widgets/menu/index.js, onPartReady
+  // 'items-wrapper').
+  //
+  // GATED ON THE MENU ROOT's data-state, not the wrapper's. The clip is
+  // load-bearing while closed — a `direction: down` menu is shut by translating
+  // the items UP and letting the wrapper swallow them — and the wrapper's own
+  // data-state is written "open" once and never written back, so keying on it
+  // would lift the clip for the rest of the session and paint the shut panel
+  // over the header. Same gate as the org chip's dropdown.
+  &__new-wrapper[data-state="1"] .menu-topic-items__wrapper {
+    overflow: visible !important;
   }
 
   &__new-menu-items {

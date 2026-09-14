@@ -616,6 +616,11 @@ class __window_manager extends push {
    *                   added to the caller's object is silently dropped there.
    *  - `open_task_id` → openTaskDeepLink, which exists precisely for "a window
    *                   that is ALREADY open" and switches to the Task tab itself.
+   *  - `open_meeting_nid` (+ `open_meeting_stime`) → openMeetingDeepLink, the
+   *                   meeting twin, added for the Personal Calendar. A meeting
+   *                   deep link is ONLY safe on this route: window_folder reads
+   *                   a launch-time activeTab of "meeting" as "start the call",
+   *                   and this route never puts activeTab in the model.
    *  - `highlight`  → _revealFromNotification (window/utils.js). It polls
    *                   Wm by nid for the rendered grid CELL, so it never cared
    *                   which layer the folder window lives in — it works on the
@@ -624,7 +629,16 @@ class __window_manager extends push {
    * @param {Object} args parsed hash args from the activity item
    */
   async openNotificationLocation(args = {}) {
-    const { hub_id, nid, pid, filetype, activeTab, open_task_id } = args;
+    const {
+      hub_id,
+      nid,
+      pid,
+      filetype,
+      activeTab,
+      open_task_id,
+      open_meeting_nid,
+      open_meeting_stime,
+    } = args;
     if (!hub_id) {
       this.warn("openNotificationLocation: missing hub_id", args);
       return;
@@ -664,6 +678,27 @@ class __window_manager extends push {
     if (!win) {
       this.warn("openNotificationLocation: workspace pane never mounted", args);
       return;
+    }
+
+    // GET THE SECTION SCREEN OUT OF THE WAY. Calendar / Settings / Get help /
+    // Plan / Apps / the Admin console all mount in `settings-main-slot`, which
+    // is `position:absolute; inset:0; z-index:1500` and covers the pane
+    // completely — so the tab really does switch and the detail modal really
+    // does open, invisibly, behind the screen the click came from.
+    //
+    // loadWorkspace above closes them (Desk.closeAllPanels), but only when it
+    // RUNS: the branch is skipped for a workspace that is already docked, which
+    // is the common case for a Personal Calendar chip naming the workspace the
+    // user was last in. So the close has to happen here, on every branch.
+    //
+    // _leaveSectionScreen, not closeMainPanels: it is the call the rail already
+    // makes for exactly this transition, and it also dismisses a covering
+    // invite popup, puts the breadcrumb back on the workspace (the bar
+    // otherwise keeps reading "Calendar"), and restores the topbar's action
+    // cluster, which the section screens hide. A no-op when no screen is up,
+    // which is every notification click today.
+    if (window.Desk && _.isFunction(window.Desk._leaveSectionScreen)) {
+      window.Desk._leaveSectionScreen(win);
     }
     if (win.raise) win.raise();
 
@@ -718,8 +753,14 @@ class __window_manager extends push {
 
     // Tab LAST, after the navigation: showFolderTab and the task panel both
     // read the folder the window is on NOW.
+    //
+    // Each deep link switches to its own tab, so neither needs `activeTab`
+    // alongside it — a caller that sends both gets the deep link, which is the
+    // more specific request.
     if (open_task_id && _.isFunction(win.openTaskDeepLink)) {
       win.openTaskDeepLink(open_task_id);
+    } else if (open_meeting_nid && _.isFunction(win.openMeetingDeepLink)) {
+      win.openMeetingDeepLink(open_meeting_nid, open_meeting_stime);
     } else if (activeTab && _.isFunction(win.showFolderTab)) {
       win.showFolderTab(activeTab);
     }
@@ -727,7 +768,15 @@ class __window_manager extends push {
     // (it is desk chrome, rebuilt with nothing) — the defect Lexis reported for
     // the workspace switcher, which _resetRailToFiles fixed there.
     if (window.Desk && _.isFunction(window.Desk._railHighlight)) {
-      window.Desk._railHighlight(open_task_id ? _a.task : activeTab || "files");
+      // Same precedence as the dispatch above: the deep link decides the tab,
+      // so it decides the lit row. ("meeting" is the folder window's name for
+      // the row the rail calls "meet" — _railHighlight maps it.)
+      const lit = open_task_id
+        ? _a.task
+        : open_meeting_nid
+          ? _a.meeting
+          : activeTab || "files";
+      window.Desk._railHighlight(lit);
     }
 
     if (highlight) this._revealFromNotification(nid, filetype, pid);
@@ -805,6 +854,30 @@ class __window_manager extends push {
   }
 
   /**
+   * THE TAB A WORKSPACE SWITCH MUST HAND OVER — Chat, Task, Meet or Access, or
+   * null.
+   *
+   * The docked pane the user is standing on right now, read from the LIVE
+   * window (`pane.activeTab`) rather than from its model: showFolderTab is
+   * what a tab click goes through and it only ever writes the instance
+   * property, so the model's `activeTab` is the LAUNCH-TIME request and is
+   * unset on every pane the sidebar or the switcher opened.
+   *
+   * Files answers null, not "files": there is nothing to restore for it — a
+   * fresh pane already lands there — and null is also what tells the callers
+   * (loadWorkspace's feed, the desk's rail highlight) that this is a plain
+   * arrival. Anything else unrecognised answers null for the same reason.
+   *
+   * @returns {String|null} "chat" | "task" | "meeting" | "access", or null for
+   *   Files
+   */
+  paneTabToCarry() {
+    const pane = this.headlessPane();
+    const tab = pane && pane.activeTab;
+    return [_a.chat, _a.task, "meeting", "access"].includes(tab) ? tab : null;
+  }
+
+  /**
    * Find a headless workspace window already open for the given hub_id.
    * Searches headlessLayer only — headless windows never live in windowsLayer.
    * Returns null if none is open or all are mid-destroy.
@@ -864,6 +937,15 @@ class __window_manager extends push {
       if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;
     }
+    // KEEP THE TAB THE USER IS ON. Read HERE — before anything below replaces
+    // the pane — because it is the OUTGOING pane that knows it, and this is the
+    // last point at which that pane is still the current one. Handed to the new
+    // window as `restore_tab` in apply()'s feed below.
+    //
+    // Past the same-workspace early return on purpose: that branch mounts
+    // nothing, so the pane keeps its own tab and there is nothing to carry.
+    const carryTab = this.paneTabToCarry();
+
     // WAIT FOR THE ACCESS PANEL. Nothing below this line runs while
     // `.permission-restricted__main` for THIS workspace is up.
     //
@@ -926,6 +1008,13 @@ class __window_manager extends push {
         // Seed the name synchronously so the title and root crumb are correct
         // from first paint, without waiting on get_path.
         hub_name: data.hub_name || workspaceName,
+        // The tab the outgoing pane was on (paneTabToCarry). Named explicitly
+        // here for the same reason `hub_name` is: `data` is the media.attributes
+        // response that shadows this method's own argument, so anything the
+        // CALLER added to its object is silently dropped by the time we get
+        // here. Read once by window_folder's onDomRefresh, which routes it
+        // through showFolderTab — never through the meeting launcher.
+        restore_tab: carryTab,
         // Headless workspace lives in its own singleton pool, which is headlessLayer.
         // subfolders or players open from the workspace shall go to this pool.
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
@@ -982,6 +1071,14 @@ class __window_manager extends push {
           if (this._curWorkspacePane !== pane) return;
           this._curWorkspacePane = null;
           this._curWorkspace = null;
+          // The canvas is empty again — give the home grid back (see
+          // _releaseCanvas). Without this the grid stayed hidden behind
+          // nothing: data-workspace is still "1" from the loadWorkspace that
+          // opened this pane, so a workspace deleted underneath the user, or a
+          // headlessLayer.clear(), left the desk showing a blank canvas. It
+          // goes unnoticed while a full-canvas screen covers it, and shows up
+          // the moment that screen closes.
+          this._releaseCanvas();
         });
       }
       // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
@@ -1335,6 +1432,9 @@ class __window_manager extends push {
       this._curWorkspace.nid == nid
     ) {
       this._curWorkspace = null;
+      // The pane never mounted, so nothing occupies the canvas — same reason
+      // as the destroy hook in loadWorkspace.
+      this._releaseCanvas();
     }
   }
 
@@ -1862,6 +1962,57 @@ class __window_manager extends push {
    * is the UX "restricted" workspace, not the personal hub.
    * No-op once the user has navigated into a sub-workspace.
    */
+  /**
+   * Mirror the WM modal's open state onto the desk root as `data-wm-modal`.
+   *
+   * Three rules in desk/skin read
+   * `:has(.window-manager__wrapper-modal[data-state="open"])` with `.desk-module`,
+   * `__body` or `__wm-container` as the subject — in effect the whole
+   * application. Chrome re-evaluates a `:has()` subject whenever anything
+   * matching its argument changes, so every open or close of a modal restyled
+   * the entire document; on production 2026-09-11 a single flip of that one
+   * attribute froze the tab. Those rules now read a plain attribute on the root,
+   * which Chrome invalidates narrowly (only the descendants its invalidation
+   * set names), and this is what keeps that attribute exact.
+   *
+   * A MutationObserver on the ONE element, filtered to the ONE attribute, rather
+   * than a stamp beside each feed()/clear(): the modal is fed from seven call
+   * sites and cleared from as many, and it is Skeletons.Wrapper that stamps
+   * `data-state` in the first place — observing the attribute is the only route
+   * that cannot miss one. ensurePart, not onPartReady, because the wrapper is
+   * declared without a partHandler.
+   *
+   * No teardown hook, on purpose: Wm is session-lifetime and defines neither
+   * onDestroy nor onBeforeDestroy (see the note in _watchHomeGridSettle). A
+   * re-feed disconnects the previous observer below; the last one lives as
+   * long as the page does, which is exactly as long as it is needed.
+   */
+  _installWmModalMirror() {
+    this.ensurePart("wrapper-modal").then((p) => {
+      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+      const root =
+        this.el && _.isFunction(this.el.closest)
+          ? this.el.closest(".desk-module")
+          : null;
+      if (!root || typeof MutationObserver !== "function") return;
+      // A re-feed hands us a fresh part; drop the observer on the old one.
+      if (this._wmModalObserver) this._wmModalObserver.disconnect();
+      const sync = () => {
+        if (p.el.getAttribute("data-state") === "open") {
+          root.dataset.wmModal = "open";
+        } else {
+          delete root.dataset.wmModal;
+        }
+      };
+      this._wmModalObserver = new MutationObserver(sync);
+      this._wmModalObserver.observe(p.el, {
+        attributes: true,
+        attributeFilter: ["data-state"],
+      });
+      sync();
+    });
+  }
+
   onPartReady(child, pn) {
     if (pn === _a.list) {
       // Warm BOTH of folder_task's steps while the grid that triggers it
@@ -1922,6 +2073,7 @@ class __window_manager extends push {
     // become "blank".
     this._syncHomeGrid(1, true);
     this.feed(require("./skeleton")(this));
+    this._installWmModalMirror();
     // Safety net for a boot that claims nothing — see settleHomeGrid. The desk
     // calls it directly at the end of its restore; this covers a Wm mounted
     // without one (or a restore that throws before it can).
@@ -2264,12 +2416,6 @@ class __window_manager extends push {
     else this._homeGridClaimed = false;
   }
 
-  /** True when `layer` currently holds at least one live window. */
-  _layerHasWindow(layer) {
-    if (!layer || (layer.isDestroyed && layer.isDestroyed())) return false;
-    return !!(layer.collection && layer.collection.length);
-  }
-
   /**
    * REVEAL THE HOME GRID ONLY IF NOTHING ELSE CLAIMED THE CANVAS.
    *
@@ -2281,14 +2427,15 @@ class __window_manager extends push {
    *                          its round trip, so "still opening" is never read
    *                          as "nothing opened"
    *   _curWorkspace          that open has landed
-   *   headlessLayer          a pane is docked on the canvas
+   *   headlessPane()         a workspace pane is docked on the canvas
    *   desk[data-no-workspace]    the account has none, and desk/home-empty is up
    *
-   * windowsLayer is deliberately NOT a claim. A floating window sits ABOVE the
-   * canvas rather than occupying it — a deep-linked file that docks no
-   * workspace (`#/desk/file?…`, the shapes openDeepLinkHash leaves alone) still
-   * wants the grid behind it, and closing that window must not leave a blank
-   * desk.
+   * A WINDOW is deliberately not a claim — headlessPane() asks for the docked
+   * pane specifically, not for whatever else the layers hold. A floating file,
+   * a player or a folder popup sits ABOVE the canvas rather than occupying it
+   * (and players land in headlessLayer too, see getWindowsPool), so the grid
+   * belongs behind them: a deep-linked file that docks no workspace still wants
+   * a backdrop, and closing it must not leave a blank desk.
    *
    * With none of those, home really is the screen — a failed workspace list, a
    * restore that threw — and the grid is the right thing to show, exactly as
@@ -2312,7 +2459,7 @@ class __window_manager extends push {
     const claimed =
       !!this._homeGridClaimed ||
       !!this._curWorkspace ||
-      this._layerHasWindow(this.headlessLayer) ||
+      !!this.headlessPane() ||
       !!(deskEl && deskEl.dataset && deskEl.dataset.noWorkspace === "1");
     if (claimed) return;
 
@@ -2320,6 +2467,25 @@ class __window_manager extends push {
     if (restoring && retries > 0) return this._armHomeGridSettle(retries - 1);
 
     this._syncHomeGrid(0);
+  }
+
+  /**
+   * NOTHING OCCUPIES THE CANVAS ANY MORE.
+   *
+   * loadWorkspace stamps the hide the moment it is entered and nothing used to
+   * take it back except reload(), so every way of losing a pane WITHOUT going
+   * home — the workspace deleted under the user, a headlessLayer.clear(), an
+   * attributes fetch that never resolved a root — left `data-workspace="1"`
+   * over an empty canvas. Dropping the claim and re-deciding is what turns
+   * that state back into the home grid.
+   *
+   * Deferred because a pane being destroyed is still in headlessLayer's
+   * collection for the rest of the tick, and settleHomeGrid would read it as a
+   * claim on a canvas that is on its way to empty.
+   */
+  _releaseCanvas() {
+    this._homeGridClaimed = false;
+    _.defer(() => this.settleHomeGrid());
   }
 
   /** @param {Number} [retries] see settleHomeGrid */
@@ -2359,6 +2525,7 @@ class __window_manager extends push {
       return this._resetHomeInPlace();
     }
     this.feed(require("./skeleton")(this));
+    this._installWmModalMirror();
   }
 
   /**

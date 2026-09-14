@@ -2069,6 +2069,69 @@
     padding-top: 12px;
   }
 
+  // ── language group ────────────────────────────────────────────────────────
+  // A caps label above the rows, so two entries reading "English"/"French"
+  // are obviously a choice of language and not two more actions.
+  &__account-menu-section {
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-50));
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-top: 1px solid var(--border-muted);
+    margin-top: 6px;
+    padding: 10px 10px 2px;
+  }
+
+  // Carries __account-menu-item too, so the hover, radius and metrics are the
+  // rows' — this only adds the trailing tick and the selected treatment.
+  &__account-menu-lang {
+    justify-content: flex-start;
+
+    // The active row has no `service`, so it must not advertise a click.
+    &--active {
+      cursor: default;
+      font-weight: 600;
+
+      &:hover {
+        background: transparent;
+      }
+    }
+  }
+
+  // Sprite icons never self-size: the builder emits <svg class="full">, so
+  // the wrapper AND the svg both need pinning or the icon eats the row.
+  &__account-menu-lang-ico {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-30);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__account-menu-lang-label {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__account-menu-lang-check {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--primary-40);
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
   // Hover tooltip for the icon-only utility buttons. Taken OUT OF FLOW — the
   // framework mounts it as a child of the button, so in normal flow it widens
   // the 30px button and breaks the row. Dark bubble below the icon, matching

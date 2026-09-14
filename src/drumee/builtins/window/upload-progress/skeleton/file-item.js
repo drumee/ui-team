@@ -51,6 +51,9 @@ function extractFileOptions(item) {
   options.showName = item.showName !== undefined ? item.showName : true;
   options.showSpeed = item.showSpeed !== undefined ? item.showSpeed : (options.isUploading && options.speed > 0);
   options.showProgress = item.showProgress !== undefined ? item.showProgress : options.isUploading;
+  // No byte stream behind this row (a workspace-side copy) — the bar
+  // animates instead of reporting a width that would be a fiction.
+  options.indeterminate = !!item.indeterminate;
   options.showCheck = item.showCheck !== undefined ? item.showCheck : options.isCompleted;
   options.showCancel = item.showCancel !== undefined ? item.showCancel : options.isUploading;
   options.showCancelled = item.showCancelled !== undefined ? item.showCancelled : options.isCancelled;
@@ -134,12 +137,18 @@ function createProgressBar(pfx, opt) {
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}-progress-bar`,
+        // The skin animates the fill off this flag. It is stamped on the BAR
+        // rather than the fill because the animation travels the bar's width,
+        // so that is the box the keyframes are relative to.
+        attrOpt: { 'data-indeterminate': opt.indeterminate ? '1' : '0' },
         kids: [
           Skeletons.Element({
             tagName: 'div',
             className: `${pfx}-progress-fill`,
             sys_pn: `progress-fill-${normalizedFileName}`,
-            style: {
+            // An indeterminate fill takes its width from the skin; setting one
+            // here would be overridden mid-animation on the next re-render.
+            style: opt.indeterminate ? {} : {
               width: `${Math.round(opt.progress)}%`
             }
           })

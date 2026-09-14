@@ -7,9 +7,9 @@
     opacity: 1;
     overflow: visible;
     transform: scale(0.75);
-    // Must stay below `.desk-module__settings-main-slot` (1500); jQuery UI
-    // appends the helper to <body> so it competes at the root context.
-    z-index: 1450;
+    // jQuery UI appends the helper to <body>, so it competes at the root
+    // context — see --z-index-drag-helper for why this sits where it does.
+    z-index: var(--z-index-drag-helper, 50005);
     box-shadow: none;
     background-color: transparent;
     @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));

@@ -97,13 +97,11 @@ function meetingSidePanel(_ui_) {
               tab("participants", LOCALE.PARTICIPANTS),
             ],
           }),
-          Skeletons.Button.Svg({
-            ico: "meet-x",
-            className: `${pfx}__chat-close`,
-            // Explicit close (not a toggle) so it can never re-open itself.
-            service: "close-chat",
-            uiHandler: [_ui_],
-          }),
+          // NO ✕ HERE. The panel is closed from the pill that opened it: both
+          // tabs have a toggling button in the topbar — `_a.chat` for Chat and
+          // `show-people` for Participants — and _toggleSidePanel collapses the
+          // panel when it is already open on that tab. The header ✕ (service
+          // "close-chat") was a second, redundant affordance.
         ],
       }),
       // Participants pane: roster toolbar + members roster.
@@ -269,7 +267,7 @@ const __skl_window_meeting = function (_ui_, localUser) {
       kidsOpt: { active: 0 },
       kids: [
         Skeletons.Image.Svg({
-          ico: "meet-expand",
+          ico: "rail-meet",
           className: `${_ui_.fig.family}__call-tile-ico`,
         }),
         Skeletons.Note({

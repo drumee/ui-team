@@ -16,19 +16,29 @@
 const Module = require("node:module");
 const { readFileSync } = require("node:fs");
 
-const HAS_EXPORT = /^export\s+(function|const|let|var|class)\s/m;
+const HAS_EXPORT = /^export\s/m;
 
-// `export function foo` / `export const foo` — the only two shapes in the
-// files this reaches. A default export would need different handling; there is
-// none here, and an unnoticed one shows up as a missing name at require time
-// rather than as a silently wrong tree.
+// `export function foo` / `export const foo` — declarations.
 const DECL = /^export\s+(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm;
+// `export { a, b as c };` — a list of names declared elsewhere in the file.
+const LIST = /^export\s*\{([^}]*)\}\s*;?/gm;
+// `export * from "./x";` — everything another module exports.
+const STAR = /^export\s+\*\s+from\s+(['"][^'"]+['"])\s*;?/gm;
 
 function transform(src) {
-  const names = [...src.matchAll(DECL)].map((m) => m[1]);
-  const body = src.replace(/^export\s+/gm, "");
-  const tail = names.map((n) => `  ${n},`).join("\n");
-  return `${body}\nmodule.exports = {\n${tail}\n};\n`;
+  const pairs = [...src.matchAll(DECL)].map((m) => [m[1], m[1]]);
+  let body = src.replace(LIST, (_m, list) => {
+    for (const part of list.split(",")) {
+      const [local, exported = local] = part.trim().split(/\s+as\s+/);
+      if (local) pairs.push([local.trim(), exported.trim()]);
+    }
+    return "";
+  });
+  body = body.replace(STAR, "Object.assign(module.exports, require($1));");
+  body = body.replace(/^export\s+/gm, "");
+  const tail = pairs.map(([local, exported]) => `  ${exported}: ${local},`).join("\n");
+  // Merged, not assigned: a star re-export has already written to module.exports.
+  return `${body}\nObject.assign(module.exports, {\n${tail}\n});\n`;
 }
 
 // Require `relPath` (from the repo root) with the transform active for it and

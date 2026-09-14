@@ -1935,6 +1935,12 @@ class __window_upload_progress extends __window_core {
     };
 
     const job = this._bundleManager.create({ entries, destNid, hub_id, resolution });
+    // Carried on the JOB, not on the window: several batches can be in flight
+    // at once (the user may attach more while a first is uploading), and each
+    // belongs to whoever started it. Read once here, so a later runBundle from
+    // a different caller cannot retarget a job already running.
+    if (this._pendingOnFileDone) job._onFileDone = this._pendingOnFileDone;
+    if (this._pendingOnDone) job._onDone = this._pendingOnDone;
     // Snapshot the privilege the viewer holds in this hub RIGHT NOW, while the
     // upload is being accepted — so it is by definition the level that allowed
     // it. A later demotion notice needs this to say what the user came FROM;
@@ -1975,6 +1981,19 @@ class __window_upload_progress extends __window_core {
     });
     job.on("file-done", (ev) => {
       this._revealInLayout(ev && ev.data, ev && ev.parent);
+      // Callers that are not a folder grid get the finished node here instead.
+      // _revealInLayout can't serve them: it appends into the target's `list`
+      // part and guards on getCurrentNid()/getItemsByAttr(), which is a folder
+      // window's shape. The chat composer wants the nid so it can add a chip to
+      // its own strip, and impersonating a folder window to get it would mean
+      // inheriting assumptions that do not hold there.
+      if (typeof job._onFileDone === "function") {
+        try {
+          job._onFileDone(ev && ev.data, ev && ev.parent);
+        } catch (err) {
+          this.warn("[upload-progress] onFileDone threw", err);
+        }
+      }
       this._renderAggregateThrottled();
       this._renderProgressListThrottled();
       // Global "a file was uploaded" signal. The BundleJob path (topbar Upload
@@ -1990,7 +2009,20 @@ class __window_upload_progress extends __window_core {
       }
     });
     job.on("error", this._renderProgressListThrottled);
-    job.on("done", ({ canceled }) => this._onBundleDone(canceled, job));
+    job.on("done", ({ canceled }) => {
+      this._onBundleDone(canceled, job);
+      // Symmetric with _onFileDone: a caller that is not a folder grid needs to
+      // know the batch is over, not just that individual files landed. Fires on
+      // cancel and on error too — whatever released the job releases the
+      // caller, or a UI gated on "uploading" would stay gated forever.
+      if (typeof job._onDone === "function") {
+        try {
+          job._onDone({ canceled: !!canceled });
+        } catch (err) {
+          this.warn("[upload-progress] onDone threw", err);
+        }
+      }
+    });
     job.on("activated", () => {
       this._job = job;
       this._renderAggregateThrottled();
@@ -2641,9 +2673,15 @@ __window_upload_progress.openStaging = function(targetWindow) {
  * @param {string} destNid      destination directory nid (the drop target)
  * @param {string} hub_id       destination hub id
  * @param {Object} [targetWindow] folder window to refresh on completion
+ * @param {Object} [opt]
+ * @param {Function} [opt.onFileDone] called with (node, parentNid) as each file
+ *   lands, for callers that are not a folder grid (see the file-done hook).
+ * @param {Function} [opt.onDone] called with ({canceled}) when the batch ends,
+ *   however it ends — a caller that disables UI while uploading needs the
+ *   release to be unconditional.
  * @returns {Promise<__window_upload_progress|null>}
  */
-__window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWindow) {
+__window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWindow, opt) {
   if (!roots || !roots.length) return Promise.resolve(null);
   return __window_upload_progress.getOrCreate().then(function(win) {
     if (!win) return null;
@@ -2657,7 +2695,65 @@ __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWind
     const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
     if (root && root.dataset) root.dataset.phase = "progress";
     if (win.raise) win.raise();
+    win._pendingOnFileDone = opt && opt.onFileDone;
+    win._pendingOnDone = opt && opt.onDone;
     win._enqueueBundle(batch, destNid, hub_id);
+    win._pendingOnFileDone = null;
+    win._pendingOnDone = null;
+    return win;
+  });
+};
+
+/**
+ * Show a row for work that has no byte progress to report.
+ *
+ * A workspace pick is a server-side `media.copy`: one round trip, no stream, so
+ * there is no percentage that would mean anything. The row still belongs in
+ * this window — from the user's side "the file is on its way" is the same
+ * statement whether the bytes come from their disk or are copied hub-side — it
+ * just animates instead of filling.
+ *
+ * Returns the name the row is keyed by, which `endIndeterminate` needs back.
+ *
+ * @param {String} fileName
+ * @returns {Promise<String|null>}
+ */
+__window_upload_progress.beginIndeterminate = function (fileName) {
+  if (!fileName) return Promise.resolve(null);
+  return __window_upload_progress.getOrCreate().then(function (win) {
+    if (!win) return null;
+    // A plain object, not a File: addUploadItem only reads name/size, and there
+    // are no bytes here to hand it.
+    win.addUploadItem({ name: fileName, size: 0 }, null);
+    const item = win._findUploadItem(fileName, true);
+    if (item) {
+      item.indeterminate = 1;
+      // showProgress is normally derived from `status === uploading && < 100`,
+      // which holds here — the bar is present, it just has no width to set.
+      item.showProgress = true;
+      if (win._refreshUI) win._refreshUI();
+    }
+    return fileName;
+  });
+};
+
+/**
+ * Close a row opened by beginIndeterminate.
+ * @param {String} fileName  the value beginIndeterminate resolved with
+ * @param {Boolean} ok       false marks it failed rather than done
+ * @param {Object} [result]  the created node, when there is one
+ */
+__window_upload_progress.endIndeterminate = function (fileName, ok, result) {
+  if (!fileName) return Promise.resolve(null);
+  return __window_upload_progress.getOrCreate().then(function (win) {
+    if (!win) return null;
+    const item = win._findUploadItem(fileName, true);
+    if (item) item.indeterminate = 0;
+    if (ok === false) {
+      win.updateUploadStatus(fileName, "error");
+    } else {
+      win.completeUpload(fileName, result || { name: fileName });
+    }
     return win;
   });
 };

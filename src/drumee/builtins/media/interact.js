@@ -1,6 +1,6 @@
 
 
-const { timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
+const { filesize, timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
 const Rectangle = require('rectangle-node');
 const OPEN_NODE = "open-node";
 const ECHO_ID = "echoId";
@@ -14,6 +14,63 @@ const ECHO_ID = "echoId";
 const VIGNETTE_CACHE_MAX = 600;
 const VIGNETTE_MISS_TTL = 60000;
 const _vignetteCache = new Map();
+
+// ── Fetch thumbnails only for tiles the user can actually see ────────────────
+//
+// Opening a folder used to fire ONE vignette request per tile, immediately, for
+// every tile in the listing. The Drumee Dev Team workspace holds 1,055 media
+// nodes; a single production session there made 479 vignette requests — 72% of
+// ALL its traffic — three of them taking 7.7s, with the app's own service calls
+// (media.show_node_by, task.list) pushed out to ~1.8s queued behind the flood.
+//
+// It is not only network. Every resolved thumbnail becomes a blob URL and a
+// rendered tile, so the eager fetch is also what inflates the DOM, and DOM size
+// is the multiplier on every style recalculation in the app.
+//
+// ONE observer for every tile on the page — an observer per tile would cost
+// more than it saves. `rootMargin` starts the fetch before the tile is on
+// screen, so ordinary scrolling still finds the thumbnail already there.
+//
+// root: null (the viewport) is correct even though the grid scrolls inside its
+// own container: intersection is computed against the viewport WITH ancestor
+// clipping applied, so a tile scrolled out of the pane does not intersect. It
+// also means a pane hidden during a workspace switch fetches nothing until it
+// is actually shown.
+const VIGNETTE_ROOT_MARGIN = "600px";
+let _vignetteObserver = null;
+const _vignettePending = new WeakMap();
+
+function _observeVignette(el, run) {
+  // No IntersectionObserver, or no element to measure: behave exactly as before
+  // and fetch straight away, rather than leaving a tile blank forever.
+  if (typeof IntersectionObserver !== "function" || !el) {
+    run();
+    return null;
+  }
+  if (!_vignetteObserver) {
+    _vignetteObserver = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const fn = _vignettePending.get(e.target);
+          _vignetteObserver.unobserve(e.target);
+          _vignettePending.delete(e.target);
+          if (fn) fn();
+        }
+      },
+      { rootMargin: VIGNETTE_ROOT_MARGIN }
+    );
+  }
+  _vignettePending.set(el, run);
+  _vignetteObserver.observe(el);
+  return el;
+}
+
+function _unobserveVignette(el) {
+  if (!el || !_vignetteObserver) return;
+  _vignetteObserver.unobserve(el);
+  _vignettePending.delete(el);
+}
 function _vignetteRemember(url, entry) {
   if (_vignetteCache.size >= VIGNETTE_CACHE_MAX) {
     const first = _vignetteCache.keys().next().value;
@@ -282,6 +339,22 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Stop watching a tile that is destroyed before it ever scrolled into view.
+   *
+   * Without this the shared IntersectionObserver keeps a strong reference to the
+   * element, and the registered callback keeps the widget, for the life of the
+   * page — the observer would trade one cost for another.
+   *
+   * `super.onBeforeDestroy()` is not optional: media_core's hook releases the
+   * RADIO_MEDIA icon-type subscription and re-syncs the parent's bounds.
+   */
+  onBeforeDestroy() {
+    _unobserveVignette(this._vignetteObserved);
+    this._vignetteObserved = null;
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
    *
    */
   defaultTrigger(e) {
@@ -475,6 +548,19 @@ class __media_interact extends media_core {
     let f = filetype == _a.vector ? _a.orig : _a.vignette;
     const { url } = this.actualNode(f);
     this.model.atLeast({ url });
+    // A card that shows a TYPE GLYPH has no use for a vignette, and must not
+    // wait on one. For image/video/vector the branch below sets innerHTML only
+    // inside the fetch callbacks, so the card stays EMPTY until the thumbnail
+    // resolves — and permanently empty on the two paths that return without
+    // rendering (`if (!blob) return` and any non-404 `blob.error`). A freshly
+    // uploaded video is exactly that case: its vignette does not exist yet.
+    // Render now from the glyph the template already draws.
+    if (this.mget("iconOnly")) {
+      this.content.el.innerHTML = this.innerContent(this);
+      this._setupInteract();
+      this.trigger("content-ready");
+      return;
+    }
     switch (filetype) {
       case _a.video:
       case _a.image:
@@ -498,7 +584,13 @@ class __media_interact extends media_core {
             return showMissing();
           _vignetteCache.delete(url);
         }
-        this.fetchFile({ url })
+        // Deferred until the tile is near the viewport (see _observeVignette).
+        // A cache HIT above still resolves synchronously, so nothing already
+        // fetched starts waiting on scroll.
+        const fetchThumb = () => {
+          this._vignetteObserved = null;
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.fetchFile({ url })
           .then(async (blob) => {
             if (!blob) {
               this.warn(`Got no blob from ${url}`);
@@ -526,6 +618,10 @@ class __media_interact extends media_core {
             this.content.el.innerHTML = this.innerContent(this);
             this._setupInteract();
           });
+        };
+        // A re-render must not leave the previous observation behind.
+        _unobserveVignette(this._vignetteObserved);
+        this._vignetteObserved = _observeVignette(this.el, fetchThumb);
         break;
       }
       default:
@@ -651,6 +747,116 @@ class __media_interact extends media_core {
   }
 
   /**
+   * Extract this archive into the folder it sits in.
+   *
+   * The response is an ACKNOWLEDGEMENT, not a result: media.unzip inspects the
+   * archive inline (so a refusal arrives here, with a reason) and then hands
+   * the extraction to an offline worker. Completion therefore arrives the same
+   * way an upload's does — the worker broadcasts `media.new` for the folder it
+   * created, and window/utils already turns that into a tile. So this method
+   * deliberately does NOT poll or wait: the toast says work started, and the
+   * folder appears on its own.
+   */
+  openArchive() {
+    // Same capability gate as the menu row, repeated rather than trusted: the
+    // row is built once, and this path is also reached by a plain click.
+    if (!this.canUnzip()) return;
+    const { nid, hub_id } = this.actualNode();
+
+    // Ask the server what is inside BEFORE offering anything. Reading an
+    // archive's table of contents is cheap (the central directory, not the
+    // payload), and it buys both halves of the decision: the counts the
+    // confirmation quotes, and whether this one is small enough to finish
+    // without a progress bar.
+    return this.fetchService(
+      { service: SERVICE.media.archive_info, nid, hub_id },
+      { async: 1 },
+    )
+      .then((info) => {
+        // The latch set by the click is released here, whatever happens next:
+        // a modal is the feedback from this point on, and for a big archive
+        // handleUnzip takes over and clears it again at completion.
+        this.wait(0);
+        if (!info || info.error) return this._unzipFailed(info && info.error);
+        return Wm.confirm(
+          LOCALE.UNZIP_CONFIRM.format(
+            this.fullname(),
+            info.files,
+            filesize(info.size),
+          ),
+        )
+          .then(() => this.unzipArchive(info))
+          .catch(() => { });
+      })
+      .catch((e) => {
+        this.wait(0);
+        this._unzipFailed((e && (e.reason || e.error)) || e);
+      });
+  }
+
+  /**
+   * Start the extraction. `info` comes from archive_info; its `small` flag is
+   * the SERVER's verdict on whether this finishes fast enough that a progress
+   * bar would be more flicker than information.
+   */
+  unzipArchive(info = {}) {
+    if (!this.canUnzip()) return;
+    const { nid, hub_id } = this.actualNode();
+    // Hold the tile's latch for the duration when a bar is coming, so the
+    // archive cannot be started twice while it extracts. handleUnzip clears it
+    // on completed/failed. A small archive gets no bar and no latch — it is
+    // over in about the time the dialog takes to close.
+    if (!info.small) this.wait(1);
+    return this.postService(
+      SERVICE.media.unzip,
+      {
+        service: SERVICE.media.unzip,
+        nid,
+        // The destination the server checks WRITE on, and the one it extracts
+        // into — media.unzip requires it precisely so those cannot diverge.
+        pid: this.mget(_a.pid),
+        hub_id,
+      },
+      { async: 1 },
+    )
+      .then((data) => {
+        if (!data || data.error) {
+          this.wait(0);
+          return this._unzipFailed(data && data.error);
+        }
+        // Same guard the workspace-copy toast uses: Butler is a bootstrap
+        // global and is not present in every context a media tile renders in
+        // (the DMZ share view has no assistant).
+        if (typeof Butler !== "undefined" && Butler.say) {
+          Butler.say(LOCALE.UNZIP_STARTED.format(this.fullname()));
+        }
+      })
+      .catch((e) => {
+        this.wait(0);
+        this._unzipFailed((e && (e.reason || e.error)) || e);
+      });
+  }
+
+  /**
+   * Turn a media.unzip refusal into something a person can act on.
+   *
+   * The server answers with a CODE (the ACL documents all of them) rather than
+   * prose, because the reason has to survive into six locales. An unmapped
+   * code — a newer server, an unrelated failure — falls back to the generic
+   * retry line rather than showing the raw token.
+   */
+  _unzipFailed(code) {
+    const key = `${code}`.toUpperCase();
+    const known = [
+      "NOT_AN_ARCHIVE", "NODE_NOT_FOUND", "ARCHIVE_UNREADABLE",
+      "ARCHIVE_ENCRYPTED", "ARCHIVE_EMPTY", "ARCHIVE_TOO_MANY_ENTRIES",
+      "ARCHIVE_TOO_LARGE", "ARCHIVE_UNSAFE_PATH",
+      "ARCHIVE_FORMAT_UNSUPPORTED", "UNZIP_FAILED",
+    ];
+    Wm.alert(known.includes(key) ? LOCALE[key] : LOCALE.TRY_AGAIN);
+  }
+
+  /**
    * Create a copy beside this media item. The live update owns grid insertion so the
    * HTTP response and WebSocket broadcast cannot add the same copy twice.
    */
@@ -763,6 +969,9 @@ class __media_interact extends media_core {
 
       case _a.duplicate:
         return this.duplicateInPlace();
+
+      case "unzip":
+        return this.openArchive();
 
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));

@@ -13,11 +13,29 @@ const {
   uidsFromText,
 } = require("./mention-markers");
 
+// How long an overlay is held on screen after its close is clicked, so its
+// exit animation can play. MUST MATCH the 0.14s the skin gives
+// tasks-panel-fade-out / -pop-out: too short and the node is torn out
+// mid-animation, too long and the card sits there finished, which is the
+// "click close → delay → popup finally disappears" this panel was already
+// bitten by once. See _dismissOverlay.
+const OVERLAY_EXIT_MS = 140;
+
 // Mention-editor scopes where a bare Enter posts, and the method it calls. The
 // description editors (create / detail) are deliberately absent: they have no
 // submit action of their own — a description is saved by its panel — so Enter
 // keeps inserting a newline there. Each target re-checks its own draft, so
 // Enter on an empty box is a no-op.
+// How many task cards a column builds before the user has scrolled it.
+//
+// A card is ~19 skeleton nodes, and `_loadTasks` fetches the WHOLE workspace in
+// one unpaginated request, so without a cap a busy board mounts thousands of
+// Marionette views in a single burst. 60 comfortably overflows the tallest
+// column, which is what keeps the scroll affordance — and therefore the path to
+// the rest — discoverable.
+const CARD_WINDOW = 60;
+const CARD_WINDOW_STEP = 60;
+
 const COMMENT_SUBMIT_BY_SCOPE = {
   comment: "_submitComment",
   "comment-edit": "_saveCommentEdit",
@@ -135,6 +153,15 @@ const PEER_NOTICE_MS = 10000;
 // mousemove within a frame or two; anything older is an idle mouse, not a drag.
 const POINTER_TTL = 2000;
 
+// How long a peer-driven reload stays open to absorb the events that follow it.
+//
+// Every task push used to run its own whole-workspace task.list plus a full
+// panel rebuild, with nothing between them: a peer dragging five cards, or a
+// bulk edit, cost five of each. The first event still runs immediately (a lone
+// change must not wait), and everything arriving inside this window is folded
+// into one trailing reload.
+const WS_REFRESH_WINDOW = 400;
+
 // Signal palette (Figma): Success / Info / Warning / Error — must match the
 // skin's [data-priority] pill colors so dots and pills agree everywhere.
 const PRIORITIES = [
@@ -192,6 +219,19 @@ class __tasks_panel extends LetcBox {
     // closes clears its own flag, so its next opening animates again without a
     // single handler having to remember to reset anything.
     this._painted = {};
+    // Which of the detail card's sections are still in flight.
+    //
+    // The card opens instantly from the board row that was clicked, but its
+    // attachments, comments and change log are three separate fetches. Nothing
+    // could tell "not fetched yet" from "fetched, and there are none":
+    // getComments() answers [] for both, and getDetailAttachments() is
+    // `_attachments[id] || []`. So every one of those sections opened claiming
+    // to be EMPTY and then filled in underneath that claim. These flags are
+    // that missing bit; the skeleton reads them through isLoading().
+    this._loading = {};
+    // Handle of the teardown queued behind an overlay's exit animation, so any
+    // render arriving mid-exit can drop it. See _dismissOverlay.
+    this._closingTimer = null;
     this._detailId = null;
     this._detailDraft = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
@@ -304,6 +344,16 @@ class __tasks_panel extends LetcBox {
     if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
     if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
     if (this._submitWatchdog) clearTimeout(this._submitWatchdog);
+    // A panel destroyed mid-exit (the tab switched, the window closed) must not
+    // leave a teardown queued against its wrappers.
+    this._cancelPendingExit();
+    if (this._wsCooldown) clearTimeout(this._wsCooldown);
+    this._wsCooldown = null;
+    this._wsPending = null;
+    if (this._visObserver) {
+      this._visObserver.disconnect();
+      this._visObserver = null;
+    }
     if (
       this._mediaDroppableInstalled &&
       typeof $ !== "undefined" &&
@@ -314,6 +364,10 @@ class __tasks_panel extends LetcBox {
       try {
         $(this.el).droppable("destroy");
       } catch (_) {}
+    }
+    if (this._pointerArm && typeof document !== "undefined") {
+      document.removeEventListener("mousedown", this._pointerArm, true);
+      this._pointerArm = null;
     }
     if (this._pointerTracker && typeof document !== "undefined") {
       document.removeEventListener("mousemove", this._pointerTracker, true);
@@ -433,6 +487,9 @@ class __tasks_panel extends LetcBox {
       this._folderFilenames = null;
     }
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
+    // Reopening the Task tab is where a panel that was hidden comes back, so
+    // it is where peer changes held back while it was hidden are picked up.
+    this._flushDeferredWsRefresh();
     // The one case that still needs a fetch: the previous load failed
     // silently, and reopening the Tasks tab re-calls setScope. Without this
     // the board would latch empty until a page reload.
@@ -454,8 +511,10 @@ class __tasks_panel extends LetcBox {
     this._trackPointer();
     this._installPasteAttach();
     this._installFileSearchFocus();
+    this._installCardWindow();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
+    this._watchVisibility();
     // PAINT AS SOON AS THERE IS SOMETHING TO PAINT, then revalidate.
     //
     // Two passes of this method met here, and both reasons are kept.
@@ -536,7 +595,11 @@ class __tasks_panel extends LetcBox {
     // this panel last loaded is simply absent — it only appeared after a full
     // page reload, and the deep link below then found nothing to open. Refresh
     // once before concluding the task is not in this folder.
-    if (!Array.isArray(this._tasks) || !this._tasks.some((t) => t.id === id)) {
+    const seek = () =>
+      Array.isArray(this._tasks)
+        ? this._tasks.find((t) => `${t.id}` === `${id}`)
+        : null;
+    if (!seek()) {
       await this._loadTasks();
       // The window can be closed while the refetch is in flight.
       if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
@@ -544,7 +607,15 @@ class __tasks_panel extends LetcBox {
     }
     // Same guard as onDomRefresh — only open a task that really belongs to this
     // folder's list, never an empty detail panel.
-    if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
+    //
+    // Matched loosely, then opened with the BOARD's own id. _openDetail (and
+    // _detailId after it) compare with `===`, so an id that arrived as a
+    // different primitive type — this deep link is called from the Personal
+    // Calendar with a calendar.list id as well as from a notification — would
+    // pass a loose test here and then find no task there, rendering the detail
+    // panel with a null draft.
+    const task = seek();
+    if (task) this._openDetail(task.id);
   }
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
@@ -1353,7 +1424,7 @@ class __tasks_panel extends LetcBox {
         // preview reflects whatever the folder body holds right now.
         this._folderFilenames = null;
         this._resetFileSearch();
-        return this._render();
+        return this._renderOverlays();
 
       case "commit-task":
         if (this._submitting) return;
@@ -1363,7 +1434,7 @@ class __tasks_panel extends LetcBox {
         return this._commitTask().catch((err) => {
           console.error("[tasks_panel] commit-task failed:", err);
           this._setSubmitting(".tasks-panel__create-submit", false);
-          this._render();
+          this._renderOverlays();
           // Say so: a commit that fails silently is indistinguishable from a
           // dead button, which makes it needlessly hard to diagnose.
           Wm.alert(LOCALE.ERROR_NETWORK);
@@ -1375,8 +1446,11 @@ class __tasks_panel extends LetcBox {
         this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
-        this._dismissOverlayNow("create-backdrop");
-        return this._renderDeferred();
+        // State is already cleared above, so the modal is shut as far as every
+        // handler is concerned; only its DOM waits for the exit to play.
+        return this._dismissOverlay("create-backdrop", () =>
+          this._renderOverlays(),
+        );
 
       case "create-status":
         if (this._createDefaults) {
@@ -1758,13 +1832,19 @@ class __tasks_panel extends LetcBox {
         // closing the child used to take the parent with it. Read the target
         // first: _closeDetailSilently clears it.
         const back = this._detailReturnTo;
-        this._closeDetailSilently();
-        // _openDetail renders on its own — a _renderDeferred() on top of it
-        // would be a second full rebuild of the panel just painted.
+        // Walking back is NAVIGATION, not a dismissal: the parent is drawn
+        // into this same element in the same tick, so an exit here would fade
+        // the child out underneath the parent arriving on top of it. Close it
+        // instantly and let _openDetail play its own entrance.
         if (back && this._tasks.some((t) => t.id === back)) {
+          this._closeDetailSilently();
+          // _openDetail renders on its own — a _renderDeferred() on top of it
+          // would be a second full rebuild of the panel just painted.
           return this._openDetail(back);
         }
-        return this._renderDeferred();
+        // A real dismissal: state is cleared now, the card animates away, and
+        // the wrappers are re-fed once it has gone.
+        return this._closeDetailSilently(() => this._renderOverlays());
       }
 
       case "open-detail":
@@ -1881,12 +1961,12 @@ class __tasks_panel extends LetcBox {
         this._boardDefault = true;
         this._colMenuFor = null;
         this._colRenameDraft = null;
-        return this._render();
+        return this._renderOverlays();
 
       case "board-cancel":
         this._boardModalOpen = false;
         this._boardTitle = "";
-        return this._render();
+        return this._renderOverlays();
 
       case "board-title-changed":
         // Live-persist the typed name so a colour pick / toggle (which update
@@ -2360,6 +2440,67 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  /**
+   * How many cards a column may build right now.
+   *
+   * Starts at CARD_WINDOW and grows by CARD_WINDOW_STEP each time the user
+   * scrolls that column near its bottom (_installCardWindow). Per column, so a
+   * long "To do" does not force every other column to build its whole list.
+   */
+  cardWindow(key) {
+    if (!this._cardWindow) this._cardWindow = {};
+    return this._cardWindow[key] || CARD_WINDOW;
+  }
+
+  /**
+   * Grow a column's window as it is scrolled.
+   *
+   * `scroll` does not bubble, so this is a CAPTURE listener on the panel root —
+   * the same shape the file-search dropdown uses below. One listener for every
+   * column rather than one per column, and it early-returns on anything that is
+   * not a column body.
+   *
+   * Repaints through `_refreshViewBody()`, never `_render()`: that path feeds
+   * only the view host and puts every scroll offset back (it snapshots
+   * `.tasks-panel__column-body[data-dropcol=…]` by selector), so the column
+   * stays exactly where the user left it and the newly built cards simply
+   * appear below.
+   */
+  _installCardWindow() {
+    if (!this.el || this._cardWindowBound) return;
+    this._cardWindowBound = 1;
+    this.el.addEventListener(
+      "scroll",
+      (e) => {
+        const body = e.target;
+        if (!body || !body.classList) return;
+        // Two windowed views, two scrollers: the board has one per column, the
+        // list is a single flat one. "__list" matches skeleton/list.js.
+        let key, total;
+        if (body.classList.contains("tasks-panel__column-body")) {
+          key = body.dataset && body.dataset.dropcol;
+          if (!key) return;
+          // getState() is the same bucketing the skeleton renders from, so
+          // this asks "are there tasks in this column I have not built yet?".
+          total = (this.getState() || {})[key];
+        } else if (body.classList.contains("tasks-panel__list")) {
+          key = "__list";
+          total = this.getTopLevelTasks();
+        } else {
+          return;
+        }
+        const have = this.cardWindow(key);
+        // Nothing left to build for this column.
+        if (!Array.isArray(total) || total.length <= have) return;
+        if (body.scrollTop + body.clientHeight < body.scrollHeight - 240) return;
+        if (!this._cardWindow) this._cardWindow = {};
+        this._cardWindow[key] = have + CARD_WINDOW_STEP;
+        this._refreshViewBody();
+      },
+      true,
+    );
+  }
+
   _installFileSearchFocus() {
     if (this._fileSearchFocusInstalled || !this.el) return;
     this._fileSearchFocusInstalled = true;
@@ -2455,43 +2596,35 @@ class __tasks_panel extends LetcBox {
         // them (hub.delete_contributor unassigns the member it removes and
         // announces it on this service), so re-read it too or the pickers keep
         // offering somebody who is no longer here.
-        Promise.all([
-          this._loadTasks(),
-          this._loadActivity(),
-          this._loadMembers(),
-        ]).then(() => {
-          this._render();
-          this._refreshOpenTaskHistory();
+        this._queueWsRefresh({
+          tasks: 1,
+          activity: 1,
+          members: 1,
+          history: 1,
         });
         return;
       case SERVICE.task.delete:
         // Warn BEFORE the reload: once _loadTasks lands, the row this user is
         // editing is gone and there is nothing left to match the id against.
         this._onPeerTaskDeleted(data, options);
-        Promise.all([this._loadTasks(), this._loadActivity()]).then(() =>
-          this._render(),
-        );
+        this._queueWsRefresh({ tasks: 1, activity: 1 });
         return;
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
-        Promise.all([this._loadTasks(), this._loadActivity()]).then(() => {
-          this._render();
-          this._refreshOpenTaskHistory();
-        });
+        this._queueWsRefresh({ tasks: 1, activity: 1, history: 1 });
         return;
       case SERVICE.task.link_file:
       case SERVICE.task.unlink_file:
         if (this._detailId) {
-          this._refreshAttachments(this._detailId).then(() => {
-            this._render();
-            this._refreshOpenTaskHistory();
-          });
+          this._refreshAttachments(this._detailId).then(() =>
+            this._queueWsRefresh({ history: 1 }),
+          );
         } else if (this.getView() === "summary") {
           // Health view's activity feed surfaces file links even with no detail open.
-          this._loadActivity().then(() => this._render());
+          this._queueWsRefresh({ activity: 1 });
         }
         return;
       case SERVICE.task.column_create:
@@ -2503,17 +2636,16 @@ class __tasks_panel extends LetcBox {
       // SERVICE.task.column_set_done is defined in lex/services.json, so this
       // is never `case undefined:` even if the backend map lacks it.
       case SERVICE.task.column_set_done:
-        Promise.all([this._loadColumns(), this._loadTasks()]).then(() =>
-          this._render(),
-        );
+        this._queueWsRefresh({ columns: 1, tasks: 1 });
         return;
       case SERVICE.task.column_delete:
         // A peer deleted a board. Its tasks are re-homed server-side, so reload
         // both lists first — the notice below needs the surviving columns to
         // tell the user where their open task went.
-        Promise.all([this._loadColumns(), this._loadTasks()]).then(() => {
-          this._onPeerColumnDeleted(data, options);
-          this._render();
+        this._queueWsRefresh({
+          columns: 1,
+          tasks: 1,
+          after: () => this._onPeerColumnDeleted(data, options),
         });
         return;
       case SERVICE.task.comment_create:
@@ -2539,13 +2671,162 @@ class __tasks_panel extends LetcBox {
         }
         // Comments also appear in the Health view's activity feed.
         if (this.getView() === "summary") {
-          this._loadActivity().then(() => this._render());
+          this._queueWsRefresh({ activity: 1 });
         }
         return;
       }
       default:
         if (super.onWsMessage) super.onWsMessage(svc, data, options);
     }
+  }
+
+  /**
+   * Is anybody actually looking at this panel?
+   *
+   * It stays mounted for the life of the folder window (folder/index.js keeps
+   * `_taskPanelMounted` and reveals the tab with `data-view`, rather than
+   * rebuilding it), so a panel on a hidden tab — or in a minimised window —
+   * went on refetching every task in the workspace and rebuilding a board
+   * nobody could see, for as long as a peer kept working.
+   *
+   * Measured on the box rather than on `offsetParent`, which is also null for
+   * a `position: fixed` element that IS visible. A `display: none` ancestor
+   * gives 0 x 0; anything on screen does not.
+   *
+   * @returns {Boolean}
+   */
+  _isPanelHidden() {
+    const el = this.el;
+    if (!el) return true;
+    // `=== false`, not `!el.isConnected`: on an engine that does not implement
+    // isConnected the property reads undefined, and a falsy test would call a
+    // perfectly visible panel hidden — which would defer every peer refresh
+    // for ever. The box measurement below already answers correctly for a
+    // detached node (0 x 0), so this is only a fast path.
+    if (el.isConnected === false) return true;
+    return el.offsetWidth === 0 && el.offsetHeight === 0;
+  }
+
+  /**
+   * Ask for a peer-driven reload. Coalescing entry point for onWsMessage.
+   *
+   * @param {Object} what
+   * @param {Number} [what.tasks]    reload the task list
+   * @param {Number} [what.columns]  reload the columns
+   * @param {Number} [what.activity] reload the activity feed
+   * @param {Number} [what.members]  reload the workspace members
+   * @param {Number} [what.history]  refresh the open task's change log after
+   * @param {Function} [what.after]  run once the loads land, before the render
+   */
+  _queueWsRefresh(what = {}) {
+    const p = (this._wsPending = this._wsPending || { after: [] });
+    for (const k of ["tasks", "columns", "activity", "members", "history"]) {
+      if (what[k]) p[k] = 1;
+    }
+    if (typeof what.after === "function") p.after.push(what.after);
+    // Nobody is watching: hold the request set and run it when the panel comes
+    // back (setScope on tab re-show, or the first interaction with it).
+    if (this._isPanelHidden()) {
+      this._wsDeferred = 1;
+      return;
+    }
+    // A run is already inside its window — this one rides along on its trailing
+    // tick rather than issuing a second reload of its own.
+    if (this._wsCooldown) return;
+    this._startWsCooldown();
+    this._runWsRefresh();
+  }
+
+  // Leading-edge + trailing: the tick runs whatever accumulated during the
+  // window, and opens another window if it ran, so a sustained storm settles at
+  // one reload per WS_REFRESH_WINDOW instead of one per event.
+  _startWsCooldown() {
+    this._wsCooldown = setTimeout(() => {
+      this._wsCooldown = null;
+      if (!this._wsPending) return;
+      if (this._isPanelHidden()) {
+        this._wsDeferred = 1;
+        return;
+      }
+      this._startWsCooldown();
+      this._runWsRefresh();
+    }, WS_REFRESH_WINDOW);
+  }
+
+  /**
+   * Release deferred peer updates the moment the panel is actually shown.
+   *
+   * The panel's own box IS the signal _isPanelHidden measures, so observe it
+   * rather than inferring visibility from something else:
+   *
+   * - Interaction is the wrong trigger. `task-input-changed` is a WATCH
+   *   (skeleton 1301 / 1620 / 3978), so onUiEvent runs on every keystroke in
+   *   the title and description fields — and releasing a deferred refresh
+   *   there ends in a full _render() mid-word, which is precisely the hazard
+   *   _render documents: ui-core seeds <input> values through a 200ms
+   *   waitElement poll, so the field blanks and then overwrites what was
+   *   typed in that window.
+   *
+   * - setScope alone is not enough. Restoring a minimised folder window that
+   *   is already on the Task tab reaches neither setScope nor any click:
+   *   showFolderTab early-returns when the tab is unchanged. The board would
+   *   sit fully visible and silently stale until the user happened to touch
+   *   something.
+   *
+   * A resize is the one event both paths share, and it cannot fire while the
+   * user is typing into a panel with work still deferred — a deferred set only
+   * exists while the panel is hidden, and being revealed is what drains it.
+   */
+  _watchVisibility() {
+    if (this._visObserver || !this.el) return;
+    if (typeof ResizeObserver === "undefined") return; // setScope still covers the tab switch
+    this._visObserver = new ResizeObserver(() => {
+      if (this._isPanelHidden()) return;
+      this._flushDeferredWsRefresh();
+    });
+    this._visObserver.observe(this.el);
+  }
+
+  // The panel is back on screen — run anything that arrived while it was not.
+  _flushDeferredWsRefresh() {
+    if (!this._wsDeferred) return;
+    this._wsDeferred = 0;
+    if (!this._wsPending || this._wsCooldown) return;
+    if (this._isPanelHidden()) {
+      this._wsDeferred = 1;
+      return;
+    }
+    this._startWsCooldown();
+    this._runWsRefresh();
+  }
+
+  _runWsRefresh() {
+    const p = this._wsPending;
+    this._wsPending = null;
+    // Taking the set is what "no longer deferred" means. Every caller has
+    // already checked visibility; clearing it here keeps the flag from
+    // outliving the work it stood for.
+    this._wsDeferred = 0;
+    if (!p) return;
+    const jobs = [];
+    if (p.tasks) jobs.push(this._loadTasks());
+    if (p.columns) jobs.push(this._loadColumns());
+    if (p.activity) jobs.push(this._loadActivity());
+    if (p.members) jobs.push(this._loadMembers());
+    return Promise.all(jobs).then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      // Ordered exactly as the per-case code was: the notices that read the
+      // freshly-loaded rows run first, then the repaint, then the history.
+      for (const fn of p.after) {
+        try {
+          fn();
+        } catch (err) {
+          console.error("[tasks_panel] ws refresh hook failed:", err);
+        }
+      }
+      this._render();
+      if (p.history) this._refreshOpenTaskHistory();
+    });
   }
 
   // Display name of the peer whose change arrived on the socket. Every
@@ -2592,11 +2873,25 @@ class __tasks_panel extends LetcBox {
     Kind.waitFor("window_info").then(show).catch(show);
   }
 
-  // Tear the detail down without the click path's re-render — callers that
-  // close it in reaction to a peer's change are already re-rendering.
-  _closeDetailSilently() {
+  /**
+   * Tear the detail down without the click path's re-render — callers that
+   * close it in reaction to a peer's change are already re-rendering.
+   *
+   * Every field here is cleared SYNCHRONOUSLY, including on the animated path:
+   * from this point the panel is shut as far as any handler is concerned, and
+   * only the DOM lingers for the length of the exit.
+   *
+   * @param {Function} [done] the teardown to defer behind the exit animation.
+   *   Passed by a DISMISSAL (the X, Cancel, a successful Update); omitted by a
+   *   reaction (peer delete, walking back to a parent), which cuts instantly.
+   *   See _dismissOverlay.
+   */
+  _closeDetailSilently(done) {
     this._detailId = null;
     this._detailDraft = null;
+    // Section fetches belong to the task that was open; a flag left standing
+    // would greet the next task with a skeleton it never clears.
+    this._loading = {};
     // A silent close is a real close (peer delete, task switch, commit) — the
     // breadcrumb must not survive it and re-open a panel the user just left.
     this._detailReturnTo = null;
@@ -2614,7 +2909,7 @@ class __tasks_panel extends LetcBox {
     this._setDragAffordance(null);
     this._closeCommentReactionsPicker();
     this._resetFileSearch();
-    this._dismissOverlayNow("detail-backdrop");
+    this._dismissOverlay("detail-backdrop", done);
   }
 
   // A peer deleted the task this user has open. Their edits can no longer be
@@ -3329,7 +3624,13 @@ class __tasks_panel extends LetcBox {
       // true, which permanently disables commit-task / commit-detail.
       this._setSubmitting(".tasks-panel__create-submit", false);
     }
-    this._render();
+    // This render runs on BOTH outcomes, so it cannot animate unconditionally:
+    // a failed create deliberately leaves the modal open with the draft intact
+    // (see the note in the success branch above) and must simply repaint it.
+    // `_creating` is the record of which happened — only the success branch
+    // clears it.
+    if (this._creating) return this._render();
+    return this._dismissOverlay("create-backdrop", () => this._render());
   }
 
   async _removeTask(trigger) {
@@ -3609,10 +3910,16 @@ class __tasks_panel extends LetcBox {
     this._resetFileSearch();
     this._setSubmitting(".tasks-panel__detail-submit", false);
     if (back && this._tasks.some((t) => t.id === back)) {
-      // _openDetail renders on its own.
+      // Navigation, not a dismissal — the parent lands in this same element,
+      // so there is nothing to animate away. _openDetail renders on its own.
       return this._openDetail(back);
     }
-    this._render();
+    // A saved task is a dismissal like any other, so it leaves the same way
+    // the X does. The render behind it is a FULL one (the task list changed
+    // and the board has to repaint), and it is deferred with everything else:
+    // the card is covering the board while it fades, so nothing of the stale
+    // paint is visible during those few frames.
+    this._dismissOverlay("detail-backdrop", () => this._render());
   }
 
   // Render the detail panel immediately on click; refresh attachments async
@@ -3693,9 +4000,14 @@ class __tasks_panel extends LetcBox {
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
-    this._render();
+    // Three fetches follow, and the card is about to be drawn without any of
+    // them. Flag all three BEFORE the render, or it paints the empty states
+    // for one frame before the skeleton could replace them.
+    this._loading = { attachments: 1, comments: 1, history: 1 };
+    this._renderOverlays();
     this._refreshAttachments(id).then(() => {
       if (this._detailId !== id) return;
+      this._settleLoading("attachments", id);
       // Initial fetch came back — refeed just the rows, don't touch the
       // form fields the user may have already started editing.
       this._refreshAttachmentsList();
@@ -3704,12 +4016,14 @@ class __tasks_panel extends LetcBox {
     // Surgically feed the comment list when it arrives — a full _render() here
     // rebuilds the panel and replays its open animation (visible glitch).
     this._loadComments(id).then(() => {
+      this._settleLoading("comments", id);
       if (this._detailId === id) this._refreshCommentList();
     });
     // "All" (the default tab) shows the change log below the comments, so it is
     // fetched on open rather than on first switch. Feeds its own part — the
     // comment list is untouched by this.
     this._loadTaskHistory(id).then(() => {
+      this._settleLoading("history", id);
       if (this._detailId === id) this._refreshHistoryList();
     });
   }
@@ -4643,6 +4957,10 @@ class __tasks_panel extends LetcBox {
   // chip rendering). Bodies are populated post-feed, like the description.
   _renderCommentBodies() {
     if (!this.el) return;
+    // Comment rows only ever exist inside the open detail panel, so with none
+    // open there is nothing to find — and this runs twice per render (again on
+    // the next frame), each time walking the whole panel subtree.
+    if (!this._detailId) return;
     this.el
       .querySelectorAll(`.${this.fig.family}__comment-body[data-comment-id]`)
       .forEach((el) => {
@@ -5314,14 +5632,33 @@ class __tasks_panel extends LetcBox {
    */
   _trackPointer() {
     if (this._pointerTracker || typeof document === "undefined") return;
+    // A held button. jQuery-UI cannot start a drag without one, so this is a
+    // strict superset of "a drag may be in flight" — and it is what keeps the
+    // affordance work off every ordinary mouse move in the app. Every move used
+    // to queue a rAF that ran a document-wide
+    // `querySelector(".ui-draggable-dragging")`, once per frame, for the whole
+    // life of the panel — and once per OPEN PANEL, since the listener is on
+    // document and every folder window installs its own.
+    this._pointerDown = 0;
+    this._pointerArm = () => {
+      this._pointerDown = 1;
+    };
     this._pointerTracker = (e) => {
+      // The POSITION is still recorded on every move, gate or no gate: the
+      // paste route (_pasteZone) reads _lastPointer with no drag in flight and
+      // no TTL, so it must stay current whenever the cursor is over the panel.
       this._lastPointer = { x: e.clientX, y: e.clientY, t: Date.now() };
+      if (!this._pointerDown) return;
       this._syncDragAffordance();
     };
     // A jQuery-UI drop or abort ends with no event on this panel at all — the
     // droppable's `drop` only fires when the pointer is inside it — so the
     // affordance would stay lit after a drag that ended elsewhere.
-    this._pointerRelease = () => this._setDragAffordance(null);
+    this._pointerRelease = () => {
+      this._pointerDown = 0;
+      this._setDragAffordance(null);
+    };
+    document.addEventListener("mousedown", this._pointerArm, true);
     document.addEventListener("mousemove", this._pointerTracker, true);
     document.addEventListener("mouseup", this._pointerRelease, true);
   }
@@ -7899,15 +8236,81 @@ class __tasks_panel extends LetcBox {
   // shows a veil + spinner over the current view), let that frame PAINT (double
   // rAF), then run the full render and clear the flag. The attribute lives on
   // this.el, which feed() never replaces, so the veil survives until cleared.
-  // Close an overlay (task detail / create modal) INSTANTLY: hide its DOM
-  // this frame, then rebuild the board deferred. The overlay is only truly
-  // removed by the full re-feed, which on a busy board takes long enough
-  // that the X felt stuck (tester 2026-07-30: click close → delay → popup
-  // finally disappears).
-  _dismissOverlayNow(cls) {
-    if (!this.el) return;
+  /**
+   * Close an overlay (task detail / create modal).
+   *
+   * This used to be `_dismissOverlayNow`, and it hid the backdrop outright —
+   * `display: none` this frame, rebuild deferred — because the overlay is only
+   * truly removed by the re-feed behind it, which on a busy board took long
+   * enough that the X felt stuck (tester 2026-07-30: "click close → delay →
+   * popup finally disappears").
+   *
+   * THAT COMPLAINT IS THE CONSTRAINT, not an argument against animating. What
+   * felt stuck was the overlay sitting there UNCHANGED while the board rebuilt
+   * underneath it — nothing acknowledged the click. So the state still clears
+   * synchronously in the caller (a second click cannot reopen or double-submit),
+   * the click is acknowledged on the very next frame by the exit itself, and
+   * only the DOM teardown waits the 140ms the animation needs.
+   *
+   * `done` is that teardown. WITHOUT IT THIS STAYS INSTANT, and that is the
+   * meaningful distinction rather than a convenience:
+   *
+   *   - a DISMISSAL (X, Cancel, a successful commit) passes one, and animates
+   *   - a REACTION passes none, and cuts. A peer deleted the task under the
+   *     user, or they walked back to a parent task — which re-uses this very
+   *     element to draw something else in the same tick, so a fading ghost
+   *     would sit under whatever replaced it.
+   *
+   * @param {String}   cls  backdrop class suffix, e.g. "detail-backdrop"
+   * @param {Function} done the teardown to run once the exit has played
+   */
+  _dismissOverlay(cls, done) {
+    // Every early return still runs the teardown. An exit that animates
+    // nothing AND tears down nothing leaves the overlay on screen for good,
+    // with the panel's own state already saying it is shut.
+    const run = () => {
+      this._closingTimer = null;
+      if (done) done();
+    };
+    if (!this.el) return run();
     const el = this.el.querySelector(`.${this.fig.family}__${cls}`);
-    if (el) el.style.display = "none";
+    if (!el) return run();
+    if (!done || this._prefersReducedMotion()) {
+      el.style.display = "none";
+      return run();
+    }
+    el.dataset.closing = "1";
+    this._cancelPendingExit();
+    this._closingTimer = setTimeout(run, OVERLAY_EXIT_MS);
+  }
+
+  /**
+   * Drop a queued teardown.
+   *
+   * Anything that re-renders during the exit window — a WS push landing, the
+   * user opening another task — rips the animating node out early. That is
+   * fine to look at; it is exactly what closing did before. But the queued
+   * teardown must not then fire against a panel that has moved on and re-feed
+   * wrappers it no longer owns, so every renderer drops it first.
+   */
+  _cancelPendingExit() {
+    if (!this._closingTimer) return;
+    clearTimeout(this._closingTimer);
+    this._closingTimer = null;
+  }
+
+  // Honoured by hand rather than left to the skin: the skin can stop the
+  // animation, but only this can stop the WAIT for one that will never play.
+  _prefersReducedMotion() {
+    try {
+      return !!(
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    } catch (_) {
+      return false;
+    }
   }
 
   _renderDeferred() {
@@ -7928,32 +8331,207 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  /**
+   * The focused field, so a DOM swap can put the caret back where it was.
+   * Split out of _render so the overlay-only path restores focus identically.
+   * @returns {Object|null}
+   */
+  _captureFocus() {
+    const active =
+      typeof document !== "undefined" ? document.activeElement : null;
+    if (!active || !this.el || !this.el.contains(active) || !active.getAttribute)
+      return null;
+    const snap = {
+      name: active.getAttribute("name"),
+      pos: null,
+      end: null,
+      scope: "",
+    };
+    const inCreate = this.el.querySelector(".tasks-panel__create-modal");
+    const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
+    if (inCreate && inCreate.contains(active))
+      snap.scope = ".tasks-panel__create-modal ";
+    else if (inDetail && inDetail.contains(active))
+      snap.scope = ".tasks-panel__detail-panel ";
+    try {
+      snap.pos = active.selectionStart;
+      snap.end = active.selectionEnd;
+    } catch (_) {
+      /* date / number inputs throw here */
+    }
+    return snap.name ? snap : null;
+  }
+
+  /**
+   * @param {Object|null} snap from _captureFocus
+   */
+  _restoreFocus(snap) {
+    if (!snap || typeof requestAnimationFrame !== "function") return;
+    requestAnimationFrame(() => {
+      if (!this.el) return;
+      const next = this.el.querySelector(`${snap.scope}[name="${snap.name}"]`);
+      if (!next || typeof next.focus !== "function") return;
+      next.focus();
+      if (snap.pos != null && typeof next.setSelectionRange === "function") {
+        try {
+          next.setSelectionRange(snap.pos, snap.end != null ? snap.end : snap.pos);
+        } catch (_) {}
+      }
+    });
+  }
+
+  /**
+   * Whatever was open has now been painted, so the NEXT render must not play
+   * its entrance again. Recorded AFTER the build, because the skeleton reads
+   * these while assembling — see hasPainted.
+   *
+   * Read from the live state rather than set by each open/close handler:
+   * there are several ways into and out of each of these overlays, and a
+   * flag maintained by hand at every one of them is a flag that will be
+   * missed at one of them.
+   */
+  _markPainted() {
+    this._painted = {
+      create: !!this._creating,
+      detail: !!this._detailId,
+      board: !!this._boardModalOpen,
+    };
+    this._chromeSig = this._chromeSignature();
+  }
+
+  /**
+   * A named part that is mounted right now, or null. Synchronous half of
+   * _withPart, so a caller that must feed in the SAME tick (rather than a
+   * microtask later, behind whatever else is already queued) can do so.
+   * @param {String} name
+   */
+  _mountedPart(name) {
+    let branch = null;
+    try {
+      branch = this._branches ? this._branches[name] : null;
+    } catch (_) {
+      return null;
+    }
+    if (!branch || (branch.isDestroyed && branch.isDestroyed())) return null;
+    return branch;
+  }
+
+  /**
+   * Every piece of state the skeleton reads OUTSIDE the three overlay
+   * wrappers. _render records it; _renderOverlays refuses when it has moved
+   * and falls back to the full rebuild.
+   *
+   *   pickerOpen === "filter"  the popup AND its backdrop are conditional root
+   *                            kids, so opening or closing it changes the kid
+   *                            list itself
+   *   getView()                the viewbar's right-hand controls and the tab
+   *                            strip's data-active
+   *   mayWriteTasks()          the "+ New task" / "+ New board" buttons and
+   *                            the per-column "⋮"
+   *   colMenuFor / renameDraft the column popover lives in the COLUMN header's
+   *                            `col-menu-<key>` slot — on the board, not in a
+   *                            wrapper. add-board clears both while opening a
+   *                            modal, and without them here the popover would
+   *                            stay open behind it.
+   *
+   * This is the invariant that keeps the fast path honest, so a new caller of
+   * _renderOverlays only has to ask "does my transition touch anything the
+   * board or the viewbar draws?" — and if the answer is yes, add it here
+   * rather than reasoning about whether it is reachable.
+   *
+   * It also makes the FIRST render after a mount full by construction: nothing
+   * has been recorded yet, so the comparison cannot match.
+   *
+   * @returns {String}
+   */
+  _chromeSignature() {
+    return [
+      this._pickerOpen === "filter" ? 1 : 0,
+      this.getView(),
+      this._mayWriteTasks() ? 1 : 0,
+      this._colMenuFor == null ? "" : this._colMenuFor,
+      this._colRenameDraft == null ? "" : this._colRenameDraft,
+    ].join("|");
+  }
+
+  // The three overlay hosts, in tree order. Their sys_pn is generated by
+  // Skeletons.Wrapper from the `name` prop (`wrapper-${name}`).
+  static get OVERLAY_PARTS() {
+    return [
+      "wrapper-task-detail",
+      "wrapper-task-create",
+      "wrapper-task-board-modal",
+    ];
+  }
+
+  /**
+   * Repaint ONLY the three overlay wrappers — task detail, create modal, new
+   * board — and leave the view behind them exactly as it stands.
+   *
+   * Opening a task cost a full _render(): feed() on the root replaces the whole
+   * collection, so every card on the board was destroyed and rebuilt just to
+   * put a modal on top of it. On a workspace-wide board that is thousands of
+   * Marionette views and DOM elements per click, and it is the reason closing
+   * a modal needed _dismissOverlay to hide the backdrop up front to feel
+   * responsive at all (tester 2026-07-30: "click close -> delay -> popup
+   * finally disappears").
+   *
+   * Nothing outside the wrappers changes on these transitions, so nothing
+   * outside them is touched — the view keeps its DOM, its scroll offset and
+   * its focus, which is also why this path needs no scroll capture/restore.
+   *
+   * SYNCHRONOUS, deliberately. The wrappers are permanent parts of the tree
+   * (the skin hides them on `:empty` / `data-state="closed"`, which the wrapper
+   * behaviour maintains from the collection), so they are always mounted and
+   * can be fed in the same tick. A microtask-deferred feed would land AFTER a
+   * caller that renders and then immediately refreshes a sub-part — the
+   * add-child-task path does exactly that — and destroy the part it had just
+   * fed.
+   *
+   * Falls back to the full render when a wrapper is missing: the panel is not
+   * mounted yet, or the skeleton was restructured. Same guard as
+   * _refreshViewBody.
+   */
+  _renderOverlays() {
+    // Same reason as _render: this re-feeds the wrappers, so an exit still
+    // playing in one of them ends here. A teardown that is running RIGHT NOW
+    // has already cleared its own handle, so this is a no-op on that path —
+    // it only catches the renders that arrive from somewhere else mid-exit.
+    this._cancelPendingExit();
+    if (this._chromeSig !== this._chromeSignature()) return this._render();
+    const names = this.constructor.OVERLAY_PARTS;
+    const parts = names.map((n) => this._mountedPart(n));
+    if (parts.some((part) => !part)) return this._render();
+    const kids = require("./skeleton")(this).kids || [];
+    const nodes = names.map((n) => kids.find((k) => k && k.sys_pn === n));
+    if (nodes.some((node) => !node)) return this._render();
+    const focus = this._captureFocus();
+    nodes.forEach((node, i) => parts[i].feed(node.kids || []));
+    this._markPainted();
+    // ui-core sets <input> values through a 200ms `waitElement` poll, so the
+    // title/description start empty after each feed; pre-populate them
+    // (sync + next frame as a safety net for late-mount children).
+    this._prepopulateInputs();
+    this._renderCommentBodies();
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        this._prepopulateInputs();
+        this._renderCommentBodies();
+      });
+    }
+    this._restoreFocus(focus);
+  }
+
   _render() {
+    // This feed replaces the overlay wrappers outright, so any overlay that is
+    // mid-exit goes with it. Drop the queued teardown: it would otherwise fire
+    // a moment from now and re-feed wrappers this render has already settled.
+    this._cancelPendingExit();
     // Drafts stay in sync via the `task-input-changed` watch — do NOT add
     // a pre-feed DOM read here; it would race the Entry's async setter.
 
     // Capture focused input + cursor BEFORE the DOM swap, restore after.
-    let focusName = null;
-    let cursorPos = null;
-    let cursorEnd = null;
-    let scopeSel = "";
-    const active =
-      typeof document !== "undefined" ? document.activeElement : null;
-    if (active && this.el && this.el.contains(active) && active.getAttribute) {
-      focusName = active.getAttribute("name");
-      const inCreate = this.el.querySelector(".tasks-panel__create-modal");
-      const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
-      if (inCreate && inCreate.contains(active))
-        scopeSel = ".tasks-panel__create-modal ";
-      else if (inDetail && inDetail.contains(active))
-        scopeSel = ".tasks-panel__detail-panel ";
-      try {
-        cursorPos = active.selectionStart;
-        cursorEnd = active.selectionEnd;
-      } catch (_) {
-        /* date / number inputs throw here */
-      }
-    }
+    const focus = this._captureFocus();
 
     // Capture the underlying view's scroll BEFORE the DOM swap so opening the
     // detail/create overlay (or any background re-render) doesn't reset the
@@ -7961,19 +8539,12 @@ class __tasks_panel extends LetcBox {
     const savedScroll = this._captureViewScroll();
 
     this.feed(require("./skeleton")(this));
-    // Whatever was open has now been painted, so the NEXT render must not play
-    // its entrance again. Recorded AFTER the build, because the skeleton reads
-    // these while assembling — see hasPainted.
-    //
-    // Read from the live state rather than set by each open/close handler:
-    // there are several ways into and out of each of these overlays, and a
-    // flag maintained by hand at every one of them is a flag that will be
-    // missed at one of them.
-    this._painted = {
-      create: !!this._creating,
-      detail: !!this._detailId,
-      board: !!this._boardModalOpen,
-    };
+    this._markPainted();
+    // The board has drawn: the folder window's Task entrance keys on this
+    // (window/folder/skin, data-view="task"), so it slides in WITH its columns.
+    // After a page refresh nothing is cached and the first render waits on
+    // task.list — an entrance on mount ran on an empty panel instead.
+    if (this.el && this.el.dataset) this.el.dataset.painted = "1";
     // ui-core sets <input> values through a 200ms `waitElement` poll, so
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).
@@ -7990,22 +8561,7 @@ class __tasks_panel extends LetcBox {
       });
     }
 
-    if (focusName && typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(() => {
-        if (!this.el) return;
-        const next = this.el.querySelector(`${scopeSel}[name="${focusName}"]`);
-        if (!next || typeof next.focus !== "function") return;
-        next.focus();
-        if (cursorPos != null && typeof next.setSelectionRange === "function") {
-          try {
-            next.setSelectionRange(
-              cursorPos,
-              cursorEnd != null ? cursorEnd : cursorPos,
-            );
-          } catch (_) {}
-        }
-      });
-    }
+    this._restoreFocus(focus);
   }
 
   /**
@@ -8026,15 +8582,8 @@ class __tasks_panel extends LetcBox {
    * but the listener removes only its own callback.
    */
   _withPart(name) {
-    let branch = null;
-    try {
-      branch = this._branches ? this._branches[name] : null;
-    } catch (_) {
-      branch = null;
-    }
-    if (branch && (!branch.isDestroyed || !branch.isDestroyed())) {
-      return Promise.resolve(branch);
-    }
+    const branch = this._mountedPart(name);
+    if (branch) return Promise.resolve(branch);
     return new Promise((resolve) => {
       const onReady = (child) => {
         if (!child || child.mget(_a.sys_pn) != name) return;
@@ -8385,8 +8934,41 @@ class __tasks_panel extends LetcBox {
   getLabel(id) {
     return this._labels.find((l) => l.id === id) || null;
   }
+  /**
+   * A workspace member by uid.
+   *
+   * Indexed, because this is called once per assignee per rendered card (twice,
+   * in fact — getKnownAssignees filters with it and the avatar builder then
+   * resolves the same uid again), so a linear scan made it O(cards x assignees
+   * x members) on every repaint.
+   *
+   * Deliberately keyed on the RAW values and looked up with the raw uid: Map
+   * uses SameValueZero, which matches the `===` of the `.find` this replaces,
+   * so a numeric uid still misses a string id exactly as it did before. First
+   * writer wins on each key, which is the member `.find` would have returned.
+   *
+   * ONE deliberate divergence, for a nullish uid. The old `.find` compared
+   * `m.id === uid || m.uid === uid`, so `getMember(undefined)` matched the
+   * first member that simply HAD NO `id` (or no `uid`) field — an arbitrary
+   * person, decided by the shape of the row rather than by the query. Answer
+   * null instead. Every caller either falls back with `|| {}` / `|| …` or
+   * treats null as "no longer here" (getKnownAssignees, _memberName, the
+   * workload chart's unassigned bucket), so this can only turn a wrong name
+   * into the right absence.
+   */
   getMember(uid) {
-    return this._members.find((m) => m.id === uid || m.uid === uid) || null;
+    if (uid == null) return null;
+    const list = this._members || [];
+    if (this._memberIdxSrc !== list) {
+      this._memberIdxSrc = list;
+      const idx = new Map();
+      for (const m of list) {
+        if (m.id != null && !idx.has(m.id)) idx.set(m.id, m);
+        if (m.uid != null && !idx.has(m.uid)) idx.set(m.uid, m);
+      }
+      this._memberIdx = idx;
+    }
+    return this._memberIdx.get(uid) || null;
   }
 
   /**
@@ -9191,6 +9773,32 @@ class __tasks_panel extends LetcBox {
    */
   hasPainted(key) {
     return !!(this._painted && this._painted[key]);
+  }
+
+  /**
+   * Is this detail-card section still waiting on its fetch?
+   *
+   * The skeleton asks so it can draw placeholder rows instead of an empty
+   * state that is not yet true. See `_loading` in initialize.
+   *
+   * @param {String} key attachments | comments | history
+   */
+  isLoading(key) {
+    return !!(this._loading && this._loading[key]);
+  }
+
+  /**
+   * Mark a section's fetch as finished. Ignores answers for a task the user
+   * has already navigated away from — the same guard the callers apply before
+   * feeding their rows, kept here too so a new caller cannot forget it and
+   * clear the flag for whatever is open NOW.
+   *
+   * @param {String} key    attachments | comments | history
+   * @param {String} taskId the task the answer belongs to
+   */
+  _settleLoading(key, taskId) {
+    if (taskId != null && `${taskId}` !== `${this._detailId}`) return;
+    if (this._loading) this._loading[key] = 0;
   }
 
   isCreating() {

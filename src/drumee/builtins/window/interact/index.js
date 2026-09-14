@@ -39,7 +39,39 @@ class __window_interact extends windowCore {
 
     this.declareHandlers();
     if (opt.headless) {
-      return
+      // A headless window is the WORKSPACE PANE (wm/index.js loadWorkspace is
+      // the only caller that sets the flag). It is sized entirely by CSS —
+      // folder/skin `[data-headless="1"]` pins top/left/width/height with
+      // !important — so it skips every drag/resize geometry step below, and
+      // that early return is correct.
+      //
+      // But `this.size` is not only geometry bookkeeping for those steps: it
+      // is a WINDOW INVARIANT that subclasses read straight after this
+      // returns. folder/index.js does `this.style.set({ width:
+      // this.size.width, ... })` unguarded. On desktop that survived by
+      // accident — folder's `!Visitor.isMobile()` block assigns `this.size`
+      // from `_defaultBounds()` a few lines earlier — but that block is
+      // skipped on MOBILE, so the pane reached the read with `this.size`
+      // undefined and threw
+      //
+      //   TypeError: Cannot read properties of undefined (reading 'width')
+      //
+      // on every single mobile boot, because the workspace pane IS the mobile
+      // default screen. Returning without the invariant was the bug; the
+      // mobile guard in folder only exposed it.
+      //
+      // The viewport is the honest value: it is what the !important CSS gives
+      // the pane anyway, so any later reader sees what is actually on screen,
+      // and writing it back out as inline style is a no-op against that
+      // cascade. Desktop is unchanged either way — folder overwrites all four
+      // fields from `_defaultBounds()` immediately after.
+      this.size = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        minWidth: 0,
+        minHeight: 0,
+      };
+      return;
     }
 
     let width = _K.docViewer.width;

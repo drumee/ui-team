@@ -195,6 +195,17 @@
   // --area-private (#eb6159): that is the folder ART colour, and the design
   // uses this deeper, less saturated red for filled surfaces carrying text.
   --signal-restricted: #d65f59;
+  // Figma "promo coral" (Drumee 2.0 node 692-128029) — the campaign accent on
+  // the Billing page: the selected Yearly tab's pill while a promotion runs,
+  // and the struck-through list price on a discounted plan card. Deliberately
+  // not --error/--signal-error: nothing here is a failure, and a saving shown
+  // in a validation red reads as one.
+  --signal-promo: #ff6265;
+  // The lightning glyph in the campaign modal's badge (Figma 696-141463). The
+  // normalized sprite strips every fill, so the icon's own #EBD212 has to be
+  // reapplied from CSS; it is a shade of its own, not --yellow-300 (#ffe50d,
+  // brighter) or --yellow-400 (#e6c100, duller).
+  --signal-promo-bolt: #ebd212;
   --warning: #e8a13b;
   --info: #71a3f4;
   --area-personal: #433CC5;

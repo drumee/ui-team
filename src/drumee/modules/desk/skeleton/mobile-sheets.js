@@ -74,26 +74,31 @@ function workspaceSheet(ui, rows, curHubId) {
   // a switch lands on FILES and the rail is reset to Files, but ONLY on a real
   // change of workspace.
   //
-  // ⚠️ MOBILE, KNOWN GAP — these rows do not switch anything today.
+  // Each row carries BOTH ids, and they are not interchangeable.
   //
-  // They re-dispatch to "switch-workspace", and desk/index.js answers that with
-  // `this._switchWorkspace(cmd.mget("wsKey"))` — but `extra` below carries only
-  // `wsHubId`, so wsKey is undefined and _switchWorkspace returns on its first
-  // line. Nothing throws; the sheet just closes.
+  // `wsKey` is what actually switches: desk/index.js answers "switch-workspace"
+  // with `this._switchWorkspaceAndOffer(cmd.mget("wsKey"))`, and
+  // `_switchWorkspace` both bails on a falsy key and matches rows by it.
+  // hub_id alone is NOT enough, which is the whole reason the key exists —
+  // every PERSONAL workspace carries the user's own hub_id, so id-matching
+  // opens the first one whichever row was tapped (the same collision that lit
+  // the entire "Personal" section at once).
   //
-  // `wsKey` is desk_module._workspaceKey(row): "hub:<id>" or "folder:<nid>".
-  // hub_id alone is NOT enough and that is the whole point of the key — every
-  // personal workspace carries the user's own hub_id, so id-matching opens the
-  // first one whichever row was tapped. Whoever owns mobile: add
-  // `wsKey: ui._workspaceKey(r)` alongside wsHubId (keep wsHubId — other
-  // per-row consumers read it). Desktop is unaffected; its rows already set it.
+  // `wsHubId` stays because other per-row consumers read it; it is not what
+  // the switch resolves on.
+  //
+  // This closes the gap this comment used to only describe: the rows
+  // re-dispatched "switch-workspace" with wsKey undefined, so
+  // `_switchWorkspace` returned on its first line — nothing threw, the sheet
+  // just closed and the workspace never changed. Desktop was always fine; its
+  // rows already set the key.
   const wsRow = (r) => {
     const hubId = r.hub_id || r.id;
     return row(fig, ui, {
       icon: wsIcon(fig, r.area, r.filetype),
       label: r.filename || r.name || "",
       go: "switch-workspace",
-      extra: { wsHubId: hubId },
+      extra: { wsHubId: hubId, wsKey: ui._workspaceKey(r) },
       trailing:
         curHubId && curHubId == hubId
           ? Skeletons.Image.Svg({
@@ -109,22 +114,46 @@ function workspaceSheet(ui, rows, curHubId) {
   const section = (label, list) =>
     list.length ? [heading(fig, label), ...list.map(wsRow)] : [];
 
+  // THREE PARTS, and only the middle one moves — the same shape the desktop
+  // switcher has (`__ws-menu` / `__ws-head` / `__ws-list` / `__ws-new` in
+  // desk/skin/topbar.scss). The title and the create button are chrome; the
+  // rows are content. Letting the whole sheet scroll sent the create button off
+  // the bottom edge, and it is the only way to make a workspace from here, so
+  // it must never need scrolling to reach — the reason the desktop menu gives
+  // for putting its overflow on __ws-list rather than on the menu box.
+  //
+  // The list is its OWN box rather than the sheet's scroller because
+  // __msheet-content is shared by all four sheets: the go-to grid, the account
+  // rows and the create options still want it scrolling them wholesale. Only
+  // this kind splits chrome from content, and the skin scopes that split on the
+  // host's `data-kind="workspace"`.
   return [
     Skeletons.Note({
       className: `${fig}__msheet-title`,
       content: LOCALE.WORKSPACES,
     }),
-    ...section(LOCALE.WORKSPACES, hubs),
-    ...section(LOCALE.PERSONAL, personal),
-    divider(fig),
+    Skeletons.Box.Y({
+      className: `${fig}__msheet-list`,
+      kidsOpt: { active: 0 },
+      kids: [
+        ...section(LOCALE.WORKSPACES, hubs),
+        ...section(LOCALE.PERSONAL, personal),
+      ],
+    }),
+    // The desktop's __ws-new, as a sheet row: a SOLID primary button, centred,
+    // pinned under the list. No divider above it any more — a rule is what
+    // separated the old text-link version from the rows, and a filled button
+    // already reads as an action ON the list rather than another workspace IN
+    // it. Still a __msheet-row, so the "mobile-sheet-go" dispatch, the goTarget
+    // and the kidsOpt tap-guard are all unchanged.
     row(fig, ui, {
       icon: Skeletons.Image.Svg({
         ico: "topbar-add",
-        className: `${fig}__msheet-ico ${fig}__msheet-ico--accent`,
+        className: `${fig}__msheet-ico`,
       }),
       label: LOCALE.NEW_WORKSPACE || LOCALE.WORKSPACE,
       go: "new-workspace",
-      modifier: "accent",
+      modifier: "new",
     }),
   ];
 }
@@ -184,6 +213,34 @@ function accountSheet(ui) {
   const iconOf = (ico) =>
     Skeletons.Image.Svg({ ico, className: `${fig}__msheet-ico` });
 
+  // locale/supported, NOT locale/lang: the latter statically requires every
+  // string table, so requiring it here would duplicate all of them into the
+  // desk chunk just to read a two-letter code.
+  const uiLang = require("locale/supported");
+  const currentLanguage = uiLang.current();
+
+  // Same group the desktop account menu carries, so a phone user is not the
+  // only one who cannot change language. Labels come from `LOCALE[code]` —
+  // the established lookup for language names — so the list reads
+  // "English / French" in English and "Anglais / Français" in French.
+  const languageRows = uiLang.SUPPORTED.map((code) => {
+    const active = code === currentLanguage;
+    return row(fig, ui, {
+      icon: iconOf("apps-globe"),
+      label: LOCALE[code] || code.toUpperCase(),
+      // Selecting the language already in use would reload the app for no
+      // change; an empty goTarget closes the sheet and stops there.
+      go: active ? null : "set-ui-language",
+      extra: { langCode: code },
+      trailing: active
+        ? Skeletons.Image.Svg({
+            ico: "desktop_check",
+            className: `${fig}__msheet-check`,
+          })
+        : null,
+    });
+  });
+
   return [
     Skeletons.Box.X({
       className: `${fig}__msheet-identity`,
@@ -230,6 +287,9 @@ function accountSheet(ui) {
     divider(fig),
     row(fig, ui, { icon: iconOf("sidebar_settings"), label: LOCALE.SETTINGS, go: "toggle-settings" }),
     row(fig, ui, { icon: iconOf("ph-info"), label: LOCALE.GET_HELP, go: "toggle-help" }),
+    divider(fig),
+    heading(fig, LOCALE.LANGUAGE),
+    ...languageRows,
     divider(fig),
     row(fig, ui, { icon: iconOf("sidebar_signout"), label: LOCALE.SIGN_OUT, go: "do-logout" }),
   ].filter(Boolean);

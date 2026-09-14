@@ -1,4 +1,5 @@
 const { isTaskViewAllowed } = require("libs/billing");
+const { chipGlyph } = require("libs/file-meta");
 
 /**
  * The `data-entered` stamp that gates an overlay's entrance animation.
@@ -141,10 +142,14 @@ const make = function (ui) {
       ? `${formatDue(task.start_date)} → ${formatDue(task.due_date)}`
       : formatDue(task && task.due_date);
 
+  // "Now" is resolved ONCE per render rather than per card. It was two Dayjs
+  // objects per card (one for the date, one for today), and every card on the
+  // board judged itself against a slightly different instant.
+  const nowDay = Dayjs();
   const isOverdue = (d) => {
     if (!d) return false;
     try {
-      return Dayjs(d).isBefore(Dayjs(), "day");
+      return Dayjs(d).isBefore(nowDay, "day");
     } catch {
       return false;
     }
@@ -152,6 +157,15 @@ const make = function (ui) {
 
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
+
+  // Column by key. Built once per render: the card footer's status pill used to
+  // run `getColumns().find(...)` for every card, which is O(cards x columns) on
+  // a board whose column count is user-controlled. First-wins, exactly as the
+  // `.find` it replaces.
+  const colByKey = new Map();
+  for (const c of ui.getColumns()) {
+    if (!colByKey.has(c.key)) colByKey.set(c.key, c);
+  }
 
   // @-mention support for the description fields. The description is a
   // contenteditable editor (not a textarea) so tagged members render as styled
@@ -306,8 +320,7 @@ const make = function (ui) {
     // Status pill row (Figma 2040-106090: "● In Progress" + avatars at the
     // card bottom). Dot color comes from the live column set so custom
     // columns tint correctly.
-    const cardCol =
-      ui.getColumns().find((c) => c.key === (task.status || colKey)) || {};
+    const cardCol = colByKey.get(task.status || colKey) || {};
     const statusPill = Skeletons.Box.X({
       className: `${pfx}__task-status`,
       dataset: { theme: cardCol.theme || "default" },
@@ -505,7 +518,26 @@ const make = function (ui) {
           // hyphen-aware mapping which a single token can't satisfy.)
           dataset: { dropcol: col.key },
           kids: [
-            ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
+            // WINDOWED. Only the first `cardWindow()` cards are built; the rest
+            // arrive as the column is scrolled (index.js _installCardWindow).
+            //
+            // A card is ~19 skeleton nodes, so a column holding every task of a
+            // busy workspace mounted thousands of Marionette views in one
+            // synchronous burst. Measured on production 2026-09-11 with ~500
+            // tasks: listeners went 23,155 -> 124,160 and the heap 60 MB ->
+            // 167 MB inside a single 2,985 ms microtask checkpoint, and the tab
+            // stopped responding to input entirely.
+            //
+            // `_loadTasks` fetches the whole workspace in ONE request with no
+            // pagination, so the row count here is unbounded by design — the
+            // render is the only place that can bound it.
+            //
+            // Slicing only what is BUILT: `state[col.key]` stays whole, so the
+            // column count badge, drag/drop bookkeeping and the empty-state
+            // test below all still see every task.
+            ...(state[col.key] || [])
+              .slice(0, ui.cardWindow(col.key))
+              .map((t) => taskCard(col.key, t)),
             // Empty-state drop hint. Keeps an empty column an obvious, valid
             // drop target. The surgical drag handler (_syncColumn) adds/removes
             // an equivalent node as cards enter/leave without a full re-render.
@@ -1019,24 +1051,24 @@ const make = function (ui) {
       ].filter(Boolean),
     });
 
-    const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
-
     // Rows live in a stable sub-part so unlink can re-feed just this list
     // without re-rendering the whole detail panel (which would steal focus
     // and wipe any unsaved title/description edits).
+    // Built through the SHARED builder rather than inline. This list has two
+    // entry points — the opening render here, and _refreshAttachmentsList when
+    // the fetch lands — and only the second went through
+    // buildAttachmentRowsContent. So a rule added there (the loading skeleton)
+    // would have applied to every repaint EXCEPT the one that opens the card,
+    // which is the only moment the section is actually still loading.
+    const attachmentsLoading = !!(ui.isLoading && ui.isLoading("attachments"));
     const attachmentRowsContainer = Skeletons.Box.X({
       className: `${pfx}__attachment-rows`,
       sys_pn: "attachment-rows",
       partHandler: ui,
-      dataset: { empty: attachments.length ? 0 : 1 },
-      kids: attachments.length
-        ? attachments.map(attachmentRow)
-        : [
-            Skeletons.Note({
-              className: `${pfx}__attachments-empty`,
-              content: LOCALE.NO_ATTACHMENTS,
-            }),
-          ],
+      // A section holding skeleton rows is not empty — it has something to
+      // show, and the flag is what other rules key off.
+      dataset: { empty: attachments.length || attachmentsLoading ? 0 : 1 },
+      kids: buildAttachmentRowsContent(ui, attachments, detail.id),
     });
 
     // "Child task items" — the metadata sidebar, under Due date (Figma
@@ -1942,7 +1974,12 @@ const make = function (ui) {
       ],
     });
 
-  const filterDropdown = Skeletons.Box.Y({
+  // A THUNK, not a value. This popup is only in the tree while it is open, but
+  // as a plain const it was assembled on every single render regardless — and
+  // its member category builds a row (avatar + name) per workspace member, so
+  // a 100-member workspace paid ~600 discarded skeleton nodes on every repaint
+  // of a board whose filter was shut.
+  const filterDropdown = () => Skeletons.Box.Y({
     className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
     kids: [
       Skeletons.Box.X({
@@ -2165,7 +2202,7 @@ const make = function (ui) {
         : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       // Every view gets the same multi-dimension accordion.
-      filterOpen ? filterDropdown : null,
+      filterOpen ? filterDropdown() : null,
       Skeletons.Wrapper.Y({
         className: `${pfx}__detail-wrapper`,
         name: "task-detail",
@@ -2614,44 +2651,11 @@ function pendingStrip(ui, scope) {
   });
 }
 
-// Icon per file type for a comment's attachment card. media/template/map only
-// knows office/code types and returns the RAW EXTENSION for anything else
-// ("png" → "png"), which is not a sprite id — so the common media types drew a
-// missing icon. These four are named explicitly; everything else still goes
-// through the shared map, now with a real fallback id instead of a made-up one.
-const ATTACHMENT_ICONS = {
-  txt: "app-txt-file",
-  png: "bg-image",
-  jpg: "bg-image",
-  jpeg: "bg-image",
-  mp4: "app-video-file",
-  mp3: "app-audio-file",
-  // Office types use the RAW sprite (raw-*), which keeps each icon's own
-  // colours — Word blue, Excel green, PowerPoint orange — rather than the
-  // normalized single-colour glyphs used above. Both sprites are loaded
-  // (src/sprite.js), and the same names come out of media/template/map, so a
-  // comment's attachment matches the file icon shown everywhere else.
-  // Legacy extensions map to the same icon as their x-suffixed twin.
-  doc: "raw-documents_word",
-  docx: "raw-documents_word",
-  xls: "raw-documents_excel",
-  xlsx: "raw-documents_excel",
-  ppt: "raw-documents_powerpoint",
-  pptx: "raw-documents_powerpoint",
-};
-
-function attachmentIcon(f) {
-  if (f && f.iconChartId) return f.iconChartId;
-  const ext = String((f && f.extension) || "").toLowerCase();
-  if (ATTACHMENT_ICONS[ext]) return ATTACHMENT_ICONS[ext];
-  let mapped;
-  try {
-    mapped = require("media/template/map")(ext, "app-file");
-  } catch (_) {
-    /* alias unavailable (tests) — fall through to the generic icon */
-  }
-  return mapped || "app-file";
-}
+// Icon per file type for a comment's attachment card. Shared with the chat
+// composer's queued-file chips via libs/file-meta `chipGlyph` - the same card
+// in two places, so the map lives in one. Kept as a local alias because this
+// file calls it in several spots and `attachmentIcon(f)` reads better here.
+const attachmentIcon = chipGlyph;
 
 // Files already attached to a saved comment (task_comment_file, delivered by
 // task_comment_list). The ✕ detaches the file; the media node stays put.
@@ -2792,6 +2796,9 @@ function commentAttachments(ui, c, isOwn) {
 function buildCommentListContent(ui) {
   const pfx = ui.fig.family;
   const comments = ui.getComments() || [];
+  // Still fetching — see skelRows. Three rows: enough to read as a thread
+  // rather than as one stray row, without pushing the composer off-screen.
+  if (isLoading(ui, "comments")) return skelRows(pfx, "comments", 3);
   if (!comments.length) {
     return [
       Skeletons.Note({
@@ -3221,6 +3228,7 @@ const HISTORY_VERBS = {
 function buildHistoryListContent(ui) {
   const pfx = ui.fig.family;
   const history = ui.getTaskHistory ? ui.getTaskHistory() || [] : [];
+  if (isLoading(ui, "history")) return skelRows(pfx, "history", 2);
   if (!history.length) {
     return [
       Skeletons.Note({
@@ -3663,8 +3671,75 @@ function buildDueSectionContent(ui, scope = "detail") {
   ];
 }
 
+/**
+ * Placeholder rows for a detail section whose fetch is still in flight.
+ *
+ * WHY THIS EXISTS AT ALL: the card opens instantly from the board row that was
+ * clicked, but attachments, comments and the change log are three separate
+ * round trips (_openDetail in ../index.js). Until they land, getComments() and
+ * getDetailAttachments() both answer `[]` — the same value they answer with
+ * when the task genuinely has none — so every one of these sections used to
+ * open claiming to be EMPTY, and then filled in underneath the sentence
+ * denying it. `ui.isLoading(key)` is the bit that tells the two apart.
+ *
+ * Shapes match the rows they stand in for, so nothing jumps when the real
+ * content replaces them: a comment is an avatar plus two lines, a history
+ * entry an avatar plus one, an attachment a single chip.
+ *
+ * `shape` is deliberately the SAME word as the loading key it is drawn for
+ * (attachments | comments | history) rather than a singular of it. Two
+ * vocabularies for one thing is how a `[data-shape="comment"]` rule quietly
+ * stops matching the `comments` section it was written for.
+ *
+ * @param {String} pfx   the panel's BEM family
+ * @param {String} shape attachments | comments | history — the section's key
+ * @param {Number} n     how many rows
+ */
+function skelRows(pfx, shape, n) {
+  // Widths alternate so the block reads as text rather than as a grid. Inline
+  // rather than per-row classes: it is the only thing that differs.
+  const LINES = {
+    comments: ["38%", "82%"],
+    history: ["64%"],
+    attachments: ["100%"],
+  };
+  const withDot = shape !== "attachments";
+  return Array.from({ length: n }, (_, i) =>
+    Skeletons.Box.X({
+      className: `${pfx}__skel-row`,
+      // attrOpt, NOT dataset: dataset alone is dropped at render, and the skin
+      // selects on [data-shape]. Shipping one without the other fails silently
+      // — see the note on `entered` at the head of this file.
+      attrOpt: { "data-shape": shape },
+      kids: [
+        withDot ? Skeletons.Box.X({ className: `${pfx}__skel-dot` }) : null,
+        Skeletons.Box.Y({
+          className: `${pfx}__skel-lines`,
+          kids: (LINES[shape] || LINES.history).map((w, j) =>
+            Skeletons.Box.X({
+              className: `${pfx}__skel-bar`,
+              // Stagger the rows a little so they pulse as a group rather than
+              // blinking in lockstep.
+              styleOpt: {
+                width: w,
+                "animation-delay": `${(i * 2 + j) * 0.08}s`,
+              },
+            }),
+          ),
+        }),
+      ].filter(Boolean),
+    }),
+  );
+}
+
+// Optional call, like getTaskHistory beside it: a caller that predates the
+// flag still renders, and falls back to the honest empty state rather than an
+// eternal skeleton.
+const isLoading = (ui, key) => !!(ui.isLoading && ui.isLoading(key));
+
 function buildAttachmentRowsContent(ui, attachments, taskId) {
   const pfx = ui.fig.family;
+  if (isLoading(ui, "attachments")) return skelRows(pfx, "attachments", 2);
   if (!attachments || !attachments.length) {
     return [
       Skeletons.Note({

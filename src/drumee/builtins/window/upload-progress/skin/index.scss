@@ -496,6 +496,30 @@
     flex: none !important;
   }
 
+  // A row with nothing to measure: a workspace pick is one server-side
+  // media.copy, so there is no percentage, only "in flight". The fill detaches
+  // from its width and sweeps the bar instead.
+  //
+  // `transition: width` above is cancelled here — leaving it would fight the
+  // keyframes every time the list re-renders and make the sweep stutter.
+  &__file-item-progress-bar[data-indeterminate="1"] {
+    .window-upload-progress__file-item-progress-fill {
+      width: 40%;
+      transition: none;
+      animation: window-upload-progress-sweep 1.1s ease-in-out infinite;
+    }
+
+    // Honour a reduced-motion preference: hold a steady partial bar rather
+    // than animate. It still reads as "working", without the movement.
+    @media (prefers-reduced-motion: reduce) {
+      .window-upload-progress__file-item-progress-fill {
+        animation: none;
+        width: 100%;
+        opacity: 0.45;
+      }
+    }
+  }
+
   // ── Footer ────────────────────────────────────────────────────
   // Mirrors the header's divider and side padding so the card reads as one box.
   &__footer {
@@ -870,4 +894,9 @@
     // viewport it pushes even a correctly-clamped card past the top edge.
     bottom: 16px;
   }
+}
+
+@keyframes window-upload-progress-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
 }
