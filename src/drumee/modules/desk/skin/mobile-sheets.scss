@@ -26,18 +26,68 @@
     background: rgba(11, 10, 33, 0.42);
   }
 
+  // ONE height for every sheet, whatever it holds. It used to be
+  // `max-height: 78vh`, which made the panel hug its content: the switcher was
+  // a different size for every workspace count, and tapping the avatar after
+  // the go-to grid resized the sheet under the thumb. A fixed height means the
+  // panel is the same box every time and only its CONTENT moves.
+  //
+  // dvh, not vh: `vh` counts the strip behind a mobile browser's collapsing
+  // URL bar, so the old 78vh put the sheet's bottom padding — and the
+  // safe-area inset with it — underneath that chrome. `100dvh` is already the
+  // house answer for this (desk/wm/skin/index.scss). The vh line above it is
+  // the fallback for engines without dvh; they drop the second declaration and
+  // keep the first.
+  //
+  // The height is deliberately not per-kind. `data-kind` is stamped on the
+  // host and could size each shape, but a single constant was the call: the
+  // go-to grid carries dead space below its two tile rows, and that is the
+  // trade for a panel that never resizes between sheets.
   &__msheet {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    max-height: 78vh;
+    height: 62vh;
+    height: 62dvh;
     background: var(--normal-bg);
     border-radius: 16px 16px 0 0;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
     overflow: hidden;
+
+    // A landscape phone is ~380px tall, where 62dvh is barely three rows.
+    // Hand those viewports almost the whole screen instead; the dim above it
+    // is still tappable, which is the only thing the sheet must not cover.
+    @media (orientation: landscape) and (max-height: 480px) {
+      height: 88vh;
+      height: 88dvh;
+    }
+
+    // "There is more below." With a FIXED height a row is routinely cut by the
+    // bottom edge, and a cut row reads as the last row. The gradient fades it
+    // into the sheet's own ground instead.
+    //
+    // It sits on the sheet, not on the scroller: a mask on __msheet-content
+    // would fade the final row even when it IS the end of the list. Above the
+    // bottom padding so it never tints the safe-area strip, and
+    // pointer-events:none so it cannot eat a tap on the row underneath.
+    //
+    // var(--normal-bg) is the sheet's own background token in BOTH themes (see
+    // the dark block at the foot of this file), so this needs no dark-mode
+    // twin. On a sheet short enough not to overflow it fades transparent over
+    // the sheet's own colour — invisible, and costs nothing.
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      height: 24px;
+      pointer-events: none;
+      background: linear-gradient(to top, var(--normal-bg), transparent);
+    }
   }
 
   &__msheet-grabber {
@@ -51,16 +101,167 @@
     flex: 0 0 auto;
   }
 
+  // The sheet's ONE scroll region. Now that __msheet has a fixed height this
+  // has to absorb whatever is left under the grabber, so it takes `flex: 1 1
+  // auto` — without it a short list would sit at its natural height and a long
+  // one would try to grow the flex parent past the fixed height rather than
+  // scroll. `min-height: 0` is the other half of that: a flex child's default
+  // `min-height: auto` refuses to shrink below its content, which silently
+  // defeats the overflow.
+  //
+  // overscroll-behavior: contain — flicking past the end of the list must not
+  // hand the scroll to the desk behind the sheet. Same reason, same spelling
+  // as desk/tutorial/share/skin/index.scss.
   &__msheet-content {
+    flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
+  // ── The workspace switcher: chrome pinned, rows scrolling ─────────────────
+  //
+  // Scoped to this kind ALONE. __msheet-content is the single scroller for the
+  // other three sheets — the go-to grid, the account rows, the create options
+  // all want it scrolling them wholesale — and `data-kind` on the host is the
+  // hook already stamped for exactly this kind of per-shape difference
+  // (_openMobileSheet writes it).
+  //
+  // Here it stops being the scroller and becomes the CAP, one level above the
+  // overflow, the same way `__ws-menu` sits above `__ws-list` in the desktop
+  // switcher. That is what keeps the title and the create button still while
+  // the rows move under them.
+  &__msheet-host[data-kind="workspace"] &__msheet-content {
+    overflow: hidden;
+  }
+
+  // NO BOTTOM FADE ON THIS SHEET. __msheet::after paints a 24px
+  // white-to-transparent wash just above the sheet's bottom padding so a row
+  // CUT by the fixed height does not read as the last row. This kind has no cut
+  // row down there any more — it has the pinned "New workspace" button — so the
+  // wash was tinting a solid primary button, which is what it looked like: a
+  // fake vertical gradient across the bottom half of the button.
+  //
+  // The affordance is not lost, it moved: the rows scroll in __msheet-list,
+  // which carries a visible scrollbar of its own (below) for exactly this job.
+  &__msheet-host[data-kind="workspace"] &__msheet::after {
+    content: none;
+  }
+
+  // The one scrolling region of this sheet. `flex: 1 1 auto` takes exactly what
+  // the title and the button leave; `min-height: 0` is what permits it — a flex
+  // item's default min-height is its content, so without the zero this box
+  // refuses to shrink, the column grows past the sheet's fixed height and the
+  // create button is pushed off the bottom edge. Same note the desktop
+  // __ws-menu carries about its own 300px cap.
+  &__msheet-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  // The desktop switcher's bar (`__ws-list` in desk/skin/topbar.scss): 4px,
+  // faint track, rounded --primary-70 thumb. Both halves of the pair are
+  // needed — `scrollbar-width` alone leaves Firefox drawing its default grey
+  // while Chrome takes the brand colour from the pseudo-elements.
+  //
+  // SCOPED THROUGH THE HOST on purpose. What this replaces is the global
+  // `.box` scrollbar (skin/lib/container.scss): a 5px bar on a rgba(0,0,0,.1)
+  // track with a --default-scrollbar-color thumb — which is
+  // rgba(250,133,64,.6), the wide orange bar down the side of this list.
+  // `.desk-module__msheet-list` and `.box` are both a single class, so on equal
+  // specificity the winner would depend on which stylesheet the bundle emits
+  // last. The host adds a second class and settles it outright.
+  &__msheet-host &__msheet-list {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-70) rgba(0, 0, 0, 0.05);
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--primary-70);
+      border-radius: 4px;
+    }
+  }
+
+  // The desktop's __ws-new (desk/skin/topbar.scss), as a sheet row: Figma
+  // 48:37026 "Button Lightmode" — a solid primary button, centred, 36px tall,
+  // r=8, Geist 14/600.
+  //
+  // It overrides __msheet-row's row geometry rather than opting out of it: the
+  // base rule supplies the 44px touch target and the tap feedback, which a
+  // phone wants and the desktop button has no equivalent of. Only the things
+  // that make it read as a ROW — left alignment, the 6px inset, the transparent
+  // ground — are replaced.
+  //
+  // `flex-shrink: 0` for the same reason the desktop button carries it: inside
+  // a fixed height the list is the only thing that may give. min-height alone
+  // stops it collapsing, but shrink:0 is what keeps it at full height rather
+  // than letting flex eat its padding first.
+  &__msheet-row--new {
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 24px;
+    min-height: 44px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    background: var(--primary-50);
+
+    // The row's default press tint is a dark wash meant for a transparent row;
+    // on a filled button it reads as dirt. --primary-40 is the token's own
+    // brighter sibling, which keeps the state inside the ramp.
+    &:active {
+      background: var(--primary-40);
+    }
+
+    .desk-module__msheet-label {
+      // Shrink-to-fit so the label sits beside the glyph as one centred pair —
+      // the base label is `flex: 1 1 auto`, which would push the icon to the
+      // far left of a justify-content:center row.
+      flex: 0 1 auto;
+      color: var(--white, #fff);
+      font-weight: 600;
+    }
+
+    .desk-module__msheet-ico {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      color: var(--white, #fff);
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+
+  // Pinned. The title is part of the content the desk FEEDS — the workspace,
+  // go-to and create builders each return it as their first element (the
+  // account sheet has none; it opens on the identity block) — so it scrolls
+  // away with the rows. That barely showed while the sheet hugged its content;
+  // it shows on every long sheet now that the height is fixed. Sticky keeps
+  // "Workspaces" over the list it names, and the opaque ground stops rows from
+  // ghosting through it.
   &__msheet-title {
     @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg));
     font-weight: 600;
     padding: 2px 6px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--normal-bg);
   }
 
   &__msheet-heading {

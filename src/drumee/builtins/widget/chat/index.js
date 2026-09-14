@@ -776,6 +776,12 @@ class __widget_chat extends LetcBox {
         child.onAddKid = this.handleScroll.bind(this);
         child.once(_e.ready, () => {
           this.scrollMessagesToBottom(child);
+          // First page of messages is in: the folder window's chat card swaps
+          // its loading skeleton for the conversation on this stamp
+          // (window/folder/skin, :has(.window__chat-widget[data-painted])) —
+          // this widget is a lazy kind and fetches media.home before it even
+          // builds this list.
+          if (this.el && this.el.dataset) this.el.dataset.painted = "1";
           // Track whether the user is parked at the bottom. Content growth
           // (an attachment card loading inside an existing row) does NOT fire a
           // scroll event, so this flag keeps reflecting the user's last intent —
@@ -907,6 +913,15 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   onDomRefresh() {
+    // Never leave the folder chat card on its loading skeleton: it waits for
+    // data-painted (stamped on the message list's first ready, see
+    // onPartReady), and a load that never readies must not keep it there.
+    clearTimeout(this._paintedFallback);
+    this._paintedFallback = setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const el = this.el;
+      if (el && el.dataset && el.dataset.painted !== "1") el.dataset.painted = "1";
+    }, 4000);
     this.fetchService({
       service: SERVICE.media.home,
       hub_id: this.hubId,
@@ -2985,20 +3000,27 @@ class __widget_chat extends LetcBox {
    * @param {*} service
    */
   confirmDeleteForAll(cmd, service) {
+    // Same shape as every other destructive confirm in the app (see the
+    // Remove-member dialog in window/folder/index.js): a plain string message
+    // through the shared body renderer, `danger` + `secondary` button types,
+    // and `hbf`. It previously passed a function returning a Note with a
+    // scoped class purely to attach its own styling, plus a buttonClass to
+    // resize the footer; both are gone, and so is the CSS they reached
+    // (window/confirm/skin/index.scss).
     Wm.confirm({
-      // Prompt rendered through the scoped chat-delete-confirm title so it picks
-      // up the larger Figma type without touching other confirm dialogs.
-      message: () =>
-        Skeletons.Note({
-          className: "chat-delete-confirm__title",
-          content: LOCALE.DELETE_MESSAGE_CONFIRM,
-        }),
+      message: LOCALE.DELETE_MESSAGE_CONFIRM,
       confirm: LOCALE.DELETE,
       confirm_type: "danger",
       cancel: LOCALE.CANCEL,
       cancel_type: "secondary",
-      buttonClass: "chat-delete-confirm",
-      mode: "bf",
+      // No backdrop. The prompt asks about messages the user has just selected
+      // and is still looking at, and scrimming the chat behind it dims the very
+      // thing they need to check before confirming. Wm.confirm defaults to
+      // "scrim"; "none" is an explicit off rather than a dropped attribute, so
+      // the shared host keeps the [data-state="open"] that SIZES it (see
+      // window/manager.js confirm) and the card still centres.
+      overlay: "none",
+      mode: "hbf",
     })
       .then(() => {
         this.setMessageSelectorState(0);

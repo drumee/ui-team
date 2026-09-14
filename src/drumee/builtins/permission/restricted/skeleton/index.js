@@ -23,6 +23,19 @@ const {
   roleFromPrivilege,
   roleByValue,
 } = require("../../../skeleton/toolkit/permission");
+// The folder window's "+ New" menu builder — the role pill's menu is one.
+const { dropdownMenuButton } = require("../../../window/skeleton/toolkit");
+
+// One glyph per role, keyed on roleItems' `value`. Chat and Edit are the ones
+// the secure-share panels already show for those access levels
+// (window/secure-share/skeleton/main.js); View and Admin come from the same
+// apps-* set, which is also where the pill's own caret is from.
+const ROLE_ICONS = {
+  view: "apps-eye",
+  chat: "apps-chat",
+  edit: "apps-pencil-simple",
+  admin: "apps-lock-shield",
+};
 
 /**
  * Map a hub.get_members_by_type row to the row shape rendered below.
@@ -54,9 +67,13 @@ function mapMember(row) {
 }
 
 /**
- * The role pill: a KIND.menu.topic dropdown whose options carry the target
- * role as dataset, so picking one fires `service` with everything the handler
- * needs. Same construction as the base panel's roleDropdown.
+ * The role pill: a window-button dropdown — the same `dropdownMenuButton` the
+ * folder window's "+ New" menu is built with, so the card and its rows share
+ * that menu's look (skin: mixins/drumee window-button-dropdown-menu).
+ *
+ * Each row carries the target role as dataset, so picking one fires `service`
+ * with everything the handler needs; `radio` + `state` keep the held role
+ * marked. dropdownMenuButton passes those through to the row untouched.
  */
 function roleDropdown(pfx, role, service, extra = {}) {
   const ui = extra.uiHandler;
@@ -76,38 +93,44 @@ function roleDropdown(pfx, role, service, extra = {}) {
     ],
   });
 
-  const items = Skeletons.Box.Y({
-    className: `${pfx}__role-menu`,
-    kids: roleOptions.map((opt) =>
-      Skeletons.Note({
-        className: `${pfx}__role-option`,
-        content: opt.label,
-        service,
-        radio: radioGroup,
-        name: opt.label,
-        tooltips: opt.description
-          ? { content: opt.description, className: "role-option-tooltip" }
-          : undefined,
-        uiHandler: ui ? [ui] : undefined,
-        dataset: {
-          ...(memberId ? { member_id: memberId } : {}),
-          privilege: opt.privilege,
-          role_label: opt.label,
-        },
-        state: opt.label === role.label ? 1 : 0,
-      }),
-    ),
+  // `sys_pn` is dropped: dropdownMenuButton defaults it to one shared
+  // placeholder, and this panel mounts a menu per member row.
+  const { sys_pn, ...menu } = dropdownMenuButton(ui, {
+    className: "window-button",
+    trigger,
+    menuItems: roleOptions.map((opt) => ({
+      service,
+      ico: ROLE_ICONS[opt.value],
+      content: opt.label,
+      radio: radioGroup,
+      name: opt.label,
+      tooltips: opt.description
+        ? { content: opt.description, className: "role-option-tooltip" }
+        : undefined,
+      dataset: {
+        ...(memberId ? { member_id: memberId } : {}),
+        privilege: opt.privilege,
+        role_label: opt.label,
+      },
+      state: opt.label === role.label ? 1 : 0,
+    })),
   });
 
   return {
-    kind: KIND.menu.topic,
-    className: `${pfx}__role-dropdown`,
-    flow: _a.y,
-    opening: _e.click,
+    ...menu,
+    // The panel's own class beside the shared one — its skin anchors the menu
+    // to the pill and styles the selected row off it.
+    className: `${menu.className} ${pfx}__role-dropdown`,
+    // Kept from the menu this replaces: dropdownMenuButton's `none` would
+    // close on any click, where the invite row closes it explicitly.
     persistence: _a.once,
-    trigger,
     offsetY: 4,
-    items,
+    // No slide or fade: the menu appears and disappears at once. ui-core's
+    // menu tweens with `mget(duration) || Visitor.timeout(duration)` (0.4s by
+    // default), so 0 would fall through to Visitor.timeout — which answers a
+    // `?timeout=` URL argument when there is one. A 1ms tween is used as-is
+    // and still runs the open/close callbacks the menu's state hangs off.
+    duration: 0.001,
   };
 }
 
@@ -212,7 +235,14 @@ module.exports = function (ui) {
 
   /**
  * Which workspace this panel is about — the area-tinted folder shape and the
- * name, modelled on `.breadcrumb-item__tab` in the topbar.
+ * name, modelled on `.desk-module-topbar__ws-item`, the switcher's row.
+ *
+ * IT IS THE TITLE, not a chip beside one. The panel used to head itself "Who
+ * has access" with the workspace tucked alongside in a bordered tab; the
+ * subject now leads on its own and `__subtitle` carries what the panel does.
+ * The switcher row is the reference because that is where a user last saw this
+ * workspace named, and one workspace should read the same in both places:
+ * the same folderArt glyph, the same 22/18 box, the same ellipsising name.
  *
  * The panel said "Who has access" and never said access to WHAT. It is opened
  * from three places that each know the answer already (the rail's Access, the
@@ -226,8 +256,16 @@ module.exports = function (ui) {
  * create_hub row (a yp.entity row) — that has `area` but no filename, because
  * the proc selects entity columns only. Hence the several names tried below.
  *
- * Renders NOTHING without a name. A tinted folder with no label is a worse
- * answer to "which workspace" than not asking the question.
+ * THREE THINGS ON ONE LINE, in this order: the glyph, the name, then "Who has
+ * access". The subject leads and the heading reads as what is being said about
+ * it — which is also why the heading is last and not first.
+ *
+ * THE HEADING IS ALWAYS THERE; the glyph and the name are the optional pair.
+ * A name that cannot be resolved drops both of them and the row is the plain
+ * heading the panel has always had — never an empty title, and never a tinted
+ * folder with no label beside it, which says nothing about WHICH workspace.
+ * They are dropped together for that reason: a glyph without its name is not a
+ * degraded answer, it is a different and worse one.
  */
 function workspaceTab(ui, pfx) {
   const media = ui.mget(_a.media);
@@ -237,21 +275,20 @@ function workspaceTab(ui, pfx) {
   };
   const filename =
     read(_a.filename) || read("hub_name") || read(_a.name) || "";
-  if (!filename) return null;
+  const area = read(_a.area) || _a.private;
 
-  return Skeletons.Box.X({
-    active: 0,
-    className: `${pfx}__ws-tab`,
-    kidsOpt: { active: 0 },
-    kids: [
+  const workspace = !filename
+    ? []
+    : [
       // Element + content, not Image.Svg + ico: media/grid/template/folder
       // returns an HTML STRING, and passing markup as an icon NAME builds
-      // `<use href="#<markup>">` and draws nothing.
+      // `<use href="#<markup>">` and draws nothing. The switcher row says the
+      // same thing about itself (desk/index.js, the ws-item glyph).
       Skeletons.Element({
         active: 0,
-        className: `${pfx}__ws-icon ${read(_a.area) || _a.private}`,
+        className: `${pfx}__title-icon ${area}`,
         content: folderArt({
-          area: read(_a.area) || _a.private,
+          area,
           filetype: _a.hub,
           role: "desk",
           widgetId: _.uniqueId("perm-ws-"),
@@ -260,8 +297,25 @@ function workspaceTab(ui, pfx) {
       }),
       Skeletons.Note({
         active: 0,
-        className: `${pfx}__ws-name`,
+        className: `${pfx}__title-name`,
         content: filename,
+      }),
+    ];
+
+  return Skeletons.Box.X({
+    active: 0,
+    className: `${pfx}__title`,
+    kidsOpt: { active: 0 },
+    kids: [
+      ...workspace,
+      // Its own node, not the title's own text: the title is a flex ROW now, so
+      // copy sitting directly on it would be an anonymous flex item that no
+      // rule can reach — it could not be kept off the ellipsis the name needs,
+      // nor held at its own size beside it.
+      Skeletons.Note({
+        active: 0,
+        className: `${pfx}__title-text`,
+        content: LOCALE.WHO_HAS_ACCESS,
       }),
     ],
   });
@@ -273,23 +327,19 @@ const header = Skeletons.Box.X({
       Skeletons.Box.Y({
         className: `${pfx}__header-text`,
         kids: [
-          // Workspace first, then the title: the subject leads and "Who has
-          // access" reads as what is being said about it. Stacking them put a
-          // second line between the two; this order puts the answer where the
-          // eye lands first.
+          // ONE child, and it is the workspace. The row used to hold a chip
+          // plus a separate "Who has access" Note; workspaceTab now returns
+          // the `__title` itself — the icon and the name when there is one,
+          // the old heading as a plain Note when there is not — so there is
+          // nothing left here to sit beside it or to filter out.
           //
-          // `.filter(Boolean)` because workspaceTab returns null when the name
-          // is unknown — the row then holds the title alone, which is what the
-          // panel looked like before any of this.
+          // The row stays rather than collapsing into the title, because it is
+          // what constrains the width: the close button is the header's other
+          // child, and without a bounded row a long workspace name pushes it
+          // off the edge instead of ellipsising.
           Skeletons.Box.X({
             className: `${pfx}__title-row`,
-            kids: [
-              workspaceTab(ui, pfx),
-              Skeletons.Note({
-                className: `${pfx}__title`,
-                content: LOCALE.WHO_HAS_ACCESS,
-              }),
-            ].filter(Boolean),
+            kids: [workspaceTab(ui, pfx)],
           }),
           Skeletons.Note({
             className: `${pfx}__subtitle`,
@@ -297,13 +347,17 @@ const header = Skeletons.Box.X({
           }),
         ],
       }),
-      Skeletons.Button.Svg({
-        ico: "cross",
-        className: `${pfx}__close`,
-        service: _e.close,
-        uiHandler: [ui],
-      }),
-    ],
+      // No ✕ in column mode: the panel is a view of the split body there, and
+      // the rail is the way out.
+      ui.mget("mode") === "column"
+        ? null
+        : Skeletons.Button.Svg({
+          ico: "cross",
+          className: `${pfx}__close`,
+          service: _e.close,
+          uiHandler: [ui],
+        }),
+    ].filter(Boolean),
   });
 
   // The inline invite message (see index.js _setInviteNotice), or null.

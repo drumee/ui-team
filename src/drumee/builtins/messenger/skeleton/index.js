@@ -6,6 +6,10 @@ const __skl_messenger = function (ui) {
     upload = Skeletons.Button.Svg({
       className: `${ui.fig.family}__icon attach`,
       ico: ui.mget('attach_icon') || "message_attach",
+      // Named so _showAttachMenu's outside-click handler can ask whether a
+      // click landed on the toggle itself. The emoji and submit buttons
+      // already carry one; this was the odd one out.
+      sys_pn: 'attach',
       service: "attach"
     });
   } else {

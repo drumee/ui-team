@@ -631,6 +631,68 @@ html {
   }
 }
 
+// …AND THE COST OF DISSOLVING IT, PAID HERE.
+//
+// The rule above is scoped to the floater, but its effect is not: dissolving
+// `__ui` releases EVERY layer inside it to the document root, not just the
+// upload one. The windows-layer is among them, and while it holds the focused
+// window it is at 50001 (`:has(> [data-state="1"])`, wm/skin) — so the open
+// folder window escapes to 50001 at the root, where `.desk-module__topbar`
+// meets it at 10003 and loses. The bar's dropdowns are the only part of it that
+// overlaps the window (they hang BELOW the 46px strip, which the WM starts
+// under), so the symptom is precisely this: while an upload is running, the
+// workspace switcher and the account menu open UNDER `window-folder__split-body`
+// and read as a dead click. Nothing about them changed — the window came up to
+// meet them.
+//
+// LIFTED, not dissolved, and the same reasoning as the tour and wrapper-modal
+// lifts below: dissolving the topbar's own context would drop the bar under the
+// sidebar (10002) and the slide-out panels (10001), which its 10003 is there to
+// clear.
+//
+// --z-index-upload-progress (50002), which is a TIE with the floater's layer and
+// deliberately so. It clears the window layers (50000, 50001 focused) — the whole
+// point — and on the tie DOM order decides: `__topbar` comes before `__body` in
+// `__main`, so the floater paints last and keeps the bottom-right corner. That
+// preserves the guarantee the floater's own z-index exists for (wm/skin: "an
+// upload in flight outranks a panel"), which a lift to 50003+ would quietly
+// take away the moment a tall account menu reached the corner on a short screen.
+// Everything above the band is untouched: file-created (50003), meeting-toast
+// (50004), drag helper (50005), preview (80000), modal (100000).
+//
+// GATED ON A MENU BEING OPEN, because the bar has no business above the
+// full-page settings/apps slot (20001) the rest of the time — see the 10003
+// comment on `&__topbar`, which is explicit that the slot should cover it.
+//
+// `.menu-topic[data-state="1"]`, i.e. the menu ROOT, and NOT the
+// `.menu-topic-items__wrapper[data-state="open"]` that the wrapper-modal lift
+// below tests. That wrapper stamp is a ONE-WAY LATCH: ui-core's menu widget
+// sets it in `_openItems` and never takes it back — `_onClosed` resets the items
+// box and the root, not the wrapper — so one press of any dropdown would leave
+// this lift on for the rest of the session, which is the unconditional rule this
+// gate exists to avoid. The root is cleared on every close path (`_onClosed` and
+// `_close` both write `this.el.dataset.state = 0`).
+//
+// One selector for all four bars' menus rather than naming ws/account: every
+// topbar dropdown is a `Skeletons.Menu` (add, more, account, switcher — see
+// skeleton/topbar.js), each hangs down over the same window, and ui-core puts
+// `menu-topic` on the menu root alongside the `__*-wrapper` class the skeleton
+// passes (`nativeClassName`, letc.js onRender). So the switcher is BOTH
+// `.desk-module-topbar__ws-wrapper` and `.menu-topic`.
+//
+// `:not([data-window-tour="1"])` because this selector is (0,6,0) and the tour
+// lift below is (0,3,0) — without it, an upload running during a tour would win
+// here at 50002 and put the menus back under the tour overlay (50000), which is
+// the bug that lift exists to fix. The wrapper-modal lift is (0,7,0) and still
+// outranks this one on its own.
+.desk-module:not([data-window-tour="1"]):has(.window-upload-progress):has(
+    .desk-module__topbar .menu-topic[data-state="1"]
+  ) {
+  .desk-module__topbar {
+    z-index: var(--z-index-upload-progress, 50002);
+  }
+}
+
 // While a window-connect (call popup) is open, the call must float above the
 // slide-out panels (chat-p2p inbox / Notification / Trash, z 10001) and the
 // sidebar (z 10002) — while the workspace folder GRID stays BELOW those panels.

@@ -108,7 +108,11 @@ const DROP_POST_TIMEOUT_MS = 1500;
 // successful send (Wm.alert → window_info). A click on any of them is the user
 // working; a click beside them is the abandon gesture the flow guards.
 const INVITE_POPUP = ".invite-popup__container";
-const INVITE_PANEL = ".permission-restricted__main";
+// :not([data-mode="column"]) excludes the rail's Access column panel (see
+// window/folder/access-column): that copy stays mounted and hidden in the
+// DOM after the user leaves Access, and without the guard it would read as
+// this step's invite panel forever.
+const INVITE_PANEL = '.permission-restricted__ui:not([data-mode="column"]) .permission-restricted__main';
 const INVITE_TOAST = ".window-info__ui, .window-info__main";
 const STEP2_SURFACES = `${INVITE_POPUP}, ${INVITE_PANEL}, ${INVITE_TOAST}`;
 // What Step 2 waits on while the user works the permission panel: the panel

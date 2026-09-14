@@ -114,22 +114,46 @@ function workspaceSheet(ui, rows, curHubId) {
   const section = (label, list) =>
     list.length ? [heading(fig, label), ...list.map(wsRow)] : [];
 
+  // THREE PARTS, and only the middle one moves — the same shape the desktop
+  // switcher has (`__ws-menu` / `__ws-head` / `__ws-list` / `__ws-new` in
+  // desk/skin/topbar.scss). The title and the create button are chrome; the
+  // rows are content. Letting the whole sheet scroll sent the create button off
+  // the bottom edge, and it is the only way to make a workspace from here, so
+  // it must never need scrolling to reach — the reason the desktop menu gives
+  // for putting its overflow on __ws-list rather than on the menu box.
+  //
+  // The list is its OWN box rather than the sheet's scroller because
+  // __msheet-content is shared by all four sheets: the go-to grid, the account
+  // rows and the create options still want it scrolling them wholesale. Only
+  // this kind splits chrome from content, and the skin scopes that split on the
+  // host's `data-kind="workspace"`.
   return [
     Skeletons.Note({
       className: `${fig}__msheet-title`,
       content: LOCALE.WORKSPACES,
     }),
-    ...section(LOCALE.WORKSPACES, hubs),
-    ...section(LOCALE.PERSONAL, personal),
-    divider(fig),
+    Skeletons.Box.Y({
+      className: `${fig}__msheet-list`,
+      kidsOpt: { active: 0 },
+      kids: [
+        ...section(LOCALE.WORKSPACES, hubs),
+        ...section(LOCALE.PERSONAL, personal),
+      ],
+    }),
+    // The desktop's __ws-new, as a sheet row: a SOLID primary button, centred,
+    // pinned under the list. No divider above it any more — a rule is what
+    // separated the old text-link version from the rows, and a filled button
+    // already reads as an action ON the list rather than another workspace IN
+    // it. Still a __msheet-row, so the "mobile-sheet-go" dispatch, the goTarget
+    // and the kidsOpt tap-guard are all unchanged.
     row(fig, ui, {
       icon: Skeletons.Image.Svg({
         ico: "topbar-add",
-        className: `${fig}__msheet-ico ${fig}__msheet-ico--accent`,
+        className: `${fig}__msheet-ico`,
       }),
       label: LOCALE.NEW_WORKSPACE || LOCALE.WORKSPACE,
       go: "new-workspace",
-      modifier: "accent",
+      modifier: "new",
     }),
   ];
 }
