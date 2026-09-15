@@ -101,15 +101,43 @@
     color: var(--an-purple, #534ab7);
   }
 
-  /* The spinner sits under the message, inside the card.
-     80px, not 60: .drumee-loading-wrapper is absolutely positioned at
-     top:50% with a -1.25rem margin, and its bars are 50px tall, so a 60px
-     box clipped them at the bottom. */
+  /* Holds the progress bar under the message.
+     The 80px floor is gone with the spinner it was sized for (that comment
+     read: .drumee-loading-wrapper is absolutely positioned at top:50% with a
+     -1.25rem margin and its bars are 50px tall, so a 60px box clipped them).
+     A 5px bar needs none of that, and the floor would leave 75px of dead air
+     under it. `position: relative` stays — it costs nothing and the card has
+     other absolutely positioned guests over its life. */
   &__container {
     width: 100%;
-    min-height: 80px;
     position: relative;
     justify-content: center;
     align-items: center;
+  }
+
+  /* The track. Ported from the boot screen's bar (server-team
+     client/templates/warmup.html + /home/drumee/static/styles/loader.css):
+     5px tall, fully rounded, #d8d6f3 under a #433cc5 fill.
+
+     The track is this element's own background rather than warmup's ::after,
+     and `overflow: hidden` is what rounds the fill's leading edge — so the
+     fill needs no radius of its own and cannot escape the track at 100%. */
+  &__progress {
+    width: 100%;
+    height: 5px;
+    border-radius: 100px;
+    background-color: #d8d6f3;
+    overflow: hidden;
+  }
+
+  /* The fill. Starts at 0 and is driven by Butler._logoutProgress; the 1s
+     transition is warmup.html's, and it is load-bearing rather than
+     decorative here — logout sets 100% and then waits Visitor.timeout(1000)
+     before redirecting, so the bar finishes filling just as the page goes. */
+  &__progress-fill {
+    width: 0;
+    height: 100%;
+    background-color: #433cc5;
+    transition: width 1s;
   }
 }

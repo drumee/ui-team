@@ -401,11 +401,41 @@ class __router_butler extends LetcBox {
    *
    * @param {*} redirect
    */
+  /**
+   * Move the goodbye screen's progress bar (skeleton/goodbye.js).
+   *
+   * getPart, not ensurePart: this is only ever called after the skeleton is
+   * up, and a bar that cannot be found must not hold up a sign-out. Every
+   * call is advisory — logout completes whether or not anything is painted.
+   *
+   * @param {Number} percent 0-100
+   */
+  _logoutProgress(percent) {
+    try {
+      const p = this.getPart && this.getPart("goodbye-progress");
+      if (p && p.el) p.el.style.width = `${percent}%`;
+    } catch (e) { /* non-fatal — the bar is never the point of logging out */ }
+  }
+
+  /**
+   *
+   * @param {*} redirect
+   */
   async logout() {
     this.isDisconnecting = 1;
     this.feed(require("./skeleton/goodbye")(this));
     await this.ensurePart('disconnected') /** Ensure the skeloton is loaded, it will be detected as disconnecting */
+    // THE ONLY TWO THINGS THIS SCREEN ACTUALLY KNOWS. The screen is up, and
+    // later the session is ended; there is no third milestone to invent. The
+    // opening 15% is the honest reading of "asked, not answered" — a bar that
+    // starts at 0 and holds there reads as broken.
+    this._logoutProgress(15);
     const f = () => {
+      // Straight to 100 rather than in steps: the work is over by the time f
+      // runs, and what remains is the Visitor.timeout(1000) wait below. The
+      // fill's 1s transition (skin/goodbye.scss) spans exactly that, so the
+      // bar lands full as the redirect fires instead of freezing part-way.
+      this._logoutProgress(100);
       this.triggerHandlers({ service: _e.logout });
       Visitor.set({ connection: _a.off });
       return setTimeout(() => {
