@@ -2141,7 +2141,35 @@
     top: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%);
-    z-index: 1000;
+    // ABOVE THE BAR'S OWN DROPDOWNS, and 1000 was not.
+    //
+    // The account menu hangs off the avatar at the END of this very cluster:
+    // `right: 0` with `min-width: 240px` (see `&__account-wrapper`), so it
+    // reaches back LEFT across all six utility icons and down over the strip
+    // where their bubbles are drawn. Nothing separates the two — the button and
+    // `__account-wrapper` are both `position: relative; z-index: auto` (`.box`,
+    // ui-styles container.scss), so neither opens a stacking context and the
+    // tip competed with that panel DIRECTLY inside `__topbar`. At 1000 it lost
+    // and the bubble rendered inside the open menu, invisible.
+    //
+    // 100000 rather than 50010, because the panel resolves to TWO different
+    // numbers depending on a rule in another file. Its own declaration is
+    // 99999, but the global `[data-state="open"] { z-index:
+    // var(--z-index-context) !important }` (skin/lib/utils.scss) out-cascades
+    // that with `!important` and pins it to 50000 while open. Measured: 50000.
+    // Clearing only the effective 50000 would leave this one edit away from
+    // breaking — drop that `!important` and the panel springs back to 99999 and
+    // swallows the tip again. This clears BOTH.
+    //
+    // Nothing escapes: `.desk-module__topbar` is its own stacking context, so
+    // every number in this file — the tip, and the 99999 on `__add-wrapper`,
+    // `__more-wrapper`, `__ws-wrapper`, `__account-wrapper` and
+    // `__search-suggestions` — is only ever compared with its siblings here.
+    // This is deliberately above all five, since any of them can overlap a
+    // bubble depending on how the row lays out, and a tooltip is
+    // `pointer-events: none` (below) — it can cover a menu visually for the
+    // moment it is shown, but it can never swallow a click meant for one.
+    z-index: 100000;
     pointer-events: none;
     white-space: nowrap;
     padding: 6px 10px;
