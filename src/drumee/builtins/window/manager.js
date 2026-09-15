@@ -1883,9 +1883,15 @@ class __window_manager extends mfsInteract {
    * The card decides for itself whether to draw a CTA at all
    * (`canUpgradePlan()`), so callers pass what is locked, never what to draw.
    *
+   * `overlay` rides straight through to confirm(), which owns the backdrop —
+   * see its own comment. Left undefined here rather than defaulted, so a gate
+   * that says nothing keeps confirm's "scrim" and this helper holds no second
+   * opinion about what the default is.
+   *
    * @param {Object} opt
    * @param {String} opt.feature key into feature-lock's FEATURES map
    * @param {Array} [opt.args] substituted into the description via `.format()`
+   * @param {String} [opt.overlay] backdrop: "scrim" (default) | "blur" | "none"
    * @returns {Promise} resolve = CTA taken, reject = dismissed
    */
   openFeatureLock(opt = {}) {
@@ -1893,6 +1899,7 @@ class __window_manager extends mfsInteract {
     return this.confirm({
       mode: "b",
       body: featureLockBody(opt.feature, opt.args),
+      overlay: opt.overlay,
     });
   }
 

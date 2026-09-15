@@ -5012,6 +5012,93 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * PUT THE RAIL OUT — no row is the screen any more.
+   *
+   * The counterpart to _railHighlight, for the full-canvas section screens the
+   * topbar utility cluster opens (Calendar, Inbox, Admin Console). They mount
+   * in `settings-main-slot`, which is `position:absolute; inset:0` over the
+   * workspace pane (skin/index.scss), so the workspace the rail is claiming is
+   * not on screen at all. The cluster has its own radio group
+   * (`topbar-utility-radio`, skeleton/topbar.js), and the radio behavior only
+   * unlights views on the SAME channel — so nothing took the rail's highlight
+   * away and Files stayed lit under a Calendar. That is the disagreement
+   * _leaveSectionScreen's docstring describes, arriving from the other side:
+   * there the lit row moved and the screen did not, here the screen moved and
+   * the lit row did not.
+   *
+   * ONE BROADCAST, NOT A ROW LIST. `sidebar-radio` is the rail's own group, so
+   * every member hears it: the five __nav-main rows AND the footer's Plan row,
+   * which is a section screen in exactly the same sense. Enumerating the rows
+   * here would be a second copy of skeleton/sidebar.js's group membership, and
+   * the next row added would be missed.
+   *
+   * `this` AS THE ORIGIN, deliberately: the behavior lights the origin and
+   * unlights everything else (radio.js _on_message), and the desk is in no
+   * row's parent chain (Backbone.View.contains walks `parent`), so every row
+   * takes the else branch. A row-shaped origin would leave that row lit.
+   *
+   * The mobile rail is left alone — it is a different group
+   * (`mobile-rail-radio`), it is not on screen where this cluster is, and it
+   * reaches these screens through its own bottom sheets.
+   *
+   * NOT `data-mtab`. That stamp says which workspace tab is selected
+   * UNDERNEATH, which a section screen does not change, and the phone's Files
+   * action row is keyed on it.
+   *
+   * Coming back needs nothing: a rail click lights its own row (the radio
+   * behavior's onAlsoClick), a workspace switch calls _railHighlight, and Home
+   * runs Wm.reload(), which closes every window — so an unlit rail is then the
+   * honest answer.
+   */
+  _railUnlight() {
+    RADIO_BROADCAST.trigger("sidebar-radio", this);
+  }
+
+  /**
+   * PUT THE UTILITY CLUSTER OUT — the screens those icons stand for are gone.
+   *
+   * The mirror of _railUnlight, and it exists for the mirror-image reason: a
+   * rail click (or Home) closes the full-canvas screens through
+   * closeMainPanels, and the cluster is on its own radio group
+   * (`topbar-utility-radio`, skeleton/topbar.js), so nothing unlit the icon of
+   * the screen that just closed. Files and Calendar were lit at once, each
+   * naming a different thing as the screen.
+   *
+   * NOT A GROUP BROADCAST, which is what _railUnlight gets to do. The cluster
+   * holds two different kinds of thing on one radio group: these three, whose
+   * screens live in settings-main-slot, and the bell / Contacts / Trash
+   * slide-outs. closeMainPanels does not close the ACTIVITY panel — see
+   * closeOtherSidebarPanels for why that one is deliberately left standing —
+   * so a broadcast would darken a bell whose panel is still open, and the
+   * cluster would then be lying in the other direction.
+   *
+   * Named parts rather than the group for that reason, and getPart NEVER
+   * ensurePart: the cluster mounts only in the desktop topbar, and ensurePart
+   * never resolves for a part that will not mount on this device — the same
+   * trap, and the same idiom, as _railHighlight and _readActivityCount.
+   *
+   * setState(0) rather than a per-view radio trigger: the skin marks the open
+   * panel with `[data-state="1"]` (topbar.scss __utility-btn), and there is no
+   * origin to name here — nothing was clicked, a screen simply closed.
+   *
+   * Lighting stays where it was: the cluster item lights itself on click
+   * through the radio behavior, which is also what keeps the three mutually
+   * exclusive. This only ever turns them off.
+   */
+  _clusterUnlight() {
+    if (!_.isFunction(this.getPart)) return;
+    // The three cluster items that mount into the slots closeMainPanels
+    // empties. Contacts and Trash are NOT here: their panels are keep-alive
+    // slide-outs, and adding them means deciding what a parked panel's icon
+    // should say — a separate question from this one.
+    for (const pn of ["utility-calendar", "utility-inbox", "utility-apps"]) {
+      const p = this.getPart(pn);
+      if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) continue;
+      p.setState(0);
+    }
+  }
+
+  /**
    * Rail navigation is about to show workspace content — get whatever SECTION
    * SCREEN is in front of the workspace out of the way, and put the breadcrumb
    * back on the workspace it is navigating in.
@@ -7346,6 +7433,47 @@ class desk_module extends LetcBox {
    * screen"). Dismiss the modal before showing another screen so the lift
    * is released.
    */
+  /**
+   * A RAIL CLICK CLOSES THE TIER-GATE CARD.
+   *
+   * The "Unlock Admin Console" upsell (_showAdminUnlockModal → openFeatureLock
+   * → Wm.confirm) is an answer to a question the user has stopped asking the
+   * moment they navigate: it is not blocking anything, and since it took its
+   * backdrop off it does not even look like it is. Left standing it hangs over
+   * the Files grid the rail just opened, and the only way out is its own X.
+   *
+   * ONLY THE FEATURE-LOCK CARD, never the wrapper on sight. __wrapperModal is
+   * SHARED — it also carries the create-workspace form, the permission panels
+   * and every other Wm.confirm — and _leaveSectionScreen already records what
+   * clearing it unconditionally costs: a half-filled form thrown away because
+   * the user glanced at another tab. So the host is asked what it is holding
+   * (`.feature-lock`, the card's own root class, builtins/widget/feature-lock)
+   * and anything else is left alone.
+   *
+   * ASKED OF THE DOM rather than tracked in a flag. A flag has to be set on
+   * every open path and cleared on every close path — including the ones that
+   * settle the promise from inside the card — and the _invitePopup field two
+   * methods down is the standing example of how much bookkeeping that is. The
+   * host can simply be asked, and the answer cannot go stale.
+   *
+   * onCancel, NOT _dismissWmModal: that is the card's own X path. It settles
+   * the confirm's promise as a cancel, releases the Escape handler and the
+   * state-guard MutationObserver (window/confirm _releaseModalGuards) and lets
+   * goodbye() take the host down — where clearing the host instead yanks it out
+   * from under a dialog that is still armed. The clear stays as the fallback
+   * for a card caught between feed() and ask().
+   */
+  _dismissFeatureLock() {
+    try {
+      const w = typeof Wm !== "undefined" && Wm.__wrapperModal;
+      if (!w || !w.el || !w.children || !w.children.length) return;
+      const card = w.children.last();
+      if (!card || !card.el || !card.el.querySelector(".feature-lock")) return;
+      if (_.isFunction(card.onCancel)) return card.onCancel();
+      return this._dismissWmModal();
+    } catch (e) { /* non-fatal */ }
+  }
+
   _dismissWmModal() {
     try {
       const w = typeof Wm !== "undefined" && Wm.__wrapperModal;
@@ -7897,7 +8025,18 @@ class desk_module extends LetcBox {
    * and putting the sidebar highlight back afterwards either way.
    */
   _showAdminUnlockModal() {
-    return Wm.openFeatureLock({ feature: "admin_console" })
+    // NO BACKDROP. The card is an upsell, not a decision about the screen
+    // behind it: the reader has nothing to check against the desk and nothing
+    // to lose by ignoring it, so dimming the whole workspace overstates what
+    // this interruption is. confirm()'s "scrim" default stays right for the
+    // prompts that really do block on an answer.
+    //
+    // "none", not a dropped key: __wrapperModal is SHARED, and confirm()
+    // documents the failure — a value left behind by the previous dialog would
+    // paint a scrim this card never asked for. Explicitly off, not merely
+    // not-on. The host keeps its [data-state="open"] sizing either way, which
+    // is what centres the card.
+    return Wm.openFeatureLock({ feature: "admin_console", overlay: "none" })
       .then(() => {
         // Defence in depth behind the card's own CTA gate: it only renders the
         // button when canUpgradePlan() passes, so reaching here without it
@@ -7991,6 +8130,11 @@ class desk_module extends LetcBox {
   closeMainPanels() {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
+    // The topbar icons for the screens about to go — see _clusterUnlight.
+    // HERE rather than in _leaveSectionScreen, which is only the rail's way in:
+    // loadHome closes these same slots too, and an icon left lit over a screen
+    // Home just closed is the same disagreement arriving by a different door.
+    this._clusterUnlight();
     const slots = ["settings-main-slot", "trash-panel", "chat-panel"];
     return Promise.all(
       slots.map((pn) => {
@@ -8050,6 +8194,19 @@ class desk_module extends LetcBox {
     // they manage the drawer themselves or are expected to leave it open.
     if (Visitor.isMobile()) {
       this._maybeDismissMobileDrawer(service);
+    }
+    // A rail row was pressed — __nav-main or __footer, both of which carry
+    // `railRow` (skeleton/sidebar.js). Transient cards that must not outlive a
+    // navigation gesture go now, BEFORE the switch below runs the service: the
+    // footer's own Invite row feeds the very host this dismisses, and doing it
+    // after would tear down the popup that row had just opened.
+    //
+    // Off the CLICKED VIEW, not off `service`: a synthetic dispatch
+    // (_deskServiceShim, _restoreSidebarService) carries the same service
+    // strings without anyone having touched the rail, and those must not count
+    // as a navigation gesture.
+    if (cmd && _.isFunction(cmd.mget) && cmd.mget("railRow")) {
+      this._dismissFeatureLock();
     }
     switch (service) {
       // "Open Workspace" on the post-sign-in invited-workspace dialog. Opens the
@@ -8331,6 +8488,10 @@ class desk_module extends LetcBox {
           filename: LOCALE.INBOX,
           ico: "top-inbox",
         });
+        // Full-canvas, so the rail no longer describes the screen — see
+        // _railUnlight. Beside the breadcrumb retitle and for the same reason:
+        // both say "you are not in the workspace any more".
+        this._railUnlight();
         return this.togglePanel("chat_p2p", INBOX_SLOT, true);
 
       case "toggle-contacts":
@@ -8367,6 +8528,11 @@ class desk_module extends LetcBox {
           filename: LOCALE.CALENDAR,
           ico: "top-calendar",
         });
+        // See _railUnlight — the calendar covers the workspace pane entirely.
+        // Before _openCalendar, which always reaches togglePanel (there is no
+        // early return to guard against), so the rail goes out whichever of
+        // its two paths — fresh mount or focusView on a parked screen — runs.
+        this._railUnlight();
         // Most callers — the rail, the topbar cluster, the phone go-to grid,
         // the reload-restore — want the screen as the user left it, so they
         // name no view and the keep-alive reveal is unchanged. The Daily
@@ -8650,6 +8816,11 @@ class desk_module extends LetcBox {
           filename: LOCALE.ADMIN_CONSOLE,
           ico: "top-apps",
         });
+        // See _railUnlight. AFTER the upsell gate above — a personal plan gets
+        // a modal over the workspace it is still looking at, not a screen — and
+        // beside the breadcrumb retitle, which already commits to the console
+        // before the plugin chunk lands and is the same bet on the same hop.
+        this._railUnlight();
         // `tab` rides in from desk:open-admin-console — the storage overage
         // asks for the Storage tab, where the per-workspace cleanup is. The
         // plugin validates it against the tabs this role may see and falls
