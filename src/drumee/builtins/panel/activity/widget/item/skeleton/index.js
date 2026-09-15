@@ -598,6 +598,63 @@ function getActivityMeta(ui, data) {
           folder: data.folder_name,
         };
       }
+      // A copy is the only file event that can take content OUT of a workspace,
+      // which is why Lexis asked for it to be reported rather than folded into
+      // the upload sentence (2026-09-14, after these rows spent three days
+      // claiming "<name> uploaded <file>" for files that were being copied out
+      // of Marketing Hub). It is a workspace-security signal first and an
+      // activity row second.
+      //
+      // The event is ALWAYS filed against the SOURCE hub, so "this workspace"
+      // below is always the one the reader is being notified about, and the
+      // hub comparison is what separates a duplicate-in-place from an export.
+      // Both shapes are common: of the copies on prod, 144 stay inside one
+      // workspace and 382 cross out of it.
+      if (data.event === 'media.copy') {
+        const source = parseJson(data.src, {});
+        const destination = parseJson(data.dest, {});
+        const sourceHub = source.hub_id || ui.mget('source_hub_id') || data.hub_id;
+        const destinationHub = destination.hub_id;
+        // An unknown destination is reported as a plain copy. A few prod rows
+        // carry an empty `src`, and "left this workspace" is a stronger claim
+        // than a row with half its ends missing can support.
+        const leftWorkspace = !!(sourceHub && destinationHub && sourceHub !== destinationHub);
+        if (!leftWorkspace) {
+          return {
+            before: LOCALE.COPIED_ACTION || 'copied ',
+            label: name,
+            after: '',
+            colorClass: 'mention',
+            badge: 'mention',
+            // No copy glyph exists in the exported set; PlusCircle is what the
+            // design already uses for "a new node now exists", which is all a
+            // same-workspace duplicate is.
+            ico: 'noti-plus-circle',
+            tone: BADGE.brand,
+            folder: data.folder_name,
+          };
+        }
+        return {
+          before: LOCALE.COPIED_ACTION || 'copied ',
+          label: name,
+          // `area` is the only destination fact a copy row always carries, and
+          // personal-vs-shared is exactly the distinction that matters here.
+          after: (destination.area || ui.mget('destination_area')) === 'personal'
+            ? (LOCALE.COPIED_OUT_TO_PERSONAL_ACTION || ' out of this workspace, into a personal space')
+            : (LOCALE.COPIED_OUT_ACTION || ' out of this workspace'),
+          // The design's alert colour, shared with "removed file" — the other
+          // event that takes something away from the workspace.
+          colorClass: 'restricted',
+          badge: 'share',
+          // ShareFat is the design's "went somewhere else" glyph, already
+          // carrying that meaning for workspace moves.
+          ico: 'noti-share-fat',
+          // Signal/Warning: needs attention, but it is not an error and must
+          // not read as one.
+          tone: BADGE.warning,
+          folder: data.folder_name,
+        };
+      }
       if (data.event === 'media.view') {
         return {
           before: LOCALE.ACT_VIEWED,

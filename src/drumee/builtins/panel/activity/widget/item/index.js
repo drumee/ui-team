@@ -88,17 +88,33 @@ class __activity_item extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    if (opt.event === 'media.workspace_move') {
+    if (opt.event === 'media.workspace_move' || opt.event === 'media.copy') {
       const source = parseJson(opt.src, {});
       const destination = parseJson(opt.dest, {});
       // The changelog belongs to the source workspace, while `dest` describes
       // a folder the recipient may not be allowed to open. Keep the source node
       // as the row target and retain destination data for the renderer.
+      //
+      // media.copy needs exactly this, and for a sharper reason. A copy row is
+      // filed against the SOURCE hub, so the people who receive it are the
+      // source workspace's members -- while `dest` is routinely a node in the
+      // copier's own personal space that none of them can open. That is what
+      // made these rows click through to nothing.
+      //
+      // Note the two branches below could never have caught a copy anyway:
+      // `src`/`dest` arrive as JSON STRINGS (the feed hands the columns through
+      // untouched -- activity.js reads them via asObject()), so `opt.dest?.nid`
+      // is undefined on a string and nid fell back to "0". parseJson handles
+      // both shapes, which is why this branch has to do the work.
       this.mset({
         ...source,
         source_hub_id: opt.hub_id,
         destination_hub_id: destination.hub_id,
         destination_hub_name: destination.hub_name || destination.workspace_name,
+        // The one destination fact a copy row can always rely on. There is no
+        // hub_name on a copy's `dest`, but `area` tells a personal space from a
+        // shared one, which is the distinction the sentence has to make.
+        destination_area: destination.area,
       });
     } else if (opt.dest?.nid) {
       this.mset(opt.dest)
@@ -108,7 +124,20 @@ class __activity_item extends LetcBox {
     let category = getCategory(opt);
     let sender = getSender(opt);
     let autho_id = getAuthorId(opt)
-    if ((category === _a.media || opt.event === 'media.workspace_move') && (opt.id || opt.key_id)) {
+    // media.copy is named explicitly for the same reason media.workspace_move
+    // is: a raw activity_get_feed_all row carries category NULL and
+    // event_type 'mfs', so `category` here resolves to 'mfs' and never equals
+    // _a.media ('media').
+    //
+    // The read handler would still find the id on its own -- it falls back to
+    // mget('id'), and on a changelog row that IS the changelog id -- so this
+    // is not load-bearing today. It is set anyway because the click branch
+    // added below passes `changelog_id` as an explicit argument, and a row
+    // that names its own id is better than one relying on that fallback
+    // chain staying in place.
+    if ((category === _a.media
+      || opt.event === 'media.workspace_move'
+      || opt.event === 'media.copy') && (opt.id || opt.key_id)) {
       this.mset({ changelog_id: opt.id || opt.key_id, item_type: 'mfs' })
     }
 
@@ -407,6 +436,20 @@ class __activity_item extends LetcBox {
         location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&activeTab=${_a.meeting}&ts=${ts}`;
       }
       this.triggerHandlers({ service: 'read-activity', hub_id: mHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'close-activity-panel' });
+      return;
+    }
+    if (this.mget('event') === 'media.copy') {
+      // Land on the file in the workspace this notification is ABOUT.
+      //
+      // The copy's destination belongs to whoever made the copy and is not
+      // openable by the people who receive the row (see initialize), so the
+      // only node here that the reader can actually be shown is the source.
+      // highlight=1 reveals it in its folder, the same landing every other
+      // file notification uses.
+      const sourceHubId = this.mget('source_hub_id') || hub_id;
+      location.hash = `#/desk/wm/reveal/?hub_id=${sourceHubId}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
+      this.triggerHandlers({ service: 'read-activity', hub_id: sourceHubId, nid: target_nid, item_type, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
