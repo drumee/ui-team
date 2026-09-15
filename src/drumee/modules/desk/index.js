@@ -7651,6 +7651,49 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the Personal Calendar, optionally on a view the caller names.
+   *
+   * @param {String} [view] "month" | "week" | "day". When given, the screen
+   *   opens on TODAY in that view instead of wherever it was last left — the
+   *   Daily Reminder card asks for "day", because the card is about today.
+   *   Every other entry point omits it and keeps the existing behaviour
+   *   exactly: no options, so the keep-alive reveal still applies.
+   */
+  _openCalendar(view) {
+    // Launch options reach a FRESH mount only — and passing any makes
+    // togglePanel drop a parked instance and remount, which is precisely what
+    // a named view needs. This is the mechanism the billing preselect and the
+    // armed department form already use. It is also the only way to reach a
+    // kind that is still lazy-importing when the promise below settles: there
+    // is nothing but a loader placeholder to call a method on at that point.
+    const opt = view ? { startView: view } : undefined;
+    const opening = this.togglePanel(
+      "calendar_main",
+      "settings-main-slot",
+      true,
+      opt,
+    );
+    if (!view) return opening;
+    return opening.then(() => {
+      // The one case options cannot cover: the calendar was ALREADY on screen,
+      // where an open-only togglePanel is a deliberate no-op. Not a corner
+      // case here — the calendar is a restorable screen, so a reload with it
+      // open puts it back, and the Daily Reminder card fires 2s later on that
+      // same load. focusView returns immediately when the screen is already on
+      // that view and on today, so the fresh-mount path above — which read the
+      // same view from its options — is not charged a second fetch.
+      const p = _.isFunction(this.getPart)
+        ? this.getPart("settings-main-slot")
+        : null;
+      if (!p || p.isEmpty()) return;
+      const child = p.children.last();
+      if (!child || (child.isDestroyed && child.isDestroyed())) return;
+      if (child.isLazyClass || !_.isFunction(child.focusView)) return;
+      child.focusView(view);
+    });
+  }
+
+  /**
    * Open the billing/subscription screen as a FULL PAGE inside the desk
    * settings-main-slot (Figma design), replacing whatever screen is there —
    * NOT a popup. Every billing entry point (sidebar "Upgrade plan", the
@@ -8319,12 +8362,17 @@ class desk_module extends LetcBox {
       // reload-restore; like Settings and Get help it is kept mounted when
       // closed (KEEP_ALIVE_MAIN_KINDS) and re-reads its window on re-show.
       // Open-only, matching its sidebar neighbours.
-      case "toggle-calendar":
+      case "toggle-calendar": {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CALENDAR,
           ico: "top-calendar",
         });
-        return this.togglePanel("calendar_main", "settings-main-slot", true);
+        // Most callers — the rail, the topbar cluster, the phone go-to grid,
+        // the reload-restore — want the screen as the user left it, so they
+        // name no view and the keep-alive reveal is unchanged. The Daily
+        // Reminder card names one: `day`, because the card is about today.
+        return this._openCalendar(args.calendarView);
+      }
 
       // Switcher header ⋯ → the open workspace's own menu, built the way a
       // right-click builds one. Its rows dispatch to the workspace WINDOW.
