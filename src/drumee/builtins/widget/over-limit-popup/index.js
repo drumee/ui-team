@@ -20,6 +20,7 @@
  */
 const OverLimit = require("libs/over-limit");
 const { needsAdminConsoleUpgrade } = require("libs/billing");
+const { closeWmPopup } = require("libs/wm-popup");
 
 class __over_limit_popup extends LetcBox {
   static initClass() {
@@ -73,9 +74,11 @@ class __over_limit_popup extends LetcBox {
     this._render();
   }
 
+  // Removes ONLY this popup when the Wm pool it lives in also holds the
+  // workspace pane — see libs/wm-popup. Closing used to `parent.clear()` the
+  // shared layer, which took the workspace down with the card.
   _close() {
-    if (this.parent && _.isFunction(this.parent.clear)) this.parent.clear();
-    else this.softDestroy();
+    closeWmPopup(this);
   }
 
   onUiEvent(cmd, args = {}) {
