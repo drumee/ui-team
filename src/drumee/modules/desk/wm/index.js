@@ -2013,6 +2013,73 @@ class __window_manager extends push {
     });
   }
 
+  /**
+   * Same trick as _installWmModalMirror, generalised: watch ONE layer and
+   * mirror "does this layer currently hold <sel>?" onto the desk root as a
+   * plain data attribute.
+   *
+   * WHY, rather than letting CSS answer it with `:has()`. A `:has()` whose
+   * SUBJECT is the desk root makes the root "affected by :has()", so whenever
+   * the argument can have changed the engine re-evaluates the root and
+   * invalidates its entire subtree — the whole application. That is what makes
+   * a style flush cost ~8,000 elements at ~13us each (~68ms) instead of a
+   * handful, and every forced layout read in any handler then pays it.
+   * Production trace 2026-09-15: 411 forced recalcs, 28,136ms, with single
+   * clicks blocking for 2.5s.
+   *
+   * An attribute on the root costs one selector match against that root. The
+   * observer is scoped to the layer the windows actually mount into (routing is
+   * manager.js getWindowsPool/getCallPool), not the desk subtree, so the
+   * callback stays cheap — a subtree observer over the whole desk would just be
+   * re-creating the cost this removes.
+   *
+   * @param {String} pn    layer part name
+   * @param {String} prop  dataset key to stamp on `.desk-module`
+   * @param {String} sel   selector the layer is tested for
+   */
+  _installDeskStateMirror(pn, prop, sel) {
+    this.ensurePart(pn).then((p) => {
+      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+      const root =
+        this.el && _.isFunction(this.el.closest)
+          ? this.el.closest(".desk-module")
+          : null;
+      if (!root || typeof MutationObserver !== "function") return;
+      const key = `_${prop}Observer`;
+      // A re-feed hands us a fresh part; drop the observer on the old one.
+      if (this[key]) this[key].disconnect();
+      const sync = () => {
+        if (p.el.querySelector(sel)) root.dataset[prop] = "1";
+        else delete root.dataset[prop];
+      };
+      this[key] = new MutationObserver(sync);
+      // childList for mount/unmount, data-state because a call window that is
+      // merely UNFOCUSED still exists and must not count (the rule this
+      // replaces keyed on [data-state="1"] for exactly that reason).
+      this[key].observe(p.el, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-state"],
+      });
+      sync();
+    });
+  }
+
+  /** Every desk-root state flag the skin reads instead of a root `:has()`. */
+  _installDeskStateMirrors() {
+    this._installDeskStateMirror(
+      "upload-progress-layer",
+      "deskUpload",
+      ".window-upload-progress",
+    );
+    this._installDeskStateMirror(
+      "call-layer",
+      "deskCall",
+      '.window-connect[data-state="1"]',
+    );
+  }
+
   onPartReady(child, pn) {
     if (pn === _a.list) {
       // Warm BOTH of folder_task's steps while the grid that triggers it
@@ -2074,6 +2141,7 @@ class __window_manager extends push {
     this._syncHomeGrid(1, true);
     this.feed(require("./skeleton")(this));
     this._installWmModalMirror();
+    this._installDeskStateMirrors();
     // Safety net for a boot that claims nothing — see settleHomeGrid. The desk
     // calls it directly at the end of its restore; this covers a Wm mounted
     // without one (or a restore that throws before it can).
@@ -2526,6 +2594,7 @@ class __window_manager extends push {
     }
     this.feed(require("./skeleton")(this));
     this._installWmModalMirror();
+    this._installDeskStateMirrors();
   }
 
   /**
