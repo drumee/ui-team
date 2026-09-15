@@ -810,9 +810,54 @@ html {
 // Gated on the switcher being OPEN as well as the modal: the rest of the time
 // the bar has no business above a dialog, where its controls would invite
 // clicks on things the modal is meant to block.
-.desk-module:has(.window-manager__wrapper-modal[data-state="open"]):has(
-    .desk-module-topbar__ws-wrapper .menu-topic-items__wrapper[data-state="open"]
-  ) {
+//
+// AND THAT GATE MUST BE READ OFF THE MENU ROOT, which is what
+// `.desk-module-topbar__ws-wrapper.menu-topic[data-state="1"]` is — one
+// element wearing both classes (ui-core adds `menu-topic` to the root beside
+// the `__*-wrapper` the skeleton passes).
+//
+// It used to test the descendant `.menu-topic-items__wrapper[data-state="open"]`
+// instead, and that stamp is a ONE-WAY LATCH: ui-core's menu widget writes it
+// in `_openItems` (widgets/menu/index.js) and never takes it back — `_onClosed`
+// resets the items box and the root, not the wrapper. So the FIRST press of the
+// switcher turned this lift on for the rest of the session, and every later
+// dialog came up with the whole bar — utility icons, avatar, New — floating
+// above it and still clickable. That is exactly the thing the gate above is
+// written to prevent, so the gate was defeating itself. Measured: open the
+// switcher once, close it, and the bar stayed at 100001 with no menu open.
+//
+// The root is cleared on every close path (`_onClosed` and `_close` both write
+// `this.el.dataset.state = 0`), so this releases. Same reasoning, and the same
+// trap, as the note on the upload lift further up — which already reads the
+// root for this reason.
+//
+// COMPOUND, not descendant, and that is deliberate: the two classes plus the
+// attribute keep this `:has()` argument at (0,3,0), so the selector stays at
+// (0,7,0). Written as `:has(.desk-module-topbar__ws-wrapper[data-state="1"])`
+// it would fall to (0,6,0) — under the utility-tooltip lift above, which is
+// (0,7,0) — and the switcher would lose its 100001 to that rule's 50002
+// whenever a tooltip happened to be showing.
+// ATTRIBUTES, NOT `:has()` — and the tie described above is preserved. Both
+// arguments are now flags on the root: `data-wm-modal` from
+// wm/index.js _installWmModalMirror (unchanged, and it tests exactly
+// `.window-manager__wrapper-modal[data-state="open"]`), and `data-desk-wsmenu`
+// from desk/index.js _installWsMenuMirror.
+//
+// This block MUST stay AFTER the utility-hover lift above: both are (0,7,0),
+// and the tie is still broken by source order so the switcher keeps its 100001.
+//
+// SPECIFICITY IS PRESERVED EXACTLY. The repeats replace the class-counts of the
+// `:has()` arguments they stand in for — a 2-class compound and a 3-class one:
+//   was  .desk-module
+//          :has(.window-manager__wrapper-modal[data-state="open"])        (0,2,0)
+//          :has(.desk-module-topbar__ws-wrapper.menu-topic[data-state="1"]) (0,3,0)
+//          .desk-module__topbar
+//        (0,1,0) + (0,2,0) + (0,3,0) + (0,1,0) = (0,7,0)
+//   now  .desk-module[data-wm-modal="open"][data-wm-modal="open"]
+//          [data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu]
+//          .desk-module__topbar
+//        (0,1,0) + (0,1,0)x2 + (0,1,0)x3 + (0,1,0) = (0,7,0)
+.desk-module[data-wm-modal="open"][data-wm-modal="open"][data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu] {
   .desk-module__topbar {
     z-index: 100001;
   }
@@ -862,7 +907,25 @@ html {
 // During the lazy chunk's own load neither exists and nothing is hidden, which
 // is harmless — the dropdown has just closed itself, and a second Open hits
 // togglePanel's already-pending guard.
-.desk-module:has(.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main) {
+// ATTRIBUTE, NOT `:has()`. The subject here is `.desk-module`, and the argument
+// depends on a descendant EXISTING — so Blink marked the root "affected by
+// :has()" and re-evaluated it on every node added or removed ANYWHERE in the
+// app, invalidating the whole subtree each time. Attributing the invalidations
+// in the 2026-09-15 trace to their cause put plain DOM churn at the top (114
+// from `remove`, 68 from `_toggleClass`, 32 from `_loadAvatar`), each restyling
+// a median of 8,278 elements — 54% of the document — none of it to do with the
+// org screen.
+//
+// `data-desk-orgview` is stamped by desk/index.js _installOrgViewMirror, which
+// runs exactly this test against the slot the screen mounts into.
+//
+// SPECIFICITY IS PRESERVED EXACTLY. The attribute is tripled because the
+// `:has()` argument it replaces was a three-class compound:
+//   was  .desk-module:has(.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main) .desk-org-tab__open
+//        (0,1,0) + (0,3,0) + (0,1,0) = (0,5,0)
+//   now  .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] .desk-org-tab__open
+//        (0,1,0) + (0,1,0)x3        + (0,1,0) = (0,5,0)
+.desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] {
   .desk-org-tab__open,
   .desk-module-sidebar__nav-main {
     display: none;
