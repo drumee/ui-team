@@ -1,4 +1,4 @@
-const { videoBlock, tourButton, articleGrid, feedback } = require("./common");
+const { videoBlock, articleGrid, feedback } = require("./common");
 const { faqPage } = require("./faq");
 
 /**
@@ -34,10 +34,13 @@ function articlePage(ui) {
       // and the click that starts it read the source the same way, so they
       // cannot disagree about whether there is anything to play.
       videoBlock(ui, ui.getVideo()),
-      // Product tour only. This layout is shared with Self-hosting, where a
-      // button labelled "Product Tour" under a self-hosting video would read
-      // as a mismatch.
-      ui.getPage() === "product-tour" ? tourButton(ui) : null,
+      // The "Product Tour" CTA (common.js tourButton -> `help-main__tour-row`)
+      // used to sit here on the product-tour page. It is hidden for now: put
+      // `ui.getPage() === "product-tour" ? tourButton(ui) : null` back, and
+      // re-import tourButton above, to restore it. Note that this was the only
+      // user-initiated way into desk_tutorial (desk/index.js
+      // _startProductTour); the automatic post-signup run and `?tutorial=1`
+      // are unaffected.
       articleGrid(ui, data.articles),
     ].filter(Boolean),
   });

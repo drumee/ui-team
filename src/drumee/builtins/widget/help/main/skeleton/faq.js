@@ -25,6 +25,13 @@ function faqRow(ui, entry) {
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}-body`,
+        // `kidsOpt` reaches ONE level (ui-core letc.js mergeKidsOptions), so
+        // the row's own `kidsOpt` inerts this box but not the two Notes
+        // inside it. An active letc element binds its own onclick, which
+        // stopPropagation()s before looking for handlers — so a click landing
+        // on the question text (most of the row's surface) was swallowed and
+        // only the caret and the padding around it toggled the answer.
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Note({
             className: `${pfx}-question`,

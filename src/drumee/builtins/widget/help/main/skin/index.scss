@@ -741,12 +741,19 @@
       &:active {
         transform: scale(0.92);
       }
+    }
 
-      &-ico {
-        width: 16px;
-        height: 16px;
-        color: $purple-base;
-      }
+    // Sibling of the button, not nested inside it. skeleton/common.js
+    // supportBtn gives the glyph the class `…__feedback-support-ico` (the
+    // button around it is `…__feedback-support-btn`), so an `&-ico` nested
+    // under `&-support-btn` compiles to `…-support-btn-ico` and matches
+    // nothing — which left both glyphs at the svg wrapper's intrinsic size,
+    // overflowing the 32px button, while the thumbs beside them sized right.
+    &-support-ico {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      color: $purple-base;
     }
   }
 
