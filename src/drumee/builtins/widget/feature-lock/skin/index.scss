@@ -63,6 +63,31 @@
     }
   }
 
+  // The lockup form of the same slot (admin_console). Ported from
+  // `.signin-form__logo-image` — same asset, same box, so the brand is one
+  // size wherever it is stated.
+  //
+  // BOTH dimensions pinned to the export's natural 120.723:24 ratio, not width
+  // alone: it carries preserveAspectRatio="none", so an off-ratio box stretches
+  // the mark rather than letterboxing it. That is also why the 56x56 square
+  // above cannot simply be inherited.
+  //
+  // AFTER the base block on purpose. Both selectors are (0,1,0) and the element
+  // carries both classes, so source order is what decides — moving this above
+  // __icon would silently hand the square back.
+  &__icon--logo {
+    width: 120.72px;
+    height: 24px;
+    flex: 0 0 auto;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
+
   // Two things the obvious CSS does NOT do here:
   //
   // 1. Centering. Note renders as a FLEX container whose text sits in an

@@ -28,6 +28,14 @@
  */
 require("./skin");
 const { canUpgradePlan } = require("libs/billing");
+// The exported drumee lockup (glyph + wordmark as ONE asset), for the specs
+// that head their card with the brand rather than a feature glyph — see the
+// `logo` branch in featureLockBody. Same file and same require idiom the
+// sign-in card, the plugin loading screen and the router goodbye screen use;
+// webpack's url-loader turns it into a data URI, and `.default` is the ESM
+// interop half of that.
+const LOGO = require("assets/drumee-logo.svg");
+const LOGO_SRC = LOGO.default || LOGO;
 
 /**
  * Every gate the product has, and all of its copy.
@@ -44,7 +52,12 @@ const FEATURES = {
    * with `libs/billing.needsAdminConsoleUpgrade()`.
    */
   admin_console: {
-    ico: "cloud-pause",
+    // The drumee lockup instead of a sprite glyph — `logo` in place of `ico`,
+    // which is what featureLockBody branches on. Admin Console is a gate on
+    // the PRODUCT tier rather than on one feature, so the brand is the honest
+    // thing to head it with; the three below each gate one named capability
+    // and keep the glyph that names it.
+    logo: 1,
     title: () => LOCALE.UNLOCK_ADMIN_CONSOLE,
     desc: () => LOCALE.UNLOCK_ADMIN_DESC,
   },
@@ -182,11 +195,30 @@ function featureLockBody(feature, args) {
             }),
           ],
         }),
-        Skeletons.Image.Svg({
-          ico: spec.ico,
-          className: "feature-lock__icon",
-          active: 0,
-        }),
+        // The card's heading mark. Two shapes, ONE class — the layout slot is
+        // the same either way, the modifier only re-boxes it.
+        //
+        // Element, NOT Note, for the lockup: Note pipes content through
+        // DOMPurify against _K.allowed_tag, which has no `img` — so a Note
+        // strips it and renders nothing while the CSS still reserves the box.
+        // Element maps to kind `wrapper`, which sets innerHTML directly. The
+        // sign-in header (signin widgets/toolkit/skeleton.js) records the same
+        // trap; this is that markup, verbatim.
+        spec.logo
+          ? Skeletons.Element({
+              className: "feature-lock__icon feature-lock__icon--logo",
+              // The export's intrinsic size, stated the way the sign-in card
+              // and the plugin loading screen state it. It matters here: the
+              // file carries preserveAspectRatio="none", so anything that
+              // reaches it off-ratio stretches the wordmark.
+              content: `<img src="${LOGO_SRC}" alt="drumee" width="121" height="24">`,
+              active: 0,
+            })
+          : Skeletons.Image.Svg({
+              ico: spec.ico,
+              className: "feature-lock__icon",
+              active: 0,
+            }),
         Skeletons.Note({
           className: "feature-lock__title",
           content: spec.title(),

@@ -67,6 +67,14 @@ const createNavItem = (
       ? `${cls(fig, "item")} ${cls(fig, `item--${opts.modifier}`)}`
       : cls(fig, "item"),
     uiHandler: [ui],
+    // "I am a row of this rail" — every __nav-main row and both __footer rows,
+    // since all of them come through here and nothing else does. The desk reads
+    // it off the clicked view (desk_module.onUiEvent) to dismiss the transient
+    // cards that must not outlive a navigation gesture — see
+    // _dismissFeatureLock. A flag rather than the desk matching on a list of
+    // rail `service` strings: that list is this file's business, and a row
+    // added here would have been missed there.
+    railRow: 1,
     // One shared group, so exactly one row is lit — right for every row that
     // REPLACES what is on screen (Files…Access swap the workspace tab, Plan
     // opens a section screen), wrong for one that opens a popup OVER it.
