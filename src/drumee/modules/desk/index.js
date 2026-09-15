@@ -2115,6 +2115,88 @@ class desk_module extends LetcBox {
     // support account itself, and the inbox badges support conversations.
     // Failure is already swallowed into null — nothing here depends on it.
     this.supportContact();
+    this._installOrgViewMirror();
+    this._installWsMenuMirror();
+  }
+
+  /**
+   * Mirror "the workspace switcher panel is open" onto the desk root as
+   * `data-desk-wsmenu` — same reason as _installOrgViewMirror, and the same
+   * cost being removed: the rule that reads it had `.desk-module` as its
+   * `:has()` subject, so ordinary DOM churn anywhere re-matched the root.
+   *
+   * The observer watches ONE element and two attributes. `class` is in the
+   * filter as well as `data-state` because the selector it replaces tested
+   * `.menu-topic` too, and that class is applied by the menu widget rather
+   * than being present from the first render.
+   */
+  _installWsMenuMirror() {
+    this.ensurePart("ws-wrapper").then((p) => {
+      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+      const root = this.el;
+      if (!root || !root.dataset || typeof MutationObserver !== "function") return;
+      if (this._wsMenuObserver) this._wsMenuObserver.disconnect();
+      const sync = () => {
+        const open =
+          p.el.classList.contains("menu-topic") &&
+          p.el.getAttribute("data-state") === "1";
+        if (open) root.dataset.deskWsmenu = "1";
+        else delete root.dataset.deskWsmenu;
+      };
+      this._wsMenuObserver = new MutationObserver(sync);
+      this._wsMenuObserver.observe(p.el, {
+        attributes: true,
+        attributeFilter: ["data-state", "class"],
+      });
+      sync();
+    });
+  }
+
+  /**
+   * Mirror "the organisation screen is up" onto the desk root as
+   * `data-desk-orgview`, so the skin can read an attribute instead of a
+   * root-anchored `:has()`.
+   *
+   * WHY THIS IS THE EXPENSIVE KIND OF SELECTOR. A `:has()` whose SUBJECT is
+   * `.desk-module` marks the root "affected by :has()". Blink then has to
+   * re-evaluate it whenever a mutation could change the answer — and the answer
+   * depends on a descendant EXISTING, so EVERY node added or removed anywhere in
+   * the app is such a mutation. The root is re-matched and its whole subtree
+   * invalidated.
+   *
+   * That is not theoretical. Attributing the style invalidations in the
+   * 2026-09-15 trace to the code that caused them put ordinary DOM churn at the
+   * top — 114 from `remove`, 68 from `_toggleClass`, 32 from `_loadAvatar`, 26
+   * from `showThumb` — none of which have anything to do with the org screen.
+   * Each one restyled a median of 8,278 elements, 54% of the document.
+   *
+   * An attribute on the root is matched against the root and nothing else. The
+   * observer is scoped to the slot the screen actually mounts into
+   * (togglePanel -> "settings-main-slot"), so it cannot re-create the cost.
+   */
+  _installOrgViewMirror() {
+    this.ensurePart("settings-main-slot").then((p) => {
+      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+      const root = this.el;
+      if (!root || !root.dataset || typeof MutationObserver !== "function") return;
+      if (this._orgViewObserver) this._orgViewObserver.disconnect();
+      // Same test the selector made: an org-view root that is not animating out
+      // and has actually drawn its __main. `data-anim !== "out"` is the desk's
+      // own liveness test (see the `topChild` read in _sectionScreenService).
+      const SEL = '.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main';
+      const sync = () => {
+        if (p.el.querySelector(SEL)) root.dataset.deskOrgview = "1";
+        else delete root.dataset.deskOrgview;
+      };
+      this._orgViewObserver = new MutationObserver(sync);
+      this._orgViewObserver.observe(p.el, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-anim"],
+      });
+      sync();
+    });
   }
 
 
