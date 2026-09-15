@@ -615,7 +615,13 @@ class __tasks_panel extends LetcBox {
     // pass a loose test here and then find no task there, rendering the detail
     // panel with a null draft.
     const task = seek();
-    if (task) this._openDetail(task.id);
+    if (task) return this._openDetail(task.id);
+    // The board switched to, the detail never opened, and nothing said why —
+    // which from the Personal Calendar reads as "the chip is not clickable"
+    // rather than "that task is not on this board". It happens when the
+    // calendar row names a task that has since moved workspace or been
+    // deleted; the meeting twin already refuses out loud (MEETING_NOT_FOUND).
+    this.warn("tasks: deep-linked task is not on this board", id);
   }
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
@@ -2614,6 +2620,11 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.update_status:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
+        // One peer changed one task — patch that one row instead of reloading
+        // the workspace. See _applyPeerTaskChange for why this is the whole
+        // idle-lag bug. Falls back to the full refresh whenever the surgical
+        // path cannot be proved correct.
+        if (this._applyPeerTaskChange(data)) return;
         this._queueWsRefresh({ tasks: 1, activity: 1, history: 1 });
         return;
       case SERVICE.task.link_file:
@@ -2798,6 +2809,55 @@ class __tasks_panel extends LetcBox {
     }
     this._startWsCooldown();
     this._runWsRefresh();
+  }
+
+  /**
+   * Apply ONE peer's change to ONE task, in place.
+   *
+   * THIS IS THE IDLE-LAG BUG. A peer editing a single task used to cost every
+   * other viewer `_loadTasks()` — a refetch of EVERY task in the workspace —
+   * followed by `_render()`, a full teardown and rebuild of the whole panel:
+   * chrome, viewbar, filter bar, every card. Coalesced at WS_REFRESH_WINDOW
+   * (400ms), so a busy team drove up to ~2.5 of those per second into a tab
+   * whose owner was not touching anything.
+   *
+   * It needed BOTH multipliers to hurt, which is why it looked workspace-
+   * specific: many members to generate the events, and many tasks to make each
+   * refetch+rebuild expensive. Drumee Dev Team is the only workspace on the
+   * platform with both (14 members, 476 tasks) — and it is the only one whose
+   * members reported the desk going slow while idle and eventually dying.
+   *
+   * The payload already carries the row, and `_mergeTask` is built to take it:
+   * it spreads over the cached row, so a PARTIAL payload (update_status sends
+   * no linked_files) patches only what it names — see the note on
+   * _normalizeTask. The local-edit path has merged this way all along; only the
+   * peer path reloaded the world.
+   *
+   * Returns true when it handled the change. Every case it cannot PROVE is
+   * correct returns false and takes the old full-refresh route:
+   *
+   *  - no `id` on the payload — nothing to merge against
+   *  - panel hidden — _queueWsRefresh already defers correctly, and re-entering
+   *    here would repaint a board nobody can see
+   *  - a task detail is open — the modal and its history read state this does
+   *    not repaint
+   *  - the Health view is up — it renders the activity feed, which only
+   *    `_loadActivity()` refreshes
+   *
+   * @param {Object} data the WS payload for the changed task
+   * @returns {Boolean} true if applied surgically
+   */
+  _applyPeerTaskChange(data) {
+    if (!data || !data.id) return false;
+    if (this._isPanelHidden()) return false;
+    if (this._detailId) return false;
+    if (this.getView() === "summary") return false;
+    this._mergeTask(data);
+    // The narrow repaint: feeds only the view host, and snapshots/restores
+    // every scroller by selector — so a colleague's edit no longer throws the
+    // reader back to the top of the column they were reading.
+    this._refreshViewBody();
+    return true;
   }
 
   _runWsRefresh() {
