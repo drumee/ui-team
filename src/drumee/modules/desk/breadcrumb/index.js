@@ -73,6 +73,11 @@ class __desk_breadcrumb extends LetcBox {
    *   _setSectionMode. Every path caller leaves it off.
    * @param {Boolean} [opt.hideAddress] that label is redundant — draw no chip.
    *   Only the organisation view asks for this; see _setSectionMode.
+   * @param {String} [opt.ico] sprite id for a SECTION's glyph — the same one
+   *   the control that opened the screen wears, so the crumb matches the lit
+   *   top-bar button. Passed as an option rather than riding in on the data,
+   *   for the same reason `section` is: _normalizeData keeps only a node's own
+   *   PROPERTIES, and this is a rendering instruction. Ignored for a path.
    */
   _buildContent(data, opt = {}) {
     const section = !!opt.section;
@@ -124,6 +129,9 @@ class __desk_breadcrumb extends LetcBox {
             // derived there from the absence of a filetype: a workspace root
             // reached through get_path can arrive without one too.
             isSection: section ? 1 : 0,
+            // Only a section draws one; a path crumb has its folder art. Left
+            // undefined otherwise so the skeleton's `else if (ico)` stays false.
+            ico: section ? opt.ico || null : null,
           });
         }
       });
@@ -147,7 +155,7 @@ class __desk_breadcrumb extends LetcBox {
       // changing any nid, and must still repaint. Same shape as the workspace
       // switcher's own revalidation guard.
       const sig = items
-        .map((i) => `${i.hub_id}:${i.nid}:${i.filename}:${i.isCurrent ? 1 : 0}:${i.isSection}`)
+        .map((i) => `${i.hub_id}:${i.nid}:${i.filename}:${i.isCurrent ? 1 : 0}:${i.isSection}:${i.ico || ""}`)
         .join("|");
       if (sig === this._renderedSig) return;
       this._renderedSig = sig;
@@ -415,15 +423,20 @@ class __desk_breadcrumb extends LetcBox {
     // instruction rather than one of them.
     const raw = (_.isArray(data) ? data[0] : data) || {};
     const hideAddress = !!raw.hideAddress;
+    // Same reason as hideAddress: a rendering instruction, not a node field,
+    // so it has to be taken before _normalizeData drops it.
+    const ico = raw.ico || null;
     this._context = this._normalizeData(data)[0];
     const filename = this._context && (this._context.filename || this._context.name);
     if (!filename) return this.loadDefault();
     // A context crumb that carries node identity IS a workspace — the
     // switcher's `change-workspace` row hands its whole model in — so it keeps
     // the folder glyph and the caret. Only a bare label is a section screen;
-    // every desk trigger of "breadcrumb:context" sends exactly {filename}.
+    // a desk trigger of "breadcrumb:context" sends {filename} and, for the
+    // section screens reachable from the top bar or the rail, the `ico` that
+    // control wears (see desk onUiEvent). The switcher's row sends neither.
     const section = !this._context.filetype && !this._context.nid;
-    this._buildContent([{ ...this._context, filename }], { section, hideAddress });
+    this._buildContent([{ ...this._context, filename }], { section, hideAddress, ico });
   }
 
   /**

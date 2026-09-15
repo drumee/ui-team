@@ -6141,6 +6141,9 @@ class desk_module extends LetcBox {
   _openGetHelp() {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.GET_HELP,
+      // Reached from the rail and the account menu; `ph-info` is the id both
+      // the mobile sheet and the account menu already give it.
+      ico: "ph-info",
     });
     return this.togglePanel("help_main", "settings-main-slot", true);
   }
@@ -7658,6 +7661,7 @@ class desk_module extends LetcBox {
   openBillingPage(preselect) {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.BILLING_SUBSCRIPTION,
+      ico: "billing",
     });
     // Extended page -> "Opened billing / plans". Marked HERE rather than on the
     // sidebar item so every route counts: the sidebar entry, the Settings
@@ -8250,17 +8254,46 @@ class desk_module extends LetcBox {
             // this desk toggle (setState directly), not the panel's own open
             // handler, so the refresh must be triggered here.
             if (typeof p.refreshFeed === "function") p.refreshFeed();
+            RADIO_BROADCAST.trigger("breadcrumb:context", {
+              filename: LOCALE.NOTIFICATIONS,
+              ico: "top-bell",
+            });
+          } else {
+            // AND PUT THE PATH BACK, which only this case has to do by hand.
+            //
+            // Every other section screen lives in one of the three main slots,
+            // so leaving it runs through Desk._leaveSectionScreen →
+            // closeMainPanels(), which rebuilds the workspace path on the way
+            // out. The activity panel is deliberately NOT one of those — it is
+            // a side panel, and closeMainPanels() neither closes it nor hears
+            // about it. Without this branch the bell's own second press would
+            // hide the panel and leave the bar still reading "Notifications"
+            // over the workspace, with nothing left on screen to explain it.
+            //
+            // _restoreCurrentPath, not loadDefault: it resolves the pane (or
+            // _curWorkspace) and repaints the real path, and falls back to
+            // loadDefault itself when no workspace is open yet.
+            const crumb = _.isFunction(this.getPart)
+              ? this.getPart("breadcrumb")
+              : null;
+            if (crumb && _.isFunction(crumb._restoreCurrentPath)) {
+              crumb._restoreCurrentPath();
+            }
           }
         });
 
       case "toggle-inbox":
       case "toggle-chat":
-        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.INBOX });
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.INBOX,
+          ico: "top-inbox",
+        });
         return this.togglePanel("chat_p2p", INBOX_SLOT, true);
 
       case "toggle-contacts":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CONTACTS,
+          ico: "top-contacts",
         });
         return this.togglePanel("address_book", "chat-panel");
 
@@ -8271,6 +8304,10 @@ class desk_module extends LetcBox {
       case "toggle-settings":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.SETTINGS,
+          // No `top-*` twin: Settings is reached from the rail and the account
+          // menu, never the utility cluster. The rail's own id, so the crumb
+          // still matches the control that opened it.
+          ico: "sidebar_settings",
         });
         // Open-only — clicking Settings (sidebar) or the bottom Profile
         // item never closes the panel; the close icon inside Settings
@@ -8285,6 +8322,7 @@ class desk_module extends LetcBox {
       case "toggle-calendar":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CALENDAR,
+          ico: "top-calendar",
         });
         return this.togglePanel("calendar_main", "settings-main-slot", true);
 
@@ -8562,6 +8600,7 @@ class desk_module extends LetcBox {
         // privilege gating (upsell for non-admins), so the item stays visible to all.
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.ADMIN_CONSOLE,
+          ico: "top-apps",
         });
         // `tab` rides in from desk:open-admin-console — the storage overage
         // asks for the Storage tab, where the per-workspace cleanup is. The
@@ -8605,6 +8644,7 @@ class desk_module extends LetcBox {
       case "toggle-trash":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.TRASH,
+          ico: "top-trash",
         });
         return this.togglePanel("panel_trash", "trash-panel");
 
