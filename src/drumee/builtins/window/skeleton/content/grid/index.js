@@ -19,7 +19,20 @@ const __media_skl_grid = function (ui) {
     innerClass: `${ui.fig.group}__icons-scroll`,
     sys_pn: _a.list,
     flow: _a.none,
-    timer: 2000,
+    // NO `timer:` HERE, DELIBERATELY. `timer: N` arms ui-core's tick() loop
+    // (letc/widgets/list/index.js:194), which re-arms itself from renderData()
+    // after every page and only stops at `_end_of_data`. On a busy folder that
+    // means the grid silently walks the ENTIRE listing while the tab sits idle:
+    // measured on preview, 27 media.show_node_by fetches for one folder, 2.17s
+    // apart over 56s, ~1.3s of server time each, mounting ~1,200 media widgets
+    // nobody asked for. That is the "open it, do nothing, it gets laggy and
+    // crashes" report.
+    //
+    // Paging still works without it: _onScroll (list/index.js:517) is bound for
+    // every List.Smart and fetches the next page when you actually reach the
+    // bottom, with useMouseWheel() covering the not-yet-scrollable case. The
+    // visible trade is that a folder now shows its first page and grows on
+    // scroll, instead of filling itself in if you wait.
     dataset: {
       role: _a.container,
     },
