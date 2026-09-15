@@ -350,6 +350,14 @@ class __tasks_panel extends LetcBox {
     if (this._wsCooldown) clearTimeout(this._wsCooldown);
     this._wsCooldown = null;
     this._wsPending = null;
+    // The coalesced peer repaint (_applyPeerTaskChange) — a frame queued
+    // against a panel that is going away would call _refreshViewBody on a
+    // destroyed view. The isDestroyed() guard inside catches it too; cancelling
+    // is the half that does not depend on the callback running at all.
+    if (this._peerPaintRaf && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._peerPaintRaf);
+    }
+    this._peerPaintRaf = 0;
     if (this._visObserver) {
       this._visObserver.disconnect();
       this._visObserver = null;
@@ -2848,15 +2856,49 @@ class __tasks_panel extends LetcBox {
    * @returns {Boolean} true if applied surgically
    */
   _applyPeerTaskChange(data) {
-    if (!data || !data.id) return false;
+    // BOTH SHAPES, exactly as the local edit path unwraps them
+    // (`_mergeTask(Array.isArray(updated) ? updated[0] : updated)`). The
+    // broadcast carries whatever `CALL task_create` / `task_update` returned,
+    // and a single-row result collapses to a bare object on some paths and
+    // stays wrapped on others. Reading `.id` off an unwrapped array yields
+    // undefined, which would silently send every event back to the full
+    // refresh — the fix would look applied and do nothing.
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || !row.id) return false;
     if (this._isPanelHidden()) return false;
     if (this._detailId) return false;
     if (this.getView() === "summary") return false;
-    this._mergeTask(data);
-    // The narrow repaint: feeds only the view host, and snapshots/restores
-    // every scroller by selector — so a colleague's edit no longer throws the
-    // reader back to the top of the column they were reading.
-    this._refreshViewBody();
+
+    // Merge FIRST and unconditionally — it is a array splice, it cannot fail,
+    // and the cache must be right even when the repaint below is skipped or
+    // deferred. Everything that reads task state (getState, the column count
+    // badges, the filters) is correct from this line on.
+    this._mergeTask(row);
+
+    // COALESCED ON A FRAME, not fired per event. The old path was throttled by
+    // WS_REFRESH_WINDOW (400ms); handling events individually removed that, and
+    // a burst from a busy team would repaint once per message. rAF gives back a
+    // ceiling of one repaint per frame no matter how many peers are typing, and
+    // the merges in between are free.
+    if (!this._peerPaintRaf && typeof requestAnimationFrame === "function") {
+      this._peerPaintRaf = requestAnimationFrame(() => {
+        this._peerPaintRaf = 0;
+        if (this.isDestroyed && this.isDestroyed()) return;
+        // NOT WHILE A CARD IS IN THE AIR. _refreshViewBody re-feeds the view
+        // host, which destroys the very element the pointer is dragging — the
+        // card would vanish mid-gesture and the drop land nowhere. The old
+        // full-render path had the same hole; it is closed here rather than
+        // carried over. The drop runs _loadTasks()/_syncColumn itself, so the
+        // board is reconciled the moment the gesture ends.
+        if (this._dragTaskId || this._dragColKey) return;
+        // Re-check: a detail may have been opened during the frame.
+        if (this._detailId || this._isPanelHidden()) return;
+        // The narrow repaint: feeds only the view host, and snapshots/restores
+        // every scroller by selector — so a colleague's edit no longer throws
+        // the reader back to the top of the column they were reading.
+        this._refreshViewBody();
+      });
+    }
     return true;
   }
 
