@@ -26,6 +26,12 @@ function normalizeTags(raw) {
     .filter((t) => t && t.tag_id);
 }
 
+// Contacts built on first paint, and the step each scroll adds. Mirrors the
+// task board's CARD_WINDOW: big enough that a normal book never pages, small
+// enough that a large one does not mount in one burst.
+const CONTACT_WINDOW = 60;
+const CONTACT_WINDOW_STEP = 60;
+
 class __address_book extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
@@ -145,6 +151,9 @@ class __address_book extends LetcBox {
 
       case "filter-tag":
         this._selectedTagId = trigger.mget("tagId") || null;
+        // A different filter is a different list — reset the window with it,
+        // for the same reason switchTab does.
+        this._contactWin = 0;
         return this._refreshList();
 
       case "select-contact":
@@ -393,6 +402,10 @@ class __address_book extends LetcBox {
     this._tab = tab;
     this._selectedKey = null;
     this._editing = false;
+    // Back to the first window. Without this a deep scroll in one tab would
+    // carry its grown window into the next, mounting hundreds of rows in one
+    // burst on a list the user has not scrolled at all.
+    this._contactWin = 0;
     // `my_contact_show_next` honours 'active', 'archived', or 'sent'. The All
     // and Blocked tabs share the 'active' fetch (Blocked filters client-side
     // on `is_blocked`). Pending combines received invitations (notification
@@ -1183,7 +1196,53 @@ class __address_book extends LetcBox {
   _refreshList() {
     return this.ensurePart("ab-list").then((part) => {
       part.feed(require("./skeleton/contact-list")(this, this._listForView()));
+      this._installContactWindow(part);
     });
+  }
+
+  /**
+   * How many contacts the list is currently allowed to build.
+   *
+   * `contact.show_contact` has no limit and the skeleton mapped every row it
+   * returned, so the whole address book mounted as widgets in one synchronous
+   * burst — a real account measured 245 contacts, each a Box with a Note, an
+   * avatar and an action cluster. Every element is a style-recalc candidate
+   * for the rest of the session.
+   *
+   * Same shape as the task board's cardWindow: a soft cap that grows when the
+   * user actually scrolls near the bottom. `_listForView().length` still gates
+   * the empty state, so a non-empty book can never render "no contacts".
+   */
+  contactWindow() {
+    return this._contactWin || CONTACT_WINDOW;
+  }
+
+  /**
+   * Grow the window as the list is scrolled. Bound once per part — the part is
+   * re-fed on every _refreshList, and a listener per feed would accumulate the
+   * way media/interact's parent-scroll handler did.
+   */
+  _installContactWindow(part) {
+    const body =
+      part && part.el && part.el.querySelector
+        ? part.el.querySelector(`.${this.fig.family}__contact-list`)
+        : null;
+    if (!body || body._abWindowBound) return;
+    body._abWindowBound = 1;
+    body.addEventListener(
+      "scroll",
+      () => {
+        const total = this._listForView();
+        const have = this.contactWindow();
+        if (!Array.isArray(total) || total.length <= have) return;
+        // Only near the end, and only reading scroll offsets — these are
+        // already-computed values, not a forced layout flush.
+        if (body.scrollTop + body.clientHeight < body.scrollHeight - 240) return;
+        this._contactWin = have + CONTACT_WINDOW_STEP;
+        this._refreshList();
+      },
+      true,
+    );
   }
 
   _refreshDetail() {

@@ -224,7 +224,10 @@ module.exports = function (ui, contacts) {
   const listBody = contacts.length
     ? Skeletons.Box.Y({
         className: `${fig}__contact-list`,
-        kids: contacts.map(item),
+        // WINDOWED — see the note on ui.contactWindow(). `contacts.length`
+        // above still gates the empty state, so a non-empty book can never
+        // render the "no contacts" note.
+        kids: contacts.slice(0, ui.contactWindow()).map(item),
       })
     : Skeletons.Note({
         className: `${fig}__empty`,
