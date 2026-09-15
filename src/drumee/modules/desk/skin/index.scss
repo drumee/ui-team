@@ -624,7 +624,24 @@ html {
 //
 // Scoped to `:has(...)` so the context is only dissolved while a floater is
 // actually mounted — the WM keeps its normal isolation the rest of the time.
-.desk-module__body:has(.window-upload-progress) {
+// READ AS AN ATTRIBUTE, NOT AS `:has()`. This was
+// `.desk-module__body:has(.window-upload-progress)`. A `:has()` anchored this
+// high makes the desk root "affected by :has()", so every time the argument
+// could have changed the engine re-evaluates it and invalidates the whole
+// subtree — the entire app. Measured 2026-09-15: a flush restyles ~8,000
+// elements at ~13us each (~68ms), and every forced layout read in any handler
+// then pays it; single clicks blocked for 2.5s.
+//
+// `data-desk-upload` is stamped on `.desk-module` by wm/index.js
+// _installDeskStateMirrors, which watches the upload-progress layer directly.
+//
+// SPECIFICITY IS PRESERVED EXACTLY, which matters because the lifts in this
+// file are a ladder with documented ties:
+//   was  .desk-module__body:has(.window-upload-progress) .window-manager__ui
+//        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
+//   now  .desk-module[data-desk-upload] .window-manager__ui
+//        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
+.desk-module[data-desk-upload] {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;
@@ -771,7 +788,19 @@ html {
 //   • windows-layer (z 50000)        → above the panels                    ✓
 //     carrying the call (and any open folder window, as before) above them.
 // Nothing drags the grid up, so the panels/sidebar no longer need lifting.
-.desk-module__body:has(.window-connect[data-state="1"]) {
+// Attribute, not `:has()` — same reasoning as the upload lift above.
+// `data-desk-call` is stamped by wm/index.js _installDeskStateMirrors, which
+// watches the call layer and keys on `[data-state="1"]` so an UNFOCUSED call
+// window does not count, exactly as this selector did.
+//
+// SPECIFICITY IS PRESERVED EXACTLY. The attribute is repeated deliberately —
+// it is the only way to reach (0,4,0) from a single flag, and dropping to
+// (0,3,0) would tie this with the upload lift above instead of outranking it:
+//   was  .desk-module__body:has(.window-connect[data-state="1"]) .window-manager__ui
+//        (0,1,0) + (0,2,0) + (0,1,0) = (0,4,0)
+//   now  .desk-module[data-desk-call][data-desk-call] .window-manager__ui
+//        (0,1,0) + (0,1,0) + (0,1,0) + (0,1,0) = (0,4,0)
+.desk-module[data-desk-call][data-desk-call] {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;

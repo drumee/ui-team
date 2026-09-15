@@ -4330,8 +4330,20 @@ class __window_folder extends mfsInteract {
     // is anchored on the window root (.window-folder__ui = this.el), NOT the
     // narrower split-body — measuring the split-body left a boundary band where
     // CSS showed the 2-column layout but JS took the compact branch (empty rail).
+    // Memoised for the duration of the current task. `offsetWidth` is a forced
+    // layout read, and this is called several times down one switchView /
+    // _enterChatTabLayout path — each call after a DOM write pays another
+    // whole-document flush (measured in a 2,554ms click). The window cannot
+    // change width without a resize or a frame boundary, so a value read once
+    // per task is the same value every later call in that task would have got.
+    // Cleared on the microtask queue, so the next task measures afresh.
+    if (this._compactChatMemo !== undefined) return this._compactChatMemo;
     const w = (this.el && this.el.offsetWidth) || 9999;
-    return w <= 700;
+    this._compactChatMemo = w <= 700;
+    Promise.resolve().then(() => {
+      this._compactChatMemo = undefined;
+    });
+    return this._compactChatMemo;
   }
 
   scopeChatToFile(fileNid, fileLabel, opts = {}) {
@@ -5804,8 +5816,30 @@ class __window_folder extends mfsInteract {
     const el = view && view.el;
     if (!el || !el.dataset) return;
     delete el.dataset.viewEntering;
-    void el.offsetWidth;
-    el.dataset.viewEntering = "1";
+    // NO `void el.offsetWidth` HERE. That was a deliberate synchronous reflow,
+    // the standard trick for restarting a CSS animation: drop the attribute,
+    // force the engine to notice, put it back. It is only cheap on a small
+    // document.
+    //
+    // switchView has just written `dataset.fromView` and `dataset.view` on this
+    // element, so style is dirty for the whole tree when the read lands, and the
+    // read has to flush all of it. Production trace 2026-09-15: the
+    // _playViewEntrance frame sat behind forced recalcs inside a 2,554ms click,
+    // where a single flush restyles ~8,000 elements at ~13us each.
+    //
+    // A frame does the same job. The attribute is absent for one frame either
+    // way, which is all the restart needs; the browser recalculates style
+    // between frames on its own schedule instead of being forced mid-handler.
+    // Cost is one frame (~16ms) of delay before the entrance starts, against
+    // tens to hundreds of ms of blocking.
+    if (this._entranceRaf && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._entranceRaf);
+    }
+    this._entranceRaf = requestAnimationFrame(() => {
+      this._entranceRaf = 0;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (el.dataset) el.dataset.viewEntering = "1";
+    });
   }
 
   getFolderActionTarget() {
