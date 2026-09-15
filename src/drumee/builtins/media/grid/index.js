@@ -242,6 +242,9 @@ class __media_grid extends DrumeeMediaInteract {
     const instant =
       window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Latched for snapToRest: from here on this element carries a GSAP
+    // transform, even once it settles back to 0.
+    this._transformTouched = true;
     TweenLite.to(this.$el, instant ? 0 : .2, {
       x,
       overwrite: "auto",
@@ -272,8 +275,25 @@ class __media_grid extends DrumeeMediaInteract {
   snapToRest() {
     this.cancelShift();
     this.el.removeAttribute("data-insert");
+    // ONLY IF GSAP HAS EVER TOUCHED THIS TILE'S TRANSFORM. A tile that was never
+    // part of a drag has no GSAP transform to drop, so this call would write the
+    // value the element already has.
+    //
+    // It is not free. GSAP must READ the computed transform matrix before it can
+    // write one (_renderZeroDurationTween -> _parseTransform -> _getMatrix ->
+    // _getComputedProperty), and that read FLUSHES PENDING STYLE for the whole
+    // document. snapToRest runs per tile on every re-measure, so on a populated
+    // workspace it fired for hundreds of tiles that had never moved. Production
+    // trace 2026-09-15: _renderZeroDurationTween sat behind 184 forced recalcs
+    // costing 20,160ms — the largest single entry, ~8,300 elements each.
+    //
+    // The flag, not the shift value, is the condition: `_shiftX` records the
+    // last TARGET, so a tile tweening 5 -> 0 already reads 0 while still sitting
+    // part-way, and keying off it would let cancelShift() strand it there. Once
+    // the flag is set it stays set, so every tile that has ever shifted keeps
+    // the old behaviour exactly.
     this._shiftX = 0;
-    TweenLite.set(this.$el, { x: 0 });
+    if (this._transformTouched) TweenLite.set(this.$el, { x: 0 });
   }
 
   /**
