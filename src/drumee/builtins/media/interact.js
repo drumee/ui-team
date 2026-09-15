@@ -324,8 +324,20 @@ class __media_interact extends media_core {
     this.feed(this.container);
     this.el.dataset.selected = this.mget(_a.state);
     this.el.setAttribute(_a.id, `media-${this._id}`);
-    this.parent.off(_e.scroll, this.initBounds.bind(this));
-    this.parent.on(_e.scroll, this.initBounds.bind(this));
+    // ONE STABLE REFERENCE, bound once. Backbone matches listeners by identity,
+    // so `off(evt, this.initBounds.bind(this))` built a brand-new function that
+    // matched nothing and removed nothing — while the `on` right after it added
+    // yet another. Every pass through here (every tile render, and tiles
+    // re-render a lot) left one more scroll listener on the parent, each one
+    // calling initBounds -> `$el.offset()` -> a forced style+layout flush.
+    //
+    // Production trace 2026-09-15: initBounds sat behind 134 forced recalcs
+    // costing 6,838ms, second only to GSAP.
+    if (!this._onParentScroll) {
+      this._onParentScroll = () => this.initBounds();
+    }
+    this.parent.off(_e.scroll, this._onParentScroll);
+    this.parent.on(_e.scroll, this._onParentScroll);
 
     if (this.mget(_a.file)) {
       return;
@@ -351,6 +363,12 @@ class __media_interact extends media_core {
   onBeforeDestroy() {
     _unobserveVignette(this._vignetteObserved);
     this._vignetteObserved = null;
+    // The parent outlives the tile, so a listener left on it keeps this widget
+    // (and its element) alive and keeps forcing layout on every scroll.
+    if (this._onParentScroll && this.parent && this.parent.off) {
+      this.parent.off(_e.scroll, this._onParentScroll);
+      this._onParentScroll = null;
+    }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
