@@ -1861,12 +1861,17 @@ class __window_mfs extends DrumeeMFS {
    */
   contentRectangle() {
     let r = this.__list || this;
-    return new Rectangle(
-      r.$el.offset().left,
-      r.$el.offset().top,
-      r.$el.width(),
-      r.$el.height(),
-    );
+    // `offset()` was called TWICE, once per coordinate. Each call is its own
+    // getBoundingClientRect plus computed-style read, and the first of them
+    // flushes pending style for the whole document. Read it once.
+    //
+    // Deliberately still jQuery `.offset()` / `.width()` / `.height()` rather
+    // than one getBoundingClientRect: offset() is document-relative and
+    // border-box, while .width()/.height() are CONTENT box. A rect built from
+    // getBoundingClientRect would include padding and border in the size and
+    // silently change what counts as inside the selection.
+    const o = r.$el.offset();
+    return new Rectangle(o.left, o.top, r.$el.width(), r.$el.height());
   }
 
   /**

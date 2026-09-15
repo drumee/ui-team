@@ -190,15 +190,25 @@ class desk_selection extends Rectangle {
     }
     this._window = t;
     this.media = t.iconsList.children.toArray();
+    // MEASURE FIRST, THEN WRITE. These two lines used to sit AFTER the
+    // `$rectangle.css(...)` below, which is the write/read order that forces a
+    // synchronous style+layout flush: the css() call dirties style, then
+    // contentRectangle() -> `$el.offset()` has to flush the whole document
+    // before it can answer. On this DOM that flush restyles ~8,000 elements.
+    // Production trace 2026-09-15 attributed 106 forced recalcs / 8,488ms to
+    // this read path, the largest remaining entry.
+    //
+    // Nothing here depends on the rectangle's new position — it is being reset
+    // to a zero-size box at the pointer — so the order is free to swap.
+    this._targetRect = t.contentRectangle();
+    this._maxHeight = this._offsetY - this._targetRect.top() + this._window.scrollTop();
+
     this.$rectangle.css({
       left: e.pageX,
       top: e.pageY,
       width: 0,
       height: 0
     });
-
-    this._targetRect = t.contentRectangle();
-    this._maxHeight = this._offsetY - this._targetRect.top() + this._window.scrollTop();
 
     this._xScrolled = 0;
     this._yScrolled = 0;
