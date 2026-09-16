@@ -103,6 +103,24 @@ const __skl_window_application = function (filetype, opt = {}) {
   };
 
   let { media } = opt;
+
+  // Notion-style Note (BlockNote), shipped ALONGSIDE the existing note and
+  // markdown editors while it is evaluated. Checked before anything else and
+  // keyed on an extension only this editor ever writes, so no file that opens
+  // somewhere today can be routed away from the editor that owns it.
+  //
+  // Extension rather than filetype because these notes deliberately carry
+  // `filetype: note` — that is what gives them the note icon in the grid and
+  // puts them in the Notes filter — and `note` already maps to editor_note.
+  const { EXT: BLOCKNOTE_EXT } = require("libs/blocknote-format");
+  const ext = `${opt.ext ||
+    opt.extension ||
+    (media && media.mget && (media.mget(_a.ext) || media.mget(_a.extension))) ||
+    ""}`.toLowerCase();
+  if (ext === BLOCKNOTE_EXT) {
+    return { ...opt, kind: "editor_blocknote" };
+  }
+
   let r = a[filetype] || {};
   if (media && media.model) {
     let { mimetype, dataType } = media.model.toJSON();

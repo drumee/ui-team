@@ -3677,6 +3677,7 @@ class __window_manager extends push {
       // delegate up instead of duplicating them here. Desk.onUiEvent owns
       // the over-limit guardWrite for each of these services.
       case "new-note":
+      case "new-blocknote":
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation":

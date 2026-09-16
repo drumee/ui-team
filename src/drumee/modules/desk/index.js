@@ -9084,6 +9084,20 @@ class desk_module extends LetcBox {
         });
         return;
       }
+
+      // Notion-style Note (BlockNote), running alongside "new-note" above
+      // while it is evaluated. Same guards, same pool — only the editor
+      // differs, so a regression here cannot reach the existing Note.
+      case "new-blocknote": {
+        this.closeDeskNewMenu(cmd);
+        if (require("libs/over-limit").guardWrite("write")) return;
+        if (this._guardWorkspaceWrite()) return;
+        Wm.windowsLayer.append({
+          kind: "editor_blocknote",
+          uiHandler: [this],
+        });
+        return;
+      }
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation": {

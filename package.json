@@ -75,6 +75,9 @@
     "webpack-manifest-plugin": "5.0.0"
   },
   "dependencies": {
+    "@blocknote/core": "^0.54.2",
+    "@blocknote/mantine": "^0.54.2",
+    "@blocknote/react": "^0.54.2",
     "@drumee/ui-core": "^1.1.50",
     "@drumee/ui-essentials": "^1.0.2",
     "@drumee/ui-styles": "^1.0.6",
@@ -84,6 +87,8 @@
     "@embedpdf/pdfium": "2.14.4",
     "@embedpdf/plugin-interaction-manager": "2.14.4",
     "@embedpdf/plugin-selection": "2.14.4",
+    "@mantine/core": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
     "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@webcomponents/webcomponentsjs": "^2.6.0",
     "aes256": "^1.1.0",
@@ -138,6 +143,8 @@
     "nouislider": "^15.6.1",
     "print-js": "^1.6.0",
     "qrcode": "^1.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "rectangle-node": "^0.1.0",
     "rectangle-overlap": "^2.0.0",
     "sdp-transform": "^2.14.1",

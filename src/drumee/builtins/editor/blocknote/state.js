@@ -1,0 +1,174 @@
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { BlockNoteEditor } from "@blocknote/core";
+import { BlockNoteView } from "@blocknote/mantine";
+import "@blocknote/core/style.css";
+import "@blocknote/mantine/style.css";
+
+const { xhRequest } = require("@drumee/ui-essentials");
+const { parse, serialize } = require("libs/blocknote-format");
+
+// The BlockNote surface, mounted into a Drumee widget element.
+//
+// Shape follows editor/diagram (`__editor_diagram` + `__diagram_state`): the
+// window owns chrome and saving, this widget owns the third-party editor and
+// nothing else. BlockNote is React, so the bridge is one createRoot per widget.
+class __blocknote_state extends DrumeeMFS {
+  /**
+   *
+   */
+  initialize(opt = {}) {
+    super.initialize(opt);
+    this.media = opt.media;
+    this.editor = opt.editor;
+    this.escapeContextmenu = true;
+    if (this.media) {
+      const { nid, pid, hub_id } = this.media.actualNode();
+      this.mset({ nid, pid, hub_id });
+    }
+  }
+
+  /**
+   * Fetch the stored note, then mount. A note with no media is a brand-new one
+   * and mounts empty.
+   */
+  onDomRefresh() {
+    if (this._mounted) return;
+    this.el.setAttribute(_a.id, `${this.mget(_a.widgetId)}-blocknote-state`);
+
+    if (!this.media) {
+      this.mount([]);
+      return;
+    }
+
+    this.media.wait(0);
+    const url = this._sourceUrl();
+    if (!url) {
+      // No readable source for an existing node: treat as a load failure so
+      // that autosave cannot replace the file with an empty document.
+      this._failLoad("no-url");
+      return;
+    }
+
+    xhRequest(url, { responseType: _a.text })
+      .then((content) => {
+        const r = parse(content);
+        if (r.error) {
+          this._failLoad(r.error);
+          return;
+        }
+        this.mount(r.blocks);
+      })
+      .catch((e) => {
+        this.warn("blocknote_state: failed to load", url, e);
+        this._failLoad("unreachable");
+      });
+  }
+
+  /**
+   * @returns {String|null}
+   */
+  _sourceUrl() {
+    const node = this.media.actualNode() || {};
+    if (node.url) return node.url;
+    const nid = node.nid || this.mget(_a.nid);
+    const hub_id = node.hub_id || this.mget(_a.hub_id);
+    if (!nid || !hub_id) return null;
+    const base = location.href.split("#")[0].replace(/\/+$/, "");
+    return `${base}/file/orig/${nid}/${hub_id}`;
+  }
+
+  /**
+   * A note we could not read is opened READ-ONLY and never saved.
+   *
+   * Mounting an empty editor and letting autosave run would rewrite a file we
+   * failed to understand with a blank document — silent, unrecoverable data
+   * loss, since office/note files keep no version history.
+   *
+   * @param {String} reason
+   */
+  _failLoad(reason) {
+    this.warn("blocknote_state: unreadable note, opening read-only", reason);
+    this._loadFailed = 1;
+    if (this.editor && this.editor.setReadOnly) this.editor.setReadOnly(reason);
+    this.mount([], { readOnly: true });
+  }
+
+  /**
+   * @param {Array} blocks
+   * @param {Object} opt
+   */
+  mount(blocks, opt = {}) {
+    if (this._mounted || this._destroyed || !this.el) return;
+    this._mounted = 1;
+
+    // BlockNote rejects an EMPTY initialContent array — a new note has to pass
+    // undefined so the editor seeds its own first paragraph.
+    const initialContent = blocks && blocks.length ? blocks : undefined;
+
+    try {
+      this._editor = BlockNoteEditor.create({ initialContent });
+    } catch (e) {
+      this.warn("blocknote_state: editor refused the stored content", e);
+      this._loadFailed = 1;
+      if (this.editor && this.editor.setReadOnly) {
+        this.editor.setReadOnly("rejected");
+      }
+      this._editor = BlockNoteEditor.create({});
+      opt.readOnly = true;
+    }
+
+    // Every real edit marks the window dirty; the window owns the debounce.
+    this._unsubscribe = this._editor.onChange(() => {
+      if (this._loadFailed) return;
+      if (this.editor && this.editor.markDirty) this.editor.markDirty();
+    });
+
+    this._root = createRoot(this.el);
+    this._root.render(
+      createElement(BlockNoteView, {
+        editor: this._editor,
+        editable: !opt.readOnly,
+        theme: "light",
+      })
+    );
+
+    // The player window sets user-select:none for its drag chrome, and the
+    // window's own contextmenu handler would otherwise swallow right-clicks
+    // inside the editor. Both are handled in skin/ and here respectively.
+    this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
+  }
+
+  /**
+   * @returns {String|null} the bytes to save, or null when saving is unsafe
+   */
+  getContent() {
+    if (this._loadFailed || !this._editor) return null;
+    try {
+      return serialize(this._editor.document);
+    } catch (e) {
+      this.warn("blocknote_state: could not serialize", e);
+      return null;
+    }
+  }
+
+  /**
+   *
+   */
+  onBeforeDestroy() {
+    this._destroyed = 1;
+    try {
+      if (this._unsubscribe) this._unsubscribe();
+    } catch (e) {
+      /** already gone */
+    }
+    // React forbids unmounting from inside its own render/commit; Backbone
+    // tears us down outside it, but a microtask keeps that guaranteed.
+    const root = this._root;
+    this._root = null;
+    if (root) Promise.resolve().then(() => root.unmount());
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+}
+
+export default __blocknote_state;

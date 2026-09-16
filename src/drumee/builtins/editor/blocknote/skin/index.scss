@@ -1,0 +1,159 @@
+/** ================================================================== *
+#   FILE : /src/drumee/builtins/editor/blocknote/skin
+#   TYPE : Component style — Notion-style Note (BlockNote) window
+# ===================================================================**/
+
+@use "mixins/drumee";
+@use "../../skin/topbar.scss";
+
+.editor-blocknote {
+  &__ui {
+    background-color: var(--default-bg);
+    width: 760px;
+    height: 560px;
+    top: 45px;
+    left: calc(50vw - 380px);
+    box-shadow: var(--shadow-container);
+    overflow: visible;
+    flex-direction: column;
+    display: flex;
+    border-radius: 24px;
+
+    &[data-device="mobile"] {
+      width: 100vw;
+      height: 100vh;
+      left: 0;
+      top: 0;
+    }
+  }
+
+  // A writing surface wants the chrome out of the way, so this header is the
+  // slim neutral bar the editor/note one is not — but it keeps that window's
+  // structure (full width, own z-index, square-topped radius) so the shared
+  // window/skeleton/content/main layout behaves identically.
+  &__header {
+    width: 100%;
+    height: 56px;
+    min-height: 56px;
+    z-index: 200;
+    background-color: var(--default-bg);
+    border-bottom: 1px solid var(--neutral-300);
+    border-radius: 24px 24px 0 0;
+
+    &[data-header="0"] {
+      display: none;
+    }
+
+    .menu-items {
+      background: var(--default-bg);
+      border-radius: var(--border-radius);
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--neutral-300);
+  }
+
+  &__body {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &-topbar {
+    &__container {
+      width: 100%;
+      height: 100%;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+    }
+
+    &__title {
+      align-items: center;
+      min-width: 0;
+      overflow: hidden;
+
+      .name {
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--normal-fg-10);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 46ch;
+      }
+    }
+
+    &__save-status {
+      align-self: center;
+      white-space: nowrap;
+      font-size: 12px;
+      line-height: 16px;
+      color: var(--normal-fg-20);
+      margin: 0 10px 0 12px;
+      transition: color 0.2s ease, opacity 0.2s ease;
+
+      &[data-state="saving"] {
+        opacity: 0.75;
+      }
+
+      &[data-state="unsaved"],
+      &[data-state="readonly"] {
+        color: var(--warning);
+      }
+    }
+
+    &__action {
+      align-items: center;
+      height: 100%;
+    }
+
+    // Same 46px round button the note editor uses, so the two Notes feel like
+    // the same product while both are on offer.
+    &__icon {
+      width: 46px;
+      height: 46px;
+      margin-left: 10px;
+      cursor: pointer;
+      z-index: 1000;
+      padding: 14px;
+      background-color: var(--neutral-200);
+      color: var(--neutral-900);
+      border-radius: 100%;
+      align-items: center;
+      flex: 0 0 46px;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+}
+
+// The player window sets user-select:none so its chrome can be dragged. That
+// inherits onto the ProseMirror surface BlockNote renders and blocks typing,
+// so selection has to be re-enabled for the whole editor subtree.
+.blocknote-state {
+  user-select: text;
+  -webkit-user-select: text;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+
+  * {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .bn-editor {
+    padding-inline: 32px;
+  }
+}

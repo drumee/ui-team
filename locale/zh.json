@@ -2976,5 +2976,9 @@
   "ARCHIVE_UNSAFE_PATH": "此压缩包中包含指向目标文件夹之外的条目，因此未被解压。",
   "UNZIP_CONFIRM": "解压 {0}？这会在当前文件夹中添加一个包含其 {1} 个文件（{2}）的文件夹。",
   "ARCHIVE_FORMAT_UNSUPPORTED": "Drumee 无法解压此压缩包格式。请下载它，或将文件夹以 ZIP 格式上传。",
-  "UNZIP_FAILED": "无法解压该压缩包，请重试。"
+  "UNZIP_FAILED": "无法解压该压缩包，请重试。",
+  "NOTE_BETA": "笔记（测试版）",
+  "ALL_CHANGES_SAVED": "所有更改已保存",
+  "UNSAVED_CHANGES": "有未保存的更改",
+  "NOTE_UNREADABLE": "无法读取此笔记 — 以只读方式打开"
 }

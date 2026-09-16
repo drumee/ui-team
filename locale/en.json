@@ -3185,5 +3185,9 @@
   "ARCHIVE_UNSAFE_PATH": "This archive contains entries that point outside the destination folder, so it was not extracted.",
   "UNZIP_CONFIRM": "Unzip {0}? This will add a folder with its {1} files ({2}) to the current folder.",
   "ARCHIVE_FORMAT_UNSUPPORTED": "Drumee cannot extract this archive format. Please download it, or upload the folder as a ZIP.",
-  "UNZIP_FAILED": "The archive could not be extracted. Please try again."
+  "UNZIP_FAILED": "The archive could not be extracted. Please try again.",
+  "NOTE_BETA": "Note (beta)",
+  "ALL_CHANGES_SAVED": "All changes saved",
+  "UNSAVED_CHANGES": "Unsaved changes",
+  "NOTE_UNREADABLE": "Cannot read this note — opened read-only"
 }

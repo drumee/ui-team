@@ -196,6 +196,12 @@ module.exports = {
   editor_note: function () {
     return import("./builtins/editor/note");
   },
+  editor_blocknote: function () {
+    return import("./builtins/editor/blocknote");
+  },
+  blocknote_state: function () {
+    return import("./builtins/editor/blocknote/state");
+  },
   email_input_item: function () {
     return import("./builtins/widget/email-input-item/index");
   },
