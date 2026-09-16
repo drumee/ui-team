@@ -1,5 +1,6 @@
 const __player = require("player/interact");
 const { EXT, DATA_TYPE } = require("libs/blocknote-format");
+const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 
 // How long after the last keystroke an untouched note writes itself back.
 // BlockNote fires onChange per keystroke, so every edit MUST go through this
@@ -45,12 +46,15 @@ class __editor_blocknote extends __player {
       });
     }
 
-    // Open FULL-FRAME (Duy, 2026-09-16). A page editor wants the room, and this
-    // is the same max_size() geometry editor_diagram opens with — reusing it
-    // rather than inventing bounds keeps the sidebar gap and the mobile
-    // full-screen case correct for free. Still draggable/resizable afterwards.
-    this.size = this.max_size();
-    this.style.set({ ...this.size, minWidth: 320, minHeight: 240 });
+    // FULL-FRAME (Duy, 2026-09-16): the editor is DOCKED to the workspace, not
+    // a big floating box. max_size() was the first attempt and was wrong — it
+    // insets by 20/10 and leaves the window draggable, which is exactly what
+    // still read as "a floating window".
+    //
+    // This is the same mechanism player/document (the Docs viewer) uses when it
+    // opens maximized: fill the WM container, then track it with a
+    // ResizeObserver. `_zoomed` is what tells the tracker to keep re-fitting.
+    this._zoomed = true;
 
     this._onBeforeUnload = this.checkUnsavedWork.bind(this);
     window.addEventListener("beforeunload", this._onBeforeUnload);
@@ -60,13 +64,89 @@ class __editor_blocknote extends __player {
   }
 
   /**
-   * Maximized on open. `display()` is called by onPartReady with a size the
-   * player base would otherwise fit the window to, so the override has to
-   * ignore it — same shape as editor_diagram.
+   * The WM canvas: right of the desk sidebar, below the header. Falls back to
+   * the viewport when the desk chrome is not mounted (DMZ share view).
+   */
+  _workspaceRect() {
+    const el =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    if (!el) {
+      return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    }
+    const r = el.getBoundingClientRect();
+    return {
+      left: Math.round(r.left),
+      top: Math.round(r.top),
+      width: Math.round(r.width),
+      height: Math.round(r.height),
+    };
+  }
+
+  /**
+   * The same rect, expressed relative to the element's offset parent — which
+   * is what `left`/`top` are actually applied against.
+   */
+  _workspaceTarget() {
+    const ws = this._workspaceRect();
+    const parent = this.el.offsetParent || this.el.parentElement || document.body;
+    const pr = parent.getBoundingClientRect();
+    return {
+      left: Math.round(ws.left - pr.left),
+      top: Math.round(ws.top - pr.top),
+      width: ws.width,
+      height: ws.height,
+    };
+  }
+
+  /**
+   * Fill the workspace. Both the style model and the element are written: the
+   * model is what the WM reads back, the element is what the user sees.
+   */
+  _applyWorkspaceBounds() {
+    if (!this.el) return;
+    const target = this._workspaceTarget();
+    this.size = {
+      width: target.width,
+      height: target.height - (this.topbarHeight || 0),
+    };
+    this.$el.stop(true, false);
+    this.style.set(target);
+    this.$el.css(target);
+  }
+
+  /**
+   * Keep the editor filling the workspace when the workspace itself changes —
+   * browser resize, sidebar collapse, the desk header showing or hiding.
+   * Watching the container covers every one of those with a single listener.
+   */
+  _observeWorkspace() {
+    if (this._wsObserver || typeof ResizeObserver === "undefined") return;
+    const el =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    if (!el) return;
+    this._wsObserver = new ResizeObserver(() => {
+      if (this._zoomed) this._applyWorkspaceBounds();
+    });
+    this._wsObserver.observe(el);
+  }
+
+  /**
+   * Opens docked to the workspace. `display()` is called by onPartReady with a
+   * size the player base would otherwise fit the window to; that argument is
+   * ignored on purpose — the workspace decides the geometry, nothing else.
    */
   display() {
-    this.size = this.max_size();
-    super.display(this.size);
+    this.el.dataset.ready = 1;
+    this.el.style.pointerEvents = "";
+    if (!this._raisedOnDisplay) {
+      this._raisedOnDisplay = 1;
+      this.raise();
+    }
+    this._applyWorkspaceBounds();
+    this._observeWorkspace();
+    TweenMax.fromTo(this.$el, 0.35, { opacity: 0 }, { opacity: 1, ease: Expo.easeOut });
   }
 
   /**
@@ -99,11 +179,17 @@ class __editor_blocknote extends __player {
   }
 
   /**
-   * Ctrl/Cmd+S saves immediately. Bound in the capture phase so it beats both
+   * Deliberately does NOT call super.setupInteract().
+   *
+   * The base makes the window draggable and resizable. A surface docked to the
+   * whole workspace has nowhere to be dragged to, and being able to drag it
+   * away is what made this read as a floating window. So the only interaction
+   * wired here is the save hotkey.
+   *
+   * Ctrl/Cmd+S saves immediately, bound in the capture phase so it beats both
    * the browser's "Save page" dialog and the editor's own key handling.
    */
   setupInteract() {
-    if (super.setupInteract) super.setupInteract();
     if (this._hotkeysWired || !this.el) return;
     this._hotkeysWired = 1;
     this.el.addEventListener(
@@ -312,6 +398,13 @@ class __editor_blocknote extends __player {
    */
   onBeforeDestroy() {
     window.removeEventListener("beforeunload", this._onBeforeUnload);
+    this._zoomed = false;
+    try {
+      if (this._wsObserver) this._wsObserver.disconnect();
+    } catch (e) {
+      /** already gone */
+    }
+    this._wsObserver = null;
     if (this._timer) {
       clearTimeout(this._timer);
       this._timer = null;

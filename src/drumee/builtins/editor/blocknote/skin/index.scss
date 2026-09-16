@@ -9,17 +9,19 @@
 .editor-blocknote {
   &__ui {
     background-color: var(--default-bg);
-    // Fallback only — the window opens full-frame and the real geometry is set
-    // inline from max_size() (see index.js), which wins over this.
-    width: 80vw;
-    height: 80vh;
-    top: 20px;
-    left: 10px;
-    box-shadow: var(--shadow-container);
+    // Fallback only — the editor is docked to the WM container and the real
+    // geometry is written inline from _workspaceTarget() (see index.js), which
+    // wins over this.
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
     overflow: visible;
     flex-direction: column;
     display: flex;
-    border-radius: 24px;
+    // No radius or drop shadow: this fills the workspace edge to edge, and
+    // rounding the corners would just show the desk through them.
+    border-radius: 0;
 
     &[data-device="mobile"] {
       width: 100vw;
@@ -40,7 +42,6 @@
     z-index: 200;
     background-color: var(--default-bg);
     border-bottom: 1px solid var(--neutral-300);
-    border-radius: 24px 24px 0 0;
 
     &[data-header="0"] {
       display: none;
@@ -56,9 +57,7 @@
     width: 100%;
     height: 100%;
     align-items: center;
-    border-radius: 24px;
     overflow: hidden;
-    border: 1px solid var(--neutral-300);
   }
 
   &__body {
