@@ -7419,6 +7419,18 @@ class desk_module extends LetcBox {
    */
   _openOrgView(opt) {
     if (!require("libs/org-overview").orgFeature()) return;
+    // See _railUnlight. This screen fills settings-main-slot, which is
+    // `position:absolute; inset:0` over the workspace pane — so the rail row
+    // that was lit is naming a surface nobody can see, the same disagreement
+    // Calendar / Inbox / Admin Console each fix on their own way in. It was
+    // missing here only because this screen had a single entry point in the
+    // topbar; the rail logo below is a second one, right beside the rows that
+    // stayed lit.
+    //
+    // AFTER the orgFeature() gate and before the raise, exactly like
+    // toggle-apps: an open that refuses must not darken the rail over a screen
+    // that never changed.
+    this._railUnlight();
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: Organization.name() || LOCALE.ORGANIZATION,
       // NO ADDRESS CHIP FOR THIS ONE. The org chip is two elements to the left
@@ -7435,6 +7447,80 @@ class desk_module extends LetcBox {
       hideAddress: 1,
     });
     return this.togglePanel("desk_org_view", "settings-main-slot", true, opt);
+  }
+
+  /**
+   * THE RAIL LOGO — take me somewhere I know.
+   *
+   * Lexis, 2026-09-15: "when a user opens other tabs and wants to go back to
+   * the workspace they started in, they get lost in navigation". The rail's own
+   * five rows cannot answer that, because every one of them drives the
+   * workspace window UNDERNEATH whatever full-canvas screen is up — the surface
+   * that is, by definition, not the one the user is looking at. So the logo,
+   * which until now rendered as decoration, becomes the one control that always
+   * leads out. Temporary: a real Home screen is a separate piece of work.
+   *
+   * THE DESTINATION IS RESOLVED AT CLICK TIME, not baked into the skeleton,
+   * because it depends on an answer only the server has — `can_browse`, which
+   * the org overview reports and which requires dom_admin_security or above
+   * (server-team service/private/organization.js `_org`). The three outcomes:
+   *
+   *   1. an organisation this account may browse → the organisation screen,
+   *      which is what was asked for: it is the directory of every department
+   *      and every workspace in the org, so it is the one screen you can reach
+   *      any workspace FROM. Identical to the topbar chip's "Open".
+   *   2. an organisation it may NOT browse (a plain member) → the workspace.
+   *      The chip withholds "Open" from exactly these accounts because the
+   *      server sends them no departments and no workspaces, so the screen
+   *      behind it would be an empty grid — see the `can_browse` note in
+   *      org-tab/skeleton. Sending them there would be a worse answer than the
+   *      one they already had.
+   *   3. no organisation at all → the workspace. THIS IS THE MAJORITY: 79% of
+   *      accounts sit on domain 1 (libs/org-overview `inOrganization`), and
+   *      they have no organisation screen to go to. Without this branch the
+   *      logo would be a dead click for four users in five, which is a worse
+   *      bug than the one being fixed.
+   *
+   * NEVER loadHome(). That is the pre-2.0 Home and it runs Wm.reload(), which
+   * closes every open window — a user who clicked this to get un-lost would
+   * lose the folder windows they had arranged. Getting back to a known screen
+   * must not cost anything.
+   *
+   * orgOverview() is the shared, cached promise the topbar chip has already
+   * resolved by the time any rail is clickable, so the async hop is free in
+   * practice, and it never rejects — a deployment whose server has no org
+   * endpoints resolves to EMPTY, whose can_browse is 0, and lands on (3).
+   */
+  _railHome() {
+    const { orgFeature, orgOverview } = require("libs/org-overview");
+    // Synchronous and local: no organisation means there is nothing to fetch.
+    if (!orgFeature()) return this._railHomeWorkspace();
+    return orgOverview(this).then((data) => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (!data || !data.can_browse) return this._railHomeWorkspace();
+      return this._openOrgView();
+    });
+  }
+
+  /**
+   * The rail logo's fallback — back to the workspace, on Files.
+   *
+   * _railTab("files") is the desk's own "leave the section screen and show
+   * workspace content" path: it closes the three main slots, releases the
+   * invite popup, rebuilds the breadcrumb off the workspace and, when no
+   * workspace window is open at all, opens the default one. _resetRailToFiles
+   * then lights the row, which the click cannot do by itself — the logo is not
+   * in `sidebar-radio` (it is not one of the five tabs and must not read as
+   * though it were), so nothing would otherwise unlight the row belonging to
+   * the screen that just closed.
+   *
+   * The same pair, in the same order and for the same reason, as the section-
+   * screen branch of _openInvitePopup.
+   */
+  _railHomeWorkspace() {
+    const landed = this._railTab("files");
+    this._resetRailToFiles();
+    return landed;
   }
 
   /**
@@ -8653,6 +8739,12 @@ class desk_module extends LetcBox {
       // keeps one definition of "which workspace is this".
       case "switch-workspace-row":
         return this._switchWorkspaceRow(args.row);
+
+      // The rail's LOGO — a temporary Home (Lexis, 2026-09-15). Its
+      // destination is not a constant, so it is resolved in _railHome rather
+      // than named here.
+      case "rail-home":
+        return this._railHome();
 
       // ── Workspace rail (Figma 43:23955) ────────────────────────────────
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
