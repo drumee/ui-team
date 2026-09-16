@@ -87,6 +87,20 @@ export function createRows(ui, opt = {}) {
     //   content: LOCALE.NOTE,
     //   className: `${cnItem}--add-note${nested}`,
     // }),
+    // The Notion-style Note (BlockNote) being trialled. Offered here because
+    // this menu is where people actually create things inside a workspace.
+    //
+    // NOTE the asymmetry: the row above — the CURRENT Note — stays hidden.
+    // That was a deliberate product call in 2026-08 and reversing it is not
+    // this feature's business; the current Note is still reachable from the
+    // desk's own "+ New" and its background context menu, so there is still a
+    // way back. Drop this row to withdraw the trial from this surface.
+    menuRow(ui, {
+      service: "add-blocknote",
+      ico: "addmenu-note",
+      content: LOCALE.NOTE_BETA,
+      className: `${cnItem}--add-note${nested}`,
+    }),
     menuRow(ui, {
       service: "new-document",
       name: "document.docx",

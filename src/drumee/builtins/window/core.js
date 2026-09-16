@@ -1196,6 +1196,16 @@ class __window_core extends __utils {
           { explicit: 1 }
         );
 
+      // Notion-style Note (BlockNote), the twin of "add-note" above while it
+      // is being trialled. Same guard, same launch shape — only the kind
+      // differs, so the existing Note cannot be affected by it.
+      case "add-blocknote":
+        if (require("libs/over-limit").guardWrite("write")) return;
+        return Wm.launch(
+          { kind: "editor_blocknote", uiHandler: [this] },
+          { explicit: 1 }
+        );
+
       case "new-document":
         return this.newDocument(cmd);
 
