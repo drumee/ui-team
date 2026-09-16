@@ -4257,14 +4257,41 @@ class desk_module extends LetcBox {
    *
    * @param {Object} [opt]
    * @param {Boolean} [opt.force] refetch instead of serving the cached list.
-   *   Set by the removal path: the cache still holds the workspace that was
-   *   just deleted, and step 1 must not "find" and reopen it.
+   * @param {Object} [opt.exclude] a workspace that no longer exists — {hub_id}
+   *   for a hub, {hub_id, nid} for a personal one (Wm.onCurrentWorkspaceRemoved
+   *   passes exactly what it was given). The cache still holds it, so step 1
+   *   must not "find" and reopen it; but the cache is otherwise good enough to
+   *   pick the replacement from RIGHT NOW. This used to `force` a refetch
+   *   instead, and the paged desk.home round trip it cost sat between the
+   *   delete and the replacement — long enough for the dead pane to be torn
+   *   down and the retired home grid to flash through before the next
+   *   workspace mounted. The list is still refreshed, behind the open, so the
+   *   switcher stops offering the deleted workspace.
    * @returns {Promise<Boolean>} whether a workspace was opened
    */
   async _openWorkspaceOrEmptyScreen(opt = {}) {
     let rows;
     try {
-      rows = await this._fetchWorkspaces(opt.force);
+      const excludeKey = opt.exclude ? this._workspaceKey(opt.exclude) : null;
+      const without = (list) =>
+        (list || []).filter((r) => this._workspaceKey(r) !== excludeKey);
+      if (excludeKey && this._workspaces) {
+        rows = without(this._workspaces);
+        if (rows.length) {
+          // Known-wrong cache: refetch and repaint the switcher, but not on
+          // this path's critical section.
+          this._onWorkspaceListChanged();
+        } else {
+          // Nothing left as far as the cache knows. Confirm with the server
+          // before putting up "create your first workspace" — the cache may
+          // simply be missing a workspace shared since it was filled.
+          rows = without(await this._fetchWorkspaces(true));
+        }
+      } else if (excludeKey) {
+        rows = without(await this._fetchWorkspaces(true));
+      } else {
+        rows = await this._fetchWorkspaces(opt.force);
+      }
     } catch (e) {
       // An unreachable list is not evidence of an empty account. Leave the
       // screen as it is rather than throwing "create your first workspace" at
@@ -5568,7 +5595,19 @@ class desk_module extends LetcBox {
       if (this._wsListPart) this._renderWorkspaceMenu(this._wsListPart);
 
       const cur = (window.Wm && Wm._curWorkspace) || null;
-      if (!gone || !cur || String(cur.hub_id) !== String(gone)) return;
+      if (!gone || !cur) return;
+      // BY WORKSPACE KEY, not hub_id. Every PERSONAL workspace is a folder in
+      // the user's own hub, so they all share hub_id === Visitor.id: comparing
+      // ids alone read "another personal workspace is open" as "the deleted
+      // one is still open", cleared the layer and reopened the default — a
+      // second teardown on top of the one Wm.onCurrentWorkspaceRemoved had
+      // already replaced. Same rule the switcher keys its rows with.
+      const goneKey = this._workspaceKey({
+        hub_id: gone,
+        nid: media.mget(_a.nid),
+        filetype: media.mget(_a.filetype),
+      });
+      if (!goneKey || this._workspaceKey(cur) !== goneKey) return;
 
       // The open pane is the one that just went. Clear it and the context it
       // set, then fall back the same way boot does.
