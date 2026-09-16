@@ -885,7 +885,7 @@ class __window_meeting extends __room {
           // is what owns the billing page. Same guard the desk puts on its own
           // `upgrade-plan` case.
           if (!canUpgradePlan()) return;
-          RADIO_BROADCAST.trigger("desk:open-billing-page");
+          RADIO_BROADCAST.trigger("desk:open-billing-page", { intent: "upgrade" });
         })
         // Dismissed — confirm rejects, and an unhandled rejection on a modal
         // the user simply closed is console noise.

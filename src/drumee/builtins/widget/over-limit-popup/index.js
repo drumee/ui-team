@@ -87,20 +87,34 @@ class __over_limit_popup extends LetcBox {
       case "over-limit-resolve": {
         const c = OverLimit.current() || {};
         this._close();
-        // Seats are resolved in the Admin Console members page (existing
-        // Remove access flow); storage on Home (existing delete + empty
-        // trash). Both flags → seats first, the banner stays for storage.
+        // Seats, on a plan that HAS the console: the members page owns the
+        // Remove access flow, so send them straight to it. Both flags → seats
+        // first; the banner stays up for the storage half.
         //
-        // ...but only where that console exists. Free and Pro sit below it
-        // (libs/billing.needsAdminConsoleUpgrade), and downgrading TO one of
-        // them is precisely how an account ends up over its seat limit — so
-        // the one CTA meant to fix the problem was sending exactly the wrong
-        // people to a page their plan does not include. They remove members
-        // workspace by workspace instead; the popup says so next to the seat
-        // row, which is why nothing needs to open here.
+        // EVERYTHING ELSE NOW GOES TO THE ORGANISATION SCREEN (Lexis,
+        // 2026-09-16). Until now this branch was the only one, so the commonest
+        // shape of all — a storage-only violation, which is what a downgrade to
+        // Free looks like — closed the popup and did nothing whatsoever, leaving
+        // the reader to find the right screen themselves.
+        //
+        // The console cannot be that screen for them either: Free and Pro sit
+        // below it (libs/billing.needsAdminConsoleUpgrade) and dropping to one
+        // of those is precisely how an account lands here, so the one CTA meant
+        // to fix the problem would have opened an upsell.
+        //
+        // The organisation screen is gated on membership and ROLE, never on
+        // tier, so it opens for exactly this reader: the block only ever exists
+        // for an organisation (the server returns null for domain 1) and
+        // "Resolve now" is only drawn for an owner/admin, whose privilege
+        // clears the screen's own can_browse bar by construction. It lists
+        // every department and every workspace in the org — the index to work
+        // through, and the companion to the seat row's existing instruction to
+        // remove members from each workspace's own list.
         if (c.flags?.seats && !needsAdminConsoleUpgrade()) {
           RADIO_BROADCAST.trigger("desk:open-admin-console");
+          return;
         }
+        RADIO_BROADCAST.trigger("desk:open-org-view");
         return;
       }
 

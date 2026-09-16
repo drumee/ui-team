@@ -206,6 +206,23 @@ class desk_module extends LetcBox {
     // console — the popup is portalled to <body> and must not reach in here.
     this._openTrashPanel = () => this._deskServiceShim("toggle-trash");
     this._openHomeFromPopup = () => this._deskServiceShim(_e.home);
+    // "Resolve now" on the over-limit popup. The organisation screen is the
+    // index of every department and workspace in the org, which is where a
+    // downgraded owner goes to shed storage and members — and, unlike the
+    // Admin Console, it is gated on role rather than on tier, so it opens for
+    // the Free and Pro accounts a downgrade actually produces.
+    //
+    // THE FALLBACK IS THE POINT. _openOrgView refuses silently when
+    // orgFeature() is false, and while the block itself only ever exists for an
+    // organisation, orgFeature() ALSO requires the server to expose the
+    // organisation endpoints — so against an older server-team this button
+    // would go on doing nothing at all, which is the exact dead end being
+    // removed. Home is where the popup's own storage row sends people to
+    // delete, so it is the right place to land instead of nowhere.
+    this._openOrgViewFromPopup = () => {
+      if (require("libs/org-overview").orgFeature()) return this._openOrgView();
+      return this._deskServiceShim(_e.home);
+    };
     this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
     // The user clicked the docked call to come back to it: take down whatever
     // screen was covering the desk so the restored, full-size window is not
@@ -215,6 +232,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
+    RADIO_BROADCAST.on("desk:open-org-view", this._openOrgViewFromPopup);
     RADIO_BROADCAST.on("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.on(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     // The topbar action cluster (Add new / Upload / Search / Invite) is
@@ -668,6 +686,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
+    RADIO_BROADCAST.off("desk:open-org-view", this._openOrgViewFromPopup);
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
@@ -1919,7 +1938,13 @@ class desk_module extends LetcBox {
         if (typeof p.refreshFeed === "function") p.refreshFeed();
       }
     } else {
-      await this.onUiEvent({ mget: () => null }, { service });
+      // `intent` matters for ONE of these services: "upgrade-plan" now opens
+      // the billing page on checkout when it can tell which plan is meant, and
+      // a RESTORE is not a click — it puts back the screen the reader was
+      // looking at before the reload, which was the plans view. Any declared
+      // intent other than 'upgrade' means "just open the page"; the other
+      // restorable services ignore the key entirely.
+      await this.onUiEvent({ mget: () => null }, { service, intent: "restore" });
     }
 
     this.ensurePart(sidebarPn)
@@ -8241,7 +8266,7 @@ class desk_module extends LetcBox {
         // means the plan changed while the card sat open. Same guard, same
         // rule, one source — libs/billing.
         if (!canUpgradePlan()) return this._restoreCurrentSidebarHighlight();
-        return this.openBillingPage().then(() =>
+        return this.openBillingPage({ intent: "upgrade" }).then(() =>
           this._restoreCurrentSidebarHighlight()
         );
       })
@@ -9079,7 +9104,23 @@ class desk_module extends LetcBox {
         // (libs/billing): ignore stray triggers (deep links, stale UI, an
         // install with no payment backend) that could otherwise dead-end.
         if (!canUpgradePlan()) return;
-        return this.openBillingPage();
+        // Every entry point NAMED upgrade means buy, so the default carries
+        // that intent and the billing page opens straight on checkout wherever
+        // it can work out which plan is meant — settings_billing
+        // ._settleUpgradeIntent, which falls back to the plans grid whenever it
+        // cannot.
+        //
+        // TWO CALLERS REACH THIS SERVICE WITHOUT MEANING BUY, and both say so
+        // by declaring some other intent: settings_main's "Manage subscription"
+        // card ('manage'), and _restoreSidebarService replaying the screen after
+        // a reload ('restore'). Testing for "declared something else" rather
+        // than for either name keeps the next such caller from having to be
+        // remembered here.
+        return this.openBillingPage(
+          args && args.intent && args.intent !== "upgrade"
+            ? undefined
+            : { intent: "upgrade" },
+        );
 
       // Display mode (light/dark/system) moved to Settings → Appearance.
       // See builtins/widget/settings/main + utils router/theme.js.

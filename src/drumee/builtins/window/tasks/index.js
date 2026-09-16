@@ -9935,7 +9935,7 @@ class __tasks_panel extends LetcBox {
         // only draws a CTA when this passes, so failing here means the plan
         // changed under an open card.
         if (!canUpgradePlan()) return;
-        RADIO_BROADCAST.trigger("desk:open-billing-page");
+        RADIO_BROADCAST.trigger("desk:open-billing-page", { intent: "upgrade" });
       })
       // Dismissed (close X or Escape) — confirm REJECTS, and an unhandled
       // rejection on a modal the user simply closed is noise in the console.
