@@ -15,6 +15,7 @@
  * for the same reason, since the `libs/` alias is webpack's alone.
  */
 const { prefetchMembers } = require("../../../libs/members-prefetch");
+const { SECURE_SHARE_TAB } = require("./secure-share-column");
 
 const ACCESS_TAB = "access";
 const ACCESS_PANEL_PN = "folder-access-panel";
@@ -91,9 +92,11 @@ function showAccessColumn(win, view) {
   return panel;
 }
 
-/** Views that keep the file grid on screen — and so its toolbar. */
+/** Views that keep the file grid on screen — and so its toolbar. The
+ *  secure-share view (./secure-share-column) takes the same column Access
+ *  does, beside the same grid. */
 function showsFileGrid(tab) {
-  return !tab || tab === "files" || tab === ACCESS_TAB;
+  return !tab || tab === "files" || tab === ACCESS_TAB || tab === SECURE_SHARE_TAB;
 }
 
 module.exports = {
