@@ -11,6 +11,20 @@
   to   { transform: translateX(0); }
 }
 
+// Column mode (window/folder/secure-share-column) show / hide. A shorter travel
+// than the drawer's 100%: the panel moves within its column, beside a file grid
+// that stays put, so it only needs to read as arriving and leaving, not cross
+// the screen.
+@keyframes window-secure-share-column-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes window-secure-share-column-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateX(24px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .window-secure-share[data-embedded="yes"] .window-secure-share__main.drive-popup {
     animation: none;
@@ -91,13 +105,41 @@
     box-shadow: none;
     border-radius: 0;
 
+    // The card, the same one the chat panel is drawn as (folder skin
+    // __split-body[data-view="access"]). On __main, not the root, so the card
+    // moves with the show / hide animation below instead of staying behind it.
     .window-secure-share__main.drive-popup {
       width: 100%;
       height: 100%;
-      border-left: 0;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
       box-shadow: none;
-      // The column enters with the split body's own switch animation.
-      animation: none;
+      // SHOW. Replays by itself every time the view is shown: the panel stays
+      // mounted and is hidden with display:none, and an element coming back
+      // from display:none restarts its animations. `backwards` holds the from-
+      // state through the frame before start; nothing is held after the end,
+      // so no transform is left on the ancestor of the panel's popovers.
+      animation: window-secure-share-column-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    }
+
+    // HIDE. display:none cannot animate, so the folder window stamps
+    // data-leaving and switches the view on this animation's end
+    // (secure-share-column leaveSecureShareView). `forwards` keeps the panel on
+    // its invisible last frame for the moment between the end and the switch.
+    &[data-leaving="1"] .window-secure-share__main.drive-popup {
+      animation: window-secure-share-column-out 0.2s ease-in forwards;
+      pointer-events: none;
+    }
+
+    // AFTER the two rules above, on purpose: the selectors are the same, so
+    // this wins by order — a copy in the file-top media block lost. The folder
+    // window reads the same media query and does not wait for a leave that
+    // will never run.
+    @media (prefers-reduced-motion: reduce) {
+      .window-secure-share__main.drive-popup,
+      &[data-leaving="1"] .window-secure-share__main.drive-popup {
+        animation: none;
+      }
     }
   }
 

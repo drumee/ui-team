@@ -2588,7 +2588,10 @@
   }
 
   // Manage access on a share-area workspace (window/folder/secure-share-column)
-  // draws the secure-share panel in the chat panel's place, as the same card.
+  // draws the secure-share panel in the chat panel's place. Only the cell here:
+  // the CARD (radius, border, surface) is drawn by the panel's own __main
+  // (secure-share skin, [data-mode="column"]), because __main is what slides in
+  // and out — a card on this root would stand there empty while it moved.
   &__split-body[data-view="secure-share"] {
     .window__chat-panel,
     .window__thread-rail,
@@ -2598,10 +2601,6 @@
 
     > .window-secure-share {
       display: flex;
-      border-radius: 8px;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      background: var(--normal-bg-90);
-      overflow: hidden;
     }
   }
 
@@ -2739,8 +2738,7 @@
     // switches restart the entrance as usual.
     &[data-view="task"] .tasks-panel__ui[data-painted="1"],
     &[data-view="meeting"] .window-folder__meeting-schedule,
-    &[data-view="access"] > .permission-restricted__ui,
-    &[data-view="secure-share"] > .window-secure-share {
+    &[data-view="access"] > .permission-restricted__ui {
       animation: window-folder__column-in-from-right 0.2s ease-out backwards;
     }
   }
@@ -2767,8 +2765,7 @@
 
       &[data-view="task"] .tasks-panel__ui[data-painted="1"],
       &[data-view="meeting"] .window-folder__meeting-schedule,
-      &[data-view="access"] > .permission-restricted__ui,
-      &[data-view="secure-share"] > .window-secure-share {
+      &[data-view="access"] > .permission-restricted__ui {
         animation: none;
       }
     }
