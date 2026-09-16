@@ -19,6 +19,9 @@ const { SECURE_SHARE_TAB } = require("./secure-share-column");
 
 const ACCESS_TAB = "access";
 const ACCESS_PANEL_PN = "folder-access-panel";
+// The service the members panel's ✕ sends its uiHandler (the folder window) in
+// column mode — see permission/restricted/index.js `_e.close`.
+const ACCESS_CLOSE = "close-access-view";
 
 /** The members panel, in column mode, for this window's workspace. */
 function accessPanelSpec(win) {
@@ -92,6 +95,25 @@ function showAccessColumn(win, view) {
   return panel;
 }
 
+/**
+ * The members panel's ✕: hide the panel and put the chat panel back in its
+ * column — i.e. the Files view — and light the rail's Files item to match.
+ *
+ * The rail has to be told. Its highlight moves on a rail CLICK (the radio
+ * behaviour on the item pressed), and the ✕ is not one, so Access would stay
+ * lit over a Files screen. Desk._railHighlight is the hook the window manager
+ * already uses for the same job (wm/index.js, after a workspace loads).
+ *
+ * @param {Object} win  the folder window
+ */
+function closeAccessColumn(win) {
+  if (win.activeTab !== ACCESS_TAB) return undefined;
+  const r = win.showFolderTab("files");
+  const desk = typeof window !== "undefined" ? window.Desk : null;
+  if (desk && typeof desk._railHighlight === "function") desk._railHighlight("files");
+  return r;
+}
+
 /** Views that keep the file grid on screen — and so its toolbar. The
  *  secure-share view (./secure-share-column) takes the same column Access
  *  does, beside the same grid. */
@@ -102,6 +124,8 @@ function showsFileGrid(tab) {
 module.exports = {
   ACCESS_TAB,
   ACCESS_PANEL_PN,
+  ACCESS_CLOSE,
+  closeAccessColumn,
   accessPanelSpec,
   showAccessColumn,
   showsFileGrid,

@@ -10,7 +10,7 @@ const {
 
 const { overMeetingCap } = require("libs/billing");
 const readCache = require("libs/read-cache");
-const { ACCESS_TAB, showAccessColumn, showsFileGrid } = require("./access-column");
+const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
@@ -2092,6 +2092,10 @@ class __window_folder extends mfsInteract {
       // are scoped to the branch that opens the link panel. An internal
       // workspace opens the members panel instead (see _manageAccessIsInternal
       // and openManageAccess) and neither applies to it.
+      // The Access column's ✕ (./access-column): back to Files, rail included.
+      case ACCESS_CLOSE:
+        return closeAccessColumn(this);
+
       // The secure-share column's ✕ (./secure-share-column).
       case SECURE_SHARE_CLOSE:
         return closeSecureShareView(this);
