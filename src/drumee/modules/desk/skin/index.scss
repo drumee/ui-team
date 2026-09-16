@@ -108,6 +108,12 @@ html {
     // Update button, and both buttons once the modal was zoomed full-screen.
     pointer-events: none;
     position: fixed;
+    // THE RESTING PLACE ONLY. The tile is draggable (window/meeting
+    // _bindCallTileDrag moves THIS element, since `> *` below pins the window
+    // to fill it), and a drag writes inline left/top here with right/bottom set
+    // to `auto`. These two numbers are also the keep-out inset the drag clamps
+    // and snaps to — CALL_TILE_INSET in window/meeting/index.js, with
+    // CALL_TILE_INSET_SM for the phone breakpoint below. Change one, change both.
     right: 24px;
     bottom: 24px;
     z-index: 20002;
@@ -171,6 +177,8 @@ html {
     }
 
     // A phone has no room for a 300px tile beside the screen it is covering.
+    // (650px is CALL_TILE_SM_W in window/meeting/index.js, 12px is
+    // CALL_TILE_INSET_SM — the drag clamps to the same inset it rests at.)
     @media (max-width: 650px) {
       right: 12px;
       bottom: 12px;
