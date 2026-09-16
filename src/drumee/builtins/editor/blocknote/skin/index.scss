@@ -9,10 +9,12 @@
 .editor-blocknote {
   &__ui {
     background-color: var(--default-bg);
-    width: 760px;
-    height: 560px;
-    top: 45px;
-    left: calc(50vw - 380px);
+    // Fallback only — the window opens full-frame and the real geometry is set
+    // inline from max_size() (see index.js), which wins over this.
+    width: 80vw;
+    height: 80vh;
+    top: 20px;
+    left: 10px;
     box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
@@ -75,8 +77,13 @@
       padding: 0 16px;
     }
 
+    // The title group absorbs the slack so the actions and the window controls
+    // stay together on the right. Without this, space-between spreads all three
+    // groups evenly and the save button ends up stranded mid-header — only
+    // visible once the window opens full-frame.
     &__title {
       align-items: center;
+      flex: 1 1 auto;
       min-width: 0;
       overflow: hidden;
 

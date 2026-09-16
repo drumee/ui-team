@@ -45,8 +45,11 @@ class __editor_blocknote extends __player {
       });
     }
 
-    this.size.width = 760;
-    this.size.height = 560;
+    // Open FULL-FRAME (Duy, 2026-09-16). A page editor wants the room, and this
+    // is the same max_size() geometry editor_diagram opens with — reusing it
+    // rather than inventing bounds keeps the sidebar gap and the mobile
+    // full-screen case correct for free. Still draggable/resizable afterwards.
+    this.size = this.max_size();
     this.style.set({ ...this.size, minWidth: 320, minHeight: 240 });
 
     this._onBeforeUnload = this.checkUnsavedWork.bind(this);
@@ -54,6 +57,16 @@ class __editor_blocknote extends __player {
     // Where a new note gets written. Captured now, because by save time this
     // window is itself the active one.
     this.lastActiveWindow = Wm.getActiveWindow();
+  }
+
+  /**
+   * Maximized on open. `display()` is called by onPartReady with a size the
+   * player base would otherwise fit the window to, so the override has to
+   * ignore it — same shape as editor_diagram.
+   */
+  display() {
+    this.size = this.max_size();
+    super.display(this.size);
   }
 
   /**
@@ -70,7 +83,7 @@ class __editor_blocknote extends __player {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.content: {
-        this.display({ top: 85 });
+        this.display();
         this.setupInteract();
         this.raise();
         const kind = "blocknote_state";
