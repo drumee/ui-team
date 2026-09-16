@@ -551,10 +551,37 @@ class __window_folder extends mfsInteract {
       value: _a.normal,
     });
 
+    // A window in someone else's hub is a HUB window — but only its ROOT is
+    // `filetype: hub`. Every reader of that value (refreshBreadcrumbsUI, the
+    // desk breadcrumb's _onBrowse / _restoreCurrentPath, the import and share
+    // targets) takes `filetype === hub && actual_home_id` to mean "I am on the
+    // workspace root" and swaps the nid for actual_home_id.
+    //
+    // Stamping it unconditionally was harmless while panes only ever MOUNTED on
+    // a root and reached subfolders by navigating (which copies the
+    // destination's real filetype back). Reload restore mounts the pane
+    // directly on the saved subfolder (desk _restoreWorkspace), so the stamp
+    // turned `testing / Clients / zy` into `testing`: the pane listed zy while
+    // loadWorkspace's deferred refreshBreadcrumbsUI asked get_path for the
+    // root and repainted the bar with it.
+    //
+    // So keep a real subfolder's filetype; isHub still follows the hub.
     if (this.model.get(_a.hub_id) !== Visitor.id) {
-      this.model.set({
-        filetype: _a.hub,
-      });
+      const nid = this.model.get(_a.nid);
+      const rootId = this.model.get(_a.actual_home_id);
+      // Same root test as _taskScopeArgs: the root node, 0, or the hub id itself.
+      const onSubfolder =
+        this.model.get(_a.filetype) === _a.folder &&
+        nid && rootId &&
+        `${nid}` !== "0" &&
+        `${nid}` !== `${rootId}` &&
+        `${nid}` !== `${this.model.get(_a.hub_id)}`;
+      if (!onSubfolder) {
+        this.model.set({
+          filetype: _a.hub,
+        });
+      }
+      this.isHub = 1;
     }
     if (this.model.get(_a.filetype) === _a.hub) {
       this.isHub = 1;
