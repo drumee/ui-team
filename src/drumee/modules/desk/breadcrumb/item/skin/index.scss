@@ -145,6 +145,34 @@
     }
   }
 
+  // A SECTION's glyph — Notifications, Inbox, Trash, Settings… — a plain sprite
+  // symbol, so it takes the OPPOSITE treatment to the folder art above: sized
+  // directly and tinted with currentColor, where the folder shape carries its
+  // own area fill and must never be tinted.
+  //
+  // Its own modifier rather than widening `&__icon`, because every rule in that
+  // block reaches INSIDE for `.media-grid__folder-art` / `.folder-shape` —
+  // neither of which exists here — and its 20x16 is the folder art's aspect,
+  // not a square icon's.
+  //
+  // AFTER `&__icon`, and that is load-bearing: the element wears both classes
+  // and the two selectors are both (0,1,0), so the later one wins. Declared
+  // before it, every dimension here lost to the 20px above and the glyph came
+  // out folder-sized.
+  &__icon--section {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
   &__filename {
     // Byte-identical ramp to .desk-breadcrumb__context-label. drumee.typo()
     // emits no font-weight ($weight is a no-op), so it is written out here

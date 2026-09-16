@@ -221,6 +221,29 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     margin-left: -2px;
   }
 
+  // Both marks are the Home control now (skeleton/sidebar.js homeGesture), so
+  // they have to read as one. Only ever one of the two is on screen.
+  //
+  // OPACITY, NOT A HOVER GROUND. The rows and the pin toggle next door use
+  // `background-color`, and that is right for them — they are rectangles on a
+  // flat ground. These are not: the expanded wordmark carries its own brand
+  // colours on the light rail and the mini mark is white on indigo, so no one
+  // background reads correctly behind both, and a plate behind a wordmark that
+  // has no padding of its own hugs the glyph.
+  //
+  // No rule for the DISABLED case, because there isn't one: _railHome always
+  // has somewhere to go (the organisation screen, or back to the workspace),
+  // which is why the pointer can be unconditional.
+  &__logo-icon,
+  &__logo-mark {
+    cursor: pointer;
+    transition: opacity 0.12s ease;
+
+    &:hover {
+      opacity: 0.75;
+    }
+  }
+
   // Desktop collapse/pin toggle. Hidden on the mobile drawer (it uses the
   // close button instead).
   &__logo-pin-btn {

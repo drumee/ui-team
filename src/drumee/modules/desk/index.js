@@ -37,6 +37,11 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // narrow right-hand slide-out it used to be. So it mounts in the same slot
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
+const {
+  SECURE_SHARE_TAB,
+  SECURE_SHARE_CLOSE,
+  SECURE_SHARE_VIEW_EVENT,
+} = require("window/folder/secure-share-column");
 
 const INBOX_SLOT = "settings-main-slot";
 
@@ -206,6 +211,23 @@ class desk_module extends LetcBox {
     // console — the popup is portalled to <body> and must not reach in here.
     this._openTrashPanel = () => this._deskServiceShim("toggle-trash");
     this._openHomeFromPopup = () => this._deskServiceShim(_e.home);
+    // "Resolve now" on the over-limit popup. The organisation screen is the
+    // index of every department and workspace in the org, which is where a
+    // downgraded owner goes to shed storage and members — and, unlike the
+    // Admin Console, it is gated on role rather than on tier, so it opens for
+    // the Free and Pro accounts a downgrade actually produces.
+    //
+    // THE FALLBACK IS THE POINT. _openOrgView refuses silently when
+    // orgFeature() is false, and while the block itself only ever exists for an
+    // organisation, orgFeature() ALSO requires the server to expose the
+    // organisation endpoints — so against an older server-team this button
+    // would go on doing nothing at all, which is the exact dead end being
+    // removed. Home is where the popup's own storage row sends people to
+    // delete, so it is the right place to land instead of nowhere.
+    this._openOrgViewFromPopup = () => {
+      if (require("libs/org-overview").orgFeature()) return this._openOrgView();
+      return this._deskServiceShim(_e.home);
+    };
     this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
     // The user clicked the docked call to come back to it: take down whatever
     // screen was covering the desk so the restored, full-size window is not
@@ -215,6 +237,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
+    RADIO_BROADCAST.on("desk:open-org-view", this._openOrgViewFromPopup);
     RADIO_BROADCAST.on("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.on(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     // The topbar action cluster (Add new / Upload / Search / Invite) is
@@ -266,6 +289,7 @@ class desk_module extends LetcBox {
     this._openWorkspaces = new Set();
     this._onWorkspaceOpen = this._onWorkspaceOpen.bind(this);
     this._onWorkspaceClose = this._onWorkspaceClose.bind(this);
+    this._onSecureShareView = this._onSecureShareView.bind(this);
     // A zoomed folder window claims the desk body the same way a sidebar
     // workspace pane does — including the header row.
     this._onFolderZoom = this._onFolderZoom.bind(this);
@@ -422,6 +446,7 @@ class desk_module extends LetcBox {
     Wm.$el.on("folder:close", this._onFolderClose);
     Wm.$el.on("workspace:open", this._onWorkspaceOpen);
     Wm.$el.on("workspace:close", this._onWorkspaceClose);
+    Wm.$el.on(SECURE_SHARE_VIEW_EVENT, this._onSecureShareView);
     Wm.$el.on("folder:zoom", this._onFolderZoom);
     Wm.$el.on(_e.minimize, this._onWmMinimize);
     Wm.$el.on(_e.wake, this._onWmWake);
@@ -489,6 +514,43 @@ class desk_module extends LetcBox {
     if (this._openWorkspaces.delete(winInstance.cid)) {
       this._syncWorkspaceTopbar();
     }
+    // A pane closed with its secure-share view up announces nothing on the
+    // way out, so the header's link chip is re-read from whatever pane is left.
+    this._syncWorkspaceAccessToggle();
+  }
+
+  /** Is the workspace the header names showing its secure-share view? */
+  _secureShareViewIsUp() {
+    const w = this._railWorkspace();
+    return !!(w && w.activeTab === SECURE_SHARE_TAB);
+  }
+
+  /**
+   * Light the switcher header's link chip while the secure-share view is up.
+   *
+   * The chip is a TOGGLE for that view, and its state is the VIEW's, written
+   * here from the folder window's own announcement — never flipped by the
+   * click. The view can be left without the chip (the panel's ✕, a rail press)
+   * and is only left once its slide-out has played, and a click-driven state
+   * would disagree with the screen in all of those.
+   *
+   * Every chip, not a part: the header is re-fed on navigation, and a stale
+   * copy may still be on its way out.
+   */
+  _syncWorkspaceAccessToggle(open = this._secureShareViewIsUp()) {
+    if (typeof document === "undefined") return;
+    document
+      .querySelectorAll(".desk-module-topbar__ws-head-action--link")
+      .forEach((el) => {
+        el.dataset.state = open ? "1" : "0";
+      });
+  }
+
+  /** Wm.$el `folder:secure-share` — (event, folderWindow, isUp). */
+  _onSecureShareView(event, win, open) {
+    // Only the pane the header names: a popup folder window has the same view.
+    if (!win || win !== this._railWorkspace()) return;
+    this._syncWorkspaceAccessToggle(!!open);
   }
 
   _onFolderZoom() {
@@ -668,6 +730,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
+    RADIO_BROADCAST.off("desk:open-org-view", this._openOrgViewFromPopup);
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
@@ -726,6 +789,7 @@ class desk_module extends LetcBox {
       Wm.$el.off("folder:close", this._onFolderClose);
       Wm.$el.off("workspace:open", this._onWorkspaceOpen);
       Wm.$el.off("workspace:close", this._onWorkspaceClose);
+      Wm.$el.off(SECURE_SHARE_VIEW_EVENT, this._onSecureShareView);
       Wm.$el.off("folder:zoom", this._onFolderZoom);
       Wm.$el.off(_e.minimize, this._onWmMinimize);
       Wm.$el.off(_e.wake, this._onWmWake);
@@ -1919,7 +1983,13 @@ class desk_module extends LetcBox {
         if (typeof p.refreshFeed === "function") p.refreshFeed();
       }
     } else {
-      await this.onUiEvent({ mget: () => null }, { service });
+      // `intent` matters for ONE of these services: "upgrade-plan" now opens
+      // the billing page on checkout when it can tell which plan is meant, and
+      // a RESTORE is not a click — it puts back the screen the reader was
+      // looking at before the reload, which was the plans view. Any declared
+      // intent other than 'upgrade' means "just open the page"; the other
+      // restorable services ignore the key entirely.
+      await this.onUiEvent({ mget: () => null }, { service, intent: "restore" });
     }
 
     this.ensurePart(sidebarPn)
@@ -2834,9 +2904,15 @@ class desk_module extends LetcBox {
           // beside it had to become one.
           [_a.share, _a.dmz].includes(curRow.area)
             ? Skeletons.Button.Svg({
-                className: `${cn}__ws-head-action`,
+                className: `${cn}__ws-head-action ${cn}__ws-head-action--link`,
                 ico: "apps-link-simple",
                 service: "workspace-access",
+                // A toggle for the secure-share view: fed lit when the header
+                // is rebuilt with the view already up, kept in step after that
+                // by _syncWorkspaceAccessToggle. `state`, NOT dataset.state:
+                // this renders as image_svg, whose onDomRefresh stamps
+                // data-state from the model's `state` over any fed dataset.
+                state: this._secureShareViewIsUp() ? 1 : 0,
                 uiHandler: [this],
               })
             : null,
@@ -3595,6 +3671,36 @@ class desk_module extends LetcBox {
    * opens the workspace itself once the walkthrough ends.
    */
   async _onWorkspaceCreated(payload = {}) {
+    // THE ORGANISATION SCREEN'S INVENTORY IS NOW WRONG TOO — drop its cache.
+    //
+    // libs/org-overview holds ONE module-level promise for the whole page
+    // session and hands it to every reader. Its only invalidator was
+    // org-tab._refresh, which runs on the "org:refresh" broadcast, which is
+    // raised only from INSIDE desk_org_view — so a workspace created or deleted
+    // while that screen was closed never reached it. desk_org_view is
+    // destroy-on-close, so the next open re-rendered from the boot-time answer
+    // and the new workspace was simply absent until the browser was reloaded.
+    // Reported by Duy, 2026-09-16.
+    //
+    // HERE because this is the single chokepoint for every shape of the event:
+    // "workspace:refresh" (every create type, via libs/create-workspace) calls
+    // it directly, and _onWorkspaceWsEvent funnels delete / rename /
+    // add_contributors / invite_received / leave_hub into it through the 250ms
+    // coalescing timer. Both are already gated, so nothing new fires.
+    //
+    // COSTS NOTHING, WHICH IS THE POINT. invalidate() is one assignment — no
+    // request, no render. Deliberately NOT org-tab._refresh(), the obvious
+    // one-liner: that also runs _feedPanel(1), i.e. an organization.overview
+    // round trip (three result sets, a whole-domain scan) on every workspace
+    // mutation, for a chip that draws only department_count and member_count —
+    // neither of which a workspace can change. The refetch is left to whoever
+    // next opens the screen, which is the only moment the answer is read.
+    //
+    // First statement, before any await: a fetch already in flight cannot
+    // re-cache the stale answer behind this (orgOverview assigns __pending up
+    // front and its .then never re-assigns), so the window is closed.
+    require("libs/org-overview").invalidate();
+
     // Was the desk on the no-workspace screen? Read the stamp BEFORE anything
     // refetches, because that is what decides whether the user needs taking
     // into the workspace they just made.
@@ -5094,6 +5200,93 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * PUT THE RAIL OUT — no row is the screen any more.
+   *
+   * The counterpart to _railHighlight, for the full-canvas section screens the
+   * topbar utility cluster opens (Calendar, Inbox, Admin Console). They mount
+   * in `settings-main-slot`, which is `position:absolute; inset:0` over the
+   * workspace pane (skin/index.scss), so the workspace the rail is claiming is
+   * not on screen at all. The cluster has its own radio group
+   * (`topbar-utility-radio`, skeleton/topbar.js), and the radio behavior only
+   * unlights views on the SAME channel — so nothing took the rail's highlight
+   * away and Files stayed lit under a Calendar. That is the disagreement
+   * _leaveSectionScreen's docstring describes, arriving from the other side:
+   * there the lit row moved and the screen did not, here the screen moved and
+   * the lit row did not.
+   *
+   * ONE BROADCAST, NOT A ROW LIST. `sidebar-radio` is the rail's own group, so
+   * every member hears it: the five __nav-main rows AND the footer's Plan row,
+   * which is a section screen in exactly the same sense. Enumerating the rows
+   * here would be a second copy of skeleton/sidebar.js's group membership, and
+   * the next row added would be missed.
+   *
+   * `this` AS THE ORIGIN, deliberately: the behavior lights the origin and
+   * unlights everything else (radio.js _on_message), and the desk is in no
+   * row's parent chain (Backbone.View.contains walks `parent`), so every row
+   * takes the else branch. A row-shaped origin would leave that row lit.
+   *
+   * The mobile rail is left alone — it is a different group
+   * (`mobile-rail-radio`), it is not on screen where this cluster is, and it
+   * reaches these screens through its own bottom sheets.
+   *
+   * NOT `data-mtab`. That stamp says which workspace tab is selected
+   * UNDERNEATH, which a section screen does not change, and the phone's Files
+   * action row is keyed on it.
+   *
+   * Coming back needs nothing: a rail click lights its own row (the radio
+   * behavior's onAlsoClick), a workspace switch calls _railHighlight, and Home
+   * runs Wm.reload(), which closes every window — so an unlit rail is then the
+   * honest answer.
+   */
+  _railUnlight() {
+    RADIO_BROADCAST.trigger("sidebar-radio", this);
+  }
+
+  /**
+   * PUT THE UTILITY CLUSTER OUT — the screens those icons stand for are gone.
+   *
+   * The mirror of _railUnlight, and it exists for the mirror-image reason: a
+   * rail click (or Home) closes the full-canvas screens through
+   * closeMainPanels, and the cluster is on its own radio group
+   * (`topbar-utility-radio`, skeleton/topbar.js), so nothing unlit the icon of
+   * the screen that just closed. Files and Calendar were lit at once, each
+   * naming a different thing as the screen.
+   *
+   * NOT A GROUP BROADCAST, which is what _railUnlight gets to do. The cluster
+   * holds two different kinds of thing on one radio group: these three, whose
+   * screens live in settings-main-slot, and the bell / Contacts / Trash
+   * slide-outs. closeMainPanels does not close the ACTIVITY panel — see
+   * closeOtherSidebarPanels for why that one is deliberately left standing —
+   * so a broadcast would darken a bell whose panel is still open, and the
+   * cluster would then be lying in the other direction.
+   *
+   * Named parts rather than the group for that reason, and getPart NEVER
+   * ensurePart: the cluster mounts only in the desktop topbar, and ensurePart
+   * never resolves for a part that will not mount on this device — the same
+   * trap, and the same idiom, as _railHighlight and _readActivityCount.
+   *
+   * setState(0) rather than a per-view radio trigger: the skin marks the open
+   * panel with `[data-state="1"]` (topbar.scss __utility-btn), and there is no
+   * origin to name here — nothing was clicked, a screen simply closed.
+   *
+   * Lighting stays where it was: the cluster item lights itself on click
+   * through the radio behavior, which is also what keeps the three mutually
+   * exclusive. This only ever turns them off.
+   */
+  _clusterUnlight() {
+    if (!_.isFunction(this.getPart)) return;
+    // The three cluster items that mount into the slots closeMainPanels
+    // empties. Contacts and Trash are NOT here: their panels are keep-alive
+    // slide-outs, and adding them means deciding what a parked panel's icon
+    // should say — a separate question from this one.
+    for (const pn of ["utility-calendar", "utility-inbox", "utility-apps"]) {
+      const p = this.getPart(pn);
+      if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) continue;
+      p.setState(0);
+    }
+  }
+
+  /**
    * Rail navigation is about to show workspace content — get whatever SECTION
    * SCREEN is in front of the workspace out of the way, and put the breadcrumb
    * back on the workspace it is navigating in.
@@ -6223,6 +6416,9 @@ class desk_module extends LetcBox {
   _openGetHelp() {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.GET_HELP,
+      // Reached from the rail and the account menu; `ph-info` is the id both
+      // the mobile sheet and the account menu already give it.
+      ico: "ph-info",
     });
     return this.togglePanel("help_main", "settings-main-slot", true);
   }
@@ -7329,6 +7525,18 @@ class desk_module extends LetcBox {
    */
   _openOrgView(opt) {
     if (!require("libs/org-overview").orgFeature()) return;
+    // See _railUnlight. This screen fills settings-main-slot, which is
+    // `position:absolute; inset:0` over the workspace pane — so the rail row
+    // that was lit is naming a surface nobody can see, the same disagreement
+    // Calendar / Inbox / Admin Console each fix on their own way in. It was
+    // missing here only because this screen had a single entry point in the
+    // topbar; the rail logo below is a second one, right beside the rows that
+    // stayed lit.
+    //
+    // AFTER the orgFeature() gate and before the raise, exactly like
+    // toggle-apps: an open that refuses must not darken the rail over a screen
+    // that never changed.
+    this._railUnlight();
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: Organization.name() || LOCALE.ORGANIZATION,
       // NO ADDRESS CHIP FOR THIS ONE. The org chip is two elements to the left
@@ -7345,6 +7553,80 @@ class desk_module extends LetcBox {
       hideAddress: 1,
     });
     return this.togglePanel("desk_org_view", "settings-main-slot", true, opt);
+  }
+
+  /**
+   * THE RAIL LOGO — take me somewhere I know.
+   *
+   * Lexis, 2026-09-15: "when a user opens other tabs and wants to go back to
+   * the workspace they started in, they get lost in navigation". The rail's own
+   * five rows cannot answer that, because every one of them drives the
+   * workspace window UNDERNEATH whatever full-canvas screen is up — the surface
+   * that is, by definition, not the one the user is looking at. So the logo,
+   * which until now rendered as decoration, becomes the one control that always
+   * leads out. Temporary: a real Home screen is a separate piece of work.
+   *
+   * THE DESTINATION IS RESOLVED AT CLICK TIME, not baked into the skeleton,
+   * because it depends on an answer only the server has — `can_browse`, which
+   * the org overview reports and which requires dom_admin_security or above
+   * (server-team service/private/organization.js `_org`). The three outcomes:
+   *
+   *   1. an organisation this account may browse → the organisation screen,
+   *      which is what was asked for: it is the directory of every department
+   *      and every workspace in the org, so it is the one screen you can reach
+   *      any workspace FROM. Identical to the topbar chip's "Open".
+   *   2. an organisation it may NOT browse (a plain member) → the workspace.
+   *      The chip withholds "Open" from exactly these accounts because the
+   *      server sends them no departments and no workspaces, so the screen
+   *      behind it would be an empty grid — see the `can_browse` note in
+   *      org-tab/skeleton. Sending them there would be a worse answer than the
+   *      one they already had.
+   *   3. no organisation at all → the workspace. THIS IS THE MAJORITY: 79% of
+   *      accounts sit on domain 1 (libs/org-overview `inOrganization`), and
+   *      they have no organisation screen to go to. Without this branch the
+   *      logo would be a dead click for four users in five, which is a worse
+   *      bug than the one being fixed.
+   *
+   * NEVER loadHome(). That is the pre-2.0 Home and it runs Wm.reload(), which
+   * closes every open window — a user who clicked this to get un-lost would
+   * lose the folder windows they had arranged. Getting back to a known screen
+   * must not cost anything.
+   *
+   * orgOverview() is the shared, cached promise the topbar chip has already
+   * resolved by the time any rail is clickable, so the async hop is free in
+   * practice, and it never rejects — a deployment whose server has no org
+   * endpoints resolves to EMPTY, whose can_browse is 0, and lands on (3).
+   */
+  _railHome() {
+    const { orgFeature, orgOverview } = require("libs/org-overview");
+    // Synchronous and local: no organisation means there is nothing to fetch.
+    if (!orgFeature()) return this._railHomeWorkspace();
+    return orgOverview(this).then((data) => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (!data || !data.can_browse) return this._railHomeWorkspace();
+      return this._openOrgView();
+    });
+  }
+
+  /**
+   * The rail logo's fallback — back to the workspace, on Files.
+   *
+   * _railTab("files") is the desk's own "leave the section screen and show
+   * workspace content" path: it closes the three main slots, releases the
+   * invite popup, rebuilds the breadcrumb off the workspace and, when no
+   * workspace window is open at all, opens the default one. _resetRailToFiles
+   * then lights the row, which the click cannot do by itself — the logo is not
+   * in `sidebar-radio` (it is not one of the five tabs and must not read as
+   * though it were), so nothing would otherwise unlight the row belonging to
+   * the screen that just closed.
+   *
+   * The same pair, in the same order and for the same reason, as the section-
+   * screen branch of _openInvitePopup.
+   */
+  _railHomeWorkspace() {
+    const landed = this._railTab("files");
+    this._resetRailToFiles();
+    return landed;
   }
 
   /**
@@ -7425,6 +7707,47 @@ class desk_module extends LetcBox {
    * screen"). Dismiss the modal before showing another screen so the lift
    * is released.
    */
+  /**
+   * A RAIL CLICK CLOSES THE TIER-GATE CARD.
+   *
+   * The "Unlock Admin Console" upsell (_showAdminUnlockModal → openFeatureLock
+   * → Wm.confirm) is an answer to a question the user has stopped asking the
+   * moment they navigate: it is not blocking anything, and since it took its
+   * backdrop off it does not even look like it is. Left standing it hangs over
+   * the Files grid the rail just opened, and the only way out is its own X.
+   *
+   * ONLY THE FEATURE-LOCK CARD, never the wrapper on sight. __wrapperModal is
+   * SHARED — it also carries the create-workspace form, the permission panels
+   * and every other Wm.confirm — and _leaveSectionScreen already records what
+   * clearing it unconditionally costs: a half-filled form thrown away because
+   * the user glanced at another tab. So the host is asked what it is holding
+   * (`.feature-lock`, the card's own root class, builtins/widget/feature-lock)
+   * and anything else is left alone.
+   *
+   * ASKED OF THE DOM rather than tracked in a flag. A flag has to be set on
+   * every open path and cleared on every close path — including the ones that
+   * settle the promise from inside the card — and the _invitePopup field two
+   * methods down is the standing example of how much bookkeeping that is. The
+   * host can simply be asked, and the answer cannot go stale.
+   *
+   * onCancel, NOT _dismissWmModal: that is the card's own X path. It settles
+   * the confirm's promise as a cancel, releases the Escape handler and the
+   * state-guard MutationObserver (window/confirm _releaseModalGuards) and lets
+   * goodbye() take the host down — where clearing the host instead yanks it out
+   * from under a dialog that is still armed. The clear stays as the fallback
+   * for a card caught between feed() and ask().
+   */
+  _dismissFeatureLock() {
+    try {
+      const w = typeof Wm !== "undefined" && Wm.__wrapperModal;
+      if (!w || !w.el || !w.children || !w.children.length) return;
+      const card = w.children.last();
+      if (!card || !card.el || !card.el.querySelector(".feature-lock")) return;
+      if (_.isFunction(card.onCancel)) return card.onCancel();
+      return this._dismissWmModal();
+    } catch (e) { /* non-fatal */ }
+  }
+
   _dismissWmModal() {
     try {
       const w = typeof Wm !== "undefined" && Wm.__wrapperModal;
@@ -7730,6 +8053,49 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the Personal Calendar, optionally on a view the caller names.
+   *
+   * @param {String} [view] "month" | "week" | "day". When given, the screen
+   *   opens on TODAY in that view instead of wherever it was last left — the
+   *   Daily Reminder card asks for "day", because the card is about today.
+   *   Every other entry point omits it and keeps the existing behaviour
+   *   exactly: no options, so the keep-alive reveal still applies.
+   */
+  _openCalendar(view) {
+    // Launch options reach a FRESH mount only — and passing any makes
+    // togglePanel drop a parked instance and remount, which is precisely what
+    // a named view needs. This is the mechanism the billing preselect and the
+    // armed department form already use. It is also the only way to reach a
+    // kind that is still lazy-importing when the promise below settles: there
+    // is nothing but a loader placeholder to call a method on at that point.
+    const opt = view ? { startView: view } : undefined;
+    const opening = this.togglePanel(
+      "calendar_main",
+      "settings-main-slot",
+      true,
+      opt,
+    );
+    if (!view) return opening;
+    return opening.then(() => {
+      // The one case options cannot cover: the calendar was ALREADY on screen,
+      // where an open-only togglePanel is a deliberate no-op. Not a corner
+      // case here — the calendar is a restorable screen, so a reload with it
+      // open puts it back, and the Daily Reminder card fires 2s later on that
+      // same load. focusView returns immediately when the screen is already on
+      // that view and on today, so the fresh-mount path above — which read the
+      // same view from its options — is not charged a second fetch.
+      const p = _.isFunction(this.getPart)
+        ? this.getPart("settings-main-slot")
+        : null;
+      if (!p || p.isEmpty()) return;
+      const child = p.children.last();
+      if (!child || (child.isDestroyed && child.isDestroyed())) return;
+      if (child.isLazyClass || !_.isFunction(child.focusView)) return;
+      child.focusView(view);
+    });
+  }
+
+  /**
    * Open the billing/subscription screen as a FULL PAGE inside the desk
    * settings-main-slot (Figma design), replacing whatever screen is there —
    * NOT a popup. Every billing entry point (sidebar "Upgrade plan", the
@@ -7740,6 +8106,7 @@ class desk_module extends LetcBox {
   openBillingPage(preselect) {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.BILLING_SUBSCRIPTION,
+      ico: "billing",
     });
     // Extended page -> "Opened billing / plans". Marked HERE rather than on the
     // sidebar item so every route counts: the sidebar entry, the Settings
@@ -7932,14 +8299,25 @@ class desk_module extends LetcBox {
    * and putting the sidebar highlight back afterwards either way.
    */
   _showAdminUnlockModal() {
-    return Wm.openFeatureLock({ feature: "admin_console" })
+    // NO BACKDROP. The card is an upsell, not a decision about the screen
+    // behind it: the reader has nothing to check against the desk and nothing
+    // to lose by ignoring it, so dimming the whole workspace overstates what
+    // this interruption is. confirm()'s "scrim" default stays right for the
+    // prompts that really do block on an answer.
+    //
+    // "none", not a dropped key: __wrapperModal is SHARED, and confirm()
+    // documents the failure — a value left behind by the previous dialog would
+    // paint a scrim this card never asked for. Explicitly off, not merely
+    // not-on. The host keeps its [data-state="open"] sizing either way, which
+    // is what centres the card.
+    return Wm.openFeatureLock({ feature: "admin_console", overlay: "none" })
       .then(() => {
         // Defence in depth behind the card's own CTA gate: it only renders the
         // button when canUpgradePlan() passes, so reaching here without it
         // means the plan changed while the card sat open. Same guard, same
         // rule, one source — libs/billing.
         if (!canUpgradePlan()) return this._restoreCurrentSidebarHighlight();
-        return this.openBillingPage().then(() =>
+        return this.openBillingPage({ intent: "upgrade" }).then(() =>
           this._restoreCurrentSidebarHighlight()
         );
       })
@@ -8026,6 +8404,11 @@ class desk_module extends LetcBox {
   closeMainPanels() {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
+    // The topbar icons for the screens about to go — see _clusterUnlight.
+    // HERE rather than in _leaveSectionScreen, which is only the rail's way in:
+    // loadHome closes these same slots too, and an icon left lit over a screen
+    // Home just closed is the same disagreement arriving by a different door.
+    this._clusterUnlight();
     const slots = ["settings-main-slot", "trash-panel", "chat-panel"];
     return Promise.all(
       slots.map((pn) => {
@@ -8085,6 +8468,19 @@ class desk_module extends LetcBox {
     // they manage the drawer themselves or are expected to leave it open.
     if (Visitor.isMobile()) {
       this._maybeDismissMobileDrawer(service);
+    }
+    // A rail row was pressed — __nav-main or __footer, both of which carry
+    // `railRow` (skeleton/sidebar.js). Transient cards that must not outlive a
+    // navigation gesture go now, BEFORE the switch below runs the service: the
+    // footer's own Invite row feeds the very host this dismisses, and doing it
+    // after would tear down the popup that row had just opened.
+    //
+    // Off the CLICKED VIEW, not off `service`: a synthetic dispatch
+    // (_deskServiceShim, _restoreSidebarService) carries the same service
+    // strings without anyone having touched the rail, and those must not count
+    // as a navigation gesture.
+    if (cmd && _.isFunction(cmd.mget) && cmd.mget("railRow")) {
+      this._dismissFeatureLock();
     }
     switch (service) {
       // "Open Workspace" on the post-sign-in invited-workspace dialog. Opens the
@@ -8332,17 +8728,50 @@ class desk_module extends LetcBox {
             // this desk toggle (setState directly), not the panel's own open
             // handler, so the refresh must be triggered here.
             if (typeof p.refreshFeed === "function") p.refreshFeed();
+            RADIO_BROADCAST.trigger("breadcrumb:context", {
+              filename: LOCALE.NOTIFICATIONS,
+              ico: "top-bell",
+            });
+          } else {
+            // AND PUT THE PATH BACK, which only this case has to do by hand.
+            //
+            // Every other section screen lives in one of the three main slots,
+            // so leaving it runs through Desk._leaveSectionScreen →
+            // closeMainPanels(), which rebuilds the workspace path on the way
+            // out. The activity panel is deliberately NOT one of those — it is
+            // a side panel, and closeMainPanels() neither closes it nor hears
+            // about it. Without this branch the bell's own second press would
+            // hide the panel and leave the bar still reading "Notifications"
+            // over the workspace, with nothing left on screen to explain it.
+            //
+            // _restoreCurrentPath, not loadDefault: it resolves the pane (or
+            // _curWorkspace) and repaints the real path, and falls back to
+            // loadDefault itself when no workspace is open yet.
+            const crumb = _.isFunction(this.getPart)
+              ? this.getPart("breadcrumb")
+              : null;
+            if (crumb && _.isFunction(crumb._restoreCurrentPath)) {
+              crumb._restoreCurrentPath();
+            }
           }
         });
 
       case "toggle-inbox":
       case "toggle-chat":
-        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.INBOX });
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.INBOX,
+          ico: "top-inbox",
+        });
+        // Full-canvas, so the rail no longer describes the screen — see
+        // _railUnlight. Beside the breadcrumb retitle and for the same reason:
+        // both say "you are not in the workspace any more".
+        this._railUnlight();
         return this.togglePanel("chat_p2p", INBOX_SLOT, true);
 
       case "toggle-contacts":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CONTACTS,
+          ico: "top-contacts",
         });
         return this.togglePanel("address_book", "chat-panel");
 
@@ -8353,6 +8782,10 @@ class desk_module extends LetcBox {
       case "toggle-settings":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.SETTINGS,
+          // No `top-*` twin: Settings is reached from the rail and the account
+          // menu, never the utility cluster. The rail's own id, so the crumb
+          // still matches the control that opened it.
+          ico: "sidebar_settings",
         });
         // Open-only — clicking Settings (sidebar) or the bottom Profile
         // item never closes the panel; the close icon inside Settings
@@ -8364,11 +8797,22 @@ class desk_module extends LetcBox {
       // reload-restore; like Settings and Get help it is kept mounted when
       // closed (KEEP_ALIVE_MAIN_KINDS) and re-reads its window on re-show.
       // Open-only, matching its sidebar neighbours.
-      case "toggle-calendar":
+      case "toggle-calendar": {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CALENDAR,
+          ico: "top-calendar",
         });
-        return this.togglePanel("calendar_main", "settings-main-slot", true);
+        // See _railUnlight — the calendar covers the workspace pane entirely.
+        // Before _openCalendar, which always reaches togglePanel (there is no
+        // early return to guard against), so the rail goes out whichever of
+        // its two paths — fresh mount or focusView on a parked screen — runs.
+        this._railUnlight();
+        // Most callers — the rail, the topbar cluster, the phone go-to grid,
+        // the reload-restore — want the screen as the user left it, so they
+        // name no view and the keep-alive reveal is unchanged. The Daily
+        // Reminder card names one: `day`, because the card is about today.
+        return this._openCalendar(args.calendarView);
+      }
 
       // Switcher header ⋯ → the open workspace's own menu, built the way a
       // right-click builds one. Its rows dispatch to the workspace WINDOW.
@@ -8401,6 +8845,12 @@ class desk_module extends LetcBox {
       // keeps one definition of "which workspace is this".
       case "switch-workspace-row":
         return this._switchWorkspaceRow(args.row);
+
+      // The rail's LOGO — a temporary Home (Lexis, 2026-09-15). Its
+      // destination is not a constant, so it is resolved in _railHome rather
+      // than named here.
+      case "rail-home":
+        return this._railHome();
 
       // ── Workspace rail (Figma 43:23955) ────────────────────────────────
       // Files / Chat / Task / Meet are the folder window's own tabs; Access is
@@ -8524,8 +8974,17 @@ class desk_module extends LetcBox {
       // working — see _workspaceAccessFromHeader. The rail is deliberately NOT
       // wrapped: it is global, so it can also land on permission_restricted,
       // which is not a lazy kind and has nothing to wait for.
-      case "workspace-access":
+      case "workspace-access": {
+        // A TOGGLE. Lit while the secure-share view is up, and a press then
+        // closes it exactly as the panel's ✕ does (slide-out, then the chat
+        // panel back) — at once, without the chunk warm-up and the tour wait
+        // that only an OPEN needs.
+        const w = this._railWorkspace();
+        if (w && w.activeTab === SECURE_SHARE_TAB && _.isFunction(w.onUiEvent)) {
+          return w.onUiEvent(w, { service: SECURE_SHARE_CLOSE });
+        }
         return this._workspaceAccessFromHeader(cmd);
+      }
 
       // Switcher header ⋯ → Rename. Lexis, 2026-09-05: edit the NAME in place,
       // the way the old desk edited a tile's label — no dialog.
@@ -8644,7 +9103,13 @@ class desk_module extends LetcBox {
         // privilege gating (upsell for non-admins), so the item stays visible to all.
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.ADMIN_CONSOLE,
+          ico: "top-apps",
         });
+        // See _railUnlight. AFTER the upsell gate above — a personal plan gets
+        // a modal over the workspace it is still looking at, not a screen — and
+        // beside the breadcrumb retitle, which already commits to the console
+        // before the plugin chunk lands and is the same bet on the same hop.
+        this._railUnlight();
         // `tab` rides in from desk:open-admin-console — the storage overage
         // asks for the Storage tab, where the per-workspace cleanup is. The
         // plugin validates it against the tabs this role may see and falls
@@ -8687,6 +9152,7 @@ class desk_module extends LetcBox {
       case "toggle-trash":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.TRASH,
+          ico: "top-trash",
         });
         return this.togglePanel("panel_trash", "trash-panel");
 
@@ -8698,7 +9164,23 @@ class desk_module extends LetcBox {
         // (libs/billing): ignore stray triggers (deep links, stale UI, an
         // install with no payment backend) that could otherwise dead-end.
         if (!canUpgradePlan()) return;
-        return this.openBillingPage();
+        // Every entry point NAMED upgrade means buy, so the default carries
+        // that intent and the billing page opens straight on checkout wherever
+        // it can work out which plan is meant — settings_billing
+        // ._settleUpgradeIntent, which falls back to the plans grid whenever it
+        // cannot.
+        //
+        // TWO CALLERS REACH THIS SERVICE WITHOUT MEANING BUY, and both say so
+        // by declaring some other intent: settings_main's "Manage subscription"
+        // card ('manage'), and _restoreSidebarService replaying the screen after
+        // a reload ('restore'). Testing for "declared something else" rather
+        // than for either name keeps the next such caller from having to be
+        // remembered here.
+        return this.openBillingPage(
+          args && args.intent && args.intent !== "upgrade"
+            ? undefined
+            : { intent: "upgrade" },
+        );
 
       // Display mode (light/dark/system) moved to Settings → Appearance.
       // See builtins/widget/settings/main + utils router/theme.js.

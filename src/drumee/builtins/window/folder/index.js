@@ -10,7 +10,15 @@ const {
 
 const { overMeetingCap } = require("libs/billing");
 const readCache = require("libs/read-cache");
-const { ACCESS_TAB, showAccessColumn, showsFileGrid } = require("./access-column");
+const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
+const {
+  SECURE_SHARE_TAB,
+  SECURE_SHARE_CLOSE,
+  SECURE_SHARE_VIEW_EVENT,
+  showSecureShareColumn,
+  toggleSecureShareView,
+  closeSecureShareView,
+} = require("./secure-share-column");
 
 
 const {
@@ -551,10 +559,37 @@ class __window_folder extends mfsInteract {
       value: _a.normal,
     });
 
+    // A window in someone else's hub is a HUB window — but only its ROOT is
+    // `filetype: hub`. Every reader of that value (refreshBreadcrumbsUI, the
+    // desk breadcrumb's _onBrowse / _restoreCurrentPath, the import and share
+    // targets) takes `filetype === hub && actual_home_id` to mean "I am on the
+    // workspace root" and swaps the nid for actual_home_id.
+    //
+    // Stamping it unconditionally was harmless while panes only ever MOUNTED on
+    // a root and reached subfolders by navigating (which copies the
+    // destination's real filetype back). Reload restore mounts the pane
+    // directly on the saved subfolder (desk _restoreWorkspace), so the stamp
+    // turned `testing / Clients / zy` into `testing`: the pane listed zy while
+    // loadWorkspace's deferred refreshBreadcrumbsUI asked get_path for the
+    // root and repainted the bar with it.
+    //
+    // So keep a real subfolder's filetype; isHub still follows the hub.
     if (this.model.get(_a.hub_id) !== Visitor.id) {
-      this.model.set({
-        filetype: _a.hub,
-      });
+      const nid = this.model.get(_a.nid);
+      const rootId = this.model.get(_a.actual_home_id);
+      // Same root test as _taskScopeArgs: the root node, 0, or the hub id itself.
+      const onSubfolder =
+        this.model.get(_a.filetype) === _a.folder &&
+        nid && rootId &&
+        `${nid}` !== "0" &&
+        `${nid}` !== `${rootId}` &&
+        `${nid}` !== `${this.model.get(_a.hub_id)}`;
+      if (!onSubfolder) {
+        this.model.set({
+          filetype: _a.hub,
+        });
+      }
+      this.isHub = 1;
     }
     if (this.model.get(_a.filetype) === _a.hub) {
       this.isHub = 1;
@@ -2057,6 +2092,14 @@ class __window_folder extends mfsInteract {
       // are scoped to the branch that opens the link panel. An internal
       // workspace opens the members panel instead (see _manageAccessIsInternal
       // and openManageAccess) and neither applies to it.
+      // The Access column's ✕ (./access-column): back to Files, rail included.
+      case ACCESS_CLOSE:
+        return closeAccessColumn(this);
+
+      // The secure-share column's ✕ (./secure-share-column).
+      case SECURE_SHARE_CLOSE:
+        return closeSecureShareView(this);
+
       case "folder-manage-access": {
         // `args.members` is the rail's Access asking for the members matrix on
         // an EXTERNAL workspace too (desk/index.js _railAccess). It has to gate
@@ -2085,10 +2128,9 @@ class __window_folder extends mfsInteract {
           // Contextual tour, raised BEFORE openManageAccess because that call
           // TOGGLES: with a drawer already open it clears it and returns, so the
           // flag read after the call means the opposite of what it means here.
-          // `!isShowSettings` is precisely "this click is going to OPEN the
-          // panel" — a closing click, and a click that dismisses the folder
-          // settings drawer (which shares the flag), are both correctly not
-          // treated as reaching Manage access for the first time.
+          // `activeTab !== SECURE_SHARE_TAB` is precisely "this click is going
+          // to OPEN the panel" — a click that toggles the view back off is
+          // correctly not treated as reaching Manage access for the first time.
           //
           // Placed in the handler rather than at either call site on purpose:
           // the topbar icon and the overflow menu both raise this service with
@@ -2102,7 +2144,9 @@ class __window_folder extends mfsInteract {
           // Whether the tour actually went up. showTutorial answers false for
           // every gate — already completed, mobile, the kill switch, another
           // tour in flight — and that answer is what decides the ORDER below.
-          if (!this.isShowSettings) {
+          // The panel is a view now: "this click OPENS it" is "the view is not
+          // up", which toggleSecureShareView reads the same way.
+          if (this.activeTab !== SECURE_SHARE_TAB) {
             // What this panel is about, told to the tour because the tour
             // cannot work it out: openManageAccess() opens a WORKSPACE's
             // access, never a single file's, from every one of the three
@@ -5636,6 +5680,15 @@ class __window_folder extends mfsInteract {
     }
     const prevTab = this.activeTab;
     this.activeTab = tab;
+    // The desk's switcher header lights its link chip while the secure-share
+    // view is up (it is a toggle for it). Announced here, where every way in
+    // and out ends — the opener, the panel's ✕, a rail press — so the chip
+    // follows the view itself rather than the click that asked for it.
+    if (prevTab === SECURE_SHARE_TAB || tab === SECURE_SHARE_TAB) {
+      if (window.Wm && Wm.$el) {
+        Wm.$el.trigger(SECURE_SHARE_VIEW_EVENT, [this, tab === SECURE_SHARE_TAB]);
+      }
+    }
     // A live call fills the desk canvas (window/meeting _lockGeometry), so it
     // covers this pane entirely — switching tab under it would change a screen
     // nobody can see. Park it in the desk's corner dock, exactly as opening a
@@ -5731,6 +5784,11 @@ class __window_folder extends mfsInteract {
           // The rail's Access: the file grid and its gutter stay, and the
           // members panel takes the chat panel's column (./access-column).
           showAccessColumn(this, view);
+          return;
+        case SECURE_SHARE_TAB:
+          // "Manage access" on a share-area workspace: the same column, with
+          // the secure-share panel in it (./secure-share-column).
+          showSecureShareColumn(this, view);
           return;
         case _a.task:
           if (!this._taskPanelMounted) {
@@ -6935,8 +6993,9 @@ class __window_folder extends mfsInteract {
    * Open the "Manage access" drawer — WHICH drawer depends on the workspace.
    *
    * An external workspace is reached through links, so it gets the secure-share
-   * panel. An internal one is reached by being a member, so it gets the members
-   * panel (permission_restricted) — the invite row plus the permissions matrix.
+   * panel — as a view of the split body (./secure-share-column), toggled. An
+   * internal one is reached by being a member, so it gets the members panel
+   * (permission_restricted) — the invite row plus the permissions matrix.
    * Asking to manage access to a team workspace and being handed a link builder
    * is the mismatch this branch exists to fix.
    *
@@ -6953,38 +7012,17 @@ class __window_folder extends mfsInteract {
     // and a `{ members }` in the signature would hand it the parameter's brace
     // instead of the body's.
     const members = !!(opt && opt.members);
+    // EXTERNAL: the secure-share panel is a view of the split body now, not a
+    // drawer (./secure-share-column), and the opener toggles it.
+    if (!members && !this._manageAccessIsInternal()) {
+      return toggleSecureShareView(this);
+    }
     if (this.isShowSettings) {
       this.isShowSettings = false;
-      // Let the secure-share drawer slide out rather than vanish: clear()
-      // destroys its children on the spot, so the panel's close animation never
-      // gets a frame.
-      //
-      // Through its own `close` service, NOT goodbye() directly — a bare
-      // goodbye() takes the framework defaults (opacity 0, scale 0.2), which is
-      // the floating-window shrink. The slide lives in that handler, and asking
-      // for it here keeps one definition of it.
-      //
-      // ONLY this panel: permission_restricted has its own close animation (a
-      // data-position slide), and the toggle leaves it on clear() so nothing
-      // changes for it.
-      const open = this.dialogWrapper.children && this.dialogWrapper.children.last();
-      if (
-        open &&
-        !(open.isDestroyed && open.isDestroyed()) &&
-        open.mget &&
-        open.mget(_a.kind) === "window_secure_share" &&
-        _.isFunction(open.onUiEvent)
-      ) {
-        return open.onUiEvent(open, { service: _e.close });
-      }
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;
-    this.dialogWrapper.feed(
-      members || this._manageAccessIsInternal()
-        ? this._internalAccessPanel()
-        : this._secureSharePanel(),
-    );
+    this.dialogWrapper.feed(this._internalAccessPanel());
     const c = this.dialogWrapper.children.last();
     if (c) {
       c.once(_e.destroy, () => {
@@ -7026,39 +7064,6 @@ class __window_folder extends mfsInteract {
         this.mget(_a.filename) || this.mget("hub_name") || this.mget(_a.name),
       [_a.area]  : this.mget(_a.area),
       uiHandler : [this],
-    };
-  }
-
-  /**
-   * EXTERNAL branch — unchanged.
-   *
-   * Converge the workspace "Manage access" onto secure-share v2 — the SAME panel
-   * files/subfolders use (window_secure_share) — so the workspace link gets
-   * editable permissions + logged-in-recipient recognition. The old external-room
-   * panel (permission_shared) supported neither (permission was hard-clamped to
-   * view; recipients were always guest-bound). Share the workspace ROOT node: for
-   * a hub/workspace-root window the real node id is actual_home_id (nid is the
-   * hub/0) — mirrors this window's own curNid logic; a share-area subfolder shares
-   * its own node. Rendered embedded in the same dialog drawer, matching the media
-   * 'secure-share' launch.
-   */
-  _secureSharePanel() {
-    let shareNid = this.mget(_a.nid);
-    if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
-      shareNid = this.mget(_a.actual_home_id);
-    }
-    return {
-      kind     : "window_secure_share",
-      embedded : 1,
-      dataset  : { embedded: "yes" },
-      nid      : shareNid,
-      hub_id   : this.mget(_a.hub_id),
-      filetype : _a.folder,
-      // Title this panel "Manage access" (workspace-root entry), not the default
-      // "Folder Secure Share" used for file/subfolder shares. Scoped: only this
-      // launch sets the flag, so subfolder/file share panels keep their title.
-      manage_access: 1,
-      uiHandler: [this],
     };
   }
 

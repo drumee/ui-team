@@ -12,6 +12,8 @@
 const SURVEY_FORM_URL =
   "https://docs.google.com/forms/d/1jiHwBNX3D2fkYueU5l_M5ODKWqHzqr2lRNe8rCNcRqs/viewform?edit_requested=true";
 
+const { closeWmPopup } = require("libs/wm-popup");
+
 class __rating_survey_popup extends LetcBox {
   static initClass() {
     require("./skin");
@@ -74,9 +76,11 @@ class __rating_survey_popup extends LetcBox {
     this._close();
   }
 
+  // Removes ONLY this popup when the Wm pool it lives in also holds the
+  // workspace pane — see libs/wm-popup. Closing used to `parent.clear()` the
+  // shared layer, which took the workspace down with the card.
   _close() {
-    if (this.parent && _.isFunction(this.parent.clear)) this.parent.clear();
-    else this.softDestroy();
+    closeWmPopup(this);
   }
 
   // ───────── event routing ─────────

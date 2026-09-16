@@ -58,10 +58,12 @@ const SEL = {
   // :not([data-mode="column"]) excludes the rail's Access column panel (see
   // window/folder/access-column): a user sitting on the Access view of their
   // CURRENT workspace would otherwise count as this follow-up panel being up.
-  permPanels: '.permission-restricted__ui:not([data-mode="column"]) .permission-restricted__main, .window-secure-share__main',
+  // …and the secure-share view (window/folder/secure-share-column), for the
+  // same reason.
+  permPanels: '.permission-restricted__ui:not([data-mode="column"]) .permission-restricted__main, .window-secure-share:not([data-mode="column"]) .window-secure-share__main',
   // A secure-share dock, whatever opened it — used to pick the perm-phase coach
   // text. No longer reached from creation (see permPanels).
-  permShare: ".window-secure-share__main",
+  permShare: '.window-secure-share:not([data-mode="column"]) .window-secure-share__main',
   // The members panel, reached by team AND share creation. This panel is where
   // members are invited, so the flow counts it as Step 2 — see the handoff in
   // _resolveSub. Column mode excluded — see permPanels above.

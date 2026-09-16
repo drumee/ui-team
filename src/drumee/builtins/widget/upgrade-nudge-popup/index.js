@@ -20,6 +20,8 @@
  * <body> (Wm renders inside window-manager, z-auto), fixed backdrop,
  * Wm.launch singleton. The payload rides in as the `nudge` model attribute.
  */
+const { closeWmPopup } = require("libs/wm-popup");
+
 class __upgrade_nudge_popup extends LetcBox {
   static initClass() {
     require("./skin");
@@ -56,9 +58,11 @@ class __upgrade_nudge_popup extends LetcBox {
     return this.mget("nudge") || {};
   }
 
+  // Removes ONLY this popup when the Wm pool it lives in also holds the
+  // workspace pane — see libs/wm-popup. Closing used to `parent.clear()` the
+  // shared layer, which took the workspace down with the card.
   _close() {
-    if (this.parent && _.isFunction(this.parent.clear)) this.parent.clear();
-    else this.softDestroy();
+    closeWmPopup(this);
   }
 
   onUiEvent(cmd, args = {}) {

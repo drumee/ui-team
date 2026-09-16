@@ -2132,7 +2132,17 @@
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
-    cursor: pointer;
+    // GRAB, NOT POINTER. The whole tile is both the drag handle and the button
+    // that returns to the call (window/meeting _bindCallTileDrag): a press that
+    // travels moves it, a press that does not brings the call back. `grab` is
+    // the affordance for the move; the cover's "Return to call" label is the
+    // one for the click, and between them the tile explains both.
+    cursor: grab;
+    // Let a touch drag move the tile instead of scrolling the screen behind it.
+    touch-action: none;
+    // A drag across the tile would otherwise select its own labels, which then
+    // stay highlighted over the video.
+    user-select: none;
     // Keep the tile's internal reflow out of the page's: the desk is navigating
     // while this resizes, and without containment that layout work landed in
     // the same frame as the screen the user just asked for.
@@ -2199,6 +2209,31 @@
 
     &:hover .#{$pfx}__call-tile-live {
       opacity: 0;
+    }
+
+    // ── While it is being dragged ─────────────────────────────────────────
+    // `data-call-drag` is stamped on the window root (and on the desk dock) for
+    // the duration of a real drag — not on press: under the slop threshold the
+    // gesture is still a click, and flashing this would make every click on the
+    // tile blink.
+    &[data-call-drag="1"] {
+      cursor: grabbing;
+      // Picked up off the surface, so it is clearly the thing being moved.
+      box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    // The pointer is still over the tile the whole way, so the hover cover
+    // would sit there through the drag inviting a click that is not coming.
+    // Same specificity as the :hover rule above (0,4,0) and later in the file.
+    &[data-call-drag="1"] .#{$pfx}__call-tile-cover {
+      opacity: 0;
+    }
+
+    // ...and with the cover down, the LIVE mark comes back, so what the user
+    // drags always reads as a running call.
+    &[data-call-drag="1"] .#{$pfx}__call-tile-live {
+      opacity: 1;
     }
   }
 

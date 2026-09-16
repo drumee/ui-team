@@ -1694,8 +1694,8 @@ class __window_manager extends push {
   // reference. Billing is now a FULL PAGE in the desk settings-main-slot, not a
   // popup — delegate to the desk module via RADIO so we don't need a direct
   // module reference from the window manager.
-  upgradePlage() {
-    RADIO_BROADCAST.trigger("desk:open-billing-page");
+  upgradePlage(preselect) {
+    RADIO_BROADCAST.trigger("desk:open-billing-page", preselect);
   }
 
   /**
@@ -3589,7 +3589,7 @@ class __window_manager extends push {
       }
 
       case "upgrade-plan":
-        return this.upgradePlage(cmd);
+        return this.upgradePlage({ intent: "upgrade" });
 
       // Billing popup close (settings_billing popup:1 bubbles billing-close)
       // and the post-Checkout result modal actions.
@@ -3599,7 +3599,12 @@ class __window_manager extends push {
 
       case "billing-result-retry":
         this.ensurePart("wrapper-modal").then((p) => p.clear());
-        return this.upgradePlage(cmd);
+        // NO PRESELECT. upgradePlage now forwards its argument to
+        // openBillingPage, and `cmd` is the triggering MODEL — spreading that
+        // into the panel options would seed the billing page with whatever
+        // enumerable keys the button happened to carry. The retry wants the
+        // page exactly as it opens by hand.
+        return this.upgradePlage();
 
       case "workspace-access-revoked-ack":
         return this.acknowledgeWorkspaceAccessRevoked(cmd);

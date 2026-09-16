@@ -43,7 +43,21 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
   let index = ui.getIndex()
 
-  // The tab's contents: the glyph only for a real node, then the name.
+  // A section's own glyph, when the desk names one. `breadcrumb:context` may
+  // carry an `ico` — the SAME sprite id the control that opened the screen
+  // wears, so the crumb and the pressed top-bar button read as one thing (the
+  // bell's `top-bell`, Trash's `top-trash`, and so on; see desk onUiEvent).
+  //
+  // Image.Svg, NOT Element+content like the folder art below: these are plain
+  // sprite symbols, so they go through `ico` and are tinted with currentColor.
+  // The folder art cannot — it is an HTML string whose own area class supplies
+  // the fill. The two are drawn by different rules for that reason, and the
+  // section one carries `__icon--section` so it can be sized without
+  // disturbing the folder glyph.
+  const ico = ui.mget("ico");
+
+  // The tab's contents: a glyph (folder art for a node, the section's sprite
+  // for a section that names one), then the name.
   const tabKids = [];
   if (!isSection) {
     tabKids.push(
@@ -57,6 +71,13 @@ module.exports = function (ui) {
           // No kebab in a breadcrumb: there is nothing for it to act on.
           isAttachment: 1,
         }),
+      }),
+    );
+  } else if (ico) {
+    tabKids.push(
+      Skeletons.Image.Svg({
+        ico,
+        className: `${pfx}__icon ${pfx}__icon--section`,
       }),
     );
   }

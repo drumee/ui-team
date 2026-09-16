@@ -2657,8 +2657,43 @@ function pendingStrip(ui, scope) {
 // file calls it in several spots and `attachmentIcon(f)` reads better here.
 const attachmentIcon = chipGlyph;
 
+// A comment file is addressed by file_nid once committed and by nid while it
+// is still only a node reference; both shapes reach the same renderers.
+const nidOf = (f) => (f && (f.file_nid || f.nid)) || null;
+
+const fileLabel = (f) =>
+  `${(f && f.filename) || ""}${f && f.extension ? "." + f.extension : ""}`;
+
+// Which comment files are worth LOOKING at rather than reading the name of.
+// Extension as well as filetype because the two sources disagree: the server
+// row carries `category` (media.category, "image" / "video" / …) while a file
+// still queued in the browser has only the name it was dropped under.
+const COMMENT_IMAGE_EXT = /^(png|jpe?g|gif|webp|bmp|avif|heic|svg)$/i;
+const COMMENT_VIDEO_EXT = /^(mp4|m4v|mov|webm|ogv|avi|mkv|3gp|mpe?g|wmv)$/i;
+
+/**
+ * "image" | "video" | null — null meaning "render it as a chip".
+ *
+ * @param {Object} f  a committed attachment row or a queued upload entry
+ */
+function commentMediaKind(f) {
+  const type = String((f && (f.filetype || f.category)) || "").toLowerCase();
+  const ext = String((f && (f.extension || f.ext)) || "").toLowerCase();
+  if (type === _a.image || COMMENT_IMAGE_EXT.test(ext)) return _a.image;
+  if (type === _a.video || COMMENT_VIDEO_EXT.test(ext)) return _a.video;
+  return null;
+}
+
 // Files already attached to a saved comment (task_comment_file, delivered by
 // task_comment_list). The ✕ detaches the file; the media node stays put.
+//
+// Two shapes, decided per file by `commentMediaKind`:
+//
+// - a picture or a video is SHOWN — full tile, at the size it wants, because
+//   that image IS the comment. Filing it behind "pasted-image.png" hid the one
+//   thing the author was trying to say and cost a click and a window to read.
+// - everything else (documents, archives, audio…) keeps the chip: there is
+//   nothing to look at, so a name and a glyph is the whole of it.
 function commentAttachments(ui, c, isOwn) {
   const pfx = ui.fig.family;
   const files = (c && c.attachments) || [];
@@ -2670,31 +2705,18 @@ function commentAttachments(ui, c, isOwn) {
   if (!files.length && !inFlight.length) return null;
 
   /**
-   * One chip, whatever state it is in. Committed and in-flight entries share
-   * the SAME shape deliberately: rendering in-flight ones as the taller
-   * fileCard made the whole thread jump 36px the moment an upload committed,
-   * which with a second drop in flight moved the list under the cursor.
-   *
-   * The trailing 12px slot is always present and holds exactly one thing —
-   * unlink, spinner, retry, or nothing — so width never varies by state or by
-   * ownership either.
+   * The trailing controls, shared by both shapes. In order: retry (error only),
+   * then the ✕ — unlink on a committed file, discard on a queued or failed one,
+   * and a spinner in its place mid-transfer.
    */
-  const chip = (f, opt = {}) => {
-    const nid = f.file_nid || f.nid;
-    const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
-    const status = opt.pending ? f.status || "queued" : null;
-    const busy = status === "uploading" || status === "downloading";
-    const pendingKey = String(f.localKey || f.nid || "");
-    // Slot contents, in order. Retry is the extra one — only an error state has
-    // two controls, and that state is terminal, so the in-flight → committed
-    // swap the equal-width rule exists for still moves between one and one.
-    const controls = [];
+  const controls = (f, status, busy, pendingKey) => {
+    const out = [];
     if (status === "error" && (f.file || f.nid)) {
       // Suppressed when there is nothing a retry could do: a cross-hub
       // placeholder whose download failed carries neither file nor nid, so the
       // link has no input and the fetch is never re-run. The ✕ below is what
       // makes that chip disposable instead of merely stuck.
-      controls.push(
+      out.push(
         Skeletons.Button.Svg({
           className: `${pfx}__comment-attachment-retry`,
           ico: "refresh-view",
@@ -2710,12 +2732,12 @@ function commentAttachments(ui, c, isOwn) {
         }),
       );
     }
-    // ✕ on every chip of a comment you wrote, whatever state it is in — what it
+    // ✕ on every file of a comment you wrote, whatever state it is in — what it
     // removes is what differs. task.comment_unlink_file is author-checked
     // server-side, so someone else's attachment gets no ✕ rather than one that
     // always fails.
     if (isOwn) {
-      controls.push(
+      out.push(
         status
           ? Skeletons.Button.Svg({
               // Same class as the unlink ✕: one control, one look, and it picks
@@ -2745,15 +2767,35 @@ function commentAttachments(ui, c, isOwn) {
               service: "comment-unlink-attachment",
               uiHandler: [ui],
               commentId: c && c.id,
-              fileNid: nid,
+              fileNid: nidOf(f),
             }),
       );
     }
+    return out;
+  };
+
+  /**
+   * One chip, whatever state it is in. Committed and in-flight entries share
+   * the SAME shape deliberately: rendering in-flight ones as the taller
+   * fileCard made the whole thread jump 36px the moment an upload committed,
+   * which with a second drop in flight moved the list under the cursor.
+   *
+   * The trailing 12px slot is always present and holds exactly one thing —
+   * unlink, spinner, retry, or nothing — so width never varies by state or by
+   * ownership either.
+   */
+  const chip = (f, opt = {}) => {
+    const nid = nidOf(f);
+    const name = fileLabel(f);
+    const status = opt.pending ? f.status || "queued" : null;
+    const busy = status === "uploading" || status === "downloading";
+    const pendingKey = String(f.localKey || f.nid || "");
+    const openable = !!nid && !busy && !status;
     return Skeletons.Box.X({
       className: `${pfx}__comment-attachment`,
       // A chip mid-upload is not a click target for opening the file.
-      service: nid && !busy && !status ? "open-attachment" : null,
-      uiHandler: nid && !busy && !status ? [ui] : null,
+      service: openable ? "open-attachment" : null,
+      uiHandler: openable ? [ui] : null,
       fileNid: nid,
       attrOpt: {
         ...(status ? { "data-status": status, "data-key": pendingKey } : {}),
@@ -2762,6 +2804,11 @@ function commentAttachments(ui, c, isOwn) {
         Skeletons.Image.Svg({
           ico: attachmentIcon(f),
           className: `${pfx}__comment-attachment-ico`,
+          // Inert, like every other non-control kid here: ui-core binds onclick
+          // to any widget left active and that handler stopPropagation()s, so a
+          // live kid eats the click and the chip never opens (it would respond
+          // on its padding alone).
+          active: 0,
           // Lets the skin treat a type differently without the renderer
           // knowing about colour — see the office rule in the skin.
           attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
@@ -2769,24 +2816,114 @@ function commentAttachments(ui, c, isOwn) {
         Skeletons.Note({
           className: `${pfx}__comment-attachment-name`,
           content: name,
+          active: 0,
         }),
         // Always rendered, even when empty: reserving the slot keeps every
         // chip the same width regardless of state or authorship. It holds one
         // control in every state but error, which adds retry beside the ✕.
         Skeletons.Box.X({
           className: `${pfx}__comment-attachment-slot`,
-          kids: controls,
+          active: 0,
+          kids: controls(f, status, busy, pendingKey),
         }),
       ],
     });
   };
 
-  return Skeletons.Box.X({
+  /**
+   * One picture or video, shown.
+   *
+   * The source differs by state and that is the whole of the difference: a
+   * committed file paints its server-side thumbnail (a video's is its poster
+   * frame), while one still uploading paints the local blob the browser
+   * already has — so the author sees what they pasted the instant they paste
+   * it, not when the round trip ends.
+   *
+   * A video is a poster plus a play badge and opens in the product's video
+   * player on click, which is the same language the media grid speaks; it is
+   * deliberately NOT an autoplaying <video> in the middle of a thread.
+   */
+  const tile = (f, opt = {}) => {
+    const kind = commentMediaKind(f);
+    const nid = nidOf(f);
+    const name = fileLabel(f);
+    const status = opt.pending ? f.status || "queued" : null;
+    const busy = status === "uploading" || status === "downloading";
+    const pendingKey = String(f.localKey || f.nid || "");
+    const openable = !!nid && !busy && !status;
+    // A local video preview has no poster to put in an <img> — the blob goes
+    // into a muted <video> instead, whose first frame is the poster. Committed
+    // videos take the <img> path: their poster is a real generated thumbnail.
+    const localVideo = kind === _a.video && f.localPreview;
+    return Skeletons.Box.Y({
+      className: `${pfx}__comment-media`,
+      service: openable ? "open-attachment" : null,
+      uiHandler: openable ? [ui] : null,
+      fileNid: nid,
+      attrOpt: {
+        // The name is the tooltip, not a caption: the picture is the content,
+        // and "Screenshot 2026-09-16 at 14.02.11.png" under every one of them
+        // is the noise this change exists to remove.
+        title: name,
+        ...(status ? { "data-status": status, "data-key": pendingKey } : {}),
+      },
+      kids: [
+        previewLeaf(f, `${pfx}__comment-media-img`, {
+          loading: "lazy",
+          alt: name,
+          draggable: "false",
+        }),
+        // No badge over a local blob: it would promise a player the file is
+        // not reachable by yet.
+        kind === _a.video && !localVideo
+          ? Skeletons.Image.Svg({
+              ico: "ph-play-fill",
+              className: `${pfx}__comment-media-play`,
+              active: 0,
+            })
+          : null,
+        Skeletons.Box.X({
+          className: `${pfx}__comment-media-slot`,
+          active: 0,
+          kids: controls(f, status, busy, pendingKey),
+        }),
+      ].filter(Boolean),
+    });
+  };
+
+  // One pass over both sources, each file routed to the shape it deserves. A
+  // media file with no preview URL yet (a cross-hub copy still arriving, a
+  // thumbnail the server could not build) falls back to the chip rather than
+  // painting an empty frame.
+  const tiles = [];
+  const rows = [];
+  const place = (f, opt) => {
+    if (commentMediaKind(f) && f.previewUrl) tiles.push(tile(f, opt));
+    else rows.push(chip(f, opt));
+  };
+  files.forEach((f) => place(f, {}));
+  inFlight.forEach((f) => place(f, { pending: true }));
+
+  // The wrapper keeps the class and the data-scope the row had before, so the
+  // busy-row skin exception and _setPendingStatus's lookup are unchanged; only
+  // its direction and its children are new.
+  return Skeletons.Box.Y({
     className: `${pfx}__comment-attachments`,
     attrOpt: { "data-scope": `comment-row:${c && c.id}` },
-    kids: files
-      .map((f) => chip(f))
-      .concat(inFlight.map((f) => chip(f, { pending: true }))),
+    kids: [
+      tiles.length
+        ? Skeletons.Box.X({
+            className: `${pfx}__comment-media-strip`,
+            kids: tiles,
+          })
+        : null,
+      rows.length
+        ? Skeletons.Box.X({
+            className: `${pfx}__comment-file-strip`,
+            kids: rows,
+          })
+        : null,
+    ].filter(Boolean),
   });
 }
 
@@ -3325,15 +3462,48 @@ function dropOverlay(ui) {
   });
 }
 
+/**
+ * The thumbnail element for a file that has one.
+ *
+ * A committed file's previewUrl is a served PNG whatever the file is — a
+ * video's is its poster frame — so it goes in an <img>. A file still queued in
+ * the browser has a blob URL of the file ITSELF (see _attachLocalPreview), and
+ * a video blob has no poster to put in an <img>: it needs a <video>, whose
+ * first frame is the poster. `localPreview` is what distinguishes the two.
+ *
+ * @param {Object} f          attachment row or queued entry, with previewUrl
+ * @param {String} className  class for the element
+ * @param {Object} extra      additional attributes (loading, alt, draggable…)
+ */
+function previewLeaf(f, className, extra = {}) {
+  if (f.localPreview && commentMediaKind(f) === _a.video) {
+    return Skeletons.Element({
+      tagName: "video",
+      className,
+      active: 0,
+      // No controls, no autoplay: this is a still of a file that is still
+      // uploading. preload="metadata" is what paints the frame.
+      attrOpt: {
+        src: f.previewUrl,
+        preload: "metadata",
+        muted: "",
+        playsinline: "",
+      },
+    });
+  }
+  return Skeletons.Element({
+    tagName: "img",
+    className,
+    active: 0,
+    attrOpt: { src: f.previewUrl, ...extra },
+  });
+}
+
 // Preview leaf: an image thumbnail when we have a URL, else a type-icon.
 function pendingPreview(ui, f) {
   const pfx = ui.fig.family;
   if (f.previewUrl) {
-    return Skeletons.Element({
-      tagName: "img",
-      className: `${pfx}__file-pending-thumb`,
-      attrOpt: { src: f.previewUrl },
-    });
+    return previewLeaf(f, `${pfx}__file-pending-thumb`);
   }
   return Skeletons.Image.Svg({
     ico: f.iconChartId || "attachment",
@@ -3351,10 +3521,8 @@ function fileCard(ui, f, opt = {}) {
 
   let preview;
   if (f.previewUrl) {
-    preview = Skeletons.Element({
-      tagName: "img",
-      className: `${pfx}__attachment-thumb`,
-      attrOpt: { src: f.previewUrl, loading: "lazy" },
+    preview = previewLeaf(f, `${pfx}__attachment-thumb`, {
+      loading: "lazy",
     });
   } else {
     let ico = f.iconChartId;
@@ -3438,13 +3606,21 @@ function fileCard(ui, f, opt = {}) {
     fileNid: nid,
     ...(status ? { attrOpt: { "data-status": status, "data-key": pendingKey } } : {}),
     kids: [
+      // Inert, so the card's own "open" click is not eaten: ui-core binds
+      // onclick to every widget left active and that handler stopPropagation()s
+      // before it dispatches, so a live kid silently swallows the click and the
+      // card only responds on its padding. The spinner and retry inside the box
+      // keep theirs — retry has a service, and the spinner only exists in the
+      // states where the card is deliberately not openable.
       Skeletons.Box.Y({
         className: `${pfx}__attachment-thumb-box`,
+        active: 0,
         kids: [preview, ...stateKids],
       }),
       Skeletons.Note({
         className: `${pfx}__attachment-name`,
         content: filename,
+        active: 0,
       }),
       // Remove stays rendered while uploading so the card does not reflow; the
       // skin disables it and the handler refuses, since there is no way to
