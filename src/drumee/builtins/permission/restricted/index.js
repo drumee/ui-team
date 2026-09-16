@@ -608,6 +608,13 @@ class __permission_restricted extends DrumeeMFS {
     const service = args.service || cmd.get(_a.service);
     switch (service) {
       case _e.close:
+        // Column mode: a view of the folder split body, mounted once
+        // (window/folder/access-column) — sliding it out and suppress()ing it
+        // would leave that view empty for good. The folder window switches the
+        // column back to the chat panel and lights the rail's Files instead.
+        if (this.mget("mode") === "column") {
+          return this.triggerHandlers({ service: "close-access-view" });
+        }
         this.el.dataset.position = "0";
         setTimeout(() => {
           this.suppress();

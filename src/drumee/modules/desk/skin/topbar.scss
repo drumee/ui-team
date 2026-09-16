@@ -1500,6 +1500,14 @@
       width: max-content;
       min-width: 260px;
       z-index: 99999;
+      // SHOW. The pair of the closed rule below: opacity and a short drop into
+      // place from the chip's corner, with visibility switched on at once so
+      // the panel is there for the whole of the fade.
+      transform-origin: top left;
+      transition:
+        opacity 0.16s ease-out,
+        transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+        visibility 0s linear 0s;
     }
 
     .menu-topic-items__wrapper[data-state="open"] {
@@ -1526,11 +1534,45 @@
         0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
-    // Without this the panel is always in the DOM flow — the "glitch".
+    // menu_topic slides the card with gsap (a `y` translate set inline on
+    // .menu-topic-items), at the 0.01s duration this menu has to pass — so it
+    // never read as motion, but on CLOSE it still jumps the card up by its own
+    // width before the fade below could play. The motion is the wrapper's
+    // transition now; an !important author rule outranks gsap's inline style.
+    .menu-topic-items {
+      transform: none !important;
+    }
+
+    // CLOSED — hidden, but NOT display:none, which cannot animate: the panel
+    // would vanish on the spot. visibility is what takes it out of hit-testing
+    // and the accessibility tree, and it flips only after the 0.12s fade (the
+    // delayed `visibility` in this rule's transition, which is the one used
+    // when ENTERING this state). The wrapper is absolute, so a hidden panel
+    // still takes no room in the bar — the old "glitch" was an unpositioned
+    // wrapper, not a visible one.
+    //
+    // opacity !important: gsap's open tween leaves `opacity: 1` inline on this
+    // wrapper, which would otherwise win over the closed state.
     .menu-topic-items__wrapper[data-state="closed"],
     .menu-topic-items__wrapper[data-state="0"],
     &:not([data-state="1"]) .menu-topic-items__wrapper {
-      display: none;
+      visibility: hidden;
+      opacity: 0 !important;
+      transform: translateY(-4px) scale(0.98);
+      pointer-events: none;
+      transition:
+        opacity 0.12s ease-in,
+        transform 0.12s ease-in,
+        visibility 0s linear 0.12s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .menu-topic-items__wrapper,
+      .menu-topic-items__wrapper[data-state="closed"],
+      .menu-topic-items__wrapper[data-state="0"],
+      &:not([data-state="1"]) .menu-topic-items__wrapper {
+        transition: none;
+      }
     }
   }
 
@@ -1764,6 +1806,20 @@
       svg {
         opacity: 0.45;
         animation: ws-head-action-spin 0.7s linear infinite;
+      }
+    }
+
+    // The link is a TOGGLE for the folder window's secure-share view: lit while
+    // the panel is up, and a press then closes it. data-state is the VIEW's,
+    // written by the desk (_syncWorkspaceAccessToggle) — same lit look as the
+    // other selected chips in this bar. Hover keeps the lit fill rather than
+    // dropping to the grey one, which read as the toggle turning off.
+    &--link[data-state="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
+
+      &:hover {
+        background: var(--radio-on-bg);
       }
     }
 
