@@ -14,11 +14,15 @@ const __skl_secure_share = function(_ui_) {
   // Leading row icon (non-interactive) — matches the Figma row glyphs.
   const rowIcon = (ico) => Skeletons.Image.Svg({ className: `${pfx}__row-icon`, ico });
 
-  // ── Topbar (unchanged) ────────────────────────────────────
+  // ── Topbar ────────────────────────────────────────────────
+  // Column mode (a view of the folder split body): no ✕ — the view is left by
+  // toggling its opener or by any rail item — and no raise, which would lift a
+  // grid cell over the desk (see index.js raise).
+  const column = _ui_.mget('mode') === 'column';
   const topbar = Skeletons.Box.X({
     className : `${group}-topbar__container`,
     sys_pn    : 'topbar',
-    service   : _e.raise,
+    ...(column ? {} : { service: _e.raise }),
     kids      : [
       Skeletons.Box.X({
         className : `${pfx}__topbar-title forbiden`,
@@ -36,7 +40,7 @@ const __skl_secure_share = function(_ui_) {
           })
         ]
       }),
-      require('window/skeleton/topbar/control')(_ui_, 'c')
+      ...(column ? [] : [require('window/skeleton/topbar/control')(_ui_, 'c')])
     ]
   });
 

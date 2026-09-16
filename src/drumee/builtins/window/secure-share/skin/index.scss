@@ -71,6 +71,36 @@
     }
   }
 
+  // ── Column mode ───────────────────────────────────────────
+  // A view of the folder window's split body (window/folder/secure-share-column),
+  // not a drawer and not a floating window: it fills the grid cell the folder
+  // skin gives it, and that skin draws the card. !important because the window
+  // base (.window__ui: absolute, min-width 600px) and any inline geometry the
+  // window core writes would otherwise win.
+  &[data-mode="column"] {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: auto !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    box-shadow: none;
+    border-radius: 0;
+
+    .window-secure-share__main.drive-popup {
+      width: 100%;
+      height: 100%;
+      border-left: 0;
+      box-shadow: none;
+      // The column enters with the split body's own switch animation.
+      animation: none;
+    }
+  }
+
   // ── Header ────────────────────────────────────────────────
   &__header {
     min-height: 52px;

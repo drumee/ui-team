@@ -13,10 +13,19 @@ class __window_secure_share extends mfsInteract {
   initialize(opt) {
     require('./skin');
     super.initialize(opt);
+    // Column mode: a view of the folder window's split body ("Manage access" on
+    // a share-area workspace, see window/folder/secure-share-column), not a
+    // drawer. Stamped on the element AFTER super.initialize, not through
+    // opt.dataset: this widget is fed as a kid there, its model is the
+    // descriptor the parent built, and an opt.dataset edit never reaches the
+    // data-* stamp.
+    this._column = this.mget("mode") === "column";
+    if (this._column) this.el.dataset.mode = "column";
     // Embedded mode (Figma): the panel renders as a right drawer INSIDE the host
     // workspace window's dialog wrapper (same mechanism as folder settings), so it
     // must NOT behave like a floating window — skip all self-positioning/chrome.
-    this._embedded = !!(opt && opt.embedded);
+    // A column is embedded too, for the same reason.
+    this._embedded = !!(opt && opt.embedded) || this._column;
     if (!this._embedded) {
       // Standalone fallback — Figma "Permission Panel (Slide in from right)": a
       // fixed 450px right dock. The window base inflates this.size.width to
@@ -44,6 +53,14 @@ class __window_secure_share extends mfsInteract {
     this._pendingRequest  = null;
     this.declareHandlers();
     this.bindEvent(_a.live);
+  }
+
+  // A column never raises. window/core gives every window `service: raise` and
+  // the Wm radio, and a raised window is `z-index: 10000 !important`
+  // (window/skin/window.scss) — a kid of the split body lifted over the desk.
+  raise(...args) {
+    if (this._column) return;
+    return super.raise(...args);
   }
 
   onBeforeDestroy() {
