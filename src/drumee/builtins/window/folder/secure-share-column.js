@@ -8,14 +8,18 @@
  * grid and its drag gutter stay, and the panel takes the chat panel's column.
  * The skin does the layout off `data-view="secure-share"`.
  *
- * It toggles, where Access does not: there is no rail item for it and no ✕ in
- * column mode, so the icon that opened it is the way back.
+ * It toggles, where Access does not: there is no rail item for it, so the icon
+ * that opened it is a way back. The panel's own ✕ is the other: it asks the
+ * folder window for SECURE_SHARE_CLOSE, which puts the chat panel back.
  *
  * Its own module so it can be required under plain node: `_a` is read inside
  * the functions, never at load.
  */
 const SECURE_SHARE_TAB = "secure-share";
 const SECURE_SHARE_PANEL_PN = "folder-secure-share-panel";
+// The service the panel's ✕ sends its uiHandler (the folder window) in column
+// mode — see secure-share/index.js `_e.close`.
+const SECURE_SHARE_CLOSE = "close-secure-share-view";
 
 /** The node the workspace link is minted for. For a hub/workspace-root window
  *  the real node is actual_home_id (nid is the hub, or 0); a subfolder shares
@@ -112,9 +116,25 @@ function toggleSecureShareView(win) {
   return win.showFolderTab(SECURE_SHARE_TAB);
 }
 
+/**
+ * The panel's ✕: hide the view and show the chat panel in its column again.
+ *
+ * Only Files and Chat HAVE a chat panel, so the ✕ goes back to the tab it came
+ * from when that is one of them, and to Files otherwise — coming from Task or
+ * Meet, going "back" would close the panel onto a view with no chat at all.
+ */
+function closeSecureShareView(win) {
+  if (win.activeTab !== SECURE_SHARE_TAB) return undefined;
+  const prev = win._tabBeforeSecureShare;
+  win._tabBeforeSecureShare = null;
+  return win.showFolderTab(prev === _a.chat ? _a.chat : "files");
+}
+
 module.exports = {
   SECURE_SHARE_TAB,
   SECURE_SHARE_PANEL_PN,
+  SECURE_SHARE_CLOSE,
+  closeSecureShareView,
   secureShareNid,
   secureSharePanelSpec,
   showSecureShareColumn,

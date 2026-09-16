@@ -15,9 +15,9 @@ const __skl_secure_share = function(_ui_) {
   const rowIcon = (ico) => Skeletons.Image.Svg({ className: `${pfx}__row-icon`, ico });
 
   // ── Topbar ────────────────────────────────────────────────
-  // Column mode (a view of the folder split body): no ✕ — the view is left by
-  // toggling its opener or by any rail item — and no raise, which would lift a
-  // grid cell over the desk (see index.js raise).
+  // Column mode (a view of the folder split body): no raise, which would lift a
+  // grid cell over the desk (see index.js raise). The ✕ stays — in a column it
+  // hides the panel and brings the chat panel back (index.js `_e.close`).
   const column = _ui_.mget('mode') === 'column';
   const topbar = Skeletons.Box.X({
     className : `${group}-topbar__container`,
@@ -40,7 +40,7 @@ const __skl_secure_share = function(_ui_) {
           })
         ]
       }),
-      ...(column ? [] : [require('window/skeleton/topbar/control')(_ui_, 'c')])
+      require('window/skeleton/topbar/control')(_ui_, 'c')
     ]
   });
 

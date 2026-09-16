@@ -13,8 +13,10 @@ const readCache = require("libs/read-cache");
 const { ACCESS_TAB, showAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
+  SECURE_SHARE_CLOSE,
   showSecureShareColumn,
   toggleSecureShareView,
+  closeSecureShareView,
 } = require("./secure-share-column");
 
 
@@ -2089,6 +2091,10 @@ class __window_folder extends mfsInteract {
       // are scoped to the branch that opens the link panel. An internal
       // workspace opens the members panel instead (see _manageAccessIsInternal
       // and openManageAccess) and neither applies to it.
+      // The secure-share column's ✕ (./secure-share-column).
+      case SECURE_SHARE_CLOSE:
+        return closeSecureShareView(this);
+
       case "folder-manage-access": {
         // `args.members` is the rail's Access asking for the members matrix on
         // an EXTERNAL workspace too (desk/index.js _railAccess). It has to gate

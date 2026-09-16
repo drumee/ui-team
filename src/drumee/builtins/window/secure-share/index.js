@@ -191,6 +191,13 @@ class __window_secure_share extends mfsInteract {
       // super.onUiEvent, so breaking out of the switch here would leave the
       // floating window's close button doing nothing at all.
       case _e.close:
+        // Column mode: the panel is a view of the folder split body, so the ✕
+        // does not destroy it — the folder window switches the column back to
+        // the chat panel, and this stays mounted for the next open
+        // (window/folder/secure-share-column closeSecureShareView).
+        if (this._column) {
+          return this.triggerHandlers({ service: "close-secure-share-view" });
+        }
         if (this._embedded) {
           // `timeout` is NOT optional here, and 0 would not do.
           //
