@@ -166,6 +166,16 @@ class __media_core extends DrumeeMFS {
     }
 
     const fileType = this.mget(_a.filetype);
+    // `share_qrcode` predates the sectioned menus (added unconditionally
+    // 2025-12-04 `37a6681d`, gated by area 2026-06-09 `1f984155`) and is
+    // appended out here, AFTER the per-type builder has already grouped and
+    // flattened its sections — so it lands below "Move to trash" with no
+    // separator of its own. The file-menu Figma (node 1646-106518) has no such
+    // row, so files opt out; folder / workspace-tile / schedule menus keep it
+    // verbatim until their own frames land. Nothing is lost either way: the QR
+    // is still on the workspace settings panel next to the share links
+    // (widget/settings/hub skeleton/footer.js + skeleton/links.js).
+    let qrcodeOffered = true;
     switch (fileType) {
       case _a.hub:
         items = this.contextmenuItemsForHub();
@@ -180,9 +190,12 @@ class __media_core extends DrumeeMFS {
 
       default:
         items = this.contextmenuItemsForFiles();
+        qrcodeOffered = false;
     }
 
-    if ([_a.public, _a.share, _a.dmz].includes(this.mget(_a.area)) && this.canShare()) items.push('share_qrcode');
+    // canShare() (ui-core letc/mfs.js) is already false outside dmz/share, so
+    // the _a.public arm here has never fired — left as-is, not this pass.
+    if (qrcodeOffered && [_a.public, _a.share, _a.dmz].includes(this.mget(_a.area)) && this.canShare()) items.push('share_qrcode');
 
     /** Children of window_search */
     if (this.mget(_a.role) == _a.search) {
