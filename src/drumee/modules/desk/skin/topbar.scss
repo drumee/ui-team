@@ -1767,6 +1767,20 @@
       }
     }
 
+    // The link is a TOGGLE for the folder window's secure-share view: lit while
+    // the panel is up, and a press then closes it. data-state is the VIEW's,
+    // written by the desk (_syncWorkspaceAccessToggle) — same lit look as the
+    // other selected chips in this bar. Hover keeps the lit fill rather than
+    // dropping to the grey one, which read as the toggle turning off.
+    &--link[data-state="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
+
+      &:hover {
+        background: var(--radio-on-bg);
+      }
+    }
+
     // The ⋯ carries the Figma component's own resting grey — that fill is its
     // normal state, not a hover — so its hover has to be a DARKER step rather
     // than the one introduced above.

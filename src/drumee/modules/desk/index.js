@@ -37,6 +37,11 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // narrow right-hand slide-out it used to be. So it mounts in the same slot
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
+const {
+  SECURE_SHARE_TAB,
+  SECURE_SHARE_CLOSE,
+  SECURE_SHARE_VIEW_EVENT,
+} = require("window/folder/secure-share-column");
 
 const INBOX_SLOT = "settings-main-slot";
 
@@ -284,6 +289,7 @@ class desk_module extends LetcBox {
     this._openWorkspaces = new Set();
     this._onWorkspaceOpen = this._onWorkspaceOpen.bind(this);
     this._onWorkspaceClose = this._onWorkspaceClose.bind(this);
+    this._onSecureShareView = this._onSecureShareView.bind(this);
     // A zoomed folder window claims the desk body the same way a sidebar
     // workspace pane does — including the header row.
     this._onFolderZoom = this._onFolderZoom.bind(this);
@@ -440,6 +446,7 @@ class desk_module extends LetcBox {
     Wm.$el.on("folder:close", this._onFolderClose);
     Wm.$el.on("workspace:open", this._onWorkspaceOpen);
     Wm.$el.on("workspace:close", this._onWorkspaceClose);
+    Wm.$el.on(SECURE_SHARE_VIEW_EVENT, this._onSecureShareView);
     Wm.$el.on("folder:zoom", this._onFolderZoom);
     Wm.$el.on(_e.minimize, this._onWmMinimize);
     Wm.$el.on(_e.wake, this._onWmWake);
@@ -507,6 +514,43 @@ class desk_module extends LetcBox {
     if (this._openWorkspaces.delete(winInstance.cid)) {
       this._syncWorkspaceTopbar();
     }
+    // A pane closed with its secure-share view up announces nothing on the
+    // way out, so the header's link chip is re-read from whatever pane is left.
+    this._syncWorkspaceAccessToggle();
+  }
+
+  /** Is the workspace the header names showing its secure-share view? */
+  _secureShareViewIsUp() {
+    const w = this._railWorkspace();
+    return !!(w && w.activeTab === SECURE_SHARE_TAB);
+  }
+
+  /**
+   * Light the switcher header's link chip while the secure-share view is up.
+   *
+   * The chip is a TOGGLE for that view, and its state is the VIEW's, written
+   * here from the folder window's own announcement — never flipped by the
+   * click. The view can be left without the chip (the panel's ✕, a rail press)
+   * and is only left once its slide-out has played, and a click-driven state
+   * would disagree with the screen in all of those.
+   *
+   * Every chip, not a part: the header is re-fed on navigation, and a stale
+   * copy may still be on its way out.
+   */
+  _syncWorkspaceAccessToggle(open = this._secureShareViewIsUp()) {
+    if (typeof document === "undefined") return;
+    document
+      .querySelectorAll(".desk-module-topbar__ws-head-action--link")
+      .forEach((el) => {
+        el.dataset.state = open ? "1" : "0";
+      });
+  }
+
+  /** Wm.$el `folder:secure-share` — (event, folderWindow, isUp). */
+  _onSecureShareView(event, win, open) {
+    // Only the pane the header names: a popup folder window has the same view.
+    if (!win || win !== this._railWorkspace()) return;
+    this._syncWorkspaceAccessToggle(!!open);
   }
 
   _onFolderZoom() {
@@ -745,6 +789,7 @@ class desk_module extends LetcBox {
       Wm.$el.off("folder:close", this._onFolderClose);
       Wm.$el.off("workspace:open", this._onWorkspaceOpen);
       Wm.$el.off("workspace:close", this._onWorkspaceClose);
+      Wm.$el.off(SECURE_SHARE_VIEW_EVENT, this._onSecureShareView);
       Wm.$el.off("folder:zoom", this._onFolderZoom);
       Wm.$el.off(_e.minimize, this._onWmMinimize);
       Wm.$el.off(_e.wake, this._onWmWake);
@@ -2859,9 +2904,15 @@ class desk_module extends LetcBox {
           // beside it had to become one.
           [_a.share, _a.dmz].includes(curRow.area)
             ? Skeletons.Button.Svg({
-                className: `${cn}__ws-head-action`,
+                className: `${cn}__ws-head-action ${cn}__ws-head-action--link`,
                 ico: "apps-link-simple",
                 service: "workspace-access",
+                // A toggle for the secure-share view: fed lit when the header
+                // is rebuilt with the view already up, kept in step after that
+                // by _syncWorkspaceAccessToggle. `state`, NOT dataset.state:
+                // this renders as image_svg, whose onDomRefresh stamps
+                // data-state from the model's `state` over any fed dataset.
+                state: this._secureShareViewIsUp() ? 1 : 0,
                 uiHandler: [this],
               })
             : null,
@@ -8923,8 +8974,17 @@ class desk_module extends LetcBox {
       // working — see _workspaceAccessFromHeader. The rail is deliberately NOT
       // wrapped: it is global, so it can also land on permission_restricted,
       // which is not a lazy kind and has nothing to wait for.
-      case "workspace-access":
+      case "workspace-access": {
+        // A TOGGLE. Lit while the secure-share view is up, and a press then
+        // closes it exactly as the panel's ✕ does (slide-out, then the chat
+        // panel back) — at once, without the chunk warm-up and the tour wait
+        // that only an OPEN needs.
+        const w = this._railWorkspace();
+        if (w && w.activeTab === SECURE_SHARE_TAB && _.isFunction(w.onUiEvent)) {
+          return w.onUiEvent(w, { service: SECURE_SHARE_CLOSE });
+        }
         return this._workspaceAccessFromHeader(cmd);
+      }
 
       // Switcher header ⋯ → Rename. Lexis, 2026-09-05: edit the NAME in place,
       // the way the old desk edited a tile's label — no dialog.

@@ -14,6 +14,7 @@ const { ACCESS_TAB, showAccessColumn, showsFileGrid } = require("./access-column
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
+  SECURE_SHARE_VIEW_EVENT,
   showSecureShareColumn,
   toggleSecureShareView,
   closeSecureShareView,
@@ -5675,6 +5676,15 @@ class __window_folder extends mfsInteract {
     }
     const prevTab = this.activeTab;
     this.activeTab = tab;
+    // The desk's switcher header lights its link chip while the secure-share
+    // view is up (it is a toggle for it). Announced here, where every way in
+    // and out ends — the opener, the panel's ✕, a rail press — so the chip
+    // follows the view itself rather than the click that asked for it.
+    if (prevTab === SECURE_SHARE_TAB || tab === SECURE_SHARE_TAB) {
+      if (window.Wm && Wm.$el) {
+        Wm.$el.trigger(SECURE_SHARE_VIEW_EVENT, [this, tab === SECURE_SHARE_TAB]);
+      }
+    }
     // A live call fills the desk canvas (window/meeting _lockGeometry), so it
     // covers this pane entirely — switching tab under it would change a screen
     // nobody can see. Park it in the desk's corner dock, exactly as opening a

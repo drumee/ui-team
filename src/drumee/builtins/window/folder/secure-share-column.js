@@ -20,6 +20,11 @@ const SECURE_SHARE_PANEL_PN = "folder-secure-share-panel";
 // The service the panel's ✕ sends its uiHandler (the folder window) in column
 // mode — see secure-share/index.js `_e.close`.
 const SECURE_SHARE_CLOSE = "close-secure-share-view";
+// Triggered on Wm.$el as (event, folderWindow, isUp) whenever the view is
+// entered or left — however that happened: the opener, the ✕, a rail press.
+// The desk's switcher header lights its link chip off it (a toggle for this
+// view; desk/index.js _onSecureShareView).
+const SECURE_SHARE_VIEW_EVENT = "folder:secure-share";
 
 // The panel's leave animation (secure-share/skin `window-secure-share-column-out`,
 // 0.2s). The view switch waits for its animationend; the fallback is for an
@@ -214,6 +219,7 @@ module.exports = {
   SECURE_SHARE_TAB,
   SECURE_SHARE_PANEL_PN,
   SECURE_SHARE_CLOSE,
+  SECURE_SHARE_VIEW_EVENT,
   LEAVE_FALLBACK_MS,
   closeSecureShareView,
   secureShareNid,
