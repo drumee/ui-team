@@ -104,7 +104,7 @@ function menu(ui) {
         break;
       case _a.private:
         // Same service as the share area's row: widget/share opens the
-        // External File Sharing modal for a non-external workspace.
+        // secure-share panel in every area.
         details.push({
           id: "share",
           label: LOCALE.SHARE,

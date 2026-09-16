@@ -189,7 +189,7 @@ class __player_image extends __core {
           break;
         case _a.private:
           // Same service as the share area's row: widget/share opens the
-          // External File Sharing modal for a non-external workspace.
+          // secure-share panel in every area.
           details.push({ id: 'share', label: LOCALE.SHARE, icon: 'app-connect', service: 'secure-share' });
           afterInfo.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, icon: 'app-share', service: 'designation-link' });
           break;

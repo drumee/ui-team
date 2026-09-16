@@ -279,8 +279,8 @@ module.exports.menu = function (ui) {
     switch (ui.mget(_a.area)) {
       case _a.private:
         // A private area is never external, so the Share row above is never
-        // there too. Same service: widget/share opens the External File
-        // Sharing modal for a non-external workspace.
+        // there too. Same service: widget/share opens the secure-share panel
+        // in every area.
         details.push({
           id: "share",
           label: LOCALE.SHARE,
