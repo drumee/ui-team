@@ -253,15 +253,9 @@ module.exports.menu = function (ui) {
 
   const details = [];
 
-  // Share only where a file can actually be shared out — an EXTERNAL
-  // workspace. This row used to be offered wherever the file lived, with
-  // widget/share explaining that an external workspace is needed first;
-  // Lexis dropped that for office files (2026-09-05). In an internal
-  // workspace the row led nowhere but to that explanation, and the
-  // Designation link below already covers sharing there.
-  //
-  // Deliberately the SAME test widget/share applies on click, so the row and
-  // its handler can never disagree about what "external" means.
+  // Share for the share area only — files in external workspaces. Private-area
+  // files get their own Share row below (same service), which opens
+  // widget/share regardless of area.
   if (editable && share.isExternal(ui)) {
     details.push({
       id: "secure-share",

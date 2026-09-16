@@ -78,12 +78,9 @@ function menu(ui) {
 
   const details = [];
 
-  // Share is offered wherever the file lives, as in the Figma
-  // (3228:281742), NOT only from an external workspace. Asking to share an
-  // internal file is a fair thing to try, and `widget/share` answers it:
-  // external hands the row to the MFS view that owns the real flow,
-  // internal explains that an external workspace is needed first. Gating
-  // the row on the area instead would leave that explanation unreachable.
+  // Share opens the secure-share panel, in every area (widget/share), as in
+  // the Figma (3228:281742). Offering the row for all editable files makes
+  // sense whether the workspace is external or internal.
   if (editable) {
     details.push({
       id: "secure-share",

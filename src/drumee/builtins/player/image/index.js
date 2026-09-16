@@ -529,8 +529,7 @@ class __player_image extends __core {
       case 'direct-rename':
         return renameInline(this);
 
-      // Share: only an external workspace can share a file out; from an
-      // internal one the user is shown what to do instead.
+      // Share opens the secure-share panel, in every area (widget/share).
       case 'secure-share':
         return share.click(this, cmd);
 

@@ -47,11 +47,8 @@ function areaOf(ui) {
 /**
  * Is this file in an external workspace, i.e. may it be shared out?
  *
- * Note the deliberate difference from `isSharedArea`, which treats a MISSING
- * area as shared: that helper is display-only (which chrome to paint), where
- * guessing wrong is cosmetic. Here the answer gates sharing, so an unknown
- * area is treated as internal and the user gets the explanation rather than
- * a share they may not be entitled to.
+ * This now only decides whether the document menu shows its share-area Share
+ * row. An unknown area is treated as internal so that row stays hidden.
  */
 function isExternal(ui) {
   const area = areaOf(ui);
@@ -129,8 +126,8 @@ function open() {
  *
  * The source MFS view goes first: it owns the share tour, which opens the
  * panel as it comes down. When that view is gone — its folder window was
- * closed after the player opened — the panel is launched directly, with the
- * same preset the MFS view would have built, so the row is never a dead click.
+ * closed after the player opened — the panel is launched directly with the
+ * minimal item it reads (nid, hub_id, filetype), so the row is never a dead click.
  *
  * @param {object} ui   the player
  * @param {object} cmd  the row that was clicked
