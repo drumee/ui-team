@@ -17,18 +17,18 @@
 @include meta.load-css("forbiden.scss");
 
 // Shared soft-fill shape for the cell's :before backdrop (hover / selected /
-// notification highlights). Only the background colour differs between states.
+// notification highlights). Only the background colour differs between states,
+// which is why the SHAPE is declared once and unconditionally on the cell (see
+// `&:before` in `&__ui` below) and this mixin now sets nothing but the colour.
+//
+// It used to carry `content` and the geometry as well, and each state rule
+// included the whole thing. That meant a cell in no state had no ::before box
+// at all, so selecting it did not change a colour — it created the element. An
+// element cannot transition into existence, so the fill could only ever appear
+// in one hard frame, and a marquee crossing a row of six tiles flicked all six
+// on at once with nothing to soften it.
 @mixin grid-cell-fill($bg) {
-  content: " ";
-  position: absolute;
-  top: -6px;
-  left: -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 12px);
-  background: $bg;
-  border-radius: var(--corner-radius-3);
-  pointer-events: none;
-  z-index: 0;
+  background-color: $bg;
 }
 
 .media-grid {
@@ -38,6 +38,28 @@
     height: 100%;
     cursor: pointer;
     user-select: none;
+
+    // The soft-fill backdrop every cell state paints into. Always present and
+    // transparent so hover / selection / notification highlight are a colour
+    // CHANGE on one stable box, which is the only thing a transition can
+    // animate. `grid-cell-fill` supplies the colour; the geometry lives here.
+    &:before {
+      content: " ";
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: calc(100% + 12px);
+      height: calc(100% + 12px);
+      background-color: transparent;
+      border-radius: var(--corner-radius-3);
+      pointer-events: none;
+      z-index: 0;
+      transition: background-color 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
 
     &.drumee-spinner {
       box-shadow: none;
