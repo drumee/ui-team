@@ -3595,6 +3595,36 @@ class desk_module extends LetcBox {
    * opens the workspace itself once the walkthrough ends.
    */
   async _onWorkspaceCreated(payload = {}) {
+    // THE ORGANISATION SCREEN'S INVENTORY IS NOW WRONG TOO — drop its cache.
+    //
+    // libs/org-overview holds ONE module-level promise for the whole page
+    // session and hands it to every reader. Its only invalidator was
+    // org-tab._refresh, which runs on the "org:refresh" broadcast, which is
+    // raised only from INSIDE desk_org_view — so a workspace created or deleted
+    // while that screen was closed never reached it. desk_org_view is
+    // destroy-on-close, so the next open re-rendered from the boot-time answer
+    // and the new workspace was simply absent until the browser was reloaded.
+    // Reported by Duy, 2026-09-16.
+    //
+    // HERE because this is the single chokepoint for every shape of the event:
+    // "workspace:refresh" (every create type, via libs/create-workspace) calls
+    // it directly, and _onWorkspaceWsEvent funnels delete / rename /
+    // add_contributors / invite_received / leave_hub into it through the 250ms
+    // coalescing timer. Both are already gated, so nothing new fires.
+    //
+    // COSTS NOTHING, WHICH IS THE POINT. invalidate() is one assignment — no
+    // request, no render. Deliberately NOT org-tab._refresh(), the obvious
+    // one-liner: that also runs _feedPanel(1), i.e. an organization.overview
+    // round trip (three result sets, a whole-domain scan) on every workspace
+    // mutation, for a chip that draws only department_count and member_count —
+    // neither of which a workspace can change. The refetch is left to whoever
+    // next opens the screen, which is the only moment the answer is read.
+    //
+    // First statement, before any await: a fetch already in flight cannot
+    // re-cache the stale answer behind this (orgOverview assigns __pending up
+    // front and its .then never re-assigns), so the window is closed.
+    require("libs/org-overview").invalidate();
+
     // Was the desk on the no-workspace screen? Read the stamp BEFORE anything
     // refetches, because that is what decides whether the user needs taking
     // into the workspace they just made.
