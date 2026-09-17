@@ -5,6 +5,11 @@ const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 
 require("./skin");
 
+// Where an EXPLICIT light/dark choice for sheets is remembered. Versioned:
+// the unsuffixed key was also written by the automatic apply on every open, so
+// values under it cannot be trusted to be the user's choice.
+const SHEET_THEME_KEY = "drumee:sheet-theme:v2";
+
 class __editor_sheet extends __player {
   /**
    *
@@ -217,13 +222,27 @@ class __editor_sheet extends __player {
     this.applyTheme(this.savedTheme());
   }
 
-  /** Last chosen look; defaults to the dark ("đen") look the demo ships. */
+  /**
+   * Which look a newly opened sheet gets.
+   *
+   * The DESK's own resolved theme (`<html data-theme>`, router/theme), not a
+   * hard-coded "dark" — that is what opened every sheet black on a light desk.
+   * An explicit choice from the gear row wins and is remembered.
+   *
+   * The remembered value lives under a NEW key: the old one was written by
+   * applyTheme on every open, including the automatic one, so the first
+   * automatic "dark" pinned dark forever and no migration could tell an
+   * explicit choice from that side effect.
+   */
   savedTheme() {
+    let chosen = null;
     try {
-      return localStorage.getItem("drumee:sheet-theme") || "dark";
+      chosen = localStorage.getItem(SHEET_THEME_KEY);
     } catch (e) {
-      return "dark";
+      /** private mode */
     }
+    if (chosen === "dark" || chosen === "light") return chosen;
+    return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
   }
 
   /**
@@ -231,14 +250,20 @@ class __editor_sheet extends __player {
    * `[data-theme]` in the skin) and switch Casual/Univer's own appearance so
    * grid, toolbar and menus follow. Persisted so the next sheet opens the same.
    * @param {"light"|"dark"} theme
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.persist] remember this look for the next sheet.
+   *   ONLY the gear-row toggle passes it: persisting the automatic apply is
+   *   what made one dark open stick to every later sheet.
    */
-  applyTheme(theme) {
+  applyTheme(theme, opt = {}) {
     this.theme = theme === "dark" ? "dark" : "light";
     if (this.el) this.el.dataset.theme = this.theme;
-    try {
-      localStorage.setItem("drumee:sheet-theme", this.theme);
-    } catch (e) {
-      /** private mode */
+    if (opt.persist) {
+      try {
+        localStorage.setItem(SHEET_THEME_KEY, this.theme);
+      } catch (e) {
+        /** private mode */
+      }
     }
     if (this._sheet && this._sheet.setTheme) this._sheet.setTheme(this.theme);
   }
@@ -584,7 +609,9 @@ class __editor_sheet extends __player {
       case "direct-rename":
         return renameInline(this);
       case "toggle-theme":
-        return this.applyTheme(this.theme === "dark" ? "light" : "dark");
+        return this.applyTheme(this.theme === "dark" ? "light" : "dark", {
+          persist: 1,
+        });
       case "contact-support":
         return this.contactSupport();
       default:
