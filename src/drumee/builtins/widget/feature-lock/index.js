@@ -281,7 +281,7 @@ function promptFeatureLock(feature, args) {
     return Wm.openFeatureLock({ feature, args: a })
       .then(() => {
         if (!canUpgradePlan()) return;
-        RADIO_BROADCAST.trigger("desk:open-billing-page");
+        RADIO_BROADCAST.trigger("desk:open-billing-page", { intent: "upgrade" });
       })
       .catch(() => {});
   } catch (e) {

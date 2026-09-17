@@ -153,16 +153,27 @@ function installGlobals() {
 }
 
 // webpack aliases `media/...`, `libs/...` and `assets/...`; stub them for node.
-// `desk/...` is aliased to a real directory (webpack/resolve.js) and is
-// resolved for real, because the tour registry it points at is pure JS and is
-// exactly what the caller wants to assert against.
+// `desk/...` and `builtins/...` are aliased to real directories
+// (webpack/resolve.js) and are resolved for real, because what they point at is
+// pure JS and is exactly what the caller wants to assert against: the tour
+// registry under `desk/`, and the shared role table
+// (builtins/skeleton/toolkit/permission) every workspace-members panel builds
+// its privilege decisions from.
 function installResolver() {
   const { join } = require("node:path");
   const DESK = join(__dirname, "..", "..", "src", "drumee", "modules", "desk");
+  const BUILTINS = join(__dirname, "..", "..", "src", "drumee", "builtins");
   const orig = Module._resolveFilename;
   Module._resolveFilename = function (request, ...rest) {
     if (/^desk\//.test(request)) {
       return orig.call(this, join(DESK, request.replace(/^desk\//, "")), ...rest);
+    }
+    if (/^builtins\//.test(request)) {
+      return orig.call(
+        this,
+        join(BUILTINS, request.replace(/^builtins\//, "")),
+        ...rest,
+      );
     }
     if (/^media\//.test(request) || /^libs\//.test(request) || /^assets\//.test(request)) {
       return require.resolve("./alias-stub.js");

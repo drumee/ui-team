@@ -24,6 +24,11 @@ const DECL = /^export\s+(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z
 const LIST = /^export\s*\{([^}]*)\}\s*;?/gm;
 // `export * from "./x";` — everything another module exports.
 const STAR = /^export\s+\*\s+from\s+(['"][^'"]+['"])\s*;?/gm;
+// `export default foo;` — the shape every billing/window SKELETON uses, and
+// the one the generic strip below cannot handle on its own (it would leave a
+// bare `default foo;`). Published under `.default` because that is how the
+// importing widget reads it: `require("./skeleton/header").default(this)`.
+const DEFAULT = /^export\s+default\s+/gm;
 
 function transform(src) {
   const pairs = [...src.matchAll(DECL)].map((m) => [m[1], m[1]]);
@@ -35,6 +40,7 @@ function transform(src) {
     return "";
   });
   body = body.replace(STAR, "Object.assign(module.exports, require($1));");
+  body = body.replace(DEFAULT, "module.exports.default = ");
   body = body.replace(/^export\s+/gm, "");
   const tail = pairs.map(([local, exported]) => `  ${exported}: ${local},`).join("\n");
   // Merged, not assigned: a star re-export has already written to module.exports.

@@ -158,7 +158,39 @@ const createRailFooter = (ui) => {
 // The rail's header. Desktop only now — the drawer this used to double for is
 // gone (the phone shell lives in skeleton/index.js), and with it this row's
 // sub-screen form (back arrow + title) and its mobile close button. The
-// desktop markup below is byte-identical to what it always rendered.
+// desktop markup below is byte-identical to what it always rendered, plus the
+// Home gesture on the two marks — see homeGesture.
+
+// The logo is the rail's Home control. Lexis, 2026-09-15: someone who wanders
+// into the Calendar, the Inbox or a Settings screen had no single place to come
+// back to, so they "get lost in navigation" — the rail's five rows all act on
+// the workspace window UNDER those screens, which is exactly the surface that
+// is not on show.
+//
+// BOTH MARKS CARRY IT, and that is not a duplicate control: only ever one of
+// them is on screen — the skin swaps the wordmark for the compact mark at the
+// mini/expanded boundary (`&__rail &__logo-icon { display: none }`). Putting
+// the gesture on a wrapper instead would mean either the ROW, which also holds
+// the pin toggle and would fire Home on a collapse, or a new box between the
+// row and the marks, which the `&__rail &__logo*` geometry rules in
+// skin/sidebar.scss are written against.
+//
+// A FACTORY, not a shared literal: `uiHandler` is an array the renderer keeps
+// per descriptor, so two nodes must not be handed the same one.
+//
+// WHERE it goes is the desk's business, not this file's — see
+// desk_module._railHome, which resolves the destination at click time because
+// it depends on an answer (can this account browse its organisation?) that
+// only the server has.
+const homeGesture = (ui) => ({
+  service: "rail-home",
+  uiHandler: [ui],
+  // The same flag every __nav-main row carries: this is a navigation gesture,
+  // so the transient cards must not outlive it. See `railRow` in
+  // createNavItem and desk_module.onUiEvent.
+  railRow: 1,
+});
+
 const createLogoRow = (ui) => {
   const fig = getSidebarFig(ui);
 
@@ -173,6 +205,7 @@ const createLogoRow = (ui) => {
           Skeletons.Button.Svg({
             ico: "raw-logo-drumee-full",
             className: `${fig}__logo-icon`,
+            ...homeGesture(ui),
           }),
           // `rail-logo` is the mark exactly as 43:23955 draws it (32x27,
           // single path, currentColor) so it sits white on the indigo
@@ -181,6 +214,7 @@ const createLogoRow = (ui) => {
           Skeletons.Button.Svg({
             ico: "rail-logo",
             className: `${fig}__logo-mark`,
+            ...homeGesture(ui),
           }),
           createText(
             fig,

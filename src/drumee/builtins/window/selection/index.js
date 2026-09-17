@@ -37,6 +37,8 @@ class desk_selection extends Rectangle {
     window.Selector = this;
     this._x_able = new RegExp(/ui-.+able/);
     this._target = null;
+    this._inband = {};
+    this._drawn = 0;
     this._idle = 1;
     require('./skin');
     if (!("path" in Event.prototype)) {
@@ -167,6 +169,10 @@ class desk_selection extends Rectangle {
     this._offsetX = e.pageX;
     this._offsetY = e.pageY;
     this._selectd = {};
+    // Which tiles the band currently holds, so _pointermove only has to touch
+    // the ones crossing its edge.
+    this._inband = {};
+    this._drawn = 0;
     this._idle = 1;
     let t = null;
     this._state = 1;
@@ -175,10 +181,23 @@ class desk_selection extends Rectangle {
     if (Wm.el.contains(e.target)) {
       Wm.unselect(2);
     }
-    for (let w of Array.from(Wm.windowsLayer.children.toArray())) {
-      if (w.acceptMedia && w.el.contains(e.target)) {
-        t = w;
-        this._state = 2;
+    // EVERY layer is walked, not windowsLayer alone. Wm.getWindowsPool()
+    // answers headlessLayer as soon as a workspace pane is open, so the docked
+    // pane — the surface that draws `.window__icons-list`, and the one a user
+    // is looking at most of the time — lives there, and so does every window
+    // opened on top of it. Scanning windowsLayer left `t` null on all of them,
+    // the fallback below handed the marquee to Wm, and it was then measured
+    // against the desk home grid hidden behind the pane: the rectangle drew
+    // and not one file in the folder was ever selected. Same layer list, and
+    // the same reason for it, as manager.js clampWindows().
+    for (let layer of [Wm.windowsLayer, Wm.headlessLayer, Wm.callLayer]) {
+      if (!layer || (layer.isDestroyed && layer.isDestroyed())) continue;
+      if (!layer.children) continue;
+      for (let w of Array.from(layer.children.toArray())) {
+        if (w.acceptMedia && w.el.contains(e.target)) {
+          t = w;
+          this._state = 2;
+        }
       }
     }
     if ((t == null)) {
@@ -240,7 +259,43 @@ class desk_selection extends Rectangle {
 
     this._idle = 0;
 
-    this.setState(1);
+    // Was re-asserted on every move. Two jQuery attr writes per pointer sample
+    // that only ever change on the first one.
+    if (this._drawn !== 1) {
+      this.setState(1);
+      this._drawn = 1;
+    }
+
+    let rtop = this._targetRect.top();
+
+    // EVERY MEASUREMENT THIS HANDLER TAKES HAPPENS HERE, BEFORE THE FIRST
+    // STYLE WRITE, and every style write is batched into the single css()
+    // call at the bottom.
+    //
+    // It used to interleave them: write `left`, read scrollTop, read
+    // $rectangle.height(), write `top`, write `width`/`height`. Each read
+    // landing after a write forces the browser to flush style and layout
+    // synchronously, and the production trace of 2026-09-10 caught what that
+    // costs on a real desk — `scrollTop < scrollTop < _pointerdown` at 6.2s
+    // over 23 calls, `offset < contentRectangle < _pointerdown` at 5.4s over
+    // 21, i.e. a quarter of a second of blocked main thread per call on a DOM
+    // that had grown to 428,000 nodes. That is the marquee lagging behind the
+    // cursor.
+    //
+    // Both reads stay conditional: `$rectangle.height()` goes through jQuery's
+    // curCSS/getComputedStyle, which the same trace put at 13.1s, so it must
+    // not run on moves that never consult it. Both conditions are known from
+    // the pointer position alone, before anything is written.
+    const draggingUp = draw_h <= 0;
+    let scrollY = draggingUp ? this._window.scrollTop() : 0;
+    const prevH = draggingUp && e.pageY <= rtop ? this.$rectangle.height() : 0;
+
+    // Deferred to the batched write at the bottom. `left`/`top` used to be
+    // written from inside the branches; the values they carried when a branch
+    // did NOT write them are the ones _pointerdown already put on the element,
+    // which is what these defaults reproduce.
+    let css_left = this._offsetX;
+    let css_top = this._offsetY;
 
     if (draw_w > 0) {
       draw_x = this._offsetX;
@@ -254,14 +309,11 @@ class desk_selection extends Rectangle {
         draw_x = this._targetRect.left();
         draw_w = this._offsetX - draw_x;
       }
-      this.$rectangle.css({
-        left: draw_x
-      });
+      css_left = draw_x;
       draw_w = Math.abs(draw_w);
     }
 
     let dy = 0;
-    let rtop = this._targetRect.top();
     // selecting from the top border
     if (draw_h > 0) {
       draw_y = this._offsetY;
@@ -282,11 +334,13 @@ class desk_selection extends Rectangle {
           top = rtop;
           draw_h = this._targetRect.h;
         }
-        this.$rectangle.css({
-          top,
-        });
-        this._window.scrollTo(0, dy);
-        let scrollY = this._window.scrollTop();
+        css_top = top;
+        // Only when it actually moves. The marquee sat on the bottom edge for
+        // the rest of the gesture and re-issued the same scrollTo on every
+        // pointer sample; each one fires a `scroll` on the list, and every
+        // tile answers it by re-measuring itself (see media/interact.js).
+        if (dy !== scrollY) this._window.scrollTo(0, dy);
+        scrollY = this._window.scrollTop();
         if (dy <= scrollY) {
           selection_y = this._offsetY - dy;
           selection_h = selection_h + dy;
@@ -300,15 +354,15 @@ class desk_selection extends Rectangle {
       selection_y = draw_y;
       draw_h = Math.abs(draw_h);
       selection_h = draw_h;
-      // reach the top border
-      let scrollY = this._window.scrollTop();
+      // reach the top border  (scrollY / prevH were read at the top of the
+      // handler, before any write — see the note there)
       if (draw_y <= rtop) {
         dy = 2 * (rtop - draw_y);
-        draw_h = this.$rectangle.height() + dy;
+        draw_h = prevH + dy;
 
         if (scrollY > 0) {
           this._yScrolled = this._yScrolled + dy;
-          this._window.scrollTo(0, scrollY - dy);
+          if (scrollY - dy !== scrollY) this._window.scrollTo(0, scrollY - dy);
           selection_h = draw_h;
         } else {
           if (draw_h > this._maxHeight) {
@@ -328,25 +382,58 @@ class desk_selection extends Rectangle {
         }
         selection_h = draw_h;
       }
-      this.$rectangle.css({
-        top: draw_y
-      });
+      css_top = draw_y;
     }
+
+    // The handler's ONE style write.
     this.$rectangle.css({
+      left: css_left,
+      top: css_top,
       width: draw_w,
       height: draw_h
     });
-    const r = this.createRectangle(draw_x, selection_y, draw_w, selection_h);
-    for (let m of Array.from(this.media)) {
-      if ((m.bbox == null)) {
+
+    // Only the tiles whose membership in the band CHANGED are touched.
+    //
+    // This used to call select() on every covered tile on every move — four
+    // DOM attribute writes and two Backbone model.set()s each, re-asserting a
+    // state the tile was already in, and dirtying that many subtrees for style
+    // recalc every frame. Sweeping 300 tiles re-applied ~1,800 attribute
+    // writes per pointer sample to say nothing had changed.
+    //
+    // Same end state: select() on an already-selected tile is a no-op, and
+    // unselect() returns early when the tile is already clear, so the only
+    // calls dropped are the ones that did nothing.
+    //
+    // `_selectd` is still maintained — it carries the pre-existing selection
+    // that _pointerdown seeded from getLocalSelection(), which is why
+    // membership is tracked separately in `_inband` rather than read back off
+    // it.
+    const rx = draw_x;
+    const ry = selection_y;
+    const rr = draw_x + draw_w;
+    const rb = selection_y + selection_h;
+    const media = this.media;
+    for (let k = 0; k < media.length; k++) {
+      const m = media[k];
+      const b = m.bbox;
+      if (b == null) {
         continue;
       }
-      const i = r.intersection(m.bbox);
-      if (i != null) {
+      // Same test as Rectangle.intersection() returning non-null, without
+      // allocating a Rectangle per tile per frame. It treats a shared edge as
+      // a hit, exactly as intersection() does (it rejects on dx/dy < 0 only).
+      const hit = rr >= b.x && b.x + b.w >= rx && rb >= b.y && b.y + b.h >= ry;
+      if (hit === !!this._inband[m.cid]) {
+        continue;
+      }
+      if (hit) {
         m.select({ select_mode: _e.drag });
         this._selectd[m.cid] = m;
-      } else if (this._selectd[m.cid]) {
+        this._inband[m.cid] = 1;
+      } else {
         m.unselect();
+        delete this._inband[m.cid];
       }
     }
   }
@@ -359,6 +446,8 @@ class desk_selection extends Rectangle {
   _pointerup(e) {
     this.media = [];
     this._target = null;
+    this._inband = {};
+    this._drawn = 0;
     this.setState(0);
     if (!this._idle) {
       this.status = _a.idle;

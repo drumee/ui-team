@@ -166,12 +166,24 @@ class __media_core extends DrumeeMFS {
     }
 
     const fileType = this.mget(_a.filetype);
+    // `share_qrcode` predates the sectioned menus (added unconditionally
+    // 2025-12-04 `37a6681d`, gated by area 2026-06-09 `1f984155`) and is
+    // appended out here, AFTER the per-type builder has already grouped and
+    // flattened its sections — so it lands below "Move to trash" with no
+    // separator of its own. The file-menu Figma (node 1646-106518) has no such
+    // row, so files opt out; folder / workspace-tile / schedule menus keep it
+    // verbatim until their own frames land. Nothing is lost either way: the QR
+    // is still on the workspace settings panel next to the share links
+    // (widget/settings/hub skeleton/footer.js + skeleton/links.js).
+    let qrcodeOffered = true;
     switch (fileType) {
       case _a.hub:
         items = this.contextmenuItemsForHub();
         break;
       case _a.folder:
         items = this.contextmenuItemsForFolder();
+        // External workspace (area `share`): no "Show QR code" on folders.
+        if (this.mget(_a.area) === _a.share) qrcodeOffered = false;
         break;
 
       case _a.schedule:
@@ -180,9 +192,12 @@ class __media_core extends DrumeeMFS {
 
       default:
         items = this.contextmenuItemsForFiles();
+        qrcodeOffered = false;
     }
 
-    if ([_a.public, _a.share, _a.dmz].includes(this.mget(_a.area)) && this.canShare()) items.push('share_qrcode');
+    // canShare() (ui-core letc/mfs.js) is already false outside dmz/share, so
+    // the _a.public arm here has never fired — left as-is, not this pass.
+    if (qrcodeOffered && [_a.public, _a.share, _a.dmz].includes(this.mget(_a.area)) && this.canShare()) items.push('share_qrcode');
 
     /** Children of window_search */
     if (this.mget(_a.role) == _a.search) {
@@ -319,21 +334,29 @@ class __media_core extends DrumeeMFS {
     const editable = this.canOrganize() || this.isMediaOwner();
     if (!editable && !this.canDownload()) return [];
 
-    // Sectioned File menu (spec 2026-06-10): each inner array renders as one
-    // separator-delimited section; trash always closes the menu.
+    // Sectioned File menu — Figma "File menu action" 2026-09-16
+    // (node 1646-106518), which supersedes the 2026-06-10 spec:
+    //   1. Make a copy · Download
+    //   2. Organize
+    //   3. Rename · See chat threads
+    //   4. (area links + per-type extras — the frame draws a plain file, so
+    //      it shows no such row; they keep their own section above the close)
+    //   5. Share (external workspace only) · Get info · Prohibit any change · Move to trash
+    // Each inner array renders as one separator-delimited section.
     const sections = [];
 
-    /** 1 — clipboard copy + same-folder duplicate + download */
-    const fileActions = [_a.copy];
-    if (editable) fileActions.push(_a.duplicate);
+    /** 1 — same-folder duplicate ("Make a copy") + download. The clipboard
+     * `copy` row is gone from the frame; copy/paste stays reachable from the
+     * player topbars and the folder-window background menu (which is where
+     * `paste` is offered), so the pair is not broken. */
+    const fileActions = [];
+    if (editable) fileActions.push('makeACopy');
     fileActions.push(_a.download);
     sections.push(fileActions);
 
-    /** 2 — organize (Move submenu). Invite (_a.share) hidden on files per Lexis
-     * 2026-06-14 (parent-folder/hub only); item def + handler + hub menu keep it. */
+    /** 2 — organize (Move submenu). */
     const organize = [];
     if (editable) organize.push('organize');
-    // if (this.canShare()) organize.push(_a.share);
     if (organize.length) sections.push(organize);
 
     /** 3 — rename + chat threads (inside a folder window only) */
@@ -344,17 +367,11 @@ class __media_core extends DrumeeMFS {
     }
     if (naming.length) sections.push(naming);
 
-    /** 4 — details */
-    sections.push([_a.info]);
-
-    /** 5 — area links + type extras. "edit" removed: opening an editable
+    /** 4 — area links + type extras. "edit" removed: opening an editable
      * document auto-enters edit mode when permitted, no menu item needed. */
     const extra = [];
     if (editable) {
       switch (this.isRegularFile() && this.mget(_a.area)) {
-        case _a.share:
-          extra.push('secureShare'); /** Share link for access from the outside world */
-          break;
         case _a.private:
           extra.push('designationLink'); /** Open a file from the link with the user environment */
           break;
@@ -384,13 +401,24 @@ class __media_core extends DrumeeMFS {
         }
         break;
     }
-    if (editable) {
-      extra.push(this.mget(_a.status) === _a.locked ? _e.unlock : _e.lock);
-    }
     if (extra.length) sections.push(extra);
 
-    /** 6 — trash last */
-    if (editable || this.canRemove()) sections.push([_a.trash]);
+    /** 5 — the design's closing block: details, lock, trash — one section, in
+     * that order. `lock` used to sit at the tail of the extras above. */
+    const closing = [];
+    /** External workspace (area `share`): the outside-world share link sits
+     * directly above Get info. "Share" is `secureShare` (LOCALE.SHARE, icon
+     * ctxmenu-share), NOT `_a.share` (LOCALE.INVITE), which stays hidden on
+     * files per Lexis 2026-06-14 (parent-folder/hub only). */
+    if (editable && this.isRegularFile() && this.mget(_a.area) === _a.share) {
+      closing.push('secureShare');
+    }
+    closing.push(_a.info);
+    if (editable) {
+      closing.push(this.mget(_a.status) === _a.locked ? _e.unlock : _e.lock);
+    }
+    if (editable || this.canRemove()) closing.push(_a.trash);
+    sections.push(closing);
 
     const fileItems = [];
     sections.forEach((s, i) => {

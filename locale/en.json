@@ -2260,6 +2260,7 @@
   "SECURE_SHARE_STATUS_EXPIRED": "Expired",
   "SECURE_SHARE_STATUS_REVOKED": "Revoked",
   "SECURE_SHARE_TITLE_FILE": "File Secure Share",
+  "SECURE_SHARE_LOADING": "Preparing secure share…",
   "SECURE_SHARE_TITLE_FOLDER": "Folder Secure Share",
   "SECURE_SHARE_VIEW": "view",
   "SECURE_SHARE_VIEWS": "views",

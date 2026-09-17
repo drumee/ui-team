@@ -690,7 +690,12 @@ class settings_main extends LetcBox {
    * "upgrade-plan" up to the desk, which swaps this slot to the billing page.
    */
   openBilling() {
-    this.triggerHandlers({ service: "upgrade-plan" });
+    // MANAGE, not buy. This card reuses the desk's "upgrade-plan" service
+    // because it wants the same screen, but the reader clicked "Manage
+    // subscription" — they have not asked to be put in front of a payment
+    // form. The intent keeps them on the plans view, where the desk now sends
+    // every genuine Upgrade CTA straight to checkout instead.
+    this.triggerHandlers({ service: "upgrade-plan", intent: "manage" });
   }
 
   /**

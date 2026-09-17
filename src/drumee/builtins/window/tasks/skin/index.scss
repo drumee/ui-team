@@ -3665,11 +3665,175 @@ $theme-colors: (
     opacity: 1;
   }
 
-  // Files already attached to a saved comment.
+  // Files already attached to a saved comment. A column now, holding up to two
+  // strips: the pictures and videos that are SHOWN, then the files that are
+  // merely named. The class and its data-scope stay on this element — the
+  // busy-row exception above and _setPendingStatus's lookup both address it.
   &__comment-attachments {
-    flex-wrap: wrap;
     gap: 8px;
     margin-top: 8px;
+  }
+
+  &__comment-file-strip {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  // ── Pictures and videos, shown ─────────────────────────────────────
+  // An image pasted into a comment IS the comment; filing it behind its
+  // filename hid it behind a click and a window. Tiles wrap into rows and cap
+  // their own height, so a portrait screenshot can't push the thread's actions
+  // off-screen — the full-size view is one click away in the viewer.
+  &__comment-media-strip {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  &__comment-media {
+    position: relative;
+    max-width: 100%;
+    overflow: hidden;
+    // The tile is sized BY the picture, so its children must not be stretched
+    // to a width that is itself derived from them.
+    align-items: flex-start;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    border-radius: 8px;
+    background: var(--normal-bg-90, #f4f4f7);
+    cursor: pointer;
+    line-height: 0; // no descender gap under the image
+
+    &:hover &-slot {
+      opacity: 1;
+    }
+  }
+
+  // Sized by the media itself up to the cap, so a wide screenshot and a narrow
+  // phone photo each keep their own shape instead of being squared off. The
+  // `min()` is what makes the cap yield on a narrow panel: 260px alone would
+  // overflow the thread on a phone and be clipped by the tile's overflow.
+  &__comment-media-img {
+    display: block;
+    max-width: min(260px, 100%);
+    max-height: 200px;
+    width: auto;
+    height: auto;
+  }
+
+  // The badge is what says the poster will play. Centred, and inert — the
+  // click belongs to the tile, which opens the video in the player.
+  &__comment-media-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    padding: 10px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.45);
+    color: var(--white, #ffffff);
+    fill: var(--white, #ffffff);
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  // Controls sit over the top-right corner rather than in a reserved slot: a
+  // tile has no width to hold constant, and an always-visible ✕ over someone's
+  // screenshot reads as damage to the picture. Kept visible while an upload is
+  // in flight, which is the one state the user needs to see without hovering.
+  &__comment-media-slot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    line-height: 1;
+
+    .tasks-panel__comment-attachment-unlink,
+    .tasks-panel__comment-attachment-retry {
+      opacity: 1;
+      color: var(--white, #ffffff);
+      fill: var(--white, #ffffff);
+    }
+  }
+
+  &__comment-media[data-status="uploading"],
+  &__comment-media[data-status="downloading"] {
+    cursor: default;
+
+    .tasks-panel__comment-media-img {
+      opacity: 0.55;
+    }
+  }
+
+  &__comment-media[data-status] &__comment-media-slot {
+    opacity: 1;
+  }
+
+  &__comment-media[data-status="error"] {
+    border-color: var(--signal-error, #d74e49);
+  }
+
+  // A file that has not landed yet cannot be opened, so it gets no play badge
+  // promising a player it can't reach. (A local blob is already badge-less —
+  // the renderer skips it — but a video LINKED by nid has a real poster and
+  // would otherwise show one while it is still queued.)
+  &__comment-media[data-status] &__comment-media-play {
+    display: none;
+  }
+
+  // ── Tile in flight: the same two states the chip has ───────────────
+  // A tile is the same open-attachment target the chip is, so it takes the
+  // same flags: data-loading while its viewer is coming up (_setControlBusy),
+  // data-removing while its unlink is on the wire. Both must make it inert —
+  // a second click opens a second window, and a click beside the ✕ opens the
+  // very file being detached.
+  &__comment-media[data-loading="1"],
+  &__comment-media[data-removing="1"] {
+    pointer-events: none;
+  }
+
+  // Leaving, not arriving — dimmed further than an upload in progress. The
+  // spinner stays on the ✕, which is the control doing the work.
+  &__comment-media[data-removing="1"] {
+    opacity: 0.5;
+  }
+
+  // Opening: the chip puts the spinner where its file-type icon sits, and a
+  // tile has no icon — so it draws one over the picture instead.
+  &__comment-media[data-loading="1"] {
+    .tasks-panel__comment-media-img {
+      opacity: 0.55;
+    }
+
+    .tasks-panel__comment-media-play {
+      display: none;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+      border-top-color: var(--accent, #433cc5);
+      border-radius: 50%;
+      animation: tasks-panel-spin 0.7s linear infinite;
+    }
   }
 
   &__comment-attachment {

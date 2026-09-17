@@ -347,16 +347,15 @@ const header = Skeletons.Box.X({
           }),
         ],
       }),
-      // No ✕ in column mode: the panel is a view of the split body there, and
-      // the rail is the way out.
-      ui.mget("mode") === "column"
-        ? null
-        : Skeletons.Button.Svg({
-          ico: "cross",
-          className: `${pfx}__close`,
-          service: _e.close,
-          uiHandler: [ui],
-        }),
+      // Drawn in both modes. In the drawer it slides the panel out; in column
+      // mode (the rail's Access) it hands the column back to the chat panel
+      // and the rail back to Files — index.js `_e.close`.
+      Skeletons.Button.Svg({
+        ico: "cross",
+        className: `${pfx}__close`,
+        service: _e.close,
+        uiHandler: [ui],
+      }),
     ].filter(Boolean),
   });
 

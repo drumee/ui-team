@@ -135,6 +135,13 @@
         gap: 8px;
       }
 
+      // The desktop header's `margin-left: auto` (see &__topbar-actions) would
+      // push the actions to the right edge of this COLUMN; keep them where
+      // they were.
+      .panel-activity__topbar-actions {
+        margin-left: 0;
+      }
+
       .panel-activity__title {
         font-size: 19px;
         line-height: 26px;
@@ -271,6 +278,7 @@
       .panel-activity__close-btn {
         display: flex;
         position: absolute;
+        margin-left: 0;
         top: 12px;
         right: 12px;
         width: 36px;
@@ -296,10 +304,34 @@
     }
   }
 
-  // Close button is mobile-only; the desktop panel closes via its nav
-  // toggle, so keep it out of the desktop topbar entirely.
+  // Close button at the end of the header, after Mark all read / Unreads.
+  // Mobile pins it to the card's corner instead (the block above, which is more
+  // specific and so wins there).
   &__close-btn {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin-left: 8px;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #65656c;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    &:hover,
+    &:active {
+      background-color: rgba(0, 0, 0, 0.06);
+      color: #0b0a21;
+    }
   }
 
   &__main {
@@ -376,6 +408,10 @@
   &__topbar-actions {
     align-items: center;
     gap: 12px;
+    // Takes the header's free space, so the title stays left and the actions
+    // sit right against the close button. With three children, the topbar's
+    // space-between alone would push the actions into the middle.
+    margin-left: auto;
   }
 
   &__mark-read-btn {

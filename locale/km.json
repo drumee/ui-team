@@ -2140,6 +2140,7 @@
   "SECURE_SHARE_EMAIL_REQUIRED": "សូមបន្ថែមអាសយដ្ឋានអ៊ីមែលយ៉ាងហោចណាស់មួយដើម្បីដាក់កម្រិតការចូលប្រើ។",
   "SECURE_SHARE_CREATE": "Get link",
   "SECURE_SHARE_TITLE_FILE": "File Secure Share",
+  "SECURE_SHARE_LOADING": "កំពុងរៀបចំការចែករំលែកដោយសុវត្ថិភាព…",
   "SECURE_SHARE_TITLE_FOLDER": "Folder Secure Share",
   "SECURE_SHARE_NAV_LOGIN": "ចូល",
   "SECURE_SHARE_GATE_FOOTER_HEADLINE": "បង្កើតកន្លែងធ្វើការឯករាជ្យរបស់អ្នកជាមួយ Drumee",

@@ -2140,6 +2140,7 @@
   "SECURE_SHARE_EMAIL_REQUIRED": "请至少添加一个电子邮件地址以限制访问。",
   "SECURE_SHARE_CREATE": "获取链接",
   "SECURE_SHARE_TITLE_FILE": "文件安全共享",
+  "SECURE_SHARE_LOADING": "正在准备安全共享…",
   "SECURE_SHARE_TITLE_FOLDER": "文件夹安全共享",
   "SECURE_SHARE_NAV_LOGIN": "登入",
   "SECURE_SHARE_GATE_FOOTER_HEADLINE": "使用 Drumee 创建您的自主工作空间",

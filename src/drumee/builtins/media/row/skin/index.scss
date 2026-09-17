@@ -19,6 +19,19 @@
     margin-top: 1px;
     width: 100%;
 
+    // Hover and selection are both a background-colour swap on this element
+    // (`&:hover, &[data-radio="on"]` below; setState writes data-radio). With
+    // nothing to ease them they landed in a single frame, so a marquee swept
+    // down the list flicked each row on hard. Same 0.15s the grid cell's fill
+    // uses, so the two views read as one gesture.
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+
     &[data-opened="1"] {
       background: #e8e8e8;
       border: none;
