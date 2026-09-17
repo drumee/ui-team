@@ -241,6 +241,51 @@ class settings_billing extends LetcBox {
   }
 
   /**
+   * May the Checkout pill be PAINTED on this render? Eligibility (above) plus
+   * the one thing eligibility cannot express: whether we know the answer yet.
+   *
+   * _checkoutTabAllowed() reads _hasActiveSub, which only _loadSubscription()
+   * fills. Before it answers the flag is `undefined`, so the gate reads
+   * "nothing is live" and the pill goes up -- and for a subscriber it then
+   * came straight back down when the mirror landed. That is the whole of
+   * Lexis's report (2026-09-16, lexishoang.drumee.in, an org on Business
+   * monthly since 09-10): "open Billing, a few seconds later the Checkout tab
+   * is gone". 372a1dc8 shortened that window from ~5 s to ~250 ms by no longer
+   * waiting on the Stripe catalog; it could not close it, because the pill was
+   * being painted on a guess that is WRONG for exactly the people who cannot
+   * use it.
+   *
+   * The guess does not have to be wrong. Visitor.quota() already carries the
+   * entitlement synchronously -- get_quota is tenant-first, so an org member
+   * reads the ORGANISATION's plan -- and _paidPlanSync() is that signal. It is
+   * the same stand-in the plan-card CTA has used since 2026-08-06 for the same
+   * reason (an early click must not walk a Business owner into a Pro
+   * checkout), so this adds no new source of truth.
+   *
+   * Deliberately one-directional -- it can only WITHHOLD the pill, never add
+   * one _checkoutTabAllowed() refuses. Quota is a superset of "has a Stripe
+   * subscription" (a comped grant and a LAUNCH30 org are paid by quota with no
+   * mirror row), so the error it can make is a pill that appears ~250 ms late
+   * rather than one that vanishes. Appearing is the safe direction: nothing
+   * the user was reaching for is taken away.
+   *
+   * @returns {boolean}
+   */
+  _checkoutTabVisible() {
+    if (!this._checkoutTabAllowed()) return false;
+    // Already standing on it -- a checkout deep link opens the tab before the
+    // mirror is known (see _applyDeepLink), and painting that content with no
+    // pill above it would be a worse screen than the one this fixes.
+    // _settleDeepLinkTab steps the tab back down a moment later if it must.
+    const tab = this.state && this.state.currentTab != null
+      ? this.state.currentTab : this.tab;
+    if (tab === TAB_CHECKOUT) return true;
+    // The mirror has not answered yet: go with what the entitlement says.
+    if (!this._subLoaded && this._paidPlanSync()) return false;
+    return true;
+  }
+
+  /**
    * Apply the #/desk/billing deep-link preselect (opt.plan / opt.cycle /
    * opt.tab, validated here). This only SEEDS existing state — a panel opened
    * without these keys is left exactly as before. The checkout tab is opened

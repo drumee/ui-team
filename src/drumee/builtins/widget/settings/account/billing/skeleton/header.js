@@ -75,11 +75,19 @@ function billing_tabs_trigger(ui) {
   // would walk them into a purchase the server now refuses outright
   // (ALREADY_SUBSCRIBED). Cancel / resume live in the banner above, and a
   // month<->year switch is a subscription update, not a new checkout.
+  //
+  // _checkoutTabVisible, not _checkoutTabAllowed: the eligibility gate cannot
+  // answer before the subscription mirror lands, and painting the pill on that
+  // unknown is what made it disappear under a subscriber a moment after the
+  // page opened (Lexis, 2026-09-16). The visibility gate is the same verdict
+  // plus the cached entitlement as a stand-in until the mirror answers — see
+  // settings_billing._checkoutTabVisible. The `||` keeps an older/stubbed ui
+  // rendering the pill rather than silently losing it.
   const kids = [
     item(ui, {content:LOCALE.MONTHLY, discountRate:0, pos:0, service:"select-plan"}),
     item(ui, {content:LOCALE.YEARLY, discountRate:saving, promo, pos:1, service:"select-plan"}),
   ];
-  if (!ui._checkoutTabAllowed || ui._checkoutTabAllowed()) {
+  if (!ui._checkoutTabVisible || ui._checkoutTabVisible()) {
     kids.push(item(ui, {content:LOCALE.CHECKOUT, discountRate:0, pos:2, service:"checkout"}));
   }
 
