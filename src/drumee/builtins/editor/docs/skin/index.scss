@@ -95,11 +95,18 @@
     display: none !important;
   }
 
-  // Co-editing shell (CasualEditor): its presence cluster (avatars · Live)
-  // sits at the right of the title row where Drumee's floating gear /
-  // maximize / close cluster lives — keep it clear of that cluster.
-  [data-testid="presence-cluster"] {
+  // Co-editing shell (CasualEditor): Casual's title row ends with
+  // "<autosave state> · <presence cluster (avatars · Live)>", and Drumee's
+  // floating gear / maximize / close cluster sits at the right edge of that
+  // same row. Push the whole group left of that cluster, and reverse the row
+  // so it reads avatar · Live · status — the order the sheet header uses.
+  // `:has()` is scoped under .editor-docs (not root-anchored), the group has
+  // no class or test id of its own.
+  div:has(> [data-testid="presence-cluster"]) {
+    flex-direction: row-reverse;
     margin-right: 150px;
+  }
+  [data-testid="presence-cluster"] {
     gap: 10px;
 
     // Casual's 1px separator before its (hidden) Share button.
@@ -316,10 +323,13 @@
   }
 
   // The Drumee bar no longer owns a row: Casual's title bar (logo + inline
-  // document name + menu row, 72px, --doc-chrome background) is the header.
-  // This floats the remaining controls (save status, gear, maximize, close)
-  // over that title bar's right side, left of Casual's own theme toggle
-  // (which sits 12px from the edge, 32px wide).
+  // document name, 48px, --doc-chrome background) is the header; its menu
+  // row sits under it. This floats the remaining controls (save status,
+  // gear, maximize, close) over that title bar's right side, left of Casual's
+  // own theme toggle (which sits 12px from the edge, 32px wide).
+  // Height = the title row's 48px, NOT the 72px of title + menu rows: the
+  // actions are centred in this box, and 72px put them 12px below the
+  // presence cluster and the autosave label that share the row.
   // NOTE the shared topbar names its rows by `fig.group` → `.editor__header`
   // (not `.editor-docs__header`).
   > .editor__main > .editor__header.container {
@@ -328,7 +338,7 @@
     right: 0;
     left: auto;
     width: auto;
-    height: 72px;
+    height: 48px;
     min-height: 0;
     padding: 0 12px 0 0;
     border: 0;
