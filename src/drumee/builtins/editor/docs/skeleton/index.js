@@ -9,6 +9,15 @@ function __skl_editor_docs(_ui_) {
     className: `${_ui_.fig.family}__body ${_ui_.fig.group}__body`,
     sys_pn: _a.content,
     partHandler: _ui_,
+    // Shown while the docs_state chunk (Casual Docs + WASM engine) downloads
+    // and mounts; docs_state._reactHost removes it.
+    kids: [
+      Skeletons.Note({
+        content: LOCALE.LOADING,
+        active: 0,
+        className: "editor-loading",
+      }),
+    ],
   });
 
   const dialog = Skeletons.Wrapper.Y({

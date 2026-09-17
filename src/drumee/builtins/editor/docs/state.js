@@ -502,6 +502,10 @@ class __docs_state extends DrumeeMFS {
     // visible area and the new-doc window looked empty.
     this.el.insertBefore(host, this.el.firstChild);
     this._host = host;
+    // The window's "Loading…" label (docs/skeleton) has done its job.
+    const win = this.el.closest(".editor-docs");
+    const loading = win && win.querySelector(".editor-loading");
+    if (loading) loading.remove();
     return host;
   }
 

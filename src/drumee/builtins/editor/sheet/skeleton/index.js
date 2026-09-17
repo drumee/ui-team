@@ -14,6 +14,17 @@ function __skl_editor_sheet(_ui_) {
     className: `${_ui_.fig.family}__body ${_ui_.fig.group}__body`,
     sys_pn: _a.content,
     partHandler: _ui_,
+    // Shown while the sheet_state chunk (Univer + Casual, several MB on a
+    // cold cache) downloads and mounts; sheet_state._reactHost removes it.
+    // Without it a first-time visitor saw a bare white window for as long
+    // as the download took.
+    kids: [
+      Skeletons.Note({
+        content: LOCALE.LOADING,
+        active: 0,
+        className: "editor-loading",
+      }),
+    ],
   });
 
   const dialog = Skeletons.Wrapper.Y({

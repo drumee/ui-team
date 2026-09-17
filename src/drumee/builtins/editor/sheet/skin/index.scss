@@ -518,3 +518,14 @@ body > div:has(> [class*="univer-popup"]) {
     color: #e7ebf3;
   }
 }
+
+// "Loading…" while the editor chunk downloads (sheet/skeleton body).
+.editor-sheet .editor-loading {
+  align-self: center;
+  margin: auto;
+  font: 400 14px/1.4 Inter, system-ui, sans-serif;
+  color: #6b7280;
+}
+.editor-sheet[data-theme="dark"] .editor-loading {
+  color: #aab2c2;
+}

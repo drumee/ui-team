@@ -665,6 +665,10 @@ class __sheet_state extends DrumeeMFS {
     host.className = "sheet-state__react-host";
     this.el.insertBefore(host, this.el.firstChild);
     this._host = host;
+    // The window's "Loading…" label (sheet/skeleton) has done its job.
+    const win = this.el.closest(".editor-sheet");
+    const loading = win && win.querySelector(".editor-loading");
+    if (loading) loading.remove();
     return host;
   }
 }

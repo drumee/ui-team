@@ -148,6 +148,17 @@ function makeFileSource(editor, ctx) {
      * replace with the same bytes (same double-save the sheet editor does).
      */
     async save(id, bytes, opts = {}) {
+      // Circuit breaker. Casual autosaves every few seconds for as long as the
+      // document is dirty, and a save that can never succeed (the node was
+      // trashed under the open window, the visitor lost write access) turned
+      // into a request every 1.5 s, forever — the server logged hundreds of
+      // failed media.save calls from one abandoned tab. After three failures
+      // in a row the editor stops sending and stays "unsaved" until it is
+      // reopened.
+      if (editor && editor._saveDisabled) {
+        status("unsaved");
+        throw new Error("saving disabled after repeated failures");
+      }
       status("saving");
       const content = JSON.stringify({ docx: abToBase64(bytes) });
       const name = opts.name || ctx.filename();
@@ -180,25 +191,35 @@ function makeFileSource(editor, ctx) {
         }
         // A replace fired straight after the create can bounce (400
         // SERVICE_FAILED) before the new node settles server-side; retry with
-        // a short backoff rather than leaving a 0-byte file behind.
+        // a short backoff rather than leaving a 0-byte file behind. Only that
+        // first replace gets retries: a later one failing is not a race, and
+        // hammering it is what the breaker above exists to stop.
+        const attempts = id ? 1 : 4;
         let data = null;
         let lastErr = null;
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < attempts; i++) {
           try {
             data = await post({ ...base, ...where, nid, id: nid, replace: 1 });
             lastErr = null;
             break;
           } catch (e) {
             lastErr = e;
-            await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+            if (i + 1 < attempts) await new Promise((r) => setTimeout(r, 400 * (i + 1)));
           }
         }
         if (lastErr) throw lastErr;
         if (editor && editor.mset && data) editor.mset(data);
-        if (editor) editor._changed = 0;
+        if (editor) {
+          editor._changed = 0;
+          editor._saveFailures = 0;
+        }
         status("saved");
         return { id: nid, etag: String(Date.now()) };
       } catch (e) {
+        if (editor) {
+          editor._saveFailures = (editor._saveFailures || 0) + 1;
+          if (editor._saveFailures >= 3) editor._saveDisabled = 1;
+        }
         status("unsaved");
         throw e;
       }

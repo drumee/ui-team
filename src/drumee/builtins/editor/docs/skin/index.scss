@@ -370,4 +370,12 @@
     border-radius: var(--border-radius);
     overflow: hidden;
   }
+
+  // "Loading…" while the editor chunk downloads (docs/skeleton body).
+  .editor-loading {
+    align-self: center;
+    margin: auto;
+    font: 400 14px/1.4 Inter, system-ui, sans-serif;
+    color: #6b7280;
+  }
 }
