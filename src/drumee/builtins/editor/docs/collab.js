@@ -51,6 +51,8 @@ function base64ToAb(b64) {
   return bytes.buffer;
 }
 
+const { contentUrl } = require("builtins/editor/content-url");
+
 /** The three bases: the endpoint's http origin+path, the gateway REST base
  *  and the gateway WebSocket base (Hocuspocus lives at /yjs). */
 function bases() {
@@ -119,8 +121,10 @@ function makeFileSource(editor, ctx) {
     },
 
     async open(id) {
-      const { http } = bases();
-      const url = `${http}/file/orig/${id}/${ctx.hub_id}`;
+      // ui-core's address for the node (share key for dmz visitors, cache
+      // buster) — builtins/editor/content-url.
+      const url = contentUrl(editor && editor.media, { nid: id, hub_id: ctx.hub_id });
+      if (!url) throw new Error("no content url for the document");
       // Revalidate (ETag) instead of trusting the year-long Cache-Control
       // nginx puts on /file/orig/…: a plain GET returned the blank document
       // the file was created as, for as long as the browser cache lived.

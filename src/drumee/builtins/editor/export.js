@@ -33,19 +33,7 @@ function saveBlob(blob, filename) {
 }
 
 /** Raw-content URL of a media tile (same endpoint the editors load from). */
-function contentUrl(media) {
-  let url = null;
-  try {
-    const node = (media.actualNode && media.actualNode(_a.orig)) || {};
-    url = node.url || null;
-  } catch (e) {
-    /** no derived url */
-  }
-  if (url) return url;
-  const nid = media.mget(_a.nid);
-  const hub = media.mget(_a.hub_id);
-  return `${location.href.split("#")[0].replace(/\/$/, "")}/file/orig/${nid}/${hub}`;
-}
+const { contentUrl } = require("builtins/editor/content-url");
 
 function isCasualFile(media) {
   const ext = String(media.mget(_a.ext) || media.mget(_a.extension) || "").toLowerCase();

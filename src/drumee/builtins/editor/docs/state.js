@@ -4,6 +4,7 @@ import { DocxEditor } from "@casualoffice/docs/react";
 import { CasualEditor } from "@casualoffice/docs";
 import { serializeDocx } from "@casualoffice/docs/core";
 import "@casualoffice/docs/styles.css";
+import { contentUrl } from "builtins/editor/content-url";
 
 // Co-editing helpers: gateway probe, Drumee FileSource adapter, identity.
 const collab = require("./collab");
@@ -94,17 +95,12 @@ class __docs_state extends DrumeeMFS {
       return;
     }
     this.media.wait(0);
-    const node = this.media.actualNode() || {};
-    let url = node.url;
-    if (!url) {
-      const nid = node.nid || this.media.mget(_a.nid) || this.mget(_a.nid);
-      const hub_id =
-        node.hub_id || this.media.mget(_a.hub_id) || this.mget(_a.hub_id);
-      if (nid && hub_id) {
-        const base = location.href.split("#")[0].replace(/\/+$/, "");
-        url = `${base}/file/orig/${nid}/${hub_id}`;
-      }
-    }
+    // ui-core's derivation (share key for dmz visitors, cache buster) — see
+    // builtins/editor/content-url.
+    const url = contentUrl(this.media, {
+      nid: this.mget(_a.nid),
+      hub_id: this.mget(_a.hub_id),
+    });
     if (!url) {
       this._mountBlank();
       return;

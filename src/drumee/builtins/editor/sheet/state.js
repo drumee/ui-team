@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { LocaleType, UserManagerService, IPermissionService } from "@univerjs/core";
 import { CasualSheets } from "@casualoffice/sheets/sheets";
 import "@casualoffice/sheets/styles";
+import { contentUrl } from "builtins/editor/content-url";
 
 // Casual Sheets does NOT bundle Univer locale strings; it only forwards a
 // `locales` prop to Univer. Without it Univer's LocaleService is "not
@@ -142,16 +143,14 @@ class __sheet_state extends DrumeeMFS {
     let url = node.url;
     if (!url) {
       // A media view built from node_info (the standalone #/sheet tab) has no
-      // derived content url — actualNode().url is null → xhRequest fails →
-      // reopen shows an empty sheet. Build the canonical file endpoint
-      // (verified: /-/<ep>/file/orig/<nid>/<hub_id> returns the raw workbook).
-      const nid = node.nid || this.media.mget(_a.nid) || this.mget(_a.nid);
-      const hub_id =
-        node.hub_id || this.media.mget(_a.hub_id) || this.mget(_a.hub_id);
-      if (nid && hub_id) {
-        const base = location.href.split("#")[0].replace(/\/+$/, "");
-        url = `${base}/file/orig/${nid}/${hub_id}`;
-      }
+      // derived content url. builtins/editor/content-url builds the canonical
+      // file endpoint the way ui-core does — including the share key a dmz
+      // visitor needs (without it the share host answers 404 and the shared
+      // sheet opened as an empty black window).
+      url = contentUrl(this.media, {
+        nid: node.nid || this.mget(_a.nid),
+        hub_id: node.hub_id || this.mget(_a.hub_id),
+      });
     }
     if (!url) {
       this.mount({});
