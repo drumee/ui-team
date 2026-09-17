@@ -32,6 +32,17 @@ class __welcome_interact extends __password_meter {
   * To avoid full page reload upon login 
   */
   gotSignedIn() {
+    // GA4 `login`, the counterpart of the signup plugin's `sign_up`. Every
+    // completed credential sign-in passes through here, and it still runs
+    // before the desk takes the document over. Self-gating and failure-proof
+    // inside libs/gtag — off a drumee.com host it does nothing.
+    //
+    // Not a reconnect: signin/index.js handles that case before it reaches
+    // this method, and counting a dropped websocket as a login would inflate
+    // the metric. Not the Google SSO route either — that lands from loby's
+    // interstitial with the session already established, and that page reports
+    // its own signup.
+    require('libs/gtag').event('login', { method: 'password' });
     if (Visitor.isOnline()) {
       this.anim([1, { alpha: 0.0 }]);
       RADIO_BROADCAST.trigger("user:signed:in", this.mget('reconnect'));
