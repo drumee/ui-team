@@ -91,14 +91,6 @@ function menu(ui) {
         });
         break;
       case _a.private:
-        // Same service as the share area's row: widget/share opens the
-        // secure-share panel in every area.
-        details.push({
-          id: "share",
-          label: LOCALE.SHARE,
-          icon: "app-connect",
-          service: "secure-share",
-        });
         afterInfo.push({
           id: "designation-link",
           label: LOCALE.DESIGNATION_LINK,

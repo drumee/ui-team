@@ -22,6 +22,7 @@
  */
 
 const Topbar = require("builtins/player/widget/topbar");
+const share = require("builtins/player/widget/share");
 
 /**
  * The gear menu. Every row is either forwarded to the source MFS view
@@ -78,10 +79,10 @@ function menu(ui) {
 
   const details = [];
 
-  // Share opens the secure-share panel, in every area (widget/share), as in
-  // the Figma (3228:281742). Offering the row for all editable files makes
-  // sense whether the workspace is external or internal.
-  if (editable) {
+  // Share only for a file in an EXTERNAL workspace — the same test the other
+  // players' menus apply (widget/share isExternal). An internal workspace
+  // offers no Share row; the Designation link below covers it.
+  if (editable && share.isExternal(ui)) {
     details.push({
       id: "secure-share",
       label: LOCALE.SHARE,
@@ -92,10 +93,12 @@ function menu(ui) {
 
   // The link flavour on top of that is area-dependent. `share` has none of
   // its own — the Share row above already covers it.
+  // Rows that sit below Get info rather than above it.
+  const afterInfo = [];
   if (editable) {
     switch (ui.mget(_a.area)) {
       case _a.private:
-        details.push({
+        afterInfo.push({
           id: "designation-link",
           label: LOCALE.DESIGNATION_LINK,
           icon: "app-share",
@@ -114,6 +117,7 @@ function menu(ui) {
   }
   // "info" is this player's own case, not the base's.
   details.push({ id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" });
+  details.push(...afterInfo);
   sections.push(details);
 
   if (media && media.canRemove && media.canRemove()) {

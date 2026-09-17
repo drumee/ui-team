@@ -253,9 +253,9 @@ module.exports.menu = function (ui) {
 
   const details = [];
 
-  // Share for the share area only — files in external workspaces. Private-area
-  // files get their own Share row below (same service), which opens
-  // widget/share regardless of area.
+  // Share only for a file in an EXTERNAL workspace (widget/share isExternal).
+  // An internal workspace offers no Share row: the Designation link below is
+  // how a file is shared there.
   if (editable && share.isExternal(ui)) {
     details.push({
       id: "secure-share",
@@ -272,15 +272,6 @@ module.exports.menu = function (ui) {
   if (editable) {
     switch (ui.mget(_a.area)) {
       case _a.private:
-        // A private area is never external, so the Share row above is never
-        // there too. Same service: widget/share opens the secure-share panel
-        // in every area.
-        details.push({
-          id: "share",
-          label: LOCALE.SHARE,
-          icon: "app-connect",
-          service: "secure-share",
-        });
         afterInfo.push({
           id: "designation-link",
           label: LOCALE.DESIGNATION_LINK,
