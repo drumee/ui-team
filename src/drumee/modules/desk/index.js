@@ -4652,9 +4652,10 @@ class desk_module extends LetcBox {
    *
    * 4. INVITE IS AN OVERLAY ON THE CURRENT TAB, NOT A DESTINATION:
    *    a. it stays OUT of the rail's radio group (skeleton/sidebar.js
-   *       `soloState`) so the current tab KEEPS its highlight — Files and
-   *       Invite lit together is correct, not a bug. Whoever opens the
-   *       popup lights and unlights the row by hand (_setInviteRowState).
+   *       `soloState`) and whoever opens the popup lights and unlights the
+   *       row by hand (_setInviteRowState). Only ONE row is lit: while the
+   *       popup is up the tab row is put out, and closing it puts that row
+   *       back unless a click lit another one meanwhile.
    *       An Invite row added to the phone bar must follow the same rule:
    *       do NOT put it in "mobile-rail-radio".
    *    b. opening it from a workspace tab must NOT change that tab.
@@ -10157,9 +10158,9 @@ class desk_module extends LetcBox {
    *
    * Invite is the one rail row outside the shared `sidebar-radio` group
    * (skeleton/sidebar.js `soloState`), because it opens a popup OVER the
-   * current tab rather than replacing it — so the tab keeps its own highlight
-   * and this row carries its own. Nothing else writes this row's state, which
-   * is why every close path has to reach here.
+   * current tab rather than replacing it — so this row follows the popup, not
+   * the radio. Nothing else writes this row's state, which is why every close
+   * path has to reach here.
    *
    * getPart, never ensurePart: the desktop rail does not mount on a phone (the
    * bottom bar has no Invite row — it lives in the mobile sheet), and
@@ -10170,9 +10171,38 @@ class desk_module extends LetcBox {
    */
   _setInviteRowState(on) {
     if (!_.isFunction(this.getPart)) return;
-    const p = this.getPart("sidebar-invite");
-    if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) return;
-    if (_.isFunction(p.setState)) p.setState(on ? 1 : 0);
+    const live = (pn) => {
+      const v = this.getPart(pn);
+      if (!v || !v.el || (v.isDestroyed && v.isDestroyed())) return null;
+      return _.isFunction(v.setState) ? v : null;
+    };
+    const p = live("sidebar-invite");
+    if (!p) return;
+    // ONE LIT ROW. Invite stays out of `sidebar-radio` (so it can follow the
+    // popup's lifetime), but it must not share the highlight with the tab
+    // underneath. Opening puts the lit rail row out and remembers it; closing
+    // puts it back — unless a click lit another row meanwhile (Invite -> Chat,
+    // Invite -> Plan), in which case that row is the truth and is left alone.
+    // Rows set by hand rather than via a broadcast, so the other members of
+    // the channel (workspace-item, workspace-list) are not touched.
+    const rows = ["files", _a.chat, _a.task, "meet", "access", "plan"]
+      .map((k) => live(`sidebar-${k}`))
+      .filter(Boolean);
+    const isLit = (v) => v.getState() === 1;
+    if (on) {
+      const lit = rows.filter(isLit);
+      if (lit.length) this._inviteShadowedRows = lit;
+      lit.forEach((v) => v.setState(0));
+      p.setState(1);
+      return;
+    }
+    p.setState(0);
+    const shadowed = this._inviteShadowedRows || [];
+    this._inviteShadowedRows = null;
+    if (rows.some(isLit)) return;
+    shadowed
+      .filter((v) => v.el && !(v.isDestroyed && v.isDestroyed()))
+      .forEach((v) => v.setState(1));
   }
 
   async _openInvitePopup(cmd) {

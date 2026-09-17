@@ -79,9 +79,10 @@ const createNavItem = (
     // REPLACES what is on screen (Files…Access swap the workspace tab, Plan
     // opens a section screen), wrong for one that opens a popup OVER it.
     // Invite does that, so being in the group made it unlight the tab the user
-    // was still looking at, and the rail read as though they had left it. It
-    // opts out with `soloState` and desk_module lights it by hand instead
-    // (_setInviteRowState), which is what lets Files and Invite be lit at once.
+    // was still looking at, and never gave it back on close. It opts out with
+    // `soloState` and desk_module lights it by hand instead
+    // (_setInviteRowState), which puts the tab row out while the popup is up
+    // and relights it on close — still only one row lit at a time.
     //
     // Opting out costs nothing else: `service` is dispatched by the uiHandler
     // loop in ui-core's letc.js, not by the radio behavior — `isRadio` only
@@ -133,8 +134,8 @@ const createRailFooter = (ui) => {
         null,
         "sidebar-invite",
         null,
-        // Not a destination — it opens a popup over whatever tab is up, so it
-        // must not take the rail's highlight away from that tab. See the
+        // Not a destination — it opens a popup over whatever tab is up, so the
+        // tab's highlight must come back when the popup closes. See the
         // `soloState` note in createNavItem.
         { soloState: 1 },
       ),
