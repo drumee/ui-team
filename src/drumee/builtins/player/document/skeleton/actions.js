@@ -253,15 +253,9 @@ module.exports.menu = function (ui) {
 
   const details = [];
 
-  // Share only where a file can actually be shared out — an EXTERNAL
-  // workspace. This row used to be offered wherever the file lived, with
-  // widget/share explaining that an external workspace is needed first;
-  // Lexis dropped that for office files (2026-09-05). In an internal
-  // workspace the row led nowhere but to that explanation, and the
-  // Designation link below already covers sharing there.
-  //
-  // Deliberately the SAME test widget/share applies on click, so the row and
-  // its handler can never disagree about what "external" means.
+  // Share for the share area only — files in external workspaces. Private-area
+  // files get their own Share row below (same service), which opens
+  // widget/share regardless of area.
   if (editable && share.isExternal(ui)) {
     details.push({
       id: "secure-share",
@@ -273,10 +267,21 @@ module.exports.menu = function (ui) {
 
   // The link flavour on top of that is area-dependent. `share` has none of
   // its own — the Share row above already covers it.
+  // Rows that sit below Get info rather than above it.
+  const afterInfo = [];
   if (editable) {
     switch (ui.mget(_a.area)) {
       case _a.private:
+        // A private area is never external, so the Share row above is never
+        // there too. Same service: widget/share opens the secure-share panel
+        // in every area.
         details.push({
+          id: "share",
+          label: LOCALE.SHARE,
+          icon: "app-connect",
+          service: "secure-share",
+        });
+        afterInfo.push({
           id: "designation-link",
           label: LOCALE.DESIGNATION_LINK,
           icon: "app-share",
@@ -295,6 +300,7 @@ module.exports.menu = function (ui) {
   }
   // "info" is handled by the base player, not this class.
   details.push({ id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" });
+  details.push(...afterInfo);
   sections.push(details);
 
   if (media && media.canRemove && media.canRemove()) {

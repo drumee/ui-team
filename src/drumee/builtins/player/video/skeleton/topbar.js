@@ -78,6 +78,8 @@ function menu(ui) {
   // Sharing is area-dependent: each area exposes the one link flavour that
   // makes sense for it.
   const details = [];
+  // Rows that sit below Get info rather than above it.
+  const afterInfo = [];
   if (editable) {
     switch (ui.mget(_a.area)) {
       case _a.share:
@@ -89,7 +91,15 @@ function menu(ui) {
         });
         break;
       case _a.private:
+        // Same service as the share area's row: widget/share opens the
+        // secure-share panel in every area.
         details.push({
+          id: "share",
+          label: LOCALE.SHARE,
+          icon: "app-connect",
+          service: "secure-share",
+        });
+        afterInfo.push({
           id: "designation-link",
           label: LOCALE.DESIGNATION_LINK,
           icon: "app-share",
@@ -108,6 +118,7 @@ function menu(ui) {
   }
   // "info" is handled by the base player.
   details.push({ id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" });
+  details.push(...afterInfo);
   sections.push(details);
 
   if (media && media.canRemove && media.canRemove()) {

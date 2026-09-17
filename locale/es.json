@@ -2141,6 +2141,7 @@
   "SECURE_SHARE_EMAIL_REQUIRED": "Por favor, añade al menos una dirección de correo electrónico para restringir el acceso.",
   "SECURE_SHARE_CREATE": "Obtener enlace",
   "SECURE_SHARE_TITLE_FILE": "Compartir archivo de forma segura",
+  "SECURE_SHARE_LOADING": "Preparando el uso compartido seguro…",
   "SECURE_SHARE_TITLE_FOLDER": "Compartir carpeta de forma segura",
   "SECURE_SHARE_NAV_LOGIN": "Iniciar sesión",
   "SECURE_SHARE_GATE_FOOTER_HEADLINE": "Crea tu espacio de trabajo soberano con Drumee",

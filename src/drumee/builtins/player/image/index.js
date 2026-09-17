@@ -180,13 +180,18 @@ class __player_image extends __core {
     if (naming.length) sections.push(naming);
 
     const details = [];
+    // Rows that sit below Get info rather than above it.
+    const afterInfo = [];
     if (editable) {
       switch (this.mget(_a.area)) {
         case _a.share:
           details.push({ id: 'secure-share', label: LOCALE.SHARE, icon: 'ctxmenu-share', service: 'secure-share' });
           break;
         case _a.private:
-          details.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, icon: 'app-share', service: 'designation-link' });
+          // Same service as the share area's row: widget/share opens the
+          // secure-share panel in every area.
+          details.push({ id: 'share', label: LOCALE.SHARE, icon: 'app-connect', service: 'secure-share' });
+          afterInfo.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, icon: 'app-share', service: 'designation-link' });
           break;
         case _a.public:
           // No icon was specified for this row; `apps-link-simple` is the
@@ -198,6 +203,7 @@ class __player_image extends __core {
     // "info" rather than `_e.settings`: this row is handled by the player
     // itself now (widget/details), not forwarded to the MFS view.
     details.push({ id: 'info', label: LOCALE.GET_INFO, icon: 'ctxmenu-info', service: 'info' });
+    details.push(...afterInfo);
     sections.push(details);
 
     if (media && media.canRemove && media.canRemove()) {
@@ -523,8 +529,7 @@ class __player_image extends __core {
       case 'direct-rename':
         return renameInline(this);
 
-      // Share: only an external workspace can share a file out; from an
-      // internal one the user is shown what to do instead.
+      // Share opens the secure-share panel, in every area (widget/share).
       case 'secure-share':
         return share.click(this, cmd);
 
