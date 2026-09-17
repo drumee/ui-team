@@ -23,7 +23,6 @@
  * back to the single-user DocxEditor path.
  */
 
-const { xhRequest } = require("@drumee/ui-essentials");
 
 const COLLAB_PATH = "collab";
 
@@ -122,7 +121,12 @@ function makeFileSource(editor, ctx) {
     async open(id) {
       const { http } = bases();
       const url = `${http}/file/orig/${id}/${ctx.hub_id}`;
-      const content = await xhRequest(url, { responseType: _a.text });
+      // Revalidate (ETag) instead of trusting the year-long Cache-Control
+      // nginx puts on /file/orig/…: a plain GET returned the blank document
+      // the file was created as, for as long as the browser cache lived.
+      const res = await fetch(url, { credentials: "include", cache: "no-cache" });
+      if (!res.ok) throw new Error(`content fetch failed: ${res.status}`);
+      const content = await res.text();
       let bytes = null;
       try {
         const j = JSON.parse(content);

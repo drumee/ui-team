@@ -40,7 +40,6 @@ import SheetsHyperLinkEnUS from "@univerjs/sheets-hyper-link/locale/en-US";
 import SheetsTableEnUS from "@univerjs/sheets-table/locale/en-US";
 import SheetsDataValidationEnUS from "@univerjs/sheets-data-validation/locale/en-US";
 
-const { xhRequest } = require("@drumee/ui-essentials");
 
 // The typing fix (Univer's cell contentEditable stays 0x0 → Chromium drops
 // keystrokes; min-size CSS restores input) + user-select:text live in this
@@ -158,7 +157,15 @@ class __sheet_state extends DrumeeMFS {
       this.mount({});
       return;
     }
-    xhRequest(url, { responseType: _a.text })
+    // `cache: "no-cache"` (revalidate with the ETag): nginx serves
+    // /file/orig/… with a year-long max-age, so a plain GET kept returning the
+    // first snapshot the browser cached — reopened sheets showed old cells and
+    // no comments whenever the collab room was not there to override them.
+    fetch(url, { credentials: "include", cache: "no-cache" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`content fetch failed: ${r.status}`);
+        return r.text();
+      })
       .then((content) => {
         let data = {};
         try {

@@ -56,7 +56,9 @@ async function downloadAsOffice(media) {
   const ext = isCasualFile(media);
   if (!ext) return false;
   const name = String(media.mget(_a.filename) || "document").replace(/<.+>/, "").trim();
-  const res = await fetch(contentUrl(media), { credentials: "include" });
+  // Revalidate: /file/orig/… carries a year-long max-age, and a plain GET would
+  // export whatever version the browser cached first.
+  const res = await fetch(contentUrl(media), { credentials: "include", cache: "no-cache" });
   if (!res.ok) throw new Error(`content fetch failed: ${res.status}`);
   const json = await res.json();
 

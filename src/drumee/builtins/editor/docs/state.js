@@ -5,7 +5,6 @@ import { CasualEditor } from "@casualoffice/docs";
 import { serializeDocx } from "@casualoffice/docs/core";
 import "@casualoffice/docs/styles.css";
 
-const { xhRequest } = require("@drumee/ui-essentials");
 // Co-editing helpers: gateway probe, Drumee FileSource adapter, identity.
 const collab = require("./collab");
 
@@ -110,7 +109,15 @@ class __docs_state extends DrumeeMFS {
       this._mountBlank();
       return;
     }
-    xhRequest(url, { responseType: _a.text })
+    // `cache: "no-cache"` (revalidate with the ETag), NOT a plain GET: nginx
+    // serves /file/orig/… with Cache-Control max-age of a year, so a plain
+    // request returned the FIRST version the browser ever saw — the blank
+    // document a new file starts as — and every later open read stale bytes.
+    fetch(url, { credentials: "include", cache: "no-cache" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`content fetch failed: ${r.status}`);
+        return r.text();
+      })
       .then((content) => {
         let buffer = null;
         try {
