@@ -536,6 +536,9 @@ class __docs_state extends DrumeeMFS {
         (editor && editor.mget(_a.filename)) || this.mget(_a.filename) || "Untitled document",
     };
     const fileSource = collab.makeFileSource(editor, ctx);
+    // Kept so flushCollabSave() can push bytes through the very same adapter
+    // the autosave uses when Casual exposes no flush handle.
+    this._fileSource = fileSource;
     const user = collab.userIdentity();
     const { ws } = collab.bases();
     console.log("[DOCS] collab mount room=", nid, "ws=", ws, "user=", user.name);
@@ -598,13 +601,27 @@ class __docs_state extends DrumeeMFS {
    * Ctrl+S / Save button in co-editing mode: force the CasualEditor autosave
    * to flush through FileSource.save (→ media.save) right now.
    */
-  flushCollabSave() {
+  async flushCollabSave() {
     if (!this._collab) return null;
+    const ref = this._ref && this._ref.current;
+    // `flushSave()` is CasualEditorRef's documented force-save (the SDK's own
+    // "Save & close" hook); `_autosave.flush()` is the same thing reached
+    // through the state object onAutosaveState hands us.
+    if (ref && typeof ref.flushSave === "function") return ref.flushSave();
     const a = this._autosave;
     if (a && typeof a.flush === "function") return a.flush();
-    const ref = this._ref && this._ref.current;
-    if (ref && typeof ref.save === "function") return ref.save();
-    return null;
+    // Nothing to flush through: export the bytes and write them with the same
+    // FileSource the autosave uses. Silently returning null here is what made
+    // the gear-menu Save look dead.
+    if (ref && typeof ref.exportDocx === "function" && this._fileSource) {
+      const buf = await ref.exportDocx();
+      if (buf) {
+        // `manual: 1` — this is a Save the user pressed, so it bypasses the
+        // autosave breaker (collab.js FileSource.save).
+        return this._fileSource.save(this._collab.nid || null, buf, { manual: 1 });
+      }
+    }
+    throw new Error("no way to flush the co-editing save");
   }
 
   /**

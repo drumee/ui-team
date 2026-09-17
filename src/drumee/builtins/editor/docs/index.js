@@ -441,9 +441,22 @@ class __editor_docs extends __player {
 
   async saveContent(opts) {
     // Co-editing mode: CasualEditor owns saving — just flush its autosave.
+    // The failure MUST be surfaced: Casual's own label only ever reads
+    // "Unsaved changes", so a save the server refuses (403 in a workspace the
+    // viewer cannot write) looked like a dead Save button.
     if (this._doc && this._doc._collab && this._doc.flushCollabSave) {
       this.setSaveStatus("saving");
-      return this._doc.flushCollabSave();
+      try {
+        const r = await this._doc.flushCollabSave();
+        this.setSaveStatus(this._changed ? "unsaved" : "saved");
+        return r;
+      } catch (e) {
+        this.setSaveStatus("unsaved");
+        this.warn("__editor_docs: co-editing save failed", e);
+        const status = e && (e.status || e.error_code);
+        Wm.alert(status == 403 ? LOCALE.WEAK_PRIVILEGE : LOCALE.ERROR_NETWORK);
+        return null;
+      }
     }
     if (!this._doc || !this._doc.getContent) return;
     // Reentrancy guard: Casual autosave fires onSave repeatedly. Without this,
@@ -580,12 +593,36 @@ class __editor_docs extends __player {
         this.goodbye();
         return;
       case "direct-rename":
-        return renameInline(this);
+        return this.renameFromChrome();
       case "contact-support":
         return this.contactSupport();
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);
     }
+  }
+
+  /**
+   * Gear "Rename".
+   *
+   * `player/widget/topbar/rename` edits the "player-title" part, and this
+   * window deliberately has none — Casual's own title bar owns the name — so
+   * that helper returns silently here. Focus Casual's name field instead: the
+   * injected one in co-editing mode, else DocxEditor's. Both commit through
+   * renameFromCasual() → media.rename, so the grid tile follows either way.
+   */
+  renameFromChrome() {
+    const input =
+      this.el.querySelector(".editor-docs__collab-name input") ||
+      this.el.querySelector('input[aria-label="Document name"]') ||
+      this.el.querySelector('[data-testid="title-bar"] input');
+    if (!input) return renameInline(this);
+    input.focus();
+    try {
+      input.select();
+    } catch (e) {
+      /** not a text input */
+    }
+    return null;
   }
 
   /**

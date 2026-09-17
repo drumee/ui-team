@@ -155,9 +155,12 @@ function makeFileSource(editor, ctx) {
       // failed media.save calls from one abandoned tab. After three failures
       // in a row the editor stops sending and stays "unsaved" until it is
       // reopened.
-      if (editor && editor._saveDisabled) {
+      // A MANUAL save (gear menu / Ctrl+S) always goes out: the breaker exists
+      // to stop the unattended autosave loop, and a Save the user pressed must
+      // either work or report why.
+      if (editor && editor._saveDisabled && !opts.manual) {
         status("unsaved");
-        throw new Error("saving disabled after repeated failures");
+        throw new Error("autosave paused after repeated failures");
       }
       status("saving");
       const content = JSON.stringify({ docx: abToBase64(bytes) });
@@ -221,6 +224,12 @@ function makeFileSource(editor, ctx) {
           if (editor._saveFailures >= 3) editor._saveDisabled = 1;
         }
         status("unsaved");
+        // Carry the HTTP status through: the window turns a 403 into
+        // "insufficient rights" rather than a generic network error.
+        if (e && e.status == null && e.error_code == null) {
+          const m = String((e && e.message) || "").match(/\b(4\d\d|5\d\d)\b/);
+          if (m) e.status = Number(m[1]);
+        }
         throw e;
       }
     },

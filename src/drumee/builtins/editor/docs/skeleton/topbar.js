@@ -7,6 +7,16 @@ const Topbar = require("builtins/player/widget/topbar");
 function gearMenu(ui) {
   return [
     { id: "menu-save", label: LOCALE.SAVE || "Save", icon: "floppy", service: _e.save },
+    // Same row the sheet's gear menu carries. Casual's own title bar has an
+    // inline-editable name, but it only appears in co-editing mode and it
+    // renames through Casual — this is the Drumee rename (media.rename), and
+    // it is the ONLY one in single-user mode.
+    {
+      id: "menu-rename",
+      label: LOCALE.RENAME || "Rename",
+      icon: "app-edit",
+      service: "direct-rename",
+    },
     { separator: true },
     // Replaces Casual's own "Help" menu (hidden by docs_state): opens Drumee's
     // support conversation, or the support mail link as a fallback.

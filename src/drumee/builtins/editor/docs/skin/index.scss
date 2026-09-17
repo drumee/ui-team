@@ -8,8 +8,15 @@
 // for the whole docs subtree.
 // In co-editing mode Casual shows its own autosave state, so Drumee's
 // "All changes saved" label would duplicate it.
-.editor-docs--collab .editor-docs__save-status {
+// In co-editing mode Casual shows its own autosave state, so Drumee's
+// "All changes saved" label would duplicate it — EXCEPT when a save failed:
+// Casual keeps reading "Unsaved changes" whatever the reason, so the one
+// state the user must see stays visible.
+.editor-docs--collab .editor-docs__save-status:not([data-state="unsaved"]) {
   display: none !important;
+}
+.editor-docs--collab .editor-docs__save-status[data-state="unsaved"] {
+  color: var(--warning-fg, #b06000);
 }
 
 // "Who is here" popover under the presence avatars (docs_state).
