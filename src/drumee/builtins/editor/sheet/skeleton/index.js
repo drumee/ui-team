@@ -16,13 +16,22 @@ function __skl_editor_sheet(_ui_) {
     partHandler: _ui_,
     // Shown while the sheet_state chunk (Univer + Casual, several MB on a
     // cold cache) downloads and mounts; sheet_state._reactHost removes it.
-    // Without it a first-time visitor saw a bare white window for as long
-    // as the download took.
+    // Same shape as the office player's progress part (player/document
+    // skeleton buildProgress): an indeterminate bar under the header and a
+    // centred label — so a Casual sheet loads the way an .xlsx does.
     kids: [
-      Skeletons.Note({
-        content: LOCALE.LOADING,
-        active: 0,
+      Skeletons.Box.X({
         className: "editor-loading",
+        dataset: { state: 1, loading: "indeterminate" },
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Box.X({ className: "editor-loading__bar", active: 0 }),
+          Skeletons.Note({
+            content: LOCALE.LOADING,
+            active: 0,
+            className: "editor-loading__text",
+          }),
+        ],
       }),
     ],
   });

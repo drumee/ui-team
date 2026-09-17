@@ -10,12 +10,21 @@ function __skl_editor_docs(_ui_) {
     sys_pn: _a.content,
     partHandler: _ui_,
     // Shown while the docs_state chunk (Casual Docs + WASM engine) downloads
-    // and mounts; docs_state._reactHost removes it.
+    // and mounts; docs_state._reactHost removes it. Same shape as the office
+    // player's progress part (indeterminate bar + centred label).
     kids: [
-      Skeletons.Note({
-        content: LOCALE.LOADING,
-        active: 0,
+      Skeletons.Box.X({
         className: "editor-loading",
+        dataset: { state: 1, loading: "indeterminate" },
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Box.X({ className: "editor-loading__bar", active: 0 }),
+          Skeletons.Note({
+            content: LOCALE.LOADING,
+            active: 0,
+            className: "editor-loading__text",
+          }),
+        ],
       }),
     ],
   });
