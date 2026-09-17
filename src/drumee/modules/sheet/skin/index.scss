@@ -1,0 +1,398 @@
+/** ================================================================== *
+#   FILE : /src/drumee/modules/sheet/skin
+#   TYPE : Standalone full-page spreadsheet module (own tab)
+# ===================================================================**/
+
+// The topbar is built on the theme's `--normal-*` / `--border-*` / `--overlay-*`
+// tokens because those are the ones that actually FLIP in dark mode (they are
+// redefined under `html[data-theme="dark"]` in router/skin/themes/dark.scss).
+// The legacy `--default-bg` is defined only on :root and stays #fff in dark, so
+// it is deliberately NOT used for any surface here. A dedicated dark block below
+// refines the few things a raw token swap does not cover (brand green, shadow).
+
+$bar-height: 48px;
+$font-stack: var(
+  --font-main,
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Roboto,
+  Helvetica,
+  Arial,
+  sans-serif
+);
+
+// The framework stamps an inline height:100% on the module/widget els, but the
+// router body only has min-height:100vh (no resolvable `height`), so 100%
+// collapses to content. Pin the module to the viewport (external !important
+// beats the non-important inline style) and reserve the top bar with padding.
+.module-sheet.module-sheet {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  padding-top: $bar-height !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden;
+  // --normal-bg flips (light #fff / dark #0b0a21); --default-bg would not.
+  background: var(--normal-bg, #ffffff);
+
+  // The Casual editor fills everything below the top bar.
+  .sheet-state {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    width: 100% !important;
+  }
+}
+
+// ── Top bar ───────────────────────────────────────────────────────────
+.module-sheet__topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: $bar-height;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  font-family: $font-stack;
+  background: var(--normal-bg, #ffffff);
+  // Hairline + a very soft lift so the bar separates from the grid.
+  border-bottom: 1px solid var(--border-default, #e5e5ea);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+// ── Brand: logo + editable title + status ──────────────────────────────
+.module-sheet__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.module-sheet__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+
+  svg {
+    display: block;
+    // Shadow follows the rounded-tile alpha (a box-shadow would be square).
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.22));
+  }
+}
+
+// The filename reads as a real, editable document title.
+.module-sheet__title {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 52ch;
+}
+
+.module-sheet__name {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.003em;
+  color: var(--normal-fg-10, #0b0a21);
+  padding: 5px 8px;
+  border-radius: 7px;
+  cursor: text;
+  // Hug the typed text like Google Sheets' title (progressive enhancement —
+  // unsupported engines fall back to width:auto below).
+  field-sizing: content;
+  width: auto;
+  min-width: 6ch;
+  max-width: 46ch;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::selection {
+    background: var(--brand-tint, rgba(89, 80, 255, 0.18));
+  }
+  &::placeholder {
+    color: var(--placeholder-fg, #c7c7cc);
+  }
+
+  &:hover {
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+  }
+  &:focus,
+  &:focus-visible {
+    background: var(--normal-bg, #ffffff);
+    border-color: var(--active-border, #5950ff);
+    box-shadow: 0 0 0 3px var(--brand-tint, rgba(89, 80, 255, 0.18));
+  }
+}
+
+// Pencil affordance — fades in while hovering the title, hidden when editing.
+.module-sheet__edit-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  color: var(--normal-fg-50, #84848c);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+
+  svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+}
+.module-sheet__title:hover .module-sheet__edit-hint {
+  opacity: 0.65;
+}
+.module-sheet__name:focus + .module-sheet__edit-hint {
+  opacity: 0;
+}
+
+// Save status — a muted pill with a leading state LED. Hidden when empty so a
+// cleared status leaves no stray dot behind.
+.module-sheet__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--normal-fg-50, #84848c);
+  background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+
+  &::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  &:empty {
+    display: none;
+  }
+}
+
+// ── Right actions ──────────────────────────────────────────────────────
+.module-sheet__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.module-sheet__btn {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: var(--border-radius, 8px);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  height: 36px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
+
+  svg {
+    display: block;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--brand-tint, rgba(89, 80, 255, 0.35));
+  }
+}
+
+// Primary — the sheet app's green identity (matches the logo mark).
+.module-sheet__btn--share {
+  background: #188038;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 94, 42, 0.35);
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+  &:hover {
+    background: #157a33;
+    box-shadow: 0 2px 6px rgba(16, 94, 42, 0.3);
+  }
+  &:active {
+    background: #12692c;
+    transform: translateY(0.5px);
+    box-shadow: 0 1px 2px rgba(16, 94, 42, 0.4);
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(24, 128, 56, 0.4);
+  }
+}
+
+// Icon button — theme toggle. The JS keeps writing a unicode glyph into
+// textContent (moon/sun), so it is hidden (font-size:0) and the crisp icon is
+// drawn as a masked ::before that swaps with the theme entirely in CSS. The
+// mask inherits `currentColor`, so hover recolours the icon too.
+.module-sheet__btn--icon {
+  position: relative;
+  width: 36px;
+  padding: 0;
+  background: transparent;
+  color: var(--normal-fg-20, #65656c);
+  font-size: 0;
+
+  &::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' fill='%23000'/%3E%3C/svg%3E")
+      center / 18px 18px no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' fill='%23000'/%3E%3C/svg%3E")
+      center / 18px 18px no-repeat;
+  }
+
+  &:hover {
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+    color: var(--normal-fg-10, #0b0a21);
+  }
+  &:active {
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.09));
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 3px var(--brand-tint, rgba(89, 80, 255, 0.3));
+  }
+}
+
+// ── Dark refinements ────────────────────────────────────────────────────
+// Most colours flip via the token redefinitions; this covers what a raw swap
+// misses — the sun glyph, a brighter primary green, and a deeper lift shadow.
+// (JS sets `document.documentElement.dataset.theme`, so :root[...] matches.)
+:root[data-theme="dark"] {
+  .module-sheet__topbar {
+    background: var(--normal-bg, #0b0a21);
+    border-bottom-color: var(--border-default, rgba(71, 69, 84, 0.4));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  }
+
+  .module-sheet__name {
+    color: var(--normal-fg-10, #e4e3ff);
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(255, 255, 255, 0.06));
+    }
+    &:focus,
+    &:focus-visible {
+      background: var(--normal-bg-90, #282538);
+      border-color: var(--active-border, #5950ff);
+    }
+  }
+
+  .module-sheet__status {
+    color: var(--normal-fg-50, #9a9aa2);
+    background: var(--overlay-bg-05, rgba(255, 255, 255, 0.07));
+  }
+
+  .module-sheet__btn--share {
+    background: #1e9e45;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+
+    &:hover {
+      background: #23ab4d;
+    }
+    &:active {
+      background: #1b8d3e;
+    }
+  }
+
+  .module-sheet__btn--icon {
+    color: var(--normal-fg-20, #b1adff);
+
+    &::before {
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='5' fill='%23000'/%3E%3Cpath d='M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='5' fill='%23000'/%3E%3Cpath d='M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42'/%3E%3C/svg%3E");
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(255, 255, 255, 0.08));
+      color: var(--normal-fg-10, #e4e3ff);
+    }
+    &:active {
+      background: var(--overlay-bg-05, rgba(255, 255, 255, 0.12));
+    }
+  }
+}
+
+// ── Toast ───────────────────────────────────────────────────────────────
+.module-sheet__toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translate(-50%, 8px);
+  background: #23222e;
+  color: #ffffff;
+  font-family: $font-stack;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.16);
+  z-index: 99999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+
+  &[data-error="1"] {
+    background: #c5352b;
+  }
+  &[data-show="1"] {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+// ── Motion preferences ───────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .module-sheet__name,
+  .module-sheet__edit-hint,
+  .module-sheet__btn,
+  .module-sheet__toast {
+    transition: none !important;
+  }
+  .module-sheet__btn--share:active {
+    transform: none !important;
+  }
+}

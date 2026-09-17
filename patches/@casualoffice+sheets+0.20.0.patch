@@ -1,0 +1,106 @@
+diff --git a/node_modules/@casualoffice/sheets/dist/sheets.cjs b/node_modules/@casualoffice/sheets/dist/sheets.cjs
+index 2c86f7d..3608fd5 100644
+--- a/node_modules/@casualoffice/sheets/dist/sheets.cjs
++++ b/node_modules/@casualoffice/sheets/dist/sheets.cjs
+@@ -3260,15 +3260,23 @@ var RESOURCE_NAME_TO_GROUP = {
+   SHEET_SORT_PLUGIN: "sort",
+   SHEET_FILTER_PLUGIN: "filter"
+ };
+-var loaded = /* @__PURE__ */ new Set();
+-var inflight = /* @__PURE__ */ new Map();
++var loaderStateByUniver = /* @__PURE__ */ new WeakMap();
++function loaderStateFor(univer) {
++  let st = loaderStateByUniver.get(univer);
++  if (!st) {
++    st = { loaded: /* @__PURE__ */ new Set(), inflight: /* @__PURE__ */ new Map() };
++    loaderStateByUniver.set(univer, st);
++  }
++  return st;
++}
+ var currentUniver = null;
+ function setUniverForLazyLoad(univer) {
+   currentUniver = univer;
+ }
+ function ensurePlugin(univer, group) {
+-  if (loaded.has(group)) return Promise.resolve();
+-  const existing = inflight.get(group);
++  const st = loaderStateFor(univer);
++  if (st.loaded.has(group)) return Promise.resolve();
++  const existing = st.inflight.get(group);
+   if (existing) return existing;
+   const loader = LOADERS[group];
+   if (!loader) return Promise.resolve();
+@@ -3276,14 +3284,16 @@ function ensurePlugin(univer, group) {
+     for (const [PluginCtor, config] of plugins) {
+       univer.registerPlugin(PluginCtor, config);
+     }
+-    loaded.add(group);
+-    inflight.delete(group);
++    st.loaded.add(group);
++    st.inflight.delete(group);
++  }).catch((e) => {
++    st.inflight.delete(group);
++    throw e;
+   });
+-  inflight.set(group, p);
++  st.inflight.set(group, p);
+   return p;
+ }
+ function ensurePluginByName(group) {
+-  if (loaded.has(group)) return Promise.resolve();
+   if (!currentUniver) return Promise.resolve();
+   return ensurePlugin(currentUniver, group);
+ }
+diff --git a/node_modules/@casualoffice/sheets/dist/sheets.js b/node_modules/@casualoffice/sheets/dist/sheets.js
+index 934a152..dd1b65d 100644
+--- a/node_modules/@casualoffice/sheets/dist/sheets.js
++++ b/node_modules/@casualoffice/sheets/dist/sheets.js
+@@ -3239,15 +3239,23 @@ var RESOURCE_NAME_TO_GROUP = {
+   SHEET_SORT_PLUGIN: "sort",
+   SHEET_FILTER_PLUGIN: "filter"
+ };
+-var loaded = /* @__PURE__ */ new Set();
+-var inflight = /* @__PURE__ */ new Map();
++var loaderStateByUniver = /* @__PURE__ */ new WeakMap();
++function loaderStateFor(univer) {
++  let st = loaderStateByUniver.get(univer);
++  if (!st) {
++    st = { loaded: /* @__PURE__ */ new Set(), inflight: /* @__PURE__ */ new Map() };
++    loaderStateByUniver.set(univer, st);
++  }
++  return st;
++}
+ var currentUniver = null;
+ function setUniverForLazyLoad(univer) {
+   currentUniver = univer;
+ }
+ function ensurePlugin(univer, group) {
+-  if (loaded.has(group)) return Promise.resolve();
+-  const existing = inflight.get(group);
++  const st = loaderStateFor(univer);
++  if (st.loaded.has(group)) return Promise.resolve();
++  const existing = st.inflight.get(group);
+   if (existing) return existing;
+   const loader = LOADERS[group];
+   if (!loader) return Promise.resolve();
+@@ -3255,14 +3263,16 @@ function ensurePlugin(univer, group) {
+     for (const [PluginCtor, config] of plugins) {
+       univer.registerPlugin(PluginCtor, config);
+     }
+-    loaded.add(group);
+-    inflight.delete(group);
++    st.loaded.add(group);
++    st.inflight.delete(group);
++  }).catch((e) => {
++    st.inflight.delete(group);
++    throw e;
+   });
+-  inflight.set(group, p);
++  st.inflight.set(group, p);
+   return p;
+ }
+ function ensurePluginByName(group) {
+-  if (loaded.has(group)) return Promise.resolve();
+   if (!currentUniver) return Promise.resolve();
+   return ensurePlugin(currentUniver, group);
+ }

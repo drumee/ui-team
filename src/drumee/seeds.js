@@ -196,6 +196,18 @@ module.exports = {
   editor_note: function () {
     return import("./builtins/editor/note");
   },
+  editor_sheet: function () {
+    return import("./builtins/editor/sheet");
+  },
+  sheet_state: function () {
+    return import("./builtins/editor/sheet/state");
+  },
+  editor_docs: function () {
+    return import("./builtins/editor/docs");
+  },
+  docs_state: function () {
+    return import("./builtins/editor/docs/state");
+  },
   email_input_item: function () {
     return import("./builtins/widget/email-input-item/index");
   },
@@ -306,6 +318,9 @@ module.exports = {
   },
   module_sandbox: function () {
     return import("./modules/sandbox");
+  },
+  module_sheet: function () {
+    return import("./modules/sheet");
   },
   module_welcome: function () {
     return import("./modules/welcome");

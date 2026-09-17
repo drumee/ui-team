@@ -29,7 +29,10 @@ const __media_tpl_map = function (ext, d) {
     xls: "raw-documents_excel",
     xls: "raw-documents_excel",
     xlsx: "raw-documents_excel",
-    xlsx: "raw-documents_excel"
+    xlsx: "raw-documents_excel",
+    // Casual Docs / Casual Sheets files — black variants of the Word/Excel glyphs.
+    udoc: "raw-documents_udoc",
+    usheet: "raw-documents_usheet"
   };
   if (a[ext]) {
     return a[ext];

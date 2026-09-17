@@ -1,0 +1,520 @@
+/** ================================================================== *
+#   FILE : /src/drumee/builtins/editor/sheet/skin/index.scss
+#   TYPE : Component style — Univer sheet editor window
+# ===================================================================**/
+@use 'mixins/drumee';
+@use '../../skin/topbar.scss';
+
+.sheet {
+  &__ui {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+.editor-sheet {
+  &__ui {
+    background-color: var(--default-bg);
+    box-shadow: var(--shadow-container);
+    overflow: visible;
+    flex-direction: column;
+    display: flex;
+    border-radius: var(--border-radius);
+  }
+
+  // The header is the shared player topbar widget (builtins/player/widget/
+  // topbar) — it ships its own skin (drumee-topbar), so nothing is styled here.
+
+  // The shared topbar names its rows by `fig.group` → `.editor__header`, not
+  // `.editor-sheet__header`. Make the title row read like the Casual demo's:
+  // one flat block, same chrome colour as Casual's menu row right below it
+  // (`#eef1f5`), no divider — so logo + name + menus form a single header.
+  > .editor__main > .editor__header.container {
+    width: 100%;
+    height: 52px;
+    min-height: 52px;
+    border: 0;
+    z-index: 200;
+    background-color: var(--doc-chrome, #eef1f5);
+
+    &[data-header="0"] {
+      display: none;
+    }
+    .editor__header.main,
+    .drumee-topbar__bar {
+      height: 100%;
+      background: transparent;
+      padding: 0 12px 0 14px;
+    }
+    .drumee-topbar__actions {
+      align-items: center;
+      gap: 2px;
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    // MUST stretch, not center: the shared topbar widget has no width of its
+    // own, so `center` shrank it to a narrow pill floating mid-window (the
+    // "kì/xấu" header). Stretch makes the header span the full window like the
+    // office player.
+    align-items: stretch;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  // The office topbar widget expects the consumer to make its header bar span
+  // the window (the image/document players provide a `.{group}__header.main`
+  // rule for this). Without it the bar shrinks to its content and the controls
+  // bunch on the left. Fill the bar and let the identity grow so the actions
+  // (Save / gear / maximize / close) sit flush on the right, exactly like the
+  // office window.
+  .drumee-topbar {
+    width: 100%;
+  }
+  .drumee-topbar__bar {
+    width: 100%;
+  }
+  .drumee-topbar__identity {
+    flex: 1 1 auto;
+    gap: 10px;
+    min-width: 0;
+  }
+  // 32px coloured sheet logo, like the demo's.
+  .drumee-topbar__filetype {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    .drumee-topbar__filetype-icon {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  // Demo/Google-Sheets document title: 16px regular, quiet until hovered,
+  // click-to-edit (renameInline swaps in the input below).
+  .drumee-topbar__title.editor-sheet__editable-title {
+    cursor: text;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    color: var(--normal-fg-10, #202124);
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    max-width: 46ch;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      border-color: var(--normal-line-10, #e8eaed);
+    }
+  }
+  .drumee-topbar__title-input {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    color: var(--normal-fg-10, #202124);
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--active-border, #5950ff);
+    background: var(--normal-bg, #ffffff);
+    box-shadow: 0 0 0 3px var(--brand-tint, rgba(89, 80, 255, 0.18));
+    outline: none;
+    max-width: 46ch;
+  }
+  // "All changes saved" — 12px muted, right of the title (same as docs).
+  .editor-sheet__save-status {
+    align-self: center;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: var(--normal-fg-40, #5f6368);
+    margin: 0 10px 0 4px;
+    transition: color 0.2s ease, opacity 0.2s ease;
+    &[data-state="saving"] {
+      opacity: 0.75;
+    }
+    &[data-state="unsaved"] {
+      color: var(--warning-fg, #b06000);
+    }
+  }
+
+  &__body {
+    overflow: hidden;
+    width: 100%;
+    // Fill whatever height is left below the header (56px), regardless of the
+    // exact header height — the old calc(100% - 44px) assumed a 44px header and
+    // left a 12px overflow now that the office topbar is 56px.
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+// -------------------------------------------------------------------
+// Make Univer read as Google Sheets, not an Office ribbon.
+// These target Univer 0.25.1 internal utility classes (version pinned),
+// scoped under our widget so nothing else is affected.
+// -------------------------------------------------------------------
+// The Drumee player window sets `user-select: none` on its body/root (drag
+// chrome). That inherits onto Univer's contentEditable cell editor and blocks
+// Chromium from inserting typed text (click selects a cell fine, but keystrokes
+// never reach the cell) — the "can't type anything" bug. Re-enable text
+// selection for the whole sheet subtree so the cell editor accepts input.
+.editor-sheet,
+.editor-sheet__body,
+.sheet-state {
+  user-select: text;
+  -webkit-user-select: text;
+
+  * {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
+
+// ROOT-CAUSE FIX for "can't type into cells": inside this build Univer's cell
+// editor (a contentEditable overlay, [data-u-comp="editor"]) stays 0x0 even once
+// editing starts — and Chromium never fires beforeinput/input on a zero-size
+// editing host, so typed characters are dropped (SheetEditStarted fires,
+// SheetEditChanging never does). Giving the editor and its contentEditable a
+// non-zero minimum size restores input: click-then-type and double-click-edit
+// both work, and Univer still grows the box to fit the content. Verified on
+// stage endpoint liam 2026-09-09.
+.sheet-state [data-u-comp="editor"],
+.sheet-state [data-u-comp="editor"] [contenteditable] {
+  min-width: 28px;
+  min-height: 20px;
+}
+
+// Univer renders its OWN native toolbar/ribbon/formula-bar/sheet-tabs (the
+// polished Google-Sheets-like UI from the official demo). We deliberately do
+// NOT hide or replace it — earlier hand-rolled-toolbar + hide-Univer's-toolbar
+// attempts are what made the embed look bad. The grid-collapse-to-0 bug is
+// fixed structurally by mounting Univer only after the window is sized
+// (state.js _mountWhenSized), with _ensureGridSized as a safety net.
+.editor-sheet__main {
+  position: relative;
+}
+
+// -------------------------------------------------------------------
+// Demo look: Inter for Casual's embedded chrome (it inherits "Armin Grotesk"
+// from Univer otherwise) + the half-disc theme toggle in the title row.
+// -------------------------------------------------------------------
+.editor-sheet .sheet-state,
+.editor-sheet .sheet-state [data-testid="casual-sheets"] {
+  font-family: Inter, "Segoe UI", -apple-system, system-ui, "Helvetica Neue", Arial, sans-serif;
+  --univer-font-family: Inter, "Segoe UI", -apple-system, system-ui, "Helvetica Neue", Arial, sans-serif;
+}
+.editor-sheet .editor-sheet__theme-toggle {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 4px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--normal-fg-20, #5f6368);
+  user-select: none;
+  &:hover {
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+    color: var(--normal-fg-10, #202124);
+  }
+}
+
+// LIGHT theme tokens, pinned explicitly: Casual stamps `data-theme` on its
+// root from the `appearance` prop at render time and api.setTheme() only
+// flips Univer's `univer-dark` class, so after a dark→light toggle its chrome
+// would keep the dark inline fallbacks. Our window's `data-theme` is the
+// source of truth for both editors' chrome.
+.editor-sheet[data-theme="light"] .sheet-state {
+  background-color: #ffffff;
+  color: #201f1e;
+  --color-surface-strip: #eef1f5;
+  --color-surface: #ffffff;
+  --color-text: #201f1e;
+  --color-text-secondary: #605e5c;
+  --color-divider: #edeff3;
+  --color-hover: rgba(15, 23, 42, 0.045);
+  --color-selected: rgba(14, 116, 144, 0.11);
+  --color-accent: #0e7490;
+  [data-testid="casual-sheets"],
+  [data-testid="casual-sheets"] * {
+    --cs-chrome-bg: #eef1f5 !important;
+    --cs-chrome-border: #edeff3 !important;
+    --cs-chrome-input-bg: #ffffff !important;
+    --cs-chrome-fg: #201f1e !important;
+    --cs-chrome-muted: #605e5c !important;
+    --cs-chrome-hover: rgba(15, 23, 42, 0.045) !important;
+    --cs-chrome-active: rgba(14, 116, 144, 0.11) !important;
+    --cs-chrome-active-fg: #0e7490 !important;
+  }
+}
+
+// -------------------------------------------------------------------
+// DARK ("đen") theme — the Casual demo's dark mode: body #14161a, chrome
+// #2a2e35, text #e7ebf3, accent #1aa3c4. Applied by editor.applyTheme() via
+// `data-theme` on the window; Casual's own chrome + Univer follow through
+// `--cs-chrome-*` vars and api.setTheme("dark").
+// -------------------------------------------------------------------
+.editor-sheet[data-theme="dark"] {
+  --sheet-dark-bg: #14161a;
+  --sheet-dark-chrome: #2a2e35;
+  --sheet-dark-chrome-2: #1f2329;
+  --sheet-dark-border: #3a3f47;
+  --sheet-dark-fg: #e7ebf3;
+  --sheet-dark-muted: #aab2c2;
+  --sheet-dark-accent: #1aa3c4;
+
+  .editor-sheet__ui,
+  &.editor-sheet__ui {
+    background-color: var(--sheet-dark-bg);
+  }
+
+  // Title row
+  > .editor__main > .editor__header.container {
+    background-color: var(--sheet-dark-chrome);
+    color: var(--sheet-dark-fg);
+    .drumee-topbar__title,
+    .drumee-topbar__title.editor-sheet__editable-title {
+      color: var(--sheet-dark-fg);
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--sheet-dark-border);
+      }
+    }
+    // Rename input, black like the bar
+    .drumee-topbar__title-input {
+      color: var(--sheet-dark-fg);
+      background: var(--sheet-dark-bg);
+      border-color: var(--sheet-dark-accent);
+      box-shadow: 0 0 0 3px rgba(26, 163, 196, 0.28);
+    }
+    .editor-sheet__save-status {
+      color: var(--sheet-dark-muted);
+    }
+    .editor-sheet__theme-toggle,
+    .drumee-topbar__actions .icon,
+    .drumee-topbar__actions .icon svg,
+    .drumee-topbar__actions svg {
+      color: var(--sheet-dark-fg);
+      fill: currentColor;
+    }
+    .drumee-topbar__actions .icon:hover,
+    .editor-sheet__theme-toggle:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    // Gear dropdown
+    .drumee-topbar__menu-panel,
+    .drumee-topbar__menu-items {
+      background-color: var(--sheet-dark-chrome);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--sheet-dark-border);
+    }
+    .drumee-topbar__menu-item {
+      color: var(--sheet-dark-fg);
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+      }
+      &.separator {
+        background-color: var(--sheet-dark-border);
+      }
+      .drumee-topbar__menu-icon,
+      svg {
+        color: var(--sheet-dark-fg);
+        fill: currentColor;
+      }
+    }
+  }
+
+  // Casual's embedded chrome (menubar / toolbar / formula bar / tabs / status).
+  // Its root sets `--cs-chrome-*: var(--color-*, <light>)` INLINE, so the
+  // design tokens it reads are what we set (inherited from here); the
+  // `!important` copies below are the belt-and-braces override of those
+  // inline vars for any element that doesn't go through the tokens.
+  .sheet-state {
+    background-color: var(--sheet-dark-bg);
+    color: var(--sheet-dark-fg);
+    --color-surface-strip: var(--sheet-dark-chrome-2);
+    --color-surface: var(--sheet-dark-bg);
+    --color-text: var(--sheet-dark-fg);
+    --color-text-secondary: var(--sheet-dark-muted);
+    --color-divider: var(--sheet-dark-border);
+    --color-hover: rgba(255, 255, 255, 0.08);
+    --color-selected: rgba(26, 163, 196, 0.22);
+    --color-accent: var(--sheet-dark-accent);
+    [data-testid="casual-sheets"],
+    [data-testid="casual-sheets"] * {
+      --cs-chrome-bg: var(--sheet-dark-chrome-2) !important;
+      --cs-chrome-border: var(--sheet-dark-border) !important;
+      --cs-chrome-input-bg: var(--sheet-dark-bg) !important;
+      --cs-chrome-fg: var(--sheet-dark-fg) !important;
+      --cs-chrome-muted: var(--sheet-dark-muted) !important;
+      --cs-chrome-hover: rgba(255, 255, 255, 0.08) !important;
+      --cs-chrome-active: rgba(26, 163, 196, 0.22) !important;
+      --cs-chrome-active-fg: var(--sheet-dark-accent) !important;
+    }
+    [data-testid="cs-menubar"] button,
+    [data-testid="casual-sheets-toolbar"] button,
+    [data-testid="casual-sheets-tabs"] button,
+    [data-testid="casual-sheets-status-bar"] button {
+      color: var(--sheet-dark-fg);
+    }
+    [data-testid="casual-sheets-toolbar"] select,
+    [data-testid="casual-sheets-formula-bar"] input,
+    [data-testid="casual-sheets-formula-bar"] select {
+      background: var(--sheet-dark-bg);
+      color: var(--sheet-dark-fg);
+      border-color: var(--sheet-dark-border);
+    }
+  }
+}
+
+// Let Univer's chrome fill the window body and round with the window frame.
+.sheet-state {
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  overflow: hidden;
+
+  // Univer's root fills the mount element.
+  > div:first-child {
+    width: 100%;
+    height: 100%;
+  }
+
+  // Skeletons' default empty-content placeholder; React owns this area
+  // (see sheet_state._reactHost), so it must not take space or clicks.
+  > .widget-blank {
+    display: none !important;
+  }
+
+  // React mounts on this first-child host; Casual's root must fill it.
+  &__react-host {
+    display: block;
+    width: 100%;
+    height: 100%;
+
+    > div:first-child {
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+
+// Co-editing indicator: sheet_state stamps data-collab on the window el.
+.editor-sheet[data-collab="live"] .editor-sheet__save-status::before,
+.editor-sheet[data-collab="connected"] .editor-sheet__save-status::before {
+  content: "\25CF  Live";
+  color: #16a34a;
+  font-weight: 600;
+  margin-right: 14px;
+}
+
+// Presence avatars (editor_sheet.setPeers) — stacked initials before Live.
+.editor-sheet__presence {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.editor-sheet__avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  margin-left: -7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font: 600 11px/1 Inter, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  box-sizing: border-box;
+
+  &:first-child {
+    margin-left: 0;
+  }
+
+  &--more {
+    background: #6b7280;
+  }
+}
+
+.editor-sheet__peers-pop {
+  position: absolute;
+  z-index: 20000;
+  min-width: 200px;
+  padding: 8px 6px;
+  background: #fff;
+  border: 1px solid #e3e6ea;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  font: 14px/1.3 Inter, system-ui, sans-serif;
+  color: #1f2328;
+}
+
+.editor-sheet__peers-title {
+  padding: 4px 10px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.editor-sheet__peers-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 7px;
+}
+
+.editor-sheet__peers-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+// Univer mounts its floating layer (cell comment popups, dropdowns, dialogs)
+// on a bare <div> straight under <body> with z-index 90. Drumee's window
+// layer is z 50001, so every such popup rendered BEHIND the sheet window
+// ("Add comment does nothing"). Lift that root above the desk.
+body > div:has(> section.univer-fixed),
+body > div:has(> [data-u-comp="rect-popup"]),
+body > div:has(> [data-u-comp="cell-popup"]),
+body > div:has(> .univer-dialog),
+body > div:has(> [class*="univer-popup"]) {
+  position: relative;
+  z-index: 60000;
+}
+
+// Univer's popup chrome inherits no font from Drumee — match the desk.
+[data-u-comp="rect-popup"],
+[data-u-comp="cell-popup"] {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.editor-sheet[data-theme="dark"] {
+  .editor-sheet__avatar {
+    border-color: #2a2e35;
+  }
+
+  .editor-sheet__peers-pop {
+    background: #2a2e35;
+    border-color: #3a3f47;
+    color: #e7ebf3;
+  }
+}

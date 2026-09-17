@@ -1,0 +1,363 @@
+/** ================================================================== *
+#   FILE : /src/drumee/builtins/editor/docs/skin
+#   TYPE : Component style — Casual Docs (DocxEditor) window
+# ===================================================================**/
+
+// The Drumee player window sets user-select:none (drag chrome). That inherits
+// onto the ProseMirror editing surface and blocks typing — re-enable selection
+// for the whole docs subtree.
+// In co-editing mode Casual shows its own autosave state, so Drumee's
+// "All changes saved" label would duplicate it.
+.editor-docs--collab .editor-docs__save-status {
+  display: none !important;
+}
+
+// "Who is here" popover under the presence avatars (docs_state).
+.editor-docs__peers-pop {
+  position: absolute;
+  z-index: 20000;
+  min-width: 200px;
+  padding: 8px 6px;
+  background: #fff;
+  border: 1px solid #e3e6ea;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  font: 14px/1.3 Inter, system-ui, sans-serif;
+  color: #1f2328;
+}
+
+.editor-docs__peers-title {
+  padding: 4px 10px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.editor-docs__peers-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 7px;
+}
+
+.editor-docs__peers-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.docs-state {
+  user-select: text;
+  -webkit-user-select: text;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  * {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  > div:first-child {
+    width: 100%;
+    height: 100%;
+  }
+
+  // Skeletons' default empty-content placeholder in this view; React owns
+  // the whole area, so the placeholder must not take space or catch clicks.
+  > .widget-blank {
+    display: none !important;
+  }
+
+  // React mounts on this child host (not on the view el — see
+  // docs_state._reactHost); the Casual root inside must still fill it.
+  &__react-host {
+    display: block;
+    width: 100%;
+    height: 100%;
+
+    > div:first-child {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  // Casual keeps a browser-local draft (IndexedDB "casual-docs", key
+  // docx-editor-autosave, always on — DocxEditor exposes no prop for it) and
+  // offers "Unsaved changes from Untitled — restore them?" on EVERY new doc.
+  // Drumee is the source of truth (autosave + Ctrl+S go to media.save), so
+  // that stale-draft prompt is only confusing here — hide it.
+  [data-testid="autosave-banner"] {
+    display: none !important;
+  }
+
+  // Co-editing shell (CasualEditor): its presence cluster (avatars · Live)
+  // sits at the right of the title row where Drumee's floating gear /
+  // maximize / close cluster lives — keep it clear of that cluster.
+  [data-testid="presence-cluster"] {
+    margin-right: 150px;
+    gap: 10px;
+
+    // Casual's 1px separator before its (hidden) Share button.
+    > span:empty {
+      display: none;
+    }
+  }
+
+  // Drumee's editable document name, injected at the left of Casual's
+  // co-editing title row (docs_state._tidyCollabChrome).
+  .editor-docs__collab-name {
+    display: flex;
+    align-items: center;
+    margin: 0 8px 0 12px;
+
+    input {
+      font: 400 16px/1.2 Inter, system-ui, sans-serif;
+      color: #1f2328;
+      background: transparent;
+      border: 0;
+      outline: none;
+      padding: 4px 8px;
+      border-radius: 6px;
+      min-width: 120px;
+      max-width: 320px;
+
+      &:hover {
+        background: #f1f3f4;
+      }
+
+      &:focus {
+        background: #fff;
+        box-shadow: 0 0 0 2px #1a73e8;
+      }
+    }
+  }
+
+  // Casual's chrome is built on Tailwind and expects its PREFLIGHT base reset
+  // (button/input: no border, transparent, font: inherit). That reset does not
+  // reach this bundle, so every toolbar button rendered with the browser's
+  // `2px outset` bevel and Arial — the "Windows 95" look. Re-create the bits of
+  // preflight Casual relies on, at ZERO specificity (`:where`) so Casual's own
+  // utilities (`.ep-root .px-2`, `.rounded`, `.bg-…`) still win, exactly as they
+  // do against the real preflight.
+  :where(.ep-root) :where(button, input, select, textarea, optgroup) {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    margin: 0;
+  }
+  :where(.ep-root) :where(button, [type="button"], [type="reset"], [type="submit"], [role="combobox"]) {
+    appearance: button;
+    -webkit-appearance: button;
+    border: 0 solid transparent;
+    background-color: transparent;
+    background-image: none;
+    padding: 0;
+    box-shadow: none;
+    cursor: pointer;
+    line-height: inherit;
+  }
+  :where(.ep-root) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"])) {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0 solid transparent;
+    background-color: transparent;
+    padding: 0;
+    box-shadow: none;
+    outline: none;
+  }
+  :where(.ep-root) :where(svg) {
+    display: block;
+    vertical-align: middle;
+  }
+  :where(.ep-root) :where(h1, h2, h3, h4, p, ul, ol, hr, figure, blockquote) {
+    margin: 0;
+    padding: 0;
+  }
+  :where(.ep-root) :where(ul, ol) {
+    list-style: none;
+  }
+  :where(.ep-root) :where(img, video) {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  :where(.ep-root) :where(a) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  // Drumee ships GLOBAL pixel-scale utilities with the same names as Tailwind's
+  // rem-scale ones — `.px-2 { padding: 2px !important }` vs Casual's
+  // `.ep-root .px-2 { .5rem }` — and its `!important` wins, so the toolbar pill
+  // collapsed to 1px/2px padding and the chrome looked cramped. Re-assert the
+  // Tailwind values for exactly the names Drumee overrides (scoped + important).
+  .ep-root {
+    .px-1 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
+    .px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    .py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+    .py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+    .pt-2 { padding-top: 0.5rem !important; }
+    .pb-1 { padding-bottom: 0.25rem !important; }
+    .pl-3 { padding-left: 0.75rem !important; }
+    .pr-1 { padding-right: 0.25rem !important; }
+    .mx-2 { margin-left: 0.5rem !important; margin-right: 0.5rem !important; }
+    .mb-1 { margin-bottom: 0.25rem !important; }
+  }
+
+  // Drumee's global menu rule `[data-state="closed"] { visibility:hidden;
+  // height:0; width:0; z-index:-1 !important }` also matches Casual's Radix
+  // Select/Popover TRIGGERS (role=combobox, data-state=closed while shut), so
+  // the toolbar's Zoom / Styles / Font dropdowns collapsed to 4px and vanished.
+  // A closed trigger must stay visible — restore it (higher specificity +
+  // !important beats the bare attribute rule). Radix unmounts closed CONTENT,
+  // so this only ever touches trigger buttons.
+  .ep-root button[data-state="closed"],
+  .ep-root [role="combobox"][data-state="closed"] {
+    visibility: visible !important;
+    height: auto !important;
+    min-height: 2rem;
+    width: auto !important;
+    margin: 0 !important;
+    z-index: auto !important;
+    overflow: visible !important;
+  }
+}
+
+.editor-docs__main {
+  position: relative;
+}
+
+// Full-width flush office-style header (same fix as the sheet editor).
+.editor-docs {
+  .drumee-topbar,
+  .drumee-topbar__bar {
+    width: 100%;
+  }
+  .drumee-topbar__identity {
+    flex: 1 1 auto;
+    gap: 10px;
+    min-width: 0;
+  }
+  // The file tile doubles as the demo's 32px document logo.
+  .drumee-topbar__filetype {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    .drumee-topbar__filetype-icon {
+      width: 32px;
+      height: 32px;
+    }
+  }
+  // Demo/Google-Docs document title: 16px regular, quiet until hovered,
+  // click-to-edit (renameInline swaps in the input below).
+  .drumee-topbar__title.editor-docs__editable-title {
+    cursor: text;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    color: var(--normal-fg-10, #202124);
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    max-width: 46ch;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      border-color: var(--normal-line-10, #e8eaed);
+    }
+  }
+  .drumee-topbar__title-input {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    color: var(--normal-fg-10, #202124);
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--active-border, #5950ff);
+    background: var(--normal-bg, #ffffff);
+    box-shadow: 0 0 0 3px var(--brand-tint, rgba(89, 80, 255, 0.18));
+    outline: none;
+    max-width: 46ch;
+  }
+  // "All changes saved" — the demo's 12px muted status, right of the title.
+  .editor-docs__save-status {
+    align-self: center;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: var(--normal-fg-40, #5f6368);
+    margin: 0 10px 0 4px;
+    transition: color 0.2s ease, opacity 0.2s ease;
+    &[data-state="saving"] {
+      opacity: 0.75;
+    }
+    &[data-state="unsaved"] {
+      color: var(--warning-fg, #b06000);
+    }
+  }
+
+  &__body {
+    overflow: hidden;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  // The Drumee bar no longer owns a row: Casual's title bar (logo + inline
+  // document name + menu row, 72px, --doc-chrome background) is the header.
+  // This floats the remaining controls (save status, gear, maximize, close)
+  // over that title bar's right side, left of Casual's own theme toggle
+  // (which sits 12px from the edge, 32px wide).
+  // NOTE the shared topbar names its rows by `fig.group` → `.editor__header`
+  // (not `.editor-docs__header`).
+  > .editor__main > .editor__header.container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: auto;
+    width: auto;
+    height: 72px;
+    min-height: 0;
+    padding: 0 12px 0 0;
+    border: 0;
+    background: transparent;
+    z-index: 200;
+    pointer-events: none;
+    &[data-header="0"] {
+      display: none;
+    }
+    .editor__header.main,
+    .drumee-topbar__bar {
+      width: auto;
+      height: 100%;
+      background: transparent;
+      justify-content: flex-end;
+      pointer-events: auto;
+    }
+    .drumee-topbar__actions {
+      align-items: center;
+      height: 100%;
+      gap: 2px;
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    align-items: stretch;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+}

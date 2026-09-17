@@ -49,8 +49,21 @@ module.exports = function (basedir) {
       include: resolve(basedir, drumee_path, 'assets', 'flags'),
       type: 'asset/resource',
     }, {
+      // @casualoffice ships real .woff2 fonts referenced from its own CSS.
+      // url-loader (deprecated under webpack 5) mis-emits them as JS modules
+      // under a .woff2 name, so the browser gets `export default "data:..."`,
+      // OTS rejects it as "invalid sfntVersion", and the Casual layout engine
+      // cannot measure text — the document page renders blank. Emit them as raw
+      // font files instead so the bytes reach the browser intact.
+      test: /\.woff2$/,
+      include: /[\\/]@casualoffice[\\/]/,
+      type: 'asset/resource',
+    }, {
       test: /(\.woff|\.woff2|\.ttf|\.eot|\.svg)($|\?.*$)/,
-      exclude: resolve(basedir, drumee_path, 'assets', 'flags'),
+      exclude: [
+        resolve(basedir, drumee_path, 'assets', 'flags'),
+        /[\\/]@casualoffice[\\/]/,
+      ],
       use: ['url-loader']
     }, {
       // Emit .wasm as a separate, content-hashed asset and resolve

@@ -53,6 +53,11 @@ const GroupMode = new Map();
 function groupOf(node = {}) {
   const filetype = String(node.filetype || "").toLowerCase();
   const ext = String(node.ext || "").toLowerCase();
+  // Univer/Casual sheets persist as .json but ARE spreadsheets — group them
+  // with the office sheets, not under "JSON", using their dataType marker.
+  const dataType = node.dataType || (node.metadata && node.metadata.dataType);
+  if (dataType === "sheet.univer" || ext === "usheet") return GROUP.sheet;
+  if (dataType === "doc.casual" || ext === "udoc") return GROUP.doc;
 
   if (filetype === "folder" || filetype === "hub") return GROUP.folder;
   if (MEDIA_TYPES.has(filetype)) return GROUP.media;
