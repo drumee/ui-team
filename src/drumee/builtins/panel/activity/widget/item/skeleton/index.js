@@ -451,6 +451,36 @@ function getActivityMeta(ui, data) {
       };
     }
 
+    // "<Somebody> deleted your workspace '<name>'" — hub.delete_hub telling the
+    // OWNER that an admin destroyed it (server _notifyOwnerOfDeletion).
+    //
+    // The NAME COMES OFF THE ROW, never from a lookup: the workspace is gone, so
+    // `data.hub_name` is a snapshot taken at delete time and is the only source
+    // that still exists. It is also why this row goes nowhere when clicked —
+    // see the `workspace_deleted` branch in ../index.js.
+    case 'workspace_deleted': {
+      const ws = `${data.hub_name || ''}`.trim();
+      return {
+        before: LOCALE.DELETED_YOUR_WORKSPACE || 'deleted your workspace',
+        // RAW, not escaped: the renderer runs every meta field through
+        // escapeHtml when it builds the sentence (see `text` below), so
+        // escaping here would double-encode — a workspace called "R&D" would
+        // read "R&amp;D". Every other branch hands its label over raw for the
+        // same reason.
+        //
+        // No quotes when the name could not be resolved, rather than an empty
+        // pair of them. The sentence still reads.
+        label: ws ? ` '${ws}'` : '',
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+        // Figma's destructive glyph — the one "meeting cancelled" and a declined
+        // invitation already use.
+        ico: 'noti-x-circle',
+        tone: BADGE.error,
+      };
+    }
+
     case 'contact_refused':
       return {
         before: LOCALE.DECLINED_YOUR_INVITATION || 'declined your contact invitation',
@@ -1013,7 +1043,13 @@ module.exports = function (ui) {
       header,
       Skeletons.Box.X({
         className: `${pfx}__row ${meta.badge}`,
-        dataset: { unread },
+        // `inert` drops the pointer cursor for a row that leads nowhere. A
+        // workspace-deleted notice is the one card in this panel with no
+        // destination — its subject no longer exists — and a row that looks
+        // clickable and then does nothing is exactly the complaint Lexis raised
+        // about workspace invites. The click is still handled (it marks the row
+        // read); only the promise of navigation is withdrawn.
+        dataset: { unread, inert: getCategory(data) === 'workspace_deleted' ? 1 : 0 },
         kids: [avatar, textBlock, actions],
       }),
     ].filter(Boolean),

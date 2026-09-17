@@ -553,6 +553,7 @@
   "STARTED_MEETING_ACTION": "started a meeting in ",
   "ENDED_MEETING_ACTION": "ended a meeting in ",
   "DECLINED_YOUR_INVITATION": "declined your contact invitation",
+  "DELETED_YOUR_WORKSPACE": "deleted your workspace",
   "CREATE_SHARED_FOLDER": "Create an external folder",
   "NOTES": "Notes:",
   "NO_CONTACT_FOUND": "No contact found",

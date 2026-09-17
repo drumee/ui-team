@@ -42,6 +42,13 @@
       background-color: var(--tertiary-grey-10);
     }
 
+    // A row whose subject no longer exists — the workspace-deleted notice. It
+    // still takes a click (that is what marks it read), so it keeps the hover
+    // fill; it just never claims to lead somewhere.
+    &[data-inert="1"] {
+      cursor: default;
+    }
+
     &:hover {
       background-color: rgba(0, 0, 0, 0.04);
     }

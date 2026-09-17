@@ -1616,6 +1616,7 @@
   "WANTS_TO_CONNECT": "хочет добавить вас в контакты",
   "ACCEPTED_YOUR_INVITATION": "принял ваше приглашение",
   "DECLINED_YOUR_INVITATION": "отклонил ваше приглашение в контакты",
+  "DELETED_YOUR_WORKSPACE": "удалил ваше рабочее пространство",
   "ZOOM": "Zoom",
   "JOIN": "Join",
   "OPEN": "Открыть",

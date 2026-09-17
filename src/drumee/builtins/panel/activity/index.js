@@ -1858,7 +1858,16 @@ class __panel_activity extends LetcBox {
       } catch (e) {
         this.warn('dismiss-activity failed', e);
       }
-    } else if (itemType === 'hub_invite' || itemType === 'contact_invite' || itemType === 'contact_refused') {
+    } else if (itemType === 'hub_invite' || itemType === 'contact_invite'
+      || itemType === 'contact_refused' || itemType === 'workspace_deleted') {
+      // `workspace_deleted` belongs in this branch for the same reason the three
+      // beside it do: it is a yp.contact_activity row (hub.delete_hub writes it
+      // through contact_log_activity), so read and trash have to address it by
+      // its contact_activity id. Left out, its category would fall past every
+      // branch to the mfs path and dismiss a CHANGELOG id that does not exist —
+      // the row would look gone and be back on the next reload, precisely the
+      // failure the meeting_notice comment above records.
+      //
       // Resolve the contact_activity row id. activity.list returns it via
       // `key_id` (string) and `last_id` (number); legacy paths used `id` /
       // `changelog_id`. Use the first non-empty.

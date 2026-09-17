@@ -376,6 +376,26 @@ class __activity_item extends LetcBox {
       this._dispatchService(cmd, args)
       return;
     }
+    // THE ONE ROW WITH NOWHERE TO GO. hub.delete_hub destroyed the workspace
+    // this notice is about, so there is no hub to open and no node to reveal —
+    // and the server deliberately withholds `hub_id` for that reason (see
+    // activity.js stampWorkspaceDeleted).
+    //
+    // So it is answered explicitly rather than left to fall through. Falling
+    // through would reach the `switch (category)` below, whose default arm
+    // builds a `#/desk/wm/reveal/?hub_id=…` hash out of whatever it finds —
+    // with no hub_id that lands on a broken route, and Wm's opener bails on the
+    // missing id anyway. Either way the user gets a click that silently does
+    // nothing, which is the complaint that produced this whole workstream.
+    //
+    // What a click here DOES do is mark the row read, so the badge can be
+    // cleared the same way every other notification clears it. The panel stays
+    // open on purpose: closing it with no navigation would read as "something
+    // happened" when nothing did.
+    if (this.mget('event') === 'workspace_deleted') {
+      this.triggerHandlers({ service: 'read-activity', item_type, item_key, changelog_id });
+      return;
+    }
     // Task assignment and watched-column notifications are contact_activity
     // rows. Open the task's folder on its Task tab, then dismiss the event.
     if (['task_assigned', 'task_column_change'].includes(this.mget('event'))) {
