@@ -6085,7 +6085,51 @@ class __window_folder extends mfsInteract {
       });
   }
 
+  /**
+   * May this viewer delete the workspace this window is in?
+   *
+   * ADMIN AND OWNER ONLY (Lexis, 2026-09-16). Deleting is not a write-tier
+   * action: it destroys the whole workspace for every member, so it belongs
+   * with managing members rather than with editing files. `canAdmin()` is the
+   * admin bit, which admin (0b0011111) and owner (0b0111111) both carry and
+   * edit (0b0001111) does not.
+   *
+   * Reading the WINDOW's privilege is correct even three subfolders deep:
+   * user_permission() resolves a non-hub node from the member's hub-wide grant
+   * (`resource_id='*'`) before any per-node row, so the value is the viewer's
+   * workspace role wherever the pane has browsed.
+   *
+   * Fails OPEN when the method is missing or throws — the same rule the panel's
+   * own row filter follows (skeleton/settings-action-panel allowedActions), so
+   * an unreadable privilege can never lock an owner out of their workspace.
+   * A privilege that reads as 0 is not unreadable; that is a refusal.
+   */
+  _mayDeleteWorkspace() {
+    try {
+      if (typeof this.canAdmin !== "function") return true;
+      return !!this.canAdmin();
+    } catch (e) {
+      return true;
+    }
+  }
+
   confirmFolderDelete() {
+    // ADMIN-ONLY, CHECKED HERE TOO. The panel already omits the row for anyone
+    // below admin, but that is a render-time decision and this is the action:
+    // `folder-delete` is a plain service string, so a stale skeleton or any
+    // future surface that raises it must meet the same rule. Cheap, and it
+    // keeps the rule readable next to what it guards.
+    if (!this._mayDeleteWorkspace()) {
+      if (this.warn) {
+        this.warn(
+          "[workspace-delete] refused: viewer lacks the admin bit",
+          { hub_id: this.mget(_a.hub_id), privilege: this.mget(_a.privilege) },
+        );
+      }
+      this.closeFolderSettings();
+      return Wm.alert(LOCALE.FORBIDEN_DELETE);
+    }
+
     // WHICH WORKSPACE, not which tile. That is the whole correction here.
     //
     // This used to resolve a media VIEW and refuse when it could not find one,
