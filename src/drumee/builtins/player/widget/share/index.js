@@ -48,8 +48,9 @@ function areaOf(ui) {
 /**
  * Is this file in an external workspace, i.e. may it be shared out?
  *
- * This now only decides whether the document menu shows its share-area Share
- * row. An unknown area is treated as internal so that row stays hidden.
+ * Decides whether the document and audio menus show their Share row. Hidden
+ * in an internal workspace; an unknown area counts as internal, so the row
+ * stays hidden rather than being offered on a guess.
  */
 function isExternal(ui) {
   const area = areaOf(ui);
@@ -124,11 +125,11 @@ const FILL_MS = 250;
 /**
  * What the gear menu's Share row does: open the secure-share panel.
  *
- * In every area. This used to open the panel only for an external workspace
- * and show the "External File Sharing" modal (`open` above) everywhere else,
- * but the server never restricted by area — secure_share.create checks only
- * the member's write bit — and the private-area menus now offer Share
- * alongside the Designation link (2026-09-16).
+ * The menus offer the row only in an external workspace (2026-09-17; the
+ * internal-workspace Share row was removed again). The handler itself does not
+ * re-check the area: it used to show the "External File Sharing" modal
+ * (`open` above) outside an external workspace, but no menu reaches it there
+ * any more, and the server's own check is the member's write bit.
  *
  * The source MFS view goes first: it owns the share tour, which opens the
  * panel as it comes down. When that view is gone — its folder window was

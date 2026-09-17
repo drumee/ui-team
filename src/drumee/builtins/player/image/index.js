@@ -188,9 +188,6 @@ class __player_image extends __core {
           details.push({ id: 'secure-share', label: LOCALE.SHARE, icon: 'ctxmenu-share', service: 'secure-share' });
           break;
         case _a.private:
-          // Same service as the share area's row: widget/share opens the
-          // secure-share panel in every area.
-          details.push({ id: 'share', label: LOCALE.SHARE, icon: 'app-connect', service: 'secure-share' });
           afterInfo.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, icon: 'app-share', service: 'designation-link' });
           break;
         case _a.public:
