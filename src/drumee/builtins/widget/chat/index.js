@@ -1,6 +1,22 @@
 const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
 require("./skin");
 
+/**
+ * True for a chat whose conversation belongs to a HUB rather than to the
+ * visitor: `workspace` (the workspace team chat) and `folder` (a DMZ share,
+ * where the folder is an access boundary). Everything else — bigchat, a P2P /
+ * direct room — is the visitor's own chat and carries no hub membership.
+ *
+ * Kept as one predicate on purpose. The scope list grew a second value when
+ * chat moved to workspace scope (37ab4fcc); the call sites that were updated
+ * one at a time then silently disagreed — that is what made the @-mention
+ * dropdown fall back to personal contacts in a workspace chat.
+ *
+ * `_a` is a runtime global, so this must stay a function body (evaluated on
+ * call), not a top-level constant.
+ */
+const isHubScopedChat = (scope) => scope === _a.folder || scope === "workspace";
+
 const cleanMentionText = (value) =>
   value == null ? "" : String(value).trim();
 
@@ -130,7 +146,7 @@ class __widget_chat extends LetcBox {
       // file dropped into it belongs in the folder you are standing in.
       const scope = this.mget("scope");
       this.scopedNid = scope === _a.folder ? nid : "";
-      this.postNid = scope === _a.folder || scope === "workspace" ? nid : "";
+      this.postNid = isHubScopedChat(scope) ? nid : "";
       // Optional initial file scope: lets a second chat instance mount already
       // scoped to a file thread (the full Chat-tab side panel) so its first
       // list load is the thread itself — no General-then-thread flash.
@@ -2043,8 +2059,7 @@ class __widget_chat extends LetcBox {
   }
 
   _syncScopedFolderContent(data = {}, fallback = {}) {
-    const scope = this.mget("scope");
-    if (scope !== _a.folder && scope !== "workspace") return;
+    if (!isHubScopedChat(this.mget("scope"))) return;
     const messageData = this._messageData(data);
     const hasFolderAttachmentFallback =
       fallback && Object.prototype.hasOwnProperty.call(fallback, "folder_attachment");
@@ -4096,10 +4111,21 @@ class __widget_chat extends LetcBox {
     }
 
     if (mentionType === "contact") {
-      // Folder-chat scope: mention workspace members (people who can see
-      // this folder), not the visitor's personal chat rooms. Falls back to
-      // contact_rooms when not in folder scope (bigchat / direct chat).
-      if (this.mget("scope") === _a.folder && folderHubId) {
+      // Hub-scoped chat: mention the WORKSPACE MEMBERS (people who can see
+      // this conversation), not the visitor's personal chat rooms. Both the
+      // workspace team chat and a DMZ share's folder chat belong here —
+      // `workspace` was missing, so every normal workspace chat fell through
+      // to contact_rooms and offered the visitor's contacts instead.
+      //
+      // A PERSONAL workspace is excluded: it IS the user, so its hub_id is
+      // Visitor.id (see desk._workspaceKey) and it has no members — the server
+      // answers [] for a personal hub (hub._members_by_type). Its folder chat
+      // keeps the contact-room source it has always had, so widening the scope
+      // test above cannot empty the dropdown there.
+      //
+      // Falls back to contact_rooms outside a hub (bigchat / direct chat).
+      const isPersonalHub = !!Visitor.id && `${folderHubId}` === `${Visitor.id}`;
+      if (isHubScopedChat(this.mget("scope")) && folderHubId && !isPersonalHub) {
         const payload = {
           service: SERVICE.hub.get_members_by_type,
           hub_id: folderHubId,
