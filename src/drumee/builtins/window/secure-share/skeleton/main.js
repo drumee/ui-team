@@ -63,6 +63,8 @@ const __skl_secure_share = function(_ui_) {
   const permSection = Skeletons.Box.Y({
     className : `${pfx}__perm-section`,
     kids      : [
+      // What is being shared — file, folder or workspace (./subject).
+      require('./subject')(_ui_),
       Skeletons.Note({ className: `${pfx}__section-label`, content: LOCALE.SECURE_SHARE_PERMISSION_LEVEL }),
       Skeletons.Note({ className: `${pfx}__section-hint`,  content: LOCALE.SECURE_SHARE_PERMISSION_HINT }),
       Skeletons.Box.Y({
@@ -83,7 +85,7 @@ const __skl_secure_share = function(_ui_) {
           ]
         }))
       })
-    ]
+    ].filter(Boolean)
   });
 
   // ── Access management section ─────────────────────────────

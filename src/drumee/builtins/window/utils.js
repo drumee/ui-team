@@ -1051,7 +1051,7 @@ class __window_mfs extends DrumeeMFS {
     // naming the dead workspace, and _snapshotWorkspace persisting it for the
     // next page load to reopen.
     if (sameHub && args.filetype === _a.hub) {
-      this.goodbye();
+      this.goodbye(this._goodbyeArgs());
       return;
     }
 
@@ -1061,9 +1061,24 @@ class __window_mfs extends DrumeeMFS {
     // `new RegExp("^" + filepath)` mis-parsed any name with regex syntax in it.
     const path = this._ownPath();
     if (sameHub && path && path !== "/" && this._pathIsUnder(path, filepath)) {
-      this.goodbye();
+      this.goodbye(this._goodbyeArgs());
       return;
     }
+  }
+
+  /**
+   * How this window leaves when the node it shows is removed under it.
+   *
+   * A popup shrinks towards its trigger (ui-core goodbye: 0.5s scale to 0.2),
+   * which reads as "that window closed". A HEADLESS pane fills the canvas and
+   * has no trigger, so the same tween shrank the whole workspace into the
+   * top-left corner for half a second — the "flash" seen when deleting the
+   * open workspace, right before the replacement faded in. A pane goes at
+   * once, the way a workspace switch already drops the outgoing pane
+   * (headlessLayer.feed). undefined keeps goodbye()'s own defaults.
+   */
+  _goodbyeArgs() {
+    return this.mget(_a.headless) ? { now: true } : undefined;
   }
 
   /**

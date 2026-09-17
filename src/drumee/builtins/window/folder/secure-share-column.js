@@ -73,6 +73,16 @@ function secureSharePanelSpec(win) {
     filetype: _a.folder,
     // Titles the panel "Manage access", as the drawer did.
     manage_access: 1,
+    // The header row (window/secure-share/skeleton/subject.js). A hub window is
+    // the workspace itself; any other folder window shares that folder.
+    subject: win.mget(_a.filetype) === _a.hub ? "workspace" : "folder",
+    subject_data: {
+      name: win.mget(_a.filename) || win.mget(_a.hub_name),
+      filetype: win.mget(_a.filetype),
+      area: win.mget(_a.area),
+      ctime: win.mget(_a.ctime),
+      mtime: win.mget(_a.mtime),
+    },
     sys_pn: SECURE_SHARE_PANEL_PN,
     partHandler: win,
     uiHandler: [win],

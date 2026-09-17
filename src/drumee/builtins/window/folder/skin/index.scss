@@ -642,6 +642,56 @@
       // window-button dropdown (mixins/drumee window-button-dropdown-menu).
       @include drumee.window-button-dropdown-menu;
 
+      // Show / close animation. ui-core's own tween is made instant for this
+      // menu (toolkit newMenu `duration`): the menu root only turns
+      // data-state="1" in its onComplete, and the card is display:none until
+      // then, so that tween only ever delayed the panel and then popped it in.
+      // The animation lives here instead:
+      //  - open:  @starting-style fades/drops the card in the moment the root
+      //           flips to 1 and the wrapper leaves display:none;
+      //  - close: `allow-discrete` holds display (the wrapper's, and ui-core's
+      //           inner .menu-items, which also goes display:none on close)
+      //           until the fade-out has run.
+      .menu-topic-items__wrapper,
+      .menu-items {
+        transition:
+          display 0.16s allow-discrete,
+          visibility 0.16s allow-discrete;
+      }
+
+      .window-button__dropdown-menu__items {
+        transform-origin: top right;
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+        transition:
+          opacity 0.16s ease-in,
+          transform 0.16s ease-in;
+      }
+
+      .window-button__dropdown-menu__wrapper[data-state="1"]
+        .window-button__dropdown-menu__items {
+        opacity: 1;
+        transform: none;
+        transition:
+          opacity 0.18s ease-out,
+          transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+        @starting-style {
+          opacity: 0;
+          transform: translateY(-6px) scale(0.97);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .menu-topic-items__wrapper,
+        .menu-items,
+        .window-button__dropdown-menu__items,
+        .window-button__dropdown-menu__wrapper[data-state="1"]
+          .window-button__dropdown-menu__items {
+          transition: none;
+        }
+      }
+
       .window-button__dropdown-menu__item--create-group {
         position: relative;
       }
@@ -2467,6 +2517,12 @@
 
   &__split-body {
     grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 360px);
+    // Pin the row to the body's height. Left implicit (auto), the row sized to
+    // its tallest item's automatic minimum — 0 only while that item clips. The
+    // Files column drops to overflow:visible while "+ New" is open (below), so
+    // the row grew to the whole file grid, stretched Team Chat past its content
+    // and clamped its scroll to the top. Same guard as [data-view="meeting"].
+    grid-template-rows: minmax(0, 1fr);
     height: 100%;
     // Transparent: this is the ROW that holds the two cards, and in 43:23955
     // the 8px gutter between them shows the white canvas. A grey ground here
