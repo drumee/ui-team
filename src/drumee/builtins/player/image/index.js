@@ -1061,7 +1061,8 @@ class __player_image extends __core {
     // Reserve vertical space for the player chrome (topbar + bottom controls).
     const CHROME_H = 132;
     const max_w = window.innerWidth - 100;
-    const max_h = window.innerHeight - 100 - CHROME_H;
+    // Window (canvas + chrome) at most 70% of the viewport height.
+    const max_h = Math.round(window.innerHeight * 0.7) - CHROME_H;
 
     let width, height, top, left;
 

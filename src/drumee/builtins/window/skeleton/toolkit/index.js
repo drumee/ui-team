@@ -1613,6 +1613,10 @@ export function newMenu(ui, opt = {}) {
     // The parent row must be clickable without dismissing the outer panel.
     // Folder leaf handlers close the ancestor menu explicitly.
     persistence: _a.always,
+    // Instant ui-core tween: the root only reaches data-state="1" when it
+    // completes, so any real duration just delays the panel. The show / close
+    // animation is CSS (window/folder/skin, __new-ctrl).
+    duration: 0.01,
     callback: () => {
       const group = ui.getPart && ui.getPart("new-create-group");
       if (group && group.el) group.el.dataset.submenu = _a.closed;

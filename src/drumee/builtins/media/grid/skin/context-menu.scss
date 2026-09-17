@@ -46,6 +46,13 @@
     &:hover {
       background-color: rgba(255, 255, 255, 0.18);
     }
+
+    // Its menu is open (media/grid/index.js _stickMenuToTrigger); clicking
+    // again closes it.
+    &[data-active="1"],
+    &[data-active="1"]:hover {
+      background-color: rgba(255, 255, 255, 0.32);
+    }
   }
 
   .media-context-menu__folder-trigger-icon {

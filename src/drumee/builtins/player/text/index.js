@@ -34,6 +34,13 @@ class __player_text extends __player {
   async initialize(opt = {}) {
     this.size = _K.docViewer;
     super.initialize(opt);
+    // player/interact.js has just replaced this.size with the shared default
+    // (95% of the viewport height), and display() keeps whatever size it finds
+    // here. Open text windows shorter: 75% of the viewport, chrome included.
+    if (!Visitor.isMobile()) {
+      const height = Math.round(window.innerHeight * 0.75);
+      this.size = { width: this.size.width, height: height - (this.topbarHeight || 42) };
+    }
     require('../skin');
     require('./skin');
     if (opt.maiden) { // Maiden note

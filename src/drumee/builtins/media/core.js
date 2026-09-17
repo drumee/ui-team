@@ -182,6 +182,8 @@ class __media_core extends DrumeeMFS {
         break;
       case _a.folder:
         items = this.contextmenuItemsForFolder();
+        // External workspace (area `share`): no "Show QR code" on folders.
+        if (this.mget(_a.area) === _a.share) qrcodeOffered = false;
         break;
 
       case _a.schedule:
@@ -335,11 +337,11 @@ class __media_core extends DrumeeMFS {
     // Sectioned File menu — Figma "File menu action" 2026-09-16
     // (node 1646-106518), which supersedes the 2026-06-10 spec:
     //   1. Make a copy · Download
-    //   2. Organize · Share
+    //   2. Organize
     //   3. Rename · See chat threads
     //   4. (area links + per-type extras — the frame draws a plain file, so
     //      it shows no such row; they keep their own section above the close)
-    //   5. Get info · Prohibit any change · Move to trash
+    //   5. Share (external workspace only) · Get info · Prohibit any change · Move to trash
     // Each inner array renders as one separator-delimited section.
     const sections = [];
 
@@ -352,16 +354,9 @@ class __media_core extends DrumeeMFS {
     fileActions.push(_a.download);
     sections.push(fileActions);
 
-    /** 2 — organize (Move submenu) + the outside-world share link. Design's
-     * "Share" is `secureShare` (LOCALE.SHARE), NOT `_a.share` (LOCALE.INVITE),
-     * which stays hidden on files per Lexis 2026-06-14 (parent-folder/hub
-     * only). Gate unchanged — share-area regular files, as before, when it
-     * lived at the bottom with the other area links. */
+    /** 2 — organize (Move submenu). */
     const organize = [];
     if (editable) organize.push('organize');
-    if (editable && this.isRegularFile() && this.mget(_a.area) === _a.share) {
-      organize.push('secureShare');
-    }
     if (organize.length) sections.push(organize);
 
     /** 3 — rename + chat threads (inside a folder window only) */
@@ -410,7 +405,15 @@ class __media_core extends DrumeeMFS {
 
     /** 5 — the design's closing block: details, lock, trash — one section, in
      * that order. `lock` used to sit at the tail of the extras above. */
-    const closing = [_a.info];
+    const closing = [];
+    /** External workspace (area `share`): the outside-world share link sits
+     * directly above Get info. "Share" is `secureShare` (LOCALE.SHARE, icon
+     * ctxmenu-share), NOT `_a.share` (LOCALE.INVITE), which stays hidden on
+     * files per Lexis 2026-06-14 (parent-folder/hub only). */
+    if (editable && this.isRegularFile() && this.mget(_a.area) === _a.share) {
+      closing.push('secureShare');
+    }
+    closing.push(_a.info);
     if (editable) {
       closing.push(this.mget(_a.status) === _a.locked ? _e.unlock : _e.lock);
     }
