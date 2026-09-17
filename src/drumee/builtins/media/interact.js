@@ -1118,19 +1118,25 @@ class __media_interact extends media_core {
         // Without it this line would fire again — and a tour the user escaped
         // is not marked seen, so it would be raised, deferred, re-entered and
         // raised again, forever.
+        //
+        // The panel's own header row draws the same subject from the same fields
+        // (window/secure-share/skeleton/subject.js), so they are built once and
+        // handed to both.
+        const _subject = _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file");
+        const _subjectData = {
+          name: this.mget(_a.filename),
+          filetype: _ft,
+          // _fileExt() is the canonical read — `ext` is an SQL alias and
+          // `extension` the field, and only one of them is present.
+          ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
+          filesize: this.mget(_a.filesize),
+          ctime: this.mget(_a.ctime),
+          mtime: this.mget(_a.mtime),
+          area: this.mget(_a.area),
+        };
         const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
-          subject: _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file"),
-          subject_data: {
-            name: this.mget(_a.filename),
-            filetype: _ft,
-            // _fileExt() is the canonical read — `ext` is an SQL alias and
-            // `extension` the field, and only one of them is present.
-            ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
-            filesize: this.mget(_a.filesize),
-            ctime: this.mget(_a.ctime),
-            mtime: this.mget(_a.mtime),
-            area: this.mget(_a.area),
-          },
+          subject: _subject,
+          subject_data: _subjectData,
         });
         // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
         // tour teaches the secure-share panel, and the panel was opening while
@@ -1171,6 +1177,12 @@ class __media_interact extends media_core {
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
+        item.subject = _subject;
+        item.subject_data = _subjectData;
+        // A player's Share row: the panel slides in and out
+        // (window/secure-share `_floating`). Other floating opens keep the
+        // window's own appearance.
+        if (args.floating) item.floating = 1;
         const launchFloating = () => Wm.launch(item, { explicit: 1, singleton: 1 });
         // Opt-in, and only players pass it (player/widget/share): they are
         // windows stacked above the host folder window, so the drawer below
@@ -1203,6 +1215,8 @@ class __media_interact extends media_core {
             nid      : item.nid,
             hub_id   : item.hub_id   || this.mget(_a.hub_id),
             filetype : item.filetype || this.mget(_a.filetype),
+            subject      : _subject,
+            subject_data : _subjectData,
             uiHandler: [host],
           });
         })).catch(() => once(launchFloating));

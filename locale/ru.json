@@ -2140,6 +2140,7 @@
   "SECURE_SHARE_EMAIL_REQUIRED": "Пожалуйста, добавьте хотя бы один адрес электронной почты для ограничения доступа.",
   "SECURE_SHARE_CREATE": "Получить ссылку",
   "SECURE_SHARE_TITLE_FILE": "Безопасный обмен файлом",
+  "SECURE_SHARE_LOADING": "Подготовка безопасного обмена…",
   "SECURE_SHARE_TITLE_FOLDER": "Безопасный обмен папкой",
   "SECURE_SHARE_NAV_LOGIN": "Войти",
   "SECURE_SHARE_GATE_FOOTER_HEADLINE": "Создайте своё суверенное рабочее пространство с Drumee",

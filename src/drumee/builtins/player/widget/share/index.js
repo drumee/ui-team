@@ -24,6 +24,7 @@
 require("./skin");
 
 const { isSharedArea } = require("dmz/sharebox/area");
+const loading = require("./loading");
 
 const CN = "player-share-restricted";
 
@@ -115,6 +116,11 @@ function open() {
   cta.focus();
 }
 
+// How long the loading card stays up at the least (see click below).
+const MIN_VISIBLE_MS = 500;
+// The fill's own transition (skin), so 100% is seen before the card goes.
+const FILL_MS = 250;
+
 /**
  * What the gear menu's Share row does: open the secure-share panel.
  *
@@ -129,10 +135,56 @@ function open() {
  * closed after the player opened — the panel is launched directly with the
  * minimal item it reads (nid, hub_id, filetype), so the row is never a dead click.
  *
+ * LOADING. `window_secure_share` is a lazy chunk (seeds.js), so the first click
+ * pays a fetch and parse before anything can appear. A loading card centred
+ * on the player (./loading) covers that span: its bar moves on real
+ * milestones — the card is up, the chunk has landed (Kind.waitFor, the same
+ * handle the desk header's Manage-access button waits on), the panel is being
+ * asked for — and it fades as the panel slides in (window/secure-share skin,
+ * `data-floating`).
+ *
+ * It stays up for at least MIN_VISIBLE_MS. A cached chunk resolves in a
+ * frame, and a card that flashes for 16ms reads as a glitch rather than as
+ * feedback; the floor is short enough that a warm click still feels immediate.
+ * A chunk that fails to load still takes the card down and still tries to
+ * open, rather than leaving it up.
+ *
  * @param {object} ui   the player
  * @param {object} cmd  the row that was clicked
+ * @returns {Promise} settles once the panel has been asked for
  */
 function click(ui, cmd) {
+  const card = loading.show(ui);
+  const shownAt = Date.now();
+  card.progress(15);
+  const warm =
+    typeof Kind !== "undefined" && Kind && _.isFunction(Kind.waitFor)
+      ? Promise.resolve(Kind.waitFor("window_secure_share")).catch(() => {})
+      : Promise.resolve();
+  const wait = (ms) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
+  return warm
+    .then(() => {
+      card.progress(70);
+      return wait(MIN_VISIBLE_MS - (Date.now() - shownAt));
+    })
+    .then(() => {
+      card.progress(100);
+      return wait(FILL_MS);
+    })
+    .then(() => {
+      // The panel starts its slide as the card starts its fade: one hand-off,
+      // not a gap.
+      const hidden = card.hide();
+      launch(ui, cmd);
+      return hidden;
+    })
+    .catch((e) => {
+      card.hide();
+      throw e;
+    });
+}
+
+function launch(ui, cmd) {
   // `floating` is what makes the panel visible. The MFS view's own Share row
   // renders it as a drawer INSIDE the host folder window (Figma), but a player
   // is a sibling window painted OVER that folder window — same window-manager
@@ -152,6 +204,16 @@ function click(ui, cmd) {
       filetype: ui.mget(_a.filetype),
       area: ui.mget(_a.area),
       filename: ui.mget(_a.filename),
+      // Slides in and out (window/secure-share, `_floating`).
+      floating: 1,
+      // The panel's header row. A player only ever holds a file.
+      subject: "file",
+      subject_data: {
+        name: ui.mget(_a.filename),
+        filetype: ui.mget(_a.filetype),
+        ext: ui.mget(_a.ext) || ui.mget("extension"),
+        area: ui.mget(_a.area),
+      },
     },
     { explicit: 1, singleton: 1 },
   );
