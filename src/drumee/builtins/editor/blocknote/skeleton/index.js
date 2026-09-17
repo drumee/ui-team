@@ -29,9 +29,36 @@ function __skl_editor_blocknote(_ui_) {
     kids: [require("./topbar")(_ui_)],
   });
 
+  // Notion's defining first interaction is typing the page title, so the note
+  // carries one in the page itself rather than only in the window chrome. It
+  // sits ABOVE the editor rather than inside it: React owns the editor element
+  // (createRoot), so nothing of ours can live in there.
+  const title = Skeletons.Box.X({
+    className: `${pfx}__title-row`,
+    kids: [
+      Skeletons.Entry({
+        className: `${pfx}__title-input`,
+        sys_pn: "page-title",
+        name: _a.filename,
+        value: _ui_.mget(_a.filename) || "",
+        placeholder: LOCALE.UNTITLED,
+        mode: "commit",
+        service: "rename-note",
+        uiHandler: [_ui_],
+        partHandler: _ui_,
+      }),
+    ],
+  });
+
   const body = Skeletons.Box.Y({
     className: `${pfx}__body ${group}__body`,
-    sys_pn: _a.content,
+    kids: [
+      title,
+      Skeletons.Box.Y({
+        className: `${pfx}__surface`,
+        sys_pn: _a.content,
+      }),
+    ],
   });
 
   const tooltips = Skeletons.Wrapper.Y({

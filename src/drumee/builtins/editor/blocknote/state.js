@@ -7,6 +7,7 @@ import "@blocknote/mantine/style.css";
 
 const { xhRequest } = require("@drumee/ui-essentials");
 const { parse, serialize } = require("libs/blocknote-format");
+const { resolveTheme } = require("router/theme");
 
 // The BlockNote surface, mounted into a Drumee widget element.
 //
@@ -129,7 +130,12 @@ class __blocknote_state extends DrumeeMFS {
       createElement(BlockNoteView, {
         editor: this._editor,
         editable: !opt.readOnly,
-        theme: "light",
+        // Ask the app rather than hardcoding a literal. Dark mode is disabled
+        // product-wide today (router/theme.js DARK_MODE_ENABLED = false), so
+        // this resolves to "light" and renders EXACTLY as before — the point is
+        // that if that switch is ever flipped, the editor follows instead of
+        // staying a white slab in a dark app.
+        theme: resolveTheme(),
       })
     );
 

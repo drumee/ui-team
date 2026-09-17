@@ -3191,5 +3191,6 @@
   "NOTE_BETA": "Note (bêta)",
   "ALL_CHANGES_SAVED": "Toutes les modifications sont enregistrées",
   "UNSAVED_CHANGES": "Modifications non enregistrées",
-  "NOTE_UNREADABLE": "Note illisible — ouverte en lecture seule"
+  "NOTE_UNREADABLE": "Note illisible — ouverte en lecture seule",
+  "UNTITLED": "Sans titre"
 }

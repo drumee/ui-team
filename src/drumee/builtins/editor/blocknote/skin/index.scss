@@ -67,6 +67,56 @@
     overflow: hidden;
   }
 
+  // ---- The page column -------------------------------------------------
+  // Notion measures its text column at ~708px. Left at full width the lines
+  // ran ~1832px — about 220 characters — which is unreadable, and going
+  // full-frame made that worse rather than better. 816px = 708px of text plus
+  // the 54px gutters BlockNote needs on each side for the drag handle and "+".
+  &__title-row,
+  &__surface .bn-editor {
+    max-width: 816px;
+    margin-inline: auto;
+    padding-inline: 54px;
+    box-sizing: border-box;
+  }
+
+  &__title-row {
+    width: 100%;
+    flex: 0 0 auto;
+    padding-top: 32px;
+    padding-bottom: 4px;
+  }
+
+  // The page title, styled as the H1 it stands in for — borderless until
+  // touched, the way Notion's is.
+  &__title-input {
+    width: 100%;
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: rgba(0, 0, 0, 0);
+      padding: 0;
+      font-size: 40px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--normal-fg-10);
+      font-family: inherit;
+
+      &::placeholder {
+        color: var(--normal-fg-20);
+        opacity: 0.45;
+      }
+    }
+  }
+
+  &__surface {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   &-topbar {
     &__container {
       width: 100%;
@@ -159,7 +209,4 @@
     -webkit-user-select: text;
   }
 
-  .bn-editor {
-    padding-inline: 32px;
-  }
 }

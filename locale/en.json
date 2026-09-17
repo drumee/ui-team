@@ -3190,5 +3190,6 @@
   "NOTE_BETA": "Note (beta)",
   "ALL_CHANGES_SAVED": "All changes saved",
   "UNSAVED_CHANGES": "Unsaved changes",
-  "NOTE_UNREADABLE": "Cannot read this note — opened read-only"
+  "NOTE_UNREADABLE": "Cannot read this note — opened read-only",
+  "UNTITLED": "Untitled"
 }

@@ -229,6 +229,19 @@ class __editor_blocknote extends __player {
   }
 
   /**
+   * Mirror the page title into the window topbar, so the two never disagree.
+   * @param {String} name
+   */
+  _syncWindowTitle(name) {
+    if (!this.ensurePart) return;
+    this.ensurePart("ref-window-name")
+      .then((p) => {
+        if (p && p.el && !p.isDestroyed() && p.set) p.set({ content: name });
+      })
+      .catch(() => { });
+  }
+
+  /**
    * @param {"saved"|"saving"|"unsaved"|"readonly"} state
    */
   _setStatus(state) {
@@ -385,6 +398,26 @@ class __editor_blocknote extends __player {
       case _e.save:
         this.saveContent();
         break;
+      // The in-page title. media.save already sends `filename` on every save and
+      // the server renames in place for the same nid (replace_content writes
+      // filename/user_filename through mfs_set_node_attr), so renaming rides on
+      // the save path that already exists — no second service, no second node.
+      case "rename-note": {
+        const next = String(
+          (cmd && cmd.getValue && cmd.getValue()) ||
+          (cmd.el && cmd.el.querySelector("input") && cmd.el.querySelector("input").value) ||
+          ""
+        ).trim();
+        if (!next || next === this.mget(_a.filename)) break;
+        // A filename is a path segment: refuse the separators outright rather
+        // than letting the server mangle them.
+        const safe = next.replace(/[\/\\]/g, "-");
+        this.mset({ filename: safe });
+        this._syncWindowTitle(safe);
+        this.markDirty();
+        break;
+      }
+
       case _e.close:
         this.goodbye();
         break;
