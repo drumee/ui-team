@@ -2251,9 +2251,21 @@ class desk_module extends LetcBox {
    * filter as well as `data-state` because the selector it replaces tested
    * `.menu-topic` too, and that class is applied by the menu widget rather
    * than being present from the first render.
+   *
+   * "wsmenu" is the switcher's ONLY part name (desk/skeleton/topbar
+   * workspaceSwitcher). It was waited on as "ws-wrapper", a second `sys_pn`
+   * added to the same literal — the later key wins in an object literal, so
+   * that promise never resolved, the observer was never installed and the
+   * root never carried `data-desk-wsmenu`: the switcher's lift in
+   * desk/skin never fired and the open panel drew under the folder window
+   * whenever a Wm modal (the post-create "Who has access" panel, Invite)
+   * had dissolved the window manager's isolation.
+   *
+   * Re-run from onPartReady("wsmenu") as well: the observer is bound to the
+   * element of one render, and the switcher is re-rendered after init.
    */
   _installWsMenuMirror() {
-    this.ensurePart("ws-wrapper").then((p) => {
+    this.ensurePart("wsmenu").then((p) => {
       if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
       const root = this.el;
       if (!root || !root.dataset || typeof MutationObserver !== "function") return;
@@ -6190,6 +6202,9 @@ class desk_module extends LetcBox {
       // inert (desk/skeleton/topbar workspaceSwitcher).
       case "wsmenu":
         this._wsSwitcher = child;
+        // Bind the data-desk-wsmenu mirror to THIS render's element — the one
+        // installed at init watched the first render only.
+        this._installWsMenuMirror();
         break;
 
       // The address chip. It is the switcher's button now, and it cannot be

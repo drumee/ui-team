@@ -691,10 +691,10 @@ function userMenu(pfx, ui) {
 function workspaceSwitcher(pfx, ui) {
   return Skeletons.Menu({
     className: `${pfx}__ws-wrapper`,
-    // Named so desk/index.js _installWsMenuMirror can reach this element and
-    // mirror its open state onto the desk root. `sys_pn` with no `partHandler`
-    // fires no onPartReady — it only makes ensurePart() resolve.
-    sys_pn: "ws-wrapper",
+    // The part name is `sys_pn: "wsmenu"` below — desk/index.js
+    // _installWsMenuMirror waits on it. Do NOT add a second `sys_pn` here: an
+    // object literal keeps only the LAST duplicate key, so an earlier
+    // "ws-wrapper" silently vanished and the mirror never installed.
     direction: _a.down,
     // duration MUST be set explicitly. Without it the menu widget falls back to
     // Visitor.timeout() -> 2000, which is MILLISECONDS, while gsap reads
