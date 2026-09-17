@@ -319,7 +319,14 @@ class __panel_activity extends LetcBox {
         return '';
 
       case 'close-activity-panel':
-        this._hide()
+        // Through the desk when it is there: the same close the bell's second
+        // press takes, which also puts the breadcrumb back on the workspace
+        // path and turns the bell off. _hide() as well, for the data-anim it
+        // stamps and for a panel mounted without a desk.
+        this._hide();
+        if (typeof Desk !== 'undefined' && Desk && typeof Desk._closeUtilityPanel === 'function') {
+          Desk._closeUtilityPanel('toggle-activity');
+        }
         return '';
 
       case 'delete-entity':
