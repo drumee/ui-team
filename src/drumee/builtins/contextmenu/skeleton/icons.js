@@ -70,6 +70,17 @@ const __icon = function (_ui_) {
     // Workspace rows (topbar switcher ⋯). Same ctxmenu-* glyphs the folder
     // menu uses for the equivalent action, so the two panels read alike.
   };
+  // External (area `share`), internal (`private`) and personal (`personal`,
+  // or unset — media/core.js seedFolder falls back to personal) workspaces:
+  // "Prohibit any change" draws the prohibit glyph instead of the padlock.
+  if (_ui_ && _.isFunction(_ui_.mget) && [_a.share, _a.private, _a.personal].includes(_ui_.mget(_a.area) || _a.personal)) {
+    a.lock = "app-prohibit";
+  }
+  // Internal workspace (area `private`): "Designation link" draws the share
+  // glyph instead of the ctxmenu link icon.
+  if (_ui_ && _.isFunction(_ui_.mget) && _ui_.mget(_a.area) === _a.private) {
+    a.designationLink = "app-share";
+  }
   if (localStorage.getItem("showHidden")) {
     a.showHidden = "backoffice_preview";
   } else {
