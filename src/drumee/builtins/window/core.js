@@ -1196,6 +1196,23 @@ class __window_core extends __utils {
           { explicit: 1 }
         );
 
+      case "add-sheet":
+        if (require("libs/over-limit").guardWrite("write")) return;
+        // IN-APP: open the spreadsheet as a desk window (PO's call). The
+        // standalone #/sheet tab route still exists for later.
+        return Wm.launch(
+          { kind: "editor_sheet", uiHandler: [this] },
+          { explicit: 1 }
+        );
+
+      case "add-doc":
+        if (require("libs/over-limit").guardWrite("write")) return;
+        // Casual Docs (native DocxEditor) as a desk window.
+        return Wm.launch(
+          { kind: "editor_docs", uiHandler: [this] },
+          { explicit: 1 }
+        );
+
       case "new-document":
         return this.newDocument(cmd);
 

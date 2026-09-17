@@ -1702,6 +1702,7 @@ class __window_manager extends push {
   }
 
   openContent(media, args) {
+    // Sheets open IN-APP (the editor_sheet desk window) — no tab redirect.
     if (
       media &&
       media.mget &&

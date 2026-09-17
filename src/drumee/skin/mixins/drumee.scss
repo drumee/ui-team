@@ -298,4 +298,17 @@
     fill: #ffa8dc;
     color: #ffa8dc;
   }
+
+  // Casual Doc / Sheet rows: the SAME glyphs as their Document / Spreadsheet
+  // siblings, tinted with the Casual brand colours (same as the file tiles)
+  // so the two pairs stay distinguishable.
+  .window-button__dropdown-menu__item--doc svg {
+    fill: #1a73e8;
+    color: #1a73e8;
+  }
+
+  .window-button__dropdown-menu__item--sheet svg {
+    fill: #148aa8;
+    color: #148aa8;
+  }
 }

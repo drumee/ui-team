@@ -105,7 +105,16 @@ const __skl_window_application = function (filetype, opt = {}) {
   let { media } = opt;
   let r = a[filetype] || {};
   if (media && media.model) {
-    let { mimetype, dataType } = media.model.toJSON();
+    let { mimetype, dataType, ext } = media.model.toJSON();
+    // Univer/Casual sheets carry the dedicated `.usheet` extension (its mimetype
+    // may not be application/json), so route them to the editor by extension.
+    if (String(ext || "").toLowerCase() === "usheet") {
+      return { ...opt, kind: "editor_sheet" };
+    }
+    // Casual Docs carry `.udoc` (base64-wrapped .docx).
+    if (String(ext || "").toLowerCase() === "udoc") {
+      return { ...opt, kind: "editor_docs" };
+    }
     if (media.imgCapable && media.imgCapable()) {
       let { kind } = a[filetype] || { kind: "image_viewer" };
       return { kind, ...opt };
@@ -128,6 +137,8 @@ const __skl_window_application = function (filetype, opt = {}) {
           switch (dataType) {
             case "diagram.state":
               return { ...opt, kind: "editor_diagram" };
+            case "sheet.univer":
+              return { ...opt, kind: "editor_sheet" };
             default:
               return { kind: "text_viewer", ...opt };
           }

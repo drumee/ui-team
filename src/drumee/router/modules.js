@@ -45,6 +45,13 @@ const Modules = {
     access: _a.public,
     loose_host: true,
   },
+  // Standalone full-page spreadsheet opened in its own tab (#/sheet?nid=…&hub_id=…).
+  // Private: an unauthenticated tab is routed to signin, then lands back here.
+  sheet: {
+    kind: 'module_sheet',
+    access: _a.private,
+    loose_host: true,
+  },
   welcome: {
     kind: 'module_welcome',
     access: _a.public,
