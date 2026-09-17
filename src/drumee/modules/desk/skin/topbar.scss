@@ -83,8 +83,17 @@
   to { transform: rotate(360deg); }
 }
 
+// The utility icons' spinner while their screen loads (desk _runUtilityBusy).
+@keyframes utility-btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .desk-module-topbar__ws-head-action[data-loading="1"] svg {
+    animation: none;
+  }
+
+  .desk-module-topbar__utility-btn[data-loading="1"]::after {
     animation: none;
   }
 
@@ -1452,6 +1461,40 @@
       background: var(--radio-on-bg);
       color: var(--primary-40);
     }
+
+    // Working — stamped by desk _runUtilityBusy until the screen behind the
+    // icon is up. The glyph (and badge) give way to a border spinner in the
+    // same colour, pinned to the centre so the 30px button does not reflow.
+    &[data-loading="1"] {
+      cursor: progress;
+      pointer-events: none;
+
+      .desk-module-topbar__utility-ico,
+      .desk-module-topbar__utility-badge {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 14px;
+        height: 14px;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        animation: utility-btn-spin 0.7s linear infinite;
+      }
+    }
+  }
+
+  // While one icon is loading the others are disabled: dimmed and taking no
+  // pointer input, so neither a click nor a hover tooltip gets through.
+  &__utility-cluster[data-busy="1"] &__utility-btn:not([data-loading="1"]) {
+    opacity: 0.4;
+    pointer-events: none;
   }
 
   &__utility-ico {

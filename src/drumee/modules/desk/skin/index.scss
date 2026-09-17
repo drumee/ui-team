@@ -656,6 +656,39 @@ html {
   }
 }
 
+// …AND THE WINDOW LAYERS PUT BACK WHERE THE ISOLATION HELD THEM.
+//
+// Dissolving `__ui` does not only free the floater: every populated window
+// layer escapes too, at 50000 (global `[data-state="open"]` lift) or 50001
+// (focus lift, wm/skin). At the root that is above everything the desk stacks
+// OVER the workspace — the settings/apps slot (1500: calendar_main, chat_p2p,
+// apps_main), the slide-out panels (10001: panel_activity, address_book,
+// trash), the sidebar (10002). So while an upload ran, opening any of them from
+// a `__utility-btn` drew it UNDER `window-folder__split-body`.
+//
+// Pin those layers under the slot (1500) instead — 1300, the layers' own
+// resting value, with the focused one at 1301 so the focus tie-break the 50001
+// lift exists for (headless vs windows layer, DOM order) survives. That is the
+// order the isolation gave them, and the floater (50002), meeting toast
+// (50004) and file-created toast (50003) — excluded or not `__layer` — still
+// clear everything as intended.
+//
+// NOT during a call (`data-desk-call`): that dissolver exists precisely to put
+// the windows layer over the panels, so the cap stands down for it.
+//
+// `!important` both: the global lift and the focus lift are `!important`.
+// Specificity (0,6,0) beats the global (0,1,0); (0,7,0) beats the focus lift's
+// (0,4,0).
+.desk-module[data-desk-upload]:not([data-desk-call]) {
+  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
+    z-index: 1300 !important;
+
+    &:has(> [data-state="1"]) {
+      z-index: 1301 !important;
+    }
+  }
+}
+
 // …AND THE COST OF DISSOLVING IT, PAID HERE.
 //
 // The rule above is scoped to the floater, but its effect is not: dissolving
@@ -669,6 +702,10 @@ html {
 // workspace switcher and the account menu open UNDER `window-folder__split-body`
 // and read as a dead click. Nothing about them changed — the window came up to
 // meet them.
+//
+// (For an upload ALONE the window-layer cap above now keeps the window at
+// 1300/1301, so this arm is belt-and-braces there; it is still load-bearing for
+// the call trigger, which the cap stands down for.)
 //
 // LIFTED, not dissolved, and the same reasoning as the tour and wrapper-modal
 // lifts below: dissolving the topbar's own context would drop the bar under the
@@ -856,6 +893,34 @@ html {
   // skin/lib/utils.scss, which otherwise pins this wrapper to 50000.
   .window-manager__wrapper-modal[data-state="open"] {
     z-index: var(--z-index-modal, 100000) !important;
+  }
+}
+
+// …AND AN IN-WINDOW TOUR STAYS OVER THE PANE WHILE THAT MODAL IS UP.
+//
+// The dissolve above releases every window layer to the root, the headless
+// layer holding `window-folder__split-body` included — at 50000, or 50001 while
+// it hosts the focused window (wm/skin). The tour lives in the desk overlay at
+// 50000. So any Wm.confirm raised during a tour — the "Unlock Admin Console"
+// card from the apps icon is the one met — painted the workspace pane OVER the
+// tour: the card and the pane, where the user expected the card over the tour.
+// Nothing ended the tour; the pane simply came up past it.
+//
+// Pinned back under the overlay while both flags are up: 1300, the layers' own
+// resting value, and 1301 for the focused one so the focus tie-break the 50001
+// lift exists for still holds — the same cap, for the same reason, as the
+// upload one (`[data-desk-upload]` above). The modal itself stays at 100000,
+// above the tour. The upload floater and meeting toast are excluded as there.
+//
+// Specificity: (0,6,0) beats the global `[data-state="open"]` (0,1,0) and the
+// focus lift (0,4,0), both `!important`; the nested rule is (0,7,0).
+.desk-module[data-window-tour="1"][data-wm-modal="open"] {
+  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
+    z-index: 1300 !important;
+
+    &:has(> [data-state="1"]) {
+      z-index: 1301 !important;
+    }
   }
 }
 
@@ -1105,6 +1170,40 @@ html {
     // One BELOW the topbar above, which has to win: see the note there.
     z-index: 100001;
   }
+
+  // The notifications, contacts and trash panels OVER the tour. The bell leaves an in-window tour
+  // running (desk toggle-activity), but the tour sits in the overlay at 50000
+  // over the workspace while this container is at 10001 — and the panel slides
+  // in over that same area, so it opened UNDER the tour and nothing appeared.
+  //
+  // 50001: one above the overlay, and still under the topbar (100002) whose
+  // menus hang down over it and the upload floater (50002). The container is
+  // zero-width and its panels park off-screen with `pointer-events: none` when
+  // closed, so the lift blocks no part of the tour. Contacts and Trash share the
+  // container and also leave the tour up (togglePanel `tourStaysUp`), so they
+  // ride the same lift. Trash's Empty Trash prompt is a wrapper-modal at 100000,
+  // above both. (Trash's blurred scrim is phone-only, where no tour runs.)
+  .desk-module__panel-container.right {
+    z-index: 50001;
+  }
+}
+
+// ── A boot that will raise the migrate tour ──────────────────────────────────
+//
+// `data-boot-tour-hold` is stamped by desk _holdBootTourPane before the restore
+// and released once the tour is on screen (or it is clear none is coming). The
+// restored workspace pane stays hidden meanwhile, so a refresh shows the tour
+// and never window-folder__split-body first.
+//
+// Hidden, NOT removed: the pane must still lay out, because the boot polls for
+// it and the tour measures its box to lay itself over it. `opacity` as well as
+// `visibility`, since a descendant can set `visibility: visible` back and no
+// descendant can undo an ancestor's opacity. The headless layer is already a
+// stacking context (z-index), so opacity changes nothing about its stacking.
+.desk-module[data-boot-tour-hold="1"] .window-manager__layer.headless {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 // ── A desk-hosted tour ───────────────────────────────────────────────────────
