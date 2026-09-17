@@ -14,8 +14,18 @@
 }
 
 .editor-sheet {
+  // Paint the WINDOW, not only the state view that mounts later: while the
+  // editor chunk downloaded (several MB on a cold cache) the window was
+  // see-through — the folder grid and the chat showed through a bare
+  // "Loading…" — because the only opaque background lived on .sheet-state.
+  // The window root carries `.editor-sheet` (not `__ui`).
+  background-color: #ffffff;
+  &[data-theme="dark"] {
+    background-color: var(--sheet-dark-bg, #14161a);
+  }
+
   &__ui {
-    background-color: var(--default-bg);
+    background-color: var(--default-bg, #ffffff);
     box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
@@ -519,13 +529,38 @@ body > div:has(> [class*="univer-popup"]) {
   }
 }
 
-// "Loading…" while the editor chunk downloads (sheet/skeleton body).
+// "Loading…" while the editor chunk downloads (sheet/skeleton body): a ring
+// spinner above the label, centred in the body.
+@keyframes editor-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .editor-sheet .editor-loading {
   align-self: center;
   margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   font: 400 14px/1.4 Inter, system-ui, sans-serif;
   color: #6b7280;
+
+  &::before {
+    content: "";
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid #e5e7eb;
+    border-top-color: #148aa8;
+    animation: editor-loading-spin 0.8s linear infinite;
+  }
 }
 .editor-sheet[data-theme="dark"] .editor-loading {
   color: #aab2c2;
+
+  &::before {
+    border-color: #3a3f47;
+    border-top-color: #1aa3c4;
+  }
 }

@@ -196,17 +196,22 @@ module.exports = {
   editor_note: function () {
     return import("./builtins/editor/note");
   },
+  // webpackPrefetch: the Casual editors weigh several MB (Univer, the .docx
+  // layout engine); fetched lazily on first use they left a first-time
+  // visitor staring at an empty window for as long as the download took.
+  // Prefetch hints let the browser pull them at idle after the desk is up,
+  // so the first open reads from cache.
   editor_sheet: function () {
-    return import("./builtins/editor/sheet");
+    return import(/* webpackPrefetch: true */ "./builtins/editor/sheet");
   },
   sheet_state: function () {
-    return import("./builtins/editor/sheet/state");
+    return import(/* webpackPrefetch: true */ "./builtins/editor/sheet/state");
   },
   editor_docs: function () {
-    return import("./builtins/editor/docs");
+    return import(/* webpackPrefetch: true */ "./builtins/editor/docs");
   },
   docs_state: function () {
-    return import("./builtins/editor/docs/state");
+    return import(/* webpackPrefetch: true */ "./builtins/editor/docs/state");
   },
   email_input_item: function () {
     return import("./builtins/widget/email-input-item/index");
