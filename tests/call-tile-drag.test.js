@@ -1,11 +1,17 @@
 // The parked-call tile can be dragged anywhere on screen
-// (builtins/window/meeting/index.js — _bindCallTileDrag and friends).
+// (builtins/webrtc/call-parking.js — _bindCallTileDrag and friends).
 //
-// The drag lives inside a 2000-line window class that needs the whole runtime
-// (Skeletons, a WebRTC room, the window manager) to instantiate, so this pulls
-// the constants and the drag block out of the SOURCE FILE and evaluates them
-// against a minimal DOM. It therefore tests the shipped text rather than a copy
-// of it: rename a method or change the clamp and this fails.
+// The drag used to live inside window/meeting's 2000-line window class; it now
+// lives in the call-parking mixin, which window_meeting and window_connect are
+// both given (Object.assign onto the prototype, like webrtc/reactions and
+// webrtc/screenshare). That is the only thing that changed for this test — the
+// methods, the constants and the arithmetic are the same shipped text, now read
+// from their new home.
+//
+// The block still needs the whole runtime to instantiate through a real window,
+// so this pulls the constants and the drag block out of the SOURCE FILE and
+// evaluates them against a minimal DOM. It therefore tests the shipped text
+// rather than a copy of it: rename a method or change the clamp and this fails.
 //
 // What is worth testing here is the arithmetic and the state machine, which is
 // exactly what a browser makes hardest to see: where the tile lands, when a
@@ -17,7 +23,7 @@ const { readFileSync } = require("node:fs");
 const { resolve } = require("node:path");
 const _ = require("underscore");
 
-const SRC = resolve(__dirname, "../src/drumee/builtins/window/meeting/index.js");
+const SRC = resolve(__dirname, "../src/drumee/builtins/webrtc/call-parking.js");
 const src = readFileSync(SRC, "utf8");
 
 const CONSTS = src
@@ -28,7 +34,14 @@ const CONSTS = src
 // Everything from the first drag helper to the end of _unbindCallTileDrag.
 const from = src.indexOf("  _callTileBox() {");
 const last = src.indexOf("  _unbindCallTileDrag() {");
-const METHODS = src.slice(from, src.indexOf("\n  }\n", last) + 4);
+// The mixin is an object literal, so each method closes with "  }," rather
+// than the class body's "  }". Accept either, and strip a trailing comma so the
+// slice is still a run of METHOD DEFINITIONS that can be wrapped in a class.
+const endTok = src.indexOf("\n  },\n", last) >= 0 ? "\n  },\n" : "\n  }\n";
+const METHODS = src
+  .slice(from, src.indexOf(endTok, last) + endTok.length)
+  // object-literal method separators -> class-body (no separators)
+  .replace(/^  \},$/gm, "  }");
 assert.ok(from > 0 && last > from, "drag block not found in " + SRC);
 
 const TILE = { width: 300, height: 180 };

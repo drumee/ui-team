@@ -720,6 +720,83 @@
     min-height: 0;
     overflow: hidden;
   }
+
+  // ── PARKED AS A CORNER TILE ─────────────────────────────────────────────
+  //
+  // 300x180 in the desk's call-dock (builtins/webrtc/call-parking). The shared
+  // shell already strips the MEETING's chrome at this size (meeting-shell
+  // `&__ui[data-call-tile="1"]`: in-topbar, chat panel, analyzers, resize
+  // handles) — but every control on this window is its own, so none of it was
+  // caught and the whole 734x600 call screen rendered inside the tile: the
+  // "Drumee connect" title bar with its three buttons, the elapsed timer across
+  // the middle, and the 64px round call actions sliced off at the bottom edge.
+  //
+  // What a parked call has to say is "this call is still live, click to come
+  // back" — the LIVE mark and the hover cover say it, and everything else is
+  // noise at this size. So: keep the video (or, before the call connects, the
+  // caller's identity, shrunk to fit), drop the rest.
+  //
+  // `!important` throughout for the same reason the shared block uses it: these
+  // elements are laid out by rules further down this file that are more
+  // specific than a plain `&__ui[…] &__x` chain.
+  &__ui[data-call-tile="1"] {
+    // Window chrome. The tile has no title bar — the dock draws the frame, the
+    // cover is the only affordance, and the close button in particular must not
+    // be reachable at a size where the tile is one click target.
+    .window-connect__call-header,
+    // The elapsed timer is an absolutely-positioned full-size overlay, which is
+    // why it read as the tile's main content.
+    .window-connect__timer-container,
+    // Status line ("Connecting…"), an absolute overlay at 15% from the top.
+    .window-connect__message-container,
+    // In-call controls, and the accept/decline row before the call connects.
+    .window-connect__commands-container,
+    .window-connect__commands,
+    .window-connect__precall-footer,
+    // Self-view during a screen share: a 176px thumbnail inside a 300px tile.
+    .window-connect__float-tiles,
+    // Popovers that can never be opened from a parked tile.
+    .window-connect__bg-effects,
+    .window-connect__devices-list {
+      display: none !important;
+    }
+
+    // Pre-call (dial / ring): keep WHO, drop the 120px avatar scale it was
+    // drawn at. A parked ringing call should still show the face it is ringing.
+    .window-connect__precall-stage {
+      padding: 0 !important;
+    }
+
+    .window-connect__avatar.user-profile {
+      width: 56px !important;
+      height: 56px !important;
+      min-width: 56px !important;
+      min-height: 56px !important;
+    }
+
+    .window-connect__caller-name {
+      font-size: 13px !important;
+      line-height: 18px !important;
+    }
+
+    // At 300px the address is unreadable and pushes the name off-centre.
+    .window-connect__caller-email {
+      display: none !important;
+    }
+
+    // The terminal panel is on screen for ~2s before the window closes itself;
+    // shrink its line rather than hide it, so a call that ended while parked
+    // still says so.
+    .window-connect__ended-message {
+      font-size: 12px !important;
+      line-height: 16px !important;
+    }
+
+    // The white panel is KEPT. The Figma call surface is white at full size and
+    // the dock draws its own frame and radius around whatever is parked in it,
+    // so there is nothing to recolour here — and the LIVE mark is a dark pill,
+    // which is what makes it legible against exactly this background.
+  }
 }
 
 // Control lock — the call controls are shown but inert during two phases where

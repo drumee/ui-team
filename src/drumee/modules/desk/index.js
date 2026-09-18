@@ -146,6 +146,15 @@ const WINDOW_TOUR_TAB = {
   share: "access",
 };
 
+// How long the workspace-rename editor takes to arrive and to leave.
+//
+// MUST MATCH the `ws-rename-in` / `ws-rename-out` keyframes in
+// desk/skin/topbar.scss — the JS owns WHEN the field is removed from the DOM,
+// the skin owns what it looks like on the way out, and a mismatch shows up
+// either as a field that vanishes mid-fade or as a gap after it has faded.
+// Change one, change both.
+const WS_RENAME_ANIM_MS = 140;
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -2242,31 +2251,50 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * Mirror "the workspace switcher panel is open" onto the desk root as
-   * `data-desk-wsmenu` — same reason as _installOrgViewMirror, and the same
+   * Mirror "a topbar dropdown is open" onto the desk root as
+   * `data-desk-topmenu` — same reason as _installOrgViewMirror, and the same
    * cost being removed: the rule that reads it had `.desk-module` as its
    * `:has()` subject, so ordinary DOM churn anywhere re-matched the root.
    *
-   * The observer watches ONE element and two attributes. `class` is in the
-   * filter as well as `data-state` because the selector it replaces tested
-   * `.menu-topic` too, and that class is applied by the menu widget rather
-   * than being present from the first render.
+   * ANY DROPDOWN, NOT JUST THE SWITCHER. This watched the ws-wrapper alone and
+   * stamped `data-desk-wsmenu`, which fed the one rule that lifts the bar over a
+   * wrapper-modal. So the workspace switcher stayed usable while the create
+   * form (`.form-folder__main`) was up — and the ORGANISATION panel and the
+   * ACCOUNT menu, which hang from the same 46px bar over the same window, did
+   * not: opening either of them during a modal drew it under
+   * `window-folder__split-body`. The modal dissolves `.window-manager__ui`, the
+   * headless layer goes to 50001 at the document root, and `.desk-module__topbar`
+   * is its own stacking context at 10003 — so every dropdown inside it loses,
+   * and there is nothing specific to the switcher about that.
+   *
+   * All three are `Skeletons.Menu` roots (org-tab skeleton/index.js,
+   * topbar.js `__ws-wrapper` / `__account-wrapper`), so ui-core gives each the
+   * `menu-topic` class and `data-state` — one test covers the bar.
+   *
+   * SCOPED TO THE BAR, not the desk. The observer takes a subtree, which is what
+   * "any dropdown" needs, but the bar is a handful of nodes; the thing worth
+   * avoiding is a `:has()` anchored on the desk ROOT, which re-matches the whole
+   * application on any mutation anywhere (see _installOrgViewMirror).
+   *
+   * `class` is in the filter as well as `data-state` because `menu-topic` is
+   * applied by the menu widget rather than being present from the first render.
    */
   _installWsMenuMirror() {
-    this.ensurePart("ws-wrapper").then((p) => {
+    this.ensurePart("top-bar").then((p) => {
       if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
       const root = this.el;
       if (!root || !root.dataset || typeof MutationObserver !== "function") return;
       if (this._wsMenuObserver) this._wsMenuObserver.disconnect();
       const sync = () => {
-        const open =
-          p.el.classList.contains("menu-topic") &&
-          p.el.getAttribute("data-state") === "1";
-        if (open) root.dataset.deskWsmenu = "1";
-        else delete root.dataset.deskWsmenu;
+        if (p.el.querySelector('.menu-topic[data-state="1"]')) {
+          root.dataset.deskTopmenu = "1";
+        } else {
+          delete root.dataset.deskTopmenu;
+        }
       };
       this._wsMenuObserver = new MutationObserver(sync);
       this._wsMenuObserver.observe(p.el, {
+        subtree: true,
         attributes: true,
         attributeFilter: ["data-state", "class"],
       });
@@ -3238,7 +3266,7 @@ class desk_module extends LetcBox {
         delete chip.el.dataset.renaming;
         return;
       }
-      box.feed(
+      box.feed([
         Skeletons.Textarea({
           className: `${cn}__ws-rename-input`,
           sys_pn: "ws-rename-input",
@@ -3259,7 +3287,23 @@ class desk_module extends LetcBox {
           service: "workspace-rename-input",
           uiHandler: [this],
         }),
-      );
+        // Enter saves, but nothing on screen said so — the field was the whole
+        // editor, and the only visible way out of it was to click away. The
+        // tick is that affordance; it takes the same decision Enter takes.
+        //
+        // bubble: 0 — the press is handled here and has no business continuing
+        // up to the window manager, which answers an unrecognised service by
+        // collapsing the open windows.
+        Skeletons.Button.Svg({
+          className: `${cn}__ws-rename-save`,
+          ico: "app-check",
+          sys_pn: "ws-rename-save",
+          service: "workspace-rename-save",
+          uiHandler: [this],
+          bubble: 0,
+          attrOpt: { title: LOCALE.SAVE },
+        }),
+      ]);
       // Focus once the widget has mounted; the editor is the point of the row.
       //
       // Deliberately NOT hung off `box.children.last()`: for a NESTED part that
@@ -3274,6 +3318,24 @@ class desk_module extends LetcBox {
           if (_.isFunction(field.select)) field.select();
         } catch (e) { }
       });
+      // Arrive rather than appear. The field takes the crumb's place in the
+      // chip, so it slides in from where the name was instead of being swapped
+      // for it between two frames. A keyframe, not a transition: there is no
+      // from-state to set and no frame to wait for — the animation runs the
+      // moment the attribute lands. Cleared by _endWorkspaceRename.
+      //
+      // A teardown still in flight from a previous edit would empty this box
+      // under the editor that just mounted; cancel it here as well as there.
+      if (this._wsRenameAnim) {
+        clearTimeout(this._wsRenameAnim);
+        this._wsRenameAnim = null;
+      }
+      if (box.el) box.el.dataset.anim = "in";
+      // Clicking away is the third way out, beside Escape and Enter — see
+      // _dismissWorkspaceRename. Bound here rather than at the top of this
+      // method so it cannot outlive an editor that never mounted, and after the
+      // feed so the press that OPENED the editor is long finished.
+      this._bindWorkspaceRenameDismiss();
     });
     return true;
   }
@@ -3286,11 +3348,44 @@ class desk_module extends LetcBox {
    * changed it in the first place.
    */
   _endWorkspaceRename() {
+    // Every ending routes through here, so this is the one place that cannot be
+    // forgotten — the individual endings release it earlier, before they await.
+    this._unbindWorkspaceRenameDismiss();
     const st = this.__wsRename;
     const chip = (st && st.chip) || this._crumbGroupPart;
     const box = (st && st.box) || this._wsRenamePart;
-    if (box && box.el && !(box.isDestroyed && box.isDestroyed())) box.feed([]);
-    if (chip && chip.el) delete chip.el.dataset.renaming;
+
+    // ONLY THE VISUAL TEARDOWN WAITS. The state teardown — __wsRename, the
+    // document listener — is done by the callers and stays synchronous, so the
+    // six paths that end an edit keep the ordering they already had. All that
+    // is deferred here is emptying the slot and giving the crumb back.
+    const finish = () => {
+      this._wsRenameAnim = null;
+      if (box && box.el && !(box.isDestroyed && box.isDestroyed())) {
+        delete box.el.dataset.anim;
+        box.feed([]);
+      }
+      // AFTER the field has gone, not beside it: the crumb and the editor share
+      // the row, so un-hiding it any earlier puts both in the chip at once and
+      // the name appears to jump as the field collapses.
+      if (chip && chip.el) delete chip.el.dataset.renaming;
+    };
+
+    // A pending teardown from a previous edit must not fire against this one —
+    // Escape, then Rename again inside the animation window, would otherwise
+    // blank the editor that had just opened.
+    if (this._wsRenameAnim) clearTimeout(this._wsRenameAnim);
+
+    // Nothing on screen to animate (the slot was never fed, or the desk has
+    // rebuilt under it): take it down now rather than hold the crumb hostage
+    // for 140ms of nothing.
+    if (!box || !box.el || (box.isDestroyed && box.isDestroyed())) {
+      this._wsRenameAnim = null;
+      return finish();
+    }
+
+    box.el.dataset.anim = "out";
+    this._wsRenameAnim = setTimeout(finish, WS_RENAME_ANIM_MS);
   }
 
   /**
@@ -3307,6 +3402,7 @@ class desk_module extends LetcBox {
     // has to be emptied and the crumb un-hidden. Deferred so the widget
     // finishes destroying before the box is re-fed.
     if (cmd.status === _e.Escape) {
+      this._unbindWorkspaceRenameDismiss();
       return _.defer(() => {
         this._endWorkspaceRename();
         this.__wsRename = null;
@@ -3314,6 +3410,11 @@ class desk_module extends LetcBox {
     }
     // Anything else is a keystroke, not an end to the edit.
     if (![_a.commit, _e.Enter].includes(cmd.status)) return;
+
+    // This edit is ending here; the click-outside listener has nothing left to
+    // dismiss. Released before the write so a press landing while the request
+    // is in flight cannot raise the prompt for an edit already committed.
+    this._unbindWorkspaceRenameDismiss();
 
     // Close the editor and give the chip its name back, whichever way this
     // ended. Read the state OUT before clearing it: _endWorkspaceRename needs
@@ -3331,6 +3432,42 @@ class desk_module extends LetcBox {
     // Nothing typed, or nothing changed: close without a request. An empty
     // name would rename the workspace to nothing.
     if (!value || value === st.current) return done();
+
+    return this._finishWorkspaceRename(value, cmd);
+  }
+
+  /**
+   * Write the new name and take the editor down.
+   *
+   * SHARED BY BOTH WRITE PATHS — Enter/commit above, and Save on the
+   * click-outside prompt (_dismissWorkspaceRename). The holder-scoped payload
+   * and the breadcrumb follow-up are the one thing here that must not drift
+   * between the two, which is why this is a method rather than a second copy.
+   *
+   * `cmd` is the editor widget when there is one to tear down (the Enter path
+   * has it; the click-outside path reads the field's own value and passes
+   * whatever the slot is holding). Optional on purpose — _endWorkspaceRename
+   * empties the slot either way.
+   *
+   * @param {String} value the trimmed new name; the caller has already decided
+   *        it is non-empty and different from `st.current`
+   * @param {Object} [cmd] the editor widget
+   */
+  _finishWorkspaceRename(value, cmd) {
+    const st = this.__wsRename;
+    if (!st) return;
+
+    // Close the editor and give the chip its name back, whichever way this
+    // ended. Read the state OUT before clearing it: _endWorkspaceRename needs
+    // the same chip and slot this edit was started on.
+    const done = () => {
+      try {
+        if (cmd && _.isFunction(cmd.goodbye)) cmd.goodbye();
+        else if (cmd && _.isFunction(cmd.softDestroy)) cmd.softDestroy();
+      } catch (e) { }
+      this._endWorkspaceRename();
+      this.__wsRename = null;
+    };
 
     const posted = st.tile._commitRename(value);
     // _commitRename answers nothing when it decides there is no write to make
@@ -3364,6 +3501,149 @@ class desk_module extends LetcBox {
         // needed to stop claiming a rename that never happened.
         this.warn("Workspace rename failed", e);
         done();
+      });
+  }
+
+  /**
+   * The Save tick beside the field.
+   *
+   * NEVER ASKS. The click-outside path raises a Save/Discard prompt because a
+   * press somewhere else in the desk does not say what the user meant; pressing
+   * Save says exactly what they meant, so it takes the decision Enter takes and
+   * gets on with it.
+   *
+   * Reads the FIELD rather than the widget's model, for the same reason
+   * _dismissWorkspaceRename does: it is the live text, and the model is only
+   * refreshed on the widget's own commit/blur.
+   */
+  _saveWorkspaceRename() {
+    const st = this.__wsRename;
+    if (!st) return;
+
+    // This edit is ending either way, so the document listener has nothing left
+    // to dismiss. Released before the write, so a press landing while the
+    // request is in flight cannot raise the prompt for an edit already saved.
+    this._unbindWorkspaceRenameDismiss();
+
+    const field = st.box && st.box.el
+      && st.box.el.querySelector("textarea, input");
+    const value = String((field && field.value) || "").trim();
+    const cmd = st.box && st.box.children && _.isFunction(st.box.children.last)
+      ? st.box.children.last()
+      : null;
+
+    // Nothing typed, or nothing changed: close without a request, exactly as
+    // the Enter path does. An empty name would rename the workspace to nothing.
+    if (!value || value === st.current) {
+      this._endWorkspaceRename();
+      this.__wsRename = null;
+      return;
+    }
+
+    return this._finishWorkspaceRename(value, cmd);
+  }
+
+  /**
+   * CLICKING AWAY ENDS THE EDIT.
+   *
+   * Escape and Enter were the only two ways out, so a click anywhere else left
+   * the field sitting in the chip with the breadcrumb still hidden behind it
+   * (`data-renaming="1"`) — the edit looked abandoned but was still live, and
+   * the crumb did not come back until the user found their way back to the
+   * field.
+   *
+   * `mousedown` on the document in the CAPTURE phase, the same shape as the
+   * desk's other dismissals (_userMenuDismiss, _suggestionsDismiss). Bound only
+   * while the editor is up.
+   *
+   * DELIBERATELY NOT THE WIDGET'S `blur`. ui-core's entry fires one
+   * (widgets/entry/input/index.js _onBlur) and it looks like the obvious hook,
+   * but blur is not "clicked outside": it also fires when the browser window
+   * loses focus, and again when the confirm below takes focus — which would
+   * re-enter this path in the middle of the question it just asked.
+   */
+  _bindWorkspaceRenameDismiss() {
+    if (this._wsRenameDismiss) return;
+    this._wsRenameDismiss = (e) => this._dismissWorkspaceRename(e && e.target);
+    document.addEventListener("mousedown", this._wsRenameDismiss, true);
+  }
+
+  /**
+   * Release the listener. Called from every ending — Escape, Enter, Save,
+   * Discard — so a stale handler can never outlive the edit it belongs to.
+   */
+  _unbindWorkspaceRenameDismiss() {
+    if (!this._wsRenameDismiss) return;
+    document.removeEventListener("mousedown", this._wsRenameDismiss, true);
+    this._wsRenameDismiss = null;
+  }
+
+  /**
+   * A press landed somewhere that is not the editor. End the edit.
+   *
+   * UNCHANGED TEXT CLOSES SILENTLY, which is what Escape already does and what
+   * the Enter path already does for a name that did not change. There is
+   * nothing to decide, so asking would be noise.
+   *
+   * CHANGED TEXT ASKS. A click on the desk is not a decision to rename a
+   * workspace — commit-on-blur would rename one by accident — and it is not a
+   * decision to throw away what was typed either. So the two real answers are
+   * offered and neither is taken on the user's behalf.
+   *
+   * @param {Element} [t] what was pressed
+   */
+  _dismissWorkspaceRename(t) {
+    const st = this.__wsRename;
+    if (!st) return this._unbindWorkspaceRenameDismiss();
+    if (t && _.isFunction(t.closest)) {
+      // The editor itself, and the chip it is drawn in.
+      if (t.closest(".desk-module-topbar__ws-rename")) return;
+      // Our own prompt. Its buttons are a press like any other, and taking one
+      // as "clicked outside" would close the edit under the answer.
+      if (t.closest(".window-manager__wrapper-modal")) return;
+    }
+
+    // BEFORE the prompt, not after. The press that answers it is another
+    // mousedown on the document, and a listener still attached would re-enter
+    // here and stack a second prompt on the first.
+    this._unbindWorkspaceRenameDismiss();
+
+    // The FIELD, not the widget's model: this is the live text the user typed,
+    // and it is what ui-core's own blur handler would have copied into the
+    // model anyway.
+    const field = st.box && st.box.el
+      && st.box.el.querySelector("textarea, input");
+    const value = String((field && field.value) || "").trim();
+    const cmd = st.box && st.box.children && _.isFunction(st.box.children.last)
+      ? st.box.children.last()
+      : null;
+
+    if (!value || value === st.current) {
+      this._endWorkspaceRename();
+      this.__wsRename = null;
+      return;
+    }
+
+    return Wm.confirm({
+      title: LOCALE.SAVE_CHANGES,
+      message: value,
+      confirm: LOCALE.SAVE,
+      confirm_type: "primary",
+      cancel: LOCALE.DISCARD,
+      cancel_type: "secondary",
+      buttonClass: "ws-rename-dismiss",
+      mode: "hbf",
+      // NO BACKDROP. This is confirm()'s own documented case for it: the prompt
+      // is ABOUT the name the user just typed, which is sitting in the chip
+      // right behind it, and dimming the surface the question is about makes it
+      // harder to check rather than easier. The card carries its own shadow, so
+      // it still reads as raised without one.
+      overlay: "none",
+    })
+      .then(() => this._finishWorkspaceRename(value, cmd))
+      .catch(() => {
+        this._endWorkspaceRename();
+        this.__wsRename = null;
       });
   }
 
@@ -9651,6 +9931,9 @@ class desk_module extends LetcBox {
       // Value/commit events from that inline editor.
       case "workspace-rename-input":
         return this._onWorkspaceRenameInput(cmd);
+
+      case "workspace-rename-save":
+        return this._saveWorkspaceRename();
 
       // Mute popup CARDS for every workspace — an empty hub_id is the global
       // scope in activity/mute.js. It suppresses the interrupting card only:
