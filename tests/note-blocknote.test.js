@@ -358,6 +358,25 @@ test("the editor saves the NEW extension, which is what converts the node", () =
   assert.match(src, /id: nid/, "the save must target the SAME node");
 });
 
+test("opening an old note does not convert it", () => {
+  // A conversion is a write. onChange can fire while an editor mounts with
+  // imported content, and that alone would convert a file somebody only
+  // opened — which matters because a markdown file might be a README, not a
+  // note. An imported note therefore waits for a real input event.
+  const src = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/state.js"), "utf8");
+  assert.match(
+    src,
+    /if \(this\._converted && !this\._userTouched\) return;/,
+    "an imported note must ignore changes until the user actually edits"
+  );
+  assert.match(src, /"beforeinput", "paste", "drop"/,
+    "typing, paste and drop all have to arm it");
+  // The guard is scoped to imported notes: a .dnote opens and behaves exactly
+  // as it did before this migration.
+  assert.match(src, /if \(this\._converted\) this\._armUserEdits\(\);/);
+});
+
 test("an unreadable old note is not replaced by an empty one", () => {
   // Same guard as a corrupt .dnote: a markdown file that imports to nothing is
   // a failed read, not an empty note, or autosave would blank it.

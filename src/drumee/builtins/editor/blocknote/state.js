@@ -129,6 +129,32 @@ class __blocknote_state extends DrumeeMFS {
   }
 
   /**
+   * Opening an old note must NOT convert it.
+   *
+   * A conversion is a write, and the promise made about this migration is that
+   * it happens when somebody EDITS the note — not when they glance at it. But
+   * `onChange` cannot be trusted to mean "the user typed": an editor seeded
+   * with imported content can fire it while mounting, and that alone would be
+   * enough for the autosave to convert a file the user only opened. Since a
+   * markdown file might be somebody's README rather than a note, converting on
+   * a look is not acceptable.
+   *
+   * So for an imported note the first change is ignored until a real input
+   * event has reached the editor. `beforeinput` covers typing, paste and drop;
+   * once any of them fires, the note behaves like any other.
+   */
+  _armUserEdits() {
+    if (!this.el || this._armed) return;
+    this._armed = 1;
+    const wake = () => {
+      this._userTouched = 1;
+    };
+    for (const ev of ["beforeinput", "paste", "drop"]) {
+      this.el.addEventListener(ev, wake, true);
+    }
+  }
+
+  /**
    * @returns {String|null}
    */
   _sourceUrl() {
@@ -181,9 +207,13 @@ class __blocknote_state extends DrumeeMFS {
       opt.readOnly = true;
     }
 
+    if (this._converted) this._armUserEdits();
+
     // Every real edit marks the window dirty; the window owns the debounce.
     this._unsubscribe = this._editor.onChange(() => {
       if (this._loadFailed) return;
+      // An imported note waits for a genuine keystroke — see _armUserEdits.
+      if (this._converted && !this._userTouched) return;
       if (this.editor && this.editor.markDirty) this.editor.markDirty();
     });
 
