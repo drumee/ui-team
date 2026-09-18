@@ -327,6 +327,41 @@ test("the new note format still wins over the legacy check", () => {
   } finally { restore(); }
 });
 
+test("NOTHING launches the old markdown editor any more", () => {
+  // The menus were only half the surface. Three more places create a note by
+  // naming the kind directly — a folder window, the desk dock, and the DMZ
+  // share view — and none of them goes through the window resolver, so
+  // changing the routing alone left them making .md files. Enumerated here
+  // because that is exactly the kind of thing a grep finds and a diff hides.
+  const launchers = [
+    "src/drumee/builtins/window/folder/index.js",
+    "src/drumee/modules/desk/wm/dock/index.js",
+    "src/drumee/modules/dmz/wm/index.js",
+    "src/drumee/modules/desk/index.js",
+    "src/drumee/builtins/window/core.js",
+    "src/drumee/builtins/window/configs/application.js",
+  ];
+  for (const f of launchers) {
+    const src = readFileSync(resolve(ROOT, f), "utf8");
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    assert.ok(
+      !/kind:\s*["']editor_markdown["']/.test(code),
+      `${f} still opens the old markdown editor`
+    );
+  }
+});
+
+test("the old editor is hidden, NOT removed", () => {
+  // Duy, 2026-09-18: "hide it, don't remove it yet". It stays registered so
+  // backing the new Note out is a one-line routing change, not a revert — and
+  // so nothing that still names the kind explodes.
+  const seeds = readFileSync(resolve(ROOT, "src/drumee/seeds.js"), "utf8");
+  assert.match(seeds, /editor_markdown:/, "the old editor must stay registered");
+  assert.match(seeds, /editor_note:/, "the legacy rich-text note must stay registered");
+  const dir = resolve(ROOT, "src/drumee/builtins/editor/markdow/index.js");
+  assert.ok(readFileSync(dir, "utf8").length > 0, "its source must still be there");
+});
+
 test("markdown is NEVER written back", () => {
   // The guarantee the whole migration rests on. BlockNote's own API says the
   // export "un-nests children and removes certain styles"

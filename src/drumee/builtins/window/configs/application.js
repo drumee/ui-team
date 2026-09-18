@@ -63,8 +63,12 @@ const __skl_window_application = function (filetype, opt = {}) {
 
     // Reached only when nothing above reads a mimetype off the node; the
     // markdown branch at the top of the resolver is what normally catches
-    // these. editor_markdown stays wired for the other text formats it owns
-    // (html, txt) and as the fallback if the new Note is ever backed out.
+    // these.
+    //
+    // With this entry moved, NOTHING routes to editor_markdown any more. It is
+    // left registered in seeds.js on purpose rather than deleted (Duy,
+    // 2026-09-18: "hide it, don't remove it yet"), so backing the new Note out
+    // is a one-line change here rather than a revert.
     markdown: {
       kind: "editor_blocknote",
     },

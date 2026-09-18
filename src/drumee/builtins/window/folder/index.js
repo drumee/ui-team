@@ -1939,7 +1939,7 @@ class __window_folder extends mfsInteract {
         this.closeNewMenu(cmd);
         if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.windowsLayer.append({
-          kind: "editor_markdown",
+          kind: "editor_blocknote",
           uiHandler: [this],
         });
 

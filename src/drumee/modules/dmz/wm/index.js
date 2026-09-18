@@ -652,13 +652,14 @@ class __dmz_wm extends winman {
    * saves via media.save as the recipient: a signed-in can_edit recipient's
    * node-grant authorizes + node-scopes the write (stage-verified); an anonymous
    * recipient is blocked by the A3 read-only ceiling (media.save is write-src).
-   * Editor opens as a draggable window in the windows-layer (markdow extends the
-   * player → inherits the DMZ viewport containment).
+   * Editor opens in the windows-layer; editor_blocknote extends the same player
+   * base the markdown editor did, and its _workspaceRect() falls back to the
+   * viewport when the desk chrome is absent — which is exactly the DMZ case.
    */
   _newNote() {
     if (!this.windowsLayer) return;
     return this.windowsLayer.append({
-      kind: "editor_markdown",
+      kind: "editor_blocknote",
       uiHandler: [this],
       target: this,
     });
