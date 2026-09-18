@@ -3193,6 +3193,7 @@
   "NOTE_UNREADABLE": "Cannot read this note — opened read-only",
   "NOTE_UPGRADES_ON_SAVE": "Opened from the old format — saving upgrades this note",
   "NOTE_BLOCKS": "Insert block",
+  "NOTE_TOOLBAR": "Toolbar",
   "NOTE_BLOCK_TEXT": "Text",
   "NOTE_BLOCK_H1": "Heading 1",
   "NOTE_BLOCK_H2": "Heading 2",

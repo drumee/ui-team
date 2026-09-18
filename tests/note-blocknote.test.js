@@ -279,7 +279,7 @@ test("every language carries the new keys", () => {
   // menu row, which is exactly the kind of thing nobody notices until QA.
   for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
     const dict = JSON.parse(readFileSync(resolve(ROOT, `locale/${lang}.json`), "utf8"));
-    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_BLOCKS"]) {
+    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_BLOCKS", "NOTE_TOOLBAR"]) {
       assert.ok(dict[key], `locale/${lang}.json is missing ${key}`);
     }
   }
@@ -435,10 +435,13 @@ test("the insert rail is a toggle that is remembered", () => {
   const topbar = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/topbar.js"), "utf8");
   assert.match(topbar, /service: "toggle-rail"/);
-  // The icon has to agree with the label: three dots means "more options",
-  // and this opens an insert palette.
-  assert.match(topbar, /ico: "ph-plus"/);
+  // The icon, the label and the action have to agree. It has been wrong twice:
+  // three dots ("more options") labelled "Insert block", then a plus, which
+  // promises an insert and delivers a panel. It shows a panel, so it says so.
+  assert.match(topbar, /ico: "ph-sidebar-simple"/);
   assert.ok(!/ico: "ph-dots-three"/.test(topbar));
+  assert.ok(!/ico: "ph-plus"/.test(topbar));
+  assert.match(topbar, /tooltips: LOCALE\.NOTE_TOOLBAR/);
   assert.match(topbar, /uiHandler: \[ui\]/, "a service with no uiHandler never fires");
   const win = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
@@ -498,6 +501,12 @@ test("the rail floats in the margin and its side is one switch", () => {
   assert.match(skin, /transform: translateY\(-50%\);/);
   assert.match(skin, /max-height: calc\(100% - 24px\);/,
     "a short window must not let it run past the frame");
+  // 🚨 Hiding a Box needs to out-specify the framework's own `.drumee-box`
+  // display rule — equal specificity meant ui-core won and the toggle looked
+  // dead. Pinned because the symptom is "the button does nothing", which
+  // points at the handler, not at CSS.
+  assert.match(skin, /&-rail__container\.drumee-box \{\s*display: none;/);
+  assert.match(skin, /&\[data-rail="1"\] &-rail__container\.drumee-box \{\s*display: flex;/);
   assert.match(skin, /&\[data-rail-side="left"\] &-rail__container/,
     "both sides have to be expressible");
   // the labels must flip with the side or they run off-window

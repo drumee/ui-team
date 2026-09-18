@@ -119,13 +119,26 @@ $note-gutter: 54px;
     box-shadow:
       0 1px 2px rgb(16 24 40 / 6%),
       0 4px 12px rgb(16 24 40 / 6%);
-    // hidden until the "..." toggle asks for it
+  }
+
+  // 🚨 Hiding a Box is NOT `display: none` on its own class.
+  //
+  // Skeletons sets the flex display for every Box through a global rule on
+  // `.drumee-box`. That is ONE class, and so is `…-rail__container`, so the two
+  // have equal specificity and ui-core's stylesheet — loaded later — won.
+  // Measured: the attribute flipped correctly and the rail stayed `display:
+  // flex` regardless, which read as a button that does nothing (Duy,
+  // 2026-09-18). Pairing the class with `.drumee-box` out-specifies it.
+  //
+  // Hidden by DEFAULT rather than on `[data-rail="0"]`, so the rail cannot
+  // flash open in the moment before the window has written the attribute.
+  &-rail__container.drumee-box {
     display: none;
   }
 
   // The toggle writes data-rail on the WINDOW, so one attribute drives both
   // the rail and the pressed state of the button.
-  &[data-rail="1"] &-rail__container {
+  &[data-rail="1"] &-rail__container.drumee-box {
     display: flex;
   }
 

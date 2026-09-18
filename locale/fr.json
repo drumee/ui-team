@@ -3194,6 +3194,7 @@
   "NOTE_UNREADABLE": "Note illisible — ouverte en lecture seule",
   "NOTE_UPGRADES_ON_SAVE": "Ouverte depuis l’ancien format — l’enregistrement met à niveau cette note",
   "NOTE_BLOCKS": "Insérer un bloc",
+  "NOTE_TOOLBAR": "Barre d’outils",
   "NOTE_BLOCK_TEXT": "Texte",
   "NOTE_BLOCK_H1": "Titre 1",
   "NOTE_BLOCK_H2": "Titre 2",

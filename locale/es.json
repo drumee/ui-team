@@ -2985,6 +2985,7 @@
   "NOTE_UNREADABLE": "No se puede leer esta nota: abierta en solo lectura",
   "NOTE_UPGRADES_ON_SAVE": "Abierta desde el formato antiguo: al guardar se actualizará esta nota",
   "NOTE_BLOCKS": "Insertar bloque",
+  "NOTE_TOOLBAR": "Barra de herramientas",
   "NOTE_BLOCK_TEXT": "Texto",
   "NOTE_BLOCK_H1": "Título 1",
   "NOTE_BLOCK_H2": "Título 2",
