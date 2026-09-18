@@ -61,10 +61,30 @@ const _build_mobile_topbar = (ui) => {
         uiHandler: [ui],
         kidsOpt: { active: 0 },
         kids: [
+          // A PART, fed by _setWorkspaceGlyph — not markup built once here.
+          //
+          // It used to be `area: ui.mget(_a.area)`, and nothing ever sets
+          // `area` on the DESK's model: the desk is the shell, the area belongs
+          // to the workspace open inside it. So the call was always made with
+          // `area: undefined`, which produced `class="folder-shape undefined"`
+          // (no area rule matches, so the shape fell to the #885EFF default)
+          // and sent the template's `switch (area)` past every case, so no
+          // emblem was built at all. Personal, private and external workspaces
+          // therefore drew the SAME anonymous violet folder.
+          //
+          // Being static was the second half of it: the name beside it is a
+          // part (`ws-current`) precisely because this bar is not rebuilt when
+          // the workspace changes, so even a correct area resolved here would
+          // have frozen at whatever was open on the first paint.
+          //
+          // The initial content is deliberately the neutral folder — the same
+          // thing it drew before, but now only for the moment before the open
+          // workspace resolves.
           Skeletons.Element({
             className: `${fig}__mobile-workspace-ico`,
+            sys_pn: "ws-current-ico",
+            partHandler: ui,
             content: require("media/grid/template/folder")({
-              area: ui.mget(_a.area),
               filetype: _a.hub,
               role: "desk",
               widgetId: _.uniqueId("m-ws-"),
