@@ -320,9 +320,13 @@
       color: var(--white);
       transition: background-color 0.15s ease;
 
+      // 12 in 22. At 16 the glyph filled the button's whole content box
+      // (22 less the 3px padding) edge to edge, so the tick read as a square of
+      // colour with a shape cut out of it rather than as an icon on a button.
+      // 5px of fill around it is what makes it a button.
       svg {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         // `fill`, not a colour of its own — the tick then follows `color`
         // above, and hover/disabled states only have to move one property.
         fill: currentColor;
