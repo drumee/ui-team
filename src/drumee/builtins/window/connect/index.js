@@ -378,7 +378,8 @@ class __window_connect extends __room {
         this.defaultState(_a.cancel);
         if (this.el) this.el.dataset.callState = 'offline';
         this.stateMessage(LOCALE.X_IS_NOT_ONLINE.format(this.mget('display')));
-        Visitor.playSound(_K.dialtones.offline, 1);
+        // Silent by design: the "<name> is not currently online" panel is the
+        // whole message. The old looping dial tone added nothing but noise.
         break;
 
       case 'connect':
