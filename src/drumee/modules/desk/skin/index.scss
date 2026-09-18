@@ -673,20 +673,60 @@ html {
 // (50004) and file-created toast (50003) — excluded or not `__layer` — still
 // clear everything as intended.
 //
-// NOT during a call (`data-desk-call`): that dissolver exists precisely to put
-// the windows layer over the panels, so the cap stands down for it.
+// DURING A CALL TOO — this cap used to stand down for `data-desk-call`, on the
+// reasoning that the call dissolver "exists precisely to put the windows layer
+// over the panels". That was the bug. The dissolver is a blunt instrument: it
+// releases EVERY layer in the window manager, so standing the cap down lifted
+// the workspace pane and the floating windows over the desk's slide-out panels
+// as well. Observed as the Inbox going blank the moment a 1:1 call started
+// (`chat-p2p__main` covered by `window-folder__ui` at 50001) and coming back
+// the moment the call ended.
 //
-// `!important` both: the global lift and the focus lift are `!important`.
-// Specificity (0,6,0) beats the global (0,1,0); (0,7,0) beats the focus lift's
-// (0,4,0).
-.desk-module[data-desk-upload]:not([data-desk-call]) {
-  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
+// It did not even protect the call it was standing down for. Inside the
+// dissolved root the call layer is an ordinary window layer on the ordinary
+// focus ladder — 50000 at rest, 50001 only while it holds the focused window —
+// so clicking the workspace pane lifted THAT layer to 50001 and the pane
+// covered the live call. Same "my call disappeared" symptom, one layer along.
+//
+// So: cap everything as during an upload, and lift the CALL LAYER ALONE out of
+// the ladder (next rule). The call then clears the panels because it is given a
+// desk-level z-index of its own, not because the whole window manager was
+// raised around it.
+//
+// `!important` throughout: the global `[data-state="open"]` lift and the focus
+// lift are both `!important`, so this has to win on specificity. Each selector
+// here is (0,3,0) + (0,4,0) = (0,7,0), and (0,8,0) for the `:has()` variant —
+// clear of the global (0,1,0) and the focus lift (0,4,0). The attribute is
+// doubled on each so the two flags rank identically.
+.desk-module[data-desk-upload][data-desk-upload],
+.desk-module[data-desk-call][data-desk-call] {
+  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer):not(.call-layer) {
     z-index: 1300 !important;
 
     &:has(> [data-state="1"]) {
       z-index: 1301 !important;
     }
   }
+}
+
+// THE CALL LAYER'S OWN LIFT — the one thing the dissolver is actually for.
+//
+// A live call is not a window that happens to be in front; it is the thing the
+// user is doing, and it has to stay visible whether or not it holds focus. So
+// it gets a fixed desk-level z-index instead of riding `[data-state]`:
+//   slide-out panel containers  10001
+//   sidebar                     10002
+//   parked-call dock            20002  ← the same call, in its other state
+// 20002 puts the full-size call exactly where the dock already sits, which is
+// the point: docked or full size, a call outranks every desk surface, and the
+// two states can never fight because the window is only ever in one of them.
+//
+// Scoped to `[data-desk-call]` because it is meaningless otherwise — without
+// the dissolve above, `isolation: isolate` on `__ui` keeps this number inside
+// the window manager. (0,3,0) + (0,2,0) = (0,5,0), above the focus lift's
+// (0,4,0), so a focused sibling layer can no longer outrank the call.
+.desk-module[data-desk-call][data-desk-call] .window-manager__layer.call-layer {
+  z-index: 20002 !important;
 }
 
 // …AND THE COST OF DISSOLVING IT, PAID HERE.
@@ -789,22 +829,30 @@ html {
 // dropdowns. One list here rather than a parallel rule, since the trigger
 // differs but the gate, the value and the reasoning are identical.
 //
-// `:where(...)` around it IS LOAD-BEARING, not decoration. `:has()` takes the
-// specificity of its most specific argument, so a bare
-// `.window-connect[data-state="1"]` (0,2,0) would push this whole selector to
+// `:where(...)` around it IS KEPT DELIBERATELY. `:has()` takes the specificity
+// of its most specific argument, and this argument used to carry an attribute:
+// a bare `.window-connect[data-state="1"]` (0,2,0) pushed the whole selector to
 // (0,8,0) — above the wrapper-modal lift's (0,7,0) — and a call running behind
-// an open modal would then drag the switcher from 100001 down to 50002, back
-// under the modal. `:where()` contributes ZERO, so the attribute keeps its
-// meaning and the selector stays at (0,7,0).
+// an open modal then dragged the switcher from 100001 down to 50002, back under
+// the modal. The argument is now the bare class (0,1,0), so the wrapper is no
+// longer strictly load-bearing, but it costs nothing and pins this selector at
+// (0,7,0) against anyone who re-adds a qualifier to it.
 //
-// The attribute is worth keeping for meaning even though the window is
-// destroyed on hangup (`goodbye()` → `selfDestroy()` → `destroy()`, ui-core
-// view/utils.js) rather than left behind at state 0: an UNFOCUSED call window
-// still exists, and only `[data-state="1"]` matches what the dissolver below
-// actually keys on.
+// PRESENCE, NOT FOCUS. This used to read `[data-state="1"]`, matching the
+// dissolver below, and both were wrong for the same reason: every window rides
+// the shared `wm-radio` channel, so raising any other window (or clicking the
+// desk) drops this one to state 0 — see ui-core view/behavior/radio.js
+// `_on_message`. The dissolver then stopped applying mid-call and the live call
+// window fell back inside `.window-manager__ui`'s stacking context, behind the
+// panels and the sidebar. Both now key on the window simply BEING THERE; the
+// window is destroyed on hangup (`goodbye()` → `selfDestroy()` → `destroy()`,
+// ui-core view/utils.js), so presence is an accurate "a call is up" test.
+// Specificity is unchanged: `:where()` still contributes ZERO, so the most
+// specific `:has()` argument is `.window-upload-progress` (0,1,0) as before and
+// the selector stays at (0,7,0).
 .desk-module:not([data-window-tour="1"]):has(
     .window-upload-progress,
-    :where(.window-connect[data-state="1"])
+    :where(.window-connect)
   ):has(
     .desk-module__topbar .menu-topic[data-state="1"],
     .desk-module__topbar .desk-module-topbar__utility-btn:hover
@@ -835,8 +883,10 @@ html {
 // Nothing drags the grid up, so the panels/sidebar no longer need lifting.
 // Attribute, not `:has()` — same reasoning as the upload lift above.
 // `data-desk-call` is stamped by wm/index.js _installDeskStateMirrors, which
-// watches the call layer and keys on `[data-state="1"]` so an UNFOCUSED call
-// window does not count, exactly as this selector did.
+// watches the call layer for a mounted `.window-connect`. It deliberately does
+// NOT key on `[data-state="1"]`: that tracked FOCUS, and an unfocused call is
+// still a live call that has to stay visible (see the note on the topbar rule
+// above).
 //
 // SPECIFICITY IS PRESERVED EXACTLY. The attribute is repeated deliberately —
 // it is the only way to reach (0,4,0) from a single flag, and dropping to
@@ -961,9 +1011,18 @@ html {
   }
 }
 
-// The workspace switcher must stay reachable OVER a wrapper-modal — the create
-// form (.form-folder__main) is fed into that modal, and switching workspace
-// from the panel above it has to keep working.
+// A TOPBAR DROPDOWN must stay reachable OVER a wrapper-modal — the create form
+// (.form-folder__main) is fed into that modal, and the bar above it has to keep
+// working: switching workspace, the organisation panel, the account menu.
+//
+// This was written for the SWITCHER alone and gated on `data-desk-wsmenu`. The
+// other two hang from the same 46px bar over the same window and were left out,
+// so opening `.desk-org-tab__panel` or `.desk-module-topbar__account-menu` while
+// the create form was up drew it under `window-folder__split-body`. Nothing
+// about those two is different — the gate simply did not name them. All three
+// are `Skeletons.Menu` roots, so the mirror now answers "a topbar dropdown is
+// open" (`data-desk-topmenu`, desk/index.js _installWsMenuMirror) and the three
+// are covered by one condition.
 //
 // This is a stacking-CONTEXT problem, not a z-index value one: the switcher
 // already asks for 99999 and the modal only for 20000. But opening a modal
@@ -976,9 +1035,11 @@ html {
 // the WM above) would drop the bar below the sidebar (10002) and the slide-out
 // panels (10001), which its 10003 is there to clear.
 //
-// Gated on the switcher being OPEN as well as the modal: the rest of the time
-// the bar has no business above a dialog, where its controls would invite
-// clicks on things the modal is meant to block.
+// Gated on a dropdown being OPEN as well as the modal: the rest of the time the
+// bar has no business above a dialog, where its controls would invite clicks on
+// things the modal is meant to block. Widening the gate from one dropdown to
+// any dropdown does not weaken that — the bar is still lifted only while the
+// user has a menu open, which is exactly when it has to be clickable.
 //
 // AND THAT GATE MUST BE READ OFF THE MENU ROOT, which is what
 // `.desk-module-topbar__ws-wrapper.menu-topic[data-state="1"]` is — one
@@ -1009,7 +1070,7 @@ html {
 // ATTRIBUTES, NOT `:has()` — and the tie described above is preserved. Both
 // arguments are now flags on the root: `data-wm-modal` from
 // wm/index.js _installWmModalMirror (unchanged, and it tests exactly
-// `.window-manager__wrapper-modal[data-state="open"]`), and `data-desk-wsmenu`
+// `.window-manager__wrapper-modal[data-state="open"]`), and `data-desk-topmenu`
 // from desk/index.js _installWsMenuMirror.
 //
 // This block MUST stay AFTER the utility-hover lift above: both are (0,7,0),
@@ -1023,10 +1084,10 @@ html {
 //          .desk-module__topbar
 //        (0,1,0) + (0,2,0) + (0,3,0) + (0,1,0) = (0,7,0)
 //   now  .desk-module[data-wm-modal="open"][data-wm-modal="open"]
-//          [data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu]
+//          [data-desk-topmenu][data-desk-topmenu][data-desk-topmenu]
 //          .desk-module__topbar
 //        (0,1,0) + (0,1,0)x2 + (0,1,0)x3 + (0,1,0) = (0,7,0)
-.desk-module[data-wm-modal="open"][data-wm-modal="open"][data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu] {
+.desk-module[data-wm-modal="open"][data-wm-modal="open"][data-desk-topmenu][data-desk-topmenu][data-desk-topmenu] {
   .desk-module__topbar {
     z-index: 100001;
   }

@@ -31,6 +31,17 @@ module.exports = function (_ui_) {
             uiHandler: [_ui_],
             bubble: 0,
           }),
+          // Park the call in the desk dock without leaving it (service
+          // "park-call" -> call-parking.setCallTile(1)). Deliberately NOT the
+          // window's own `minimize`, which shrinks a window into the Wm dock
+          // and would bury a live call inside the window manager again.
+          Skeletons.Button.Svg({
+            className: `${pfx}__call-header-btn minimize`,
+            ico: "window-minimize",
+            service: "park-call",
+            uiHandler: [_ui_],
+            bubble: 0,
+          }),
           Skeletons.Button.Svg({
             className: `${pfx}__call-header-btn close`,
             ico: "meet-x",

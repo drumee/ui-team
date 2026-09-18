@@ -1,6 +1,16 @@
 const __room = require('builtins/webrtc/room/jitsi');
 
 const { timestamp } = require("@drumee/ui-essentials")
+
+// The floating call frame. Was the Figma 734x600; a 1:1 call is one or two
+// faces and a row of controls, and at that size it covered most of the desk
+// behind it for no gain.
+const CONNECT_W = 640;
+const CONNECT_H = 520;
+// Keep-out from the edges of the work area, used only when the area is smaller
+// than the window and there is nothing left to centre.
+const CONNECT_INSET = 16;
+
 class __window_connect extends __room {
 
   /**
@@ -26,9 +36,15 @@ class __window_connect extends __room {
     // floats it as a free window in the Wm pool with a grabbable resize frame.
     this.model.atLeast({ header: 1, resizable: 1 });
     if (typeof this._setSize === "function") {
-      // Figma frame: 734 × 600.
-      this._setSize({ width: 734, height: 600, minWidth: 480, minHeight: 420 });
+      this._setSize({
+        width: CONNECT_W,
+        height: CONNECT_H,
+        minWidth: 480,
+        minHeight: 420,
+      });
     }
+    // _setSize placed it too; this puts it where it belongs. See the method.
+    this._centerInWorkArea();
     this._state = 0;
     this.declareHandlers();
     this.statusMessages = {
@@ -71,6 +87,121 @@ class __window_connect extends __room {
         this.showCallEnded(this.callEndedMessage());
       }
     })
+
+    // Desk navigation asks a live call to step aside rather than closing it —
+    // the SAME mechanism the team meeting uses (builtins/webrtc/call-parking,
+    // Wm.parkLiveCall / Desk._parkLiveCall -> "call:minimize"). Before this, the
+    // broadcast had no listener here, so a 1:1 call stayed inside the window
+    // manager while a full-page desk screen covered it: navigating away looked
+    // exactly like the call had been closed.
+    this._installCallParking();
+  }
+
+  /**
+   * The box this window is positioned INSIDE — the window manager's container,
+   * in viewport coordinates.
+   *
+   * The same box Wm.clampWindows measures, and for the same reason: it is the
+   * desk canvas, which starts below the topbar and to the right of the sidebar
+   * rail, not at the viewport origin.
+   *
+   * Falls back to the viewport when the desk has not laid out yet (or measures
+   * 0x0, which it does for a frame during a rebuild) — a window centred against
+   * nothing would sit in the corner.
+   *
+   * @returns {{width: Number, height: Number}}
+   */
+  _workAreaBox() {
+    try {
+      const host = window.Wm && Wm.el && (Wm.el.parentElement || Wm.el);
+      if (host && _.isFunction(host.getBoundingClientRect)) {
+        const r = host.getBoundingClientRect();
+        if (r.width && r.height) return r;
+      }
+    } catch (e) { /* no desk — DMZ, or a teardown mid-flight */ }
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
+  /**
+   * CENTRE IT IN THE CANVAS, NOT IN THE VIEWPORT.
+   *
+   * The shared `_setSize` (window/interact/webrtc.js) computes
+   * `left = innerWidth / 2 - width / 2` and a `top` from `innerHeight`. Those
+   * are viewport coordinates, but this window's offset parent is the call layer,
+   * whose origin is the WM work area — so the offset is applied from a point
+   * already pushed right by the sidebar rail (64px pinned, 231px expanded) and
+   * down by the topbar. The window landed right and low by exactly that much,
+   * which on a 1440x800 desk with the rail open is ~123px right of centre.
+   *
+   * Corrected here rather than in `_setSize` itself: that method is shared with
+   * window/meeting, which is a full-frame screen and throws its inline geometry
+   * away in `_lockGeometry`, and with the orphaned window/screenshare. Neither
+   * can be exercised on a box without a WebRTC stack, so the shared arithmetic
+   * is left alone and the one live consumer places itself.
+   *
+   * Not re-run on resize on purpose: the window is draggable, so re-centring
+   * would take it away from wherever the user put it, and Wm.clampWindows
+   * already pulls it back inside when the area shrinks.
+   *
+   * @param {Number} [width] defaults to the launch width
+   * @param {Number} [height] defaults to the launch height
+   * @returns {{left: Number, top: Number}}
+   */
+  _centerInWorkArea(width, height) {
+    const area = this._workAreaBox();
+    const w = width || CONNECT_W;
+    const h = height || CONNECT_H;
+    // max() rather than a bare divide: an area narrower than the window gives a
+    // negative offset, which would hang the frame off the top-left of the desk.
+    const left = Math.max(CONNECT_INSET, Math.round((area.width - w) / 2));
+    const top = Math.max(CONNECT_INSET, Math.round((area.height - h) / 2));
+
+    // `this.size` is what change_size restores to, so it has to carry the new
+    // origin as well as the element.
+    this.size = { ...(this.size || {}), left, top };
+    if (this.style && _.isFunction(this.style.set)) this.style.set({ left, top });
+    if (this.el) {
+      this.el.style.left = `${left}px`;
+      this.el.style.top = `${top}px`;
+    }
+    return { left, top };
+  }
+
+  /**
+   * The 1:1 call is always its own floating window — there is no embedded
+   * variant to protect (the meeting's `_isFullFrame` case), so it can always be
+   * parked. Guarded on the element only, which the mixin re-checks anyway.
+   */
+  _canParkCall() {
+    return !!this.el;
+  }
+
+  /**
+   * Put the popup's own box back after the tile is un-docked.
+   *
+   * Unlike the meeting — a full-frame screen whose stylesheet fills the canvas
+   * once the inline geometry is gone — this window is a floating popup that OWNS
+   * its geometry (see `_setSize` in initialize). Dropping it into the dock leaves
+   * the dock's `> *` fill rule in charge; coming back out, nothing would size it
+   * at all, so it has to be re-seeded here.
+   *
+   * THE SAME CONSTANTS AS THE LAUNCH, and the same centring. Written out as
+   * literals this drifted the moment the frame was resized: the window opened at
+   * one size and came back from the dock at another.
+   */
+  _onCallTileLeft() {
+    if (!this.el) return;
+    // The dock pinned it with a stylesheet, not with inline styles, so there is
+    // nothing to strip — only the launch geometry to re-assert.
+    if (typeof this._setSize === "function") {
+      this._setSize({
+        width: CONNECT_W,
+        height: CONNECT_H,
+        minWidth: 480,
+        minHeight: 420,
+      });
+    }
+    this._centerInWorkArea();
   }
 
   /**
@@ -740,6 +871,21 @@ class __window_connect extends __room {
         this._toggleWindowFullscreen();
         break;
 
+      // The designed target on the parked tile ("Return to call" cover,
+      // webrtc/skeleton/call-tile). call-parking also takes the click on the
+      // window root in the capture phase, because at 300x180 every other child
+      // is a live WebRTC widget that stops propagation — this is the clean path
+      // when the cover itself is hit.
+      case "restore-call":
+        this.setCallTile(0);
+        break;
+
+      // Park this call in the desk dock without leaving it. Same end state as
+      // the desk's own navigation park, reached deliberately.
+      case "park-call":
+        this.setCallTile(1);
+        break;
+
       case 'remote-left':
         if (args.siblings > 1) {
           this.stateMessage();
@@ -802,6 +948,10 @@ class __window_connect extends __room {
   onBeforeDestroy(opt) {
     // Drop the reactions picker's document click-listener if open at teardown.
     this._closeReactionsPicker();
+    // Un-park (if parked), release the broadcasts and tell the desk the call is
+    // gone. Covers every exit: Leave, the peer hanging up, a decline, a revoke,
+    // a tab close.
+    this._teardownCallParking();
     if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
   }
 
@@ -850,6 +1000,12 @@ class __window_connect extends __room {
 }
 
 // Shared in-call reactions behavior (same module the meeting uses).
+// Live-call dock parking, shared with window_meeting: "call:minimize" parks
+// this window as a tile in the desk's call-dock, a click brings it back. Its
+// two seams — _canParkCall / _onCallTileLeft — are defined on the class above
+// and must NOT appear in the mixin (Object.assign would overwrite them).
+Object.assign(__window_connect.prototype, require("builtins/webrtc/call-parking"));
+
 Object.assign(__window_connect.prototype, require("builtins/webrtc/reactions"));
 // Shared in-call screen-share behavior (own screen on stage, tile docking,
 // one-at-a-time lock, fullscreen). Meeting-only hooks it calls are optional.
