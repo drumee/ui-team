@@ -44,8 +44,13 @@ module.exports = function (ui) {
           // which leaves someone who has never used an editor like this with
           // nothing to click. This raises a rail of the same blocks in the
           // margin, and remembers the choice.
+          //
+          // A PLUS, not three dots: this opens an insert palette, and three
+          // dots means "more options" everywhere else in the product. Duy read
+          // the old pairing as a contradiction, and he was right — the icon
+          // said one thing and the label said another.
           Skeletons.Button.Svg({
-            ico: "ph-dots-three",
+            ico: "ph-plus",
             service: "toggle-rail",
             sys_pn: "ref-rail-toggle",
             className: `${pfx}__icon rail-toggle`,

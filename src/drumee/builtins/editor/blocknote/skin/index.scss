@@ -100,7 +100,14 @@ $note-gutter: 54px;
 
   &-rail__container {
     position: absolute;
-    top: 8px;
+    // Centred in the margin rather than pinned to the top edge: hung from the
+    // top it reads as something stuck there, not as a palette that belongs to
+    // the page (Duy, 2026-09-18 — "it looks unresponsive").
+    top: 50%;
+    transform: translateY(-50%);
+    // A short window must not let it run past the frame.
+    max-height: calc(100% - 24px);
+    overflow-y: auto;
     z-index: 30;
     gap: 2px;
     padding: 6px;

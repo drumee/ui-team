@@ -435,6 +435,10 @@ test("the insert rail is a toggle that is remembered", () => {
   const topbar = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/topbar.js"), "utf8");
   assert.match(topbar, /service: "toggle-rail"/);
+  // The icon has to agree with the label: three dots means "more options",
+  // and this opens an insert palette.
+  assert.match(topbar, /ico: "ph-plus"/);
+  assert.ok(!/ico: "ph-dots-three"/.test(topbar));
   assert.match(topbar, /uiHandler: \[ui\]/, "a service with no uiHandler never fires");
   const win = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
@@ -489,6 +493,11 @@ test("the rail floats in the margin and its side is one switch", () => {
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
   assert.match(skin, /&-rail__container \{[\s\S]{0,400}position: absolute;/,
     "out of flow, so it never moves the text");
+  // centred in the margin — hung from the top it reads as stuck there
+  assert.match(skin, /&-rail__container \{[\s\S]{0,600}top: 50%;/);
+  assert.match(skin, /transform: translateY\(-50%\);/);
+  assert.match(skin, /max-height: calc\(100% - 24px\);/,
+    "a short window must not let it run past the frame");
   assert.match(skin, /&\[data-rail-side="left"\] &-rail__container/,
     "both sides have to be expressible");
   // the labels must flip with the side or they run off-window
