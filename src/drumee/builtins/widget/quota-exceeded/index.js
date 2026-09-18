@@ -72,7 +72,7 @@ class __quota_exceeded extends LetcBox {
       // would sit over the billing page it just navigated to, and go on
       // swallowing every click on it.
       if (typeof Wm !== "undefined" && Wm.closeQuotaExceeded) Wm.closeQuotaExceeded();
-      RADIO_BROADCAST.trigger("desk:open-billing-page");
+      RADIO_BROADCAST.trigger("desk:open-billing-page", { intent: "upgrade" });
       return;
     }
 

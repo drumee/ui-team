@@ -328,9 +328,17 @@ module.exports = function (ui) {
  * @param {Object} ui   desk module
  */
 function utilityCluster(pfx, ui) {
-  const item = ({ ico, label, service, badgePn }) =>
+  // `pn` is carried only by the three items whose screen the desk closes on
+  // its own (Calendar / Inbox / Admin Console all mount in settings-main-slot,
+  // which closeMainPanels empties). The radio group cannot unlight them there
+  // — nothing was clicked — so desk_module._clusterUnlight needs a handle on
+  // each. The other three items are slide-outs the desk leaves standing, so
+  // they have nothing to be reached for and stay anonymous. The desk resolves
+  // these through the implicit part walk, same as __actions-cluster below.
+  const item = ({ ico, label, service, badgePn, pn }) =>
     Skeletons.Box.X({
       className: `${pfx}__utility-btn`,
+      sys_pn: pn,
       service,
       uiHandler: [ui],
       // Grouped on one radio so the pressed icon reflects which panel is open,
@@ -376,11 +384,13 @@ function utilityCluster(pfx, ui) {
         ico: "top-calendar",
         label: LOCALE.CALENDAR,
         service: "toggle-calendar",
+        pn: "utility-calendar",
       }),
       item({
         ico: "top-inbox",
         label: LOCALE.INBOX,
         service: "toggle-inbox",
+        pn: "utility-inbox",
       }),
       item({
         ico: "top-contacts",
@@ -396,6 +406,7 @@ function utilityCluster(pfx, ui) {
         ico: "top-apps",
         label: LOCALE.ADMIN_CONSOLE,
         service: "toggle-apps",
+        pn: "utility-apps",
       }),
       userMenu(pfx, ui),
     ],
@@ -673,6 +684,10 @@ function userMenu(pfx, ui) {
 function workspaceSwitcher(pfx, ui) {
   return Skeletons.Menu({
     className: `${pfx}__ws-wrapper`,
+    // Named so desk/index.js _installWsMenuMirror can reach this element and
+    // mirror its open state onto the desk root. `sys_pn` with no `partHandler`
+    // fires no onPartReady — it only makes ensurePart() resolve.
+    sys_pn: "ws-wrapper",
     direction: _a.down,
     // duration MUST be set explicitly. Without it the menu widget falls back to
     // Visitor.timeout() -> 2000, which is MILLISECONDS, while gsap reads

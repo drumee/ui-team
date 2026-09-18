@@ -994,6 +994,11 @@ class __window_manager extends push {
     const apply = (data) => {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
+      // A workspace removed under the user has its replacement: the hold
+      // onCurrentWorkspaceRemoved took on the canvas ends here, with the pane
+      // about to be fed and _curWorkspace set — both claims settleHomeGrid
+      // already honours.
+      this._replacingWorkspace = false;
       this.mset(data);
       // Drop the OUTGOING pane's claim on the context before feed() destroys
       // it — see the destroy hook below for why identity, not hub_id, is what
@@ -1350,6 +1355,25 @@ class __window_manager extends push {
     // A new generation invalidates any loadWorkspace still in flight for the
     // dead hub, so its `apply()` cannot put the context back.
     this._wsGeneration = (this._wsGeneration || 0) + 1;
+    // THE DYING PANE HANDS OVER, IT DOES NOT TEAR DOWN.
+    //
+    // Its `once(destroy)` hook in loadWorkspace clears the context and calls
+    // _releaseCanvas() when the pane dying still owns the context. Here the
+    // context is already gone (cleared above), and a replacement is about to
+    // open — so release the claim now, or the hook runs later (goodbye() fades
+    // for 0.5s, and the pane may outlive the replacement's attributes fetch)
+    // and wipes the NEW workspace's context and canvas claim on its way out.
+    this._curWorkspacePane = null;
+    // HOLD THE CANVAS while the replacement opens. Without this the sequence
+    // was: pane destroyed -> _releaseCanvas -> settleHomeGrid finds no claim ->
+    // the retired home grid (workspace tiles) is revealed -> the forced
+    // desk.home refetch lands -> loadWorkspace hides the grid again -> the new
+    // pane mounts. Reported as "the screen flashes a list of folders, then
+    // goes back to the first workspace". settleHomeGrid reads this as a claim;
+    // it is dropped when the replacement lands (apply), when it cannot
+    // (_releaseWorkspaceContext / _endWorkspaceReplacement), or when the user
+    // goes home (_syncHomeGrid(0)).
+    this._replacingWorkspace = true;
     try {
       this.mset({
         hub_id: null,
@@ -1370,19 +1394,44 @@ class __window_manager extends push {
     // nothing to restore. Opening one also repaints the topbar breadcrumb,
     // which is what clears the dead workspace's name from the left cluster.
     const desk = window.Desk;
-    if (desk && _.isFunction(desk._openDefaultWorkspace)) {
-      // Deferred: the pane for the dead hub is being torn down on this same
-      // echo, and opening the next one first would have the old pane's destroy
-      // handler clear the NEW context on its way out.
-      _.defer(() => {
-        if (this.isDestroyed && this.isDestroyed()) return;
-        if (this._curWorkspace) return; // something already opened one
-        // FORCED. The desk's cached workspace list still contains the hub that
-        // was just deleted, so an unforced step 1 would "find" it and try to
-        // reopen the very thing being removed.
-        desk._openDefaultWorkspace({ force: true });
-      });
+    if (!desk || !_.isFunction(desk._openDefaultWorkspace)) {
+      return this._endWorkspaceReplacement();
     }
+    // Deferred: the pane for the dead hub is being torn down on this same
+    // echo, and opening the next one first would have the old pane's destroy
+    // handler clear the NEW context on its way out.
+    _.defer(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this._curWorkspace) return this._endWorkspaceReplacement();
+      // EXCLUDE, DO NOT FORCE. The desk's cached workspace list still contains
+      // the workspace that was just deleted, so an unfiltered step 1 would
+      // "find" it and try to reopen the very thing being removed. A forced
+      // refetch fixed that, but it put a desk.home round trip (paged) between
+      // the delete and the replacement — the gap the home grid flashed in.
+      // Filtering the cache picks the replacement in this same tick, so
+      // loadWorkspace claims the canvas before the dead pane is gone; the
+      // desk refreshes its list behind the open (see
+      // _openWorkspaceOrEmptyScreen).
+      Promise.resolve(desk._openDefaultWorkspace({ exclude: { hub_id, nid } }))
+        .then((opened) => {
+          if (!opened) this._endWorkspaceReplacement();
+        })
+        .catch((e) => {
+          this.warn && this.warn("[workspace-removed] replacement failed", e);
+          this._endWorkspaceReplacement();
+        });
+    });
+  }
+
+  /**
+   * No replacement is coming for a removed workspace — drop the hold taken in
+   * onCurrentWorkspaceRemoved and let settleHomeGrid decide the canvas as it
+   * would for any other emptied desk. Idempotent.
+   */
+  _endWorkspaceReplacement() {
+    if (!this._replacingWorkspace) return;
+    this._replacingWorkspace = false;
+    this._releaseCanvas();
   }
 
   /**
@@ -1433,7 +1482,10 @@ class __window_manager extends push {
     ) {
       this._curWorkspace = null;
       // The pane never mounted, so nothing occupies the canvas — same reason
-      // as the destroy hook in loadWorkspace.
+      // as the destroy hook in loadWorkspace. If this was the replacement for
+      // a removed workspace, the hold ends with it, or the canvas would stay
+      // blank for good.
+      this._replacingWorkspace = false;
       this._releaseCanvas();
     }
   }
@@ -1694,8 +1746,8 @@ class __window_manager extends push {
   // reference. Billing is now a FULL PAGE in the desk settings-main-slot, not a
   // popup — delegate to the desk module via RADIO so we don't need a direct
   // module reference from the window manager.
-  upgradePlage() {
-    RADIO_BROADCAST.trigger("desk:open-billing-page");
+  upgradePlage(preselect) {
+    RADIO_BROADCAST.trigger("desk:open-billing-page", preselect);
   }
 
   /**
@@ -2013,6 +2065,73 @@ class __window_manager extends push {
     });
   }
 
+  /**
+   * Same trick as _installWmModalMirror, generalised: watch ONE layer and
+   * mirror "does this layer currently hold <sel>?" onto the desk root as a
+   * plain data attribute.
+   *
+   * WHY, rather than letting CSS answer it with `:has()`. A `:has()` whose
+   * SUBJECT is the desk root makes the root "affected by :has()", so whenever
+   * the argument can have changed the engine re-evaluates the root and
+   * invalidates its entire subtree — the whole application. That is what makes
+   * a style flush cost ~8,000 elements at ~13us each (~68ms) instead of a
+   * handful, and every forced layout read in any handler then pays it.
+   * Production trace 2026-09-15: 411 forced recalcs, 28,136ms, with single
+   * clicks blocking for 2.5s.
+   *
+   * An attribute on the root costs one selector match against that root. The
+   * observer is scoped to the layer the windows actually mount into (routing is
+   * manager.js getWindowsPool/getCallPool), not the desk subtree, so the
+   * callback stays cheap — a subtree observer over the whole desk would just be
+   * re-creating the cost this removes.
+   *
+   * @param {String} pn    layer part name
+   * @param {String} prop  dataset key to stamp on `.desk-module`
+   * @param {String} sel   selector the layer is tested for
+   */
+  _installDeskStateMirror(pn, prop, sel) {
+    this.ensurePart(pn).then((p) => {
+      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+      const root =
+        this.el && _.isFunction(this.el.closest)
+          ? this.el.closest(".desk-module")
+          : null;
+      if (!root || typeof MutationObserver !== "function") return;
+      const key = `_${prop}Observer`;
+      // A re-feed hands us a fresh part; drop the observer on the old one.
+      if (this[key]) this[key].disconnect();
+      const sync = () => {
+        if (p.el.querySelector(sel)) root.dataset[prop] = "1";
+        else delete root.dataset[prop];
+      };
+      this[key] = new MutationObserver(sync);
+      // childList for mount/unmount, data-state because a call window that is
+      // merely UNFOCUSED still exists and must not count (the rule this
+      // replaces keyed on [data-state="1"] for exactly that reason).
+      this[key].observe(p.el, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-state"],
+      });
+      sync();
+    });
+  }
+
+  /** Every desk-root state flag the skin reads instead of a root `:has()`. */
+  _installDeskStateMirrors() {
+    this._installDeskStateMirror(
+      "upload-progress-layer",
+      "deskUpload",
+      ".window-upload-progress",
+    );
+    this._installDeskStateMirror(
+      "call-layer",
+      "deskCall",
+      '.window-connect[data-state="1"]',
+    );
+  }
+
   onPartReady(child, pn) {
     if (pn === _a.list) {
       // Warm BOTH of folder_task's steps while the grid that triggers it
@@ -2074,6 +2193,7 @@ class __window_manager extends push {
     this._syncHomeGrid(1, true);
     this.feed(require("./skeleton")(this));
     this._installWmModalMirror();
+    this._installDeskStateMirrors();
     // Safety net for a boot that claims nothing — see settleHomeGrid. The desk
     // calls it directly at the end of its restore; this covers a Wm mounted
     // without one (or a restore that throws before it can).
@@ -2413,7 +2533,11 @@ class __window_manager extends push {
     // feeds. That gap is exactly where a slow connection would otherwise let
     // settleHomeGrid mistake "still opening" for "nothing opened".
     if (open) this._homeGridClaimed = !boot;
-    else this._homeGridClaimed = false;
+    else {
+      this._homeGridClaimed = false;
+      // Home is an explicit destination: nothing is being replaced any more.
+      this._replacingWorkspace = false;
+    }
   }
 
   /**
@@ -2458,6 +2582,9 @@ class __window_manager extends push {
     const deskEl = window.Desk && window.Desk.el;
     const claimed =
       !!this._homeGridClaimed ||
+      // A removed workspace's replacement is on its way — see
+      // onCurrentWorkspaceRemoved.
+      !!this._replacingWorkspace ||
       !!this._curWorkspace ||
       !!this.headlessPane() ||
       !!(deskEl && deskEl.dataset && deskEl.dataset.noWorkspace === "1");
@@ -2526,6 +2653,7 @@ class __window_manager extends push {
     }
     this.feed(require("./skeleton")(this));
     this._installWmModalMirror();
+    this._installDeskStateMirrors();
   }
 
   /**
@@ -3520,7 +3648,7 @@ class __window_manager extends push {
       }
 
       case "upgrade-plan":
-        return this.upgradePlage(cmd);
+        return this.upgradePlage({ intent: "upgrade" });
 
       // Billing popup close (settings_billing popup:1 bubbles billing-close)
       // and the post-Checkout result modal actions.
@@ -3530,7 +3658,12 @@ class __window_manager extends push {
 
       case "billing-result-retry":
         this.ensurePart("wrapper-modal").then((p) => p.clear());
-        return this.upgradePlage(cmd);
+        // NO PRESELECT. upgradePlage now forwards its argument to
+        // openBillingPage, and `cmd` is the triggering MODEL — spreading that
+        // into the panel options would seed the billing page with whatever
+        // enumerable keys the button happened to carry. The retry wants the
+        // page exactly as it opens by hand.
+        return this.upgradePlage();
 
       case "workspace-access-revoked-ack":
         return this.acknowledgeWorkspaceAccessRevoked(cmd);

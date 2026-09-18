@@ -38,7 +38,13 @@ class __calendar_main extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
 
-    this._view = "month";
+    // Month, unless the entry point NAMED a view: the Daily Reminder card's
+    // [My calendar] asks for today in `day` view. Validated against VIEW_KEYS,
+    // so a malformed or stale option can only ever fall back to the default —
+    // an unknown string would otherwise reach GRIDS[view] in the skeleton and
+    // silently render the month grid under a toolbar claiming something else.
+    const startView = this.mget("startView");
+    this._view = VIEW_KEYS.includes(startView) ? startView : "month";
     this._cursor = ymd(Dayjs());
     // Not persisted, by spec: the filter resets to All every session.
     this._filter = "all";
@@ -121,6 +127,38 @@ class __calendar_main extends LetcBox {
    */
   onPanelHidden() {
     this._parked = true;
+  }
+
+  /**
+   * Point the screen at `view`, on TODAY — for an entry point that names one
+   * rather than taking the screen as the user left it. The Daily Reminder
+   * card's [My calendar] is the only such caller today: its whole subject is
+   * this day, so it opens the day view on this day.
+   *
+   * A FRESH mount reads the same thing from its `startView` option, and that
+   * is the path that matters most, because the kind may still be lazy-loading
+   * when the desk's togglePanel promise settles — nothing can be called on it
+   * then. This method is the other half: the desk keeps this screen alive
+   * (KEEP_ALIVE_MAIN_KINDS), so an instance that is merely REVEALED, or is
+   * already on screen where an open-only togglePanel is a deliberate no-op,
+   * never sees launch options and would otherwise keep the view it was left on.
+   *
+   * No-op when the screen is already exactly there, so the fresh-mount path —
+   * which just read the same view from its options — does not pay for a second
+   * fetch of the window it is already loading.
+   */
+  focusView(view) {
+    if (!VIEW_KEYS.includes(view)) return;
+    const today = ymd(Dayjs());
+    if (this._view === view && this._cursor === today) return;
+    this._view = view;
+    this._cursor = today;
+    // Same pairing every cursor/view change in onUiEvent uses: a toolbar
+    // dropdown left open would hang over a grid it no longer describes.
+    this._closeMenus();
+    // The fetch window is derived from view + cursor, so this is a refetch,
+    // not a repaint — exactly what `cal-set-view` and `cal-day-more` do.
+    return this._reload();
   }
 
   // ── state readers used by the skeletons ────────────────────────────────────

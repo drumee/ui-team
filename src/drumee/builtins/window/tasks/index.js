@@ -350,6 +350,14 @@ class __tasks_panel extends LetcBox {
     if (this._wsCooldown) clearTimeout(this._wsCooldown);
     this._wsCooldown = null;
     this._wsPending = null;
+    // The coalesced peer repaint (_applyPeerTaskChange) — a frame queued
+    // against a panel that is going away would call _refreshViewBody on a
+    // destroyed view. The isDestroyed() guard inside catches it too; cancelling
+    // is the half that does not depend on the callback running at all.
+    if (this._peerPaintRaf && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._peerPaintRaf);
+    }
+    this._peerPaintRaf = 0;
     if (this._visObserver) {
       this._visObserver.disconnect();
       this._visObserver = null;
@@ -615,7 +623,13 @@ class __tasks_panel extends LetcBox {
     // pass a loose test here and then find no task there, rendering the detail
     // panel with a null draft.
     const task = seek();
-    if (task) this._openDetail(task.id);
+    if (task) return this._openDetail(task.id);
+    // The board switched to, the detail never opened, and nothing said why —
+    // which from the Personal Calendar reads as "the chip is not clickable"
+    // rather than "that task is not on this board". It happens when the
+    // calendar row names a task that has since moved workspace or been
+    // deleted; the meeting twin already refuses out loud (MEETING_NOT_FOUND).
+    this.warn("tasks: deep-linked task is not on this board", id);
   }
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
@@ -2614,6 +2628,11 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.update_status:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
+        // One peer changed one task — patch that one row instead of reloading
+        // the workspace. See _applyPeerTaskChange for why this is the whole
+        // idle-lag bug. Falls back to the full refresh whenever the surgical
+        // path cannot be proved correct.
+        if (this._applyPeerTaskChange(data)) return;
         this._queueWsRefresh({ tasks: 1, activity: 1, history: 1 });
         return;
       case SERVICE.task.link_file:
@@ -2798,6 +2817,89 @@ class __tasks_panel extends LetcBox {
     }
     this._startWsCooldown();
     this._runWsRefresh();
+  }
+
+  /**
+   * Apply ONE peer's change to ONE task, in place.
+   *
+   * THIS IS THE IDLE-LAG BUG. A peer editing a single task used to cost every
+   * other viewer `_loadTasks()` — a refetch of EVERY task in the workspace —
+   * followed by `_render()`, a full teardown and rebuild of the whole panel:
+   * chrome, viewbar, filter bar, every card. Coalesced at WS_REFRESH_WINDOW
+   * (400ms), so a busy team drove up to ~2.5 of those per second into a tab
+   * whose owner was not touching anything.
+   *
+   * It needed BOTH multipliers to hurt, which is why it looked workspace-
+   * specific: many members to generate the events, and many tasks to make each
+   * refetch+rebuild expensive. Drumee Dev Team is the only workspace on the
+   * platform with both (14 members, 476 tasks) — and it is the only one whose
+   * members reported the desk going slow while idle and eventually dying.
+   *
+   * The payload already carries the row, and `_mergeTask` is built to take it:
+   * it spreads over the cached row, so a PARTIAL payload (update_status sends
+   * no linked_files) patches only what it names — see the note on
+   * _normalizeTask. The local-edit path has merged this way all along; only the
+   * peer path reloaded the world.
+   *
+   * Returns true when it handled the change. Every case it cannot PROVE is
+   * correct returns false and takes the old full-refresh route:
+   *
+   *  - no `id` on the payload — nothing to merge against
+   *  - panel hidden — _queueWsRefresh already defers correctly, and re-entering
+   *    here would repaint a board nobody can see
+   *  - a task detail is open — the modal and its history read state this does
+   *    not repaint
+   *  - the Health view is up — it renders the activity feed, which only
+   *    `_loadActivity()` refreshes
+   *
+   * @param {Object} data the WS payload for the changed task
+   * @returns {Boolean} true if applied surgically
+   */
+  _applyPeerTaskChange(data) {
+    // BOTH SHAPES, exactly as the local edit path unwraps them
+    // (`_mergeTask(Array.isArray(updated) ? updated[0] : updated)`). The
+    // broadcast carries whatever `CALL task_create` / `task_update` returned,
+    // and a single-row result collapses to a bare object on some paths and
+    // stays wrapped on others. Reading `.id` off an unwrapped array yields
+    // undefined, which would silently send every event back to the full
+    // refresh — the fix would look applied and do nothing.
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || !row.id) return false;
+    if (this._isPanelHidden()) return false;
+    if (this._detailId) return false;
+    if (this.getView() === "summary") return false;
+
+    // Merge FIRST and unconditionally — it is a array splice, it cannot fail,
+    // and the cache must be right even when the repaint below is skipped or
+    // deferred. Everything that reads task state (getState, the column count
+    // badges, the filters) is correct from this line on.
+    this._mergeTask(row);
+
+    // COALESCED ON A FRAME, not fired per event. The old path was throttled by
+    // WS_REFRESH_WINDOW (400ms); handling events individually removed that, and
+    // a burst from a busy team would repaint once per message. rAF gives back a
+    // ceiling of one repaint per frame no matter how many peers are typing, and
+    // the merges in between are free.
+    if (!this._peerPaintRaf && typeof requestAnimationFrame === "function") {
+      this._peerPaintRaf = requestAnimationFrame(() => {
+        this._peerPaintRaf = 0;
+        if (this.isDestroyed && this.isDestroyed()) return;
+        // NOT WHILE A CARD IS IN THE AIR. _refreshViewBody re-feeds the view
+        // host, which destroys the very element the pointer is dragging — the
+        // card would vanish mid-gesture and the drop land nowhere. The old
+        // full-render path had the same hole; it is closed here rather than
+        // carried over. The drop runs _loadTasks()/_syncColumn itself, so the
+        // board is reconciled the moment the gesture ends.
+        if (this._dragTaskId || this._dragColKey) return;
+        // Re-check: a detail may have been opened during the frame.
+        if (this._detailId || this._isPanelHidden()) return;
+        // The narrow repaint: feeds only the view host, and snapshots/restores
+        // every scroller by selector — so a colleague's edit no longer throws
+        // the reader back to the top of the column they were reading.
+        this._refreshViewBody();
+      });
+    }
+    return true;
   }
 
   _runWsRefresh() {
@@ -3286,13 +3388,27 @@ class __tasks_panel extends LetcBox {
       const list = Array.isArray(files) ? files : [];
       // Linked files live in this hub (cross-hub files are copied in on attach),
       // so the preview is built from file_nid + this hub — no get_node_attr.
-      this._attachments[taskId] = list.map((f) => {
-        const { previewUrl, chartId } = this._attachmentPreview(f);
-        return { ...f, previewUrl, iconChartId: chartId };
-      });
+      this._attachments[taskId] = this._withPreviews(list);
     } catch (err) {
       this._attachments[taskId] = [];
     }
+  }
+
+  /**
+   * Stamp a server file list with what it takes to SHOW each file.
+   *
+   * Both lists that carry files — a task's linked files and a comment's
+   * attachments — arrive in the same shape (task_get_linked_files and
+   * task_comment_list select the same columns), and both are rendered by
+   * surfaces that draw a thumbnail when there is one. Comment rows used to get
+   * no preview at all, which is why an image posted in a comment could only
+   * ever be a filename: the renderer had nothing to paint.
+   */
+  _withPreviews(list) {
+    return (Array.isArray(list) ? list : []).map((f) => {
+      const { previewUrl, chartId } = this._attachmentPreview(f);
+      return { ...f, previewUrl, iconChartId: chartId };
+    });
   }
 
   // Shared preview for dragged + committed files: mirrors media imgCapable()
@@ -4327,7 +4443,7 @@ class __tasks_panel extends LetcBox {
       const fresh = (Array.isArray(rows) ? rows : []).map((r) => ({
         ...r,
         reactions: jsonList(r.reactions),
-        attachments: jsonList(r.attachments),
+        attachments: this._withPreviews(jsonList(r.attachments)),
       }));
       // Carry over any optimistic row still awaiting its create response. A
       // peer's comment lands on the socket and re-reads the whole thread; if
@@ -4643,9 +4759,14 @@ class __tasks_panel extends LetcBox {
     // data-loading of an OPENING chip — that one puts a spinner where the
     // file-type icon sits, and here the spinner belongs on the ✕, which is the
     // control doing the work.
+    // Both shapes a comment file can take: the named chip, and the media tile
+    // a picture or a video renders as. Matching only the chip left every tile
+    // live during its own unlink — the bug this flag exists to close.
     const chip =
       btn && btn.closest
-        ? btn.closest(`.${this.fig.family}__comment-attachment`)
+        ? btn.closest(
+            `.${this.fig.family}__comment-attachment, .${this.fig.family}__comment-media`,
+          )
         : null;
     if (chip && chip.dataset) chip.dataset.removing = "1";
     const taskId = this._detailId;
@@ -5273,11 +5394,7 @@ class __tasks_panel extends LetcBox {
           provisional: 1,
           status: "queued",
         };
-        if (this._isImageExt(extension)) {
-          try {
-            entry.previewUrl = URL.createObjectURL(item);
-          } catch (_) {}
-        }
+        this._attachLocalPreview(entry, item);
         list.push(entry);
         added.push(entry);
         continue;
@@ -5724,14 +5841,21 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
-   * image/* files carried by a paste, in clipboard order.
+   * image/* and video/* files carried by a paste, in clipboard order.
    *
    * `items` is the authoritative list (a screenshot is an item with no entry in
    * some engines' `files`), with `files` as the fallback for engines that only
-   * populate that. Everything non-image is left alone: the paste then falls
-   * through to whatever the browser would have done with it.
+   * populate that. Everything that is neither is left alone: the paste then
+   * falls through to whatever the browser would have done with it.
+   *
+   * Video is here because a comment shows one now — copying a clip in the OS
+   * file manager and pasting it into a comment used to do nothing at all, since
+   * nothing on either paste route so much as looked at a non-image.
+   *
+   * @param {Event} e
+   * @param {RegExp} [accept]  narrow it, e.g. to images alone
    */
-  _clipboardImages(e) {
+  _clipboardMedia(e, accept = /^(image|video)\//) {
     const dt =
       (e && e.clipboardData) ||
       (e && e.originalEvent && e.originalEvent.clipboardData);
@@ -5740,16 +5864,22 @@ class __tasks_panel extends LetcBox {
     const items = dt.items || [];
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
-      if (!it || it.kind !== "file" || !/^image\//.test(it.type || "")) continue;
+      if (!it || it.kind !== "file" || !accept.test(it.type || "")) continue;
       const f = it.getAsFile && it.getAsFile();
       if (f) out.push(f);
     }
     if (!out.length) {
       for (const f of Array.from(dt.files || [])) {
-        if (/^image\//.test((f && f.type) || "")) out.push(f);
+        if (accept.test((f && f.type) || "")) out.push(f);
       }
     }
     return out;
+  }
+
+  // Images alone — the caret can hold an inline image and nothing else, so the
+  // editor's own paste handler asks for that narrower set.
+  _clipboardImages(e) {
+    return this._clipboardMedia(e, /^image\//);
   }
 
   /**
@@ -5760,8 +5890,11 @@ class __tasks_panel extends LetcBox {
    */
   _namedPasteFile(file, i) {
     if (!file || file.name) return file;
-    const ext = String(file.type || "").split("/")[1] || "png";
-    const n = i ? `pasted-image-${i + 1}` : "pasted-image";
+    const type = String(file.type || "");
+    const video = /^video\//.test(type);
+    const ext = type.split("/")[1] || (video ? "mp4" : "png");
+    const stem = video ? "pasted-video" : "pasted-image";
+    const n = i ? `${stem}-${i + 1}` : stem;
     try {
       return new File([file], `${n}.${ext}`, { type: file.type });
     } catch (_) {
@@ -5811,8 +5944,8 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
-   * Ctrl/Cmd+V with an image in the clipboard, with nothing editable focused →
-   * attach it where the cursor is.
+   * Ctrl/Cmd+V with an image or a video in the clipboard, with nothing editable
+   * focused → attach it where the cursor is.
    *
    * Refusals come first and cheapest-first, and preventDefault is called ONLY
    * once we have committed to handling the event, so every paste we decline
@@ -5827,7 +5960,7 @@ class __tasks_panel extends LetcBox {
       typeof document !== "undefined" ? document.activeElement : null;
     if (this._isTextEntry(e.target) || this._isTextEntry(focused)) return;
     if (!this._detailId) return;
-    const files = this._clipboardImages(e);
+    const files = this._clipboardMedia(e);
     if (!files.length) return;
     const zone = this._pasteZone();
     if (!zone) return;
@@ -5939,7 +6072,8 @@ class __tasks_panel extends LetcBox {
   }
 
   // Queues File objects onto a draft's pending list (picker + drag-drop),
-  // caching an object URL for image previews. Names are provisional here; the
+  // caching an object URL so a picture or a video shows before it lands
+  // (_attachLocalPreview). Names are provisional here; the
   // collision-safe one is resolved at upload time (_finalizePendingName).
   async _stashPendingFiles(draft, files) {
     draft.pending_files = draft.pending_files || [];
@@ -5962,17 +6096,43 @@ class __tasks_panel extends LetcBox {
         provisional: 1,
         status: "queued",
       };
-      if (this._isImageExt(extension)) {
-        try {
-          entry.previewUrl = URL.createObjectURL(file);
-        } catch (_) {}
-      }
+      this._attachLocalPreview(entry, file);
       draft.pending_files.push(entry);
     }
   }
 
   _isImageExt(ext) {
     return /^(png|jpe?g|gif|webp|bmp|svg|avif|heic)$/i.test(ext || "");
+  }
+
+  _isVideoExt(ext) {
+    return /^(mp4|m4v|mov|webm|ogv|avi|mkv|3gp|mpe?g|wmv)$/i.test(ext || "");
+  }
+
+  /**
+   * Show a file the browser already holds, before the server has seen it.
+   *
+   * A queued entry has no nid, so no served thumbnail exists yet; the File it
+   * was dropped or pasted with is the only thing that can be painted, and it
+   * is right here. `localPreview` is what tells the renderer the URL is a blob
+   * — a video's blob has no poster frame to put in an <img>, so it needs a
+   * <video> instead (see the tile in ./skeleton).
+   *
+   * Revoked by whoever drops the entry — _removePendingFile and
+   * _releasePendingPreviews for a draft, _dropRowUpload for a row, plus the
+   * task-switch and destroy sweeps. All of them key on `previewUrl` alone, so
+   * a video needs no new release path. An object URL pins the whole file in
+   * memory until one of them runs.
+   */
+  _attachLocalPreview(entry, file) {
+    if (!entry || !file) return entry;
+    const ext = entry.extension;
+    if (!this._isImageExt(ext) && !this._isVideoExt(ext)) return entry;
+    try {
+      entry.previewUrl = URL.createObjectURL(file);
+      entry.localPreview = 1;
+    } catch (_) {}
+    return entry;
   }
 
   _splitFilename(name) {
@@ -6118,8 +6278,9 @@ class __tasks_panel extends LetcBox {
    * Rewrite one pending card's visible filename in place.
    *
    * Scope-agnostic on purpose: the same entry shape renders as an
-   * __attachment-row in a staged strip and as a __comment-attachment chip in a
-   * comment row, and _finalizePendingName does not know which. Iterating over
+   * __attachment-row in a staged strip, as a __comment-attachment chip in a
+   * comment row, and as a __comment-media tile when it is a picture or a
+   * video — and _finalizePendingName does not know which. Iterating over
    * data-key rather than building a selector from it, for the same reason as
    * _setPendingStatus: the key carries a filename.
    */
@@ -6129,14 +6290,17 @@ class __tasks_panel extends LetcBox {
     if (!key) return;
     const pfx = this.fig.family;
     const cards = this.el.querySelectorAll(
-      `.${pfx}__attachment-row, .${pfx}__comment-attachment`,
+      `.${pfx}__attachment-row, .${pfx}__comment-attachment, .${pfx}__comment-media`,
     );
     for (const card of cards) {
       if (card.dataset.key !== key) continue;
       const n = card.querySelector(
         `.${pfx}__attachment-name, .${pfx}__comment-attachment-name`,
       );
+      // A tile shows no name — the picture is the content — so its copy of the
+      // filename is the tooltip, and that is what goes stale without this.
       if (n) n.textContent = fullName;
+      else card.setAttribute("title", fullName);
       return;
     }
   }
@@ -6221,6 +6385,11 @@ class __tasks_panel extends LetcBox {
       this._attachments[this._detailId],
       this._detailDraft && this._detailDraft.pending_files,
       this._createDefaults && this._createDefaults.pending_files,
+      // Comment files too: a picture or a video posted in a comment is opened
+      // straight from its tile, and it is often attached to NO task list at
+      // all — so without these the node_info fallback had nothing to fall back
+      // to and the click did nothing.
+      ...(this._comments || []).map((c) => c && c.attachments),
     ];
     for (const l of lists) {
       if (!Array.isArray(l)) continue;
@@ -6646,15 +6815,16 @@ class __tasks_panel extends LetcBox {
     const strip = this.el.querySelector(`[data-scope="${scopeKey}"]`);
     if (!strip) return;
     const want = this._pendingKey(entry);
-    // Both card shapes: a staged strip renders __attachment-row, a comment row
-    // renders the smaller __comment-attachment chip. Only the first was matched
+    // Every card shape: a staged strip renders __attachment-row, a comment row
+    // renders the smaller __comment-attachment chip — or, for a picture or a
+    // video, the __comment-media tile. Only the first was matched
     // here, so a row upload's queued → uploading → error transitions never
     // reached the DOM — the chip only ever showed the status it happened to be
     // built with. That was survivable while the chip was built AFTER the
     // status was set; now that it is painted on drop, the spinner depends on
     // this write.
     const cards = strip.querySelectorAll(
-      `.${pfx}__attachment-row, .${pfx}__comment-attachment`,
+      `.${pfx}__attachment-row, .${pfx}__comment-attachment, .${pfx}__comment-media`,
     );
     for (const card of cards) {
       if (card.dataset.key === want) {
@@ -7528,6 +7698,30 @@ class __tasks_panel extends LetcBox {
         range = sel.getRangeAt(0).cloneRange();
       }
       return this._insertPastedImage(file, scope, editorEl, range);
+    }
+
+    // A video cannot go at the caret — the body's marker grammar holds mentions,
+    // links and inline images, and nothing else. It attaches instead, which is
+    // where it is shown as a poster tile rather than filed under its name. Same
+    // three comment surfaces the editor serves; the two description editors
+    // attach to the task, which is what their own paperclip does.
+    const clips = this._clipboardMedia(e, /^video\//);
+    if (clips.length) {
+      // A row has no submit of its own, so arriving IS the commit — the same
+      // rule the paperclip beside that editor already follows. Every other
+      // editor scope names a draft _draftForKey knows (PICK_ATTACHMENT_SCOPES),
+      // so there the scope IS the key.
+      const row = scope === "comment-edit" ? this._editingCommentId : null;
+      // Resolved BEFORE preventDefault, so a scope with nowhere to put the
+      // file declines the paste rather than swallowing it — the same order
+      // _onPasteAttach keeps for the same reason.
+      if (scope !== "comment-edit" || row) {
+        e.preventDefault();
+        const named = clips.map((f, i) => this._namedPasteFile(f, i));
+        return row
+          ? this._dropOnCommentRow(row, named)
+          : this._attachFilesToZone({ scope, key: scope }, named);
+      }
     }
 
     const html = dt.getData("text/html");
@@ -9741,7 +9935,7 @@ class __tasks_panel extends LetcBox {
         // only draws a CTA when this passes, so failing here means the plan
         // changed under an open card.
         if (!canUpgradePlan()) return;
-        RADIO_BROADCAST.trigger("desk:open-billing-page");
+        RADIO_BROADCAST.trigger("desk:open-billing-page", { intent: "upgrade" });
       })
       // Dismissed (close X or Escape) — confirm REJECTS, and an unhandled
       // rejection on a modal the user simply closed is noise in the console.

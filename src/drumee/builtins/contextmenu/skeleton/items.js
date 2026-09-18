@@ -86,10 +86,13 @@ const __button = function (ui, trigger, k) {
     // itself is a no-op (interact.js `case 'chat-threads'`); the submenu opens on
     // hover via CSS (.contextmenu-item:hover > &__submenu).
     seeChatThreads: Skeletons.Box.X({
-      content: LOCALE.CHAT_THREADS,
+      // "See chat threads" per the file-menu Figma (2026-09-16). LOCALE.CHAT_THREADS
+      // ("Chat threads") stays the label of the player-topbar menus that share the
+      // same submenu — only this row was redrawn.
+      content: LOCALE.SEE_CHAT_THREADS,
       service: 'chat-threads',
       kids: [
-        Skeletons.Note({ content: LOCALE.CHAT_THREADS, className: `${pfx}__label` }),
+        Skeletons.Note({ content: LOCALE.SEE_CHAT_THREADS, className: `${pfx}__label` }),
         Skeletons.Note({ content: '›', className: `${pfx}__chevron` }),
         Skeletons.Box.Y({
           className: `${pfx}__submenu`,

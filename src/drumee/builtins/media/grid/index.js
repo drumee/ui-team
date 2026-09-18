@@ -108,6 +108,13 @@ class __media_grid extends DrumeeMediaInteract {
     if (service === 'context-menu') {
       e.stopPropagation();
       e.preventDefault();
+      // Trigger is active (its menu is up): this click closes it. ui-core's
+      // own outside-pointerdown close (volatility 4) only fires 300ms later,
+      // so without this the click would open a second menu instead.
+      if (this._closeMenu) {
+        this._closeMenu();
+        return;
+      }
       const trigger = this.el.querySelector('.media-context-menu__trigger')
         || this.el.querySelector('.media-context-menu__folder-trigger');
       const rect = trigger
@@ -131,10 +138,106 @@ class __media_grid extends DrumeeMediaInteract {
           stopPropagation() {},
           stopImmediatePropagation() {},
         });
+        if (trigger) this._stickMenuToTrigger(trigger);
       }
       return;
     }
     super.dispatchUiEvent(e);
+  }
+
+  /**
+   * Keep the kebab's popup attached to its trigger while the grid scrolls.
+   *
+   * ui-core places the menu once, at the trigger's rect at open time, inside
+   * `window.drumeeDialog` — a fixed 0×0 layer at the viewport origin
+   * (router/skin/index.scss `&__dialog`), so the menu's left/top ARE viewport
+   * coordinates. Nothing moved it afterwards, so scrolling the grid left the
+   * menu floating over other tiles. Re-anchor on every scroll (capture phase:
+   * the scroller is a folder-window body, not the document) and on resize:
+   * below the trigger when it fits, flipped above it when it doesn't, clamped
+   * into the viewport. Listeners drop themselves once the menu is gone.
+   *
+   * @param {HTMLElement} trigger
+   */
+  _stickMenuToTrigger(trigger) {
+    const dialog = window.drumeeDialog;
+    const last = dialog && !dialog.isDestroyed() && dialog.children.last();
+    const menu = last && last.el;
+    if (!menu || !menu.classList.contains('drumee-contextmenu')) return;
+
+    if (this._unstickMenu) this._unstickMenu();
+
+    // Active state for as long as the menu is up (skin/context-menu.scss).
+    trigger.dataset.active = '1';
+
+    // The visible grid pane. Once the trigger scrolls out of it the menu would
+    // point at a tile nobody can see, so close it instead of following.
+    const pane = trigger.closest('.window__icons-list, [class*="__icons-list"]');
+
+    let frame = 0;
+    let scrolled = false;
+    const place = () => {
+      frame = 0;
+      if (!menu.isConnected || !trigger.isConnected) return unstick();
+      const r = trigger.getBoundingClientRect();
+      if (pane && scrolled) {
+        const b = pane.getBoundingClientRect();
+        if (r.top < b.top || r.bottom > b.bottom) {
+          close();
+          return;
+        }
+      }
+      const w = menu.offsetWidth;
+      const h = menu.offsetHeight;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let top = r.bottom;
+      if (top + h > vh && r.top - h >= 0) top = r.top - h;
+      top = Math.max(0, Math.min(top, vh - h));
+      const left = Math.max(0, Math.min(r.right, vw - w));
+      menu.style.top = `${Math.round(top)}px`;
+      menu.style.left = `${Math.round(left)}px`;
+    };
+    const schedule = (ev) => {
+      // Only a scroll may close the menu; the open-time placement and resizes
+      // must not, or a tile half-clipped at the pane's edge could never open one.
+      if (ev && ev.type === 'scroll') scrolled = true;
+      if (!frame) frame = requestAnimationFrame(place);
+    };
+    // However the menu goes away — this trigger, an item click, an outside
+    // click, the pane-overflow close above — drop the listeners and the
+    // active state with it.
+    const gone = new MutationObserver(() => {
+      if (!menu.isConnected) unstick();
+    });
+    const unstick = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      gone.disconnect();
+      document.removeEventListener('scroll', schedule, true);
+      window.removeEventListener('resize', schedule);
+      delete trigger.dataset.active;
+      if (this._unstickMenu === unstick) {
+        this._unstickMenu = null;
+        this._closeMenu = null;
+      }
+    };
+    const close = () => {
+      unstick();
+      if (!last.isDestroyed()) last.suppress();
+    };
+
+    if (menu.parentNode) gone.observe(menu.parentNode, { childList: true });
+    document.addEventListener('scroll', schedule, true);
+    window.addEventListener('resize', schedule);
+    this._unstickMenu = unstick;
+    this._closeMenu = close;
+    place();
+  }
+
+  onBeforeDestroy() {
+    if (this._unstickMenu) this._unstickMenu();
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
@@ -242,6 +345,9 @@ class __media_grid extends DrumeeMediaInteract {
     const instant =
       window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Latched for snapToRest: from here on this element carries a GSAP
+    // transform, even once it settles back to 0.
+    this._transformTouched = true;
     TweenLite.to(this.$el, instant ? 0 : .2, {
       x,
       overwrite: "auto",
@@ -272,8 +378,25 @@ class __media_grid extends DrumeeMediaInteract {
   snapToRest() {
     this.cancelShift();
     this.el.removeAttribute("data-insert");
+    // ONLY IF GSAP HAS EVER TOUCHED THIS TILE'S TRANSFORM. A tile that was never
+    // part of a drag has no GSAP transform to drop, so this call would write the
+    // value the element already has.
+    //
+    // It is not free. GSAP must READ the computed transform matrix before it can
+    // write one (_renderZeroDurationTween -> _parseTransform -> _getMatrix ->
+    // _getComputedProperty), and that read FLUSHES PENDING STYLE for the whole
+    // document. snapToRest runs per tile on every re-measure, so on a populated
+    // workspace it fired for hundreds of tiles that had never moved. Production
+    // trace 2026-09-15: _renderZeroDurationTween sat behind 184 forced recalcs
+    // costing 20,160ms — the largest single entry, ~8,300 elements each.
+    //
+    // The flag, not the shift value, is the condition: `_shiftX` records the
+    // last TARGET, so a tile tweening 5 -> 0 already reads 0 while still sitting
+    // part-way, and keying off it would let cancelShift() strand it there. Once
+    // the flag is set it stays set, so every tile that has ever shifted keeps
+    // the old behaviour exactly.
     this._shiftX = 0;
-    TweenLite.set(this.$el, { x: 0 });
+    if (this._transformTouched) TweenLite.set(this.$el, { x: 0 });
   }
 
   /**

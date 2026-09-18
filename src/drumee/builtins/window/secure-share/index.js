@@ -2,6 +2,17 @@
 const { copyToClipboard } = require('@drumee/ui-essentials');
 const mfsInteract = require('../interact');
 
+// The close slide honours reduced motion too; the open keyframes do in the skin.
+function reducedMotion() {
+  try {
+    return typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {
+    return false;
+  }
+}
+
 class __window_secure_share extends mfsInteract {
 
   static initClass() {
@@ -13,10 +24,25 @@ class __window_secure_share extends mfsInteract {
   initialize(opt) {
     require('./skin');
     super.initialize(opt);
+    // Column mode: a view of the folder window's split body ("Manage access" on
+    // a share-area workspace, see window/folder/secure-share-column), not a
+    // drawer. Stamped on the element AFTER super.initialize, not through
+    // opt.dataset: this widget is fed as a kid there, its model is the
+    // descriptor the parent built, and an opt.dataset edit never reaches the
+    // data-* stamp.
+    this._column = this.mget("mode") === "column";
+    if (this._column) this.el.dataset.mode = "column";
     // Embedded mode (Figma): the panel renders as a right drawer INSIDE the host
     // workspace window's dialog wrapper (same mechanism as folder settings), so it
     // must NOT behave like a floating window — skip all self-positioning/chrome.
-    this._embedded = !!(opt && opt.embedded);
+    // A column is embedded too, for the same reason.
+    this._embedded = !!(opt && opt.embedded) || this._column;
+    // Opened from a player's Share row (player/widget/share, media/interact.js
+    // `args.floating`): the floating dock slides in from the right and out
+    // again on close, like the embedded drawer. Stamped on the element for the
+    // skin, after super.initialize for the same reason as data-mode above.
+    this._floating = !this._embedded && !!this.mget("floating");
+    if (this._floating) this.el.dataset.floating = "1";
     if (!this._embedded) {
       // Standalone fallback — Figma "Permission Panel (Slide in from right)": a
       // fixed 450px right dock. The window base inflates this.size.width to
@@ -44,6 +70,14 @@ class __window_secure_share extends mfsInteract {
     this._pendingRequest  = null;
     this.declareHandlers();
     this.bindEvent(_a.live);
+  }
+
+  // A column never raises. window/core gives every window `service: raise` and
+  // the Wm radio, and a raised window is `z-index: 10000 !important`
+  // (window/skin/window.scss) — a kid of the split body lifted over the desk.
+  raise(...args) {
+    if (this._column) return;
+    return super.raise(...args);
   }
 
   onBeforeDestroy() {
@@ -168,13 +202,20 @@ class __window_secure_share extends mfsInteract {
       // scale are restated at 1 to CANCEL those defaults; without them the
       // panel would slide and shrink at once.
       //
-      // Only when embedded. The standalone window is a floating window and the
-      // shrink is right for it.
+      // Only when embedded, or floating from a player — that dock slid in from
+      // the right too. Any other standalone window keeps the shrink.
       // Delegates rather than `break`s: only `default:` reaches
       // super.onUiEvent, so breaking out of the switch here would leave the
       // floating window's close button doing nothing at all.
       case _e.close:
-        if (this._embedded) {
+        // Column mode: the panel is a view of the folder split body, so the ✕
+        // does not destroy it — the folder window switches the column back to
+        // the chat panel, and this stays mounted for the next open
+        // (window/folder/secure-share-column closeSecureShareView).
+        if (this._column) {
+          return this.triggerHandlers({ service: "close-secure-share-view" });
+        }
+        if (this._embedded || this._floating) {
           // `timeout` is NOT optional here, and 0 would not do.
           //
           // goodbye's own `timeout: 2` lives in a PARAMETER DEFAULT, so it
@@ -187,7 +228,7 @@ class __window_secure_share extends mfsInteract {
           // `o.timeout || Visitor.timeout()` would send it straight back to
           // 2000.
           return this.goodbye(
-            { duration: 0.28, timeout: 2 },
+            { duration: reducedMotion() ? 0.01 : 0.28, timeout: 2 },
             { xPercent: 100, opacity: 1, scale: 1 },
           );
         }
@@ -611,6 +652,12 @@ class __window_secure_share extends mfsInteract {
     const nid    = this.mget(_a.nid);
     const hub_id = this.mget(_a.hub_id);
     const events_skl = require('./skeleton/access-events');
+    // Spinner on the FIRST load only, while the table is still empty. Later
+    // reloads (a share.track_event push, a revoke) keep the rows on screen
+    // until the new ones replace them, rather than flashing a spinner.
+    const container = this._accessEvents.el;
+    const firstLoad = !this._accessEventsLoaded;
+    if (firstLoad && container) container.dataset.loading = '1';
     let list = [];
     try {
       const rows = await this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id });
@@ -618,6 +665,9 @@ class __window_secure_share extends mfsInteract {
     } catch (e) {
       list = [];
     }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._accessEventsLoaded = true;
+    if (container) delete container.dataset.loading;
     this._accessEvents.feed(events_skl(this, list));
     // Reflect the access count in the toggle header (e.g. "View access list (12)"),
     // mirroring the Shared-links label. Count = rows shown = total access events.

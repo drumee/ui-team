@@ -1,5 +1,5 @@
 const {
-  canUpgradePlan, billingAvailable, planRank,
+  canUpgradePlan, billingAvailable, planRank, planKey,
   PROMO_YEARLY_PCT, promoYearlyEndsAt, promoYearlySecondsLeft, promoYearlyCountdown,
 } = require("libs/billing");
 
@@ -147,6 +147,36 @@ class settings_billing extends LetcBox {
     // Stripe mirror (LAUNCH30 org) — keep it for cancel-consequence copy.
     this._memberCount = ~~(raw && raw.member_count);
     const sub = this._subscription;
+    // DOES THE STRIPE MIRROR STILL DESCRIBE THE PLAN THIS CALLER HOLDS?
+    //
+    // `plan` on this row is the last Stripe receipt; `entitlement_plan` is
+    // yp.quota -- the row every quota check in the product actually reads. The
+    // two come apart, because the mirror is only dropped by the
+    // customer.subscription.deleted webhook: a subscription cancelled in the
+    // Stripe dashboard, one whose deletion event never landed, and one
+    // superseded by a hand-granted tier all leave the row behind as status
+    // 'canceled' long after the entitlement has moved on.
+    //
+    // Live on prod 2026-09-16 -- entitlement 'business', mirror 'pro'
+    // /'canceled' -- and the page announced Pro, marked the Pro card "Your
+    // current plan" (disabled, so it could not even be re-bought) and left the
+    // Business tier the account actually held looking unowned.
+    //
+    // A MISSING entitlement KEEPS the mirror. A server one release behind that
+    // does not select the column, and a payer with no quota row at all, both
+    // arrive here empty -- and "unknown" must never read as "stale", or such a
+    // deployment would disown every live subscription on it.
+    //
+    // SO DOES A LIVE ONE, and that is the guardrail that matters: while Stripe
+    // is still charging for this subscription the caller holds it, whatever the
+    // quota row says. Without this, any disagreement at all could hide a plan
+    // somebody is paying for -- a legacy entitlement name is enough, since
+    // planKey folds 'advanced' onto free -- and taking a paid tier off a paying
+    // customer's screen is a far worse failure than the stale label this fixes.
+    // Only a subscription Stripe is NOT charging for can be disowned.
+    const liveMirror = !!(sub && /^(active|trialing|past_due)$/.test(sub.status || ""));
+    this._mirrorIsCurrent = !sub || !sub.plan || !sub.entitlement_plan || liveMirror
+      || planKey(sub.plan) === planKey(sub.entitlement_plan);
     const now = Math.floor(Date.now() / 1000);
     this._periodEnd = (sub && Number(sub.period_end)) || 0;
     // Pending cancel = mirror status 'canceled' with the paid period still in
@@ -239,9 +269,16 @@ class settings_billing extends LetcBox {
     // rather than posting junk to preview_coupon.
     const rawPromo = opt.promo != null ? String(opt.promo).trim() : "";
     const promo = /^[A-Za-z0-9_-]{1,64}$/.test(rawPromo) ? rawPromo : null;
-    // `promo` joins the guard, or a promo-only link would return here and the
-    // code would be dropped one hop after the lib was taught to carry it.
-    if (!plan && !cycle && !tab && !promo) return;
+    // An Upgrade CTA knows WHERE it wants to go but not WHAT to buy. Kept
+    // apart from `tab` for exactly that reason: `tab: "checkout"` names a
+    // destination the caller has already committed to and needs a `plan`
+    // beside it, while this is a request for THIS screen to work the plan out
+    // once the subscription mirror lands. Resolved in _settleUpgradeIntent.
+    const intent = opt.intent != null ? String(opt.intent).toLowerCase() : "";
+    // `intent` joins the guard for the same reason `promo` did -- an
+    // intent-only open carries none of the other three.
+    if (!plan && !cycle && !tab && !promo && !intent) return;
+    this._upgradeIntent = intent === "upgrade";
 
     if (cycle) {
       this.state.plansTab.cycle = cycle;
@@ -335,6 +372,68 @@ class settings_billing extends LetcBox {
     // AFTER the tab decision above, never before: a coupon must not be
     // previewed onto a screen this method just decided has no checkout on it.
     this._autoApplyDeepLinkPromo();
+  }
+
+  /**
+   * "Upgrade" clicked somewhere that cannot name a plan.
+   *
+   * Every upgrade CTA outside this screen -- the sidebar entry, the Settings
+   * storage row, the admin console's capacity card, the quota-exceeded card,
+   * the feature lock -- lands on the plans grid. That is the right answer for
+   * somebody shopping and the wrong one for somebody whose plan has just
+   * lapsed: they are shown the ladder again and made to re-pick the tier they
+   * already chose once and paid for (reported 2026-09-16).
+   *
+   * THE PLAN THEY LOST is the only thing that makes this decidable, and a
+   * disowned mirror is precisely that record -- a receipt for a tier the
+   * entitlement no longer grants (see _loadSubscription). Where there is none
+   * the grid stays up, deliberately: a clean lapse deletes the mirror row
+   * outright and a first-time buyer never had one, and neither should be
+   * dropped into a payment form for a plan nobody has proposed to them.
+   *
+   * Runs once, after _loadSubscription, and defers to the same
+   * _checkoutTabAllowed() gate the tab bar and the deep link use -- so it can
+   * no more dead-end an account than they can. It also stands aside for an
+   * explicit checkout deep link, which has already named both plan and tab.
+   */
+  _settleUpgradeIntent() {
+    if (!this._upgradeIntent || this._upgradeIntentSettled) return;
+    this._upgradeIntentSettled = true;
+    if (this._deepLinkCheckout) return;
+    if (this._mirrorIsCurrent !== false) return;
+    const mirrorPlan = String((this._subscription || {}).plan || "");
+    // planKey() falls back to Visitor.quota() when given nothing, which would
+    // name the plan they HAVE rather than the one they lost. _mirrorIsCurrent
+    // being false already implies a non-empty mirror plan; this keeps that
+    // implication local instead of resting on a check thirty lines away.
+    if (!mirrorPlan) return;
+    const lost = planKey(mirrorPlan);
+    // Neither end of the ladder is a purchase: free has no checkout, and
+    // sovereign is sales-led.
+    if (!/^(pro|team|business)$/.test(lost)) return;
+    // Nothing to sell in this environment -- the card itself says so rather
+    // than walking the buyer to a NO_PRICE failure, and so does this.
+    if (!this._catSellable(lost)) return;
+    if (!this._checkoutTabAllowed()) return;
+    // The RHYTHM they were on, too. fetchPlanData only re-seeds the cycle
+    // while the caller is NOT on the checkout tab, and this puts them on it —
+    // so without this line a lapsed yearly subscriber is quoted the monthly
+    // price (the state default) for the plan they are being offered back, on a
+    // screen they never asked to be taken to. Same two keys _applyDeepLink
+    // writes for a cycle, so leaving checkout lands on the matching tab.
+    const period = String((this._subscription || {}).period || "");
+    if (/^year/.test(period) || /^month/.test(period)) {
+      const cycle = /^year/.test(period) ? "yearly" : "monthly";
+      this.state.plansTab.cycle = cycle;
+      this.state.checkout.billingCycle = cycle;
+      // Keep fetchPlanData's first-paint seed from overriding the rhythm we
+      // just chose, exactly as _applyDeepLink does for an explicit cycle.
+      this._cycleSeeded = true;
+    }
+    this.state.plansTab.selectedPlan = lost;
+    this.state.checkout.selectedPlan = lost;
+    this.state.currentTab = TAB_CHECKOUT;
+    this.tab = TAB_CHECKOUT;
   }
 
   // Human-readable consequence list for the cancel-confirm modal.
@@ -755,6 +854,9 @@ class settings_billing extends LetcBox {
     // settle any checkout deep link (stepping down to the plans view if this
     // account can't buy) before the render below.
     this._settleDeepLinkTab();
+    // Same moment, same reason: an Upgrade CTA's intent can only be turned
+    // into a plan once the mirror is known.
+    this._settleUpgradeIntent();
     // Correct the screen NOW rather than at the end of the method: everything
     // this render fixes is already known, and the awaits that follow are the
     // slow ones. The final fetchPlanData() below still runs, with the prices.
@@ -812,10 +914,20 @@ class settings_billing extends LetcBox {
       // the mirror whenever
       // there is a live subscription row; quota stays the source for everyone
       // else (a free account has no mirror row at all).
-      const mirrored = String((this._subscription || {}).plan || "");
-      const planName = (mirrored || plan || "free").toLowerCase();
+      //
+      // ...and only for as long as that mirror IS the caller's plan. A
+      // superseded row (see _loadSubscription's _mirrorIsCurrent) is a receipt
+      // for a tier they no longer hold, so the ENTITLEMENT takes over: the
+      // server's own reading of yp.quota first, the Visitor cache after it.
+      // The cycle below rides on the same decision -- a period lifted off a
+      // disowned receipt would label the billing rhythm of a plan it does not
+      // describe.
+      const subRow = this._subscription || {};
+      const mirrored = this._mirrorIsCurrent === false ? "" : String(subRow.plan || "");
+      const entitled = String(subRow.entitlement_plan || "");
+      const planName = (mirrored || entitled || plan || "free").toLowerCase();
       if (mirrored) {
-        const p = String((this._subscription || {}).period || "");
+        const p = String(subRow.period || "");
         if (/^year/.test(p)) billing_cycle = "yearly";
         else if (/^month/.test(p)) billing_cycle = "monthly";
       }

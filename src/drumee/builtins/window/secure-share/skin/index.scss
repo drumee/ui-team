@@ -11,6 +11,26 @@
   to   { transform: translateX(0); }
 }
 
+// Column mode (window/folder/secure-share-column) show / hide. A shorter travel
+// than the drawer's 100%: the panel moves within its column, beside a file grid
+// that stays put, so it only needs to read as arriving and leaving, not cross
+// the screen.
+@keyframes window-secure-share-column-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes window-secure-share-column-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateX(24px); }
+}
+
+// Access list first load (index.js _loadAccessEvents). Top level for the same
+// reason as the keyframes above.
+@keyframes window-secure-share-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .window-secure-share[data-embedded="yes"] .window-secure-share__main.drive-popup {
     animation: none;
@@ -71,6 +91,81 @@
     }
   }
 
+  // ── Floating, from a player's Share row ───────────────────
+  // The dock is positioned in JS (_applyRightDock sets left/top/width/height
+  // inline on the root), so the slide runs on __main, never on the root: a
+  // transform animation there would fight those inline offsets. Same keyframe
+  // and easing as the embedded drawer, and `backwards` for the same reason — a
+  // filled final frame would outrank the gsap transform the close tween sets.
+  // The close slides the ROOT out (index.js, goodbye xPercent 100).
+  &[data-floating="1"] .window-secure-share__main.drive-popup {
+    animation: window-secure-share-slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+    // Inside the rule, not in the file-top media block: same selector, so a
+    // copy up there loses by order.
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  // ── Column mode ───────────────────────────────────────────
+  // A view of the folder window's split body (window/folder/secure-share-column),
+  // not a drawer and not a floating window: it fills the grid cell the folder
+  // skin gives it, and that skin draws the card. !important because the window
+  // base (.window__ui: absolute, min-width 600px) and any inline geometry the
+  // window core writes would otherwise win.
+  &[data-mode="column"] {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: auto !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    box-shadow: none;
+    border-radius: 0;
+
+    // The card, the same one the chat panel is drawn as (folder skin
+    // __split-body[data-view="access"]). On __main, not the root, so the card
+    // moves with the show / hide animation below instead of staying behind it.
+    .window-secure-share__main.drive-popup {
+      width: 100%;
+      height: 100%;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      box-shadow: none;
+      // SHOW. Replays by itself every time the view is shown: the panel stays
+      // mounted and is hidden with display:none, and an element coming back
+      // from display:none restarts its animations. `backwards` holds the from-
+      // state through the frame before start; nothing is held after the end,
+      // so no transform is left on the ancestor of the panel's popovers.
+      animation: window-secure-share-column-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    }
+
+    // HIDE. display:none cannot animate, so the folder window stamps
+    // data-leaving and switches the view on this animation's end
+    // (secure-share-column leaveSecureShareView). `forwards` keeps the panel on
+    // its invisible last frame for the moment between the end and the switch.
+    &[data-leaving="1"] .window-secure-share__main.drive-popup {
+      animation: window-secure-share-column-out 0.2s ease-in forwards;
+      pointer-events: none;
+    }
+
+    // AFTER the two rules above, on purpose: the selectors are the same, so
+    // this wins by order — a copy in the file-top media block lost. The folder
+    // window reads the same media query and does not wait for a leave that
+    // will never run.
+    @media (prefers-reduced-motion: reduce) {
+      .window-secure-share__main.drive-popup,
+      &[data-leaving="1"] .window-secure-share__main.drive-popup {
+        animation: none;
+      }
+    }
+  }
+
   // ── Header ────────────────────────────────────────────────
   &__header {
     min-height: 52px;
@@ -116,6 +211,95 @@
 
   &__section-label {
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--default-text-color));
+  }
+
+  // ── What is being shared (skeleton/subject.js) ────────────
+  // The share tour's subject row (modules/desk/tutorial/share/skin __file*),
+  // icon and name only: 8/12 padding on an 8px radius, a 38.4 icon box, a
+  // 14/20 semibold name that truncates rather than wraps.
+  &__subject {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--border-muted);
+  }
+
+  &__subject-ico {
+    width: 38.4px;
+    height: 38.4px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &__subject-glyph {
+    width: 25.6px;
+    height: 25.6px;
+    color: var(--normal-fg-20);
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  // Folder or workspace: the folder shape itself, 38.4 wide at its own 105:86,
+  // centred in the same square the file icon occupies. Sized on the inner
+  // nodes too — the template emits width/height attributes of its own.
+  &__subject-art {
+    width: 38.4px;
+    height: 38.4px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    .media-grid__folder-art {
+      position: relative;
+      width: 38.4px;
+      height: 31.4px;
+    }
+    svg { width: 38.4px; height: 31.4px; }
+
+    // The template's path carries no fill: the colour is CSS's job, and the
+    // grid's own rules live under .media-grid__container, which this is not.
+    // Same values as the grid and the tour.
+    .folder-shape {
+      fill: #885eff;
+
+      &.personal { fill: var(--area-personal); }
+      &.public { fill: var(--area-public); }
+      &.share { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+
+    // Workspace emblem. `fill: currentColor` flattens the template's
+    // gradient layer, whose stops no stylesheet defines (it would read black).
+    // Percentages, as the tour places it, since the art is drawn this small.
+    .badge {
+      position: absolute;
+      width: 24%;
+      height: 30%;
+      bottom: 26%;
+      left: 7%;
+      color: var(--grid-color-folder-badge);
+      fill: currentColor;
+      filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.32));
+    }
+  }
+
+  &__subject-name {
+    @include drumee.typo($size: 14px, $line: 20px);
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 8px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   // Sub-label under "Recipients mode" (Figma: "Users can view by default…")
@@ -880,6 +1064,34 @@
     padding: var(--spacer-4);
 
     &[data-mode='closed'] { display: none; }
+
+    // First load: nothing to show yet, so a spinner holds the table's place.
+    // Drawn here — ui-core's view.spinner() ships no styles in this app.
+    &[data-loading="1"] {
+      position: relative;
+      min-height: 72px;
+
+      > * { visibility: hidden; }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        box-sizing: border-box;
+        border: 2px solid var(--primary-40);
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: window-secure-share-spin 0.8s linear infinite;
+
+        @media (prefers-reduced-motion: reduce) {
+          animation-duration: 2.4s;
+        }
+      }
+    }
   }
 
   &__events-table { gap: var(--spacer-5); }

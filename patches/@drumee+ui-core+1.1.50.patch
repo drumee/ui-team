@@ -196,7 +196,7 @@ index e035048..43c1c6a 100644
    },
    gender: {
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/list/index.js b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
-index 838406c..aba8302 100644
+index 838406c..dacf105 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/list/index.js
 +++ b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
 @@ -54,7 +54,16 @@ class __list extends LetcBox {
@@ -259,6 +259,90 @@ index 838406c..aba8302 100644
      this.__container = c;
      //this.trigger(_e.ready);
      let kids = this.mget(_a.kids) || [];
+@@ -749,7 +779,7 @@ class __list extends LetcBox {
+         }
+       } else {
+         if ((this._curPage > 1) || this.mget(_a.defaults)) {
+-          this.collection.add(data);
++          this._appendPage(data);
+         } else {
+           this.collection.cleanSet(data);
+         }
+@@ -766,6 +796,74 @@ class __list extends LetcBox {
+     }
+   }
+ 
++  /**
++   * Append one fetched page at the END of the list.
++   *
++   * `this.collection.add(data)` looks like it only adds, but Marionette
++   * re-attaches EVERY child on it, not just the new rows.
++   * `_onCollectionUpdate` -> `sort()` -> `_sortChildren()` asks
++   * `getComparator()`, which answers `_viewComparator` (order by collection
++   * index) for any collection view with `sortWithCollection` on -- the
++   * default. A truthy comparator makes `_sortChildren` `delete
++   * this._addedViews`, so `_renderChildren` falls back to
++   * `this.children._views`: all of them go into a DocumentFragment and are
++   * appended back. Two things follow, and together they are the paging
++   * complaint on the file tab.
++   *
++   *  1. THE SCROLL CONTAINER IS EMPTY for the length of that operation. Any
++   *     layout read while it is -- a tile measuring itself, a GSAP tween
++   *     reading a computed matrix, a partition pass -- clamps `scrollTop` to
++   *     0, and re-appending does not bring it back, so the list snaps to the
++   *     top exactly as the new page arrives. Measured in Chrome against this
++   *     repo's Backbone/Marionette: scrolled to 1500, one layout read during
++   *     the append, scrollTop comes back 0. On the add-to-end path below it
++   *     stays 1500.
++   *  2. The cost is O(rows already loaded) per page, and in the folder grid
++   *     every tile also leaves its `.workspace-/.folder-/.file-section`
++   *     wrapper, so window/utils.js `_doPartition` has to re-partition the
++   *     WHOLE list while the skin hides it (`:not([data-partitioning="0"]) >
++   *     [data-filetype]`). Page 10 of a folder rebuilt 450 tiles to show 45.
++   *
++   * Neither is needed for a page append. With no comparator on the collection
++   * Backbone puts the new rows at the end, in order, so the DOM the existing
++   * children already have IS the order to render -- turning the re-sort off
++   * for the duration of the add keeps `_addedViews`, and Marionette attaches
++   * the new rows alone.
++   *
++   * A collection that DOES carry a comparator (the column sort in
++   * window/core.js `sortContent`, the folder's alphabetical grid pass) is left
++   * on the old path on purpose: there the new rows interleave, so the DOM
++   * genuinely has to be re-ordered. All we can do there is put the scroll
++   * offset back, which is what the snapshot below is for -- it is restored
++   * within the same task, so the jump is never painted.
++   */
++  _appendPage(data) {
++    const c = this.collection;
++    const sorted = !!(c && c.comparator);
++    const el = this.__container;
++    const top = (sorted && el) ? el.scrollTop : null;
++
++    // Restore by DELETING the own property when there was none, rather than
++    // writing `undefined` back: `sortWithCollection` lives on the prototype
++    // (Marionette) unless mergeOptions copied it, and an own `undefined`
++    // would shadow the prototype's `true` and disable sorting for good.
++    const owned = Object.prototype.hasOwnProperty.call(this, 'sortWithCollection');
++    const previous = this.sortWithCollection;
++    if (!sorted) this.sortWithCollection = false;
++    try {
++      c.add(data);
++    } finally {
++      if (!sorted) {
++        if (owned) {
++          this.sortWithCollection = previous;
++        } else {
++          delete this.sortWithCollection;
++        }
++      }
++    }
++    if (top != null && el.scrollTop !== top) el.scrollTop = top;
++  }
++
+   /**
+    * 
+    */
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 index 13edb44..e8df4bc 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
@@ -378,10 +462,10 @@ index 13edb44..e8df4bc 100644
      return this._show('i');
    }
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/text/index.js b/node_modules/@drumee/ui-core/letc/widgets/text/index.js
-index 83c2dda..e96831d 100644
+index 83c2dda..4e52e30 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/text/index.js
 +++ b/node_modules/@drumee/ui-core/letc/widgets/text/index.js
-@@ -103,9 +103,29 @@ class ___drumee_text extends Marionette.View {
+@@ -103,9 +103,63 @@ class ___drumee_text extends Marionette.View {
      let c = m.content || m.value || m.label || m.text || '';
      let tags = this.mget(_a.tags) ||  _K.allowed_tag;
  
@@ -401,9 +485,43 @@ index 83c2dda..e96831d 100644
 +    // waste. `>` and quotes are inert in a text position. Anything containing
 +    // either character still takes the full path below, unchanged — this
 +    // narrows WHEN the sanitizer runs, never WHAT it does.
-+    const clean = (typeof c === 'string' && !/[<&]/.test(c))
-+      ? c
-+      : dompurify.sanitize(c, {ADD_ATTR: ['target'], ALLOWED_TAGS: tags});
++    const plain = (typeof c === 'string' && !/[<&]/.test(c));
++
++    // AND DON'T PARSE HTML EITHER. The sanitizer skip above stopped the
++    // throwaway Document per Note, but this assignment still handed the parser
++    // a fresh markup string for every label, filename, menu item and button
++    // caption on screen — even when the content was a bare word.
++    //
++    // An `innerHTML =` is an HTML parse plus a full subtree replacement, and the
++    // subtree replacement is what a MutationObserver sees. That matters beyond
++    // our own cost: content-blocker extensions hook a document-wide observer and
++    // re-run their element-hiding filters over whatever we mutate. A production
++    // trace (2026-09-15) measured 13,773 ParseHTML events in 104s — 133/s — and
++    // in that same trace one ad-filtering extension burned 25.7s of CPU, versus
++    // 10ms in a second trace of the same browser where our mutation rate was 8x
++    // lower. We are billed for that churn twice: once ourselves, once per
++    // extension the user happens to run.
++    //
++    // When `plain` holds there is no markup to parse, so build the one element
++    // directly and set its text. `textContent` writes a single text node with no
++    // parser involved. Same id, same class string (including the literal
++    // "undefined" when innerClass is unset — matched deliberately so no CSS
++    // selector changes), same rendered result: the surrounding newlines the
++    // template used to emit are leading/trailing whitespace in a block context
++    // and were never painted.
++    //
++    // Anything with `<` or `&` still takes the sanitize + innerHTML path below,
++    // byte for byte as before.
++    if (plain) {
++      const inner = document.createElement('div');
++      inner.id = `${m.widgetId}-inner`;
++      inner.className = `${m.innerClass} ${this.fig.family} inner note-content`;
++      inner.textContent = c;
++      this.el.replaceChildren(inner);
++      return;
++    }
++
++    const clean = dompurify.sanitize(c, {ADD_ATTR: ['target'], ALLOWED_TAGS: tags});
 +
      this.el.innerHTML = `
        <div id="${m.widgetId}-inner" class="${m.innerClass} ${this.fig.family} inner note-content">

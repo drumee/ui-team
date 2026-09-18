@@ -14,11 +14,15 @@ const __skl_secure_share = function(_ui_) {
   // Leading row icon (non-interactive) — matches the Figma row glyphs.
   const rowIcon = (ico) => Skeletons.Image.Svg({ className: `${pfx}__row-icon`, ico });
 
-  // ── Topbar (unchanged) ────────────────────────────────────
+  // ── Topbar ────────────────────────────────────────────────
+  // Column mode (a view of the folder split body): no raise, which would lift a
+  // grid cell over the desk (see index.js raise). The ✕ stays — in a column it
+  // hides the panel and brings the chat panel back (index.js `_e.close`).
+  const column = _ui_.mget('mode') === 'column';
   const topbar = Skeletons.Box.X({
     className : `${group}-topbar__container`,
     sys_pn    : 'topbar',
-    service   : _e.raise,
+    ...(column ? {} : { service: _e.raise }),
     kids      : [
       Skeletons.Box.X({
         className : `${pfx}__topbar-title forbiden`,
@@ -59,6 +63,8 @@ const __skl_secure_share = function(_ui_) {
   const permSection = Skeletons.Box.Y({
     className : `${pfx}__perm-section`,
     kids      : [
+      // What is being shared — file, folder or workspace (./subject).
+      require('./subject')(_ui_),
       Skeletons.Note({ className: `${pfx}__section-label`, content: LOCALE.SECURE_SHARE_PERMISSION_LEVEL }),
       Skeletons.Note({ className: `${pfx}__section-hint`,  content: LOCALE.SECURE_SHARE_PERMISSION_HINT }),
       Skeletons.Box.Y({
@@ -79,7 +85,7 @@ const __skl_secure_share = function(_ui_) {
           ]
         }))
       })
-    ]
+    ].filter(Boolean)
   });
 
   // ── Access management section ─────────────────────────────

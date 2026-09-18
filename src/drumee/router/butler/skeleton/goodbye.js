@@ -49,10 +49,34 @@ const __skl_goodbye = function (_ui_) {
     ]
   });
 
+  // The determinate bar from the boot screen (server-team
+  // client/templates/warmup.html), not a spinner: logout has REAL milestones
+  // to report — the screen is up, the session POST came back — where a boot
+  // has bundles landing. A spinner says "something is happening" for a flow
+  // whose length is actually known.
+  //
+  // Colours, height, radius and the 1s width transition are that bar's, ported
+  // in skin/goodbye.scss. The MECHANICS are not: warmup.html hangs its track
+  // and fill off `bottom: -5px` because the bar has to sit under a caption
+  // inside one fixed row. Here the markup is ours, so the track is the row's
+  // own background and the fill is an in-flow child — same picture, nothing
+  // absolutely positioned to keep in step.
+  //
+  // `goodbye-progress` is how Butler.logout reaches the fill (_logoutProgress).
   const content = Skeletons.Box.Y({
     className: `${goodByeFig}__container`,
     sys_pn: _a.loader,
-    kids: [{ kind: 'spinner', mode: 'goodbye-loader' }]
+    kids: [
+      Skeletons.Box.X({
+        className: `${goodByeFig}__progress`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${goodByeFig}__progress-fill`,
+            sys_pn: "goodbye-progress",
+          }),
+        ],
+      }),
+    ]
   });
 
   const card = Skeletons.Box.Y({

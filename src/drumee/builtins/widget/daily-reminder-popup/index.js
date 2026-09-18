@@ -7,10 +7,13 @@
  * per device, which is a deliberate choice — a two-device user seeing it twice
  * is acceptable and it costs no schema.
  *
- * [My calendar] opens the Personal Calendar. It was deliberately inert until
- * 2026-09-07 because that screen did not exist yet; it does now, so the button
- * dispatches the desk's own `toggle-calendar` — the exact service the left
- * rail, the topbar utility cluster and the phone's go-to grid already fire.
+ * [My calendar] opens the Personal Calendar on TODAY, in DAY view — the card
+ * reports on today, so the screen it opens shows today rather than the month
+ * grid the rail opens. It was deliberately inert until 2026-09-07 because that
+ * screen did not exist yet; it does now, so the button dispatches the desk's
+ * own `toggle-calendar` — the exact service the left rail, the topbar utility
+ * cluster and the phone's go-to grid already fire, with the view named in the
+ * args those callers omit.
  * Going through the desk rather than mounting the panel here is what keeps the
  * breadcrumb, the sidebar highlight, the mutual exclusion with Settings / Get
  * help / Billing and the reload-restore all working: `toggle-calendar` is in
@@ -19,6 +22,8 @@
  * Discard and ✕ are the same action: close, write nothing. There is no
  * server-side "seen" state at all.
  */
+const { closeWmPopup } = require("libs/wm-popup");
+
 const STORAGE_KEY = "drumee_daily_reminder_shown";
 
 class __daily_reminder_popup extends LetcBox {
@@ -115,32 +120,15 @@ class __daily_reminder_popup extends LetcBox {
   /**
    * WHEN WE SHARE THE PARENT WITH ANYONE ELSE, REMOVE ONLY OURSELVES.
    *
-   * `parent.clear()` is `collection.reset()`, and it is only right when the
-   * parent is a single-widget modal host. It is NOT one here: Wm.launch with
-   * `explicit: 1` appends to `Wm.getWindowsPool(kind)`, which answers
-   * `headlessLayer` whenever a workspace pane is open — and that is always the
-   * case 2s into a desk load, which is exactly when this card fires. So the
-   * parent is the shared layer that also hosts the singleton headless
-   * window_folder, and clearing it destroyed the WORKSPACE PANE along with the
-   * card.
-   *
-   * What the user saw was the address chip spinning for the rest of the
-   * session: with no pane left, the next repaint of the track (breadcrumb
-   * _restoreCurrentPath -> headlessPane() -> null) falls through to
-   * loadDefault(), which empties it — and the chip's spinner is the CSS
-   * condition "no crumbs in the chip" (desk/skin/topbar.scss), so an empty
-   * track IS the loading state with nothing left to re-signal.
-   *
-   * Same bug, same fix, as migrate-gdrive-popup's _teardown — which reached
-   * production first, on this same boot path, as "closing the migrate popup
-   * closes the folder window".
+   * This card is where the rule was worked out — `parent.clear()` here wiped
+   * the shared Wm pool and took the WORKSPACE PANE down with the card, which
+   * reached production as "blank workspace after closing the daily reminder".
+   * The reasoning, the measurements and the top-bar symptom now live in ONE
+   * place, libs/wm-popup, because three separate widgets have each been
+   * diagnosed from scratch for the same defect.
    */
   _close() {
-    const p = this.parent;
-    const soleChild = p?.children?.length === 1;
-    if (soleChild && _.isFunction(p.clear)) p.clear();
-    else if (_.isFunction(this.goodbye)) this.goodbye();
-    else this.softDestroy();
+    closeWmPopup(this);
   }
 
   // ───────── event routing ─────────
@@ -174,8 +162,14 @@ class __daily_reminder_popup extends LetcBox {
         // `service` is passed in args, so Desk.onUiEvent never dereferences
         // `cmd` — which matters because _close() above may already have
         // destroyed this widget and the button inside it.
+        //
+        // `calendarView: "day"` — the card is a report on TODAY, so its button
+        // lands on today in DAY view rather than on the month grid the rail
+        // opens (Lexis, 2026-09-14). The desk owns the whole of that: it
+        // passes the view as a launch option AND re-states it on an instance
+        // that was only revealed. See desk `_openCalendar`.
         if (window.Desk && _.isFunction(Desk.onUiEvent)) {
-          Desk.onUiEvent(cmd, { service: "toggle-calendar" });
+          Desk.onUiEvent(cmd, { service: "toggle-calendar", calendarView: "day" });
         }
         return;
       }

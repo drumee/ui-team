@@ -199,9 +199,9 @@ module.exports = function (ui) {
                     service: "daily-reminder-discard",
                     uiHandler: [ui],
                   }),
-                  // Opens the Personal Calendar via the desk's own
-                  // `toggle-calendar` service — see the widget header. Inert
-                  // until 2026-09-07, when that screen shipped.
+                  // Opens the Personal Calendar on today, in day view, via
+                  // the desk's own `toggle-calendar` service — see the widget
+                  // header. Inert until 2026-09-07, when that screen shipped.
                   Skeletons.Note({
                     className: `${pfx}__btn ${pfx}__btn--primary`,
                     content: LOCALE.MY_CALENDAR,

@@ -6,7 +6,24 @@ const _icons_list = function (ui) {
     innerClass: `${ui.fig.family}__icons-scroll ${ui.fig.group}__icons-scroll`,
     sys_pn: _a.list,
     flow: _a.none,
-    timer: 1000,
+    // NO `timer:` HERE, DELIBERATELY — same reason as the file surfaces in
+    // window/skeleton (see the note at gridFilesBrowser). `timer: N` arms
+    // ui-core's tick() loop (letc/widgets/list/index.js:194), which re-arms
+    // itself from renderData() after every page and only stops at
+    // `_end_of_data`, so the list silently walks the ENTIRE listing while the
+    // tab sits idle.
+    //
+    // It was dormant on small accounts, which is why it survived the first
+    // pass: desk.home answers short on page 1 for anyone with fewer than 45
+    // root-level home items, the list calls _eod() and the loop stops. An
+    // account that fills a page did not get that reprieve — it walked
+    // desk.home once per SECOND, and desk.home measured 442ms avg / 1,967ms
+    // max on production.
+    //
+    // Paging is unaffected: _onScroll (list/index.js:517) is bound for every
+    // List.Smart independently of `timer` and fetches the next page on
+    // reaching the bottom, with useMouseWheel() covering the not-yet-
+    // scrollable case.
     spinnerWait: 1000,
     spinner: true,
     vendorOpt: Preset.List.Orange_e,

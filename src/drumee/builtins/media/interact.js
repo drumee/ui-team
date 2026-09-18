@@ -324,8 +324,20 @@ class __media_interact extends media_core {
     this.feed(this.container);
     this.el.dataset.selected = this.mget(_a.state);
     this.el.setAttribute(_a.id, `media-${this._id}`);
-    this.parent.off(_e.scroll, this.initBounds.bind(this));
-    this.parent.on(_e.scroll, this.initBounds.bind(this));
+    // ONE STABLE REFERENCE, bound once. Backbone matches listeners by identity,
+    // so `off(evt, this.initBounds.bind(this))` built a brand-new function that
+    // matched nothing and removed nothing — while the `on` right after it added
+    // yet another. Every pass through here (every tile render, and tiles
+    // re-render a lot) left one more scroll listener on the parent, each one
+    // calling initBounds -> `$el.offset()` -> a forced style+layout flush.
+    //
+    // Production trace 2026-09-15: initBounds sat behind 134 forced recalcs
+    // costing 6,838ms, second only to GSAP.
+    if (!this._onParentScroll) {
+      this._onParentScroll = () => this.initBounds();
+    }
+    this.parent.off(_e.scroll, this._onParentScroll);
+    this.parent.on(_e.scroll, this._onParentScroll);
 
     if (this.mget(_a.file)) {
       return;
@@ -351,6 +363,12 @@ class __media_interact extends media_core {
   onBeforeDestroy() {
     _unobserveVignette(this._vignetteObserved);
     this._vignetteObserved = null;
+    // The parent outlives the tile, so a listener left on it keeps this widget
+    // (and its element) alive and keeps forcing layout on every scroll.
+    if (this._onParentScroll && this.parent && this.parent.off) {
+      this.parent.off(_e.scroll, this._onParentScroll);
+      this._onParentScroll = null;
+    }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -1100,19 +1118,25 @@ class __media_interact extends media_core {
         // Without it this line would fire again — and a tour the user escaped
         // is not marked seen, so it would be raised, deferred, re-entered and
         // raised again, forever.
+        //
+        // The panel's own header row draws the same subject from the same fields
+        // (window/secure-share/skeleton/subject.js), so they are built once and
+        // handed to both.
+        const _subject = _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file");
+        const _subjectData = {
+          name: this.mget(_a.filename),
+          filetype: _ft,
+          // _fileExt() is the canonical read — `ext` is an SQL alias and
+          // `extension` the field, and only one of them is present.
+          ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
+          filesize: this.mget(_a.filesize),
+          ctime: this.mget(_a.ctime),
+          mtime: this.mget(_a.mtime),
+          area: this.mget(_a.area),
+        };
         const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
-          subject: _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file"),
-          subject_data: {
-            name: this.mget(_a.filename),
-            filetype: _ft,
-            // _fileExt() is the canonical read — `ext` is an SQL alias and
-            // `extension` the field, and only one of them is present.
-            ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
-            filesize: this.mget(_a.filesize),
-            ctime: this.mget(_a.ctime),
-            mtime: this.mget(_a.mtime),
-            area: this.mget(_a.area),
-          },
+          subject: _subject,
+          subject_data: _subjectData,
         });
         // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
         // tour teaches the secure-share panel, and the panel was opening while
@@ -1153,6 +1177,12 @@ class __media_interact extends media_core {
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
+        item.subject = _subject;
+        item.subject_data = _subjectData;
+        // A player's Share row: the panel slides in and out
+        // (window/secure-share `_floating`). Other floating opens keep the
+        // window's own appearance.
+        if (args.floating) item.floating = 1;
         const launchFloating = () => Wm.launch(item, { explicit: 1, singleton: 1 });
         // Opt-in, and only players pass it (player/widget/share): they are
         // windows stacked above the host folder window, so the drawer below
@@ -1185,6 +1215,8 @@ class __media_interact extends media_core {
             nid      : item.nid,
             hub_id   : item.hub_id   || this.mget(_a.hub_id),
             filetype : item.filetype || this.mget(_a.filetype),
+            subject      : _subject,
+            subject_data : _subjectData,
             uiHandler: [host],
           });
         })).catch(() => once(launchFloating));

@@ -108,6 +108,12 @@ html {
     // Update button, and both buttons once the modal was zoomed full-screen.
     pointer-events: none;
     position: fixed;
+    // THE RESTING PLACE ONLY. The tile is draggable (window/meeting
+    // _bindCallTileDrag moves THIS element, since `> *` below pins the window
+    // to fill it), and a drag writes inline left/top here with right/bottom set
+    // to `auto`. These two numbers are also the keep-out inset the drag clamps
+    // and snaps to — CALL_TILE_INSET in window/meeting/index.js, with
+    // CALL_TILE_INSET_SM for the phone breakpoint below. Change one, change both.
     right: 24px;
     bottom: 24px;
     z-index: 20002;
@@ -171,6 +177,8 @@ html {
     }
 
     // A phone has no room for a 300px tile beside the screen it is covering.
+    // (650px is CALL_TILE_SM_W in window/meeting/index.js, 12px is
+    // CALL_TILE_INSET_SM — the drag clamps to the same inset it rests at.)
     @media (max-width: 650px) {
       right: 12px;
       bottom: 12px;
@@ -624,7 +632,24 @@ html {
 //
 // Scoped to `:has(...)` so the context is only dissolved while a floater is
 // actually mounted — the WM keeps its normal isolation the rest of the time.
-.desk-module__body:has(.window-upload-progress) {
+// READ AS AN ATTRIBUTE, NOT AS `:has()`. This was
+// `.desk-module__body:has(.window-upload-progress)`. A `:has()` anchored this
+// high makes the desk root "affected by :has()", so every time the argument
+// could have changed the engine re-evaluates it and invalidates the whole
+// subtree — the entire app. Measured 2026-09-15: a flush restyles ~8,000
+// elements at ~13us each (~68ms), and every forced layout read in any handler
+// then pays it; single clicks blocked for 2.5s.
+//
+// `data-desk-upload` is stamped on `.desk-module` by wm/index.js
+// _installDeskStateMirrors, which watches the upload-progress layer directly.
+//
+// SPECIFICITY IS PRESERVED EXACTLY, which matters because the lifts in this
+// file are a ladder with documented ties:
+//   was  .desk-module__body:has(.window-upload-progress) .window-manager__ui
+//        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
+//   now  .desk-module[data-desk-upload] .window-manager__ui
+//        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
+.desk-module[data-desk-upload] {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;
@@ -685,8 +710,67 @@ html {
 // here at 50002 and put the menus back under the tour overlay (50000), which is
 // the bug that lift exists to fix. The wrapper-modal lift is (0,7,0) and still
 // outranks this one on its own.
-.desk-module:not([data-window-tour="1"]):has(.window-upload-progress):has(
-    .desk-module__topbar .menu-topic[data-state="1"]
+//
+// AND THE UTILITY TOOLTIPS, for exactly the same reason. They are the other
+// thing the bar paints below its 46px strip: `__utility-tip` is `position:
+// absolute; z-index: 1000` (skin/topbar.scss) mounted by ui-core as a real
+// CHILD of the button (letc.js `__addTooltips`), so it is sealed inside the
+// bar's own 10003 context and its 1000 never meets the 50001 window layer at
+// all. Hovering a bell/calendar/inbox icon during an upload drew the bubble
+// UNDER `window-folder__split-body` — the same symptom as the menus, with the
+// same cause, just reached by hover instead of a click.
+//
+// `:hover` on the BUTTON, not a state attribute on the tip, because there is
+// no such attribute to read. ui-core's flyover behavior does stamp
+// `data-over="on"`, but it is dead on this path twice over: the behavior is
+// only attached when the view's options carry a `flyover` key (behavior.js
+// `__configured`) and these buttons pass none, and `this.view.tooltips` — the
+// element it writes to — is defined nowhere in ui-core, so the write would
+// throw into that handler's bare `try/catch` regardless. The tip is toggled by
+// letc's `__handlePointerenter`/`__handlePointerleave` with a bare
+// `$(el).show()`, which leaves nothing in the DOM to select on. Pointer-enter
+// and pointer-leave are precisely the edges of `:hover`, so the button's own
+// hover state tracks the bubble exactly.
+//
+// Unlike the menu arm, this one cannot strand the bar above the full-page
+// settings/apps slot (20001) that the 10003 comment says should cover it: while
+// that slot covers the bar the pointer lands on the SLOT, so the button never
+// takes `:hover` and the gate cannot even be entered. It also releases on its
+// own — there is no close path to miss, the way the menus' one-way
+// `[data-state="open"]` latch is missed (see the note above).
+//
+// Both `:has()` arguments are (0,3,0), so the selector's specificity is
+// UNCHANGED at (0,7,0) — every relationship the notes above and below describe
+// (the tour lift, the wrapper-modal lift) still resolves exactly as it did.
+//
+// AND THE CALL POPUP, because it dissolves the very same context for the very
+// same reason. `.desk-module__body:has(.window-connect[data-state="1"])` below
+// is a second `isolation: auto`, so a call in progress releases the windows
+// layer to the root exactly as an upload does — and that branch shipped with no
+// topbar compensation of any kind, which made it strictly worse than the upload
+// case: with a folder window open, a call buried the tooltips AND all four
+// dropdowns. One list here rather than a parallel rule, since the trigger
+// differs but the gate, the value and the reasoning are identical.
+//
+// `:where(...)` around it IS LOAD-BEARING, not decoration. `:has()` takes the
+// specificity of its most specific argument, so a bare
+// `.window-connect[data-state="1"]` (0,2,0) would push this whole selector to
+// (0,8,0) — above the wrapper-modal lift's (0,7,0) — and a call running behind
+// an open modal would then drag the switcher from 100001 down to 50002, back
+// under the modal. `:where()` contributes ZERO, so the attribute keeps its
+// meaning and the selector stays at (0,7,0).
+//
+// The attribute is worth keeping for meaning even though the window is
+// destroyed on hangup (`goodbye()` → `selfDestroy()` → `destroy()`, ui-core
+// view/utils.js) rather than left behind at state 0: an UNFOCUSED call window
+// still exists, and only `[data-state="1"]` matches what the dissolver below
+// actually keys on.
+.desk-module:not([data-window-tour="1"]):has(
+    .window-upload-progress,
+    :where(.window-connect[data-state="1"])
+  ):has(
+    .desk-module__topbar .menu-topic[data-state="1"],
+    .desk-module__topbar .desk-module-topbar__utility-btn:hover
   ) {
   .desk-module__topbar {
     z-index: var(--z-index-upload-progress, 50002);
@@ -712,7 +796,19 @@ html {
 //   • windows-layer (z 50000)        → above the panels                    ✓
 //     carrying the call (and any open folder window, as before) above them.
 // Nothing drags the grid up, so the panels/sidebar no longer need lifting.
-.desk-module__body:has(.window-connect[data-state="1"]) {
+// Attribute, not `:has()` — same reasoning as the upload lift above.
+// `data-desk-call` is stamped by wm/index.js _installDeskStateMirrors, which
+// watches the call layer and keys on `[data-state="1"]` so an UNFOCUSED call
+// window does not count, exactly as this selector did.
+//
+// SPECIFICITY IS PRESERVED EXACTLY. The attribute is repeated deliberately —
+// it is the only way to reach (0,4,0) from a single flag, and dropping to
+// (0,3,0) would tie this with the upload lift above instead of outranking it:
+//   was  .desk-module__body:has(.window-connect[data-state="1"]) .window-manager__ui
+//        (0,1,0) + (0,2,0) + (0,1,0) = (0,4,0)
+//   now  .desk-module[data-desk-call][data-desk-call] .window-manager__ui
+//        (0,1,0) + (0,1,0) + (0,1,0) + (0,1,0) = (0,4,0)
+.desk-module[data-desk-call][data-desk-call] {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;
@@ -763,6 +859,43 @@ html {
   }
 }
 
+// The utility TOOLTIPS over a wrapper-modal — the third dissolver, and the only
+// part of the bar that needs anything here.
+//
+// `[data-wm-modal="open"]` dissolves `.window-manager__ui` too (see the block
+// above), so a modal raised while a folder window is open puts the windows
+// layer at 50001 on the root and the bubbles render under
+// `window-folder__split-body`, exactly as during an upload.
+//
+// HOVER ONLY, and deliberately NOT the menus. The lift below is gated on the
+// switcher being open because "the bar has no business above a dialog, where
+// its controls would invite clicks on things the modal is meant to block" —
+// that reasoning is sound and is left intact. It simply does not reach a
+// tooltip: `__utility-tip` is `pointer-events: none` (skin/topbar.scss), so it
+// can swallow no click and block nothing the modal wanted blocked. A bubble
+// that is merely unreadable is a rendering bug with no safety story behind it.
+//
+// 50002, NOT the 100001 the switcher below uses. The only thing that has to be
+// cleared is the opaque folder window at 50001; the modal's own
+// `dialog__wrapper` is TRANSPARENT and `inset: 0` (see the block above), so
+// painting under it costs the tooltip nothing visually, and staying under
+// 100000 keeps the bar itself below the dialog — which is the whole point of
+// not lifting it further.
+//
+// Specificity (0,7,0), a TIE with the switcher lift immediately below, broken
+// by source order — hence this block comes FIRST, so that when a modal, the
+// switcher and a hovered utility button all coincide the switcher still gets
+// its 100001. `:not([data-window-tour="1"])` for the same reason it is on the
+// upload rule: without it this (0,6,0) selector would outrank the tour lift
+// (0,3,0) and drop the bar from 100002 to 50002 mid-tour.
+.desk-module:not([data-window-tour="1"])[data-wm-modal="open"]:has(
+    .desk-module__topbar .desk-module-topbar__utility-btn:hover
+  ) {
+  .desk-module__topbar {
+    z-index: var(--z-index-upload-progress, 50002);
+  }
+}
+
 // The workspace switcher must stay reachable OVER a wrapper-modal — the create
 // form (.form-folder__main) is fed into that modal, and switching workspace
 // from the panel above it has to keep working.
@@ -781,9 +914,54 @@ html {
 // Gated on the switcher being OPEN as well as the modal: the rest of the time
 // the bar has no business above a dialog, where its controls would invite
 // clicks on things the modal is meant to block.
-.desk-module:has(.window-manager__wrapper-modal[data-state="open"]):has(
-    .desk-module-topbar__ws-wrapper .menu-topic-items__wrapper[data-state="open"]
-  ) {
+//
+// AND THAT GATE MUST BE READ OFF THE MENU ROOT, which is what
+// `.desk-module-topbar__ws-wrapper.menu-topic[data-state="1"]` is — one
+// element wearing both classes (ui-core adds `menu-topic` to the root beside
+// the `__*-wrapper` the skeleton passes).
+//
+// It used to test the descendant `.menu-topic-items__wrapper[data-state="open"]`
+// instead, and that stamp is a ONE-WAY LATCH: ui-core's menu widget writes it
+// in `_openItems` (widgets/menu/index.js) and never takes it back — `_onClosed`
+// resets the items box and the root, not the wrapper. So the FIRST press of the
+// switcher turned this lift on for the rest of the session, and every later
+// dialog came up with the whole bar — utility icons, avatar, New — floating
+// above it and still clickable. That is exactly the thing the gate above is
+// written to prevent, so the gate was defeating itself. Measured: open the
+// switcher once, close it, and the bar stayed at 100001 with no menu open.
+//
+// The root is cleared on every close path (`_onClosed` and `_close` both write
+// `this.el.dataset.state = 0`), so this releases. Same reasoning, and the same
+// trap, as the note on the upload lift further up — which already reads the
+// root for this reason.
+//
+// COMPOUND, not descendant, and that is deliberate: the two classes plus the
+// attribute keep this `:has()` argument at (0,3,0), so the selector stays at
+// (0,7,0). Written as `:has(.desk-module-topbar__ws-wrapper[data-state="1"])`
+// it would fall to (0,6,0) — under the utility-tooltip lift above, which is
+// (0,7,0) — and the switcher would lose its 100001 to that rule's 50002
+// whenever a tooltip happened to be showing.
+// ATTRIBUTES, NOT `:has()` — and the tie described above is preserved. Both
+// arguments are now flags on the root: `data-wm-modal` from
+// wm/index.js _installWmModalMirror (unchanged, and it tests exactly
+// `.window-manager__wrapper-modal[data-state="open"]`), and `data-desk-wsmenu`
+// from desk/index.js _installWsMenuMirror.
+//
+// This block MUST stay AFTER the utility-hover lift above: both are (0,7,0),
+// and the tie is still broken by source order so the switcher keeps its 100001.
+//
+// SPECIFICITY IS PRESERVED EXACTLY. The repeats replace the class-counts of the
+// `:has()` arguments they stand in for — a 2-class compound and a 3-class one:
+//   was  .desk-module
+//          :has(.window-manager__wrapper-modal[data-state="open"])        (0,2,0)
+//          :has(.desk-module-topbar__ws-wrapper.menu-topic[data-state="1"]) (0,3,0)
+//          .desk-module__topbar
+//        (0,1,0) + (0,2,0) + (0,3,0) + (0,1,0) = (0,7,0)
+//   now  .desk-module[data-wm-modal="open"][data-wm-modal="open"]
+//          [data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu]
+//          .desk-module__topbar
+//        (0,1,0) + (0,1,0)x2 + (0,1,0)x3 + (0,1,0) = (0,7,0)
+.desk-module[data-wm-modal="open"][data-wm-modal="open"][data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu] {
   .desk-module__topbar {
     z-index: 100001;
   }
@@ -833,7 +1011,25 @@ html {
 // During the lazy chunk's own load neither exists and nothing is hidden, which
 // is harmless — the dropdown has just closed itself, and a second Open hits
 // togglePanel's already-pending guard.
-.desk-module:has(.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main) {
+// ATTRIBUTE, NOT `:has()`. The subject here is `.desk-module`, and the argument
+// depends on a descendant EXISTING — so Blink marked the root "affected by
+// :has()" and re-evaluated it on every node added or removed ANYWHERE in the
+// app, invalidating the whole subtree each time. Attributing the invalidations
+// in the 2026-09-15 trace to their cause put plain DOM churn at the top (114
+// from `remove`, 68 from `_toggleClass`, 32 from `_loadAvatar`), each restyling
+// a median of 8,278 elements — 54% of the document — none of it to do with the
+// org screen.
+//
+// `data-desk-orgview` is stamped by desk/index.js _installOrgViewMirror, which
+// runs exactly this test against the slot the screen mounts into.
+//
+// SPECIFICITY IS PRESERVED EXACTLY. The attribute is tripled because the
+// `:has()` argument it replaces was a three-class compound:
+//   was  .desk-module:has(.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main) .desk-org-tab__open
+//        (0,1,0) + (0,3,0) + (0,1,0) = (0,5,0)
+//   now  .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] .desk-org-tab__open
+//        (0,1,0) + (0,1,0)x3        + (0,1,0) = (0,5,0)
+.desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] {
   .desk-org-tab__open,
   .desk-module-sidebar__nav-main {
     display: none;
