@@ -46,14 +46,14 @@ module.exports = function (ui) {
           // margin, and remembers the choice.
           //
           // The button SHOWS AND HIDES THE TOOLBAR, so the icon and the label
-          // both say "toolbar". It took three goes to get there: three dots
-          // ("more options") next to "Insert block", then a plus, which
-          // promises an insert and delivers a panel, then a sidebar glyph,
-          // which describes where the thing appears rather than what it is
-          // (Duy, 2026-09-18). The icon, the label and the action have to
-          // agree, and the label is the one to match.
+          // both say "toolbar". Four goes to get here: three dots ("more
+          // options") beside a label reading "Insert block", a plus that
+          // promises an insert and delivers a panel, a sidebar glyph that
+          // describes where the thing appears rather than what it is, and a
+          // toolbox. Faders is Duy's pick (2026-09-18) — controls you adjust,
+          // which is what the rail is.
           Skeletons.Button.Svg({
-            ico: "ph-toolbox",
+            ico: "ph-faders",
             service: "toggle-rail",
             sys_pn: "ref-rail-toggle",
             className: `${pfx}__icon rail-toggle`,

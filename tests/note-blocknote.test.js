@@ -438,8 +438,8 @@ test("the insert rail is a toggle that is remembered", () => {
   // The icon, the label and the action have to agree. It has been wrong twice:
   // three dots ("more options") labelled "Insert block", then a plus, which
   // promises an insert and delivers a panel. It shows a panel, so it says so.
-  assert.match(topbar, /ico: "ph-toolbox"/);
-  for (const wrong of ["ph-dots-three", "ph-plus", "ph-sidebar-simple"]) {
+  assert.match(topbar, /ico: "ph-faders"/);
+  for (const wrong of ["ph-dots-three", "ph-plus", "ph-sidebar-simple", "ph-toolbox"]) {
     assert.ok(!new RegExp(`ico: "${wrong}"`).test(topbar), `${wrong} was rejected`);
   }
   assert.match(topbar, /tooltips: LOCALE\.NOTE_TOOLBAR/);
@@ -489,6 +489,36 @@ test("every rail button names a real slash-menu key and a real icon", () => {
       `${ico}.svg is missing from the sprite source`
     );
     assert.ok(dict[loc], `locale/en.json is missing ${loc}`);
+  }
+});
+
+test("no icon is added to the sprite that nothing references", () => {
+  // The sprite is injected at boot — it was ~900 KB of the 2.8 MB the app
+  // loads before it shows anything — so an icon left behind after a design
+  // change is a cost every user pays forever, for nothing. Three icons were
+  // tried and dropped for this one button alone.
+  const { readdirSync } = require("node:fs");
+  const dir = resolve(ROOT, "icons/src/normalized");
+  const src = readdirSync(resolve(ROOT, "src"), { recursive: true })
+    .filter((f) => typeof f === "string" && /\.(js|scss)$/.test(f))
+    .map((f) => readFileSync(resolve(ROOT, "src", f), "utf8"))
+    .join("\n");
+  // only the icons this feature introduced; the rest of the sprite is not ours
+  const mine = [
+    "ph-text-t", "ph-text-h-one", "ph-text-h-two", "ph-text-h-three",
+    "ph-list-bullets", "ph-list-numbers", "ph-check-square", "ph-quotes",
+    "ph-code", "ph-table", "ph-minus", "ph-faders",
+  ];
+  for (const ico of mine) {
+    assert.ok(
+      existsSync(resolve(dir, `${ico}.svg`)),
+      `${ico}.svg is referenced but missing from the sprite source`
+    );
+    assert.ok(src.includes(`"${ico}"`), `${ico}.svg is in the sprite but unused`);
+  }
+  // and the ones that were tried and rejected are gone again
+  for (const dead of ["ph-toolbox", "ph-sidebar-simple"]) {
+    assert.ok(!existsSync(resolve(dir, `${dead}.svg`)), `${dead}.svg was left behind`);
   }
 });
 
