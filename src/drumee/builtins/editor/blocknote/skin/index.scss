@@ -264,6 +264,41 @@ $note-gutter: 54px;
         color: var(--neutral-900);
       }
 
+      // 🚨 The tooltip has to be styled HERE, and this is why.
+      //
+      // The shared editor skin styles `.editor-topbar__control__icon
+      // .tooltips` — a prefix nothing in this editor carries, because our
+      // family is `editor-blocknote-topbar`. So the label inherited the page
+      // font at 16px, `position: static` (it took up LAYOUT rather than
+      // floating), and `white-space: normal`, which wrapped "Formatting
+      // toolbar" onto two lines and shoved the header around on hover.
+      //
+      // Same trap the 46px save button fell into. Any editor that names its
+      // own topbar has to restate these.
+      position: relative;
+      overflow: visible;
+
+      .tooltips {
+        position: absolute;
+        top: calc(100% + 6px);
+        // anchored on the RIGHT so a long label grows inwards instead of off
+        // the window — these buttons sit in the top-right corner.
+        right: 0;
+        width: max-content;
+        max-width: none;
+        white-space: nowrap;
+        padding: 5px 8px;
+        border-radius: var(--border-radius-tiny);
+        background-color: var(--bg-tooltips);
+        pointer-events: none;
+        z-index: 2000;
+        @include drumee.typo(
+          $line: 16px,
+          $size: 12px,
+          $color: var(--default-text-color)
+        );
+      }
+
       svg {
         width: 18px;
         height: 18px;
@@ -310,22 +345,23 @@ $note-gutter: 54px;
       width: 100%;
     }
 
+    // Duy, 2026-09-18 (md1.jpg): spanning the window, this read as a rule
+    // slicing the page in half between the title and the text. It belongs to
+    // the DOCUMENT, so it takes the document's width — the same column as the
+    // title and the text — and sticks to the top of the scroller so it is
+    // still there once you have scrolled away from it.
     .bn-formatting-toolbar {
       order: -1;
-      position: static;
+      position: sticky;
+      top: 0;
+      z-index: 5;
       width: 100%;
-      margin: 0 0 8px;
-      padding: 6px 12px;
-      // The band spans the window, but its buttons line up with the TEXT —
-      // otherwise they float against the frame while every other thing on the
-      // page starts at the column. max() keeps them sane below the measure.
-      padding-left: max(
-        #{$note-gutter},
-        calc((100% - #{$note-measure}) / 2 + #{$note-gutter})
-      );
+      max-width: $note-measure;
+      margin: 0 auto 8px;
+      padding: 6px $note-gutter;
       background-color: #fafafa;
-      border-bottom: 1px solid var(--neutral-300);
-      border-radius: 0;
+      border: 1px solid var(--neutral-300);
+      border-radius: 10px;
       box-shadow: none;
       justify-content: flex-start;
     }
