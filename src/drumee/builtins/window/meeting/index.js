@@ -960,6 +960,13 @@ class __window_meeting extends __room {
   //
   // Routed through the normal onUserLeft path so tile teardown, hand-raise,
   // presenting and spotlight cleanup all behave exactly as a normal leave.
+  //
+  // A dropped Drumee socket is not always a departure, though. A few seconds
+  // of bad network kill the websocket while the peer's Jitsi call carries on,
+  // and the websocket reconnects on its own. Tearing the tile down then also
+  // silenced the peer (its audio plays through the tile) for the rest of the
+  // meeting. So while the peer's call is still alive, keep the tile and only
+  // drop it once the call goes quiet (see _watchDroppedPeer).
   onPeerSocketDropped(data = {}) {
     const uid = data.uid != null ? data.uid : data.drumate_id;
     if (uid == null || !this.endpoints) return;
@@ -968,11 +975,12 @@ class __window_meeting extends __room {
       const ep = this.endpoints[pid];
       if (!ep || (typeof ep.isDestroyed === "function" && ep.isDestroyed())) continue;
       if (String(ep.mget && ep.mget(_a.uid)) !== key) continue;
-      this.onUserLeft(pid);
-      // Drop the map entry so a late Jitsi USER_LEFT for the same participant
-      // hits onUserLeft's `if (!endpoint) return` instead of calling goodbye()
-      // on an already-destroyed tile.
-      delete this.endpoints[pid];
+      const drop = () => this._dropSocketPeer(pid);
+      if (this._peerStillLive(pid)) {
+        this._watchDroppedPeer(pid, drop);
+      } else {
+        drop();
+      }
       return;
     }
     // No tile for them (joined without media, or already torn down) — the
@@ -983,6 +991,29 @@ class __window_meeting extends __room {
       if (this._memberPresenting) this._memberPresenting.delete(key);
       if (this._clearHandTimer) this._clearHandTimer(key);
       this._refreshMember(uid);
+    }
+  }
+
+  // The tile of a peer dropped on a socket blip was rebuilt (jitsi
+  // _onPeerHello): onUserLeft had cleared its roster entry, so mark it joined
+  // again, or the dashboard card keeps offering to call someone in the call.
+  onPeerRestored(pid) {
+    const uid = this._uidForParticipant(pid);
+    if (uid != null) this._markMemberJoined(uid);
+  }
+
+  _dropSocketPeer(pid) {
+    const ep = this.endpoints && this.endpoints[pid];
+    if (!ep || (typeof ep.isDestroyed === "function" && ep.isDestroyed())) return;
+    this.onUserLeft(pid);
+    // Drop the map entry so a late Jitsi USER_LEFT for the same participant
+    // hits onUserLeft's `if (!endpoint) return` instead of calling goodbye()
+    // on an already-destroyed tile.
+    delete this.endpoints[pid];
+    // Still in the call as far as Jitsi knows: remember it, so a HELLO from
+    // its reconnected socket brings the tile back (jitsi _onPeerHello).
+    if (this.room && this.room.getParticipantById(pid)) {
+      this._socketDroppedPeers.add(pid);
     }
   }
 
