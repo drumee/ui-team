@@ -1,5 +1,5 @@
-// Clicking outside the workspace-rename editor closes it
-// (modules/desk/index.js — _dismissWorkspaceRename and friends).
+// Ending the workspace-rename edit: the Save button, and clicking outside
+// (modules/desk/index.js — _saveWorkspaceRename, _dismissWorkspaceRename).
 //
 // Unchanged text closes silently, the way Escape does. CHANGED text asks first,
 // because a stray click somewhere else in the desk is not a decision to rename
@@ -27,6 +27,7 @@ const METHODS = [
   "_bindWorkspaceRenameDismiss",
   "_unbindWorkspaceRenameDismiss",
   "_dismissWorkspaceRename",
+  "_saveWorkspaceRename",
   "_finishWorkspaceRename",
   "_endWorkspaceRename",
 ];
@@ -225,4 +226,67 @@ test("a dismissal with no edit in flight just releases the listener", async () =
   await d._dismissWorkspaceRename(target(".desk-module__body"));
   assert.equal(calls.listeners, 0);
   assert.equal(calls.confirm.length, 0);
+});
+
+// ── The Save button ─────────────────────────────────────────────────────────
+//
+// Pressing Save IS the decision, so unlike clicking away it never asks. It
+// takes the same two decisions Enter takes.
+
+test("Save writes the typed name and refreshes the breadcrumb", async () => {
+  const { d, calls, chip } = desk({ typed: "Design 2026", current: "Design" });
+  d._bindWorkspaceRenameDismiss();
+  await d._saveWorkspaceRename();
+  assert.equal(calls.confirm.length, 0, "pressing Save is not ambiguous");
+  assert.deepEqual(calls.commit, ["Design 2026"]);
+  assert.equal(calls.crumb, 1);
+  assert.equal(d.__wsRename, null);
+  assert.equal(chip.el.dataset.renaming, undefined, "the crumb is back");
+});
+
+test("Save on unchanged text closes without writing", async () => {
+  const { d, calls } = desk({ typed: "Design", current: "Design" });
+  d._bindWorkspaceRenameDismiss();
+  await d._saveWorkspaceRename();
+  assert.equal(calls.commit.length, 0, "nothing changed, nothing to write");
+  assert.equal(calls.confirm.length, 0);
+  assert.equal(d.__wsRename, null);
+});
+
+test("Save on an emptied field closes rather than renaming to nothing", async () => {
+  const { d, calls } = desk({ typed: "  ", current: "Design" });
+  d._bindWorkspaceRenameDismiss();
+  await d._saveWorkspaceRename();
+  assert.equal(calls.commit.length, 0);
+  assert.equal(d.__wsRename, null);
+});
+
+test("Save releases the click-outside listener", async () => {
+  const { d, calls } = desk({ typed: "Design 2026" });
+  d._bindWorkspaceRenameDismiss();
+  assert.equal(calls.listeners, 1);
+  await d._saveWorkspaceRename();
+  assert.equal(calls.listeners, 0);
+});
+
+test("pressing Save is not an outside click", async () => {
+  // The button lives INSIDE .desk-module-topbar__ws-rename, so the document
+  // listener must read its mousedown as inside and leave the edit alone — the
+  // press that follows is the Save handler's business. Without this the
+  // dismissal would fire first and raise the Save/Discard prompt on top of the
+  // very button the user just pressed.
+  const { d, calls } = desk({ typed: "Design 2026" });
+  d._bindWorkspaceRenameDismiss();
+  await d._dismissWorkspaceRename(target(".desk-module-topbar__ws-rename"));
+  assert.equal(calls.confirm.length, 0);
+  assert.equal(calls.commit.length, 0);
+  assert.ok(d.__wsRename, "the edit survives to be saved");
+  assert.equal(calls.listeners, 1);
+});
+
+test("Save with no edit in flight is a no-op", async () => {
+  const { d, calls } = desk();
+  d.__wsRename = null;
+  await d._saveWorkspaceRename();
+  assert.equal(calls.commit.length, 0);
 });

@@ -3257,7 +3257,7 @@ class desk_module extends LetcBox {
         delete chip.el.dataset.renaming;
         return;
       }
-      box.feed(
+      box.feed([
         Skeletons.Textarea({
           className: `${cn}__ws-rename-input`,
           sys_pn: "ws-rename-input",
@@ -3278,7 +3278,26 @@ class desk_module extends LetcBox {
           service: "workspace-rename-input",
           uiHandler: [this],
         }),
-      );
+        // Enter saves, but nothing on screen said so — the field was the whole
+        // editor, and the only visible way out of it was to click away. The
+        // tick is that affordance; it takes the same decision Enter takes.
+        //
+        // `checked` is the topbar's own tick (skeleton/topbar.js uses it for the
+        // account menu's active language), so this bar already carries it.
+        //
+        // bubble: 0 — the press is handled here and has no business continuing
+        // up to the window manager, which answers an unrecognised service by
+        // collapsing the open windows.
+        Skeletons.Button.Svg({
+          className: `${cn}__ws-rename-save`,
+          ico: "checked",
+          sys_pn: "ws-rename-save",
+          service: "workspace-rename-save",
+          uiHandler: [this],
+          bubble: 0,
+          attrOpt: { title: LOCALE.SAVE },
+        }),
+      ]);
       // Focus once the widget has mounted; the editor is the point of the row.
       //
       // Deliberately NOT hung off `box.children.last()`: for a NESTED part that
@@ -3434,6 +3453,45 @@ class desk_module extends LetcBox {
         this.warn("Workspace rename failed", e);
         done();
       });
+  }
+
+  /**
+   * The Save tick beside the field.
+   *
+   * NEVER ASKS. The click-outside path raises a Save/Discard prompt because a
+   * press somewhere else in the desk does not say what the user meant; pressing
+   * Save says exactly what they meant, so it takes the decision Enter takes and
+   * gets on with it.
+   *
+   * Reads the FIELD rather than the widget's model, for the same reason
+   * _dismissWorkspaceRename does: it is the live text, and the model is only
+   * refreshed on the widget's own commit/blur.
+   */
+  _saveWorkspaceRename() {
+    const st = this.__wsRename;
+    if (!st) return;
+
+    // This edit is ending either way, so the document listener has nothing left
+    // to dismiss. Released before the write, so a press landing while the
+    // request is in flight cannot raise the prompt for an edit already saved.
+    this._unbindWorkspaceRenameDismiss();
+
+    const field = st.box && st.box.el
+      && st.box.el.querySelector("textarea, input");
+    const value = String((field && field.value) || "").trim();
+    const cmd = st.box && st.box.children && _.isFunction(st.box.children.last)
+      ? st.box.children.last()
+      : null;
+
+    // Nothing typed, or nothing changed: close without a request, exactly as
+    // the Enter path does. An empty name would rename the workspace to nothing.
+    if (!value || value === st.current) {
+      this._endWorkspaceRename();
+      this.__wsRename = null;
+      return;
+    }
+
+    return this._finishWorkspaceRename(value, cmd);
   }
 
   /**
@@ -9824,6 +9882,9 @@ class desk_module extends LetcBox {
       // Value/commit events from that inline editor.
       case "workspace-rename-input":
         return this._onWorkspaceRenameInput(cmd);
+
+      case "workspace-rename-save":
+        return this._saveWorkspaceRename();
 
       // Mute popup CARDS for every workspace — an empty hub_id is the global
       // scope in activity/mute.js. It suppresses the interrupting card only:

@@ -293,6 +293,39 @@
         box-shadow: inset 0 0 0 1px var(--primary-purple-40);
       }
     }
+
+    // The Save tick. Enter has always saved; nothing on screen said so, and the
+    // only visible way out of the field was to click away from it.
+    //
+    // 22px to match the field's own height, so the two read as one control
+    // rather than a control with something stuck to it. `flex-shrink: 0` because
+    // the box is `flex: 1 1 auto` and the field beside it is 220px — without it
+    // a narrow bar takes the squeeze out of the button instead of the field.
+    &-save {
+      display: flex;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-left: 4px;
+      padding: 3px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--primary-purple-100, #0b0a21);
+      transition: background 0.15s ease;
+
+      svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
   }
 
   // While the editor is up. The crumb and the caret are taken out of the row so
