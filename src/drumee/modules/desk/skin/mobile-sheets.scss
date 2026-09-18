@@ -264,6 +264,116 @@
     background: var(--normal-bg);
   }
 
+  // ── The open workspace, above the list ────────────────────────────────────
+  // The desktop switcher's `__ws-head` (desk/skin/topbar.scss): glyph, name,
+  // then a rule separating it from the rows it is being chosen out of.
+  //
+  // CHROME, not content. `flex: 0 0 auto` for the reason the desktop header and
+  // the "New workspace" button both carry it — inside the sheet's fixed height
+  // the list is the only thing that may give, and a flex item shrinks by
+  // default, so without this the name would be squeezed before the rows ever
+  // started scrolling.
+  //
+  // No `:empty` fallback here, unlike the desktop header: this block is built
+  // as null when there is no open workspace to name (skeleton/mobile-sheets.js)
+  // rather than rendered empty, because a Skeletons.Box is never CSS-empty.
+  &__msheet-ws-head {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 6px 12px;
+    margin-bottom: 4px;
+    // The token, not the rgba the divider above hardcodes — it is already
+    // theme-aware, so this needs no twin in the dark block at the foot.
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  // The header's action cluster — the desktop's __ws-head-actions: the share
+  // chip on an external workspace, then the ⋯. 4px between them, against the
+  // header's own 12px, so the two read as one control group rather than as two
+  // unrelated buttons.
+  //
+  // `flex: 0 0 auto` so the NAME is what gives way on a long workspace; chips
+  // have no shorter form.
+  &__msheet-ws-head-actions {
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  // One chip — ⋯ / ✕, or the chain. A 32px touch target rather than the desktop
+  // header's 27px: this one is pressed with a thumb.
+  //
+  // `flex: 0 0 auto` so neither chip is squeezed by the other.
+  //
+  // The grey resting fill is the desktop ⋯'s, which carries it in the Figma
+  // component itself rather than on hover — a phone has no hover, so a control
+  // that only shows itself on one would never show itself at all.
+  &__msheet-ws-head-action {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    display: flex !important;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    background: var(--overlay-bg-05);
+
+    &:active {
+      background: var(--normal-bg-80);
+    }
+
+    // Lit while its actions are showing, so the ✕ reads as "this is the thing
+    // you opened" rather than as a second, unrelated control.
+    //
+    // Keyed on `data-mode`, not `data-state` — see the skeleton: a global
+    // `[data-state="closed"]` rule in skin/lib hides anything carrying it, so
+    // this control cannot use that attribute to mean anything of its own.
+    &[data-mode="actions"] {
+      color: var(--primary-40);
+    }
+  }
+
+  // The glyph inside it. Its own class rather than a bare `svg` descendant
+  // selector: the widget renders an inner `<svg class="full inner …">`, and
+  // `full` is a size rule of ui-core's own — sizing the element the skeleton
+  // names is what keeps this independent of that markup.
+  &__msheet-ws-head-action-ico {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    flex: 0 0 auto;
+    color: inherit;
+    pointer-events: none;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  // 600, where a row's label is 400: the weight is what says "this is the one
+  // you are in" now that the header carries no tick of its own. Same ellipsis
+  // treatment as __msheet-label, and for the same reason — the truncation has
+  // to sit on the Note's inner .note-content or it clips without the "…".
+  &__msheet-ws-head-name {
+    @include drumee.typo($size: 16px, $line: 22px, $color: var(--normal-fg));
+    font-weight: 600;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   &__msheet-heading {
     @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-50));
     font-weight: 600;
@@ -332,6 +442,55 @@
     }
   }
 
+  // ── the actions menu's icons ──────────────────────────────────────────────
+  //
+  // These rows are the desktop workspace context menu
+  // (`drumee-contextmenu media-grid desk-module-topbar`), so their glyphs are
+  // that menu's `ctxmenu-*` artwork, read off the shared icon map. They are
+  // drawn the way THAT menu draws them, not the way the sheet's own sprites are.
+  //
+  // The slot keeps the sheet's 22px rhythm so the labels line up with the
+  // workspace rows above, but the GLYPH is 16px — the context menu's size.
+  // __msheet-ico forces `svg { width: 22px; height: 22px }`, which blew these
+  // up and squared off the artwork that is not square.
+  //
+  // `fill: currentColor` for the same reason the context menu sets it: these
+  // are outline glyphs that take their colour from the row.
+  &__msheet-action-ico {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    display: flex !important;
+    color: var(--normal-fg-10);
+    fill: currentColor;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    // The two per-sprite exceptions the context menu carries, keyed on the
+    // ARTWORK rather than on the menu row, because that is what they are about.
+    //
+    // `topbar-add` is a filled 12×12 plus; at 16px it optically overpowers the
+    // outline glyphs beside it.
+    &[data-ico="topbar-add"] svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    // `topbar-invite` is 15×11 artwork — squaring it stretches the envelope.
+    &[data-ico="topbar-invite"] svg {
+      width: 16px;
+      height: 12px;
+    }
+  }
+
   &__msheet-check {
     width: 18px;
     height: 18px;
@@ -388,6 +547,29 @@
       width: 14px !important;
       height: 14px !important;
       color: var(--grid-color-folder-badge);
+    }
+
+    // The open-workspace header's copy of the same glyph: 28px against the
+    // rows' 22px, keeping the 22:18 art ratio — the size relationship the
+    // desktop header has to its own rows (27px vs 22px).
+    //
+    // NESTED INSIDE THE BASE RULE, not written as its own
+    // `&__msheet-ws-ico--head` block earlier in the file. Both are a single
+    // class, so on equal specificity source order decides, and declared above
+    // this rule the modifier lost every property it was meant to override —
+    // the header glyph measured 22px. The inner shape has to be re-stated for
+    // the same reason: the base pins .media-grid__folder-art and .folder-shape
+    // to 22x18 explicitly.
+    &--head {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+
+      .media-grid__folder-art,
+      .folder-shape {
+        width: 28px;
+        height: 23px;
+      }
     }
   }
 

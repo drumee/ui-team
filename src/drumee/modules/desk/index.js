@@ -3002,7 +3002,7 @@ class desk_module extends LetcBox {
           // clickable and does nothing is worse than one that looks inert.
           Skeletons.Button.Svg({
             className: `${cn}__ws-head-action ${cn}__ws-head-action--more`,
-            ico: "ph-dots-three",
+            ico: "app-dots-horizontal",
             service: "workspace-menu",
             uiHandler: [this],
           }),
@@ -3156,6 +3156,45 @@ class desk_module extends LetcBox {
       p.el.querySelector(".note-content") ||
       p.el;
     el.textContent = name || LOCALE.WORKSPACES;
+  }
+
+  /**
+   * Repaint the phone pill's folder glyph for the workspace now open.
+   *
+   * The NAME's twin (_setWorkspaceLabel above), and called beside it every
+   * time: the mobile topbar is not rebuilt on a switch, so both halves of the
+   * pill's identity have to be written into their parts by hand.
+   *
+   * Why it exists at all: the glyph was built once in skeleton/index.js from
+   * `ui.mget(_a.area)` — the DESK's own model, which never carries an area —
+   * so every workspace drew `folder-shape undefined`: the #885EFF default with
+   * no emblem, identical for Personal, an internal workspace and an external
+   * one.
+   *
+   * The `filetype`/`role` pair is the switcher's, not a new one: a PERSONAL
+   * workspace is a home-root folder and is drawn as one, everything else as a
+   * hub with its area emblem. Same mapping as the sheet's wsIcon and the
+   * desktop header's _feedWorkspaceHead, so the three surfaces cannot disagree
+   * about what a workspace looks like.
+   *
+   * `isAttachment: 1` keeps the folder kebab out of a 20px glyph — the template
+   * gates `showKebab` on it.
+   *
+   * @param {Object} [row] a desk.home workspace row; falsy paints the neutral
+   *   folder, which is what "no workspace open" should look like rather than
+   *   the last one's colours.
+   */
+  _setWorkspaceGlyph(row) {
+    const p = this.getPart && this.getPart("ws-current-ico");
+    if (!p || !p.el) return;
+    const isFolder = row && row.filetype === _a.folder;
+    p.el.innerHTML = folderIcon({
+      area: (row && row.area) || "",
+      filetype: isFolder ? _a.folder : _a.hub,
+      role: isFolder ? "" : "desk",
+      widgetId: _.uniqueId("m-ws-"),
+      isAttachment: 1,
+    });
   }
 
   /**
@@ -3648,45 +3687,145 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * The switcher header's ⋯ — toggles the open workspace's own menu.
+   * Resolve WHAT the workspace actions act on, and WHICH of them apply.
    *
-   * Built the way a right-click builds one (ui-core letc.js buildContextmenu):
-   * rows from builtins/contextmenu/skeleton/items, a `.drumee-contextmenu` box
-   * fed into the global drumeeDialog part, `volatility: 4` so a click elsewhere
-   * dismisses it, and the same viewport clamp. Position comes from the button's
-   * own rect rather than a pointer event — media/grid dispatchUiEvent does the
-   * same for its kebab, because a synthetic 'contextmenu' event does not reach
-   * property-style oncontextmenu handlers.
+   * Lifted out of _toggleWorkspaceMenu so the phone's sheet runs the same
+   * resolution rather than a second copy of it — the desktop header's ⋯ and
+   * the sheet's action button are the same control on the same workspace, and
+   * the subtractions below are decisions about the WORKSPACE menu, not about
+   * the surface it is drawn on. A second copy is what this menu was broken by
+   * once already (see the note on the shared builder).
    *
-   * NOT the home tile's menu, though that was the obvious thing to borrow:
-   * loadWorkspaceNode repoints the grid's list to media.show_node_by and
-   * resets its collection, so the tile for the open workspace is not reliably
-   * mounted — and its items act on a media row, not on the workspace.
-   *
-   * `uiHandler` is the WINDOW, not this module: window_folder already
-   * implements every service these rows raise, so nothing new handles them.
-   *
-   * The two gates are the desk's existing ones, which fail OPEN by design —
-   * they can only ever remove a row from someone provably lacking the right,
-   * never block a member whose privilege could not be read.
+   * @returns {Object|null} {w, media, target, keys}, or null with no workspace
+   *   open. `keys` is empty when the grid has no tile for it yet — the caller
+   *   decides whether that is worth a _refreshHomeGrid and a retry.
    */
-  _toggleWorkspaceMenu(cmd, retried) {
-    // Second click: shut it and stop. `volatility: 4` listens on POINTERDOWN,
-    // which precedes this click, so the menu has already queued its own
-    // destroy — but on a 300ms timeout, so it is still alive right now. Without
-    // closing here the click would fall through and feed a second menu on top.
-    //
-    // Not on the RETRY below: that is the same press continuing, and closing
-    // there would answer a menu this press never opened.
-    if (!retried && this._closeWorkspaceMenu()) return;
+  /**
+   * Open (or re-feed) the phone's workspace sheet.
+   *
+   * One opener for all three states — first open, back out of the actions, and
+   * the actions themselves — because each is the same sheet with a different
+   * body, and _openMobileSheet's feed() replaces the content wholesale.
+   *
+   * @param {Array} [actions] the action rows; omitted renders the workspace
+   *   list, which is the sheet's resting state.
+   */
+  _openWorkspaceSheet(actions) {
+    return this._fetchWorkspaces().then((rows) => {
+      const cur = (window.Wm && window.Wm._curWorkspace) || null;
+      return this._openMobileSheet(
+        "workspace",
+        // `cur`, not `cur.hub_id`: the sheet resolves the open workspace with
+        // _workspaceKey (its header, and the row it leaves out of the list),
+        // and the key needs the whole object — hub_id alone is Visitor.id for
+        // every personal workspace.
+        require("./skeleton/mobile-sheets").workspaceSheet(this, rows || [], cur, {
+          actions,
+        }),
+      );
+    });
+  }
 
+  /**
+   * Swap the sheet's list for the open workspace's actions.
+   *
+   * The retry is the desktop menu's, for the same reason: a workspace created
+   * while another was open has no tile in the home grid, so the rows come back
+   * empty until the grid is refetched. Once only — a second miss means the
+   * workspace genuinely is not in the grid, and re-fetching per press would be
+   * a request a tap with nothing to show for it.
+   */
+  _openWorkspaceSheetActions(retried) {
+    const actions = this._mobileWorkspaceActions();
+    if (!actions.length) {
+      if (retried) return;
+      return this._refreshHomeGrid().then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        return this._openWorkspaceSheetActions(1);
+      });
+    }
+    return this._openWorkspaceSheet(actions);
+  }
+
+  /**
+   * The open workspace's actions, flattened for the phone's sheet.
+   *
+   * SAME KEYS AS THE DESKTOP ⋯ (_resolveWorkspaceActions), read back off the
+   * rows the shared contextmenu builder produces so the labels and icons are
+   * the ones that menu shows — "Make a copy", "Move to trash" — rather than a
+   * second vocabulary invented here. Only the SHAPE changes: a sheet row is a
+   * 44px touch target, not a 28px context-menu line.
+   *
+   * Separators are dropped. They divide a floating menu into sections; in a
+   * sheet the rows simply sit under the header's rule, and the desktop's own
+   * `tidy` has already guaranteed none of them are leading, trailing or
+   * doubled, so nothing is lost by ignoring them.
+   *
+   * Two rows answer on the DESK rather than on the media item:
+   *
+   *   Rename — the desktop menu re-points it to `workspace-rename` because the
+   *     tile's inline editor is appended into the home grid, which is hidden
+   *     while a workspace is open. Same re-point here, same reason.
+   *   Manage access — the chain chip of the desktop header, which the phone's
+   *     header has no room for. The desktop ⋯ deliberately omits sharing rows
+   *     because "sharing already has two doors"; on a phone one of those doors
+   *     does not exist, so this is the door.
+   */
+  _mobileWorkspaceActions() {
+    const resolved = this._resolveWorkspaceActions();
+    if (!resolved) return [];
+    const { target, keys } = resolved;
+    const item = require("builtins/contextmenu/skeleton/items");
+    const out = [];
+
+    // NO "MANAGE ACCESS" ROW. It was added here while the phone's header had
+    // no chain chip and the rail was an external workspace's only remaining
+    // door to sharing. The header carries that chip now
+    // (skeleton/mobile-sheets headChip --link, gated on the same share/dmz
+    // test), so a row here would be the third door the desktop ⋯ deliberately
+    // refuses — "sharing already has two doors" is why `secureShare` and
+    // `share` are filtered out of these keys in the first place.
+    //
+    // The phone and the desktop ⋯ therefore offer exactly the same rows again.
+    for (const k of keys) {
+      if (k === "separator") continue;
+      const row = item(target, target, k);
+      if (!row) continue;
+      // The builder's row is [icon, label] under a context-menu class; this
+      // reads those two back rather than re-deriving them from the key.
+      // `chartId` FIRST, and that is not a fallback — it is the normal case.
+      // `Skeletons.Image.Svg` does not keep `ico`: its builder
+      // (ui-core toolkit/builder/button/svg.js) runs
+      //
+      //   if (this.props.ico) { this.props.chartId = this.props.ico;
+      //                         delete this.props.ico; }
+      //
+      // so every icon the shared menu builder produces arrives here as
+      // `chartId` and NEVER as `ico`. Reading only `ico` found nothing, and the
+      // sheet drew action rows with no glyph at all. `ico` is still accepted so
+      // a hand-made row (or a future builder that stops renaming) also works.
+      const kids = [].concat(row.kids || []).filter(Boolean);
+      const iconKid = kids.find((x) => x && (x.chartId || x.ico));
+      const ico = iconKid && (iconKid.chartId || iconKid.ico);
+      const label = (kids.find((x) => x && x.content != null) || {}).content;
+      if (!label) continue;
+      const isRename = k === _a.rename;
+      out.push({
+        key: k,
+        label,
+        ico,
+        service: isRename ? "workspace-rename" : row.service,
+        onDesk: isRename ? 1 : 0,
+      });
+    }
+    return out;
+  }
+
+  _resolveWorkspaceActions() {
     const w = this._activeWorkspace();
     // Every row acts on an open workspace; with none there is nothing to act
     // on, so no menu rather than an empty one.
-    if (!w) return;
-    const dialog = window.drumeeDialog;
-    if (!dialog || (dialog.isDestroyed && dialog.isDestroyed())) return;
-
+    if (!w) return null;
     // Act on the workspace's MEDIA item, never on the pane.
     //
     // loadWorkspace() feeds window_folder with no `media` and no `trigger`, so
@@ -3729,8 +3868,6 @@ class desk_module extends LetcBox {
     // Building a parallel vocabulary here is what broke this menu once: those
     // rows duplicated items that already existed and raised services the pane
     // could not answer.
-    const item = require("builtins/contextmenu/skeleton/items");
-
     // Removing a row can leave the divider that framed it, so the list is
     // tidied rather than trusted: no leading rule, no trailing rule, never two
     // in a row. The builder's own sectioning is otherwise passed through.
@@ -3772,6 +3909,52 @@ class desk_module extends LetcBox {
               && k !== "secureShare" && k !== _a.share),
         )
       : [];
+
+    return { w, media, target, keys };
+  }
+
+  /**
+   * The switcher header's ⋯ — toggles the open workspace's own menu.
+   *
+   * Built the way a right-click builds one (ui-core letc.js buildContextmenu):
+   * rows from builtins/contextmenu/skeleton/items, a `.drumee-contextmenu` box
+   * fed into the global drumeeDialog part, `volatility: 4` so a click elsewhere
+   * dismisses it, and the same viewport clamp. Position comes from the button's
+   * own rect rather than a pointer event — media/grid dispatchUiEvent does the
+   * same for its kebab, because a synthetic 'contextmenu' event does not reach
+   * property-style oncontextmenu handlers.
+   *
+   * NOT the home tile's menu, though that was the obvious thing to borrow:
+   * loadWorkspaceNode repoints the grid's list to media.show_node_by and
+   * resets its collection, so the tile for the open workspace is not reliably
+   * mounted — and its items act on a media row, not on the workspace.
+   *
+   * `uiHandler` is the WINDOW, not this module: window_folder already
+   * implements every service these rows raise, so nothing new handles them.
+   *
+   * The two gates are the desk's existing ones, which fail OPEN by design —
+   * they can only ever remove a row from someone provably lacking the right,
+   * never block a member whose privilege could not be read.
+   */
+  _toggleWorkspaceMenu(cmd, retried) {
+    // Second click: shut it and stop. `volatility: 4` listens on POINTERDOWN,
+    // which precedes this click, so the menu has already queued its own
+    // destroy — but on a 300ms timeout, so it is still alive right now. Without
+    // closing here the click would fall through and feed a second menu on top.
+    //
+    // Not on the RETRY below: that is the same press continuing, and closing
+    // there would answer a menu this press never opened.
+    if (!retried && this._closeWorkspaceMenu()) return;
+
+    const dialog = window.drumeeDialog;
+    if (!dialog || (dialog.isDestroyed && dialog.isDestroyed())) return;
+
+    // Target and rows both come from _resolveWorkspaceActions, which the
+    // phone's sheet calls too.
+    const resolved = this._resolveWorkspaceActions();
+    if (!resolved) return;
+    const { target, keys } = resolved;
+    const item = require("builtins/contextmenu/skeleton/items");
 
     // NO MEDIA ITEM. Every row would be inert, and a menu whose rows do nothing
     // is the bug this replaced — so rather than show one, go and get the grid.
@@ -4159,6 +4342,10 @@ class desk_module extends LetcBox {
     window.Wm.loadWorkspace(this._workspaceTarget(row));
     this._railHighlight(landsOn || "files");
     this._setWorkspaceLabel(ws.filename);
+    // `row`, not `ws`: the line above already corrected a personal workspace's
+    // filetype to `folder`, which is what decides whether the glyph is drawn as
+    // a folder or as a hub with an emblem.
+    this._setWorkspaceGlyph(row);
     return this._renderWorkspaceMenu(this._wsListPart, true);
   }
 
@@ -4425,10 +4612,29 @@ class desk_module extends LetcBox {
   _syncWorkspaceLabel() {
     const wm = window.Wm;
     const cur = wm && wm._curWorkspace;
-    if (!cur || !cur.hub_id) return this._setWorkspaceLabel(null);
+    if (!cur || !cur.hub_id) {
+      this._setWorkspaceGlyph(null);
+      return this._setWorkspaceLabel(null);
+    }
+    // BY KEY for the glyph's row, not by hub_id. Every personal workspace
+    // carries the user's own hub_id, so the id match below lands on whichever
+    // personal row comes first — harmless for the NAME it was written for
+    // (_setWorkspaceLabel falls back to the window manager's), and not harmless
+    // for a glyph, which would then paint one personal workspace's area over
+    // another's. The id match is left as it is so the name keeps its existing
+    // behaviour; the glyph resolves properly alongside it.
+    const curKey = this._workspaceKey(cur);
+    const keyed =
+      (curKey && (this._workspaces || []).find((r) => this._workspaceKey(r) === curKey)) ||
+      null;
     const row = (this._workspaces || []).find(
       (r) => (r.hub_id || r.id) == cur.hub_id,
     );
+    // `cur` as the last resort: it is what Wm resolved for a workspace reached
+    // by deep link, and it carries `area` for a hub (loadWorkspace writes it
+    // from media.attributes). A home-root folder's area is NULL there, which is
+    // exactly the case `keyed` covers.
+    this._setWorkspaceGlyph(keyed || row || cur);
     if (row) return this._setWorkspaceLabel(row.filename || row.name);
     // Not in the cached index (reached by deep link, or created since boot) —
     // take the name the window manager resolved for it.
@@ -4469,6 +4675,7 @@ class desk_module extends LetcBox {
     // keeps the tab it was on — restamping the rail there is at best a no-op.
     if (!wasOpen) this._railHighlight(landsOn || "files");
     this._setWorkspaceLabel(row.filename || row.name);
+    this._setWorkspaceGlyph(row);
     return this._renderWorkspaceMenu(this._wsListPart);
   }
 
@@ -6463,6 +6670,16 @@ class desk_module extends LetcBox {
       case "ws-head":
         this._wsHeadPart = child;
         this._renderWorkspaceMenu(this._wsListPart);
+        break;
+
+      // The phone pill's folder glyph. Painted on arrival because the workspace
+      // is usually resolved BEFORE this part mounts — _syncWorkspaceLabel runs
+      // from the boot path and simply finds no part to write to, which would
+      // leave the neutral placeholder standing until the next switch.
+      // _syncWorkspaceLabel, not _setWorkspaceGlyph directly: resolving which
+      // workspace is open belongs in one place.
+      case "ws-current-ico":
+        this._syncWorkspaceLabel();
         break;
 
       // The switcher widget itself. Held because the CHIP opens it now, and
@@ -9564,17 +9781,41 @@ class desk_module extends LetcBox {
         return this._closeMobileSheet();
 
       case "mobile-workspace-sheet":
-        return this._fetchWorkspaces().then((rows) => {
-          const cur = (window.Wm && window.Wm._curWorkspace) || null;
-          return this._openMobileSheet(
-            "workspace",
-            require("./skeleton/mobile-sheets").workspaceSheet(
-              this,
-              rows || [],
-              cur && cur.hub_id,
-            ),
-          );
-        });
+        return this._openWorkspaceSheet();
+
+      // The header's action button. It replaces the LIST with the workspace's
+      // own actions and turns itself into a close button — the phone's answer
+      // to the desktop header's ⋯, which floats a panel beside its card. There
+      // is no card to float beside in a bottom sheet, so the sheet becomes the
+      // panel instead of growing a second one.
+      //
+      // Re-feeding the whole sheet rather than toggling two pre-built halves:
+      // the rows come off the workspace's grid tile and may need the grid
+      // fetching first (_resolveWorkspaceActions), so there is nothing to
+      // pre-build at open time.
+      case "mobile-ws-actions":
+        return this._openWorkspaceSheetActions();
+
+      case "mobile-ws-actions-close":
+        return this._openWorkspaceSheet();
+
+      // One of those action rows. Same two steps "mobile-sheet-go" takes —
+      // close, then dispatch — but the dispatch lands on the workspace's MEDIA
+      // ITEM, not on the desk: that is the object the folder menu has always
+      // acted on, and the one that carries move/trash/download at all.
+      // `onDesk` rows (Rename, Manage access) are the exceptions the desktop
+      // menu already makes, and they are answered here.
+      case "mobile-ws-action": {
+        const svc = cmd.mget("goTarget");
+        const onDesk = cmd.mget("onDesk");
+        this._closeMobileSheet();
+        if (!svc) return;
+        if (onDesk) return this.onUiEvent(cmd, { ...args, service: svc });
+        const resolved = this._resolveWorkspaceActions();
+        const target = resolved && resolved.target;
+        if (!target || !_.isFunction(target.onUiEvent)) return;
+        return target.onUiEvent(cmd, { ...args, service: svc });
+      }
 
       case "mobile-goto-sheet":
         return this._openMobileSheet(
