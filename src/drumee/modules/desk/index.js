@@ -3293,6 +3293,11 @@ class desk_module extends LetcBox {
           if (_.isFunction(field.select)) field.select();
         } catch (e) { }
       });
+      // Clicking away is the third way out, beside Escape and Enter — see
+      // _dismissWorkspaceRename. Bound here rather than at the top of this
+      // method so it cannot outlive an editor that never mounted, and after the
+      // feed so the press that OPENED the editor is long finished.
+      this._bindWorkspaceRenameDismiss();
     });
     return true;
   }
@@ -3305,6 +3310,9 @@ class desk_module extends LetcBox {
    * changed it in the first place.
    */
   _endWorkspaceRename() {
+    // Every ending routes through here, so this is the one place that cannot be
+    // forgotten — the individual endings release it earlier, before they await.
+    this._unbindWorkspaceRenameDismiss();
     const st = this.__wsRename;
     const chip = (st && st.chip) || this._crumbGroupPart;
     const box = (st && st.box) || this._wsRenamePart;
@@ -3326,6 +3334,7 @@ class desk_module extends LetcBox {
     // has to be emptied and the crumb un-hidden. Deferred so the widget
     // finishes destroying before the box is re-fed.
     if (cmd.status === _e.Escape) {
+      this._unbindWorkspaceRenameDismiss();
       return _.defer(() => {
         this._endWorkspaceRename();
         this.__wsRename = null;
@@ -3333,6 +3342,11 @@ class desk_module extends LetcBox {
     }
     // Anything else is a keystroke, not an end to the edit.
     if (![_a.commit, _e.Enter].includes(cmd.status)) return;
+
+    // This edit is ending here; the click-outside listener has nothing left to
+    // dismiss. Released before the write so a press landing while the request
+    // is in flight cannot raise the prompt for an edit already committed.
+    this._unbindWorkspaceRenameDismiss();
 
     // Close the editor and give the chip its name back, whichever way this
     // ended. Read the state OUT before clearing it: _endWorkspaceRename needs
@@ -3350,6 +3364,42 @@ class desk_module extends LetcBox {
     // Nothing typed, or nothing changed: close without a request. An empty
     // name would rename the workspace to nothing.
     if (!value || value === st.current) return done();
+
+    return this._finishWorkspaceRename(value, cmd);
+  }
+
+  /**
+   * Write the new name and take the editor down.
+   *
+   * SHARED BY BOTH WRITE PATHS — Enter/commit above, and Save on the
+   * click-outside prompt (_dismissWorkspaceRename). The holder-scoped payload
+   * and the breadcrumb follow-up are the one thing here that must not drift
+   * between the two, which is why this is a method rather than a second copy.
+   *
+   * `cmd` is the editor widget when there is one to tear down (the Enter path
+   * has it; the click-outside path reads the field's own value and passes
+   * whatever the slot is holding). Optional on purpose — _endWorkspaceRename
+   * empties the slot either way.
+   *
+   * @param {String} value the trimmed new name; the caller has already decided
+   *        it is non-empty and different from `st.current`
+   * @param {Object} [cmd] the editor widget
+   */
+  _finishWorkspaceRename(value, cmd) {
+    const st = this.__wsRename;
+    if (!st) return;
+
+    // Close the editor and give the chip its name back, whichever way this
+    // ended. Read the state OUT before clearing it: _endWorkspaceRename needs
+    // the same chip and slot this edit was started on.
+    const done = () => {
+      try {
+        if (cmd && _.isFunction(cmd.goodbye)) cmd.goodbye();
+        else if (cmd && _.isFunction(cmd.softDestroy)) cmd.softDestroy();
+      } catch (e) { }
+      this._endWorkspaceRename();
+      this.__wsRename = null;
+    };
 
     const posted = st.tile._commitRename(value);
     // _commitRename answers nothing when it decides there is no write to make
@@ -3383,6 +3433,104 @@ class desk_module extends LetcBox {
         // needed to stop claiming a rename that never happened.
         this.warn("Workspace rename failed", e);
         done();
+      });
+  }
+
+  /**
+   * CLICKING AWAY ENDS THE EDIT.
+   *
+   * Escape and Enter were the only two ways out, so a click anywhere else left
+   * the field sitting in the chip with the breadcrumb still hidden behind it
+   * (`data-renaming="1"`) — the edit looked abandoned but was still live, and
+   * the crumb did not come back until the user found their way back to the
+   * field.
+   *
+   * `mousedown` on the document in the CAPTURE phase, the same shape as the
+   * desk's other dismissals (_userMenuDismiss, _suggestionsDismiss). Bound only
+   * while the editor is up.
+   *
+   * DELIBERATELY NOT THE WIDGET'S `blur`. ui-core's entry fires one
+   * (widgets/entry/input/index.js _onBlur) and it looks like the obvious hook,
+   * but blur is not "clicked outside": it also fires when the browser window
+   * loses focus, and again when the confirm below takes focus — which would
+   * re-enter this path in the middle of the question it just asked.
+   */
+  _bindWorkspaceRenameDismiss() {
+    if (this._wsRenameDismiss) return;
+    this._wsRenameDismiss = (e) => this._dismissWorkspaceRename(e && e.target);
+    document.addEventListener("mousedown", this._wsRenameDismiss, true);
+  }
+
+  /**
+   * Release the listener. Called from every ending — Escape, Enter, Save,
+   * Discard — so a stale handler can never outlive the edit it belongs to.
+   */
+  _unbindWorkspaceRenameDismiss() {
+    if (!this._wsRenameDismiss) return;
+    document.removeEventListener("mousedown", this._wsRenameDismiss, true);
+    this._wsRenameDismiss = null;
+  }
+
+  /**
+   * A press landed somewhere that is not the editor. End the edit.
+   *
+   * UNCHANGED TEXT CLOSES SILENTLY, which is what Escape already does and what
+   * the Enter path already does for a name that did not change. There is
+   * nothing to decide, so asking would be noise.
+   *
+   * CHANGED TEXT ASKS. A click on the desk is not a decision to rename a
+   * workspace — commit-on-blur would rename one by accident — and it is not a
+   * decision to throw away what was typed either. So the two real answers are
+   * offered and neither is taken on the user's behalf.
+   *
+   * @param {Element} [t] what was pressed
+   */
+  _dismissWorkspaceRename(t) {
+    const st = this.__wsRename;
+    if (!st) return this._unbindWorkspaceRenameDismiss();
+    if (t && _.isFunction(t.closest)) {
+      // The editor itself, and the chip it is drawn in.
+      if (t.closest(".desk-module-topbar__ws-rename")) return;
+      // Our own prompt. Its buttons are a press like any other, and taking one
+      // as "clicked outside" would close the edit under the answer.
+      if (t.closest(".window-manager__wrapper-modal")) return;
+    }
+
+    // BEFORE the prompt, not after. The press that answers it is another
+    // mousedown on the document, and a listener still attached would re-enter
+    // here and stack a second prompt on the first.
+    this._unbindWorkspaceRenameDismiss();
+
+    // The FIELD, not the widget's model: this is the live text the user typed,
+    // and it is what ui-core's own blur handler would have copied into the
+    // model anyway.
+    const field = st.box && st.box.el
+      && st.box.el.querySelector("textarea, input");
+    const value = String((field && field.value) || "").trim();
+    const cmd = st.box && st.box.children && _.isFunction(st.box.children.last)
+      ? st.box.children.last()
+      : null;
+
+    if (!value || value === st.current) {
+      this._endWorkspaceRename();
+      this.__wsRename = null;
+      return;
+    }
+
+    return Wm.confirm({
+      title: LOCALE.SAVE_CHANGES,
+      message: value,
+      confirm: LOCALE.SAVE,
+      confirm_type: "primary",
+      cancel: LOCALE.DISCARD,
+      cancel_type: "secondary",
+      buttonClass: "ws-rename-dismiss",
+      mode: "hbf",
+    })
+      .then(() => this._finishWorkspaceRename(value, cmd))
+      .catch(() => {
+        this._endWorkspaceRename();
+        this.__wsRename = null;
       });
   }
 
