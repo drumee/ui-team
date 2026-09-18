@@ -165,6 +165,10 @@ test("changed text asks before doing anything", async () => {
   assert.equal(o.confirm, "Save");
   assert.equal(o.cancel, "Discard");
   assert.ok(String(o.message).includes("Design 2026"), "the card shows the new name");
+  // No backdrop: the question is about the name in the chip behind the card,
+  // and dimming it makes it harder to check. confirm() defaults to "scrim", so
+  // this has to be asked for explicitly and must not be dropped by accident.
+  assert.equal(o.overlay, "none");
 });
 
 test("the listener is detached BEFORE the confirm opens", async () => {

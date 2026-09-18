@@ -3526,6 +3526,12 @@ class desk_module extends LetcBox {
       cancel_type: "secondary",
       buttonClass: "ws-rename-dismiss",
       mode: "hbf",
+      // NO BACKDROP. This is confirm()'s own documented case for it: the prompt
+      // is ABOUT the name the user just typed, which is sitting in the chip
+      // right behind it, and dimming the surface the question is about makes it
+      // harder to check rather than easier. The card carries its own shadow, so
+      // it still reads as raised without one.
+      overlay: "none",
     })
       .then(() => this._finishWorkspaceRename(value, cmd))
       .catch(() => {
