@@ -1011,9 +1011,18 @@ html {
   }
 }
 
-// The workspace switcher must stay reachable OVER a wrapper-modal — the create
-// form (.form-folder__main) is fed into that modal, and switching workspace
-// from the panel above it has to keep working.
+// A TOPBAR DROPDOWN must stay reachable OVER a wrapper-modal — the create form
+// (.form-folder__main) is fed into that modal, and the bar above it has to keep
+// working: switching workspace, the organisation panel, the account menu.
+//
+// This was written for the SWITCHER alone and gated on `data-desk-wsmenu`. The
+// other two hang from the same 46px bar over the same window and were left out,
+// so opening `.desk-org-tab__panel` or `.desk-module-topbar__account-menu` while
+// the create form was up drew it under `window-folder__split-body`. Nothing
+// about those two is different — the gate simply did not name them. All three
+// are `Skeletons.Menu` roots, so the mirror now answers "a topbar dropdown is
+// open" (`data-desk-topmenu`, desk/index.js _installWsMenuMirror) and the three
+// are covered by one condition.
 //
 // This is a stacking-CONTEXT problem, not a z-index value one: the switcher
 // already asks for 99999 and the modal only for 20000. But opening a modal
@@ -1026,9 +1035,11 @@ html {
 // the WM above) would drop the bar below the sidebar (10002) and the slide-out
 // panels (10001), which its 10003 is there to clear.
 //
-// Gated on the switcher being OPEN as well as the modal: the rest of the time
-// the bar has no business above a dialog, where its controls would invite
-// clicks on things the modal is meant to block.
+// Gated on a dropdown being OPEN as well as the modal: the rest of the time the
+// bar has no business above a dialog, where its controls would invite clicks on
+// things the modal is meant to block. Widening the gate from one dropdown to
+// any dropdown does not weaken that — the bar is still lifted only while the
+// user has a menu open, which is exactly when it has to be clickable.
 //
 // AND THAT GATE MUST BE READ OFF THE MENU ROOT, which is what
 // `.desk-module-topbar__ws-wrapper.menu-topic[data-state="1"]` is — one
@@ -1059,7 +1070,7 @@ html {
 // ATTRIBUTES, NOT `:has()` — and the tie described above is preserved. Both
 // arguments are now flags on the root: `data-wm-modal` from
 // wm/index.js _installWmModalMirror (unchanged, and it tests exactly
-// `.window-manager__wrapper-modal[data-state="open"]`), and `data-desk-wsmenu`
+// `.window-manager__wrapper-modal[data-state="open"]`), and `data-desk-topmenu`
 // from desk/index.js _installWsMenuMirror.
 //
 // This block MUST stay AFTER the utility-hover lift above: both are (0,7,0),
@@ -1073,10 +1084,10 @@ html {
 //          .desk-module__topbar
 //        (0,1,0) + (0,2,0) + (0,3,0) + (0,1,0) = (0,7,0)
 //   now  .desk-module[data-wm-modal="open"][data-wm-modal="open"]
-//          [data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu]
+//          [data-desk-topmenu][data-desk-topmenu][data-desk-topmenu]
 //          .desk-module__topbar
 //        (0,1,0) + (0,1,0)x2 + (0,1,0)x3 + (0,1,0) = (0,7,0)
-.desk-module[data-wm-modal="open"][data-wm-modal="open"][data-desk-wsmenu][data-desk-wsmenu][data-desk-wsmenu] {
+.desk-module[data-wm-modal="open"][data-wm-modal="open"][data-desk-topmenu][data-desk-topmenu][data-desk-topmenu] {
   .desk-module__topbar {
     z-index: 100001;
   }

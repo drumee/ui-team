@@ -2242,31 +2242,50 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * Mirror "the workspace switcher panel is open" onto the desk root as
-   * `data-desk-wsmenu` — same reason as _installOrgViewMirror, and the same
+   * Mirror "a topbar dropdown is open" onto the desk root as
+   * `data-desk-topmenu` — same reason as _installOrgViewMirror, and the same
    * cost being removed: the rule that reads it had `.desk-module` as its
    * `:has()` subject, so ordinary DOM churn anywhere re-matched the root.
    *
-   * The observer watches ONE element and two attributes. `class` is in the
-   * filter as well as `data-state` because the selector it replaces tested
-   * `.menu-topic` too, and that class is applied by the menu widget rather
-   * than being present from the first render.
+   * ANY DROPDOWN, NOT JUST THE SWITCHER. This watched the ws-wrapper alone and
+   * stamped `data-desk-wsmenu`, which fed the one rule that lifts the bar over a
+   * wrapper-modal. So the workspace switcher stayed usable while the create
+   * form (`.form-folder__main`) was up — and the ORGANISATION panel and the
+   * ACCOUNT menu, which hang from the same 46px bar over the same window, did
+   * not: opening either of them during a modal drew it under
+   * `window-folder__split-body`. The modal dissolves `.window-manager__ui`, the
+   * headless layer goes to 50001 at the document root, and `.desk-module__topbar`
+   * is its own stacking context at 10003 — so every dropdown inside it loses,
+   * and there is nothing specific to the switcher about that.
+   *
+   * All three are `Skeletons.Menu` roots (org-tab skeleton/index.js,
+   * topbar.js `__ws-wrapper` / `__account-wrapper`), so ui-core gives each the
+   * `menu-topic` class and `data-state` — one test covers the bar.
+   *
+   * SCOPED TO THE BAR, not the desk. The observer takes a subtree, which is what
+   * "any dropdown" needs, but the bar is a handful of nodes; the thing worth
+   * avoiding is a `:has()` anchored on the desk ROOT, which re-matches the whole
+   * application on any mutation anywhere (see _installOrgViewMirror).
+   *
+   * `class` is in the filter as well as `data-state` because `menu-topic` is
+   * applied by the menu widget rather than being present from the first render.
    */
   _installWsMenuMirror() {
-    this.ensurePart("ws-wrapper").then((p) => {
+    this.ensurePart("top-bar").then((p) => {
       if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
       const root = this.el;
       if (!root || !root.dataset || typeof MutationObserver !== "function") return;
       if (this._wsMenuObserver) this._wsMenuObserver.disconnect();
       const sync = () => {
-        const open =
-          p.el.classList.contains("menu-topic") &&
-          p.el.getAttribute("data-state") === "1";
-        if (open) root.dataset.deskWsmenu = "1";
-        else delete root.dataset.deskWsmenu;
+        if (p.el.querySelector('.menu-topic[data-state="1"]')) {
+          root.dataset.deskTopmenu = "1";
+        } else {
+          delete root.dataset.deskTopmenu;
+        }
       };
       this._wsMenuObserver = new MutationObserver(sync);
       this._wsMenuObserver.observe(p.el, {
+        subtree: true,
         attributes: true,
         attributeFilter: ["data-state", "class"],
       });
