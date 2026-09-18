@@ -313,17 +313,26 @@
       justify-content: center;
       border-radius: 6px;
       cursor: pointer;
-      color: var(--primary-purple-100, #0b0a21);
-      transition: background 0.15s ease;
+      // A filled primary button, not a bare glyph: this is the commit, and it
+      // sits next to a field the user is still typing in, so it has to read as
+      // the thing that ends the edit rather than as decoration on the chip.
+      background-color: var(--primary-40);
+      color: var(--white);
+      transition: background-color 0.15s ease;
 
       svg {
         width: 16px;
         height: 16px;
+        // `fill`, not a colour of its own — the tick then follows `color`
+        // above, and hover/disabled states only have to move one property.
         fill: currentColor;
       }
 
+      // The next step down the same ramp. A translucent black wash (what the
+      // bar's other icon buttons use) muddies a saturated fill rather than
+      // darkening it.
       &:hover {
-        background: rgba(0, 0, 0, 0.05);
+        background-color: var(--primary-50);
       }
     }
   }

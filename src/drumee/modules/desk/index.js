@@ -3282,15 +3282,12 @@ class desk_module extends LetcBox {
         // editor, and the only visible way out of it was to click away. The
         // tick is that affordance; it takes the same decision Enter takes.
         //
-        // `checked` is the topbar's own tick (skeleton/topbar.js uses it for the
-        // account menu's active language), so this bar already carries it.
-        //
         // bubble: 0 — the press is handled here and has no business continuing
         // up to the window manager, which answers an unrecognised service by
         // collapsing the open windows.
         Skeletons.Button.Svg({
           className: `${cn}__ws-rename-save`,
-          ico: "checked",
+          ico: "app-check",
           sys_pn: "ws-rename-save",
           service: "workspace-rename-save",
           uiHandler: [this],
