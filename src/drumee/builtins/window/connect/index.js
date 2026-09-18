@@ -71,6 +71,41 @@ class __window_connect extends __room {
         this.showCallEnded(this.callEndedMessage());
       }
     })
+
+    // Desk navigation asks a live call to step aside rather than closing it —
+    // the SAME mechanism the team meeting uses (builtins/webrtc/call-parking,
+    // Wm.parkLiveCall / Desk._parkLiveCall -> "call:minimize"). Before this, the
+    // broadcast had no listener here, so a 1:1 call stayed inside the window
+    // manager while a full-page desk screen covered it: navigating away looked
+    // exactly like the call had been closed.
+    this._installCallParking();
+  }
+
+  /**
+   * The 1:1 call is always its own floating window — there is no embedded
+   * variant to protect (the meeting's `_isFullFrame` case), so it can always be
+   * parked. Guarded on the element only, which the mixin re-checks anyway.
+   */
+  _canParkCall() {
+    return !!this.el;
+  }
+
+  /**
+   * Put the popup's own box back after the tile is un-docked.
+   *
+   * Unlike the meeting — a full-frame screen whose stylesheet fills the canvas
+   * once the inline geometry is gone — this window is a floating 734x600 popup
+   * that OWNS its geometry (see `_setSize` in initialize). Dropping it into the
+   * dock leaves the dock's `> *` fill rule in charge; coming back out, nothing
+   * would size it at all, so it has to be re-seeded here.
+   */
+  _onCallTileLeft() {
+    if (!this.el) return;
+    // The dock pinned it with a stylesheet, not with inline styles, so there is
+    // nothing to strip — only the launch geometry to re-assert.
+    if (typeof this._setSize === "function") {
+      this._setSize({ width: 734, height: 600, minWidth: 480, minHeight: 420 });
+    }
   }
 
   /**
@@ -740,6 +775,21 @@ class __window_connect extends __room {
         this._toggleWindowFullscreen();
         break;
 
+      // The designed target on the parked tile ("Return to call" cover,
+      // webrtc/skeleton/call-tile). call-parking also takes the click on the
+      // window root in the capture phase, because at 300x180 every other child
+      // is a live WebRTC widget that stops propagation — this is the clean path
+      // when the cover itself is hit.
+      case "restore-call":
+        this.setCallTile(0);
+        break;
+
+      // Park this call in the desk dock without leaving it. Same end state as
+      // the desk's own navigation park, reached deliberately.
+      case "park-call":
+        this.setCallTile(1);
+        break;
+
       case 'remote-left':
         if (args.siblings > 1) {
           this.stateMessage();
@@ -802,6 +852,10 @@ class __window_connect extends __room {
   onBeforeDestroy(opt) {
     // Drop the reactions picker's document click-listener if open at teardown.
     this._closeReactionsPicker();
+    // Un-park (if parked), release the broadcasts and tell the desk the call is
+    // gone. Covers every exit: Leave, the peer hanging up, a decline, a revoke,
+    // a tab close.
+    this._teardownCallParking();
     if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
   }
 
@@ -850,6 +904,12 @@ class __window_connect extends __room {
 }
 
 // Shared in-call reactions behavior (same module the meeting uses).
+// Live-call dock parking, shared with window_meeting: "call:minimize" parks
+// this window as a tile in the desk's call-dock, a click brings it back. Its
+// two seams — _canParkCall / _onCallTileLeft — are defined on the class above
+// and must NOT appear in the mixin (Object.assign would overwrite them).
+Object.assign(__window_connect.prototype, require("builtins/webrtc/call-parking"));
+
 Object.assign(__window_connect.prototype, require("builtins/webrtc/reactions"));
 // Shared in-call screen-share behavior (own screen on stage, tile docking,
 // one-at-a-time lock, fullscreen). Meeting-only hooks it calls are optional.
