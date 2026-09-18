@@ -438,9 +438,10 @@ test("the insert rail is a toggle that is remembered", () => {
   // The icon, the label and the action have to agree. It has been wrong twice:
   // three dots ("more options") labelled "Insert block", then a plus, which
   // promises an insert and delivers a panel. It shows a panel, so it says so.
-  assert.match(topbar, /ico: "ph-sidebar-simple"/);
-  assert.ok(!/ico: "ph-dots-three"/.test(topbar));
-  assert.ok(!/ico: "ph-plus"/.test(topbar));
+  assert.match(topbar, /ico: "ph-toolbox"/);
+  for (const wrong of ["ph-dots-three", "ph-plus", "ph-sidebar-simple"]) {
+    assert.ok(!new RegExp(`ico: "${wrong}"`).test(topbar), `${wrong} was rejected`);
+  }
   assert.match(topbar, /tooltips: LOCALE\.NOTE_TOOLBAR/);
   assert.match(topbar, /uiHandler: \[ui\]/, "a service with no uiHandler never fires");
   const win = readFileSync(

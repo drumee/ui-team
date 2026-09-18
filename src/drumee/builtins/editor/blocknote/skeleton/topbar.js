@@ -45,14 +45,15 @@ module.exports = function (ui) {
           // nothing to click. This raises a rail of the same blocks in the
           // margin, and remembers the choice.
           //
-          // The button SHOWS AND HIDES A PANEL, so it says so: a sidebar
-          // glyph, and a label about the panel rather than about one thing
-          // inside it. It has now been wrong twice — three dots ("more
-          // options") next to "Insert block", then a plus, which promises an
-          // insert and delivers a panel (Duy, 2026-09-18). The icon, the
-          // label and the action have to agree.
+          // The button SHOWS AND HIDES THE TOOLBAR, so the icon and the label
+          // both say "toolbar". It took three goes to get there: three dots
+          // ("more options") next to "Insert block", then a plus, which
+          // promises an insert and delivers a panel, then a sidebar glyph,
+          // which describes where the thing appears rather than what it is
+          // (Duy, 2026-09-18). The icon, the label and the action have to
+          // agree, and the label is the one to match.
           Skeletons.Button.Svg({
-            ico: "ph-sidebar-simple",
+            ico: "ph-toolbox",
             service: "toggle-rail",
             sys_pn: "ref-rail-toggle",
             className: `${pfx}__icon rail-toggle`,
