@@ -1,11 +1,38 @@
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { BlockNoteEditor } from "@blocknote/core";
+import { FormattingToolbar } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
 
 const { xhRequest } = require("@drumee/ui-essentials");
+
+/**
+ * Whether the toolbar stays open, remembered per browser.
+ *
+ * Deliberately NOT stored on the note: it is a preference about how one person
+ * likes to work, not a property of the document, and putting it in the file
+ * would push a toolbar onto everyone the note is shared with.
+ */
+const TOOLBAR_KEY = "drumee.note.toolbar";
+
+function readToolbarPreference() {
+  try {
+    return localStorage.getItem(TOOLBAR_KEY) === "1";
+  } catch (e) {
+    /** private mode, blocked storage — the toolbar simply starts closed */
+    return false;
+  }
+}
+
+function writeToolbarPreference(on) {
+  try {
+    localStorage.setItem(TOOLBAR_KEY, on ? "1" : "0");
+  } catch (e) {
+    /** nothing to do: the toggle still works for this session */
+  }
+}
 const { parse, serialize, isLegacyNote } = require("libs/blocknote-format");
 const { resolveTheme } = require("router/theme");
 
@@ -23,6 +50,7 @@ class __blocknote_state extends DrumeeMFS {
     this.media = opt.media;
     this.editor = opt.editor;
     this.escapeContextmenu = true;
+    this._toolbar = readToolbarPreference();
     if (this.media) {
       const { nid, pid, hub_id } = this.media.actualNode();
       this.mset({ nid, pid, hub_id });
@@ -225,24 +253,62 @@ class __blocknote_state extends DrumeeMFS {
       if (this.editor && this.editor.markDirty) this.editor.markDirty();
     });
 
+    this._editable = !opt.readOnly;
     this._root = createRoot(this.el);
-    this._root.render(
-      createElement(BlockNoteView, {
-        editor: this._editor,
-        editable: !opt.readOnly,
-        // Ask the app rather than hardcoding a literal. Dark mode is disabled
-        // product-wide today (router/theme.js DARK_MODE_ENABLED = false), so
-        // this resolves to "light" and renders EXACTLY as before — the point is
-        // that if that switch is ever flipped, the editor follows instead of
-        // staying a white slab in a dark app.
-        theme: resolveTheme(),
-      })
-    );
+    this._paint();
 
     // The player window sets user-select:none for its drag chrome, and the
     // window's own contextmenu handler would otherwise swallow right-clicks
     // inside the editor. Both are handled in skin/ and here respectively.
     this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
+  }
+
+  /**
+   * Render the editor. Kept as its own step because the toolbar toggle has to
+   * re-render with different props, and React owns this element — the strip
+   * cannot be appended to it from the outside.
+   *
+   * The static toolbar goes in as a CHILD of BlockNoteView so that it sits
+   * inside the editor's own React context (it reads the editor from there),
+   * and the pop-up toolbar is switched OFF while it is on — two toolbars for
+   * the same selection is noise, not redundancy.
+   */
+  _paint() {
+    if (!this._root) return;
+    this._root.render(
+      createElement(
+        BlockNoteView,
+        {
+          editor: this._editor,
+          editable: this._editable,
+          // Ask the app rather than hardcoding a literal. Dark mode is disabled
+          // product-wide today (router/theme.js DARK_MODE_ENABLED = false), so
+          // this resolves to "light" and renders EXACTLY as before — the point
+          // is that if that switch is ever flipped, the editor follows instead
+          // of staying a white slab in a dark app.
+          theme: resolveTheme(),
+          formattingToolbar: !this._toolbar,
+        },
+        this._toolbar ? createElement(FormattingToolbar) : null
+      )
+    );
+  }
+
+  /**
+   * @returns {Boolean} whether the persistent toolbar is now showing
+   */
+  toggleToolbar() {
+    this._toolbar = !this._toolbar;
+    writeToolbarPreference(this._toolbar);
+    this._paint();
+    return this._toolbar;
+  }
+
+  /**
+   * @returns {Boolean}
+   */
+  toolbarShown() {
+    return Boolean(this._toolbar);
   }
 
   /**

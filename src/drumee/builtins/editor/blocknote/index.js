@@ -179,6 +179,12 @@ class __editor_blocknote extends __player {
         Kind.waitFor(kind).then(() => {
           child.feed({ kind, media: this.media, editor: this });
           this._state = child.children.last();
+          // The toolbar preference is remembered, so the button has to open
+          // already pressed when it is on — otherwise the toggle and what is
+          // on screen disagree from the first frame.
+          if (this._state && this._state.toolbarShown) {
+            this._reflectToolbarState(this._state.toolbarShown());
+          }
         });
         break;
       }
@@ -245,6 +251,23 @@ class __editor_blocknote extends __player {
       this._timer = null;
       this.saveContent();
     }, AUTOSAVE_MS);
+  }
+
+  /**
+   * Show the toggle as pressed while the toolbar is up, so the button says
+   * what state the editor is in rather than just what it does.
+   *
+   * @param {Boolean} on
+   */
+  _reflectToolbarState(on) {
+    if (!this.ensurePart) return;
+    this.ensurePart("ref-toolbar-toggle")
+      .then((p) => {
+        if (!p || !p.el || p.isDestroyed()) return;
+        p.el.dataset.state = on ? "1" : "0";
+      })
+      .catch(() => { });
+    if (this.el) this.el.dataset.toolbar = on ? "1" : "0";
   }
 
   /**
@@ -435,6 +458,14 @@ class __editor_blocknote extends __player {
         this.mset({ filename: safe });
         this._syncWindowTitle(safe);
         this.markDirty();
+        break;
+      }
+
+      // Formatting on demand — see the button in skeleton/topbar.
+      case "toggle-toolbar": {
+        if (!this._state || !this._state.toggleToolbar) break;
+        const on = this._state.toggleToolbar();
+        this._reflectToolbarState(on);
         break;
       }
 

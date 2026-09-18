@@ -40,12 +40,25 @@ module.exports = function (ui) {
         className: `${pfx}__action`,
         service: _e.raise,
         kids: [
+          // Formatting on demand. BlockNote's own toolbar only appears on a
+          // selection and its block menu only on "/", which leaves someone who
+          // has never used an editor like this with nothing to click. This
+          // toggles a toolbar that STAYS, and remembers the choice.
+          Skeletons.Button.Svg({
+            ico: "ph-dots-three",
+            service: "toggle-toolbar",
+            sys_pn: "ref-toolbar-toggle",
+            className: `${pfx}__icon toolbar-toggle`,
+            tooltips: LOCALE.NOTE_TOOLBAR,
+            uiHandler: [ui],
+          }),
           Skeletons.Button.Svg({
             ico: "floppy",
             service: _e.save,
             className: `${pfx}__icon save`,
             tooltips: LOCALE.SAVE,
             haptic: 1000,
+            uiHandler: [ui],
           }),
         ],
       }),

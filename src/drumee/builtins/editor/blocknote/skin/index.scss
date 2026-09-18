@@ -6,6 +6,13 @@
 @use "mixins/drumee";
 @use "../../skin/topbar.scss";
 
+// The page column. Notion measures its text at ~708px; 54px of gutter each
+// side is what BlockNote needs for the drag handle and "+". Named because
+// three different things now have to line up on it: the page title, the
+// editor, and the formatting band.
+$note-measure: 816px;
+$note-gutter: 54px;
+
 .editor-blocknote {
   &__ui {
     background-color: var(--default-bg);
@@ -35,13 +42,19 @@
   // slim neutral bar the editor/note one is not — but it keeps that window's
   // structure (full width, own z-index, square-topped radius) so the shared
   // window/skeleton/content/main layout behaves identically.
+  // Duy, 2026-09-18: white-on-white with a hairline read as unfinished space
+  // rather than a header. The NOTE stays pure white — that was the explicit
+  // constraint — so the separation is carried by the header instead: a barely
+  // tinted strip lifted off the page by a shadow. Depth, not a line.
   &__header {
     width: 100%;
     height: 56px;
     min-height: 56px;
     z-index: 200;
-    background-color: var(--default-bg);
-    border-bottom: 1px solid var(--neutral-300);
+    background-color: #fafafa;
+    box-shadow:
+      0 1px 2px rgb(16 24 40 / 6%),
+      0 1px 3px rgb(16 24 40 / 4%);
 
     &[data-header="0"] {
       display: none;
@@ -74,9 +87,9 @@
   // the 54px gutters BlockNote needs on each side for the drag handle and "+".
   &__title-row,
   &__surface .bn-editor {
-    max-width: 816px;
+    max-width: $note-measure;
     margin-inline: auto;
-    padding-inline: 54px;
+    padding-inline: $note-gutter;
     box-sizing: border-box;
   }
 
@@ -123,7 +136,51 @@
       height: 100%;
       justify-content: space-between;
       align-items: center;
-      padding: 0 16px;
+      // One gutter in from the frame, so the title is not jammed against the
+      // window edge.
+      //
+      // NOT aligned to the page column, and that is deliberate: measured, the
+      // column starts at ~642px on a wide window, which would strand this
+      // small title in the middle of an empty bar. A window's own title
+      // belongs at its left edge; the FORMATTING BAND is the thing that lines
+      // up with the text, because it acts on the text.
+      padding: 0 12px 0 $note-gutter;
+      gap: 8px;
+
+      // The window controls belong to the WINDOW, the buttons beside them
+      // belong to the NOTE. They read as one undifferentiated row of odds and
+      // ends, so a hairline separates the two jobs and the close button gets
+      // the same 32px box as everything else.
+      //
+      // Nested HERE and not one level up: `&-topbar` compiles to a class no
+      // element carries — the element is `…-topbar__container` — so a rule
+      // written beside `&__container` silently matches nothing. It did, and
+      // the close button stayed 20px next to two 32px ones.
+      .window-button__icon-button {
+        align-items: center;
+        margin-left: 8px;
+        padding-left: 10px;
+        border-left: 1px solid var(--neutral-300);
+
+        > * {
+          width: 32px;
+          height: 32px;
+          padding: 7px;
+          border-radius: 8px;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.15s ease;
+
+          &:hover {
+            background-color: var(--default-bg-hover);
+          }
+
+          svg {
+            width: 18px;
+            height: 18px;
+          }
+        }
+      }
     }
 
     // The title group absorbs the slack so the actions and the window controls
@@ -169,22 +226,43 @@
     &__action {
       align-items: center;
       height: 100%;
+      gap: 2px;
     }
 
-    // Same 46px round button the note editor uses, so the two Notes feel like
-    // the same product while both are on offer.
+
+    // ONE size for everything in this header.
+    //
+    // It used to be a 46px filled circle sitting next to the 20px window close
+    // button — more than twice the size, different shape, different weight,
+    // touching each other. That mismatch is what read as unfinished. These are
+    // quiet 32px targets that only show a background on hover, so the chrome
+    // stays out of the way of the writing.
     &__icon {
-      width: 46px;
-      height: 46px;
-      margin-left: 10px;
+      width: 32px;
+      height: 32px;
+      margin-left: 2px;
       cursor: pointer;
       z-index: 1000;
-      padding: 14px;
-      background-color: var(--neutral-200);
-      color: var(--neutral-900);
-      border-radius: 100%;
+      padding: 7px;
+      background-color: transparent;
+      color: var(--normal-fg-10);
+      border-radius: 8px;
       align-items: center;
-      flex: 0 0 46px;
+      justify-content: center;
+      flex: 0 0 32px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+
+      &:hover {
+        background-color: var(--default-bg-hover);
+        color: var(--neutral-900);
+      }
+
+      // The toggle reports state, not just intent: while the toolbar is up the
+      // button stays lit, the way a pressed control should.
+      &.toolbar-toggle[data-state="1"] {
+        background-color: var(--default-bg-hover);
+        color: var(--neutral-900);
+      }
 
       svg {
         width: 18px;
@@ -209,4 +287,47 @@
     -webkit-user-select: text;
   }
 
+
+  // The formatting toolbar the "..." button toggles.
+  //
+  // It has to be a CHILD of BlockNoteView — it reads the editor from React
+  // context — and BlockNote renders children AFTER the editor, so left alone
+  // it lands BELOW the text and reads as a popup that forgot to close.
+  // Measured in a browser, not guessed at.
+  //
+  // The DOM order belongs to BlockNote, so the fix is visual: the container
+  // becomes a column and the band is ordered first.
+  //
+  // 🚨 `align-items: stretch` and the explicit width are NOT decoration. Making
+  // the container flex collapses the editor to its content width — the 816px
+  // measure silently became 537px until both were put back.
+  .bn-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+
+    > .bn-editor {
+      width: 100%;
+    }
+
+    .bn-formatting-toolbar {
+      order: -1;
+      position: static;
+      width: 100%;
+      margin: 0 0 8px;
+      padding: 6px 12px;
+      // The band spans the window, but its buttons line up with the TEXT —
+      // otherwise they float against the frame while every other thing on the
+      // page starts at the column. max() keeps them sane below the measure.
+      padding-left: max(
+        #{$note-gutter},
+        calc((100% - #{$note-measure}) / 2 + #{$note-gutter})
+      );
+      background-color: #fafafa;
+      border-bottom: 1px solid var(--neutral-300);
+      border-radius: 0;
+      box-shadow: none;
+      justify-content: flex-start;
+    }
+  }
 }

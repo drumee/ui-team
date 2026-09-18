@@ -279,7 +279,7 @@ test("every language carries the new keys", () => {
   // menu row, which is exactly the kind of thing nobody notices until QA.
   for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
     const dict = JSON.parse(readFileSync(resolve(ROOT, `locale/${lang}.json`), "utf8"));
-    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE"]) {
+    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_TOOLBAR"]) {
       assert.ok(dict[key], `locale/${lang}.json is missing ${key}`);
     }
   }
@@ -360,6 +360,61 @@ test("the old editor is hidden, NOT removed", () => {
   assert.match(seeds, /editor_note:/, "the legacy rich-text note must stay registered");
   const dir = resolve(ROOT, "src/drumee/builtins/editor/markdow/index.js");
   assert.ok(readFileSync(dir, "utf8").length > 0, "its source must still be there");
+});
+
+// ---------------------------------------------------------------------------
+// The header, and formatting on demand (Duy, 2026-09-18)
+// ---------------------------------------------------------------------------
+
+test("every button in the header is the same size", () => {
+  // What made it look unfinished was a 46px filled circle touching the 20px
+  // window close button. The sizes are pinned because "they look wrong
+  // together" is invisible in a diff and comes back the moment someone adds
+  // the next button.
+  const skin = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
+  const icon = skin.slice(skin.indexOf("&__icon {"));
+  assert.match(icon, /width: 32px;/);
+  assert.match(icon, /height: 32px;/);
+  assert.ok(!/flex: 0 0 46px/.test(skin), "the 46px circle must be gone");
+  assert.ok(!/border-radius: 100%/.test(icon.slice(0, 400)), "and it is no longer a circle");
+  // the shared window control is brought to the same box, scoped to this header
+  assert.match(skin, /\.window-button__icon-button/);
+});
+
+test("the note stays white; only the header is tinted", () => {
+  // Duy was explicit: the page keeps its white. The separation is carried by
+  // the header alone.
+  const skin = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
+  const header = skin.slice(skin.indexOf("&__header {"), skin.indexOf("&__main"));
+  assert.match(header, /background-color: #fafafa;/);
+  assert.match(header, /box-shadow:/, "separation is depth, not a hard rule");
+  assert.ok(
+    !/border-bottom: 1px solid var\(--neutral-300\)/.test(header),
+    "the hairline is replaced by the shadow"
+  );
+});
+
+test("the formatting toolbar is a toggle that is remembered", () => {
+  const state = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/state.js"), "utf8");
+  assert.match(state, /toggleToolbar\(\)/);
+  assert.match(state, /localStorage/, "the choice has to survive a reload");
+  // a preference about how one person works must NOT ride on the document
+  assert.ok(
+    !/serialize\([^)]*toolbar/i.test(state),
+    "the toolbar state must never be written into the note"
+  );
+  // the pop-up and the fixed strip are mutually exclusive
+  assert.match(state, /formattingToolbar: !this\._toolbar/);
+  const topbar = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/topbar.js"), "utf8");
+  assert.match(topbar, /service: "toggle-toolbar"/);
+  assert.match(topbar, /uiHandler: \[ui\]/, "a service with no uiHandler never fires");
+  const win = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
+  assert.match(win, /case "toggle-toolbar"/);
 });
 
 test("markdown is NEVER written back", () => {
