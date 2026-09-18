@@ -396,30 +396,30 @@ test("the note stays white; only the header is tinted", () => {
   );
 });
 
-test("the header restates the tooltip rules it does not inherit", () => {
+test("the tooltip rule this editor does not inherit is defined ONCE", () => {
   // Duy, 2026-09-18: hovering a header button showed a huge two-line label
   // that shoved the header around. The shared editor skin styles
   // `.editor-topbar__control__icon .tooltips` — a prefix nothing in THIS
   // editor carries — so the label fell back to the page font at 16px,
   // `position: static` (taking up layout instead of floating) and wrapping.
   //
-  // Same trap as the 46px save button. Pinned because the symptom only shows
-  // on hover, which no amount of reading the diff reveals.
+  // It shipped broken twice, in the header and then in the rail, because the
+  // rule was hand-copied each time. It is now a mixin with a side argument: a
+  // third copy is how the third button gets forgotten.
   const skin = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
-  // `&__icon` comes AFTER `&__save-status` in the file — slicing between them
-  // in the other order silently yields an empty string and the assertions pass
-  // on nothing.
-  const start = skin.indexOf("&__icon {");
-  assert.ok(start > 0, "the icon rules are gone");
-  const icon = skin.slice(start);
-  assert.match(icon, /\.tooltips \{/, "the editor must style its own tooltip");
-  assert.match(icon, /position: absolute;/, "a static tooltip takes up layout");
-  assert.match(icon, /white-space: nowrap;/, "or the label wraps onto two lines");
-  assert.match(icon, /\$size: 12px/, "it must not inherit the page font size");
-  assert.match(icon, /right: 0;/, "top-right buttons: the label grows inwards");
-  // the button has to be the positioning context, or `absolute` escapes it
-  assert.match(icon, /position: relative;/);
+  assert.match(skin, /@mixin note-tooltip\(\$side: below\) \{/);
+  const mixin = skin.slice(skin.indexOf("@mixin note-tooltip"));
+  assert.match(mixin.slice(0, 900), /position: absolute;/, "a static tooltip takes up layout");
+  assert.match(mixin.slice(0, 900), /white-space: nowrap;/, "or the label wraps");
+  assert.match(mixin.slice(0, 900), /\$size: 12px/, "and must not inherit the page font");
+  assert.match(mixin.slice(0, 900), /position: relative;/, "the button anchors it");
+
+  // every labelled button uses it, and nobody hand-rolls a copy
+  const uses = (skin.match(/@include note-tooltip\(/g) || []).length;
+  assert.ok(uses >= 3, `expected every labelled button to use it, found ${uses}`);
+  const handRolled = (skin.match(/background-color: var\(--bg-tooltips\)/g) || []).length;
+  assert.strictEqual(handRolled, 1, "the tooltip background belongs to the mixin alone");
 });
 
 test("the insert rail is a toggle that is remembered", () => {
@@ -577,7 +577,7 @@ test("the rail floats in the margin and its side is one switch", () => {
   assert.match(skin, /&\[data-rail-side="left"\] &-rail__container/,
     "both sides have to be expressible");
   // the labels must flip with the side or they run off-window
-  assert.match(skin, /&\[data-rail-side="left"\] &-rail__icon \.tooltips/);
+  assert.match(skin, /&\[data-rail-side="left"\] &-rail__icon \{\s*@include note-tooltip\(right\);/);
   // and it steps aside when there is no margin left to float in
   assert.match(skin, /@media \(max-width: 1100px\)/);
   const win = readFileSync(

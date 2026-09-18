@@ -13,6 +13,53 @@
 $note-measure: 816px;
 $note-gutter: 54px;
 
+// 🚨 The shared editor skin styles `.editor-topbar__control__icon .tooltips` —
+// a prefix nothing in THIS editor carries, since its family is
+// `editor-blocknote-topbar`. Every button here therefore has to restate the
+// rule, or its label inherits the page font, `position: static` (taking up
+// LAYOUT instead of floating) and wrapping onto two lines.
+//
+// Written once because it is needed in more than one place, and it has already
+// shipped broken twice.
+//
+// @param $side  which way the label opens: "below", "left" or "right"
+@mixin note-tooltip($side: below) {
+  position: relative;
+  overflow: visible;
+
+  .tooltips {
+    position: absolute;
+    width: max-content;
+    max-width: none;
+    white-space: nowrap;
+    padding: 5px 8px;
+    border-radius: var(--border-radius-tiny);
+    background-color: var(--bg-tooltips);
+    pointer-events: none;
+    z-index: 2000;
+    @include drumee.typo(
+      $line: 16px,
+      $size: 12px,
+      $color: var(--default-text-color)
+    );
+
+    @if $side == below {
+      // anchored on the RIGHT so a long label grows inwards instead of off
+      // the window — these buttons sit in the top-right corner.
+      top: calc(100% + 6px);
+      right: 0;
+    } @else if $side == left {
+      top: 50%;
+      right: calc(100% + 8px);
+      transform: translateY(-50%);
+    } @else {
+      top: 50%;
+      left: calc(100% + 8px);
+      transform: translateY(-50%);
+    }
+  }
+}
+
 .editor-blocknote {
   &__ui {
     background-color: var(--default-bg);
@@ -184,34 +231,12 @@ $note-gutter: 54px;
       height: 18px;
     }
 
-    // Same reason as the header buttons: the shared editor skin styles a
-    // prefix this editor does not carry, so the label would inherit the page
-    // font and take up layout instead of floating.
-    .tooltips {
-      position: absolute;
-      top: 50%;
-      right: calc(100% + 8px);
-      transform: translateY(-50%);
-      width: max-content;
-      max-width: none;
-      white-space: nowrap;
-      padding: 5px 8px;
-      border-radius: var(--border-radius-tiny);
-      background-color: var(--bg-tooltips);
-      pointer-events: none;
-      z-index: 2000;
-      @include drumee.typo(
-        $line: 16px,
-        $size: 12px,
-        $color: var(--default-text-color)
-      );
-    }
+    @include note-tooltip(left);
   }
 
   // On the left the labels have to open the other way or they run off-window.
-  &[data-rail-side="left"] &-rail__icon .tooltips {
-    right: auto;
-    left: calc(100% + 8px);
+  &[data-rail-side="left"] &-rail__icon {
+    @include note-tooltip(right);
   }
 
   &-rail__separator {
@@ -401,40 +426,7 @@ $note-gutter: 54px;
         color: var(--neutral-900);
       }
 
-      // 🚨 The tooltip has to be styled HERE, and this is why.
-      //
-      // The shared editor skin styles `.editor-topbar__control__icon
-      // .tooltips` — a prefix nothing in this editor carries, because our
-      // family is `editor-blocknote-topbar`. So the label inherited the page
-      // font at 16px, `position: static` (it took up LAYOUT rather than
-      // floating), and `white-space: normal`, which wrapped "Formatting
-      // toolbar" onto two lines and shoved the header around on hover.
-      //
-      // Same trap the 46px save button fell into. Any editor that names its
-      // own topbar has to restate these.
-      position: relative;
-      overflow: visible;
-
-      .tooltips {
-        position: absolute;
-        top: calc(100% + 6px);
-        // anchored on the RIGHT so a long label grows inwards instead of off
-        // the window — these buttons sit in the top-right corner.
-        right: 0;
-        width: max-content;
-        max-width: none;
-        white-space: nowrap;
-        padding: 5px 8px;
-        border-radius: var(--border-radius-tiny);
-        background-color: var(--bg-tooltips);
-        pointer-events: none;
-        z-index: 2000;
-        @include drumee.typo(
-          $line: 16px,
-          $size: 12px,
-          $color: var(--default-text-color)
-        );
-      }
+      @include note-tooltip(below);
 
       svg {
         width: 18px;
