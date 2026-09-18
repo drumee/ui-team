@@ -1187,18 +1187,17 @@ class __window_core extends __utils {
         return;
 
       case "add-note":
-        // No opt.media — that branch in editor_markdown.onDomRefresh is
-        // for opening an existing file. New-note path uses getCurrentMedia()
+        // No opt.media — that branch in the editor's onDomRefresh is for
+        // opening an existing file. New-note path uses getCurrentMedia()
         // which reads from `this.target = Wm.getActiveWindow()`.
         if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.launch(
-          { kind: "editor_markdown", uiHandler: [this] },
+          { kind: "editor_blocknote", uiHandler: [this] },
           { explicit: 1 }
         );
 
-      // Notion-style Note (BlockNote), the twin of "add-note" above while it
-      // is being trialled. Same guard, same launch shape — only the kind
-      // differs, so the existing Note cannot be affected by it.
+      // Alias kept from the trial, when this editor ran beside the markdown
+      // Note. Both names now open the same thing.
       case "add-blocknote":
         if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.launch(

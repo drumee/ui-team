@@ -2982,5 +2982,6 @@
   "ALL_CHANGES_SAVED": "所有更改已保存",
   "UNSAVED_CHANGES": "有未保存的更改",
   "NOTE_UNREADABLE": "无法读取此笔记 — 以只读方式打开",
+  "NOTE_UPGRADES_ON_SAVE": "以旧格式打开 — 保存将升级此笔记",
   "UNTITLED": "无标题"
 }

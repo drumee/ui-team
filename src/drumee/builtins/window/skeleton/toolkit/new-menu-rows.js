@@ -78,27 +78,17 @@ export function createRows(ui, opt = {}) {
       area: ui.mget(_a.area) || _a.personal,
       className: `${cnItem}--add-folder${nested}`,
     }),
-    // Note is temporarily hidden from the create list (2026-08). The add-note
-    // handler (window/core.js) and editor_markdown stay wired — uncomment this
-    // row to restore the option on BOTH surfaces.
-    // menuRow(ui, {
-    //   service: "add-note",
-    //   ico: "addmenu-note",
-    //   content: LOCALE.NOTE,
-    //   className: `${cnItem}--add-note${nested}`,
-    // }),
-    // The Notion-style Note (BlockNote) being trialled. Offered here because
-    // this menu is where people actually create things inside a workspace.
+    // Note. This menu is where people actually create things inside a
+    // workspace, which is why the option lives here rather than only on the
+    // desk's own "+ New".
     //
-    // NOTE the asymmetry: the row above — the CURRENT Note — stays hidden.
-    // That was a deliberate product call in 2026-08 and reversing it is not
-    // this feature's business; the current Note is still reachable from the
-    // desk's own "+ New" and its background context menu, so there is still a
-    // way back. Drop this row to withdraw the trial from this surface.
+    // `add-blocknote` rather than `add-note`: both now open the same editor
+    // (window/core.js), and this is the name the row has carried since it was
+    // added, so the CSS and any muscle memory around it stay put.
     menuRow(ui, {
       service: "add-blocknote",
       ico: "addmenu-note",
-      content: LOCALE.NOTE_BETA,
+      content: LOCALE.NOTE,
       className: `${cnItem}--add-note${nested}`,
     }),
     menuRow(ui, {

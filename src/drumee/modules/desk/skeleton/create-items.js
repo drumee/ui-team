@@ -37,17 +37,6 @@ const createEntries = (mayWrite) => [
           iconClass: "ico-note",
           highlight: 0,
         },
-        // Notion-style Note (BlockNote). Sits NEXT TO the existing Note
-        // rather than replacing it: both stay available until this one is
-        // signed off, so there is always a way back.
-        {
-          ico: "addmenu-note",
-          label: LOCALE.NOTE_BETA,
-          service: "new-blocknote",
-          name: "",
-          iconClass: "ico-note",
-          highlight: 0,
-        },
         {
           ico: "addmenu-document",
           label: LOCALE.DOCUMENT || "Document",

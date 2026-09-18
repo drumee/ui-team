@@ -11,10 +11,19 @@ const AUTOSAVE_MS = 2500;
 /**
  * Notion-style Note, built on BlockNote.
  *
- * Shipped ALONGSIDE the existing Note (`editor_markdown`) and the legacy
- * rich-text note (`editor_note`) rather than replacing either, so the old ones
- * stay available as a fallback until this is signed off. Nothing routes here
- * except files this editor itself wrote — they carry the `.dnote` extension.
+ * This REPLACES the markdown Note (Lexis, via Duy, 2026-09-18). Two kinds of
+ * file reach it: the `.dnote` files it writes itself, and notes still in the
+ * old markdown format, which are imported for reading.
+ *
+ * 🚨 A markdown note is UPGRADED, never written back as markdown. BlockNote's
+ * own export is lossy by name (`blocksToMarkdownLossy` — it un-nests children
+ * and drops styles), so saving a document back to markdown would shave a
+ * little off it every time. Instead the first save writes the new format under
+ * the `.dnote` extension against the SAME nid, which media.save turns into an
+ * in-place conversion: one node, same id, the name the user sees unchanged
+ * (Drumee hides extensions), and a version snapshot of the markdown kept
+ * behind it. The legacy `editor_note` is untouched — the desk reminder still
+ * uses it.
  *
  * Structure mirrors editor/diagram: this window owns chrome, dirty state and
  * saving; `blocknote_state` owns the editor surface.
@@ -206,6 +215,16 @@ class __editor_blocknote extends __player {
   }
 
   /**
+   * This note arrived in the OLD markdown format and is being shown from an
+   * imported copy. Nothing is written yet — the upgrade happens on the first
+   * save — so say so rather than leaving the status reading "saved".
+   */
+  markConverting() {
+    this._fromLegacy = 1;
+    if (!this._readOnly) this._setStatus("converting");
+  }
+
+  /**
    * A note we could not read is never written back — see blocknote_state.
    * @param {String} reason
    */
@@ -242,7 +261,7 @@ class __editor_blocknote extends __player {
   }
 
   /**
-   * @param {"saved"|"saving"|"unsaved"|"readonly"} state
+   * @param {"saved"|"saving"|"unsaved"|"readonly"|"converting"} state
    */
   _setStatus(state) {
     this._status = state;
@@ -251,6 +270,7 @@ class __editor_blocknote extends __player {
       saving: LOCALE.SAVING,
       unsaved: LOCALE.UNSAVED_CHANGES,
       readonly: LOCALE.NOTE_UNREADABLE,
+      converting: LOCALE.NOTE_UPGRADES_ON_SAVE,
     };
     if (!this.ensurePart) return;
     this.ensurePart("save-status")

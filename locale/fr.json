@@ -3192,5 +3192,6 @@
   "ALL_CHANGES_SAVED": "Toutes les modifications sont enregistrées",
   "UNSAVED_CHANGES": "Modifications non enregistrées",
   "NOTE_UNREADABLE": "Note illisible — ouverte en lecture seule",
+  "NOTE_UPGRADES_ON_SAVE": "Ouverte depuis l’ancien format — l’enregistrement met à niveau cette note",
   "UNTITLED": "Sans titre"
 }

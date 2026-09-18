@@ -2983,5 +2983,6 @@
   "ALL_CHANGES_SAVED": "Todos los cambios guardados",
   "UNSAVED_CHANGES": "Cambios sin guardar",
   "NOTE_UNREADABLE": "No se puede leer esta nota: abierta en solo lectura",
+  "NOTE_UPGRADES_ON_SAVE": "Abierta desde el formato antiguo: al guardar se actualizará esta nota",
   "UNTITLED": "Sin título"
 }

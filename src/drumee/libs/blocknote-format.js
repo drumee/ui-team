@@ -13,6 +13,41 @@
 /** Extension carried by every file this editor writes. */
 const EXT = "dnote";
 
+/**
+ * The format this editor REPLACES.
+ *
+ * The old Note wrote plain markdown through the same media.save text path, and
+ * left NOTHING on the node to say a Drumee Note had written it: it saves
+ * `filetype: "markdown"`, which is exactly what an uploaded README.md also
+ * carries. So "every old note" and "every markdown file" are the same set, and
+ * routing one here routes the other too. That is deliberate and was decided
+ * with Lexis — but it is the reason the import path below never writes
+ * markdown back (see the note on conversion in editor/blocknote).
+ */
+const LEGACY_EXT = "md";
+const LEGACY_FILETYPE = "markdown";
+const LEGACY_MIMETYPE = "text/markdown";
+
+/**
+ * Does this node hold a note in the OLD format?
+ *
+ * Any one signal is enough: a node reaches the window resolver with whichever
+ * of the three the caller happened to have.
+ *
+ * @param {Object} o
+ * @param {String} o.ext
+ * @param {String} o.filetype
+ * @param {String} o.mimetype
+ * @returns {Boolean}
+ */
+function isLegacyNote({ ext, filetype, mimetype } = {}) {
+  return (
+    `${ext || ""}`.toLowerCase() === LEGACY_EXT ||
+    `${filetype || ""}`.toLowerCase() === LEGACY_FILETYPE ||
+    `${mimetype || ""}`.toLowerCase() === LEGACY_MIMETYPE
+  );
+}
+
 /** Stamped into the node's metadata; a second, rename-proof signal. */
 const DATA_TYPE = "drumee.blocknote";
 
@@ -58,4 +93,14 @@ function parse(content) {
   return { blocks: data.blocks };
 }
 
-module.exports = { EXT, DATA_TYPE, VERSION, serialize, parse };
+module.exports = {
+  EXT,
+  DATA_TYPE,
+  VERSION,
+  LEGACY_EXT,
+  LEGACY_FILETYPE,
+  LEGACY_MIMETYPE,
+  isLegacyNote,
+  serialize,
+  parse,
+};

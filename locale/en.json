@@ -3191,5 +3191,6 @@
   "ALL_CHANGES_SAVED": "All changes saved",
   "UNSAVED_CHANGES": "Unsaved changes",
   "NOTE_UNREADABLE": "Cannot read this note — opened read-only",
+  "NOTE_UPGRADES_ON_SAVE": "Opened from the old format — saving upgrades this note",
   "UNTITLED": "Untitled"
 }

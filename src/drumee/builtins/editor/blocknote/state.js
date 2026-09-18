@@ -6,7 +6,7 @@ import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
 
 const { xhRequest } = require("@drumee/ui-essentials");
-const { parse, serialize } = require("libs/blocknote-format");
+const { parse, serialize, isLegacyNote } = require("libs/blocknote-format");
 const { resolveTheme } = require("router/theme");
 
 // The BlockNote surface, mounted into a Drumee widget element.
@@ -53,6 +53,10 @@ class __blocknote_state extends DrumeeMFS {
 
     xhRequest(url, { responseType: _a.text })
       .then((content) => {
+        if (this._isLegacy()) {
+          this._mountMarkdown(content);
+          return;
+        }
         const r = parse(content);
         if (r.error) {
           this._failLoad(r.error);
@@ -64,6 +68,64 @@ class __blocknote_state extends DrumeeMFS {
         this.warn("blocknote_state: failed to load", url, e);
         this._failLoad("unreachable");
       });
+  }
+
+  /**
+   * Is this node still in the markdown format the old Note wrote?
+   *
+   * @returns {Boolean}
+   */
+  _isLegacy() {
+    const node = (this.media && this.media.actualNode()) || {};
+    return isLegacyNote({
+      ext: node.ext || node.extension,
+      filetype: node.filetype || node.category,
+      mimetype: node.mimetype,
+    });
+  }
+
+  /**
+   * Open a note written by the OLD editor.
+   *
+   * BlockNote's markdown import is explicitly best-effort — its own
+   * documentation says unrecognised syntax is kept as plain text — so this
+   * path is READ-first: the blocks it produces are what the user sees, and the
+   * file is only rewritten if they choose to edit it, at which point the
+   * window converts it to the new format under a new extension. Markdown is
+   * NEVER written back: the export side is lossy by name
+   * (`blocksToMarkdownLossy`), so a save-as-markdown would quietly shave
+   * content off the document on every round trip.
+   *
+   * An import that yields NOTHING from a file that had bytes is treated as a
+   * failure rather than as an empty note, for the same reason a corrupt
+   * `.dnote` is: whatever we could not read must not be replaced by a blank
+   * document.
+   *
+   * @param {String} content
+   */
+  async _mountMarkdown(content) {
+    const md = typeof content === "string" ? content : "";
+    if (!md.trim()) {
+      /** genuinely empty: nothing to lose, open it as a new note */
+      this.mount([]);
+      return;
+    }
+    let blocks;
+    try {
+      const importer = BlockNoteEditor.create({});
+      blocks = await importer.tryParseMarkdownToBlocks(md);
+    } catch (e) {
+      this.warn("blocknote_state: markdown import failed", e);
+      this._failLoad("markdown-import");
+      return;
+    }
+    if (!Array.isArray(blocks) || !blocks.length) {
+      this._failLoad("markdown-empty");
+      return;
+    }
+    this._converted = 1;
+    if (this.editor && this.editor.markConverting) this.editor.markConverting();
+    this.mount(blocks);
   }
 
   /**
