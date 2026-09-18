@@ -2,6 +2,15 @@ const __player = require("player/interact");
 const { EXT, DATA_TYPE } = require("libs/blocknote-format");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 
+/**
+ * Which margin the insert rail floats in.
+ *
+ * "right" by default: the desk's own purple rail sits immediately to the LEFT
+ * of this window, and two vertical bars touching reads heavy. Flip this to
+ * "left" to try the other side — the rail and its tooltips both follow.
+ */
+const RAIL_SIDE = "right";
+
 // How long after the last keystroke an untouched note writes itself back.
 // BlockNote fires onChange per keystroke, so every edit MUST go through this
 // debounce: a save per change races the create → adopt-nid → replace sequence
@@ -65,6 +74,7 @@ class __editor_blocknote extends __player {
     // ResizeObserver. `_zoomed` is what tells the tracker to keep re-fitting.
     this._zoomed = true;
 
+    this._railSide = RAIL_SIDE;
     this._onBeforeUnload = this.checkUnsavedWork.bind(this);
     window.addEventListener("beforeunload", this._onBeforeUnload);
     // Where a new note gets written. Captured now, because by save time this
@@ -179,11 +189,11 @@ class __editor_blocknote extends __player {
         Kind.waitFor(kind).then(() => {
           child.feed({ kind, media: this.media, editor: this });
           this._state = child.children.last();
-          // The toolbar preference is remembered, so the button has to open
+          // The rail preference is remembered, so the button has to open
           // already pressed when it is on — otherwise the toggle and what is
           // on screen disagree from the first frame.
-          if (this._state && this._state.toolbarShown) {
-            this._reflectToolbarState(this._state.toolbarShown());
+          if (this._state && this._state.railShown) {
+            this._reflectRailState(this._state.railShown());
           }
         });
         break;
@@ -254,20 +264,28 @@ class __editor_blocknote extends __player {
   }
 
   /**
-   * Show the toggle as pressed while the toolbar is up, so the button says
-   * what state the editor is in rather than just what it does.
+   * Show the toggle as pressed while the rail is up, so the button says what
+   * state the editor is in rather than just what it does.
+   *
+   * The rail itself is shown by a data attribute on the window rather than by
+   * building and tearing down the widget: it is eleven buttons, and keeping
+   * them in the DOM means the toggle is instant and the tooltips do not have
+   * to be re-created every time.
    *
    * @param {Boolean} on
    */
-  _reflectToolbarState(on) {
+  _reflectRailState(on) {
     if (!this.ensurePart) return;
-    this.ensurePart("ref-toolbar-toggle")
+    this.ensurePart("ref-rail-toggle")
       .then((p) => {
         if (!p || !p.el || p.isDestroyed()) return;
         p.el.dataset.state = on ? "1" : "0";
       })
       .catch(() => { });
-    if (this.el) this.el.dataset.toolbar = on ? "1" : "0";
+    if (this.el) {
+      this.el.dataset.rail = on ? "1" : "0";
+      this.el.dataset.railSide = this._railSide;
+    }
   }
 
   /**
@@ -461,11 +479,18 @@ class __editor_blocknote extends __player {
         break;
       }
 
-      // Formatting on demand — see the button in skeleton/topbar.
-      case "toggle-toolbar": {
-        if (!this._state || !this._state.toggleToolbar) break;
-        const on = this._state.toggleToolbar();
-        this._reflectToolbarState(on);
+      // The insert rail — see skeleton/rail.
+      case "toggle-rail": {
+        if (!this._state || !this._state.toggleRail) break;
+        this._reflectRailState(this._state.toggleRail());
+        break;
+      }
+
+      case "insert-block": {
+        if (!this._state || !this._state.applyBlock) break;
+        const block = cmd && cmd.mget && cmd.mget("block");
+        if (!block) break;
+        this._state.applyBlock(block);
         break;
       }
 

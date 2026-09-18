@@ -2983,6 +2983,17 @@
   "UNSAVED_CHANGES": "ការផ្លាស់ប្តូរមិនទាន់រក្សាទុក",
   "NOTE_UNREADABLE": "មិនអាចអានកំណត់ចំណាំនេះបានទេ — បើកបានតែអាន",
   "NOTE_UPGRADES_ON_SAVE": "បើកពីទម្រង់ចាស់ — ការរក្សទុកនឹងធ្វើបច្ចុប្បន្នភាពកំណណ់ចំណាំនេះ",
-  "NOTE_TOOLBAR": "របារទ្រង់ទ្រាយ",
+  "NOTE_BLOCKS": "បញ្ចូលប្លុក",
+  "NOTE_BLOCK_TEXT": "អត្ថបទ",
+  "NOTE_BLOCK_H1": "ចំណងជើង 1",
+  "NOTE_BLOCK_H2": "ចំណងជើង 2",
+  "NOTE_BLOCK_H3": "ចំណងជើង 3",
+  "NOTE_BLOCK_BULLET": "បញ្ជីចំណុច",
+  "NOTE_BLOCK_NUMBERED": "បញ្ជីលេខ",
+  "NOTE_BLOCK_CHECK": "បញ្ជីធីក",
+  "NOTE_BLOCK_QUOTE": "ស្ម្រង",
+  "NOTE_BLOCK_CODE": "ប្លុកកូដ",
+  "NOTE_BLOCK_TABLE": "តារាង",
+  "NOTE_BLOCK_DIVIDER": "បន្ទាត់ចំនែក",
   "UNTITLED": "គ្មានចំណងជើង"
 }

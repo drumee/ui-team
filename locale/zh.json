@@ -2983,6 +2983,17 @@
   "UNSAVED_CHANGES": "有未保存的更改",
   "NOTE_UNREADABLE": "无法读取此笔记 — 以只读方式打开",
   "NOTE_UPGRADES_ON_SAVE": "以旧格式打开 — 保存将升级此笔记",
-  "NOTE_TOOLBAR": "格式工具栏",
+  "NOTE_BLOCKS": "插入块",
+  "NOTE_BLOCK_TEXT": "正文",
+  "NOTE_BLOCK_H1": "标题 1",
+  "NOTE_BLOCK_H2": "标题 2",
+  "NOTE_BLOCK_H3": "标题 3",
+  "NOTE_BLOCK_BULLET": "项目符号列表",
+  "NOTE_BLOCK_NUMBERED": "编号列表",
+  "NOTE_BLOCK_CHECK": "待办列表",
+  "NOTE_BLOCK_QUOTE": "引用",
+  "NOTE_BLOCK_CODE": "代码块",
+  "NOTE_BLOCK_TABLE": "表格",
+  "NOTE_BLOCK_DIVIDER": "分隔线",
   "UNTITLED": "无标题"
 }

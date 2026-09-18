@@ -27,7 +27,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const Module = require("node:module");
-const { readFileSync } = require("node:fs");
+const { existsSync, readFileSync } = require("node:fs");
 const { resolve } = require("node:path");
 const { requireEsmish } = require("./helpers/load-esmish.js");
 
@@ -279,7 +279,7 @@ test("every language carries the new keys", () => {
   // menu row, which is exactly the kind of thing nobody notices until QA.
   for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
     const dict = JSON.parse(readFileSync(resolve(ROOT, `locale/${lang}.json`), "utf8"));
-    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_TOOLBAR"]) {
+    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_BLOCKS"]) {
       assert.ok(dict[key], `locale/${lang}.json is missing ${key}`);
     }
   }
@@ -422,25 +422,82 @@ test("the header restates the tooltip rules it does not inherit", () => {
   assert.match(icon, /position: relative;/);
 });
 
-test("the formatting toolbar is a toggle that is remembered", () => {
+test("the insert rail is a toggle that is remembered", () => {
   const state = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/state.js"), "utf8");
-  assert.match(state, /toggleToolbar\(\)/);
+  assert.match(state, /toggleRail\(\)/);
   assert.match(state, /localStorage/, "the choice has to survive a reload");
   // a preference about how one person works must NOT ride on the document
   assert.ok(
-    !/serialize\([^)]*toolbar/i.test(state),
-    "the toolbar state must never be written into the note"
+    !/serialize\([^)]*rail/i.test(state),
+    "the rail state must never be written into the note"
   );
-  // the pop-up and the fixed strip are mutually exclusive
-  assert.match(state, /formattingToolbar: !this\._toolbar/);
   const topbar = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/topbar.js"), "utf8");
-  assert.match(topbar, /service: "toggle-toolbar"/);
+  assert.match(topbar, /service: "toggle-rail"/);
   assert.match(topbar, /uiHandler: \[ui\]/, "a service with no uiHandler never fires");
   const win = readFileSync(
     resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
-  assert.match(win, /case "toggle-toolbar"/);
+  assert.match(win, /case "toggle-rail"/);
+  assert.match(win, /case "insert-block"/);
+});
+
+test("the rail runs BlockNote's own menu actions, never a hand-built block", () => {
+  // A table built from a literal here would have to repeat BlockNote's default
+  // shape (2 rows of 3 cells) and would drift from it on the next upgrade.
+  // Naming the slash-menu key means the rail and typing "/" can never disagree
+  // — verified live: the rail produced exactly a 2x3 table.
+  const state = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/state.js"), "utf8");
+  assert.match(state, /getDefaultSlashMenuItems/);
+  assert.match(state, /item\.onItemClick\(\)/);
+  const code = state.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  assert.ok(
+    !/tableContent/.test(code),
+    "the rail must not construct block payloads itself"
+  );
+  // a rail click is a deliberate edit, so it has to arm the conversion guard
+  assert.match(state, /this\._userTouched = 1;[\s\S]{0,120}item\.onItemClick/);
+});
+
+test("every rail button names a real slash-menu key and a real icon", () => {
+  const rail = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/rail.js"), "utf8");
+  // keys BlockNote actually ships (blocks-*.cjs): a typo here is a dead button
+  const known = new Set([
+    "paragraph", "heading", "heading_2", "heading_3", "bullet_list",
+    "numbered_list", "check_list", "toggle_list", "quote", "code_block",
+    "divider", "table", "image", "video", "audio", "file", "emoji",
+  ]);
+  // NOTE the digits in the locale name: NOTE_BLOCK_H1 does not match [A-Z_]+,
+  // and a too-narrow pattern here quietly checks only part of the rail.
+  const rows = [...rail.matchAll(/\["([a-z_0-9]+)", "([a-z0-9-]+)", LOCALE\.([A-Z_0-9]+)\]/g)];
+  assert.ok(rows.length >= 10, `expected the full rail, found ${rows.length}`);
+  const dict = JSON.parse(readFileSync(resolve(ROOT, "locale/en.json"), "utf8"));
+  for (const [, key, ico, loc] of rows) {
+    assert.ok(known.has(key), `${key} is not a BlockNote slash-menu key`);
+    assert.ok(
+      existsSync(resolve(ROOT, `icons/src/normalized/${ico}.svg`)),
+      `${ico}.svg is missing from the sprite source`
+    );
+    assert.ok(dict[loc], `locale/en.json is missing ${loc}`);
+  }
+});
+
+test("the rail floats in the margin and its side is one switch", () => {
+  const skin = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
+  assert.match(skin, /&-rail__container \{[\s\S]{0,400}position: absolute;/,
+    "out of flow, so it never moves the text");
+  assert.match(skin, /&\[data-rail-side="left"\] &-rail__container/,
+    "both sides have to be expressible");
+  // the labels must flip with the side or they run off-window
+  assert.match(skin, /&\[data-rail-side="left"\] &-rail__icon \.tooltips/);
+  // and it steps aside when there is no margin left to float in
+  assert.match(skin, /@media \(max-width: 1100px\)/);
+  const win = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
+  assert.match(win, /const RAIL_SIDE = "(left|right)";/);
 });
 
 test("markdown is NEVER written back", () => {

@@ -1,7 +1,6 @@
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { BlockNoteEditor } from "@blocknote/core";
-import { FormattingToolbar } from "@blocknote/react";
+import { BlockNoteEditor, getDefaultSlashMenuItems } from "@blocknote/core";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
@@ -9,26 +8,26 @@ import "@blocknote/mantine/style.css";
 const { xhRequest } = require("@drumee/ui-essentials");
 
 /**
- * Whether the toolbar stays open, remembered per browser.
+ * Whether the insert rail stays open, remembered per browser.
  *
  * Deliberately NOT stored on the note: it is a preference about how one person
  * likes to work, not a property of the document, and putting it in the file
- * would push a toolbar onto everyone the note is shared with.
+ * would push a rail onto everyone the note is shared with.
  */
-const TOOLBAR_KEY = "drumee.note.toolbar";
+const RAIL_KEY = "drumee.note.rail";
 
-function readToolbarPreference() {
+function readRailPreference() {
   try {
-    return localStorage.getItem(TOOLBAR_KEY) === "1";
+    return localStorage.getItem(RAIL_KEY) === "1";
   } catch (e) {
-    /** private mode, blocked storage — the toolbar simply starts closed */
+    /** private mode, blocked storage — the rail simply starts closed */
     return false;
   }
 }
 
-function writeToolbarPreference(on) {
+function writeRailPreference(on) {
   try {
-    localStorage.setItem(TOOLBAR_KEY, on ? "1" : "0");
+    localStorage.setItem(RAIL_KEY, on ? "1" : "0");
   } catch (e) {
     /** nothing to do: the toggle still works for this session */
   }
@@ -50,7 +49,7 @@ class __blocknote_state extends DrumeeMFS {
     this.media = opt.media;
     this.editor = opt.editor;
     this.escapeContextmenu = true;
-    this._toolbar = readToolbarPreference();
+    this._rail = readRailPreference();
     if (this.media) {
       const { nid, pid, hub_id } = this.media.actualNode();
       this.mset({ nid, pid, hub_id });
@@ -264,51 +263,86 @@ class __blocknote_state extends DrumeeMFS {
   }
 
   /**
-   * Render the editor. Kept as its own step because the toolbar toggle has to
-   * re-render with different props, and React owns this element — the strip
-   * cannot be appended to it from the outside.
+   * Render the editor with BlockNote's own defaults — including the pop-up
+   * formatting toolbar, which appears at the selection where it belongs.
    *
-   * The static toolbar goes in as a CHILD of BlockNoteView so that it sits
-   * inside the editor's own React context (it reads the editor from there),
-   * and the pop-up toolbar is switched OFF while it is on — two toolbars for
-   * the same selection is noise, not redundancy.
+   * Nothing of ours renders in here. An earlier attempt hung a permanent
+   * formatting bar inside this tree and it landed below the text, because
+   * BlockNote renders children AFTER the editor; hosting it outside instead
+   * needs MantineProvider and two BlockNote contexts rebuilt by hand, which is
+   * a dependency on the library's insides. The insert rail avoids all of that
+   * by being an ordinary widget that only calls the editor's public API.
    */
   _paint() {
     if (!this._root) return;
     this._root.render(
-      createElement(
-        BlockNoteView,
-        {
-          editor: this._editor,
-          editable: this._editable,
-          // Ask the app rather than hardcoding a literal. Dark mode is disabled
-          // product-wide today (router/theme.js DARK_MODE_ENABLED = false), so
-          // this resolves to "light" and renders EXACTLY as before — the point
-          // is that if that switch is ever flipped, the editor follows instead
-          // of staying a white slab in a dark app.
-          theme: resolveTheme(),
-          formattingToolbar: !this._toolbar,
-        },
-        this._toolbar ? createElement(FormattingToolbar) : null
-      )
+      createElement(BlockNoteView, {
+        editor: this._editor,
+        editable: this._editable,
+        // Ask the app rather than hardcoding a literal. Dark mode is disabled
+        // product-wide today (router/theme.js DARK_MODE_ENABLED = false), so
+        // this resolves to "light" and renders EXACTLY as before — the point
+        // is that if that switch is ever flipped, the editor follows instead
+        // of staying a white slab in a dark app.
+        theme: resolveTheme(),
+      })
     );
   }
 
   /**
-   * @returns {Boolean} whether the persistent toolbar is now showing
+   * @returns {Boolean} whether the insert rail is now showing
    */
-  toggleToolbar() {
-    this._toolbar = !this._toolbar;
-    writeToolbarPreference(this._toolbar);
-    this._paint();
-    return this._toolbar;
+  toggleRail() {
+    this._rail = !this._rail;
+    writeRailPreference(this._rail);
+    return this._rail;
   }
 
   /**
    * @returns {Boolean}
    */
-  toolbarShown() {
-    return Boolean(this._toolbar);
+  railShown() {
+    return Boolean(this._rail);
+  }
+
+  /**
+   * Run one of BlockNote's own slash-menu actions.
+   *
+   * The rail names a menu KEY rather than a block payload on purpose. A table
+   * built from a literal here would have to repeat BlockNote's default shape
+   * and would drift from it silently on the next upgrade; `onItemClick` is the
+   * same code path typing "/" takes, so the two can never disagree.
+   *
+   * @param {String} key a default slash-menu item key, e.g. "table"
+   * @returns {Boolean} whether anything ran
+   */
+  applyBlock(key) {
+    if (this._loadFailed || !this._editor || !this._editable) return false;
+    let item;
+    try {
+      item = (getDefaultSlashMenuItems(this._editor) || []).find(
+        (i) => i && i.key === key
+      );
+    } catch (e) {
+      this.warn("blocknote_state: could not read the block menu", e);
+      return false;
+    }
+    if (!item || typeof item.onItemClick !== "function") {
+      // The schema does not offer this block; the rail should not have shown it
+      this.warn("blocknote_state: no such block", key);
+      return false;
+    }
+    // Clicking a rail button IS a deliberate edit, so it arms the guard that
+    // keeps a merely-opened markdown note from converting itself.
+    this._userTouched = 1;
+    try {
+      this._editor.focus();
+      item.onItemClick();
+    } catch (e) {
+      this.warn("blocknote_state: block insert failed", key, e);
+      return false;
+    }
+    return true;
   }
 
   /**

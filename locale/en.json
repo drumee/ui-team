@@ -3192,6 +3192,17 @@
   "UNSAVED_CHANGES": "Unsaved changes",
   "NOTE_UNREADABLE": "Cannot read this note — opened read-only",
   "NOTE_UPGRADES_ON_SAVE": "Opened from the old format — saving upgrades this note",
-  "NOTE_TOOLBAR": "Formatting toolbar",
+  "NOTE_BLOCKS": "Insert block",
+  "NOTE_BLOCK_TEXT": "Text",
+  "NOTE_BLOCK_H1": "Heading 1",
+  "NOTE_BLOCK_H2": "Heading 2",
+  "NOTE_BLOCK_H3": "Heading 3",
+  "NOTE_BLOCK_BULLET": "Bulleted list",
+  "NOTE_BLOCK_NUMBERED": "Numbered list",
+  "NOTE_BLOCK_CHECK": "Check list",
+  "NOTE_BLOCK_QUOTE": "Quote",
+  "NOTE_BLOCK_CODE": "Code block",
+  "NOTE_BLOCK_TABLE": "Table",
+  "NOTE_BLOCK_DIVIDER": "Divider",
   "UNTITLED": "Untitled"
 }

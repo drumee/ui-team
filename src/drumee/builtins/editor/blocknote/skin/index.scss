@@ -85,6 +85,123 @@ $note-gutter: 54px;
   // ran ~1832px — about 220 characters — which is unreadable, and going
   // full-frame made that worse rather than better. 816px = 708px of text plus
   // the 54px gutters BlockNote needs on each side for the drag handle and "+".
+  // ---- The insert rail ---------------------------------------------------
+  // Duy, 2026-09-18: a vertical rail in the margin, the way the desk already
+  // uses one. It lives out of flow so it never moves the text, and the margin
+  // it floats in is ~500px of nothing on a wide window.
+  //
+  // WHICH SIDE is a one-line switch, not two implementations: the window
+  // carries data-rail-side and the rail reads it. The desk's own purple rail
+  // sits immediately left of this window, so "right" avoids two vertical bars
+  // touching — but left is a keystroke away if that reads better.
+  &__body {
+    position: relative;
+  }
+
+  &-rail__container {
+    position: absolute;
+    top: 8px;
+    z-index: 30;
+    gap: 2px;
+    padding: 6px;
+    width: max-content;
+    align-items: center;
+    border: 1px solid var(--neutral-300);
+    border-radius: 12px;
+    background-color: var(--default-bg);
+    box-shadow:
+      0 1px 2px rgb(16 24 40 / 6%),
+      0 4px 12px rgb(16 24 40 / 6%);
+    // hidden until the "..." toggle asks for it
+    display: none;
+  }
+
+  // The toggle writes data-rail on the WINDOW, so one attribute drives both
+  // the rail and the pressed state of the button.
+  &[data-rail="1"] &-rail__container {
+    display: flex;
+  }
+
+  // Default side. The window may override with data-rail-side="left".
+  &-rail__container {
+    right: 16px;
+  }
+
+  &[data-rail-side="left"] &-rail__container {
+    right: auto;
+    left: 16px;
+  }
+
+  // Below the measure plus two margins there is nowhere for it to float
+  // without covering the text, so it steps aside rather than overlapping.
+  @media (max-width: 1100px) {
+    &-rail__container {
+      display: none !important;
+    }
+  }
+
+  &-rail__icon {
+    width: 32px;
+    height: 32px;
+    padding: 7px;
+    cursor: pointer;
+    position: relative;
+    overflow: visible;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    color: var(--normal-fg-10);
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background-color: var(--default-bg-hover);
+      color: var(--neutral-900);
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    // Same reason as the header buttons: the shared editor skin styles a
+    // prefix this editor does not carry, so the label would inherit the page
+    // font and take up layout instead of floating.
+    .tooltips {
+      position: absolute;
+      top: 50%;
+      right: calc(100% + 8px);
+      transform: translateY(-50%);
+      width: max-content;
+      max-width: none;
+      white-space: nowrap;
+      padding: 5px 8px;
+      border-radius: var(--border-radius-tiny);
+      background-color: var(--bg-tooltips);
+      pointer-events: none;
+      z-index: 2000;
+      @include drumee.typo(
+        $line: 16px,
+        $size: 12px,
+        $color: var(--default-text-color)
+      );
+    }
+  }
+
+  // On the left the labels have to open the other way or they run off-window.
+  &[data-rail-side="left"] &-rail__icon .tooltips {
+    right: auto;
+    left: calc(100% + 8px);
+  }
+
+  &-rail__separator {
+    width: 20px;
+    height: 1px;
+    margin: 4px 0;
+    flex: 0 0 1px;
+    background-color: var(--neutral-300);
+  }
+
   &__title-row,
   &__surface .bn-editor {
     max-width: $note-measure;
@@ -322,48 +439,4 @@ $note-gutter: 54px;
     -webkit-user-select: text;
   }
 
-
-  // The formatting toolbar the "..." button toggles.
-  //
-  // It has to be a CHILD of BlockNoteView — it reads the editor from React
-  // context — and BlockNote renders children AFTER the editor, so left alone
-  // it lands BELOW the text and reads as a popup that forgot to close.
-  // Measured in a browser, not guessed at.
-  //
-  // The DOM order belongs to BlockNote, so the fix is visual: the container
-  // becomes a column and the band is ordered first.
-  //
-  // 🚨 `align-items: stretch` and the explicit width are NOT decoration. Making
-  // the container flex collapses the editor to its content width — the 816px
-  // measure silently became 537px until both were put back.
-  .bn-container {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-
-    > .bn-editor {
-      width: 100%;
-    }
-
-    // Duy, 2026-09-18 (md1.jpg): spanning the window, this read as a rule
-    // slicing the page in half between the title and the text. It belongs to
-    // the DOCUMENT, so it takes the document's width — the same column as the
-    // title and the text — and sticks to the top of the scroller so it is
-    // still there once you have scrolled away from it.
-    .bn-formatting-toolbar {
-      order: -1;
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      width: 100%;
-      max-width: $note-measure;
-      margin: 0 auto 8px;
-      padding: 6px $note-gutter;
-      background-color: #fafafa;
-      border: 1px solid var(--neutral-300);
-      border-radius: 10px;
-      box-shadow: none;
-      justify-content: flex-start;
-    }
-  }
 }

@@ -2984,6 +2984,17 @@
   "UNSAVED_CHANGES": "Cambios sin guardar",
   "NOTE_UNREADABLE": "No se puede leer esta nota: abierta en solo lectura",
   "NOTE_UPGRADES_ON_SAVE": "Abierta desde el formato antiguo: al guardar se actualizará esta nota",
-  "NOTE_TOOLBAR": "Barra de formato",
+  "NOTE_BLOCKS": "Insertar bloque",
+  "NOTE_BLOCK_TEXT": "Texto",
+  "NOTE_BLOCK_H1": "Título 1",
+  "NOTE_BLOCK_H2": "Título 2",
+  "NOTE_BLOCK_H3": "Título 3",
+  "NOTE_BLOCK_BULLET": "Lista con viñetas",
+  "NOTE_BLOCK_NUMBERED": "Lista numerada",
+  "NOTE_BLOCK_CHECK": "Lista de tareas",
+  "NOTE_BLOCK_QUOTE": "Cita",
+  "NOTE_BLOCK_CODE": "Bloque de código",
+  "NOTE_BLOCK_TABLE": "Tabla",
+  "NOTE_BLOCK_DIVIDER": "Separador",
   "UNTITLED": "Sin título"
 }

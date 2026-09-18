@@ -50,9 +50,13 @@ function __skl_editor_blocknote(_ui_) {
     ],
   });
 
+  // The insert rail lives in the margin beside the column. It is a child of
+  // the body and positioned out of flow, so it never moves the text — the
+  // margin is ~500px of nothing on a wide window.
   const body = Skeletons.Box.Y({
     className: `${pfx}__body ${group}__body`,
     kids: [
+      require("./rail")(_ui_),
       title,
       Skeletons.Box.Y({
         className: `${pfx}__surface`,
