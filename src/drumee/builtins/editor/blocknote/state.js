@@ -1,6 +1,10 @@
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { BlockNoteEditor, getDefaultSlashMenuItems } from "@blocknote/core";
+// Named imports, NOT `import * as locales`: the barrel carries 23 languages
+// (~190 KB) and we ship six. Anything unreferenced has to tree-shake away —
+// measured after the change, not assumed.
+import { en, es, fr, ru, zh } from "@blocknote/core/locales";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
@@ -14,6 +18,31 @@ const { xhRequest } = require("@drumee/ui-essentials");
  * likes to work, not a property of the document, and putting it in the file
  * would push a rail onto everyone the note is shared with.
  */
+/**
+ * BlockNote's own UI — the "/" menu, the drag handle menus, the selection
+ * toolbar, the placeholder that teaches people "/" exists — is English out of
+ * the box, while Drumee ships six languages. For a Vietnamese or Khmer reader
+ * that placeholder is not a hint, it is noise.
+ *
+ * These are BlockNote's OWN translations, not ours: it ships en/es/fr/ru/zh
+ * (and more), which is every Drumee language except Khmer. Khmer falls back to
+ * English, the same default the app itself uses when a page carries no `lang`.
+ */
+const DICTIONARIES = { en, es, fr, ru, zh };
+
+/**
+ * @returns {Object} the BlockNote dictionary for the language the app is in
+ */
+function dictionary() {
+  let lang = "en";
+  try {
+    lang = `${bootstrap().lang || "en"}`.toLowerCase().split("-")[0];
+  } catch (e) {
+    /** pre-bootstrap or a page without <html lang>: English, like api.js */
+  }
+  return DICTIONARIES[lang] || DICTIONARIES.en;
+}
+
 const RAIL_KEY = "drumee.note.rail";
 
 function readRailPreference() {
@@ -231,14 +260,14 @@ class __blocknote_state extends DrumeeMFS {
     const initialContent = blocks && blocks.length ? blocks : undefined;
 
     try {
-      this._editor = BlockNoteEditor.create({ initialContent });
+      this._editor = BlockNoteEditor.create({ initialContent, dictionary: dictionary() });
     } catch (e) {
       this.warn("blocknote_state: editor refused the stored content", e);
       this._loadFailed = 1;
       if (this.editor && this.editor.setReadOnly) {
         this.editor.setReadOnly("rejected");
       }
-      this._editor = BlockNoteEditor.create({});
+      this._editor = BlockNoteEditor.create({ dictionary: dictionary() });
       opt.readOnly = true;
     }
 

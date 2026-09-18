@@ -450,6 +450,42 @@ test("the insert rail is a toggle that is remembered", () => {
   assert.match(win, /case "insert-block"/);
 });
 
+test("BlockNote's own UI is localised, from ITS dictionaries not ours", () => {
+  // The "/" menu, the drag-handle menus, the selection toolbar and the
+  // placeholder that teaches people "/" exists are English out of the box,
+  // while Drumee ships six languages. For a Khmer or Vietnamese reader that
+  // placeholder is noise, not a hint.
+  //
+  // These are BlockNote's OWN translations — it ships en/es/fr/ru/zh, every
+  // Drumee language except Khmer, which falls back to English exactly as the
+  // app itself does for a page with no <html lang>.
+  const state = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/state.js"), "utf8");
+  assert.match(state, /from "@blocknote\/core\/locales"/);
+  // 🚨 NAMED imports, never the namespace: the barrel carries 23 languages and
+  // only the referenced ones tree-shake away. `import * as` would ship them all.
+  assert.ok(
+    !/import \* as \w+ from "@blocknote\/core\/locales"/.test(state),
+    "the whole locale barrel must not be pulled in"
+  );
+  assert.match(state, /import \{ en, es, fr, ru, zh \}/);
+  // every dictionary imported is one the app can actually reach
+  const dict = /const DICTIONARIES = \{([^}]*)\}/.exec(state);
+  assert.ok(dict, "the language map is gone");
+  const langs = dict[1].split(",").map((x) => x.trim()).filter(Boolean).sort();
+  assert.deepStrictEqual(langs, ["en", "es", "fr", "ru", "zh"]);
+  // and it is read from the SAME place the rest of the app reads it
+  assert.match(state, /bootstrap\(\)\.lang/);
+  assert.match(state, /DICTIONARIES\[lang\] \|\| DICTIONARIES\.en/,
+    "an unknown language must fall back, not render blank");
+  // the editors the user actually sees must be given it
+  const creates = state.match(/BlockNoteEditor\.create\(/g) || [];
+  const withDict = state.match(/BlockNoteEditor\.create\(\{[^}]*dictionary: dictionary\(\)/g) || [];
+  assert.strictEqual(creates.length - withDict.length, 1,
+    "only the throwaway markdown parser may skip the dictionary — it renders nothing"
+  );
+});
+
 test("the rail runs BlockNote's own menu actions, never a hand-built block", () => {
   // A table built from a literal here would have to repeat BlockNote's default
   // shape (2 rows of 3 cells) and would drift from it on the next upgrade.
