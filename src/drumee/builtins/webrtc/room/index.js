@@ -849,7 +849,16 @@ class __webrtc_room extends __interact {
     if (this.isDestroyed()) return;
     this.stateMessage(LOCALE.RECONNECTION_IN_PROGRESS);
     uiRouter.ensureWebsocket().then(() => {
+      if (this.isDestroyed()) return;
       this.stateMessage("");
+      // The offline listener is a `once`: re-arm it, or only the first drop
+      // of a meeting would ever be noticed.
+      RADIO_NETWORK.once(_e.offline, this.handleError.bind(this));
+      // Reconnecting the socket alone does not bring us back into the room
+      // (see jitsi onSignalingReconnected).
+      if (typeof this.onSignalingReconnected === "function") {
+        this.onSignalingReconnected();
+      }
     });
   }
 
