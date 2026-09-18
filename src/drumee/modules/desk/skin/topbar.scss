@@ -84,6 +84,24 @@
 }
 
 // The utility icons' spinner while their screen loads (desk _runUtilityBusy).
+// The workspace-rename editor arriving and leaving. 140ms MUST MATCH
+// WS_RENAME_ANIM_MS in modules/desk/index.js, which owns when the field is
+// actually removed from the DOM — see the constant's own note. Change one,
+// change both.
+//
+// The field takes the CRUMB'S PLACE in the chip, so it comes in from where the
+// name was rather than fading in on the spot: a 6px slide reads as the name
+// turning into a field, which is what just happened.
+@keyframes ws-rename-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes ws-rename-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateX(-6px); }
+}
+
 @keyframes utility-btn-spin {
   to { transform: rotate(360deg); }
 }
@@ -251,6 +269,38 @@
 
     &:empty {
       display: none;
+    }
+
+    // `data-anim` is the desk's own convention for a surface arriving and
+    // leaving (desk/skin reads [data-anim="out"], chat-p2p mounts with "in").
+    //
+    // `both` so the out state HOLDS at opacity 0 for the frame or two between
+    // the animation ending and index.js emptying the slot — without it the
+    // field snaps back to full opacity at the end and flickers before it goes.
+    &[data-anim="in"] {
+      animation: ws-rename-in 140ms ease-out both;
+    }
+
+    &[data-anim="out"] {
+      animation: ws-rename-out 140ms ease-in both;
+      // The edit is over; a press landing on a field on its way out would
+      // reopen nothing and could still take focus.
+      pointer-events: none;
+    }
+
+    // HERE, NOT IN THE BLOCK AT THE TOP OF THIS FILE. Both selectors are
+    // (0,2,0) — the attribute is the only thing either adds — so the cascade
+    // falls through to source order, and up there this loses to the two rules
+    // above it. Measured with chromium --force-prefers-reduced-motion: the
+    // animation still ran. Immediately after them, it wins.
+    //
+    // Only the movement goes. index.js's timer is not branched on the media
+    // query, so a reduced-motion user gets the identical teardown sequence.
+    @media (prefers-reduced-motion: reduce) {
+      &[data-anim="in"],
+      &[data-anim="out"] {
+        animation: none;
+      }
     }
 
     textarea,

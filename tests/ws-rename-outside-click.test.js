@@ -23,6 +23,11 @@ function grab(name) {
   return src.slice(start, src.indexOf("\n  }\n", start) + 4);
 }
 
+const ANIM_MS = Number(
+  /\nconst WS_RENAME_ANIM_MS = (\d+)/.exec(src)?.[1],
+);
+assert.ok(ANIM_MS > 0, "WS_RENAME_ANIM_MS not found in the source");
+
 const METHODS = [
   "_bindWorkspaceRenameDismiss",
   "_unbindWorkspaceRenameDismiss",
@@ -55,10 +60,21 @@ function desk(opt = {}) {
     removeEventListener: (t, f, c) => { if (f === doc._f) calls.listeners--; },
   };
 
+  // The show/close animation defers the VISUAL teardown by WS_RENAME_ANIM_MS.
+  // State teardown stays synchronous, so only feed([]) and the crumb wait.
+  const timers = new Map();
+  let seq = 0;
+  const setTimeout_ = (fn, ms) => { timers.set(++seq, { fn, ms }); return seq; };
+  const clearTimeout_ = (id) => { timers.delete(id); };
+  const flush = () => { const t = [...timers.values()]; timers.clear(); t.forEach((x) => x.fn()); };
+
   const field = { value: typed };
   const box = {
-    el: { querySelector: (s) => (/textarea|input/.test(s) ? field : null) },
-    feed: () => { box.fed = 1; },
+    el: {
+      dataset: {},
+      querySelector: (s) => (/textarea|input/.test(s) ? field : null),
+    },
+    feed: (k) => { box.fed = k; },
     isDestroyed: () => false,
     children: { last: () => cmd },
   };
@@ -89,7 +105,7 @@ function desk(opt = {}) {
   };
 
   const d = new Function(
-    "_", "_a", "LOCALE", "Wm", "document",
+    "_", "_a", "LOCALE", "Wm", "document", "setTimeout", "clearTimeout", "WS_RENAME_ANIM_MS",
     `return { ${METHODS.map(grab).join(",\n")} };`,
   )(
     { isFunction: (f) => typeof f === "function" },
@@ -97,6 +113,9 @@ function desk(opt = {}) {
     { SAVE_CHANGES: "Save Changes", SAVE: "Save", DISCARD: "Discard" },
     Wm,
     doc,
+    setTimeout_,
+    clearTimeout_,
+    ANIM_MS,
   );
 
   d.fig = { family: "desk-module" };
@@ -104,7 +123,7 @@ function desk(opt = {}) {
   d.__wsRename = { tile, current, hubId: 7, box, chip };
   d._crumbGroupPart = chip;
   d._wsRenamePart = box;
-  return { d, calls, chip, box };
+  return { d, calls, chip, box, flush, pending: () => timers.size };
 }
 
 test("binding is idempotent and unbinding removes exactly one listener", () => {
@@ -138,12 +157,13 @@ test("a click on our own confirm dialog is not a dismissal", async () => {
 });
 
 test("unchanged text closes silently — no confirm, no write", async () => {
-  const { d, calls, chip } = desk({ typed: "Design", current: "Design" });
+  const { d, calls, chip, flush } = desk({ typed: "Design", current: "Design" });
   d._bindWorkspaceRenameDismiss();
   await d._dismissWorkspaceRename(target(".desk-module__body"));
   assert.equal(calls.confirm.length, 0, "nothing to ask about");
   assert.equal(calls.commit.length, 0, "nothing to write");
   assert.equal(d.__wsRename, null);
+  flush();
   assert.equal(chip.el.dataset.renaming, undefined, "the crumb is back");
   assert.equal(calls.listeners, 0, "listener released");
 });
@@ -183,31 +203,34 @@ test("the listener is detached BEFORE the confirm opens", async () => {
 });
 
 test("Save commits the typed name and refreshes the breadcrumb", async () => {
-  const { d, calls, chip } = desk({ typed: "Design 2026", confirm: "save" });
+  const { d, calls, chip, flush } = desk({ typed: "Design 2026", confirm: "save" });
   d._bindWorkspaceRenameDismiss();
   await d._dismissWorkspaceRename(target(".desk-module__body"));
   assert.deepEqual(calls.commit, ["Design 2026"]);
   assert.equal(calls.crumb, 1, "the chip must not keep the old name");
   assert.equal(d.__wsRename, null);
+  flush();
   assert.equal(chip.el.dataset.renaming, undefined);
 });
 
 test("Discard closes without writing", async () => {
-  const { d, calls, chip } = desk({ typed: "Design 2026", confirm: "discard" });
+  const { d, calls, chip, flush } = desk({ typed: "Design 2026", confirm: "discard" });
   d._bindWorkspaceRenameDismiss();
   await d._dismissWorkspaceRename(target(".desk-module__body"));
   assert.equal(calls.commit.length, 0, "no write");
   assert.equal(d.__wsRename, null);
+  flush();
   assert.equal(chip.el.dataset.renaming, undefined);
   assert.equal(calls.listeners, 0);
 });
 
 test("a failed write still closes the editor and says so", async () => {
-  const { d, calls, chip } = desk({ typed: "Design 2026", confirm: "save", posted: "reject" });
+  const { d, calls, chip, flush } = desk({ typed: "Design 2026", confirm: "save", posted: "reject" });
   await d._dismissWorkspaceRename(target(".desk-module__body"));
   assert.deepEqual(calls.commit, ["Design 2026"]);
   assert.equal(calls.crumb, 0, "nothing was renamed, so nothing to re-resolve");
   assert.equal(d.__wsRename, null, "the editor does not hang around");
+  flush();
   assert.equal(chip.el.dataset.renaming, undefined);
   assert.equal(calls.warned.length, 1);
 });
@@ -234,13 +257,14 @@ test("a dismissal with no edit in flight just releases the listener", async () =
 // takes the same two decisions Enter takes.
 
 test("Save writes the typed name and refreshes the breadcrumb", async () => {
-  const { d, calls, chip } = desk({ typed: "Design 2026", current: "Design" });
+  const { d, calls, chip, flush } = desk({ typed: "Design 2026", current: "Design" });
   d._bindWorkspaceRenameDismiss();
   await d._saveWorkspaceRename();
   assert.equal(calls.confirm.length, 0, "pressing Save is not ambiguous");
   assert.deepEqual(calls.commit, ["Design 2026"]);
   assert.equal(calls.crumb, 1);
   assert.equal(d.__wsRename, null);
+  flush();
   assert.equal(chip.el.dataset.renaming, undefined, "the crumb is back");
 });
 
@@ -289,4 +313,47 @@ test("Save with no edit in flight is a no-op", async () => {
   d.__wsRename = null;
   await d._saveWorkspaceRename();
   assert.equal(calls.commit.length, 0);
+});
+
+// ── Show / close animation ─────────────────────────────────────────────────
+//
+// The box is animated with `data-anim`, the desk's own convention. Only the
+// VISUAL teardown waits for it — the state teardown stays synchronous, so the
+// six paths that end an edit keep the ordering they already had.
+
+test("ending stamps data-anim=out and holds the field until it has played", () => {
+  const { d, box, chip, pending } = desk({ typed: "Design" });
+  d._endWorkspaceRename();
+  assert.equal(box.el.dataset.anim, "out", "the out animation is running");
+  assert.equal(box.fed, undefined, "the field is still on screen");
+  assert.equal(chip.el.dataset.renaming, "1", "and the crumb is still hidden");
+  assert.equal(pending(), 1);
+});
+
+test("the field goes and the crumb returns once the animation is over", () => {
+  const { d, box, chip, flush } = desk({ typed: "Design" });
+  d._endWorkspaceRename();
+  flush();
+  assert.deepEqual(box.fed, [], "the slot is emptied");
+  assert.equal(chip.el.dataset.renaming, undefined, "the crumb is back");
+  assert.equal(box.el.dataset.anim, undefined, "and the flag is cleaned up");
+});
+
+test("a second ending cancels the first — reopening cannot be emptied under", () => {
+  // Escape, then Rename again inside the animation window. Without the cancel
+  // the first timer fires against the NEW editor and blanks it.
+  const { d, box, pending, flush } = desk({ typed: "Design" });
+  d._endWorkspaceRename();
+  d._endWorkspaceRename();
+  assert.equal(pending(), 1, "one pending teardown, not two");
+  flush();
+  assert.deepEqual(box.fed, []);
+});
+
+test("a destroyed box is torn down at once rather than animated", () => {
+  const { d, chip, pending } = desk({ typed: "Design" });
+  d.__wsRename.box.isDestroyed = () => true;
+  d._endWorkspaceRename();
+  assert.equal(pending(), 0, "nothing to animate, nothing to wait for");
+  assert.equal(chip.el.dataset.renaming, undefined, "the crumb comes back now");
 });

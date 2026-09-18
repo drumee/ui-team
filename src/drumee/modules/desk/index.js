@@ -146,6 +146,15 @@ const WINDOW_TOUR_TAB = {
   share: "access",
 };
 
+// How long the workspace-rename editor takes to arrive and to leave.
+//
+// MUST MATCH the `ws-rename-in` / `ws-rename-out` keyframes in
+// desk/skin/topbar.scss — the JS owns WHEN the field is removed from the DOM,
+// the skin owns what it looks like on the way out, and a mismatch shows up
+// either as a field that vanishes mid-fade or as a gap after it has faded.
+// Change one, change both.
+const WS_RENAME_ANIM_MS = 140;
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -3309,6 +3318,19 @@ class desk_module extends LetcBox {
           if (_.isFunction(field.select)) field.select();
         } catch (e) { }
       });
+      // Arrive rather than appear. The field takes the crumb's place in the
+      // chip, so it slides in from where the name was instead of being swapped
+      // for it between two frames. A keyframe, not a transition: there is no
+      // from-state to set and no frame to wait for — the animation runs the
+      // moment the attribute lands. Cleared by _endWorkspaceRename.
+      //
+      // A teardown still in flight from a previous edit would empty this box
+      // under the editor that just mounted; cancel it here as well as there.
+      if (this._wsRenameAnim) {
+        clearTimeout(this._wsRenameAnim);
+        this._wsRenameAnim = null;
+      }
+      if (box.el) box.el.dataset.anim = "in";
       // Clicking away is the third way out, beside Escape and Enter — see
       // _dismissWorkspaceRename. Bound here rather than at the top of this
       // method so it cannot outlive an editor that never mounted, and after the
@@ -3332,8 +3354,38 @@ class desk_module extends LetcBox {
     const st = this.__wsRename;
     const chip = (st && st.chip) || this._crumbGroupPart;
     const box = (st && st.box) || this._wsRenamePart;
-    if (box && box.el && !(box.isDestroyed && box.isDestroyed())) box.feed([]);
-    if (chip && chip.el) delete chip.el.dataset.renaming;
+
+    // ONLY THE VISUAL TEARDOWN WAITS. The state teardown — __wsRename, the
+    // document listener — is done by the callers and stays synchronous, so the
+    // six paths that end an edit keep the ordering they already had. All that
+    // is deferred here is emptying the slot and giving the crumb back.
+    const finish = () => {
+      this._wsRenameAnim = null;
+      if (box && box.el && !(box.isDestroyed && box.isDestroyed())) {
+        delete box.el.dataset.anim;
+        box.feed([]);
+      }
+      // AFTER the field has gone, not beside it: the crumb and the editor share
+      // the row, so un-hiding it any earlier puts both in the chip at once and
+      // the name appears to jump as the field collapses.
+      if (chip && chip.el) delete chip.el.dataset.renaming;
+    };
+
+    // A pending teardown from a previous edit must not fire against this one —
+    // Escape, then Rename again inside the animation window, would otherwise
+    // blank the editor that had just opened.
+    if (this._wsRenameAnim) clearTimeout(this._wsRenameAnim);
+
+    // Nothing on screen to animate (the slot was never fed, or the desk has
+    // rebuilt under it): take it down now rather than hold the crumb hostage
+    // for 140ms of nothing.
+    if (!box || !box.el || (box.isDestroyed && box.isDestroyed())) {
+      this._wsRenameAnim = null;
+      return finish();
+    }
+
+    box.el.dataset.anim = "out";
+    this._wsRenameAnim = setTimeout(finish, WS_RENAME_ANIM_MS);
   }
 
   /**
