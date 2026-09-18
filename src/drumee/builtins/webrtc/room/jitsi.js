@@ -16,6 +16,10 @@ const MIC_SILENCE_MS = 6000;
 // then periodically. They go to the service log via conference.update.
 const DIAG_FIRST_MS = 10000;
 const DIAG_PERIOD_MS = 30000;
+// A peer's client broadcasts its connection stats about every 10 s
+// (lib-jitsi-meet pcStatsInterval). Three missed rounds means its call is gone.
+const PEER_LIVE_MS = 30000;
+const PEER_WATCH_MS = 10000;
 // localTracks slot for the tab/system audio captured alongside a screen share.
 // Deliberately NOT `audio` (that slot is the microphone) and NOT `desktop` (that
 // is the screen VIDEO track). unload() iterates localTracks, so parking it here
@@ -130,6 +134,12 @@ class __webrtc_room extends __room {
     this.idleStreams = [];
     this._kicked = {};
     this._guests = new Map();
+    // Last time each peer's client reported stats, peers we keep watching
+    // after their Drumee socket dropped, and peers whose tile was torn down on
+    // such a drop while they stayed in the call. Keyed by participant id.
+    this._peerSeenAt = {};
+    this._droppedPeerWatch = {};
+    this._socketDroppedPeers = new Set();
     // Start fetching the conference widget chunks the moment ANY room window
     // exists (dialing, ringing, opening a meeting) so they're already loaded
     // by the time prepareConference needs them — instead of five serialized
@@ -1287,18 +1297,17 @@ class __webrtc_room extends __room {
     // Let remote-user widgets attach without waiting for ENDPOINT_STATS_RECEIVED.
     this.trigger("TRACK_ADDED", track);
 
-    /** Wait a while to ensure HELLO message has arrived */
-    setTimeout(() => {
-      if (this.isDestroyed() || !this.room) return;
-      if (!this._guests.get(participant_id)) {
-        this.warn(`Participant ${participant_id} is not expected. Should kick out`);
-        if (this.mget(_a.role) == "host") {
-          this.room.kickParticipant(participant_id, LOCALE.WEAK_PRIVILEGE);
-          this._kicked[participant_id] = participant_id;
-          this.room.off(JEVENTS.conference.TRACK_ADDED, this.onStreamReceived);
-        }
-      }
-    }, 5000);
+    // A peer is vouched for by its HELLO broadcast or by the attendee lookup.
+    // Give both time to land before treating it as an intruder.
+    this._lookupAttendee(participant_id);
+    setTimeout(() => this._verifyParticipant(participant_id, 1), 5000);
+  }
+
+  /**
+   * Ask the server who this Jitsi participant is. A match puts them in
+   * _guests, which is what stops the host from kicking them.
+   */
+  _lookupAttendee(participant_id) {
     let args = {
       participant_id,
       hub_id: this.mget(_a.hub_id),
@@ -1307,14 +1316,41 @@ class __webrtc_room extends __room {
       socket_id: Visitor.get(_a.socket_id),
       deviceId: Visitor.deviceId(),
     };
-
-    this.postService(
+    return this.postService(
       SERVICE.conference.attendee, args).then((attendee = {}) => {
         const { room_id, participant_id } = attendee;
         if (participant_id && room_id == this.mget(_a.room_id)) {
           this._guests.set(participant_id, attendee);
         }
       });
+  }
+
+  /**
+   * Kick a participant nobody vouched for. Host only.
+   *
+   * An empty attendee lookup is not proof of an intruder. When a peer's Drumee
+   * websocket drops, the push router frees its yp.conference row while its
+   * Jitsi session stays live, and a host who leaves and rejoins starts with an
+   * empty _guests. Both together used to get a legitimate member kicked with
+   * WEAK_PRIVILEGE. So ask the server once more before kicking.
+   *
+   * Only the kicked participant is ignored afterwards (onStreamReceived checks
+   * _kicked). The TRACK_ADDED listener used to be removed here, which left the
+   * host deaf and blind to everybody who joined after any kick.
+   */
+  _verifyParticipant(participant_id, retries = 0) {
+    if (this.isDestroyed() || !this.room) return;
+    if (this._guests.get(participant_id)) return;
+    if (this.mget(_a.role) != "host") return;
+    if (!this.room.getParticipantById(participant_id)) return;
+    if (retries > 0) {
+      this._lookupAttendee(participant_id);
+      setTimeout(() => this._verifyParticipant(participant_id, retries - 1), 5000);
+      return;
+    }
+    this.warn(`Participant ${participant_id} is not expected. Kicking out`);
+    this.room.kickParticipant(participant_id, LOCALE.WEAK_PRIVILEGE);
+    this._kicked[participant_id] = participant_id;
   }
 
   /**
@@ -1436,14 +1472,108 @@ class __webrtc_room extends __room {
         this.stateMessage("waiting");
       }
     }
-    let event = "HELLO";
-    let payload = {
-      id: this.room.myUserId(),
-      room_id: this.mget(_a.room_id),
-    };
     await this.sendRoomSignaling(SERVICE.conference.update);
-    await this.sendRoomSignaling(SERVICE.conference.broadcast, { event, payload });
+    await this.sendHello();
+  }
 
+  /**
+   * Tell the room who we are. The host only keeps a Jitsi participant it can
+   * vouch for (see _verifyParticipant), and HELLO is one of the two ways it
+   * learns that.
+   */
+  sendHello() {
+    return this.sendRoomSignaling(SERVICE.conference.broadcast, {
+      event: "HELLO",
+      payload: {
+        id: this.room.myUserId(),
+        room_id: this.mget(_a.room_id),
+      },
+    });
+  }
+
+  /**
+   * Re-announce ourselves when somebody joins. HELLO used to be sent once, at
+   * our own join, so a host who left and came back had never received it. If
+   * our yp.conference row had been freed by a websocket drop in the meantime,
+   * the attendee lookup came back empty too and the host kicked us.
+   * Debounced: joining a room of N people fires N USER_JOINED events.
+   */
+  _scheduleHello() {
+    clearTimeout(this._helloTimer);
+    this._helloTimer = setTimeout(() => {
+      if (this.isDestroyed() || !this.room || !this.room.isJoined()) return;
+      this.sendHello();
+    }, 500);
+  }
+
+  /**
+   * The Drumee websocket came back after a drop (room/index handleReconnect).
+   * While it was down the server freed our yp.conference row and told the
+   * peers we had left, although our Jitsi session never stopped. Say HELLO so
+   * they keep, or rebuild, our tile and a host does not kick us.
+   */
+  onSignalingReconnected() {
+    if (this.isDestroyed() || !this.room || !this.room.isJoined()) return;
+    this.sendHello();
+  }
+
+  /**
+   * True while a peer is still in the Jitsi conference and its client keeps
+   * reporting stats. That is what tells a Drumee socket blip, where the call
+   * itself is fine, from a client that is really gone.
+   */
+  _peerStillLive(participant_id) {
+    if (!this.room || !this.room.getParticipantById(participant_id)) return false;
+    const seen = this._peerSeenAt[participant_id];
+    return !!seen && Date.now() - seen < PEER_LIVE_MS;
+  }
+
+  /**
+   * Keep a peer whose Drumee socket dropped for as long as its call is alive,
+   * and run `drop` once it goes quiet. A HELLO from the peer (its socket came
+   * back) or a Jitsi USER_LEFT ends the watch.
+   */
+  _watchDroppedPeer(participant_id, drop) {
+    this._stopWatchingPeer(participant_id);
+    this._droppedPeerWatch[participant_id] = setInterval(() => {
+      if (this.isDestroyed() || !this.room) {
+        this._stopWatchingPeer(participant_id);
+        return;
+      }
+      if (this._peerStillLive(participant_id)) return;
+      this._stopWatchingPeer(participant_id);
+      drop();
+    }, PEER_WATCH_MS);
+  }
+
+  _stopWatchingPeer(participant_id) {
+    const timer = this._droppedPeerWatch[participant_id];
+    if (timer) clearInterval(timer);
+    delete this._droppedPeerWatch[participant_id];
+  }
+
+  /**
+   * A peer said HELLO. If its tile was torn down on a socket drop while it
+   * stayed in the call, build the tile again. The new tile picks up the
+   * participant's live tracks by itself (remote/user onDomRefresh), so the
+   * peer's audio comes back without anyone having to rejoin.
+   */
+  _onPeerHello(participant_id) {
+    this._stopWatchingPeer(participant_id);
+    if (!this._socketDroppedPeers.has(participant_id)) return;
+    this._socketDroppedPeers.delete(participant_id);
+    if (this._kicked[participant_id] || !this.room) return;
+    const endpoint = this.endpoints[participant_id];
+    if (endpoint && !endpoint.isDestroyed()) return;
+    const participant = this.room.getParticipantById(participant_id);
+    if (!participant) return;
+    delete this.endpoints[participant_id];
+    Promise.resolve(this.onRemoteUserJoined(participant_id, participant)).then(() => {
+      if (this.isDestroyed()) return;
+      if (typeof this.onPeerRestored === "function") {
+        this.onPeerRestored(participant_id);
+      }
+    });
   }
 
   /**
@@ -1637,6 +1767,7 @@ class __webrtc_room extends __room {
     endpoint = this.__participants.children.last();
     endpoint.once("audio:ready", () => { this.stateMessage() });
     this.endpoints[id] = endpoint;
+    this._scheduleHello();
     this.responsive();
     if (this.__peerContainer && !this.__peerContainer.isEmpty()) {
       this.__peerContainer.clear();
@@ -1769,6 +1900,9 @@ class __webrtc_room extends __room {
    * In case where the event were lost, catch up from stat
    */
   onStatsReceived(p) {
+    if (p && typeof p.getId === "function") {
+      this._peerSeenAt[p.getId()] = Date.now();
+    }
     if (this.presentation && !this.presentation.isDestroyed()) return;
     for (let t of p.getTracks()) {
       if (t.getVideoType() != _a.desktop) continue;
@@ -1793,6 +1927,9 @@ class __webrtc_room extends __room {
    */
   onUserLeft(id) {
     let endpoint = this.endpoints[id];
+    this._stopWatchingPeer(id);
+    this._socketDroppedPeers.delete(id);
+    delete this._peerSeenAt[id];
     this.trigger("user-left", { id });
     const name = this._partyNames && this._partyNames[id];
     if (this._partyNames) delete this._partyNames[id];
@@ -2192,6 +2329,7 @@ class __webrtc_room extends __room {
       case "HELLO":
         if (data && data.id) {
           this._guests.set(data.id, data);
+          this._onPeerHello(data.id);
         }
         break;
 
