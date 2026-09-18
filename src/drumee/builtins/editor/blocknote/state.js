@@ -139,9 +139,17 @@ class __blocknote_state extends DrumeeMFS {
    * markdown file might be somebody's README rather than a note, converting on
    * a look is not acceptable.
    *
-   * So for an imported note the first change is ignored until a real input
-   * event has reached the editor. `beforeinput` covers typing, paste and drop;
-   * once any of them fires, the note behaves like any other.
+   * So for an imported note the first change is ignored until a real editing
+   * event has reached the editor.
+   *
+   * 🚨 `beforeinput` alone does NOT work, and the failure is silent in the
+   * worst way: measured in a browser, ProseMirror (which BlockNote is built
+   * on) takes `beforeinput` and only `input` reaches this element. A guard
+   * armed on `beforeinput` therefore never arms, and an imported note becomes
+   * permanently unsaveable — it looks editable and quietly throws the work
+   * away. `input` is what actually arrives, and it is still only dispatched
+   * for real editing: seeding the editor with imported content does not fire
+   * it. The rest are belt and braces.
    */
   _armUserEdits() {
     if (!this.el || this._armed) return;
@@ -149,7 +157,7 @@ class __blocknote_state extends DrumeeMFS {
     const wake = () => {
       this._userTouched = 1;
     };
-    for (const ev of ["beforeinput", "paste", "drop"]) {
+    for (const ev of ["input", "beforeinput", "keydown", "paste", "drop", "cut"]) {
       this.el.addEventListener(ev, wake, true);
     }
   }

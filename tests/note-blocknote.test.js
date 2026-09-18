@@ -405,8 +405,11 @@ test("opening an old note does not convert it", () => {
     /if \(this\._converted && !this\._userTouched\) return;/,
     "an imported note must ignore changes until the user actually edits"
   );
-  assert.match(src, /"beforeinput", "paste", "drop"/,
-    "typing, paste and drop all have to arm it");
+  // `input`, not `beforeinput`: measured in a browser, ProseMirror takes
+  // `beforeinput` and only `input` reaches the widget element. Arming on
+  // `beforeinput` alone makes an imported note permanently unsaveable.
+  assert.match(src, /"input", "beforeinput", "keydown", "paste", "drop", "cut"/,
+    "the guard must arm on the event that actually arrives");
   // The guard is scoped to imported notes: a .dnote opens and behaves exactly
   // as it did before this migration.
   assert.match(src, /if \(this\._converted\) this\._armUserEdits\(\);/);
