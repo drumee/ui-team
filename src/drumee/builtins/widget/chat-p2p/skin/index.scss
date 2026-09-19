@@ -465,9 +465,22 @@
   // (mixins/drumee): a mask over a theme colour, so the shapes follow light
   // and dark, and the pulse stands down under prefers-reduced-motion.
   //
-  // Both are gated on a stamp on __ui — the widget's own root, which is never
-  // a lazy placeholder — rather than on the list or the fed child, so a kind
-  // that has not resolved yet cannot read as "ready".
+  // ONE stamp drives BOTH, on __ui — the widget's own root, which is never a
+  // lazy placeholder, rather than the list or the fed child, so a kind that
+  // has not resolved yet cannot read as "ready".
+  //
+  // One attribute rather than one per region is what makes the two columns
+  // move together: a single flip raises both in the same frame and drops both
+  // in the same frame, so their pulses start in phase and end together by
+  // construction, with nothing to keep in sync. The inbox column therefore
+  // holds its skeleton even once its OWN rows have arrived — it waits for the
+  // conversation, which is the slower of the two.
+  //
+  // Deliberately NOT keyed on "the pane has no painted child", which is the
+  // condition that would express this in pure CSS: that is also true every
+  // time the user merely CLICKS another conversation, and the inbox list
+  // would grey out on every click with the selected row vanishing under it.
+  // The flag is raised only for a scope load (see _raiseSkeletons).
 
   // One conversation row: 48px avatar at the row's 16px padding, name and
   // preview beside it, time at the right. 80px pitch (16 + 48 + 16), first row
@@ -481,56 +494,42 @@
   // data with no round trip, so it never has anything to wait for.
   $conversation-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='24' y='32' width='46%25' height='40' rx='12'/%3E%3Crect x='24' y='84' width='58%25' height='56' rx='12'/%3E%3Crect x='46%25' y='152' width='50%25' height='40' rx='12'/%3E%3Crect x='24' y='204' width='52%25' height='40' rx='12'/%3E%3Crect x='38%25' y='256' width='58%25' height='56' rx='12'/%3E%3Crect x='24' y='324' width='44%25' height='40' rx='12'/%3E%3Crect x='52%25' y='376' width='44%25' height='40' rx='12'/%3E%3Crect x='24' y='428' width='56%25' height='56' rx='12'/%3E%3Crect x='44%25' y='496' width='52%25' height='40' rx='12'/%3E%3Crect x='24' y='548' width='48%25' height='40' rx='12'/%3E%3C/svg%3E");
 
-  // The inbox column, while its page is in flight. `loading` is the SEEDED
-  // value (see initialize), so the very first paint is this rather than a
-  // blank 400px column — the list's own spinner option draws nothing in
-  // ui-team, which is what left that gap empty.
-  &__ui[data-list-state="loading"] &__contact-list {
-    // The list sets no position of its own, so without this the skeleton
-    // sizes itself to the sidebar and the rows land above the list box.
+  // `1` is the SEEDED value (see initialize), so the very first paint is the
+  // skeleton rather than a blank screen — the list's own spinner option draws
+  // nothing in ui-team, which is what left that gap empty.
+  //
+  // The list sets no position of its own and neither does the pane, so both
+  // need one here or the skeleton sizes itself to an ancestor and the shapes
+  // land nowhere near the box they belong to.
+  // Written flat, NOT nested under a shared `&__ui[data-loading="1"] { }`:
+  // at that depth `&` is the whole compiled selector, so a nested
+  // `&__contact-list` concatenates into
+  // `.chat-p2p__ui[data-loading="1"]__contact-list` instead of descending.
+  // Same shape as the &__ui[data-mview] rules further down.
+  &__ui[data-loading="1"] &__contact-list,
+  &__ui[data-loading="1"] &__chat-panel {
     position: relative;
 
     > * {
       visibility: hidden;
     }
-
-    &::after {
-      @include drumee.skeleton-layer($inbox-skeleton-mask);
-    }
   }
 
-  &__ui[data-list-state="ready"] &__contact-list > * {
-    @include drumee.skeleton-content-in;
+  &__ui[data-loading="1"] &__contact-list::after {
+    @include drumee.skeleton-layer($inbox-skeleton-mask);
   }
 
-  // The conversation pane. Two conditions, and both are load-bearing:
-  //   data-chat-mounted="1" — a conversation is actually being opened. Without
-  //     it the skeleton would pulse forever over a pane that is EMPTY on
-  //     purpose (a scope with nothing to land on — see _clearConversation).
-  //   :not(:has([data-painted="1"])) — widget_chat stamps itself once its
-  //     message list is ready, with a 4s fallback of its own (widget/chat).
-  //     That is what drops the skeleton, so it hands over to a readable
-  //     conversation instead of to an empty pane: widget_chat is a lazy kind
-  //     that fetches before it builds anything, so its mere presence as a
-  //     child proves nothing. Same contract the folder window keys on.
-  &__ui[data-chat-mounted="1"] &__chat-panel:not(:has([data-painted="1"])) {
-    position: relative;
-
-    > * {
-      visibility: hidden;
-    }
-
-    &::after {
-      @include drumee.skeleton-layer($conversation-skeleton-mask);
-    }
+  &__ui[data-loading="1"] &__chat-panel::after {
+    @include drumee.skeleton-layer($conversation-skeleton-mask);
   }
 
-  // Supersedes chat-p2p-swap-in above for this one transition — the pane was
-  // hidden under a skeleton, so the swap-in it would otherwise play has
-  // already run out while invisible. Both are a ~0.2s fade, so it reads the
-  // same, and the swap-in rule still owns conversation-to-conversation swaps
-  // that never raised a skeleton.
-  &__ui[data-chat-mounted="1"] &__chat-panel:has([data-painted="1"]) > * {
+  // Both reveal on the same flip. This supersedes chat-p2p-swap-in above for
+  // that one transition — the content was hidden under a skeleton, so the
+  // swap-in it would otherwise play has already run out while invisible. Both
+  // are a ~0.2s fade, so it reads the same, and the swap-in rule still owns
+  // conversation-to-conversation swaps, which never raise a skeleton.
+  &__ui[data-loading="0"] &__contact-list > *,
+  &__ui[data-loading="0"] &__chat-panel > * {
     @include drumee.skeleton-content-in;
   }
 
