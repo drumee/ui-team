@@ -167,6 +167,25 @@ $theme-colors: (
     position: relative;
   }
 
+  // The description's drop affordance is the ELEMENT ITSELF — no overlay child.
+  //
+  // Every other zone above reveals a `> __drop-overlay` node. This one cannot:
+  // the editor is contenteditable, so anything inside it is editable content.
+  // _serializeEditor walks the subtree to build the stored body and would carry
+  // the overlay's text into it, and _onDescInput inspects the same subtree to
+  // decide whether the field is empty — an overlay would make an empty
+  // description look filled and defeat the :empty placeholder.
+  //
+  // outline rather than border or box-shadow: a border would reflow the text
+  // inside a padded box the moment a drag entered it, and the focus ring below
+  // is an inset shadow, which cannot be dashed. The negative offset draws the
+  // ring inside the box — the same clipping reason that ring is inset.
+  &__desc-editor[data-drop-active="1"] {
+    outline: 2px dashed var(--active-border, rgba(67, 60, 197, 0.4));
+    outline-offset: -2px;
+    background: var(--hover-bg-40, rgba(67, 60, 197, 0.06));
+  }
+
   // Instant feedback for heavy view switches (Project Health links, viewbar
   // tabs): data-view-loading is set by _renderDeferred the moment the link is
   // clicked and painted BEFORE the full skeleton rebuild runs — a translucent
@@ -3099,6 +3118,121 @@ $theme-colors: (
       pointer-events: none;
       border-radius: 8px;
     }
+  }
+
+  // ── Inline image being uploaded ───────────────────────────────────
+  //
+  // The placeholder _beginInlineImage puts at the drop/paste point. Sized and
+  // spaced like __inline-img above so the swap to the real image, when the
+  // upload lands, does not move the text around it.
+  //
+  // NOT resizable, unlike the committed image: there is no marker behind it
+  // yet, so a width dragged here would be thrown away by the swap.
+  //
+  // One attribute drives both states, exactly as __attachment-row[data-status]
+  // does for the strip — see _settleInlineImage.
+  &__inline-img-pending {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    min-width: 60px;
+    width: 220px;
+    margin: 4px 2px;
+    vertical-align: bottom;
+    border-radius: 8px;
+    line-height: 0;
+    // A placeholder with no preview (an engine that refused the object URL)
+    // would otherwise be zero-high and its spinner would sit on the text.
+    min-height: 60px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+  }
+
+  // Same dimming the attachment strip uses while a file is in flight.
+  &__inline-img-pending[data-status="uploading"] img {
+    opacity: 0.45;
+  }
+
+  &__inline-img-pending[data-status="error"] {
+    outline: 1px solid var(--signal-error, #d74e49);
+    outline-offset: 0;
+
+    img {
+      opacity: 0.3;
+    }
+  }
+
+  // Indeterminate, for the same reason the strip's is: the upload xhr's
+  // progress events are not plumbed through, so this says "working", not
+  // "how far". Identical geometry and animation to __file-pending-spinner.
+  &__inline-img-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+    border-top-color: var(--accent, #433cc5);
+    border-radius: 50%;
+    animation: tasks-panel-spin 0.7s linear infinite;
+  }
+
+  // The two recovery controls. Their glyphs are ::after CONTENT, never text
+  // nodes — generated content is not in the DOM, so _serializeEditor cannot
+  // walk it into the saved description. That is what lets a failed
+  // placeholder sit in the editor without corrupting the body.
+  &__inline-img-retry,
+  &__inline-img-discard {
+    position: absolute;
+    display: none;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 50%;
+    background: var(--normal-bg-10, #fff);
+    color: var(--signal-error, #d74e49);
+    font-size: 13px;
+  }
+
+  &__inline-img-retry {
+    top: 50%;
+    left: 50%;
+    margin: -11px 0 0 -11px;
+
+    &::after {
+      content: "\21bb"; // ↻
+    }
+  }
+
+  &__inline-img-discard {
+    top: 2px;
+    right: 2px;
+
+    &::after {
+      content: "\2715"; // ✕
+    }
+  }
+
+  // Only a FAILED placeholder offers them. While it is uploading there is
+  // nothing to retry and no way to un-upload, so a control there would lie —
+  // the same rule the strip's ✕ follows.
+  &__inline-img-pending[data-status="error"] &__inline-img-spinner {
+    display: none;
+  }
+
+  &__inline-img-pending[data-status="error"] &__inline-img-retry,
+  &__inline-img-pending[data-status="error"] &__inline-img-discard {
+    display: block;
   }
 
   // Read-only inline image (comment bodies) — not resizable.
