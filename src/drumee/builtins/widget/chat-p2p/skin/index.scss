@@ -452,6 +452,87 @@
     }
   }
 
+  // ── Loading skeletons ────────────────────────────────────────────
+  // Switching scope tabs is a REFETCH, not a show/hide: _setRoomScope calls
+  // list.restart(), whose start(1) resets the collection synchronously and
+  // only then fetches (ui-core letc/widgets/list/index.js). So both panes go
+  // blank for the length of a round trip — the inbox column empties, and the
+  // conversation beside it is about to be replaced by the new scope's first
+  // row. Draw the SHAPE of each instead, pulsing, so the screen holds its
+  // structure across the switch.
+  //
+  // Same primitives the folder window's chat card and the task board use
+  // (mixins/drumee): a mask over a theme colour, so the shapes follow light
+  // and dark, and the pulse stands down under prefers-reduced-motion.
+  //
+  // ONE stamp drives BOTH, on __ui — the widget's own root, which is never a
+  // lazy placeholder, rather than the list or the fed child, so a kind that
+  // has not resolved yet cannot read as "ready".
+  //
+  // One attribute rather than one per region is what makes the two columns
+  // move together: a single flip raises both in the same frame and drops both
+  // in the same frame, so their pulses start in phase and end together by
+  // construction, with nothing to keep in sync. The inbox column therefore
+  // holds its skeleton even once its OWN rows have arrived — it waits for the
+  // conversation, which is the slower of the two.
+  //
+  // Deliberately NOT keyed on "the pane has no painted child", which is the
+  // condition that would express this in pure CSS: that is also true every
+  // time the user merely CLICKS another conversation, and the inbox list
+  // would grey out on every click with the selected row vanishing under it.
+  // The flag is raised only for a scope load (see _raiseSkeletons).
+
+  // One conversation row: 48px avatar at the row's 16px padding, name and
+  // preview beside it, time at the right. 80px pitch (16 + 48 + 16), first row
+  // at the list's own 12px padding. Eight of them overflows any realistic
+  // sidebar height; the mask is not scaled (no viewBox), so px here are px.
+  $inbox-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cg%3E%3Crect x='28' y='28' width='48' height='48' rx='24'/%3E%3Crect x='92' y='36' width='38%25' height='12' rx='6'/%3E%3Crect x='86%25' y='37' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='58' width='52%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='108' width='48' height='48' rx='24'/%3E%3Crect x='92' y='116' width='32%25' height='12' rx='6'/%3E%3Crect x='86%25' y='117' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='138' width='60%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='188' width='48' height='48' rx='24'/%3E%3Crect x='92' y='196' width='44%25' height='12' rx='6'/%3E%3Crect x='86%25' y='197' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='218' width='45%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='268' width='48' height='48' rx='24'/%3E%3Crect x='92' y='276' width='35%25' height='12' rx='6'/%3E%3Crect x='86%25' y='277' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='298' width='55%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='348' width='48' height='48' rx='24'/%3E%3Crect x='92' y='356' width='41%25' height='12' rx='6'/%3E%3Crect x='86%25' y='357' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='378' width='48%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='428' width='48' height='48' rx='24'/%3E%3Crect x='92' y='436' width='30%25' height='12' rx='6'/%3E%3Crect x='86%25' y='437' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='458' width='58%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='508' width='48' height='48' rx='24'/%3E%3Crect x='92' y='516' width='39%25' height='12' rx='6'/%3E%3Crect x='86%25' y='517' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='538' width='50%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='588' width='48' height='48' rx='24'/%3E%3Crect x='92' y='596' width='34%25' height='12' rx='6'/%3E%3Crect x='86%25' y='597' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='618' width='56%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='668' width='48' height='48' rx='24'/%3E%3Crect x='92' y='676' width='42%25' height='12' rx='6'/%3E%3Crect x='86%25' y='677' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='698' width='47%25' height='11' rx='5'/%3E%3C/g%3E%3C/svg%3E");
+
+  // The conversation: alternating message bubbles, incoming left and outgoing
+  // right, over the pane's own ground. No header band — chat-p2p's header is a
+  // SIBLING of the pane (__chat-header), and it repaints from the row's own
+  // data with no round trip, so it never has anything to wait for.
+  $conversation-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='24' y='32' width='46%25' height='40' rx='12'/%3E%3Crect x='24' y='84' width='58%25' height='56' rx='12'/%3E%3Crect x='46%25' y='152' width='50%25' height='40' rx='12'/%3E%3Crect x='24' y='204' width='52%25' height='40' rx='12'/%3E%3Crect x='38%25' y='256' width='58%25' height='56' rx='12'/%3E%3Crect x='24' y='324' width='44%25' height='40' rx='12'/%3E%3Crect x='52%25' y='376' width='44%25' height='40' rx='12'/%3E%3Crect x='24' y='428' width='56%25' height='56' rx='12'/%3E%3Crect x='44%25' y='496' width='52%25' height='40' rx='12'/%3E%3Crect x='24' y='548' width='48%25' height='40' rx='12'/%3E%3C/svg%3E");
+
+  // `1` is the SEEDED value (see initialize), so the very first paint is the
+  // skeleton rather than a blank screen — the list's own spinner option draws
+  // nothing in ui-team, which is what left that gap empty.
+  //
+  // The list sets no position of its own and neither does the pane, so both
+  // need one here or the skeleton sizes itself to an ancestor and the shapes
+  // land nowhere near the box they belong to.
+  // Written flat, NOT nested under a shared `&__ui[data-loading="1"] { }`:
+  // at that depth `&` is the whole compiled selector, so a nested
+  // `&__contact-list` concatenates into
+  // `.chat-p2p__ui[data-loading="1"]__contact-list` instead of descending.
+  // Same shape as the &__ui[data-mview] rules further down.
+  &__ui[data-loading="1"] &__contact-list,
+  &__ui[data-loading="1"] &__chat-panel {
+    position: relative;
+
+    > * {
+      visibility: hidden;
+    }
+  }
+
+  &__ui[data-loading="1"] &__contact-list::after {
+    @include drumee.skeleton-layer($inbox-skeleton-mask);
+  }
+
+  &__ui[data-loading="1"] &__chat-panel::after {
+    @include drumee.skeleton-layer($conversation-skeleton-mask);
+  }
+
+  // Both reveal on the same flip. This supersedes chat-p2p-swap-in above for
+  // that one transition — the content was hidden under a skeleton, so the
+  // swap-in it would otherwise play has already run out while invisible. Both
+  // are a ~0.2s fade, so it reads the same, and the swap-in rule still owns
+  // conversation-to-conversation swaps, which never raise a skeleton.
+  &__ui[data-loading="0"] &__contact-list > *,
+  &__ui[data-loading="0"] &__chat-panel > * {
+    @include drumee.skeleton-content-in;
+  }
+
   // ── Conversation search (43:32209) ───────────────────────────────
   // 33px pill on 5% black, r=12, 12px side padding, 8px between the glyph and
   // the field.
