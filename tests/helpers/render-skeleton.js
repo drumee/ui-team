@@ -248,6 +248,40 @@ function makeUi(over = {}) {
     // modal reads this whenever it draws, so a fixture without it cannot render
     // that modal at all.
     getPendingSubtasks: () => [],
+    // The rest of the reader surface the skeleton calls. Every one of these was
+    // absent, so `render()` threw on the FIRST column it drew (cardWindow) and
+    // nothing could use it — the two tests that render a skeleton today both go
+    // through renderModule with their own stub, which is what hid it.
+    //
+    // Defaults are the "nothing here yet" answer in each case, so a test that
+    // cares about one overrides it and a test that does not is unaffected.
+    cardWindow: () => 60,
+    getDefaultStatus: () => "todo",
+    getFilteredTasks: () => [],
+    getTopLevelTasks: () => [],
+    getTaskById: () => null,
+    getSubtasks: () => [],
+    getSubtaskDraft: () => null,
+    getSubtaskCount: () => ({ done: 0, total: 0 }),
+    isSubtask: () => false,
+    isSubtasksOpen: () => false,
+    getActivity: () => [],
+    isCommentRowBusy: () => false,
+    // Per-section in-flight flags for the detail card (attachments / comments /
+    // history). False = "fetched, and there are none", which is what an
+    // already-settled fixture should look like.
+    isLoading: () => false,
+    // Which overlays have already played their entrance. 0 keeps the fixture
+    // in the state a freshly-opened overlay is in.
+    hasPainted: () => 0,
+    // Mirrors tasks_panel.pickerService — the assignee/reporter scopes' service
+    // names, which the pickers stamp on their rows.
+    pickerService: (scope) => {
+      if (scope === "create") return "create-assignee";
+      if (scope === "create-reporter") return "create-reporter";
+      if (scope === "detail-reporter") return "set-reporter";
+      return "set-assignee";
+    },
   };
   return { ...base, ...over };
 }

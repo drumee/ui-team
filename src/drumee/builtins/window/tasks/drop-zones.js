@@ -17,13 +17,29 @@
 // __attachments are SIBLING subtrees in __modal-main, so they never contend —
 // the ordering matters only for __comment-replybox, which sits beside rows in a
 // thread group.
+//
+// __desc-editor is first because it is the innermost of them all: it is the
+// only zone that can sit INSIDE another one. The two description editors do
+// not (they are their own rows, beside __attachments / __create-files rather
+// than within them), but the three comment editors are nested in the composer,
+// the reply box and a row — and they reach this table too, because the scope
+// check that excludes them lives here rather than in the selector. First is
+// therefore where "an inner zone wins" puts it, and where it has to be for
+// that check to be the thing that decides.
 const ZONES = [
+  { sel: "__desc-editor[data-desc-scope]", scope: "desc" },
   { sel: "__comment-replybox", scope: "comment-reply" },
   { sel: "__comment-row[data-comment-id]", scope: "comment-row" },
   { sel: "__comment-composer", scope: "comment" },
   { sel: "__attachments", scope: "detail" },
   { sel: "__create-files", scope: "create" },
 ];
+
+// The description editors a drop may inline into. Only the two TASK
+// descriptions: the comment editors pass their own `editorClass` and so never
+// carry __desc-editor at all, but this is the check that decides it rather
+// than an accident of the markup — see the fall-through in resolveZone.
+const DESC_SCOPES = ["detail", "create"];
 
 /**
  * Resolve a pointer's element to a drop-zone descriptor, or null to refuse.
@@ -42,6 +58,18 @@ function resolveZone(pfx, el, ctx) {
   for (const z of ZONES) {
     const n = el.closest(`.${pfx}${z.sel}`);
     if (!n || !ctx.contains(n)) continue;
+    if (z.scope === "desc") {
+      const s = n.getAttribute("data-desc-scope");
+      // FALLS THROUGH, unlike the comment-row refusal below, and the difference
+      // is which surface owns the drop. A comment row that is not yours sits in
+      // __modal-main, where nothing else would claim the file — so stopping is
+      // the only way to avoid a silent attach somewhere else. A mention editor
+      // sits inside the composer / reply box / row that DOES own it, and those
+      // zones are the next entries in this table. Refusing here would take a
+      // drop the composer has always accepted.
+      if (!DESC_SCOPES.includes(s)) continue;
+      return { scope: "desc", key: `desc:${s}`, el: n, descScope: s };
+    }
     if (z.scope === "comment-row") {
       const id = n.getAttribute("data-comment-id");
       // Author-only server-side (_ownComment). Refuse rather than fall through
@@ -60,4 +88,4 @@ function resolveZone(pfx, el, ctx) {
   return null;
 }
 
-module.exports = { ZONES, resolveZone };
+module.exports = { ZONES, DESC_SCOPES, resolveZone };
