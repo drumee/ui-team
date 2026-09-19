@@ -452,6 +452,88 @@
     }
   }
 
+  // ── Loading skeletons ────────────────────────────────────────────
+  // Switching scope tabs is a REFETCH, not a show/hide: _setRoomScope calls
+  // list.restart(), whose start(1) resets the collection synchronously and
+  // only then fetches (ui-core letc/widgets/list/index.js). So both panes go
+  // blank for the length of a round trip — the inbox column empties, and the
+  // conversation beside it is about to be replaced by the new scope's first
+  // row. Draw the SHAPE of each instead, pulsing, so the screen holds its
+  // structure across the switch.
+  //
+  // Same primitives the folder window's chat card and the task board use
+  // (mixins/drumee): a mask over a theme colour, so the shapes follow light
+  // and dark, and the pulse stands down under prefers-reduced-motion.
+  //
+  // Both are gated on a stamp on __ui — the widget's own root, which is never
+  // a lazy placeholder — rather than on the list or the fed child, so a kind
+  // that has not resolved yet cannot read as "ready".
+
+  // One conversation row: 48px avatar at the row's 16px padding, name and
+  // preview beside it, time at the right. 80px pitch (16 + 48 + 16), first row
+  // at the list's own 12px padding. Eight of them overflows any realistic
+  // sidebar height; the mask is not scaled (no viewBox), so px here are px.
+  $inbox-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cg%3E%3Crect x='28' y='28' width='48' height='48' rx='24'/%3E%3Crect x='92' y='36' width='38%25' height='12' rx='6'/%3E%3Crect x='86%25' y='37' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='58' width='52%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='108' width='48' height='48' rx='24'/%3E%3Crect x='92' y='116' width='32%25' height='12' rx='6'/%3E%3Crect x='86%25' y='117' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='138' width='60%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='188' width='48' height='48' rx='24'/%3E%3Crect x='92' y='196' width='44%25' height='12' rx='6'/%3E%3Crect x='86%25' y='197' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='218' width='45%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='268' width='48' height='48' rx='24'/%3E%3Crect x='92' y='276' width='35%25' height='12' rx='6'/%3E%3Crect x='86%25' y='277' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='298' width='55%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='348' width='48' height='48' rx='24'/%3E%3Crect x='92' y='356' width='41%25' height='12' rx='6'/%3E%3Crect x='86%25' y='357' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='378' width='48%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='428' width='48' height='48' rx='24'/%3E%3Crect x='92' y='436' width='30%25' height='12' rx='6'/%3E%3Crect x='86%25' y='437' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='458' width='58%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='508' width='48' height='48' rx='24'/%3E%3Crect x='92' y='516' width='39%25' height='12' rx='6'/%3E%3Crect x='86%25' y='517' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='538' width='50%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='588' width='48' height='48' rx='24'/%3E%3Crect x='92' y='596' width='34%25' height='12' rx='6'/%3E%3Crect x='86%25' y='597' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='618' width='56%25' height='11' rx='5'/%3E%3C/g%3E%3Cg%3E%3Crect x='28' y='668' width='48' height='48' rx='24'/%3E%3Crect x='92' y='676' width='42%25' height='12' rx='6'/%3E%3Crect x='86%25' y='677' width='9%25' height='10' rx='5'/%3E%3Crect x='92' y='698' width='47%25' height='11' rx='5'/%3E%3C/g%3E%3C/svg%3E");
+
+  // The conversation: alternating message bubbles, incoming left and outgoing
+  // right, over the pane's own ground. No header band — chat-p2p's header is a
+  // SIBLING of the pane (__chat-header), and it repaints from the row's own
+  // data with no round trip, so it never has anything to wait for.
+  $conversation-skeleton-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='24' y='32' width='46%25' height='40' rx='12'/%3E%3Crect x='24' y='84' width='58%25' height='56' rx='12'/%3E%3Crect x='46%25' y='152' width='50%25' height='40' rx='12'/%3E%3Crect x='24' y='204' width='52%25' height='40' rx='12'/%3E%3Crect x='38%25' y='256' width='58%25' height='56' rx='12'/%3E%3Crect x='24' y='324' width='44%25' height='40' rx='12'/%3E%3Crect x='52%25' y='376' width='44%25' height='40' rx='12'/%3E%3Crect x='24' y='428' width='56%25' height='56' rx='12'/%3E%3Crect x='44%25' y='496' width='52%25' height='40' rx='12'/%3E%3Crect x='24' y='548' width='48%25' height='40' rx='12'/%3E%3C/svg%3E");
+
+  // The inbox column, while its page is in flight. `loading` is the SEEDED
+  // value (see initialize), so the very first paint is this rather than a
+  // blank 400px column — the list's own spinner option draws nothing in
+  // ui-team, which is what left that gap empty.
+  &__ui[data-list-state="loading"] &__contact-list {
+    // The list sets no position of its own, so without this the skeleton
+    // sizes itself to the sidebar and the rows land above the list box.
+    position: relative;
+
+    > * {
+      visibility: hidden;
+    }
+
+    &::after {
+      @include drumee.skeleton-layer($inbox-skeleton-mask);
+    }
+  }
+
+  &__ui[data-list-state="ready"] &__contact-list > * {
+    @include drumee.skeleton-content-in;
+  }
+
+  // The conversation pane. Two conditions, and both are load-bearing:
+  //   data-chat-mounted="1" — a conversation is actually being opened. Without
+  //     it the skeleton would pulse forever over a pane that is EMPTY on
+  //     purpose (a scope with nothing to land on — see _clearConversation).
+  //   :not(:has([data-painted="1"])) — widget_chat stamps itself once its
+  //     message list is ready, with a 4s fallback of its own (widget/chat).
+  //     That is what drops the skeleton, so it hands over to a readable
+  //     conversation instead of to an empty pane: widget_chat is a lazy kind
+  //     that fetches before it builds anything, so its mere presence as a
+  //     child proves nothing. Same contract the folder window keys on.
+  &__ui[data-chat-mounted="1"] &__chat-panel:not(:has([data-painted="1"])) {
+    position: relative;
+
+    > * {
+      visibility: hidden;
+    }
+
+    &::after {
+      @include drumee.skeleton-layer($conversation-skeleton-mask);
+    }
+  }
+
+  // Supersedes chat-p2p-swap-in above for this one transition — the pane was
+  // hidden under a skeleton, so the swap-in it would otherwise play has
+  // already run out while invisible. Both are a ~0.2s fade, so it reads the
+  // same, and the swap-in rule still owns conversation-to-conversation swaps
+  // that never raised a skeleton.
+  &__ui[data-chat-mounted="1"] &__chat-panel:has([data-painted="1"]) > * {
+    @include drumee.skeleton-content-in;
+  }
+
   // ── Conversation search (43:32209) ───────────────────────────────
   // 33px pill on 5% black, r=12, 12px side padding, 8px between the glyph and
   // the field.

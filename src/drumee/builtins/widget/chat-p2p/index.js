@@ -35,7 +35,27 @@ class __chat_p2p extends LetcBox {
     // that ever revealed it was the contact list's `eod`, so an empty or slow
     // list showed a blank screen. "out" now means only one thing: the desk is
     // closing this screen (_hidePanel / togglePanel's animate-then-destroy).
-    opt.dataset = { ...opt.dataset, anim: "in", mview: "sidebar" };
+    //
+    // `list-state` and `chat-mounted` gate the loading skeletons (see skin).
+    // Seeded here rather than flipped on later, so the FIRST paint is already
+    // the skeleton: the inbox mounts with an empty list and a chat_rooms fetch
+    // in flight, and the list's own spinner option draws nothing in ui-team.
+    // Failing closed matters more than the switch case — an unstamped root
+    // reads as "ready" and shows the blank column this exists to replace.
+    //
+    // HYPHENATED, NOT camelCase. onRender applies this map with
+    // setAttribute("data-" + key) verbatim (ui-core letc/addons/letc.js), with
+    // none of the camelCase -> kebab folding the el.dataset API does — so
+    // `listState` would land as data-liststate and no selector written the
+    // obvious way would ever match it. The runtime writes below use
+    // el.dataset.listState, which resolves to this same attribute.
+    opt.dataset = {
+      ...opt.dataset,
+      anim: "in",
+      mview: "sidebar",
+      "list-state": "loading",
+      "chat-mounted": 0,
+    };
     super.initialize(opt);
     this.declareHandlers();
     this._radioId = `peer-${this.mget(_a.widgetId)}`;
@@ -98,6 +118,7 @@ class __chat_p2p extends LetcBox {
   onBeforeDestroy() {
     clearTimeout(this._searchDebounce);
     clearTimeout(this._settleTimer);
+    clearTimeout(this._listStateFallback);
     this.unbindEvent(_a.live);
     document.removeEventListener("mousedown", this._onDocClick);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
@@ -206,9 +227,61 @@ class __chat_p2p extends LetcBox {
     }
     const list = await this.ensurePart("contact-list");
     if (!list || !_.isFunction(list.restart)) return;
+    // Raised BEFORE restart(), which empties the collection synchronously —
+    // stamping after it would leave one frame of blank column between the
+    // reset and the skeleton.
+    this._markListLoading();
     list.restart();
     // AFTER restart(), never before — see _armScopeLanding.
     this._armScopeLanding(list, next);
+  }
+
+  /**
+   * Raise the inbox skeleton while a page is in flight.
+   *
+   * The fallback is the whole reason this is a method rather than one
+   * assignment: `eod` is the only thing that lowers the skeleton, and a
+   * request that never answers never fires it. Without a deadline the column
+   * would pulse for the rest of the session, which reads far worse than the
+   * blank list this replaces. widget_chat's own painted stamp carries the
+   * same insurance for the same reason.
+   */
+  _markListLoading() {
+    if (this.el) this.el.dataset.listState = "loading";
+    clearTimeout(this._listStateFallback);
+    this._listStateFallback = setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.el) this.el.dataset.listState = "ready";
+    }, 6000);
+  }
+
+  /**
+   * Lower the inbox skeleton, unless the scope it belongs to has been left.
+   *
+   * Both landings route their stamp through here AFTER their own scope check,
+   * so a page arriving for a tab the user already moved off cannot uncover a
+   * list that is about to be replaced again.
+   *
+   * @param {String} scope the scope the finished page belongs to
+   */
+  _markListReady(scope) {
+    if (scope != null && this._scopeKey() !== scope) return;
+    clearTimeout(this._listStateFallback);
+    this._listStateFallback = null;
+    if (this.el) this.el.dataset.listState = "ready";
+  }
+
+  /**
+   * The active scope, normalised.
+   *
+   * `_roomScope` is UNSET until the first tab press — getCurrentApi reads the
+   * absence as Direct — so comparing it raw would make every first-load guard
+   * a comparison against undefined, which is never equal to the "direct" a
+   * later press sets. Everything that captures or checks a scope goes through
+   * here so both spellings of Direct are the same value.
+   */
+  _scopeKey() {
+    return this._roomScope || "direct";
   }
 
   /**
@@ -235,7 +308,8 @@ class __chat_p2p extends LetcBox {
     list.once(_e.eod, async () => {
       if (this.isDestroyed && this.isDestroyed()) return;
       // A second tab press while this page was in flight owns the pane now.
-      if (this._roomScope !== scope) return;
+      if (this._scopeKey() !== scope) return;
+      this._markListReady(scope);
       // The Unreads toggle and the search term survive a scope switch, so the
       // landing has to see the same rows the user does.
       this._applyFilter();
@@ -251,7 +325,7 @@ class __chat_p2p extends LetcBox {
       await Kind.waitFor("widget_chat");
       // Re-checked after the await for the same reason as above: the wait is
       // a suspension point, and a tab press during it must win.
-      if (this._roomScope !== scope) return;
+      if (this._scopeKey() !== scope) return;
       if (this.isDestroyed && this.isDestroyed()) return;
       this.openChat(row);
     });
@@ -270,7 +344,11 @@ class __chat_p2p extends LetcBox {
     this.activePeer = null;
     this.activePeerType = null;
     this.chatWidget = null;
-    if (this.el) this.el.dataset.mview = "sidebar";
+    if (this.el) {
+      this.el.dataset.mview = "sidebar";
+      // Empty ON PURPOSE, not waiting for anything — see _openConversation.
+      this.el.dataset.chatMounted = "0";
+    }
     this.ensurePart("chat-header").then((header) => {
       header.clear();
       header.feed(require("./skeleton/chat-header")(this, null));
@@ -317,6 +395,22 @@ class __chat_p2p extends LetcBox {
   }
 
   onDomRefresh() {
+    // Re-stamped here, before the skeleton builds the list, because the seed
+    // in initialize rides opt.dataset — and a widget mounted as a FED kid
+    // takes its model from the parent's descriptor, so an opt edit does not
+    // always survive the trip. Writing the element directly costs two
+    // assignments and removes the question; both paths target the same
+    // attributes, so whichever landed first, the list is never on screen
+    // unstamped.
+    if (this.el && !this.el.dataset.chatMounted) {
+      this.el.dataset.chatMounted = "0";
+    }
+    // Through the helper, not a bare assignment: it also arms the deadline
+    // that lowers the skeleton if the page never lands. The seed in initialize
+    // only sets the attribute, so a FIRST fetch that never answers would
+    // otherwise pulse for the rest of the session — the one case with no tab
+    // press behind it to re-arm anything.
+    this._markListLoading();
     this.feed(require("./skeleton")(this));
     RADIO_CLICK.on(_e.click, this._onOutsideClick);
   }
@@ -375,8 +469,21 @@ class __chat_p2p extends LetcBox {
         if (child.collection) {
           child.collection.comparator = (item) => -item.get(_a.ctime);
         }
+        // The scope this first page belongs to, captured at ARM time.
+        //
+        // restart() fires `eod` synchronously as a listener flush before it
+        // refetches, so pressing a scope tab while this very first page is
+        // still in flight detonates this handler early — against the list the
+        // user just left, which then lands on one of its rows and lowers the
+        // skeleton over a column about to be replaced. Latent before the
+        // skeleton existed (the landing simply opened the wrong row); visible
+        // now, as a flash of empty list. The guard below is the same one
+        // _armScopeLanding carries, for the same reason.
+        const armedScope = this._scopeKey();
         child.once(_e.eod, async () => {
+          if (this._scopeKey() !== armedScope) return;
           this.el.dataset.anim = "in";
+          this._markListReady(armedScope);
           this._applyFilter();
           // Deliberately NOT awaited: resolving the support account is a
           // network call, and putting it in front of the landing below would
@@ -953,6 +1060,13 @@ class __chat_p2p extends LetcBox {
 
     // Single-pane mobile/tablet: reveal the chat pane (no effect ≥ 1024px).
     this.el.dataset.mview = "chat";
+    // Raise the conversation skeleton. It is lowered by CSS alone, the moment
+    // widget_chat stamps data-painted on itself — nothing here has to flip it
+    // back, and nothing has to watch the pane. What this flag adds is the
+    // distinction CSS cannot make on its own: a pane with no painted child
+    // because a conversation is LOADING, versus one that is empty on purpose
+    // (see _clearConversation), which must not pulse.
+    this.el.dataset.chatMounted = "1";
 
     this.ensurePart("chat-header").then((header) => {
       header.clear();
