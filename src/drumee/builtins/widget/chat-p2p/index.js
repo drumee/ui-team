@@ -205,7 +205,77 @@ class __chat_p2p extends LetcBox {
       }
     }
     const list = await this.ensurePart("contact-list");
-    if (list && _.isFunction(list.restart)) list.restart();
+    if (!list || !_.isFunction(list.restart)) return;
+    list.restart();
+    // AFTER restart(), never before — see _armScopeLanding.
+    this._armScopeLanding(list, next);
+  }
+
+  /**
+   * Open the new scope's first conversation once its page lands.
+   *
+   * The scope tabs are a refetch, and the landing that opens a conversation on
+   * first load is a `once` (see onPartReady) — consumed by the first page and
+   * never re-armed. So switching tabs used to leave the previous scope's
+   * conversation standing beside a list it no longer belongs to: a Direct chat
+   * open with "Workspace chat" selected.
+   *
+   * ARMED AFTER `list.restart()`, WHICH IS LOAD-BEARING. restart() triggers
+   * `eod` SYNCHRONOUSLY to flush stale listeners before it calls start()
+   * (ui-core letc/widgets/list/index.js), so a handler armed before the call
+   * burns on that flush — against the OLD page — and the real one arrives with
+   * nothing listening. Armed after, the flush has already passed and the next
+   * `eod` is this scope's data.
+   *
+   * @param {View} list    the contact-list
+   * @param {String} scope the scope this arming belongs to
+   */
+  _armScopeLanding(list, scope) {
+    if (!list || !_.isFunction(list.once)) return;
+    list.once(_e.eod, async () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      // A second tab press while this page was in flight owns the pane now.
+      if (this._roomScope !== scope) return;
+      // The Unreads toggle and the search term survive a scope switch, so the
+      // landing has to see the same rows the user does.
+      this._applyFilter();
+      const row = this._landingRow(list);
+      // Nothing to open: the pane must not keep showing the scope we just
+      // left. Cleared even on mobile, where the pane is behind the sidebar —
+      // the back button would otherwise reveal a stale conversation.
+      if (!row) return this._clearConversation();
+      // Mobile/tablet stays on the inbox. The user just tapped a tab THERE,
+      // and opening flips data-mview to "chat" and hides it — same reason the
+      // first-load landing bails (see onPartReady).
+      if (this._isMobile()) return;
+      await Kind.waitFor("widget_chat");
+      // Re-checked after the await for the same reason as above: the wait is
+      // a suspension point, and a tab press during it must win.
+      if (this._roomScope !== scope) return;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this.openChat(row);
+    });
+  }
+
+  /**
+   * Put the conversation pane back to its empty state.
+   *
+   * Used when a scope has nothing to land on. chat-header renders its
+   * `--empty` variant when it is fed a null contact (see skeleton/chat-header),
+   * and dropping chatWidget matters as much as clearing the pane: a live
+   * widget_chat left mounted keeps acknowledging messages in a scope the user
+   * is no longer looking at.
+   */
+  _clearConversation() {
+    this.activePeer = null;
+    this.activePeerType = null;
+    this.chatWidget = null;
+    if (this.el) this.el.dataset.mview = "sidebar";
+    this.ensurePart("chat-header").then((header) => {
+      header.clear();
+      header.feed(require("./skeleton/chat-header")(this, null));
+    });
+    this.ensurePart("chat-panel").then((panel) => panel.clear());
   }
 
   /**
@@ -668,6 +738,16 @@ class __chat_p2p extends LetcBox {
    * Falls back to the placeholder when it is all there is, which is the right
    * first screen for an account with no conversations yet.
    *
+   * "Placeholder" is overloaded here and the two senses are unrelated:
+   * `is_placeholder` marks the support row WE draw (a real, openable
+   * conversation), while an EMPTY list has the ui-core smart list's own
+   * NO_CONTACT note sitting in `children` as `__placeholder` — a Note, not a
+   * conversation. Only the first is landable, so the note is dropped by
+   * requiring an entity_id, which every conversation row carries (contact rows
+   * from chat_rooms directly, workspace rows via the prepareData normaliser in
+   * onPartReady). Without that, an empty scope lands on the note and openChat
+   * runs until _openConversation bails on a missing hub_id.
+   *
    * @param {View} list
    * @returns {View|null}
    */
@@ -685,7 +765,13 @@ class __chat_p2p extends LetcBox {
       return children.first() || null;
     }
     const visible = kids.filter(
-      (c) => c && c.el && c.el.style.display !== "none",
+      (c) =>
+        c &&
+        c.el &&
+        c.el.style.display !== "none" &&
+        c !== list.__placeholder &&
+        _.isFunction(c.mget) &&
+        c.mget(_a.entity_id),
     );
     return visible.find((c) => !c.mget("is_placeholder")) || visible[0] || null;
   }
