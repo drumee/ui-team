@@ -50,10 +50,22 @@
   }
 
   &__main {
-    padding: var(--spacer-5);
+    padding: var(--spacer-6);
+    border-radius: var(--corner-radius-2);
+    min-width: 300px;
     // Height follows the card (see __ui): no fixed minimum.
     min-height: 0;
     gap: 12px;
+  }
+
+  // The shared window header (window/skin/group/header/main.scss) rounds its
+  // top corners and adds its own spacer-4/6 padding. Inside this card that
+  // double-pads the top and draws a rounded edge in the middle of a box that
+  // already has one, so both are dropped here. Qualified by __ui to outrank
+  // that shared rule, which matches the same element through its other class.
+  &__ui &__header {
+    border-radius: 0;
+    padding: 0;
   }
 
   // ── Header (based on window/confirm): logo left, X close right ──────────────
@@ -63,27 +75,6 @@
     align-items: center;
     justify-content: space-between;
     position: relative;
-  }
-
-  &__close {
-    width: 28px;
-    height: 28px;
-    padding: 4px;
-    flex-shrink: 0;
-    cursor: pointer;
-    color: var(--normal-fg-10);
-    margin-left: auto;
-    border-radius: 6px;
-    transition: background-color 120ms ease;
-
-    svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    &:hover {
-      background-color: rgba(0, 0, 0, 0.04);
-    }
   }
 
   &__icon.badge {
@@ -205,11 +196,19 @@
   &__button-main {
     opacity: 1;
     height: 100%;
-    gap: var(--spacer-4);
+    // A step down the spacer scale (was spacer-4 / spacer-6): the action row
+    // sits under a 24px-padded card and the buttons were reading larger than
+    // the message they answer.
+    gap: var(--spacer-3);
     border-radius: var(--corner-radius-2);
-    padding: var(--spacer-4) var(--spacer-6);
+    padding: var(--spacer-3) var(--spacer-5);
     cursor: pointer;
     background-color: var(--normal-bg-80) !important;
+    // Nothing set this before, so the label fell through to the browser's
+    // 16px default and read a size larger than the card's own body text. The
+    // mixin defaults keep weight (400) and colour as they were — only the
+    // size and line-height change. The label inherits it.
+    @include drumee.typo($size: 14px, $line: 20px);
   }
 
   // ── Simulated download-progress bar (window_info `body` = download-progress) ──

@@ -33,6 +33,20 @@ function mediaDeviceLabel(error) {
   return names.join(" / ");
 }
 
+// Was the device BLOCKED (browser or OS permission), as opposed to missing or
+// busy? The distinction decides whether the control gets the blocked treatment
+// (warning badge + disabled toggle, which only a settings change clears) or a
+// plain message — a busy or unplugged device is transient and must leave the
+// toggle usable.
+function isMediaPermissionError(error) {
+  const name = (error && error.name) || "";
+  const cause =
+    (error && error.gum && error.gum.error && error.gum.error.name) ||
+    (error && error.constructor && error.constructor.name) ||
+    "";
+  return /permission_denied|NotAllowedError|SecurityError/.test(`${name} ${cause}`);
+}
+
 // The user-facing sentence for a local-media failure. Every branch runs the
 // locale string through .format() — DEVICES_PERMISSION_DENIED carries a {0}
 // placeholder that used to render literally.
@@ -44,7 +58,7 @@ function mediaErrorMessage(error) {
     (error && error.constructor && error.constructor.name) ||
     "";
   const both = `${name} ${cause}`;
-  if (/permission_denied|NotAllowedError|SecurityError/.test(both)) {
+  if (isMediaPermissionError(error)) {
     return LOCALE.MEDIA_BLOCKED_BY_BROWSER.format(label);
   }
   if (/not_found|NotFoundError/.test(both)) {
@@ -56,4 +70,4 @@ function mediaErrorMessage(error) {
   return LOCALE.DEVICES_PERMISSION_DENIED.format(label);
 }
 
-module.exports = { mediaDeviceLabel, mediaErrorMessage };
+module.exports = { mediaDeviceLabel, mediaErrorMessage, isMediaPermissionError };
