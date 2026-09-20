@@ -1,5 +1,9 @@
 const __room = require("builtins/webrtc/room/jitsi");
 const { canUpgradePlan } = require("libs/billing");
+const {
+  mediaDeviceLabel,
+  isMediaPermissionError,
+} = require("builtins/webrtc/media-error");
 
 // Join/leave toasts stop once this many remote participants are already in the
 // room — past a handful, individual arrivals are noise.
@@ -370,6 +374,62 @@ class __window_meeting extends __room {
   // → the meeting override empties the container). Unlock the in-topbar controls
   // that onDomRefresh locked for the startup phase. On a failed startup this
   // never fires, so the controls stay locked (leave stays clickable via CSS).
+  /**
+   * "Retry" on the blocked-media overlay: re-run the startup in place, so a
+   * user who has just allowed the device continues into the meeting instead of
+   * leaving and re-entering it.
+   *
+   * onDomRefresh is safe to re-enter — every step it takes before the join is
+   * guarded (_initIdleControls by _idleBound, _bindResizeObserver by
+   * _resizeObserver, _lockGeometry only clears inline styles) — so the retry
+   * is the startup itself rather than a second, divergent copy of it.
+   */
+  async _retryJoinMeeting(cmd) {
+    // Retrying while still blocked would fail identically and flash the
+    // overlay. Which devices to test comes from the failure itself; where the
+    // permission is not queryable (Firefox) this yields null and we simply
+    // try, which is the old behaviour.
+    const kinds =
+      (this._mediaError && this._mediaError.gum && this._mediaError.gum.devices)
+      || [_a.audio, _a.video];
+    // Re-joining is the slowest thing either Retry does (permission read, then
+    // a whole connection + conference bind), so the button shows progress for
+    // the entire attempt — it is cleared only on the paths that leave it on
+    // screen; a successful join re-feeds the window and discards it.
+    if (cmd && cmd.el) cmd.el.dataset.loading = 1;
+    for (const kind of kinds) {
+      if ((await this._mediaPermissionState(kind)) === "denied") {
+        // Say so on the button rather than doing nothing, which reads as a
+        // dead click (same treatment as the device picker's Retry).
+        if (cmd && cmd.el) {
+          cmd.el.dataset.loading = 0;
+          cmd.el.dataset.error = 1;
+        }
+        return;
+      }
+    }
+    // Clear the denial before re-joining. _mediaDenied especially: it is
+    // replayed onto the controls by initCommadPanel (_applyMediaDeniedUi), so
+    // leaving it set would badge the pills of a meeting that just succeeded.
+    this._mediaError = null;
+    this._mediaDenied = null;
+    if (this.el) this.el.dataset.denied = "0";
+    const c = this.getPart("message-container");
+    if (c) c.clear();
+    // The failed attempt left a live XMPP connection and a _startupMediaFailed
+    // flag behind; either one makes the re-join resolve without ever creating
+    // the conference, which is what left the retry sitting on "waiting for
+    // permission". See resetStartupState.
+    this.resetStartupState();
+    try {
+      return await this.onDomRefresh();
+    } finally {
+      // A failed re-join re-renders the overlay with a fresh button, but a
+      // partial failure can leave this one in place — never strand it spinning.
+      if (cmd && cmd.el) cmd.el.dataset.loading = 0;
+    }
+  }
+
   async onLocalUserJoined(...args) {
     await super.onLocalUserJoined(...args);
     if (this.el) this.el.dataset.startingUp = "0";
@@ -1018,6 +1078,10 @@ class __window_meeting extends __room {
 
       case _a.chat:
         this.toggleMeetingChat();
+        break;
+
+      case "retry-join-meeting":
+        this._retryJoinMeeting(cmd);
         break;
 
       case _a.invite:
@@ -1916,14 +1980,22 @@ class __window_meeting extends __room {
       // message-container to fill the body (avatar centered, denial text
       // beneath) instead of the small floating tooltip used by other states.
       if (this.el) this.el.dataset.denied = "1";
+      // Blocked by the browser or the OS — not just refused once. Tell the
+      // user HOW to allow it, with the same browser + OS steps the device
+      // picker shows (webrtc/skeleton/media-blocked), naming whichever
+      // device(s) the failed request actually covered. No heading (the text
+      // above already says what is wrong) and no Retry: this state is
+      // terminal, the message tells them to start the meeting again.
+      const blocked = s === "mediaDenied" && isMediaPermissionError(this._mediaError);
+      const guidance = blocked
+        ? [require("builtins/webrtc/skeleton/media-blocked")(this, _a.audio, {
+            device: mediaDeviceLabel(this._mediaError),
+            heading: false,
+            retry: false,
+          })]
+        : [];
       this.ensurePart("message-container").then((c) => {
         c.feed([
-          Skeletons.Button.Svg({
-            ico: "cross",
-            className: "message-close-x",
-            service: "leave-meeting",
-            uiHandler: [this],
-          }),
           Skeletons.UserProfile({
             className: "message-avatar",
             id: Visitor.id,
@@ -1933,6 +2005,20 @@ class __window_meeting extends __room {
           }),
           Skeletons.Note({ className: "message-name", content: fullname }),
           Skeletons.Note({ className: "message-text", content: message }),
+          ...guidance,
+          // Once the user has allowed access, this re-runs the join instead of
+          // making them leave and re-enter the meeting. Only offered for a
+          // blocked device: a server privilege refusal is not fixed by
+          // retrying.
+          ...(blocked
+            ? [Skeletons.Note({
+                className: "message-retry clickable",
+                content: LOCALE.RETRY,
+                service: "retry-join-meeting",
+                uiHandler: [this],
+                dataset: { error: 0 },
+              })]
+            : []),
         ]);
       });
       return;
