@@ -227,8 +227,14 @@ $theme-colors: (
     align-items: center;
     justify-content: center;
     gap: 12px;
-    background: rgba(250, 133, 64, 0.08);
-    border: 2px dashed var(--primary, #fa8540);
+    background: var(--hover-bg-40, rgba(67, 60, 197, 0.06));
+    // outline + a negative offset rather than a border, matching
+    // __desc-editor[data-drop-active] above: every drop zone in the create and
+    // detail cards now reads as the same affordance, in the same brand colour.
+    // The offset draws the dashed frame INSIDE inset:0 — an outline is painted
+    // outside the box by default and would bleed 2px past the zone it marks.
+    outline: 2px dashed var(--active-border, rgba(67, 60, 197, 0.4));
+    outline-offset: -2px;
     border-radius: 12px;
     backdrop-filter: blur(1px);
     pointer-events: none;
@@ -240,8 +246,8 @@ $theme-colors: (
   &__drop-overlay-ico {
     width: 44px;
     height: 44px;
-    color: var(--primary, #fa8540);
-    fill: var(--primary, #fa8540);
+    color: var(--active-border, #5950ff);
+    fill: var(--active-border, #5950ff);
   }
 
   &__drop-overlay-text {
@@ -249,7 +255,7 @@ $theme-colors: (
       $size: 15px,
       $weight: 600,
       $line: 20px,
-      $color: var(--primary, #fa8540)
+      $color: var(--active-border, #5950ff)
     );
   }
 
@@ -3598,16 +3604,19 @@ $theme-colors: (
   }
 
   // Drop affordance covering one comment (edited row / reply composer) instead
-  // of the whole panel. Same colours as __drop-overlay, one size down: no icon,
-  // thinner dash, smaller type — it sits inside a card, not over a modal.
+  // of the whole panel. Same colours AND the same dashed frame as
+  // __drop-overlay, one size down on content only: no icon, smaller type — it
+  // sits inside a card, not over a modal.
   &__comment-drop-overlay {
     position: absolute;
     inset: 0;
     z-index: 20;
     align-items: center;
     justify-content: center;
-    background: rgba(250, 133, 64, 0.08);
-    border: 1px dashed var(--primary, #fa8540);
+    background: var(--hover-bg-40, rgba(67, 60, 197, 0.06));
+    // See __drop-overlay for why this is an inset outline and not a border.
+    outline: 2px dashed var(--active-border, rgba(67, 60, 197, 0.4));
+    outline-offset: -2px;
     border-radius: 12px;
     pointer-events: none;
     opacity: 0;
@@ -3620,7 +3629,7 @@ $theme-colors: (
       $size: 13px,
       $weight: 600,
       $line: 18px,
-      $color: var(--primary, #fa8540)
+      $color: var(--active-border, #5950ff)
     );
   }
 
