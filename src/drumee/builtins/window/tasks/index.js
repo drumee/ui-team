@@ -182,6 +182,14 @@ class __tasks_panel extends LetcBox {
     // Upload destination — must be a real folder/home node, not the hub_id.
     // The folder window passes `actual_home_id || nid` when launching us.
     this._destNid = this.mget(_a.actual_home_id) || this.mget(_a.nid) || 0;
+    // Where attachments actually land — see _attachmentNid(). NOT _destNid:
+    // an attachment belongs to the task, not to the folder body.
+    this._attachNid = null;
+    this._attachNidJob = null;
+    // Set once the server has ANSWERED without a task folder (pre-patch
+    // schema). A stable fact, unlike a failed request, so it is cached — else
+    // every upload would re-ask media.home for it.
+    this._noTaskFolder = 0;
     // The board is WORKSPACE-level: it lists every task in the workspace no
     // matter which folder each was created in (Figma 43:23955 — Task is a
     // workspace rail item, not a per-folder tab), and there is one set of
@@ -497,10 +505,11 @@ class __tasks_panel extends LetcBox {
     this._scopeIsRoot = isRoot ? 1 : 0;
     if (destNid != null && `${destNid}` !== `${this._destNid}`) {
       this._destNid = destNid;
-      // _folderFilenames caches the DESTINATION folder's names, for the
-      // a → a(1) collision preview on an attachment. It is the one piece of
-      // per-folder state the board keeps, so it has to follow the move even
-      // though nothing else here does.
+      // _destNid is now only the FALLBACK upload destination (see
+      // _attachmentNid) — attachments normally go to the hub-level task
+      // folder, which navigation does not move. The cached filenames still
+      // follow it, because on an unpatched server the fallback is live and
+      // the a → a(1) collision preview reads the folder the user is in.
       this._folderFilenames = null;
     }
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
@@ -3683,7 +3692,7 @@ class __tasks_panel extends LetcBox {
       if (row && row.id) {
         // For each pending entry: search-picked files already have `nid`;
         // newly-picked uploads carry a File object and need to be sent to the
-        // folder body now. Either way, the resolved nid is link_file'd to
+        // task folder now. Either way, the resolved nid is link_file'd to
         // the new task.
         const linkPending = async (pf) => {
           let nid = pf.nid;
@@ -6278,11 +6287,62 @@ class __tasks_panel extends LetcBox {
     return { filename: safe.slice(0, dot), extension: safe.slice(dot + 1) };
   }
 
-  // Fetches the folder body's current filenames into a lowercase Set, used
-  // by _resolveAvailableName. Cleared whenever the create modal reopens
+  /**
+   * The folder task attachments are uploaded into.
+   *
+   * NOT `_destNid` — the folder the user happens to be standing in. An
+   * attachment belongs to the task, not to the workspace body, so uploading it
+   * there listed it in that folder's Files tab beside the real documents. It
+   * goes to the hub's hidden task folder instead (`/__chat__/__task__`,
+   * `mfs_home.task_upload_id`): same hub, same member permissions, and already
+   * excluded from every listing, search, export and manifest by the
+   * `^/__chat__` rule the chat staging folder relies on.
+   *
+   * Existing files LINKED to a task (the picker, a drag out of the folder) are
+   * untouched — they stay where they are and keep showing in Files.
+   *
+   * Falls back to `_destNid` when the server has no `task_upload_id` (schema
+   * not patched yet), so attaching keeps working — the file just stays visible,
+   * exactly as before.
+   */
+  async _attachmentNid() {
+    if (this._attachNid) return this._attachNid;
+    if (this._noTaskFolder) return this._destNid;
+    const job =
+      this._attachNidJob ||
+      (this._attachNidJob = (async () => {
+        try {
+          const home = await this.fetchService({
+            service: SERVICE.media.home,
+            hub_id: this._hubId,
+          });
+          const nid = home && home.task_upload_id;
+          if (nid) this._attachNid = nid;
+          else if (home) this._noTaskFolder = 1;
+        } catch (err) {
+          // Leave BOTH caches unset so the next attach retries: a request that
+          // failed says nothing about whether the folder exists, and pinning
+          // the panel to the fallback over one bad request would be wrong.
+          this.warn && this.warn("task attachment folder lookup failed", err);
+        } finally {
+          this._attachNidJob = null;
+        }
+        return this._attachNid || null;
+      })());
+    return (await job) || this._destNid;
+  }
+
+  // Fetches the attachment folder's current filenames into a lowercase Set,
+  // used by _resolveAvailableName. Cleared whenever the create modal reopens
   // (see "add-task" handler) so we re-fetch after each session. Resolves NULL
   // when the listing could not be read — "unknown", which callers must not
   // read as "the folder is empty".
+  //
+  // Only the first page is read, so a workspace with many attachments can miss
+  // an older same-named one. That is a display nicety, not a correctness
+  // problem: mfs_create_node rejects the duplicate and the server resolves the
+  // name itself, and the card is repainted from task_get_linked_files — the
+  // stored name — once the link is written.
   async _ensureFolderFilenames() {
     if (this._folderFilenames) return this._folderFilenames;
     // One fetch, shared by every concurrent caller. The cache used to be
@@ -6295,13 +6355,17 @@ class __tasks_panel extends LetcBox {
     // The four `_folderFilenames = null` resets don't cancel a fetch already in
     // flight, so a job that outlives a scope change must not install names read
     // from the folder we have since left.
-    const forNid = this._destNid;
+    // Resolved INSIDE the job: an await out here would run before
+    // _folderFilenamesJob is assigned, and two concurrent callers would each
+    // start their own listing — the single flight this guard exists for.
     this._folderFilenamesJob = (async () => {
+      let forNid = null;
       try {
+        forNid = await this._attachmentNid();
         const rows = await this.fetchService({
           service: SERVICE.media.show_node_by,
           hub_id: this._hubId,
-          nid: this._destNid,
+          nid: forNid,
           type: "all",
           page: 1,
           order: _K.order.descending,
@@ -6314,7 +6378,11 @@ class __tasks_panel extends LetcBox {
           const full = ext ? `${base}.${ext}` : base;
           if (full) names.add(full.toLowerCase());
         }
-        if (this._destNid === forNid) this._folderFilenames = names;
+        // Read straight off the cache rather than calling _attachmentNid()
+        // again: it is the same value, and re-asking would cost a second
+        // media.home round trip on a server that has no task folder.
+        if ((this._attachNid || this._destNid) === forNid)
+          this._folderFilenames = names;
       } catch (err) {
         // Leave the cache UNSET so the next attach retries. Callers then see
         // null and de-duplicate against the in-flight entries alone, rather
@@ -6447,41 +6515,96 @@ class __tasks_panel extends LetcBox {
   // entry's provisional name becomes that resolved one.
   async _uploadPendingFile(pf, siblings) {
     await this._finalizePendingName(pf, siblings);
-    return new Promise((resolve, reject) => {
-      this._pendingUploadScope = "_commit";
-      const params = { hub_id: this._hubId, nid: this._destNid };
-      const fullName = pf.extension
-        ? `${pf.filename}.${pf.extension}`
-        : pf.filename;
-      if (fullName && fullName !== pf.file?.name) {
-        params.filename = encodeURI(fullName);
+    const fullName = pf.extension
+      ? `${pf.filename}.${pf.extension}`
+      : pf.filename;
+    const extra =
+      fullName && fullName !== pf.file?.name
+        ? { filename: encodeURI(fullName) }
+        : {};
+    return this._uploadAttachment(pf.file, "_commit", extra);
+  }
+
+  /**
+   * One attachment upload into the task folder, with a single retry into the
+   * folder body if that folder refuses the write.
+   *
+   * The retry is for a member granted a SUBFOLDER rather than the workspace:
+   * `user_permission` resolves the task folder off the hub root, so such a
+   * member can write where they were granted and not into /__chat__/__task__.
+   * Losing their attachment would be worse than showing it in the Files tab —
+   * which is exactly what they had before this change. The downgrade is NOT
+   * cached: a transient failure must not disable the task folder for the rest
+   * of the panel's life.
+   *
+   * media.store reports a denied destination through `exception.server`, which
+   * is an HTTP 500 — indistinguishable from any other server fault, so the
+   * retry fires for those too. That is deliberate. The one case it costs
+   * anything is a 500 raised AFTER the node was written, which leaves a stray
+   * file; the code this replaces left an equally stray file in the workspace
+   * body on that same fault, and failed the attach on top of it.
+   */
+  async _uploadAttachment(file, scope, extra = {}) {
+    const attachNid = await this._attachmentNid();
+    try {
+      return await this._uploadOnce(file, scope, attachNid, extra);
+    } catch (err) {
+      const fallback = this._destNid;
+      if (!err || !err.retryElsewhere || !fallback || fallback === attachNid) {
+        throw err;
       }
+      this.warn &&
+        this.warn("task folder upload refused, using the folder body", err);
+      return this._uploadOnce(file, scope, fallback, extra);
+    }
+  }
+
+  /**
+   * Promise-wrapped uploadFile. Tags scope so the global onUploadResponse
+   * skips this xhr (we resolve via the xhr readystate listener).
+   *
+   * A rejection carries `retryElsewhere` when the destination could be to
+   * blame AND nothing is known to have been written: an upload that never
+   * started, a non-2xx, or a 2xx that names no node (media.store answered
+   * without creating one). The single exception is a 2xx whose body would not
+   * parse — something WAS stored there, so retrying would file the same
+   * attachment twice.
+   */
+  _uploadOnce(file, scope, nid, extra = {}) {
+    return new Promise((resolve, reject) => {
+      const fail = (err, retryElsewhere) => {
+        this._pendingUploadScope = null;
+        if (err && retryElsewhere) err.retryElsewhere = 1;
+        reject(err);
+      };
+      this._pendingUploadScope = scope;
+      const params = { hub_id: this._hubId, nid, ...extra };
       let xhr;
       try {
-        xhr = this.uploadFile(pf.file, params);
+        xhr = this.uploadFile(file, params);
       } catch (e) {
-        this._pendingUploadScope = null;
-        return reject(e);
+        return fail(e, 1);
       }
-      if (!xhr) {
-        this._pendingUploadScope = null;
-        return reject(new Error("upload failed to start"));
-      }
+      if (!xhr) return fail(new Error("upload failed to start"), 1);
       xhr.addEventListener("readystatechange", () => {
         if (xhr.readyState !== 4) return;
         this._pendingUploadScope = null;
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const { data } = JSON.parse(xhr.responseText);
-            const nid = data?.nid || data?.id;
-            if (!nid) return reject(new Error("no nid in upload response"));
-            resolve({ nid, data });
-          } catch (err) {
-            reject(err);
-          }
-        } else {
-          reject(new Error(`upload http ${xhr.status}`));
+        if (xhr.status < 200 || xhr.status >= 300) {
+          return fail(new Error(`upload http ${xhr.status}`), 1);
         }
+        let data;
+        try {
+          ({ data } = JSON.parse(xhr.responseText));
+        } catch (err) {
+          return fail(err);
+        }
+        const fileNid = data?.nid || data?.id;
+        // A 2xx that names no node means media.store answered without creating
+        // one — nothing was written, so this is safe to retry elsewhere.
+        if (!fileNid) {
+          return fail(new Error("no nid in upload response"), 1);
+        }
+        resolve({ nid: fileNid, data, hub: data?.hub_id || this._hubId });
       });
     });
   }
@@ -8157,40 +8280,11 @@ class __tasks_panel extends LetcBox {
     return this._settleInlineImage(ph, file, scope, editorEl);
   }
 
-  // Promise-wrapped upload for a raw clipboard image File. Tags scope so the
-  // global onUploadResponse skips it (resolved here via the readystate listener).
+  // A raw clipboard image File pasted into a description. Same destination as
+  // every other attachment (the hidden task folder) — an image pasted into a
+  // task is no more part of the folder body than a file attached to it.
   _uploadInlineImage(file) {
-    return new Promise((resolve, reject) => {
-      this._pendingUploadScope = "_inline";
-      const params = { hub_id: this._hubId, nid: this._destNid };
-      let xhr;
-      try {
-        xhr = this.uploadFile(file, params);
-      } catch (e) {
-        this._pendingUploadScope = null;
-        return reject(e);
-      }
-      if (!xhr) {
-        this._pendingUploadScope = null;
-        return reject(new Error("upload failed to start"));
-      }
-      xhr.addEventListener("readystatechange", () => {
-        if (xhr.readyState !== 4) return;
-        this._pendingUploadScope = null;
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const { data } = JSON.parse(xhr.responseText);
-            const nid = data?.nid || data?.id;
-            if (!nid) return reject(new Error("no nid in upload response"));
-            resolve({ nid, hub: data?.hub_id || this._hubId });
-          } catch (err) {
-            reject(err);
-          }
-        } else {
-          reject(new Error(`upload http ${xhr.status}`));
-        }
-      });
-    });
+    return this._uploadAttachment(file, "_inline");
   }
 
   _onDescInput(scope, editorEl) {
