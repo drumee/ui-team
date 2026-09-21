@@ -199,12 +199,20 @@ class __address_book extends LetcBox {
         return this._acceptInvitation(trigger);
       case "refuse-invitation":
         return this._refuseInvitation(trigger);
+      // Delete / Archive / Cancel-invite never run straight off the click:
+      // they are one-tap destructive actions on hover controls, and
+      // `contact.delete_contact` is a hard delete with no trash behind it.
       case "delete-contact":
-        return this._deleteContact(trigger);
       case "archive-contact":
-        return this._setStatus(trigger, "archived");
+        return this._askConfirm(trigger, service);
+      case "confirm-dismiss":
+        return this._closeConfirm();
+      case "confirm-proceed":
+        return this._runConfirm();
+
+      // Restore is not destructive — it stays a direct action.
       case "restore-contact":
-        return this._setStatus(trigger, "active");
+        return this._setStatus(trigger.mget("contactId"), "active");
       case "block-contact":
         return this._block(trigger);
       case "unblock-contact":
@@ -550,8 +558,7 @@ class __address_book extends LetcBox {
     this._refreshDetail();
   }
 
-  async _deleteContact(trigger) {
-    const id = trigger.mget("contactId");
+  async _deleteContact(id) {
     if (!id) return;
     try {
       await this.postService({
@@ -585,8 +592,7 @@ class __address_book extends LetcBox {
     }
   }
 
-  async _setStatus(trigger, status) {
-    const id = trigger.mget("contactId");
+  async _setStatus(id, status) {
     if (!id) return;
     try {
       await this.postService({
@@ -1267,6 +1273,63 @@ class __address_book extends LetcBox {
     return this.ensurePart("wrapper-invite-modal").then((w) => w.clear());
   }
 
+  // ─── Destructive-action confirmation ────────────────────────────
+
+  /**
+   * Stage a destructive action and raise the confirmation dialog.
+   *
+   * `service` is the action that was clicked; the sent-invitation row reuses
+   * "delete-contact" for its Cancel-invite button, so it tags itself with
+   * `confirmKind` to get its own copy rather than "Delete contact?".
+   */
+  _askConfirm(trigger, service) {
+    const contactId = trigger.mget("contactId");
+    if (!contactId) return;
+    // `kind` picks the dialog's copy; `status` (archive only) picks what runs
+    // on confirm — everything else is a delete.
+    this._confirm =
+      service === "archive-contact"
+        ? { kind: "archive", contactId, status: "archived" }
+        : { kind: trigger.mget("confirmKind") || "delete", contactId };
+    this._confirmBusy = false;
+    return this._renderConfirmModal();
+  }
+
+  _renderConfirmModal() {
+    return this.ensurePart("wrapper-confirm-modal").then((wrap) => {
+      wrap.clear();
+      const skl = require("./skeleton/confirm-modal")(this);
+      if (skl) wrap.feed(skl);
+    });
+  }
+
+  _closeConfirm() {
+    this._confirm = null;
+    this._confirmBusy = false;
+    return this.ensurePart("wrapper-confirm-modal").then((w) => w.clear());
+  }
+
+  /**
+   * Run the staged action. The dialog stays up, disabled, until the request
+   * settles — closing it first would let a second click re-raise the dialog
+   * for a contact whose delete is already in flight.
+   */
+  async _runConfirm() {
+    const pending = this._confirm;
+    if (!pending || this._confirmBusy) return;
+    this._confirmBusy = true;
+    await this._renderConfirmModal();
+    try {
+      if (pending.status) {
+        await this._setStatus(pending.contactId, pending.status);
+      } else {
+        await this._deleteContact(pending.contactId);
+      }
+    } finally {
+      await this._closeConfirm();
+    }
+  }
+
   _showToast(message, kind = "success") {
     this._toast = { message, kind };
     if (this._toastTimer) clearTimeout(this._toastTimer);
@@ -1410,6 +1473,13 @@ class __address_book extends LetcBox {
   }
   isInviteSubmitting() {
     return this._inviteSubmitting === true;
+  }
+
+  getPendingConfirm() {
+    return this._confirm || null;
+  }
+  isConfirmBusy() {
+    return this._confirmBusy === true;
   }
 
   isEditing() {

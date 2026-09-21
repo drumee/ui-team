@@ -1116,6 +1116,17 @@
       }
     }
 
+    // Solid red — the committing button of a destructive confirmation, where
+    // the outlined &--danger above reads as secondary next to a Cancel.
+    &--danger-solid {
+      color: #fff;
+      background: #d65f59;
+      &:hover {
+        background: #c14f49;
+        box-shadow: 0 4px 12px rgba(214, 95, 89, 0.3);
+      }
+    }
+
     &[data-disabled="1"] {
       cursor: not-allowed;
       opacity: 0.6;
@@ -1347,6 +1358,26 @@
     justify-content: flex-end;
     gap: 8px;
     margin-top: 4px;
+  }
+
+  // ── Destructive-action confirmation ───────────────────────────
+  // Narrower than the invite/import dialogs: a title, one line of copy and
+  // two buttons. No field to give the wider shell a reason.
+  &__modal--confirm {
+    width: 380px;
+  }
+
+  &__confirm-body {
+    // .note-content is the inner element the text actually lands in, so the
+    // wrapper's own text rules never reach it — style the inner.
+    .note-content {
+      @include drumee.typo(
+        $size: 13px,
+        $line: 20px,
+        $color: var(--normal-fg-50, #65656c)
+      );
+      font-weight: 400;
+    }
   }
 
   // ── Toast ─────────────────────────────────────────────────────

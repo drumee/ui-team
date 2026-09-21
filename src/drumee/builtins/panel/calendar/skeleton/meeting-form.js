@@ -19,7 +19,11 @@ function timePicker(ui, which, value) {
   const v = value || {};
   const meridiem = v.meridiem === "PM" ? "PM" : "AM";
 
-  const numberBox = (part, val, placeholderKey) =>
+  // `hint` is a two-digit format sample, not copy — it stays out of LOCALE on
+  // purpose. It is also not optional: ui-core's entry widget falls back to
+  // LOCALE.FORM_ENTRY when no placeholder is given, and a full sentence in a
+  // two-character box is worse than nothing.
+  const numberBox = (part, val, placeholderKey, hint) =>
     Skeletons.Box.Y({
       className: `${pfx}__time-part`,
       kids: [
@@ -28,6 +32,7 @@ function timePicker(ui, which, value) {
           formItem: `${which}_${part}`,
           name: `${which}_${part}`,
           value: val == null ? "" : String(val),
+          placeholder: hint,
           require: "any",
           bubble: 0,
           service: "cal-form-time",
@@ -59,9 +64,9 @@ function timePicker(ui, which, value) {
   return Skeletons.Box.X({
     className: `${pfx}__time`,
     kids: [
-      numberBox("hour", v.hour, "HOUR"),
+      numberBox("hour", v.hour, "HOUR", "12"),
       Skeletons.Note({ className: `${pfx}__time-colon`, content: ":" }),
-      numberBox("minute", v.minute, "MINUTE"),
+      numberBox("minute", v.minute, "MINUTE", "00"),
       meridiemToggle,
     ],
   });
