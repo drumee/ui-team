@@ -107,6 +107,7 @@ class __chat_p2p extends LetcBox {
 
   onBeforeDestroy() {
     clearTimeout(this._searchDebounce);
+    clearTimeout(this._composeSearchDebounce);
     clearTimeout(this._settleTimer);
     clearTimeout(this._skeletonFallback);
     if (this._paintWatcher) {
@@ -457,12 +458,28 @@ class __chat_p2p extends LetcBox {
    * which feeds straight into openChat().
    */
   getContactsApi() {
-    return {
+    const api = {
       service: SERVICE.chat.chat_rooms,
       flag: _a.contact,
       option: _a.active,
       hub_id: Visitor.get(_a.id),
     };
+    // THE SEARCH MUST GO TO THE SERVER, not stay a filter over the loaded rows.
+    //
+    // chat_rooms is paged (20 rows a page) and ordered
+    // `IFNULL(ctime,0) DESC` — ctime being the last message exchanged with that
+    // peer. A contact you have NEVER messaged has no p2p_time row, so ctime is
+    // NULL and they sort to the very BOTTOM of the whole address book — which
+    // is exactly the person you open this picker to find. Past ~20 contacts
+    // they are never on page one.
+    //
+    // The proc takes `key` and filters every page with it, so handing the typed
+    // text over is what makes an unmessaged contact reachable at all. `restart()`
+    // re-runs this function (start() -> _initApi()), so the value is picked up
+    // on the next fetch.
+    const key = (this._composeQuery || "").trim();
+    if (key) api[_a.key] = key;
+    return api;
   }
 
   onDomRefresh() {
@@ -595,7 +612,13 @@ class __chat_p2p extends LetcBox {
       case "compose-list":
         this._composeList = child;
         if (child.collection) {
-          child.collection.comparator = (item) => -item.get(_a.ctime);
+          // `~~` before negating, because a contact you have never messaged
+          // has NO ctime: plain `-undefined` is NaN, and a NaN comparator
+          // compares false against everything, so those rows landed in an
+          // arbitrary order instead of a predictable one. Coercing to 0 first
+          // mirrors the server's own `ORDER BY IFNULL(ctime,0) DESC`, so the
+          // merged pages keep exactly the order they were fetched in.
+          child.collection.comparator = (item) => -~~item.get(_a.ctime);
         }
         break;
 
@@ -652,10 +675,10 @@ class __chat_p2p extends LetcBox {
         inputEl.value = "";
         setTimeout(() => inputEl.focus(), 0);
       }
-      if (this._composeList && _.isFunction(this._composeList.restart)) {
-        this._composeList.restart();
-      }
-      this._filterComposeList("");
+      // Clear the term BEFORE restarting: getContactsApi reads it, so leaving
+      // it set would reopen the picker still filtered by the last search.
+      this._composeQuery = "";
+      this._restartComposeList();
     }
   }
 
@@ -673,43 +696,39 @@ class __chat_p2p extends LetcBox {
     this._toggleComposePopup(false);
   }
 
+  /**
+   * Search the compose picker.
+   *
+   * This used to hide non-matching rows with `display:none`, which could only
+   * ever find someone already loaded — and it also DEADLOCKED paging: once
+   * every row is hidden the scroll container has no height, so neither
+   * `_onScroll` nor `_onMouseWheel` can fire and the list can never reach the
+   * page the contact is actually on. Refetching with the term instead searches
+   * the whole address book and leaves the rows real, so scrolling still pages.
+   *
+   * Server-side matching is a PREFIX match on firstname / lastname / surname /
+   * source, so a mid-name fragment no longer matches the way the old local
+   * `includes()` did over page one. That is the deliberate trade: reaching
+   * every contact beats substring-matching the first twenty.
+   */
   _filterComposeList(text) {
-    if (!this._composeList || !this._composeList.children) return;
-    const q = (text || "").trim().toLowerCase();
-    this._composeList.children.forEach((item) => {
-      if (!item.el) return;
-      if (!q) {
-        item.el.style.display = "";
-        return;
-      }
-      // Read the DISPLAYED name from the item's rendered DOM — this is the
-      // ground truth no matter which model field fed it (firstname,
-      // fullname, name, display_name, etc.). Fall back to a wide net of
-      // common model keys to cover items rendered before their DOM is
-      // ready or with non-text avatars.
-      let haystack = "";
-      const nameEl = item.el.querySelector(
-        ".widget-chatcontactItem__note.name",
-      );
-      if (nameEl) haystack += " " + (nameEl.textContent || "");
-      if (item.mget) {
-        haystack +=
-          " " +
-          [
-            item.mget(_a.firstname),
-            item.mget(_a.lastname),
-            item.mget(_a.fullname),
-            item.mget(_a.name),
-            item.mget(_a.email),
-            item.mget("display_name"),
-            item.mget("username"),
-            item.mget("hubname"),
-          ]
-            .filter(Boolean)
-            .join(" ");
-      }
-      item.el.style.display = haystack.toLowerCase().includes(q) ? "" : "none";
-    });
+    const next = (text || "").trim();
+    if (next === (this._composeQuery || "")) return;
+    this._composeQuery = next;
+    clearTimeout(this._composeSearchDebounce);
+    // The entry is `interactive`, so this arrives on every keystroke and each
+    // restart is a round trip — debounce before going to the server.
+    this._composeSearchDebounce = setTimeout(
+      () => this._restartComposeList(),
+      250,
+    );
+  }
+
+  _restartComposeList() {
+    clearTimeout(this._composeSearchDebounce);
+    if (this._composeList && _.isFunction(this._composeList.restart)) {
+      this._composeList.restart();
+    }
   }
 
   /**
