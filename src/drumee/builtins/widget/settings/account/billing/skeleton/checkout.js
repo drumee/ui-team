@@ -36,6 +36,52 @@ function pillBar(ui, segments) {
 }
 
 /**
+ * The value an org bootstrap field paints with.
+ *
+ * `saved` is what the shopper has typed — mirrored into state.checkout on
+ * every keystroke by the `watch` services below — and `fallback` is the
+ * auto-suggestion. It has to come from state because EVERY re-render of this
+ * tab rebuilds these inputs from `value`, and re-renders happen with nobody
+ * touching the page: the visibilitychange re-sync fires the moment the browser
+ * tab regains focus, so switching to another tab and back used to hand the
+ * typed name and subdomain straight back to the auto-suggested ones
+ * (reported 2026-09-20).
+ *
+ * An empty string is a deliberate clear, not "untouched", so it must survive
+ * that repaint too — hence the null check rather than `||`. Submitting an
+ * empty field still falls back to the same auto value in _proceedToCheckout.
+ *
+ * @param {string|undefined} saved - value mirrored from the input, if any
+ * @param {string} fallback - the auto-derived suggestion
+ * @returns {string} value to paint the input with
+ */
+function orgFieldValue(saved, fallback) {
+  return String(saved != null ? saved : (fallback || ""));
+}
+
+/**
+ * Inline verdict for the subdomain field — the answer to "is this one already
+ * taken?" while the shopper is still typing, instead of only after they press
+ * Proceed to Checkout.
+ *
+ * Built from state, so a full re-render repaints the same verdict; the widget
+ * also feeds it into the -org-ident-msg slot on its own when a check lands.
+ *
+ * @param {Object} ui - UI instance
+ * @returns {Object|null} a Note, or null when there is nothing to say
+ */
+function orgIdentMsgNote(ui) {
+  const pfx = `${ui.fig.family}__checkout`;
+  const checkout = (ui.state && ui.state.checkout) || {};
+  const msg = checkout.orgIdentMsg || "";
+  if (!msg) return null;
+  return Skeletons.Note({
+    className: `${pfx}-org-ident-msg ${checkout.orgIdentOk ? "is-ok" : "is-error"}`,
+    content: msg,
+  });
+}
+
+/**
  * Create checkout layout with left panel (form) and right panel (summary)
  * Left panel: plan selection, seats, storage, billing cycle, storage bundles
  * Right panel: total price, breakdown, checkout button
@@ -81,9 +127,13 @@ function checkout(ui) {
             placeholder: LOCALE.ORG_NAME_LABEL,
             // Auto organization name ("<user> Team") — editable; the submit
             // path falls back to the same default if the field is cleared.
-            value: String(ui.state?.checkout?.orgName || ui._defaultOrgName() || ""),
+            value: orgFieldValue(ui.state?.checkout?.orgName, ui._defaultOrgName()),
             sys_pn: `${pfx}-org-name-input`,
             interactive: 1,
+            // See orgFieldValue(): `watch` is what mirrors each keystroke (and
+            // each paste) into state.checkout, so the line above has something
+            // to repaint after a re-render.
+            watch: "org-name-typed",
           }),
           Skeletons.Box.X({
             className: `${pfx}-org-ident-row`,
@@ -94,10 +144,12 @@ function checkout(ui) {
                 type: "text",
                 placeholder: LOCALE.ORG_SUBDOMAIN_LABEL,
                 // Auto subdomain suggestion (slugged username) — editable;
-                // availability is still checked by validate_org_ident.
-                value: String(ui.state?.checkout?.orgIdent || ui._defaultOrgIdent() || ""),
+                // availability is checked by validate_org_ident, now while it
+                // is being typed (see -org-ident-msg below) as well as on Pay.
+                value: orgFieldValue(ui.state?.checkout?.orgIdent, ui._defaultOrgIdent()),
                 sys_pn: `${pfx}-org-ident-input`,
                 interactive: 1,
+                watch: "org-ident-typed",
               }),
               Skeletons.Note({
                 className: `${pfx}-org-ident-suffix`,
@@ -108,6 +160,17 @@ function checkout(ui) {
           Skeletons.Note({
             className: `${pfx}-org-ident-hint`,
             content: LOCALE.ORG_URL_HINT,
+          }),
+          // Slot for the live availability verdict. A Box, not the Note
+          // itself: a Note rebuilds its own inner .note-content, so the
+          // framework's update path is to feed() a fresh Note into a
+          // container that owns a sys_pn — the same shape the promo countdown
+          // uses. Empty (and display:none) until there is something to say.
+          Skeletons.Box.X({
+            className: `${pfx}-org-ident-msg-slot`,
+            sys_pn: `${pfx}-org-ident-msg`,
+            partHandler: [ui],
+            kids: [orgIdentMsgNote(ui)].filter(Boolean),
           }),
         ],
       })
@@ -430,7 +493,20 @@ function rightPanelContent(ui) {
         priority: "primary",
         uiHandler: [ui],
         bubble: false,
-        state: isFreePlan ? 0 : 1,
+        // NO `state` prop, deliberately. ui-core attaches the TOGGLE behavior
+        // to any widget carrying one (addons/backbone/view/behavior.js), and
+        // its onAlsoClick flips data-state 1 → 0 on the very click that
+        // submits — while the skin greys `[data-state="0"]` out with
+        // pointer-events:none. Nobody noticed while the click ended in a
+        // redirect to Stripe, but every path that STAYS on the page (the
+        // subdomain is taken, ALREADY_SUBSCRIBED, a network error) left the
+        // shopper looking at a dead grey button: fix the subdomain, and there
+        // was no way to press Pay again short of reloading (reported
+        // 2026-09-20). The entry fields escape this only because entry()
+        // gives them a `radio`, which wins over toggle.
+        //
+        // Disabled-ness is carried by `dataset.disabled` alone — the same skin
+        // rule styles it, and nothing flips it behind our back.
         dataset: isFreePlan ? { disabled: 1 } : undefined,
       }),
     ].filter(Boolean);
@@ -461,4 +537,4 @@ function rightPanel(ui) {
 }
 
 export default checkout;
-export { rightPanel, rightPanelContent, promoCodeSection };
+export { rightPanel, rightPanelContent, promoCodeSection, orgIdentMsgNote };
