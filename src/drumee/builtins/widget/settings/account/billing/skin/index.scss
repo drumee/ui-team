@@ -1125,10 +1125,11 @@
       );
     }
 
-    // The availability verdict's slot. It is empty until a check comes back,
-    // and an empty box would still draw the org section's 12px gap — so it
-    // takes itself out of the flow until it has a Note in it.
-    &-org-ident-msg-slot:empty {
+    // The availability verdict's slot. Out of the flow until a check comes
+    // back, or it would draw the org section's 12px gap around nothing.
+    // Driven by data-empty, NOT `:empty` — ui-core keeps a `blank` widget
+    // inside a Box with no kids, so the element is never childless.
+    &-org-ident-msg-slot[data-empty="1"] {
       display: none;
     }
 
