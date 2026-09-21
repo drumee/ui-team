@@ -2027,6 +2027,47 @@
         flex-shrink: 0;
         fill: currentColor;
       }
+
+      // Blocked-permission badge (room _setMediaDeniedUi appends it). The
+      // control keeps its own mic / camera glyph — the warning sits on the
+      // corner instead, so the button still says what it toggles.
+      // pointer-events:none is load-bearing: ui-core only fires a widget's
+      // service when the innermost element under the pointer carries it, so a
+      // hit-testable child here would swallow every click on the toggle.
+      .media-denied-badge {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        display: flex;
+        width: 13px;
+        height: 13px;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        border-radius: 50%;
+        // Ring in the bar's own background so the badge reads as a badge
+        // rather than as part of the glyph behind it.
+        background: var(--default-bg, #fff);
+        color: var(--eorange, #fa8540);
+
+        svg {
+          width: 11px;
+          height: 11px;
+          fill: currentcolor;
+        }
+      }
+
+      // Blocked: the toggle is inert (its service is nulled in
+      // _setMediaDeniedUi — this is the matching cursor half). Only the glyph
+      // dims: dimming the whole control would take the warning badge down with
+      // it, and the badge is the message.
+      &[data-denied="1"] {
+        cursor: not-allowed;
+
+        > svg {
+          opacity: 0.45;
+        }
+      }
     }
 
     // Device caret: interactive button on both camera and mic pills.
@@ -2062,6 +2103,21 @@
 
       .ctrl-button {
         color: var(--signal-error, #d74e49);
+      }
+    }
+
+    // Blocked by the browser or the operating system — amber, and AFTER the
+    // red rule so it wins at equal specificity. A blocked device is also an
+    // "off" device, so without this the two states are the same red pill: one
+    // is the user's own choice, the other is something they must go and fix.
+    // The glyph itself becomes apps-warning (room _setMediaDeniedUi).
+    &:has(.ctrl-video[data-denied="1"]),
+    &:has(.ctrl-audio[data-denied="1"]) {
+      background: rgba(250, 133, 64, 0.18);
+      color: var(--eorange, #fa8540);
+
+      .ctrl-button {
+        color: var(--eorange, #fa8540);
       }
     }
   }

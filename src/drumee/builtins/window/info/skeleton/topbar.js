@@ -1,7 +1,8 @@
 module.exports = function (ui) {
   const fig = ui.fig.family; // window-info
-  // Based on window/confirm: brand logo on the left, an X close on the right
-  // (matches the "drumee … ✕" header in the reference dialog).
+  // Brand logo only. The X was removed: every caller's action row already
+  // carries a dismissing button (Close / Cancel / Got it), so the corner cross
+  // was a second way out that only cost the header its padding.
   return Skeletons.Box.X({
     className: `${fig}__topbar`,
     sys_pn: "topbar",
@@ -18,19 +19,6 @@ module.exports = function (ui) {
           Skeletons.Note({
             content: "drumee",
             className: `${fig}__logo-text`,
-          }),
-        ],
-      }),
-      Skeletons.Box.X({
-        className: `${fig}__close`,
-        service: _e.close,
-        uiHandler: ui,
-        bubble: 0,
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Image.Svg({
-            ico: "cross",
-            className: `${fig}__close-ico`,
           }),
         ],
       }),
