@@ -19,6 +19,15 @@
   color: var(--warning-fg, #b06000);
 }
 
+// Casual's own modals (Share, profile, insert dialogs) mount on
+// `body > div[data-testid="cs-dialog-backdrop"]` with an INLINE z-index of
+// 1200 — under Drumee's window layer (50001), so they open BEHIND the editor
+// window and the control that summoned them looks dead. Same lift the sheet
+// skin applies; `!important` because the value is inline.
+[data-testid="cs-dialog-backdrop"] {
+  z-index: 60000 !important;
+}
+
 // "Who is here" popover under the presence avatars (docs_state).
 .editor-docs__peers-pop {
   position: absolute;

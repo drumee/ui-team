@@ -1,5 +1,5 @@
 diff --git a/node_modules/@casualoffice/sheets/dist/sheets.cjs b/node_modules/@casualoffice/sheets/dist/sheets.cjs
-index 2c86f7d..3608fd5 100644
+index 2c86f7d..b5e11da 100644
 --- a/node_modules/@casualoffice/sheets/dist/sheets.cjs
 +++ b/node_modules/@casualoffice/sheets/dist/sheets.cjs
 @@ -3260,15 +3260,23 @@ var RESOURCE_NAME_TO_GROUP = {
@@ -51,8 +51,23 @@ index 2c86f7d..3608fd5 100644
    if (!currentUniver) return Promise.resolve();
    return ensurePlugin(currentUniver, group);
  }
+@@ -3306,9 +3316,11 @@ function idleLoadAll(univer) {
+   });
+ }
+ function schedule(fn) {
+-  const ric = globalThis.requestIdleCallback;
+-  if (ric) ric(fn, { timeout: 500 });
+-  else setTimeout(fn, 0);
++  // Drumee: start the lazy plugin downloads AT MOUNT, not at idle. The
++  // groups (drawing, table, threadComment, ...) register the commands the
++  // Insert menu runs; on the idle path a click in the first seconds hit a
++  // command that was not registered yet and silently did nothing.
++  fn();
+ }
+ function snapshotHasHyperlinks(snapshot) {
+   const sheetOrder = snapshot.sheetOrder ?? [];
 diff --git a/node_modules/@casualoffice/sheets/dist/sheets.js b/node_modules/@casualoffice/sheets/dist/sheets.js
-index 934a152..dd1b65d 100644
+index 934a152..4a23853 100644
 --- a/node_modules/@casualoffice/sheets/dist/sheets.js
 +++ b/node_modules/@casualoffice/sheets/dist/sheets.js
 @@ -3239,15 +3239,23 @@ var RESOURCE_NAME_TO_GROUP = {
@@ -104,3 +119,18 @@ index 934a152..dd1b65d 100644
    if (!currentUniver) return Promise.resolve();
    return ensurePlugin(currentUniver, group);
  }
+@@ -3285,9 +3295,11 @@ function idleLoadAll(univer) {
+   });
+ }
+ function schedule(fn) {
+-  const ric = globalThis.requestIdleCallback;
+-  if (ric) ric(fn, { timeout: 500 });
+-  else setTimeout(fn, 0);
++  // Drumee: start the lazy plugin downloads AT MOUNT, not at idle. The
++  // groups (drawing, table, threadComment, ...) register the commands the
++  // Insert menu runs; on the idle path a click in the first seconds hit a
++  // command that was not registered yet and silently did nothing.
++  fn();
+ }
+ function snapshotHasHyperlinks(snapshot) {
+   const sheetOrder = snapshot.sheetOrder ?? [];

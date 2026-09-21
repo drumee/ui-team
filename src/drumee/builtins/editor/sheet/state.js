@@ -3,6 +3,14 @@ import { createRoot } from "react-dom/client";
 import { LocaleType, UserManagerService, IPermissionService } from "@univerjs/core";
 import { CasualSheets } from "@casualoffice/sheets/sheets";
 import "@casualoffice/sheets/styles";
+// Side-effect import: installs `registerComponent` on the Univer FACADE.
+// Casual's Insert ▸ Chart builds the chart as a float DOM and registers its
+// React renderer through `api.univer.registerComponent` — a method that only
+// exists once this module has been imported. Without it `ensureChartComponent`
+// returns early, the float DOM is created with a component key nothing can
+// resolve, and the chart inserts INVISIBLY: the dialog closes and the sheet
+// stays empty ("click vào nó không chèn được chart").
+import "@univerjs/ui/facade";
 import { contentUrl } from "builtins/editor/content-url";
 
 // Casual Sheets does NOT bundle Univer locale strings; it only forwards a

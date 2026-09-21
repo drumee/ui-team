@@ -517,6 +517,17 @@ body > div:has(> [class*="univer-popup"]) {
   font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+// Casual's OWN modals — Insert ▸ Chart, Image, PivotTable, Sparkline,
+// Hyperlink, Function — mount on `body > div[data-testid="cs-dialog-backdrop"]`
+// with an INLINE `z-index: 1200`. Drumee's window layer is 50001, so every one
+// of them opened BEHIND the sheet window: the menu row highlighted, a dialog
+// really was created, and the user saw nothing happen ("click vào nó không
+// chèn được chart với hình"). `!important` is required — the value is inline.
+[data-testid="cs-dialog-backdrop"] {
+  z-index: 60000 !important;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 .editor-sheet[data-theme="dark"] {
   .editor-sheet__avatar {
     border-color: #2a2e35;
