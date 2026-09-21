@@ -154,24 +154,25 @@ module.exports = function (ui, days, view) {
       });
     });
 
-    // Each hour row carries two half-hour click zones (:00 / :30), so clicking
-    // the 6:30 band schedules 6:30 rather than the whole 6:00 hour — the Meet
-    // tab's `sched-new-at` slots, same geometry and same hover hint.
+    // The hour row IS the click target: clicking the band between 1 and 2
+    // schedules 1–2, which is how the Meet tab's cells read.
+    //
+    // The service sits on the row itself and the row has NO kids. That is the
+    // point, not an accident — ui-core binds a click to every widget left at
+    // the default `active`, and its handler calls e.stopPropagation() BEFORE
+    // triggerHandlers, so any child here would swallow the click on its own
+    // half of the row. The dashed half-hour divider is drawn by the skin as an
+    // ::after with pointer-events:none for the same reason.
     const rules = Array.from({ length: last - first }, (_, i) => {
       const h = first + i;
       return Skeletons.Box.Y({
         className: `${pfx}__hour-rule`,
-        kids: [0, 30].map((min) =>
-          Skeletons.Box.Y({
-            className: `${pfx}__hour-slot`,
-            service: "cal-slot-add",
-            uiHandler: [ui],
-            calDay: k,
-            calHour: h,
-            calMin: min,
-            attrOpt: { "data-hour": h, "data-min": min },
-          }),
-        ),
+        bubble: 0,
+        service: "cal-slot-add",
+        uiHandler: [ui],
+        calDay: k,
+        calHour: h,
+        attrOpt: { "data-hour": h },
       });
     });
 

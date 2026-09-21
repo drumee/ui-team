@@ -619,13 +619,14 @@ class __calendar_main extends LetcBox {
       minute: String(m).padStart(2, "0"),
       meridiem: h < 12 ? "AM" : "PM",
     });
-    const startAt = at ? clock(at.hour, at.min) : { hour: 11, minute: "00", meridiem: "AM" };
+    const startMin = at ? at.hour * 60 + (at.min || 0) : 0;
+    const startAt = at ? clock(at.hour, at.min || 0) : { hour: 11, minute: "00", meridiem: "AM" };
     // An hour long, CLAMPED to the end of the day rather than wrapped past
     // midnight. The draft carries a single date, and _writeMeeting reads an end
     // that is not after the start as "no end" and books thirty minutes — so a
-    // wrapped 00:30 would quietly store something the form never showed. The
-    // last band of the day therefore offers 23:30 → 23:59, which is what it is.
-    const endMin = at ? Math.min(at.hour * 60 + at.min + 60, 23 * 60 + 59) : 0;
+    // wrapped 00:00 would quietly store something the form never showed. The
+    // last band of the day therefore offers 23:00 → 23:59, which is what it is.
+    const endMin = at ? Math.min(startMin + 60, 23 * 60 + 59) : 0;
     const endAt = at
       ? clock(Math.floor(endMin / 60), endMin % 60)
       : { hour: 12, minute: "00", meridiem: "PM" };
@@ -1162,18 +1163,17 @@ class __calendar_main extends LetcBox {
         this._pendingDay = cmd.mget("calDay");
         return this._openTaskForm(null);
 
-      // An empty half-hour band on the week/day canvas → schedule a meeting at
-      // that day and time. A task cannot be created here: `due_date` is a
-      // calendar DATE with no time (see skeleton/hours.js), so an hour clicked
-      // on the ruler has nothing to bind to — the day header's "+" still opens
-      // the task form for the whole day.
+      // An hour band on the week/day canvas → schedule a meeting across that
+      // hour, which is what the Meet tab's cells do. A task cannot be created
+      // here: `due_date` is a calendar DATE with no time (see skeleton/
+      // hours.js), so an hour clicked on the ruler has nothing to bind to —
+      // the day header still opens the task form for the whole day.
       case "cal-slot-add": {
         const hour = Number(cmd.mget("calHour"));
         return this._openMeetingForm({
           at: {
             day: cmd.mget("calDay"),
-            hour: isNaN(hour) ? DAY_START_HOUR : hour,
-            min: Number(cmd.mget("calMin")) || 0,
+            hour: Number.isFinite(hour) ? hour : DAY_START_HOUR,
           },
         });
       }

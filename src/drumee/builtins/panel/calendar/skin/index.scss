@@ -592,11 +592,18 @@
     @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg-20));
     font-weight: 400;
     margin-left: auto;
+    // The first cell of a month reads "Sep 1", and the enlarged quick-add
+    // beside it leaves a narrow cell too little room — without this it broke
+    // onto two lines and pushed the chips down by a row.
+    white-space: nowrap;
   }
 
   &__day-add {
-    width: 18px;
-    height: 18px;
+    // Never shrinks: it is a hit target, and a squeezed cell must take the
+    // room out of the date label beside it, not out of the button.
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
     align-items: center;
     justify-content: center;
     border-radius: 4px;
@@ -609,8 +616,11 @@
     }
   }
 
+  // Sized up from 18px/15px: this is a hover-revealed control on a cell the
+  // user is already pointing at, and at 18px square it was a smaller target
+  // than the day number beside it.
   &__day-add-ico {
-    @include drumee.typo($size: 15px, $line: 15px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 22px, $line: 22px, $color: var(--normal-fg-20));
   }
 
   // The cell's scroll container. Every item for the day renders — a busy day is
@@ -954,16 +964,28 @@
     flex: 1 1 auto;
   }
 
+  // Also the click target: the band between 1 and 2 schedules 1–2. The tint on
+  // hover is what says so — the row carries no glyph, exactly like the Meet
+  // tab's cells.
+  //
+  // A chip sitting over this row is NOT a descendant of it (the blocks are
+  // their own absolutely-positioned layer), so hovering a meeting does not
+  // light up the band underneath and offer to book over it.
   &__hour-rule {
     flex: 0 0 var(--cal-hour-height);
     height: var(--cal-hour-height);
     position: relative;
     border-bottom: 1px solid var(--border-muted);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
 
     // Dashed half-hour divider — the Meet tab draws the same line the same way
     // (a real dashed border, not the faint gradient this row used to paint).
-    // An ::after rather than a background, so the hover tint on the two slots
-    // below reads through it.
+    // An ::after, and explicitly pointer-events:none, so the line cannot take
+    // the click that belongs to the hour band it sits inside.
     &::after {
       content: "";
       position: absolute;
@@ -972,20 +994,6 @@
       top: 50%;
       border-top: 1px dashed var(--border-strong);
       pointer-events: none;
-    }
-  }
-
-  // The two half-hour click zones inside each hour row (:00 / :30) — the Meet
-  // tab's `sched-new-at` slots. They replace the dashed half-hour line the row
-  // used to paint: the hover tint says the same thing about where the half
-  // hour falls AND says the band can be clicked, which the line never did.
-  &__hour-slot {
-    flex: 1 1 0;
-    min-height: 0;
-    cursor: pointer;
-
-    &:hover {
-      background: var(--overlay-bg-05);
     }
   }
 
