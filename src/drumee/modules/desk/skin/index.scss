@@ -1011,6 +1011,50 @@ html {
   }
 }
 
+// …AND ABOVE THE MODAL ITSELF ON DESKTOP, because the premise the 50002 above
+// rests on is not true of every modal.
+//
+// That value was chosen so the bar would clear the opaque folder window at
+// 50001 and stop there, on the stated grounds that "the modal's own
+// dialog__wrapper is TRANSPARENT and inset: 0, so painting under it costs the
+// tooltip nothing visually". It is transparent only while the modal asked for
+// no backdrop. Any confirm that takes one — which is every confirm that does
+// not opt out, the Admin Console upsell now included — paints the host at
+// --z-index-modal (100000), and a bubble at 50002 goes UNDER it. Reported from
+// drumee.in: hover any top-right utility icon with the upsell open and the
+// tooltip is there but its text is washed out by the backdrop.
+//
+// 100001 is the value the switcher lift below already uses for "above the
+// modal", so this borrows it rather than inventing a second one. When both
+// rules apply they now agree, which is why the source-order tie the switcher's
+// comment describes stops mattering rather than being broken.
+//
+// DESKTOP ONLY, and that is the whole safety argument. Lifting the bar over a
+// modal is exactly what the note above warns against — "its controls would
+// invite clicks on things the modal is meant to block" — and that warning has
+// teeth only where the host actually covers the bar. Above 1024px it never
+// does: it is `position: absolute; inset: 0` inside .window-manager, which
+// begins below the topbar, so the bar is already fully clickable at 50002 and
+// this changes paint order and nothing else. At <= 1024px the host IS pinned
+// over the whole viewport (desk/wm/skin wrapper-modal-mobile-centre), the bar
+// included — so there the old value stands and the warning keeps its teeth.
+// Hover cannot normally even be acquired through a covering host, but a
+// pointer left resting on the button as the modal opens keeps `:hover`
+// latched, and that is the case this media query refuses to hand the bar over
+// the dialog for.
+//
+// Specificity is (0,7,0), unchanged from the rule it shadows; it wins on
+// source order inside its media query.
+@media (min-width: 1025px) {
+  .desk-module:not([data-window-tour="1"])[data-wm-modal="open"]:has(
+      .desk-module__topbar .desk-module-topbar__utility-btn:hover
+    ) {
+    .desk-module__topbar {
+      z-index: 100001;
+    }
+  }
+}
+
 // A TOPBAR DROPDOWN must stay reachable OVER a wrapper-modal — the create form
 // (.form-folder__main) is fed into that modal, and the bar above it has to keep
 // working: switching workspace, the organisation panel, the account menu.
