@@ -23,6 +23,13 @@ const TAB_CHECKOUT = 2;
 // account, this is the single place that changes.
 const PROMO_YEARLY_SEEN_KEY = "drumee.promo.yearly.shown-on";
 
+// How long the subdomain field stays quiet before its availability is checked.
+// Long enough that an ordinary typist produces one request per word rather
+// than one per letter; short enough that the verdict is there before the hand
+// reaches Proceed to Checkout. payment.validate_org_ident is a DB-only read
+// (one proc + one count query), so this costs nothing Stripe-shaped.
+const ORG_IDENT_DEBOUNCE_MS = 450;
+
 const formatCurrency = (amount) => {
   return `$${amount.toFixed(2)}`;
 };
@@ -97,6 +104,7 @@ class settings_billing extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     clearTimeout(this._motionTimer);
+    clearTimeout(this._orgIdentTimer);
     this._stopPromoCountdown();
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
@@ -1064,6 +1072,20 @@ class settings_billing extends LetcBox {
         break;
       case `${this.fig.family}__checkout-org-ident-input`:
         this.__orgIdentInput = child;
+        // Check whatever the field is SHOWING, including the auto-suggested
+        // subdomain nobody typed — that one is derived from the username and
+        // is just as able to be taken. Deduped on the value in
+        // _checkOrgIdent, so the re-renders this page does on its own never
+        // re-ask the same question.
+        this._scheduleOrgIdentCheck(
+          this.state?.checkout?.orgIdent != null
+            ? this.state.checkout.orgIdent
+            : this._defaultOrgIdent(),
+        );
+        break;
+
+      case `${this.fig.family}__checkout-org-ident-msg`:
+        this.__orgIdentMsg = child;
         break;
       case `${this.fig.family}__checkout-promo-code-input`:
         this.__promoCodeInput = child;
@@ -1652,6 +1674,113 @@ class settings_billing extends LetcBox {
       .replace(/-+$/g, "");
   }
 
+  /**
+   * Keep an org bootstrap field's typed value in state.
+   *
+   * The `watch` option on those entries fires on input/change/paste/cut, so
+   * this catches a mouse paste as well as typing — the keyup path the seats
+   * field uses would miss it. Deliberately does NOT re-render: the value is
+   * only read back when something ELSE rebuilds the tab, and re-rendering per
+   * keystroke would take the caret out of the field.
+   *
+   * @param {string} key - "orgName" or "orgIdent"
+   * @param {Object} args - the watch payload ({ value })
+   */
+  _onOrgFieldTyped(key, args = {}) {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    const value = String(args.value != null ? args.value : "");
+    checkout[key] = value;
+    if (key === "orgIdent") this._scheduleOrgIdentCheck(value);
+  }
+
+  /**
+   * Ask, a short pause after the typing stops, whether this subdomain is free.
+   *
+   * Emptying the field clears the verdict rather than asking about "" — the
+   * server would answer IDENT_INVALID, which is not a useful thing to say
+   * about a field the shopper is in the middle of retyping.
+   *
+   * @param {string} raw - the field's current text
+   */
+  _scheduleOrgIdentCheck(raw) {
+    clearTimeout(this._orgIdentTimer);
+    const ident = String(raw || "").trim().toLowerCase();
+    if (!ident) {
+      this._orgIdentChecked = "";
+      this._setOrgIdentMsg("", false);
+      return;
+    }
+    this._orgIdentTimer = setTimeout(
+      () => this._checkOrgIdent(ident),
+      ORG_IDENT_DEBOUNCE_MS,
+    );
+  }
+
+  /**
+   * Run payment.validate_org_ident and show the verdict under the field.
+   *
+   * The same call Proceed to Checkout makes, so the two can never disagree;
+   * this only moves the answer to where it is useful. `_orgIdentChecked` both
+   * de-duplicates (a re-render, or retyping the same value, asks nothing) and
+   * settles races: it holds the ident whose answer is still wanted, so a slow
+   * reply for an abandoned value is dropped instead of labelling the field
+   * the shopper has since changed.
+   *
+   * @param {string} ident - normalised subdomain label
+   */
+  async _checkOrgIdent(ident) {
+    if (this.isDestroyed() || ident === this._orgIdentChecked) return;
+    this._orgIdentChecked = ident;
+    const v = await this.postService(SERVICE.payment.validate_org_ident, {
+      hub_id: Visitor.id,
+      ident,
+    }).catch(() => null);
+    if (this.isDestroyed() || this._orgIdentChecked !== ident) return;
+    if (!v) {
+      // A failed round trip says nothing about the subdomain. Stay silent and
+      // let the check on Pay be the one that blocks — claiming "taken" here
+      // over a dropped connection would send the shopper renaming their org
+      // for no reason. Forget it, so the next keystroke asks again.
+      this._orgIdentChecked = "";
+      this._setOrgIdentMsg("", false);
+      return;
+    }
+    const ok = v.status === "OK";
+    this._setOrgIdentMsg(
+      ok
+        ? (LOCALE.ORG_IDENT_AVAILABLE || "")
+        : this._orgIdentError(v.status),
+      ok,
+    );
+  }
+
+  /**
+   * Record the subdomain verdict and repaint it.
+   * @param {string} msg - message to show, "" for none
+   * @param {boolean} ok - true when the subdomain is available
+   */
+  _setOrgIdentMsg(msg, ok) {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    const text = msg || "";
+    if (checkout.orgIdentMsg === text && checkout.orgIdentOk === !!ok) return;
+    checkout.orgIdentMsg = text;
+    checkout.orgIdentOk = !!ok;
+    this._paintOrgIdentMsg();
+  }
+
+  /**
+   * Feed the verdict into its slot — the ONE surface that changes, so the
+   * inputs beside it keep their caret and their text.
+   */
+  _paintOrgIdentMsg() {
+    const part = this.__orgIdentMsg;
+    if (!part || !part.el || !part.el.isConnected) return;
+    const { orgIdentMsgNote } = require("./skeleton/checkout");
+    if (typeof part.softClear === "function") part.softClear();
+    const note = orgIdentMsgNote(this);
+    if (note) part.feed(note);
+  }
+
   // Map an org-ident validation status to its user-facing message.
   /**
    * Open the user's mail client addressed to sales.
@@ -1971,9 +2100,21 @@ class settings_billing extends LetcBox {
         ident,
       }).catch(() => null);
       if (!v || v.status !== "OK") {
-        if (Wm && Wm.alert) Wm.alert(this._orgIdentError(v && v.status));
+        const reason = this._orgIdentError(v && v.status);
+        // Leave a real verdict ON the field, not only in an alert the shopper
+        // has to dismiss before they can see which field it was about. A
+        // failed round trip (`v` null) gets the alert only — pinning "something
+        // went wrong" under the subdomain would blame the field for the
+        // network.
+        if (v) {
+          this._orgIdentChecked = ident;
+          this._setOrgIdentMsg(reason, false);
+        }
+        if (Wm && Wm.alert) Wm.alert(reason);
         return;
       }
+      this._orgIdentChecked = ident;
+      this._setOrgIdentMsg(LOCALE.ORG_IDENT_AVAILABLE || "", true);
       payload.ident = v.ident;
       payload.org_name = org_name;
     }
@@ -2492,6 +2633,16 @@ class settings_billing extends LetcBox {
 
       case "select-bundle":
         return this._handleSelectBundle(cmd, args);
+
+      // The org bootstrap fields mirror themselves into state as they are
+      // edited — see orgFieldValue() in skeleton/checkout for why they have to.
+      case "org-name-typed":
+        this._onOrgFieldTyped("orgName", args);
+        return false;
+
+      case "org-ident-typed":
+        this._onOrgFieldTyped("orgIdent", args);
+        return false;
 
       case "input-seats":
         if (/^(Backspace|)$/.test(cmd.status)) {

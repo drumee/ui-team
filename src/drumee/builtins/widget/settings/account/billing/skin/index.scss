@@ -1125,6 +1125,25 @@
       );
     }
 
+    // The availability verdict's slot. It is empty until a check comes back,
+    // and an empty box would still draw the org section's 12px gap — so it
+    // takes itself out of the flow until it has a Note in it.
+    &-org-ident-msg-slot:empty {
+      display: none;
+    }
+
+    &-org-ident-msg {
+      @include drumee.typo($size: 12px, $line: 16px, $weight: 500);
+
+      &.is-error {
+        color: var(--color-danger, #c0392b);
+      }
+
+      &.is-ok {
+        color: var(--color-success, #1f8a4c);
+      }
+    }
+
     &-left {
       // min-width:0 lets the column actually shrink — a flex item defaults to
       // min-width:auto, which is what pinned it at min-content and pushed the

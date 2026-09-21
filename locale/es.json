@@ -973,6 +973,7 @@
   "ORG_IDENT_REQUIRED": "Enter your organization name and subdomain to continue.",
   "ORG_IDENT_INVALID": "This subdomain is not valid — use lowercase letters, numbers and dashes.",
   "ORG_IDENT_TAKEN": "This subdomain is already taken. Please choose another one.",
+  "ORG_IDENT_AVAILABLE": "This subdomain is available.",
   "ORG_ALREADY_IN_DOMAIN": "Your account already belongs to an organization.",
   "ORG_PROVISIONED": "Your organization space is ready — reloading to your new address…",
   "ROLE_VIEW": "View",
