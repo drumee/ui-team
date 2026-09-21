@@ -53,7 +53,13 @@
   // 160px is what leaves room for three compact chips (26px + 4px gaps) plus the
   // pinned "+N" footer — see skeleton/month.js MONTH_FIT.
   --cal-cell-min: 160px;
-  --cal-hour-height: 56px;
+  // Hour-canvas geometry, matched to the workspace Meet tab's schedule grid
+  // (window/folder/skin/meeting-schedule.scss: 72px rows, an 85px hour gutter)
+  // so the day and week views read as the same calendar in both places. The
+  // row height is also what skeleton/hours.js's 24 rows are measured against
+  // when the widget scrolls the grid onto the first item.
+  --cal-hour-height: 72px;
+  --cal-hour-gutter: 85px;
 
   &__ui {
     width: 100%;
@@ -196,46 +202,103 @@
     white-space: nowrap;
   }
 
-  &__range-menu {
-    width: 232px;
-    gap: 8px;
+  // ── the range label's mini calendar ───────────────────────────────────────
+  // The Meet tab's schedule picker, metric for metric
+  // (window/folder/skin/meeting-schedule.scss → &__meeting-sched-picker*), in
+  // this file's tokens. It replaced a 232px year-stepper + 12-month grid, which
+  // is why these classes changed name as well as shape.
+  // Doubled up on purpose: the popup carries BOTH classes, and the shared
+  // `&__menu` block is further down this file, so at equal specificity it wins
+  // on source order — which is why the old range menu's own `gap` never
+  // applied. Two classes take the padding and gap back.
+  &__menu#{&}__range-menu {
+    width: 264px;
+    padding: 12px;
+    gap: 0;
   }
 
-  &__range-year {
+  &__range-head {
     align-items: center;
     justify-content: space-between;
+    margin-bottom: 8px;
   }
 
-  &__range-year-label {
+  &__range-month-label {
     @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
-  // Four across, three down — the shape a month picker is read in. A wrapped
-  // Box.X rather than a grid: the framework owns `display` on Box-rendered
-  // elements, so setting `display: grid` here would fight it.
-  &__range-months {
-    flex-wrap: wrap;
-    gap: 4px;
+  // Same box as __nav-arrow, and for the same reason: the wrapper's size is
+  // only half of it, the sprite <svg> inside carries the glyph and needs its
+  // own — see the note there.
+  &__range-nav {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--normal-fg);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
   }
 
-  &__range-month {
-    flex: 0 0 calc(25% - 3px);
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
-    padding: 7px 0;
+  // Seven across, never wrapping — a wrapped row would push a day onto its own
+  // line and break the column the weekday above it names.
+  &__range-dows,
+  &__range-week {
+    flex-wrap: nowrap !important;
+  }
+
+  &__range-dow {
+    flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
+    padding: 2px 0;
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg-50));
+    font-weight: 600;
+  }
+
+  &__range-day {
+    flex: 1 1 0;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     border-radius: 6px;
     cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    font-variant-numeric: tabular-nums;
 
     &:hover {
-      background: var(--radio-on-bg);
+      background: var(--overlay-bg-05);
     }
 
-    &[data-active="1"] {
-      background: var(--primary-40);
-      color: var(--gray-white);
+    // A day from the neighbouring month — shown so the weeks stay whole, but
+    // quiet, and still pickable. One step lighter than the weekday row above
+    // it, which is the Meet tab's own pairing (#84848c over #c7c7cc).
+    &[data-in="0"] {
+      color: var(--border-strong);
+    }
+
+    // The range on screen: the whole week band in week view, the day otherwise.
+    &[data-sel="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
       font-weight: 600;
+    }
+
+    &[data-today="1"] {
+      font-weight: 700;
     }
   }
 
@@ -564,6 +627,16 @@
     min-height: 0;
     gap: var(--cal-gap);
     @include quiet-scroll;
+
+    // A cell that actually runs past the fold keeps its thumb inked at rest.
+    // The transparent default is right for the 40-odd cells that fit their
+    // day — 42 resting bars would stripe the grid — but it is wrong for the
+    // one or two that do not, which is exactly where the user needs to be
+    // told the region moves. The "+N" says there is more; the bar says how
+    // to reach it without leaving the month.
+    &[data-overflow="1"] {
+      scrollbar-color: var(--primary-40) transparent;
+    }
   }
 
   // Pinned to the bottom of the scroller, so the one affordance that leads to
@@ -783,36 +856,44 @@
   }
 
   &__hours-head-spacer {
-    flex: 0 0 64px;
+    flex: 0 0 var(--cal-hour-gutter);
     border-right: 1px solid var(--border-default);
   }
 
   &__hours-head-cell {
     flex: 1 1 0;
     min-width: 0;
-    padding: 8px;
-    gap: 6px;
+    padding: 12px;
+    gap: 2px;
     border-right: 1px solid var(--border-default);
 
-    &[data-today="1"] {
-      background: var(--radio-on-bg);
+    // Today is the DATE in brand ink, not a wash over the column — the Meet
+    // tab's rule. The wash was invisible as a marker on the day view (there is
+    // only ever one column, so the whole grid went lavender) and it tinted
+    // every chip sitting on it.
+    &[data-today="1"] .calendar-main__hours-head-num {
+      color: var(--primary-40);
     }
   }
 
+  // Stacked num-over-name, the Meet tab's schedule header. It was a baseline
+  // ROW here, which is the one shape that made the same day read differently
+  // in the two calendars. Still the day's "add" target, unlike the Meet tab's —
+  // hence the pointer.
   &__hours-head-date {
-    align-items: baseline;
-    gap: 6px;
+    align-items: flex-start;
+    gap: 2px;
     cursor: pointer;
   }
 
   &__hours-head-num {
-    @include drumee.typo($size: 18px, $line: 22px, $color: var(--normal-fg));
+    @include drumee.typo($size: 18px, $line: 24px, $color: var(--normal-fg));
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
   &__hours-head-name {
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
   }
 
   // All-day strip. Tasks live here rather than at an invented hour: due_date
@@ -843,16 +924,22 @@
   }
 
   &__hours-gutter {
-    flex: 0 0 64px;
+    flex: 0 0 var(--cal-hour-gutter);
     border-right: 1px solid var(--border-default);
   }
 
+  // Centred and pinned to the top of its row, on its own hour line — the Meet
+  // tab's hour column. It used to sit bottom-right in 11px grey with no rule
+  // beside it, which read as a caption under the hour above rather than a
+  // label for the hour beside it.
   &__hour-label {
     flex: 0 0 var(--cal-hour-height);
     height: var(--cal-hour-height);
-    padding: 2px 8px;
-    align-items: flex-end;
-    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-50));
+    padding-top: 12px;
+    align-items: center;
+    justify-content: flex-start;
+    border-bottom: 1px solid var(--border-muted);
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
     font-variant-numeric: tabular-nums;
   }
 
@@ -861,10 +948,6 @@
     min-width: 0;
     position: relative;
     border-right: 1px solid var(--border-default);
-
-    &[data-today="1"] {
-      background: var(--radio-on-bg);
-    }
   }
 
   &__hour-rules {
@@ -874,15 +957,36 @@
   &__hour-rule {
     flex: 0 0 var(--cal-hour-height);
     height: var(--cal-hour-height);
+    position: relative;
     border-bottom: 1px solid var(--border-muted);
 
-    // Dashed half-hour line, per the frames.
-    background-image: linear-gradient(
-      to bottom,
-      transparent calc(50% - 1px),
-      var(--border-muted) calc(50%),
-      transparent calc(50% + 1px)
-    );
+    // Dashed half-hour divider — the Meet tab draws the same line the same way
+    // (a real dashed border, not the faint gradient this row used to paint).
+    // An ::after rather than a background, so the hover tint on the two slots
+    // below reads through it.
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      border-top: 1px dashed var(--border-strong);
+      pointer-events: none;
+    }
+  }
+
+  // The two half-hour click zones inside each hour row (:00 / :30) — the Meet
+  // tab's `sched-new-at` slots. They replace the dashed half-hour line the row
+  // used to paint: the hover tint says the same thing about where the half
+  // hour falls AND says the band can be clicked, which the line never did.
+  &__hour-slot {
+    flex: 1 1 0;
+    min-height: 0;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
   }
 
   // Timed blocks sit over the rules. Geometry (top/height/left/width) is inline
@@ -893,13 +997,69 @@
     pointer-events: none;
   }
 
+  // The timed block, built to read like the Meet tab's schedule card: a bold
+  // title on its own line, the agenda under it, the time and provenance in a
+  // meta row at the foot — and hover to see the rest of whatever a short slot
+  // had to cut. `height` / `min-height` / `left` / `width` are inline because
+  // they are data (skeleton/hours.js).
   &__hour-blocks > .calendar-main__chip {
     position: absolute;
     pointer-events: auto;
-    align-items: flex-start;
+    align-items: stretch;
     box-sizing: border-box;
     // Hairline gutter so adjacent concurrent blocks read as separate.
     margin-right: 2px;
+    gap: 2px;
+    padding: 4px 8px;
+    overflow: hidden;
+
+    &:hover {
+      // Above its neighbours while expanded. The skeleton sets `height`
+      // inline, so releasing it needs !important; `min-height` (also inline)
+      // is what stops a long block shrinking to its text.
+      z-index: 6;
+      height: auto !important;
+      overflow: visible;
+      box-shadow: 0 6px 16px rgba(11, 10, 33, 0.18);
+    }
+
+    // One line at slot size — the title is what the block is FOR, so it never
+    // shrinks and the agenda below it clips instead. Hover releases it.
+    .calendar-main__chip-title {
+      flex: 0 0 auto;
+      // Clear of the hover remove button.
+      padding-right: 18px;
+      @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+      font-weight: 700;
+    }
+
+    &:hover .calendar-main__chip-title {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .calendar-main__chip-desc {
+      flex: 0 1 auto;
+      min-height: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+
+    &:hover .calendar-main__chip-desc {
+      -webkit-line-clamp: unset;
+      display: block;
+    }
+  }
+
+  // Time + provenance, at the foot of an hour block.
+  &__chip-meta {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
     overflow: hidden;
   }
 

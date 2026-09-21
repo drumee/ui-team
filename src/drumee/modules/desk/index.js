@@ -10092,7 +10092,11 @@ class desk_module extends LetcBox {
       // Open-only, matching its sidebar neighbours.
       case "toggle-calendar": {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
-          filename: LOCALE.CALENDAR,
+          // The screen names itself "Personal Calendar" (its own page title,
+          // panel/calendar/skeleton/index.js), so the breadcrumb says the same
+          // thing. LOCALE.CALENDAR stays on the topbar button and the mobile
+          // sheet tile, which label the launcher, not the screen.
+          filename: LOCALE.PERSONAL_CALENDAR,
           ico: "top-calendar",
         });
         // See _railUnlight — the calendar covers the workspace pane entirely.
