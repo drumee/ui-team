@@ -37,6 +37,25 @@ function getCategory(data) {
   return dot > 0 ? ev.slice(0, dot) : '';
 }
 
+// ONE file event, TWO category strings — every switch that routes a file
+// notification has to accept both.
+//
+// The panel opens with the Unread toggle OFF (panel/activity `_unreadsOnly = 0`),
+// and that feed is `activity_get_feed_all`, which stamps every mfs_changelog row
+// `event_type = 'mfs'` and leaves `category` NULL. getCategory prefers
+// `event_type`, so those rows resolve to 'mfs' and NEVER to 'media'.
+// Turn the toggle ON and the very same event arrives from
+// `mfs_get_activity_feed`, which returns neither column — so it falls through to
+// the 'media.' event prefix and resolves to 'media'.
+//
+// The row SKELETON has always handled both (`case 'media': case 'mfs':`), which
+// is why these rows look completely normal; only the routing below was keyed on
+// 'media' alone, so with the default toggle a file notification rendered fine
+// and then did nothing at all when clicked.
+function isFileCategory(category) {
+  return category === _a.media || category === _a.mfs;
+}
+
 /**
  * 
  * @param {*} data 
@@ -135,7 +154,16 @@ class __activity_item extends LetcBox {
     // added below passes `changelog_id` as an explicit argument, and a row
     // that names its own id is better than one relying on that fallback
     // chain staying in place.
-    if ((category === _a.media
+    //
+    // 🚨 It IS load-bearing for a raw `activity_get_feed_all` row (category
+    // 'mfs'), and that is why isFileCategory is used here rather than a bare
+    // `=== _a.media`. The mget('id') fallback the paragraph above relies on has
+    // already been destroyed by the `mset(opt.src)` / `mset(opt.dest)` above:
+    // a changelog row's `src`/`dest` payload carries its own `id` — the NODE id
+    // — which overwrites the changelog id on the model. Reading or trashing
+    // such a row therefore posted a 16-hex node id into `changelog_id`, an INT
+    // column, so the row came straight back on the next refresh.
+    if ((isFileCategory(category)
       || opt.event === 'media.workspace_move'
       || opt.event === 'media.copy') && (opt.id || opt.key_id)) {
       this.mset({ changelog_id: opt.id || opt.key_id, item_type: 'mfs' })
@@ -248,6 +276,10 @@ class __activity_item extends LetcBox {
       case 'dismiss-activity':
         switch (category) {
           case _a.media:
+          // A raw mfs_changelog row reaches here as 'mfs', never as 'media'
+          // (see isFileCategory). Without this label the switch matched nothing
+          // and the trash button on a file notification was inert.
+          case _a.mfs:
             this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, changelog_id })
             return
 
@@ -474,6 +506,10 @@ class __activity_item extends LetcBox {
         break;
 
       case _a.media:
+      // Same event, other category string (see isFileCategory). This is the
+      // shape the panel shows by DEFAULT, so until this label was added the
+      // ordinary "<somebody> uploaded <file>" notification was a dead click.
+      case _a.mfs:
         // highlight=1 → reveal the file in its folder (scroll + select + flash)
         // instead of opening it in a player. Scoped to notification clicks.
         location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
