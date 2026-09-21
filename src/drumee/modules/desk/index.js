@@ -8693,12 +8693,33 @@ class desk_module extends LetcBox {
    * from under a dialog that is still armed. The clear stays as the fallback
    * for a card caught between feed() and ask().
    */
-  _dismissFeatureLock() {
+  /**
+   * The feature-lock card currently hosted by the shared wrapper-modal, or
+   * null when it is holding something else (or nothing).
+   *
+   * Pulled out of _dismissFeatureLock because a second caller needs the same
+   * question answered — see _showAdminUnlockModal, which must not raise a
+   * card that is already standing. Asked of the DOM for the reason the note
+   * above gives: a flag would have to be set on every open path and cleared on
+   * every close path, including the ones that settle the confirm's promise
+   * from inside the card.
+   */
+  _featureLockCard() {
     try {
       const w = typeof Wm !== "undefined" && Wm.__wrapperModal;
-      if (!w || !w.el || !w.children || !w.children.length) return;
+      if (!w || !w.el || !w.children || !w.children.length) return null;
       const card = w.children.last();
-      if (!card || !card.el || !card.el.querySelector(".feature-lock")) return;
+      if (!card || !card.el || !card.el.querySelector(".feature-lock")) return null;
+      return card;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  _dismissFeatureLock() {
+    try {
+      const card = this._featureLockCard();
+      if (!card) return;
       if (_.isFunction(card.onCancel)) return card.onCancel();
       return this._dismissWmModal();
     } catch (e) { /* non-fatal */ }
@@ -9416,6 +9437,32 @@ class desk_module extends LetcBox {
    * and putting the sidebar highlight back afterwards either way.
    */
   _showAdminUnlockModal() {
+    // ALREADY UP -> LEAVE IT STANDING.
+    //
+    // Nothing covers this card's own trigger: the wrapper-modal is
+    // `inset: 0` inside .window-manager, which begins below the topbar, so on
+    // desktop the Admin Console button stays clickable with the card open and
+    // gets pressed again. Without this the second press ran the whole open
+    // again — `Wm.confirm` feeds the host, which tears the standing card down
+    // and builds an identical one in its place.
+    //
+    // That rebuild is what the user actually sees go wrong. It is also pure
+    // waste: the answer cannot change between two clicks a second apart, since
+    // the gate was already decided before the first one.
+    //
+    // The backdrop half of the same problem is fixed in confirm() itself
+    // (manager.js, the overlay owner stamp), because it belongs to every
+    // caller of the shared host and not to this one. This guard is why THIS
+    // card no longer gets there at all.
+    //
+    // The highlight is still put back, exactly as the then/catch arms below
+    // do it: the press that got here has already lit the item up, so
+    // returning early without this would leave it lit over the wrong content.
+    if (this._featureLockCard()) {
+      this._restoreCurrentSidebarHighlight();
+      return Promise.resolve();
+    }
+
     // BACKDROP: the app's frosted glass.
     //
     // This passed "none" until now, on the argument that an upsell is not a
