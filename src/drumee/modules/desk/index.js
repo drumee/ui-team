@@ -9376,22 +9376,42 @@ class desk_module extends LetcBox {
    * @returns {Promise}
    */
   async _showAdminUnlockOverTour() {
+    // SINGLE-FLIGHT, and the awaits below are the whole reason it is needed.
+    //
+    // _showAdminUnlockModal refuses to raise a card while one is already up
+    // (_featureLockCard), which covers the ordinary second press. It cannot
+    // cover a second press that arrives BEFORE the first has produced
+    // anything to find: raising the tour can take the best part of four
+    // seconds here, and Wm.confirm is itself async behind Kind.waitFor, so two
+    // clicks inside that window both sail past the guard and the second
+    // rebuilds the card the first just put up.
+    //
+    // Cleared once the card has been RAISED, not when it is dismissed. From
+    // that moment the DOM probe is the accurate answer and this flag would
+    // only be a second, staler copy of it — the kind of bookkeeping the note
+    // on _featureLockCard argues against keeping.
+    if (this._adminUnlockInFlight) return;
+    this._adminUnlockInFlight = true;
     try {
-      const Tours = require("libs/tutorial-tours");
-      if (
-        !this._hasWindowTour() &&
-        Tours.offerable("migrate", this) &&
-        this._railWorkspace() &&
-        (await this._raiseRailTour("migrate")) &&
-        (await this._awaitWindowTour(4000))
-      ) {
-        this._leaveSectionScreen(this._railWorkspace());
+      try {
+        const Tours = require("libs/tutorial-tours");
+        if (
+          !this._hasWindowTour() &&
+          Tours.offerable("migrate", this) &&
+          this._railWorkspace() &&
+          (await this._raiseRailTour("migrate")) &&
+          (await this._awaitWindowTour(4000))
+        ) {
+          this._leaveSectionScreen(this._railWorkspace());
+        }
+      } catch (e) {
+        this.warn && this.warn("[desk] could not raise the migrate tour under the upsell", e);
       }
-    } catch (e) {
-      this.warn && this.warn("[desk] could not raise the migrate tour under the upsell", e);
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._showAdminUnlockModal();
+    } finally {
+      this._adminUnlockInFlight = false;
     }
-    if (this.isDestroyed && this.isDestroyed()) return;
-    this._showAdminUnlockModal();
   }
 
   /**
