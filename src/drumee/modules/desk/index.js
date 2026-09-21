@@ -9390,8 +9390,24 @@ class desk_module extends LetcBox {
     // that moment the DOM probe is the accurate answer and this flag would
     // only be a second, staler copy of it — the kind of bookkeeping the note
     // on _featureLockCard argues against keeping.
-    if (this._adminUnlockInFlight) return;
-    this._adminUnlockInFlight = true;
+    //
+    // A TIMESTAMP, NOT A BOOLEAN, and that is the part that matters. The tour
+    // phase awaits _raiseRailTour, which this method neither owns nor can
+    // bound; a bare flag would latch forever the first time that failed to
+    // settle, and the Admin Console button would be dead for the rest of the
+    // session. That trades a cosmetic double-open for something strictly
+    // worse, on a promise this file has no control over. The window only has
+    // to outlast the tour budget (4s, _awaitWindowTour) plus confirm's own
+    // async hop; 10s clears both and is far longer than any gap a person
+    // would call pressing the button again.
+    const started = Date.now();
+    if (
+      this._adminUnlockInFlight &&
+      started - this._adminUnlockInFlight < 10000
+    ) {
+      return;
+    }
+    this._adminUnlockInFlight = started;
     try {
       try {
         const Tours = require("libs/tutorial-tours");
@@ -9410,7 +9426,7 @@ class desk_module extends LetcBox {
       if (this.isDestroyed && this.isDestroyed()) return;
       this._showAdminUnlockModal();
     } finally {
-      this._adminUnlockInFlight = false;
+      this._adminUnlockInFlight = 0;
     }
   }
 
