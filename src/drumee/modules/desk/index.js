@@ -8668,8 +8668,8 @@ class desk_module extends LetcBox {
    * The "Unlock Admin Console" upsell (_showAdminUnlockModal → openFeatureLock
    * → Wm.confirm) is an answer to a question the user has stopped asking the
    * moment they navigate: it is not blocking anything the rail can reach, and
-   * on desktop the scrim it carries stops at the window manager's edge, so the
-   * rail stays live under it. Left standing the card hangs over the Files grid
+   * on desktop the glass it carries stops at the window manager's edge, so the
+   * rail stays live beside it. Left standing the card hangs over the Files grid
    * the rail just opened, and the only way out is its own X.
    *
    * ONLY THE FEATURE-LOCK CARD, never the wrapper on sight. __wrapperModal is
@@ -9416,22 +9416,26 @@ class desk_module extends LetcBox {
    * and putting the sidebar highlight back afterwards either way.
    */
   _showAdminUnlockModal() {
-    // BACKDROP: the desk's flat scrim, like every other confirm.
+    // BACKDROP: the app's frosted glass.
     //
     // This passed "none" until now, on the argument that an upsell is not a
     // decision about the screen behind it. What that missed is where the card
     // actually lands: a desk full of file and folder tiles, against which an
     // unbacked card reads as one more floating panel among them. The busier
-    // the workspace the less it looks like the topmost thing it is, which is
-    // the complaint this answers — the scrim is what says "this is on top".
+    // the workspace the less it looks like the topmost thing it is.
     //
-    // "scrim" and not "blur": the glass treatment is a 55% WHITE wash
-    // (drumee.glass-overlay) and this card is itself white, so it would lose
-    // contrast against its own backdrop. scrim-overlay is var(--overlay-bg),
-    // theme-aware on its own, with the blur(6px) it was designed to pair with
-    // — and it is already what the other tier gates get: task_views and the
-    // two meeting caps go through promptFeatureLock, which passes no overlay
-    // and so takes confirm()'s "scrim" default. admin_console was the holdout.
+    // "blur" AND NOT confirm()'s "scrim" default, which was the first attempt
+    // and was rejected on sight: scrim-overlay is a flat var(--overlay-bg)
+    // — rgba(0,0,0,.4) — and a hard black wash over the desk is not what this
+    // product looks like anywhere else. `blur` is drumee.glass-overlay, the
+    // treatment every other modal fed through THIS SAME host already uses:
+    // wm/index.js openRequestAccessModal stamps it by hand, and the reward and
+    // guided flows both describe it as "the app's frosted-glass overlay" while
+    // opting out of it. A white card on it is the proven combination, not a
+    // new one — request_access_modal is exactly that — and the card carries
+    // its own 1px border and `0 14px 42px` shadow (window/confirm/skin) to sit
+    // on it. It is also theme-aware without a branch here: the mixin swaps to
+    // rgba(11, 10, 33, .55) under html[data-theme="dark"].
     //
     // Still spelled out rather than dropped: __wrapperModal is SHARED, and
     // confirm() documents the failure an explicit value guards against — one
@@ -9439,17 +9443,22 @@ class desk_module extends LetcBox {
     // backdrop a decision rather than an inherited default.
     //
     // NO POSITIONING RISK in the switch, which is the one thing worth checking
-    // here: the scrim rule adds a backdrop-filter, and a backdrop-filter makes
+    // here: the glass rule adds a backdrop-filter, and a backdrop-filter makes
     // its element the containing block for fixed-position descendants — while
     // window/confirm/skin pins its card `position: fixed` at <= 1024px. At
     // exactly those breakpoints desk/wm/skin already pins this wrapper
     // `position: fixed; inset: 0` (wrapper-modal-mobile-centre), i.e. to the
-    // viewport, so the card resolves against the same box either way. Above
-    // 1024px the card is absolutely positioned inside a wrapper that is
-    // already `position: absolute`, which a filter does not change. Hit
-    // testing is untouched: the wrapper was always there and always took
-    // clicks, it simply did not paint.
-    return Wm.openFeatureLock({ feature: "admin_console", overlay: "scrim" })
+    // viewport, so the card resolves against the same box either way; that
+    // mixin's own comment was written about this very filter. Above 1024px the
+    // card is absolutely positioned inside a wrapper that is already
+    // `position: absolute`, which a filter does not change. Hit testing is
+    // untouched: the wrapper was always there and always took clicks, it
+    // simply did not paint.
+    //
+    // The one thing a PAINTING host broke is the utility tooltip that hangs
+    // down off the topbar into it — see the z-index note in desk/skin, which
+    // was written on the premise that this host is always transparent.
+    return Wm.openFeatureLock({ feature: "admin_console", overlay: "blur" })
       .then(() => {
         // Defence in depth behind the card's own CTA gate: it only renders the
         // button when canUpgradePlan() passes, so reaching here without it
