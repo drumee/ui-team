@@ -8667,9 +8667,10 @@ class desk_module extends LetcBox {
    *
    * The "Unlock Admin Console" upsell (_showAdminUnlockModal → openFeatureLock
    * → Wm.confirm) is an answer to a question the user has stopped asking the
-   * moment they navigate: it is not blocking anything, and since it took its
-   * backdrop off it does not even look like it is. Left standing it hangs over
-   * the Files grid the rail just opened, and the only way out is its own X.
+   * moment they navigate: it is not blocking anything the rail can reach, and
+   * on desktop the scrim it carries stops at the window manager's edge, so the
+   * rail stays live under it. Left standing the card hangs over the Files grid
+   * the rail just opened, and the only way out is its own X.
    *
    * ONLY THE FEATURE-LOCK CARD, never the wrapper on sight. __wrapperModal is
    * SHARED — it also carries the create-workspace form, the permission panels
@@ -9415,18 +9416,40 @@ class desk_module extends LetcBox {
    * and putting the sidebar highlight back afterwards either way.
    */
   _showAdminUnlockModal() {
-    // NO BACKDROP. The card is an upsell, not a decision about the screen
-    // behind it: the reader has nothing to check against the desk and nothing
-    // to lose by ignoring it, so dimming the whole workspace overstates what
-    // this interruption is. confirm()'s "scrim" default stays right for the
-    // prompts that really do block on an answer.
+    // BACKDROP: the desk's flat scrim, like every other confirm.
     //
-    // "none", not a dropped key: __wrapperModal is SHARED, and confirm()
-    // documents the failure — a value left behind by the previous dialog would
-    // paint a scrim this card never asked for. Explicitly off, not merely
-    // not-on. The host keeps its [data-state="open"] sizing either way, which
-    // is what centres the card.
-    return Wm.openFeatureLock({ feature: "admin_console", overlay: "none" })
+    // This passed "none" until now, on the argument that an upsell is not a
+    // decision about the screen behind it. What that missed is where the card
+    // actually lands: a desk full of file and folder tiles, against which an
+    // unbacked card reads as one more floating panel among them. The busier
+    // the workspace the less it looks like the topmost thing it is, which is
+    // the complaint this answers — the scrim is what says "this is on top".
+    //
+    // "scrim" and not "blur": the glass treatment is a 55% WHITE wash
+    // (drumee.glass-overlay) and this card is itself white, so it would lose
+    // contrast against its own backdrop. scrim-overlay is var(--overlay-bg),
+    // theme-aware on its own, with the blur(6px) it was designed to pair with
+    // — and it is already what the other tier gates get: task_views and the
+    // two meeting caps go through promptFeatureLock, which passes no overlay
+    // and so takes confirm()'s "scrim" default. admin_console was the holdout.
+    //
+    // Still spelled out rather than dropped: __wrapperModal is SHARED, and
+    // confirm() documents the failure an explicit value guards against — one
+    // left behind by the previous dialog. Naming it keeps this caller's
+    // backdrop a decision rather than an inherited default.
+    //
+    // NO POSITIONING RISK in the switch, which is the one thing worth checking
+    // here: the scrim rule adds a backdrop-filter, and a backdrop-filter makes
+    // its element the containing block for fixed-position descendants — while
+    // window/confirm/skin pins its card `position: fixed` at <= 1024px. At
+    // exactly those breakpoints desk/wm/skin already pins this wrapper
+    // `position: fixed; inset: 0` (wrapper-modal-mobile-centre), i.e. to the
+    // viewport, so the card resolves against the same box either way. Above
+    // 1024px the card is absolutely positioned inside a wrapper that is
+    // already `position: absolute`, which a filter does not change. Hit
+    // testing is untouched: the wrapper was always there and always took
+    // clicks, it simply did not paint.
+    return Wm.openFeatureLock({ feature: "admin_console", overlay: "scrim" })
       .then(() => {
         // Defence in depth behind the card's own CTA gate: it only renders the
         // button when canUpgradePlan() passes, so reaching here without it
