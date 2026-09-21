@@ -8710,6 +8710,23 @@ class desk_module extends LetcBox {
       if (!w || !w.el || !w.children || !w.children.length) return null;
       const card = w.children.last();
       if (!card || !card.el || !card.el.querySelector(".feature-lock")) return null;
+      // STANDING, not merely PRESENT — and this is the load-bearing half for
+      // the caller that refuses to open over it.
+      //
+      // A dismissed confirm is not removed from the host the instant it is
+      // answered: window/confirm sets `_done` and calls goodbye(), whose tween
+      // leaves the element in place while it plays, and an interrupted
+      // teardown can leave it there for good. Matching on the class alone
+      // would then read that husk as a live card — harmless for the dismiss
+      // path, which simply has nothing to cancel, but for _showAdminUnlockModal
+      // it would mean the Admin Console button never opens anything again.
+      //
+      // `_done` is the confirm's own record that its promise has settled
+      // (window/confirm ask()), and isConnected catches a card detached from
+      // the document with the host's reference not yet cleaned up. Either way
+      // the answer is the same: nothing here is waiting on the user.
+      if (card._done) return null;
+      if (card.el.isConnected === false) return null;
       return card;
     } catch (e) {
       return null;
