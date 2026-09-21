@@ -1778,6 +1778,10 @@ class settings_billing extends LetcBox {
     const { orgIdentMsgNote } = require("./skeleton/checkout");
     if (typeof part.softClear === "function") part.softClear();
     const note = orgIdentMsgNote(this);
+    // Keep the collapse flag in step with what is actually in the slot — see
+    // the skeleton: a Box with no kids still holds ui-core's `blank` widget,
+    // so only this attribute can tell the skin the slot has nothing to show.
+    part.el.dataset.empty = note ? 0 : 1;
     if (note) part.feed(note);
   }
 

@@ -165,11 +165,19 @@ function checkout(ui) {
           // itself: a Note rebuilds its own inner .note-content, so the
           // framework's update path is to feed() a fresh Note into a
           // container that owns a sys_pn — the same shape the promo countdown
-          // uses. Empty (and display:none) until there is something to say.
+          // uses.
+          //
+          // `data-empty` rather than a `:empty` CSS rule: ui-core puts a
+          // `blank` widget inside a Box with no kids, so the element is never
+          // actually childless and `:empty` never matches. Measured on
+          // drumee.in — the rule did nothing and the empty slot still drew the
+          // org section's 12px gap. _paintOrgIdentMsg keeps this flag in step
+          // on the incremental path.
           Skeletons.Box.X({
             className: `${pfx}-org-ident-msg-slot`,
             sys_pn: `${pfx}-org-ident-msg`,
             partHandler: [ui],
+            dataset: { empty: orgIdentMsgNote(ui) ? 0 : 1 },
             kids: [orgIdentMsgNote(ui)].filter(Boolean),
           }),
         ],
