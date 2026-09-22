@@ -407,6 +407,21 @@
     }
   }
 
+  // A DEEPER PATH HAS NO SWITCHER. Once the address holds more than the
+  // workspace crumb (Workspace › Folder › …) the caret and its dropdown are
+  // taken out of the chip. Asked of the DOM, like the loading rules below:
+  // a second child in the crumb track is the whole condition.
+  //
+  // !important: Box children are forced display:flex inline by the framework.
+  // _crumbClickOpensSwitcher (desk/index.js) refuses the click on the same
+  // condition, so the chip cannot open a dropdown that is not there.
+  &__crumb-group:has(.desk-breadcrumb__content > :nth-child(2)) {
+    .desk-module-topbar__ws-wrapper,
+    .desk-module-topbar__ws-menu {
+      display: none !important;
+    }
+  }
+
   &__left-cluster {
     align-items: center;
     gap: 20px;

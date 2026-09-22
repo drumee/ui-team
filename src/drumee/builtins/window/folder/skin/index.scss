@@ -116,51 +116,6 @@
     padding: 10px 12px;
     font-size: 15px;
   }
-
-  // "+ Add new" expands INLINE as an accordion. flex-wrap lets the submenu
-  // take a full-width row of its own beneath the "+ Add new" label instead
-  // of being squeezed into the same line.
-  .window-button__dropdown-menu__item--create-group {
-    flex-wrap: wrap;
-  }
-
-  .window-button__dropdown-menu__create-submenu {
-    position: static;
-    top: auto;
-    left: auto;
-    right: auto;
-    width: 100%;
-    min-width: 0;
-    flex-basis: 100%;
-    margin-top: 4px;
-    padding: 0;
-    background-color: transparent;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  // Neutralise the hover branch, and do it BEFORE the data-submenu rule so
-  // the explicit toggle still wins. Touch browsers latch :hover onto the
-  // last-tapped element, which would leave the accordion stuck open after
-  // the user tapped it closed; the tap already flips data-submenu
-  // (folder/index.js toggleNewCreateMenu) and that is the only signal this
-  // should follow on a phone.
-  .window-button__dropdown-menu__item--create-group:hover
-    > .window-button__dropdown-menu__create-submenu {
-    display: none;
-  }
-
-  .window-button__dropdown-menu__item--create-group[data-submenu="open"]
-    > .window-button__dropdown-menu__create-submenu {
-    display: flex;
-  }
-
-  // Indent the create rows so the accordion reads as nested under
-  // "+ Add new" without a box of its own.
-  .window-button__dropdown-menu__submenu-item {
-    min-height: 44px;
-    padding-left: 22px;
-  }
 }
 
 
@@ -690,68 +645,6 @@
           .window-button__dropdown-menu__items {
           transition: none;
         }
-      }
-
-      .window-button__dropdown-menu__item--create-group {
-        position: relative;
-      }
-
-      .window-button__dropdown-menu__create-symbol {
-        width: 20px;
-        height: 20px;
-        flex: 0 0 20px;
-        align-items: center;
-        justify-content: center;
-        font-family: "Inter", sans-serif;
-        font-size: 25px;
-        font-weight: 400;
-        line-height: 20px;
-        text-align: center;
-        color: #0b0a20;
-      }
-
-      // The controls now sit at the Files/Team Chat boundary, leaving enough
-      // space for this cascade to open right like the reference. The 8px
-      // overlap keeps a pointer bridge between the two menu sections.
-      .window-button__dropdown-menu__create-submenu {
-        display: none;
-        position: absolute;
-        top: -8px;
-        left: calc(100% - 8px);
-        right: auto;
-        z-index: 2;
-        width: max-content;
-        min-width: 200px;
-        padding: 8px;
-        gap: 2px;
-        align-items: stretch;
-        background-color: var(--normal-bg-elevated, #fff);
-        border-radius: 6px;
-        box-shadow:
-          0 4px 6px -4px rgba(0, 0, 0, 0.1),
-          0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        box-sizing: border-box;
-      }
-
-      .window-button__dropdown-menu__item--create-group:hover
-        > .window-button__dropdown-menu__create-submenu,
-      .window-button__dropdown-menu__item--create-group[data-submenu="open"]
-        > .window-button__dropdown-menu__create-submenu {
-        display: flex;
-      }
-
-      // Outside-click closes ui-core's panel directly. Until its open callback
-      // resets data-submenu, keep any stale click state hidden throughout the
-      // next opening animation (the menu root becomes data-state=1 at the same
-      // moment the callback runs).
-      .window-button__dropdown-menu__wrapper:not([data-state="1"])
-        .window-button__dropdown-menu__create-submenu {
-        display: none !important;
-      }
-
-      .window-button__dropdown-menu__submenu-item {
-        width: 100%;
-        min-height: 34px;
       }
 
       // Shared with the Files empty-state hero's copy of these rows, which is
