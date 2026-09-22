@@ -145,6 +145,12 @@ class __docs_state extends DrumeeMFS {
    * buffer path an existing file uses — that path settles isLoading → false.
    */
   _mountBlank() {
+    // A brand-new document still gets a tab model, so the rail shows "Tab 1"
+    // from the start and "+" has something to append to.
+    if (this.editor && this.editor.setTabs && !(this.editor.getTabs() || []).length) {
+      const seed = docTabs.readTabs(null, null);
+      this.editor.setTabs(seed.tabs, seed.active);
+    }
     let buffer = null;
     try {
       buffer = base64ToAb(BLANK_DOCX_B64);

@@ -7,6 +7,21 @@ const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 
 require("./skin");
 
+/**
+ * Resolve when `p` does, or after `ms` — whichever comes first, and never
+ * reject. Used around the Casual SDK's export/flush promises, which can stay
+ * pending for good and must not be able to wedge a tab switch.
+ *
+ * @param {Promise} p
+ * @param {Number} ms
+ */
+function capped(p, ms) {
+  return Promise.race([
+    Promise.resolve(p).catch(() => null),
+    new Promise((r) => setTimeout(() => r(null), ms)),
+  ]);
+}
+
 // Casual Docs (@casualoffice/docs DocxEditor) window — mirrors editor_sheet.
 // The .docx is binary, so the workbook is stored base64-wrapped in JSON and
 // saved through the same text media.save path (docs_state does the (de)coding).
@@ -654,11 +669,11 @@ class __editor_docs extends __player {
   setTabs(tabs, active) {
     this._tabs = Array.isArray(tabs) && tabs.length ? tabs : [];
     this._activeTab = active || (this._tabs[0] && this._tabs[0].id) || null;
-    // A file with more than one tab shows the rail by itself — otherwise the
-    // other tabs are invisible and the document looks like it lost them. One
-    // tab keeps the rail closed (nothing to choose from), and an explicit
-    // close by the user is remembered for as long as the window is open.
-    if (this._tabs.length > 1 && !this._tabsClosedByUser && !this._tabsOpen) {
+    // The rail opens by itself, the way Google Docs shows it: the tabs of a
+    // document are part of the document, and a rail that must be found in a
+    // menu first reads as "the feature is missing". An explicit close by the
+    // user is remembered for as long as the window is open.
+    if (this._tabs.length && !this._tabsClosedByUser && !this._tabsOpen) {
       this.toggleTabs(true);
       return;
     }
@@ -730,14 +745,22 @@ class __editor_docs extends __player {
       // exports whatever the editor still shows — which for the moments the
       // room swap takes is the OUTGOING tab — and would write it over the tab
       // just opened (both tabs ended up with the same text).
-      await this.stashActiveTab();
-      await this.saveContent();
+      //
+      // EVERY step is raced against a timeout. The Casual SDK's export and
+      // autosave-flush both return promises that can stay pending for good
+      // (a flush with nothing to save never settles), and one of them hanging
+      // used to leave `_switchingTab` set: the tab never opened and no later
+      // click did anything either ("click tab 2 không ăn"). Losing a step is
+      // survivable — the autosave writes again a few seconds later — while
+      // hanging is not.
+      await capped(this.stashActiveTab(), 4000);
+      await capped(this.saveContent(), 5000);
       this._activeTab = id;
       this.renderTabs();
-      if (this._doc && this._doc.showTab) await this._doc.showTab(id);
+      if (this._doc && this._doc.showTab) await capped(this._doc.showTab(id), 15000);
       // Only the list and the active pointer are written now; the bytes come
       // from the model, never from the editor mid-swap.
-      await this.persistTabs();
+      await capped(this.persistTabs(), 5000);
     } catch (e) {
       this.warn("__editor_docs: tab switch failed", e);
     } finally {
