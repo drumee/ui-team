@@ -1508,6 +1508,13 @@
 // ── Post-decision confirmation modal (Figma 64 / 65 / 66) ───────────────────
 .window-secure-share-access-result {
   &__panel {
+    // `drumee.typo` only emits `font-family` for a whitelist of $weight values,
+    // and 600 is not one of them — so every 600 rule below inherited instead.
+    // This card is lifted out to <body> (_liftArOverlay), whose font-family is
+    // the browser default, so those rules rendered in Times New Roman next to
+    // their Armin Grotesk siblings. Set the family once here and let the whole
+    // card inherit it.
+    font-family: var(--font-main);
     // Theme-aware surface (see approve-access __panel above): was hardcoded
     // --white so the result modal showed a white card in dark mode. --normal-bg-100
     // is #fff in light (unchanged) and #0b0a21 in dark; the __info box uses the
@@ -1600,6 +1607,8 @@
     align-self: stretch;
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--primary-50, #433cc5);
@@ -1612,6 +1621,8 @@
     align-self: stretch;
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--normal-bg-80);
