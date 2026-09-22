@@ -459,6 +459,10 @@ class __editor_docs extends __player {
         return null;
       }
     }
+    // `opts.content` is a payload the caller already built (persistTabs, which
+    // must NOT export the editor: around a tab switch the editor still shows
+    // the tab being left).
+    if (opts && opts.content) return this._saveJson(opts.content);
     if (!this._doc || !this._doc.getContent) return;
     // Reentrancy guard: Casual autosave fires onSave repeatedly. Without this,
     // several saves race before the first assigns an nid — each takes the
@@ -518,6 +522,34 @@ class __editor_docs extends __player {
       return this._saveContent(opt, Wm, stamp);
     }
     this._saveContent(opt, target, stamp);
+  }
+
+  /**
+   * Replace the file with a payload the caller built (the tab list around a
+   * switch). Only for a file that already exists — there is nothing to
+   * re-point when the node has not been created yet.
+   *
+   * @param {String} content  the JSON to store
+   */
+  _saveJson(content) {
+    const nid = this.mget(_a.nid);
+    if (!nid) return null;
+    const ext = this.mget(_a.ext) || "udoc";
+    const opt = {
+      service: SERVICE.media.save,
+      hub_id: this.mget(_a.hub_id) || Visitor.get(_a.id),
+      nid,
+      id: nid,
+      replace: 1,
+      pid: this.mget(_a.pid) || Visitor.get(_a.home_id),
+      filename: `${this.mget(_a.filename)}.${ext}`,
+      content,
+      metadata: { dataType: "doc.casual" },
+    };
+    return this.postService(opt, { async: 1 }).catch((e) => {
+      this.warn("__editor_docs: tab list save failed", e);
+      return null;
+    });
   }
 
   /**
@@ -681,17 +713,36 @@ class __editor_docs extends __player {
     if (!tabs.some((t) => t.id === id)) return;
     this._switchingTab = 1;
     try {
+      // ORDER MATTERS. Everything that persists the bytes on screen runs
+      // BEFORE the editor swaps to the other tab: a save fired afterwards
+      // exports whatever the editor still shows — which for the moments the
+      // room swap takes is the OUTGOING tab — and would write it over the tab
+      // just opened (both tabs ended up with the same text).
       await this.stashActiveTab();
+      await this.saveContent();
       this._activeTab = id;
       this.renderTabs();
       if (this._doc && this._doc.showTab) await this._doc.showTab(id);
-      // The tab that just came up is what a save must write.
-      this.saveContent();
+      // Only the list and the active pointer are written now; the bytes come
+      // from the model, never from the editor mid-swap.
+      await this.persistTabs();
     } catch (e) {
       this.warn("__editor_docs: tab switch failed", e);
     } finally {
       this._switchingTab = 0;
     }
+  }
+
+  /**
+   * Write the tab LIST as it stands (names, order, which one is active) with
+   * each tab's stored bytes. Used around a switch, where exporting the editor
+   * would capture the wrong tab.
+   */
+  async persistTabs() {
+    const tabs = this.getTabs();
+    if (!tabs.length || !this.mget(_a.nid)) return null;
+    const docTabsLib = require("./tabs");
+    return this.saveContent({ content: JSON.stringify(docTabsLib.writeTabs(tabs, this.activeTabId())) });
   }
 
   /** Export what is on screen into the active tab of the in-memory list. */
