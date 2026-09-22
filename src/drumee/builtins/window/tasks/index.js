@@ -1862,7 +1862,7 @@ class __tasks_panel extends LetcBox {
         return this._commitDetail().catch((err) => {
           console.error("[tasks_panel] commit-detail failed:", err);
           this._setSubmitting(".tasks-panel__detail-submit", false);
-          this._render();
+          this._renderOverlays();
           // Say so: a commit that fails silently is indistinguishable from a
           // dead button, which makes it needlessly hard to diagnose.
           Wm.alert(LOCALE.ERROR_NETWORK);
@@ -3952,9 +3952,9 @@ class __tasks_panel extends LetcBox {
           hub_id: this._hubId,
           id,
           ...upd,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update failed:", err),
-        ),
+        })
+          .catch(() => undefined)
+          .then((r) => ({ kind: "row", service: "task.update", row: rowOf(r) })),
       );
     }
 
@@ -3966,9 +3966,15 @@ class __tasks_panel extends LetcBox {
           hub_id: this._hubId,
           id,
           status: draft.status,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update_status failed:", err),
-        ),
+        })
+          .catch(() => undefined)
+          .then((r) => ({
+            kind: "row",
+            service: "task.update_status",
+            row: rowOf(r),
+            // The response may carry the auto-completed parent row.
+            parent: rowOf(r && r.parent),
+          })),
       );
     }
 
@@ -3990,9 +3996,13 @@ class __tasks_panel extends LetcBox {
           hub_id: this._hubId,
           id,
           assignee_uids: draftAssignees,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update_assignee failed:", err),
-        ),
+        })
+          .catch(() => undefined)
+          .then((r) => ({
+            kind: "row",
+            service: "task.update_assignee",
+            row: rowOf(r),
+          })),
       );
     }
 
@@ -4006,7 +4016,14 @@ class __tasks_panel extends LetcBox {
             hub_id: this._hubId,
             task_id: id,
             label_id: lid,
-          }).catch(() => null),
+          })
+            .catch(() => undefined)
+            .then((r) => ({
+              kind: "label",
+              op: "link",
+              label_id: lid,
+              ok: Array.isArray(r),
+            })),
         );
       }
     }
@@ -4018,7 +4035,14 @@ class __tasks_panel extends LetcBox {
             hub_id: this._hubId,
             task_id: id,
             label_id: lid,
-          }).catch(() => null),
+          })
+            .catch(() => undefined)
+            .then((r) => ({
+              kind: "label",
+              op: "unlink",
+              label_id: lid,
+              ok: !!(r && r.task_id),
+            })),
         );
       }
     }
@@ -4035,49 +4059,69 @@ class __tasks_panel extends LetcBox {
           let nid = pf.nid;
           if (!nid && pf.file) {
             try {
-              const result = await this._uploadPendingFile(pf, pendingFiles);
-              nid = result.nid;
+              nid = (await this._uploadPendingFile(pf, pendingFiles)).nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
-              return;
+              return { kind: "file", list: null };
             }
           }
-          if (!nid) return;
-          await this.postService({
+          if (!nid) return { kind: "file", list: null };
+          const list = await this.postService({
             service: SERVICE.task.link_file,
             hub_id: this._hubId,
             task_id: id,
             file_nid: nid,
           }).catch(() => null);
+          return { kind: "file", list: Array.isArray(list) ? list : null };
         })(),
       );
     }
 
-    if (calls.length) await Promise.all(calls);
+    const results = calls.length ? await Promise.all(calls) : [];
 
-    await this._loadTasks();
-    // Update on a child returns to the parent, exactly as its X does — leaving
-    // Update to dump the user back on the board while Cancel walked up one
-    // level would be the same "it closed everything" surprise, just on the
-    // happier path. Read before the reset clears it.
-    const back = this._detailReturnTo;
-    this._detailId = null;
-    this._detailDraft = null;
-    this._detailReturnTo = null;
-    this._pickerOpen = null;
-    this._resetFileSearch();
+    // Merge what landed, and only the fields each call owns — see OWNED in
+    // live-sync.js for why a whole row would be wrong here.
+    for (const r of results) {
+      if (r.kind !== "row" || !r.row) continue;
+      this._mergeTask(ownedPatch(r.service, r.row));
+      if (r.parent) {
+        this._mergeTask(r.parent);
+        this._syncSubtaskBadges(r.parent.id);
+      }
+    }
+    const labelOps = results.filter((r) => r.kind === "label");
+    if (labelOps.length) {
+      this._mergeTask({ id, label_ids: applyLabelOps(task.label_ids, labelOps) });
+    }
+    const fileResults = results.filter((r) => r.kind === "file");
+    const files = longestList(fileResults.map((r) => r.list));
+    if (files) this._mergeTask({ id, linked_files: files });
+
+    const failed = results.some(
+      (r) => (r.kind === "row" && !r.row) ||
+        (r.kind === "label" && !r.ok) ||
+        (r.kind === "file" && !r.list),
+    );
     this._setSubmitting(".tasks-panel__detail-submit", false);
+    this._repaintBoard();
+
+    if (failed) {
+      // Keep the card open with the draft, so nothing the user typed is lost
+      // and pressing Update again retries. The cache already holds whatever
+      // DID land, so a retry only re-sends what still differs.
+      if (files) this._refreshAttachments(id).then(() => this._refreshAttachmentsList());
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+
+    // Update on a child returns to the parent, exactly as its X does.
+    const back = this._detailReturnTo;
     if (back && this._tasks.some((t) => t.id === back)) {
-      // Navigation, not a dismissal — the parent lands in this same element,
-      // so there is nothing to animate away. _openDetail renders on its own.
+      this._closeDetailSilently();
       return this._openDetail(back);
     }
-    // A saved task is a dismissal like any other, so it leaves the same way
-    // the X does. The render behind it is a FULL one (the task list changed
-    // and the board has to repaint), and it is deferred with everything else:
-    // the card is covering the board while it fades, so nothing of the stale
-    // paint is visible during those few frames.
-    this._dismissOverlay("detail-backdrop", () => this._render());
+    // A saved task leaves the way the X does; only the overlay parts re-feed.
+    this._closeDetailSilently(() => this._renderOverlays());
   }
 
   // Render the detail panel immediately on click; refresh attachments async
