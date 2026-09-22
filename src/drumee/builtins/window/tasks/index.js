@@ -78,6 +78,16 @@ const ROW_BUSY_SERVICES = [
 // land identically and both attach to THAT comment rather than a new one.
 const ROW_SCOPE = /^comment-row:(.+)$/;
 
+// Default width of an image dropped or pasted into an editor (resizable up via
+// the handle afterwards). Matches __inline-img-pending's CSS width.
+const INLINE_IMG_W = 220;
+
+// The width an inline image lands at: the default, capped at the image's
+// natural width so a small one isn't upscaled. 0 when the width is unknown.
+function inlineImageWidth(naturalWidth) {
+  return naturalWidth ? Math.min(INLINE_IMG_W, naturalWidth) : 0;
+}
+
 // 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
 // the skin derives the column tint from the accent (--col-accent) and pill
 // tints from data-theme.
@@ -8157,6 +8167,17 @@ class __tasks_panel extends LetcBox {
       img.src = url;
       img.alt = "";
       img.setAttribute("draggable", "false");
+      // Take the committed image's width the moment the preview decodes, so
+      // the box keeps ONE size from drop to final image — the CSS 220px alone
+      // would upscale a small image here and shrink it again on the swap.
+      img.addEventListener(
+        "load",
+        () => {
+          const w = inlineImageWidth(img.naturalWidth);
+          if (w) ph.style.width = `${w}px`;
+        },
+        { once: true },
+      );
       ph.appendChild(img);
       ph.__previewUrl = url;
     }
@@ -8213,7 +8234,32 @@ class __tasks_panel extends LetcBox {
       this._releaseInlinePreview(ph);
       return;
     }
-    const node = this._makeInlineImage(res.nid, res.hub, null, true);
+    // The swap must not change the box. The committed wrapper used to be built
+    // with NO width and pointed straight at the served URL, so between the swap
+    // and that download it went from 220px to zero-high, then to the image's
+    // full natural size (inline-block shrink-to-fit around a width:100% img),
+    // and only on its load back down to 220px. Instead: the width is known
+    // already — the local preview decoded long ago — and the <img> keeps
+    // showing that same local preview until the served copy has loaded.
+    const preview = ph && ph.querySelector && ph.querySelector("img");
+    const nat = preview && preview.naturalWidth;
+    const width = inlineImageWidth(nat);
+    const node = this._makeInlineImage(res.nid, res.hub, width, true);
+    const img = node.querySelector && node.querySelector("img");
+    if (img && nat && ph.__previewUrl) {
+      const served = img.src;
+      img.src = ph.__previewUrl;
+      const loader = new Image();
+      const done = () => {
+        if (img.isConnected) img.src = served;
+        this._releaseInlinePreview(ph);
+      };
+      loader.onload = done;
+      loader.onerror = done;
+      loader.src = served;
+    } else {
+      this._releaseInlinePreview(ph);
+    }
     if (ph && ph.isConnected) {
       ph.replaceWith(node);
     } else {
@@ -8221,22 +8267,19 @@ class __tasks_panel extends LetcBox {
       // editor, the same place a stale range has always put it.
       this._insertInlineNode(node, editorEl, null);
     }
-    this._releaseInlinePreview(ph);
-    // Pasted images default to a small size (still resizable up via the handle).
-    // Cap at the image's natural width so a small image isn't upscaled, then
-    // re-sync so the width is stored in the draft marker.
-    const DEFAULT_W = 220;
-    const img = node.querySelector && node.querySelector("img");
-    const applySmall = () => {
-      if (!node.isConnected) return;
-      const nat = img && img.naturalWidth ? img.naturalWidth : DEFAULT_W;
-      node.style.width = `${Math.min(DEFAULT_W, nat)}px`;
-      this._onDescInput(scope, editorEl);
-    };
-    if (img && img.complete && img.naturalWidth) applySmall();
-    else if (img) img.addEventListener("load", applySmall, { once: true });
-    else node.style.width = `${DEFAULT_W}px`;
-    // Sync the draft from the mutated editor (initial; width sync follows onload).
+    if (!width) {
+      // No preview to measure (an engine that refused the object URL): size it
+      // once the served image arrives, capped so a small one isn't upscaled.
+      const applySmall = () => {
+        if (!node.isConnected) return;
+        node.style.width = `${inlineImageWidth(img && img.naturalWidth) || INLINE_IMG_W}px`;
+        this._onDescInput(scope, editorEl);
+      };
+      if (img && img.complete && img.naturalWidth) applySmall();
+      else if (img) img.addEventListener("load", applySmall, { once: true });
+      else node.style.width = `${INLINE_IMG_W}px`;
+    }
+    // Sync the draft (with its width marker) from the mutated editor.
     this._onDescInput(scope, editorEl);
   }
 
