@@ -5,6 +5,17 @@
 //   • approved → "Access granted" with the effective level (download / chat / full)
 // Done closes the flow; Change permission reopens the approve popup. Rendered
 // into the same approve overlay so it stacks over the dimmed backdrop.
+//
+// The `.window-secure-share-access-result` rules live in the secure-share
+// WINDOW's skin, which style-loader only injects when some module requires it —
+// and the only other requirer is `__window_secure_share.initialize`. A host that
+// renders this modal without ever opening that window (the activity panel, from
+// an access-request notification) therefore painted a completely unstyled card.
+// Declaring the dependency here keeps it with the classnames it pays for, so
+// every host gets the skin; the require is cached, so the window still injects
+// it once.
+require('../skin');
+
 const __skl_secure_share_access_result = function(_ui_, opts = {}) {
   // `opts.fig` lets a different host (e.g. the activity panel) reuse this modal
   // with the secure-share window's BEM root, so the same SCSS applies — no style
