@@ -236,6 +236,47 @@ class __media_core extends DrumeeMFS {
     return this.mget(_a.privilege) & _K.permission.admin;
   }
 
+  /**
+   * The WAY OUT of a workspace, as a contextmenu item key: `trash` (delete the
+   * workspace) or `leaveWorkspace` (drop my own membership).
+   *
+   * ONE ROW, TWO ACTIONS — and until now one label for both. `_a.trash` renders
+   * "Move to trash" and posts `_e.remove`, which ends at
+   * Wm.removeMediaSelection → libs/media-selection bucketFor. That function
+   * decides, per item, whether a hub is DELETED (hub.delete_hub, an
+   * irreversible DROP DATABASE) or merely LEFT (desk.leave_hub) — and for a
+   * member without the admin bit it has always been the latter. So the row said
+   * "Move to trash" and the dialog that followed said "Leave". Lexis reported
+   * the confusion on 2026-09-21.
+   *
+   * This reads the SAME bit bucketFor reads, so the label and the action cannot
+   * disagree: admin (and therefore owner) sees the destructive row, everyone
+   * else sees the row that describes what will actually happen to them.
+   *
+   * Keyed on `filetype`, NOT on `isHub`: media/grid initContainer() raises
+   * `isHub` on any node whose `hubs` attribute is non-empty, which for a FOLDER
+   * means "there are hubs somewhere inside me" (see the note in
+   * media/interact.js move(), and the hubs_inside branch of bucketFor). A file
+   * or a folder has no membership to leave, so it keeps "Move to trash".
+   *
+   * Fails to `trash` — the row every caller has always rendered — when the
+   * privilege cannot be read at all, matching the fail-open rule the folder
+   * settings panel's own gate follows (window/folder allowedActions). A
+   * privilege that reads 0 is an ANSWER, not a failure, and gives
+   * `leaveWorkspace`.
+   *
+   * @returns {String} a key of builtins/contextmenu/skeleton/items
+   */
+  _workspaceExitKey() {
+    if (this.mget(_a.filetype) !== _a.hub) return _a.trash;
+    try {
+      if (!_.isFunction(this.isGranted)) return _a.trash;
+      return this.isGranted(_K.permission.admin) ? _a.trash : "leaveWorkspace";
+    } catch (e) {
+      return _a.trash;
+    }
+  }
+
   contextmenuItemsForHub() {
     let fileItems = [];
     // Over-limit: upload + invite are paused — omit them from the kebab so
@@ -248,11 +289,11 @@ class __media_core extends DrumeeMFS {
       if (!locked && this._canInviteToHub()) {
         fileItems.push(_a.share)
       }
-      fileItems.push(_a.separator, _a.trash)
+      fileItems.push(_a.separator, this._workspaceExitKey())
     } else if (this.canDownload()) {
       fileItems = ['openInWindow', _a.separator, _a.download, _a.separator, _a.info];
       if (!locked && this._canInviteToHub()) fileItems.push(_a.share);
-      if (this.canRemove()) fileItems.push(_a.trash);
+      if (this.canRemove()) fileItems.push(this._workspaceExitKey());
     }
     // for media files in trash
     if (this.mget(_a.status) == _a.deleted) {
@@ -287,15 +328,18 @@ class __media_core extends DrumeeMFS {
       sections.push([_a.info]);
       /** 5 — outside-world share link (share area only) */
       if (this.mget(_a.area) === _a.share) sections.push(['secureShare']);
-      /** 6 — trash last */
-      sections.push([_a.trash]);
+      /** 6 — trash last. On a WORKSPACE this row may be "Leave workspace"
+       *  instead: the desk switcher's ⋯ menu is built from this same builder
+       *  (modules/desk/index.js _resolveWorkspaceActions), so the workspace
+       *  menu goes through _workspaceExitKey exactly as the grid tile does. */
+      sections.push([this._workspaceExitKey()]);
     } else if (this.canDownload()) {
       // Restricted/shared recipient — Download only per Figma 2.2
       sections.push([_a.download]);
       // Invite (_a.share) hidden on subfolders per Lexis 2026-06-14 (parent-folder/hub only).
       // if (this.canShare()) sections.push([_a.share]);
       sections.push([_a.info]);
-      if (this.canRemove()) sections.push([_a.trash]);
+      if (this.canRemove()) sections.push([this._workspaceExitKey()]);
     }
 
     const fileItems = [];

@@ -3192,8 +3192,20 @@ class __window_manager extends push {
   }
 
   /**
+   * Drop the caller's own membership of a workspace — the other half of the
+   * exit row, for a member without the admin bit (libs/media-selection
+   * bucketFor sends them here, and media/core.js _workspaceExitKey labels the
+   * row "Leave workspace" to match).
    *
-   * @param {*} cmd
+   * The COPY names a workspace and says what is lost. It used to be
+   * LOCALE.LEAVE + MSG_LEAVE_HUB — "Leave" over "You want to leave the shared
+   * folder …", which is this dialog's oldest wording and predates workspaces
+   * having a name of their own in the UI. Everything that reaches this method
+   * is a hub (bucketFor keys on isHub), so there is no caller left that a
+   * "shared folder" reads better for. MSG_LEAVE_HUB itself is untouched — the
+   * legacy hub settings window still uses it.
+   *
+   * @param {*} media the workspace's media view
    */
   confirmLeaveHub(media) {
     // Returns a Promise that settles once the request settles (or the user
@@ -3204,8 +3216,8 @@ class __window_manager extends push {
         p.feed({
           kind: "window_confirm",
           maxsize: 2,
-          title: LOCALE.LEAVE,
-          message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
+          title: LOCALE.LEAVE_WORKSPACE,
+          message: LOCALE.MSG_LEAVE_WORKSPACE.format(media.mget(_a.filename)),
           confirm: LOCALE.LEAVE,
         })
           .ask()
@@ -3365,6 +3377,12 @@ class __window_manager extends push {
    * never consulted — one shape, evaluated the same way each time, is worth more
    * than skipping a cheap call.
    *
+   * `isAdmin` is what decides delete-vs-leave for a hub (see bucketFor). It is
+   * read as a BIT rather than through canAdmin() so this stays a plain model
+   * read like every other field here; the admin bit is set for an owner too
+   * (owner 0b0111111 contains admin 0b0010000), and `isOwner` is kept beside it
+   * because bucketFor still honours it.
+   *
    * @param {Object} m a media view
    * @returns {Object} the row shape bucketFor expects
    */
@@ -3372,6 +3390,7 @@ class __window_manager extends push {
     return {
       locked: m.mget(_a.status) === _a.locked,
       isHub: !!m.isHub,
+      isAdmin: !!m.isGranted(_K.permission.admin),
       isOwner: !!m.isGranted(_K.permission.owner),
       isFolder: !!m.isFolder,
       containsHub: !!m.containsHub,

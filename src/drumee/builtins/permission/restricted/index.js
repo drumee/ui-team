@@ -507,6 +507,121 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   /**
+   * "Leave workspace" — the red button under the Permissions Matrix.
+   *
+   * The panel's own exit door, and for a View or Chat member the ONLY one: the
+   * workspace tile's kebab and the switcher's ⋯ only render an exit row for a
+   * viewer holding the write bit. See the skeleton's leaveSection.
+   *
+   * Confirm FIRST, on the same destructive card the member-removal prompt uses
+   * (Wm.confirm, `confirm_type: "danger"`), naming the workspace. Cancel, ✕ and
+   * Escape all reject that promise, and a rejection means nothing happens —
+   * the card is the only thing that can start the request.
+   *
+   * The backdrop stays at Wm.confirm's "scrim" default here, unlike the role
+   * and remove prompts beside it: those name a member row the user would check
+   * in the matrix behind the card, this one is about the whole workspace and has
+   * nothing behind it worth reading.
+   */
+  async _leaveWorkspace() {
+    if (this._confirmInFlight) return;
+    const hubId = this.mget(_a.hub_id);
+    // No hub, or the user's OWN entity: there is nothing to leave. A personal
+    // workspace is a folder in the caller's home and reports hub_id ===
+    // Visitor.id; desk.leave_hub refuses that outright (HUB_ID_NOT_ALLOWED), so
+    // stop here rather than posting a request that can only fail. The button is
+    // not drawn in either case (skeleton viewerCanLeave) — this is the belt to
+    // that brace, for a stale skeleton or a future surface raising the service.
+    if (!hubId || `${hubId}` === `${Visitor.id}`) {
+      this.warn("leave-workspace: refused, no foreign hub to leave", { hubId });
+      return;
+    }
+    const name = this._workspaceName();
+
+    this._confirmInFlight = true;
+    try {
+      await Wm.confirm({
+        title: LOCALE.LEAVE_WORKSPACE,
+        message: LOCALE.MSG_LEAVE_WORKSPACE.format(name),
+        confirm: LOCALE.LEAVE,
+        confirm_type: "danger",
+        cancel: LOCALE.CANCEL,
+        cancel_type: "secondary",
+        mode: "hbf",
+      });
+    } catch (_) {
+      this._confirmInFlight = false;
+      return;
+    }
+
+    const btn = this.getPart?.("leave-workspace");
+    if (btn?.el) btn.el.dataset.pending = "1";
+    try {
+      // Same call and same payload the tile path posts (wm/index.js
+      // confirmLeaveHub): `nid` is the hub being left, `hub_id` is the caller's
+      // own — the ACL resolves this service's scope from hub_id.
+      const res = await this.postService(SERVICE.desk.leave_hub, {
+        nid: hubId,
+        hub_id: Visitor.id,
+      });
+      // A rejected POST resolves UNDEFINED — doRequest hands a non-200 to
+      // onServerComplain, which only warns — so a falsy answer is a failure and
+      // must not be reported as a departure.
+      if (!res || res.error) {
+        return this._notice(
+          (res && (res.reason || res.error)) || LOCALE.LEAVE_WORKSPACE_FAILED,
+        );
+      }
+      // The same local echo the tile path emits. The sidebar workspace list
+      // (modules/desk _onWorkspaceWsEvent) and any open window of this hub
+      // (window/utils handleWsEvent → removeContent) already subscribe to
+      // `desk.leave_hub`; the server pushes its own notification to this
+      // account's sockets as well, and both handlers are idempotent — the
+      // later one finds nothing left to remove.
+      //
+      // Emitted on Wm, which is where this panel LISTENS for the same bus
+      // (see initialize), because the panel is fed into hosts whose uiHandler
+      // chain does not reach the desk.
+      Wm.trigger(WS_EVENT, {
+        data: {
+          hub_id: hubId,
+          home_id: hubId,
+          nid: hubId,
+          filetype: _a.hub,
+          [_a.filename]: name,
+        },
+        options: { service: "desk.leave_hub" },
+      });
+    } catch (e) {
+      this._notice(e?.reason || e?.error || LOCALE.LEAVE_WORKSPACE_FAILED);
+    } finally {
+      this._confirmInFlight = false;
+      if (btn?.el) delete btn.el.dataset.pending;
+    }
+  }
+
+  /**
+   * Which workspace this panel is about, in words — for the confirm card.
+   *
+   * Same order the header's own title tries (skeleton/index.js workspaceTab):
+   * the bound media first, the panel's model second, because the two feeds
+   * carry different fields — window/folder's access column hands over the
+   * window's media (filename + area), while media/form wraps a raw create_hub
+   * row, which has no filename at all. Falls back to the generic word rather
+   * than naming nothing.
+   */
+  _workspaceName() {
+    const media = this.mget(_a.media);
+    const read = (k) => {
+      const fromMedia = media && _.isFunction(media.mget) ? media.mget(k) : null;
+      return fromMedia || this.mget(k);
+    };
+    return (
+      read(_a.filename) || read("hub_name") || read(_a.name) || LOCALE.WORKSPACE
+    );
+  }
+
+  /**
    * Send button. EVERY outcome is reported inline at the field, success and
    * failure alike (see _setInviteNotice) — nothing here opens a modal.
    *
@@ -635,6 +750,9 @@ class __permission_restricted extends DrumeeMFS {
 
       case "remove-member":
         return this._removeMember(cmd);
+
+      case "leave-workspace":
+        return this._leaveWorkspace();
 
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);

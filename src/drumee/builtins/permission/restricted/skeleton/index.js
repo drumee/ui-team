@@ -62,6 +62,11 @@ function mapMember(row) {
     lastname: (row.lastname || "").trim(),
     fullname: (row.fullname || "").trim() || name,
     role: roleFromPrivilege(row.privilege),
+    // The RAW bitmask, beside the role it resolves to. `role` cannot answer
+    // "am I the owner": roleFromPrivilege has four levels and an owner (63)
+    // resolves to Admin, exactly as an admin (31) does. viewerCanLeave below
+    // needs the owner BIT, which only the mask carries.
+    privilege: ~~row.privilege,
     isSelf,
   };
 }
@@ -156,6 +161,39 @@ function viewerIsAdmin(list) {
   return self.role.label === LOCALE.ROLE_ADMIN;
 }
 
+/**
+ * May this viewer leave this workspace — i.e. should the red button be drawn?
+ *
+ * Read off the SAME member list the matrix renders, for the same reason
+ * viewerIsAdmin is: one source, so the button and the rows can never disagree
+ * about who the viewer is.
+ *
+ * FAIL CLOSED, and deliberately the opposite of the action rows' fail-open
+ * rule. This button costs the viewer every file, folder and conversation in the
+ * workspace and only an admin can undo it, so it is drawn only when we
+ * positively know two things:
+ *
+ *   1. the viewer IS a member row here — no self row, no button. That is also
+ *      what keeps it off a PERSONAL workspace: `hub_get_members_by_type` exists
+ *      only in templates/factory/hub.sql and not in drumate.sql, so a personal
+ *      workspace always renders this panel with zero rows. There is nothing to
+ *      leave there — it is the user's own home — and desk.leave_hub refuses it
+ *      outright (HUB_ID_NOT_ALLOWED when nid == the caller's uid).
+ *   2. the viewer is NOT the owner. Nothing server-side stops an owner from
+ *      calling desk.leave_hub, which would leave the workspace with no owner at
+ *      all; an owner deletes a workspace or hands it over (hub.change_owner),
+ *      they do not walk out of it.
+ *
+ * An ADMIN who is not the owner DOES get the button: they are an invited
+ * member like any other, and it is their only exit that does not destroy the
+ * workspace for everyone else.
+ */
+function viewerCanLeave(list) {
+  const self = list.find((m) => m.isSelf);
+  if (!self) return false;
+  return !(self.privilege & _K.permission.owner);
+}
+
 function memberRows(list, ui, pfx, isAdmin) {
   if (!list.length) {
     return [
@@ -232,6 +270,7 @@ module.exports = function (ui) {
     .filter((row) => row.entity_id || row.drumate_id || row.id)
     .map(mapMember);
   const isAdmin = viewerIsAdmin(members);
+  const canLeave = viewerCanLeave(members);
 
   /**
  * Which workspace this panel is about — the area-tinted folder shape and the
@@ -444,10 +483,43 @@ const header = Skeletons.Box.X({
     ],
   });
 
+  // ── Leave workspace ───────────────────────────────────────────
+  // UNDER the Permissions Matrix, last thing in the panel (Lexis, 2026-09-21).
+  //
+  // WHY IT IS HERE AT ALL: a member below Edit has no other way out. The
+  // workspace tile's kebab and the switcher's ⋯ only render an exit row when
+  // the viewer holds the write bit (media/core.js contextmenuItemsForHub /
+  // contextmenuItemsForFolder both gate on canOrganize/canRemove), so a View or
+  // Chat member could be added to a workspace and never able to leave it. This
+  // panel is a door every member can reach.
+  //
+  // THE WARNING COMES FIRST, then the button: what is lost is the part the
+  // viewer has to weigh, and a red button on its own only says "careful". The
+  // click still opens a confirm card naming the workspace (index.js
+  // _leaveWorkspace) — the button itself never leaves anything.
+  const leaveSection = canLeave
+    ? Skeletons.Box.Y({
+      className: `${pfx}__leave-section`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__leave-warning`,
+          content: LOCALE.LEAVE_WORKSPACE_WARNING,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__leave-button`,
+          sys_pn: "leave-workspace",
+          content: LOCALE.LEAVE_WORKSPACE,
+          service: "leave-workspace",
+          uiHandler: [ui],
+        }),
+      ],
+    })
+    : null;
+
   // Pinned header + scrolling body, after the base panel's -header / -scroll.
   const body = Skeletons.Box.Y({
     className: `${pfx}__body`,
-    kids: [inviteSection, membersSection].filter(Boolean),
+    kids: [inviteSection, membersSection, leaveSection].filter(Boolean),
   });
 
   return Skeletons.Box.Y({

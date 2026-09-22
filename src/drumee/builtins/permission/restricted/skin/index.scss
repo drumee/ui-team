@@ -346,7 +346,8 @@
   // row: the role popover is an absolutely positioned descendant that has to
   // escape its row's box.
   &__invite-section,
-  &__members-section {
+  &__members-section,
+  &__leave-section {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -555,6 +556,71 @@
         border-radius: 50%;
         animation: permission-restricted__send-button-spin 0.7s linear infinite;
       }
+    }
+  }
+
+  // ── Leave workspace ──────────────────────────────────────────
+  // Last thing in the panel, under the Permissions Matrix. A rule above it
+  // rather than a gap alone: this is not another way to manage members, it is
+  // the viewer acting on their own membership, and the line is what says so.
+  //
+  // The rule is drawn as padding-top on the section so the body's own 24px gap
+  // stays above it — the section's `padding: 0 24px` comes from the shared rule
+  // with the other two, and this block sits AFTER that rule in the file, so the
+  // longhand below wins on source order without an !important.
+  &__leave-section {
+    gap: 12px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-default);
+  }
+
+  // What is lost, said before the button rather than only inside the confirm
+  // card — the button alone would just read as "careful".
+  &__leave-warning {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $weight: 400,
+      $color: var(--normal-fg-20)
+    );
+  }
+
+  // Geometry from __send-button above (same 36px full-width pill, so the
+  // panel has one button shape), colour from the confirm card's own danger
+  // button (window/confirm/skin __button-danger) — this button opens that
+  // card, and the two must not be different reds. Those --btn-caution-* tokens
+  // live in skin/vars/default.scss `:root`, not per theme, so there is no
+  // dark-mode branch to keep in step.
+  &__leave-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 24px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: var(--btn-caution-background, #ff7479);
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--btn-caution-text, #ffffff)
+    );
+
+    &:hover {
+      background: var(--btn-caution-background-hover, #ea4d44);
+    }
+
+    // In flight: index.js stamps data-pending on the element while
+    // desk.leave_hub is out and deletes it in its finally, so this covers both
+    // outcomes. pointer-events is the actual disable — a second POST would be
+    // answered for a workspace the account has already left.
+    &[data-pending="1"] {
+      cursor: progress;
+      pointer-events: none;
+      opacity: 0.6;
     }
   }
 
