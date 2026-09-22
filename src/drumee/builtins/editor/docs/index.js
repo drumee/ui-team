@@ -2,6 +2,7 @@ const __player = require("player/interact");
 const renameInline = require("builtins/player/widget/topbar/rename");
 const { attachHelpContactMenu } = require("builtins/editor/help-contact-menu");
 const collab = require("./collab");
+const docTabs = require("./tabs");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 
 require("./skin");
@@ -480,7 +481,10 @@ class __editor_docs extends __player {
       this.setSaveStatus("unsaved");
       return;
     }
-    const content = JSON.stringify({ docx: base64 });
+    // Tabs: the bytes just exported belong to the ACTIVE tab; the file keeps
+    // every tab (docs/tabs.js writeTabs also mirrors the active one into
+    // `docx`, so a reader that knows nothing about tabs still opens it).
+    const content = JSON.stringify(this.tabsPayload(base64));
 
     const ext = this.mget(_a.ext) || "udoc";
     let filename = this.mget(_a.filename);
@@ -594,11 +598,165 @@ class __editor_docs extends __player {
         return;
       case "direct-rename":
         return this.renameFromChrome();
+      case "toggle-doc-tabs":
+        return this.toggleTabs();
       case "contact-support":
         return this.contactSupport();
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);
     }
+  }
+
+  // ── Document tabs ────────────────────────────────────────────────────────
+  //
+  // One .udoc holds several documents, like Google Docs' "Document tabs":
+  // the rail on the left lists them, the editor shows one at a time, and a
+  // save writes them all (docs/tabs.js owns the on-disk shape).
+
+  /**
+   * Adopt the tab list read from the file (docs_state, on load).
+   *
+   * @param {Array} tabs
+   * @param {String} active
+   */
+  setTabs(tabs, active) {
+    this._tabs = Array.isArray(tabs) && tabs.length ? tabs : [];
+    this._activeTab = active || (this._tabs[0] && this._tabs[0].id) || null;
+    this.renderTabs();
+  }
+
+  /** @returns {Array} the tab list, never empty once the file has loaded. */
+  getTabs() {
+    return this._tabs || [];
+  }
+
+  /** @returns {String|null} */
+  activeTabId() {
+    return this._activeTab || null;
+  }
+
+  /**
+   * The JSON to store: every tab, with `base64` written into the active one.
+   *
+   * @param {String} base64 freshly exported bytes of the tab on screen
+   */
+  tabsPayload(base64) {
+    const tabs = this.getTabs();
+    if (!tabs.length) return { docx: base64 };
+    const active = this.activeTabId();
+    const merged = tabs.map((t) => (t.id === active ? { ...t, docx: base64 } : t));
+    this._tabs = merged;
+    return docTabs.writeTabs(merged, active);
+  }
+
+  /** Repaint the rail (no-op while it is collapsed). */
+  renderTabs() {
+    if (!this._tabsOpen) return;
+    this.ensurePart("doc-tabs").then((p) => {
+      if (!p || !p.el) return;
+      p.el.innerHTML = "";
+      p.el.appendChild(
+        require("./skeleton/tabs-rail").build(this, this.getTabs(), this.activeTabId())
+      );
+    });
+  }
+
+  /** Show / hide the rail. */
+  toggleTabs(force) {
+    this._tabsOpen = force == null ? !this._tabsOpen : !!force;
+    if (this.el) this.el.dataset.tabs = this._tabsOpen ? "open" : "closed";
+    this.renderTabs();
+  }
+
+  /**
+   * Switch tabs: the bytes on screen belong to the tab we are LEAVING, so
+   * they are exported and kept before the next tab is loaded — otherwise a
+   * switch would drop whatever was typed since the last autosave.
+   *
+   * @param {String} id
+   */
+  async selectTab(id) {
+    if (!id || id === this._activeTab || this._switchingTab) return;
+    const tabs = this.getTabs();
+    if (!tabs.some((t) => t.id === id)) return;
+    this._switchingTab = 1;
+    try {
+      await this.stashActiveTab();
+      this._activeTab = id;
+      this.renderTabs();
+      if (this._doc && this._doc.showTab) await this._doc.showTab(id);
+      // The tab that just came up is what a save must write.
+      this.saveContent();
+    } catch (e) {
+      this.warn("__editor_docs: tab switch failed", e);
+    } finally {
+      this._switchingTab = 0;
+    }
+  }
+
+  /** Export what is on screen into the active tab of the in-memory list. */
+  async stashActiveTab() {
+    if (!this._doc || !this._doc.exportCurrent) return null;
+    const base64 = await this._doc.exportCurrent();
+    if (!base64) return null;
+    const active = this.activeTabId();
+    this._tabs = this.getTabs().map((t) => (t.id === active ? { ...t, docx: base64 } : t));
+    return base64;
+  }
+
+  /** "+" on the rail: a new, empty tab, opened straight away. */
+  async addTab() {
+    const tabs = this.getTabs();
+    const id = docTabs.newTabId();
+    this._tabs = tabs.concat([{ id, name: docTabs.defaultName(tabs.length), docx: null }]);
+    await this.selectTab(id);
+  }
+
+  /**
+   * Rename a tab from the rail's inline input.
+   *
+   * @param {String} id
+   * @param {String} name
+   */
+  renameTab(id, name) {
+    const clean = String(name || "").trim();
+    if (!clean) return;
+    this._tabs = this.getTabs().map((t) => (t.id === id ? { ...t, name: clean } : t));
+    this.renderTabs();
+    this.saveContent();
+  }
+
+  /** A copy of a tab, right after it. */
+  async duplicateTab(id) {
+    if (id === this.activeTabId()) await this.stashActiveTab();
+    const tabs = this.getTabs();
+    const i = tabs.findIndex((t) => t.id === id);
+    if (i < 0) return;
+    const copy = {
+      id: docTabs.newTabId(),
+      name: `${tabs[i].name} (${LOCALE.COPY || "copy"})`,
+      docx: tabs[i].docx,
+    };
+    this._tabs = tabs.slice(0, i + 1).concat([copy], tabs.slice(i + 1));
+    await this.selectTab(copy.id);
+  }
+
+  /** Remove a tab. The last one always stays — a document needs a body. */
+  async removeTab(id) {
+    const tabs = this.getTabs();
+    if (tabs.length < 2) return;
+    const i = tabs.findIndex((t) => t.id === id);
+    if (i < 0) return;
+    const next = tabs[i + 1] || tabs[i - 1];
+    this._tabs = tabs.filter((t) => t.id !== id);
+    if (id === this.activeTabId()) {
+      this._activeTab = next.id;
+      this.renderTabs();
+      if (this._doc && this._doc.showTab) await this._doc.showTab(next.id);
+    } else {
+      this.renderTabs();
+    }
+    this.saveContent();
   }
 
   /**

@@ -5,6 +5,7 @@ import { CasualEditor } from "@casualoffice/docs";
 import { serializeDocx } from "@casualoffice/docs/core";
 import "@casualoffice/docs/styles.css";
 import { contentUrl } from "builtins/editor/content-url";
+const docTabs = require("./tabs");
 
 // Co-editing helpers: gateway probe, Drumee FileSource adapter, identity.
 const collab = require("./collab");
@@ -118,7 +119,13 @@ class __docs_state extends DrumeeMFS {
         let buffer = null;
         try {
           const j = JSON.parse(content);
-          if (j && j.docx) buffer = base64ToAb(j.docx);
+          // Document tabs: hand the list to the window (which owns it) and
+          // mount the active one. A file written before tabs existed yields a
+          // single tab holding its `docx` — see docs/tabs.js readTabs.
+          const model = docTabs.readTabs(j, BLANK_DOCX_B64);
+          if (this.editor && this.editor.setTabs) this.editor.setTabs(model.tabs, model.active);
+          const cur = model.tabs.find((t) => t.id === model.active) || model.tabs[0];
+          if (cur && cur.docx) buffer = base64ToAb(cur.docx);
         } catch (e) {
           this.warn("docs_state: unreadable document, starting blank", e);
         }
@@ -557,11 +564,15 @@ class __docs_state extends DrumeeMFS {
     this._pinCasualTheme();
     if (editor && editor.el) editor.el.classList.add("editor-docs--collab");
     this._root = createRoot(this._reactHost());
-    this._root.render(
+    // Rendered through a closure so a TAB SWITCH can re-render with another
+    // room (docs/tabs.js roomId) instead of tearing the editor down.
+    const renderCollab = (room) => {
+      this._room = room;
+      this._root.render(
       createElement(CasualEditor, {
         ref: this._ref,
         fileSource,
-        docId: nid,
+        docId: room,
         backendUrl: ws,
         user,
         author: user.name,
@@ -590,11 +601,67 @@ class __docs_state extends DrumeeMFS {
         onError: (e) =>
           console.error("[DOCS] collab onError", e && (e.message || e), e && e.stack),
       })
-    );
+      );
+    };
+    this._renderCollab = renderCollab;
+    renderCollab(nid);
 
     this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
     this._nudgeResize();
     if (editor && editor._raiseAboveDesk) setTimeout(() => editor._raiseAboveDesk(), 1200);
+  }
+
+  /**
+   * Put a tab on screen.
+   *
+   * SINGLE-USER: load the tab's bytes into the mounted editor.
+   * CO-EDITING: each tab is its own Yjs room, so the editor is re-rendered
+   * with that room's `docId`; the FileSource then opens the tab's bytes and
+   * seeds the room (collab.js maps `<nid>~<tabId>` back to the tab).
+   *
+   * @param {String} tabId
+   */
+  async showTab(tabId) {
+    const editor = this.editor;
+    const tabs = (editor && editor.getTabs && editor.getTabs()) || [];
+    const tab = tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    if (this._collab) {
+      const room = docTabs.roomId(this._collab.nid, tabs, tabId);
+      if (this._renderCollab) this._renderCollab(room);
+      return;
+    }
+    const ref = this._ref && this._ref.current;
+    const bytes = tab.docx ? base64ToAb(tab.docx) : base64ToAb(BLANK_DOCX_B64);
+    if (ref && typeof ref.loadDocumentBuffer === "function") {
+      this._loading = 1;
+      await ref.loadDocumentBuffer(bytes);
+      setTimeout(() => {
+        this._loading = 0;
+      }, 800);
+      return;
+    }
+    // No imperative loader (older build): remount on the new bytes.
+    if (this._root) this._root.unmount();
+    this._mounted = 0;
+    this.mount(bytes);
+  }
+
+  /**
+   * @returns {Promise<String|null>} base64 of what is on screen right now —
+   * used to keep the tab being left before another is loaded.
+   */
+  async exportCurrent() {
+    try {
+      const ref = this._ref && this._ref.current;
+      if (ref && typeof ref.exportDocx === "function") {
+        const buf = await ref.exportDocx();
+        if (buf) return abToBase64(buf);
+      }
+    } catch (e) {
+      this.warn("docs_state: exportCurrent failed", e);
+    }
+    return this.getContent();
   }
 
   /**

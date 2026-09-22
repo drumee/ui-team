@@ -52,6 +52,28 @@ function base64ToAb(b64) {
 }
 
 const { contentUrl } = require("builtins/editor/content-url");
+const docTabs = require("./tabs");
+
+/**
+ * The JSON to store when ONE tab has new bytes.
+ *
+ * The window holds the tab list (docs/index.js), so the bytes are merged into
+ * the right entry and every other tab is written back untouched. With no tab
+ * model — a file opened before the list loaded — the old single-document
+ * shape is kept.
+ *
+ * @param {Object} editor  the editor window
+ * @param {String|null} tabId  null for the first tab (its room is the bare nid)
+ * @param {String} b64
+ */
+function tabsContent(editor, tabId, b64) {
+  const tabs = (editor && editor.getTabs && editor.getTabs()) || [];
+  if (!tabs.length) return { docx: b64 };
+  const target = tabId || (editor.activeTabId && editor.activeTabId()) || tabs[0].id;
+  const merged = tabs.map((t) => (t.id === target ? { ...t, docx: b64 } : t));
+  if (editor.setTabs) editor.setTabs(merged, editor.activeTabId ? editor.activeTabId() : target);
+  return docTabs.writeTabs(merged, editor.activeTabId ? editor.activeTabId() : target);
+}
 
 /** The three bases: the endpoint's http origin+path, the gateway REST base
  *  and the gateway WebSocket base (Hocuspocus lives at /yjs). */
@@ -121,9 +143,13 @@ function makeFileSource(editor, ctx) {
     },
 
     async open(id) {
+      // Document tabs: the id CasualEditor opens is the ROOM, which for every
+      // tab but the first is `<nid>~<tabId>` (docs/tabs.js). Strip it back to
+      // the node to fetch the file, then hand back that tab's bytes.
+      const { nid, tabId } = docTabs.splitRoom(id);
       // ui-core's address for the node (share key for dmz visitors, cache
       // buster) — builtins/editor/content-url.
-      const url = contentUrl(editor && editor.media, { nid: id, hub_id: ctx.hub_id });
+      const url = contentUrl(editor && editor.media, { nid, hub_id: ctx.hub_id });
       if (!url) throw new Error("no content url for the document");
       // Revalidate (ETag) instead of trusting the year-long Cache-Control
       // nginx puts on /file/orig/…: a plain GET returned the blank document
@@ -134,7 +160,15 @@ function makeFileSource(editor, ctx) {
       let bytes = null;
       try {
         const j = JSON.parse(content);
-        if (j && j.docx) bytes = base64ToAb(j.docx);
+        const model = docTabs.readTabs(j, BLANK_DOCX_B64);
+        if (editor && editor.setTabs && !(editor.getTabs && editor.getTabs().length)) {
+          editor.setTabs(model.tabs, tabId || model.active);
+        }
+        const want = tabId
+          ? model.tabs.find((t) => t.id === tabId)
+          : model.tabs.find((t) => t.id === model.active) || model.tabs[0];
+        const b64 = (want && want.docx) || (tabId ? null : j && j.docx);
+        if (b64) bytes = base64ToAb(b64);
       } catch (e) {
         /** not our JSON wrapper */
       }
@@ -163,7 +197,12 @@ function makeFileSource(editor, ctx) {
         throw new Error("autosave paused after repeated failures");
       }
       status("saving");
-      const content = JSON.stringify({ docx: abToBase64(bytes) });
+      // Document tabs: these bytes are ONE tab of the file, so they are merged
+      // into the tab the room stands for and the whole list is written back.
+      // Writing `{docx}` alone here would drop every other tab.
+      const { nid: node, tabId } = docTabs.splitRoom(id);
+      const b64 = abToBase64(bytes);
+      const content = JSON.stringify(tabsContent(editor, tabId, b64));
       const name = opts.name || ctx.filename();
       const base = {
         service: SERVICE.media.save,
@@ -174,7 +213,7 @@ function makeFileSource(editor, ctx) {
         metadata: { dataType: "doc.casual" },
       };
       try {
-        let nid = id;
+        let nid = node || id;
         let where = { hub_id: ctx.hub_id, pid: ctx.pid };
         if (!nid) {
           const created = await post({ ...base, replace: 0, p: ctx.pid });

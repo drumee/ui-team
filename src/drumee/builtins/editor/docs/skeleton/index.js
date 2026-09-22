@@ -34,11 +34,25 @@ function __skl_editor_docs(_ui_) {
     name: "dialog",
   });
 
+  // Document tabs live in their own column left of the editor. The part is
+  // always present and empty; docs/index.js fills it (skeleton/tabs-rail) and
+  // the skin collapses the column while `data-tabs` is not "open".
+  const tabs = Skeletons.Box.Y({
+    className: `${_ui_.fig.family}__tabs-slot`,
+    sys_pn: "doc-tabs",
+    partHandler: _ui_,
+  });
+
+  const row = Skeletons.Box.X({
+    className: `${_ui_.fig.family}__row`,
+    kids: [tabs, body],
+  });
+
   return Skeletons.Box.Y({
     className: `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
-    kids: [header, body, dialog],
+    kids: [header, row, dialog],
   });
 }
 module.exports = __skl_editor_docs;

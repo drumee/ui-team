@@ -28,6 +28,179 @@
   z-index: 60000 !important;
 }
 
+// ── Document tabs ───────────────────────────────────────────────────────────
+// A rail left of the editor, like Google Docs: title + "+", one row per tab,
+// a ⋮ menu per row. The column is 0 wide until the gear row opens it, so the
+// editor keeps the whole window when tabs are not in use.
+.editor-docs {
+  &__row {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  &__tabs-slot {
+    width: 0;
+    flex: 0 0 0;
+    overflow: hidden;
+    transition: width 0.15s ease, flex-basis 0.15s ease;
+  }
+
+  &[data-tabs="open"] &__tabs-slot {
+    width: 260px;
+    flex: 0 0 260px;
+    border-right: 1px solid #e3e6ea;
+    background: #f8f9fb;
+  }
+
+  &__tabs {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px 8px 12px;
+    font: 400 14px/1.3 Inter, system-ui, sans-serif;
+    color: #1f2328;
+  }
+
+  &__tabs-top {
+    display: flex;
+    padding: 4px 4px 8px;
+  }
+
+  &__tabs-close,
+  &__tabs-add {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #5f6368;
+
+    &:hover {
+      background: rgba(15, 23, 42, 0.06);
+    }
+  }
+
+  &__tabs-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 0 12px;
+  }
+
+  &__tabs-title {
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  &__tabs-list {
+    margin-top: 8px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  &__tab-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 8px 0 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background: rgba(15, 23, 42, 0.05);
+    }
+
+    &.is-active {
+      background: #d7e3fc;
+      color: #0b57d0;
+
+      .editor-docs__tab-glyph {
+        color: #0b57d0;
+      }
+    }
+  }
+
+  &__tab-glyph {
+    flex: none;
+    color: #5f6368;
+    fill: currentColor;
+  }
+
+  &__tab-name {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__tab-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #0b57d0;
+    border-radius: 6px;
+    padding: 2px 6px;
+    outline: none;
+  }
+
+  &__tab-more {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #5f6368;
+    font-size: 16px;
+    line-height: 1;
+
+    &:hover {
+      background: rgba(15, 23, 42, 0.1);
+    }
+  }
+
+  &__tab-menu {
+    position: absolute;
+    z-index: 30000;
+    min-width: 160px;
+    padding: 6px 0;
+    background: #fff;
+    border: 1px solid #e3e6ea;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    font: 400 14px/1.3 Inter, system-ui, sans-serif;
+    color: #1f2328;
+  }
+
+  &__tab-menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(15, 23, 42, 0.06);
+    }
+
+    &.is-disabled {
+      color: #9aa0a6;
+      cursor: default;
+
+      &:hover {
+        background: transparent;
+      }
+    }
+  }
+}
+
 // "Who is here" popover under the presence avatars (docs_state).
 .editor-docs__peers-pop {
   position: absolute;

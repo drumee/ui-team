@@ -17,6 +17,14 @@ function gearMenu(ui) {
       icon: "app-edit",
       service: "direct-rename",
     },
+    // Google-Docs "Document tabs": several documents in one file, listed in a
+    // rail on the left (docs/skeleton/tabs-rail).
+    {
+      id: "menu-tabs",
+      label: LOCALE.DOCUMENT_TABS || "Document tabs",
+      icon: "app-doc-file",
+      service: "toggle-doc-tabs",
+    },
     { separator: true },
     // Replaces Casual's own "Help" menu (hidden by docs_state): opens Drumee's
     // support conversation, or the support mail link as a fallback.

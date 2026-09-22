@@ -1,4 +1,7 @@
 {
+  "TAB": "Tab",
+  "NEW_TAB": "New tab",
+  "DOCUMENT_TABS": "Document tabs",
   "DEPARTMENT": "Отдел",
   "DEPARTMENT_NAME": "Название отдела",
   "ORG_NAME": "Название организации",
