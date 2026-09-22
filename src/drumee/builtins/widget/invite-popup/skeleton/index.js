@@ -12,12 +12,42 @@
 // Admin, weakest first, with hover descriptions) — adapted to this
 // popup's historical {id, label, bit} shape. Fixes the old hardcoded
 // table where "View & Edit" sent the CHAT-level bitmask (0b0000111).
-const { roleItems } = require("builtins/skeleton/toolkit/permission");
+const { roleItems, ROLE_ICONS } = require("builtins/skeleton/toolkit/permission");
+// Same area-tinted folder glyph the workspace dropdown rows draw, so the
+// picked workspace looks like the row it was picked from.
+const folderIcon = require("media/grid/template/folder");
+
+/**
+ * The glyph for one picked workspace, or "" when the row has no pick yet.
+ *
+ * `hub`/`role: "desk"` unconditionally: the picker only ever offers hubs —
+ * _fetchWorkspaces drops `personal` via NON_INVITEABLE before anything is
+ * listed — so there is no folder case to branch on here.
+ *
+ * A missing `area` still draws: the template falls back to its own base fill.
+ * That is the pre-seeded row's case when a caller supplies a name but no area.
+ */
+const workspaceGlyph = (ws) =>
+  ws && ws.hub_id
+    ? folderIcon({
+        // `|| ""`, not the bare value: with role "desk" the template skips its
+        // own `inner-folder` default and interpolates whatever it was given
+        // straight into `class="folder-shape ${area}"` — an undefined here
+        // ships a literal `folder-shape undefined` class.
+        area: ws.area || "",
+        filetype: _a.hub,
+        role: "desk",
+        widgetId: _.uniqueId("invite-ws-picked-"),
+        isAttachment: 1,
+      })
+    : "";
 const ROLES = roleItems.map((r) => ({
   id: r.value,
   label: r.label,
   bit: r.privilege,
   description: r.description,
+  // The glyph the permission panel's role pill shows for the same level.
+  ico: ROLE_ICONS[r.value],
 }));
 
 const DEFAULT_ROLE_IDS = ["edit"];
@@ -66,6 +96,24 @@ const buildWorkspaceRow = (ui, idx) => {
             service: "search-workspace",
             bubble: 0,
           }),
+          // Overlays the input's left edge (the cell is position:relative
+          // already, for the dropdown). pointer-events are off in the skin so
+          // a click still lands in the field behind it, and the input takes
+          // matching left padding while this is showing — see the skin.
+          //
+          // Gated on a `state` stamp, never on CSS :empty: this is fed with
+          // markup by _renderWorkspaceIcon and an empty widget still renders
+          // its own inner node.
+          Skeletons.Element({
+            // No area class on the wrapper: the tint rides on the glyph's own
+            // `.folder-shape.<area>`, and a class here would go stale the
+            // first time _renderWorkspaceIcon swaps the content.
+            className: `${pfx}__workspace-icon`,
+            sys_pn: `workspace-icon:${idx}`,
+            partHandler: ui,
+            dataset: { idx, state: ws.hub_id ? 1 : 0 },
+            content: workspaceGlyph(ws),
+          }),
           Skeletons.Box.Y({
             className: `${pfx}__workspace-suggestions`,
             sys_pn: `workspace-suggestions:${idx}`,
@@ -101,11 +149,24 @@ const buildWorkspaceRow = (ui, idx) => {
             sys_pn: `role-options:${idx}`,
             partHandler: ui,
             dataset: { idx, state: 0 },
+            // Rows modelled on the permission panel's role pill
+            // (permission/restricted roleDropdown → dropdownMenuButton): the
+            // level's glyph, then its name, then its description on hover.
+            //
+            // The vocabulary only, not that widget. This menu is hand-wired
+            // into _toggleRoleDropdown, _pickRole's capture-phase mousedown
+            // and _maybeCloseDropdowns, and swapping it for a menu_topic would
+            // rewire all three. The pick still resolves the same way:
+            // closest(".invite-popup__role-option"), and the skin's
+            // `&__role-option > *` rule keeps both kids pointer-transparent.
             kids: ROLES.map((r) =>
-              Skeletons.Note({
+              Skeletons.Box.X({
                 className: `${pfx}__role-option`,
-                // Hover description ("Can only View", …) — positioned
-                // beside the row by the skin (.role-option-tooltip).
+                // Hover description ("Can only View", …). Declared the same
+                // way the panel declares it — but ui-core hides it with an
+                // inline display:none that only a CLICK toggles, and a click
+                // here picks the role and closes the menu. The skin reveals it
+                // on :hover instead; see `.role-option-tooltip` there.
                 tooltips: r.description
                   ? { content: r.description, className: "role-option-tooltip" }
                   : undefined,
@@ -114,7 +175,17 @@ const buildWorkspaceRow = (ui, idx) => {
                   idx,
                   checked: roleIds.includes(r.id) ? 1 : 0,
                 },
-                content: r.label,
+                kidsOpt: { active: 0 },
+                kids: [
+                  Skeletons.Button.Svg({
+                    ico: r.ico,
+                    className: `${pfx}__role-option-icon`,
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__role-option-label`,
+                    content: r.label,
+                  }),
+                ],
               }),
             ),
           }),
@@ -266,6 +337,7 @@ module.exports = function (ui) {
 };
 
 module.exports.buildWorkspaceRow = buildWorkspaceRow;
+module.exports.workspaceGlyph = workspaceGlyph;
 module.exports.ROLES = ROLES;
 module.exports.DEFAULT_ROLE_IDS = DEFAULT_ROLE_IDS;
 module.exports.computePrivilege = computePrivilege;

@@ -1,5 +1,26 @@
 @use "mixins/drumee";
 
+// ── Entrance / exit ─────────────────────────────────────────────────────
+// The same pair, and the same timings, that every other dialog fed into
+// Wm.__wrapperModal plays: media/form (create workspace),
+// widget/migrate-gdrive-popup, and the tour card that rehearses it
+// (desk/tutorial/migrate). A card the user meets in several places should
+// arrive and leave the same way in all of them.
+//
+// `backwards`, NEVER `both`: a filling animation keeps its last keyframe
+// forever and outranks inline styles, and the window manager stamps inline
+// left/top on the instance it feeds here — `both` would freeze the card at
+// the final transform and fight that placement.
+@keyframes invite-popup-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes invite-popup-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.97); }
+}
+
 .invite-popup {
   /* All interactive Notes: inner div must not intercept clicks */
   &__role-select > *,
@@ -27,6 +48,21 @@
     border-radius: 6px;
     box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.16);
     z-index: 99998;
+
+    // ON __ui, NOT __container. The card IS this element — the background,
+    // border, radius and shadow above all live here; __container is only the
+    // padded inner column. Animating __container would scale the contents
+    // inside a card frame that sat perfectly still. media/form carries the
+    // same note for the same reason.
+    animation: invite-popup-in 0.18s ease-out backwards;
+
+    // Set by _closePopup, which then defers the teardown so the exit actually
+    // gets frames — clearing the wrapper synchronously destroyed the element
+    // on the spot and the animation never rendered. (0,2,0) so it out-ranks
+    // the entrance declared just above.
+    &[data-closing="1"] {
+      animation: invite-popup-out 0.16s ease-in forwards;
+    }
 
     &[data-state="0"] {
       display: none;
@@ -262,6 +298,33 @@
     }
   }
 
+  // ── Pending: the service is in flight and the box is still empty ────────
+  //
+  // Gated on data-loading and NEVER on :empty. Both of these are
+  // Skeletons.Box, which always renders a widget-blank emptyView child, so
+  // the CSS :empty test can never match them however empty they look.
+  //
+  // index.js stamps data-state="1" ALONGSIDE data-loading, because neither
+  // box is on screen without it: __suggestions is `visibility: hidden` and
+  // __workspace-suggestions is `display: none !important` until that flag
+  // flips. Stamping data-loading alone would spin something nobody can see.
+  //
+  // Reuses invite-popup-send-spin rather than declaring a second identical
+  // rotation — @keyframes is global, so one spin per stylesheet.
+  &__suggestions[data-loading="1"]::before,
+  &__workspace-suggestions[data-loading="1"]::before {
+    content: "";
+    align-self: center;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 10px auto;
+    border: 2px solid var(--border-default, #e5e5ea);
+    border-top-color: var(--active-border, #5950ff);
+    border-radius: 50%;
+    animation: invite-popup-send-spin 0.6s linear infinite;
+  }
+
   &__suggestion-item {
     padding: 8px 12px;
     cursor: pointer;
@@ -348,6 +411,21 @@
     flex: 1;
     position: relative;
     min-width: 0;
+
+    // Room for the picked-workspace glyph: 12px inset + 22px glyph + 8px gap,
+    // less the 12px __workspace-input already pads by.
+    //
+    // :has() on the CELL, not a sibling combinator on the input — the icon is
+    // rendered AFTER the input in the row skeleton and CSS has no
+    // previous-sibling selector. Keying off the icon's own state is what makes
+    // the text move exactly when the glyph appears, with no second flag to
+    // keep in sync. The same :has() idiom this file already uses to stop the
+    // card scrolling while a dropdown is open.
+    &:has(.invite-popup__workspace-icon[data-state="1"]) {
+      .invite-popup__workspace-input input {
+        padding-left: 30px;
+      }
+    }
   }
 
   &__role-cell {
@@ -393,12 +471,51 @@
     }
   }
 
+  // The picked workspace's glyph, sitting over the field's left edge.
+  //
+  // An OVERLAY rather than a sibling in flow: the field is an Entry whose
+  // <input> fills the cell, and an element beside it would either shrink the
+  // field or push the absolutely-positioned suggestions out of line. The cell
+  // is already position:relative (for that dropdown), so this costs no new
+  // stacking context.
+  //
+  // pointer-events off, always: this sits ON TOP of the input, and a click
+  // that lands here instead of in the field would neither focus it nor open
+  // the workspace list.
+  &__workspace-icon {
+    // THE @include COMES FIRST. ws-folder-icon declares `position: relative`
+    // of its own (it is the containing block for the glyph's badge), so an
+    // `position: absolute` written above it is silently overwritten and the
+    // glyph drops into flow BELOW the field instead of sitting over it.
+    //
+    // Same 22/18 the dropdown rows draw, so the picked workspace looks like
+    // the row it was picked from. 22 in a 36px field leaves 7px either side.
+    @include drumee.ws-folder-icon(22px, 18px);
+
+    position: absolute;
+    left: 12px;
+    // Centred rather than a measured offset: the field is 36px today and a
+    // hardcoded 7px would go stale the moment that changes.
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    pointer-events: none;
+
+    // Hidden until a pick, and again while the user types over it. display,
+    // not visibility: the mixin sets `display: flex !important`, so only a
+    // matching !important can take it back out of flow.
+    &[data-state="0"] {
+      display: none !important;
+    }
+  }
+
   &__workspace-input {
     background-color: var(--normal-bg-elevated);
     border-radius: 6px;
     padding: 8px 12px;
     height: 36px;
     width: 100%;
+
 
     input {
       background: transparent;
@@ -441,6 +558,29 @@
     padding: 4px 0;
     z-index: 99999;
     padding: 8px;
+    // ── Borrowed from the topbar switcher's __ws-list ──────────────────
+    // This picker lists the same things that list does, so it uses the same
+    // row rhythm and the same scrollbar.
+    gap: 1px;
+    // A VISIBLE bar. The default one gave a capped list no sign there was
+    // more below it. Both halves are needed: `scrollbar-width` alone leaves
+    // Firefox drawing its default grey while Chrome takes the brand colour
+    // from the ::-webkit rules.
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-70) rgba(0, 0, 0, 0.05);
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--primary-70);
+      border-radius: 4px;
+    }
 
     &[data-state="1"] {
       display: flex !important;
@@ -449,19 +589,62 @@
     }
   }
 
+  // Geometry and colours taken from the topbar switcher's __ws-item, which in
+  // turn took them from __new-menu-item — the app's established dropdown row.
+  // 36px min-height, 8/10 padding, r=4, 10px gap, --normal-bg-90 hover. This
+  // picker offers the same workspaces the switcher lists, so it should not be
+  // a third dialect of the same row.
+  //
+  // NOT ported: the switcher's `[data-current="1"]` tint. Nothing here is ever
+  // the current row — _pickedHubIds filters every already-chosen workspace out
+  // of the list before it is rendered, so the state cannot occur.
   &__workspace-option {
-    padding: 8px 12px;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    padding: 8px 10px;
     border-radius: 4px;
+    box-sizing: border-box;
+    width: 100%;
     cursor: pointer;
-    @include drumee.typo($size: 12px, $color: var(--normal-fg-10));
-
-    .inner {
-      pointer-events: none;
-    }
+    white-space: nowrap;
 
     &:hover {
-      background-color: var(--normal-bg-40);
+      background-color: var(--normal-bg-90);
     }
+  }
+
+  // Group heading — the topbar switcher's __ws-section, to the letter, since
+  // the rows under it are that switcher's rows.
+  &__workspace-section {
+    padding: 10px 10px 4px;
+    font-family: "Geist", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--normal-fg-50);
+
+    // No dead space above the first heading.
+    &:first-child {
+      padding-top: 2px;
+    }
+  }
+
+  &__workspace-option-icon {
+    @include drumee.ws-folder-icon(22px, 18px);
+  }
+
+  &__workspace-option-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: "Geist", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-10);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__role-select {
@@ -558,10 +741,26 @@
     align-items: center;
     position: relative;
     padding: 8px 12px;
+    // Glyph-to-label spacing from the permission panel's role pill rows
+    // (mixins/drumee window-button-dropdown-menu `__item`).
+    gap: 10px;
     cursor: pointer;
 
     .inner {
       pointer-events: none;
+    }
+
+    // THE ONLY THING THAT MAKES THE DESCRIPTION VISIBLE. ui-core's
+    // __addTooltips writes `display: none` INLINE on this card and toggles it
+    // only from __handleClick — there is no hover handling in the framework at
+    // all. A click on a role option picks it and closes the menu, so without
+    // this the card is created, styled below, and never once seen. !important
+    // because nothing else outranks an inline style.
+    //
+    // Gated on the ROW's :hover, not on any state the framework stamps: it
+    // stamps none (data-over is dead code in ui-core).
+    &:hover .role-option-tooltip {
+      display: block !important;
     }
 
     &:hover {
@@ -597,7 +796,53 @@
       line-height: 16px;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
       z-index: 100000;
+
+      // ON NARROW SCREENS, TO THE LEFT. The role menu is the right-most thing
+      // on the card, so a card on its right runs off the edge on a phone —
+      // measured at a 600px viewport its right edge landed at 675px, and
+      // __wrapper-modal is overflow:clip, so the description was cut off. It
+      // was never seen before only because the tooltip never showed at all.
+      // The left is the workspace field: always room. Desktop keeps the
+      // right-hand placement chosen on 2026-07-20.
+      //
+      // Emitted twice, as mixins/responsive.scss does it: Visitor.device()
+      // only answers "mobile" below 801px, so the attribute is absent in the
+      // DevTools emulator and on a landscape phone.
+      @media (max-width: 650px) {
+        left: auto;
+        right: calc(100% + 10px);
+      }
+
+      .invite-popup__ui[data-device="mobile"] & {
+        left: auto;
+        right: calc(100% + 10px);
+      }
     }
+  }
+
+  // The level's glyph — the same one the permission panel's role pill draws,
+  // at that menu's size: a 20px box holding a 16px mark. currentColor so the
+  // checked row's accent reaches the glyph as well as the label.
+  &__role-option-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    color: inherit;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  }
+
+  &__role-option-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
   }
 
   &__role-text {
@@ -717,92 +962,68 @@
   }
 }
 
-// ── Desktop backdrop: thin the glass so the tab underneath still reads ──
+// ── Reduced motion ──────────────────────────────────────────────────────
+// Global, not nested, so it lands AFTER the block above and wins on source
+// order without needing to out-specify each rule it cancels.
 //
-// The shared glass (mixins/drumee.scss glass-overlay) is rgba(255,255,255,.55)
-// plus blur(30px) plus a second blur(60px) ::before layer. Over a workspace
-// that is almost opaque white — the popup stopped looking like something ON
-// the current tab and started looking like a screen that had REPLACED it,
-// which is exactly the confusion reported. Same colour, much less of it, and
-// enough blur to keep the card legible without hiding what is behind it.
+// The close still takes its full 160ms here: _closePopup drives the teardown
+// off a TIMER, never animationend, precisely because that event never fires
+// when the animation is switched off — the popup would otherwise stay open
+// forever for exactly the users who asked for less motion.
+//
+// The pending rings go static rather than disappearing: a two-tone ring with
+// one coloured arc still reads as "working", which is what
+// window/info/skin does with its own loader.
+@media (prefers-reduced-motion: reduce) {
+  .invite-popup__ui,
+  .invite-popup__ui[data-closing="1"],
+  .invite-popup__suggestions[data-loading="1"]::before,
+  .invite-popup__workspace-suggestions[data-loading="1"]::before {
+    animation: none;
+  }
+}
+
+// ── Backdrop: no glass, no dim ──────────────────────────────────────────
+//
+// The shared glass (mixins/drumee.scss glass-overlay) the wrapper-modal
+// normally wears is rgba(255,255,255,.55) plus blur(30px) plus a second
+// blur(60px) ::before layer. This popup opts out of ALL of it: the tab behind
+// stays fully sharp and untinted, so the card reads as something sitting ON
+// the current tab rather than as a screen that replaced it.
 //
 // Keyed on data-invite-overlay, which invite-popup/index.js sets ALONGSIDE
 // data-overlay="blur" (never instead of it — libs/guided-flow and reward-flow
-// both select on [data-*-overlay][data-overlay="blur"]). So this cannot reach
-// any other occupant of the shared wrapper: the create-workspace dialog,
-// permission_*, window_info, request_access and Wm.confirm() all keep the
-// glass exactly as it is.
+// both select on [data-*-overlay][data-overlay="blur"] to install their own
+// tour backdrop). So this cannot reach any other occupant of the shared
+// wrapper: the create-workspace dialog, permission_*, window_info,
+// request_access and Wm.confirm() all keep the glass exactly as it is.
 //
-// Both class names are real on that element and are doubled up for
-// specificity (0,4,0) so this out-cascades the mixin's 0,3,0 without
-// !important — which is what leaves the tours' own !important overrides on top
-// when one is running, and leaves the mobile scrim below (0,5,0 and, for the
-// media query, 0,4,0 declared LATER in this file) the winner on a phone.
+// Both class names are real on that element (wm/skeleton:
+// `${family}__wrapper-modal ${group}__wrapper-modal`) and are doubled up for
+// specificity (0,4,0) so this out-cascades the mixin's 0,3,0 — included for
+// both `.window-manager__wrapper-modal[data-overlay="blur"]` (wm/skin) and
+// `.window__wrapper-modal[data-overlay="blur"]` (window/skin/window.scss) —
+// without !important, which is what leaves the tours' own !important
+// overrides on top when one is running.
+//
+// NO DEVICE SPLIT. The phone used to get the desk's flat scrim here
+// (scrim-overlay, matching .desk-module__overlay behind the mobile drawer)
+// and the desktop a thinned glass. With the backdrop fully transparent there
+// is nothing left for either to vary, so this one block covers every width.
+//
+// CRITICAL — this rule belongs in THIS file, not in the skin of whichever
+// widget shares the host. Webpack injects a widget's stylesheet only when that
+// widget loads (`static initClass() { require("./skin") }`), so the rule has
+// to ship in the chunk that is guaranteed to be present whenever this popup is
+// on screen: its own.
 .window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay][data-overlay="blur"] {
-  background-color: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-
-  html[data-theme="dark"] & {
-    background-color: rgba(11, 10, 33, 0.28);
-  }
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 // glass-overlay stacks a blurred ::before on top of the colour; left in place
 // it re-frosts everything the rule above just cleared.
 .window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay][data-overlay="blur"]::before {
   content: none;
-}
-
-// ── Mobile backdrop ─────────────────────────────────────────────────────
-// ⚠️ MOBILE: these rules MUST stay BELOW the [data-invite-overlay] block above.
-// The media-query one ties with it on specificity (0,4,0), so it wins on SOURCE
-// ORDER alone — move it up, or hoist the desktop rule down past it, and the
-// phone silently gets the desktop's thin glass instead of this scrim. The
-// [data-device="mobile"] one is 0,5,0 and wins either way.
-//
-// This popup is fed into Wm.__wrapperModal (desk/index.js and
-// widget/settings/hub both do), and invite-popup/index.js opts that host INTO
-// the app's frosted glass by setting data-overlay="blur" on it. On a phone the
-// backdrop should instead be the desk's flat scrim — the same
-// var(--overlay-bg) + blur(6px) that .desk-module__overlay uses behind the
-// mobile drawer — so every mobile overlay surface matches.
-//
-// So this has to out-specify that opt-in rather than fill a gap. The
-// wrapper-modal element carries BOTH the family and group classes
-// (wm/skeleton: `${family}__wrapper-modal ${group}__wrapper-modal`), and glass
-// is included for both `.window-manager__wrapper-modal[data-overlay="blur"]`
-// (wm/skin) and `.window__wrapper-modal[data-overlay="blur"]`
-// (window/skin/window.scss). Doubling the class here takes this to (0,5,0),
-// clear of both and independent of stylesheet load order.
-//
-// CRITICAL — this rule belongs in THIS file, not in the skin of whichever
-// widget shares the host. Webpack injects a widget's stylesheet only when that
-// widget loads (`static initClass() { require("./skin") }`), so the rule has to
-// ship in the chunk that is guaranteed to be present whenever this popup is on
-// screen: its own. It previously lived in media/form/skin next to the
-// create-workspace dialog's identical rule, and was therefore absent from the
-// page unless that unrelated dialog had also been opened — the backdrop stayed
-// frosted for exactly that reason.
-//
-// Global (not nested) because the element being restyled is desk chrome this
-// widget does not own, and :has() keeps it to this popup — the wrapper also
-// hosts the create-workspace dialog, permission_*, window_info and
-// request_access, which must keep the glass.
-//
-// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
-// answers "mobile" below 801px, so the attribute is absent in the DevTools
-// emulator and on a landscape phone.
-.window-manager__wrapper-modal.window-manager__wrapper-modal[data-device="mobile"][data-state="open"]:has(
-    .invite-popup__container
-  ) {
-  @include drumee.scrim-overlay;
-}
-
-@media (max-width: 650px) {
-  .window-manager__wrapper-modal.window-manager__wrapper-modal[data-state="open"]:has(
-      .invite-popup__container
-    ) {
-    @include drumee.scrim-overlay;
-  }
 }

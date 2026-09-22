@@ -5,8 +5,14 @@
  */
 const { lookupContacts, suggestionRows } = require("libs/contact-lookup");
 const { isSeatLimitReply, showSeatLimitReached } = require("libs/billing");
+// The area-tinted folder glyph the desk topbar's workspace switcher draws.
+// Returns an HTML STRING, not a sprite name — see its use below.
+const folderIcon = require("media/grid/template/folder");
+// The desk's own Internal/External/Public/Personal split — see the lib on
+// why the rule is shared rather than restated here.
+const { groupWorkspaces } = require("libs/workspace-groups");
 const skeletonModule = require("./skeleton");
-const { ROLES, DEFAULT_ROLE_IDS, computePrivilege, summarizeRoles } =
+const { ROLES, DEFAULT_ROLE_IDS, computePrivilege, summarizeRoles, workspaceGlyph } =
   skeletonModule;
 
 class __invite_popup extends LetcBox {
@@ -48,6 +54,11 @@ class __invite_popup extends LetcBox {
       {
         hub_id: seedId,
         name: seedId ? opt.hub_name : "",
+        // Tints the picked-workspace glyph. Only the kebab "Invite" path
+        // seeds a row at all, and it is the only caller that can know this —
+        // see media/interact.openInvitePopup. Absent is fine: the folder
+        // template falls back to its own base fill.
+        area: seedId ? opt.hub_area || "" : "",
         roleIds: DEFAULT_ROLE_IDS.slice(),
       },
     ];
@@ -60,6 +71,7 @@ class __invite_popup extends LetcBox {
       roleLabels: {},
       roleOptions: {},
       workspaceRows: {},
+      workspaceIcons: {},
     };
     this._nextRowIdx = 1;
   }
@@ -73,9 +85,9 @@ class __invite_popup extends LetcBox {
       this._wrapperEl.dataset.overlay = "blur";
       // A SECOND marker, alongside `overlay` rather than instead of it.
       //
-      // The skin uses it to thin the frosted glass down to something the
-      // current tab is still visible through, so the popup reads as an overlay
-      // ON that tab instead of as a screen that replaced it. The default
+      // The skin uses it to clear the wrapper's frosted glass entirely —
+      // no blur and no tint — so the popup reads as an overlay ON the current
+      // tab instead of as a screen that replaced it. The default
       // rgba(255,255,255,.55) + blur(30px) is opaque enough to look like a
       // blank white page.
       //
@@ -252,12 +264,41 @@ class __invite_popup extends LetcBox {
     this._setError(this._workspaceError, message);
   }
 
-  _closePopup() {
-    if (this.parent && _.isFunction(this.parent.clear)) {
-      this.parent.clear();
-    } else {
-      this.softDestroy();
-    }
+  /**
+   * Close the popup, playing the exit animation on the way out.
+   *
+   * Still parent.clear() and not goodbye(): goodbye removes the widget
+   * silently, leaving the wrapper's data-state stuck at "open" and breaking
+   * the next open click. What changed is only WHEN — clearing synchronously
+   * destroyed the element on the spot, so invite-popup-out never got a frame.
+   * The root is marked instead and the same clear() runs 160ms later.
+   *
+   * A TIMER, not animationend. Under prefers-reduced-motion the skin sets
+   * `animation: none`, and that event would then never fire — the popup would
+   * stay open forever for exactly the users who asked for less motion.
+   *
+   * @param {Object} [opt]
+   * @param {Number} [opt.immediate] 1 to skip the animation and close now.
+   *   The post-send path passes it: _sendInvitation raises a Wm.alert toast
+   *   into THIS SAME wrapper-modal, and that feed destroys this popup. Hold
+   *   the close for 160ms and the toast can land first, at which point the
+   *   deferred clear() would wipe the confirmation the user is meant to read.
+   */
+  _closePopup(opt = {}) {
+    if (this._closing) return;
+    this._closing = 1;
+    const done = () => {
+      // The wrapper may already have been re-fed while we waited (a Wm.alert
+      // toast, another dialog). Clearing it then would destroy THAT, not us.
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.parent && _.isFunction(this.parent.clear)) {
+        return this.parent.clear();
+      }
+      return this.softDestroy();
+    };
+    if (opt.immediate || !this.el || !this.el.dataset) return done();
+    this.el.dataset.closing = "1";
+    setTimeout(done, 160);
   }
 
   /**
@@ -330,6 +371,8 @@ class __invite_popup extends LetcBox {
           this._fetchWorkspaces(idx, inputEl.value.trim());
         });
       });
+    } else if (pn.startsWith("workspace-icon:")) {
+      this._partRefs.workspaceIcons[pn.split(":")[1]] = child;
     } else if (pn.startsWith("workspace-suggestions:")) {
       const idx = pn.split(":")[1];
       this._partRefs.workspaceSuggestions[idx] = child;
@@ -371,17 +414,47 @@ class __invite_popup extends LetcBox {
   // The typed string is matched against the whole address book — every
   // address a contact holds, not just their name (see libs/contact-lookup),
   // so a half-typed email offers the contacts that own it.
+  /**
+   * Show or clear the pending spinner on one of the two dropdown boxes.
+   *
+   * BOTH flags go on together. Neither box is on screen without
+   * data-state="1" — __suggestions is `visibility: hidden` and
+   * __workspace-suggestions is `display: none !important` until it flips — so
+   * stamping data-loading alone spins something nobody can see.
+   *
+   * The box is emptied first: whatever is in it belongs to the previous
+   * answer, and leaving stale rows under a spinner claims they are still the
+   * matches for what is being typed now.
+   *
+   * @param {Object} box  the part (may be absent — parts mount late)
+   * @param {Number} on   1 while the service is in flight, 0 once it answered
+   */
+  _setBoxLoading(box, on) {
+    if (!box || !box.el) return;
+    if (!on) {
+      delete box.el.dataset.loading;
+      return;
+    }
+    box.clear();
+    box.el.dataset.state = 1;
+    box.el.dataset.loading = 1;
+  }
+
   _fetchSuggestions(value) {
     if (this._searchTimer) clearTimeout(this._searchTimer);
     // Each keystroke supersedes the one before: a slow answer that comes
     // back after the user typed on must not repopulate the dropdown.
     const seq = (this._searchSeq = (this._searchSeq || 0) + 1);
     this._searchTimer = setTimeout(async () => {
+      this._setBoxLoading(this._suggestionsBox, 1);
       const rows = await lookupContacts(this, {
         value,
         exclude: this._invitees.map((i) => i.email),
         limit: 8,
       });
+      // Superseded: a newer keystroke is still in flight, so the spinner is
+      // deliberately LEFT UP — it belongs to that request now, and clearing
+      // it here would blink the box empty between two searches.
       if (seq !== this._searchSeq) return;
       this._showSuggestions(rows);
     }, 250);
@@ -392,6 +465,7 @@ class __invite_popup extends LetcBox {
   _showSuggestions(rows) {
     this._suggestions = rows;
     if (!this._suggestionsBox) return;
+    this._setBoxLoading(this._suggestionsBox, 0);
     if (!rows.length) {
       this._hideSuggestions();
       return;
@@ -410,27 +484,49 @@ class __invite_popup extends LetcBox {
 
   _hideSuggestions() {
     if (this._suggestionsBox) {
+      this._setBoxLoading(this._suggestionsBox, 0);
       this._suggestionsBox.el.dataset.state = 0;
       this._suggestionsBox.clear();
     }
   }
 
+  /**
+   * Add one address to the chip list, or refuse it with a reason.
+   *
+   * ONE CANONICAL FORM, stored and compared. Everything downstream already
+   * treats an address case-insensitively — libs/contact-lookup lowercases
+   * every suggestion row (normalize()) and its exclude set, the server's seat
+   * count lowercases (hub.js _newcomers), and yp.token's UNIQUE KEY
+   * (email, method, inviter_id) is utf8mb3_general_ci. The typed path was the
+   * one exception: it stored the raw token and compared with ===, so
+   * `Bob@acme.com` and `bob@acme.com` both became chips and both went to
+   * hub.invite, which loops the array as given. That billed one person two
+   * seats (and could refuse the whole call as SEAT_LIMIT_REACHED), then had
+   * token_hub_invite_add REPLACE the first invitation with the second —
+   * sending two mails whose first link was already dead.
+   *
+   * @returns {String|null} null when the address was added, else why it was
+   *   refused: "empty" | "self" | "duplicate". Callers adding a BATCH use this
+   *   to report after the loop — see _addPendingEmailFromInput.
+   */
   _addInvitee(data, opt) {
-    if (!data || !data.email) return;
+    if (!data || !data.email) return "empty";
+    const email = String(data.email).trim().toLowerCase();
+    if (!email) return "empty";
     const ownEmail = (Visitor.profile() || {}).email;
-    if (ownEmail && data.email.toLowerCase() === ownEmail.toLowerCase()) {
+    if (ownEmail && email === String(ownEmail).toLowerCase()) {
       this._setEmailError(
         LOCALE.INVITE_EMAIL_SELF || "You cannot invite yourself.",
       );
-      return;
+      return "self";
     }
-    if (this._invitees.find((i) => i.email === data.email)) {
+    if (this._invitees.find((i) => i.email === email)) {
       this._setEmailError(
         LOCALE.INVITE_EMAIL_DUPLICATE || "This email is already in the list.",
       );
-      return;
+      return "duplicate";
     }
-    this._invitees.push(data);
+    this._invitees.push({ ...data, email });
     this._setEmailError(null);
     this._renderChips();
     this._refreshSendState();
@@ -442,6 +538,7 @@ class __invite_popup extends LetcBox {
       }
     }
     this._hideSuggestions();
+    return null;
   }
 
   _removeInvitee(idx) {
@@ -495,17 +592,41 @@ class __invite_popup extends LetcBox {
     // Leftovers (typos / partial input) stay in the input so the user can fix them.
     const tokens = value.split(/[\s,;]+/).filter(Boolean);
     const leftovers = [];
+    // Well-formed but refused (your own address, or already a chip). They are
+    // NOT put back in the input: a duplicate is by definition already in the
+    // list, and your own address can never be added, so returning either would
+    // leave text the user cannot clear by any means but deleting it. They are
+    // reported below instead, which is what was missing.
+    const refused = [];
     for (const tok of tokens) {
       if (__invite_popup._EMAIL_RE.test(tok)) {
-        this._addInvitee({ email: tok });
+        const reason = this._addInvitee({ email: tok });
+        if (reason) refused.push(reason);
       } else {
         leftovers.push(tok);
       }
     }
     if (inputEl) inputEl.value = leftovers.join(" ");
+    // THE MESSAGE IS SET AFTER THE LOOP, NEVER INSIDE IT. _addInvitee clears
+    // the error on every success, so a refused token followed by a good one
+    // used to end the loop with a cleared error — "bob@x.com alice@x.com" with
+    // bob already listed dropped bob and said nothing at all.
+    //
+    // Bad syntax outranks a refusal because those tokens are the ones still
+    // sitting in the input waiting to be fixed; a refusal has nothing left on
+    // screen to point at. Self outranks duplicate for the same reason it is
+    // checked first — it is the more surprising of the two.
     if (leftovers.length) {
       this._setEmailError(
         LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.",
+      );
+    } else if (refused.includes("self")) {
+      this._setEmailError(
+        LOCALE.INVITE_EMAIL_SELF || "You cannot invite yourself.",
+      );
+    } else if (refused.includes("duplicate")) {
+      this._setEmailError(
+        LOCALE.INVITE_EMAIL_DUPLICATE || "This email is already in the list.",
       );
     }
   }
@@ -513,6 +634,10 @@ class __invite_popup extends LetcBox {
   /* ── Workspace search ─────────────────────────────────────── */
 
   _onWorkspaceInput(idx, e) {
+    // The field no longer reads as the picked workspace, so the glyph must go.
+    // NOTE it only clears the GLYPH — _workspaces[idx].hub_id keeps the last
+    // pick until a new one replaces it, which is how this has always behaved.
+    this._renderWorkspaceIcon(idx, 0);
     this._fetchWorkspaces(idx, (e.target.value || "").trim());
   }
 
@@ -527,6 +652,10 @@ class __invite_popup extends LetcBox {
       async () => {
         let list = this._workspacesCache;
         if (!list) {
+          // Only on a REAL round trip. Every later call is answered from
+          // _workspacesCache in the same tick, and a spinner that appears and
+          // vanishes within one frame just makes the list flicker on open.
+          this._setBoxLoading(this._partRefs.workspaceSuggestions[idx], 1);
           const data = await this.fetchService(
             {
               service: SERVICE.desk.home,
@@ -581,6 +710,7 @@ class __invite_popup extends LetcBox {
   _showWorkspaceSuggestions(idx, list) {
     const sugBox = this._partRefs.workspaceSuggestions[idx];
     if (!sugBox) return;
+    this._setBoxLoading(sugBox, 0);
     const picked = this._pickedHubIds(idx);
     const dedup = list.filter((row) => {
       const id = String(row.hub_id || row.id || row.actual_hub_id || "");
@@ -591,18 +721,78 @@ class __invite_popup extends LetcBox {
       return;
     }
     const pfx = this.fig.family;
-    const items = dedup.map((row) =>
-      Skeletons.Note({
+    // Built to match the desk topbar's workspace switcher row
+    // (desk-module-topbar__ws-item): glyph + name, same geometry, same
+    // colours. These are the same workspaces that list offers, so a picker
+    // that renders them as bare text read as a different component.
+    const rowFor = (row) => {
+      const name = row.filename || row.name || "";
+      return Skeletons.Box.X({
         className: `${pfx}__workspace-option`,
-        content: row.filename || row.name,
+        service: "pick-workspace",
+        uiHandler: [this],
         dataset: {
           idx,
           hub_id: row.hub_id || row.id || row.actual_hub_id,
-          name: row.filename || row.name,
+          name,
+          area: row.area || "",
         },
-        service: "pick-workspace",
-        uiHandler: [this],
-      }),
+        // The ROW owns the click, its kids must not — the same pairing the
+        // switcher uses. triggerHandlers returns early on an active:0 view,
+        // so a tap on the glyph or the label falls through to this Box, which
+        // is what carries `service`.
+        kidsOpt: { active: 0 },
+        kids: [
+          // Element + content, NOT Image.Svg + ico: media/grid/template/folder
+          // emits MARKUP, and handing that to `ico` builds
+          // `<use href="#<markup>">`, which resolves to nothing and draws a
+          // broken oversized glyph. The topbar row carries the same warning.
+          Skeletons.Element({
+            className: `${pfx}__workspace-option-icon ${row.area || ""}`,
+            content: folderIcon({
+              // `|| ""` — see the skeleton's workspaceGlyph: an undefined area
+              // reaches the markup as a literal `folder-shape undefined`.
+              area: row.area || "",
+              filetype: row.filetype === _a.folder ? _a.folder : _a.hub,
+              role: row.filetype === _a.folder ? "" : "desk",
+              widgetId: _.uniqueId("invite-ws-icon-"),
+              isAttachment: 1,
+            }),
+          }),
+          Skeletons.Note({
+            className: `${pfx}__workspace-option-name`,
+            content: name,
+          }),
+        ],
+      });
+    };
+
+    // GROUPED BY THE DESK'S OWN RULE, not a second one written here — the same
+    // call the topbar switcher and the phone's workspace sheet make. An
+    // INTERNAL workspace and one shared with people outside the organisation
+    // are different answers to "who am I inviting them into", and this picker
+    // said nothing about which was which.
+    //
+    // GROUPED AFTER THE DEDUP above, so a workspace already chosen on another
+    // row is gone before the buckets are counted — groupWorkspaces drops empty
+    // groups, which is what makes a heading leave with its last row.
+    //
+    // Nothing is ever dropped: a row matching no rule keeps the generic
+    // "Workspaces" heading at the end. That matters more here than in the
+    // switcher — a workspace missing from this list cannot be invited into at
+    // all.
+    const section = (label, group) =>
+      group.length
+        ? [
+            Skeletons.Note({
+              className: `${pfx}__workspace-section`,
+              content: label,
+            }),
+            ...group.map(rowFor),
+          ]
+        : [];
+    const items = groupWorkspaces(dedup).flatMap((g) =>
+      section(g.label, g.rows),
     );
     sugBox.feed(items);
     sugBox.el.dataset.state = 1;
@@ -621,6 +811,7 @@ class __invite_popup extends LetcBox {
   _hideWorkspaceSuggestions(idx) {
     const sugBox = this._partRefs.workspaceSuggestions[idx];
     if (sugBox) {
+      this._setBoxLoading(sugBox, 0);
       sugBox.el.dataset.state = 0;
       sugBox.clear();
     }
@@ -663,7 +854,45 @@ class __invite_popup extends LetcBox {
     }
   }
 
-  _pickWorkspace(idx, hub_id, name) {
+  /**
+   * Draw (or clear) the glyph sitting over one row's workspace field.
+   *
+   * @param {String|Number} idx  the ROW index (not the model index)
+   * @param {Number} on 1 to show the picked workspace's glyph, 0 to clear it.
+   *   Cleared while the user types: the text in the field no longer names the
+   *   workspace the glyph stands for, and a glyph that outlives its label
+   *   claims a pick that is no longer on screen.
+   */
+  _renderWorkspaceIcon(idx, on) {
+    const slot = this._partRefs.workspaceIcons[idx];
+    if (!slot || !slot.el) return;
+    const wsIdx = this._workspaceIdxByRowIdx(idx);
+    const ws = wsIdx == null ? null : this._workspaces[wsIdx];
+    if (!on || !ws || !ws.hub_id) {
+      slot.el.dataset.state = 0;
+      return;
+    }
+    // innerHTML DIRECTLY, and deliberately not slot.set()/slot.feed().
+    //
+    // Skeletons.Element is ui-core's `blank` widget, whose whole rendering is
+    //     onDomRefresh() { if (content) this.el.innerHTML = content; }
+    // — content is written ONCE at mount and the model is never re-read. It
+    // has no set() either: in all of ui-core only text, text/editable and
+    // entry/input define one, and Backbone.View.prototype.set is undefined.
+    // An earlier version called slot.set() behind an _.isFunction guard, so
+    // the glyph silently never rendered on the only path that matters (pick a
+    // workspace on a row that had none when it was built) while data-state
+    // still said it was showing — a visible empty box.
+    //
+    // feed() is not the alternative: that appends child WIDGETS, and this is
+    // a markup string. Assigning innerHTML is exactly what the widget does to
+    // itself, and assignment replaces, so re-picking retints rather than
+    // stacking a second glyph.
+    slot.el.innerHTML = workspaceGlyph(ws);
+    slot.el.dataset.state = 1;
+  }
+
+  _pickWorkspace(idx, hub_id, name, area) {
     const wsIdx = this._workspaceIdxByRowIdx(idx);
     if (wsIdx == null) return;
     if (this._pickedHubIds(wsIdx).has(String(hub_id))) {
@@ -678,9 +907,13 @@ class __invite_popup extends LetcBox {
     }
     this._workspaces[wsIdx].hub_id = hub_id;
     this._workspaces[wsIdx].name = name;
+    // Carried on the row's dataset by _showWorkspaceSuggestions, purely so the
+    // glyph over the field can be tinted the same as the row that was clicked.
+    this._workspaces[wsIdx].area = area || "";
     const inputEl =
       this._partRefs.workspaceInputs[idx]?.el?.querySelector("input");
     if (inputEl) inputEl.value = name;
+    this._renderWorkspaceIcon(idx, 1);
     this._hideWorkspaceSuggestions(idx);
     this._setWorkspaceError(null);
     this._refreshSendState();
@@ -734,6 +967,7 @@ class __invite_popup extends LetcBox {
       if (dom) dom.remove();
     }
     delete this._partRefs.workspaceRows[idx];
+    delete this._partRefs.workspaceIcons[idx];
     delete this._partRefs.workspaceInputs[idx];
     delete this._partRefs.workspaceSuggestions[idx];
     delete this._partRefs.roleLabels[idx];
@@ -745,13 +979,28 @@ class __invite_popup extends LetcBox {
   _sendInvitation() {
     this._addPendingEmailFromInput();
     if (!this._invitees.length) {
-      this._setEmailError(
-        LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.",
-      );
+      // Only claim "invalid" when the commit above has not already said
+      // something more precise. Sending with your own address as the only
+      // entry lands here having just been told "You cannot invite yourself",
+      // and overwriting that with "Please enter a valid email address" names
+      // the wrong problem — the address is perfectly valid. _setError stamps
+      // data-state on the Note, so the error slot is its own flag.
+      if (!this._emailError || this._emailError.el.dataset.state !== "1") {
+        this._setEmailError(
+          LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.",
+        );
+      }
       return;
     }
 
-    const emails = this._invitees.map((i) => i.email || i.id || i.uid);
+    // Belt and braces. _addInvitee is the only writer and it already refuses
+    // duplicates, but THIS is the array that spends seats: the server loops it
+    // verbatim (hub.js `for (const email of invitees)`) and its seat budget
+    // does not dedupe either, so a single slip upstream bills one person twice
+    // and can refuse the whole call as SEAT_LIMIT_REACHED.
+    const emails = [
+      ...new Set(this._invitees.map((i) => i.email || i.id || i.uid)),
+    ];
     const assignments = Object.values(this._workspaces)
       .filter((w) => w && w.hub_id)
       .map((w) => ({
@@ -834,7 +1083,10 @@ class __invite_popup extends LetcBox {
             ],
           });
         }
-        this._closePopup();
+        // Immediate: the toast Wm.alert just raised takes this same wrapper,
+        // so there is nothing left to animate out from under it — and a
+        // deferred clear() would take the toast with it. See _closePopup.
+        this._closePopup({ immediate: 1 });
       })
       .catch((err) => {
         this.warn("[invite-popup] hub.invite failed", err);
@@ -895,6 +1147,7 @@ class __invite_popup extends LetcBox {
           this._get(cmd, "idx"),
           this._get(cmd, "hub_id"),
           this._get(cmd, "name"),
+          this._get(cmd, "area"),
         );
 
       case "add-workspace-role":

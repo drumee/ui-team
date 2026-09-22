@@ -540,6 +540,52 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     white-space: nowrap;
   }
 
+  // ── A row waiting on a lazily-imported kind ─────────────────────────────
+  //
+  // Today only Invite: desk_module._setInviteRowLoading stamps it while
+  // Kind.waitFor("invite_popup") fetches that chunk. Written against
+  // `&__item[data-loading]` rather than the Invite row specifically, so the
+  // next rail row that opens a lazy kind gets the same treatment for free.
+  //
+  // The ring REPLACES the glyph inside the icon box instead of sitting beside
+  // it. The rail's __item-icon is a fixed 40x40 pill and the expanded row's
+  // label follows the icon, so adding an element would shove the label; only
+  // swapping what is drawn inside that box leaves every row exactly where it
+  // was. The svg is hidden rather than removed for the same reason.
+  //
+  // 2px currentColor with a transparent top, 0.7s linear — the same ring and
+  // the same beat as every other busy control in the desk chrome (topbar's
+  // utility-btn, ws-head-action, crumb). Its own @keyframes, not a borrow of
+  // topbar's `utility-btn-spin`: @keyframes is global at runtime but this
+  // stylesheet has to stand on its own in whatever chunk ships it.
+  &__item[data-loading="1"] {
+    // A second click during the wait would otherwise reach the toggle branch
+    // of _openInvitePopup and shut the popup as it arrives.
+    pointer-events: none;
+
+    .desk-module-sidebar__item-icon {
+      position: relative;
+
+      svg {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 18px;
+        height: 18px;
+        box-sizing: border-box;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: sidebar-invite-spin 0.7s linear infinite;
+      }
+    }
+  }
+
   // Trailing arrow on a row that leads to a sub-screen (the mobile "Add new"
   // row). Pushed to the far edge and dimmed — it marks the row as navigation
   // without competing with the label.
@@ -1127,5 +1173,19 @@ html[data-theme="dark"] .desk-module-sidebar {
     &:hover {
       background-color: var(--normal-bg-80);
     }
+  }
+}
+
+@keyframes sidebar-invite-spin {
+  to { transform: rotate(360deg); }
+}
+
+// The ring goes static rather than vanishing: a two-tone circle with one
+// open arc still reads as "working". Same call topbar.scss makes for its own
+// loaders. The open itself is unaffected — nothing here is driven by
+// animationend.
+@media (prefers-reduced-motion: reduce) {
+  .desk-module-sidebar__item[data-loading="1"] .desk-module-sidebar__item-icon::after {
+    animation: none;
   }
 }

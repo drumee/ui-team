@@ -37,6 +37,7 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // narrow right-hand slide-out it used to be. So it mounts in the same slot
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
+const { groupWorkspaces } = require("libs/workspace-groups");
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
@@ -2875,47 +2876,21 @@ class desk_module extends LetcBox {
   /**
    * Split the switcher's rows into the types the user chose when creating them.
    *
-   * The vocabulary is the CREATE DIALOG's, not a new one invented here —
-   * tutorial/skeleton/toolkit/workspace-dialog TYPES maps internal -> private,
-   * external -> share, personal -> a home-root folder. Listing a workspace
-   * under the type it was created as is the whole point; a second, different
-   * taxonomy would be worse than none.
+   * THE RULE ITSELF MOVED to libs/workspace-groups. It had two callers while it
+   * lived here, both of which reach it through a desk instance — this method
+   * and mobile-sheets' `ui._groupWorkspaces`. The invite popup's workspace
+   * picker is the third, and it holds no reference to the desk, so the
+   * taxonomy had to stop being the desk's private property.
    *
-   * `dmz` joins External because it is the share area's variant — window/hub.js
-   * openSettings already treats the two as one case. `restricted` joins
-   * Internal: wm/index.js calls {share, private, restricted, public} the
-   * collaborative set, and restricted is the one that is not outward-facing.
-   *
-   * FOLDERS are personal whatever their area says: _fetchWorkspaces only
-   * defaults a missing area to `personal`, so filetype is the reliable test.
-   *
-   * Nothing is ever dropped. A row matching no rule keeps the generic
-   * "Workspaces" heading at the end rather than vanishing — this menu is the
-   * only global way to change workspace, so an unlisted one is unreachable,
-   * not merely unlabelled. That is what makes a new area on the server a
-   * cosmetic problem here instead of a functional one.
+   * Kept as a method rather than updating the two call sites: `ui._groupWorkspaces`
+   * is part of what the desk hands the phone sheet, and a shared rule is only
+   * shared if changing where it lives does not ripple.
    *
    * @param {Array} rows desk.home workspaces, already ordered
    * @returns {Array} [{ label, rows }] — empty groups omitted
    */
   _groupWorkspaces(rows) {
-    const isFolder = (r) => r.filetype === _a.folder;
-    const inArea = (...areas) => (r) => !isFolder(r) && areas.includes(r.area);
-    const defs = [
-      { label: LOCALE.INTERNAL, match: inArea(_a.private, _a.restricted) },
-      { label: LOCALE.EXTERNAL, match: inArea(_a.share, _a.dmz) },
-      { label: LOCALE.PUBLIC, match: inArea(_a.public) },
-      { label: LOCALE.PERSONAL, match: isFolder },
-    ];
-    const groups = defs.map((d) => ({ label: d.label, rows: [] }));
-    const rest = [];
-    for (const r of rows || []) {
-      const i = defs.findIndex((d) => d.match(r));
-      if (i === -1) rest.push(r);
-      else groups[i].rows.push(r);
-    }
-    if (rest.length) groups.push({ label: LOCALE.WORKSPACES, rows: rest });
-    return groups.filter((g) => g.rows.length);
+    return groupWorkspaces(rows);
   }
 
   /**
@@ -5210,12 +5185,11 @@ class desk_module extends LetcBox {
    *    half-filled form because someone glanced at another tab is a worse
    *    bug than the one that guard fixes.
    *
-   * 6. THE INVITE BACKDROP IS THIN ON PURPOSE on desktop
-   *    (invite-popup/skin `[data-invite-overlay]`) so the tab behind stays
-   *    readable — that is what makes it read as a popup over the tab. The
-   *    phone deliberately gets the desk's flat scrim instead, matching
-   *    .desk-module__overlay behind the mobile drawer. Both are intended;
-   *    they are not two people disagreeing.
+   * 6. THE INVITE BACKDROP IS FULLY TRANSPARENT ON PURPOSE
+   *    (invite-popup/skin `[data-invite-overlay]`) — no blur and no dim, at
+   *    every width, so the tab behind stays completely readable. That is what
+   *    makes it read as a popup over the tab. It is intended, not a missing
+   *    scrim; the other occupants of the shared wrapper keep the glass.
    *
    * Rail → folder-window tab. With no workspace open there is nothing to show
    * a tab OF, so OPEN one — the legacy all-workspaces grid this used to fall
@@ -10887,6 +10861,43 @@ class desk_module extends LetcBox {
     if (_.isFunction(p.setState)) p.setState(on ? 1 : 0);
   }
 
+  /**
+   * Spinner on the rail's Invite row while the popup is on its way.
+   *
+   * A sibling of _setInviteRowState rather than part of it: that one is the
+   * HIGHLIGHT (the popup is up), this one is the WAIT (the popup is coming).
+   * They are briefly both on and they clear on different signals — the
+   * highlight on the popup's destroy, this one on the feed.
+   *
+   * Same part lookup and the same guards, for the same reason: ensurePart
+   * never resolves for a part that will not mount on this device, so the row
+   * may simply not be there.
+   *
+   * @param {Number} on 1 to spin the row, 0 to clear it
+   */
+  _setInviteRowLoading(on) {
+    if (!_.isFunction(this.getPart)) return;
+    const p = this.getPart("sidebar-invite");
+    if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) return;
+    if (on) {
+      p.el.dataset.loading = "1";
+    } else {
+      delete p.el.dataset.loading;
+    }
+  }
+
+  /**
+   * Clear the Invite row's spinner AND cancel a grace timer that has not
+   * fired yet. Safe on a path that never armed one.
+   */
+  _clearInviteRowLoading() {
+    if (this._inviteLoadingTimer) {
+      clearTimeout(this._inviteLoadingTimer);
+      this._inviteLoadingTimer = null;
+    }
+    this._setInviteRowLoading(0);
+  }
+
   async _openInvitePopup(cmd) {
     if (typeof Wm === "undefined" || !Wm || !Wm.__wrapperModal) return;
     if (this._invitePopup && !this._invitePopup.isDestroyed()) {
@@ -10926,7 +10937,29 @@ class desk_module extends LetcBox {
       this._resetRailToFiles();
     }
 
+    // SPIN THE ROW, BUT NOT STRAIGHT AWAY.
+    //
+    // What is being waited for is the lazy chunk behind Kind.waitFor — the
+    // kind is a webpack import() (seeds.js `invite_popup`), so a cold click
+    // is a network fetch. reward-flow budgets 8s for this very chunk, so the
+    // wait is real and worth showing.
+    //
+    // It is only real ONCE. Every later click is answered from the module
+    // cache in a microtask, and stamping unconditionally would flash a
+    // spinner for a single frame on every open after the first. So the stamp
+    // is armed on a short delay and simply never fires on a warm click.
+    // Cancel an orphan first. Two clicks inside this 120ms window both get
+    // past the toggle guard above (_invitePopup is not set until the feed),
+    // and the first timer would otherwise survive to stamp a row that the
+    // second open has already finished with.
+    this._clearInviteRowLoading();
+    this._inviteLoadingTimer = setTimeout(() => {
+      this._inviteLoadingTimer = null;
+      this._setInviteRowLoading(1);
+    }, 120);
+
     return Kind.waitFor("invite_popup").then(() => {
+      this._clearInviteRowLoading();
       const ws = (Wm && Wm._curWorkspace) || {};
       Wm.__wrapperModal.feed({
         kind: "invite_popup",
@@ -10951,6 +10984,12 @@ class desk_module extends LetcBox {
           this._activateFlow.onInvitePopupClosed();
         }
       });
+    }).catch((err) => {
+      // A chunk that 404s, or a feed that throws, would otherwise leave the
+      // row spinning for the rest of the session — no popup, and nothing to
+      // clear it but a reload.
+      this._clearInviteRowLoading();
+      this.warn("[desk] invite popup failed to open", err);
     });
   }
 
