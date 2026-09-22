@@ -2958,7 +2958,7 @@ class __tasks_panel extends LetcBox {
       // chips), so those still take the full render. A task/activity-only
       // refresh repaints the view body alone.
       if (p.columns || p.members) this._render();
-      else this._repaintBoard();
+      else this._repaintBoard({ activityLoaded: p.activity });
       if (p.history) this._refreshOpenTaskHistory();
     });
   }
@@ -9364,11 +9364,14 @@ class __tasks_panel extends LetcBox {
    *
    * The Health view draws the activity feed, which the rows do not carry, so
    * that view reloads it first. The read cache follows the rows by hand now
-   * that _loadTasks no longer runs after a write.
+   * that _loadTasks no longer runs after a write. A caller that has just
+   * loaded the activity feed itself passes `activityLoaded` so it is not
+   * fetched twice.
    */
-  _repaintBoard({ activity = 0 } = {}) {
+  _repaintBoard({ activity = 0, activityLoaded = 0 } = {}) {
     readCache.set(this._cacheKey("tasks"), this._tasks);
-    const needActivity = activity || this.getView() === "summary";
+    const needActivity =
+      !activityLoaded && (activity || this.getView() === "summary");
     const load = needActivity ? this._loadActivity() : Promise.resolve();
     return load.then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
