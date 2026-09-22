@@ -4140,21 +4140,22 @@ class __widget_chat extends LetcBox {
     }
 
     if (mentionType === "contact") {
-      // Hub-scoped chat: mention the WORKSPACE MEMBERS (people who can see
-      // this conversation), not the visitor's personal chat rooms. Both the
-      // workspace team chat and a DMZ share's folder chat belong here —
-      // `workspace` was missing, so every normal workspace chat fell through
-      // to contact_rooms and offered the visitor's contacts instead.
+      // Who can be @-mentioned is decided by the HUB the conversation lives
+      // in, not by the surface that mounted the widget:
       //
-      // A PERSONAL workspace is excluded: it IS the user, so its hub_id is
-      // Visitor.id (see desk._workspaceKey) and it has no members — the server
-      // answers [] for a personal hub (hub._members_by_type). Its folder chat
-      // keeps the contact-room source it has always had, so widening the scope
-      // test above cannot empty the dropdown there.
-      //
-      // Falls back to contact_rooms outside a hub (bigchat / direct chat).
+      // - A team hub (any surface: folder window, Chat tab, DMZ share, a
+      //   workspace room in the chat inbox) → the WORKSPACE MEMBERS, the
+      //   people who can read this conversation. The inbox's workspace rooms
+      //   carry no `scope`, so keying this on the scope string sent them to
+      //   the address book instead.
+      // - The user's own hub with a peer (a direct chat) → the address book,
+      //   as it has always been.
+      // - The user's own hub with no peer (a personal workspace folder) → no
+      //   one: a personal workspace has no members (the server answers [] for
+      //   it, hub._members_by_type) and its files are not shared with anyone.
       const isPersonalHub = !!Visitor.id && `${folderHubId}` === `${Visitor.id}`;
-      if (isHubScopedChat(this.mget("scope")) && folderHubId && !isPersonalHub) {
+      const isDirectChat = isPersonalHub && !!this.peerId;
+      if (folderHubId && !isPersonalHub) {
         const payload = {
           service: SERVICE.hub.get_members_by_type,
           hub_id: folderHubId,
@@ -4173,6 +4174,12 @@ class __widget_chat extends LetcBox {
           console.warn("[mention] hub members fetch failed", e);
           return null;
         });
+      } else if (!isDirectChat) {
+        console.log("[mention-members] personal workspace: no one to mention", {
+          chatHubId: this.hubId,
+          scope: this.mget("scope"),
+        });
+        contactsPromise = Promise.resolve([]);
       } else {
         const payload = {
           service: SERVICE.chat.contact_rooms,
@@ -4227,6 +4234,17 @@ class __widget_chat extends LetcBox {
 
         files = files.filter((f) => f.filetype !== _a.hub);
 
+        // One row per person. contact_rooms answers one row per CONTACT
+        // record, and a person can be in the address book twice (imported and
+        // accepted, or under two emails) — the dropdown then named them twice.
+        const seenPeople = new Set();
+        contacts = contacts.filter((c) => {
+          const key = `${c.drumate_id || c.entity_id || c.id || ""}`;
+          if (!key) return true;
+          if (seenPeople.has(key)) return false;
+          seenPeople.add(key);
+          return true;
+        });
         const contactsBeforeLabelFilter = contacts;
         contacts = contacts.filter((c) => mentionMemberLabel(c).length > 0);
         console.log("[mention-members] after label filter", {
