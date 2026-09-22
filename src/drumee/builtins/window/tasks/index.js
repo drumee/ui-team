@@ -3,6 +3,7 @@ const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
 const readCache = require("libs/read-cache");
 const { resolveZone } = require("./drop-zones");
+const { rowOf, ownedPatch, applyLabelOps, longestList, peerPatch } = require("./live-sync");
 const {
   markerRe,
   contentTokenRe,
@@ -3702,8 +3703,8 @@ class __tasks_panel extends LetcBox {
           ? draft.mention_uids
           : [],
       });
-      const row = Array.isArray(raw) ? raw[0] : raw;
-      if (row && row.id) {
+      const row = rowOf(raw);
+      if (row) {
         // For each pending entry: search-picked files already have `nid`;
         // newly-picked uploads carry a File object and need to be sent to the
         // task folder now. Either way, the resolved nid is link_file'd to
@@ -3716,36 +3717,52 @@ class __tasks_panel extends LetcBox {
               nid = result.nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
-              return;
+              return null;
             }
           }
-          if (!nid) return;
-          await this.postService({
+          if (!nid) return null;
+          return this.postService({
             service: SERVICE.task.link_file,
             hub_id: this._hubId,
             task_id: row.id,
             file_nid: nid,
           }).catch(() => null);
         };
-        await Promise.all([
-          ...labels.map((labelId) =>
+        const labelResults = await Promise.all(
+          labels.map((labelId) =>
             this.postService({
               service: SERVICE.task.link_label,
               hub_id: this._hubId,
               task_id: row.id,
               label_id: labelId,
-            }).catch(() => null),
+            })
+              .then((r) => ({ op: "link", label_id: labelId, ok: Array.isArray(r) }))
+              .catch(() => ({ op: "link", label_id: labelId, ok: false })),
           ),
-          ...pendingFiles.map(linkPending),
-        ]);
+        );
+        const fileLists = await Promise.all(pendingFiles.map(linkPending));
         // Children last, and NOT inside the Promise.all above: they are
         // ordered (the loop is sequential so they land as entered), and unlike
         // a label or a file link a failure here leaves a task the user meant to
         // have children without them — worth saying so rather than swallowing.
         // The parent exists either way, so this can never fail the create.
-        const subtasksFailed = queuedSubtasks.length
+        const { failed: subtasksFailed, rows: childRows } = queuedSubtasks.length
           ? await this._createQueuedSubtasks(row.id, queuedSubtasks)
-          : 0;
+          : { failed: 0, rows: [] };
+
+        // Patch the cache from what the server answered — no workspace reload.
+        // The create row predates the label/file links, so those are applied
+        // from their own answers.
+        const patch = {
+          ...row,
+          label_ids: applyLabelOps([], labelResults),
+        };
+        const files = longestList(fileLists);
+        if (files) patch.linked_files = files;
+        this._mergeTask(patch);
+        childRows.forEach((c) => this._mergeTask(c));
+        if (childRows.length) this._syncSubtaskBadges(row.id);
+
         // Tear down the form only after a successful create — postService
         // resolves undefined (or an error payload with no id) on failure, so
         // the teardown must live INSIDE this success branch or a failed
@@ -3755,10 +3772,7 @@ class __tasks_panel extends LetcBox {
         this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
-        await this._loadTasks();
-        // After the reload, so the board already shows the children that DID
-        // make it and the alert reads as a partial result rather than a total
-        // failure.
+        this._repaintBoard();
         if (subtasksFailed) Wm.alert(LOCALE.ERROR_NETWORK);
       } else {
         Wm.alert(LOCALE.ERROR_NETWORK);
@@ -3772,13 +3786,9 @@ class __tasks_panel extends LetcBox {
       // true, which permanently disables commit-task / commit-detail.
       this._setSubmitting(".tasks-panel__create-submit", false);
     }
-    // This render runs on BOTH outcomes, so it cannot animate unconditionally:
-    // a failed create deliberately leaves the modal open with the draft intact
-    // (see the note in the success branch above) and must simply repaint it.
-    // `_creating` is the record of which happened — only the success branch
-    // clears it.
-    if (this._creating) return this._render();
-    return this._dismissOverlay("create-backdrop", () => this._render());
+    // Failed: the modal stays open with its draft — repaint just the overlay.
+    if (this._creating) return this._renderOverlays();
+    return this._dismissOverlay("create-backdrop", () => this._renderOverlays());
   }
 
   async _removeTask(trigger) {
@@ -10070,10 +10080,11 @@ class __tasks_panel extends LetcBox {
    *
    * Never throws: the parent is already created by the time this runs, so a
    * child that fails must not roll the create back or take the modal down with
-   * it. Returns how many failed, for the caller to report.
+   * it. Returns how many failed and the rows that were created.
    */
   async _createQueuedSubtasks(parentId, queued) {
     let failed = 0;
+    const rows = [];
     for (const sub of queued) {
       try {
         const created = await this.postService({
@@ -10088,15 +10099,16 @@ class __tasks_panel extends LetcBox {
           status: sub.status || undefined,
           due_date: sub.due_date || null,
         });
-        const row = Array.isArray(created) ? created[0] : created;
+        const row = rowOf(created);
         // postService resolves falsy on failure rather than rejecting.
-        if (!row || !row.id) failed += 1;
+        if (row) rows.push(row);
+        else failed += 1;
       } catch (err) {
         console.error("[tasks_panel] queued subtask create failed:", err);
         failed += 1;
       }
     }
-    return failed;
+    return { failed, rows };
   }
 
   /**
