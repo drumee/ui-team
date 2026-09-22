@@ -4266,10 +4266,13 @@ class __widget_chat extends LetcBox {
         let html = "";
 
         if (files.length) {
+          // Same tile as the From workspace picker: an image row shows the
+          // file's own vignette, every other file its type glyph.
           const renderFileIcon = (file) =>
             nodeIconHtml(file, {
               area: this.mget(_a.area),
               prefix: "mention-preview-",
+              thumbnail: true,
             });
           html += `<div class="mention-section-header">${LOCALE.MENTION_FILES}</div>`;
           files.slice(0, 6).forEach((f) => {
