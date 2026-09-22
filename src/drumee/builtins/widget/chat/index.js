@@ -738,19 +738,15 @@ class __widget_chat extends LetcBox {
         for (const ev of [_e.data, _e.eod, _e.error]) {
           child.on(ev, () => this._hideDeskPickerSkeleton());
         }
-        // Same hub gate as the desk sidebar (desk_workspace-list): the root
-        // listing carries the user's own personal hub and the auto dmz/wicket
-        // hubs, none of which is a workspace to browse. Folders and files
-        // always pass; deeper listings contain no hub rows.
+        // The user's own desk root lists their hubs as child nodes. A hub is
+        // another workspace, so it is never offered here: only this
+        // workspace's folders and files are.
         if (!child._deskPickerFilterInstalled) {
           child._deskPickerFilterInstalled = 1;
           const original = child.prepareData.bind(child);
           child.prepareData = function (data) {
             return (original(data) || []).filter(
-              (it) =>
-                it &&
-                (it.filetype !== _a.hub ||
-                  /^(share|private|restricted|public)$/.test(it.area)),
+              (it) => it && it.filetype !== _a.hub,
             );
           };
         }
@@ -1341,11 +1337,11 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * "From workspace" picker. Opens on the rows the desk sidebar lists
-   * (desk.home: hub workspaces plus the user's own home-root nodes) and walks
-   * into any hub or folder with media.show_node_by; only a file can be
-   * picked. `_deskPickerTrail` is the navigation stack: its last entry is the
-   * folder being listed, an empty trail is the root listing.
+   * "From workspace" picker. Opens on the chat's own workspace and walks down
+   * its folders with media.show_node_by; only a file can be picked. Other
+   * workspaces are never offered: an attachment comes from where the
+   * conversation lives. `_deskPickerTrail` is the navigation stack — its
+   * first entry is that root, its last the folder being listed.
    */
   async _openDeskPicker() {
     const picker = await this.ensurePart("wrapper-desk-picker");
@@ -1353,8 +1349,41 @@ class __widget_chat extends LetcBox {
       picker.clear();
       return;
     }
-    this._deskPickerTrail = [];
+    const root = await this._deskPickerRoot();
+    if (!root || picker.isDestroyed()) return;
+    this._deskPickerTrail = [root];
     this._renderDeskPicker(picker);
+  }
+
+  /**
+   * Where the picker starts. A DMZ share's chat starts at the shared folder
+   * (its access boundary). On the user's own desk a workspace IS a folder
+   * (the sidebar's Personal workspaces are home-root folders), so the chat's
+   * post scope names it. A team hub's workspace is the hub: its home root,
+   * whatever folder the chat was opened from. A direct chat starts at the
+   * user's own desk root.
+   */
+  async _deskPickerRoot() {
+    const hub_id = this.hubId;
+    const area = this.mget(_a.area);
+    const scoped = this.getScopedNid();
+    if (scoped) return { hub_id, nid: scoped, area };
+    const isPersonalHub = !!Visitor.id && `${hub_id}` === `${Visitor.id}`;
+    const personalNid = isPersonalHub ? this.getPostNid() : "";
+    if (personalNid) {
+      return { hub_id, nid: personalNid, area: area || _a.personal };
+    }
+    let home = this.mget(_a.home);
+    if (!home || !home.home_id) {
+      try {
+        home = await this.fetchService(SERVICE.media.home, { hub_id });
+      } catch (e) {
+        this.warn("[chat] _deskPickerRoot: failed to fetch home", e);
+        return null;
+      }
+    }
+    if (!home || !home.home_id) return null;
+    return { hub_id: home.hub_id || hub_id, nid: home.home_id, area: area || home.area };
   }
 
   _renderDeskPicker(picker) {
@@ -1362,24 +1391,16 @@ class __widget_chat extends LetcBox {
     const fig = this.fig.family;
     const trail = this._deskPickerTrail || [];
     const current = trail[trail.length - 1];
-    // Root = the same listing as the desk sidebar (hubs and home-root nodes,
-    // filtered in onPartReady). Deeper = the children of the entered node,
-    // hub-scoped so a workspace folder lists from that hub's DB.
-    const api = current
-      ? {
-          service: SERVICE.media.show_node_by,
-          hub_id: current.hub_id,
-          nid: current.nid,
-          page: 1,
-        }
-      : {
-          service: SERVICE.desk.home,
-          hub_id: Visitor.id,
-          type: "all",
-          page: 1,
-        };
+    if (!current) return;
+    const atRoot = trail.length <= 1;
+    const api = {
+      service: SERVICE.media.show_node_by,
+      hub_id: current.hub_id,
+      nid: current.nid,
+      page: 1,
+    };
     const header = [];
-    if (current) {
+    if (!atRoot) {
       header.push(
         Skeletons.Note({
           className: `${fig}__desk-picker-back`,
@@ -1392,7 +1413,7 @@ class __widget_chat extends LetcBox {
     header.push(
       Skeletons.Note({
         className: `${fig}__desk-picker-title`,
-        content: current ? current.filename : LOCALE.FROM_WORKSPACE,
+        content: atRoot ? LOCALE.FROM_WORKSPACE : current.filename,
       }),
     );
     picker.clear();
@@ -1450,17 +1471,14 @@ class __widget_chat extends LetcBox {
   }
 
   _deskPickerRowType(item = {}) {
-    if (item.filetype === _a.hub) return _a.hub;
-    if (item.filetype === _a.folder) return _a.folder;
-    return "file";
+    return item.filetype === _a.folder ? _a.folder : "file";
   }
 
   /**
    * One picker row, laid out like an @-mention row: the node's desk icon
-   * (folder art in the area colour, hub badge, file type glyph), its name,
-   * and for a file its extension. A folder inside a workspace carries no
-   * area of its own, so it takes the colour of the workspace being browsed;
-   * at the root the user's own folders are personal.
+   * (folder art in the area colour, file type glyph), its name, and for a
+   * file its extension. A folder carries no area of its own, so it takes
+   * the colour of the workspace being browsed.
    */
   _deskPickerRow(item = {}, current) {
     const fig = this.fig.family;
@@ -1498,25 +1516,15 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * A row of the picker was clicked: descend into a hub or folder, attach a
-   * file. A hub row's own nid is the hub entity; its listing root is
-   * actual_home_id (the same resolution Wm.loadWorkspace uses).
+   * A row of the picker was clicked: descend into a folder, attach a file.
    */
   _pickDeskNode(cmd) {
     const o = cmd.model.toJSON();
     const trail = this._deskPickerTrail || [];
     const current = trail[trail.length - 1];
-    if (o.filetype === _a.hub) {
-      return this._enterDeskFolder({
-        hub_id: o.hub_id || o.nid,
-        nid: o.actual_home_id || o.home_id,
-        filename: o.filename,
-        area: o.area,
-      });
-    }
     if (o.filetype === _a.folder) {
       return this._enterDeskFolder({
-        hub_id: o.hub_id || Visitor.id,
+        hub_id: o.hub_id || (current && current.hub_id) || this.hubId,
         nid: o.nid,
         filename: o.filename,
         area: o.area || (current && current.area) || _a.personal,
@@ -1535,7 +1543,8 @@ class __widget_chat extends LetcBox {
   }
 
   _deskPickerBack() {
-    if (!this._deskPickerTrail || !this._deskPickerTrail.length) return;
+    // The first entry is the chat's workspace root; there is no level above it.
+    if (!this._deskPickerTrail || this._deskPickerTrail.length <= 1) return;
     this._deskPickerTrail.pop();
     return this.ensurePart("wrapper-desk-picker").then((picker) =>
       this._renderDeskPicker(picker),

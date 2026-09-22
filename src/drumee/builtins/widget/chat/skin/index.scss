@@ -846,8 +846,7 @@
   }
 
   // Containers read as rows you can enter: bold name, trailing chevron.
-  &__desk-picker-item--folder,
-  &__desk-picker-item--hub {
+  &__desk-picker-item--folder {
     .widget-chat__desk-picker-name {
       font-weight: 600;
     }
