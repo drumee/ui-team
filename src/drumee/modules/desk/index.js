@@ -4519,6 +4519,11 @@ class desk_module extends LetcBox {
       || !chip.el.querySelector(".breadcrumb-item__filename")) {
       return false;
     }
+    // A DEEPER PATH HAS NO SWITCHER: topbar.scss hides __ws-wrapper once the
+    // crumb track holds more than one item, so there is nothing to open.
+    if (chip.el.querySelector(".desk-breadcrumb__content > :nth-child(2)")) {
+      return false;
+    }
     if (!target || !_.isFunction(target.closest)) return true;
     // THE PANEL IS NOT THE CHIP, even though it is inside it.
     //
