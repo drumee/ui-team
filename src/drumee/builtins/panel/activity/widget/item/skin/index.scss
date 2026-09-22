@@ -272,6 +272,65 @@
       opacity: 0.75;
     }
   }
+
+  // The two answers on a workspace-invitation row. A third line inside the text
+  // block, not part of __actions — that column is the fixed 20px
+  // bookmark/trash pair at the card's right edge and two labelled buttons do
+  // not belong in it.
+  //
+  // 4px of top margin rather than leaning on __text-block's 4px gap alone:
+  // the sentence and the time line sit close together on purpose, and the
+  // answer needs to read as a separate act.
+  &__answer {
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  // 🚨 typo() TAKES $weight: 500 HERE AND font-weight IS SET SEPARATELY.
+  // The mixin has no 600 branch and emits NOTHING for an unknown weight — not
+  // even font-family — so `$weight: 600` would drop these buttons to the
+  // browser default serif. It never emits font-weight at all for any value, so
+  // the semibold has to be its own declaration regardless.
+  &__accept,
+  &__decline {
+    @include drumee.typo($size: 13px, $weight: 500, $line: 1.4em);
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-weight: 600;
+    padding: 5px 14px;
+    transition: background-color 0.12s, opacity 0.12s;
+    user-select: none;
+  }
+
+  // --primary-50, not --primary-40: 40 is the token this file already uses for
+  // the {ts1} highlight spans, while every FILLED brand button in the builtins
+  // (permission/share's Send and Confirm) is 50. #fff literal because there is
+  // no white token in the palette — the codebase spells it out too.
+  &__accept {
+    background-color: var(--primary-50);
+    color: #fff;
+
+    &:hover {
+      opacity: 0.88;
+    }
+  }
+
+  // Outlined, not a second filled button: Accept is the action the invitation
+  // is asking for and has to be the one that reads as primary.
+  &__decline {
+    background-color: transparent;
+    border: 1px solid #d1d1d6;
+    color: var(--primary-purple-100);
+    // The border adds a pixel on each side; take it back so both buttons are
+    // the same height.
+    padding: 4px 13px;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+  }
 }
 
 // ── Dark mode overrides ─────────────────────────────────────────
@@ -300,6 +359,18 @@ html[data-theme="dark"] {
 
     &__bookmark {
       color: var(--normal-fg-50);
+    }
+
+    // Accept keeps its brand fill in both themes, like the badge fills above.
+    // Decline is the one that has to flip: a #d1d1d6 hairline on a dark card is
+    // brighter than the label inside it.
+    &__decline {
+      border-color: var(--normal-fg-50);
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background-color: var(--hover-bg-40);
+      }
     }
   }
 }

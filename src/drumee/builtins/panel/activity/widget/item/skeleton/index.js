@@ -939,6 +939,52 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 
+  // A WORKSPACE INVITATION IS NOW SOMETHING YOU ANSWER, so the row carries the
+  // two answers instead of only opening the workspace it names.
+  //
+  // 🚨 KEYED ON THE TOKEN, NOT ON THE CATEGORY. Two different things are both
+  // `hub_invite` rows: a real invitation, written by hub.invite, which carries
+  // `invite_token`; and the receipt _grantMembership writes when an admin adds
+  // somebody DIRECTLY through add_contributors, which has nothing to answer
+  // because the membership already exists. Rendering buttons by category would
+  // offer Accept on a workspace the user is already in, and would put them on
+  // every row written before this shipped. The token is the only field that
+  // distinguishes the two, and its absence is what makes an old row keep
+  // rendering exactly as it did.
+  //
+  // The buttons sit INSIDE the text block rather than in `__actions`, which is
+  // the fixed bookmark/trash column at the row's right edge: two labelled
+  // buttons do not fit there, and putting them under the sentence keeps them
+  // reading as the answer to it.
+  //
+  // Each button carries its own service, so the framework's handler contains
+  // the click (the same e.stopPropagation() the day-header note above relies
+  // on) and pressing Accept cannot also fire the text block's own service and
+  // navigate away underneath the answer.
+  const inviteToken = category === 'hub_invite' ? (data.invite_token || '') : '';
+  const answer = inviteToken
+    ? Skeletons.Box.X({
+      className: `${pfx}__answer`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__accept`,
+          content: LOCALE.ACCEPT,
+          service: 'accept-invite',
+          uiHandler: ui,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__decline`,
+          // REFUSE, not DECLINE: the key is spelled REFUSE and its value is
+          // already "Decline" in en, with a real translation in all six locale
+          // files. DECLINE does not exist, and a missing key renders blank.
+          content: LOCALE.REFUSE,
+          service: 'decline-invite',
+          uiHandler: ui,
+        }),
+      ],
+    })
+    : null;
+
   const textBlockService = data.category === 'access_request'
     ? 'open-access-request'
     : data.category === 'meeting'
@@ -952,7 +998,8 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),
       metaLine,
-    ],
+      answer,
+    ].filter(Boolean),
   });
 
 

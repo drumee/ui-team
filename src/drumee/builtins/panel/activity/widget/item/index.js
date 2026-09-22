@@ -393,6 +393,42 @@ class __activity_item extends LetcBox {
       }
       return;
     }
+    // 🚨 READ OFF THE CLICKED WIDGET, NOT `service`, for exactly the reason the
+    // day-header guard above does. A hub-invite row carries
+    // `service: 'open-workspace-invitation'` on its OWN model (the panel sets
+    // it when it builds the row), and the `service` chain prefers that over the
+    // button's — so both answers would resolve as "the row was clicked", fall
+    // through to _dispatchService, and navigate to the workspace instead of
+    // answering the invitation. The trash and bookmark buttons survive the same
+    // shadowing only because _dispatchService re-resolves from `cmd`.
+    const clicked = args.service || (cmd && cmd.get && cmd.get(_a.service));
+    if (clicked === 'accept-invite' || clicked === 'decline-invite') {
+      // Forwarded to the activity panel (logicalParent) for the same reason
+      // open-access-request is: _dispatchService knows only toggle-favorite and
+      // dismiss-activity, so anything else dies there silently — and the panel
+      // is what owns the feed refresh and the navigation that follow an answer.
+      //
+      // The token is passed in the args rather than looked up by the panel: the
+      // list factory consumes `kind`, so a kind-based lookup of a forwarded
+      // item can miss, and an answer that silently did nothing is exactly the
+      // failure this whole row exists to remove.
+      if (parent && parent.onUiEvent) {
+        parent.onUiEvent(this, {
+          // `clicked`, NOT `service` — the same shadowing the guard above is
+          // about. Forwarding `service` would hand the panel
+          // 'open-workspace-invitation' and it would match no case at all.
+          service: clicked,
+          invite_token: this.mget('invite_token'),
+          // Only as the fallback target for the post-accept navigation: the
+          // accept response carries its own hub_id and is preferred, because it
+          // is the workspace the TOKEN resolved rather than the one this row
+          // happens to name.
+          hub_id,
+          item_key,
+        });
+      }
+      return;
+    }
     if (service === 'join-meeting' || service === 'open-meeting-chat') {
       // Meeting notification. The green button joins the call directly
       // ('join-meeting'); clicking the row opens the folder chat where the
