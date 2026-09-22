@@ -781,6 +781,17 @@ class __tasks_panel extends LetcBox {
       } catch (e) {
         /* never let the guard break a legitimate call */
       }
+      // Lets task._broadcast skip only THIS socket, so the user's other tabs
+      // hear the change. Mutations only; reads stay cacheable and unchanged.
+      const a0 = args[0];
+      if (
+        a0 && typeof a0 === "object" &&
+        this.constructor.TASK_MUTATIONS.includes(`${a0.service}`) &&
+        a0.socket_id == null
+      ) {
+        const sid = typeof Visitor !== "undefined" && Visitor.get && Visitor.get(_a.socket_id);
+        if (sid) args[0] = { ...a0, socket_id: sid };
+      }
       return original(...args);
     };
   }
