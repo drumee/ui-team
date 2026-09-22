@@ -1893,17 +1893,7 @@ class __window_folder extends mfsInteract {
       (cmd && cmd.getParentByKind?.(KIND.menu.topic)) ||
       (this.getPart && this.getPart("new-menu"));
     if (!menu) return;
-    const group = menu.el?.querySelector(
-      ".window-button__dropdown-menu__item--create-group",
-    );
-    if (group) group.dataset.submenu = _a.closed;
     if (menu.changeState) menu.changeState(0);
-  }
-
-  toggleNewCreateMenu(cmd) {
-    if (!cmd || !cmd.el) return;
-    cmd.el.dataset.submenu =
-      cmd.el.dataset.submenu === _a.open ? _a.closed : _a.open;
   }
 
   onUiEvent(cmd, args = {}) {
@@ -1945,9 +1935,6 @@ class __window_folder extends mfsInteract {
 
       case "tab-bar-page":
         return this._showTabCarouselPage(cmd);
-
-      case "toggle-new-create-menu":
-        return this.toggleNewCreateMenu(cmd);
 
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
