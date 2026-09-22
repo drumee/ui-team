@@ -321,19 +321,20 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     // at its expanded 231px width and relies on __main clipping it.
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
+    // Scrolls, but without drawing a bar: the column is chrome, and a visible
+    // track next to the nav rows reads as a second edge beside the sidebar's
+    // own. The wheel, trackpad, keyboard and drag-scrolling are untouched —
+    // only the painted bar and its gutter go away, so the 231px width stays
+    // whole instead of losing 4px whenever the viewport is short.
+    scrollbar-width: none;
+    // Legacy Edge / IE.
+    -ms-overflow-style: none;
 
+    // Chromium / WebKit.
     &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--primary-40);
-      border-radius: 4px;
+      width: 0;
+      height: 0;
+      display: none;
     }
   }
 

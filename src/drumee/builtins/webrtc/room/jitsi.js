@@ -363,6 +363,46 @@ class __webrtc_room extends __room {
   }
 
   /**
+   * Throw away what a FAILED startup left behind, so the next attempt starts
+   * from a clean slate. Called before a retry (window/meeting
+   * _retryJoinMeeting), never on the happy path.
+   *
+   * prepareConference opens the XMPP connection IN PARALLEL with getUserMedia,
+   * so a media failure aborts the join in onConnectionSuccess only AFTER the
+   * connection is already up. That leaves two things set, and each one alone
+   * is enough to make a second attempt hang on "waiting for permission":
+   *
+   *   - this.connection — bindConferenceRoom returns early on it ("a
+   *     connection already exists") and resolves WITHOUT calling
+   *     onConnectionSuccess, so initJitsiConference never runs, no conference
+   *     is created, and CONFERENCE_JOINED never fires.
+   *   - this._startupMediaFailed — still 1, so even if onConnectionSuccess did
+   *     run it would return before creating the conference.
+   */
+  resetStartupState() {
+    this._startupMediaFailed = 0;
+    this._startupTracks = null;
+    // Only the PRE-JOIN connection is thrown away. If a conference exists the
+    // startup got further than this reset is meant to undo, and tearing it
+    // down here would drop a live meeting.
+    if (this.room) return;
+    try {
+      // Drops every listener this room installed on the old connection.
+      this.disconnect();
+    } catch (e) {
+      this.warn("could not unbind the stale connection", e);
+    }
+    if (this.connection) {
+      try {
+        this.connection.disconnect();
+      } catch (e) {
+        this.warn("could not close the stale connection", e);
+      }
+      this.connection = null;
+    }
+  }
+
+  /**
    *
    * @param {*} tracks
    */
@@ -562,7 +602,9 @@ class __webrtc_room extends __room {
             // Classified cause, not the raw DOMException: "(NotAllowedError:
             // Permission denied)" told the user nothing about what to do. The
             // raw error is still in the warn() above for support.
-            Wm.alert(this.mediaErrorMessage(error));
+            // Via mediaAlert: this fires for a device switch and a blocked
+            // toggle too, both of which can happen with a picker open.
+            this.mediaAlert(this.mediaErrorMessage(error));
           }
           reject(error);
         });
@@ -2059,6 +2101,9 @@ class __webrtc_room extends __room {
    *
    */
   async changeLocalVideo(state) {
+    // Same up-front check as the mic: turning the camera OFF never touches
+    // getUserMedia, so the block would otherwise cost a click to surface.
+    if (await this._blockedOnToggle(_a.video)) return;
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
       // Camera + screen run simultaneously: the camera is a SECOND video track
@@ -2085,10 +2130,15 @@ class __webrtc_room extends __room {
           await this.applyBackgroundEffect();
         }
       } catch (e) {
-        this.isVideo = false;
         this.toggleAvatarVideo(1, 0);
-        if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
+        // Reverting the button is not enough — say why it snapped back, and
+        // mark the control when the camera is blocked (see
+        // room/index _onMediaToggleFailed, which also clears isVideo/state).
+        this._onMediaToggleFailed(_a.video, e);
+        return;
       }
+      // Got a camera: clear any blocked flag this control was carrying.
+      this._setMediaDeniedUi(_a.video, false);
     } else {
       this.isVideo = false;
       this.toggleAvatarVideo(1, 0);
@@ -2100,6 +2150,11 @@ class __webrtc_room extends __room {
    *
    */
   async changeLocalAudio(state) {
+    // Before anything else: a blocked mic has to be caught here, not by
+    // failing to acquire later. The mute branch below never attempts capture,
+    // so turning a blocked mic OFF would succeed silently and cost a click
+    // before anything said why (room/index _blockedOnToggle).
+    if (await this._blockedOnToggle(_a.audio)) return;
     let t = this.getLocalTrack(_a.audio);
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
@@ -2107,16 +2162,25 @@ class __webrtc_room extends __room {
       // implicit "default" — otherwise toggling mute/unmute after picking a
       // specific microphone silently reverts capture to the default device.
       const micId = await this._preferredMicId();
-      if (!t) {
-        await this.createLocalTracks(_a.audio, micId, { muted: false });
-      } else if (t.isActive() && !t.isEnded()) {
-        await t.unmute();
-      } else {
-        // Dead track (device pulled, stream ended): unmute() would only flip
-        // a flag on a track that no longer captures. Start over.
-        await t.dispose();
-        await this.createLocalTracks(_a.audio, micId, { muted: false });
+      try {
+        if (!t) {
+          await this.createLocalTracks(_a.audio, micId, { muted: false });
+        } else if (t.isActive() && !t.isEnded()) {
+          await t.unmute();
+        } else {
+          // Dead track (device pulled, stream ended): unmute() would only flip
+          // a flag on a track that no longer captures. Start over.
+          await t.dispose();
+          await this.createLocalTracks(_a.audio, micId, { muted: false });
+        }
+      } catch (e) {
+        // Was an UNHANDLED rejection: onUiEvent calls this without awaiting,
+        // so a blocked mic failed in silence behind a button that stayed lit.
+        this._onMediaToggleFailed(_a.audio, e);
+        return;
       }
+      // Got a mic: clear any blocked flag this control was carrying.
+      this._setMediaDeniedUi(_a.audio, false);
       this.postAudioDiagnostics("unmute");
     } else {
       t && (await t.mute());

@@ -393,6 +393,15 @@ class __tasks_panel extends LetcBox {
       this.el.removeEventListener("mouseleave", this._pointerExit);
       this._pointerExit = null;
     }
+    // Inline-image placeholders hold an object URL each while they upload.
+    // They live in the editor's DOM rather than on a draft, so the loop below
+    // cannot see them — a panel closed mid-upload would leak one per image.
+    for (const url of this._inlinePreviews || []) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (_) {}
+    }
+    this._inlinePreviews = null;
     // Release pending-file image-preview blob URLs — the two task forms and
     // the three comment drafts, which carry their own queued files.
     for (const draft of [
@@ -5248,8 +5257,16 @@ class __tasks_panel extends LetcBox {
    * a retained node would either leak or silently miss after a re-feed.
    */
   _rememberDropScope(zone) {
+    // `desc` is excluded for exactly the reason detail/create are: it is a task
+    // surface, recoverable from the pointer, so remembering it would let a
+    // stale hover write into a description with no overlay ever shown.
+    const task =
+      zone &&
+      (zone.scope === "detail" ||
+        zone.scope === "create" ||
+        zone.scope === "desc");
     this._lastDropScope =
-      zone && zone.scope !== "detail" && zone.scope !== "create"
+      zone && !task
         ? { scope: zone.scope, key: zone.key, commentId: zone.commentId }
         : null;
   }
@@ -5712,10 +5729,16 @@ class __tasks_panel extends LetcBox {
     });
     if (!zone) return null;
     // A zone only accepts while the surface that owns it is actually open.
-    if (zone.scope === "detail" && !this._detailDraft) return null;
-    if (zone.scope === "create" && !this._createDefaults) return null;
+    //
+    // A `desc` zone is the same surface as its form's attachment zone, one row
+    // up — the detail panel's description and its __attachments both live or
+    // die with _detailDraft — so it answers to the same guard rather than a
+    // second one that could drift from it.
+    const surface = zone.scope === "desc" ? zone.descScope : zone.scope;
+    if (surface === "detail" && !this._detailDraft) return null;
+    if (surface === "create" && !this._createDefaults) return null;
     if (
-      (zone.scope === "comment" || zone.scope === "comment-reply") &&
+      (surface === "comment" || surface === "comment-reply") &&
       !this._detailId
     ) {
       return null;
@@ -5927,7 +5950,17 @@ class __tasks_panel extends LetcBox {
     // Only the one under the cursor may claim it.
     if (!this._dropPointEl(at)) return null;
     const zone = this._activeUploadScope(at);
-    if (zone) return zone;
+    // A desc zone is a DROP target, not a paste target.
+    //
+    // Pasting INTO a description is the editor's own path: the caret is in a
+    // contenteditable, so _onPasteAttach never runs (_isTextEntry) and
+    // _onEditorPaste inlines at the caret. This branch is the opposite case —
+    // the caret is somewhere else entirely and only the POINTER happens to be
+    // over the editor. Claiming it here would drop an image into a body the
+    // user is not typing in, from a keystroke that gave no hint it would go
+    // there. Falls through to the composer default below, exactly as it did
+    // before this zone existed.
+    if (zone && zone.scope !== "desc") return zone;
     // Inside the panel but over no zone — including over another author's
     // comment, which resolveZone refuses rather than passing through. The
     // composer is where a paste belongs by default; its draft is allocated on
@@ -6048,7 +6081,43 @@ class __tasks_panel extends LetcBox {
     }
     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
     if (!files.length) return;
+    // WHERE in the description the file landed. The event is the only thing
+    // that knows, and the upload that follows is async — by the time it
+    // resolves the drag is long over and there is no pointer left to ask. Same
+    // reason _onEditorPaste clones the caret range before awaiting.
+    if (scope.scope === "desc") {
+      scope.range = this._caretRangeFromPoint(e.clientX, e.clientY);
+    }
     return this._attachFilesToZone(scope, files);
+  }
+
+  /**
+   * A collapsed range at a viewport point, or null.
+   *
+   * Two vendor spellings and no agreement between them: Chromium and WebKit
+   * expose caretRangeFromPoint, Gecko caretPositionFromPoint. Neither is
+   * guaranteed, and null is a perfectly good answer — _insertPastedImage
+   * appends to the editor when it has no usable range, which is what a drop
+   * onto the editor's padding should do anyway.
+   */
+  _caretRangeFromPoint(x, y) {
+    if (typeof document === "undefined" || x == null || y == null) return null;
+    try {
+      if (document.caretRangeFromPoint) {
+        return document.caretRangeFromPoint(x, y);
+      }
+      if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(x, y);
+        if (!pos || !pos.offsetNode) return null;
+        const range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.collapse(true);
+        return range;
+      }
+    } catch (_) {
+      /* a detached or cross-document node — fall through to appending */
+    }
+    return null;
   }
 
   /**
@@ -6061,6 +6130,10 @@ class __tasks_panel extends LetcBox {
    */
   async _attachFilesToZone(zone, files) {
     if (!zone || !files || !files.length) return;
+    // A description takes an image INTO the body and everything else beside it.
+    if (zone.scope === "desc") {
+      return this._dropOnDescEditor(zone, files);
+    }
     // A comment row has no submit, so arriving IS the commit.
     if (zone.scope === "comment-row") {
       return this._dropOnCommentRow(zone.commentId, files);
@@ -6069,6 +6142,67 @@ class __tasks_panel extends LetcBox {
     if (!draft) return;
     await this._stashPendingFiles(draft, files);
     this._refreshPendingList(this._scopeKey(zone));
+  }
+
+  /**
+   * A drop on a task description.
+   *
+   * Splits the files the way _onEditorPaste splits a paste, and for the same
+   * reason: the body's marker grammar holds mentions, links and inline images,
+   * and nothing else. An image goes IN, at the point it was dropped. A PDF, a
+   * video or a spreadsheet has no marker it could become, so it attaches to the
+   * task instead — which is where that editor's own paperclip already puts it,
+   * and where a pasted video already goes.
+   *
+   * Sequential, not Promise.all: _insertPastedImage moves the range past the
+   * node it just inserted, so three images dropped together land in the order
+   * they were dropped rather than in whatever order their uploads finish.
+   */
+  async _dropOnDescEditor(zone, files) {
+    const editorEl = zone.el;
+    const scope = zone.descScope;
+    if (!editorEl || !scope) return;
+    const images = [];
+    const rest = [];
+    for (const f of files) (this._isDroppableImage(f) ? images : rest).push(f);
+    // Attachments first. Queuing them is synchronous and touches only the
+    // draft, so the strip is already showing them while the first image is
+    // still uploading — rather than both landing at once, several seconds in.
+    if (rest.length) {
+      await this._attachFilesToZone({ scope, key: scope }, rest);
+    }
+    // Every placeholder goes in FIRST, in one synchronous pass, so a drop of
+    // three images shows three spinners at once and in the order they were
+    // dropped. Settling them inside the same loop would mean the second
+    // placeholder only appeared once the first upload had finished — the
+    // spinner would then be describing the wait it was added to explain away.
+    const placed = images.map((file) => ({
+      file,
+      ph: this._beginInlineImage(file, scope, editorEl, zone.range),
+    }));
+    for (const { file, ph } of placed) {
+      // The panel can be closed, or the task switched, mid-upload.
+      if (!editorEl.isConnected) return;
+      await this._settleInlineImage(ph, file, scope, editorEl);
+    }
+  }
+
+  /**
+   * Is this dropped file an image, for the purposes of going inline?
+   *
+   * By MIME type first, exactly as the paste path tests a clipboard item. The
+   * extension is the fallback for a file the OS handed over with no type at
+   * all — a drag out of an archive, off a network share, or from an app that
+   * simply does not set one. A file that DOES declare a type is taken at its
+   * word, so a mislabelled .png attaches rather than rendering as a broken
+   * inline image.
+   */
+  _isDroppableImage(file) {
+    if (!file) return false;
+    if (/^image\//.test(file.type || "")) return true;
+    if (file.type) return false;
+    const { extension } = this._splitFilename(file.name || "");
+    return this._isImageExt(extension);
   }
 
   // Queues File objects onto a draft's pending list (picker + drag-drop),
@@ -6929,12 +7063,27 @@ class __tasks_panel extends LetcBox {
   // Every one of those paths applies the same editing guard, so a drop can
   // never land on the task while a comment owns the surface.
   attachExistingNodes(files, resolved) {
-    const scope =
+    let scope =
       resolved ||
       this._lastDropScope ||
       this._pointerScope() ||
       this._positionlessScope();
     if (!scope) return false;
+    // A workspace node dragged onto a DESCRIPTION attaches; it does not inline.
+    // Inlining uploads a File and this route has none — it carries a node that
+    // already exists — so the zone is normalised to the form behind it.
+    //
+    // Not cosmetic: without this, _draftForScope below is asked for a
+    // "desc:detail" draft, _draftForKey does not know that key, and the drop
+    // returns false having done nothing — while canAttachExisting() has
+    // already told the folder window not to insert the file into its own body.
+    // The file would land nowhere at all.
+    //
+    // The affordance still lights the description the pointer is actually
+    // over, which is one row above where the file lands.
+    if (scope.scope === "desc") {
+      scope = { scope: scope.descScope, key: scope.descScope };
+    }
     // A comment row has no submit, so the drop IS the commit — _stageRowItems
     // applies the same dedupes and the same cross-hub placeholder path this
     // function does for the staged scopes.
@@ -7817,16 +7966,15 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  async _insertPastedImage(file, scope, editorEl, range) {
-    let res;
-    try {
-      res = await this._uploadInlineImage(file);
-    } catch (err) {
-      console.error("[tasks_panel] inline image upload failed:", err);
-      return;
-    }
-    if (!editorEl.isConnected) return;
-    const node = this._makeInlineImage(res.nid, res.hub, null, true);
+  /**
+   * Put a node at a caret range, or at the end of the editor.
+   *
+   * Extracted from _insertPastedImage so a placeholder and the image that
+   * replaces it land by the same rule — and so the range ADVANCES past what it
+   * just inserted, which is what lets several images dropped together keep the
+   * order they were dropped in.
+   */
+  _insertInlineNode(node, editorEl, range) {
     if (range && editorEl.contains(range.startContainer)) {
       range.deleteContents();
       range.insertNode(node);
@@ -7838,6 +7986,119 @@ class __tasks_panel extends LetcBox {
     } else {
       editorEl.appendChild(node);
     }
+    return node;
+  }
+
+  /**
+   * Show that an image is on its way, at the point it was dropped or pasted.
+   *
+   * SYNCHRONOUS, and that is the whole point: the upload behind it takes
+   * seconds, and until now nothing at all appeared during them — an image
+   * dropped on a description read as a drop that had been ignored.
+   *
+   * NOTHING HERE CAN REACH THE SAVED BODY, by three separate properties, because
+   * _onDescInput serializes the editor on every keystroke and a placeholder is
+   * not something the marker grammar can express:
+   *
+   *   - the class is __inline-img-pending, and _serializeEditor tests
+   *     `classList.contains(__inline-img)` — a WHOLE-TOKEN match, so this is
+   *     not one, and no image marker is emitted for it;
+   *   - every child is an element, so the serializer's fallback (walk into
+   *     anything it does not recognise and keep the text) finds no text nodes
+   *     and emits the empty string;
+   *   - the retry and discard glyphs are CSS ::after content, which is
+   *     generated content — never in childNodes, never in textContent.
+   *
+   * So a failed placeholder can sit in the editor indefinitely, and a save
+   * while it is there stores the description exactly as if it were not.
+   */
+  _beginInlineImage(file, scope, editorEl, range) {
+    const pfx = this.fig.family;
+    const ph = document.createElement("span");
+    ph.className = `${pfx}__inline-img-pending`;
+    ph.setAttribute("contenteditable", "false");
+    ph.dataset.status = "uploading";
+    // The file is already in the browser, so the real picture can be shown
+    // while it uploads — the same trick _attachLocalPreview plays for a queued
+    // attachment, and the reason this reads as "this image, arriving" rather
+    // than as an anonymous spinner.
+    let url = null;
+    try {
+      url = URL.createObjectURL(file);
+    } catch (_) {
+      /* an engine that refuses is fine — the spinner alone still says enough */
+    }
+    if (url) {
+      (this._inlinePreviews = this._inlinePreviews || new Set()).add(url);
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "";
+      img.setAttribute("draggable", "false");
+      ph.appendChild(img);
+      ph.__previewUrl = url;
+    }
+    for (const part of ["spinner", "retry", "discard"]) {
+      const s = document.createElement("span");
+      s.className = `${pfx}__inline-img-${part}`;
+      ph.appendChild(s);
+    }
+    return this._insertInlineNode(ph, editorEl, range);
+  }
+
+  // Drop a placeholder's object URL. Safe to call twice.
+  _releaseInlinePreview(ph) {
+    const url = ph && ph.__previewUrl;
+    if (!url) return;
+    ph.__previewUrl = null;
+    if (this._inlinePreviews) this._inlinePreviews.delete(url);
+    try {
+      URL.revokeObjectURL(url);
+    } catch (_) {}
+  }
+
+  /**
+   * Upload the file behind a placeholder and put the real image in its place.
+   *
+   * On failure the placeholder STAYS, in its error state, offering a retry —
+   * the alternative is an image that silently never arrives, which is what
+   * this path did before (it logged to the console and returned).
+   *
+   * The placeholder can also be gone by the time the upload lands:
+   * _renderEditorContent rebuilds the editor body from the draft's markers on
+   * every render, and a placeholder is deliberately not a marker. That is not
+   * an error — the image is simply appended, which is exactly what this method
+   * did in that situation before there were placeholders at all.
+   */
+  async _settleInlineImage(ph, file, scope, editorEl) {
+    if (ph && ph.isConnected) ph.dataset.status = "uploading";
+    let res;
+    try {
+      res = await this._uploadInlineImage(file);
+    } catch (err) {
+      console.error("[tasks_panel] inline image upload failed:", err);
+      if (ph && ph.isConnected) {
+        ph.dataset.status = "error";
+        this._wireInlineImageRecovery(ph, file, scope, editorEl);
+      } else if (typeof Butler !== "undefined" && Butler.say) {
+        // No placeholder left to carry the failure, so say it out loud rather
+        // than let the image vanish without a word.
+        Butler.say(LOCALE.ERROR_NETWORK);
+      }
+      return;
+    }
+    if (!editorEl.isConnected) {
+      this._releaseInlinePreview(ph);
+      return;
+    }
+    const node = this._makeInlineImage(res.nid, res.hub, null, true);
+    if (ph && ph.isConnected) {
+      ph.replaceWith(node);
+    } else {
+      // Wiped by a render while it was uploading — fall back to the end of the
+      // editor, the same place a stale range has always put it.
+      this._insertInlineNode(node, editorEl, null);
+    }
+    this._releaseInlinePreview(ph);
     // Pasted images default to a small size (still resizable up via the handle).
     // Cap at the image's natural width so a small image isn't upscaled, then
     // re-sync so the width is stored in the draft marker.
@@ -7854,6 +8115,46 @@ class __tasks_panel extends LetcBox {
     else node.style.width = `${DEFAULT_W}px`;
     // Sync the draft from the mutated editor (initial; width sync follows onload).
     this._onDescInput(scope, editorEl);
+  }
+
+  /**
+   * Wire a failed placeholder's two controls.
+   *
+   * Native listeners on the node itself, not services: this is raw DOM that
+   * skeleton feed() never rebuilds, so there is no re-render to survive and
+   * nothing for onUiEvent to route. They are attached once — a retry that
+   * fails again comes back through here and would otherwise stack a second
+   * listener on every attempt.
+   */
+  _wireInlineImageRecovery(ph, file, scope, editorEl) {
+    if (ph.__wired) return;
+    ph.__wired = 1;
+    const pfx = this.fig.family;
+    ph.addEventListener("click", (e) => {
+      const hit = e.target && e.target.closest && e.target.closest("span");
+      if (!hit) return;
+      if (hit.classList.contains(`${pfx}__inline-img-discard`)) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._releaseInlinePreview(ph);
+        ph.remove();
+        // The placeholder was never in the draft, so nothing needs saving —
+        // but the editor may now be empty, and _onDescInput is what notices
+        // (it strips the stray <br> that defeats the :empty placeholder).
+        this._onDescInput(scope, editorEl);
+        return;
+      }
+      if (hit.classList.contains(`${pfx}__inline-img-retry`)) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._settleInlineImage(ph, file, scope, editorEl);
+      }
+    });
+  }
+
+  async _insertPastedImage(file, scope, editorEl, range) {
+    const ph = this._beginInlineImage(file, scope, editorEl, range);
+    return this._settleInlineImage(ph, file, scope, editorEl);
   }
 
   // Promise-wrapped upload for a raw clipboard image File. Tags scope so the

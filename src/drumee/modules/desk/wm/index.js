@@ -2105,9 +2105,10 @@ class __window_manager extends push {
         else delete root.dataset[prop];
       };
       this[key] = new MutationObserver(sync);
-      // childList for mount/unmount, data-state because a call window that is
-      // merely UNFOCUSED still exists and must not count (the rule this
-      // replaces keyed on [data-state="1"] for exactly that reason).
+      // childList for mount/unmount; data-state so a selector that DOES key on
+      // a state attribute still re-syncs. The call mirror deliberately does not
+      // (see _installDeskStateMirrors) — an unfocused call window is still a
+      // live call.
       this[key].observe(p.el, {
         childList: true,
         subtree: true,
@@ -2125,11 +2126,19 @@ class __window_manager extends push {
       "deskUpload",
       ".window-upload-progress",
     );
-    this._installDeskStateMirror(
-      "call-layer",
-      "deskCall",
-      '.window-connect[data-state="1"]',
-    );
+    // MOUNTED, not FOCUSED. This flag is what dissolves `.window-manager__ui`'s
+    // stacking context (desk/skin) so the call popup can cross the slide-out
+    // panels (10001) and the sidebar (10002). Keyed on `[data-state="1"]` it
+    // tracked FOCUS, and every window shares the `wm-radio` channel — raising
+    // any other window, or clicking the desk, makes ui-core's radio behavior
+    // (view/behavior/radio.js `_on_message`) call setState(0) on this one. The
+    // flag was then dropped mid-call, `__ui` re-isolated, and the call window's
+    // own z-index (100100) was trapped inside it: the live call vanished behind
+    // a panel or the sidebar and read as "clicking outside closed my call".
+    // A call has to stay visible whether or not it holds focus, so the mirror
+    // tracks the window's PRESENCE. The topbar compensation in desk/skin keys
+    // on the same condition, for the same reason.
+    this._installDeskStateMirror("call-layer", "deskCall", ".window-connect");
   }
 
   onPartReady(child, pn) {

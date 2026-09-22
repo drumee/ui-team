@@ -5,17 +5,6 @@ module.exports = function (ui) {
     className: `${pfx}__topbar`,
     kids: [
       Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.NOTIFICATIONS }),
-      // Mobile-only close button (hidden on desktop via CSS). Routes to the
-      // panel's own `close-activity-panel` handler → _hide(). On mobile this
-      // is the only way to dismiss the card (outside-tap close is disabled
-      // there — see _onOutsideClick); desktop still closes via the sidebar
-      // toggle / outside click.
-      Skeletons.Button.Svg({
-        ico: 'cross',
-        className: `${pfx}__close-btn`,
-        service: 'close-activity-panel',
-        uiHandler: [ui],
-      }),
       Skeletons.Box.X({
         className: `${pfx}__topbar-actions`,
         kids: [
@@ -61,6 +50,18 @@ module.exports = function (ui) {
             ],
           }),
         ],
+      }),
+      // Close button, on every device. LAST, so on desktop it sits at the end
+      // of the header after the actions; on mobile the skin pins it to the
+      // card's corner out of flow, where source order does not matter. Routes to
+      // the panel's `close-activity-panel` handler. On mobile it is the only way
+      // to dismiss the card (outside-tap close is disabled there — see
+      // _onOutsideClick).
+      Skeletons.Button.Svg({
+        ico: 'cross',
+        className: `${pfx}__close-btn`,
+        service: 'close-activity-panel',
+        uiHandler: [ui],
       }),
     ],
   });

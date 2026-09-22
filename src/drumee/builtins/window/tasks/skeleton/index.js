@@ -2497,6 +2497,16 @@ function mentionField(ui, scope, opt = {}) {
           contenteditable: "true",
           "data-placeholder":
             opt.placeholder || LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+          // Which editor this is, for the drop zone (../drop-zones.js). It has
+          // to be an ATTRIBUTE: sys_pn carries the same thing one line above,
+          // but that is a model field read with mget and never reaches the DOM,
+          // and a drop resolves from the element under the pointer.
+          //
+          // Stamped for all five scopes, not just the two that can be dropped
+          // into. The zone table is what decides which scopes accept a file
+          // (DESC_SCOPES), so leaving the other three unlabelled would move
+          // that decision into whether an attribute happens to be present.
+          "data-desc-scope": scope,
         },
       }),
       mentionDropdown(ui, scope),

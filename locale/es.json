@@ -2978,5 +2978,17 @@
   "ARCHIVE_UNSAFE_PATH": "Este archivo comprimido contiene entradas que apuntan fuera de la carpeta de destino, por lo que no se extrajo.",
   "UNZIP_CONFIRM": "¿Descomprimir {0}? Se añadirá al directorio actual una carpeta con sus {1} archivos ({2}).",
   "ARCHIVE_FORMAT_UNSUPPORTED": "Drumee no puede extraer este formato de archivo comprimido. Descárguelo o suba la carpeta en formato ZIP.",
-  "UNZIP_FAILED": "No se pudo extraer el archivo comprimido. Inténtelo de nuevo."
+  "UNZIP_FAILED": "No se pudo extraer el archivo comprimido. Inténtelo de nuevo.",
+  "MICROPHONE_BLOCKED": "Micrófono bloqueado",
+  "CAMERA_BLOCKED": "Cámara bloqueada",
+  "NO_CAMERA_DEVICE": "No se encontró ninguna cámara",
+  "ALLOW_IN_BROWSER": "En tu navegador",
+  "ALLOW_IN_BROWSER_STEP_1": "Haz clic en el candado o en el icono de cámara de la barra de direcciones.",
+  "ALLOW_IN_BROWSER_STEP_2": "Cambia el {0} a Permitir.",
+  "ALLOW_IN_BROWSER_STEP_3": "Vuelve a cargar esta página.",
+  "ALLOW_IN_SYSTEM": "En los ajustes del sistema",
+  "ALLOW_IN_SYSTEM_MAC": "Abre Ajustes del Sistema › Privacidad y seguridad › {0} y activa tu navegador.",
+  "ALLOW_IN_SYSTEM_WINDOWS": "Abre Configuración › Privacidad y seguridad › {0} y permite el acceso a las aplicaciones de escritorio.",
+  "ALLOW_IN_SYSTEM_LINUX": "Comprueba que los ajustes de sonido y privacidad de tu escritorio permitan a tu navegador usar el {0}.",
+  "ALLOW_IN_SYSTEM_GENERIC": "Comprueba que tu sistema operativo permita a tu navegador usar el {0}."
 }

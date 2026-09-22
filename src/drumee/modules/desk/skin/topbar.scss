@@ -83,8 +83,35 @@
   to { transform: rotate(360deg); }
 }
 
+// The utility icons' spinner while their screen loads (desk _runUtilityBusy).
+// The workspace-rename editor arriving and leaving. 140ms MUST MATCH
+// WS_RENAME_ANIM_MS in modules/desk/index.js, which owns when the field is
+// actually removed from the DOM — see the constant's own note. Change one,
+// change both.
+//
+// The field takes the CRUMB'S PLACE in the chip, so it comes in from where the
+// name was rather than fading in on the spot: a 6px slide reads as the name
+// turning into a field, which is what just happened.
+@keyframes ws-rename-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes ws-rename-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateX(-6px); }
+}
+
+@keyframes utility-btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .desk-module-topbar__ws-head-action[data-loading="1"] svg {
+    animation: none;
+  }
+
+  .desk-module-topbar__utility-btn[data-loading="1"]::after {
     animation: none;
   }
 
@@ -244,6 +271,38 @@
       display: none;
     }
 
+    // `data-anim` is the desk's own convention for a surface arriving and
+    // leaving (desk/skin reads [data-anim="out"], chat-p2p mounts with "in").
+    //
+    // `both` so the out state HOLDS at opacity 0 for the frame or two between
+    // the animation ending and index.js emptying the slot — without it the
+    // field snaps back to full opacity at the end and flickers before it goes.
+    &[data-anim="in"] {
+      animation: ws-rename-in 140ms ease-out both;
+    }
+
+    &[data-anim="out"] {
+      animation: ws-rename-out 140ms ease-in both;
+      // The edit is over; a press landing on a field on its way out would
+      // reopen nothing and could still take focus.
+      pointer-events: none;
+    }
+
+    // HERE, NOT IN THE BLOCK AT THE TOP OF THIS FILE. Both selectors are
+    // (0,2,0) — the attribute is the only thing either adds — so the cascade
+    // falls through to source order, and up there this loses to the two rules
+    // above it. Measured with chromium --force-prefers-reduced-motion: the
+    // animation still ran. Immediately after them, it wins.
+    //
+    // Only the movement goes. index.js's timer is not branched on the media
+    // query, so a reduced-motion user gets the identical teardown sequence.
+    @media (prefers-reduced-motion: reduce) {
+      &[data-anim="in"],
+      &[data-anim="out"] {
+        animation: none;
+      }
+    }
+
     textarea,
     input {
       display: block;
@@ -282,6 +341,52 @@
 
       &:focus {
         box-shadow: inset 0 0 0 1px var(--primary-purple-40);
+      }
+    }
+
+    // The Save tick. Enter has always saved; nothing on screen said so, and the
+    // only visible way out of the field was to click away from it.
+    //
+    // 22px to match the field's own height, so the two read as one control
+    // rather than a control with something stuck to it. `flex-shrink: 0` because
+    // the box is `flex: 1 1 auto` and the field beside it is 220px — without it
+    // a narrow bar takes the squeeze out of the button instead of the field.
+    &-save {
+      display: flex;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-left: 4px;
+      padding: 3px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      cursor: pointer;
+      // A filled primary button, not a bare glyph: this is the commit, and it
+      // sits next to a field the user is still typing in, so it has to read as
+      // the thing that ends the edit rather than as decoration on the chip.
+      background-color: var(--primary-40);
+      color: var(--white);
+      transition: background-color 0.15s ease;
+
+      // 12 in 22. At 16 the glyph filled the button's whole content box
+      // (22 less the 3px padding) edge to edge, so the tick read as a square of
+      // colour with a shape cut out of it rather than as an icon on a button.
+      // 5px of fill around it is what makes it a button.
+      svg {
+        width: 12px;
+        height: 12px;
+        // `fill`, not a colour of its own — the tick then follows `color`
+        // above, and hover/disabled states only have to move one property.
+        fill: currentColor;
+      }
+
+      // The next step down the same ramp. A translucent black wash (what the
+      // bar's other icon buttons use) muddies a saturated fill rather than
+      // darkening it.
+      &:hover {
+        background-color: var(--primary-50);
       }
     }
   }
@@ -1452,6 +1557,40 @@
       background: var(--radio-on-bg);
       color: var(--primary-40);
     }
+
+    // Working — stamped by desk _runUtilityBusy until the screen behind the
+    // icon is up. The glyph (and badge) give way to a border spinner in the
+    // same colour, pinned to the centre so the 30px button does not reflow.
+    &[data-loading="1"] {
+      cursor: progress;
+      pointer-events: none;
+
+      .desk-module-topbar__utility-ico,
+      .desk-module-topbar__utility-badge {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 14px;
+        height: 14px;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        animation: utility-btn-spin 0.7s linear infinite;
+      }
+    }
+  }
+
+  // While one icon is loading the others are disabled: dimmed and taking no
+  // pointer input, so neither a click nor a hover tooltip gets through.
+  &__utility-cluster[data-busy="1"] &__utility-btn:not([data-loading="1"]) {
+    opacity: 0.4;
+    pointer-events: none;
   }
 
   &__utility-ico {

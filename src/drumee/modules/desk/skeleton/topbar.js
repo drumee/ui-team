@@ -335,6 +335,10 @@ function utilityCluster(pfx, ui) {
   // each. The other three items are slide-outs the desk leaves standing, so
   // they have nothing to be reached for and stay anonymous. The desk resolves
   // these through the implicit part walk, same as __actions-cluster below.
+  //
+  // The slide-outs (bell / Contacts / Trash) now carry one too, for
+  // desk_module._syncUtilityLights: their icon is turned off whenever their
+  // panel closes, by whatever closed it.
   const item = ({ ico, label, service, badgePn, pn }) =>
     Skeletons.Box.X({
       className: `${pfx}__utility-btn`,
@@ -379,6 +383,7 @@ function utilityCluster(pfx, ui) {
         label: LOCALE.NOTIFICATIONS,
         service: "toggle-activity",
         badgePn: "activity-count-top",
+        pn: "utility-activity",
       }),
       item({
         ico: "top-calendar",
@@ -396,11 +401,13 @@ function utilityCluster(pfx, ui) {
         ico: "top-contacts",
         label: LOCALE.CONTACTS,
         service: "toggle-contacts",
+        pn: "utility-contacts",
       }),
       item({
         ico: "top-trash",
         label: LOCALE.TRASH,
         service: "toggle-trash",
+        pn: "utility-trash",
       }),
       item({
         ico: "top-apps",

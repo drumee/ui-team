@@ -51,7 +51,9 @@ const __webrtc_init = function (_ui_, peer) {
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${fig}__main`,
-    kids: [header, body],
+    // The call can be parked before it connects (dial / ring), so the tile
+    // furniture belongs on this screen too — see builtins/webrtc/call-parking.
+    kids: [header, body, ...require("builtins/webrtc/skeleton/call-tile")(_ui_)],
   });
 };
 

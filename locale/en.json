@@ -3186,5 +3186,17 @@
   "ARCHIVE_UNSAFE_PATH": "This archive contains entries that point outside the destination folder, so it was not extracted.",
   "UNZIP_CONFIRM": "Unzip {0}? This will add a folder with its {1} files ({2}) to the current folder.",
   "ARCHIVE_FORMAT_UNSUPPORTED": "Drumee cannot extract this archive format. Please download it, or upload the folder as a ZIP.",
-  "UNZIP_FAILED": "The archive could not be extracted. Please try again."
+  "UNZIP_FAILED": "The archive could not be extracted. Please try again.",
+  "MICROPHONE_BLOCKED": "Microphone blocked",
+  "CAMERA_BLOCKED": "Camera blocked",
+  "NO_CAMERA_DEVICE": "No camera found",
+  "ALLOW_IN_BROWSER": "In your browser",
+  "ALLOW_IN_BROWSER_STEP_1": "Click the padlock or camera icon in the address bar.",
+  "ALLOW_IN_BROWSER_STEP_2": "Set the {0} to Allow.",
+  "ALLOW_IN_BROWSER_STEP_3": "Reload this page.",
+  "ALLOW_IN_SYSTEM": "In your system settings",
+  "ALLOW_IN_SYSTEM_MAC": "Open System Settings › Privacy & Security › {0} and turn your browser on.",
+  "ALLOW_IN_SYSTEM_WINDOWS": "Open Settings › Privacy & security › {0} and let desktop apps use it.",
+  "ALLOW_IN_SYSTEM_LINUX": "Check that your desktop's sound and privacy settings let your browser use the {0}.",
+  "ALLOW_IN_SYSTEM_GENERIC": "Check that your operating system lets your browser use the {0}."
 }

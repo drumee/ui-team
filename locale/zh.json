@@ -2977,5 +2977,17 @@
   "ARCHIVE_UNSAFE_PATH": "此压缩包中包含指向目标文件夹之外的条目，因此未被解压。",
   "UNZIP_CONFIRM": "解压 {0}？这会在当前文件夹中添加一个包含其 {1} 个文件（{2}）的文件夹。",
   "ARCHIVE_FORMAT_UNSUPPORTED": "Drumee 无法解压此压缩包格式。请下载它，或将文件夹以 ZIP 格式上传。",
-  "UNZIP_FAILED": "无法解压该压缩包，请重试。"
+  "UNZIP_FAILED": "无法解压该压缩包，请重试。",
+  "MICROPHONE_BLOCKED": "麦克风已被阻止",
+  "CAMERA_BLOCKED": "摄像头已被阻止",
+  "NO_CAMERA_DEVICE": "未找到摄像头",
+  "ALLOW_IN_BROWSER": "在浏览器中",
+  "ALLOW_IN_BROWSER_STEP_1": "点击地址栏中的锁形或摄像头图标。",
+  "ALLOW_IN_BROWSER_STEP_2": "将{0}设为“允许”。",
+  "ALLOW_IN_BROWSER_STEP_3": "重新加载本页。",
+  "ALLOW_IN_SYSTEM": "在系统设置中",
+  "ALLOW_IN_SYSTEM_MAC": "打开“系统设置” › “隐私与安全性” › “{0}”，并开启你的浏览器。",
+  "ALLOW_IN_SYSTEM_WINDOWS": "打开“设置” › “隐私和安全性” › “{0}”，并允许桌面应用使用。",
+  "ALLOW_IN_SYSTEM_LINUX": "请检查桌面的声音和隐私设置是否允许浏览器使用{0}。",
+  "ALLOW_IN_SYSTEM_GENERIC": "请检查操作系统是否允许浏览器使用{0}。"
 }
