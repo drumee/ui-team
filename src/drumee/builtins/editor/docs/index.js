@@ -735,9 +735,16 @@ class __editor_docs extends __player {
    * @param {String} id
    */
   async selectTab(id) {
-    if (!id || id === this._activeTab || this._switchingTab) return;
+    if (!id || id === this._activeTab) return;
     const tabs = this.getTabs();
     if (!tabs.some((t) => t.id === id)) return;
+    // LAST CLICK WINS. A switch is not finished until the room has connected,
+    // which takes a moment; a lock over that window swallowed the next click
+    // ("click tab 2 không ăn"). Each switch takes a ticket instead, and an
+    // older one that comes back late stops rather than dragging the editor
+    // back to the tab the user has already left.
+    const seq = (this._switchSeq = (this._switchSeq || 0) + 1);
+    const current = () => seq === this._switchSeq;
     this._switchingTab = 1;
     try {
       // ONE thing has to happen before the swap: keeping the bytes of the tab
@@ -745,6 +752,7 @@ class __editor_docs extends __player {
       // save fired after the swap would export whatever the editor shows
       // mid-swap, which is still the OLD tab, and write it over the new one.
       await capped(this.stashActiveTab(), 2500);
+      if (!current()) return;
 
       // Open the tab NOW. Everything else is network: waiting for it before
       // showing the tab is what made a switch take many seconds ("click
@@ -760,7 +768,7 @@ class __editor_docs extends __player {
     } catch (e) {
       this.warn("__editor_docs: tab switch failed", e);
     } finally {
-      this._switchingTab = 0;
+      if (current()) this._switchingTab = 0;
     }
   }
 
