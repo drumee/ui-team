@@ -4251,14 +4251,40 @@ class desk_module extends LetcBox {
     // the same answer and the descriptor is not needed. A create that asks to
     // be switched to is handled below, where it does have to be named.
     if (wasEmpty) {
-      // A PERSONAL workspace raises no follow-up panel — it is a home-root
-      // folder, not a hub, so media/form finishes as soon as it exists. Nothing
-      // to wait for, so open it now.
-      if (payload.personal) {
+      // NOTHING FOLLOWS THE FORM → open it now.
+      //
+      // Two ways to get here. A PERSONAL workspace raises no follow-up panel by
+      // its nature — it is a home-root folder, not a hub, so media/form
+      // finishes as soon as it exists. And an ordinary create no longer raises
+      // one either: the create dialog hands the user straight into the new
+      // workspace (media/form, the `post` block). Either way there is nothing
+      // to wait for, and waiting would cost the 4s fallback below.
+      //
+      // `payload.open` IS PART OF THE TEST, though this branch has never read
+      // it, because one create does NOT want to be taken in: the post-signup
+      // tour (desk/tutorial/workspace) calls createWorkspace with no options
+      // and opens the workspace itself when the walkthrough ends. It reaches
+      // here with neither flag, and it must keep landing on the two-stage wait
+      // below — which for it has always meant the 4s fallback — rather than
+      // being handed a new, faster way to have a workspace opened underneath
+      // its own screen.
+      //
+      // _walkthroughRunning() for the same reason, and it is the test the
+      // `created` branch below has always applied: reward-flow and
+      // activate-workspace create through the ORDINARY dialog, which asks to
+      // be taken in on their behalf whether they want it or not, and each owns
+      // its own sequel. They keep the route they have always taken.
+      if (
+        payload.personal
+        || (payload.open && !payload.panel && !this._walkthroughRunning())
+      ) {
         await this._openWorkspaceOrEmptyScreen({ force: true });
         return;
       }
-      // INTERNAL / EXTERNAL: wait for "Who has access" to be dismissed first.
+      // A SURFACE SAID IT WILL RAISE A PANEL (today: the activate-workspace
+      // walkthrough's override), never asked to be taken in at all, or is a
+      // walkthrough that owns what comes next — wait, exactly as this branch
+      // did for every create before.
       // See _openWorkspaceAfterAccessPanel for why it cannot be done now.
       this._openWorkspaceAfterAccessPanel();
       return;
@@ -4281,9 +4307,10 @@ class desk_module extends LetcBox {
         ? payload.workspace
         : null;
     if (created) {
-      // A personal workspace raises no follow-up panel — a home-root folder is
-      // not a hub — so there is nothing to wait for.
-      if (payload.personal) {
+      // Nothing follows the form — the ordinary create, and every personal one
+      // — so open it straight away. Same reasoning as the empty-screen branch
+      // above.
+      if (payload.personal || !payload.panel) {
         await this._openCreatedWorkspace(created);
         return;
       }
@@ -4326,21 +4353,22 @@ class desk_module extends LetcBox {
     if (!wsKey) return;
     const rows = await this._fetchWorkspaces();
     if (this.isDestroyed && this.isDestroyed()) return;
+    // ON FILES, both here and in the _switchWorkspace branch above: this
+    // workspace was created seconds ago, so inheriting the outgoing pane's Chat
+    // or Task tab would open it on a view that is empty by construction. See
+    // the `land_on_files` note in Wm.loadWorkspace.
     if ((rows || []).some((r) => this._workspaceKey(r) === wsKey)) {
-      return this._switchWorkspace(wsKey);
+      return this._switchWorkspace(wsKey, { landOnFiles: 1 });
     }
     if (!window.Wm || !_.isFunction(window.Wm.loadWorkspace)) return;
     // `filetype` is what libs/workspace-target branches on, and a descriptor
     // carries `area` instead — so say it, rather than letting a personal
     // workspace resolve as a hub and open Home.
     const row = ws.area === _a.personal ? { ...ws, filetype: _a.folder } : ws;
-    // Same as _switchWorkspace: read the tab the switch will carry BEFORE the
-    // pane is replaced, so the lit row is the one that comes up.
-    const landsOn = _.isFunction(window.Wm.paneTabToCarry)
-      ? window.Wm.paneTabToCarry()
-      : null;
-    window.Wm.loadWorkspace(this._workspaceTarget(row));
-    this._railHighlight(landsOn || "files");
+    const target = this._workspaceTarget(row);
+    if (target) target.land_on_files = 1;
+    window.Wm.loadWorkspace(target);
+    this._railHighlight("files");
     this._setWorkspaceLabel(ws.filename);
     // `row`, not `ws`: the line above already corrected a personal workspace's
     // filetype to `folder`, which is what decides whether the glyph is drawn as
@@ -4643,8 +4671,16 @@ class desk_module extends LetcBox {
     );
   }
 
-  /** Switcher row -> open that workspace, then refresh the menu's current mark. */
-  async _switchWorkspace(wsKey) {
+  /**
+   * Switcher row -> open that workspace, then refresh the menu's current mark.
+   *
+   * @param {String} wsKey            the row key, see _workspaceKey
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.landOnFiles] open on Files rather than inheriting the
+   *   outgoing pane's tab. Asked for by _openCreatedWorkspace alone — see the
+   *   `land_on_files` note in Wm.loadWorkspace. Absent, nothing changes.
+   */
+  async _switchWorkspace(wsKey, opt = {}) {
     if (!wsKey) return;
     const rows = await this._fetchWorkspaces();
     // Matched on the KEY the row was built with. Finding by hub_id opened the
@@ -4665,11 +4701,17 @@ class desk_module extends LetcBox {
     // WHICH TAB THE NEW PANE WILL OPEN ON, asked BEFORE the call: a switch
     // hands the outgoing pane's tab to the incoming one (Wm.loadWorkspace →
     // `restore_tab`), and the pane that knows it is the one this call is about
-    // to replace. Null means Files.
-    const landsOn = _.isFunction(window.Wm.paneTabToCarry)
+    // to replace. Null means Files — which is also what `landOnFiles` forces,
+    // and the rail has to be told the same thing the pane is (below).
+    const landsOn = !opt.landOnFiles && _.isFunction(window.Wm.paneTabToCarry)
       ? window.Wm.paneTabToCarry()
       : null;
-    window.Wm.loadWorkspace(this._workspaceTarget(row));
+    const target = this._workspaceTarget(row);
+    // Read by loadWorkspace in place of paneTabToCarry(). Set on the target
+    // rather than passed as an argument because that is the one object the
+    // method reads before `apply` shadows its `data`.
+    if (target && opt.landOnFiles) target.land_on_files = 1;
+    window.Wm.loadWorkspace(target);
     // ONLY on a real change of workspace. Re-picking the open one makes
     // loadWorkspace an early return that merely raises the pane, so the window
     // keeps the tab it was on — restamping the rail there is at best a no-op.
@@ -4907,9 +4949,14 @@ class desk_module extends LetcBox {
   /**
    * OPEN THE NEW WORKSPACE ONCE THE ACCESS PANEL IS CLOSED.
    *
-   * Creating an internal or external workspace from the empty screen ends on
-   * `.permission-restricted__main` — media/form chains to it on success, into
-   * Wm's wrapper-modal. Opening the workspace cannot happen alongside that,
+   * ONLY REACHED WHEN THE CREATE ANNOUNCED `panel: 1`. The ordinary create no
+   * longer raises anything over the form — it hands the user straight into the
+   * new workspace — and _onWorkspaceCreated opens it directly in that case.
+   * Today the one surface that still asks for this is the activate-workspace
+   * walkthrough, whose Step 2 invites a teammate and so needs Step 1 to end on
+   * the members panel (see _createFormOverrides).
+   *
+   * When a panel IS raised, opening the workspace cannot happen alongside it,
    * because loadWorkspace CLEARS the wrapper-modal on its way in
    * (wm/index.js): open first and the panel the user was about to invite people
    * from is destroyed under them. So the order is the user's — panel, then

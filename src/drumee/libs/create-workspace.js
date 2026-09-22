@@ -62,11 +62,26 @@ function track(host, type, opt) {
  * assumed here because the surfaces genuinely disagree: the create dialog wants
  * it, and the tour's own create screen does not — that one opens the workspace
  * itself when the walkthrough ends, and two navigations would fight.
+ *
+ * `panel: 1` says the calling surface WILL raise a follow-up panel over the
+ * wrapper-modal, so navigation must wait for that panel to be dismissed before
+ * opening the workspace — opening it earlier destroys the panel, because
+ * loadWorkspace clears the very wrapper it lives in.
+ *
+ * It has to be announced rather than inferred. This broadcast fires from inside
+ * createHub/createPersonal, BEFORE the caller's `.then` has fed anything, so a
+ * listener reading the wrapper's contents at this moment is reading a state
+ * that has not happened yet — see desk's _openWorkspaceAfterAccessPanel. The
+ * surface is the only thing that knows, and it knows before it calls.
+ *
+ * Absent — the ordinary create — nothing follows the form, so the desk opens
+ * the workspace as soon as it exists.
  */
-function announce(workspace, personal, open) {
+function announce(workspace, personal, open, panel) {
   const payload = { workspace };
   if (personal) payload.personal = 1;
   if (open) payload.open = 1;
+  if (panel) payload.panel = 1;
   RADIO_BROADCAST.trigger("workspace:refresh", payload);
 }
 
@@ -138,7 +153,7 @@ function createPersonal(host, filename, open) {
  *   success, `{ok: false, quota: true}` when the server refused on quota, or
  *   `{ok: false, message}` with something worth showing the user.
  */
-function createHub(host, type, filename, open) {
+function createHub(host, type, filename, open, panel) {
   const area = HUB_AREA[type] || HUB_AREA.team;
   return host
     .postService(SERVICE.desk.create_hub, {
@@ -289,7 +304,7 @@ function createHub(host, type, filename, open) {
       // analytics table from yp.hub keys on hub id, and the two must agree or a
       // backfilled workspace is counted twice.
       track(host, type, { wid: workspace.hub_id, area: workspace.area, filename });
-      announce(workspace, false, open);
+      announce(workspace, false, open, panel);
       return { ok: true, hub, workspace };
     });
 }
@@ -309,6 +324,11 @@ function createHub(host, type, filename, open) {
  * @param {Boolean} [opt.open]  ask navigation to switch to the new workspace
  *   once it exists — broadcast as `open: 1`, see announce(). A hub's parent is
  *   always the home root, so there is nothing else to pass here.
+ * @param {Boolean} [opt.panel] this surface will raise a follow-up panel over
+ *   the wrapper-modal, so navigation must wait for it — broadcast as
+ *   `panel: 1`, see announce(). Ignored for `personal`, which is a folder and
+ *   has no membership panel to raise; the desk already short-circuits on
+ *   `personal` for that reason.
  * @returns {Promise<Object>} `{ok: true, workspace, hub?, personal?}` or
  *   `{ok: false, ...}` — `handled` when the failure has already been shown to
  *   the user, `quota` when the server refused on quota, `message` otherwise.
@@ -320,7 +340,7 @@ function createWorkspace(host, type, name, opt = {}) {
   const open = !!opt.open;
   const run = type === "personal"
     ? createPersonal(host, filename, open)
-    : createHub(host, type, filename, open);
+    : createHub(host, type, filename, open, !!opt.panel);
   return run.catch((e) => {
     if (host && host.warn) host.warn("Failed to create workspace", e);
     return { ok: false, error: e };

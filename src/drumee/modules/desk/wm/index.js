@@ -944,7 +944,15 @@ class __window_manager extends push {
     //
     // Past the same-workspace early return on purpose: that branch mounts
     // nothing, so the pane keeps its own tab and there is nothing to carry.
-    const carryTab = this.paneTabToCarry();
+    //
+    // `land_on_files` OPTS OUT, and one caller asks for it: a workspace that
+    // has just been CREATED (desk _openCreatedWorkspace). Carrying makes sense
+    // for a switch between two workspaces the user already has — it keeps them
+    // where they were working — but a workspace created seconds ago has no
+    // chat, no tasks and no meeting to land on, so inheriting Chat or Task
+    // opens it on a view that is empty by construction. Files is where a new
+    // workspace starts.
+    const carryTab = data.land_on_files ? null : this.paneTabToCarry();
 
     // WAIT FOR THE ACCESS PANEL. Nothing below this line runs while
     // `.permission-restricted__main` for THIS workspace is up.
