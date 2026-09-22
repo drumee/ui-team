@@ -974,6 +974,45 @@ html {
   }
 }
 
+// …AND A MODAL RAISED FROM THE ADMIN CONSOLE STAYS OVER THE CONSOLE.
+//
+// The dissolve above is what lets a WM modal clear the section slot (1500) at
+// all — and it releases every window layer to the root with it, the headless
+// layer holding `window-folder__split-body` included, at 50000 (the global
+// `[data-state="open"]` lift) or 50001 (the focus lift, wm/skin). Both are far
+// above the slot. So the Admin Console's own "Invite members" CTA
+// (`apps-main__seats-banner-cta` → apps_main _openInvitePopup, which feeds
+// invite_popup straight into Wm.__wrapperModal) opened the popup over the
+// WORKSPACE PANE, with the console the user had just clicked from buried
+// beneath it. The popup's transparent backdrop made that plain to see.
+//
+// Pinned back to the layers' resting 1300 / 1301 — the same values, for the
+// same reason, as the tour case directly above. While a section screen is up
+// the whole window manager normally sits UNDER its slot, so this restores
+// exactly the no-modal picture and puts the modal (100000) on top of it: the
+// popup lands on apps-main__content, as the console's own CTA intends.
+//
+// Keyed on apps_main being IN the slot. It is not in KEEP_ALIVE_MAIN_KINDS
+// (index.js), so present means showing; `:not([data-anim="out"])` is there in
+// case that ever changes. A direct child, which is how the slot itself styles
+// its screens (`> [data-anim="out"]` in __settings-main-slot). Gated behind
+// `[data-wm-modal="open"]`, so the :has() is only ever evaluated while a modal
+// is up. Upload floater and meeting toast excluded, as in the tour case.
+//
+// Specificity (0,7,0), nested (0,8,0): clears the focus lift (0,4,0) and the
+// global lift (0,1,0), both !important.
+.desk-module[data-wm-modal="open"]:has(
+    .desk-module__settings-main-slot > [data-kind="apps_main"]:not([data-anim="out"])
+  ) {
+  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
+    z-index: 1300 !important;
+
+    &:has(> [data-state="1"]) {
+      z-index: 1301 !important;
+    }
+  }
+}
+
 // The utility TOOLTIPS over a wrapper-modal — the third dissolver, and the only
 // part of the bar that needs anything here.
 //

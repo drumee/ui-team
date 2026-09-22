@@ -1424,6 +1424,11 @@ class __media_interact extends media_core {
     const hub_name = this.isHub
       ? this.mget(_a.filename) || this.mget(_a.name) || ""
       : "";
+    // Tints the folder glyph the popup draws over its pre-filled workspace
+    // field. Paired with hub_name for the same reason it is: only a hub knows
+    // its own area, and a tint borrowed from a parent would be a lie about
+    // which workspace the row names.
+    const hub_area = this.isHub ? this.mget(_a.area) || "" : "";
     // Free: solo — no invites (silent). Org seat cap does not apply to hub.invite.
     const { isFreeSoloPlan, showFreeSoloLimit } = require("libs/billing");
     if (isFreeSoloPlan()) return showFreeSoloLimit();
@@ -1432,6 +1437,7 @@ class __media_interact extends media_core {
         kind: "invite_popup",
         hub_id,
         hub_name,
+        hub_area,
         uiHandler: [this],
       });
     });
