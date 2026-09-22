@@ -1,4 +1,4 @@
-const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
+const { colorFromName, copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
 const nodeIconHtml = require("./node-icon");
 require("./skin");
 
@@ -52,6 +52,19 @@ const mentionMemberSearchText = (member = {}) =>
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+
+// Two letters for the avatar fallback: first + last name, else the two words
+// of the display name, else the first letter of whatever labels the person.
+const mentionMemberInitials = (member = {}) => {
+  const first = cleanMentionText(member.firstname);
+  const last = cleanMentionText(member.lastname);
+  let initials = `${first[0] || ""}${last[0] || ""}`;
+  if (!initials) {
+    const parts = mentionMemberLabel(member).split(/\s+/).filter(Boolean);
+    initials = `${(parts[0] || "")[0] || ""}${(parts[1] || "")[0] || ""}`;
+  }
+  return initials.toUpperCase() || "?";
+};
 
 const mentionMemberDebugRow = (member = {}) => ({
   id: cleanMentionText(member.id),
@@ -3769,6 +3782,34 @@ class __widget_chat extends LetcBox {
   /**
    * Normalize media-service response envelopes before rows are rendered.
    */
+  /**
+   * Avatar of one contact row: the photo shows only once it has loaded; a
+   * person without one gets their initials on a colour derived from them
+   * (chat-item _loadAvatar draws the bubble avatar the same way).
+   */
+  _loadMentionAvatar(row) {
+    const holder = row.querySelector(".mention-item__avatar");
+    const img = holder && holder.querySelector("img");
+    if (!holder || !img) return;
+    const showInitials = () => {
+      img.style.display = "none";
+      if (holder.querySelector(".mention-item__avatar-initials")) return;
+      const span = document.createElement("span");
+      span.className = "mention-item__avatar-initials";
+      span.textContent = holder.dataset.initials || "?";
+      span.style.backgroundColor = colorFromName(holder.dataset.initials || "??");
+      holder.appendChild(span);
+    };
+    img.style.display = "none";
+    img.onerror = showInitials;
+    img.onload = () => {
+      img.style.display = "";
+    };
+    const id = row.dataset.drumate_id;
+    if (!id) return showInitials();
+    img.src = Visitor.avatar(id, _a.vignette);
+  }
+
   _mentionRows(data) {
     if (!data) return [];
     if (Array.isArray(data)) return data;
@@ -4323,10 +4364,13 @@ class __widget_chat extends LetcBox {
               cleanMentionText(c.surname) ||
               fullname;
             const lastname = cleanMentionText(c.lastname);
-            const avatarUrl = Visitor.avatar(drumate_id, _a.vignette);
+            const initials = mentionMemberInitials(c);
 
+            // The photo is wired after the HTML lands (see below): hidden
+            // until it loads, initials on a name colour when there is none —
+            // the same fallback the chat bubble's avatar uses.
             html += `<div class="mention-item mention-item--contact" data-drumate_id="${drumate_id}" data-firstname="${_.escape(firstname)}" data-lastname="${_.escape(lastname)}" data-fullname="${_.escape(fullname)}" data-type="contact" data-service="mention-select">
-            <div class="mention-item__avatar"><img class="mention-item__avatar-img" src="${avatarUrl}"></div>
+            <div class="mention-item__avatar" data-initials="${_.escape(initials)}"><img class="mention-item__avatar-img" alt=""></div>
             <div class="mention-item__name">${_.escape(fullname)}</div>
           </div>`;
           });
@@ -4340,6 +4384,9 @@ class __widget_chat extends LetcBox {
         }
 
         dropdown.el.innerHTML = html;
+        dropdown.el
+          .querySelectorAll(".mention-item--contact")
+          .forEach((row) => this._loadMentionAvatar(row));
         dropdown.el.dataset.state = _a.open;
         this._setMentionActiveIndex(0);
         console.log("[mention] dropdown OPENED", {
