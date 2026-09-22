@@ -38,6 +38,15 @@ class __permission_restricted extends DrumeeMFS {
     this._inviteRole = roleByValue("edit");
     this._members = [];
     this._membersLoaded = false;
+    // Addresses already committed as chips, waiting to be sent together. State
+    // rather than DOM for the same reason _inviteNotice is: the skeleton is
+    // re-fed on every member push, and chips read off the DOM would be lost
+    // exactly when an admin is halfway through entering a list.
+    this._inviteChips = [];
+    // Invitations this workspace is waiting on (hub.invitations). Null until
+    // the first read answers, which is how the skeleton tells "not fetched
+    // yet" from "none" — an empty section and a missing one look different.
+    this._invitations = null;
     // The inline message under the invite field, as STATE rather than a DOM
     // write alone: _loadMembers re-feeds the whole skeleton, and the
     // hub.member_joined push lands within a second of a successful invite —
@@ -67,7 +76,122 @@ class __permission_restricted extends DrumeeMFS {
       service: "pick-invite-contact",
       itemClass: `${this.fig.family}__invite-suggestion`,
     });
+    this._installChipInput();
     this._loadMembers();
+  }
+
+  /**
+   * Turn the single-address field into a chip field: several people, one send.
+   *
+   * 🚨 DELEGATED ON THE WIDGET ROOT AND INSTALLED ONCE, exactly like
+   * attachEmailLookup and for the same reason — _render() re-feeds the whole
+   * skeleton on every member push, so a listener bound to the input element
+   * itself would be thrown away a second after a successful invite, silently
+   * turning the field back into a single-address one.
+   *
+   * SEPARATORS ARE HANDLED ON `input`, NOT ON keydown, so one rule covers both
+   * typing a comma and PASTING "a@x.com, b@y.com" — a paste fires input and
+   * never fires a keydown per character. Enter and Backspace are genuinely
+   * keys and stay on keydown.
+   *
+   * The server has accepted an array since before this panel existed
+   * (hub.invite loops over `invitees`), and the rail's Invite popup already
+   * sends several. This is the panel catching up, not a new server contract.
+   */
+  _installChipInput() {
+    if (this._chipInputInstalled) return;
+    this._chipInputInstalled = 1;
+    const cls = `${this.fig.family}__invite-entry`;
+    const isInput = (t) =>
+      t && t.matches && t.matches("input") && t.closest(`.${cls}`);
+
+    this.el.addEventListener("input", (e) => {
+      if (!isInput(e.target)) return;
+      // Only when a separator is actually present: every other keystroke has
+      // to fall through untouched or the address-book lookup never sees a
+      // string long enough to search on.
+      if (!/[,;]/.test(e.target.value)) return;
+      this._commitChips(e.target.value, { keepTail: true });
+    });
+
+    this.el.addEventListener("keydown", (e) => {
+      if (!isInput(e.target)) return;
+      if (e.key === "Enter") {
+        // preventDefault, or the Entry's own commit handling (and any form
+        // wrapping it) also reacts and the address is consumed twice.
+        e.preventDefault();
+        this._commitChips(e.target.value);
+        return;
+      }
+      // Backspace on an EMPTY field takes back the previous chip — the
+      // convention every chip field has, and the only way to correct the one
+      // you just entered without reaching for the mouse.
+      if (e.key === "Backspace" && !e.target.value && (this._inviteChips || []).length) {
+        e.preventDefault();
+        this._inviteChips.pop();
+        this._setInviteError();
+        this._render();
+      }
+    });
+  }
+
+  /**
+   * Take what is typed and turn the complete addresses in it into chips.
+   *
+   * @param {String} raw   the field's current value
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.keepTail] leave the last fragment in the field. True
+   *   while TYPING a list — "a@x.com, b@" must keep "b@" so the user can go on
+   *   typing it — and false on Enter, where the whole value is meant.
+   * @returns {Boolean} whether everything offered was accepted
+   */
+  _commitChips(raw, { keepTail = false } = {}) {
+    const parts = String(raw || "").split(/[,;]+/);
+    const tail = keepTail ? parts.pop() : "";
+    let ok = true;
+    let firstBad = "";
+    for (const part of parts) {
+      const email = String(part || "").trim();
+      if (!email) continue;
+      if (!email.isEmail()) {
+        ok = false;
+        if (!firstBad) firstBad = email;
+        continue;
+      }
+      if (this._emailIsMember(email)) {
+        ok = false;
+        if (!firstBad) firstBad = email;
+        this._setInviteError(
+          LOCALE.MEMBER_ALREADY_HAS_ACCESS
+          || "This email already has access to this folder.",
+        );
+        continue;
+      }
+      this._addInviteChip(email);
+    }
+    if (firstBad && !this._inviteNotice) {
+      this._setInviteError(LOCALE.ENTER_VALID_EMAIL || LOCALE.INVALID_EMAIL);
+    }
+    if (ok && !firstBad) this._setInviteError();
+    // A rejected address stays in the field so it can be corrected rather than
+    // silently dropped; accepted ones have become chips and must not also be
+    // left behind as text.
+    const remainder = [firstBad, String(tail || "").trim()]
+      .filter(Boolean)
+      .join(", ");
+    this._closeEmailLookup?.();
+    this._render();
+    this.ensurePart("invite-email").then((p) => fillEntry(p, remainder));
+    return ok;
+  }
+
+  /** Add one address, case-folded against the chips already there so the same
+   *  person cannot be invited twice in one send. */
+  _addInviteChip(email) {
+    if (!this._inviteChips) this._inviteChips = [];
+    const key = String(email).trim().toLowerCase();
+    if (this._inviteChips.some((e) => e.toLowerCase() === key)) return;
+    this._inviteChips.push(String(email).trim());
   }
 
   /**
@@ -139,6 +263,62 @@ class __permission_restricted extends DrumeeMFS {
     this._membersLoaded = true;
     this._render();
     this._reveal();
+    // AFTER the render, because that is what publishes `_isAdmin` — the gate
+    // _loadInvitations checks. Not awaited: the matrix is already on screen and
+    // the invitations section fills in behind it rather than holding it back.
+    this._loadInvitations();
+  }
+
+  /**
+   * The invitations this workspace is still waiting on, and the ones that were
+   * turned down — the Pending Invitations section.
+   *
+   * A SEPARATE READ FROM THE MEMBER LIST, because they are separate states now.
+   * Inviting somebody no longer makes them a member, so between the send and
+   * their answer they exist in neither the matrix nor anywhere else the admin
+   * can see; without this section an invitation would vanish the moment it was
+   * sent and the admin would have nothing to tell them apart from a mistake.
+   *
+   * ADMIN ONLY, matching the service (hub.invitations is `src: admin`) and the
+   * invite form above it. A non-admin viewer is not shown a section that would
+   * answer 403 — the request is not even made.
+   *
+   * NEVER THROWS AND NEVER CLEARS ON FAILURE. This runs beside _loadMembers on
+   * every refresh, and a blip on the invitations read must not blank a section
+   * that is currently correct, nor stop the matrix rendering. `_invitations`
+   * stays null until the first answer, which is what lets the skeleton tell
+   * "not read yet" from "none" — the section is absent in the first case and
+   * present-but-empty in the second.
+   */
+  async _loadInvitations() {
+    const hub_id = this.mget(_a.hub_id);
+    if (!hub_id) return;
+    // Set by the skeleton on every render — see the note there on why this is
+    // published rather than re-derived from a privilege bit here.
+    if (!this._isAdmin) return;
+    // Same out-of-order guard as the member read: an invite and a decline can
+    // land back to back and only the newest answer may paint.
+    const seq = (this._invitationsSeq = (this._invitationsSeq || 0) + 1);
+    let rows;
+    try {
+      // Literal fallback, the same shape the activity panel uses for
+      // secure_share.respond_to_access_request. SERVICE.hub is published by
+      // the SERVER's ACL (Platform.get('services')), so on an endpoint whose
+      // server has not shipped hub.invitations yet the key is absent and
+      // postService would be handed undefined. The string still resolves, and
+      // the request simply 404s into the catch below.
+      rows = await this.postService(
+        (SERVICE.hub && SERVICE.hub.invitations) || "hub.invitations",
+        { hub_id },
+      );
+    } catch (e) {
+      this.warn("Failed to load workspace invitations", e);
+      return;
+    }
+    if (seq !== this._invitationsSeq) return;
+    if (!_.isArray(rows)) return;
+    this._invitations = rows;
+    this._render();
   }
 
   /**
@@ -641,22 +821,22 @@ class __permission_restricted extends DrumeeMFS {
    * Duy approved this route 2026-09-08.
    */
   _sendInvitation(cmd) {
-    const email = this._getInviteEmail(cmd);
-    if (!email) {
-      return this._setInviteError(
-        LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL,
-      );
-    }
-    if (!email.isEmail()) {
-      return this._setInviteError(
-        LOCALE.ENTER_VALID_EMAIL || LOCALE.INVALID_EMAIL,
-      );
-    }
-    if (this._emailIsMember(email)) {
-      return this._setInviteError(
-        LOCALE.MEMBER_ALREADY_HAS_ACCESS
-        || "This email already has access to this folder.",
-      );
+    // WHATEVER IS STILL TYPED COUNTS. Somebody who enters one address and
+    // presses Send never made a chip out of it, and losing it because they did
+    // not press Enter first would be the worst possible reading of "multiple
+    // addresses". Committing here also runs the same validation the chips got.
+    const typed = this._getInviteEmail(cmd);
+    if (typed) this._commitChips(typed);
+
+    const invitees = (this._inviteChips || []).slice();
+    if (!invitees.length) {
+      // An error is already on screen when the typed text was rejected above;
+      // do not replace a specific complaint ("not a valid address") with the
+      // generic one.
+      if (!this._inviteNotice) {
+        this._setInviteError(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
+      }
+      return;
     }
     this._setInviteError();
 
@@ -667,7 +847,7 @@ class __permission_restricted extends DrumeeMFS {
 
     return this.postService(SERVICE.hub.invite, {
       hub_id: this.mget(_a.hub_id),
-      invitees: [email],
+      invitees,
       privilege,
     })
       .then((res) => {
@@ -676,15 +856,38 @@ class __permission_restricted extends DrumeeMFS {
             res.reason || res.error || LOCALE.TRY_AGAIN,
           );
         }
-        const r = (res && res.results && res.results[0]) || {};
-        if (r.status === "failed") {
-          return this._setInviteError(r.reason || LOCALE.TRY_AGAIN);
-        }
         // A rejected POST resolves `undefined` — doRequest hands a non-200 to
         // onServerComplain, which only warns — so a falsy answer is a failure
         // and must not be reported as a sent invitation.
         if (!res) {
           return this._setInviteError(LOCALE.TRY_AGAIN);
+        }
+        // PER-ADDRESS RESULTS, because one send can now half-succeed. The
+        // server answers with a row per invitee and reports them
+        // independently — a mailbox that bounces does not stop the others.
+        //
+        // The failures are kept as chips and the successes are dropped, so
+        // pressing Send again retries exactly what did not go, and the field
+        // shows the admin which addresses those were. Clearing everything
+        // would tell them five invitations went out when four did.
+        const results = (res && res.results) || [];
+        const failed = results.filter((r) => r && r.status === "failed");
+        if (failed.length) {
+          const bad = new Set(
+            failed.map((r) => String(r.email || "").trim().toLowerCase()),
+          );
+          this._inviteChips = invitees.filter((e) =>
+            bad.has(String(e).trim().toLowerCase()),
+          );
+          this._render();
+          return this._setInviteError(
+            failed.length === results.length
+              ? (failed[0].reason || LOCALE.TRY_AGAIN)
+              : LOCALE.INVITE_PARTIAL_FAILED.format(
+                results.length - failed.length,
+                failed.length,
+              ),
+          );
         }
         // A member was really invited from this panel. Broadcast it so
         // flows that only observe the desk can react — the reward flow's
@@ -695,16 +898,20 @@ class __permission_restricted extends DrumeeMFS {
         RADIO_BROADCAST.trigger("invitation:sent", {
           hub_id: this.mget(_a.hub_id),
         });
-        // Empty the field before the notice, not after: the address is now a
-        // member, so leaving it there would fail this panel's own
-        // _emailIsMember check on a second click and answer a successful
-        // invitation with "already has access". Clearing also readies the row
+        // Empty the chips and the field before the notice, not after: those
+        // addresses are now invitations, so leaving them would let a second
+        // click send the same invitations again. Clearing also readies the row
         // for the next one — fillEntry refocuses the input.
+        this._inviteChips = [];
         fillEntry(this.getPart?.("invite-email"), "");
         this._setInviteNotice(
           LOCALE.INVITATION_SENT_SUCCESSFULLY,
           "success",
         );
+        // The people just invited are PENDING now, not members, so the matrix
+        // below will not show them — the Pending Invitations section is where
+        // they appear, and it has to be re-read for them to.
+        this._loadInvitations();
       })
       .catch((e) =>
         this._setInviteError(e?.reason || e?.error || LOCALE.TRY_AGAIN),
@@ -741,6 +948,18 @@ class __permission_restricted extends DrumeeMFS {
 
       case "pick-invite-contact":
         return this._pickInviteContact(cmd);
+
+      case "remove-invite-chip": {
+        // The × on one chip. Read off the DOM index the skeleton stamped, so
+        // it cannot drift from the array the chips were rendered from.
+        const index = Number(cmd?.el?.dataset?.index);
+        if (!Number.isInteger(index)) return;
+        (this._inviteChips || []).splice(index, 1);
+        // A stale "already has access" or "not a valid address" complaint was
+        // about an address that may be the one just removed.
+        this._setInviteError();
+        return this._render();
+      }
 
       case "select-invite-role":
         return this._selectInviteRole(cmd);

@@ -3001,5 +3001,10 @@
   "ALLOW_IN_SYSTEM_MAC": "Abre Ajustes del Sistema › Privacidad y seguridad › {0} y activa tu navegador.",
   "ALLOW_IN_SYSTEM_WINDOWS": "Abre Configuración › Privacidad y seguridad › {0} y permite el acceso a las aplicaciones de escritorio.",
   "ALLOW_IN_SYSTEM_LINUX": "Comprueba que los ajustes de sonido y privacidad de tu escritorio permitan a tu navegador usar el {0}.",
-  "ALLOW_IN_SYSTEM_GENERIC": "Comprueba que tu sistema operativo permita a tu navegador usar el {0}."
+  "ALLOW_IN_SYSTEM_GENERIC": "Comprueba que tu sistema operativo permita a tu navegador usar el {0}.",
+  "DECLINED": "Rechazada",
+  "PENDING_INVITATIONS": "Invitaciones pendientes",
+  "PENDING_INVITATIONS_HINT": "Los miembros invitados aparecerán aquí hasta que respondan.",
+  "INVITE_MEMBER_TO_WORKSPACE": "Invitar a un miembro al espacio de trabajo",
+  "INVITED_AGO_BY": "invitado {0} por {1}"
 }

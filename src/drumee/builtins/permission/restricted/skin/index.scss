@@ -346,6 +346,7 @@
   // row: the role popover is an absolutely positioned descendant that has to
   // escape its row's box.
   &__invite-section,
+  &__invitations-section,
   &__members-section,
   &__leave-section {
     display: flex;
@@ -353,6 +354,14 @@
     width: 100%;
     padding: 0 24px;
     box-sizing: border-box;
+  }
+
+  // Same 16px rhythm as the member list below it — the two are one column of
+  // people and must not be spaced differently. The hint under the heading
+  // pulls itself back up (see __section-hint) so it reads as part of the
+  // heading rather than as the first row.
+  &__invitations-section {
+    gap: 16px;
   }
 
   &__invite-section {
@@ -395,9 +404,65 @@
     overflow: visible;
   }
 
+  // The chips and the text field share one box, so the row reads as a single
+  // input that happens to hold several people. It WRAPS: a workspace invite
+  // can carry half a dozen addresses and a single non-wrapping line would push
+  // the role dropdown off the panel.
+  //
+  // `flex-wrap` is declared here and `display: flex` is NOT: this is a Box.X,
+  // so the framework sets the display and direction (repo rule), but it has no
+  // opinion about wrapping.
+  &__invite-field {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__invite-chip {
+    align-items: center;
+    background: rgba(89, 80, 255, 0.1);
+    border-radius: 4px;
+    gap: 4px;
+    max-width: 100%;
+    padding: 2px 4px 2px 8px;
+  }
+
+  &__invite-chip-text {
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--primary-40));
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__invite-chip-remove {
+    color: var(--primary-40);
+    cursor: pointer;
+    flex-shrink: 0;
+    height: 12px;
+    width: 12px;
+
+    svg {
+      height: 12px;
+      width: 12px;
+    }
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
   &__invite-entry {
     flex: 1 1 auto;
-    min-width: 0;
+    // Narrow enough that one chip plus the caret still fits on a line, but
+    // wide enough to type a whole address into before it wraps.
+    min-width: 120px;
 
     input {
       width: 100%;
@@ -787,6 +852,102 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
       z-index: 100000;
     }
+  }
+
+  // ── Pending invitations ───────────────────────────────────────
+  // The section's own sub-line ("Invited members will appear here until they
+  // respond"). Grey/80 at Body/Small Body, sitting under the heading.
+  &__section-hint {
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--tertiary-grey-80, #84848c));
+    margin-top: -4px;
+  }
+
+  // Deliberately the same geometry as __member-row — the two lists are the two
+  // halves of who is in this workspace and must read as one column, not two
+  // designs. No hover tint: an invitation row has nothing to click yet.
+  &__invitation-row {
+    align-items: center;
+    gap: 12px;
+    justify-content: space-between;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__invitation-info {
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__invitation-text {
+    justify-content: center;
+    min-width: 0;
+  }
+
+  &__invitation-name {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--normal-fg-10));
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__invitation-sub {
+    @include drumee.typo($size: 11px, $line: 16px, $weight: 400, $color: var(--tertiary-grey-80, #84848c));
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Status pill. Figma: Pending = Overlay/Orange + Signal/Warning + Clock;
+  // Declined ("Rejected" there) = Overlay/red + Signal/Error + XCircle.
+  // data-status drives both, so one rule pair covers the two states and a
+  // third could be added without touching the skeleton.
+  &__invitation-badge {
+    align-items: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+    gap: 4px;
+    padding: 3px 10px 3px 8px;
+
+    &[data-status="pending"] {
+      background: rgba(250, 133, 64, 0.12);
+      color: var(--signal-warning, #fa8540);
+    }
+
+    &[data-status="declined"] {
+      background: rgba(255, 98, 101, 0.12);
+      color: var(--signal-error, #ff6265);
+    }
+  }
+
+  &__invitation-badge-ico {
+    flex-shrink: 0;
+    height: 14px;
+    width: 14px;
+
+    svg {
+      height: 14px;
+      width: 14px;
+    }
+  }
+
+  // Colour is INHERITED from the badge, which is what makes one data-status
+  // rule tint the glyph and the word together.
+  &__invitation-badge-text {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500);
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   // ── Member rows ───────────────────────────────────────────────

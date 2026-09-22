@@ -255,6 +255,101 @@ function memberRows(list, ui, pfx, isAdmin) {
 }
 
 /**
+ * One row per invitation this workspace is waiting on, or that was refused.
+ *
+ * WHY THE SECTION EXISTS AT ALL. Inviting somebody no longer makes them a
+ * member — they have to accept — so between the send and their answer they
+ * appear in neither the matrix above nor anywhere else. Without this, an
+ * invitation would vanish the moment it was sent and an admin could not tell a
+ * sent-and-waiting invitation from one they only think they sent.
+ *
+ * THE STATUS WORD IS THE POINT. `pending` is a clock and an amber wash;
+ * `declined` is a cross and a red one. The server answers with exactly those
+ * two (hub_invitations maps token status to them) — an accepted invitation is
+ * absent, because that person is a member and belongs in the matrix.
+ *
+ * 🚨 "Declined", NOT "Rejected". Figma labels the red badge Rejected; Duy asked
+ * for Declined, and it is also the word the rest of the flow uses — the email
+ * button, the notification row (LOCALE.REFUSE) and the token status all say
+ * decline. One word for one act.
+ *
+ * THE NAME FALLS BACK TO THE ADDRESS, and usually is one: most invitees have
+ * no Drumee account, so there is no profile to name them by. `invitee_uid` is
+ * null in that case and UserProfile draws its initials-on-colour placeholder
+ * from whatever name it is given.
+ */
+function invitationRows(list, pfx) {
+  return list.map((row, index) => {
+    const email = String(row.email || "");
+    const name = String(row.invitee_fullname || "").trim() || email;
+    const inviter = String(row.inviter_fullname || "").trim();
+    const when = row.ctime ? Dayjs.unix(Number(row.ctime)).fromNow() : "";
+    // "invited 10 minutes ago by Alex".
+    //
+    // ONE KEY WITH PLACEHOLDERS, not "invited" + when + "by" + inviter glued
+    // together: word order is not a constant across the six locale files — zh
+    // puts the inviter first — and a sentence assembled from fragments can only
+    // ever come out in English order.
+    //
+    // Dropped entirely when either half is missing, rather than rendered
+    // half-built: a row reading "invited by" says less than a row with just a
+    // name on it.
+    const sub = when && inviter
+      ? LOCALE.INVITED_AGO_BY.format(when, inviter)
+      : "";
+    const declined = row.status === "declined";
+    return Skeletons.Box.X({
+      className: `${pfx}__invitation-row`,
+      dataset: { index, status: row.status || "pending" },
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__invitation-info`,
+          kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__avatar`,
+              auto_color: 0,
+              id: row.invitee_uid || "",
+              firstname: row.invitee_firstname,
+              lastname: row.invitee_lastname,
+              fullname: name,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__invitation-text`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__invitation-name`,
+                  content: name,
+                }),
+                sub
+                  ? Skeletons.Note({
+                    className: `${pfx}__invitation-sub`,
+                    content: sub,
+                  })
+                  : null,
+              ].filter(Boolean),
+            }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__invitation-badge`,
+          dataset: { status: declined ? "declined" : "pending" },
+          kids: [
+            Skeletons.Image.Svg({
+              className: `${pfx}__invitation-badge-ico`,
+              ico: declined ? "noti-x-circle" : "clock",
+            }),
+            Skeletons.Note({
+              className: `${pfx}__invitation-badge-text`,
+              content: declined ? LOCALE.DECLINED : LOCALE.PENDING,
+            }),
+          ],
+        }),
+      ],
+    });
+  });
+}
+
+/**
  * Permission management panel skeleton
  * @param {*} ui
  * @returns
@@ -271,6 +366,14 @@ module.exports = function (ui) {
     .map(mapMember);
   const isAdmin = viewerIsAdmin(members);
   const canLeave = viewerCanLeave(members);
+  // Published back to the widget so _loadInvitations can ask the SAME question
+  // this render answered, instead of re-deriving it from a privilege bit.
+  //
+  // 🚨 Those bits have moved twice (server-essentials 1.3.0 shifted them, 1.3.6
+  // put them back), which is why viewerIsAdmin reads the role WORD and not a
+  // mask — a second, bit-based copy in index.js would be the one that silently
+  // disagrees after a dependency bump. One source, published once per render.
+  ui._isAdmin = isAdmin;
 
   /**
  * Which workspace this panel is about — the area-tinted folder shape and the
@@ -409,18 +512,61 @@ const header = Skeletons.Box.X({
       kids: [
         Skeletons.Note({
           className: `${pfx}__section-title`,
-          content: LOCALE.INVITE_MEMBER,
+          // Figma 85:36439 heads this "Invite member to workspace" — it says
+          // WHERE the invitation leads, which matters more now that accepting
+          // one is a decision the recipient makes.
+          content: LOCALE.INVITE_MEMBER_TO_WORKSPACE,
         }),
         Skeletons.Box.X({
           className: `${pfx}__invite-input-row`,
           kids: [
-            Skeletons.Entry({
-              className: `${pfx}__invite-entry`,
-              sys_pn: "invite-email",
-              formItem: _a.email,
-              placeholder: LOCALE.INVITE_EMAIL_LABEL,
-              require: _a.email,
-              bubble: 0,
+            // SEVERAL ADDRESSES, ONE SEND. The committed ones become chips and
+            // the field keeps whatever is still being typed — see index.js
+            // _installChipInput for how a comma, a paste or Enter turns text
+            // into a chip, and Backspace on an empty field takes the last one
+            // back.
+            //
+            // The chips and the field share one bordered box (the skin styles
+            // __invite-field, not the Entry) so the row reads as one input
+            // that happens to hold several people, which is what Figma draws.
+            // The Entry keeps its own class because that is what
+            // attachEmailLookup and the chip listeners match on.
+            Skeletons.Box.X({
+              className: `${pfx}__invite-field`,
+              kids: [
+                ...(ui._inviteChips || []).map((email, index) =>
+                  Skeletons.Box.X({
+                    className: `${pfx}__invite-chip`,
+                    dataset: { index },
+                    kids: [
+                      Skeletons.Note({
+                        active: 0,
+                        className: `${pfx}__invite-chip-text`,
+                        content: email,
+                      }),
+                      Skeletons.Button.Svg({
+                        className: `${pfx}__invite-chip-remove`,
+                        ico: "cross",
+                        service: "remove-invite-chip",
+                        dataset: { index },
+                        uiHandler: [ui],
+                      }),
+                    ],
+                  }),
+                ),
+                Skeletons.Entry({
+                  className: `${pfx}__invite-entry`,
+                  sys_pn: "invite-email",
+                  formItem: _a.email,
+                  // Only the first address prompts; once there are chips the
+                  // placeholder would sit beside them repeating itself.
+                  placeholder: (ui._inviteChips || []).length
+                    ? ""
+                    : LOCALE.INVITE_EMAIL_LABEL,
+                  require: _a.email,
+                  bubble: 0,
+                }),
+              ],
             }),
             roleDropdown(pfx, inviteRole, "select-invite-role", {
               uiHandler: ui,
@@ -472,12 +618,47 @@ const header = Skeletons.Box.X({
     })
     : null;
 
+  // ── Pending Invitations ───────────────────────────────────────
+  // Between the send and the answer, an invitee is in neither list. This is
+  // where they wait, and where a refusal is reported.
+  //
+  // ADMIN ONLY, and only once the read has ANSWERED. `_invitations` is null
+  // until then (index.js), which is what separates "not fetched" from "none":
+  // the section is absent in the first case rather than flashing an empty
+  // heading under the invite form on every open.
+  //
+  // Absent when there is nothing waiting, too. A workspace whose members all
+  // joined has no pending invitations, and a permanently empty section under
+  // the form is furniture — Figma draws it with rows in it.
+  const invitations = _.isArray(ui._invitations) ? ui._invitations : null;
+  const invitationsSection = isAdmin && invitations && invitations.length
+    ? Skeletons.Box.Y({
+      className: `${pfx}__invitations-section`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__section-title`,
+          content: `${LOCALE.PENDING_INVITATIONS} (${invitations.length})`,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__section-hint`,
+          content: LOCALE.PENDING_INVITATIONS_HINT,
+        }),
+        ...invitationRows(invitations, pfx),
+      ],
+    })
+    : null;
+
   const membersSection = Skeletons.Box.Y({
     className: `${pfx}__members-section`,
     kids: [
       Skeletons.Note({
         className: `${pfx}__section-title`,
-        content: LOCALE.PERMISSIONS_MATRIX,
+        // "Members (6)" — Figma 85:36439. It was "Permissions Matrix", which
+        // named the CONTROL rather than what the list is, and read as jargon
+        // beside a section called Pending Invitations. The count matters here
+        // for the same reason it does above: the two lists are now the two
+        // halves of who is in this workspace, and both say how many.
+        content: `${LOCALE.MEMBERS} (${members.length})`,
       }),
       ...memberRows(members, ui, pfx, isAdmin),
     ],
@@ -517,9 +698,20 @@ const header = Skeletons.Box.X({
     : null;
 
   // Pinned header + scrolling body, after the base panel's -header / -scroll.
+  //
+  // ORDER IS FIGMA'S: invite, then what is waiting on an answer, then who is
+  // already in. 🔒 leaveSection stays LAST and is not in Figma at all — Duy
+  // flagged it explicitly when handing over the design. It is the only exit a
+  // View or Chat member has (see its own note above), so "not in the mockup"
+  // must not be read as "removed".
   const body = Skeletons.Box.Y({
     className: `${pfx}__body`,
-    kids: [inviteSection, membersSection, leaveSection].filter(Boolean),
+    kids: [
+      inviteSection,
+      invitationsSection,
+      membersSection,
+      leaveSection,
+    ].filter(Boolean),
   });
 
   return Skeletons.Box.Y({

@@ -3000,5 +3000,10 @@
   "ALLOW_IN_SYSTEM_MAC": "打开“系统设置” › “隐私与安全性” › “{0}”，并开启你的浏览器。",
   "ALLOW_IN_SYSTEM_WINDOWS": "打开“设置” › “隐私和安全性” › “{0}”，并允许桌面应用使用。",
   "ALLOW_IN_SYSTEM_LINUX": "请检查桌面的声音和隐私设置是否允许浏览器使用{0}。",
-  "ALLOW_IN_SYSTEM_GENERIC": "请检查操作系统是否允许浏览器使用{0}。"
+  "ALLOW_IN_SYSTEM_GENERIC": "请检查操作系统是否允许浏览器使用{0}。",
+  "DECLINED": "已婉拒",
+  "PENDING_INVITATIONS": "待处理邀请",
+  "PENDING_INVITATIONS_HINT": "受邀成员在回复前会显示在此处。",
+  "INVITE_MEMBER_TO_WORKSPACE": "邀请成员加入工作空间",
+  "INVITED_AGO_BY": "由 {1} 于{0}邀请"
 }
