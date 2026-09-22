@@ -2954,7 +2954,11 @@ class __tasks_panel extends LetcBox {
           console.error("[tasks_panel] ws refresh hook failed:", err);
         }
       }
-      this._render();
+      // Columns and members feed the chrome (column headers, pickers, filter
+      // chips), so those still take the full render. A task/activity-only
+      // refresh repaints the view body alone.
+      if (p.columns || p.members) this._render();
+      else this._repaintBoard();
       if (p.history) this._refreshOpenTaskHistory();
     });
   }
@@ -9350,6 +9354,26 @@ class __tasks_panel extends LetcBox {
       if (typeof requestAnimationFrame === "function") {
         requestAnimationFrame(() => this._restoreViewScroll(savedScroll));
       }
+    });
+  }
+
+  /**
+   * Repaint after the task rows changed but the chrome did not — a create, an
+   * Update, or a peer's edit. Feeds only the view host (and the open task's
+   * subtask rows); the viewbar, filter bar and overlays are left alone.
+   *
+   * The Health view draws the activity feed, which the rows do not carry, so
+   * that view reloads it first. The read cache follows the rows by hand now
+   * that _loadTasks no longer runs after a write.
+   */
+  _repaintBoard({ activity = 0 } = {}) {
+    readCache.set(this._cacheKey("tasks"), this._tasks);
+    const needActivity = activity || this.getView() === "summary";
+    const load = needActivity ? this._loadActivity() : Promise.resolve();
+    return load.then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._refreshViewBody();
+      if (this._detailId) this._refreshSubtaskSection();
     });
   }
 
