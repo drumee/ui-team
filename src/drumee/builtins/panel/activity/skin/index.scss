@@ -676,6 +676,13 @@ html[data-theme="dark"] {
 /* Approve-access popup shown from an access-request notification (Figma 63) */
 .panel-activity-approve-request {
   &__panel {
+    // `drumee.typo` only emits `font-family` for a whitelist of $weight values,
+    // and 600 is not one of them — so every 600 rule below inherited instead.
+    // This card is lifted out to <body> (_liftArOverlay), whose font-family is
+    // the browser default, so those rules rendered in Times New Roman next to
+    // their Armin Grotesk siblings. Set the family once here and let the whole
+    // card inherit it.
+    font-family: var(--font-main);
     width: 380px;
     max-width: calc(100% - 32px);
     gap: 16px;
@@ -807,6 +814,8 @@ html[data-theme="dark"] {
   &__confirm {
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--primary-50, #433cc5);
@@ -819,6 +828,8 @@ html[data-theme="dark"] {
   &__deny {
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--red-500, #ff5a5f);
