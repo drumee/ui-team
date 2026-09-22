@@ -728,6 +728,24 @@ class __widget_chat extends LetcBox {
    */
   onPartReady(child, pn, section) {
     switch (pn) {
+      case "desk-picker-list":
+        // Same hub gate as the desk sidebar (desk_workspace-list): the root
+        // listing carries the user's own personal hub and the auto dmz/wicket
+        // hubs, none of which is a workspace to browse. Folders and files
+        // always pass; deeper listings contain no hub rows.
+        if (!child._deskPickerFilterInstalled) {
+          child._deskPickerFilterInstalled = 1;
+          const original = child.prepareData.bind(child);
+          child.prepareData = function (data) {
+            return (original(data) || []).filter(
+              (it) =>
+                it &&
+                (it.filetype !== _a.hub ||
+                  /^(share|private|restricted|public)$/.test(it.area)),
+            );
+          };
+        }
+        break;
       case "attachment-list":
         this.attachmentList = child;
         this.checkPendingContent();
@@ -1035,8 +1053,11 @@ class __widget_chat extends LetcBox {
       case "attach-from-desk":
         return this._openDeskPicker();
 
-      case "pick-desk-file":
-        return this._pickDeskFile(cmd);
+      case "pick-desk-node":
+        return this._pickDeskNode(cmd);
+
+      case "desk-picker-back":
+        return this._deskPickerBack();
 
       case "close-desk-picker":
         return this._closeDeskPicker();
@@ -1311,10 +1332,11 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   *
-   * @param {*} e
-   * @param {*} token
-   * @returns
+   * "From workspace" picker. Opens on the rows the desk sidebar lists
+   * (desk.home: hub workspaces plus the user's own home-root nodes) and walks
+   * into any hub or folder with media.show_node_by; only a file can be
+   * picked. `_deskPickerTrail` is the navigation stack: its last entry is the
+   * folder being listed, an empty trail is the root listing.
    */
   async _openDeskPicker() {
     const picker = await this.ensurePart("wrapper-desk-picker");
@@ -1322,43 +1344,71 @@ class __widget_chat extends LetcBox {
       picker.clear();
       return;
     }
-    let home;
-    try {
-      home = await this.fetchService(SERVICE.media.home, {
-        hub_id: Visitor.id,
-      });
-    } catch (e) {
-      this.warn("[chat] _openDeskPicker: failed to fetch home", e);
-      return;
-    }
-    if (!home || !home.home_id) return;
+    this._deskPickerTrail = [];
+    this._renderDeskPicker(picker);
+  }
+
+  _renderDeskPicker(picker) {
+    if (!picker || picker.isDestroyed()) return;
     const fig = this.fig.family;
+    const trail = this._deskPickerTrail || [];
+    const current = trail[trail.length - 1];
+    // Root = the same listing as the desk sidebar (hubs and home-root nodes,
+    // filtered in onPartReady). Deeper = the children of the entered node,
+    // hub-scoped so a workspace folder lists from that hub's DB.
+    const api = current
+      ? {
+          service: SERVICE.media.show_node_by,
+          hub_id: current.hub_id,
+          nid: current.nid,
+          page: 1,
+        }
+      : {
+          service: SERVICE.desk.home,
+          hub_id: Visitor.id,
+          type: "all",
+          page: 1,
+        };
+    const header = [];
+    if (current) {
+      header.push(
+        Skeletons.Note({
+          className: `${fig}__desk-picker-back`,
+          content: LOCALE.BACK,
+          service: "desk-picker-back",
+          uiHandler: [this],
+        }),
+      );
+    }
+    header.push(
+      Skeletons.Note({
+        className: `${fig}__desk-picker-title`,
+        content: current ? current.filename : LOCALE.FROM_WORKSPACE,
+      }),
+    );
+    picker.clear();
     picker.feed(
       Skeletons.Box.Y({
         className: `${fig}__desk-picker-panel`,
         kids: [
           Skeletons.Box.X({
             className: `${fig}__desk-picker-header`,
-            kids: [
-              Skeletons.Note({
-                className: `${fig}__desk-picker-title`,
-                content: LOCALE.FROM_WORKSPACE,
-              }),
-            ],
+            kids: header,
           }),
           Skeletons.List.Smart({
             className: `${fig}__desk-picker-list`,
-            api: {
-              service: SERVICE.media.show_node_by,
-              hub_id: home.hub_id || Visitor.id,
-              nid: home.home_id,
-              page: 1,
-            },
-            itemsOpt: {
+            sys_pn: "desk-picker-list",
+            partHandler: this,
+            api,
+            // Per-row options so a folder or hub row can be told apart from a
+            // file row by class alone (List.Smart merges the function's result
+            // into each item before the row is built).
+            itemsOpt: (list, item) => ({
               kind: KIND.note,
-              service: "pick-desk-file",
+              service: "pick-desk-node",
               uiHandler: [this],
-            },
+              className: `${fig}__desk-picker-item ${fig}__desk-picker-item--${this._deskPickerRowType(item)}`,
+            }),
             itemsMap: { filename: "content" },
             evArgs: Skeletons.Note(
               LOCALE.NO_FILES_YET || LOCALE.NO_DISCUSSIONS_YET,
@@ -1376,6 +1426,53 @@ class __widget_chat extends LetcBox {
           }),
         ],
       }),
+    );
+  }
+
+  _deskPickerRowType(item = {}) {
+    if (item.filetype === _a.hub) return _a.hub;
+    if (item.filetype === _a.folder) return _a.folder;
+    return "file";
+  }
+
+  /**
+   * A row of the picker was clicked: descend into a hub or folder, attach a
+   * file. A hub row's own nid is the hub entity; its listing root is
+   * actual_home_id (the same resolution Wm.loadWorkspace uses).
+   */
+  _pickDeskNode(cmd) {
+    const o = cmd.model.toJSON();
+    if (o.filetype === _a.hub) {
+      return this._enterDeskFolder({
+        hub_id: o.hub_id || o.nid,
+        nid: o.actual_home_id || o.home_id,
+        filename: o.filename,
+      });
+    }
+    if (o.filetype === _a.folder) {
+      return this._enterDeskFolder({
+        hub_id: o.hub_id || Visitor.id,
+        nid: o.nid,
+        filename: o.filename,
+      });
+    }
+    return this._pickDeskFile(cmd);
+  }
+
+  _enterDeskFolder(step) {
+    if (!step.hub_id || !step.nid) return;
+    if (!this._deskPickerTrail) this._deskPickerTrail = [];
+    this._deskPickerTrail.push(step);
+    return this.ensurePart("wrapper-desk-picker").then((picker) =>
+      this._renderDeskPicker(picker),
+    );
+  }
+
+  _deskPickerBack() {
+    if (!this._deskPickerTrail || !this._deskPickerTrail.length) return;
+    this._deskPickerTrail.pop();
+    return this.ensurePart("wrapper-desk-picker").then((picker) =>
+      this._renderDeskPicker(picker),
     );
   }
 
@@ -1450,6 +1547,7 @@ class __widget_chat extends LetcBox {
   }
 
   _closeDeskPicker() {
+    this._deskPickerTrail = [];
     this.ensurePart("wrapper-desk-picker").then((picker) => {
       if (picker && !picker.isDestroyed()) picker.clear();
     });
@@ -2099,7 +2197,8 @@ class __widget_chat extends LetcBox {
         [_e.commit]: 1,
         [_e.reply]: 1,
         "attach-from-desk": 1,
-        "pick-desk-file": 1,
+        "pick-desk-node": 1,
+        "desk-picker-back": 1,
         "remove-upload": 1,
         "mention-select": 1,
         "delete-for-me": 1,
