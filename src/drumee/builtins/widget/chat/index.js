@@ -1,4 +1,5 @@
 const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
+const nodeIconHtml = require("./node-icon");
 require("./skin");
 
 /**
@@ -728,7 +729,15 @@ class __widget_chat extends LetcBox {
    */
   onPartReady(child, pn, section) {
     switch (pn) {
+      case "desk-picker-skeleton":
+        this._deskPickerSkeleton = child;
+        break;
       case "desk-picker-list":
+        // Placeholder rows give way to the real rows once the first page
+        // lands, the listing ends empty, or the request fails.
+        for (const ev of [_e.data, _e.eod, _e.error]) {
+          child.on(ev, () => this._hideDeskPickerSkeleton());
+        }
         // Same hub gate as the desk sidebar (desk_workspace-list): the root
         // listing carries the user's own personal hub and the auto dmz/wicket
         // hubs, none of which is a workspace to browse. Folders and files
@@ -1395,28 +1404,39 @@ class __widget_chat extends LetcBox {
             className: `${fig}__desk-picker-header`,
             kids: header,
           }),
+          // Placeholder rows in the geometry of the real rows, shown until the
+          // first page lands (onPartReady "desk-picker-list" hides them).
+          Skeletons.Box.Y({
+            className: `${fig}__desk-picker-skeleton`,
+            sys_pn: "desk-picker-skeleton",
+            partHandler: this,
+            kids: [1, 2, 3, 4].map(() =>
+              Skeletons.Box.X({
+                className: `${fig}__desk-picker-skeleton-row`,
+                kids: [
+                  Skeletons.Box.X({
+                    className: `${fig}__desk-picker-skeleton-tile`,
+                  }),
+                  Skeletons.Box.X({
+                    className: `${fig}__desk-picker-skeleton-name`,
+                  }),
+                ],
+              }),
+            ),
+          }),
           Skeletons.List.Smart({
             className: `${fig}__desk-picker-list`,
             sys_pn: "desk-picker-list",
             partHandler: this,
             api,
-            // Per-row options so a folder or hub row can be told apart from a
-            // file row by class alone (List.Smart merges the function's result
-            // into each item before the row is built).
-            itemsOpt: (list, item) => ({
-              kind: KIND.note,
-              service: "pick-desk-node",
-              uiHandler: [this],
-              className: `${fig}__desk-picker-item ${fig}__desk-picker-item--${this._deskPickerRowType(item)}`,
-            }),
-            itemsMap: { filename: "content" },
-            evArgs: Skeletons.Note(
+            // List.Smart merges the function's result into each item before
+            // the row is built, so every row is a full skeleton of its own.
+            itemsOpt: (list, item) => this._deskPickerRow(item, current),
+            placeholder: Skeletons.Note(
               LOCALE.NO_FILES_YET || LOCALE.NO_DISCUSSIONS_YET,
-              "no-content",
+              `${fig}__desk-picker-empty`,
             ),
             vendorOpt: Preset.List.Orange_e,
-            spinner: true,
-            spinnerWait: 300,
           }),
           Skeletons.Note({
             className: `${fig}__desk-picker-cancel`,
@@ -1436,17 +1456,62 @@ class __widget_chat extends LetcBox {
   }
 
   /**
+   * One picker row, laid out like an @-mention row: the node's desk icon
+   * (folder art in the area colour, hub badge, file type glyph), its name,
+   * and for a file its extension. A folder inside a workspace carries no
+   * area of its own, so it takes the colour of the workspace being browsed;
+   * at the root the user's own folders are personal.
+   */
+  _deskPickerRow(item = {}, current) {
+    const fig = this.fig.family;
+    const type = this._deskPickerRowType(item);
+    const area = item.area || (current && current.area) || _a.personal;
+    const kids = [
+      Skeletons.Element({
+        className: `${fig}__desk-picker-icon ${area}`,
+        content: nodeIconHtml(item, { area, prefix: "desk-picker-icon-" }),
+      }),
+      Skeletons.Note({
+        className: `${fig}__desk-picker-name`,
+        content: item.filename,
+      }),
+    ];
+    if (type === "file" && item.ext) {
+      kids.push(
+        Skeletons.Note({
+          className: `${fig}__desk-picker-ext`,
+          content: item.ext,
+        }),
+      );
+    }
+    return Skeletons.Box.X({
+      className: `${fig}__desk-picker-item ${fig}__desk-picker-item--${type}`,
+      service: "pick-desk-node",
+      uiHandler: [this],
+      kids,
+    });
+  }
+
+  _hideDeskPickerSkeleton() {
+    const sk = this._deskPickerSkeleton;
+    if (sk && !sk.isDestroyed()) sk.el.dataset.state = "done";
+  }
+
+  /**
    * A row of the picker was clicked: descend into a hub or folder, attach a
    * file. A hub row's own nid is the hub entity; its listing root is
    * actual_home_id (the same resolution Wm.loadWorkspace uses).
    */
   _pickDeskNode(cmd) {
     const o = cmd.model.toJSON();
+    const trail = this._deskPickerTrail || [];
+    const current = trail[trail.length - 1];
     if (o.filetype === _a.hub) {
       return this._enterDeskFolder({
         hub_id: o.hub_id || o.nid,
         nid: o.actual_home_id || o.home_id,
         filename: o.filename,
+        area: o.area,
       });
     }
     if (o.filetype === _a.folder) {
@@ -1454,6 +1519,7 @@ class __widget_chat extends LetcBox {
         hub_id: o.hub_id || Visitor.id,
         nid: o.nid,
         filename: o.filename,
+        area: o.area || (current && current.area) || _a.personal,
       });
     }
     return this._pickDeskFile(cmd);
@@ -3991,7 +4057,6 @@ class __widget_chat extends LetcBox {
     this._mentionRequestSeq = requestSeq;
 
     const hubId = this.hubId;
-    const mediaGridPreview = require("builtins/media/grid/template/preview");
 
     let filesPromise = Promise.resolve(null);
     let contactsPromise = Promise.resolve(null);
@@ -4193,48 +4258,11 @@ class __widget_chat extends LetcBox {
         let html = "";
 
         if (files.length) {
-          const isImgCapable = (file) => {
-            if (/^-/.test(file.capability || "")) return 0;
-            if ((file.ext || "").toLowerCase() === "svg") return 1;
-            if ((file.ext || "").toLowerCase() === _a.pdf) return 0;
-            if (/text/.test(file.mimetype || "")) return 0;
-            if (/shell|script|text/.test(file.filetype || "")) return 0;
-            return /^r/.test(file.capability || "") ? 1 : 0;
-          };
-          const previewUrl = (file) =>
-            file.url ||
-            file.vignette ||
-            file.thumbnail ||
-            file.src ||
-            file.preview ||
-            "";
-          const renderFileIcon = (file) => {
-            const url = previewUrl(file);
-            const model = {
-              ...file,
-              _id: file._id || file.id || file.nid,
-              area: file.area || this.mget(_a.area),
-              role:
-                file.filetype === _a.folder ? "mention" : file.role || "desk",
-              imgCapable: url ? isImgCapable(file) : 0,
-              url,
-              widgetId: _.uniqueId("mention-preview-"),
-              isAttachment: 1,
-            };
-            switch (model.filetype) {
-              case _a.folder:
-                return require("builtins/media/grid/template/folder")(model);
-              case _a.audio:
-                return require("builtins/media/grid/template/filetype/audio.txt")
-                  .default;
-              case _a.note:
-              case "markdown":
-                return require("builtins/media/grid/template/filetype/note.txt")
-                  .default;
-              default:
-                return mediaGridPreview(model);
-            }
-          };
+          const renderFileIcon = (file) =>
+            nodeIconHtml(file, {
+              area: this.mget(_a.area),
+              prefix: "mention-preview-",
+            });
           html += `<div class="mention-section-header">${LOCALE.MENTION_FILES}</div>`;
           files.slice(0, 6).forEach((f) => {
             const label = f.mention_path || f.filename;

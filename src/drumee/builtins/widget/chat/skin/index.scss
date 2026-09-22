@@ -1,6 +1,111 @@
 @use "sass:meta";
 @use "mixins/drumee";
 
+// A desk node's icon at row size — the @-mention rows and the "From
+// workspace" picker rows share it: folder art tinted by area (own area, else
+// the area class on the tile), hub badge in the corner, file glyphs 24px.
+@mixin node-icon-tile {
+  width: 32px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--normal-fg-20);
+  overflow: visible;
+
+  .preview-container,
+  .preview-content,
+  .media-grid__folder-art {
+    width: 32px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+
+  .preview-content {
+    position: static;
+  }
+
+  .preview-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .preview-icon.extension {
+    width: 28px;
+    height: 28px;
+  }
+
+  .media-grid__folder-art {
+    aspect-ratio: auto;
+    position: relative;
+  }
+
+  .folder-shape,
+  svg:not(.preview-icon):not(.badge) {
+    width: 28px;
+    height: 24px;
+    max-width: 28px;
+    max-height: 24px;
+    flex-shrink: 0;
+  }
+
+  // Hub badge (personal / private / share / public glyph) sits on the
+  // folder's bottom-left corner, as on the sidebar rows.
+  .badge {
+    bottom: -2px;
+    color: var(--grid-color-folder-badge);
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+    height: 14px !important;
+    left: 0;
+    position: absolute;
+    width: 14px !important;
+  }
+
+  .folder-shape {
+    fill: var(--area-private);
+
+    &.personal {
+      fill: var(--area-personal);
+    }
+    &.private {
+      fill: var(--area-private);
+    }
+    &.share,
+    &.dmz {
+      fill: var(--area-share);
+    }
+    &.public {
+      fill: var(--area-public);
+    }
+    &.inner-folder {
+      fill: var(--area-private);
+    }
+  }
+
+  &.personal .folder-shape.inner-folder {
+    fill: var(--area-personal);
+  }
+  &.private .folder-shape.inner-folder {
+    fill: var(--area-private);
+  }
+  &.share .folder-shape.inner-folder,
+  &.dmz .folder-shape.inner-folder {
+    fill: var(--area-share);
+  }
+  &.public .folder-shape.inner-folder {
+    fill: var(--area-public);
+  }
+}
+
 @keyframes widget-chat-typing-bounce {
   0%,
   80%,
@@ -689,40 +794,126 @@
     }
   }
 
-  // Containers read as rows you can enter: bold with a trailing chevron,
-  // pinned to the row's vertical centre whatever the row's display mode.
-  &__desk-picker-item--folder,
-  &__desk-picker-item--hub {
-    font-weight: 600;
-    position: relative;
-
-    &::after {
-      content: "\203A";
-      opacity: 0.6;
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-  }
-
   &__desk-picker-list {
     flex: 1;
     min-height: 80px;
     overflow-y: auto;
+    padding: 4px 0;
+  }
 
-    .list-smart__container {
-      > * {
-        cursor: pointer;
-        display: block;
-        overflow: hidden;
-        padding: 9px 14px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+  // Row laid out like an @-mention row: icon tile, name, extension, in a
+  // rounded pill inset from the panel edges. The kids are inert so the click
+  // always lands on the row, which owns the service.
+  &__desk-picker-item {
+    align-items: center;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    gap: 8px;
+    margin: 0 8px;
+    padding: 6px 8px;
+    transition: background 0.15s;
+    @include drumee.skeleton-content-in;
 
-        &:hover {
-          background: var(--normal-bg-10, #f5f5f5);
-        }
+    &:hover {
+      background: color-mix(in srgb, var(--primary-purple-40) 10%, transparent);
+    }
+
+    * {
+      pointer-events: none;
+    }
+  }
+
+  &__desk-picker-icon {
+    @include node-icon-tile;
+  }
+
+  &__desk-picker-name {
+    flex: 1;
+    font-size: 13px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__desk-picker-ext {
+    color: var(--tertiary-grey-80);
+    flex-shrink: 0;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  // Containers read as rows you can enter: bold name, trailing chevron.
+  &__desk-picker-item--folder,
+  &__desk-picker-item--hub {
+    .widget-chat__desk-picker-name {
+      font-weight: 600;
+    }
+
+    &::after {
+      content: "\203A";
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+  }
+
+  &__desk-picker-empty {
+    color: var(--tertiary-grey-80);
+    font-size: 13px;
+    padding: 12px 16px;
+  }
+
+  // Placeholder rows in the geometry of the real rows, pulsing until the
+  // list's first page lands; the chat widget stamps data-state="done" then.
+  &__desk-picker-skeleton {
+    flex-shrink: 0;
+    padding: 4px 0;
+
+    &[data-state="done"] {
+      display: none;
+    }
+
+    &-row {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+      margin: 0 8px;
+      padding: 6px 8px;
+    }
+
+    &-tile {
+      border-radius: 4px;
+      flex-shrink: 0;
+      height: 28px;
+      width: 32px;
+    }
+
+    &-name {
+      border-radius: 6px;
+      height: 12px;
+      width: 45%;
+    }
+
+    &-row:nth-child(2) &-name {
+      width: 60%;
+    }
+
+    &-row:nth-child(3) &-name {
+      width: 35%;
+    }
+
+    &-tile,
+    &-name {
+      animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+      background: var(--border-default, #e5e5ea);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &-tile,
+      &-name {
+        animation: none;
       }
     }
   }
@@ -1062,91 +1253,8 @@
     }
 
     .mention-item__icon {
-      width: 32px;
-      height: 28px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--normal-fg-20);
+      @include node-icon-tile;
       overflow: hidden;
-
-      .preview-container,
-      .preview-content,
-      .media-grid__folder-art {
-        width: 32px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        background-position: center;
-        background-size: cover;
-        background-repeat: no-repeat;
-      }
-
-      .preview-content {
-        position: static;
-      }
-
-      .preview-icon {
-        width: 24px;
-        height: 24px;
-        flex-shrink: 0;
-      }
-
-      .preview-icon.extension {
-        width: 28px;
-        height: 28px;
-      }
-
-      .media-grid__folder-art {
-        aspect-ratio: auto;
-      }
-
-      .folder-shape,
-      svg:not(.preview-icon) {
-        width: 28px;
-        height: 24px;
-        max-width: 28px;
-        max-height: 24px;
-        flex-shrink: 0;
-      }
-
-      .folder-shape {
-        fill: var(--area-private);
-
-        &.personal {
-          fill: var(--area-personal);
-        }
-        &.private {
-          fill: var(--area-private);
-        }
-        &.share,
-        &.dmz {
-          fill: var(--area-share);
-        }
-        &.public {
-          fill: var(--area-public);
-        }
-        &.inner-folder {
-          fill: var(--area-private);
-        }
-      }
-
-      &.personal .folder-shape.inner-folder {
-        fill: var(--area-personal);
-      }
-      &.private .folder-shape.inner-folder {
-        fill: var(--area-private);
-      }
-      &.share .folder-shape.inner-folder,
-      &.dmz .folder-shape.inner-folder {
-        fill: var(--area-share);
-      }
-      &.public .folder-shape.inner-folder {
-        fill: var(--area-public);
-      }
     }
 
     .mention-item__avatar {
