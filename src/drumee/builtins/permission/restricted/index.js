@@ -1,6 +1,7 @@
 const { roleByValue, roleFromPrivilege } = require("../../../builtins/skeleton/toolkit");
 const { attachEmailLookup, fillEntry } = require("libs/contact-lookup");
 const { membersFor } = require("libs/members-prefetch");
+const { isSeatLimitReply, seatLimitMessage } = require("libs/billing");
 
 // Wm's inbound-websocket bus. Same name and same channel window/utils.js and
 // modules/desk use; wm/push.js re-emits every push it does not itself consume
@@ -675,6 +676,12 @@ class __permission_restricted extends DrumeeMFS {
           return this._setInviteError(
             res.reason || res.error || LOCALE.TRY_AGAIN,
           );
+        }
+        // Refused for want of seats: no `results`, which the check below read
+        // as sent. This panel lives in the wrapper-modal the seat card is fed
+        // into, so the card would replace it — keep the panel, say it inline.
+        if (isSeatLimitReply(res)) {
+          return this._setInviteError(seatLimitMessage(res));
         }
         const r = (res && res.results && res.results[0]) || {};
         if (r.status === "failed") {

@@ -299,8 +299,9 @@ async function _orgSeatsUsed(view) {
  * Team (finite) org-member seat cap reached?
  *
  * Use ONLY before Admin org-member create (`loadCreateMember` / member_form).
- * Do NOT call from desk / media / hub invite_popup — those use hub.invite and
- * are outside the org seat budget.
+ * Do NOT pre-check from desk / media / hub invite_popup: hub.invite is capped
+ * by the server itself, which answers SEAT_LIMIT_REACHED. Its callers react to
+ * that reply instead (isSeatLimitReply / showSeatLimitReached below).
  *
  * Product:
  *  - Free → false here. Free still must not create org members; callers use
@@ -397,6 +398,62 @@ function canShowSeatLimitPopup() {
     _K.permission &&
     Visitor.domainCan(_K.permission.owner)
   );
+}
+
+/**
+ * Did a hub.invite call refuse for want of seats?
+ *
+ * The server answers `{ status: "SEAT_LIMIT_REACHED", seat, used, free,
+ * requested }` and nothing else: no `error`, no `results`. Every caller used
+ * to read that shape as "zero invitees failed" and announce the invitation as
+ * sent, so an owner on a full plan saw a success toast and waited for mail
+ * that was never written. Seen live: an org with one member and twelve stale
+ * pending invitations on a five-seat plan.
+ *
+ * @param {*} res a resolved hub.invite reply
+ * @returns {boolean}
+ */
+function isSeatLimitReply(res) {
+  return !!(res && res.status === "SEAT_LIMIT_REACHED");
+}
+
+/**
+ * One sentence for an inline notice, for panels that cannot show the card
+ * (they live in the shared wrapper-modal the card is fed into, so it would
+ * replace them). Carries the numbers the server sent, so the reader can see
+ * how full the plan is, and ends the way the card does: with the upgrade
+ * sentence for someone who can buy, "ask your owner" for someone who cannot.
+ *
+ * @param {Object} [res] the SEAT_LIMIT_REACHED reply
+ * @returns {string}
+ */
+function seatLimitMessage(res = {}) {
+  const title = LOCALE.QX_SEAT_TITLE || "Member limit reached";
+  const seat = ~~res.seat;
+  const used = ~~res.used;
+  const count = seat > 0 ? ` (${used}/${seat})` : "";
+  const next = canUpgradePlan()
+    ? (LOCALE.QX_SEAT_BODY
+      || "You can not invite more members because you have reached limit of team plan. Upgrade to business plan now to invite more members.")
+    : (LOCALE.QX_ASK_OWNER
+      || "Ask your workspace owner to review the organisation's plan.");
+  return `${title}${count}. ${next}`;
+}
+
+/**
+ * Show the seat card for a refused hub.invite: the same card the Admin
+ * members page raises for member_add, so a full plan reads the same from every
+ * door. The card adapts to the viewer on its own (Upgrade for the owner,
+ * "Ask your workspace owner…" for a member), so there is no owner gate here.
+ *
+ * Not for panels hosted in the shared wrapper-modal — see seatLimitMessage.
+ *
+ * @returns {*} whatever Wm.openQuotaExceeded returns, or undefined
+ */
+function showSeatLimitReached() {
+  if (typeof Wm === "undefined" || !Wm) return;
+  if (Wm.openQuotaExceeded) return Wm.openQuotaExceeded({ limit: "seat" });
+  if (Wm.alert) return Wm.alert(seatLimitMessage());
 }
 
 /**
@@ -629,6 +686,9 @@ module.exports = {
   checkOrgSeatLimit,
   canShowSeatLimitPopup,
   showFreeSoloLimit,
+  isSeatLimitReply,
+  seatLimitMessage,
+  showSeatLimitReached,
   PROMO_YEARLY_PCT,
   promoYearlyEndsAt,
   promoYearlySecondsLeft,
