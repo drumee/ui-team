@@ -2634,18 +2634,6 @@ class __tasks_panel extends LetcBox {
       return;
     }
     switch (service) {
-      case SERVICE.task.update_assignee:
-        // Assignees changed — the workspace member list may have changed with
-        // them (hub.delete_contributor unassigns the member it removes and
-        // announces it on this service), so re-read it too or the pickers keep
-        // offering somebody who is no longer here.
-        this._queueWsRefresh({
-          tasks: 1,
-          activity: 1,
-          members: 1,
-          history: 1,
-        });
-        return;
       case SERVICE.task.delete:
         // Warn BEFORE the reload: once _loadTasks lands, the row this user is
         // editing is gone and there is nothing left to match the id against.
@@ -2655,25 +2643,25 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
+      case SERVICE.task.update_assignee:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
+      case SERVICE.task.link_file:
+      case SERVICE.task.unlink_file:
         // One peer changed one task — patch that one row instead of reloading
         // the workspace. See _applyPeerTaskChange for why this is the whole
         // idle-lag bug. Falls back to the full refresh whenever the surgical
         // path cannot be proved correct.
-        if (this._applyPeerTaskChange(data)) return;
-        this._queueWsRefresh({ tasks: 1, activity: 1, history: 1 });
-        return;
-      case SERVICE.task.link_file:
-      case SERVICE.task.unlink_file:
-        if (this._detailId) {
-          this._refreshAttachments(this._detailId).then(() =>
-            this._queueWsRefresh({ history: 1 }),
-          );
-        } else if (this.getView() === "summary") {
-          // Health view's activity feed surfaces file links even with no detail open.
-          this._queueWsRefresh({ activity: 1 });
-        }
+        if (this._applyPeerTaskChange(service, data)) return;
+        // Unresolvable (e.g. hub.delete_contributor's unassign announcement on
+        // update_assignee, which names a member, not a task): reload. Members
+        // too, since that one means somebody left the workspace.
+        this._queueWsRefresh({
+          tasks: 1,
+          activity: 1,
+          history: 1,
+          members: service === SERVICE.task.update_assignee ? 1 : 0,
+        });
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
@@ -2873,60 +2861,49 @@ class __tasks_panel extends LetcBox {
    * Returns true when it handled the change. Every case it cannot PROVE is
    * correct returns false and takes the old full-refresh route:
    *
-   *  - no `id` on the payload — nothing to merge against
+   *  - no resolvable patch — `peerPatch` could not turn the payload into a
+   *    row patch (no cached row to patch against, or a payload shape it does
+   *    not recognise, e.g. hub.delete_contributor's unassign announcement)
    *  - panel hidden — _queueWsRefresh already defers correctly, and re-entering
    *    here would repaint a board nobody can see
-   *  - a task detail is open — the modal and its history read state this does
-   *    not repaint
-   *  - the Health view is up — it renders the activity feed, which only
-   *    `_loadActivity()` refreshes
    *
+   * @param {String} service the WS service name (options.service from onWsMessage)
    * @param {Object} data the WS payload for the changed task
    * @returns {Boolean} true if applied surgically
    */
-  _applyPeerTaskChange(data) {
-    // BOTH SHAPES, exactly as the local edit path unwraps them
-    // (`_mergeTask(Array.isArray(updated) ? updated[0] : updated)`). The
-    // broadcast carries whatever `CALL task_create` / `task_update` returned,
-    // and a single-row result collapses to a bare object on some paths and
-    // stays wrapped on others. Reading `.id` off an unwrapped array yields
-    // undefined, which would silently send every event back to the full
-    // refresh — the fix would look applied and do nothing.
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row || !row.id) return false;
+  _applyPeerTaskChange(service, data) {
     if (this._isPanelHidden()) return false;
-    if (this._detailId) return false;
-    if (this.getView() === "summary") return false;
+    const current =
+      data && data.task_id ? this._tasks.find((t) => t.id === data.task_id) : null;
+    const patch = peerPatch(service, data, current);
+    if (!patch) return false;
 
-    // Merge FIRST and unconditionally — it is a array splice, it cannot fail,
-    // and the cache must be right even when the repaint below is skipped or
-    // deferred. Everything that reads task state (getState, the column count
-    // badges, the filters) is correct from this line on.
-    this._mergeTask(row);
+    // Merge FIRST and unconditionally — the cache must be right even when the
+    // repaint below is skipped or deferred.
+    this._mergeTask(patch);
+    if (patch.parent_task_id) this._syncSubtaskBadges(patch.parent_task_id);
+    const touchedOpen = this._detailId && this._detailId === patch.id;
 
-    // COALESCED ON A FRAME, not fired per event. The old path was throttled by
-    // WS_REFRESH_WINDOW (400ms); handling events individually removed that, and
-    // a burst from a busy team would repaint once per message. rAF gives back a
-    // ceiling of one repaint per frame no matter how many peers are typing, and
-    // the merges in between are free.
     if (!this._peerPaintRaf && typeof requestAnimationFrame === "function") {
       this._peerPaintRaf = requestAnimationFrame(() => {
         this._peerPaintRaf = 0;
         if (this.isDestroyed && this.isDestroyed()) return;
-        // NOT WHILE A CARD IS IN THE AIR. _refreshViewBody re-feeds the view
-        // host, which destroys the very element the pointer is dragging — the
-        // card would vanish mid-gesture and the drop land nowhere. The old
-        // full-render path had the same hole; it is closed here rather than
-        // carried over. The drop runs _loadTasks()/_syncColumn itself, so the
-        // board is reconciled the moment the gesture ends.
+        // Not while a card is in the air — see the note this replaced.
         if (this._dragTaskId || this._dragColKey) return;
-        // Re-check: a detail may have been opened during the frame.
-        if (this._detailId || this._isPanelHidden()) return;
-        // The narrow repaint: feeds only the view host, and snapshots/restores
-        // every scroller by selector — so a colleague's edit no longer throws
-        // the reader back to the top of the column they were reading.
-        this._refreshViewBody();
+        if (this._isPanelHidden()) return;
+        // The view host sits UNDER the overlay, so feeding it leaves an open
+        // detail (and its half-typed draft) untouched.
+        this._repaintBoard({ activity: this.getView() === "summary" });
       });
+    }
+    // The open task itself changed under the user: refresh the read-only
+    // sections that show server state (history, attachments). The draft is
+    // NOT overwritten — the user's unsaved edits win until they press Update.
+    if (touchedOpen) {
+      this._refreshOpenTaskHistory();
+      if (service === "task.link_file" || service === "task.unlink_file") {
+        this._refreshAttachments(patch.id).then(() => this._refreshAttachmentsList());
+      }
     }
     return true;
   }
