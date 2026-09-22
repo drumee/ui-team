@@ -4276,7 +4276,11 @@ class __widget_chat extends LetcBox {
             });
           html += `<div class="mention-section-header">${LOCALE.MENTION_FILES}</div>`;
           files.slice(0, 6).forEach((f) => {
-            const label = f.mention_path || f.filename;
+            // Display only: the row names the file with its extension, as the
+            // From workspace picker does. The inserted mention text is unchanged.
+            const base = f.mention_path || f.filename;
+            const label =
+              f.ext && f.filetype !== _a.folder ? `${base}.${f.ext}` : base;
             // File row: type icon + name + a single-select radio cue on the right
             // (filled on the active/hovered row). Click still mentions immediately.
             html += `<div class="mention-item mention-item--file" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
