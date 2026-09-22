@@ -19,13 +19,36 @@ const previewUrl = (file) =>
   file.url || file.vignette || file.thumbnail || file.src || file.preview || "";
 
 /**
+ * The node's server-side vignette, addressed the way View.actualNode does it
+ * for the desk grid (letc.js): file/<format>/<nid>/<hub_id>, keyed for the
+ * session unless public, cache-busted when the node changed since upload.
+ */
+const vignetteUrl = (node) => {
+  const { keysel, endpoint } = bootstrap();
+  const format = node.filetype === _a.vector ? _a.orig : _a.vignette;
+  const query = [];
+  if (keysel && node.area !== _a.public) query.push(`keysel=${keysel}`);
+  const changed = Math.abs(node.mtime - node.ctime);
+  if (!Number.isNaN(changed) && changed) query.push(`v=${node.md5Hash || changed}`);
+  const url = `${endpoint}file/${format}/${node.nid}/${node.hub_id}`;
+  return query.length ? `${url}?${query.join("&")}` : url;
+};
+
+/**
  * @param {Object} node   row from media.show_node_by / desk.home / search
  * @param {Object} opt
- * @param {string} opt.area    fallback area when the node carries none
- * @param {string} opt.prefix  uniqueId prefix for the SVG filter ids
+ * @param {string}  opt.area       fallback area when the node carries none
+ * @param {string}  opt.prefix     uniqueId prefix for the SVG filter ids
+ * @param {boolean} opt.thumbnail  draw an image's vignette instead of the glyph
  */
-module.exports = function nodeIconHtml(node, { area, prefix = "node-icon-" } = {}) {
-  const url = previewUrl(node);
+module.exports = function nodeIconHtml(
+  node,
+  { area, prefix = "node-icon-", thumbnail = false } = {},
+) {
+  let url = previewUrl(node);
+  if (!url && thumbnail && node.filetype === _a.image && node.nid && node.hub_id) {
+    url = vignetteUrl(node);
+  }
   const model = {
     ...node,
     _id: node._id || node.id || node.nid,

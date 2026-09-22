@@ -1476,32 +1476,31 @@ class __widget_chat extends LetcBox {
 
   /**
    * One picker row, laid out like an @-mention row: the node's desk icon
-   * (folder art in the area colour, file type glyph), its name, and for a
-   * file its extension. A folder carries no area of its own, so it takes
-   * the colour of the workspace being browsed.
+   * (folder art in the area colour, an image's own thumbnail, otherwise the
+   * file type glyph) and its full name — a file keeps its extension, as
+   * "photo.png". A folder carries no area of its own, so it takes the
+   * colour of the workspace being browsed.
    */
   _deskPickerRow(item = {}, current) {
     const fig = this.fig.family;
     const type = this._deskPickerRowType(item);
     const area = item.area || (current && current.area) || _a.personal;
+    const name =
+      type === "file" && item.ext ? `${item.filename}.${item.ext}` : item.filename;
     const kids = [
       Skeletons.Element({
         className: `${fig}__desk-picker-icon ${area}`,
-        content: nodeIconHtml(item, { area, prefix: "desk-picker-icon-" }),
+        content: nodeIconHtml(item, {
+          area,
+          prefix: "desk-picker-icon-",
+          thumbnail: true,
+        }),
       }),
       Skeletons.Note({
         className: `${fig}__desk-picker-name`,
-        content: item.filename,
+        content: name,
       }),
     ];
-    if (type === "file" && item.ext) {
-      kids.push(
-        Skeletons.Note({
-          className: `${fig}__desk-picker-ext`,
-          content: item.ext,
-        }),
-      );
-    }
     return Skeletons.Box.X({
       className: `${fig}__desk-picker-item ${fig}__desk-picker-item--${type}`,
       service: "pick-desk-node",

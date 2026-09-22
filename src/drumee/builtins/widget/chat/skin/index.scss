@@ -837,14 +837,6 @@
     white-space: nowrap;
   }
 
-  &__desk-picker-ext {
-    color: var(--tertiary-grey-80);
-    flex-shrink: 0;
-    font-size: 11px;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-  }
-
   // Containers read as rows you can enter: bold name, trailing chevron.
   &__desk-picker-item--folder {
     .widget-chat__desk-picker-name {
