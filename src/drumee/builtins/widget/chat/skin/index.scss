@@ -671,6 +671,39 @@
   &__desk-picker-title {
     font-size: 13px;
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__desk-picker-back {
+    color: var(--drumee-orange, #fa8540);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 500;
+    margin-right: 12px;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // Containers read as rows you can enter: bold with a trailing chevron,
+  // pinned to the row's vertical centre whatever the row's display mode.
+  &__desk-picker-item--folder,
+  &__desk-picker-item--hub {
+    font-weight: 600;
+    position: relative;
+
+    &::after {
+      content: "\203A";
+      opacity: 0.6;
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
   }
 
   &__desk-picker-list {
