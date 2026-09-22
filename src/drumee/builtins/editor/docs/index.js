@@ -654,6 +654,14 @@ class __editor_docs extends __player {
   setTabs(tabs, active) {
     this._tabs = Array.isArray(tabs) && tabs.length ? tabs : [];
     this._activeTab = active || (this._tabs[0] && this._tabs[0].id) || null;
+    // A file with more than one tab shows the rail by itself — otherwise the
+    // other tabs are invisible and the document looks like it lost them. One
+    // tab keeps the rail closed (nothing to choose from), and an explicit
+    // close by the user is remembered for as long as the window is open.
+    if (this._tabs.length > 1 && !this._tabsClosedByUser && !this._tabsOpen) {
+      this.toggleTabs(true);
+      return;
+    }
     this.renderTabs();
   }
 
@@ -696,6 +704,10 @@ class __editor_docs extends __player {
   /** Show / hide the rail. */
   toggleTabs(force) {
     this._tabsOpen = force == null ? !this._tabsOpen : !!force;
+    // Closing it by hand means "leave it closed", even when the file has
+    // several tabs (setTabs would otherwise re-open it on the next save).
+    if (!this._tabsOpen) this._tabsClosedByUser = 1;
+    else this._tabsClosedByUser = 0;
     if (this.el) this.el.dataset.tabs = this._tabsOpen ? "open" : "closed";
     this.renderTabs();
   }
