@@ -740,27 +740,23 @@ class __editor_docs extends __player {
     if (!tabs.some((t) => t.id === id)) return;
     this._switchingTab = 1;
     try {
-      // ORDER MATTERS. Everything that persists the bytes on screen runs
-      // BEFORE the editor swaps to the other tab: a save fired afterwards
-      // exports whatever the editor still shows — which for the moments the
-      // room swap takes is the OUTGOING tab — and would write it over the tab
-      // just opened (both tabs ended up with the same text).
-      //
-      // EVERY step is raced against a timeout. The Casual SDK's export and
-      // autosave-flush both return promises that can stay pending for good
-      // (a flush with nothing to save never settles), and one of them hanging
-      // used to leave `_switchingTab` set: the tab never opened and no later
-      // click did anything either ("click tab 2 không ăn"). Losing a step is
-      // survivable — the autosave writes again a few seconds later — while
-      // hanging is not.
-      await capped(this.stashActiveTab(), 4000);
-      await capped(this.saveContent(), 5000);
+      // ONE thing has to happen before the swap: keeping the bytes of the tab
+      // being left. That is a local export (milliseconds), not a save — a
+      // save fired after the swap would export whatever the editor shows
+      // mid-swap, which is still the OLD tab, and write it over the new one.
+      await capped(this.stashActiveTab(), 2500);
+
+      // Open the tab NOW. Everything else is network: waiting for it before
+      // showing the tab is what made a switch take many seconds ("click
+      // chuyển tab rất lâu mới ăn"). The model already holds the bytes, so a
+      // save that lands a second later loses nothing.
       this._activeTab = id;
       this.renderTabs();
-      if (this._doc && this._doc.showTab) await capped(this._doc.showTab(id), 15000);
-      // Only the list and the active pointer are written now; the bytes come
-      // from the model, never from the editor mid-swap.
-      await capped(this.persistTabs(), 5000);
+      const showing = this._doc && this._doc.showTab ? this._doc.showTab(id) : null;
+      // Background: write the list (names, order, which tab is active) with
+      // the bytes from the model. Not awaited, and never able to hang the UI.
+      capped(this.persistTabs(), 8000);
+      await capped(showing, 15000);
     } catch (e) {
       this.warn("__editor_docs: tab switch failed", e);
     } finally {
