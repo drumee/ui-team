@@ -1041,7 +1041,7 @@
   &__invitation-info {
     align-items: center;
     flex: 1 1 auto;
-    gap: 8px;
+    gap: 12px;
     min-width: 0;
   }
 
@@ -1050,8 +1050,12 @@
     min-width: 0;
   }
 
+  // Figma: Buttons/Small Button 14/20 SemiBold, Primary/100 — the same name
+  // style as a member row. typo() takes 500 and the weight is set on its own:
+  // the mixin emits nothing (not even font-family) for 600.
   &__invitation-name {
-    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 500, $color: var(--normal-fg-10));
+    font-weight: 600;
     min-width: 0;
     overflow: hidden;
 
@@ -1062,8 +1066,9 @@
     }
   }
 
+  // Figma: Body/Mini Body 12 Regular, Grey/80 (#65656c = --tertiary-grey-80).
   &__invitation-sub {
-    @include drumee.typo($size: 11px, $line: 16px, $weight: 400, $color: var(--tertiary-grey-80, #84848c));
+    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
     min-width: 0;
     overflow: hidden;
 
@@ -1083,7 +1088,8 @@
     border-radius: 12px;
     flex-shrink: 0;
     gap: 4px;
-    padding: 3px 10px 3px 8px;
+    // Figma Overlay+Border: 4px 12px 4px 8px.
+    padding: 4px 12px 4px 8px;
 
     // Figma's own pairs, to the value: Overlay/Orange rgba(232,161,59,.15)
     // over Signal/Warning #E8A13B, and Overlay/red rgba(255,106,101,.15) over
@@ -1102,21 +1108,25 @@
     }
   }
 
+  // Figma: the Clock / XCircle glyph is 17px wide. Its colour comes from the
+  // badge through currentColor — the sprite strips the source fills.
   &__invitation-badge-ico {
     flex-shrink: 0;
-    height: 14px;
-    width: 14px;
+    height: 17px;
+    width: 17px;
 
     svg {
-      height: 14px;
-      width: 14px;
+      height: 17px;
+      width: 17px;
+      fill: currentColor;
     }
   }
 
   // Colour is INHERITED from the badge, which is what makes one data-status
   // rule tint the glyph and the word together.
+  // Figma: Buttons/Small Button 14 SemiBold, line 1.2em.
   &__invitation-badge-text {
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 500);
+    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 500);
     font-weight: 600;
     white-space: nowrap;
   }
@@ -1177,22 +1187,47 @@
     gap: 12px;
   }
 
+  // Figma: role pill and trash 12px apart.
   &__member-actions {
     flex: 0 0 auto;
-    gap: 4px;
+    gap: 12px;
     overflow: visible;
   }
 
+  // Figma: 48x48, a rounded SQUARE (12px), not a disc. ui-core rounds the
+  // photo itself (.user-profile__main is 50%), so that layer is squared too —
+  // otherwise a circle would sit inside the rounded square.
   &__avatar {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     overflow: hidden;
+    position: relative;
     background: #e8e8ed;
+
+    .user-profile__main {
+      border-radius: 12px;
+    }
+
+    // Presence dot. ui-core pins it at left 24 / top 3 for its own 40px
+    // avatar, which on this 48px square lands on the top edge. Figma puts a
+    // 10px dot in the bottom-right corner, ringed off the photo. Only the
+    // position and size move; the colour stays ui-core's presence token, the
+    // green every other avatar in the app shows.
+    &[data-online="1"]::before,
+    &[data-online="2"]::before {
+      top: auto;
+      left: auto;
+      right: 1px;
+      bottom: 1px;
+      width: 10px;
+      height: 10px;
+      box-shadow: 0 0 0 2px var(--white, #fff);
+    }
 
     // Fallback initials when UserProfile has no photo. Depth beats ui-core's
     // .user-profile__initiales rule.
@@ -1201,14 +1236,29 @@
     }
   }
 
+  &__member-text {
+    justify-content: center;
+    min-width: 0;
+  }
+
+  // Figma: Buttons/Small Button 14/20 SemiBold, Primary/100. typo() takes 500
+  // and the weight is set on its own — see __invitation-name.
   &__member-name {
     min-width: 0;
     @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
-      $weight: 600,
+      $size: 14px,
+      $line: 20px,
+      $weight: 500,
       $color: #0b0a21
     );
+    font-weight: 600;
+    @include drumee.overflow-text;
+  }
+
+  // Figma: Body/Mini Body 12 Regular, Grey/80.
+  &__member-email {
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
     @include drumee.overflow-text;
   }
 
@@ -1236,17 +1286,18 @@
     }
   }
 
+  // Figma: Phosphor Trash at 24px in Signal/Error.
   &__member-remove {
-    width: 21px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     color: #d74e49;
     cursor: pointer;
     border-radius: 50%;
     transition: background-color 120ms ease, color 120ms ease;
 
     svg {
-      width: 13.33px;
-      height: 15px;
+      width: 24px;
+      height: 24px;
     }
 
     // Tinted from the icon's OWN red (#d74e49 = 215 78 73), not the neutral row
@@ -1328,6 +1379,10 @@ html[data-theme="dark"] {
 
     &__member-row:hover::before {
       background-color: var(--hover-bg-40);
+    }
+
+    &__member-email {
+      color: var(--normal-fg-50);
     }
 
     // Stronger tint and a lighter glyph: the same red at 0.14 disappears into

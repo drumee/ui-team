@@ -61,6 +61,8 @@ function mapMember(row) {
     firstname: (row.firstname || "").trim(),
     lastname: (row.lastname || "").trim(),
     fullname: (row.fullname || "").trim() || name,
+    // The line under the name (Figma: Body/Mini Body, Grey/80).
+    email: String(row.email || "").trim(),
     role: roleFromPrivilege(row.privilege),
     // The RAW bitmask, beside the role it resolves to. `role` cannot answer
     // "am I the owner": roleFromPrivilege has four levels and an owner (63)
@@ -224,7 +226,9 @@ function memberRows(list, ui, pfx, isAdmin) {
           }),
           Skeletons.Button.Svg({
             className: `${pfx}__member-remove`,
-            ico: "trash-action",
+            // Phosphor Trash, the glyph the Figma frame uses (component
+            // "Trash", 24px). trash-action is a different, crossed-out bin.
+            ico: "ph-trash",
             service: "remove-member",
             dataset: { index, member_id: member.id },
             uiHandler: [ui],
@@ -239,9 +243,23 @@ function memberRows(list, ui, pfx, isAdmin) {
           className: `${pfx}__member-info`,
           kids: [
             memberAvatar(pfx, member),
-            Skeletons.Note({
-              className: `${pfx}__member-name`,
-              content: member.name,
+            Skeletons.Box.Y({
+              className: `${pfx}__member-text`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__member-name`,
+                  content: member.name,
+                }),
+                // Left out when the name already IS the address (a member
+                // with no name on file falls back to it in mapMember), so
+                // the same string is never printed twice.
+                member.email && member.email !== member.fullname
+                  ? Skeletons.Note({
+                    className: `${pfx}__member-email`,
+                    content: member.email,
+                  })
+                  : null,
+              ].filter(Boolean),
             }),
           ],
         }),
@@ -336,7 +354,10 @@ function invitationRows(list, pfx) {
           kids: [
             Skeletons.Image.Svg({
               className: `${pfx}__invitation-badge-ico`,
-              ico: declined ? "noti-x-circle" : "clock",
+              // Phosphor Clock / XCircle, as in Figma. NOT `clock`: that is
+              // a solid Illustrator dial whose fills the sprite strips, so it
+              // drew as a filled blob rather than an outlined clock.
+              ico: declined ? "noti-x-circle" : "apps-clock",
             }),
             Skeletons.Note({
               className: `${pfx}__invitation-badge-text`,
