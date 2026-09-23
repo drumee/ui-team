@@ -30,7 +30,7 @@ const GROUP_LABEL = {
   [GROUP.sheet]: "SPREADSHEET",
   [GROUP.slide]: "PRESENTATION",
   [GROUP.pdf]: "GROUP_PDF",
-  [GROUP.media]: "GROUP_MEDIA",
+  [GROUP.media]: "MEDIA",
   [GROUP.markdown]: "GROUP_MARKDOWN",
   [GROUP.json]: "GROUP_JSON",
   [GROUP.html]: "GROUP_HTML",
