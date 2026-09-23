@@ -3,6 +3,14 @@ const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
 const readCache = require("libs/read-cache");
 const { resolveZone } = require("./drop-zones");
+const { rowOf, ownedPatch, applyLabelOps, longestList, peerPatch } = require("./live-sync");
+const {
+  snapshotTask,
+  planDetailCommit,
+  advanceBase,
+  settlePendingFiles,
+} = require("./detail-commit");
+const { restoreScroll } = require("./scroll-restore");
 const {
   markerRe,
   contentTokenRe,
@@ -252,6 +260,7 @@ class __tasks_panel extends LetcBox {
     this._closingTimer = null;
     this._detailId = null;
     this._detailDraft = null;
+    this._detailBase = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
     // then returns to the parent instead of dismissing the whole thing. There
     // is only one detail panel, so without this a child replaced the parent and
@@ -779,6 +788,17 @@ class __tasks_panel extends LetcBox {
         }
       } catch (e) {
         /* never let the guard break a legitimate call */
+      }
+      // Lets task._broadcast skip only THIS socket, so the user's other tabs
+      // hear the change. Mutations only; reads stay cacheable and unchanged.
+      const a0 = args[0];
+      if (
+        a0 && typeof a0 === "object" &&
+        this.constructor.TASK_MUTATIONS.includes(`${a0.service}`) &&
+        a0.socket_id == null
+      ) {
+        const sid = typeof Visitor !== "undefined" && Visitor.get && Visitor.get(_a.socket_id);
+        if (sid) args[0] = { ...a0, socket_id: sid };
       }
       return original(...args);
     };
@@ -1861,7 +1881,7 @@ class __tasks_panel extends LetcBox {
         return this._commitDetail().catch((err) => {
           console.error("[tasks_panel] commit-detail failed:", err);
           this._setSubmitting(".tasks-panel__detail-submit", false);
-          this._render();
+          this._renderOverlays();
           // Say so: a commit that fails silently is indistinguishable from a
           // dead button, which makes it needlessly hard to diagnose.
           Wm.alert(LOCALE.ERROR_NETWORK);
@@ -2633,18 +2653,6 @@ class __tasks_panel extends LetcBox {
       return;
     }
     switch (service) {
-      case SERVICE.task.update_assignee:
-        // Assignees changed — the workspace member list may have changed with
-        // them (hub.delete_contributor unassigns the member it removes and
-        // announces it on this service), so re-read it too or the pickers keep
-        // offering somebody who is no longer here.
-        this._queueWsRefresh({
-          tasks: 1,
-          activity: 1,
-          members: 1,
-          history: 1,
-        });
-        return;
       case SERVICE.task.delete:
         // Warn BEFORE the reload: once _loadTasks lands, the row this user is
         // editing is gone and there is nothing left to match the id against.
@@ -2654,25 +2662,25 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
+      case SERVICE.task.update_assignee:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
+      case SERVICE.task.link_file:
+      case SERVICE.task.unlink_file:
         // One peer changed one task — patch that one row instead of reloading
         // the workspace. See _applyPeerTaskChange for why this is the whole
         // idle-lag bug. Falls back to the full refresh whenever the surgical
         // path cannot be proved correct.
-        if (this._applyPeerTaskChange(data)) return;
-        this._queueWsRefresh({ tasks: 1, activity: 1, history: 1 });
-        return;
-      case SERVICE.task.link_file:
-      case SERVICE.task.unlink_file:
-        if (this._detailId) {
-          this._refreshAttachments(this._detailId).then(() =>
-            this._queueWsRefresh({ history: 1 }),
-          );
-        } else if (this.getView() === "summary") {
-          // Health view's activity feed surfaces file links even with no detail open.
-          this._queueWsRefresh({ activity: 1 });
-        }
+        if (this._applyPeerTaskChange(service, data)) return;
+        // Unresolvable (e.g. hub.delete_contributor's unassign announcement on
+        // update_assignee, which names a member, not a task): reload. Members
+        // too, since that one means somebody left the workspace.
+        this._queueWsRefresh({
+          tasks: 1,
+          activity: 1,
+          history: 1,
+          members: service === SERVICE.task.update_assignee ? 1 : 0,
+        });
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
@@ -2872,60 +2880,49 @@ class __tasks_panel extends LetcBox {
    * Returns true when it handled the change. Every case it cannot PROVE is
    * correct returns false and takes the old full-refresh route:
    *
-   *  - no `id` on the payload — nothing to merge against
+   *  - no resolvable patch — `peerPatch` could not turn the payload into a
+   *    row patch (no cached row to patch against, or a payload shape it does
+   *    not recognise, e.g. hub.delete_contributor's unassign announcement)
    *  - panel hidden — _queueWsRefresh already defers correctly, and re-entering
    *    here would repaint a board nobody can see
-   *  - a task detail is open — the modal and its history read state this does
-   *    not repaint
-   *  - the Health view is up — it renders the activity feed, which only
-   *    `_loadActivity()` refreshes
    *
+   * @param {String} service the WS service name (options.service from onWsMessage)
    * @param {Object} data the WS payload for the changed task
    * @returns {Boolean} true if applied surgically
    */
-  _applyPeerTaskChange(data) {
-    // BOTH SHAPES, exactly as the local edit path unwraps them
-    // (`_mergeTask(Array.isArray(updated) ? updated[0] : updated)`). The
-    // broadcast carries whatever `CALL task_create` / `task_update` returned,
-    // and a single-row result collapses to a bare object on some paths and
-    // stays wrapped on others. Reading `.id` off an unwrapped array yields
-    // undefined, which would silently send every event back to the full
-    // refresh — the fix would look applied and do nothing.
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row || !row.id) return false;
+  _applyPeerTaskChange(service, data) {
     if (this._isPanelHidden()) return false;
-    if (this._detailId) return false;
-    if (this.getView() === "summary") return false;
+    const current =
+      data && data.task_id ? this._tasks.find((t) => t.id === data.task_id) : null;
+    const patch = peerPatch(service, data, current);
+    if (!patch) return false;
 
-    // Merge FIRST and unconditionally — it is a array splice, it cannot fail,
-    // and the cache must be right even when the repaint below is skipped or
-    // deferred. Everything that reads task state (getState, the column count
-    // badges, the filters) is correct from this line on.
-    this._mergeTask(row);
+    // Merge FIRST and unconditionally — the cache must be right even when the
+    // repaint below is skipped or deferred.
+    this._mergeTask(patch);
+    if (patch.parent_task_id) this._syncSubtaskBadges(patch.parent_task_id);
+    const touchedOpen = this._detailId && this._detailId === patch.id;
 
-    // COALESCED ON A FRAME, not fired per event. The old path was throttled by
-    // WS_REFRESH_WINDOW (400ms); handling events individually removed that, and
-    // a burst from a busy team would repaint once per message. rAF gives back a
-    // ceiling of one repaint per frame no matter how many peers are typing, and
-    // the merges in between are free.
     if (!this._peerPaintRaf && typeof requestAnimationFrame === "function") {
       this._peerPaintRaf = requestAnimationFrame(() => {
         this._peerPaintRaf = 0;
         if (this.isDestroyed && this.isDestroyed()) return;
-        // NOT WHILE A CARD IS IN THE AIR. _refreshViewBody re-feeds the view
-        // host, which destroys the very element the pointer is dragging — the
-        // card would vanish mid-gesture and the drop land nowhere. The old
-        // full-render path had the same hole; it is closed here rather than
-        // carried over. The drop runs _loadTasks()/_syncColumn itself, so the
-        // board is reconciled the moment the gesture ends.
+        // Not while a card is in the air — see the note this replaced.
         if (this._dragTaskId || this._dragColKey) return;
-        // Re-check: a detail may have been opened during the frame.
-        if (this._detailId || this._isPanelHidden()) return;
-        // The narrow repaint: feeds only the view host, and snapshots/restores
-        // every scroller by selector — so a colleague's edit no longer throws
-        // the reader back to the top of the column they were reading.
-        this._refreshViewBody();
+        if (this._isPanelHidden()) return;
+        // The view host sits UNDER the overlay, so feeding it leaves an open
+        // detail (and its half-typed draft) untouched.
+        this._repaintBoard({ activity: this.getView() === "summary" });
       });
+    }
+    // The open task itself changed under the user: refresh the read-only
+    // sections that show server state (history, attachments). The draft is
+    // NOT overwritten — the user's unsaved edits win until they press Update.
+    if (touchedOpen) {
+      this._refreshOpenTaskHistory();
+      if (service === "task.link_file" || service === "task.unlink_file") {
+        this._refreshAttachments(patch.id).then(() => this._refreshAttachmentsList());
+      }
     }
     return true;
   }
@@ -2954,7 +2951,11 @@ class __tasks_panel extends LetcBox {
           console.error("[tasks_panel] ws refresh hook failed:", err);
         }
       }
-      this._render();
+      // Columns and members feed the chrome (column headers, pickers, filter
+      // chips), so those still take the full render. A task/activity-only
+      // refresh repaints the view body alone.
+      if (p.columns || p.members) this._render();
+      else this._repaintBoard({ activityLoaded: p.activity });
       if (p.history) this._refreshOpenTaskHistory();
     });
   }
@@ -3019,6 +3020,7 @@ class __tasks_panel extends LetcBox {
   _closeDetailSilently(done) {
     this._detailId = null;
     this._detailDraft = null;
+    this._detailBase = null;
     // Section fetches belong to the task that was open; a flag left standing
     // would greet the next task with a skeleton it never clears.
     this._loading = {};
@@ -3698,8 +3700,8 @@ class __tasks_panel extends LetcBox {
           ? draft.mention_uids
           : [],
       });
-      const row = Array.isArray(raw) ? raw[0] : raw;
-      if (row && row.id) {
+      const row = rowOf(raw);
+      if (row) {
         // For each pending entry: search-picked files already have `nid`;
         // newly-picked uploads carry a File object and need to be sent to the
         // task folder now. Either way, the resolved nid is link_file'd to
@@ -3712,36 +3714,52 @@ class __tasks_panel extends LetcBox {
               nid = result.nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
-              return;
+              return null;
             }
           }
-          if (!nid) return;
-          await this.postService({
+          if (!nid) return null;
+          return this.postService({
             service: SERVICE.task.link_file,
             hub_id: this._hubId,
             task_id: row.id,
             file_nid: nid,
           }).catch(() => null);
         };
-        await Promise.all([
-          ...labels.map((labelId) =>
+        const labelResults = await Promise.all(
+          labels.map((labelId) =>
             this.postService({
               service: SERVICE.task.link_label,
               hub_id: this._hubId,
               task_id: row.id,
               label_id: labelId,
-            }).catch(() => null),
+            })
+              .then((r) => ({ op: "link", label_id: labelId, ok: Array.isArray(r) }))
+              .catch(() => ({ op: "link", label_id: labelId, ok: false })),
           ),
-          ...pendingFiles.map(linkPending),
-        ]);
+        );
+        const fileLists = await Promise.all(pendingFiles.map(linkPending));
         // Children last, and NOT inside the Promise.all above: they are
         // ordered (the loop is sequential so they land as entered), and unlike
         // a label or a file link a failure here leaves a task the user meant to
         // have children without them — worth saying so rather than swallowing.
         // The parent exists either way, so this can never fail the create.
-        const subtasksFailed = queuedSubtasks.length
+        const { failed: subtasksFailed, rows: childRows } = queuedSubtasks.length
           ? await this._createQueuedSubtasks(row.id, queuedSubtasks)
-          : 0;
+          : { failed: 0, rows: [] };
+
+        // Patch the cache from what the server answered — no workspace reload.
+        // The create row predates the label/file links, so those are applied
+        // from their own answers.
+        const patch = {
+          ...row,
+          label_ids: applyLabelOps([], labelResults),
+        };
+        const files = longestList(fileLists);
+        if (files) patch.linked_files = files;
+        this._mergeTask(patch);
+        childRows.forEach((c) => this._mergeTask(c));
+        if (childRows.length) this._syncSubtaskBadges(row.id);
+
         // Tear down the form only after a successful create — postService
         // resolves undefined (or an error payload with no id) on failure, so
         // the teardown must live INSIDE this success branch or a failed
@@ -3751,10 +3769,7 @@ class __tasks_panel extends LetcBox {
         this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
-        await this._loadTasks();
-        // After the reload, so the board already shows the children that DID
-        // make it and the alert reads as a partial result rather than a total
-        // failure.
+        this._repaintBoard();
         if (subtasksFailed) Wm.alert(LOCALE.ERROR_NETWORK);
       } else {
         Wm.alert(LOCALE.ERROR_NETWORK);
@@ -3768,13 +3783,9 @@ class __tasks_panel extends LetcBox {
       // true, which permanently disables commit-task / commit-detail.
       this._setSubmitting(".tasks-panel__create-submit", false);
     }
-    // This render runs on BOTH outcomes, so it cannot animate unconditionally:
-    // a failed create deliberately leaves the modal open with the draft intact
-    // (see the note in the success branch above) and must simply repaint it.
-    // `_creating` is the record of which happened — only the success branch
-    // clears it.
-    if (this._creating) return this._render();
-    return this._dismissOverlay("create-backdrop", () => this._render());
+    // Failed: the modal stays open with its draft — repaint just the overlay.
+    if (this._creating) return this._renderOverlays();
+    return this._dismissOverlay("create-backdrop", () => this._renderOverlays());
   }
 
   async _removeTask(trigger) {
@@ -3812,6 +3823,7 @@ class __tasks_panel extends LetcBox {
       if (gone.has(this._detailId)) {
         this._detailId = null;
         this._detailDraft = null;
+        this._detailBase = null;
         this._subtaskDraft = null;
         // The panel it would return to may be one of the rows just pruned.
         this._detailReturnTo = null;
@@ -3893,120 +3905,52 @@ class __tasks_panel extends LetcBox {
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
 
+    // Three-way merge (see detail-commit.js): send only what the user changed
+    // since the card opened, on top of the cache as it is NOW — peer pushes
+    // patch it in place while the card is open. Diffing the draft against
+    // the cache alone wrote a colleague's change made meanwhile back over it.
+    // A card with no base degrades to that old diff.
+    const fresh = snapshotTask(task, {
+      assignees: this.getKnownAssignees(task),
+      noStatus: this.getDefaultStatus(),
+    });
+    const base = this._detailBase || fresh;
+    const plan = planDetailCommit(base, draft, fresh);
+
     const calls = [];
+    // Each call resolves a descriptor instead of rejecting: postService
+    // resolves undefined (or an error payload) on failure.
+    const rowCall = (service, args, extra = () => ({})) =>
+      this.postService({ service, hub_id: this._hubId, id, ...args })
+        .catch(() => undefined)
+        .then((r) => ({ kind: "row", service, row: rowOf(r), ...extra(r) }));
+    const labelCall = (service, op, lid, okOf) =>
+      this.postService({ service, hub_id: this._hubId, task_id: id, label_id: lid })
+        .catch(() => undefined)
+        .then((r) => ({ kind: "label", op, label_id: lid, ok: okOf(r) }));
 
-    // task.update — covers title, description, priority, due_date.
-    const upd = {};
-    const draftTitle = String(draft.title || "").trim();
-    const taskTitle = String(task.title || "").trim();
-    if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
-    // Both are marker form (the editor serializes chips to markers).
-    if ((draft.description || "") !== (task.description || "")) {
-      upd.description = draft.description || "";
-      // Notify only members tagged in this edit who weren't tagged before.
-      const before = Array.isArray(draft._mentioned_before)
-        ? draft._mentioned_before
-        : [];
-      const now = Array.isArray(draft.mention_uids) ? draft.mention_uids : [];
-      upd.mention_uids = now.filter((u) => !before.includes(u));
-    }
-    if ((draft.priority || "medium") !== (task.priority || "medium"))
-      upd.priority = draft.priority;
-    // Reporter. Compared against the same created_by fallback the draft was
-    // seeded with, so merely opening and saving a pre-reporter task does NOT
-    // count as a reassignment (which would otherwise log a bogus 'reporter'
-    // entry in the activity feed on every Update).
-    const taskReporter = task.reporter_uid || task.created_by || "";
-    if ((draft.reporter_uid || "") !== taskReporter && draft.reporter_uid) {
-      upd.reporter_uid = draft.reporter_uid;
-    }
-    const draftDue = (draft.due_date || "").trim();
-    const taskDue = task.due_date || "";
-    const dueChanged = draftDue !== taskDue;
-    // start_date only when the Duration toggle is on; OFF ("") clears it.
-    const draftStart = draft.duration_on ? (draft.start_date || "").trim() : "";
-    const taskStart = task.start_date || "";
-    const startChanged = draftStart !== taskStart;
-    if (Object.keys(upd).length || dueChanged || startChanged) {
-      // task_update SP overwrites due_date / start_date unconditionally —
-      // always send the current values or another-field update would null them.
-      upd.due_date = draftDue || null;
-      upd.start_date = draftStart || null;
+    // task_update overwrites due_date / start_date unconditionally, so
+    // plan.update always carries both (see planDetailCommit).
+    if (plan.update) calls.push(rowCall(SERVICE.task.update, plan.update));
+    if (plan.status) {
       calls.push(
-        this.postService({
-          service: SERVICE.task.update,
-          hub_id: this._hubId,
-          id,
-          ...upd,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update failed:", err),
-        ),
+        rowCall(SERVICE.task.update_status, { status: plan.status }, (r) => ({
+          // The response may carry the auto-completed parent row.
+          parent: rowOf(r && r.parent),
+        })),
       );
     }
-
-    const noStatus = this.getDefaultStatus();
-    if ((draft.status || noStatus) !== (task.status || noStatus)) {
+    // The full new set: the peer's current assignees plus/minus mine.
+    if (plan.assignees) {
+      calls.push(rowCall(SERVICE.task.update_assignee, { assignee_uids: plan.assignees }));
+    }
+    for (const lid of plan.link) {
+      calls.push(labelCall(SERVICE.task.link_label, "link", lid, Array.isArray));
+    }
+    for (const lid of plan.unlink) {
       calls.push(
-        this.postService({
-          service: SERVICE.task.update_status,
-          hub_id: this._hubId,
-          id,
-          status: draft.status,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update_status failed:", err),
-        ),
+        labelCall(SERVICE.task.unlink_label, "unlink", lid, (r) => !!(r && r.task_id)),
       );
-    }
-
-    // Multi-assignee: send the full new set only when it differs (order-
-    // independent) from the task's current assignees.
-    const draftAssignees = Array.isArray(draft.assignees) ? draft.assignees : [];
-    const taskAssignees = Array.isArray(task.assignee_uids)
-      ? task.assignee_uids
-      : task.assignee_uid
-        ? [task.assignee_uid]
-        : [];
-    const sameAssignees =
-      draftAssignees.length === taskAssignees.length &&
-      [...draftAssignees].sort().join(",") === [...taskAssignees].sort().join(",");
-    if (!sameAssignees) {
-      calls.push(
-        this.postService({
-          service: SERVICE.task.update_assignee,
-          hub_id: this._hubId,
-          id,
-          assignee_uids: draftAssignees,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update_assignee failed:", err),
-        ),
-      );
-    }
-
-    const original = new Set(task.label_ids || []);
-    const next = new Set(draft.labels || []);
-    for (const lid of next) {
-      if (!original.has(lid)) {
-        calls.push(
-          this.postService({
-            service: SERVICE.task.link_label,
-            hub_id: this._hubId,
-            task_id: id,
-            label_id: lid,
-          }).catch(() => null),
-        );
-      }
-    }
-    for (const lid of original) {
-      if (!next.has(lid)) {
-        calls.push(
-          this.postService({
-            service: SERVICE.task.unlink_label,
-            hub_id: this._hubId,
-            task_id: id,
-            label_id: lid,
-          }).catch(() => null),
-        );
-      }
     }
 
     // Pending attachments — same flow as _commitTask: search-picked entries
@@ -4021,49 +3965,119 @@ class __tasks_panel extends LetcBox {
           let nid = pf.nid;
           if (!nid && pf.file) {
             try {
-              const result = await this._uploadPendingFile(pf, pendingFiles);
-              nid = result.nid;
+              nid = (await this._uploadPendingFile(pf, pendingFiles)).nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
-              return;
+              return { kind: "file", pf, nid: null, list: null };
             }
           }
-          if (!nid) return;
-          await this.postService({
+          if (!nid) return { kind: "file", pf, nid: null, list: null };
+          const list = await this.postService({
             service: SERVICE.task.link_file,
             hub_id: this._hubId,
             task_id: id,
             file_nid: nid,
           }).catch(() => null);
+          return { kind: "file", pf, nid, list: Array.isArray(list) ? list : null };
         })(),
       );
     }
 
-    if (calls.length) await Promise.all(calls);
+    const results = calls.length ? await Promise.all(calls) : [];
 
-    await this._loadTasks();
-    // Update on a child returns to the parent, exactly as its X does — leaving
-    // Update to dump the user back on the board while Cancel walked up one
-    // level would be the same "it closed everything" surprise, just on the
-    // happier path. Read before the reset clears it.
-    const back = this._detailReturnTo;
-    this._detailId = null;
-    this._detailDraft = null;
-    this._detailReturnTo = null;
-    this._pickerOpen = null;
-    this._resetFileSearch();
+    // Merge what landed, and only the fields each call owns — see OWNED in
+    // live-sync.js for why a whole row would be wrong here.
+    for (const r of results) {
+      if (r.kind !== "row" || !r.row) continue;
+      this._mergeTask(ownedPatch(r.service, r.row));
+      if (r.parent) {
+        this._mergeTask(r.parent);
+        this._syncSubtaskBadges(r.parent.id);
+      }
+    }
+    // Apply to the row as it is NOW, not the `task` read before the awaits:
+    // peer pushes patch the cache in place mid-flight (and _mergeTask swaps
+    // the row object), so the old snapshot would drop a colleague's label or
+    // file that landed meanwhile.
+    const current = () => this._tasks.find((t) => t.id === id) || task;
+    const labelOps = results.filter((r) => r.kind === "label");
+    if (labelOps.length) {
+      this._mergeTask({ id, label_ids: applyLabelOps(current().label_ids, labelOps) });
+    }
+    const fileResults = results.filter((r) => r.kind === "file");
+    const files = longestList(fileResults.map((r) => r.list));
+    if (files) {
+      // Our answers can predate a peer's link: keep any file the cache has
+      // that they don't list.
+      const have = Array.isArray(current().linked_files) ? current().linked_files : [];
+      const ours = new Set(files.map((f) => String(f.file_nid)));
+      this._mergeTask({
+        id,
+        linked_files: [...files, ...have.filter((f) => !ours.has(String(f.file_nid)))],
+      });
+    }
+
+    const failed = results.some(
+      (r) => (r.kind === "row" && !r.row) ||
+        (r.kind === "label" && !r.ok) ||
+        (r.kind === "file" && !r.list),
+    );
     this._setSubmitting(".tasks-panel__detail-submit", false);
+    this._repaintBoard();
+
+    // The user may have moved on while the calls were in flight — opened a
+    // child row, closed the card, or a peer deleted the task. The cache is
+    // already right (merged above); but a new base or a close applied to
+    // whatever card is open NOW would corrupt its merge or shut it under the
+    // user, so stop here.
+    if (this._detailId !== id || this._detailDraft !== draft) {
+      // A deleted task is already announced; "network error" would mislead.
+      if (failed && this._tasks.some((t) => t.id === id)) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+      }
+      return;
+    }
+
+    if (failed) {
+      // Move the base past whatever did land, so pressing Update again
+      // re-sends only the rest instead of logging the same change twice.
+      const landed = (svc) =>
+        results.some((r) => r.kind === "row" && r.service === svc && r.row);
+      this._detailBase = advanceBase(base, draft, {
+        update: landed("task.update"),
+        status: landed("task.update_status"),
+        assignees: landed("task.update_assignee"),
+        labels: labelOps,
+      });
+      // The landed update already notified this edit's new tags; a retry
+      // must not notify them again.
+      if (landed("task.update")) {
+        draft._mentioned_before = (draft.mention_uids || []).slice();
+      }
+      // Linked files leave the pending list; one that uploaded but failed to
+      // link keeps its nid, so the retry links it instead of uploading a
+      // second copy ("a(1).png") into the task folder.
+      draft.pending_files = settlePendingFiles(
+        draft.pending_files,
+        fileResults.map((r) => ({ pf: r.pf, nid: r.nid, linked: !!r.list })),
+      );
+      this._refreshPendingList("detail");
+      // Keep the card open with the draft, so nothing the user typed is lost
+      // and pressing Update again retries. The cache already holds whatever
+      // DID land, so a retry only re-sends what still differs.
+      if (files) this._refreshAttachments(id).then(() => this._refreshAttachmentsList());
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+
+    // Update on a child returns to the parent, exactly as its X does.
+    const back = this._detailReturnTo;
     if (back && this._tasks.some((t) => t.id === back)) {
-      // Navigation, not a dismissal — the parent lands in this same element,
-      // so there is nothing to animate away. _openDetail renders on its own.
+      this._closeDetailSilently();
       return this._openDetail(back);
     }
-    // A saved task is a dismissal like any other, so it leaves the same way
-    // the X does. The render behind it is a FULL one (the task list changed
-    // and the board has to repaint), and it is deferred with everything else:
-    // the card is covering the board while it fades, so nothing of the stale
-    // paint is visible during those few frames.
-    this._dismissOverlay("detail-backdrop", () => this._render());
+    // A saved task leaves the way the X does; only the overlay parts re-feed.
+    this._closeDetailSilently(() => this._renderOverlays());
   }
 
   // Render the detail panel immediately on click; refresh attachments async
@@ -4110,6 +4124,16 @@ class __tasks_panel extends LetcBox {
           // these (upload missing nids, then link_file) on Update.
           pending_files: [],
         }
+      : null;
+    // What the card opened with — the "base" of _commitDetail's three-way
+    // merge. Built the same way as the draft's fields (same assignee filter,
+    // same status fallback), from a separate call so no array is shared with
+    // the draft the user is editing.
+    this._detailBase = task
+      ? snapshotTask(task, {
+          assignees: this.getKnownAssignees(task),
+          noStatus: this.getDefaultStatus(),
+        })
       : null;
     // A half-typed subtask belongs to the task it was opened on — carrying it
     // across to another task would create a child under the wrong parent.
@@ -9182,14 +9206,13 @@ class __tasks_panel extends LetcBox {
     // (sync + next frame as a safety net for late-mount children).
     this._prepopulateInputs();
     this._renderCommentBodies();
-    // Restore synchronously to avoid a visible jump, then again next frame in
-    // case the rebuilt content only reaches full scrollHeight after layout.
+    // Restores now, and keeps retrying until the rebuilt content is tall
+    // enough to take the offset (see _restoreViewScroll).
     this._restoreViewScroll(savedScroll);
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(() => {
         this._prepopulateInputs();
         this._renderCommentBodies();
-        this._restoreViewScroll(savedScroll);
       });
     }
 
@@ -9346,10 +9369,31 @@ class __tasks_panel extends LetcBox {
       // render rather than silently leaving a stale view on screen.
       if (!node) return this._render();
       host.feed(node.kids);
+      // Retries per frame until the rebuilt columns can take the offsets.
       this._restoreViewScroll(savedScroll);
-      if (typeof requestAnimationFrame === "function") {
-        requestAnimationFrame(() => this._restoreViewScroll(savedScroll));
-      }
+    });
+  }
+
+  /**
+   * Repaint after the task rows changed but the chrome did not — a create, an
+   * Update, or a peer's edit. Feeds only the view host (and the open task's
+   * subtask rows); the viewbar, filter bar and overlays are left alone.
+   *
+   * The Health view draws the activity feed, which the rows do not carry, so
+   * that view reloads it first. The read cache follows the rows by hand now
+   * that _loadTasks no longer runs after a write. A caller that has just
+   * loaded the activity feed itself passes `activityLoaded` so it is not
+   * fetched twice.
+   */
+  _repaintBoard({ activity = 0, activityLoaded = 0 } = {}) {
+    readCache.set(this._cacheKey("tasks"), this._tasks);
+    const needActivity =
+      !activityLoaded && (activity || this.getView() === "summary");
+    const load = needActivity ? this._loadActivity() : Promise.resolve();
+    return load.then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._refreshViewBody();
+      if (this._detailId) this._refreshSubtaskSection();
     });
   }
 
@@ -9411,17 +9455,45 @@ class __tasks_panel extends LetcBox {
     return saved;
   }
 
-  // Reapply offsets captured by _captureViewScroll. Best-effort: a container
-  // that no longer exists (view switched, column deleted) is simply skipped.
+  // Reapply offsets captured by _captureViewScroll, retrying once per frame
+  // until each one sticks. A rebuilt column's cards reach full height a few
+  // frames after feed(); restoring only then-and-next-frame hit a column still
+  // scrollHeight == clientHeight, which clamped the offset to 0 and threw the
+  // user back to the first card after every create / Update (stage probe,
+  // 2026-09-23). A container that no longer exists (view switched, column
+  // deleted) simply never matches and times out.
+  //
+  // A newer restore supersedes an older one, and any user input cancels the
+  // retry so it never fights a scroll the user started.
   _restoreViewScroll(saved) {
     if (!this.el || !saved || !saved.length) return;
-    for (const { selector, top, left } of saved) {
-      const node = this.el.querySelector(selector);
-      if (!node) continue;
-      if (top) node.scrollTop = top;
-      if (left) node.scrollLeft = left;
+    this._installScrollRestoreCancel();
+    const gen = (this._scrollRestoreGen = (this._scrollRestoreGen || 0) + 1);
+    restoreScroll(saved, {
+      find: (sel) => (this.el ? this.el.querySelector(sel) : null),
+      raf:
+        typeof requestAnimationFrame === "function"
+          ? (fn) => requestAnimationFrame(fn)
+          : null,
+      now: () => Date.now(),
+      isCancelled: () =>
+        gen !== this._scrollRestoreGen ||
+        !!(this.isDestroyed && this.isDestroyed()),
+    });
+  }
+
+  // The user taking over (wheel, touch, click, key) ends a pending restore.
+  _installScrollRestoreCancel() {
+    if (this._scrollRestoreCancelBound || !this.el) return;
+    this._scrollRestoreCancelBound = 1;
+    const cancel = () => {
+      this._scrollRestoreGen = (this._scrollRestoreGen || 0) + 1;
+    };
+    for (const ev of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+      this.el.addEventListener(ev, cancel, { capture: true, passive: true });
     }
   }
+
 
   // ── Skeleton accessors ─────────────────────────────────────────
   /**
@@ -10043,10 +10115,11 @@ class __tasks_panel extends LetcBox {
    *
    * Never throws: the parent is already created by the time this runs, so a
    * child that fails must not roll the create back or take the modal down with
-   * it. Returns how many failed, for the caller to report.
+   * it. Returns how many failed and the rows that were created.
    */
   async _createQueuedSubtasks(parentId, queued) {
     let failed = 0;
+    const rows = [];
     for (const sub of queued) {
       try {
         const created = await this.postService({
@@ -10061,15 +10134,16 @@ class __tasks_panel extends LetcBox {
           status: sub.status || undefined,
           due_date: sub.due_date || null,
         });
-        const row = Array.isArray(created) ? created[0] : created;
+        const row = rowOf(created);
         // postService resolves falsy on failure rather than rejecting.
-        if (!row || !row.id) failed += 1;
+        if (row) rows.push(row);
+        else failed += 1;
       } catch (err) {
         console.error("[tasks_panel] queued subtask create failed:", err);
         failed += 1;
       }
     }
-    return failed;
+    return { failed, rows };
   }
 
   /**
