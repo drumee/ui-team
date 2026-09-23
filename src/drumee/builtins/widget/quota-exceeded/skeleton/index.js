@@ -77,7 +77,7 @@ const LIMITS = {
         ? (LOCALE.QX_SEAT_BODY_FREE
           || "The Free plan is for one person only. Upgrade to invite other members.")
         : (LOCALE.QX_SEAT_BODY
-          || "You have used every seat in your plan. Invitations that have not been accepted yet also hold a seat. Remove a member or upgrade your plan to invite more people."),
+          || "You can not invite more members because you have reached limit of team plan. Upgrade to business plan now to invite more members."),
     // Freeing a seat is only a move when seats exist — on Free there is
     // nothing to remove, the plan itself is the limit.
     makeRoom: (opt = {}) =>
