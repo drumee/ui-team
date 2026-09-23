@@ -3211,5 +3211,12 @@
   "ALLOW_IN_SYSTEM_MAC": "Ouvrez Réglages Système › Confidentialité et sécurité › {0} et activez votre navigateur.",
   "ALLOW_IN_SYSTEM_WINDOWS": "Ouvrez Paramètres › Confidentialité et sécurité › {0} et autorisez les applications de bureau.",
   "ALLOW_IN_SYSTEM_LINUX": "Vérifiez que les réglages de son et de confidentialité de votre bureau autorisent votre navigateur à utiliser le {0}.",
-  "ALLOW_IN_SYSTEM_GENERIC": "Vérifiez que votre système d'exploitation autorise votre navigateur à utiliser le {0}."
+  "ALLOW_IN_SYSTEM_GENERIC": "Vérifiez que votre système d'exploitation autorise votre navigateur à utiliser le {0}.",
+  "DECLINED": "Refusée",
+  "INVITE_STATUS_ACCEPTED": "Acceptée",
+  "INVITE_STATUS_UNAVAILABLE": "Invitation plus valide",
+  "PENDING_INVITATIONS": "Invitations en attente",
+  "PENDING_INVITATIONS_HINT": "Les membres invités apparaîtront ici jusqu'à leur réponse.",
+  "INVITE_MEMBER_TO_WORKSPACE": "Inviter un membre dans l'espace de travail",
+  "INVITED_AGO_BY": "invité {0} par {1}"
 }

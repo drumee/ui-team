@@ -3210,5 +3210,12 @@
   "ALLOW_IN_SYSTEM_MAC": "Open System Settings › Privacy & Security › {0} and turn your browser on.",
   "ALLOW_IN_SYSTEM_WINDOWS": "Open Settings › Privacy & security › {0} and let desktop apps use it.",
   "ALLOW_IN_SYSTEM_LINUX": "Check that your desktop's sound and privacy settings let your browser use the {0}.",
-  "ALLOW_IN_SYSTEM_GENERIC": "Check that your operating system lets your browser use the {0}."
+  "ALLOW_IN_SYSTEM_GENERIC": "Check that your operating system lets your browser use the {0}.",
+  "DECLINED": "Declined",
+  "INVITE_STATUS_ACCEPTED": "Accepted",
+  "INVITE_STATUS_UNAVAILABLE": "Invitation no longer valid",
+  "PENDING_INVITATIONS": "Pending Invitations",
+  "PENDING_INVITATIONS_HINT": "Invited members will appear here until they respond.",
+  "INVITE_MEMBER_TO_WORKSPACE": "Invite member to workspace",
+  "INVITED_AGO_BY": "invited {0} by {1}"
 }

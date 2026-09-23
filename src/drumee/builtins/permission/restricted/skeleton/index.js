@@ -61,6 +61,8 @@ function mapMember(row) {
     firstname: (row.firstname || "").trim(),
     lastname: (row.lastname || "").trim(),
     fullname: (row.fullname || "").trim() || name,
+    // The line under the name (Figma: Body/Mini Body, Grey/80).
+    email: String(row.email || "").trim(),
     role: roleFromPrivilege(row.privilege),
     // The RAW bitmask, beside the role it resolves to. `role` cannot answer
     // "am I the owner": roleFromPrivilege has four levels and an owner (63)
@@ -224,7 +226,9 @@ function memberRows(list, ui, pfx, isAdmin) {
           }),
           Skeletons.Button.Svg({
             className: `${pfx}__member-remove`,
-            ico: "trash-action",
+            // Phosphor Trash, the glyph the Figma frame uses (component
+            // "Trash", 24px). trash-action is a different, crossed-out bin.
+            ico: "ph-trash",
             service: "remove-member",
             dataset: { index, member_id: member.id },
             uiHandler: [ui],
@@ -239,15 +243,127 @@ function memberRows(list, ui, pfx, isAdmin) {
           className: `${pfx}__member-info`,
           kids: [
             memberAvatar(pfx, member),
-            Skeletons.Note({
-              className: `${pfx}__member-name`,
-              content: member.name,
+            Skeletons.Box.Y({
+              className: `${pfx}__member-text`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__member-name`,
+                  content: member.name,
+                }),
+                // Left out when the name already IS the address (a member
+                // with no name on file falls back to it in mapMember), so
+                // the same string is never printed twice.
+                member.email && member.email !== member.fullname
+                  ? Skeletons.Note({
+                    className: `${pfx}__member-email`,
+                    content: member.email,
+                  })
+                  : null,
+              ].filter(Boolean),
             }),
           ],
         }),
         Skeletons.Box.X({
           className: `${pfx}__member-actions`,
           kids: actions,
+        }),
+      ],
+    });
+  });
+}
+
+/**
+ * One row per invitation this workspace is waiting on, or that was refused.
+ *
+ * WHY THE SECTION EXISTS AT ALL. Inviting somebody no longer makes them a
+ * member — they have to accept — so between the send and their answer they
+ * appear in neither the matrix above nor anywhere else. Without this, an
+ * invitation would vanish the moment it was sent and an admin could not tell a
+ * sent-and-waiting invitation from one they only think they sent.
+ *
+ * THE STATUS WORD IS THE POINT. `pending` is a clock and an amber wash;
+ * `declined` is a cross and a red one. The server answers with exactly those
+ * two (hub_invitations maps token status to them) — an accepted invitation is
+ * absent, because that person is a member and belongs in the matrix.
+ *
+ * 🚨 "Declined", NOT "Rejected". Figma labels the red badge Rejected; Duy asked
+ * for Declined, and it is also the word the rest of the flow uses — the email
+ * button, the notification row (LOCALE.REFUSE) and the token status all say
+ * decline. One word for one act.
+ *
+ * THE NAME FALLS BACK TO THE ADDRESS, and usually is one: most invitees have
+ * no Drumee account, so there is no profile to name them by. `invitee_uid` is
+ * null in that case and UserProfile draws its initials-on-colour placeholder
+ * from whatever name it is given.
+ */
+function invitationRows(list, pfx) {
+  return list.map((row, index) => {
+    const email = String(row.email || "");
+    const name = String(row.invitee_fullname || "").trim() || email;
+    const inviter = String(row.inviter_fullname || "").trim();
+    const when = row.ctime ? Dayjs.unix(Number(row.ctime)).fromNow() : "";
+    // "invited 10 minutes ago by Alex".
+    //
+    // ONE KEY WITH PLACEHOLDERS, not "invited" + when + "by" + inviter glued
+    // together: word order is not a constant across the six locale files — zh
+    // puts the inviter first — and a sentence assembled from fragments can only
+    // ever come out in English order.
+    //
+    // Dropped entirely when either half is missing, rather than rendered
+    // half-built: a row reading "invited by" says less than a row with just a
+    // name on it.
+    const sub = when && inviter
+      ? LOCALE.INVITED_AGO_BY.format(when, inviter)
+      : "";
+    const declined = row.status === "declined";
+    return Skeletons.Box.X({
+      className: `${pfx}__invitation-row`,
+      dataset: { index, status: row.status || "pending" },
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__invitation-info`,
+          kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__avatar`,
+              auto_color: 0,
+              id: row.invitee_uid || "",
+              firstname: row.invitee_firstname,
+              lastname: row.invitee_lastname,
+              fullname: name,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__invitation-text`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__invitation-name`,
+                  content: name,
+                }),
+                sub
+                  ? Skeletons.Note({
+                    className: `${pfx}__invitation-sub`,
+                    content: sub,
+                  })
+                  : null,
+              ].filter(Boolean),
+            }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__invitation-badge`,
+          dataset: { status: declined ? "declined" : "pending" },
+          kids: [
+            Skeletons.Image.Svg({
+              className: `${pfx}__invitation-badge-ico`,
+              // Phosphor Clock / XCircle, as in Figma. NOT `clock`: that is
+              // a solid Illustrator dial whose fills the sprite strips, so it
+              // drew as a filled blob rather than an outlined clock.
+              ico: declined ? "noti-x-circle" : "apps-clock",
+            }),
+            Skeletons.Note({
+              className: `${pfx}__invitation-badge-text`,
+              content: declined ? LOCALE.DECLINED : LOCALE.PENDING,
+            }),
+          ],
         }),
       ],
     });
@@ -271,6 +387,14 @@ module.exports = function (ui) {
     .map(mapMember);
   const isAdmin = viewerIsAdmin(members);
   const canLeave = viewerCanLeave(members);
+  // Published back to the widget so _loadInvitations can ask the SAME question
+  // this render answered, instead of re-deriving it from a privilege bit.
+  //
+  // 🚨 Those bits have moved twice (server-essentials 1.3.0 shifted them, 1.3.6
+  // put them back), which is why viewerIsAdmin reads the role WORD and not a
+  // mask — a second, bit-based copy in index.js would be the one that silently
+  // disagrees after a dependency bump. One source, published once per render.
+  ui._isAdmin = isAdmin;
 
   /**
  * Which workspace this panel is about — the area-tinted folder shape and the
@@ -306,7 +430,7 @@ module.exports = function (ui) {
  * They are dropped together for that reason: a glyph without its name is not a
  * degraded answer, it is a different and worse one.
  */
-function workspaceTab(ui, pfx) {
+function workspaceTab(ui, pfx, cardShown) {
   const media = ui.mget(_a.media);
   const read = (k) => {
     const fromMedia = media && _.isFunction(media.mget) ? media.mget(k) : null;
@@ -316,7 +440,17 @@ function workspaceTab(ui, pfx) {
     read(_a.filename) || read("hub_name") || read(_a.name) || "";
   const area = read(_a.area) || _a.private;
 
-  const workspace = !filename
+  // 🚨 NOT WHEN THE CARD IS SHOWING. The card below names the workspace with
+  // the same glyph and the same name, and Figma 85:36439 heads the panel with
+  // the title ALONE for that reason — repeating it here says the workspace
+  // twice in the first 80px of the panel.
+  //
+  // Still drawn when there is no card, which is the same condition the card
+  // itself drops out on (no resolvable name is impossible — if the name is
+  // missing the card is gone AND this list is empty). So the pair is: card
+  // present -> plain heading; card absent -> the heading with whatever the
+  // header can resolve, exactly as before the card existed.
+  const workspace = (!filename || cardShown)
     ? []
     : [
       // Element + content, not Image.Svg + ico: media/grid/template/folder
@@ -360,7 +494,135 @@ function workspaceTab(ui, pfx) {
   });
 }
 
-const header = Skeletons.Box.X({
+/**
+ * The workspace this panel is about, as a card — Figma 85:36439 (#1082:81233).
+ *
+ * WHAT IT IS FOR. The panel is opened from three places that each already know
+ * which workspace is meant, so the subject was only ever obvious from what was
+ * on screen behind it — and on the create path there was nothing behind it yet.
+ * The header title carried the glyph and the name for that reason; the design
+ * promotes them into a bordered card with the two figures that say how big the
+ * thing you are granting access TO actually is.
+ *
+ * THE CARD IS DROPPED ENTIRELY WITHOUT A NAME, exactly as workspaceTab drops
+ * its glyph-and-name pair: a bordered box holding a folder shape and two
+ * numbers, with no label, names the wrong workspace as easily as the right one.
+ *
+ * THE FIGURES DEGRADE INDEPENDENTLY. The member count is free — it is the list
+ * this panel already rendered. Storage is a second read that may not have
+ * landed, or may not be permitted, so its chip is drawn only once there is a
+ * number (see _loadSpaceUsage); the card is complete without it rather than
+ * showing a placeholder that never fills in.
+ */
+function workspaceCard(ui, pfx, memberCount) {
+  const media = ui.mget(_a.media);
+  const read = (k) => {
+    const fromMedia = media && _.isFunction(media.mget) ? media.mget(k) : null;
+    return fromMedia || ui.mget(k);
+  };
+  const filename = read(_a.filename) || read("hub_name") || read(_a.name) || "";
+  if (!filename) return null;
+  const area = read(_a.area) || _a.private;
+
+  // Bytes → "3.5 GB", split so the number and the unit can be coloured
+  // separately the way the design does (Primary/40 number, Grey/80 unit).
+  // `filesize` is @drumee/ui-essentials' own formatter, already used by the
+  // upload progress window — not a second implementation.
+  let sizeChip = null;
+  const used = Number(ui._spaceUsed);
+  if (Number.isFinite(used) && used > 0) {
+    const { filesize } = require("@drumee/ui-essentials");
+    const text = String(filesize(used) || "").trim();
+    // "3.5 GB" → ["3.5", "GB"]. A formatter that ever returns something
+    // unsplittable falls back to printing it whole rather than dropping it.
+    const at = text.lastIndexOf(" ");
+    sizeChip = Skeletons.Box.X({
+      active: 0,
+      className: `${pfx}__ws-stat`,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Note({
+          active: 0,
+          className: `${pfx}__ws-stat-value`,
+          content: at > 0 ? text.slice(0, at) : text,
+        }),
+        at > 0
+          ? Skeletons.Note({
+            active: 0,
+            className: `${pfx}__ws-stat-unit`,
+            content: text.slice(at + 1),
+          })
+          : null,
+      ].filter(Boolean),
+    });
+  }
+
+  return Skeletons.Box.X({
+    active: 0,
+    className: `${pfx}__ws-card`,
+    kidsOpt: { active: 0 },
+    kids: [
+      // Element + content, not Image.Svg + ico — folderArt returns an HTML
+      // STRING, and handing markup to `ico` builds `<use href="#<markup>">`
+      // and draws nothing. Same note as workspaceTab above.
+      Skeletons.Element({
+        active: 0,
+        className: `${pfx}__ws-card-icon ${area}`,
+        content: folderArt({
+          area,
+          filetype: _a.hub,
+          role: "desk",
+          widgetId: _.uniqueId("perm-ws-card-"),
+          isAttachment: 1,
+        }),
+      }),
+      Skeletons.Box.Y({
+        active: 0,
+        className: `${pfx}__ws-card-text`,
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Note({
+            active: 0,
+            className: `${pfx}__ws-card-name`,
+            content: filename,
+          }),
+          Skeletons.Box.X({
+            active: 0,
+            className: `${pfx}__ws-card-stats`,
+            kidsOpt: { active: 0 },
+            kids: [
+              sizeChip,
+              Skeletons.Box.X({
+                active: 0,
+                className: `${pfx}__ws-stat`,
+                kidsOpt: { active: 0 },
+                kids: [
+                  Skeletons.Note({
+                    active: 0,
+                    className: `${pfx}__ws-stat-value`,
+                    content: `${memberCount}`,
+                  }),
+                  // Phosphor "Users", which is the icon the Figma frame uses
+                  // (componentId 1:702) and already in the sprite.
+                  Skeletons.Image.Svg({
+                    className: `${pfx}__ws-stat-ico`,
+                    ico: "ph-users",
+                  }),
+                ],
+              }),
+            ].filter(Boolean),
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+// The workspace card, built here so the header below can ask whether it exists
+  // before deciding to name the workspace a second time.
+  const wsCard = workspaceCard(ui, pfx, members.length);
+
+  const header = Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
       Skeletons.Box.Y({
@@ -378,12 +640,13 @@ const header = Skeletons.Box.X({
           // off the edge instead of ellipsising.
           Skeletons.Box.X({
             className: `${pfx}__title-row`,
-            kids: [workspaceTab(ui, pfx)],
+            kids: [workspaceTab(ui, pfx, !!wsCard)],
           }),
-          Skeletons.Note({
-            className: `${pfx}__subtitle`,
-            content: LOCALE.MANAGE_FOLDER_PERMISSIONS,
-          }),
+          // NO SUBTITLE. Figma 85:36439 heads the panel with the title alone.
+          // "Manage folder permissions" restated what the heading and the
+          // sections below already say, and it is the workspace CARD that now
+          // answers the question it was really standing in for — which
+          // workspace this is about.
         ],
       }),
       // Drawn in both modes. In the drawer it slides the panel out; in column
@@ -409,18 +672,61 @@ const header = Skeletons.Box.X({
       kids: [
         Skeletons.Note({
           className: `${pfx}__section-title`,
-          content: LOCALE.INVITE_MEMBER,
+          // Figma 85:36439 heads this "Invite member to workspace" — it says
+          // WHERE the invitation leads, which matters more now that accepting
+          // one is a decision the recipient makes.
+          content: LOCALE.INVITE_MEMBER_TO_WORKSPACE,
         }),
         Skeletons.Box.X({
           className: `${pfx}__invite-input-row`,
           kids: [
-            Skeletons.Entry({
-              className: `${pfx}__invite-entry`,
-              sys_pn: "invite-email",
-              formItem: _a.email,
-              placeholder: LOCALE.INVITE_EMAIL_LABEL,
-              require: _a.email,
-              bubble: 0,
+            // SEVERAL ADDRESSES, ONE SEND. The committed ones become chips and
+            // the field keeps whatever is still being typed — see index.js
+            // _installChipInput for how a comma, a paste or Enter turns text
+            // into a chip, and Backspace on an empty field takes the last one
+            // back.
+            //
+            // The chips and the field share one bordered box (the skin styles
+            // __invite-field, not the Entry) so the row reads as one input
+            // that happens to hold several people, which is what Figma draws.
+            // The Entry keeps its own class because that is what
+            // attachEmailLookup and the chip listeners match on.
+            Skeletons.Box.X({
+              className: `${pfx}__invite-field`,
+              kids: [
+                ...(ui._inviteChips || []).map((email, index) =>
+                  Skeletons.Box.X({
+                    className: `${pfx}__invite-chip`,
+                    dataset: { index },
+                    kids: [
+                      Skeletons.Note({
+                        active: 0,
+                        className: `${pfx}__invite-chip-text`,
+                        content: email,
+                      }),
+                      Skeletons.Button.Svg({
+                        className: `${pfx}__invite-chip-remove`,
+                        ico: "cross",
+                        service: "remove-invite-chip",
+                        dataset: { index },
+                        uiHandler: [ui],
+                      }),
+                    ],
+                  }),
+                ),
+                Skeletons.Entry({
+                  className: `${pfx}__invite-entry`,
+                  sys_pn: "invite-email",
+                  formItem: _a.email,
+                  // Only the first address prompts; once there are chips the
+                  // placeholder would sit beside them repeating itself.
+                  placeholder: (ui._inviteChips || []).length
+                    ? ""
+                    : LOCALE.INVITE_EMAIL_LABEL,
+                  require: _a.email,
+                  bubble: 0,
+                }),
+              ],
             }),
             roleDropdown(pfx, inviteRole, "select-invite-role", {
               uiHandler: ui,
@@ -467,7 +773,39 @@ const header = Skeletons.Box.X({
           content: LOCALE.SEND_INVITATION,
           service: "send-invitation",
           uiHandler: [ui],
+          // Busy while hub.invite is in flight — see _setInviteSending.
+          dataset: ui._inviteSending ? { pending: "1" } : undefined,
         }),
+      ],
+    })
+    : null;
+
+  // ── Pending Invitations ───────────────────────────────────────
+  // Between the send and the answer, an invitee is in neither list. This is
+  // where they wait, and where a refusal is reported.
+  //
+  // ADMIN ONLY, and only once the read has ANSWERED. `_invitations` is null
+  // until then (index.js), which is what separates "not fetched" from "none":
+  // the section is absent in the first case rather than flashing an empty
+  // heading under the invite form on every open.
+  //
+  // Absent when there is nothing waiting, too. A workspace whose members all
+  // joined has no pending invitations, and a permanently empty section under
+  // the form is furniture — Figma draws it with rows in it.
+  const invitations = _.isArray(ui._invitations) ? ui._invitations : null;
+  const invitationsSection = isAdmin && invitations && invitations.length
+    ? Skeletons.Box.Y({
+      className: `${pfx}__invitations-section`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__section-title`,
+          content: `${LOCALE.PENDING_INVITATIONS} (${invitations.length})`,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__section-hint`,
+          content: LOCALE.PENDING_INVITATIONS_HINT,
+        }),
+        ...invitationRows(invitations, pfx),
       ],
     })
     : null;
@@ -477,7 +815,12 @@ const header = Skeletons.Box.X({
     kids: [
       Skeletons.Note({
         className: `${pfx}__section-title`,
-        content: LOCALE.PERMISSIONS_MATRIX,
+        // "Members (6)" — Figma 85:36439. It was "Permissions Matrix", which
+        // named the CONTROL rather than what the list is, and read as jargon
+        // beside a section called Pending Invitations. The count matters here
+        // for the same reason it does above: the two lists are now the two
+        // halves of who is in this workspace, and both say how many.
+        content: `${LOCALE.MEMBERS} (${members.length})`,
       }),
       ...memberRows(members, ui, pfx, isAdmin),
     ],
@@ -517,9 +860,23 @@ const header = Skeletons.Box.X({
     : null;
 
   // Pinned header + scrolling body, after the base panel's -header / -scroll.
+  //
+  // ORDER IS FIGMA'S: invite, then what is waiting on an answer, then who is
+  // already in. 🔒 leaveSection stays LAST and is not in Figma at all — Duy
+  // flagged it explicitly when handing over the design. It is the only exit a
+  // View or Chat member has (see its own note above), so "not in the mockup"
+  // must not be read as "removed".
   const body = Skeletons.Box.Y({
     className: `${pfx}__body`,
-    kids: [inviteSection, membersSection, leaveSection].filter(Boolean),
+    kids: [
+      // Built above the header (see `wsCard`) because the header asks whether
+      // it exists before deciding to name the workspace itself.
+      wsCard,
+      inviteSection,
+      invitationsSection,
+      membersSection,
+      leaveSection,
+    ].filter(Boolean),
   });
 
   return Skeletons.Box.Y({

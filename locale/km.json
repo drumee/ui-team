@@ -3001,5 +3001,12 @@
   "ALLOW_IN_SYSTEM_MAC": "Open System Settings › Privacy & Security › {0} and turn your browser on.",
   "ALLOW_IN_SYSTEM_WINDOWS": "Open Settings › Privacy & security › {0} and let desktop apps use it.",
   "ALLOW_IN_SYSTEM_LINUX": "Check that your desktop's sound and privacy settings let your browser use the {0}.",
-  "ALLOW_IN_SYSTEM_GENERIC": "Check that your operating system lets your browser use the {0}."
+  "ALLOW_IN_SYSTEM_GENERIC": "Check that your operating system lets your browser use the {0}.",
+  "DECLINED": "បានបដិសេធ",
+  "INVITE_STATUS_ACCEPTED": "បានទទួលយក",
+  "INVITE_STATUS_UNAVAILABLE": "ការអញ្ជើញលែងមានសុពលភាព",
+  "PENDING_INVITATIONS": "ការអញ្ជើញកំពុងរង់ចាំ",
+  "PENDING_INVITATIONS_HINT": "សមាជិកដែលបានអញ្ជើញនឹងបង្ហាញនៅទីនេះរហូតដល់ពួកគេឆ្លើយតប។",
+  "INVITE_MEMBER_TO_WORKSPACE": "អញ្ជើញសមាជិកទៅកន្លែងធ្វើការ",
+  "INVITED_AGO_BY": "បានអញ្ជើញ {0} ដោយ {1}"
 }
