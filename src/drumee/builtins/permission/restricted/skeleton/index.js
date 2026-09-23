@@ -463,6 +463,130 @@ function workspaceTab(ui, pfx) {
   });
 }
 
+/**
+ * The workspace this panel is about, as a card — Figma 85:36439 (#1082:81233).
+ *
+ * WHAT IT IS FOR. The panel is opened from three places that each already know
+ * which workspace is meant, so the subject was only ever obvious from what was
+ * on screen behind it — and on the create path there was nothing behind it yet.
+ * The header title carried the glyph and the name for that reason; the design
+ * promotes them into a bordered card with the two figures that say how big the
+ * thing you are granting access TO actually is.
+ *
+ * THE CARD IS DROPPED ENTIRELY WITHOUT A NAME, exactly as workspaceTab drops
+ * its glyph-and-name pair: a bordered box holding a folder shape and two
+ * numbers, with no label, names the wrong workspace as easily as the right one.
+ *
+ * THE FIGURES DEGRADE INDEPENDENTLY. The member count is free — it is the list
+ * this panel already rendered. Storage is a second read that may not have
+ * landed, or may not be permitted, so its chip is drawn only once there is a
+ * number (see _loadSpaceUsage); the card is complete without it rather than
+ * showing a placeholder that never fills in.
+ */
+function workspaceCard(ui, pfx, memberCount) {
+  const media = ui.mget(_a.media);
+  const read = (k) => {
+    const fromMedia = media && _.isFunction(media.mget) ? media.mget(k) : null;
+    return fromMedia || ui.mget(k);
+  };
+  const filename = read(_a.filename) || read("hub_name") || read(_a.name) || "";
+  if (!filename) return null;
+  const area = read(_a.area) || _a.private;
+
+  // Bytes → "3.5 GB", split so the number and the unit can be coloured
+  // separately the way the design does (Primary/40 number, Grey/80 unit).
+  // `filesize` is @drumee/ui-essentials' own formatter, already used by the
+  // upload progress window — not a second implementation.
+  let sizeChip = null;
+  const used = Number(ui._spaceUsed);
+  if (Number.isFinite(used) && used > 0) {
+    const { filesize } = require("@drumee/ui-essentials");
+    const text = String(filesize(used) || "").trim();
+    // "3.5 GB" → ["3.5", "GB"]. A formatter that ever returns something
+    // unsplittable falls back to printing it whole rather than dropping it.
+    const at = text.lastIndexOf(" ");
+    sizeChip = Skeletons.Box.X({
+      active: 0,
+      className: `${pfx}__ws-stat`,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Note({
+          active: 0,
+          className: `${pfx}__ws-stat-value`,
+          content: at > 0 ? text.slice(0, at) : text,
+        }),
+        at > 0
+          ? Skeletons.Note({
+            active: 0,
+            className: `${pfx}__ws-stat-unit`,
+            content: text.slice(at + 1),
+          })
+          : null,
+      ].filter(Boolean),
+    });
+  }
+
+  return Skeletons.Box.X({
+    active: 0,
+    className: `${pfx}__ws-card`,
+    kidsOpt: { active: 0 },
+    kids: [
+      // Element + content, not Image.Svg + ico — folderArt returns an HTML
+      // STRING, and handing markup to `ico` builds `<use href="#<markup>">`
+      // and draws nothing. Same note as workspaceTab above.
+      Skeletons.Element({
+        active: 0,
+        className: `${pfx}__ws-card-icon ${area}`,
+        content: folderArt({
+          area,
+          filetype: _a.hub,
+          role: "desk",
+          widgetId: _.uniqueId("perm-ws-card-"),
+          isAttachment: 1,
+        }),
+      }),
+      Skeletons.Box.Y({
+        active: 0,
+        className: `${pfx}__ws-card-text`,
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Note({
+            active: 0,
+            className: `${pfx}__ws-card-name`,
+            content: filename,
+          }),
+          Skeletons.Box.X({
+            active: 0,
+            className: `${pfx}__ws-card-stats`,
+            kidsOpt: { active: 0 },
+            kids: [
+              sizeChip,
+              Skeletons.Box.X({
+                active: 0,
+                className: `${pfx}__ws-stat`,
+                kidsOpt: { active: 0 },
+                kids: [
+                  Skeletons.Note({
+                    active: 0,
+                    className: `${pfx}__ws-stat-value`,
+                    content: `${memberCount}`,
+                  }),
+                  // Phosphor "Users", which is the icon the Figma frame uses
+                  // (componentId 1:702) and already in the sprite.
+                  Skeletons.Image.Svg({
+                    className: `${pfx}__ws-stat-ico`,
+                    ico: "ph-users",
+                  }),
+                ],
+              }),
+            ].filter(Boolean),
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 const header = Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
@@ -707,6 +831,11 @@ const header = Skeletons.Box.X({
   const body = Skeletons.Box.Y({
     className: `${pfx}__body`,
     kids: [
+      // The workspace itself, first — see workspaceCard. Null when there is no
+      // name to put on it, which is also when the header title keeps the glyph
+      // and name it has always carried, so the panel never loses the subject
+      // entirely.
+      workspaceCard(ui, pfx, members.length),
       inviteSection,
       invitationsSection,
       membersSection,

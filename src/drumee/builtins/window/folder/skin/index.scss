@@ -2477,14 +2477,15 @@
   // The gutter is a REAL grid column (not an absolute overlay) so it never gets
   // covered by the chat panel's stacking context.
   //
-  // Access (the rail's Access, window/folder/access-column) is this same layout
-  // with the members panel in the chat panel's place, so it shares the block:
-  // the same grid, the same per-panel overrides and the same flex shares — and
-  // with them the chat panel's width, in grid layout and in the flex fallback.
-  // Without the shared flex share the fallback sized the members panel to its
-  // content (61px against the chat panel's 467px at a 1400px window).
+  // 🚨 ACCESS IS NO LONGER IN THIS BLOCK. It used to share the layout, with the
+  // members panel standing in the chat panel's column on the right. Figma
+  // 85:36439 moves it to a fixed-width panel anchored to the LEFT, floating
+  // over the file grid instead of squeezing it into the remaining third — see
+  // the [data-view="access"] block below, which needs the plain one-column
+  // grid and no drag gutter. Leaving it listed here would hand it a
+  // three-column template and a visible splitter that its own rules would then
+  // have to fight with !important.
   &__split-body[data-view="files"],
-  &__split-body[data-view="access"],
   &__split-body[data-view="secure-share"] {
     grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
 
@@ -2519,20 +2520,64 @@
     }
   }
 
-  // Access draws the members panel in the chat panel's place, as the same card.
+  // Access draws the members panel as a LEFT-ANCHORED OVERLAY over the file
+  // grid — Figma 85:36439, where the panel is an absolutely placed 512px card
+  // at x=80 (immediately right of the 64px rail) and the board is unchanged
+  // underneath it.
+  //
+  // WHY AN OVERLAY AND NOT A COLUMN. As a column the panel took a third of the
+  // window and the file grid was re-laid out every time Access was pressed —
+  // the grid reflowed, the user's dragged --files-w was overridden, and on a
+  // narrow window the files column became unusable. Floating it leaves the
+  // grid exactly as the user left it and makes Access a thing you open and
+  // close over your work, which is what the design draws.
+  //
+  // The file grid keeps the whole body: the grid is back to ONE column here
+  // (the block above no longer lists access) and the drag gutter is hidden,
+  // since there is no second column left to drag against.
   &__split-body[data-view="access"] {
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+
     .window__chat-panel,
     .window__thread-rail,
     .window__file-thread-panel {
       display: none;
     }
 
+    // !important to beat the shared Files/secure-share rule's own !important —
+    // that block sets the gutter to display:flex and this one has equal
+    // specificity, so the declaration has to win on weight rather than order.
+    > .window-folder__files-splitter {
+      display: none !important;
+    }
+
     > .permission-restricted__ui {
       display: flex;
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      // 512px is the design's width. min() rather than a clamp with a floor:
+      // below ~536px the @container rule at the bottom of this file has
+      // already taken over and drawn the panel full width, so there is no
+      // narrow case left for a floor to catch.
+      width: min(512px, calc(100% - 24px));
+      // 🚨 ABOVE 100, because that is what the FILES PANEL carries. Both are
+      // children of this grid and the panel comes later in the DOM, so source
+      // order alone looked sufficient — but the file grid declares
+      // `position: relative; z-index: 100` and painted straight over an
+      // overlay sitting at 20. Measured in the browser: elementFromPoint at
+      // the panel's centre returned the file list while the panel's own box
+      // reported the right geometry and full opacity, which is the shape this
+      // bug hides in — everything says visible and nothing is.
+      z-index: 120;
       border-radius: 8px;
       border: 1px solid rgba(0, 0, 0, 0.05);
       background: var(--normal-bg-90);
       overflow: hidden;
+      // It floats now, so it needs to read as lifted off the grid behind it.
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     }
   }
 
@@ -2585,8 +2630,10 @@
 
   // The members card enters on the switch, with its loading skeleton inside
   // (permission/restricted skin); its rows fade in when they land.
+  // From the LEFT, because that is the edge it is anchored to now — sliding it
+  // in from the right would have it cross the file grid it sits over.
   &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
-    animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+    animation: window-folder__column-in-from-left 0.2s ease-out backwards;
   }
 
   &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel,
@@ -2686,9 +2733,15 @@
     // then popped in. tasks/index.js _render stamps data-painted; later
     // switches restart the entrance as usual.
     &[data-view="task"] .tasks-panel__ui[data-painted="1"],
-    &[data-view="meeting"] .window-folder__meeting-schedule,
-    &[data-view="access"] > .permission-restricted__ui {
+    &[data-view="meeting"] .window-folder__meeting-schedule {
       animation: window-folder__column-in-from-right 0.2s ease-out backwards;
+    }
+
+    // Split out of the list above: the members panel is anchored to the LEFT
+    // edge now, so it has to enter from that side like the switch animation
+    // does. Everything else in this block still enters from the right.
+    &[data-view="access"] > .permission-restricted__ui {
+      animation: window-folder__column-in-from-left 0.2s ease-out backwards;
     }
   }
 

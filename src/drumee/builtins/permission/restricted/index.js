@@ -78,6 +78,9 @@ class __permission_restricted extends DrumeeMFS {
     });
     this._installChipInput();
     this._loadMembers();
+    // Not awaited and not gated on anything: the card draws without it and
+    // fills the chip in when the answer lands.
+    this._loadSpaceUsage();
   }
 
   /**
@@ -267,6 +270,53 @@ class __permission_restricted extends DrumeeMFS {
     // _loadInvitations checks. Not awaited: the matrix is already on screen and
     // the invitations section fills in behind it rather than holding it back.
     this._loadInvitations();
+  }
+
+  /**
+   * How much this workspace occupies, for the card's storage chip.
+   *
+   * 🚨 hub.show_privilege, NOT hub.get_space_usage. The obvious candidate
+   * answers {total, selected, others, free} and `selected` would be exactly
+   * this workspace's share — but it returns NOTHING on a live endpoint
+   * (measured on drumee.in: undefined, no error), and it has no other caller
+   * in the UI, so nothing was keeping it honest. show_privilege is called on
+   * every panel that shows a matrix and carries `filesize`, the sum over this
+   * hub's media — the same figure, from a path that is exercised.
+   *
+   * Reported as a STRING by the driver, hence the Number() below.
+   *
+   * READ ONCE PER PANEL, not per render: the figure moves when files are
+   * uploaded, not when a member's role changes, and _render runs on every
+   * member push. `_spaceUsed` staying undefined until the first answer is what
+   * keeps the chip out of the card rather than showing a zero.
+   *
+   * 🚨 NEVER THROWS AND NEVER BLOCKS. This service has no other caller in the
+   * UI today, so it is the least exercised thing this panel touches — the
+   * panel must open identically whether it answers, errors or is not routed
+   * at all. A missing chip is a cosmetic loss; a panel that fails to open
+   * because a storage figure could not be read is not.
+   */
+  async _loadSpaceUsage() {
+    if (this._spaceRequested) return;
+    this._spaceRequested = 1;
+    const hub_id = this.mget(_a.hub_id);
+    if (!hub_id) return;
+    let res;
+    try {
+      res = await this.postService(
+        (SERVICE.hub && SERVICE.hub.show_privilege) || "hub.show_privilege",
+        { hub_id },
+      );
+    } catch (e) {
+      this.warn("Failed to read workspace space usage", e);
+      return;
+    }
+    const used = Number(res && res.filesize);
+    // An empty workspace answers 0, and the chip is left off for it — see
+    // workspaceCard. "0 B" beside the member count is noise, not information.
+    if (!Number.isFinite(used)) return;
+    this._spaceUsed = used;
+    this._render();
   }
 
   /**

@@ -387,6 +387,145 @@
     );
   }
 
+  // ── Workspace card ────────────────────────────────────────────
+  // Figma 85:36439 (#1082:81233): a bordered row at the top of the body — the
+  // area-tinted folder shape, the name, and the two figures under it.
+  &__ws-card {
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    gap: 8px;
+    margin: 0 24px;
+    min-width: 0;
+    padding: 8px 16px;
+  }
+
+  // Same recipe as __title-icon, at the card's 40px. folderArt emits a
+  // `.folder-shape` authored at 105x86 with an absolutely positioned `.badge`,
+  // so it needs an explicit box AND a positioned ancestor or the badge anchors
+  // to whatever it finds further up.
+  // 🚨 THE WHOLE __title-icon RECIPE, AT 40px. The first version set only a
+  // 40x40 box and let `.folder-shape` fill it, and the art spilled out of the
+  // card and over the section heading below: folderArt's markup is authored at
+  // 105x86 and carries an absolutely positioned `.badge`, so without sizing
+  // BOTH the wrapper (.media-grid__folder-art) and the shape — and without
+  // pinning the badge — it paints at its intrinsic size wherever it finds a
+  // positioned ancestor. Copied rather than shared because __title-icon's own
+  // note says the same: the switcher geometry is written out per place.
+  &__ws-card-icon {
+    align-items: center;
+    display: flex !important;
+    flex: 0 0 auto;
+    height: 40px;
+    justify-content: center;
+    min-width: 40px;
+    overflow: visible;
+    position: relative;
+    width: 40px;
+
+    .media-grid__folder-art {
+      align-items: center;
+      display: flex;
+      height: 32px;
+      justify-content: center;
+      position: relative;
+      width: 40px;
+    }
+
+    .folder-shape {
+      fill: #885eff;
+      height: 32px;
+      width: 40px;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public { fill: var(--area-public); }
+      &.share,
+      &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+
+    // Same emblem treatment as __title-icon, scaled up — including the
+    // gradient stops, which carry no colour of their own and paint black
+    // without this.
+    .badge {
+      bottom: -4px;
+      color: var(--grid-color-folder-badge);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+      height: 20px !important;
+      left: -4px;
+      position: absolute;
+      width: 20px !important;
+
+      [class^="gradient-start-"] { stop-color: var(--primary-purple-40); }
+      [class^="gradient-end-"] { stop-color: var(--primary-purple-50); }
+      stop.gradient-start-private { stop-color: var(--orange-400); }
+      stop.gradient-end-private { stop-color: var(--orange-600); }
+      stop.gradient-start-share,
+      stop.gradient-end-share { stop-color: var(--area-share, #ffa8dc); }
+    }
+
+    .media-context-menu__folder-trigger {
+      display: none !important;
+    }
+  }
+
+  &__ws-card-text {
+    flex: 1 1 auto;
+    gap: 4px;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  &__ws-card-name {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 500, $color: var(--normal-fg-10));
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__ws-card-stats {
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__ws-stat {
+    align-items: center;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  // The number carries the brand colour and the unit does not — Figma prints
+  // "3.5" in Primary/40 beside a Grey/80 "GB", and the member count the same
+  // way beside its glyph.
+  &__ws-stat-value {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--primary-40));
+    font-weight: 600;
+  }
+
+  &__ws-stat-unit {
+    @include drumee.typo($size: 11px, $line: 16px, $weight: 400, $color: var(--tertiary-grey-80, #84848c));
+  }
+
+  &__ws-stat-ico {
+    color: var(--tertiary-grey-80, #84848c);
+    flex-shrink: 0;
+    height: 14px;
+    width: 14px;
+
+    svg {
+      height: 14px;
+      width: 14px;
+    }
+  }
+
   // ── Invite row ────────────────────────────────────────────────
   &__invite-input-row {
     display: flex;
