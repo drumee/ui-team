@@ -312,3 +312,36 @@ test("a successful save reloads nothing and patches the cache in place", async (
   assert.equal(panel._tasks[0].title, "New");
   assert.equal(panel._tasks[0].priority, "high");
 });
+
+// A peer's push lands in the cache while our calls are in flight.
+function peerPushMidFlight(panel, service, patchOf) {
+  const post = panel.postService;
+  panel.postService = async (args) => {
+    const r = await post(args);
+    if (args.service === service) panel._mergeTask(patchOf(panel._tasks[0]));
+    return r;
+  };
+}
+
+test("a peer's label linked mid-save survives our label merge", async () => {
+  const { panel } = makePanel({ edit: { labels: ["l1", "l2"] } });
+  peerPushMidFlight(panel, "task.link_label", (t) => ({
+    id: t.id,
+    label_ids: [...t.label_ids, "l9"],
+  }));
+  await panel._commitDetail();
+  assert.deepEqual([...panel._tasks[0].label_ids].sort(), ["l1", "l2", "l9"]);
+});
+
+test("a peer's file linked mid-save survives our file merge", async () => {
+  const { panel } = makePanel({
+    now: { ...TASK, linked_files: [] },
+    edit: { pending_files: [{ nid: "n1" }] },
+  });
+  peerPushMidFlight(panel, "task.link_file", (t) => ({
+    id: t.id,
+    linked_files: [...(t.linked_files || []), { task_id: t.id, file_nid: "n9" }],
+  }));
+  await panel._commitDetail();
+  assert.deepEqual(panel._tasks[0].linked_files.map((f) => f.file_nid).sort(), ["n1", "n9"]);
+});

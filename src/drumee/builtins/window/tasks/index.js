@@ -3994,13 +3994,27 @@ class __tasks_panel extends LetcBox {
         this._syncSubtaskBadges(r.parent.id);
       }
     }
+    // Apply to the row as it is NOW, not the `task` read before the awaits:
+    // peer pushes patch the cache in place mid-flight (and _mergeTask swaps
+    // the row object), so the old snapshot would drop a colleague's label or
+    // file that landed meanwhile.
+    const current = () => this._tasks.find((t) => t.id === id) || task;
     const labelOps = results.filter((r) => r.kind === "label");
     if (labelOps.length) {
-      this._mergeTask({ id, label_ids: applyLabelOps(task.label_ids, labelOps) });
+      this._mergeTask({ id, label_ids: applyLabelOps(current().label_ids, labelOps) });
     }
     const fileResults = results.filter((r) => r.kind === "file");
     const files = longestList(fileResults.map((r) => r.list));
-    if (files) this._mergeTask({ id, linked_files: files });
+    if (files) {
+      // Our answers can predate a peer's link: keep any file the cache has
+      // that they don't list.
+      const have = Array.isArray(current().linked_files) ? current().linked_files : [];
+      const ours = new Set(files.map((f) => String(f.file_nid)));
+      this._mergeTask({
+        id,
+        linked_files: [...files, ...have.filter((f) => !ours.has(String(f.file_nid)))],
+      });
+    }
 
     const failed = results.some(
       (r) => (r.kind === "row" && !r.row) ||
