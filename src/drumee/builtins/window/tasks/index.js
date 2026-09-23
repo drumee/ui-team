@@ -5794,11 +5794,17 @@ class __tasks_panel extends LetcBox {
   }
 
   // Whichever task form is open. NOT a drop decision: it answers "is a task
-  // surface open at all", never "where does this land". Its only real consumer
-  // is canAttachExisting's claim breadth.
+  // surface open at all", never "where does this land". canAttachExisting reads
+  // it for claim breadth, and _positionlessScope hands it to
+  // attachExistingNodes ("Link to task tracker", desk drops), which resolves the
+  // draft through _scopeKey — so it must carry `key` like a resolveZone result.
   _formUploadScope() {
-    if (this._creating && this._createDefaults) return { scope: "create" };
-    if (this._detailId && this._detailDraft) return { scope: "detail" };
+    if (this._creating && this._createDefaults) {
+      return { scope: "create", key: "create" };
+    }
+    if (this._detailId && this._detailDraft) {
+      return { scope: "detail", key: "detail" };
+    }
     return null;
   }
 
