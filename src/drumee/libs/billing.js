@@ -200,36 +200,6 @@ function nextPlan(plan) {
   return Object.keys(PLAN_RANK).find((k) => PLAN_RANK[k] === next) || null;
 }
 
-/**
- * The plan a seat-limit Upgrade button sells: the tier directly above the
- * caller's, but only when the billing page can check it out (free has nothing
- * to buy, sovereign is not self-serve). Null when there is no such tier; the
- * button then falls back to the plain "Upgrade" that opens the plans page.
- */
-const SELF_SERVE_PLANS = { pro: 1, team: 1, business: 1 };
-function seatUpgradeTarget() {
-  const next = nextPlan();
-  return next && SELF_SERVE_PLANS[next] ? next : null;
-}
-
-/** "Upgrade to Business" (UN_CTA, shared with the upgrade nudge), or "Upgrade". */
-function seatUpgradeLabel() {
-  const target = seatUpgradeTarget();
-  if (!target) return LOCALE.UPGRADE || "Upgrade";
-  return (LOCALE.UN_CTA || "Upgrade to {0}").format(planLabel(target));
-}
-
-/**
- * The desk:open-billing-page options behind that button: straight into the
- * checkout of the target plan (the same deep link #/desk/billing carries),
- * or the plain upgrade intent when there is no target. The billing page steps
- * the checkout tab back down on its own when the account is not eligible.
- */
-function seatUpgradeRoute() {
-  const target = seatUpgradeTarget();
-  return target ? { plan: target, tab: "checkout" } : { intent: "upgrade" };
-}
-
 /** Does this plan sit on a paid tier? */
 function isPaidPlan(plan) {
   return planKey(plan) !== "free";
@@ -464,7 +434,7 @@ function seatLimitMessage(res = {}) {
   const count = seat > 0 ? ` (${used}/${seat})` : "";
   const next = canUpgradePlan()
     ? (LOCALE.QX_SEAT_BODY
-      || "You have used every seat in your Team plan. Invitations that have not been accepted yet still hold a seat. Cancel a pending invitation, remove a member, or upgrade to a higher plan to invite more.")
+      || "You can not invite more members because you have reached limit of team plan. Upgrade to a higher plan now to invite more members.")
     : (LOCALE.QX_ASK_OWNER
       || "Ask your workspace owner to review the organisation's plan.");
   return `${title}${count}. ${next}`;
@@ -710,9 +680,6 @@ module.exports = {
   planLabel,
   planRank,
   nextPlan,
-  seatUpgradeTarget,
-  seatUpgradeLabel,
-  seatUpgradeRoute,
   isPaidPlan,
   isFreeSoloPlan,
   isOrgSeatLimitReached,

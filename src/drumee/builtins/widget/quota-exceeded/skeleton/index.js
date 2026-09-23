@@ -1,4 +1,4 @@
-const { canUpgradePlan, seatUpgradeLabel } = require("libs/billing");
+const { canUpgradePlan } = require("libs/billing");
 const { filesize } = require("@drumee/ui-essentials");
 
 /**
@@ -77,7 +77,7 @@ const LIMITS = {
         ? (LOCALE.QX_SEAT_BODY_FREE
           || "The Free plan is for one person only. Upgrade to invite other members.")
         : (LOCALE.QX_SEAT_BODY
-          || "You have used every seat in your Team plan. Invitations that have not been accepted yet still hold a seat. Cancel a pending invitation, remove a member, or upgrade to a higher plan to invite more."),
+          || "You can not invite more members because you have reached limit of team plan. Upgrade to a higher plan now to invite more members."),
     // Freeing a seat is only a move when seats exist — on Free there is
     // nothing to remove, the plan itself is the limit.
     makeRoom: (opt = {}) =>
@@ -178,10 +178,8 @@ module.exports = function (ui, opt = {}) {
     footer.push(
       Skeletons.Note({
         className: `${fig}__btn ${fig}__btn--primary`,
-        // Seat: name the tier the click buys ("Upgrade to Business") — the
-        // button is the checkout trigger, so it says what it is about to do.
         content: isSeat
-          ? seatUpgradeLabel()
+          ? (LOCALE.UPGRADE || "Upgrade")
           : (LOCALE.QX_SEE_PLANS || LOCALE.UPGRADE_PLAN_MENU || "See plans"),
         service: "upgrade-plan",
         uiHandler: [ui],

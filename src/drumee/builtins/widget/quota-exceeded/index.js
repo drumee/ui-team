@@ -6,7 +6,7 @@
  * rule; this file is only the shell and the two service handlers.
  */
 const skeleton = require("./skeleton");
-const { canUpgradePlan, seatUpgradeRoute } = require("libs/billing");
+const { canUpgradePlan } = require("libs/billing");
 
 class __quota_exceeded extends LetcBox {
   static initClass() {
@@ -72,12 +72,7 @@ class __quota_exceeded extends LetcBox {
       // would sit over the billing page it just navigated to, and go on
       // swallowing every click on it.
       if (typeof Wm !== "undefined" && Wm.closeQuotaExceeded) Wm.closeQuotaExceeded();
-      // Seat limit: land in the checkout of the next tier, like the upgrade
-      // nudge's CTA. Other limits keep opening the plans page.
-      RADIO_BROADCAST.trigger(
-        "desk:open-billing-page",
-        this.mget("limit") === "seat" ? seatUpgradeRoute() : { intent: "upgrade" },
-      );
+      RADIO_BROADCAST.trigger("desk:open-billing-page", { intent: "upgrade" });
       return;
     }
 
