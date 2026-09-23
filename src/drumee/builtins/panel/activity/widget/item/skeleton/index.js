@@ -961,8 +961,34 @@ module.exports = function (ui) {
   // the click (the same e.stopPropagation() the day-header note above relies
   // on) and pressing Accept cannot also fire the text block's own service and
   // navigate away underneath the answer.
+  //
+  // 🚨 AND KEYED ON THE STATUS WHEN THERE IS ONE. Answering an invitation only
+  // dismisses its row — it stays in the history, token and all — so keying on
+  // the token alone brought a declined invitation back from the refresh with
+  // both buttons live: Decline then did nothing and Accept reported an invalid
+  // link. The feed stamps `invite_status` from the token itself, and anything
+  // but `pending` gets a quiet label in place of the buttons. A row WITHOUT the
+  // field (the lookup was skipped or failed server-side) keeps the old
+  // token-only behaviour, so this can never hide an invitation that is still
+  // answerable.
   const inviteToken = category === 'hub_invite' ? (data.invite_token || '') : '';
-  const answer = inviteToken
+  const inviteStatus = inviteToken ? (data.invite_status || '') : '';
+  const INVITE_STATUS_LABEL = {
+    accepted: LOCALE.INVITE_STATUS_ACCEPTED,
+    declined: LOCALE.DECLINED,
+    expired: LOCALE.INVITE_STATUS_UNAVAILABLE,
+    invalid: LOCALE.INVITE_STATUS_UNAVAILABLE,
+  };
+  const answered = inviteStatus && inviteStatus !== 'pending';
+  const answer = answered
+    ? Skeletons.Note({
+      className: `${pfx}__answer-status`,
+      // An unknown future value still hides the buttons — it is not `pending`
+      // — and reads as "no longer valid" rather than rendering blank.
+      content: INVITE_STATUS_LABEL[inviteStatus] || LOCALE.INVITE_STATUS_UNAVAILABLE,
+      dataset: { status: inviteStatus },
+    })
+    : inviteToken
     ? Skeletons.Box.X({
       className: `${pfx}__answer`,
       kids: [

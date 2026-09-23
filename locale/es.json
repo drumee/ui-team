@@ -3003,6 +3003,8 @@
   "ALLOW_IN_SYSTEM_LINUX": "Comprueba que los ajustes de sonido y privacidad de tu escritorio permitan a tu navegador usar el {0}.",
   "ALLOW_IN_SYSTEM_GENERIC": "Comprueba que tu sistema operativo permita a tu navegador usar el {0}.",
   "DECLINED": "Rechazada",
+  "INVITE_STATUS_ACCEPTED": "Aceptada",
+  "INVITE_STATUS_UNAVAILABLE": "Invitación ya no válida",
   "PENDING_INVITATIONS": "Invitaciones pendientes",
   "PENDING_INVITATIONS_HINT": "Los miembros invitados aparecerán aquí hasta que respondan.",
   "INVITE_MEMBER_TO_WORKSPACE": "Invitar a un miembro al espacio de trabajo",

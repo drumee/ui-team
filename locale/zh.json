@@ -3002,6 +3002,8 @@
   "ALLOW_IN_SYSTEM_LINUX": "请检查桌面的声音和隐私设置是否允许浏览器使用{0}。",
   "ALLOW_IN_SYSTEM_GENERIC": "请检查操作系统是否允许浏览器使用{0}。",
   "DECLINED": "已婉拒",
+  "INVITE_STATUS_ACCEPTED": "已接受",
+  "INVITE_STATUS_UNAVAILABLE": "邀请已失效",
   "PENDING_INVITATIONS": "待处理邀请",
   "PENDING_INVITATIONS_HINT": "受邀成员在回复前会显示在此处。",
   "INVITE_MEMBER_TO_WORKSPACE": "邀请成员加入工作空间",

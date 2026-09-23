@@ -287,6 +287,14 @@
     margin-top: 4px;
   }
 
+  // What replaces the two buttons once the invitation has been answered (or
+  // can no longer be). Deliberately quiet — same grey as the timestamp — since
+  // it is a record, not something to act on.
+  &__answer-status {
+    @include drumee.typo($size: 13px, $weight: 500, $line: 1.4em, $color: var(--tertiary-grey-80));
+    margin-top: 4px;
+  }
+
   // 🚨 typo() TAKES $weight: 500 HERE AND font-weight IS SET SEPARATELY.
   // The mixin has no 600 branch and emits NOTHING for an unknown weight — not
   // even font-family — so `$weight: 600` would drop these buttons to the
@@ -353,7 +361,8 @@ html[data-theme="dark"] {
     }
 
     &__day,
-    &__time {
+    &__time,
+    &__answer-status {
       color: var(--normal-fg-50);
     }
 
