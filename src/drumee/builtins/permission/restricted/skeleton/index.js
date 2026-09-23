@@ -752,6 +752,8 @@ function workspaceCard(ui, pfx, memberCount) {
           content: LOCALE.SEND_INVITATION,
           service: "send-invitation",
           uiHandler: [ui],
+          // Busy while hub.invite is in flight — see _setInviteSending.
+          dataset: ui._inviteSending ? { pending: "1" } : undefined,
         }),
       ],
     })

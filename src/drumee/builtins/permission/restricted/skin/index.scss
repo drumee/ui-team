@@ -760,8 +760,9 @@
       $color: var(--white)
     );
 
-    // In flight (index.js sets data-pending on the clicked element and deletes
-    // it in its finally, so this covers both success and failure).
+    // In flight (index.js _setInviteSending, and the skeleton from the same
+    // state, so a re-render mid-send keeps it; cleared in the send's finally,
+    // so this covers both success and failure).
     // pointer-events:none is the actual disable; the spinner is the signal.
     &[data-pending="1"] {
       cursor: progress;

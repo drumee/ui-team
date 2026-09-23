@@ -390,17 +390,30 @@ class __permission_restricted extends DrumeeMFS {
    * set a role (hub.set_privilege) or removed members (hub.delete_contributor).
    * Both used to push only to the member being changed, so this matrix kept
    * the old role, or the removed member, until the panel was reopened.
+   *
+   * `hub.invitations_changed` is the Pending Invitations section's own: an
+   * invitation was accepted or declined (server _closeInvitation).
    */
   _onWsEvent(args = {}) {
     const { data, options } = args || {};
     const service = options && options.service;
-    if (service !== "hub.member_joined" && service !== "hub.members_changed") {
+    if (
+      service !== "hub.member_joined"
+      && service !== "hub.members_changed"
+      && service !== "hub.invitations_changed"
+    ) {
       return;
     }
     const hub_id = this.mget(_a.hub_id);
     if (!hub_id) return;
     // Several panels can be open on different workspaces — only ours reacts.
     if (data && data.hub_id && `${data.hub_id}` !== `${hub_id}`) return;
+    // An invitation was ANSWERED (hub.accept_invite / hub.decline_invite). A
+    // decline changes no membership, so nothing else would tell this panel —
+    // its Pending line kept saying Pending until it was reopened. Only the
+    // invitations are re-read: the member list did not move, and an accept
+    // that did add somebody also sends hub.member_joined, which reloads both.
+    if (service === "hub.invitations_changed") return this._loadInvitations();
     this._loadMembers();
   }
 
@@ -872,6 +885,14 @@ class __permission_restricted extends DrumeeMFS {
    * Duy approved this route 2026-09-08.
    */
   _sendInvitation(cmd) {
+    // ONE SEND AT A TIME, guarded on STATE. hub.invite answers only once the
+    // mail relay has taken every message (~5-7 s measured on stage), and the
+    // guard used to be a data-pending flag on the clicked element — but the
+    // chip commit just below re-feeds the whole skeleton, so that element was
+    // gone before the request even left. The spinner never showed, the panel
+    // looked idle with the address sitting in a chip, and a second press sent
+    // the same invitations again.
+    if (this._inviteSending) return;
     // WHATEVER IS STILL TYPED COUNTS. Somebody who enters one address and
     // presses Send never made a chip out of it, and losing it because they did
     // not press Enter first would be the worst possible reading of "multiple
@@ -892,9 +913,7 @@ class __permission_restricted extends DrumeeMFS {
     this._setInviteError();
 
     const privilege = this._inviteRole?.privilege || _K.privilege.write;
-    const btn = cmd?.el;
-    if (btn?.dataset.pending === "1") return;
-    if (btn) btn.dataset.pending = "1";
+    this._setInviteSending(true);
 
     return this.postService(SERVICE.hub.invite, {
       hub_id: this.mget(_a.hub_id),
@@ -974,9 +993,21 @@ class __permission_restricted extends DrumeeMFS {
       .catch((e) =>
         this._setInviteError(e?.reason || e?.error || LOCALE.TRY_AGAIN),
       )
-      .finally(() => {
-        if (btn) delete btn.dataset.pending;
-      });
+      .finally(() => this._setInviteSending(false));
+  }
+
+  /**
+   * Flip the in-flight state of the Send button. Kept on the widget, and read
+   * by the skeleton, so a re-render during the send (the chip commit, a
+   * member push) redraws the button still busy; the DOM write here only
+   * covers the button already on screen.
+   */
+  _setInviteSending(on) {
+    this._inviteSending = !!on;
+    const el = this.getPart?.("invite-send")?.el;
+    if (!el || !el.dataset) return;
+    if (on) el.dataset.pending = "1";
+    else delete el.dataset.pending;
   }
 
   /**
