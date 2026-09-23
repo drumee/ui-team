@@ -2806,6 +2806,7 @@
   "DOCS": "Documentos",
   "PDF": "PDF",
   "IMAGES": "Imágenes",
+  "MEDIA": "Multimedia",
   "FILES_HERO_TITLE": "El chat vive en los archivos. Sin pérdida de contexto.",
   "FILES_HERO_DESC": "Cada archivo aquí vive dentro de una conversación. Comenta, comparte contexto y mantén las decisiones unidas al trabajo, sin rebuscar en otra aplicación por qué cambió un archivo.",
   "MIGRATE_STEP_SHARE_ADDRESS": "1. En Google Drive, comparte la carpeta o el archivo con esta dirección (basta con acceso de Lector):",

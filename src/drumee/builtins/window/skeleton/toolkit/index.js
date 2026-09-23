@@ -1117,7 +1117,7 @@ export function fileTypeFilterBar(ui) {
     { label: LOCALE.ALL, value: "all" },
     { label: LOCALE.DOCS, value: "docs" },
     { label: LOCALE.PDF, value: "pdf" },
-    { label: LOCALE.IMAGES, value: "image" },
+    { label: LOCALE.MEDIA, value: "image" },
     { label: LOCALE.OTHER, value: "other" },
   ];
   // Which tab is lit comes from the WINDOW, never from the tab's position.
