@@ -4,6 +4,7 @@
  * (libs/contact-lookup → contact.lookup) + hub.invite APIs.
  */
 const { lookupContacts, suggestionRows } = require("libs/contact-lookup");
+const { isSeatLimitReply, showSeatLimitReached } = require("libs/billing");
 const skeletonModule = require("./skeleton");
 const { ROLES, DEFAULT_ROLE_IDS, computePrivilege, summarizeRoles } =
   skeletonModule;
@@ -788,6 +789,17 @@ class __invite_popup extends LetcBox {
               LOCALE.TRY_AGAIN,
           );
           if (this._sendBtn) delete this._sendBtn.el.dataset.loading;
+          return;
+        }
+        // Refused for want of seats. That reply carries no `results`, so the
+        // branch below counted zero failures and announced the invitation as
+        // sent — nothing was granted and no mail left. Say so with the seat
+        // card. The popup goes first: both live in the wrapper-modal and the
+        // card would replace it anyway.
+        if (results.some(isSeatLimitReply)) {
+          if (this._sendBtn) delete this._sendBtn.el.dataset.loading;
+          this._closePopup();
+          showSeatLimitReached();
           return;
         }
         const flat = [].concat(...results.map((r) => (r && r.results) || []));

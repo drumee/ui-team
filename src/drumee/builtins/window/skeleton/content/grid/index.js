@@ -62,7 +62,7 @@ const __media_skl_grid = function (ui) {
     { label: LOCALE.ALL, value: "all" },
     { label: LOCALE.DOCS, value: "docs" },
     { label: LOCALE.PDF, value: "pdf" },
-    { label: LOCALE.IMAGES, value: "image" },
+    { label: LOCALE.MEDIA, value: "image" },
     { label: LOCALE.OTHER, value: "other" },
   ];
 

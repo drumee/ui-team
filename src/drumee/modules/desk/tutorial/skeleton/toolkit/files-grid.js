@@ -57,7 +57,7 @@ function toolbar(ui) {
           chip(LOCALE.ALL, true),
           chip(LOCALE.DOCS),
           chip(LOCALE.PDF),
-          chip(LOCALE.IMAGES),
+          chip(LOCALE.MEDIA),
           chip(LOCALE.OTHER),
         ],
       }),

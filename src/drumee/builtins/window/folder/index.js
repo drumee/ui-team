@@ -8,7 +8,11 @@ const {
   nextGroupViewState,
 } = require("../skeleton/toolkit/file-group");
 
-const { overMeetingCap } = require("libs/billing");
+const {
+  overMeetingCap,
+  isSeatLimitReply,
+  showSeatLimitReached,
+} = require("libs/billing");
 const readCache = require("libs/read-cache");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
@@ -6680,6 +6684,10 @@ class __window_folder extends mfsInteract {
         if (res && (res.error || res.error_code)) {
           return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
         }
+        // Refused for want of seats: no `results`, which the check below read
+        // as sent. Nothing was granted, so no member refresh and no toast —
+        // the seat card instead (this window is not in the wrapper-modal).
+        if (isSeatLimitReply(res)) return showSeatLimitReached();
         const r = (res && res.results && res.results[0]) || {};
         if (r.status === "failed") {
           return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
