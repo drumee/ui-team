@@ -1,7 +1,8 @@
 // src/drumee/builtins/media/bundle/job.js
 // Recursive orchestrator for one bundle. Extends LetcBox to inherit postService;
 // binds uploadFile from ui-essentials. Sequential: one file/make_dir at a time.
-// Emits via Backbone events: "progress" | "file-done" | "folder-created" | "error" | "done".
+// Emits via Backbone events: "progress" | "file-done" | "folder-created" | "error" | "done"
+// | "paused" | "resumed" (chunked upload waiting for the network).
 const { uploadFile } = require("@drumee/ui-essentials");
 const { chunkedUpload, isChunkable } = require("media/chunked");
 
@@ -226,13 +227,15 @@ class __bundle_job extends LetcBox {
   onUploadProgress(e) {
     if (!this._current || !e.lengthComputable) return;
     this._armWatchdog(this._current.entry);   // activity → keep this file alive
+    // High-water mark: a chunked upload that paused re-sends the bytes that
+    // were in flight, so `loaded` drops and climbs again. Count each byte once
+    // or the aggregate reads 168 MB of a 136 MB file.
     const delta = e.loaded - this._current.loaded;
+    if (delta <= 0) return;
     this._current.loaded = e.loaded;
-    if (delta > 0) {
-      this.bytesDone += delta;
-      if (this._governor) this._governor.report(delta);
-      this.trigger("progress", { job: this, entry: this._current.entry, loaded: e.loaded, total: e.total });
-    }
+    this.bytesDone += delta;
+    if (this._governor) this._governor.report(delta);
+    this.trigger("progress", { job: this, entry: this._current.entry, loaded: e.loaded, total: e.total });
   }
 
   onUploadResponse(data) {
@@ -286,6 +289,31 @@ class __bundle_job extends LetcBox {
     if (!this._canceled) entry.status = "skipped";
     this._current = null; this._currentXhr = null;
     resolve();
+  }
+
+  // ---- chunked-upload pause hooks (link or gateway down) ----
+  onUploadPaused(e) {
+    if (!this._current) return;
+    this._clearWatchdog();                 // no bytes are expected while paused
+    const { entry } = this._current;
+    entry.status = "paused";
+    entry.pauseReason = (e && e.reason) || "network";
+    this.trigger("paused", { job: this, entry, reason: entry.pauseReason });
+  }
+
+  onUploadResumed() {
+    if (!this._current) return;
+    const { entry } = this._current;
+    entry.status = "uploading";
+    entry.pauseReason = null;
+    this._armWatchdog(entry);
+    this.trigger("resumed", { job: this, entry });
+  }
+
+  /** Resume button: ask the paused in-flight upload to try again now. */
+  resumeCurrent() {
+    const h = this._currentXhr;
+    if (h && typeof h.resume === "function") h.resume();
   }
 
   _failOrResolve(entry, e) {
