@@ -10,6 +10,7 @@ const {
   advanceBase,
   settlePendingFiles,
 } = require("./detail-commit");
+const { restoreScroll } = require("./scroll-restore");
 const {
   markerRe,
   contentTokenRe,
@@ -9205,14 +9206,13 @@ class __tasks_panel extends LetcBox {
     // (sync + next frame as a safety net for late-mount children).
     this._prepopulateInputs();
     this._renderCommentBodies();
-    // Restore synchronously to avoid a visible jump, then again next frame in
-    // case the rebuilt content only reaches full scrollHeight after layout.
+    // Restores now, and keeps retrying until the rebuilt content is tall
+    // enough to take the offset (see _restoreViewScroll).
     this._restoreViewScroll(savedScroll);
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(() => {
         this._prepopulateInputs();
         this._renderCommentBodies();
-        this._restoreViewScroll(savedScroll);
       });
     }
 
@@ -9369,10 +9369,8 @@ class __tasks_panel extends LetcBox {
       // render rather than silently leaving a stale view on screen.
       if (!node) return this._render();
       host.feed(node.kids);
+      // Retries per frame until the rebuilt columns can take the offsets.
       this._restoreViewScroll(savedScroll);
-      if (typeof requestAnimationFrame === "function") {
-        requestAnimationFrame(() => this._restoreViewScroll(savedScroll));
-      }
     });
   }
 
@@ -9457,17 +9455,45 @@ class __tasks_panel extends LetcBox {
     return saved;
   }
 
-  // Reapply offsets captured by _captureViewScroll. Best-effort: a container
-  // that no longer exists (view switched, column deleted) is simply skipped.
+  // Reapply offsets captured by _captureViewScroll, retrying once per frame
+  // until each one sticks. A rebuilt column's cards reach full height a few
+  // frames after feed(); restoring only then-and-next-frame hit a column still
+  // scrollHeight == clientHeight, which clamped the offset to 0 and threw the
+  // user back to the first card after every create / Update (stage probe,
+  // 2026-09-23). A container that no longer exists (view switched, column
+  // deleted) simply never matches and times out.
+  //
+  // A newer restore supersedes an older one, and any user input cancels the
+  // retry so it never fights a scroll the user started.
   _restoreViewScroll(saved) {
     if (!this.el || !saved || !saved.length) return;
-    for (const { selector, top, left } of saved) {
-      const node = this.el.querySelector(selector);
-      if (!node) continue;
-      if (top) node.scrollTop = top;
-      if (left) node.scrollLeft = left;
+    this._installScrollRestoreCancel();
+    const gen = (this._scrollRestoreGen = (this._scrollRestoreGen || 0) + 1);
+    restoreScroll(saved, {
+      find: (sel) => (this.el ? this.el.querySelector(sel) : null),
+      raf:
+        typeof requestAnimationFrame === "function"
+          ? (fn) => requestAnimationFrame(fn)
+          : null,
+      now: () => Date.now(),
+      isCancelled: () =>
+        gen !== this._scrollRestoreGen ||
+        !!(this.isDestroyed && this.isDestroyed()),
+    });
+  }
+
+  // The user taking over (wheel, touch, click, key) ends a pending restore.
+  _installScrollRestoreCancel() {
+    if (this._scrollRestoreCancelBound || !this.el) return;
+    this._scrollRestoreCancelBound = 1;
+    const cancel = () => {
+      this._scrollRestoreGen = (this._scrollRestoreGen || 0) + 1;
+    };
+    for (const ev of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+      this.el.addEventListener(ev, cancel, { capture: true, passive: true });
     }
   }
+
 
   // ── Skeleton accessors ─────────────────────────────────────────
   /**
