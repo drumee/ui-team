@@ -1,4 +1,4 @@
-const { canUpgradePlan } = require("libs/billing");
+const { canUpgradePlan, seatUpgradeLabel } = require("libs/billing");
 const { filesize } = require("@drumee/ui-essentials");
 
 /**
@@ -178,8 +178,10 @@ module.exports = function (ui, opt = {}) {
     footer.push(
       Skeletons.Note({
         className: `${fig}__btn ${fig}__btn--primary`,
+        // Seat: name the tier the click buys ("Upgrade to Business") — the
+        // button is the checkout trigger, so it says what it is about to do.
         content: isSeat
-          ? (LOCALE.UPGRADE || "Upgrade")
+          ? seatUpgradeLabel()
           : (LOCALE.QX_SEE_PLANS || LOCALE.UPGRADE_PLAN_MENU || "See plans"),
         service: "upgrade-plan",
         uiHandler: [ui],
