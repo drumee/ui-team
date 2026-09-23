@@ -2574,7 +2574,10 @@
       z-index: 120;
       border-radius: 8px;
       border: 1px solid rgba(0, 0, 0, 0.05);
-      background: var(--normal-bg-90);
+      // Grey/white in the frame, and the same token the panel's own __main
+      // uses — the two must not disagree or the 1px border shows a seam
+      // between the root's fill and the content's.
+      background: var(--normal-bg-elevated, #fff);
       overflow: hidden;
       // It floats now, so it needs to read as lifted off the grid behind it.
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);

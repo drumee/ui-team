@@ -409,7 +409,7 @@ module.exports = function (ui) {
  * They are dropped together for that reason: a glyph without its name is not a
  * degraded answer, it is a different and worse one.
  */
-function workspaceTab(ui, pfx) {
+function workspaceTab(ui, pfx, cardShown) {
   const media = ui.mget(_a.media);
   const read = (k) => {
     const fromMedia = media && _.isFunction(media.mget) ? media.mget(k) : null;
@@ -419,7 +419,17 @@ function workspaceTab(ui, pfx) {
     read(_a.filename) || read("hub_name") || read(_a.name) || "";
   const area = read(_a.area) || _a.private;
 
-  const workspace = !filename
+  // 🚨 NOT WHEN THE CARD IS SHOWING. The card below names the workspace with
+  // the same glyph and the same name, and Figma 85:36439 heads the panel with
+  // the title ALONE for that reason — repeating it here says the workspace
+  // twice in the first 80px of the panel.
+  //
+  // Still drawn when there is no card, which is the same condition the card
+  // itself drops out on (no resolvable name is impossible — if the name is
+  // missing the card is gone AND this list is empty). So the pair is: card
+  // present -> plain heading; card absent -> the heading with whatever the
+  // header can resolve, exactly as before the card existed.
+  const workspace = (!filename || cardShown)
     ? []
     : [
       // Element + content, not Image.Svg + ico: media/grid/template/folder
@@ -587,7 +597,11 @@ function workspaceCard(ui, pfx, memberCount) {
   });
 }
 
-const header = Skeletons.Box.X({
+// The workspace card, built here so the header below can ask whether it exists
+  // before deciding to name the workspace a second time.
+  const wsCard = workspaceCard(ui, pfx, members.length);
+
+  const header = Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
       Skeletons.Box.Y({
@@ -605,12 +619,13 @@ const header = Skeletons.Box.X({
           // off the edge instead of ellipsising.
           Skeletons.Box.X({
             className: `${pfx}__title-row`,
-            kids: [workspaceTab(ui, pfx)],
+            kids: [workspaceTab(ui, pfx, !!wsCard)],
           }),
-          Skeletons.Note({
-            className: `${pfx}__subtitle`,
-            content: LOCALE.MANAGE_FOLDER_PERMISSIONS,
-          }),
+          // NO SUBTITLE. Figma 85:36439 heads the panel with the title alone.
+          // "Manage folder permissions" restated what the heading and the
+          // sections below already say, and it is the workspace CARD that now
+          // answers the question it was really standing in for — which
+          // workspace this is about.
         ],
       }),
       // Drawn in both modes. In the drawer it slides the panel out; in column
@@ -831,11 +846,9 @@ const header = Skeletons.Box.X({
   const body = Skeletons.Box.Y({
     className: `${pfx}__body`,
     kids: [
-      // The workspace itself, first — see workspaceCard. Null when there is no
-      // name to put on it, which is also when the header title keeps the glyph
-      // and name it has always carried, so the panel never loses the subject
-      // entirely.
-      workspaceCard(ui, pfx, members.length),
+      // Built above the header (see `wsCard`) because the header asks whether
+      // it exists before deciding to name the workspace itself.
+      wsCard,
       inviteSection,
       invitationsSection,
       membersSection,

@@ -89,10 +89,19 @@
     box-sizing: border-box;
     position: relative;
     overflow: hidden;
-    background: var(--normal-bg-90);
+    // Figma fills the panel Grey/white (#FFFFFF). --normal-bg-elevated is the
+    // repo's white-card token — the one the folder skin's own cards use — so
+    // this tracks dark mode instead of pinning a literal. It was
+    // --normal-bg-90 (#f2f2f7), a grey that read as a different material from
+    // the white file card beside it.
+    background: var(--normal-bg-elevated, #fff);
   }
 
   // ── Header (pinned, with divider) ─────────────────────────────
+  // Figma 85:36439 has NO divider and no second line here: the panel is one
+  // 12px-padded column and the heading is simply its first item. The header
+  // stays a pinned row only because this panel scrolls and the static frame
+  // does not — the close button has to stay reachable.
   &__header {
     display: flex;
     flex-direction: row;
@@ -100,10 +109,8 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    min-height: 65px;
-    padding: 16px 24px 17px;
+    padding: 12px 12px 0;
     box-sizing: border-box;
-    border-bottom: 1px solid var(--border-default);
   }
 
   &__header-text {
@@ -302,6 +309,9 @@
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
+    // 24px between sections and a 12px gutter — the frame's own column gap and
+    // padding. The gutter was 24px, inherited from the 360px dock where it was
+    // right; at 512px it wasted a tenth of the panel on each side.
     gap: 24px;
     padding: 24px 0;
     box-sizing: border-box;
@@ -352,7 +362,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: 0 24px;
+    padding: 0 12px;
     box-sizing: border-box;
   }
 
@@ -378,13 +388,19 @@
   // drops it the same way, so both panels inherit the same weight from their
   // context. Declaring 600 outright here would render this panel bolder than
   // the one it is matching.
+  // Figma 85:36439 heads every section with Buttons/Large Button — Geist
+  // SemiBold 18/1.2em, the SAME ramp as the panel title. They were 12px, the
+  // folder Settings panel's small caps-ish label, which read as fine print
+  // beside a 512px panel and made the three sections look like one list with
+  // dividers instead of three.
+  //
+  // 🚨 $weight 500, with font-weight declared: drumee.typo has no 600 branch
+  // and emits NOTHING for an unknown weight — not even font-family — so
+  // passing 600 there drops the heading to the browser default serif. Same
+  // trap the panel title's own note records.
   &__section-title {
-    @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
-      $weight: 600,
-      $color: var(--normal-fg-10)
-    );
+    @include drumee.typo($size: 18px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
+    font-weight: 600;
   }
 
   // ── Workspace card ────────────────────────────────────────────
@@ -395,7 +411,7 @@
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 12px;
     gap: 8px;
-    margin: 0 24px;
+    margin: 0 12px;
     min-width: 0;
     padding: 8px 16px;
   }
@@ -478,7 +494,7 @@
   }
 
   &__ws-card-name {
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 500, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 16px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
     font-weight: 600;
     min-width: 0;
     overflow: hidden;
@@ -527,19 +543,23 @@
   }
 
   // ── Invite row ────────────────────────────────────────────────
+  // 🚨 AN UNDERLINE, NOT A BOX. Figma draws the address field as a single
+  // bottom rule in Grey/70 over the panel's own surface
+  // (strokeWeight "0px 0px 1px", padding 8px 0 4px). It was a filled white
+  // rounded box, which was invisible once the panel surface itself became
+  // white — a white box on white, announced only by its shadowless corners.
+  //
+  // The rule belongs to the FIELD, not to this row: the role pill sits beside
+  // it and must not be underlined too.
   &__invite-input-row {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 12px;
     position: relative;
     z-index: 1200;
     width: 100%;
-    min-height: 46px;
-    padding: 12px;
     box-sizing: border-box;
-    border-radius: 4px;
-    background: #ffffff;
     overflow: visible;
   }
 
@@ -552,11 +572,13 @@
   // so the framework sets the display and direction (repo rule), but it has no
   // opinion about wrapping.
   &__invite-field {
+    align-items: center;
+    border-bottom: 1px solid var(--tertiary-grey-70);
     flex: 1 1 auto;
     flex-wrap: wrap;
-    align-items: center;
     gap: 6px;
     min-width: 0;
+    padding: 8px 0 4px;
   }
 
   &__invite-chip {
@@ -996,9 +1018,12 @@
   // ── Pending invitations ───────────────────────────────────────
   // The section's own sub-line ("Invited members will appear here until they
   // respond"). Grey/80 at Body/Small Body, sitting under the heading.
+  // Body/Small Body (14/1.4em) on Grey/80 — #65656c is exactly
+  // --tertiary-grey-80. The negative margin pulls it under its heading so the
+  // pair reads as one block inside the section's 16px rhythm.
   &__section-hint {
-    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--tertiary-grey-80, #84848c));
-    margin-top: -4px;
+    @include drumee.typo($size: 14px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80));
+    margin-top: -8px;
   }
 
   // Deliberately the same geometry as __member-row — the two lists are the two
@@ -1059,14 +1084,20 @@
     gap: 4px;
     padding: 3px 10px 3px 8px;
 
+    // Figma's own pairs, to the value: Overlay/Orange rgba(232,161,59,.15)
+    // over Signal/Warning #E8A13B, and Overlay/red rgba(255,106,101,.15) over
+    // Signal/Error #D74E49. --signal-error already IS #d74e49; there is no
+    // --signal-warning token in revamp.scss, so that one is written out with
+    // the Figma value rather than borrowed from --orange-*, which is a
+    // different, redder amber.
     &[data-status="pending"] {
-      background: rgba(250, 133, 64, 0.12);
-      color: var(--signal-warning, #fa8540);
+      background: rgba(232, 161, 59, 0.15);
+      color: #e8a13b;
     }
 
     &[data-status="declined"] {
-      background: rgba(255, 98, 101, 0.12);
-      color: var(--signal-error, #ff6265);
+      background: rgba(255, 106, 101, 0.15);
+      color: var(--signal-error);
     }
   }
 
