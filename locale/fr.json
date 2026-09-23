@@ -328,6 +328,8 @@
   "RENAME": "Renommer",
   "REPLACE": "Remplacer",
   "RETRY": "Réessayer",
+  "RESUME": "Reprendre",
+  "UPLOAD_PAUSED": "Import en pause - en attente du réseau",
   "REQUIRE_EMAIL": "Une adresse E-mail valide est requise",
   "REQUIRE_IDENT": "Alphanumérique, au moins 2 caractères",
   "REQUIRE_THAT_FIELD": "{0} requis",
