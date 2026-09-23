@@ -5,6 +5,12 @@ const readCache = require("libs/read-cache");
 const { resolveZone } = require("./drop-zones");
 const { rowOf, ownedPatch, applyLabelOps, longestList, peerPatch } = require("./live-sync");
 const {
+  snapshotTask,
+  planDetailCommit,
+  advanceBase,
+  settlePendingFiles,
+} = require("./detail-commit");
+const {
   markerRe,
   contentTokenRe,
   imgMarker,
@@ -253,6 +259,7 @@ class __tasks_panel extends LetcBox {
     this._closingTimer = null;
     this._detailId = null;
     this._detailDraft = null;
+    this._detailBase = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
     // then returns to the parent instead of dismissing the whole thing. There
     // is only one detail panel, so without this a child replaced the parent and
@@ -3012,6 +3019,7 @@ class __tasks_panel extends LetcBox {
   _closeDetailSilently(done) {
     this._detailId = null;
     this._detailDraft = null;
+    this._detailBase = null;
     // Section fetches belong to the task that was open; a flag left standing
     // would greet the next task with a skeleton it never clears.
     this._loading = {};
@@ -3814,6 +3822,7 @@ class __tasks_panel extends LetcBox {
       if (gone.has(this._detailId)) {
         this._detailId = null;
         this._detailDraft = null;
+        this._detailBase = null;
         this._subtaskDraft = null;
         // The panel it would return to may be one of the rows just pruned.
         this._detailReturnTo = null;
@@ -3895,144 +3904,52 @@ class __tasks_panel extends LetcBox {
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
 
+    // Three-way merge (see detail-commit.js): send only what the user changed
+    // since the card opened, on top of the cache as it is NOW — peer pushes
+    // patch it in place while the card is open. Diffing the draft against
+    // the cache alone wrote a colleague's change made meanwhile back over it.
+    // A card with no base degrades to that old diff.
+    const fresh = snapshotTask(task, {
+      assignees: this.getKnownAssignees(task),
+      noStatus: this.getDefaultStatus(),
+    });
+    const base = this._detailBase || fresh;
+    const plan = planDetailCommit(base, draft, fresh);
+
     const calls = [];
+    // Each call resolves a descriptor instead of rejecting: postService
+    // resolves undefined (or an error payload) on failure.
+    const rowCall = (service, args, extra = () => ({})) =>
+      this.postService({ service, hub_id: this._hubId, id, ...args })
+        .catch(() => undefined)
+        .then((r) => ({ kind: "row", service, row: rowOf(r), ...extra(r) }));
+    const labelCall = (service, op, lid, okOf) =>
+      this.postService({ service, hub_id: this._hubId, task_id: id, label_id: lid })
+        .catch(() => undefined)
+        .then((r) => ({ kind: "label", op, label_id: lid, ok: okOf(r) }));
 
-    // task.update — covers title, description, priority, due_date.
-    const upd = {};
-    const draftTitle = String(draft.title || "").trim();
-    const taskTitle = String(task.title || "").trim();
-    if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
-    // Both are marker form (the editor serializes chips to markers).
-    if ((draft.description || "") !== (task.description || "")) {
-      upd.description = draft.description || "";
-      // Notify only members tagged in this edit who weren't tagged before.
-      const before = Array.isArray(draft._mentioned_before)
-        ? draft._mentioned_before
-        : [];
-      const now = Array.isArray(draft.mention_uids) ? draft.mention_uids : [];
-      upd.mention_uids = now.filter((u) => !before.includes(u));
-    }
-    if ((draft.priority || "medium") !== (task.priority || "medium"))
-      upd.priority = draft.priority;
-    // Reporter. Compared against the same created_by fallback the draft was
-    // seeded with, so merely opening and saving a pre-reporter task does NOT
-    // count as a reassignment (which would otherwise log a bogus 'reporter'
-    // entry in the activity feed on every Update).
-    const taskReporter = task.reporter_uid || task.created_by || "";
-    if ((draft.reporter_uid || "") !== taskReporter && draft.reporter_uid) {
-      upd.reporter_uid = draft.reporter_uid;
-    }
-    const draftDue = (draft.due_date || "").trim();
-    const taskDue = task.due_date || "";
-    const dueChanged = draftDue !== taskDue;
-    // start_date only when the Duration toggle is on; OFF ("") clears it.
-    const draftStart = draft.duration_on ? (draft.start_date || "").trim() : "";
-    const taskStart = task.start_date || "";
-    const startChanged = draftStart !== taskStart;
-    if (Object.keys(upd).length || dueChanged || startChanged) {
-      // task_update SP overwrites due_date / start_date unconditionally —
-      // always send the current values or another-field update would null them.
-      upd.due_date = draftDue || null;
-      upd.start_date = draftStart || null;
+    // task_update overwrites due_date / start_date unconditionally, so
+    // plan.update always carries both (see planDetailCommit).
+    if (plan.update) calls.push(rowCall(SERVICE.task.update, plan.update));
+    if (plan.status) {
       calls.push(
-        this.postService({
-          service: SERVICE.task.update,
-          hub_id: this._hubId,
-          id,
-          ...upd,
-        })
-          .catch(() => undefined)
-          .then((r) => ({ kind: "row", service: "task.update", row: rowOf(r) })),
+        rowCall(SERVICE.task.update_status, { status: plan.status }, (r) => ({
+          // The response may carry the auto-completed parent row.
+          parent: rowOf(r && r.parent),
+        })),
       );
     }
-
-    const noStatus = this.getDefaultStatus();
-    if ((draft.status || noStatus) !== (task.status || noStatus)) {
+    // The full new set: the peer's current assignees plus/minus mine.
+    if (plan.assignees) {
+      calls.push(rowCall(SERVICE.task.update_assignee, { assignee_uids: plan.assignees }));
+    }
+    for (const lid of plan.link) {
+      calls.push(labelCall(SERVICE.task.link_label, "link", lid, Array.isArray));
+    }
+    for (const lid of plan.unlink) {
       calls.push(
-        this.postService({
-          service: SERVICE.task.update_status,
-          hub_id: this._hubId,
-          id,
-          status: draft.status,
-        })
-          .catch(() => undefined)
-          .then((r) => ({
-            kind: "row",
-            service: "task.update_status",
-            row: rowOf(r),
-            // The response may carry the auto-completed parent row.
-            parent: rowOf(r && r.parent),
-          })),
+        labelCall(SERVICE.task.unlink_label, "unlink", lid, (r) => !!(r && r.task_id)),
       );
-    }
-
-    // Multi-assignee: send the full new set only when it differs (order-
-    // independent) from the task's current assignees.
-    const draftAssignees = Array.isArray(draft.assignees) ? draft.assignees : [];
-    const taskAssignees = Array.isArray(task.assignee_uids)
-      ? task.assignee_uids
-      : task.assignee_uid
-        ? [task.assignee_uid]
-        : [];
-    const sameAssignees =
-      draftAssignees.length === taskAssignees.length &&
-      [...draftAssignees].sort().join(",") === [...taskAssignees].sort().join(",");
-    if (!sameAssignees) {
-      calls.push(
-        this.postService({
-          service: SERVICE.task.update_assignee,
-          hub_id: this._hubId,
-          id,
-          assignee_uids: draftAssignees,
-        })
-          .catch(() => undefined)
-          .then((r) => ({
-            kind: "row",
-            service: "task.update_assignee",
-            row: rowOf(r),
-          })),
-      );
-    }
-
-    const original = new Set(task.label_ids || []);
-    const next = new Set(draft.labels || []);
-    for (const lid of next) {
-      if (!original.has(lid)) {
-        calls.push(
-          this.postService({
-            service: SERVICE.task.link_label,
-            hub_id: this._hubId,
-            task_id: id,
-            label_id: lid,
-          })
-            .catch(() => undefined)
-            .then((r) => ({
-              kind: "label",
-              op: "link",
-              label_id: lid,
-              ok: Array.isArray(r),
-            })),
-        );
-      }
-    }
-    for (const lid of original) {
-      if (!next.has(lid)) {
-        calls.push(
-          this.postService({
-            service: SERVICE.task.unlink_label,
-            hub_id: this._hubId,
-            task_id: id,
-            label_id: lid,
-          })
-            .catch(() => undefined)
-            .then((r) => ({
-              kind: "label",
-              op: "unlink",
-              label_id: lid,
-              ok: !!(r && r.task_id),
-            })),
-        );
-      }
     }
 
     // Pending attachments — same flow as _commitTask: search-picked entries
@@ -4050,17 +3967,17 @@ class __tasks_panel extends LetcBox {
               nid = (await this._uploadPendingFile(pf, pendingFiles)).nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
-              return { kind: "file", list: null };
+              return { kind: "file", pf, nid: null, list: null };
             }
           }
-          if (!nid) return { kind: "file", list: null };
+          if (!nid) return { kind: "file", pf, nid: null, list: null };
           const list = await this.postService({
             service: SERVICE.task.link_file,
             hub_id: this._hubId,
             task_id: id,
             file_nid: nid,
           }).catch(() => null);
-          return { kind: "file", list: Array.isArray(list) ? list : null };
+          return { kind: "file", pf, nid, list: Array.isArray(list) ? list : null };
         })(),
       );
     }
@@ -4093,7 +4010,43 @@ class __tasks_panel extends LetcBox {
     this._setSubmitting(".tasks-panel__detail-submit", false);
     this._repaintBoard();
 
+    // The user may have moved on while the calls were in flight — opened a
+    // child row, closed the card, or a peer deleted the task. The cache is
+    // already right (merged above); but a new base or a close applied to
+    // whatever card is open NOW would corrupt its merge or shut it under the
+    // user, so stop here.
+    if (this._detailId !== id || this._detailDraft !== draft) {
+      // A deleted task is already announced; "network error" would mislead.
+      if (failed && this._tasks.some((t) => t.id === id)) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+      }
+      return;
+    }
+
     if (failed) {
+      // Move the base past whatever did land, so pressing Update again
+      // re-sends only the rest instead of logging the same change twice.
+      const landed = (svc) =>
+        results.some((r) => r.kind === "row" && r.service === svc && r.row);
+      this._detailBase = advanceBase(base, draft, {
+        update: landed("task.update"),
+        status: landed("task.update_status"),
+        assignees: landed("task.update_assignee"),
+        labels: labelOps,
+      });
+      // The landed update already notified this edit's new tags; a retry
+      // must not notify them again.
+      if (landed("task.update")) {
+        draft._mentioned_before = (draft.mention_uids || []).slice();
+      }
+      // Linked files leave the pending list; one that uploaded but failed to
+      // link keeps its nid, so the retry links it instead of uploading a
+      // second copy ("a(1).png") into the task folder.
+      draft.pending_files = settlePendingFiles(
+        draft.pending_files,
+        fileResults.map((r) => ({ pf: r.pf, nid: r.nid, linked: !!r.list })),
+      );
+      this._refreshPendingList("detail");
       // Keep the card open with the draft, so nothing the user typed is lost
       // and pressing Update again retries. The cache already holds whatever
       // DID land, so a retry only re-sends what still differs.
@@ -4156,6 +4109,16 @@ class __tasks_panel extends LetcBox {
           // these (upload missing nids, then link_file) on Update.
           pending_files: [],
         }
+      : null;
+    // What the card opened with — the "base" of _commitDetail's three-way
+    // merge. Built the same way as the draft's fields (same assignee filter,
+    // same status fallback), from a separate call so no array is shared with
+    // the draft the user is editing.
+    this._detailBase = task
+      ? snapshotTask(task, {
+          assignees: this.getKnownAssignees(task),
+          noStatus: this.getDefaultStatus(),
+        })
       : null;
     // A half-typed subtask belongs to the task it was opened on — carrying it
     // across to another task would create a child under the wrong parent.

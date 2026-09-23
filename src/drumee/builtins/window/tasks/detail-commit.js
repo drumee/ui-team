@@ -14,6 +14,8 @@
 //
 // No DOM and no `this`: everything here runs under plain node in a test.
 
+const { applyLabelOps } = require("./live-sync");
+
 const trim = (v) => String(v == null ? "" : v).trim();
 const list = (v) => (Array.isArray(v) ? v.slice() : []);
 // The stored range start only counts while the Duration switch is on.
@@ -108,18 +110,6 @@ function planDetailCommit(base, draft, fresh) {
     link: l.added.filter((x) => !fresh.labels.includes(x)),
     unlink: l.removed.filter((x) => fresh.labels.includes(x)),
   };
-}
-
-// Apply the label link/unlink calls that succeeded to a list of label ids.
-function applyLabelOps(ids, ops) {
-  const out = list(ids);
-  for (const { op, label_id, ok } of ops || []) {
-    if (!ok) continue;
-    const i = out.indexOf(label_id);
-    if (op === "link" && i === -1) out.push(label_id);
-    if (op === "unlink" && i !== -1) out.splice(i, 1);
-  }
-  return out;
 }
 
 // After a PARTIAL failure the card stays open for a retry. Move the base up to
