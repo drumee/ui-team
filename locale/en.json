@@ -1202,7 +1202,7 @@
   "QX_WORKSPACE_TITLE": "Workspace limit reached",
   "QX_WORKSPACE_BODY": "You have created all the workspaces your plan allows.",
   "QX_SEAT_TITLE": "Member limit reached",
-  "QX_SEAT_BODY": "You have used every seat in your Team plan. Invitations that have not been accepted yet still hold a seat. Cancel a pending invitation, remove a member, or upgrade to Business to invite more.",
+  "QX_SEAT_BODY": "You have used every seat in your Team plan. Invitations that have not been accepted yet still hold a seat. Cancel a pending invitation, remove a member, or upgrade to a higher plan to invite more.",
   "QX_ASK_OWNER": "Ask your workspace owner to review the organisation's plan.",
   "QX_ROOM_STORAGE": "Free up space to continue.",
   "QX_ROOM_WORKSPACE": "Delete a workspace you no longer need to create another.",

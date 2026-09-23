@@ -1478,7 +1478,7 @@
   "QX_WORKSPACE_TITLE": "Límite de espacios de trabajo alcanzado",
   "QX_WORKSPACE_BODY": "Has creado todos los espacios de trabajo que permite tu plan.",
   "QX_SEAT_TITLE": "Límite de miembros alcanzado",
-  "QX_SEAT_BODY": "Has usado todas las plazas de tu plan Team. Las invitaciones aún no aceptadas también ocupan una plaza. Cancela una invitación pendiente, elimina un miembro o cambia a Business para invitar a más personas.",
+  "QX_SEAT_BODY": "Has usado todas las plazas de tu plan Team. Las invitaciones aún no aceptadas también ocupan una plaza. Cancela una invitación pendiente, elimina un miembro o cambia a un plan superior para invitar a más personas.",
   "QX_ASK_OWNER": "Pide al propietario del espacio que revise el plan de la organización.",
   "QX_ROOM_STORAGE": "Libera espacio para continuar.",
   "QX_ROOM_WORKSPACE": "Elimina un espacio de trabajo que ya no necesites para crear otro.",
