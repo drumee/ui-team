@@ -13,6 +13,11 @@ const MAX_PROGRESS_ROWS = 200;
 // self-dismisses. Mirrors the document player's role-change notice.
 const ROLE_NOTICE_MS = 5000;
 
+// How long a finished batch stays on screen before the popup dismisses
+// itself: just enough for the last frame (100%, check icon) to paint. Only a
+// batch that ended well leaves on its own; errors and cancels wait for the user.
+const AUTO_DISMISS_MS = 300;
+
 /**
  * @class __window_upload_progress
  * @extends __window_core
@@ -71,7 +76,7 @@ class __window_upload_progress extends __window_core {
     );
 
     this._isExpanded = true;
-    this._autoMinimizeTimer = null; // 5s auto-dismiss once uploads settle (no pending)
+    this._autoMinimizeTimer = null; // auto-dismiss once uploads settle (see _maybeArmAutoMinimize)
     this._totalFiles = 0;
     this._fileProgressMap = {}; // Track progress for speed calculation
     this._pendingProgressUpdates = new Map(); // Queue progress updates when DOM not ready
@@ -981,7 +986,7 @@ class __window_upload_progress extends __window_core {
     }, 200);
     
     
-    // When this was the last pending file, arm the 5s auto-collapse.
+    // When this was the last pending file, dismiss the popup.
     this._maybeArmAutoMinimize();
   }
 
@@ -1352,18 +1357,22 @@ class __window_upload_progress extends __window_core {
   }
 
   /**
-   * Arm the 5s auto-dismiss once uploads settle (nothing left 'uploading').
-   * Works for both legacy (_uploadItems) and bundle drag-drop paths.
-   * A new upload or manual toggle cancels the countdown.
+   * Dismiss the popup as soon as uploads settle (nothing left 'uploading')
+   * and everything went well. Works for both legacy (_uploadItems) and bundle
+   * drag-drop paths, expanded or collapsed: a finished upload has nothing
+   * left to show, the file is already in the grid.
+   *
+   * The delay is only long enough for the last frame (100%, check icon) to
+   * paint, so the user sees the upload land rather than the popup vanish
+   * mid-progress. It used to linger for 5 s, which read as "still busy".
    *
    * "Settled" is not the same as "went well": a cancelled or errored batch is
-   * settled too, and dismissing THAT on a timer throws away the only account of
-   * what happened — including the Retry button an errored row offers, which is
-   * useless if it disappears five seconds after appearing. A batch that ended
-   * badly waits for the user to dismiss it.
+   * settled too, and dismissing THAT throws away the only account of what
+   * happened — including the Retry button an errored row offers. A batch that
+   * ended badly waits for the user to dismiss it.
    */
   _maybeArmAutoMinimize() {
-    if (!this._isUploadSettled() || !this._hasTrackedUploads() || !this._isExpanded) {
+    if (!this._isUploadSettled() || !this._hasTrackedUploads()) {
       this._cancelAutoMinimize();
       return;
     }
@@ -1371,12 +1380,12 @@ class __window_upload_progress extends __window_core {
       this._cancelAutoMinimize();
       return;
     }
-    if (this._autoMinimizeTimer) return; // already counting down
+    if (this._autoMinimizeTimer) return; // already scheduled
     this._autoMinimizeTimer = setTimeout(() => {
       this._autoMinimizeTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
-      if (this._isUploadSettled() && this._isExpanded) this.goodbye();
-    }, 5000);
+      if (this._isUploadSettled() && !this._hasUnhappyEntry()) this.goodbye();
+    }, AUTO_DISMISS_MS);
   }
 
   /**

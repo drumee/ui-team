@@ -3,6 +3,7 @@
 // binds uploadFile from ui-essentials. Sequential: one file/make_dir at a time.
 // Emits via Backbone events: "progress" | "file-done" | "folder-created" | "error" | "done".
 const { uploadFile } = require("@drumee/ui-essentials");
+const { chunkedUpload, isChunkable } = require("media/chunked");
 
 // Per-operation timeouts so an unresponsive server (a 504 with no parsable body,
 // or a connection that hangs with no response at all) fails THAT step instead of
@@ -194,7 +195,10 @@ class __bundle_job extends LetcBox {
       // so a retry re-uploads to the SAME parent folder (not the bundle root).
       this._current = { entry, resolve, loaded: 0, destNid, opt };
       try {
-        this._currentXhr = this.uploadFile(entry.source, opt);
+        // Big files go chunked (parallel + resumable); same hooks, xhr-like handle.
+        this._currentXhr = isChunkable(entry.source)
+          ? chunkedUpload(this, entry.source, opt)
+          : this.uploadFile(entry.source, opt);
         // Recovery net: uploadFile's onReadyStateChange JSON.parses the response
         // BEFORE checking status, so a non-200 with a non-JSON body (e.g. a 504
         // gateway HTML page) makes it throw and return WITHOUT calling any hook —
@@ -256,7 +260,9 @@ class __bundle_job extends LetcBox {
       this._current.loaded = 0;
       try {
         // Reuse the stored opt so the retry targets the file's real parent folder.
-        this._currentXhr = this.uploadFile(entry.source, opt);
+        this._currentXhr = isChunkable(entry.source)
+          ? chunkedUpload(this, entry.source, opt)
+          : this.uploadFile(entry.source, opt);
         this._armWatchdog(entry);
       } catch (e) { this._failOrResolve(entry, e); }
       return;
