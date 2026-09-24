@@ -238,6 +238,37 @@ class __media_wrapper extends LetcBox {
   }
 
   /**
+   * The staged nodes as the card rows the strip itself renders — what the
+   * just-sent bubble draws while channel.post is still running, instead of
+   * waiting for the server to mint a message id and fetching them back.
+   * Widget-only fields are stripped: the bubble list stamps its own.
+   */
+  getAttachmentNodes() {
+    return this.__content.collection.map((model) => {
+      const node = model.toJSON();
+      // A node picked from the workspace browser arrives as that picker row's
+      // model, so it still carries the row's widget options (className,
+      // service, kids…); the bubble list stamps its own. The strip's
+      // icon-only flag goes too: the bubble draws real cards with
+      // thumbnails, like the rows chat.attachment would return.
+      for (const key of [
+        "uiHandler",
+        "logicalParent",
+        "partHandler",
+        "kind",
+        "className",
+        "service",
+        "kids",
+        "sys_pn",
+        "iconOnly",
+      ]) {
+        delete node[key];
+      }
+      return node;
+    });
+  }
+
+  /**
    * 
    */
   hasPendingUpload() {

@@ -2700,6 +2700,17 @@ class __widget_chat extends LetcBox {
     delete tmp._scopeKey;
     delete api._restoreText;
     delete api._scopeKey;
+    // Optimistic cards: the staged nodes are already rendered in the composer
+    // strip, so the bubble can show them at once. Rendered-row only — `api`
+    // is what goes to the server and stays a list of nids.
+    if (
+      !_.isEmpty(api.attachment) &&
+      this.attachmentList &&
+      !this.attachmentList.isDestroyed() &&
+      _.isFunction(this.attachmentList.getAttachmentNodes)
+    ) {
+      tmp.attachment_preview = this.attachmentList.getAttachmentNodes();
+    }
     if (this.__list) {
       this.__list.append(tmp);
       this.__list.scrollToBottom();
