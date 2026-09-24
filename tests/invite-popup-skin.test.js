@@ -27,3 +27,21 @@ test("an open role menu lifts the tree's overflow clip", () => {
 test("an empty org slot is not rendered", () => {
   assert.match(css, /\.invite-popup__org-card\[data-state="0"\] \{ display: none !important; \}/);
 });
+
+// Compact variant (requested after the Figma pass): every item ~85% of the
+// design's size. Pinned on the dimensions that set the popup's footprint.
+const rule = (sel) => {
+  const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + " \\{([^}]*)\\}"));
+  assert.ok(m, `missing rule ${sel}`);
+  return m[1];
+};
+test("compact sizes: card, type, rows, controls", () => {
+  assert.match(rule(".invite-popup__ui"), /width: 440px/);
+  assert.match(rule(".invite-popup__container"), /padding: 24px; gap: 16px/);
+  assert.match(rule(".invite-popup__title"), /font: 600 16px/);
+  assert.match(rule(".invite-popup__field-label"), /font: 600 13px/);
+  assert.match(rule(".invite-popup__row-box"), /min-height: 32px/);
+  assert.match(rule(".invite-popup__check"), /width: 16px; height: 16px/);
+  assert.match(rule(".invite-popup__switch"), /width: 32px; height: 16px/);
+  assert.match(rule(".invite-popup__get-link, .invite-popup__send-btn"), /padding: 8px 16px/);
+});

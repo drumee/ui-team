@@ -51,7 +51,7 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__ui {
-    width: 520px;
+    width: 440px;
     // The popup is fed into Wm.__wrapperModal, a flex-centered full-inset box
     // with `overflow: clip` — a card wider than the viewport is CUT, not
     // scrolled to. This guard needs no breakpoint.
@@ -84,8 +84,8 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__container {
-    padding: 32px;
-    gap: 24px;
+    padding: 24px;
+    gap: 16px;
     color: $ink;
     font-family: $font;
     // Never taller than the viewport it is centered in: __wrapper-modal clips
@@ -106,12 +106,12 @@ $tint: rgba(89, 80, 255, 0.1);
     // Visitor.device() only answers "mobile" below 801px.
     .invite-popup__ui[data-device="mobile"] & {
       padding: 16px;
-      gap: 16px;
+      gap: 12px;
     }
 
     @media (max-width: 650px) {
       padding: 16px;
-      gap: 16px;
+      gap: 12px;
     }
   }
 
@@ -121,13 +121,13 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__title {
-    font: 600 20px/1.2 $font;
+    font: 600 16px/1.2 $font;
     color: $ink;
   }
 
   &__close {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     cursor: pointer;
     color: $muted;
 
@@ -139,18 +139,18 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__description {
-    font: 400 14px/1.4 $font;
+    font: 400 12px/1.4 $font;
     color: $muted;
     // The design groups title + description in one 24px-gapped block.
-    margin-top: -8px;
+    margin-top: -6px;
   }
 
   // ── Org card ──────────────────────────────────────────────────────────
   &__org-card {
-    gap: 4px;
-    padding: 8px 16px;
+    gap: 2px;
+    padding: 6px 12px;
     border: 1px solid $line;
-    border-radius: 12px;
+    border-radius: 10px;
 
     // An empty slot — no organisation, or the overview has not answered.
     // !important: `.box[data-flow]` sets display at the same specificity.
@@ -160,7 +160,7 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__org-name {
-    font: 600 16px/1.2 $font;
+    font: 600 13px/1.2 $font;
     color: $ink;
   }
 
@@ -170,27 +170,27 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__org-stat-word {
-    font: 400 12px/1.4 $font;
+    font: 400 11px/1.4 $font;
     color: $muted;
     margin-right: 4px;
   }
 
   // ── Tabs ──────────────────────────────────────────────────────────────
   &__tabs {
-    padding: 4px;
+    padding: 3px;
     background-color: #f2f2f7;
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
   &__tab {
     flex: 1 0 0;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 8px 24px;
-    border-radius: 8px;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 7px;
     cursor: pointer;
-    font: 600 14px/1.2 $font;
+    font: 600 12px/1.2 $font;
     color: $muted;
     transition: background-color 0.15s, color 0.15s;
 
@@ -201,8 +201,8 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__tab-ico {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
 
     svg {
       width: 100%;
@@ -214,23 +214,23 @@ $tint: rgba(89, 80, 255, 0.1);
   // ── Via email ─────────────────────────────────────────────────────────
   &__panel-email,
   &__panel-link {
-    gap: 12px;
+    gap: 8px;
   }
 
   &__invite-to {
-    gap: 12px;
+    gap: 8px;
     // The one section allowed to shrink when the card hits its max-height.
     min-height: 0;
     flex: 0 1 auto;
   }
 
   &__field-label {
-    font: 600 16px/1.2 $font;
+    font: 600 13px/1.2 $font;
     color: $ink;
   }
 
   &__field-error {
-    font: 400 12px/1.4 $font;
+    font: 400 11px/1.4 $font;
     color: #d74e49;
     margin-top: -4px;
 
@@ -243,13 +243,13 @@ $tint: rgba(89, 80, 255, 0.1);
     align-items: center;
     flex-wrap: wrap;
     gap: 3px;
-    padding: 8px 0 4px;
+    padding: 4px 0 3px;
     border-bottom: 1px solid #84848c;
-    min-height: 32px;
+    min-height: 26px;
     // Chips are `display: contents`, so every recipient is a direct flex child
     // and wraps; ~3 lines, then it scrolls. Safe: __suggestions is a SIBLING
     // of this row, not inside this scroll box.
-    max-height: 96px;
+    max-height: 80px;
     overflow-y: auto;
   }
 
@@ -260,11 +260,11 @@ $tint: rgba(89, 80, 255, 0.1);
 
   &__chip {
     align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
+    gap: 6px;
+    padding: 2px 6px;
     background-color: $tint;
     border-radius: 4px;
-    font: 400 12px/1.4 $font;
+    font: 400 11px/1.4 $font;
     color: var(--primary-50, #433cc5);
 
     &-remove {
@@ -288,7 +288,7 @@ $tint: rgba(89, 80, 255, 0.1);
       border: none;
       outline: none;
       width: 100%;
-      font: 400 14px/1.4 $font;
+      font: 400 12px/1.4 $font;
       color: $ink;
       caret-color: var(--primary-40, #5950ff);
 
@@ -345,12 +345,12 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__suggestion-item {
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 8px;
     cursor: pointer;
     align-items: center;
     gap: 8px;
-    font: 400 14px/1.2 $font;
+    font: 400 12px/1.2 $font;
     color: $ink;
 
     .inner {
@@ -380,7 +380,7 @@ $tint: rgba(89, 80, 255, 0.1);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 12px;
+    font-size: 11px;
     color: $muted;
   }
 
@@ -388,12 +388,12 @@ $tint: rgba(89, 80, 255, 0.1);
   &__invite-to-head {
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 8px;
+    padding-bottom: 4px;
   }
 
   &__all {
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 
     // _renderTree stamps "hidden" when there is no invitable workspace.
     // !important: `.box[data-flow]` matches at the same specificity.
@@ -403,21 +403,21 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__all-label {
-    font: 400 16px/1.2 $font;
+    font: 400 13px/1.2 $font;
     color: $ink;
   }
 
   &__tree {
-    gap: 12px;
+    gap: 8px;
     // Shrinks with __invite-to when the card hits its max-height; without an
     // explicit flex the framework's `.box` keeps it at content height and the
     // Send button is pushed out of the clipped card.
     flex: 0 1 auto;
     min-height: 0;
-    max-height: 330px;
+    max-height: 280px;
     overflow-y: auto;
     // Room for the 4px Primary/30 scrollbar the design draws beside the rows.
-    padding-right: 12px;
+    padding-right: 8px;
     // Standard properties only where the webkit pseudo-elements do not exist:
     // Chrome ignores every ::-webkit-scrollbar rule once these are set, and
     // falls back to a default bar with stepper arrows.
@@ -457,32 +457,32 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__tree-empty {
-    font: 400 14px/1.4 $font;
+    font: 400 12px/1.4 $font;
     color: $muted;
   }
 
   &__dept-head,
   &__ws-row {
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   &__dept-children {
-    margin-left: 16px;
-    padding: 12px 0 0 12px;
+    margin-left: 12px;
+    padding: 8px 0 0 8px;
     border-left: 1px solid $line;
-    gap: 12px;
+    gap: 8px;
   }
 
   &__row-box {
     flex: 1 0 0;
     min-width: 0;
-    min-height: 40px;
+    min-height: 32px;
     align-items: center;
-    gap: 12px;
-    padding: 4px 12px;
+    gap: 8px;
+    padding: 2px 10px;
     border: 1px solid $line;
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
 
     &:hover {
@@ -491,26 +491,26 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__dept-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     flex: none;
     align-items: center;
     justify-content: center;
-    padding: 4px;
-    border-radius: 6px;
+    padding: 3px;
+    border-radius: 5px;
     background-color: $tint;
     color: var(--primary-40, #5950ff);
 
     svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       fill: currentColor;
     }
   }
 
   &__ws-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     flex: none;
 
     svg {
@@ -522,7 +522,7 @@ $tint: rgba(89, 80, 255, 0.1);
   &__row-name {
     flex: 1 0 0;
     min-width: 0;
-    font: 400 14px/20px $font;
+    font: 400 12px/18px $font;
     color: $ink;
     white-space: nowrap;
     overflow: hidden;
@@ -532,25 +532,25 @@ $tint: rgba(89, 80, 255, 0.1);
   &__pill {
     flex: none;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
+    gap: 3px;
+    padding: 2px 6px;
     border-radius: 46px;
     background-color: $tint;
   }
 
   &__pill-num {
-    font: 600 12px/1.2 $font;
+    font: 600 11px/1.2 $font;
     color: var(--primary-40, #5950ff);
   }
 
   &__pill-word {
-    font: 400 12px/1.4 $font;
+    font: 400 11px/1.4 $font;
     color: #000;
   }
 
   &__pill-ico {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: $ink;
 
     svg {
@@ -561,8 +561,8 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__caret {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex: none;
     color: $ink;
 
@@ -576,13 +576,13 @@ $tint: rgba(89, 80, 255, 0.1);
   // ── Checkbox (0 | 1 | "mixed") ────────────────────────────────────────
   &__check {
     position: relative;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     flex: none;
     align-items: center;
     justify-content: center;
     border: 1px solid #84848c;
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
 
     &[data-state="1"] {
@@ -597,8 +597,8 @@ $tint: rgba(89, 80, 255, 0.1);
       &::after {
         content: "";
         position: absolute;
-        width: 12px;
-        height: 3px;
+        width: 9px;
+        height: 2px;
         border-radius: 18px;
         background-color: #fff;
       }
@@ -608,8 +608,8 @@ $tint: rgba(89, 80, 255, 0.1);
   // Visibility rather than display: the tick widget's own display is the
   // framework's, and an equal-specificity fight is not worth having.
   &__check-tick {
-    width: 14px;
-    height: 14px;
+    width: 11px;
+    height: 11px;
     color: #fff;
     visibility: hidden;
 
@@ -635,14 +635,14 @@ $tint: rgba(89, 80, 255, 0.1);
     height: 100%;
     align-items: center;
     gap: 4px;
-    padding: 0 12px;
-    border-radius: 12px;
+    padding: 0 10px;
+    border-radius: 10px;
     background-color: $line;
     cursor: pointer;
   }
 
   &__role-select-label {
-    font: 400 14px/1.2 $font;
+    font: 400 12px/1.2 $font;
     color: #000;
     white-space: nowrap;
   }
@@ -656,11 +656,11 @@ $tint: rgba(89, 80, 255, 0.1);
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
-    min-width: 160px;
+    min-width: 136px;
     padding: 4px;
     background-color: #fff;
     border: 1px solid $line;
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
     z-index: 99999;
     // The hover description card sits OUTSIDE the menu box — don't clip it.
@@ -675,11 +675,11 @@ $tint: rgba(89, 80, 255, 0.1);
     position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
+    gap: 8px;
+    padding: 6px 10px;
     border-radius: 8px;
     cursor: pointer;
-    font: 400 14px/1.2 $font;
+    font: 400 12px/1.2 $font;
     color: $ink;
 
     .inner {
@@ -718,7 +718,7 @@ $tint: rgba(89, 80, 255, 0.1);
       border-radius: 6px;
       background-color: $ink;
       color: #fff;
-      font: 400 12px/16px $font;
+      font: 400 11px/15px $font;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
       z-index: 100000;
 
@@ -738,14 +738,14 @@ $tint: rgba(89, 80, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    flex: 0 0 20px;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
     color: inherit;
 
     svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       fill: currentColor;
     }
   }
@@ -764,8 +764,8 @@ $tint: rgba(89, 80, 255, 0.1);
 
   &__switch {
     position: relative;
-    width: 40px;
-    height: 20px;
+    width: 32px;
+    height: 16px;
     flex: none;
     border-radius: 12px;
     background-color: #aeaeb2;
@@ -781,19 +781,19 @@ $tint: rgba(89, 80, 255, 0.1);
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 12px;
     background-color: #fff;
     transition: left 0.15s;
   }
 
   &__switch[data-state="1"] &__switch-knob {
-    left: 22px;
+    left: 18px;
   }
 
   &__expiry-options {
-    padding: 4px;
+    padding: 3px;
     background-color: #f2f2f7;
     border-radius: 8px;
   }
@@ -802,11 +802,11 @@ $tint: rgba(89, 80, 255, 0.1);
     flex: 1 0 0;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 4px 0;
+    gap: 6px;
+    padding: 3px 0;
     border-radius: 4px;
     cursor: pointer;
-    font: 400 14px/1.2 $font;
+    font: 400 12px/1.2 $font;
     color: $ink;
 
     &[data-state="1"] {
@@ -815,8 +815,8 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__expiry-ico {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
 
     svg {
       width: 100%;
@@ -830,11 +830,11 @@ $tint: rgba(89, 80, 255, 0.1);
     width: 100%;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 12px 24px;
+    gap: 6px;
+    padding: 8px 16px;
     background-color: var(--primary-50, #433cc5);
     color: #fff;
-    font: 600 16px/24px $font;
+    font: 600 14px/20px $font;
     text-align: center;
     cursor: pointer;
     transition: opacity 0.2s;
@@ -845,12 +845,12 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__get-link {
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
   &__get-link-ico {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
 
     svg {
       width: 100%;
@@ -860,16 +860,16 @@ $tint: rgba(89, 80, 255, 0.1);
   }
 
   &__link-row {
-    height: 40px;
-    gap: 8px;
+    height: 32px;
+    gap: 6px;
   }
 
   &__link-field {
     flex: 1 0 0;
     min-width: 0;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 6px 10px;
     border-radius: 8px;
     background-color: $tint;
     cursor: pointer;
@@ -879,7 +879,7 @@ $tint: rgba(89, 80, 255, 0.1);
     flex: 1 0 0;
     min-width: 0;
     opacity: 0.6;
-    font: 400 14px/1.2 $font;
+    font: 400 12px/1.2 $font;
     color: $ink;
     white-space: nowrap;
     overflow: hidden;
@@ -888,8 +888,8 @@ $tint: rgba(89, 80, 255, 0.1);
 
   &__link-ico,
   &__link-copy {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex: none;
     color: $ink;
 
@@ -903,18 +903,18 @@ $tint: rgba(89, 80, 255, 0.1);
   &__revoke {
     flex: none;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 6px 10px;
     border-radius: 8px;
     background-color: #d74e49;
     color: #fff;
-    font: 600 14px/20px $font;
+    font: 600 12px/16px $font;
     cursor: pointer;
   }
 
   &__revoke-ico {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
 
     svg {
       width: 100%;
