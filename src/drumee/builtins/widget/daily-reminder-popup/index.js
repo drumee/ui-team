@@ -108,6 +108,26 @@ class __daily_reminder_popup extends LetcBox {
   getCounts() { return this._counts; }
 
   /**
+   * "Now" for the card, captured ONCE so the greeting, the sub-line and the
+   * art can never straddle a period boundary between them.
+   */
+  getNow() {
+    if (!this._now) this._now = new Date();
+    return this._now;
+  }
+
+  /**
+   * morning | noon | afternoon | evening. A `period` launch option overrides
+   * the clock — QA uses it from the console to see all four; the desk never
+   * passes one.
+   */
+  getPeriod() {
+    const { PERIODS, periodOf } = require("./period");
+    const forced = this.mget("period");
+    return PERIODS.includes(forced) ? forced : periodOf(this.getNow());
+  }
+
+  /**
    * First name for the greeting. Falls back to the full name, then to a
    * name-less greeting — never to the literal "[User name]" of the mockup.
    */
