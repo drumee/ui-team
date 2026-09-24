@@ -1,6 +1,6 @@
 
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
-const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
+const { TweenMax } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const snap = require('builtins/window/snap');
 const details = require('builtins/player/widget/details');
@@ -1112,8 +1112,11 @@ class __player_document extends PlayerInteract {
     let maxHeight = 900;
     const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
     const max_width = window.innerWidth - 2 * o.marginX;
-    if (this.mget(_a.mode) == _a.edit) {
-      // Open the editor maximized to the workspace (header and sidebar stay
+    // The editor has always opened maximized; the PDF preview now does too —
+    // every file opens full-frame (Lexis, 2026-09-23). `_opensFullFrame`
+    // (player/interact) leaves mobile and DMZ on their own sizing below.
+    if (this.mget(_a.mode) == _a.edit || this._opensFullFrame()) {
+      // Open maximized to the workspace (header and sidebar stay
       // visible) — same bounds the zoom button uses.
       const ws = this._workspaceRect();
       const base = this._workspaceTarget();
@@ -1131,7 +1134,8 @@ class __player_document extends PlayerInteract {
       // at the correct size, then keep it fitted as the workspace resizes.
       this._applyWorkspaceBounds(false);
       this._observeWorkspace();
-      TweenMax.fromTo(this.$el, 0.35, { opacity: 0 }, { opacity: 1, ease: Expo.easeOut });
+      // Shown at once — no fade-in (Lexis, 2026-09-23).
+      TweenMax.set(this.$el, { opacity: 1 });
       return
     }
     this.size = this.max_size();
@@ -1196,15 +1200,8 @@ class __player_document extends PlayerInteract {
     }
     if (pos.left < 0) pos.left = 50
     if (pos.top < 0) pos.top = 50
-    TweenMax.fromTo(this.$el, 1.5,
-      { scale: 0.15, opacity: 0 },
-      {
-        scale: 1,
-        opacity: 1,
-        ease: Expo.easeInOut,
-        ...pos,
-      }
-    );
+    // Shown at once — no grow-in tween (Lexis, 2026-09-23).
+    TweenMax.set(this.$el, { scale: 1, opacity: 1, ...pos });
   }
 
   /**

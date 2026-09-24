@@ -93,6 +93,11 @@ function applyBounds(ui, bounds, opt = {}) {
     ui.$el.resizable(_a.option, "minWidth", minW);
     ui.$el.resizable(_a.option, "minHeight", minH);
   } catch (e) {}
+  if (opt.instant) {
+    ui.$el.stop(true, false).css(next);
+    if (ui.syncBounds) ui.syncBounds(true);
+    return;
+  }
   ui.$el.stop(true, false).animate(next, {
     duration: 220,
     queue: false,
@@ -153,6 +158,24 @@ function toggleZoom(ui, opt) {
 }
 
 /**
+ * Open straight into the zoomed ("full") preset, with no tween: the state is
+ * exactly what the zoom button leaves behind, so the WM keeps it fitted to the
+ * work area (manager `_clampWindow`) and the "center" preset / a second zoom
+ * restores to `restore` — the geometry the viewer would have opened at.
+ */
+function fillWorkspace(ui, restore, opt = {}) {
+  const ws = workspaceRect();
+  ui._preZoomBounds = restore || snapshotBounds(ui);
+  ui._zoomed = true;
+  ui.el.dataset.zoomed = 1;
+  applyBounds(
+    ui,
+    { left: 0, top: 0, width: ws.width, height: ws.height },
+    { ...opt, instant: true },
+  );
+}
+
+/**
  * Tile to the left or right half. Left gets the floored half and right the
  * remainder, so an odd workspace width splits with no overlap and no gap.
  */
@@ -202,6 +225,7 @@ module.exports = {
   applyBounds,
   applyBoundsAfterFs,
   toggleZoom,
+  fillWorkspace,
   tileToSide,
   reframe,
 };
