@@ -52,11 +52,16 @@ global.document = {
 };
 // Capture listeners first, then bubble — the order a real document runs them
 // for a target below it. `path` stands in for composedPath().
-const dispatch = (type, path) => {
+//
+// `stoppedBelow`: an element on the path stops propagation in its own handler,
+// as every ACTIVE ui-core view does in __handleClick (letc.js `el.onclick`) —
+// the wrapper-modal behind the popup, the topbar, the rail. Document capture
+// listeners still run (they fire before the target); bubble listeners do not.
+const dispatch = (type, path, { stoppedBelow = false } = {}) => {
   const e = { type, target: path[0], composedPath: () => path };
-  for (const phase of [true, false]) {
-    for (const l of listeners.slice()) if (l.type === type && l.capture === phase) l.fn(e);
-  }
+  for (const l of listeners.slice()) if (l.type === type && l.capture) l.fn(e);
+  if (stoppedBelow) return;
+  for (const l of listeners.slice()) if (l.type === type && !l.capture) l.fn(e);
 };
 
 const part = () => ({
@@ -143,6 +148,30 @@ test("a click outside the popup closes it", () => {
   dispatch("click", outside());
   assert.equal(p.closed, 1);
   p.onBeforeDestroy();
+});
+
+// ROOT CAUSE of "must click many times": the backdrop is the wrapper-modal, an
+// active ui-core view whose __handleClick stops propagation, so a bubble-phase
+// document listener never heard a single click. Only a second click inside
+// ui-core's 300ms double-click window (which returns BEFORE stopPropagation)
+// leaked through.
+test("one click on a ui-core view outside (which stops propagation) closes it", () => {
+  const p = opened();
+  dispatch("mousedown", outside());
+  dispatch("click", outside(), { stoppedBelow: true });
+  assert.equal(p.closed, 1);
+  p.onBeforeDestroy();
+});
+
+test("while a guided tour owns the backdrop, an outside click is left to its guard", () => {
+  for (const stamp of ["rewardOverlay", "guidedOverlay"]) {
+    const p = opened();
+    p._wrapperEl = { dataset: { [stamp]: "bare" } };
+    dispatch("mousedown", outside());
+    dispatch("click", outside());
+    assert.equal(p.closed, 0, stamp);
+    p.onBeforeDestroy();
+  }
 });
 
 test("a click inside the popup does not close it — even on a node the click re-rendered away", () => {

@@ -132,16 +132,27 @@ class __invite_popup extends LetcBox {
     // only spans the window-manager area, and a click on the topbar is just as
     // much "outside".
     //
+    // CAPTURE PHASE, or it takes several clicks. Every ACTIVE ui-core view
+    // binds `el.onclick = __handleClick`, which calls e.stopPropagation()
+    // (@drumee/ui-core letc.js) — and the backdrop behind this card IS one:
+    // the wrapper-modal, as are the topbar and the rail. A bubble listener
+    // here never heard a single click; only a second click inside ui-core's
+    // 300ms double-click window, which returns BEFORE stopPropagation, leaked
+    // through. Capture runs before any element handler. It does not stop the
+    // click either, so whatever was clicked outside still does its job.
+    //
     // The press must ALSO have started outside. That excludes a text drag
     // that began in the email field and was released beside the card, and —
     // the reason it is a mousedown seen by US — the click that opened this
     // popup: its mousedown predates the listener, and the popup can mount
     // while that same click is still being dispatched.
     //
-    // BUBBLE phase, deliberately. reward-flow and activate-workspace guard
-    // this backdrop with a CAPTURE listener on the wrapper-modal that
-    // stops propagation and asks "Don't drop now"; bubbling here lets that
-    // guard win whenever a tour is running.
+    // A GUIDED TOUR OWNS THE BACKDROP while it stamps the wrapper
+    // (reward-flow: data-reward-overlay, activate-workspace:
+    // data-guided-overlay — set under the same condition as their capture
+    // guard on it). Capture on document runs BEFORE that guard, so without
+    // this check an outside click would close the popup out from under the
+    // tour instead of letting it ask "Don't drop now".
     this._onOutsideDown = (e) => {
       this._outsideDown = !this._isInsideEvent(e);
     };
@@ -150,10 +161,10 @@ class __invite_popup extends LetcBox {
       const startedOutside = this._outsideDown;
       this._outsideDown = false;
       if (!startedOutside || this._closing) return;
-      if (this._isInsideEvent(e)) return;
+      if (this._isInsideEvent(e) || this._tourOwnsBackdrop()) return;
       this._closePopup();
     };
-    document.addEventListener("click", this._onOutsideClick);
+    document.addEventListener("click", this._onOutsideClick, true);
     this._loadData();
   }
 
@@ -166,6 +177,12 @@ class __invite_popup extends LetcBox {
    * which would read every such click as outside. composedPath() is fixed at
    * dispatch, so it still holds this widget's root.
    */
+  /** A guided tour is guarding this popup's backdrop (see onDomRefresh). */
+  _tourOwnsBackdrop() {
+    const ds = this._wrapperEl && this._wrapperEl.dataset;
+    return !!(ds && (ds.rewardOverlay || ds.guidedOverlay));
+  }
+
   _isInsideEvent(e) {
     if (!this.el) return false;
     const path = typeof e.composedPath === "function" ? e.composedPath() : [];
@@ -195,7 +212,7 @@ class __invite_popup extends LetcBox {
       document.removeEventListener("mousedown", this._onOutsideDown, true);
     }
     if (this._onOutsideClick) {
-      document.removeEventListener("click", this._onOutsideClick);
+      document.removeEventListener("click", this._onOutsideClick, true);
     }
   }
 
