@@ -127,7 +127,50 @@ class __invite_popup extends LetcBox {
       this._refreshSendState();
     };
     this.el.addEventListener("focusout", this._onFocusOut);
+
+    // CLICK OUTSIDE CLOSES. On document, not on the wrapper-modal: that host
+    // only spans the window-manager area, and a click on the topbar is just as
+    // much "outside".
+    //
+    // The press must ALSO have started outside. That excludes a text drag
+    // that began in the email field and was released beside the card, and —
+    // the reason it is a mousedown seen by US — the click that opened this
+    // popup: its mousedown predates the listener, and the popup can mount
+    // while that same click is still being dispatched.
+    //
+    // BUBBLE phase, deliberately. reward-flow and activate-workspace guard
+    // this backdrop with a CAPTURE listener on the wrapper-modal that
+    // stops propagation and asks "Don't drop now"; bubbling here lets that
+    // guard win whenever a tour is running.
+    this._onOutsideDown = (e) => {
+      this._outsideDown = !this._isInsideEvent(e);
+    };
+    document.addEventListener("mousedown", this._onOutsideDown, true);
+    this._onOutsideClick = (e) => {
+      const startedOutside = this._outsideDown;
+      this._outsideDown = false;
+      if (!startedOutside || this._closing) return;
+      if (this._isInsideEvent(e)) return;
+      this._closePopup();
+    };
+    document.addEventListener("click", this._onOutsideClick);
     this._loadData();
+  }
+
+  /**
+   * Did this event happen on the popup?
+   *
+   * By the event PATH, not `el.contains(target)`: a chip ×, a checkbox or a
+   * department row re-feeds its part on click, so by the time the click
+   * bubbles to document its target is detached and `contains` answers no —
+   * which would read every such click as outside. composedPath() is fixed at
+   * dispatch, so it still holds this widget's root.
+   */
+  _isInsideEvent(e) {
+    if (!this.el) return false;
+    const path = typeof e.composedPath === "function" ? e.composedPath() : [];
+    if (path.includes(this.el)) return true;
+    return !!(e.target && this.el.contains && this.el.contains(e.target));
   }
 
   onBeforeDestroy() {
@@ -147,6 +190,12 @@ class __invite_popup extends LetcBox {
     }
     if (this._onSuggestionUp) {
       document.removeEventListener("mouseup", this._onSuggestionUp, true);
+    }
+    if (this._onOutsideDown) {
+      document.removeEventListener("mousedown", this._onOutsideDown, true);
+    }
+    if (this._onOutsideClick) {
+      document.removeEventListener("click", this._onOutsideClick);
     }
   }
 

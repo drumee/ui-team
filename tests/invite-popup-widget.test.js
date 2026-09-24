@@ -41,7 +41,23 @@ global.LOCALE = new Proxy({}, { get: (t, k) => k });
 global.Visitor = { id: "me", profile: () => ({ email: "me@x.com" }) };
 global.Wm = { alert() {} };
 global._ = { isFunction: (f) => typeof f === "function", isArray: Array.isArray };
-global.document = { addEventListener() {}, removeEventListener() {} };
+// A document that keeps its listeners, so the outside-click tests can dispatch.
+const listeners = [];
+global.document = {
+  addEventListener(type, fn, capture) { listeners.push({ type, fn, capture: !!capture }); },
+  removeEventListener(type, fn, capture) {
+    const i = listeners.findIndex((l) => l.type === type && l.fn === fn && l.capture === !!capture);
+    if (i >= 0) listeners.splice(i, 1);
+  },
+};
+// Capture listeners first, then bubble — the order a real document runs them
+// for a target below it. `path` stands in for composedPath().
+const dispatch = (type, path) => {
+  const e = { type, target: path[0], composedPath: () => path };
+  for (const phase of [true, false]) {
+    for (const l of listeners.slice()) if (l.type === type && l.capture === phase) l.fn(e);
+  }
+};
 
 const part = () => ({
   el: { dataset: {}, querySelector: () => null, querySelectorAll: () => [] },
@@ -52,7 +68,7 @@ const part = () => ({
 global.LetcBox = class {
   constructor(opt = {}) {
     this._opt = opt;
-    this.el = { dataset: {}, addEventListener() {}, contains: () => false };
+    this.el = { dataset: {}, addEventListener() {}, removeEventListener() {}, contains: () => false };
     this.fig = { family: "invite-popup" };
   }
   initialize() {}
@@ -107,6 +123,61 @@ test("production build: no mock departments", async () => {
   } finally {
     delete global.__BUILD__;
   }
+});
+
+// ── Click outside closes ─────────────────────────────────────────────────
+function opened() {
+  listeners.length = 0; // a failed test must not leak its listeners into the next
+  const p = make();
+  p.onDomRefresh();
+  p.closed = 0;
+  p._closePopup = () => { p.closed++; };
+  return p;
+}
+const outside = () => [{ id: "desk" }];
+const inside = (p) => [{ id: "row" }, p.el];
+
+test("a click outside the popup closes it", () => {
+  const p = opened();
+  dispatch("mousedown", outside());
+  dispatch("click", outside());
+  assert.equal(p.closed, 1);
+  p.onBeforeDestroy();
+});
+
+test("a click inside the popup does not close it — even on a node the click re-rendered away", () => {
+  const p = opened();
+  // A chip × / checkbox re-feeds its row before the click reaches document, so
+  // the target is detached: el.contains() says no, the event path still says yes.
+  dispatch("mousedown", inside(p));
+  dispatch("click", inside(p));
+  assert.equal(p.closed, 0);
+  p.onBeforeDestroy();
+});
+
+test("a drag that starts inside and ends outside does not close it", () => {
+  const p = opened();
+  dispatch("mousedown", inside(p));
+  dispatch("click", outside());
+  assert.equal(p.closed, 0);
+  p.onBeforeDestroy();
+});
+
+test("the click that opened the popup does not close it", () => {
+  // Its mousedown happened before the popup mounted, so only the click is seen.
+  const p = opened();
+  dispatch("click", outside());
+  assert.equal(p.closed, 0);
+  p.onBeforeDestroy();
+});
+
+test("destroy removes the outside-click listeners", () => {
+  const p = opened();
+  p.onBeforeDestroy();
+  dispatch("mousedown", outside());
+  dispatch("click", outside());
+  assert.equal(p.closed, 0);
+  assert.equal(listeners.length, 0);
 });
 
 test("loads a flat tree from desk.home when there is no organisation", async () => {
