@@ -1109,6 +1109,7 @@ class __player_image extends __core {
     if (this._opensFullFrame()) {
       snap.fillWorkspace(this, this._naturalBounds, this._snapOpt());
       this._markFullFrame();
+      this._followViewport();
       return;
     }
     this.$el.css({ width, height, ...this._pos });

@@ -483,6 +483,10 @@ class __window_interact_player extends __utils {
    */
   onBeforeDestroy() {
     this._removeResizeShield();
+    if (this._onViewportFill) {
+      window.removeEventListener("resize", this._onViewportFill);
+      clearTimeout(this._viewportFillTimer);
+    }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -825,6 +829,7 @@ class __window_interact_player extends __utils {
         this._fullFrameOpt(),
       );
       this._markFullFrame();
+      this._followViewport();
       if (_.isFunction(cb)) _.defer(() => cb(this));
       return;
     }
@@ -833,12 +838,12 @@ class __window_interact_player extends __utils {
   }
 
   /**
-   * Whether this viewer opens full-frame — filling the desk work area, like
-   * the office editor always has. Audio keeps its compact player; mobile is
-   * full-bleed already; a DMZ share has no desk work area to fill.
+   * Whether this viewer opens full-frame — filling the desk work area (the
+   * whole viewport on a share page), like the office editor always has. Audio
+   * keeps its compact player; mobile is full-bleed already.
    */
   _opensFullFrame() {
-    if (Visitor.isMobile() || Visitor.inDmz) return false;
+    if (Visitor.isMobile()) return false;
     if (this.mget(_a.kind) === "audio_player") return false;
     return true;
   }
@@ -859,6 +864,38 @@ class __window_interact_player extends __utils {
   _fullFrameOpt() {
     if (_.isFunction(this._snapOpt)) return this._snapOpt();
     return { minWidth: 200, minHeight: 200 };
+  }
+
+  /**
+   * Keep a full-frame viewer filling the viewport on a share page. The desk WM
+   * already re-fits zoomed windows on resize (manager `_clampWindow`), but the
+   * DMZ WM replaces that part of `onPartReady`, so nothing else would.
+   */
+  _followViewport() {
+    if (!Visitor.inDmz || this._onViewportFill) return;
+    const f = () => {
+      clearTimeout(this._viewportFillTimer);
+      this._viewportFillTimer = setTimeout(() => {
+        if (this.isDestroyed()) {
+          window.removeEventListener("resize", f);
+          return;
+        }
+        if (!this._zoomed) return;
+        // The document player sizes its content off its own helper.
+        if (_.isFunction(this._applyWorkspaceBounds)) {
+          this._applyWorkspaceBounds(false);
+          return;
+        }
+        const ws = snap.workspaceRect();
+        snap.applyBounds(
+          this,
+          { left: 0, top: 0, width: ws.width, height: ws.height },
+          { ...this._fullFrameOpt(), instant: true },
+        );
+      }, 150);
+    };
+    this._onViewportFill = f;
+    window.addEventListener("resize", f);
   }
 
   /**

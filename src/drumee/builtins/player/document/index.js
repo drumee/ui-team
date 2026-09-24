@@ -1114,7 +1114,7 @@ class __player_document extends PlayerInteract {
     const max_width = window.innerWidth - 2 * o.marginX;
     // The editor has always opened maximized; the PDF preview now does too —
     // every file opens full-frame (Lexis, 2026-09-23). `_opensFullFrame`
-    // (player/interact) leaves mobile and DMZ on their own sizing below.
+    // (player/interact) leaves mobile on its own sizing below.
     if (this.mget(_a.mode) == _a.edit || this._opensFullFrame()) {
       // Open maximized to the workspace (header and sidebar stay
       // visible) — same bounds the zoom button uses.
@@ -1134,6 +1134,7 @@ class __player_document extends PlayerInteract {
       // at the correct size, then keep it fitted as the workspace resizes.
       this._applyWorkspaceBounds(false);
       this._observeWorkspace();
+      this._followViewport();
       // Shown at once — no fade-in (Lexis, 2026-09-23).
       TweenMax.set(this.$el, { opacity: 1 });
       return
