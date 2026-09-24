@@ -299,6 +299,55 @@ test("no checked workspace: workspace error, nothing posted", async () => {
   assert.equal(p._workspaceError.el.dataset.state, 1);
 });
 
+// ── Get link (mock, development builds) ──────────────────────────────────
+test("development build: Get link mints a mock link for the checked workspaces", async () => {
+  global.__BUILD__ = "development";
+  try {
+    const p = make();
+    await p._loadData();
+    p._checked = new Set(["h1"]);
+    p.onUiEvent(cmd("get-link"));
+    assert.match(p._link.url, /^https?:\/\/[^/]+\/s\/[a-z]+-[a-z]+-\d{2}$/);
+    assert.equal(p.posted.length, 0, "a mock never calls the server");
+    assert.ok(Array.isArray(p._linkPanel.fed), "link panel re-fed with the url row");
+    const first = p._link.url;
+    p.onUiEvent(cmd("get-link"));
+    assert.notEqual(p._link.url, undefined);
+    assert.equal(typeof p._link.url, "string");
+    p.onUiEvent(cmd("revoke-link"));
+    assert.equal(p._link.url, null);
+    assert.ok(first);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+test("development build: Get link with no workspace checked asks for one", async () => {
+  global.__BUILD__ = "development";
+  try {
+    const p = make();
+    await p._loadData();
+    p.onUiEvent(cmd("get-link"));
+    assert.equal(p._link.url, null);
+    assert.equal(p._workspaceError.el.dataset.state, 1);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+test("production build: Get link stays a no-op", async () => {
+  global.__BUILD__ = "production";
+  try {
+    const p = make();
+    await p._loadData();
+    p._checked = new Set(["h1"]);
+    p.onUiEvent(cmd("get-link"));
+    assert.equal(p._link.url, null);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
 test("public link tab is local state only: no server call", async () => {
   const p = make();
   await p._loadData();

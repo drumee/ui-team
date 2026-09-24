@@ -299,7 +299,11 @@ function linkPanelKids(ui, pfx) {
             kidsOpt: { active: 0 },
             kids: [
               Skeletons.Button.Svg({ ico: "apps-link-simple", className: `${pfx}__link-ico` }),
-              Skeletons.Note({ className: `${pfx}__link-url`, content: l.url }),
+              Skeletons.Note({
+                className: `${pfx}__link-url`,
+                // Displayed without its scheme, as the design draws it.
+                content: String(l.url).replace(/^https?:\/\//, ""),
+              }),
               Skeletons.Button.Svg({ ico: "apps-copy", className: `${pfx}__link-copy` }),
             ],
           }),

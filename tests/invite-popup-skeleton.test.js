@@ -162,3 +162,10 @@ test("no invitable workspace: one empty-state line", () => {
   assert.equal(out.length, 1);
   assert.equal(out[0].content, en.INVITE_NO_WORKSPACE);
 });
+
+// Figma 785:72862 shows the link without its scheme; Copy still copies the
+// full URL (the controller reads _link.url, not the displayed text).
+test("link row shows the url without its scheme", () => {
+  const got = skeleton(ui({ _tab: "link", _link: { expiry: 0, preset: "7d", url: "https://team.drumee.in/s/pink-fox-42" } }));
+  assert.equal(cls(got, "link-url")[0].content, "team.drumee.in/s/pink-fox-42");
+});

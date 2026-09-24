@@ -601,7 +601,7 @@ class __invite_popup extends LetcBox {
     ]);
     if (this.isDestroyed && this.isDestroyed()) return;
     this._tree = T.buildTree({ homeRows: home, overview });
-    if (__invite_popup._mockDepartments()) this._tree = T.withMockDepartments(this._tree);
+    if (__invite_popup._mocksEnabled()) this._tree = T.withMockDepartments(this._tree);
     const org = overview && overview.organisation;
     this._org = inOrganization() && org ? org : null;
     if (this._seedHubId && T.allHubIds(this._tree).includes(this._seedHubId)) {
@@ -724,11 +724,27 @@ class __invite_popup extends LetcBox {
 
   /**
    * THE BACKEND SEAM. No server endpoint mints a multi-workspace invite link
-   * yet (hub.get_external_room_attr is per share-hub and carries no roles), so
-   * this deliberately does nothing. When one exists: post the checked hub ids,
-   * their roles and the expiry here, and hand the answer to _setLink().
+   * yet (hub.get_external_room_attr is per share-hub and carries no roles).
+   * When one exists: post the checked hub ids, their roles and the expiry
+   * here, and hand the answer to _setLink().
+   *
+   * Until then a DEVELOPMENT build mints a mock link so the tab can be
+   * exercised end to end (link row, copy, revoke); a production build does
+   * nothing — a fake link there would be shared by real users and lead
+   * nowhere. Same gate as the mock departments.
    */
-  _requestLink() {}
+  _requestLink() {
+    if (!__invite_popup._mocksEnabled()) return;
+    // Same rule as Send: a link invites INTO workspaces, so it needs one.
+    if (!this._checked.size) {
+      this._setWorkspaceError(
+        LOCALE.INVITE_WORKSPACE_REQUIRED || "Please select at least one workspace.",
+      );
+      return;
+    }
+    this._setWorkspaceError(null);
+    this._setLink(__invite_popup._mockLinkUrl());
+  }
 
   _setLink(url) {
     this._link = { ...this._link, url: url || null };
@@ -951,13 +967,27 @@ class __invite_popup extends LetcBox {
 }
 
 /**
- * Mock departments (tree.withMockDepartments) in DEVELOPMENT builds only —
- * `__BUILD__` is webpack's mode (webpack/plugins.js DefinePlugin), so a
- * production bundle never groups a real organisation's workspaces under
- * departments that do not exist.
+ * UI mocks — departments (tree.withMockDepartments) and the Public link
+ * (_requestLink) — in DEVELOPMENT builds only. `__BUILD__` is webpack's mode
+ * (webpack/plugins.js DefinePlugin), so a production bundle never shows
+ * departments that do not exist or hands out a link that leads nowhere.
  */
-__invite_popup._mockDepartments = () =>
+__invite_popup._mocksEnabled = () =>
   typeof __BUILD__ !== "undefined" && !/^prod/.test(__BUILD__);
+
+/**
+ * A mock share link in the design's shape (Figma 785:72862:
+ * `drumee.com/s/pink-fo…`) on the current host: /s/<adjective>-<animal>-<nn>.
+ */
+__invite_popup._mockLinkUrl = () => {
+  const ADJ = ["pink", "blue", "calm", "bold", "quick", "sunny", "brave", "lucky"];
+  const ANIMAL = ["fox", "owl", "lynx", "otter", "panda", "heron", "koala", "tiger"];
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const nn = String(Math.floor(Math.random() * 90) + 10);
+  const origin =
+    typeof location !== "undefined" && location.origin ? location.origin : "https://drumee.com";
+  return `${origin}/s/${pick(ADJ)}-${pick(ANIMAL)}-${nn}`;
+};
 
 __invite_popup._EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
