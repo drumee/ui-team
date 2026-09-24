@@ -8161,6 +8161,10 @@ class desk_module extends LetcBox {
     // need, so the first press does not sit on a fetch with the previous pane
     // on screen. Declines for almost every session too.
     this._warmWindowTourKinds();
+    // Same idea for the office editor: its ~3.6 MB bundle is what the first
+    // .docx / .xlsx open otherwise waits on. Loads it in a hidden iframe on the
+    // docserver origin once per docserver version; see libs/office-warmup.
+    require("libs/office-warmup").schedule(this);
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
