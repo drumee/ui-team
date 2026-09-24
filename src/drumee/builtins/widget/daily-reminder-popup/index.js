@@ -90,6 +90,31 @@ class __daily_reminder_popup extends LetcBox {
   onDomRefresh() {
     this._portalToBody();
     this.feed(require("./skeleton")(this));
+    this._startMotion();
+  }
+
+  /**
+   * Entrance + per-period idle animation (motion.js). The kids are not
+   * guaranteed to be in the DOM the instant feed() returns, so try on the
+   * next frames until the card is there — a few frames at most; after that
+   * the static card simply stands, which is always a correct rendering.
+   */
+  _startMotion(tries = 10) {
+    requestAnimationFrame(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const handle = require("./motion").play(this.el, this.getPeriod());
+      if (handle.started) this._motion = handle;
+      else if (tries > 1) this._startMotion(tries - 1);
+    });
+  }
+
+  _stopMotion() {
+    if (this._motion) this._motion.kill();
+    this._motion = null;
+  }
+
+  onBeforeDestroy() {
+    this._stopMotion();
   }
 
   /**
@@ -148,6 +173,9 @@ class __daily_reminder_popup extends LetcBox {
    * diagnosed from scratch for the same defect.
    */
   _close() {
+    // Stop the tweens BEFORE the view goes: goodbye() destroys on a timer,
+    // and an idle loop left running would keep touching a detached node.
+    this._stopMotion();
     closeWmPopup(this);
   }
 
