@@ -115,3 +115,30 @@ test("toggles never mutate their input", () => {
   T.toggleWorkspace(before, "h2");
   assert.deepEqual([...before], ["h1"]);
 });
+
+// UI mock for development builds: an org with no departments still shows the
+// department rows, built from the caller's REAL workspaces (so Send still
+// invites into real hubs). Never replaces real departments.
+test("withMockDepartments groups real workspaces under two mock departments", () => {
+  const t = T.buildTree({ homeRows: home, overview: { can_browse: 0 } });
+  const m = T.withMockDepartments(t);
+  assert.deepEqual(m.departments.map((d) => [d.id, d.mock, d.workspaces.map((w) => w.hub_id)]),
+    [["mock-1", 1, ["h1", "h2"]], ["mock-2", 1, ["h3"]]]);
+  assert.deepEqual(m.ungrouped, []);
+  assert.deepEqual(T.allHubIds(m).sort(), ["h1", "h2", "h3"]);
+  assert.equal(t.departments.length, 0, "input tree untouched");
+});
+
+test("withMockDepartments leaves the rest ungrouped past four workspaces", () => {
+  const rows = ["a", "b", "c", "d", "e"].map((id) => ({ hub_id: id, filename: id, area: "private", privilege: ADMIN }));
+  const m = T.withMockDepartments(T.buildTree({ homeRows: rows, overview: null }));
+  assert.deepEqual(m.departments.map((d) => d.workspaces.length), [2, 2]);
+  assert.deepEqual(m.ungrouped.map((w) => w.hub_id), ["e"]);
+});
+
+test("withMockDepartments never touches real departments or an empty tree", () => {
+  const real = T.buildTree({ homeRows: home, overview });
+  assert.equal(T.withMockDepartments(real), real);
+  const empty = { departments: [], ungrouped: [] };
+  assert.equal(T.withMockDepartments(empty), empty);
+});

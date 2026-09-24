@@ -45,3 +45,14 @@ test("compact sizes: card, type, rows, controls", () => {
   assert.match(rule(".invite-popup__switch"), /width: 32px; height: 16px/);
   assert.match(rule(".invite-popup__get-link, .invite-popup__send-btn"), /padding: 8px 16px/);
 });
+
+// The folder template emits `.media-grid__folder-art > svg.folder-shape + .badge`
+// sized for grid cards. Without the shared ws-folder-icon sizing the art box
+// has no size, the folder draws at 0×0 and its area badge (globe / lock) falls
+// out below the row — seen live on team-9637.
+test("workspace glyph uses the shared folder-icon sizing", () => {
+  assert.match(rule(".invite-popup__ws-icon"), /width: 20px; height: 20px;.*display: flex !important;.*overflow: visible; position: relative/);
+  assert.match(rule(".invite-popup__ws-icon .media-grid__folder-art"), /width: 20px; height: 16px/);
+  assert.match(rule(".invite-popup__ws-icon .folder-shape"), /width: 20px; height: 16px/);
+  assert.match(rule(".invite-popup__ws-icon .badge"), /position: absolute/);
+});

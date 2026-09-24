@@ -86,6 +86,29 @@ function make(opt = {}) {
   return p;
 }
 
+test("development build: an org without departments gets mock ones", async () => {
+  global.__BUILD__ = "development";
+  try {
+    const p = make();
+    await p._loadData();
+    assert.deepEqual(p._tree.departments.map((d) => d.id), ["mock-1"]);
+    assert.deepEqual(p._tree.departments[0].workspaces.map((w) => w.hub_id), ["h1", "h2"]);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+test("production build: no mock departments", async () => {
+  global.__BUILD__ = "production";
+  try {
+    const p = make();
+    await p._loadData();
+    assert.equal(p._tree.departments.length, 0);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
 test("loads a flat tree from desk.home when there is no organisation", async () => {
   const p = make();
   await p._loadData();

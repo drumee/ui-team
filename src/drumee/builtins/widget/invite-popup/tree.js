@@ -86,6 +86,35 @@ function buildTree({ homeRows, overview }) {
   return { departments: departments.filter((d) => d.workspaces.length), ungrouped };
 }
 
+/**
+ * UI mock for development builds (see the controller's gate): an organisation
+ * with no departments yet still shows the department rows, so the design can
+ * be exercised on a stage endpoint. Built from the caller's REAL invitable
+ * workspaces — at most two mock departments of two — so every checkbox still
+ * maps to a real hub and Send invites exactly what it would without the mock.
+ *
+ * Returns the input untouched when there is nothing to mock: a tree with real
+ * departments, or no workspace at all.
+ *
+ * @param {{departments: Array, ungrouped: Array}} tree buildTree() result
+ * @returns {{departments: Array, ungrouped: Array}}
+ */
+function withMockDepartments(tree) {
+  if (tree.departments.length || !tree.ungrouped.length) return tree;
+  const rest = tree.ungrouped.slice();
+  const departments = [];
+  for (let i = 1; i <= 2 && rest.length; i++) {
+    const id = `mock-${i}`;
+    departments.push({
+      id,
+      name: `Department ${String.fromCharCode(64 + i)} (mock)`,
+      mock: 1,
+      workspaces: rest.splice(0, 2).map((w) => ({ ...w, department_id: id })),
+    });
+  }
+  return { departments, ungrouped: rest };
+}
+
 function allHubIds(tree) {
   return [...tree.departments.flatMap((d) => d.workspaces), ...tree.ungrouped].map(
     (w) => w.hub_id,
@@ -139,6 +168,7 @@ module.exports = {
   ADMIN,
   inviteable,
   buildTree,
+  withMockDepartments,
   allHubIds,
   deptOf,
   deptState,

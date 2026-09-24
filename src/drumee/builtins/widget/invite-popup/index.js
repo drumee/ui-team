@@ -552,6 +552,7 @@ class __invite_popup extends LetcBox {
     ]);
     if (this.isDestroyed && this.isDestroyed()) return;
     this._tree = T.buildTree({ homeRows: home, overview });
+    if (__invite_popup._mockDepartments()) this._tree = T.withMockDepartments(this._tree);
     const org = overview && overview.organisation;
     this._org = inOrganization() && org ? org : null;
     if (this._seedHubId && T.allHubIds(this._tree).includes(this._seedHubId)) {
@@ -899,6 +900,15 @@ class __invite_popup extends LetcBox {
     }
   }
 }
+
+/**
+ * Mock departments (tree.withMockDepartments) in DEVELOPMENT builds only —
+ * `__BUILD__` is webpack's mode (webpack/plugins.js DefinePlugin), so a
+ * production bundle never groups a real organisation's workspaces under
+ * departments that do not exist.
+ */
+__invite_popup._mockDepartments = () =>
+  typeof __BUILD__ !== "undefined" && !/^prod/.test(__BUILD__);
 
 __invite_popup._EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 

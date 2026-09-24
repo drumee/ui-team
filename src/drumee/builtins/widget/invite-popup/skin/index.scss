@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 
 // ── Entrance / exit ─────────────────────────────────────────────────────
 // The same pair, and the same timings, that every other dialog fed into
@@ -508,15 +510,13 @@ $tint: rgba(89, 80, 255, 0.1);
     }
   }
 
+  // The folder template's markup (`.media-grid__folder-art > .folder-shape`
+  // + area `.badge`) is sized for grid cards; the shared mixin scales it into
+  // a row icon and pins the badge to the glyph's corner. Hand-rolled `svg
+  // { width: 100% }` sized the folder against an unsized art box — 0×0 — and
+  // the badge fell out below the row.
   &__ws-icon {
-    width: 20px;
-    height: 20px;
-    flex: none;
-
-    svg {
-      width: 100%;
-      height: 100%;
-    }
+    @include drumee.ws-folder-icon(20px, 16px);
   }
 
   &__row-name {
