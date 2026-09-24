@@ -2555,7 +2555,10 @@
     > .permission-restricted__ui {
       display: flex;
       position: absolute;
-      left: 0;
+      // RIGHT, not left: Lexis 09-24 wants Access to open on the right again,
+      // where it stood as a column before 85:36439. Still an overlay, so the
+      // file grid and the user's dragged --files-w are left as they were.
+      right: 0;
       top: 0;
       bottom: 0;
       // 512px is the design's width. min() rather than a clamp with a floor:
@@ -2633,10 +2636,10 @@
 
   // The members card enters on the switch, with its loading skeleton inside
   // (permission/restricted skin); its rows fade in when they land.
-  // From the LEFT, because that is the edge it is anchored to now — sliding it
-  // in from the right would have it cross the file grid it sits over.
+  // From the RIGHT, the edge it is anchored to — sliding in from the left
+  // would have it cross the file grid it sits over.
   &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
-    animation: window-folder__column-in-from-left 0.2s ease-out backwards;
+    animation: window-folder__column-in-from-right 0.2s ease-out backwards;
   }
 
   &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel,
@@ -2740,11 +2743,10 @@
       animation: window-folder__column-in-from-right 0.2s ease-out backwards;
     }
 
-    // Split out of the list above: the members panel is anchored to the LEFT
-    // edge now, so it has to enter from that side like the switch animation
-    // does. Everything else in this block still enters from the right.
+    // The members panel is anchored to the RIGHT edge, so it enters from that
+    // side like the switch animation does.
     &[data-view="access"] > .permission-restricted__ui {
-      animation: window-folder__column-in-from-left 0.2s ease-out backwards;
+      animation: window-folder__column-in-from-right 0.2s ease-out backwards;
     }
   }
 
