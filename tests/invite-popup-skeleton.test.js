@@ -64,10 +64,18 @@ test("root keeps the class the guided flows select on", () => {
   assert.equal(skeleton(ui()).className, `${P}__container`);
 });
 
-test("org card only when the caller is in an organisation", () => {
-  assert.equal(cls(skeleton(ui()), "org-card").length, 0);
-  const t = skeleton(ui({ _org: { name: "Acme", department_count: 3, member_count: 24 } }));
-  const texts = walk(cls(t, "org-card")[0]).map((n) => n.content).filter(Boolean);
+// A SLOT, filled once organization.overview answers — so the controller feeds
+// that one part instead of re-feeding the whole popup (which rebuilt the email
+// row and dropped chips the user had already added).
+test("org card is an always-present slot, empty and off outside an organisation", () => {
+  const slot = cls(skeleton(ui()), "org-card")[0];
+  assert.equal(slot.sys_pn, "org");
+  assert.equal(slot.dataset.state, 0);
+  assert.equal((slot.kids || []).length, 0);
+  const org = { name: "Acme", department_count: 3, member_count: 24 };
+  const on = cls(skeleton(ui({ _org: org })), "org-card")[0];
+  assert.equal(on.dataset.state, 1);
+  const texts = walk(skeleton.orgCardKids(ui({ _org: org }), P)).map((n) => n.content).filter(Boolean);
   assert.ok(texts.includes("Acme") && texts.includes("3") && texts.includes("24"));
 });
 

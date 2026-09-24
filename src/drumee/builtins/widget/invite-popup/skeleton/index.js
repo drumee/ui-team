@@ -80,28 +80,38 @@ const header = (ui, pfx) =>
     ],
   });
 
-// Absent — not empty — outside an organisation (79% of accounts, domain 1).
-const orgCard = (ui, pfx) => {
+/**
+ * The org card's content. Fed into the `org` slot by the controller once
+ * organization.overview answers — a slot, so that answer never re-feeds the
+ * whole popup (which rebuilt the email row and dropped the chips).
+ */
+function orgCardKids(ui, pfx) {
   const o = ui._org;
-  if (!o) return null;
-  return Skeletons.Box.Y({
+  if (!o) return [];
+  return [
+    Skeletons.Note({ className: `${pfx}__org-name`, content: o.name }),
+    Skeletons.Box.X({
+      className: `${pfx}__org-stats`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__pill-num`, content: String(o.department_count || 0) }),
+        Skeletons.Note({ className: `${pfx}__org-stat-word`, content: LOCALE.INVITE_DEPARTMENTS }),
+        Skeletons.Note({ className: `${pfx}__pill-num`, content: String(o.member_count || 0) }),
+        Skeletons.Button.Svg({ ico: "ph-users", className: `${pfx}__pill-ico`, active: 0 }),
+      ],
+    }),
+  ];
+}
+
+// Off (data-state 0, hidden by the skin) outside an organisation — 79% of
+// accounts sit on domain 1 — and until the overview answers.
+const orgCard = (ui, pfx) =>
+  Skeletons.Box.Y({
     className: `${pfx}__org-card`,
     sys_pn: "org",
     partHandler: ui,
-    kids: [
-      Skeletons.Note({ className: `${pfx}__org-name`, content: o.name }),
-      Skeletons.Box.X({
-        className: `${pfx}__org-stats`,
-        kids: [
-          Skeletons.Note({ className: `${pfx}__pill-num`, content: String(o.department_count || 0) }),
-          Skeletons.Note({ className: `${pfx}__org-stat-word`, content: LOCALE.INVITE_DEPARTMENTS }),
-          Skeletons.Note({ className: `${pfx}__pill-num`, content: String(o.member_count || 0) }),
-          Skeletons.Button.Svg({ ico: "ph-users", className: `${pfx}__pill-ico`, active: 0 }),
-        ],
-      }),
-    ],
+    dataset: { state: ui._org ? 1 : 0 },
+    kids: orgCardKids(ui, pfx),
   });
-};
 
 const TABS = [
   { tab: "email", ico: "ph-envelope-simple", label: () => LOCALE.INVITE_VIA_EMAIL },
@@ -343,6 +353,7 @@ module.exports = function (ui) {
 };
 
 module.exports.linkPanelKids = linkPanelKids;
+module.exports.orgCardKids = orgCardKids;
 module.exports.workspaceGlyph = workspaceGlyph;
 module.exports.ROLES = ROLES;
 module.exports.DEFAULT_ROLE_IDS = DEFAULT_ROLE_IDS;

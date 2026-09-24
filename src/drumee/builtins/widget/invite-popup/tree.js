@@ -24,14 +24,22 @@ const NON_INVITEABLE = new Set([
 
 const idOf = (r) => String(r.hub_id || r.id || r.actual_hub_id || "");
 
+// A list service with exactly one row answers with the object itself.
+const asRows = (r) => (r == null ? [] : Array.isArray(r) ? r : [r]);
+
 /**
- * @param {Array} rows desk.home rows
+ * @param {Array|Object} rows desk.home rows (or the single-row object)
  * @returns {Array} the rows this caller may invite into
  */
 function inviteable(rows) {
-  return (rows || []).filter(
+  return asRows(rows).filter(
     (w) =>
+      w &&
       idOf(w) &&
+      // desk.home returns hubs whose ENTITY is deleted or frozen with that
+      // status (see desk _fetchWorkspaces). Allow-list active; a missing
+      // status still passes, as it does in the desk switcher.
+      (!w.status || w.status === "active") &&
       ((w.privilege | 0) & ADMIN) === ADMIN &&
       !NON_INVITEABLE.has(w.area || ""),
   );

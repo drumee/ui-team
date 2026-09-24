@@ -276,6 +276,8 @@ class __invite_popup extends LetcBox {
       this._workspaceError = child;
     } else if (pn === "send-btn") {
       this._sendBtn = child;
+    } else if (pn === "org") {
+      this._orgBox = child;
     } else if (pn === "tree") {
       this._treeBox = child;
     } else if (pn === "all-check") {
@@ -545,16 +547,11 @@ class __invite_popup extends LetcBox {
    */
   async _loadData() {
     const [home, overview] = await Promise.all([
-      Promise.resolve(
-        this.fetchService(
-          { service: SERVICE.desk.home, hub_id: Visitor.id, type: _a.hub },
-          { async: 1 },
-        ),
-      ).catch(() => []),
+      this._fetchHome().catch(() => []),
       orgOverview(this),
     ]);
     if (this.isDestroyed && this.isDestroyed()) return;
-    this._tree = T.buildTree({ homeRows: _.isArray(home) ? home : [], overview });
+    this._tree = T.buildTree({ homeRows: home, overview });
     const org = overview && overview.organisation;
     this._org = inOrganization() && org ? org : null;
     if (this._seedHubId && T.allHubIds(this._tree).includes(this._seedHubId)) {
@@ -562,12 +559,45 @@ class __invite_popup extends LetcBox {
       const d = T.deptOf(this._tree, this._seedHubId);
       if (d) this._expanded = new Set([d]);
     }
-    // The org card is part of the static layout, so it needs one re-feed.
-    if (this._org) {
-      this.feed(skeletonModule(this));
-      this.el.dataset.tab = this._tab;
+    // Feed the org SLOT only. Re-feeding the whole popup rebuilt the email row
+    // and dropped any chip the user had added while this was loading — while
+    // _invitees still held it, so Send went to a recipient no longer shown.
+    if (this._org && this._orgBox) {
+      this._orgBox.feed(skeletonModule.orgCardKids(this, this.fig.family));
+      this._orgBox.el.dataset.state = 1;
     }
     this._renderTree();
+  }
+
+  /**
+   * Every page of desk.home, not just the first.
+   *
+   * desk.home IS PAGINATED AT 45 (mfs_show_node_by's pageToLimits — see the
+   * desk's _fetchWorkspacePages for the full story). A home listing is ordered
+   * rank asc and a new workspace ranks last, so for anyone with 45+ home items
+   * page 1 alone missed it: not offered, and not pre-checked from its own
+   * kebab "Invite". A short page is the last one, so the common case still
+   * costs one request.
+   *
+   * @returns {Promise<Array>} every row, in server order
+   */
+  async _fetchHome() {
+    const PAGE_SIZE = 45;
+    const MAX_PAGES = 20;
+    // A list service with exactly one row answers with the object itself.
+    const asRows = (r) => (r == null ? [] : _.isArray(r) ? r : [r]);
+    const all = [];
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const rows = asRows(
+        await this.fetchService(
+          { service: SERVICE.desk.home, hub_id: Visitor.id, type: _a.hub, page },
+          { async: 1 },
+        ),
+      );
+      all.push(...rows);
+      if (rows.length < PAGE_SIZE) break;
+    }
+    return all;
   }
 
   _renderTree() {

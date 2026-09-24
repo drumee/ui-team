@@ -90,6 +90,26 @@ test("toggleAll checks everything unless everything is checked", () => {
   assert.equal(T.toggleAll(t, new Set(["h1", "h2", "h3"])).size, 0);
 });
 
+// desk.home returns hubs whose ENTITY is deleted or frozen with status
+// "deleted"/"frozen" (see desk _fetchWorkspaces); "All" must never select one.
+test("inviteable drops non-active hubs, keeps rows with no status", () => {
+  const rows = [
+    { hub_id: "x1", area: "private", privilege: ADMIN, status: "active" },
+    { hub_id: "x2", area: "private", privilege: ADMIN, status: "deleted" },
+    { hub_id: "x3", area: "private", privilege: ADMIN, status: "frozen" },
+    { hub_id: "x4", area: "private", privilege: ADMIN },
+  ];
+  assert.deepEqual(T.inviteable(rows).map((r) => r.hub_id), ["x1", "x4"]);
+});
+
+// A list service with exactly one row answers with the object itself.
+test("a single-object desk.home answer is one row, not none", () => {
+  const one = { hub_id: "h1", filename: "Solo", area: "private", privilege: ADMIN };
+  assert.deepEqual(T.inviteable(one).map((r) => r.hub_id), ["h1"]);
+  const t = T.buildTree({ homeRows: one, overview: null });
+  assert.deepEqual(T.allHubIds(t), ["h1"]);
+});
+
 test("toggles never mutate their input", () => {
   const before = new Set(["h1"]);
   T.toggleWorkspace(before, "h2");

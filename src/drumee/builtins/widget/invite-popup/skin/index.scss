@@ -151,6 +151,12 @@ $tint: rgba(89, 80, 255, 0.1);
     padding: 8px 16px;
     border: 1px solid $line;
     border-radius: 12px;
+
+    // An empty slot — no organisation, or the overview has not answered.
+    // !important: `.box[data-flow]` sets display at the same specificity.
+    &[data-state="0"] {
+      display: none !important;
+    }
   }
 
   &__org-name {
@@ -418,6 +424,16 @@ $tint: rgba(89, 80, 255, 0.1);
     @supports not selector(::-webkit-scrollbar) {
       scrollbar-width: thin;
       scrollbar-color: #847eff $line;
+    }
+
+    // An OPEN ROLE MENU LIFTS THE CLIP. The menu is absolutely positioned
+    // below its row inside this scroller, so with overflow:auto it opens into
+    // the scroll overflow — invisible on a one- or two-row list, the ordinary
+    // case — and its hover descriptions are cut off on the right. The
+    // pre-redesign skin carried the same escape on __workspaces for exactly
+    // this bug. Scrolling is suspended only while the menu is open.
+    &:has(.invite-popup__role-options[data-state="1"]) {
+      overflow: visible;
     }
 
     &::-webkit-scrollbar {

@@ -18,6 +18,7 @@ const STUBS = {
     summarizeRoles: (ids) => ids[0],
     workspaceGlyph: () => "",
     linkPanelKids: () => [],
+    orgCardKids: () => [],
   }),
   "./skeleton/tree": { rows: (ui, tree, st) => [{ rows: true, st }] },
   "libs/contact-lookup": { lookupContacts: async () => [], suggestionRows: () => [] },
@@ -57,7 +58,8 @@ global.LetcBox = class {
   initialize() {}
   declareHandlers() {}
   mget(k) { return this._opt[k]; }
-  feed() {}
+  // Counts WHOLE-widget re-feeds: each one rebuilds every part (chips included).
+  feed() { this.wholeFeeds = (this.wholeFeeds || 0) + 1; }
   triggerHandlers(a) { (this.triggered = this.triggered || []).push(a); }
   warn() {}
 };
@@ -79,7 +81,7 @@ function make(opt = {}) {
   p.fetchService = async () => home;
   p.posted = [];
   p.postService = async (svc, args) => { p.posted.push([svc, args]); return { results: [] }; };
-  for (const pn of ["tree", "all-check", "send-btn", "email-error", "workspace-error", "link-panel", "tabs"])
+  for (const pn of ["org", "tree", "all-check", "send-btn", "email-error", "workspace-error", "link-panel", "tabs"])
     p.onPartReady(part(), pn);
   return p;
 }
@@ -97,12 +99,54 @@ test("kebab seed pre-checks that workspace and expands its department", async ()
     organisation: { name: "Acme" }, can_browse: 1,
     departments: [{ id: 7, name: "D" }], workspaces: [{ hub_id: "h2", department_id: 7 }],
   };
-  const p = make({ hub_id: "h2", hub_name: "Sales" });
+  try {
+    const p = make({ hub_id: "h2", hub_name: "Sales" });
+    await p._loadData();
+    assert.deepEqual([...p._checked], ["h2"]);
+    assert.deepEqual([...p._expanded], ["7"]);
+    assert.equal(p._org.name, "Acme");
+  } finally {
+    orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+  }
+});
+
+test("org answer fills the org slot without re-feeding the popup", async () => {
+  orgAnswer = { organisation: { name: "Acme" }, can_browse: 0, departments: [], workspaces: [] };
+  try {
+    const p = make();
+    p._invitees = [{ email: "a@b.co" }];
+    await p._loadData();
+    assert.equal(p.wholeFeeds || 0, 0, "a whole re-feed rebuilds the email row and drops chips");
+    assert.equal(p._orgBox.el.dataset.state, 1);
+    assert.ok(Array.isArray(p._orgBox.fed));
+  } finally {
+    orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+  }
+});
+
+// desk.home is paginated at 45 (desk _fetchWorkspacePages); a workspace on
+// page 2 must still be offered — and pre-checked from its kebab.
+test("reads every desk.home page and pre-checks a page-2 seed", async () => {
+  const page1 = Array.from({ length: 45 }, (_, i) => ({ hub_id: `p${i}`, filename: `W${i}`, area: "private", privilege: ADMIN }));
+  const page2 = [{ hub_id: "late", filename: "Late", area: "private", privilege: ADMIN }];
+  const p = make({ hub_id: "late", hub_name: "Late" });
+  const pages = [];
+  p.fetchService = async (svc, args) => {
+    const page = (svc && svc.page) || (args && args.page);
+    pages.push(page);
+    return page === 1 ? page1 : page === 2 ? page2 : [];
+  };
   await p._loadData();
-  assert.deepEqual([...p._checked], ["h2"]);
-  assert.deepEqual([...p._expanded], ["7"]);
-  assert.equal(p._org.name, "Acme");
-  orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+  assert.deepEqual(pages, [1, 2]);
+  assert.equal(p._tree.ungrouped.length, 46);
+  assert.deepEqual([...p._checked], ["late"]);
+});
+
+test("a single-object desk.home answer still lists that workspace", async () => {
+  const p = make();
+  p.fetchService = async () => home[0];
+  await p._loadData();
+  assert.deepEqual(p._tree.ungrouped.map((w) => w.hub_id), ["h1"]);
 });
 
 test("toggle-ws and toggle-all update selection and the All stamp", async () => {
