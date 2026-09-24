@@ -29,3 +29,18 @@ for (const lang of LANGS) {
     assert.match(t.DAILY_REMINDER_HELLO_NO_NAME, /\{0\}/);
   });
 }
+
+// The pre-redesign strings. Nothing reads them since the 2026-09-23 card; a
+// leftover would be a translation someone keeps maintaining for nothing.
+const RETIRED = /^DAILY_REMINDER_(TITLE|TITLE_NO_NAME|SUBLINE|MESSAGES_[A-Z]+|TASKS_[A-Z]+|MEETINGS_[A-Z]+)$/;
+
+for (const lang of LANGS) {
+  test(`${lang}.json no longer carries the retired daily-reminder keys`, () => {
+    const t = require(path.join(__dirname, "..", "locale", `${lang}.json`));
+    assert.deepEqual(Object.keys(t).filter((k) => RETIRED.test(k)), []);
+    // still needed by the new card, or elsewhere
+    for (const k of ["DAILY_REMINDER_NOTHING", "DISCARD", "MY_CALENDAR"]) {
+      assert.equal(typeof t[k], "string", `${lang}: lost ${k}`);
+    }
+  });
+}
