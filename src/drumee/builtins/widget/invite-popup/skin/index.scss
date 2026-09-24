@@ -85,6 +85,14 @@ $tint: rgba(89, 80, 255, 0.1);
     }
   }
 
+  // ui-core draws every icon as an INLINE `<svg class="full inner
+  // drumee-picto">` inside its widget div; inline, the svg keeps baseline
+  // space and sits low in its box (the members icon beside a count, the
+  // checkbox tick). Block, once, for every icon in the popup.
+  &__ui svg.drumee-picto {
+    display: block;
+  }
+
   &__container {
     padding: 24px;
     gap: 16px;
@@ -175,6 +183,55 @@ $tint: rgba(89, 80, 255, 0.1);
     font: 400 11px/1.4 $font;
     color: $muted;
     margin-right: 4px;
+  }
+
+  // ── Workspace card (workspace scope, Figma 785:74990) ─────────────────
+  // The org card's frame, holding the workspace's own glyph, its name and two
+  // figures — storage, then members — each a Primary/40 number.
+  &__ws-card {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid $line;
+    border-radius: 10px;
+  }
+
+  &__ws-card-icon {
+    @include drumee.ws-folder-icon(32px, 26px);
+  }
+
+  &__ws-card-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__ws-card-name {
+    font: 600 13px/1.2 $font;
+    color: $ink;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__ws-stats {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__ws-stat {
+    align-items: center;
+    gap: 3px;
+  }
+
+  &__ws-stat-value {
+    font: 600 11px/1.2 $font;
+    color: var(--primary-40, #5950ff);
+  }
+
+  &__ws-stat-unit {
+    font: 400 11px/1.4 $font;
+    color: #65656c;
   }
 
   // ── Tabs ──────────────────────────────────────────────────────────────

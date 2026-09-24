@@ -19,6 +19,7 @@ const STUBS = {
     workspaceGlyph: () => "",
     linkPanelKids: () => [],
     orgCardKids: () => [],
+    wsCardKids: () => [],
   }),
   "./skeleton/tree": { rows: (ui, tree, st) => [{ rows: true, st }] },
   "libs/contact-lookup": { lookupContacts: async () => [], suggestionRows: () => [] },
@@ -28,6 +29,7 @@ const STUBS = {
     inOrganization: () => !!orgAnswer.organisation,
   },
   "media/grid/template/folder": () => "",
+  "@drumee/ui-essentials": { filesize: (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${n} B`) },
 };
 const load = Module._load;
 Module._load = function (r, p, m) {
@@ -102,7 +104,7 @@ function make(opt = {}) {
   p.fetchService = async () => home;
   p.posted = [];
   p.postService = async (svc, args) => { p.posted.push([svc, args]); return { results: [] }; };
-  for (const pn of ["org", "tree", "all-check", "send-btn", "email-error", "workspace-error", "link-panel", "tabs"])
+  for (const pn of ["org", "ws-card", "tree", "all-check", "send-btn", "email-error", "workspace-error", "link-panel", "tabs"])
     p.onPartReady(part(), pn);
   return p;
 }
@@ -128,6 +130,55 @@ test("production build: no mock departments", async () => {
   } finally {
     delete global.__BUILD__;
   }
+});
+
+// ── Workspace scope (sidebar Invite inside a workspace) ─────────────────
+const wsOpt = { scope: "workspace", hub_id: "h2", hub_name: "Sales", hub_area: "private" };
+
+test("workspace scope: that workspace is the selection; no desk.home read", async () => {
+  const p = make(wsOpt);
+  const calls = [];
+  p.fetchService = async (a) => { calls.push(a.service || a); return home; };
+  p.postService = async (svc, args) => {
+    p.posted.push([svc, args]);
+    return svc === "hub.show_privilege" ? { filesize: "3500000000" } : { results: [] };
+  };
+  global.SERVICE.hub.show_privilege = "hub.show_privilege";
+  await p._loadData();
+  assert.equal(p._scope, "workspace");
+  assert.deepEqual([...p._checked], ["h2"]);
+  assert.ok(!calls.includes("desk.home"), "no workspace list to fetch");
+  assert.equal(p._ws.name, "Sales");
+  assert.equal(p._ws.sizeText, "3.5 GB");
+  assert.ok(Array.isArray(p._wsCardBox.fed), "card re-fed with the size");
+});
+
+test("workspace scope: member count from the org overview when the caller may see it", async () => {
+  orgAnswer = { organisation: { name: "Acme" }, can_browse: 1, departments: [], workspaces: [{ hub_id: "h2", members: 24 }] };
+  try {
+    const p = make(wsOpt);
+    await p._loadData();
+    assert.equal(p._ws.members, 24);
+  } finally {
+    orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+  }
+});
+
+test("workspace scope: Send invites into that one workspace", async () => {
+  const p = make(wsOpt);
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._refreshSendState();
+  assert.equal(p._sendBtn.el.dataset.state, 1, "no workspace to pick first");
+  p._closePopup = () => {};
+  p.posted = [];
+  await p._sendInvitation();
+  assert.deepEqual(p.posted.filter(([s]) => s === "hub.invite").map(([, a]) => a.hub_id), ["h2"]);
+});
+
+test("workspace scope needs a real workspace: the personal home falls back to org scope", () => {
+  const p = make({ ...wsOpt, hub_id: "me" });
+  assert.equal(p._scope, "org");
 });
 
 // ── Click outside closes ─────────────────────────────────────────────────

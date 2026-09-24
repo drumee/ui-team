@@ -67,3 +67,21 @@ test("the checkbox tick is pinned to the box centre", () => {
   assert.match(tick, /margin: 0; padding: 0;/);
   assert.match(rule(".invite-popup__check-tick svg"), /display: block/);
 });
+
+// Workspace card (Figma 785:74990), compact like the rest of the popup: the
+// org card's frame, a folder glyph sized by the shared mixin, name + stats.
+test("workspace card: framed row, sized folder glyph, stats", () => {
+  assert.match(rule(".invite-popup__ws-card"), /gap: 8px; padding: 6px 12px; border: 1px solid rgba\(0, 0, 0, 0.05\); border-radius: 10px;/);
+  assert.match(rule(".invite-popup__ws-card-icon"), /width: 32px; height: 32px;.*display: flex !important/);
+  assert.match(rule(".invite-popup__ws-card-icon .folder-shape"), /width: 32px; height: 26px/);
+  assert.match(rule(".invite-popup__ws-card-name"), /font: 600 13px/);
+  assert.match(rule(".invite-popup__ws-stat-value"), /color: var\(--primary-40, #5950ff\)/);
+  assert.match(rule(".invite-popup__ws-stat-unit"), /color: #65656c/);
+});
+
+// ui-core icons are an INLINE <svg class="full inner drumee-picto"> inside
+// their widget div; inline, it carries baseline space and sits low in its box
+// (the members icon beside "24" in the workspace card, like the tick before).
+test("every ui-core icon inside the popup is a block svg", () => {
+  assert.match(rule(".invite-popup__ui svg.drumee-picto"), /display: block/);
+});

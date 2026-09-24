@@ -3035,5 +3035,6 @@
   "INVITE_EXPIRY_1H": "1ч",
   "INVITE_EXPIRY_24H": "24ч",
   "INVITE_EXPIRY_7D": "7д",
-  "INVITE_NO_WORKSPACE": "У вас нет пространства, в которое можно пригласить людей."
+  "INVITE_NO_WORKSPACE": "У вас нет пространства, в которое можно пригласить людей.",
+  "INVITE_WORKSPACE_TITLE": "Пригласить участника в пространство"
 }

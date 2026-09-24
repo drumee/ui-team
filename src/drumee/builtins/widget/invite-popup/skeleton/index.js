@@ -70,7 +70,11 @@ const header = (ui, pfx) =>
   Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.INVITE_TEAM_TITLE }),
+      Skeletons.Note({
+        className: `${pfx}__title`,
+        content:
+          ui._scope === "workspace" ? LOCALE.INVITE_WORKSPACE_TITLE : LOCALE.INVITE_TEAM_TITLE,
+      }),
       Skeletons.Button.Svg({
         className: `${pfx}__close`,
         ico: "cross",
@@ -101,6 +105,70 @@ function orgCardKids(ui, pfx) {
     }),
   ];
 }
+
+/**
+ * The workspace card (Figma 785:74990): the workspace's own glyph, its name,
+ * then how much it holds and how many members it has. Fed into the `ws-card`
+ * slot — the size and the member count arrive after the popup opens.
+ *
+ * A figure that is not known is LEFT OUT, never drawn as a zero: "0 B" beside
+ * an unread member count would be a claim, not a placeholder.
+ *
+ * @param {Object} ui reads ui._ws = {name, area, members, sizeText}
+ */
+function wsCardKids(ui, pfx) {
+  const ws = ui._ws || {};
+  const stats = [];
+  const text = String(ws.sizeText || "").trim();
+  if (text) {
+    // "3.5 GB" → number + unit, coloured apart the way the design does.
+    const at = text.lastIndexOf(" ");
+    stats.push(
+      Skeletons.Box.X({
+        className: `${pfx}__ws-stat`,
+        active: 0,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__ws-stat-value`, content: at > 0 ? text.slice(0, at) : text }),
+          at > 0 ? Skeletons.Note({ className: `${pfx}__ws-stat-unit`, content: text.slice(at + 1) }) : null,
+        ].filter(Boolean),
+      }),
+    );
+  }
+  if (ws.members != null) {
+    stats.push(
+      Skeletons.Box.X({
+        className: `${pfx}__ws-stat`,
+        active: 0,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__ws-stat-value`, content: String(ws.members) }),
+          Skeletons.Button.Svg({ ico: "ph-users", className: `${pfx}__pill-ico`, active: 0 }),
+        ],
+      }),
+    );
+  }
+  return [
+    // Element + content: the folder template emits MARKUP, not a sprite name.
+    Skeletons.Element({
+      className: `${pfx}__ws-card-icon`,
+      content: workspaceGlyph({ hub_id: ws.hub_id || "ws", area: ws.area || "" }),
+    }),
+    Skeletons.Box.Y({
+      className: `${pfx}__ws-card-text`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__ws-card-name`, content: ws.name || "" }),
+        stats.length ? Skeletons.Box.X({ className: `${pfx}__ws-stats`, kids: stats }) : null,
+      ].filter(Boolean),
+    }),
+  ];
+}
+
+const wsCard = (ui, pfx) =>
+  Skeletons.Box.X({
+    className: `${pfx}__ws-card`,
+    sys_pn: "ws-card",
+    partHandler: ui,
+    kids: wsCardKids(ui, pfx),
+  });
 
 // Off (data-state 0, hidden by the skin) outside an organisation — 79% of
 // accounts sit on domain 1 — and until the overview answers.
@@ -329,14 +397,17 @@ module.exports = function (ui) {
   return Skeletons.Box.Y({
     className: `${pfx}__container`,
     debug: __filename,
-    dataset: { tab: ui._tab },
+    dataset: { tab: ui._tab, scope: ui._scope === "workspace" ? "workspace" : "org" },
     kids: [
       header(ui, pfx),
       Skeletons.Note({ className: `${pfx}__description`, content: LOCALE.INVITE_TEAM_HINT }),
-      orgCard(ui, pfx),
+      // Workspace scope (the sidebar's Invite, inside a workspace): the popup
+      // is about THAT workspace, so its card replaces the org card and there
+      // is no "Invite to" tree to pick from.
+      ui._scope === "workspace" ? wsCard(ui, pfx) : orgCard(ui, pfx),
       tabs(ui, pfx),
       emailPanel(ui, pfx),
-      inviteTo(ui, pfx),
+      ui._scope === "workspace" ? null : inviteTo(ui, pfx),
       Skeletons.Box.Y({
         className: `${pfx}__panel-link`,
         sys_pn: "link-panel",
@@ -358,6 +429,7 @@ module.exports = function (ui) {
 
 module.exports.linkPanelKids = linkPanelKids;
 module.exports.orgCardKids = orgCardKids;
+module.exports.wsCardKids = wsCardKids;
 module.exports.workspaceGlyph = workspaceGlyph;
 module.exports.ROLES = ROLES;
 module.exports.DEFAULT_ROLE_IDS = DEFAULT_ROLE_IDS;

@@ -562,6 +562,7 @@
   "INVITE_EXPIRY_24H": "24h",
   "INVITE_EXPIRY_7D": "7d",
   "INVITE_NO_WORKSPACE": "You have no workspace you can invite people into.",
+  "INVITE_WORKSPACE_TITLE": "Invite member to workspace",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "SENT_A_MESSAGE": "sent a message",
   "UPLOADED_ACTION": "uploaded ",

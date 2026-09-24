@@ -169,3 +169,53 @@ test("link row shows the url without its scheme", () => {
   const got = skeleton(ui({ _tab: "link", _link: { expiry: 0, preset: "7d", url: "https://team.drumee.in/s/pink-fox-42" } }));
   assert.equal(cls(got, "link-url")[0].content, "team.drumee.in/s/pink-fox-42");
 });
+
+// ── Workspace scope (Figma 785:74990 / 821:36883) ─────────────────────────
+// Opened from the sidebar's Invite inside a workspace: the popup is about THAT
+// workspace — no org card, no "Invite to" tree.
+const wsUi = (o = {}) => ui({
+  _scope: "workspace",
+  _ws: { hub_id: "h1", name: "Design", area: "private", members: 24, sizeText: "3.5 GB" },
+  ...o,
+});
+
+test("workspace scope: its own title, a workspace card, no org card or tree", () => {
+  const t = skeleton(wsUi());
+  const texts = walk(t).map((n) => n.content).filter(Boolean);
+  assert.ok(texts.includes(en.INVITE_WORKSPACE_TITLE));
+  assert.ok(!texts.includes(en.INVITE_TEAM_TITLE));
+  assert.equal(t.dataset.scope, "workspace");
+  assert.equal(cls(t, "org-card").length, 0);
+  assert.equal(cls(t, "invite-to").length, 0);
+  const pns = walk(t).map((n) => n.sys_pn).filter(Boolean);
+  assert.ok(pns.includes("ws-card") && !pns.includes("tree") && !pns.includes("all-check"));
+  // Both tabs and their panels stay.
+  assert.equal(cls(t, "tab").length, 2);
+  assert.ok(pns.includes("email-input") && pns.includes("link-panel") && pns.includes("send-btn"));
+});
+
+test("workspace card: glyph, name, storage split into number + unit, members", () => {
+  const kids = skeleton.wsCardKids(wsUi(), P);
+  const all = walk(kids);
+  assert.ok(cls(kids, "ws-card-icon")[0].content.includes("folder-shape private"));
+  assert.equal(cls(kids, "ws-card-name")[0].content, "Design");
+  // Both figures are Primary/40 numbers in the design: size, then members.
+  assert.deepEqual(cls(kids, "ws-stat-value").map((n) => n.content), ["3.5", "24"]);
+  assert.deepEqual(cls(kids, "ws-stat-unit").map((n) => n.content), ["GB"]);
+  assert.ok(all.some((n) => n.content === "24"));
+  assert.ok(all.some((n) => n.ico === "ph-users"));
+});
+
+test("workspace card: unknown size or members are left out, not shown as zero", () => {
+  const kids = skeleton.wsCardKids(wsUi({ _ws: { hub_id: "h1", name: "Design", area: "share", members: null, sizeText: "" } }), P);
+  assert.equal(cls(kids, "ws-stat-value").length, 0);
+  assert.equal(walk(kids).some((n) => n.ico === "ph-users"), false);
+  assert.equal(cls(kids, "ws-card-name")[0].content, "Design");
+});
+
+test("org scope is unchanged by default", () => {
+  const t = skeleton(ui());
+  assert.equal(t.dataset.scope, "org");
+  assert.equal(cls(t, "invite-to").length, 1);
+  assert.equal(cls(t, "ws-card").length, 0);
+});

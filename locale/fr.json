@@ -2994,6 +2994,7 @@
   "INVITE_EXPIRY_24H": "24h",
   "INVITE_EXPIRY_7D": "7j",
   "INVITE_NO_WORKSPACE": "Vous n’avez aucun espace dans lequel inviter des personnes.",
+  "INVITE_WORKSPACE_TITLE": "Inviter un membre dans l’espace",
   "MIGRATE_GDRIVE_TITLE": "Migrer depuis Google Drive",
   "MIGRATE_GDRIVE_HINT": "Importe les fichiers et dossiers de votre Google Drive dans Drumee. Les fichiers Google Workspace (Docs, Sheets, Slides) sont exportés en DOCX/XLSX/PPTX.",
   "MIGRATE_GDRIVE_CONNECT_HINT": "Nous avons besoin de votre autorisation pour lire votre Google Drive. Vous l'accorderez sur l'écran de consentement Google — Drumee ne voit jamais votre mot de passe.",

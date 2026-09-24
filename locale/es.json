@@ -3030,5 +3030,6 @@
   "INVITE_EXPIRY_1H": "1h",
   "INVITE_EXPIRY_24H": "24h",
   "INVITE_EXPIRY_7D": "7d",
-  "INVITE_NO_WORKSPACE": "No tienes ningún espacio al que invitar personas."
+  "INVITE_NO_WORKSPACE": "No tienes ningún espacio al que invitar personas.",
+  "INVITE_WORKSPACE_TITLE": "Invitar a un miembro al espacio"
 }

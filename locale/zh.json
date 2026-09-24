@@ -3029,5 +3029,6 @@
   "INVITE_EXPIRY_1H": "1小时",
   "INVITE_EXPIRY_24H": "24小时",
   "INVITE_EXPIRY_7D": "7天",
-  "INVITE_NO_WORKSPACE": "您没有可以邀请他人加入的工作区。"
+  "INVITE_NO_WORKSPACE": "您没有可以邀请他人加入的工作区。",
+  "INVITE_WORKSPACE_TITLE": "邀请成员加入工作区"
 }

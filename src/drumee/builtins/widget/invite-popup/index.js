@@ -52,6 +52,24 @@ class __invite_popup extends LetcBox {
     this._tab = "email";
     this._link = { expiry: 0, preset: "7d", url: null };
     this._org = null;
+    // WORKSPACE SCOPE: opened from the sidebar's Invite inside a workspace
+    // (modules/desk _openInvitePopup passes scope + the workspace's name and
+    // area). The popup is then about THAT workspace (Figma 785:74990): its
+    // card instead of the org card, no "Invite to" tree, and the workspace
+    // itself is the selection Send and Get link act on. Needs a real seeded
+    // workspace — the personal home is not one — or it stays org scope.
+    this._scope = opt.scope === "workspace" && this._seedHubId ? "workspace" : "org";
+    this._ws = null;
+    if (this._scope === "workspace") {
+      this._ws = {
+        hub_id: this._seedHubId,
+        name: opt.hub_name,
+        area: opt.hub_area || "",
+        members: null,
+        sizeText: "",
+      };
+      this._checked = new Set([this._seedHubId]);
+    }
     this._suggestions = [];
     this._partRefs = { roleLabels: {}, roleOptions: {} };
   }
@@ -342,6 +360,8 @@ class __invite_popup extends LetcBox {
       this._workspaceError = child;
     } else if (pn === "send-btn") {
       this._sendBtn = child;
+    } else if (pn === "ws-card") {
+      this._wsCardBox = child;
     } else if (pn === "org") {
       this._orgBox = child;
     } else if (pn === "tree") {
@@ -612,6 +632,7 @@ class __invite_popup extends LetcBox {
    * showing its empty-state line.
    */
   async _loadData() {
+    if (this._scope === "workspace") return this._loadWorkspace();
     const [home, overview] = await Promise.all([
       this._fetchHome().catch(() => []),
       orgOverview(this),
@@ -634,6 +655,45 @@ class __invite_popup extends LetcBox {
       this._orgBox.el.dataset.state = 1;
     }
     this._renderTree();
+  }
+
+  /**
+   * Workspace scope: fill the card's two figures. Neither blocks the popup
+   * and neither is drawn until known (see skeleton wsCardKids).
+   *
+   *  - SIZE from hub.show_privilege's `filesize` (the sum over the hub's
+   *    media), NOT hub.get_space_usage, which answers nothing on a live
+   *    endpoint — the permission panel measured this; see its
+   *    _loadSpaceUsage. Reported as a string by the driver.
+   *  - MEMBERS from organization.overview's rollup, which only an org admin
+   *    receives. hub.show_privilege's member list is PAGED, so its length is
+   *    not a count; without the overview the figure is simply left out.
+   */
+  async _loadWorkspace() {
+    const hub_id = this._ws.hub_id;
+    const [priv, overview] = await Promise.all([
+      Promise.resolve(
+        this.postService(
+          (SERVICE.hub && SERVICE.hub.show_privilege) || "hub.show_privilege",
+          { hub_id },
+        ),
+      ).catch(() => null),
+      orgOverview(this),
+    ]);
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const used = Number(priv && priv.filesize);
+    if (Number.isFinite(used) && used > 0) {
+      const { filesize } = require("@drumee/ui-essentials");
+      this._ws.sizeText = String(filesize(used) || "").trim();
+    }
+    const row = ((overview && overview.workspaces) || []).find(
+      (w) => String(w.hub_id) === String(hub_id),
+    );
+    if (row && row.members != null) this._ws.members = Number(row.members);
+    if (this._wsCardBox) {
+      this._wsCardBox.feed(skeletonModule.wsCardKids(this, this.fig.family));
+    }
+    this._refreshSendState();
   }
 
   /**
