@@ -22,20 +22,11 @@ const {
   roleItems: roleOptions,
   roleFromPrivilege,
   roleByValue,
+  ROLE_ICONS,
 } = require("../../../skeleton/toolkit/permission");
 // The folder window's "+ New" menu builder — the role pill's menu is one.
 const { dropdownMenuButton } = require("../../../window/skeleton/toolkit");
 
-// One glyph per role, keyed on roleItems' `value`. Chat and Edit are the ones
-// the secure-share panels already show for those access levels
-// (window/secure-share/skeleton/main.js); View and Admin come from the same
-// apps-* set, which is also where the pill's own caret is from.
-const ROLE_ICONS = {
-  view: "apps-eye",
-  chat: "apps-chat",
-  edit: "apps-pencil-simple",
-  admin: "apps-lock-shield",
-};
 
 /**
  * Map a hub.get_members_by_type row to the row shape rendered below.
