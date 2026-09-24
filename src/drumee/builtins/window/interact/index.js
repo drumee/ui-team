@@ -4,7 +4,7 @@ const { copyToClipboard, timestamp } = require("@drumee/ui-essentials")
 const { TimelineMax } = require("@drumee/ui-core/vendor");
 
 const windowCore = require("../core");
-const { isGrouped } = require("../skeleton/toolkit/file-group");
+const { isSectioned } = require("../skeleton/toolkit/file-group");
 class __window_interact extends windowCore {
   constructor(...args) {
     super(...args);
@@ -894,10 +894,11 @@ class __window_interact extends windowCore {
       this.captured.left = primary;
       if (paired) this.captured.right = paired;
     }
-    // Group view never re-arms the flanking tiles below, so nothing may be
-    // kept shifted: `keep` skips the release AND `_shifted` is reset, leaving
-    // those two tiles pushed aside until the delayed clearShift a second later.
-    const grouped = isGrouped(this);
+    // Group view (and the Media tab's sections) never re-arm the flanking
+    // tiles below, so nothing may be kept shifted: `keep` skips the release
+    // AND `_shifted` is reset, leaving those two tiles pushed aside until the
+    // delayed clearShift a second later.
+    const grouped = isSectioned(this);
     this._releaseShifted(
       grouped ? [] : [this.captured.left, this.captured.right],
     );

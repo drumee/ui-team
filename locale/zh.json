@@ -1499,6 +1499,7 @@
   "PDF": "PDF",
   "IMAGES": "图片",
   "MEDIA": "媒体",
+  "AUDIO": "音频",
   "LINK_EXPIRATION": "链接有效期",
   "FOLDER_SECURE_SHARE": "文件夹安全共享",
   "RECIPIENT_MODE": "接收者模式",

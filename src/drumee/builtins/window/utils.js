@@ -6,11 +6,8 @@ const Rectangle = require("rectangle-node");
 const { TimelineMax, Expo, TweenMax } = require("@drumee/ui-core/vendor");
 const EDITABLES = require('../player/document/editable');
 const {
-  GROUP_ORDER,
-  GROUP_LABEL,
-  groupOf,
   bucketByGroup,
-  isGrouped,
+  sectionsFor,
 } = require("./skeleton/toolkit/file-group");
 
 // Filetypes that open as a CONTAINER window rather than a file viewer — the
@@ -613,7 +610,7 @@ class __window_mfs extends DrumeeMFS {
     );
   }
 
-  _doGroupPartition(listPart, scrollEl) {
+  _doGroupPartition(listPart, scrollEl, sections) {
     const collection = listPart.collection;
     const rankOf = new Map();
     const groupOfEl = new Map();
@@ -624,7 +621,7 @@ class __window_mfs extends DrumeeMFS {
         if (!view || !view.el || !view.model) return;
         const index = collection.indexOf(view.model);
         if (index >= 0) rankOf.set(view.el, index);
-        groupOfEl.set(view.el, groupOf(view.model.toJSON()));
+        groupOfEl.set(view.el, sections.groupOf(view.model.toJSON()));
         if (view.el.dataset?.filetype && scrollEl.contains(view.el)) {
           items.add(view.el);
         }
@@ -652,7 +649,11 @@ class __window_mfs extends DrumeeMFS {
       const value = rankOf.get(el);
       return value == null ? Number.MAX_SAFE_INTEGER : value;
     };
-    const byGroup = bucketByGroup(items, (item) => groupOfEl.get(item));
+    const byGroup = bucketByGroup(
+      items,
+      (item) => groupOfEl.get(item),
+      sections,
+    );
 
     const existing = new Map();
     for (const child of [...scrollEl.children]) {
@@ -660,7 +661,7 @@ class __window_mfs extends DrumeeMFS {
       existing.set(child.dataset.group, child);
     }
 
-    for (const key of GROUP_ORDER) {
+    for (const key of sections.order) {
       const groupedItems = byGroup.get(key).sort((a, b) => rank(a) - rank(b));
       let wrap = existing.get(key);
       if (!groupedItems.length) {
@@ -678,7 +679,7 @@ class __window_mfs extends DrumeeMFS {
         title.className = "group-section-title";
         wrap.prepend(title);
       }
-      title.textContent = LOCALE[GROUP_LABEL[key]];
+      title.textContent = LOCALE[sections.label[key]];
       groupedItems.forEach((item) => wrap.appendChild(item));
       scrollEl.appendChild(wrap);
     }
@@ -687,6 +688,17 @@ class __window_mfs extends DrumeeMFS {
     // Remove them only after the move so a mode transition cannot discard a view.
     for (const child of [...scrollEl.children]) {
       if (isSectionElement(child) && !child.classList.contains("group-section")) {
+        child.remove();
+      }
+    }
+    // Same for a section left over from the OTHER set (Group view ↔ Media
+    // tab): its tiles have just moved out, and only a bare title would remain.
+    for (const child of [...scrollEl.children]) {
+      if (
+        child.classList.contains("group-section") &&
+        !sections.order.includes(child.dataset.group) &&
+        !child.querySelector(":scope > [data-filetype]")
+      ) {
         child.remove();
       }
     }
@@ -706,8 +718,10 @@ class __window_mfs extends DrumeeMFS {
     const scrollEl = listPart.el.querySelector(".smart-container");
     if (!scrollEl) return false;
 
-    if (isGrouped(this)) {
-      return this._doGroupPartition(listPart, scrollEl);
+    // Group view, or the Media tab's Images / Videos / Audio split.
+    const sections = sectionsFor(this);
+    if (sections) {
+      return this._doGroupPartition(listPart, scrollEl, sections);
     }
 
     // A mode transition normally rebuilds the list. If an observer from the

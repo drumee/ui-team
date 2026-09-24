@@ -1,7 +1,7 @@
 const mfsInteract = require("../interact");
 const {
   VIEW_STATES,
-  isGrouped,
+  isSectioned,
   setGrouped,
   clearGrouped,
   groupViewState,
@@ -799,7 +799,7 @@ class __window_folder extends mfsInteract {
     // renamed tile in its old group until the next mode switch. Partitioning
     // alone re-reads the models and never installs a comparator, so the saved
     // ranks stay intact.
-    if (isGrouped(this) && this._partitionFoldersAndFiles && this.iconsList) {
+    if (isSectioned(this) && this._partitionFoldersAndFiles && this.iconsList) {
       this._partitionFoldersAndFiles(this.iconsList);
     }
     this._scheduleAlphabeticalGridSort();

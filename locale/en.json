@@ -3021,6 +3021,7 @@
   "PDF": "PDF",
   "IMAGES": "Images",
   "MEDIA": "Media",
+  "AUDIO": "Audio",
   "FILES_HERO_TITLE": "Chat live in files.\nNo more context loss.",
   "FILES_HERO_DESC": "Every file here lives inside a conversation. Comment, share context, keep decisions attached to the work, no digging through another app to find why a file changed.",
   "MIGRATE_STEP_SHARE_ADDRESS": "1. In Google Drive, share the folder or file with this address (Viewer access is enough):",
