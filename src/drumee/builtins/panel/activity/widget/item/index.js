@@ -62,12 +62,13 @@ function isFileCategory(category) {
  * (window/secure-share focusAccessEvent). The reveal link above still does
  * everything it did; this runs beside it.
  *
- * WAITS FOR THE WORKSPACE PANE. The reveal may be switching workspace, and
- * loadWorkspace re-feeds headlessLayer — the pool a launched window lands in —
- * so a panel launched before the new pane is up would be wiped with the old
- * one. Wm._awaitWorkspaceWindow is the wait openNotificationLocation itself
- * makes (answers at once when the pane is already there). The panel's lazy
- * chunk is fetched during that same wait, so it adds no time of its own.
+ * WAITS FOR THE LANDING (`landing`, the promise of Wm.openNotificationLocation,
+ * which resolves to the workspace pane once it is mounted, raised and
+ * navigated). Launched earlier, the panel would be wiped when loadWorkspace
+ * re-feeds headlessLayer — the pool a launched window lands in — or buried when
+ * the landing raises the pane over it. The panel's lazy chunk is fetched during
+ * that same wait, so it adds no time of its own. No landing (the hash fallback)
+ * means no panel: the click then does exactly what it did before.
  *
  * A panel already on screen for this node (drawer, column or floating) is
  * pointed instead of doubled. A hidden one — the column stays mounted after its
@@ -75,11 +76,11 @@ function isFileCategory(category) {
  *
  * Best-effort: every failure leaves the click exactly as it was before.
  */
-function openShareOpenAccess({ hub_id, nid, filetype, name, focus }) {
+function openShareOpenAccess({ landing, hub_id, nid, filetype, name, focus }) {
   const wm = window.Wm;
-  if (!hub_id || !nid || !wm || !_.isFunction(wm._awaitWorkspaceWindow)) return;
+  if (!hub_id || !nid || !wm || !landing) return;
   const chunk = Promise.resolve(Kind.waitFor("window_secure_share")).catch(() => {});
-  Promise.all([wm._awaitWorkspaceWindow(hub_id), chunk])
+  Promise.all([landing, chunk])
     .then(([pane]) => {
       if (!pane) return;
       const onScreen = (wm.getItemsByKind("window_secure_share") || []).find(
@@ -98,9 +99,12 @@ function openShareOpenAccess({ hub_id, nid, filetype, name, focus }) {
         return onScreen.focusAccessEvent(focus);
       }
       // The workspace itself was shared: its link is minted on the root folder
-      // (window/folder/secure-share-column secureShareNid).
+      // (window/folder/secure-share-column secureShareNid), whose node_filetype
+      // the feed reports as "root" (measured on stage), not "hub".
       const isWorkspace =
-        filetype === _a.hub || `${pane.mget(_a.actual_home_id)}` === `${nid}`;
+        filetype === _a.hub ||
+        filetype === "root" ||
+        `${pane.mget(_a.actual_home_id)}` === `${nid}`;
       const isFolder = isWorkspace || !filetype || filetype === _a.folder;
       const subject = isWorkspace ? "workspace" : isFolder ? "folder" : "file";
       const uid = `window_secure_share-${nid}`;
@@ -729,7 +733,20 @@ class __activity_item extends LetcBox {
         const sharedFile = !!shareFiletype
           && shareFiletype !== _a.folder
           && shareFiletype !== 'hub';
-        if (sharedFile) {
+        //
+        // Landed through Wm.openNotificationLocation DIRECTLY — the very call the
+        // `#/desk/wm/reveal/` route makes, with the same payload the hash carried
+        // (as the strings the route would parse) — because the share panel
+        // opened below must come up AFTER it: it raises the workspace pane, and
+        // through the hash that happened ~1.3s later (measured on drumee.in),
+        // burying the panel under the pane. The hash stays as the fallback.
+        const revealArgs = sharedFile
+          ? { hub_id, nid: shareNid, filetype: shareFiletype, pid: `${shareParentId || "0"}`, highlight: "1", ts: `${ts}` }
+          : { hub_id, nid: shareNid, filetype: _a.folder, pid: "0", ts: `${ts}` };
+        let landing = null;
+        if (window.Wm && _.isFunction(Wm.openNotificationLocation)) {
+          landing = Promise.resolve(Wm.openNotificationLocation(revealArgs)).catch(() => null);
+        } else if (sharedFile) {
           location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${shareNid}&filetype=${shareFiletype}&pid=${shareParentId || "0"}&highlight=1&ts=${ts}`;
         } else {
           location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${shareNid}&filetype=folder&pid=0&ts=${ts}`;
@@ -742,6 +759,7 @@ class __activity_item extends LetcBox {
         this.triggerHandlers({ service: 'close-activity-panel' });
         // ...and, over it, the share panel pointed at who opened it.
         openShareOpenAccess({
+          landing,
           hub_id,
           nid: shareNid,
           filetype: shareFiletype,
