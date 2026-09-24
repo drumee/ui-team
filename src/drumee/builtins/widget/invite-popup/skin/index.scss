@@ -1,4 +1,3 @@
-@use "mixins/drumee";
 
 // ── Entrance / exit ─────────────────────────────────────────────────────
 // The same pair, and the same timings, that every other dialog fed into
@@ -21,45 +20,60 @@
   to   { opacity: 0; transform: translateY(-6px) scale(0.97); }
 }
 
+
+// Drumee 2.0 (Figma 980:172148 and siblings). Colours are the design's own
+// tokens: Primary/100 #0b0a21, Grey/80 #65656c, Grey/70 #84848c, Grey/60
+// #aeaeb2, Grey/20 #f2f2f7, Primary/30 #847eff, Primary/20 #b1adff,
+// Signal/Error #d74e49; Primary/40 and /50 come from revamp.scss.
+$font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+$ink: #0b0a21;
+$muted: #65656c;
+$line: rgba(0, 0, 0, 0.05);
+$tint: rgba(89, 80, 255, 0.1);
+
 .invite-popup {
-  /* All interactive Notes: inner div must not intercept clicks */
-  &__role-select > *,
-  &__role-option > *,
+  /* All interactive boxes: their kids must not intercept clicks */
   &__close > *,
-  &__row-remove > *,
   &__chip-remove > *,
-  &__add-role > *,
   &__send-btn > *,
   &__suggestion-item > *,
-  &__workspace-option > * {
+  &__tab > *,
+  &__check > *,
+  &__row-box > *,
+  &__role-select > *,
+  &__role-option > *,
+  &__switch > *,
+  &__expiry-option > *,
+  &__get-link > *,
+  &__link-field > *,
+  &__revoke > * {
     pointer-events: none !important;
   }
 
   &__ui {
-    width: 450px;
-    // The popup is fed into Wm.__wrapperModal, which is a flex-centered
-    // full-inset box with `overflow: clip` — so a card wider than the viewport
-    // is CUT, not scrolled to. This guard is what keeps that from happening,
-    // and it needs no breakpoint: 450px already fits from 514px up, so the
-    // clamp only engages on the narrow screens that need it.
+    width: 520px;
+    // The popup is fed into Wm.__wrapperModal, a flex-centered full-inset box
+    // with `overflow: clip` — a card wider than the viewport is CUT, not
+    // scrolled to. This guard needs no breakpoint.
     max-width: calc(100vw - 32px);
-    background-color: var(--normal-bg-90, #f1f1f5);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 6px;
-    box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.16);
+    background-color: #fff;
+    border: 1px solid $line;
+    border-radius: 12px;
+    backdrop-filter: blur(50px);
+    box-shadow:
+      0 7px 10px 0 rgba(0, 0, 0, 0.05),
+      0 40px 80px 0 rgba(0, 0, 0, 0.15),
+      0 25px 50px -12px rgba(0, 0, 0, 0.25);
     z-index: 99998;
+    font-family: $font;
 
-    // ON __ui, NOT __container. The card IS this element — the background,
-    // border, radius and shadow above all live here; __container is only the
+    // ON __ui, NOT __container: the card IS this element, __container is the
     // padded inner column. Animating __container would scale the contents
-    // inside a card frame that sat perfectly still. media/form carries the
-    // same note for the same reason.
+    // inside a frame that sat still.
     animation: invite-popup-in 0.18s ease-out backwards;
 
-    // Set by _closePopup, which then defers the teardown so the exit actually
-    // gets frames — clearing the wrapper synchronously destroyed the element
-    // on the spot and the animation never rendered. (0,2,0) so it out-ranks
-    // the entrance declared just above.
+    // Set by _closePopup, which defers the teardown so the exit gets frames.
+    // (0,2,0) so it out-ranks the entrance above.
     &[data-closing="1"] {
       animation: invite-popup-out 0.16s ease-in forwards;
     }
@@ -70,147 +84,165 @@
   }
 
   &__container {
-    padding: 24px;
-    gap: 16px;
-    // The card can never be taller than the viewport it is centered in: 8
-    // workspace rows on a 700px-tall screen made it 1346px, and __wrapper-modal
-    // clips rather than scrolls, so Send ended up unreachable. 32px matches the
-    // max-width guard on __ui, keeping an even margin on all four edges. dvh
-    // where supported (mobile chrome collapses), vh as the fallback.
+    padding: 32px;
+    gap: 24px;
+    color: $ink;
+    font-family: $font;
+    // Never taller than the viewport it is centered in: __wrapper-modal clips
+    // rather than scrolls, so Send would become unreachable. The tree is the
+    // part that yields (see __tree).
     max-height: calc(100vh - 32px);
     max-height: calc(100dvh - 32px);
 
-    // ── Responsive ────────────────────────────────────────────────────
-    // Width is handled once, by the max-width guard on __ui above. What is
-    // left for the small screens is this container's own breathing room:
-    // 24px of padding on a 328px-wide card leaves 280px of usable row,
-    // which is what made the workspace row's select and role chips crowd.
-    //
-    // DELIBERATELY no max-height / overflow-y here. The email, workspace
-    // and role dropdowns are `position: absolute; top: calc(100% + 4px)`
-    // on their own rows and are MEANT to spill past this container's
-    // bottom edge — the reward flow unions them into its spotlight cutout
-    // for exactly that reason (reward-flow/index.js POPUP_OVERFLOW). A
-    // scroll container here would clip them on precisely the screens this
-    // block is for.
+    // Tab switching is CSS only: the controller stamps data-tab here. (0,3,0)
+    // out-ranks the framework's `.box[data-flow]` display.
+    &[data-tab="email"] .invite-popup__panel-link,
+    &[data-tab="link"] .invite-popup__panel-email,
+    &[data-tab="link"] .invite-popup__send-btn {
+      display: none;
+    }
 
     // Mobile, emitted twice the way mixins/responsive.scss does it:
-    // Visitor.device() only answers "mobile" below 801px, so the attribute
-    // is absent in the DevTools emulator and on a landscape phone, and the
-    // viewport query below is the fallback. ui-core puts both
-    // `invite-popup` and `invite-popup__ui` on the widget root (letc.js
-    // addClass) — __ui is the name the rest of this file uses for it.
-    //
-    // The attribute can also fire on a 768px tablet with a mobile UA. That
-    // is why __ui keeps its 450px width there rather than stretching, and
-    // why this branch — being the more specific of the two — deliberately
-    // wins over the tablet padding below in that overlap: a client that
-    // calls itself mobile is taken at its word.
+    // Visitor.device() only answers "mobile" below 801px.
     .invite-popup__ui[data-device="mobile"] & {
       padding: 16px;
-      gap: 12px;
+      gap: 16px;
     }
 
     @media (max-width: 650px) {
       padding: 16px;
-      gap: 12px;
-    }
-
-    // Tablet — the 768–1024px band on a coarse pointer, the same band and
-    // the same `pointer: coarse` test the desk sidebar uses to tell a
-    // tablet from a resized desktop window. A 450px card has room to spare
-    // at these widths, so this is only a modest step down from desktop.
-    @media (min-width: 768px) and (max-width: 1024px) and (pointer: coarse) {
-      padding: 20px;
+      gap: 16px;
     }
   }
 
   &__header {
     align-items: center;
     justify-content: space-between;
-    width: 100%;
   }
 
   &__title {
-    @include drumee.typo(
-      $size: 20px,
-      $weight: 700,
-      $line: 28px,
-      $color: var(--normal-fg-10)
-    );
-    font-family: "Manrope", var(--font-bold);
+    font: 600 20px/1.2 $font;
+    color: $ink;
   }
 
   &__close {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
-    color: var(--normal-fg-50);
-    transition: color 0.2s;
+    color: $muted;
 
     svg {
       width: 100%;
       height: 100%;
       fill: currentColor;
     }
-
-    &:hover {
-      color: var(--normal-fg-10);
-    }
   }
 
   &__description {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 400,
-      $line: 19.6px,
-      $color: var(--normal-fg-50)
-    );
+    font: 400 14px/1.4 $font;
+    color: $muted;
+    // The design groups title + description in one 24px-gapped block.
+    margin-top: -8px;
+  }
+
+  // ── Org card ──────────────────────────────────────────────────────────
+  &__org-card {
+    gap: 4px;
+    padding: 8px 16px;
+    border: 1px solid $line;
+    border-radius: 12px;
+  }
+
+  &__org-name {
+    font: 600 16px/1.2 $font;
+    color: $ink;
+  }
+
+  &__org-stats {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__org-stat-word {
+    font: 400 12px/1.4 $font;
+    color: $muted;
+    margin-right: 4px;
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  &__tabs {
+    padding: 4px;
+    background-color: #f2f2f7;
+    border-radius: 12px;
+  }
+
+  &__tab {
+    flex: 1 0 0;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font: 600 14px/1.2 $font;
+    color: $muted;
+    transition: background-color 0.15s, color 0.15s;
+
+    &[data-state="1"] {
+      background-color: var(--primary-40, #5950ff);
+      color: #fff;
+    }
+  }
+
+  &__tab-ico {
+    width: 16px;
+    height: 16px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // ── Via email ─────────────────────────────────────────────────────────
+  &__panel-email,
+  &__panel-link {
+    gap: 12px;
+  }
+
+  &__invite-to {
+    gap: 12px;
+    // The one section allowed to shrink when the card hits its max-height.
+    min-height: 0;
+    flex: 0 1 auto;
   }
 
   &__field-label {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 14.88px,
-      $color: var(--normal-fg-10)
-    );
-    margin-top: 4px;
+    font: 600 16px/1.2 $font;
+    color: $ink;
   }
 
   &__field-error {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16px,
-      $color: var(--error, #d74e49)
-    );
-    margin-top: -8px;
+    font: 400 12px/1.4 $font;
+    color: #d74e49;
+    margin-top: -4px;
 
     &[data-state="0"] {
-      display: none;
+      display: none !important;
     }
   }
 
   &__email-row {
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    gap: 3px;
+    padding: 8px 0 4px;
+    border-bottom: 1px solid #84848c;
     min-height: 32px;
     // Chips are `display: contents`, so every recipient is a direct flex child
-    // here and wraps onto a new line — twenty invitees made this row alone
-    // taller than the card. ~3 wrapped lines, then it scrolls.
-    //
-    // An explicit cap rather than a flex share: this row sits inside
-    // __email-field, not directly in __container, so the card's max-height
-    // cannot shrink it.
-    //
-    // Safe to scroll: the email dropdown (__suggestions) is a SIBLING of this
-    // row under __email-field, not a descendant, so it is not inside this
-    // scroll box and cannot be clipped by it. The two dropdowns raised from the
-    // workspace rows are NOT siblings — see __workspaces.
+    // and wraps; ~3 lines, then it scrolls. Safe: __suggestions is a SIBLING
+    // of this row, not inside this scroll box.
     max-height: 96px;
     overflow-y: auto;
   }
@@ -222,16 +254,12 @@
 
   &__chip {
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     padding: 4px 8px;
-    background-color: rgba(89, 80, 255, 0.12);
+    background-color: $tint;
     border-radius: 4px;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
-      $line: 16px,
-      $color: var(--active-border, #5950ff)
-    );
+    font: 400 12px/1.4 $font;
+    color: var(--primary-50, #433cc5);
 
     &-remove {
       cursor: pointer;
@@ -254,29 +282,24 @@
       border: none;
       outline: none;
       width: 100%;
-      @include drumee.typo(
-        $size: 12px,
-        $weight: 400,
-        $line: 16.8px,
-        $color: var(--normal-fg-10)
-      );
+      font: 400 14px/1.4 $font;
+      color: $ink;
+      caret-color: var(--primary-40, #5950ff);
 
       &::placeholder {
-        color: var(--normal-fg-50);
+        color: $muted;
       }
     }
   }
 
-  /* Suggestions dropdown */
   // Anchor for the floating suggestions list (see skeleton __email-field).
   &__email-field {
     position: relative;
   }
 
   &__suggestions {
-    // Floats over the dialog rather than sitting in the column: in flow it
-    // pushed the workspace row and Send button down on every match, so the
-    // dialog jumped while typing.
+    // Floats over the dialog: in flow it pushed everything below it down on
+    // every match, so the dialog jumped while typing.
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
@@ -284,13 +307,13 @@
     z-index: 20;
     visibility: hidden;
     pointer-events: none;
-    background-color: var(--white);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    background-color: #fff;
+    border: 1px solid $line;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
     max-height: 220px;
     overflow-y: auto;
-    padding: 4px 0;
+    padding: 4px;
 
     &[data-state="1"] {
       visibility: visible;
@@ -298,39 +321,31 @@
     }
   }
 
-  // ── Pending: the service is in flight and the box is still empty ────────
-  //
-  // Gated on data-loading and NEVER on :empty. Both of these are
-  // Skeletons.Box, which always renders a widget-blank emptyView child, so
-  // the CSS :empty test can never match them however empty they look.
-  //
-  // index.js stamps data-state="1" ALONGSIDE data-loading, because neither
-  // box is on screen without it: __suggestions is `visibility: hidden` and
-  // __workspace-suggestions is `display: none !important` until that flag
-  // flips. Stamping data-loading alone would spin something nobody can see.
-  //
-  // Reuses invite-popup-send-spin rather than declaring a second identical
-  // rotation — @keyframes is global, so one spin per stylesheet.
-  &__suggestions[data-loading="1"]::before,
-  &__workspace-suggestions[data-loading="1"]::before {
+  // Pending spinner. Gated on data-loading and NEVER on :empty: a
+  // Skeletons.Box always renders a widget-blank child, so :empty never
+  // matches. index.js stamps data-state="1" alongside data-loading, because
+  // the box is invisible without it.
+  &__suggestions[data-loading="1"]::before {
     content: "";
     align-self: center;
     flex-shrink: 0;
     width: 18px;
     height: 18px;
     margin: 10px auto;
-    border: 2px solid var(--border-default, #e5e5ea);
-    border-top-color: var(--active-border, #5950ff);
+    border: 2px solid #f2f2f7;
+    border-top-color: var(--primary-40, #5950ff);
     border-radius: 50%;
     animation: invite-popup-send-spin 0.6s linear infinite;
   }
 
   &__suggestion-item {
     padding: 8px 12px;
+    border-radius: 8px;
     cursor: pointer;
     align-items: center;
     gap: 8px;
-    @include drumee.typo($size: 13px, $color: var(--normal-fg-10));
+    font: 400 14px/1.2 $font;
+    color: $ink;
 
     .inner {
       pointer-events: none;
@@ -338,21 +353,18 @@
 
     &:hover,
     &[data-state="1"] {
-      background-color: var(--default-bg-hover, #f5f5fa);
+      background-color: #f2f2f7;
     }
   }
 
-  // Name and address are separate elements (the address cannot be bracketed
-  // into the name — Note content is sanitized as innerHTML and <addr> would be
-  // stripped as an unknown tag). The address is the thing being picked, so it
-  // never truncates away: the name yields space first.
+  // The address is the thing being picked, so it never truncates away: the
+  // name yields space first.
   &__suggestion-item-name {
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    // Explicit: drumee.typo's $weight argument emits nothing.
     font-weight: 500;
   }
 
@@ -362,422 +374,312 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $color: var(--normal-fg-50));
+    font-size: 12px;
+    color: $muted;
   }
 
-  /* Workspace + role rows */
-  &__workspaces {
-    gap: 8px;
-    // Absorbs whatever the card's max-height cannot fit. `min-height: 0`
-    // overrides the flex default of `min-height: auto`, which refuses to shrink
-    // a child below its content — without it the rows push straight through the
-    // cap instead of scrolling.
-    //
-    // No min-height FLOOR and no max-height: the list keeps its natural size
-    // until the card actually runs out of room, so a one-row form is one row
-    // tall. An earlier attempt floored this at 88px and left a visibly empty
-    // box under the single row.
-    min-height: 0;
-    overflow-y: auto;
-
-    // `overflow` clips absolutely-positioned descendants whether or not
-    // anything is scrolling, and the workspace/role dropdowns are exactly that
-    // — anchored at `top: calc(100% + 4px)` inside these rows. Without this
-    // escape the role picker was invisible even on a ONE-ROW form: not a
-    // long-list edge case, the ordinary path.
-    //
-    // So while either dropdown is open, stop being a scroll container. The list
-    // is not being scrolled at that moment anyway — the user is picking from
-    // the menu. `data-state="1"` is the widget's own open flag (index.js
-    // toggles it on both boxes), and :has() is already used this way in the wm
-    // dock skin.
-    //
-    // Caveat: if the list HAD been scrolled, dropping to `overflow: visible`
-    // discards the scroll offset, so a long list jumps back to the top when a
-    // menu opens.
-    &:has(.invite-popup__role-options[data-state="1"]),
-    &:has(.invite-popup__workspace-suggestions[data-state="1"]) {
-      overflow: visible;
-    }
-  }
-
-  &__workspace-row {
-    align-items: flex-start;
-    gap: 8px;
-    width: 100%;
-  }
-
-  &__workspace-cell {
-    flex: 1;
-    position: relative;
-    min-width: 0;
-
-    // Room for the picked-workspace glyph: 12px inset + 22px glyph + 8px gap,
-    // less the 12px __workspace-input already pads by.
-    //
-    // :has() on the CELL, not a sibling combinator on the input — the icon is
-    // rendered AFTER the input in the row skeleton and CSS has no
-    // previous-sibling selector. Keying off the icon's own state is what makes
-    // the text move exactly when the glyph appears, with no second flag to
-    // keep in sync. The same :has() idiom this file already uses to stop the
-    // card scrolling while a dropdown is open.
-    &:has(.invite-popup__workspace-icon[data-state="1"]) {
-      .invite-popup__workspace-input input {
-        padding-left: 30px;
-      }
-    }
-  }
-
-  &__role-cell {
-    position: relative;
-    flex-shrink: 0;
-    width: 110px;
-    min-width: 0;
-  }
-
-  &__row-remove {
-    @include drumee.typo(
-      $size: 16px,
-      $weight: 300,
-      $color: var(--normal-fg-50)
-    );
-    flex-shrink: 0;
-    margin-top: 4px;
-    cursor: pointer;
-    transition:
-      color 0.15s,
-      background 0.15s;
-    line-height: 1;
-    text-align: center;
-    // Enlarge the hit target so the × is easy to click. The glyph stays
-    // 16px; padding + min-width/height push the click area to a 28px
-    // square. Border-radius lets us add a subtle hover background.
-    padding: 6px;
-    min-width: 28px;
-    min-height: 28px;
-    box-sizing: border-box;
-    border-radius: 6px;
-    display: inline-flex;
+  // ── Invite to ─────────────────────────────────────────────────────────
+  &__invite-to-head {
     align-items: center;
-    justify-content: center;
-
-    .inner {
-      pointer-events: none;
-    }
-
-    &:hover {
-      color: var(--error, #d74e49);
-      background: rgba(0, 0, 0, 0.04);
-    }
+    justify-content: space-between;
+    padding-bottom: 8px;
   }
 
-  // The picked workspace's glyph, sitting over the field's left edge.
-  //
-  // An OVERLAY rather than a sibling in flow: the field is an Entry whose
-  // <input> fills the cell, and an element beside it would either shrink the
-  // field or push the absolutely-positioned suggestions out of line. The cell
-  // is already position:relative (for that dropdown), so this costs no new
-  // stacking context.
-  //
-  // pointer-events off, always: this sits ON TOP of the input, and a click
-  // that lands here instead of in the field would neither focus it nor open
-  // the workspace list.
-  &__workspace-icon {
-    // THE @include COMES FIRST. ws-folder-icon declares `position: relative`
-    // of its own (it is the containing block for the glyph's badge), so an
-    // `position: absolute` written above it is silently overwritten and the
-    // glyph drops into flow BELOW the field instead of sitting over it.
-    //
-    // Same 22/18 the dropdown rows draw, so the picked workspace looks like
-    // the row it was picked from. 22 in a 36px field leaves 7px either side.
-    @include drumee.ws-folder-icon(22px, 18px);
+  &__all {
+    align-items: center;
+    gap: 12px;
 
-    position: absolute;
-    left: 12px;
-    // Centred rather than a measured offset: the field is 36px today and a
-    // hardcoded 7px would go stale the moment that changes.
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1;
-    pointer-events: none;
-
-    // Hidden until a pick, and again while the user types over it. display,
-    // not visibility: the mixin sets `display: flex !important`, so only a
-    // matching !important can take it back out of flow.
-    &[data-state="0"] {
+    // _renderTree stamps "hidden" when there is no invitable workspace.
+    // !important: `.box[data-flow]` matches at the same specificity.
+    &[data-state="hidden"] {
       display: none !important;
     }
   }
 
-  &__workspace-input {
-    background-color: var(--normal-bg-elevated);
-    border-radius: 6px;
-    padding: 8px 12px;
-    height: 36px;
-    width: 100%;
-
-
-    input {
-      background: transparent;
-      border: none;
-      outline: none;
-      width: 100%;
-      @include drumee.typo(
-        $size: 12px,
-        $weight: 400,
-        $line: 16.8px,
-        $color: var(--normal-fg-10)
-      );
-
-      &::placeholder {
-        color: var(--normal-fg-50);
-      }
-    }
+  &__all-label {
+    font: 400 16px/1.2 $font;
+    color: $ink;
   }
 
-  &__workspace-suggestions {
-    // `display: none` while closed, not visibility alone. These are absolutely
-    // positioned inside __workspaces, which now scrolls, and a merely-invisible
-    // box still counts toward that box's scrollable overflow — the closed role
-    // menu is 139px, which put a scrollbar on a one-row list. !important for
-    // the same reason __chips needs it: the framework's
-    // `.box[data-flow="y"] { display: flex }` matches with equal specificity,
-    // which is why visibility was reached for in the first place.
-    display: none !important;
-    visibility: hidden;
-    pointer-events: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    width: 100%;
-    background-color: var(--normal-bg-elevated);
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-    max-height: 180px;
+  &__tree {
+    gap: 12px;
+    min-height: 0;
+    max-height: 330px;
     overflow-y: auto;
-    padding: 4px 0;
-    z-index: 99999;
-    padding: 8px;
-    // ── Borrowed from the topbar switcher's __ws-list ──────────────────
-    // This picker lists the same things that list does, so it uses the same
-    // row rhythm and the same scrollbar.
-    gap: 1px;
-    // A VISIBLE bar. The default one gave a capped list no sign there was
-    // more below it. Both halves are needed: `scrollbar-width` alone leaves
-    // Firefox drawing its default grey while Chrome takes the brand colour
-    // from the ::-webkit rules.
+    // Room for the 4px Primary/30 scrollbar the design draws beside the rows.
+    padding-right: 12px;
     scrollbar-width: thin;
-    scrollbar-color: var(--primary-70) rgba(0, 0, 0, 0.05);
+    scrollbar-color: #847eff $line;
 
     &::-webkit-scrollbar {
       width: 4px;
     }
 
     &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
+      background: $line;
+      border-radius: 22px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: var(--primary-70);
-      border-radius: 4px;
-    }
-
-    &[data-state="1"] {
-      display: flex !important;
-      visibility: visible;
-      pointer-events: auto;
+      background: #847eff;
+      border-radius: 28px;
     }
   }
 
-  // Geometry and colours taken from the topbar switcher's __ws-item, which in
-  // turn took them from __new-menu-item — the app's established dropdown row.
-  // 36px min-height, 8/10 padding, r=4, 10px gap, --normal-bg-90 hover. This
-  // picker offers the same workspaces the switcher lists, so it should not be
-  // a third dialect of the same row.
-  //
-  // NOT ported: the switcher's `[data-current="1"]` tint. Nothing here is ever
-  // the current row — _pickedHubIds filters every already-chosen workspace out
-  // of the list before it is rendered, so the state cannot occur.
-  &__workspace-option {
-    align-items: center;
-    gap: 10px;
-    min-height: 36px;
-    padding: 8px 10px;
-    border-radius: 4px;
-    box-sizing: border-box;
-    width: 100%;
-    cursor: pointer;
-    white-space: nowrap;
-
-    &:hover {
-      background-color: var(--normal-bg-90);
-    }
+  &__tree-empty {
+    font: 400 14px/1.4 $font;
+    color: $muted;
   }
 
-  // Group heading — the topbar switcher's __ws-section, to the letter, since
-  // the rows under it are that switcher's rows.
-  &__workspace-section {
-    padding: 10px 10px 4px;
-    font-family: "Geist", sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--normal-fg-50);
-
-    // No dead space above the first heading.
-    &:first-child {
-      padding-top: 2px;
-    }
-  }
-
-  &__workspace-option-icon {
-    @include drumee.ws-folder-icon(22px, 18px);
-  }
-
-  &__workspace-option-name {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-family: "Geist", sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--normal-fg-10);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__role-select {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 36px,
-      $color: var(--normal-fg-50)
-    );
-    background-color: rgba(0, 0, 0, 0.06);
-    border-radius: 6px;
-    padding: 0 12px;
-    height: 36px;
-    width: 100%;
-    cursor: pointer;
-    box-sizing: border-box;
+  &__dept-head,
+  &__ws-row {
     align-items: center;
     gap: 8px;
   }
 
-  &__role-select-label {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 36px;
+  &__dept-children {
+    margin-left: 16px;
+    padding: 12px 0 0 12px;
+    border-left: 1px solid $line;
+    gap: 12px;
+  }
 
-    .inner {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      line-height: 36px;
+  &__row-box {
+    flex: 1 0 0;
+    min-width: 0;
+    min-height: 40px;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 12px;
+    border: 1px solid $line;
+    border-radius: 12px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.02);
     }
   }
 
-  &__role-caret {
-    flex-shrink: 0;
-    width: 12px;
-    height: 12px;
-    display: inline-flex;
+  &__dept-icon {
+    width: 24px;
+    height: 24px;
+    flex: none;
     align-items: center;
     justify-content: center;
-    margin-bottom: 2px;
+    padding: 4px;
+    border-radius: 6px;
+    background-color: $tint;
+    color: var(--primary-40, #5950ff);
 
     svg {
-      width: 12px;
-      height: 12px;
-      fill: var(--normal-fg-50);
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
     }
+  }
+
+  &__ws-icon {
+    width: 24px;
+    height: 24px;
+    flex: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__row-name {
+    flex: 1 0 0;
+    min-width: 0;
+    font: 400 14px/20px $font;
+    color: $ink;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__pill {
+    flex: none;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 46px;
+    background-color: $tint;
+  }
+
+  &__pill-num {
+    font: 600 12px/1.2 $font;
+    color: var(--primary-40, #5950ff);
+  }
+
+  &__pill-word {
+    font: 400 12px/1.4 $font;
+    color: #000;
+  }
+
+  &__pill-ico {
+    width: 16px;
+    height: 16px;
+    color: $ink;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__caret {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: $ink;
+    transition: transform 0.15s;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__row-box[data-open="1"] &__caret {
+    transform: rotate(180deg);
+  }
+
+  // ── Checkbox (0 | 1 | "mixed") ────────────────────────────────────────
+  &__check {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #84848c;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &[data-state="1"] {
+      background-color: var(--primary-50, #433cc5);
+      border-color: var(--primary-50, #433cc5);
+    }
+
+    &[data-state="mixed"] {
+      background-color: #b1adff;
+      border-color: #b1adff;
+
+      &::after {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 3px;
+        border-radius: 18px;
+        background-color: #fff;
+      }
+    }
+  }
+
+  // Visibility rather than display: the tick widget's own display is the
+  // framework's, and an equal-specificity fight is not worth having.
+  &__check-tick {
+    width: 14px;
+    height: 14px;
+    color: #fff;
+    visibility: hidden;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__check[data-state="1"] &__check-tick {
+    visibility: visible;
+  }
+
+  // ── Role pill + menu ──────────────────────────────────────────────────
+  &__role-cell {
+    position: relative;
+    align-self: stretch;
+    flex: none;
+  }
+
+  &__role-select {
+    height: 100%;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    border-radius: 12px;
+    background-color: $line;
+    cursor: pointer;
+  }
+
+  &__role-select-label {
+    font: 400 14px/1.2 $font;
+    color: #000;
+    white-space: nowrap;
   }
 
   &__role-options {
-    // `display: none` while closed, not visibility alone. These are absolutely
-    // positioned inside __workspaces, which now scrolls, and a merely-invisible
-    // box still counts toward that box's scrollable overflow — the closed role
-    // menu is 139px, which put a scrollbar on a one-row list. !important for
-    // the same reason __chips needs it: the framework's
-    // `.box[data-flow="y"] { display: flex }` matches with equal specificity,
-    // which is why visibility was reached for in the first place.
+    // `display: none` while closed, not visibility alone: these are
+    // absolutely positioned inside __tree, which scrolls, and a merely
+    // invisible box still counts toward its scrollable overflow. !important
+    // because `.box[data-flow="y"]` matches at the same specificity.
     display: none !important;
-    visibility: hidden;
-    pointer-events: none;
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
-    min-width: 130px;
-    background-color: var(--white);
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-    padding: 4px 0;
+    min-width: 160px;
+    padding: 4px;
+    background-color: #fff;
+    border: 1px solid $line;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
     z-index: 99999;
     // The hover description card sits OUTSIDE the menu box — don't clip it.
     overflow: visible;
 
     &[data-state="1"] {
       display: flex !important;
-      visibility: visible;
-      pointer-events: auto;
     }
   }
 
-  // Single-select rows (no checkbox): the selected role is shown with the
-  // same background-tint highlight the workspace-settings role menu uses,
-  // so both selectors read identically.
   &__role-option {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16.8px,
-      $color: var(--normal-fg-10)
-    );
+    position: relative;
     display: flex;
     align-items: center;
-    position: relative;
-    padding: 8px 12px;
-    // Glyph-to-label spacing from the permission panel's role pill rows
-    // (mixins/drumee window-button-dropdown-menu `__item`).
     gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
     cursor: pointer;
+    font: 400 14px/1.2 $font;
+    color: $ink;
 
     .inner {
       pointer-events: none;
     }
 
-    // THE ONLY THING THAT MAKES THE DESCRIPTION VISIBLE. ui-core's
-    // __addTooltips writes `display: none` INLINE on this card and toggles it
-    // only from __handleClick — there is no hover handling in the framework at
-    // all. A click on a role option picks it and closes the menu, so without
-    // this the card is created, styled below, and never once seen. !important
-    // because nothing else outranks an inline style.
-    //
-    // Gated on the ROW's :hover, not on any state the framework stamps: it
-    // stamps none (data-over is dead code in ui-core).
+    // THE ONLY THING THAT MAKES THE DESCRIPTION VISIBLE: ui-core writes
+    // `display: none` inline on this card and toggles it only on click, and a
+    // click here picks the role and closes the menu.
     &:hover .role-option-tooltip {
       display: block !important;
     }
 
     &:hover {
-      background-color: var(--default-bg-hover, #f5f5fa);
+      background-color: #f2f2f7;
     }
 
     &[data-checked="1"] {
-      background-color: rgba(89, 80, 255, 0.12);
-      color: var(--active-border, #5950ff);
+      background-color: $tint;
+      color: var(--primary-40, #5950ff);
       font-weight: 500;
     }
 
-    // Hover description ("Can only View", …) injected by the framework
-    // `tooltips` prop — a small card on the RIGHT of the hovered row
-    // (user decision 2026-07-20), vertically centered. max-width keeps
-    // ~4-5 words per line so the longer descriptions wrap to two lines
-    // instead of one long strip.
+    // Hover description card, on the RIGHT of the row (user decision
+    // 2026-07-20); on narrow screens to the LEFT, where there is always room.
     .role-option-tooltip {
       position: absolute;
       left: calc(100% + 10px);
@@ -789,25 +691,12 @@
       pointer-events: none;
       padding: 6px 10px;
       border-radius: 6px;
-      background-color: var(--normal-fg, #2f2f36);
-      color: var(--white, #fff);
-      font-size: 12px;
-      font-weight: 400;
-      line-height: 16px;
+      background-color: $ink;
+      color: #fff;
+      font: 400 12px/16px $font;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
       z-index: 100000;
 
-      // ON NARROW SCREENS, TO THE LEFT. The role menu is the right-most thing
-      // on the card, so a card on its right runs off the edge on a phone —
-      // measured at a 600px viewport its right edge landed at 675px, and
-      // __wrapper-modal is overflow:clip, so the description was cut off. It
-      // was never seen before only because the tooltip never showed at all.
-      // The left is the workspace field: always room. Desktop keeps the
-      // right-hand placement chosen on 2026-07-20.
-      //
-      // Emitted twice, as mixins/responsive.scss does it: Visitor.device()
-      // only answers "mobile" below 801px, so the attribute is absent in the
-      // DevTools emulator and on a landscape phone.
       @media (max-width: 650px) {
         left: auto;
         right: calc(100% + 10px);
@@ -820,9 +709,6 @@
     }
   }
 
-  // The level's glyph — the same one the permission panel's role pill draws,
-  // at that menu's size: a 20px box holding a 16px mark. currentColor so the
-  // checked row's accent reaches the glyph as well as the label.
   &__role-option-icon {
     display: flex;
     align-items: center;
@@ -845,27 +731,67 @@
     white-space: nowrap;
   }
 
-  &__role-text {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16.8px,
-      $color: var(--normal-fg-50)
-    );
-    display: block;
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  // ── Public link ───────────────────────────────────────────────────────
+  &__expiry-head {
+    align-items: center;
+    justify-content: space-between;
   }
 
-  &__role-chevron {
+  &__switch {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    flex: none;
+    border-radius: 12px;
+    background-color: #aeaeb2;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &[data-state="1"] {
+      background-color: #847eff;
+    }
+  }
+
+  &__switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 12px;
+    background-color: #fff;
+    transition: left 0.15s;
+  }
+
+  &__switch[data-state="1"] &__switch-knob {
+    left: 22px;
+  }
+
+  &__expiry-options {
+    padding: 4px;
+    background-color: #f2f2f7;
+    border-radius: 8px;
+  }
+
+  &__expiry-option {
+    flex: 1 0 0;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 4px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font: 400 14px/1.2 $font;
+    color: $ink;
+
+    &[data-state="1"] {
+      background-color: #fff;
+    }
+  }
+
+  &__expiry-ico {
     width: 12px;
     height: 12px;
-    flex-shrink: 0;
-    color: var(--normal-fg-50);
 
     svg {
       width: 100%;
@@ -874,41 +800,107 @@
     }
   }
 
-  &__add-role {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16.8px,
-      $color: var(--normal-fg-50)
-    );
+  &__get-link,
+  &__send-btn {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background-color: var(--primary-50, #433cc5);
+    color: #fff;
+    font: 600 16px/24px $font;
+    text-align: center;
     cursor: pointer;
-    margin-top: -4px;
-
-    .inner {
-      pointer-events: none;
-    }
+    transition: opacity 0.2s;
 
     &:hover {
-      color: var(--active-border, #5950ff);
+      opacity: 0.92;
     }
   }
 
-  &__send-btn {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
-      $color: var(--white)
-    );
-    background-color: var(--active-border, #5950ff);
-    border-radius: 6px;
-    padding: 12px 24px;
-    text-align: center;
+  &__get-link {
+    border-radius: 12px;
+  }
+
+  &__get-link-ico {
+    width: 24px;
+    height: 24px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__link-row {
+    height: 40px;
+    gap: 8px;
+  }
+
+  &__link-field {
+    flex: 1 0 0;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: $tint;
     cursor: pointer;
-    transition:
-      opacity 0.2s,
-      background-color 0.2s;
-    margin-top: 8px;
+  }
+
+  &__link-url {
+    flex: 1 0 0;
+    min-width: 0;
+    opacity: 0.6;
+    font: 400 14px/1.2 $font;
+    color: $ink;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__link-ico,
+  &__link-copy {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: $ink;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__revoke {
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: #d74e49;
+    color: #fff;
+    font: 600 14px/20px $font;
+    cursor: pointer;
+  }
+
+  &__revoke-ico {
+    width: 20px;
+    height: 20px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // ── Send ──────────────────────────────────────────────────────────────
+  &__send-btn {
+    border-radius: 8px;
 
     .inner {
       pointer-events: none;
@@ -916,27 +908,18 @@
       text-align: center;
     }
 
-    &:hover {
-      opacity: 0.92;
-    }
-
     &[data-state="0"] {
-      background-color: var(--normal-fg-50);
       cursor: not-allowed;
       pointer-events: none;
-      opacity: 0.6;
+      opacity: 0.5;
     }
 
-    // While hub.invite is in flight: show a spinner alongside the label —
-    // the spinner is part of the button, the "Send Invitation" text stays.
+    // While hub.invite is in flight: a spinner alongside the label.
     &[data-loading="1"] {
       pointer-events: none;
       cursor: not-allowed;
       opacity: 0.6;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
 
       &::before {
         content: "";
@@ -944,7 +927,7 @@
         height: 16px;
         flex-shrink: 0;
         border: 2px solid rgba(255, 255, 255, 0.45);
-        border-top-color: var(--white);
+        border-top-color: #fff;
         border-radius: 50%;
         animation: invite-popup-send-spin 0.6s linear infinite;
       }
@@ -977,8 +960,7 @@
 @media (prefers-reduced-motion: reduce) {
   .invite-popup__ui,
   .invite-popup__ui[data-closing="1"],
-  .invite-popup__suggestions[data-loading="1"]::before,
-  .invite-popup__workspace-suggestions[data-loading="1"]::before {
+  .invite-popup__suggestions[data-loading="1"]::before {
     animation: none;
   }
 }
