@@ -57,6 +57,85 @@ function isFileCategory(category) {
 }
 
 /**
+ * A share-open notification ("{who} opened {item}") also opens that item's
+ * share panel, with the opener's rows marked in "View access list"
+ * (window/secure-share focusAccessEvent). The reveal link above still does
+ * everything it did; this runs beside it.
+ *
+ * WAITS FOR THE WORKSPACE PANE. The reveal may be switching workspace, and
+ * loadWorkspace re-feeds headlessLayer — the pool a launched window lands in —
+ * so a panel launched before the new pane is up would be wiped with the old
+ * one. Wm._awaitWorkspaceWindow is the wait openNotificationLocation itself
+ * makes (answers at once when the pane is already there). The panel's lazy
+ * chunk is fetched during that same wait, so it adds no time of its own.
+ *
+ * A panel already on screen for this node (drawer, column or floating) is
+ * pointed instead of doubled. A hidden one — the column stays mounted after its
+ * ✕ — does not count: that one is out of sight.
+ *
+ * Best-effort: every failure leaves the click exactly as it was before.
+ */
+function openShareOpenAccess({ hub_id, nid, filetype, name, focus }) {
+  const wm = window.Wm;
+  if (!hub_id || !nid || !wm || !_.isFunction(wm._awaitWorkspaceWindow)) return;
+  const chunk = Promise.resolve(Kind.waitFor("window_secure_share")).catch(() => {});
+  Promise.all([wm._awaitWorkspaceWindow(hub_id), chunk])
+    .then(([pane]) => {
+      if (!pane) return;
+      const onScreen = (wm.getItemsByKind("window_secure_share") || []).find(
+        (p) =>
+          p &&
+          !(p.isDestroyed && p.isDestroyed()) &&
+          `${p.mget(_a.nid)}` === `${nid}` &&
+          _.isFunction(p.focusAccessEvent) &&
+          p.el &&
+          p.el.getClientRects().length > 0,
+      );
+      if (onScreen) {
+        // Only a standalone window raises; raising a drawer or a column would
+        // lift it out of its folder window (window/core raise → z 10000).
+        if (!onScreen._embedded && _.isFunction(onScreen.raise)) onScreen.raise();
+        return onScreen.focusAccessEvent(focus);
+      }
+      // The workspace itself was shared: its link is minted on the root folder
+      // (window/folder/secure-share-column secureShareNid).
+      const isWorkspace =
+        filetype === _a.hub || `${pane.mget(_a.actual_home_id)}` === `${nid}`;
+      const isFolder = isWorkspace || !filetype || filetype === _a.folder;
+      const subject = isWorkspace ? "workspace" : isFolder ? "folder" : "file";
+      const uid = `window_secure_share-${nid}`;
+      const launched = wm.launch(
+        {
+          kind: "window_secure_share",
+          wm_unique_id: uid,
+          nid,
+          hub_id,
+          filetype: isFolder ? _a.folder : filetype,
+          area: pane.mget(_a.area),
+          // Slides in and out, like the player's Share (window/secure-share `_floating`).
+          floating: 1,
+          ...(isWorkspace ? { manage_access: 1 } : {}),
+          subject,
+          subject_data: {
+            name: name || (isWorkspace ? pane.mget(_a.filename) || pane.mget(_a.hub_name) : ""),
+            filetype: isWorkspace ? _a.hub : isFolder ? _a.folder : filetype,
+            area: pane.mget(_a.area),
+          },
+          access_focus: focus,
+        },
+        { explicit: 1, singleton: 1 },
+      );
+      // false = the singleton already exists but is out of sight (minimised):
+      // launch wakes it, and the focus has to be handed to it directly.
+      if (launched === false) {
+        const w = (wm.getItemsByAttr("wm_unique_id", uid) || [])[0];
+        if (w && _.isFunction(w.focusAccessEvent)) w.focusAccessEvent(focus);
+      }
+    })
+    .catch((e) => console.warn("[activity] share-open panel failed", e));
+}
+
+/**
  * 
  * @param {*} data 
  * @returns 
@@ -661,6 +740,18 @@ class __activity_item extends LetcBox {
           recipient_email: this.mget('recipient_email'),
         });
         this.triggerHandlers({ service: 'close-activity-panel' });
+        // ...and, over it, the share panel pointed at who opened it.
+        openShareOpenAccess({
+          hub_id,
+          nid: shareNid,
+          filetype: shareFiletype,
+          name: this.mget('node_name'),
+          focus: {
+            token_id: this.mget('token_id'),
+            email: this.mget('recipient_email'),
+            actor_id: this.mget('author_id'),
+          },
+        });
         break;
       }
     }
