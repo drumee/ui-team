@@ -6,6 +6,7 @@ const {
   captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
 } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
+const { inviteWorkspaceScope } = require("libs/invite-scope");
 // "Open this file once I am signed in" — a Designation link opened by a visitor
 // with no session. Armed at module scope in index.web.js, consumed below.
 const fileDeepLink = require("libs/file-deep-link");
@@ -10964,6 +10965,18 @@ class desk_module extends LetcBox {
       Wm.__wrapperModal.feed({
         kind: "invite_popup",
         hub_id: ws.hub_id || Visitor.id,
+        // The sidebar's Invite row opens the popup about the CURRENT workspace
+        // (Figma 785:74990) — see libs/invite-scope. Every other caller of
+        // "invite-member" (topbar, context menu, the guided tours) keeps the
+        // organisation-wide popup with its "Invite to" tree.
+        ...inviteWorkspaceScope({
+          cmd,
+          ws,
+          rows: this._workspaces,
+          visitorId: Visitor.id,
+          wmName:
+            (Wm && _.isFunction(Wm.mget) && (Wm.mget(_a.hub_name) || Wm.mget(_a.filename))) || "",
+        }),
         uiHandler: [this],
       });
       this._invitePopup = Wm.__wrapperModal.children.last();

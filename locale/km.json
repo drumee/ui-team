@@ -3016,5 +3016,19 @@
   "PENDING_INVITATIONS": "ការអញ្ជើញកំពុងរង់ចាំ",
   "PENDING_INVITATIONS_HINT": "សមាជិកដែលបានអញ្ជើញនឹងបង្ហាញនៅទីនេះរហូតដល់ពួកគេឆ្លើយតប។",
   "INVITE_MEMBER_TO_WORKSPACE": "អញ្ជើញសមាជិកទៅកន្លែងធ្វើការ",
-  "INVITED_AGO_BY": "បានអញ្ជើញ {0} ដោយ {1}"
+  "INVITED_AGO_BY": "បានអញ្ជើញ {0} ដោយ {1}",
+  "INVITE_VIA_EMAIL": "តាមអ៊ីមែល",
+  "INVITE_PUBLIC_LINK": "តំណសាធារណៈ",
+  "INVITE_TO": "អញ្ជើញទៅ",
+  "INVITE_DEPARTMENTS": "នាយកដ្ឋាន",
+  "INVITE_WORKSPACE_ONE": "កន្លែងធ្វើការ",
+  "INVITE_WORKSPACE_OTHER": "កន្លែងធ្វើការ",
+  "INVITE_LINK_EXPIRATION": "ការផុតកំណត់តំណ",
+  "INVITE_GET_LINK": "យកតំណ",
+  "INVITE_REVOKE": "ដកហូត",
+  "INVITE_EXPIRY_1H": "1ម៉ោង",
+  "INVITE_EXPIRY_24H": "24ម៉ោង",
+  "INVITE_EXPIRY_7D": "7ថ្ងៃ",
+  "INVITE_NO_WORKSPACE": "អ្នកមិនមានកន្លែងធ្វើការដែលអាចអញ្ជើញមនុស្សចូលបានទេ។",
+  "INVITE_WORKSPACE_TITLE": "អញ្ជើញសមាជិកចូលកន្លែងធ្វើការ"
 }

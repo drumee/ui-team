@@ -1,12 +1,14 @@
 /**
- * Invite popup skeleton — matches Figma 316:77288 / 316:77652
+ * Invite popup skeleton — Drumee 2.0, Figma 980:172148 / 785:110823 /
+ * 899:78049 (Via email) and 780:188741 / 785:72115 / 785:72862 (Public link).
  * Layout:
- *  - Header: title + close button
- *  - Sub: description
- *  - "Invite member via email" + chips entry + autocomplete suggestions
- *  - Workspace selector + role dropdown rows (1..N via "+ Add new")
- *  - "+ Add new workspace and role" link
- *  - Send Invitation button
+ *  - Header: title + close button, then the description
+ *  - Org card (name, departments, members) — only inside an organisation
+ *  - Tabs: Via email | Public link (switched by CSS on the root's data-tab)
+ *  - Via email: "Invite member via email" + chips entry + autocomplete
+ *  - "Invite to": All checkbox + department/workspace tree (skeleton/tree)
+ *  - Public link: Link Expiration switch + presets, Get link, link row
+ *  - Send Invitation button (email tab)
  */
 // Same 4-level list every role selector renders (View → Chat → Edit →
 // Admin, weakest first, with hover descriptions) — adapted to this
@@ -20,8 +22,8 @@ const folderIcon = require("media/grid/template/folder");
 /**
  * The glyph for one picked workspace, or "" when the row has no pick yet.
  *
- * `hub`/`role: "desk"` unconditionally: the picker only ever offers hubs —
- * _fetchWorkspaces drops `personal` via NON_INVITEABLE before anything is
+ * `hub`/`role: "desk"` unconditionally: the tree only ever offers hubs —
+ * tree.inviteable drops `personal` via NON_INVITEABLE before anything is
  * listed — so there is no folder case to branch on here.
  *
  * A missing `area` still draws: the template falls back to its own base fill.
@@ -62,160 +64,16 @@ const summarizeRoles = (selectedIds) => {
   return role?.label || LOCALE.SELECT_ROLE || "Select role";
 };
 
-const buildWorkspaceRow = (ui, idx) => {
-  const pfx = ui.fig.family;
-  // Reflect any pre-seeded workspace (e.g. opened from a hub's kebab Invite) so
-  // the input shows the workspace name instead of the empty placeholder. Empty
-  // rows (initial picker, "+ Add new") fall back to "" / default role.
-  const ws = (ui._workspaces && ui._workspaces[idx]) || {};
-  const roleIds = ws.roleIds || DEFAULT_ROLE_IDS;
-  return Skeletons.Box.X({
-    className: `${pfx}__workspace-row`,
-    sys_pn: `workspace-row:${idx}`,
-    partHandler: ui,
-    dataset: { idx },
-    active: 0,
-    kidsOpt: { active: 0 },
-    kids: [
-      Skeletons.Box.Y({
-        className: `${pfx}__workspace-cell`,
-        active: 0,
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Entry({
-            className: `${pfx}__workspace-input`,
-            sys_pn: `workspace-input:${idx}`,
-            partHandler: ui,
-            uiHandler: [ui],
-            dataset: { idx },
-            value: ws.name || "",
-            placeholder:
-              LOCALE.INVITE_WORKSPACE_PLACEHOLDER || "Search workspace to add",
-            require: "any",
-            mode: "commit",
-            service: "search-workspace",
-            bubble: 0,
-          }),
-          // Overlays the input's left edge (the cell is position:relative
-          // already, for the dropdown). pointer-events are off in the skin so
-          // a click still lands in the field behind it, and the input takes
-          // matching left padding while this is showing — see the skin.
-          //
-          // Gated on a `state` stamp, never on CSS :empty: this is fed with
-          // markup by _renderWorkspaceIcon and an empty widget still renders
-          // its own inner node.
-          Skeletons.Element({
-            // No area class on the wrapper: the tint rides on the glyph's own
-            // `.folder-shape.<area>`, and a class here would go stale the
-            // first time _renderWorkspaceIcon swaps the content.
-            className: `${pfx}__workspace-icon`,
-            sys_pn: `workspace-icon:${idx}`,
-            partHandler: ui,
-            dataset: { idx, state: ws.hub_id ? 1 : 0 },
-            content: workspaceGlyph(ws),
-          }),
-          Skeletons.Box.Y({
-            className: `${pfx}__workspace-suggestions`,
-            sys_pn: `workspace-suggestions:${idx}`,
-            partHandler: ui,
-            dataset: { idx, state: 0 },
-            active: 0,
-          }),
-        ],
-      }),
-      Skeletons.Box.Y({
-        className: `${pfx}__role-cell`,
-        kids: [
-          Skeletons.Box.X({
-            className: `${pfx}__role-select`,
-            service: "toggle-role",
-            uiHandler: [ui],
-            dataset: { idx },
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}__role-select-label`,
-                sys_pn: `role-label:${idx}`,
-                partHandler: ui,
-                content: summarizeRoles(roleIds),
-              }),
-              Skeletons.Button.Svg({
-                ico: "apps-caret-down",
-                className: `${pfx}__role-caret`,
-              }),
-            ],
-          }),
-          Skeletons.Box.Y({
-            className: `${pfx}__role-options`,
-            sys_pn: `role-options:${idx}`,
-            partHandler: ui,
-            dataset: { idx, state: 0 },
-            // Rows modelled on the permission panel's role pill
-            // (permission/restricted roleDropdown → dropdownMenuButton): the
-            // level's glyph, then its name, then its description on hover.
-            //
-            // The vocabulary only, not that widget. This menu is hand-wired
-            // into _toggleRoleDropdown, _pickRole's capture-phase mousedown
-            // and _maybeCloseDropdowns, and swapping it for a menu_topic would
-            // rewire all three. The pick still resolves the same way:
-            // closest(".invite-popup__role-option"), and the skin's
-            // `&__role-option > *` rule keeps both kids pointer-transparent.
-            kids: ROLES.map((r) =>
-              Skeletons.Box.X({
-                className: `${pfx}__role-option`,
-                // Hover description ("Can only View", …). Declared the same
-                // way the panel declares it — but ui-core hides it with an
-                // inline display:none that only a CLICK toggles, and a click
-                // here picks the role and closes the menu. The skin reveals it
-                // on :hover instead; see `.role-option-tooltip` there.
-                tooltips: r.description
-                  ? { content: r.description, className: "role-option-tooltip" }
-                  : undefined,
-                dataset: {
-                  id: r.id,
-                  idx,
-                  checked: roleIds.includes(r.id) ? 1 : 0,
-                },
-                kidsOpt: { active: 0 },
-                kids: [
-                  Skeletons.Button.Svg({
-                    ico: r.ico,
-                    className: `${pfx}__role-option-icon`,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}__role-option-label`,
-                    content: r.label,
-                  }),
-                ],
-              }),
-            ),
-          }),
-        ],
-      }),
-      Skeletons.Note({
-        // Override the row's kidsOpt active:0 so the X Note actually
-        // handles its own click. Without this it inherits active:0 and
-        // the click bubbles to the parent Box.X (which has no service)
-        // — so clicking × did nothing.
-        active: 1,
-        className: `${pfx}__row-remove`,
-        service: "remove-workspace-row",
-        uiHandler: [ui],
-        dataset: { idx },
-        content: "×",
-      }),
-    ],
-  });
-};
+const { check } = require("./tree");
 
-module.exports = function (ui) {
-  const pfx = ui.fig.family;
-
-  const header = Skeletons.Box.X({
+const header = (ui, pfx) =>
+  Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
       Skeletons.Note({
         className: `${pfx}__title`,
-        content: LOCALE.INVITE_TEAM_TITLE || "Invite your team members",
+        content:
+          ui._scope === "workspace" ? LOCALE.INVITE_WORKSPACE_TITLE : LOCALE.INVITE_TEAM_TITLE,
       }),
       Skeletons.Button.Svg({
         className: `${pfx}__close`,
@@ -226,117 +84,352 @@ module.exports = function (ui) {
     ],
   });
 
-  const description = Skeletons.Note({
-    className: `${pfx}__description`,
-    content:
-      LOCALE.INVITE_TEAM_HINT ||
-      "Invitees receive an email to join your workspace. Manage permissions anytime from settings.",
-  });
+/**
+ * The org card's content. Fed into the `org` slot by the controller once
+ * organization.overview answers — a slot, so that answer never re-feeds the
+ * whole popup (which rebuilt the email row and dropped the chips).
+ */
+function orgCardKids(ui, pfx) {
+  const o = ui._org;
+  if (!o) return [];
+  return [
+    Skeletons.Note({ className: `${pfx}__org-name`, content: o.name }),
+    Skeletons.Box.X({
+      className: `${pfx}__org-stats`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__pill-num`, content: String(o.department_count || 0) }),
+        Skeletons.Note({ className: `${pfx}__org-stat-word`, content: LOCALE.INVITE_DEPARTMENTS }),
+        Skeletons.Note({ className: `${pfx}__pill-num`, content: String(o.member_count || 0) }),
+        Skeletons.Button.Svg({ ico: "ph-users", className: `${pfx}__pill-ico`, active: 0 }),
+      ],
+    }),
+  ];
+}
 
-  const emailLabel = Skeletons.Note({
-    className: `${pfx}__field-label`,
-    content: LOCALE.INVITE_EMAIL_LABEL || "Invite member via email",
-  });
-
-  const emailRow = Skeletons.Box.X({
-    className: `${pfx}__email-row`,
-    sys_pn: "email-row",
-    partHandler: ui,
-    kids: [
+/**
+ * The workspace card (Figma 785:74990): the workspace's own glyph, its name,
+ * then how much it holds and how many members it has. Fed into the `ws-card`
+ * slot — the size and the member count arrive after the popup opens.
+ *
+ * A figure that is not known is LEFT OUT, never drawn as a zero: "0 B" beside
+ * an unread member count would be a claim, not a placeholder.
+ *
+ * @param {Object} ui reads ui._ws = {name, area, members, sizeText}
+ */
+function wsCardKids(ui, pfx) {
+  const ws = ui._ws || {};
+  const stats = [];
+  const text = String(ws.sizeText || "").trim();
+  if (text) {
+    // "3.5 GB" → number + unit, coloured apart the way the design does.
+    const at = text.lastIndexOf(" ");
+    stats.push(
       Skeletons.Box.X({
-        className: `${pfx}__chips`,
-        sys_pn: "email-chips",
-        partHandler: ui,
+        className: `${pfx}__ws-stat`,
+        active: 0,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__ws-stat-value`, content: at > 0 ? text.slice(0, at) : text }),
+          at > 0 ? Skeletons.Note({ className: `${pfx}__ws-stat-unit`, content: text.slice(at + 1) }) : null,
+        ].filter(Boolean),
       }),
-      Skeletons.Entry({
-        className: `${pfx}__email-input`,
-        sys_pn: "email-input",
-        partHandler: ui,
+    );
+  }
+  if (ws.members != null) {
+    stats.push(
+      Skeletons.Box.X({
+        className: `${pfx}__ws-stat`,
+        active: 0,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__ws-stat-value`, content: String(ws.members) }),
+          Skeletons.Button.Svg({ ico: "ph-users", className: `${pfx}__pill-ico`, active: 0 }),
+        ],
+      }),
+    );
+  }
+  return [
+    // Element + content: the folder template emits MARKUP, not a sprite name.
+    Skeletons.Element({
+      className: `${pfx}__ws-card-icon`,
+      content: workspaceGlyph({ hub_id: ws.hub_id || "ws", area: ws.area || "" }),
+    }),
+    Skeletons.Box.Y({
+      className: `${pfx}__ws-card-text`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__ws-card-name`, content: ws.name || "" }),
+        stats.length ? Skeletons.Box.X({ className: `${pfx}__ws-stats`, kids: stats }) : null,
+      ].filter(Boolean),
+    }),
+  ];
+}
+
+const wsCard = (ui, pfx) =>
+  Skeletons.Box.X({
+    className: `${pfx}__ws-card`,
+    sys_pn: "ws-card",
+    partHandler: ui,
+    kids: wsCardKids(ui, pfx),
+  });
+
+// Off (data-state 0, hidden by the skin) outside an organisation — 79% of
+// accounts sit on domain 1 — and until the overview answers.
+const orgCard = (ui, pfx) =>
+  Skeletons.Box.Y({
+    className: `${pfx}__org-card`,
+    sys_pn: "org",
+    partHandler: ui,
+    dataset: { state: ui._org ? 1 : 0 },
+    kids: orgCardKids(ui, pfx),
+  });
+
+const TABS = [
+  { tab: "email", ico: "ph-envelope-simple", label: () => LOCALE.INVITE_VIA_EMAIL },
+  { tab: "link", ico: "apps-globe", label: () => LOCALE.INVITE_PUBLIC_LINK },
+];
+
+const tabs = (ui, pfx) =>
+  Skeletons.Box.X({
+    className: `${pfx}__tabs`,
+    sys_pn: "tabs",
+    partHandler: ui,
+    kids: TABS.map((t) =>
+      Skeletons.Box.X({
+        className: `${pfx}__tab`,
+        service: "switch-tab",
         uiHandler: [ui],
-        placeholder: "name@company.com",
-        require: "any",
-        mode: "commit",
-        service: "submit-email",
-        bubble: 0,
+        dataset: { tab: t.tab, state: ui._tab === t.tab ? 1 : 0 },
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Button.Svg({ ico: t.ico, className: `${pfx}__tab-ico` }),
+          Skeletons.Note({ className: `${pfx}__tab-label`, content: t.label() }),
+        ],
+      }),
+    ),
+  });
+
+// Parts unchanged from the previous popup (email-row / email-chips /
+// email-input / suggestions): the controller's chip and autocomplete logic
+// binds to them by sys_pn.
+const emailPanel = (ui, pfx) =>
+  Skeletons.Box.Y({
+    className: `${pfx}__panel-email`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.INVITE_EMAIL_LABEL }),
+      // The dropdown floats under the email row instead of sitting in the
+      // column, so the dialog does not jump while typing. Anchoring needs a
+      // positioned parent, hence this wrapper.
+      Skeletons.Box.Y({
+        className: `${pfx}__email-field`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__email-row`,
+            sys_pn: "email-row",
+            partHandler: ui,
+            kids: [
+              Skeletons.Box.X({ className: `${pfx}__chips`, sys_pn: "email-chips", partHandler: ui }),
+              Skeletons.Entry({
+                className: `${pfx}__email-input`,
+                sys_pn: "email-input",
+                partHandler: ui,
+                uiHandler: [ui],
+                placeholder: "name@company.com",
+                require: "any",
+                mode: "commit",
+                service: "submit-email",
+                bubble: 0,
+              }),
+            ],
+          }),
+          Skeletons.Box.Y({
+            className: `${pfx}__suggestions`,
+            sys_pn: "suggestions",
+            partHandler: ui,
+            state: 0,
+            active: 0,
+          }),
+        ],
+      }),
+      Skeletons.Note({
+        className: `${pfx}__field-error`,
+        sys_pn: "email-error",
+        partHandler: ui,
+        dataset: { state: 0 },
+        content: "",
       }),
     ],
   });
 
-  const suggestion = Skeletons.Box.Y({
-    className: `${pfx}__suggestions`,
-    sys_pn: "suggestions",
-    partHandler: ui,
-    state: 0,
-    active: 0,
+const inviteTo = (ui, pfx) =>
+  Skeletons.Box.Y({
+    className: `${pfx}__invite-to`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__invite-to-head`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.INVITE_TO }),
+          Skeletons.Box.X({
+            className: `${pfx}__all`,
+            sys_pn: "all-check",
+            partHandler: ui,
+            dataset: { state: 0 },
+            kids: [
+              Skeletons.Note({ className: `${pfx}__all-label`, content: LOCALE.ALL }),
+              check(pfx, { state: 0 }, "toggle-all", ui),
+            ],
+          }),
+        ],
+      }),
+      // Fed by the controller (skeleton/tree.rows) once desk.home answers.
+      Skeletons.Box.Y({
+        className: `${pfx}__tree`,
+        sys_pn: "tree",
+        partHandler: ui,
+        dataset: { loading: 1 },
+      }),
+      Skeletons.Note({
+        className: `${pfx}__field-error`,
+        sys_pn: "workspace-error",
+        partHandler: ui,
+        dataset: { state: 0 },
+        content: "",
+      }),
+    ],
   });
 
-  // The dropdown floats under the email row instead of sitting in the column:
-  // in flow it pushed the workspace picker and the Send button down every time
-  // a match appeared, so the dialog jumped around while typing. Anchoring
-  // needs a positioned parent, hence this wrapper.
-  const emailField = Skeletons.Box.Y({
-    className: `${pfx}__email-field`,
-    kids: [emailRow, suggestion],
-  });
+const PRESETS = [
+  { preset: "1h", label: () => LOCALE.INVITE_EXPIRY_1H },
+  { preset: "24h", label: () => LOCALE.INVITE_EXPIRY_24H },
+  { preset: "7d", label: () => LOCALE.INVITE_EXPIRY_7D },
+  { preset: "custom", label: () => LOCALE.CUSTOM, ico: "calendar" },
+];
 
-  const emailError = Skeletons.Note({
-    className: `${pfx}__field-error`,
-    sys_pn: "email-error",
-    partHandler: ui,
-    dataset: { state: 0 },
-    content: "",
-  });
+/**
+ * The Public link panel's content. Exported so the controller can re-feed
+ * the `link-panel` part alone when the switch, a preset or the link changes.
+ */
+function linkPanelKids(ui, pfx) {
+  const l = ui._link;
+  const kids = [
+    Skeletons.Box.X({
+      className: `${pfx}__expiry-head`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.INVITE_LINK_EXPIRATION }),
+        Skeletons.Box.X({
+          className: `${pfx}__switch`,
+          service: "toggle-expiry",
+          uiHandler: [ui],
+          dataset: { state: l.expiry ? 1 : 0 },
+          kids: [Skeletons.Box.X({ className: `${pfx}__switch-knob`, active: 0 })],
+        }),
+      ],
+    }),
+  ];
+  if (l.expiry) {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${pfx}__expiry-options`,
+        kids: PRESETS.map((p) =>
+          Skeletons.Box.X({
+            className: `${pfx}__expiry-option`,
+            service: "pick-expiry",
+            uiHandler: [ui],
+            dataset: { preset: p.preset, state: l.preset === p.preset ? 1 : 0 },
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Note({ content: p.label() }),
+              p.ico ? Skeletons.Button.Svg({ ico: p.ico, className: `${pfx}__expiry-ico` }) : null,
+            ].filter(Boolean),
+          }),
+        ),
+      }),
+    );
+  }
+  kids.push(
+    Skeletons.Box.X({
+      className: `${pfx}__get-link`,
+      service: "get-link",
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Button.Svg({ ico: "apps-link-simple", className: `${pfx}__get-link-ico` }),
+        Skeletons.Note({ content: LOCALE.INVITE_GET_LINK }),
+      ],
+    }),
+  );
+  if (l.url) {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${pfx}__link-row`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__link-field`,
+            service: "copy-link",
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Button.Svg({ ico: "apps-link-simple", className: `${pfx}__link-ico` }),
+              Skeletons.Note({
+                className: `${pfx}__link-url`,
+                // Displayed without its scheme, as the design draws it.
+                content: String(l.url).replace(/^https?:\/\//, ""),
+              }),
+              Skeletons.Button.Svg({ ico: "apps-copy", className: `${pfx}__link-copy` }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__revoke`,
+            service: "revoke-link",
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Button.Svg({ ico: "app-ban", className: `${pfx}__revoke-ico` }),
+              Skeletons.Note({ content: LOCALE.INVITE_REVOKE }),
+            ],
+          }),
+        ],
+      }),
+    );
+  }
+  return kids;
+}
 
-  const workspaceList = Skeletons.Box.Y({
-    className: `${pfx}__workspaces`,
-    sys_pn: "workspaces",
-    partHandler: ui,
-    kids: [buildWorkspaceRow(ui, 0)],
-  });
-
-  const workspaceError = Skeletons.Note({
-    className: `${pfx}__field-error`,
-    sys_pn: "workspace-error",
-    partHandler: ui,
-    dataset: { state: 0 },
-    content: "",
-  });
-
-  const addRoleLink = Skeletons.Note({
-    className: `${pfx}__add-role`,
-    content: LOCALE.INVITE_ADD_ROLE || "+ Add new workspace and role",
-    service: "add-workspace-role",
-    uiHandler: [ui],
-  });
-
-  const sendBtn = Skeletons.Note({
-    className: `${pfx}__send-btn`,
-    sys_pn: "send-btn",
-    partHandler: ui,
-    content: LOCALE.SEND_INVITATION || "Send Invitation",
-    service: "send-invitation",
-    uiHandler: [ui],
-    state: 0,
-  });
-
+module.exports = function (ui) {
+  const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__container`,
     debug: __filename,
+    dataset: { tab: ui._tab, scope: ui._scope === "workspace" ? "workspace" : "org" },
     kids: [
-      header,
-      description,
-      emailLabel,
-      emailField,
-      emailError,
-      workspaceList,
-      workspaceError,
-      addRoleLink,
-      sendBtn,
-    ],
+      header(ui, pfx),
+      Skeletons.Note({ className: `${pfx}__description`, content: LOCALE.INVITE_TEAM_HINT }),
+      // Workspace scope (the sidebar's Invite, inside a workspace): the popup
+      // is about THAT workspace, so its card replaces the org card and there
+      // is no "Invite to" tree to pick from.
+      ui._scope === "workspace" ? wsCard(ui, pfx) : orgCard(ui, pfx),
+      tabs(ui, pfx),
+      emailPanel(ui, pfx),
+      ui._scope === "workspace" ? null : inviteTo(ui, pfx),
+      Skeletons.Box.Y({
+        className: `${pfx}__panel-link`,
+        sys_pn: "link-panel",
+        partHandler: ui,
+        kids: linkPanelKids(ui, pfx),
+      }),
+      Skeletons.Note({
+        className: `${pfx}__send-btn`,
+        sys_pn: "send-btn",
+        partHandler: ui,
+        content: LOCALE.SEND_INVITATION,
+        service: "send-invitation",
+        uiHandler: [ui],
+        state: 0,
+      }),
+    ].filter(Boolean),
   });
 };
 
-module.exports.buildWorkspaceRow = buildWorkspaceRow;
+module.exports.linkPanelKids = linkPanelKids;
+module.exports.orgCardKids = orgCardKids;
+module.exports.wsCardKids = wsCardKids;
 module.exports.workspaceGlyph = workspaceGlyph;
 module.exports.ROLES = ROLES;
 module.exports.DEFAULT_ROLE_IDS = DEFAULT_ROLE_IDS;

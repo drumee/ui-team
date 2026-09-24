@@ -3022,5 +3022,19 @@
   "PENDING_INVITATIONS": "Ожидающие приглашения",
   "PENDING_INVITATIONS_HINT": "Приглашённые участники будут здесь, пока не ответят.",
   "INVITE_MEMBER_TO_WORKSPACE": "Пригласить участника в рабочее пространство",
-  "INVITED_AGO_BY": "приглашён {0} пользователем {1}"
+  "INVITED_AGO_BY": "приглашён {0} пользователем {1}",
+  "INVITE_VIA_EMAIL": "По e-mail",
+  "INVITE_PUBLIC_LINK": "Публичная ссылка",
+  "INVITE_TO": "Пригласить в",
+  "INVITE_DEPARTMENTS": "Отделы",
+  "INVITE_WORKSPACE_ONE": "Пространство",
+  "INVITE_WORKSPACE_OTHER": "Пространства",
+  "INVITE_LINK_EXPIRATION": "Срок действия ссылки",
+  "INVITE_GET_LINK": "Получить ссылку",
+  "INVITE_REVOKE": "Отозвать",
+  "INVITE_EXPIRY_1H": "1ч",
+  "INVITE_EXPIRY_24H": "24ч",
+  "INVITE_EXPIRY_7D": "7д",
+  "INVITE_NO_WORKSPACE": "У вас нет пространства, в которое можно пригласить людей.",
+  "INVITE_WORKSPACE_TITLE": "Пригласить участника в пространство"
 }
