@@ -24,7 +24,7 @@ const check = (pfx, dataset, service, ui) =>
     uiHandler: [ui],
     dataset,
     kidsOpt: { active: 0 },
-    kids: [Skeletons.Button.Svg({ ico: "chat-tick", className: `${pfx}__check-tick` })],
+    kids: [Skeletons.Button.Svg({ ico: "editbox_checkmark", className: `${pfx}__check-tick` })],
   });
 
 const pill = (pfx, num, word, extra) =>
