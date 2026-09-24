@@ -299,7 +299,7 @@ function linkPanelKids(ui, pfx) {
             uiHandler: [ui],
             kidsOpt: { active: 0 },
             kids: [
-              Skeletons.Button.Svg({ ico: "app-prohibit", className: `${pfx}__revoke-ico` }),
+              Skeletons.Button.Svg({ ico: "app-ban", className: `${pfx}__revoke-ico` }),
               Skeletons.Note({ content: LOCALE.INVITE_REVOKE }),
             ],
           }),

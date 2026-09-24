@@ -138,6 +138,17 @@ test("role options keep the class and data the controller resolves", () => {
   assert.deepEqual(Object.keys(opts[0].dataset).sort(), ["checked", "hub_id", "id"]);
 });
 
+// Figma draws a plain bold tick and a circle-slash: `app-check` is a CIRCLED
+// check and `app-prohibit` is a shield in this sprite (seen in the headless
+// render), so the ids are pinned here.
+test("checkbox tick and Revoke glyph match the design's icons", () => {
+  const t = T.buildTree({ homeRows: home, overview: { can_browse: 0 } });
+  const out = rows(ui(), t, { checked: new Set(["h1"]), expanded: new Set(), roles: new Map() });
+  assert.ok(cls(out, "check-tick").every((n) => n.ico === "chat-tick"));
+  const got = skeleton(ui({ _tab: "link", _link: { expiry: 0, preset: "7d", url: "https://x/s/abc" } }));
+  assert.equal(cls(got, "revoke-ico")[0].ico, "app-ban");
+});
+
 test("no invitable workspace: one empty-state line", () => {
   const out = rows(ui(), { departments: [], ungrouped: [] }, { checked: new Set(), expanded: new Set(), roles: new Map() });
   assert.equal(out.length, 1);

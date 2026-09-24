@@ -403,13 +403,22 @@ $tint: rgba(89, 80, 255, 0.1);
 
   &__tree {
     gap: 12px;
+    // Shrinks with __invite-to when the card hits its max-height; without an
+    // explicit flex the framework's `.box` keeps it at content height and the
+    // Send button is pushed out of the clipped card.
+    flex: 0 1 auto;
     min-height: 0;
     max-height: 330px;
     overflow-y: auto;
     // Room for the 4px Primary/30 scrollbar the design draws beside the rows.
     padding-right: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: #847eff $line;
+    // Standard properties only where the webkit pseudo-elements do not exist:
+    // Chrome ignores every ::-webkit-scrollbar rule once these are set, and
+    // falls back to a default bar with stepper arrows.
+    @supports not selector(::-webkit-scrollbar) {
+      scrollbar-width: thin;
+      scrollbar-color: #847eff $line;
+    }
 
     &::-webkit-scrollbar {
       width: 4px;
@@ -423,6 +432,11 @@ $tint: rgba(89, 80, 255, 0.1);
     &::-webkit-scrollbar-thumb {
       background: #847eff;
       border-radius: 28px;
+    }
+
+    // The design's bar is a bare 4px track; no stepper arrows.
+    &::-webkit-scrollbar-button {
+      display: none;
     }
   }
 
@@ -535,17 +549,12 @@ $tint: rgba(89, 80, 255, 0.1);
     height: 16px;
     flex: none;
     color: $ink;
-    transition: transform 0.15s;
 
     svg {
       width: 100%;
       height: 100%;
       fill: currentColor;
     }
-  }
-
-  &__row-box[data-open="1"] &__caret {
-    transform: rotate(180deg);
   }
 
   // ── Checkbox (0 | 1 | "mixed") ────────────────────────────────────────
