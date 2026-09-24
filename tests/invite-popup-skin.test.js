@@ -56,3 +56,14 @@ test("workspace glyph uses the shared folder-icon sizing", () => {
   assert.match(rule(".invite-popup__ws-icon .folder-shape"), /width: 20px; height: 16px/);
   assert.match(rule(".invite-popup__ws-icon .badge"), /position: absolute/);
 });
+
+// The tick is ui-core's image.svg widget (a div around an inline
+// `<svg class="full inner drumee-picto">`); inside the flex-centred box it
+// landed low-left on the live desk. Pinned to the box centre absolutely, with
+// a block svg, nothing the widget's own box does can move it.
+test("the checkbox tick is pinned to the box centre", () => {
+  const tick = rule(".invite-popup__check-tick");
+  assert.match(tick, /position: absolute; top: 50%; left: 50%; transform: translate\(-50%, -50%\)/);
+  assert.match(tick, /margin: 0; padding: 0;/);
+  assert.match(rule(".invite-popup__check-tick svg"), /display: block/);
+});

@@ -607,13 +607,27 @@ $tint: rgba(89, 80, 255, 0.1);
 
   // Visibility rather than display: the tick widget's own display is the
   // framework's, and an equal-specificity fight is not worth having.
+  //
+  // PINNED TO THE CENTRE, not left to the box's flex centring. The tick is
+  // ui-core's image.svg widget — a div around an INLINE
+  // `<svg class="full inner drumee-picto">` — and on the live desk it landed
+  // low-left of the box (inline-svg baseline space and the widget's own box
+  // both move it). Absolute + translate centres it whatever that box does.
   &__check-tick {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    padding: 0;
     width: 11px;
     height: 11px;
+    line-height: 0;
     color: #fff;
     visibility: hidden;
 
     svg {
+      display: block;
       width: 100%;
       height: 100%;
       fill: currentColor;
