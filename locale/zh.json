@@ -3016,5 +3016,18 @@
   "PENDING_INVITATIONS": "待处理邀请",
   "PENDING_INVITATIONS_HINT": "受邀成员在回复前会显示在此处。",
   "INVITE_MEMBER_TO_WORKSPACE": "邀请成员加入工作空间",
-  "INVITED_AGO_BY": "由 {1} 于{0}邀请"
+  "INVITED_AGO_BY": "由 {1} 于{0}邀请",
+  "INVITE_VIA_EMAIL": "通过邮件",
+  "INVITE_PUBLIC_LINK": "公开链接",
+  "INVITE_TO": "邀请至",
+  "INVITE_DEPARTMENTS": "部门",
+  "INVITE_WORKSPACE_ONE": "工作区",
+  "INVITE_WORKSPACE_OTHER": "工作区",
+  "INVITE_LINK_EXPIRATION": "链接有效期",
+  "INVITE_GET_LINK": "获取链接",
+  "INVITE_REVOKE": "撤销",
+  "INVITE_EXPIRY_1H": "1小时",
+  "INVITE_EXPIRY_24H": "24小时",
+  "INVITE_EXPIRY_7D": "7天",
+  "INVITE_NO_WORKSPACE": "您没有可以邀请他人加入的工作区。"
 }
