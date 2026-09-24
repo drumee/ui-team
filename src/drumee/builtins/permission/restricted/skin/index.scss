@@ -1,5 +1,11 @@
 @use "mixins/drumee";
 
+// Side gutter of the panel's content. Figma 84:30632 draws 12px; Lexis
+// (09-24) found that tight at 512px, so it is 4px wider — the smallest step
+// that reads as air without moving anything else in the frame. Header,
+// sections and the workspace card all take it from here so they stay aligned.
+$gutter: 16px;
+
 // Workspace-members panel, restyled after the folder Settings panel
 // (window-folder__settings-action-panel), the same base its Manage-Access
 // sibling was moved onto (see permission/share/skin): a 360px light surface, a
@@ -109,7 +115,7 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 12px 12px 0;
+    padding: 12px $gutter 0;
     box-sizing: border-box;
   }
 
@@ -362,7 +368,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: 0 12px;
+    padding: 0 $gutter;
     box-sizing: border-box;
   }
 
@@ -409,7 +415,7 @@
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 12px;
     gap: 8px;
-    margin: 0 12px;
+    margin: 0 $gutter;
     min-width: 0;
     padding: 8px 16px;
   }
@@ -816,33 +822,30 @@
     );
   }
 
-  // Geometry from __send-button above (same 48px full-width button, so the
-  // panel has one button shape), colour from the confirm card's own danger
-  // button (window/confirm/skin __button-danger) — this button opens that
-  // card, and the two must not be different reds. Those --btn-caution-* tokens
-  // live in skin/vars/default.scss `:root`, not per theme, so there is no
-  // dark-mode branch to keep in step.
+  // Same 48px full-width geometry and radius as __send-button above, so the
+  // panel has one button shape.
+  //
+  // COLOUR per Lexis 09-24 (lw1.jpg): a grey surface with the label and a
+  // sign-out glyph in red, left-aligned — a quiet exit rather than a solid red
+  // alarm. The confirm card it opens is still the red one. Both tokens are
+  // theme-aware (--normal-bg-90 is set per theme, --red-500 is global), so
+  // there is no dark-mode branch to keep in step.
   &__leave-button {
-    display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 12px;
     width: 100%;
     min-height: 48px;
-    padding: 12px 24px;
+    padding: 12px 16px;
     box-sizing: border-box;
     border-radius: 8px;
-    background: var(--btn-caution-background, #ff7479);
+    background: var(--normal-bg-90, #f2f2f7);
+    color: var(--red-500, #ff2350);
     cursor: pointer;
-    @include drumee.typo(
-      $size: 16px,
-      $line: 24px,
-      $weight: 500,
-      $color: var(--btn-caution-text, #ffffff)
-    );
-    font-weight: 600;
+    transition: background-color 120ms ease;
 
     &:hover {
-      background: var(--btn-caution-background-hover, #ea4d44);
+      background: color-mix(in srgb, var(--red-500, #ff2350) 8%, var(--normal-bg-90, #f2f2f7));
     }
 
     // In flight: index.js stamps data-pending on the element while
@@ -854,6 +857,26 @@
       pointer-events: none;
       opacity: 0.6;
     }
+  }
+
+  // Phosphor SignOut (sidebar_signout, the glyph the account menu's Sign out
+  // uses), tinted by the button's colour through currentColor.
+  &__leave-icon {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+  }
+
+  // $weight 500 + font-weight 600 for the typo() 600 trap.
+  &__leave-label {
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 500, $color: currentColor);
+    font-weight: 600;
   }
 
   // ── Role pill + its popover ───────────────────────────────────

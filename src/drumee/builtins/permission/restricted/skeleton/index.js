@@ -848,12 +848,25 @@ function workspaceCard(ui, pfx, memberCount) {
           className: `${pfx}__leave-warning`,
           content: LOCALE.LEAVE_WORKSPACE_WARNING,
         }),
-        Skeletons.Note({
+        // A row of glyph + label (lw1.jpg). The service sits on the row and
+        // its kids are inactive, so a click anywhere on it fires once;
+        // sys_pn stays on the row for _leaveWorkspace's data-pending stamp.
+        Skeletons.Box.X({
           className: `${pfx}__leave-button`,
           sys_pn: "leave-workspace",
-          content: LOCALE.LEAVE_WORKSPACE,
           service: "leave-workspace",
           uiHandler: [ui],
+          kidsOpt: { active: 0 },
+          kids: [
+            Skeletons.Image.Svg({
+              className: `${pfx}__leave-icon`,
+              ico: "sidebar_signout",
+            }),
+            Skeletons.Note({
+              className: `${pfx}__leave-label`,
+              content: LOCALE.LEAVE_WORKSPACE,
+            }),
+          ],
         }),
       ],
     })
