@@ -44,3 +44,17 @@ for (const lang of LANGS) {
     }
   });
 }
+
+// Intl only gives the weekday in the nominative, so the Russian greeting must
+// be built around that — not bracket it, which reads as a rendering bug
+// ("Хорошего дня (пятница), Iris!").
+test("ru greeting reads as a sentence around the nominative weekday", () => {
+  const ru = require(path.join(__dirname, "..", "locale", "ru.json"));
+  const day = new Intl.DateTimeFormat("ru", { weekday: "long" }).format(new Date(2026, 8, 25));
+  for (const k of ["DAILY_REMINDER_HELLO", "DAILY_REMINDER_HELLO_NO_NAME"]) {
+    assert.doesNotMatch(ru[k], /\(\{0\}\)/, `${k} brackets the weekday`);
+  }
+  assert.equal(ru.DAILY_REMINDER_HELLO.replace("{0}", day).replace("{1}", "Iris"),
+    "Сегодня пятница — хорошего дня, Iris!");
+  assert.equal(ru.DAILY_REMINDER_HELLO_NO_NAME.replace("{0}", day), "Сегодня пятница — хорошего дня!");
+});

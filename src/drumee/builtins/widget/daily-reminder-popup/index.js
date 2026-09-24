@@ -1,14 +1,16 @@
 /**
  * Daily reminder — Round 3 / Sprint 1 row 7.
  *
- * "Hi <name>, Today you have ...." with three counts, shown ONCE on the first
- * desk load of each day. The counts come from activity.daily_digest, which
+ * "Happy <Weekday>, <name>!" with three counts, shown ONCE on the first desk
+ * load of each day. Since the 2026-09-23 redesign the hero art, confetti
+ * colours, sub-line and idle animation follow the time of day (period.js,
+ * images.js, motion.js). The counts come from activity.daily_digest, which
  * fans out across the desk's workspaces; the once-a-day rule is localStorage,
  * per device, which is a deliberate choice — a two-device user seeing it twice
  * is acceptable and it costs no schema.
  *
- * [My calendar] opens the Personal Calendar on TODAY, in DAY view — the card
- * reports on today, so the screen it opens shows today rather than the month
+ * [Open my calendar] and the calendar row open the Personal Calendar on
+ * TODAY, in DAY view — the card reports on today, so the screen it opens shows today rather than the month
  * grid the rail opens. It was deliberately inert until 2026-09-07 because that
  * screen did not exist yet; it does now, so the button dispatches the desk's
  * own `toggle-calendar` — the exact service the left rail, the topbar utility
@@ -19,7 +21,7 @@
  * help / Billing and the reload-restore all working: `toggle-calendar` is in
  * desk `_RESTORABLE_SCREENS`, and none of that would follow a hand-rolled open.
  *
- * Discard and ✕ are the same action: close, write nothing. There is no
+ * Maybe later and ✕ are the same action: close, write nothing. There is no
  * server-side "seen" state at all.
  */
 const { closeWmPopup } = require("libs/wm-popup");
@@ -72,6 +74,7 @@ class __daily_reminder_popup extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._counts = this.mget("counts") || { unread_messages: 0, due_tasks: 0, meetings: 0 };
+    this._motionGen = 0;
   }
 
   /**
@@ -98,13 +101,24 @@ class __daily_reminder_popup extends LetcBox {
    * guaranteed to be in the DOM the instant feed() returns, so try on the
    * next frames until the card is there — a few frames at most; after that
    * the static card simply stands, which is always a correct rendering.
+   *
+   * ONE live animation at a time. The idle loops repeat forever, so a second
+   * onDomRefresh that simply overwrote `_motion` would orphan the first
+   * handle and leave it tweening detached nodes for the life of the tab. Each
+   * start bumps a generation: a frame from an older start gives up, and a
+   * new handle always kills the one before it.
    */
-  _startMotion(tries = 10) {
+  _startMotion(tries = 10, gen = ++this._motionGen) {
     requestAnimationFrame(() => {
+      if (gen !== this._motionGen) return;
       if (this.isDestroyed && this.isDestroyed()) return;
       const handle = require("./motion").play(this.el, this.getPeriod());
-      if (handle.started) this._motion = handle;
-      else if (tries > 1) this._startMotion(tries - 1);
+      if (handle.started) {
+        this._stopMotion();
+        this._motion = handle;
+      } else if (tries > 1) {
+        this._startMotion(tries - 1, gen);
+      }
     });
   }
 
