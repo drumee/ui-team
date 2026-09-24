@@ -835,12 +835,21 @@ class __window_mfs extends DrumeeMFS {
   acknowledge(msg = LOCALE.ACK_COPY_LINK) {
     var c = require("@drumee/ui-core/letc/preset/ack")(this, msg);
     c.className = `${c.className} ${this.fig.group}-topbar__copy-link-ack`;
-    this.append(c);
-    const l = this.children.last();
+    const host = this._acknowledgeHost();
+    host.append(c);
+    const l = host.children.last();
     var f = () => {
       return l.suppress();
     };
     return setTimeout(f, Visitor.timeout());
+  }
+
+  /**
+   * Where `acknowledge` mounts its toast. The window itself by default; a
+   * window whose own children must not be re-rendered overrides it.
+   */
+  _acknowledgeHost() {
+    return this;
   }
 
   /**

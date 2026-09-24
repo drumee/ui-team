@@ -224,6 +224,19 @@ class __window_manager extends push {
     });
   }
 
+  /**
+   * `acknowledge` toasts ("link copied" — Designation link, Share link) get a
+   * layer of their own. Appended to the Wm itself, the toast joins the Wm's
+   * root collection, which re-renders on every add/remove: `wm-container` —
+   * every window, the open workspace included — was detached and re-attached
+   * twice per toast, snapping the workspace's file list back to the top.
+   */
+  _acknowledgeHost() {
+    const layer = this.getPart("ack-layer");
+    if (layer && !layer.isDestroyed()) return layer;
+    return super._acknowledgeHost();
+  }
+
   dismissFileCreated() {
     clearTimeout(this._createdFileTimer);
     this._createdFile = null;
