@@ -309,11 +309,11 @@
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
-    // 24px between sections and a 12px gutter — the frame's own column gap and
-    // padding. The gutter was 24px, inherited from the 360px dock where it was
-    // right; at 512px it wasted a tenth of the panel on each side.
-    gap: 24px;
-    padding: 24px 0;
+    // 12px between sections and 12px top and bottom — Figma 84:30632 is one
+    // auto-layout column with padding 12 and itemSpacing 12. The sections carry
+    // the 12px side gutter themselves (see below).
+    gap: 12px;
+    padding: 12px 0;
     box-sizing: border-box;
     overflow-y: auto;
 
@@ -366,12 +366,10 @@
     box-sizing: border-box;
   }
 
-  // Same 16px rhythm as the member list below it — the two are one column of
-  // people and must not be spaced differently. The hint under the heading
-  // pulls itself back up (see __section-hint) so it reads as part of the
-  // heading rather than as the first row.
+  // Figma: itemSpacing 12 — heading, hint and rows all 12px apart, each row
+  // carrying its own 8px above and below (see __invitation-row).
   &__invitations-section {
-    gap: 16px;
+    gap: 12px;
   }
 
   &__invite-section {
@@ -408,7 +406,7 @@
   // area-tinted folder shape, the name, and the two figures under it.
   &__ws-card {
     align-items: center;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 12px;
     gap: 8px;
     margin: 0 12px;
@@ -508,7 +506,7 @@
 
   &__ws-card-stats {
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
   }
 
@@ -522,23 +520,24 @@
   // "3.5" in Primary/40 beside a Grey/80 "GB", and the member count the same
   // way beside its glyph.
   &__ws-stat-value {
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--primary-40));
+    @include drumee.typo($size: 12px, $line: 1.2em, $weight: 500, $color: var(--primary-40));
     font-weight: 600;
   }
 
   &__ws-stat-unit {
-    @include drumee.typo($size: 11px, $line: 16px, $weight: 400, $color: var(--tertiary-grey-80, #84848c));
+    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
   }
 
+  // Figma: Phosphor Users at 16px.
   &__ws-stat-ico {
-    color: var(--tertiary-grey-80, #84848c);
+    color: var(--tertiary-grey-80, #65656c);
     flex-shrink: 0;
-    height: 14px;
-    width: 14px;
+    height: 16px;
+    width: 16px;
 
     svg {
-      height: 14px;
-      width: 14px;
+      height: 16px;
+      width: 16px;
     }
   }
 
@@ -745,20 +744,25 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 36px;
-    padding: 8px 24px;
+    // Figma "Button Lightmode": 48px tall, padding 12/24, radius 8, Geist
+    // SemiBold 16/24.
+    min-height: 48px;
+    padding: 12px 24px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: 8px;
     background: var(--primary-50);
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    // $weight 500 + font-weight 600: typo() emits nothing, not even the font
+    // family, for 600 — the button text fell back to the browser serif.
     @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
-      $weight: 600,
+      $size: 16px,
+      $line: 24px,
+      $weight: 500,
       $color: var(--white)
     );
+    font-weight: 600;
 
     // In flight (index.js _setInviteSending, and the skeleton from the same
     // state, so a re-render mid-send keeps it; cleared in the send's finally,
@@ -812,7 +816,7 @@
     );
   }
 
-  // Geometry from __send-button above (same 36px full-width pill, so the
+  // Geometry from __send-button above (same 48px full-width button, so the
   // panel has one button shape), colour from the confirm card's own danger
   // button (window/confirm/skin __button-danger) — this button opens that
   // card, and the two must not be different reds. Those --btn-caution-* tokens
@@ -823,18 +827,19 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 36px;
-    padding: 8px 24px;
+    min-height: 48px;
+    padding: 12px 24px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: 8px;
     background: var(--btn-caution-background, #ff7479);
     cursor: pointer;
     @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
-      $weight: 600,
+      $size: 16px,
+      $line: 24px,
+      $weight: 500,
       $color: var(--btn-caution-text, #ffffff)
     );
+    font-weight: 600;
 
     &:hover {
       background: var(--btn-caution-background-hover, #ea4d44);
@@ -898,29 +903,44 @@
     }
   }
 
+  // Figma "Overlay+Border": rgba(0,0,0,.05), radius 12, label and caret 4px
+  // apart. It HUGS its label in Figma; min-width is the frame's width for
+  // "Admin", so English matches it exactly and a longer translation grows
+  // instead of being cut off.
+  //   member row — 80 x 25, padding 4/8/4/12
+  //   invite row — 88 x 32, padding 4/12/4/16 (see __invite-input-row below)
   &__role-select {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex: 0 0 88px;
-    width: 88px;
-    min-height: 22px;
-    padding: 4px 4px 4px 8px;
+    flex: 0 0 auto;
+    gap: 4px;
+    min-width: 80px;
+    padding: 4px 8px 4px 12px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: 12px;
     background: var(--overlay-bg-05);
-    color: var(--normal-fg-20);
+    color: var(--normal-fg-10);
     cursor: pointer;
   }
 
+  &__invite-input-row &__role-select {
+    min-width: 88px;
+    min-height: 32px;
+    padding: 4px 12px 4px 16px;
+  }
+
+  // Figma: Geist SemiBold 14, line 1.2em, #0b0a21. $weight 500 + font-weight
+  // 600 for the typo() 600 trap.
   &__role-label {
     min-width: 0;
     @include drumee.typo(
-      $size: 10px,
-      $line: 14px,
-      $weight: 400,
-      $color: var(--normal-fg-20)
+      $size: 14px,
+      $line: 1.2em,
+      $weight: 500,
+      $color: var(--normal-fg-10)
     );
+    font-weight: 600;
     @include drumee.overflow-text;
   }
 
@@ -1020,21 +1040,22 @@
   // The section's own sub-line ("Invited members will appear here until they
   // respond"). Grey/80 at Body/Small Body, sitting under the heading.
   // Body/Small Body (14/1.4em) on Grey/80 — #65656c is exactly
-  // --tertiary-grey-80. The negative margin pulls it under its heading so the
-  // pair reads as one block inside the section's 16px rhythm.
+  // --tertiary-grey-80. Figma sets it 12px under the heading — the section's
+  // own gap, no pull-up.
   &__section-hint {
     @include drumee.typo($size: 14px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80));
-    margin-top: -8px;
   }
 
   // Deliberately the same geometry as __member-row — the two lists are the two
   // halves of who is in this workspace and must read as one column, not two
   // designs. No hover tint: an invitation row has nothing to click yet.
+  // Figma: each row is 56px — the 48px avatar with 8px above and below.
   &__invitation-row {
     align-items: center;
     gap: 12px;
     justify-content: space-between;
     min-width: 0;
+    padding: 8px 0;
     width: 100%;
   }
 
