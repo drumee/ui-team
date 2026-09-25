@@ -292,13 +292,21 @@ class __window_manager extends mfsInteract {
     return !!(_K.permission.write & privilege);
   }
 
-  _rejectUploadTarget() {
+  _rejectUploadTarget(target) {
     // Say the right thing: while over-limit the refusal has nothing to do
     // with the dropper's privilege, and "insufficient privilege" sends the
     // user asking an admin for rights nobody can grant.
     const OverLimit = require("libs/over-limit");
+    if (OverLimit.isLocked()) {
+      this._showUploadDeniedToast(OverLimit.blockedMessage("write"));
+      return;
+    }
+    const privilege =
+      target && target.mget && (target.mget(_a.privilege) || target.mget(_a.permission));
     this._showUploadDeniedToast(
-      OverLimit.isLocked() ? OverLimit.blockedMessage("write") : LOCALE.WEAK_PRIVILEGE,
+      require("libs/permission-denied").weakPrivilegeMessage(
+        LOCALE.PERMISSION_ACTION_UPLOAD, privilege, _K.permission.write,
+      ),
     );
   }
 
@@ -330,7 +338,8 @@ class __window_manager extends mfsInteract {
         }),
       );
       this._uploadDeniedToast = wrapper.children.last();
-      this._uploadDeniedToast.selfDestroy({ timeout: Visitor.timeout(2200) });
+      // Two sentences now (action + level + who to ask) — 2.2s was not enough to read them.
+      this._uploadDeniedToast.selfDestroy({ timeout: Visitor.timeout(5000) });
     };
 
     if (this.tooltipsWrapper) return render(this.tooltipsWrapper);
@@ -384,7 +393,7 @@ class __window_manager extends mfsInteract {
     }
 
     if (!this._canUploadToTarget(target)) {
-      this._rejectUploadTarget();
+      this._rejectUploadTarget(target);
       return;
     }
     if (!roots.length) {

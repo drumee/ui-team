@@ -3032,5 +3032,14 @@
   "INVITE_EXPIRY_24H": "24h",
   "INVITE_EXPIRY_7D": "7d",
   "INVITE_NO_WORKSPACE": "No tienes ningún espacio al que invitar personas.",
-  "INVITE_WORKSPACE_TITLE": "Invitar a un miembro al espacio"
+  "INVITE_WORKSPACE_TITLE": "Invitar a un miembro al espacio",
+  "PERMISSION_DENIED_ACTION": "No puedes {0} porque tu nivel de permiso actual es {1}.<br>Pide a un administrador que te conceda un nivel de acceso superior para realizar esta acción.",
+  "PERMISSION_ACTION_UPLOAD": "subir archivos",
+  "PERMISSION_ACTION_IMPORT": "importar archivos",
+  "PERMISSION_ACTION_CREATE_NOTE": "crear notas",
+  "PERMISSION_ACTION_CREATE_DOCUMENT": "crear documentos",
+  "PERMISSION_ACTION_INVITE": "invitar a miembros",
+  "PERMISSION_ACTION_EDIT_TASKS": "editar tareas",
+  "PERMISSION_ACTION_SHARE": "crear enlaces para compartir",
+  "PERMISSION_ACTION_MOVE": "mover elementos aquí"
 }

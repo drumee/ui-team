@@ -3242,5 +3242,14 @@
   "PENDING_INVITATIONS": "Pending Invitations",
   "PENDING_INVITATIONS_HINT": "Invited members will appear here until they respond.",
   "INVITE_MEMBER_TO_WORKSPACE": "Invite member to workspace",
-  "INVITED_AGO_BY": "invited {0} by {1}"
+  "INVITED_AGO_BY": "invited {0} by {1}",
+  "PERMISSION_DENIED_ACTION": "You can’t {0} because your current permission level is {1}.<br>Please ask an admin to grant you a higher access level to perform this action.",
+  "PERMISSION_ACTION_UPLOAD": "upload files",
+  "PERMISSION_ACTION_IMPORT": "import files",
+  "PERMISSION_ACTION_CREATE_NOTE": "create notes",
+  "PERMISSION_ACTION_CREATE_DOCUMENT": "create documents",
+  "PERMISSION_ACTION_INVITE": "invite members",
+  "PERMISSION_ACTION_EDIT_TASKS": "edit tasks",
+  "PERMISSION_ACTION_SHARE": "create share links",
+  "PERMISSION_ACTION_MOVE": "move items here"
 }

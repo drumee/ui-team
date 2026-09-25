@@ -1009,7 +1009,13 @@ class __window_core extends __utils {
         // message — a 500 or a dead connection must NOT be reported as a
         // permission problem (the inverse mistake, see webrtc/room/index.js).
         const status = e && (e.status || e.error_code);
-        Wm.alert(status == 403 ? LOCALE.WEAK_PRIVILEGE : LOCALE.ERROR_NETWORK);
+        Wm.alert(
+          status == 403
+            ? require("libs/permission-denied").weakPrivilegeMessage(
+              LOCALE.PERMISSION_ACTION_CREATE_DOCUMENT, aw.mget(_a.privilege), _K.permission.write,
+            )
+            : LOCALE.ERROR_NETWORK,
+        );
         if (this.onServerError) this.onServerError(e);
       });
   }

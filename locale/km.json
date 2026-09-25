@@ -3031,5 +3031,14 @@
   "INVITE_EXPIRY_24H": "24ម៉ោង",
   "INVITE_EXPIRY_7D": "7ថ្ងៃ",
   "INVITE_NO_WORKSPACE": "អ្នកមិនមានកន្លែងធ្វើការដែលអាចអញ្ជើញមនុស្សចូលបានទេ។",
-  "INVITE_WORKSPACE_TITLE": "អញ្ជើញសមាជិកចូលកន្លែងធ្វើការ"
+  "INVITE_WORKSPACE_TITLE": "អញ្ជើញសមាជិកចូលកន្លែងធ្វើការ",
+  "PERMISSION_DENIED_ACTION": "អ្នកមិនអាច{0}បានទេ ដោយសារកម្រិតសិទ្ធិបច្ចុប្បន្នរបស់អ្នកគឺ {1}។<br>សូមស្នើឱ្យអ្នកគ្រប់គ្រងផ្ដល់កម្រិតចូលប្រើខ្ពស់ជាងនេះដល់អ្នក ដើម្បីអនុវត្តសកម្មភាពនេះ។",
+  "PERMISSION_ACTION_UPLOAD": "ផ្ទុកឯកសារឡើង",
+  "PERMISSION_ACTION_IMPORT": "នាំចូលឯកសារ",
+  "PERMISSION_ACTION_CREATE_NOTE": "បង្កើតកំណត់ចំណាំ",
+  "PERMISSION_ACTION_CREATE_DOCUMENT": "បង្កើតឯកសារ",
+  "PERMISSION_ACTION_INVITE": "អញ្ជើញសមាជិក",
+  "PERMISSION_ACTION_EDIT_TASKS": "កែសម្រួលកិច្ចការ",
+  "PERMISSION_ACTION_SHARE": "បង្កើតតំណចែករំលែក",
+  "PERMISSION_ACTION_MOVE": "ផ្លាស់ទីធាតុមកទីនេះ"
 }

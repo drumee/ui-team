@@ -3031,5 +3031,14 @@
   "INVITE_EXPIRY_24H": "24小时",
   "INVITE_EXPIRY_7D": "7天",
   "INVITE_NO_WORKSPACE": "您没有可以邀请他人加入的工作区。",
-  "INVITE_WORKSPACE_TITLE": "邀请成员加入工作区"
+  "INVITE_WORKSPACE_TITLE": "邀请成员加入工作区",
+  "PERMISSION_DENIED_ACTION": "您无法{0}，因为您当前的权限级别为 {1}。<br>请联系管理员为您授予更高的访问级别以执行此操作。",
+  "PERMISSION_ACTION_UPLOAD": "上传文件",
+  "PERMISSION_ACTION_IMPORT": "导入文件",
+  "PERMISSION_ACTION_CREATE_NOTE": "创建笔记",
+  "PERMISSION_ACTION_CREATE_DOCUMENT": "创建文档",
+  "PERMISSION_ACTION_INVITE": "邀请成员",
+  "PERMISSION_ACTION_EDIT_TASKS": "编辑任务",
+  "PERMISSION_ACTION_SHARE": "创建共享链接",
+  "PERMISSION_ACTION_MOVE": "将项目移动到此处"
 }

@@ -1004,7 +1004,11 @@ class __window_interact extends windowCore {
         priv = this.mget(_a.privilege) || this.mget(_a.permission);
       }
       if (!(_K.permission.write & priv)) {
-        this.warning(LOCALE.WEAK_PRIVILEGE);
+        this.warning(
+          require("libs/permission-denied").weakPrivilegeMessage(
+            LOCALE.PERMISSION_ACTION_UPLOAD, priv,
+          ),
+        );
         return null;
       }
       item.phase = _a.upload;

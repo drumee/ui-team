@@ -780,7 +780,16 @@ class __tasks_panel extends LetcBox {
           this.constructor.TASK_MUTATIONS.includes(`${name}`)
           && !this._mayWriteTasks()
         ) {
-          if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+          if (typeof Butler !== "undefined" && Butler.say) {
+            // The panel holds no privilege of its own (see _mayWriteTasks);
+            // read it from the workspace window it is mounted for.
+            const PD = require("libs/permission-denied");
+            Butler.say(PD.weakPrivilegeMessage(
+              LOCALE.PERMISSION_ACTION_EDIT_TASKS,
+              PD.workspacePrivilege(this.mget(_a.hub_id)),
+              _K.permission.write,
+            ));
+          }
           // postService resolves UNDEFINED when a call does not complete, and
           // every caller here already tolerates that — so refusing this way
           // reproduces a shape they handle rather than adding a rejection path.

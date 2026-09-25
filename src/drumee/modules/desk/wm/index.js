@@ -2378,6 +2378,17 @@ class __window_manager extends push {
   }
 
   /**
+   * insert()'s refusal when the drop target's privilege lacks the write bit.
+   */
+  _movePrivilegeMessage() {
+    return require("libs/permission-denied").weakPrivilegeMessage(
+      LOCALE.PERMISSION_ACTION_MOVE,
+      this._target && this._target.mget(_a.privilege),
+      _K.permission.write,
+    );
+  }
+
+  /**
    *
    * @param {*} moving
    * @returns
@@ -2444,7 +2455,7 @@ class __window_manager extends push {
         }
         if (rearranging) this._target._manualArrange = 1;
       } else {
-        this._target.warning(LOCALE.WEAK_PRIVILEGE);
+        this._target.warning(this._movePrivilegeMessage());
         return false;
       }
     } else if (c.right) {
@@ -2465,7 +2476,7 @@ class __window_manager extends push {
         ) {
           this._target.insertMedia(files, 0);
         } else {
-          this._target.warning(LOCALE.WEAK_PRIVILEGE);
+          this._target.warning(this._movePrivilegeMessage());
           return false;
         }
         return true;

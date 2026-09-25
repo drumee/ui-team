@@ -3037,5 +3037,14 @@
   "INVITE_EXPIRY_24H": "24ч",
   "INVITE_EXPIRY_7D": "7д",
   "INVITE_NO_WORKSPACE": "У вас нет пространства, в которое можно пригласить людей.",
-  "INVITE_WORKSPACE_TITLE": "Пригласить участника в пространство"
+  "INVITE_WORKSPACE_TITLE": "Пригласить участника в пространство",
+  "PERMISSION_DENIED_ACTION": "Вы не можете {0}, так как ваш текущий уровень доступа — {1}.<br>Попросите администратора предоставить вам более высокий уровень доступа для выполнения этого действия.",
+  "PERMISSION_ACTION_UPLOAD": "загружать файлы",
+  "PERMISSION_ACTION_IMPORT": "импортировать файлы",
+  "PERMISSION_ACTION_CREATE_NOTE": "создавать заметки",
+  "PERMISSION_ACTION_CREATE_DOCUMENT": "создавать документы",
+  "PERMISSION_ACTION_INVITE": "приглашать участников",
+  "PERMISSION_ACTION_EDIT_TASKS": "редактировать задачи",
+  "PERMISSION_ACTION_SHARE": "создавать ссылки для общего доступа",
+  "PERMISSION_ACTION_MOVE": "перемещать элементы сюда"
 }

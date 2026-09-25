@@ -6578,9 +6578,9 @@ class desk_module extends LetcBox {
    * write bit), so this is not the enforcement — it exists so a view/chat member
    * is never offered a picker whose result can only be a 403.
    */
-  _guardWorkspaceWrite() {
+  _guardWorkspaceWrite(action) {
     if (this._curWorkspaceCanWrite()) return false;
-    this._sayWeakPrivilege();
+    this._sayWeakPrivilege(action, _K.permission.write);
     return true;
   }
 
@@ -6588,12 +6588,15 @@ class desk_module extends LetcBox {
    * The one place this batch says "you don't have the right for that".
    * Mirrors over-limit's notifyBlocked: Butler first, Wm.alert as the fallback,
    * and never allowed to throw into the caller's own path.
-   * LOCALE.WEAK_PRIVILEGE already exists in all six locales — no new key.
+   * Names the refused action and the viewer's level in the current workspace
+   * (libs/permission-denied); `needed` is the _K.permission bit it asks for.
    */
-  _sayWeakPrivilege() {
+  _sayWeakPrivilege(action, needed) {
     try {
-      if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
-      else if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(LOCALE.WEAK_PRIVILEGE);
+      const PD = require("libs/permission-denied");
+      const msg = PD.weakPrivilegeMessage(action, PD.workspacePrivilege(), needed);
+      if (typeof Butler !== "undefined" && Butler.say) Butler.say(msg);
+      else if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(msg);
     } catch (e) {
       /* a toast must never break the caller's own path */
     }
@@ -9889,7 +9892,7 @@ class desk_module extends LetcBox {
         // Same reason, different cause: a view/chat member of the CURRENT
         // workspace cannot upload into it, and a picker that can only end in a
         // 403 is worse than no picker.
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_UPLOAD)) return;
         return Wm.handleUpload();
       }
 
@@ -9900,7 +9903,7 @@ class desk_module extends LetcBox {
         this.closeDeskNewMenu(cmd);
         // A Drive import writes into the current workspace (it lands on the same
         // upload path), so it needs the same right as "From device".
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_IMPORT)) return;
         const workspace = (Wm && Wm._curWorkspace) || {};
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
@@ -10634,7 +10637,7 @@ class desk_module extends LetcBox {
         if (require("libs/over-limit").guardWrite("write")) return;
         // A note is saved into the current workspace (media.save asks for the
         // write bit), so refuse here rather than open an editor that cannot save.
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_CREATE_NOTE)) return;
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
@@ -10649,7 +10652,7 @@ class desk_module extends LetcBox {
         // "network error" path that the plugin's own error handler shows.
         if (require("libs/over-limit").guardWrite("write")) return;
         // Same for a viewer who simply lacks write in this workspace.
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_CREATE_DOCUMENT)) return;
         Wm.newDocument(cmd);
         return;
       }
@@ -10663,7 +10666,7 @@ class desk_module extends LetcBox {
         // Managing members needs the ADMIN bit (hub.invite is `src: admin`), so
         // refuse with words rather than open a popup whose submit can only 403.
         if (!this._curWorkspaceCanManage()) {
-          this._sayWeakPrivilege();
+          this._sayWeakPrivilege(LOCALE.PERMISSION_ACTION_INVITE, _K.permission.admin);
           return;
         }
         return this._openInvitePopup(cmd);

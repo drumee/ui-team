@@ -2113,7 +2113,11 @@ class __window_folder extends mfsInteract {
           // to every member. Gating it would make the rail's Access a dead
           // control for a view-only member of their own team workspace.
           if (this.canUpload && !this.canUpload()) {
-            if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+            if (window.Butler && Butler.say) {
+              Butler.say(require("libs/permission-denied").weakPrivilegeMessage(
+                LOCALE.PERMISSION_ACTION_SHARE, this.mget(_a.privilege), _K.permission.write,
+              ));
+            }
             return;
           }
           // Contextual tour, raised BEFORE openManageAccess because that call
