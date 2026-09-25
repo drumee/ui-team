@@ -53,6 +53,11 @@ class __permission_restricted extends DrumeeMFS {
     // hub.member_joined push lands within a second of a successful invite —
     // an imperative-only notice would be wiped by its own success.
     this._inviteNotice = null;
+    // The members search query. State, like the chips: the skeleton is re-fed
+    // on every member push and draws the field and the filter from this.
+    this._memberQuery = "";
+    // The members role filter: "all" or a role value (view/chat/edit/admin).
+    this._memberRole = "all";
     // Registered BEFORE the `opt.media` early return below: this panel is fed
     // without a media from the creation flow (media/form) and from Wm's own
     // wrapper-modal, and the matrix has to stay live in those too.
@@ -78,6 +83,7 @@ class __permission_restricted extends DrumeeMFS {
       itemClass: `${this.fig.family}__invite-suggestion`,
     });
     this._installChipInput();
+    this._installMemberSearch();
     this._loadMembers();
     // Not awaited and not gated on anything: the card draws without it and
     // fills the chip in when the answer lands.
@@ -137,6 +143,73 @@ class __permission_restricted extends DrumeeMFS {
         this._render();
       }
     });
+  }
+
+  /**
+   * The Members search field filters the rows as you type.
+   *
+   * Delegated on the widget root and installed once, for the reason
+   * _installChipInput gives: _render() re-feeds the whole skeleton on every
+   * member push, and a listener on the input itself would go with it.
+   *
+   * Each keystroke re-feeds only the `members-list` part (_filterMembers), not
+   * the panel — that would rebuild the search field under the caret. Escape
+   * clears the query.
+   */
+  _installMemberSearch() {
+    if (this._memberSearchInstalled) return;
+    this._memberSearchInstalled = 1;
+    const cls = `${this.fig.family}__member-search-entry`;
+    const isSearch = (t) =>
+      t && t.matches && t.matches("input") && t.closest(`.${cls}`);
+
+    this.el.addEventListener("input", (e) => {
+      if (!isSearch(e.target)) return;
+      this._filterMembers(e.target.value);
+    });
+
+    this.el.addEventListener("keydown", (e) => {
+      if (!isSearch(e.target) || e.key !== "Escape" || !e.target.value) return;
+      // Stop here, or the Escape also reaches whatever closes the panel.
+      e.preventDefault();
+      e.stopPropagation();
+      e.target.value = "";
+      this._filterMembers("");
+    });
+  }
+
+  /** Apply a search query to the member rows, repainting only the list. */
+  _filterMembers(query) {
+    const next = String(query || "");
+    if (next === this._memberQuery) return;
+    this._memberQuery = next;
+    this._repaintMembersList();
+  }
+
+  _repaintMembersList() {
+    const list = this.getPart?.("members-list");
+    if (!list || !_.isFunction(list.feed)) return this._render();
+    list.feed(require("./skeleton").membersList(this));
+  }
+
+  /**
+   * Role filter pick. Same shape as _selectInviteRole, for the same reason:
+   * NOT a full re-feed — that would rebuild the still-open menu mid-click —
+   * so the pill's label is set in place, the menu closed explicitly, and only
+   * the member rows re-fed.
+   */
+  _filterMembersByRole(cmd) {
+    const value = cmd?.el?.dataset?.role_value || "all";
+    const item = require("./skeleton").roleFilterItem(value);
+    const label = this.el?.querySelector(
+      `.${this.fig.family}__role-filter .${this.fig.family}__role-label .note-content`,
+    );
+    if (label) label.textContent = item.label;
+    const menu = cmd.getParentByKind?.(KIND.menu.topic);
+    if (menu?.changeState) menu.changeState(0);
+    if (item.value === this._memberRole) return;
+    this._memberRole = item.value;
+    this._repaintMembersList();
   }
 
   /**
@@ -215,9 +288,26 @@ class __permission_restricted extends DrumeeMFS {
    */
   _render() {
     const draft = this._inviteDraft();
+    // A member push can land while someone is typing a search. The query
+    // survives as state (the skeleton draws the value from it); the focus and
+    // caret are put back here so the next keystroke still goes to the field.
+    const active = document.activeElement;
+    const searching = !!(
+      active
+      && active.closest
+      && active.closest(`.${this.fig.family}__member-search-entry`)
+    );
     this.feed(require("./skeleton")(this));
     if (draft) {
       this.ensurePart("invite-email").then((p) => fillEntry(p, draft));
+    } else if (searching) {
+      this.ensurePart("member-search").then((p) => {
+        const input = p?.el?.querySelector?.("input");
+        if (!input) return;
+        input.focus();
+        const end = input.value.length;
+        input.setSelectionRange?.(end, end);
+      });
     }
   }
 
@@ -1055,6 +1145,9 @@ class __permission_restricted extends DrumeeMFS {
 
       case "select-member-role":
         return this._selectMemberRole(cmd);
+
+      case "filter-member-role":
+        return this._filterMembersByRole(cmd);
 
       case "remove-member":
         return this._removeMember(cmd);

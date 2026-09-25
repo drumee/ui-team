@@ -175,8 +175,8 @@ $gutter: 16px;
     flex: 0 0 auto;
 
     @include drumee.typo(
-      $size: 18px,
-      $line: 24px,
+      $size: 15px,
+      $line: 20px,
       $color: var(--normal-fg-10)
     );
     font-weight: 600;
@@ -274,8 +274,8 @@ $gutter: 16px;
     overflow: hidden;
 
     @include drumee.typo(
-      $size: 13px,
-      $line: 18px,
+      $size: 12px,
+      $line: 16px,
       $color: var(--normal-fg)
     );
     font-weight: 600;
@@ -298,8 +298,8 @@ $gutter: 16px;
 
   &__subtitle {
     @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
+      $size: 11px,
+      $line: 16px,
       $weight: 400,
       $color: var(--neutral-600)
     );
@@ -318,8 +318,8 @@ $gutter: 16px;
     // 12px between sections and 12px top and bottom — Figma 84:30632 is one
     // auto-layout column with padding 12 and itemSpacing 12. The sections carry
     // the 12px side gutter themselves (see below).
-    gap: 12px;
-    padding: 12px 0;
+    gap: 24px;
+    padding: 12px 0 16px;
     box-sizing: border-box;
     overflow-y: auto;
 
@@ -334,17 +334,17 @@ $gutter: 16px;
 
   &__close {
     flex-shrink: 0;
-    margin-left: 12px;
-    width: 32px;
-    height: 32px;
+    margin-left: 8px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
 
     svg {
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
       color: var(--normal-fg-10);
     }
 
@@ -375,16 +375,91 @@ $gutter: 16px;
   // Figma: itemSpacing 12 — heading, hint and rows all 12px apart, each row
   // carrying its own 8px above and below (see __invitation-row).
   &__invitations-section {
-    gap: 12px;
+    gap: 8px;
   }
 
   &__invite-section {
-    gap: 12px;
+    gap: 8px;
   }
 
   &__members-section {
-    gap: 16px;
+    gap: 10px;
     overflow: visible;
+  }
+
+  // The rows' own column (skeleton membersList), re-fed alone on each search
+  // keystroke. Same 10px rhythm the rows had as direct children of the
+  // section, and overflow visible for the role popover, like the section.
+  &__members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    overflow: visible;
+  }
+
+  // Members search row: the search field, then the role filter pill.
+  //
+  // Positioned and raised like __invite-input-row: every member row below
+  // carries an inline `z-index: 1000 - index`, so without this the filter's
+  // open menu would drop under the first rows.
+  &__member-search {
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    position: relative;
+    z-index: 1100;
+    overflow: visible;
+  }
+
+  // The field itself: a filled pill rather than the invite field's underline,
+  // so the two inputs don't read as the same kind of control.
+  &__member-search-field {
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 6px;
+    min-width: 0;
+    min-height: 32px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+  }
+
+  // Same height as the search field beside it.
+  &__role-filter &__role-select {
+    min-height: 32px;
+  }
+
+  &__member-search-ico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--tertiary-grey-80, #65656c);
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+  }
+
+  &__member-search-entry {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      outline: none;
+      @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--normal-fg-10));
+
+      &::placeholder {
+        color: #aeaeb2;
+      }
+    }
   }
 
   // Base panel's __settings-action-section-title. $weight goes THROUGH the
@@ -403,7 +478,7 @@ $gutter: 16px;
   // passing 600 there drops the heading to the browser default serif. Same
   // trap the panel title's own note records.
   &__section-title {
-    @include drumee.typo($size: 18px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
     font-weight: 600;
   }
 
@@ -413,11 +488,11 @@ $gutter: 16px;
   &__ws-card {
     align-items: center;
     border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 12px;
+    border-radius: 10px;
     gap: 8px;
     margin: 0 $gutter;
     min-width: 0;
-    padding: 8px 16px;
+    padding: 6px 12px;
   }
 
   // Same recipe as __title-icon, at the card's 40px. folderArt emits a
@@ -436,26 +511,26 @@ $gutter: 16px;
     align-items: center;
     display: flex !important;
     flex: 0 0 auto;
-    height: 40px;
+    height: 32px;
     justify-content: center;
-    min-width: 40px;
+    min-width: 32px;
     overflow: visible;
     position: relative;
-    width: 40px;
+    width: 32px;
 
     .media-grid__folder-art {
       align-items: center;
       display: flex;
-      height: 32px;
+      height: 26px;
       justify-content: center;
       position: relative;
-      width: 40px;
+      width: 32px;
     }
 
     .folder-shape {
       fill: #885eff;
-      height: 32px;
-      width: 40px;
+      height: 26px;
+      width: 32px;
 
       &.personal,
       &.inner-folder { fill: var(--area-personal); }
@@ -469,13 +544,13 @@ $gutter: 16px;
     // gradient stops, which carry no colour of their own and paint black
     // without this.
     .badge {
-      bottom: -4px;
+      bottom: -3px;
       color: var(--grid-color-folder-badge);
       filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
-      height: 20px !important;
-      left: -4px;
+      height: 16px !important;
+      left: -3px;
       position: absolute;
-      width: 20px !important;
+      width: 16px !important;
 
       [class^="gradient-start-"] { stop-color: var(--primary-purple-40); }
       [class^="gradient-end-"] { stop-color: var(--primary-purple-50); }
@@ -498,7 +573,7 @@ $gutter: 16px;
   }
 
   &__ws-card-name {
-    @include drumee.typo($size: 16px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
     font-weight: 600;
     min-width: 0;
     overflow: hidden;
@@ -526,24 +601,24 @@ $gutter: 16px;
   // "3.5" in Primary/40 beside a Grey/80 "GB", and the member count the same
   // way beside its glyph.
   &__ws-stat-value {
-    @include drumee.typo($size: 12px, $line: 1.2em, $weight: 500, $color: var(--primary-40));
+    @include drumee.typo($size: 11px, $line: 1.2em, $weight: 500, $color: var(--primary-40));
     font-weight: 600;
   }
 
   &__ws-stat-unit {
-    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
+    @include drumee.typo($size: 11px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
   }
 
   // Figma: Phosphor Users at 16px.
   &__ws-stat-ico {
     color: var(--tertiary-grey-80, #65656c);
     flex-shrink: 0;
-    height: 16px;
-    width: 16px;
+    height: 14px;
+    width: 14px;
 
     svg {
-      height: 16px;
-      width: 16px;
+      height: 14px;
+      width: 14px;
     }
   }
 
@@ -560,7 +635,7 @@ $gutter: 16px;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
     position: relative;
     z-index: 1200;
     width: 100%;
@@ -583,7 +658,7 @@ $gutter: 16px;
     flex-wrap: wrap;
     gap: 6px;
     min-width: 0;
-    padding: 8px 0 4px;
+    padding: 6px 0 3px;
   }
 
   &__invite-chip {
@@ -596,7 +671,7 @@ $gutter: 16px;
   }
 
   &__invite-chip-text {
-    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--primary-40));
+    @include drumee.typo($size: 11px, $line: 15px, $weight: 400, $color: var(--primary-40));
     min-width: 0;
     overflow: hidden;
 
@@ -637,8 +712,8 @@ $gutter: 16px;
       background: transparent;
       outline: none;
       @include drumee.typo(
-        $size: 12px,
-        $line: 17px,
+        $size: 11px,
+        $line: 15px,
         $weight: 400,
         $color: #0b0a21
       );
@@ -670,13 +745,13 @@ $gutter: 16px;
   }
 
   &__invite-suggestion {
-    padding: 8px 12px;
+    padding: 6px 10px;
     cursor: pointer;
     align-items: center;
     gap: 8px;
     @include drumee.typo(
-      $size: 12px,
-      $line: 17px,
+      $size: 11px,
+      $line: 15px,
       $weight: 400,
       $color: var(--normal-fg-10)
     );
@@ -737,8 +812,8 @@ $gutter: 16px;
   // is a problem with the address.
   &__invite-error-message {
     @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
+      $size: 11px,
+      $line: 14px,
       $weight: 500,
       $color: var(--red-500)
     );
@@ -749,13 +824,15 @@ $gutter: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    // Figma "Button Lightmode": 48px tall, padding 12/24, radius 8, Geist
-    // SemiBold 16/24.
-    min-height: 48px;
-    padding: 12px 24px;
+    // On the invite row beside the role pill (skeleton inviteSection), so it
+    // takes that pill's geometry — 28px tall, radius 12 — and sizes to its
+    // label instead of spanning the section.
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 3px 14px;
     box-sizing: border-box;
-    border-radius: 8px;
+    border-radius: 12px;
+    white-space: nowrap;
     background: var(--primary-50);
     cursor: pointer;
     position: relative;
@@ -763,8 +840,8 @@ $gutter: 16px;
     // $weight 500 + font-weight 600: typo() emits nothing, not even the font
     // family, for 600 — the button text fell back to the browser serif.
     @include drumee.typo(
-      $size: 16px,
-      $line: 24px,
+      $size: 12px,
+      $line: 1.2em,
       $weight: 500,
       $color: var(--white)
     );
@@ -778,15 +855,15 @@ $gutter: 16px;
       cursor: progress;
       pointer-events: none;
       background: #5b54d1;
-      gap: 8px;
+      gap: 6px;
 
       // Ring spinner, same convention as window/upload-progress and
       // widget/chat-export. It renders as a flex sibling of the Note's
       // .note-content, so the label stays put and the pair centers together.
       &::before {
         content: "";
-        width: 14px;
-        height: 14px;
+        width: 10px;
+        height: 10px;
         flex-shrink: 0;
         border: 2px solid rgba(255, 255, 255, 0.35);
         border-top-color: var(--white);
@@ -806,8 +883,8 @@ $gutter: 16px;
   // with the other two, and this block sits AFTER that rule in the file, so the
   // longhand below wins on source order without an !important.
   &__leave-section {
-    gap: 12px;
-    padding-top: 24px;
+    gap: 8px;
+    padding-top: 20px;
     border-top: 1px solid var(--border-default);
   }
 
@@ -815,8 +892,8 @@ $gutter: 16px;
   // card — the button alone would just read as "careful".
   &__leave-warning {
     @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
+      $size: 11px,
+      $line: 16px,
       $weight: 400,
       $color: var(--normal-fg-20)
     );
@@ -833,10 +910,10 @@ $gutter: 16px;
   &__leave-button {
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
-    min-height: 48px;
-    padding: 12px 16px;
+    min-height: 36px;
+    padding: 8px 12px;
     box-sizing: border-box;
     border-radius: 8px;
     background: var(--normal-bg-90, #f2f2f7);
@@ -862,13 +939,13 @@ $gutter: 16px;
   // Phosphor SignOut (sidebar_signout, the glyph the account menu's Sign out
   // uses), tinted by the button's colour through currentColor.
   &__leave-icon {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       fill: currentColor;
     }
   }
@@ -878,7 +955,7 @@ $gutter: 16px;
   // label together as one group.
   &__leave-label {
     flex: 0 1 auto;
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 500, $color: currentColor);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 500, $color: currentColor);
     font-weight: 600;
   }
 
@@ -941,8 +1018,8 @@ $gutter: 16px;
     justify-content: space-between;
     flex: 0 0 auto;
     gap: 4px;
-    min-width: 80px;
-    padding: 4px 8px 4px 12px;
+    min-width: 72px;
+    padding: 3px 6px 3px 10px;
     box-sizing: border-box;
     border-radius: 12px;
     background: var(--overlay-bg-05);
@@ -951,9 +1028,9 @@ $gutter: 16px;
   }
 
   &__invite-input-row &__role-select {
-    min-width: 88px;
-    min-height: 32px;
-    padding: 4px 12px 4px 16px;
+    min-width: 80px;
+    min-height: 28px;
+    padding: 3px 10px 3px 12px;
   }
 
   // Figma: Geist SemiBold 14, line 1.2em, #0b0a21. $weight 500 + font-weight
@@ -961,7 +1038,7 @@ $gutter: 16px;
   &__role-label {
     min-width: 0;
     @include drumee.typo(
-      $size: 14px,
+      $size: 12px,
       $line: 1.2em,
       $weight: 500,
       $color: var(--normal-fg-10)
@@ -973,8 +1050,8 @@ $gutter: 16px;
   // Read-only role for the self row: the server rejects self-mutation, so the
   // dropdown and the remove button give way to plain text.
   &__role-readonly {
-    flex: 0 0 88px;
-    padding: 4px 8px;
+    flex: 0 0 80px;
+    padding: 3px 6px;
     cursor: default;
     background: transparent;
   }
@@ -1069,7 +1146,7 @@ $gutter: 16px;
   // --tertiary-grey-80. Figma sets it 12px under the heading — the section's
   // own gap, no pull-up.
   &__section-hint {
-    @include drumee.typo($size: 14px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80));
+    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80));
   }
 
   // Deliberately the same geometry as __member-row — the two lists are the two
@@ -1078,17 +1155,17 @@ $gutter: 16px;
   // Figma: each row is 56px — the 48px avatar with 8px above and below.
   &__invitation-row {
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     justify-content: space-between;
     min-width: 0;
-    padding: 8px 0;
+    padding: 4px 0;
     width: 100%;
   }
 
   &__invitation-info {
     align-items: center;
     flex: 1 1 auto;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
   }
 
@@ -1101,7 +1178,7 @@ $gutter: 16px;
   // style as a member row. typo() takes 500 and the weight is set on its own:
   // the mixin emits nothing (not even font-family) for 600.
   &__invitation-name {
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 500, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--normal-fg-10));
     font-weight: 600;
     min-width: 0;
     overflow: hidden;
@@ -1115,7 +1192,7 @@ $gutter: 16px;
 
   // Figma: Body/Mini Body 12 Regular, Grey/80 (#65656c = --tertiary-grey-80).
   &__invitation-sub {
-    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
+    @include drumee.typo($size: 11px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
     min-width: 0;
     overflow: hidden;
 
@@ -1136,7 +1213,7 @@ $gutter: 16px;
     flex-shrink: 0;
     gap: 4px;
     // Figma Overlay+Border: 4px 12px 4px 8px.
-    padding: 4px 12px 4px 8px;
+    padding: 2px 8px 2px 6px;
 
     // Figma's own pairs, to the value: Overlay/Orange rgba(232,161,59,.15)
     // over Signal/Warning #E8A13B, and Overlay/red rgba(255,106,101,.15) over
@@ -1159,12 +1236,12 @@ $gutter: 16px;
   // badge through currentColor — the sprite strips the source fills.
   &__invitation-badge-ico {
     flex-shrink: 0;
-    height: 17px;
-    width: 17px;
+    height: 14px;
+    width: 14px;
 
     svg {
-      height: 17px;
-      width: 17px;
+      height: 14px;
+      width: 14px;
       fill: currentColor;
     }
   }
@@ -1173,7 +1250,7 @@ $gutter: 16px;
   // rule tint the glyph and the word together.
   // Figma: Buttons/Small Button 14 SemiBold, line 1.2em.
   &__invitation-badge-text {
-    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 500);
+    @include drumee.typo($size: 12px, $line: 1.2em, $weight: 500);
     font-weight: 600;
     white-space: nowrap;
   }
@@ -1183,7 +1260,7 @@ $gutter: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     position: relative;
     overflow: visible;
@@ -1206,7 +1283,7 @@ $gutter: 16px;
     &::before {
       content: "";
       position: absolute;
-      inset: -8px -12px;
+      inset: -4px -8px;
       border-radius: 8px;
       z-index: -1;
       pointer-events: none;
@@ -1231,13 +1308,13 @@ $gutter: 16px;
   &__member-info {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 12px;
+    gap: 10px;
   }
 
   // Figma: role pill and trash 12px apart.
   &__member-actions {
     flex: 0 0 auto;
-    gap: 12px;
+    gap: 8px;
     overflow: visible;
   }
 
@@ -1248,16 +1325,16 @@ $gutter: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 48px;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
     overflow: hidden;
     position: relative;
     background: #e8e8ed;
 
     .user-profile__main {
-      border-radius: 12px;
+      border-radius: 9px;
     }
 
     // Presence dot. ui-core pins it at left 24 / top 3 for its own 40px
@@ -1271,8 +1348,8 @@ $gutter: 16px;
       left: auto;
       right: 1px;
       bottom: 1px;
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       box-shadow: 0 0 0 2px var(--white, #fff);
     }
 
@@ -1293,8 +1370,8 @@ $gutter: 16px;
   &__member-name {
     min-width: 0;
     @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
+      $size: 13px,
+      $line: 18px,
       $weight: 500,
       $color: #0b0a21
     );
@@ -1305,7 +1382,7 @@ $gutter: 16px;
   // Figma: Body/Mini Body 12 Regular, Grey/80.
   &__member-email {
     min-width: 0;
-    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
+    @include drumee.typo($size: 11px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
     @include drumee.overflow-text;
   }
 
@@ -1335,16 +1412,16 @@ $gutter: 16px;
 
   // Figma: Phosphor Trash at 24px in Signal/Error.
   &__member-remove {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     color: #d74e49;
     cursor: pointer;
     border-radius: 50%;
     transition: background-color 120ms ease, color 120ms ease;
 
     svg {
-      width: 24px;
-      height: 24px;
+      width: 18px;
+      height: 18px;
     }
 
     // Tinted from the icon's OWN red (#d74e49 = 215 78 73), not the neutral row
@@ -1360,8 +1437,8 @@ $gutter: 16px;
 
   &__members-empty {
     @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
+      $size: 11px,
+      $line: 16px,
       $weight: 400,
       $color: var(--normal-fg-20)
     );
@@ -1391,7 +1468,8 @@ html[data-theme="dark"] {
       background: var(--normal-bg-elevated);
     }
 
-    &__invite-entry input {
+    &__invite-entry input,
+    &__member-search-entry input {
       color: var(--normal-fg-10);
 
       &::placeholder {
