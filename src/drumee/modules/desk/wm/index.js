@@ -3582,6 +3582,91 @@ class __window_manager extends push {
   }
 
   /**
+   * Trash a whole selection in ONE media.trash request per hub.
+   *
+   * It used to be one request per tile, all fired at once (_trashNow in a
+   * loop). Every request is its own transaction on the same hub DB, running
+   * mfs_pre_trash_next with temp tables, REPLACE INTO trash_media and DELETE
+   * FROM media; thirty of them racing lock each other, the procedure's exit
+   * handler swallows the lock error with a silent ROLLBACK, the request comes
+   * back empty and the tile is put back — so "select all, delete" removed
+   * five or six files and had to be repeated (Liam, 2026-09-26). The service
+   * has always accepted an array of nodes; one request is one transaction
+   * and either the whole batch is in the bin or none of it is.
+   *
+   * Same optimistic feel as _trashNow: tiles leave the grid at once and come
+   * back only when the request is refused. Split per hub because the request
+   * is hub-scoped, and capped at TRASH_BATCH_MAX nodes so a huge selection
+   * does not turn into one multi-minute transaction.
+   *
+   * @param {Array} tiles media tiles from the `allowed` bucket
+   */
+  _trashBatch(tiles) {
+    const TRASH_BATCH_MAX = 100;
+    const groups = new Map();
+    for (const r of tiles || []) {
+      if (!r || r._trashPending) continue;
+      if (r.mget(_a.status) === "seeding") {
+        // Never reached the server: nothing to trash, same as putIntoTrash.
+        r.suppress();
+        continue;
+      }
+      // makeTrashOptions is what a single tile posts (node + the hub it is
+      // charged to, the isHub holder rule included) and it raises the tile's
+      // own _e.trash, which is what closes a window open on that node.
+      const opt = r.makeTrashOptions();
+      const node = opt && opt.nid && opt.nid[0];
+      if (!node || !node.nid) continue;
+      r._trashPending = 1;
+      const el = r.el;
+      const display = el ? el.style.display : "";
+      if (el) el.style.display = "none";
+      const parent = r.logicalParent;
+      if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
+      const key = String(opt.hub_id || node.hub_id || "");
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ tile: r, node, display, hub_id: opt.hub_id || node.hub_id });
+    }
+    for (const group of groups.values()) {
+      for (let i = 0; i < group.length; i += TRASH_BATCH_MAX) {
+        this._sendTrashBatch(group.slice(i, i + TRASH_BATCH_MAX));
+      }
+    }
+  }
+
+  /** One media.trash request for `batch` (same hub); restores every tile on refusal. */
+  _sendTrashBatch(batch) {
+    if (!batch.length) return;
+    const restore = () => {
+      for (const b of batch) {
+        b.tile._trashPending = 0;
+        if (b.tile.isDestroyed && b.tile.isDestroyed()) continue;
+        if (b.tile.el) b.tile.el.style.display = b.display;
+      }
+    };
+    const request = this.postService({
+      service: SERVICE.media.trash,
+      nid: batch.map((b) => b.node),
+      hub_id: batch[0].hub_id,
+    });
+    if (!request || !_.isFunction(request.then)) return restore();
+    request
+      .then((data) => {
+        // doRequest resolves undefined on a failed request; an {error} is a
+        // refusal too (403 already explained by onServerComplain).
+        if (!data || data.error) return restore();
+        // What the tile's own response handler does for a single trash: the
+        // server's media.remove broadcast will find them gone already.
+        for (const b of batch) {
+          if (b.tile.isDestroyed && b.tile.isDestroyed()) continue;
+          b.tile.trigger(_e.deleted);
+          b.tile.suppress();
+        }
+      })
+      .catch(restore);
+  }
+
+  /**
    *
    */
   async removeMediaSelection(media, opts = {}) {
@@ -3619,9 +3704,7 @@ class __window_manager extends push {
       r.actionDenied();
     }
 
-    for (let r of allowed) {
-      this._trashNow(r);
-    }
+    this._trashBatch(allowed);
 
     for (let r of own_hubs) {
       await this.confirmRemoveHub(r);
