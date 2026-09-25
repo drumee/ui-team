@@ -1,4 +1,5 @@
 const { trackDeskCanvas } = require("libs/desk-canvas");
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 
 const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) ||
@@ -43,6 +44,7 @@ class __address_book extends LetcBox {
     // attribute is ignored.
     opt.dataset = { ...opt.dataset, anim: "out", mview: "sidebar" };
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
     this._tab = "all";
     this._search = "";
@@ -104,6 +106,10 @@ class __address_book extends LetcBox {
       this._loadTags(),
     ]);
     this._refreshList();
+    // Contacts painted (the _load* calls swallow their own failures, so this
+    // is reached with an empty list too). A reload's screen restore waits on
+    // this (libs/items-ready).
+    markItemsReady(this);
     this.el.dataset.anim = "in";
     RADIO_CLICK.on(_e.click, this._onOutsideClick);
   }

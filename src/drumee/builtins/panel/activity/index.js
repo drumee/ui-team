@@ -17,6 +17,7 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 const { loadMuteState } = require('./mute');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 
 class __panel_activity extends LetcBox {
   constructor(...args) {
@@ -39,6 +40,7 @@ class __panel_activity extends LetcBox {
     this.activityState = 0;
     opt.state = 0;
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
 
     window.ActivityHandler = this;
@@ -188,6 +190,9 @@ class __panel_activity extends LetcBox {
       // them into item models — the one place the whole page is visible in
       // order, which is what day grouping needs.
       child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
+      // The first page is down (rows or none): the feed has painted. A
+      // reload's screen restore waits on this (libs/items-ready).
+      child.once(_e.eod, () => markItemsReady(this));
     }
     if (super.onPartReady) super.onPartReady(child, pn);
   }
