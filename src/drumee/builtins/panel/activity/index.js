@@ -16,6 +16,7 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 // the feed, the badge and the tab counts are untouched by design.
 const { loadMuteState } = require('./mute');
 require('./skin');
+const { trackDeskCanvas } = require('libs/desk-canvas');
 
 class __panel_activity extends LetcBox {
   constructor(...args) {
@@ -119,6 +120,27 @@ class __panel_activity extends LetcBox {
     // The card lives in the window layer, not inside this panel, so it would
     // outlive the panel — along with its pending dismiss timer.
     killChatToast(this);
+    if (this._untrackCanvas) this._untrackCanvas();
+  }
+
+  /**
+   * Cover the workspace at ≤ 1024px (see libs/desk-canvas). This panel is
+   * mounted once with the desk and opened through setState, so tracking is
+   * (re)tried on every open as well as on render, in case the desk was not
+   * in the DOM yet the first time.
+   */
+  _trackCanvas() {
+    if (this._untrackCanvas) return;
+    this._untrackCanvas = trackDeskCanvas(this.el);
+  }
+
+  /**
+   * The desk opens this panel with setState(1) directly, not through a
+   * service, so this is the one place every open passes.
+   */
+  setState(state, ...rest) {
+    if (~~state === 1) this._trackCanvas();
+    return super.setState(state, ...rest);
   }
 
   /**
@@ -138,6 +160,7 @@ class __panel_activity extends LetcBox {
    */
   onDomRefresh() {
     this.setState(0);
+    this._trackCanvas();
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
