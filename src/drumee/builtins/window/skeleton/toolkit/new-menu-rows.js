@@ -96,7 +96,7 @@ export function createRows(ui) {
       service: "add-doc",
       ico: "addmenu-document",
       content: LOCALE.DOCUMENT,
-      className: `${cnItem}--doc${nested}`,
+      className: `${cnItem}--doc`,
     }),
     menuRow(ui, {
       service: "new-document",
@@ -111,7 +111,7 @@ export function createRows(ui) {
       service: "add-sheet",
       ico: "addmenu-spreadsheet",
       content: LOCALE.SPREADSHEET,
-      className: `${cnItem}--sheet${nested}`,
+      className: `${cnItem}--sheet`,
     }),
     menuRow(ui, {
       service: "new-document",
