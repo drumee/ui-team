@@ -5678,7 +5678,20 @@ class desk_module extends LetcBox {
       // another tour holding single-flight. The tab shows at once.
       return this._railTab(tab);
     }
-    require("libs/tutorial-tours").whenDone(tour, () => {
+    // THE TAB GOES IN UNDER THE TOUR, not after it. Parked on the release, it
+    // switched only when the tour's softDestroy had FINISHED — and that is a
+    // 0.5s fade-and-shrink during which the pane underneath is revealed. So
+    // Done on the chat tour faded out onto the Files view (files-panel + chat
+    // panel) and only then jumped to the Chat view (thread-rail + chat panel).
+    // Switched as soon as the tour has painted, the swap happens behind an
+    // opaque overlay and the fade reveals the tab the user asked for.
+    //
+    // The release stays as the fallback, for a tour that was claimed and never
+    // reached the screen. Whichever comes first runs; the other is a no-op.
+    let shown = false;
+    const show = () => {
+      if (shown) return;
+      shown = true;
       if (this.isDestroyed && this.isDestroyed()) return;
       // UNLESS THE USER HAS MOVED ON. Every way of ending this tour early runs
       // this callback — the release is the release — so without the check the
@@ -5687,7 +5700,9 @@ class desk_module extends LetcBox {
       // of a tour they walked out of over the workspace they switched into.
       // Both were reported; see _navigated.
       if ((this._navSeq || 0) === seq) this._railTab(tab);
-    });
+    };
+    this._windowTourShown = { tour, cb: show };
+    require("libs/tutorial-tours").whenDone(tour, show);
   }
 
   /**
@@ -7212,6 +7227,19 @@ class desk_module extends LetcBox {
             if (this._windowTour !== child) return;
             this._endWindowTour({ immediate: true });
           });
+          return;
+        }
+        // The tab a rail press parked for this tour (_railTabWithTour) — now,
+        // under the tour, rather than on its release at the end of the fade.
+        // Two frames, so the tour has painted over the pane before the pane
+        // changes: switching first would show the answer before the question.
+        const parked = this._windowTourShown;
+        if (parked && parked.tour === wtTour) {
+          this._windowTourShown = null;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (this._windowTour !== child) return;
+            parked.cb();
+          }));
         }
         return;
       }
