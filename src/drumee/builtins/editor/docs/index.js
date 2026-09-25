@@ -711,9 +711,23 @@ class __editor_docs extends __player {
       if (!p || !p.el) return;
       p.el.innerHTML = "";
       p.el.appendChild(
-        require("./skeleton/tabs-rail").build(this, this.getTabs(), this.activeTabId())
+        require("./skeleton/tabs-rail").build(this, this.getTabs(), this.activeTabId(), {
+          loading: this._loadingTab || null,
+        })
       );
     });
+  }
+
+  /**
+   * Mark the row of the tab that is being opened, so a switch that has to
+   * wait for its co-editing room to connect looks like work in progress
+   * rather than a click that did nothing.
+   *
+   * @param {String|null} id
+   */
+  setTabLoading(id) {
+    this._loadingTab = id || null;
+    this.renderTabs();
   }
 
   /** Show / hide the rail. */
@@ -759,6 +773,7 @@ class __editor_docs extends __player {
       // chuyển tab rất lâu mới ăn"). The model already holds the bytes, so a
       // save that lands a second later loses nothing.
       this._activeTab = id;
+      this._loadingTab = id;
       this.renderTabs();
       const showing = this._doc && this._doc.showTab ? this._doc.showTab(id) : null;
       // Background: write the list (names, order, which tab is active) with
@@ -768,7 +783,10 @@ class __editor_docs extends __player {
     } catch (e) {
       this.warn("__editor_docs: tab switch failed", e);
     } finally {
-      if (current()) this._switchingTab = 0;
+      if (current()) {
+        this._switchingTab = 0;
+        this.setTabLoading(null);
+      }
     }
   }
 
@@ -813,7 +831,29 @@ class __editor_docs extends __player {
     if (!clean) return;
     this._tabs = this.getTabs().map((t) => (t.id === id ? { ...t, name: clean } : t));
     this.renderTabs();
-    this.saveContent();
+    // A name change touches no document: persistTabs writes the list from the
+    // model, where saveContent would export the .docx through WASM (and, in
+    // co-editing, flush the autosave) for nothing.
+    this.persistTabs();
+  }
+
+  /**
+   * Move a tab, from the rail's drag-and-drop.
+   *
+   * @param {String} id     the tab being moved
+   * @param {String} beforeId  the tab it lands in front of, null for the end
+   */
+  reorderTabs(id, beforeId) {
+    if (id === beforeId) return;
+    const tabs = this.getTabs();
+    const moving = tabs.find((t) => t.id === id);
+    if (!moving) return;
+    const rest = tabs.filter((t) => t.id !== id);
+    const at = beforeId ? rest.findIndex((t) => t.id === beforeId) : rest.length;
+    if (at < 0) return;
+    this._tabs = rest.slice(0, at).concat([moving], rest.slice(at));
+    this.renderTabs();
+    this.persistTabs();
   }
 
   /** A copy of a tab, right after it. */
@@ -846,7 +886,8 @@ class __editor_docs extends __player {
     } else {
       this.renderTabs();
     }
-    this.saveContent();
+    // Same as a rename: the list changed, the documents did not.
+    this.persistTabs();
   }
 
   /**

@@ -58,8 +58,12 @@ function openRowMenu(ui, tab, anchor, canDelete) {
   ui.el.appendChild(menu);
   const a = anchor.getBoundingClientRect();
   const host = ui.el.getBoundingClientRect();
-  menu.style.top = `${a.bottom - host.top + 4}px`;
-  menu.style.left = `${a.left - host.left - 60}px`;
+  // Flip above the ⋮ when the row sits low enough that the menu would run off
+  // the bottom of the window.
+  const h = menu.getBoundingClientRect().height || 120;
+  const below = a.bottom - host.top + 4;
+  menu.style.top = `${below + h > host.height ? Math.max(4, a.top - host.top - h - 4) : below}px`;
+  menu.style.left = `${Math.max(4, a.left - host.left - 60)}px`;
   const close = (e) => {
     if (menu.contains(e.target)) return;
     menu.remove();
@@ -102,7 +106,7 @@ function startRename(ui, tab) {
  * @param {String} active
  * @returns {Element}
  */
-function build(ui, tabs, active) {
+function build(ui, tabs, active, opt = {}) {
   const root = el("div", "editor-docs__tabs");
 
   const top = el("div", "editor-docs__tabs-top");
@@ -124,7 +128,10 @@ function build(ui, tabs, active) {
 
   const list = el("div", "editor-docs__tabs-list");
   for (const t of tabs) {
-    const row = el("div", `editor-docs__tab-row${t.id === active ? " is-active" : ""}`);
+    const state = [];
+    if (t.id === active) state.push("is-active");
+    if (t.id === opt.loading) state.push("is-loading");
+    const row = el("div", `editor-docs__tab-row${state.length ? " " + state.join(" ") : ""}`);
     row.dataset.tab = t.id;
     row.appendChild(icon("--icon-raw-documents_udoc", 18));
     row.appendChild(el("span", "editor-docs__tab-name", t.name || ""));
@@ -138,6 +145,45 @@ function build(ui, tabs, active) {
     row.addEventListener("dblclick", (e) => {
       e.stopPropagation();
       startRename(ui, t);
+    });
+
+    // Reordering. HTML5 drag and drop rather than pointer maths: the rows are
+    // a plain list, the browser draws the drag image, and a drop that lands
+    // outside simply does nothing.
+    row.draggable = true;
+    row.addEventListener("dragstart", (e) => {
+      row.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try {
+        e.dataTransfer.setData("text/plain", t.id);
+      } catch (err) {
+        /** some browsers refuse custom types */
+      }
+      list.dataset.dragging = t.id;
+    });
+    row.addEventListener("dragend", () => {
+      row.classList.remove("is-dragging");
+      delete list.dataset.dragging;
+      [...list.children].forEach((c) => c.classList.remove("is-drop-before"));
+    });
+    row.addEventListener("dragover", (e) => {
+      if (!list.dataset.dragging || list.dataset.dragging === t.id) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const b = row.getBoundingClientRect();
+      const before = e.clientY < b.top + b.height / 2;
+      [...list.children].forEach((c) => c.classList.remove("is-drop-before"));
+      row.classList.add("is-drop-before");
+      row.dataset.dropBefore = before ? "1" : "0";
+    });
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const moved = list.dataset.dragging;
+      if (!moved || moved === t.id) return;
+      const before = row.dataset.dropBefore !== "0";
+      const idx = tabs.findIndex((x) => x.id === t.id);
+      const anchorTab = before ? t : tabs[idx + 1];
+      ui.reorderTabs(moved, anchorTab ? anchorTab.id : null);
     });
     list.appendChild(row);
   }

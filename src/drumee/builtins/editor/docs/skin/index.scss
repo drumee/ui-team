@@ -104,6 +104,7 @@
   }
 
   &__tab-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -124,6 +125,37 @@
       .editor-docs__tab-glyph {
         color: #0b57d0;
       }
+    }
+
+    // The tab being opened: its co-editing room may take a moment, and a row
+    // that only highlights reads as a click that did nothing.
+    &.is-loading .editor-docs__tab-name::after {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-left: 8px;
+      vertical-align: -1px;
+      border-radius: 50%;
+      border: 2px solid rgba(11, 87, 208, 0.25);
+      border-top-color: #0b57d0;
+      animation: editor-loading-spin 0.8s linear infinite;
+    }
+
+    &.is-dragging {
+      opacity: 0.45;
+    }
+
+    // Where the dragged row would land.
+    &.is-drop-before::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: -2px;
+      height: 2px;
+      border-radius: 2px;
+      background: #0b57d0;
     }
   }
 
