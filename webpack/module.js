@@ -61,6 +61,14 @@ module.exports = function (basedir) {
       test: /\.wasm$/,
       type: 'asset/resource',
     }, {
+      // Media too heavy to inline (the Get help tutorial videos and their
+      // posters). Emitted as content-hashed files next to the bundle, so they
+      // ship with every UI deploy instead of depending on a static tree that
+      // each host has to sync by hand.
+      test: /\.(mp4|webm|webp)$/,
+      type: 'asset/resource',
+      generator: { filename: 'media/[name]-[contenthash:8][ext]' },
+    }, {
       test: /babel(.*)\.js?$/,
       use: ['babel-loader']
     }, {
