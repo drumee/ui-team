@@ -3481,6 +3481,51 @@ class __window_manager extends push {
   }
 
   /**
+   * Trash one tile the moment the user asks, not 1.4s later.
+   *
+   * The tile used to stay on screen, fully clickable, while a CLONE flew to
+   * the bin (animateMediaToTrash, a 1.4s tween), and only then was media.trash
+   * sent — the tile left when that answered (media/core suppress). On a folder
+   * with content that is ~2.5s during which a click still opened the folder
+   * being deleted, and the Trash heard nothing until the end of it.
+   *
+   * Now: the clone is taken first (animateMediaToTrash reads the tile's
+   * position synchronously), then the tile is taken out of the grid and the
+   * request goes out at once, alongside the flight — the order the workspace
+   * paths (confirmRemoveHub) already use. The success path is unchanged: the
+   * reply suppresses the tile. A refused trash (403 popup, network) resolves
+   * undefined, so the tile is put back where it was. A tile already on its way
+   * out is skipped, so pressing Delete twice sends one request.
+   *
+   * @param {*} r media tile
+   */
+  _trashNow(r) {
+    if (!r || r._trashPending) return;
+    r._trashPending = 1;
+    const animation = this.animateMediaToTrash(r).catch(() => { });
+    const el = r.el;
+    const display = el ? el.style.display : "";
+    if (el) el.style.display = "none";
+    const request = r.putIntoTrash(1);
+    animation.then(() => {
+      const parent = r.logicalParent;
+      if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
+    });
+    // Seeding tiles are suppressed inside putIntoTrash and return nothing.
+    if (!request || !_.isFunction(request.then)) return;
+    const restore = () => {
+      r._trashPending = 0;
+      if (r.isDestroyed && r.isDestroyed()) return;
+      if (el) el.style.display = display;
+    };
+    request
+      .then((data) => {
+        if (!data || data.error) restore();
+      })
+      .catch(restore);
+  }
+
+  /**
    *
    */
   async removeMediaSelection(media) {
@@ -3512,18 +3557,7 @@ class __window_manager extends push {
     }
 
     for (let r of allowed) {
-      this.animateMediaToTrash(r)
-        .then(() => {
-          r.logicalParent.syncGeometry();
-          if (r.mget(_a.status) === "seeding") {
-            r.suppress();
-            return;
-          }
-          r.putIntoTrash(1);
-        })
-        .catch(() => {
-          r.putIntoTrash(1);
-        });
+      this._trashNow(r);
     }
 
     for (let r of own_hubs) {

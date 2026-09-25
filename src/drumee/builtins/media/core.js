@@ -1880,7 +1880,9 @@ class __media_core extends DrumeeMFS {
       return;
     }
     if (single_node) {
-      this.postService(this.makeTrashOptions());
+      // Returned so a caller can tell a refused trash from a done one (Wm
+      // _trashNow puts a hidden tile back). Existing callers ignore it.
+      return this.postService(this.makeTrashOptions());
     }
   }
 
