@@ -1663,6 +1663,7 @@
   "NEW_TASK": "Nouvelle tâche",
   "ADD_TASK": "+ Ajouter",
   "TASK_TITLE": "Titre de la tâche",
+  "TASK_TITLE_REQUIRED": "Veuillez donner un titre à la tâche.",
   "DUE_DATE": "Date d'échéance",
   "DROP_TASKS_HERE": "Déposez les tâches ici",
   "SELECT_DATE": "Sélectionnez la date",

@@ -1652,6 +1652,7 @@
   "NEW_TASK": "Nueva tarea",
   "ADD_TASK": "+ Add",
   "TASK_TITLE": "Título de la tarea",
+  "TASK_TITLE_REQUIRED": "Por favor, dale un título a la tarea.",
   "DUE_DATE": "Fecha de vencimiento",
   "DROP_TASKS_HERE": "Suelta las tareas aquí",
   "SELECT_DATE": "Selecciona la fecha",

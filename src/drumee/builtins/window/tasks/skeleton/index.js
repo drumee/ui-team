@@ -108,6 +108,14 @@ const {
 
 const make = function (ui) {
   const pfx = ui.fig.family;
+  // Always rendered, shown only while its `__title-field` carries
+  // `is-missing` — the panel toggles that class in place (_flagTitleMissing),
+  // so a blocked submit doesn't need a re-feed that would wipe other edits.
+  const titleMissingNote = () =>
+    Skeletons.Note({
+      className: `${pfx}__title-missing`,
+      content: LOCALE.TASK_TITLE_REQUIRED,
+    });
   // Phone flag stamped directly onto the popups / list / gantt roots (see
   // `data-mobile` below). Driven from JS rather than a CSS media/container
   // query because the panel lives in a resizable window — the viewport is
@@ -1305,20 +1313,26 @@ const make = function (ui) {
     const header = Skeletons.Box.X({
       className: `${pfx}__detail-header`,
       kids: [
-        // Textarea (not Entry) so a long title wraps and stays fully
-        // visible in the update popup instead of being clipped past the
-        // field width. `ignoreEnter` keeps it logically single-line.
-        Skeletons.Textarea({
-          className: `${pfx}__detail-title`,
-          name: "title",
-          value: dDraft.title || "",
-          placeholder: LOCALE.TASK_TITLE,
-          require: "any",
-          rows: 1,
-          ignoreEnter: true,
-          bubble: 0,
-          watch: "task-input-changed",
-          uiHandler: [ui],
+        Skeletons.Box.Y({
+          className: `${pfx}__title-field ${pfx}__detail-title-field${dDraft._titleMissing ? " is-missing" : ""}`,
+          kids: [
+            // Textarea (not Entry) so a long title wraps and stays fully
+            // visible in the update popup instead of being clipped past the
+            // field width. `ignoreEnter` keeps it logically single-line.
+            Skeletons.Textarea({
+              className: `${pfx}__detail-title`,
+              name: "title",
+              value: dDraft.title || "",
+              placeholder: LOCALE.TASK_TITLE,
+              require: "any",
+              rows: 1,
+              ignoreEnter: true,
+              bubble: 0,
+              watch: "task-input-changed",
+              uiHandler: [ui],
+            }),
+            titleMissingNote(),
+          ],
         }),
         Skeletons.Button.Svg({
           className: `${pfx}__detail-close`,
@@ -1697,7 +1711,17 @@ const make = function (ui) {
             Skeletons.Box.Y({
               className: `${pfx}__modal-main`,
               kids: [
-                field(LOCALE.TASK_TITLE, titleControl),
+                Skeletons.Box.Y({
+                  className: `${pfx}__create-field ${pfx}__title-field${draft?._titleMissing ? " is-missing" : ""}`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}__create-label`,
+                      content: LOCALE.TASK_TITLE,
+                    }),
+                    titleControl,
+                    titleMissingNote(),
+                  ],
+                }),
                 field(
                   LOCALE.TASK_DESCRIPTION,
                   descControl,

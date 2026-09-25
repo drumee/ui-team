@@ -1682,6 +1682,7 @@
   "NEW_TASK": "New task",
   "ADD_TASK": "+ Add",
   "TASK_TITLE": "Task title",
+  "TASK_TITLE_REQUIRED": "Please give the task a title.",
   "DUE_DATE": "Due date",
   "SELECT_DATE": "Select date",
   "SELECT_START_DATE": "Select start date",

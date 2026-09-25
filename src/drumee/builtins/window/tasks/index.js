@@ -3656,9 +3656,48 @@ class __tasks_panel extends LetcBox {
       this._createDefaults
     ) {
       this._createDefaults[name] = value;
+      if (name === "title" && value.trim()) this._clearTitleMissing("create");
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
+      if (name === "title" && value.trim()) this._clearTitleMissing("detail");
     }
+  }
+
+  _titleScope(scope) {
+    const isCreate = scope === "create";
+    return {
+      draft: isCreate ? this._createDefaults : this._detailDraft,
+      root:
+        this.el &&
+        this.el.querySelector(
+          `.${this.fig.family}__${isCreate ? "create-modal" : "detail-panel"}`,
+        ),
+    };
+  }
+
+  /**
+   * Mark the title as required: red outline + message under the field, caret
+   * back in the box. In place rather than via _render() — a re-feed rebuilds
+   * the description editor and drops whatever else is half-typed. The flag
+   * also rides on the draft so a later re-render (peer WS push) keeps it.
+   */
+  _flagTitleMissing(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (draft) draft._titleMissing = true;
+    if (!root) return;
+    const field = root.querySelector(`.${this.fig.family}__title-field`);
+    if (field) field.classList.add("is-missing");
+    const input = root.querySelector('[name="title"]');
+    if (input && typeof input.focus === "function") input.focus();
+  }
+
+  _clearTitleMissing(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (!draft || !draft._titleMissing) return;
+    draft._titleMissing = false;
+    const field =
+      root && root.querySelector(`.${this.fig.family}__title-field`);
+    if (field) field.classList.remove("is-missing");
   }
 
   async _commitTask() {
@@ -3671,7 +3710,7 @@ class __tasks_panel extends LetcBox {
     // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
-    if (!title) return this._render();
+    if (!title) return this._flagTitleMissing("create");
 
     this._setSubmitting(".tasks-panel__create-submit", true);
 
@@ -3911,6 +3950,9 @@ class __tasks_panel extends LetcBox {
     const draft = this._detailDraft;
     const task = this._tasks.find((t) => t.id === id);
     if (!task) return;
+    // planDetailCommit drops an empty title and saves everything else, so a
+    // cleared title used to quietly snap back to the old one. Refuse instead.
+    if (!String(draft.title || "").trim()) return this._flagTitleMissing("detail");
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
 
