@@ -13,6 +13,11 @@ const MAX_PROGRESS_ROWS = 200;
 // self-dismisses. Mirrors the document player's role-change notice.
 const ROLE_NOTICE_MS = 5000;
 
+// How long a finished batch stays on screen before the popup dismisses
+// itself: just enough for the last frame (100%, check icon) to paint. Only a
+// batch that ended well leaves on its own; errors and cancels wait for the user.
+const AUTO_DISMISS_MS = 300;
+
 /**
  * @class __window_upload_progress
  * @extends __window_core
@@ -71,7 +76,7 @@ class __window_upload_progress extends __window_core {
     );
 
     this._isExpanded = true;
-    this._autoMinimizeTimer = null; // 5s auto-dismiss once uploads settle (no pending)
+    this._autoMinimizeTimer = null; // auto-dismiss once uploads settle (see _maybeArmAutoMinimize)
     this._totalFiles = 0;
     this._fileProgressMap = {}; // Track progress for speed calculation
     this._pendingProgressUpdates = new Map(); // Queue progress updates when DOM not ready
@@ -981,7 +986,7 @@ class __window_upload_progress extends __window_core {
     }, 200);
     
     
-    // When this was the last pending file, arm the 5s auto-collapse.
+    // When this was the last pending file, dismiss the popup.
     this._maybeArmAutoMinimize();
   }
 
@@ -1342,7 +1347,8 @@ class __window_upload_progress extends __window_core {
       if (this._uploading) return false;
       if (mgr && (mgr.activeCount() > 0 || mgr.queuedCount() > 0)) return false;
       for (const e of this._bundle || []) {
-        if (this._entryDisplayStatus(e) === "active") return false;
+        const st = this._entryDisplayStatus(e);
+        if (st === "active" || st === "paused") return false;
       }
       return this._hasTrackedUploads();
     }
@@ -1352,18 +1358,22 @@ class __window_upload_progress extends __window_core {
   }
 
   /**
-   * Arm the 5s auto-dismiss once uploads settle (nothing left 'uploading').
-   * Works for both legacy (_uploadItems) and bundle drag-drop paths.
-   * A new upload or manual toggle cancels the countdown.
+   * Dismiss the popup as soon as uploads settle (nothing left 'uploading')
+   * and everything went well. Works for both legacy (_uploadItems) and bundle
+   * drag-drop paths, expanded or collapsed: a finished upload has nothing
+   * left to show, the file is already in the grid.
+   *
+   * The delay is only long enough for the last frame (100%, check icon) to
+   * paint, so the user sees the upload land rather than the popup vanish
+   * mid-progress. It used to linger for 5 s, which read as "still busy".
    *
    * "Settled" is not the same as "went well": a cancelled or errored batch is
-   * settled too, and dismissing THAT on a timer throws away the only account of
-   * what happened — including the Retry button an errored row offers, which is
-   * useless if it disappears five seconds after appearing. A batch that ended
-   * badly waits for the user to dismiss it.
+   * settled too, and dismissing THAT throws away the only account of what
+   * happened — including the Retry button an errored row offers. A batch that
+   * ended badly waits for the user to dismiss it.
    */
   _maybeArmAutoMinimize() {
-    if (!this._isUploadSettled() || !this._hasTrackedUploads() || !this._isExpanded) {
+    if (!this._isUploadSettled() || !this._hasTrackedUploads()) {
       this._cancelAutoMinimize();
       return;
     }
@@ -1371,12 +1381,12 @@ class __window_upload_progress extends __window_core {
       this._cancelAutoMinimize();
       return;
     }
-    if (this._autoMinimizeTimer) return; // already counting down
+    if (this._autoMinimizeTimer) return; // already scheduled
     this._autoMinimizeTimer = setTimeout(() => {
       this._autoMinimizeTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
-      if (this._isUploadSettled() && this._isExpanded) this.goodbye();
-    }, 5000);
+      if (this._isUploadSettled() && !this._hasUnhappyEntry()) this.goodbye();
+    }, AUTO_DISMISS_MS);
   }
 
   /**
@@ -2009,6 +2019,10 @@ class __window_upload_progress extends __window_core {
       }
     });
     job.on("error", this._renderProgressListThrottled);
+    // Network went away / came back: swap the row's spinner for Resume and the
+    // header for "paused", then back again.
+    job.on("paused", () => { this._renderProgressListThrottled(); this._renderAggregateThrottled(); });
+    job.on("resumed", () => { this._renderProgressListThrottled(); this._renderAggregateThrottled(); });
     job.on("done", ({ canceled }) => {
       this._onBundleDone(canceled, job);
       // Symmetric with _onFileDone: a caller that is not a folder grid needs to
@@ -2082,8 +2096,11 @@ class __window_upload_progress extends __window_core {
     // The bundle drag-drop path never runs through _refreshUI, so the header
     // title would otherwise stay stuck at "Uploading 0 files". Drive it here
     // from the job's own file counters so the user sees uploaded/total files.
+    const paused = jobs.some((j) => j._current && j._current.entry && j._current.entry.status === "paused");
     this.ensurePart("upload-title").then((p) => p.set({
-      content: `${LOCALE.UPLOADING || "Uploading"} ${filesDone || 0}/${filesTotal || 0} ${LOCALE.FILES || "files"}`,
+      content: paused
+        ? (LOCALE.UPLOAD_PAUSED || "Upload paused - waiting for network")
+        : `${LOCALE.UPLOADING || "Uploading"} ${filesDone || 0}/${filesTotal || 0} ${LOCALE.FILES || "files"}`,
     }));
   }
 
@@ -2131,12 +2148,15 @@ class __window_upload_progress extends __window_core {
       // means the user deliberately passed on a name conflict — that IS a
       // resolved outcome and keeps the tick.
       if (e.status === "canceled") return "canceled";
+      // Waiting for the network: not failed, not done, and not spinning either.
+      if (e.status === "paused") return "paused";
       if (e.status === "done" || e.status === "skipped") return "done";
       return "active";
     }
     const s = this._folderStats(e);
     if (e.status === "error" || s.hasError) return "error";
     if (e.status === "canceled" || s.hasCanceled) return "canceled";
+    if (s.hasPaused) return "paused";
     if (s.total > 0 && s.done >= s.total) return "done";
     if (e.status === "done") return "done";
     return "active";
@@ -2145,7 +2165,7 @@ class __window_upload_progress extends __window_core {
   // One cheap walk over a folder subtree (ints/refs only, no UI) returning
   // { done, total, hasError }. Bounded work: only called for shown folder rows.
   _folderStats(folder) {
-    let done = 0, total = 0, hasError = false, hasCanceled = false;
+    let done = 0, total = 0, hasError = false, hasCanceled = false, hasPaused = false;
     const walk = (l) => {
       for (const e of l || []) {
         if (e.kind === "folder") {
@@ -2159,11 +2179,12 @@ class __window_upload_progress extends __window_core {
           // Deliberately NOT counted toward `done`: a cancelled file never
           // reached the server, so "3 / 10" must keep reading 3.
           else if (e.status === "canceled") hasCanceled = true;
+          else if (e.status === "paused") hasPaused = true;
         }
       }
     };
     walk(folder.children);
-    return { done, total, hasError, hasCanceled };
+    return { done, total, hasError, hasCanceled, hasPaused };
   }
 
   _buildProgressRow(e) {
@@ -2175,14 +2196,23 @@ class __window_upload_progress extends __window_core {
     // so Button.Svg can't render them). File: derive from name via getFileIcon.
     const ico = isFolder ? "dock-folder" : getFileIcon({ name: e.name });
 
-    // Right-hand status indicator: Retry (error) · warning (canceled) ·
-    // check (done) · spinner (active).
+    // Right-hand status indicator: Retry (error) · Resume (paused) ·
+    // warning (canceled) · check (done) · spinner (active).
     let statusEl;
     if (st === "error") {
       statusEl = Skeletons.Note({
         className: `${pfx}__progress-retry`,
         content: LOCALE.RETRY || "Retry",
         service: `retry:${e.id}`, uiHandler: [this],
+      });
+    } else if (st === "paused") {
+      // The link dropped mid-transfer: the chunks already sent are kept and
+      // the upload picks up on its own when the browser is back online.
+      // Resume lets the user push it now instead of waiting for the probe.
+      statusEl = Skeletons.Note({
+        className: `${pfx}__progress-retry`,
+        content: LOCALE.RESUME || "Resume",
+        service: `resume:${e.id}`, uiHandler: [this],
       });
     } else if (st === "canceled") {
       // A warning glyph, NOT the Retry affordance: this file stopped because
@@ -2323,6 +2353,20 @@ class __window_upload_progress extends __window_core {
     this._renderStaging();
   }
 
+  /**
+   * Resume button on a paused row: poke the job holding that entry in flight.
+   * A folder row resumes whichever job is paused, since only the in-flight
+   * file can be paused and it is the one the folder is waiting on.
+   */
+  _resumeEntry(id) {
+    const jobs = (this._jobs || []).slice();
+    if (this._job && !jobs.includes(this._job)) jobs.push(this._job);
+    const live = jobs.filter((j) => j && typeof j.resumeCurrent === "function");
+    const owner = live.find((j) => j._current && j._current.entry && String(j._current.entry.id) === String(id));
+    if (owner) { owner.resumeCurrent(); return; }
+    for (const j of live) j.resumeCurrent();
+  }
+
   _retryEntry(id) {
     if (!this._job) return;
     const find = (list) => {
@@ -2382,6 +2426,7 @@ class __window_upload_progress extends __window_core {
       this._removeFromBundle(service.slice(7)); return;
     }
     if (service && service.indexOf("retry:") === 0) { this._retryEntry(service.slice(6)); return; }
+    if (service && service.indexOf("resume:") === 0) { this._resumeEntry(service.slice(7)); return; }
     if (service === "open-uploaded") {
       // Focus the finished file/folder ON THE LAYOUT only: locate its tile in the
       // current grid and select + scroll it into view. Never open a viewer / fall
@@ -2592,9 +2637,17 @@ __window_upload_progress.getOrCreate = function() {
     // Check if window already exists
     const existing = window.Wm.getItemsByKind('window_upload_progress');
     if (existing && existing.length > 0 && !existing[0].isDestroyed()) {
-      _pendingPromise = null;
-      resolve(existing[0]);
-      return;
+      // A window in the middle of its goodbye fade (selfDestroy's 2 s timeout)
+      // is still listed but about to vanish. Handing it a new batch made the
+      // popup disappear while the upload went on headless — likely right after
+      // a finished batch dismissed itself. Finish its exit now, launch a fresh one.
+      if (existing[0].stopping) {
+        try { existing[0].selfDestroy({ now: true }); } catch (e) { /* already gone */ }
+      } else {
+        _pendingPromise = null;
+        resolve(existing[0]);
+        return;
+      }
     }
     
     // Launch new window

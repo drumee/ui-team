@@ -34,6 +34,10 @@ const __skl_window_connect = function(_ui_, localUser, peer) {
         className: `${_ui_.fig.family}__reaction-stack`,
         sys_pn: "reaction-stack",
       }),
+      // Parked-call furniture, shared with the meeting (both park into the same
+      // desk dock via builtins/webrtc/call-parking). Inert until the shell skin
+      // sees data-call-tile="1" on the window root.
+      ...require("builtins/webrtc/skeleton/call-tile")(_ui_),
     ],
   });
 

@@ -135,6 +135,13 @@
         gap: 8px;
       }
 
+      // The desktop header's `margin-left: auto` (see &__topbar-actions) would
+      // push the actions to the right edge of this COLUMN; keep them where
+      // they were.
+      .panel-activity__topbar-actions {
+        margin-left: 0;
+      }
+
       .panel-activity__title {
         font-size: 19px;
         line-height: 26px;
@@ -271,6 +278,7 @@
       .panel-activity__close-btn {
         display: flex;
         position: absolute;
+        margin-left: 0;
         top: 12px;
         right: 12px;
         width: 36px;
@@ -296,10 +304,34 @@
     }
   }
 
-  // Close button is mobile-only; the desktop panel closes via its nav
-  // toggle, so keep it out of the desktop topbar entirely.
+  // Close button at the end of the header, after Mark all read / Unreads.
+  // Mobile pins it to the card's corner instead (the block above, which is more
+  // specific and so wins there).
   &__close-btn {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin-left: 8px;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #65656c;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    &:hover,
+    &:active {
+      background-color: rgba(0, 0, 0, 0.06);
+      color: #0b0a21;
+    }
   }
 
   &__main {
@@ -376,6 +408,10 @@
   &__topbar-actions {
     align-items: center;
     gap: 12px;
+    // Takes the header's free space, so the title stays left and the actions
+    // sit right against the close button. With three children, the topbar's
+    // space-between alone would push the actions into the middle.
+    margin-left: auto;
   }
 
   &__mark-read-btn {
@@ -602,6 +638,27 @@
   &__ui[data-has-priority="1"] &__empty {
     display: none;
   }
+
+  // ── Responsive: fill the workspace on tablet (≤ 1024px) ──────────
+  // Covers the desk workspace (__right-side) — the box chat-p2p fills from
+  // settings-main-slot — instead of a 512px card against the right edge.
+  // Stays position:fixed (its __panel-inner anchor is zero-width, so
+  // inset/100% sizing would collapse it); the --desk-canvas-inset-* insets
+  // are measured in JS (libs/desk-canvas), and the fallbacks are the desktop
+  // canvas with the 64px mini rail. Position and size ONLY — the
+  // [data-state] pair above keeps driving the slide. Phones keep the centred
+  // card (&__ui[data-device="mobile"]); the :not() keeps the regimes apart.
+  @media (max-width: 1024px) {
+    &__ui:not([data-device="mobile"]) {
+      top: var(--desk-canvas-inset-top, var(--desk-canvas-top, 54px));
+      right: var(--desk-canvas-inset-right, var(--desk-gutter, 8px));
+      bottom: var(--desk-canvas-inset-bottom, var(--desk-gutter, 8px));
+      left: var(--desk-canvas-inset-left, 80px);
+      width: auto;
+      max-width: none;
+      height: auto;
+    }
+  }
 }
 
 // ── Dark mode overrides ─────────────────────────────────────────
@@ -676,6 +733,13 @@ html[data-theme="dark"] {
 /* Approve-access popup shown from an access-request notification (Figma 63) */
 .panel-activity-approve-request {
   &__panel {
+    // `drumee.typo` only emits `font-family` for a whitelist of $weight values,
+    // and 600 is not one of them — so every 600 rule below inherited instead.
+    // This card is lifted out to <body> (_liftArOverlay), whose font-family is
+    // the browser default, so those rules rendered in Times New Roman next to
+    // their Armin Grotesk siblings. Set the family once here and let the whole
+    // card inherit it.
+    font-family: var(--font-main);
     width: 380px;
     max-width: calc(100% - 32px);
     gap: 16px;
@@ -807,6 +871,8 @@ html[data-theme="dark"] {
   &__confirm {
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--primary-50, #433cc5);
@@ -819,6 +885,8 @@ html[data-theme="dark"] {
   &__deny {
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--red-500, #ff5a5f);

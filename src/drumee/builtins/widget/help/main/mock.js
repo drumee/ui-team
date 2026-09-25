@@ -34,8 +34,9 @@ const DOCS = "https://docs.drumee.com";
  *  - `HELP_<PAGE>_VIDEO_URL` — a plain file URL, for an install that serves
  *    the video itself. Wins over the node reference when both are set.
  *
- * All three ship empty: with no source the page keeps its "coming soon"
- * frame (skeleton/common.js) rather than showing a player that cannot load.
+ * All of them ship empty, so the page plays the copy bundled with the UI
+ * (BUNDLED_VIDEOS below). Only a page with no bundled copy either keeps its
+ * "coming soon" frame (skeleton/common.js).
  */
 function pageVideo(page) {
   // Optional: a still from the video, shown on the frame before playback
@@ -47,8 +48,29 @@ function pageVideo(page) {
   if (src) return { src, poster };
   const nid = LOCALE[`HELP_${page}_VIDEO_NID`];
   const hub_id = LOCALE[`HELP_${page}_VIDEO_HUB`];
-  return nid && hub_id ? { nid, hub_id, poster } : null;
+  if (nid && hub_id) return { nid, hub_id, poster };
+  // Nothing configured: fall back to the copy bundled with the UI build.
+  // Its poster goes with it — a configured poster belongs to a configured
+  // video, never to this one.
+  return BUNDLED_VIDEOS[page] || null;
 }
+
+/**
+ * Default tutorial videos, shipped inside the UI build (webpack emits them
+ * as content-hashed files beside the bundle, see webpack/module.js) so every
+ * host that runs this UI can play them — no static tree to keep in sync.
+ * Each require() resolves to the file's public URL.
+ */
+const BUNDLED_VIDEOS = {
+  PRODUCT_TOUR: {
+    src: require("./assets/product-tour-v1.mp4"),
+    poster: require("./assets/product-tour-v1-poster-v2.webp"),
+  },
+  SELF_HOSTING: {
+    src: require("./assets/self-hosting-v1.mp4"),
+    poster: require("./assets/self-hosting-v1-poster.webp"),
+  },
+};
 
 /** Nav entries for the inner Get-help sidebar, in display order. */
 function navPages() {

@@ -292,51 +292,22 @@ class __window_manager extends mfsInteract {
     return !!(_K.permission.write & privilege);
   }
 
-  _rejectUploadTarget() {
+  _rejectUploadTarget(target) {
     // Say the right thing: while over-limit the refusal has nothing to do
     // with the dropper's privilege, and "insufficient privilege" sends the
     // user asking an admin for rights nobody can grant.
+    // Both answer with the app's popup (Butler), like every other refusal —
+    // not a corner toast.
     const OverLimit = require("libs/over-limit");
-    this._showUploadDeniedToast(
-      OverLimit.isLocked() ? OverLimit.blockedMessage("write") : LOCALE.WEAK_PRIVILEGE,
+    if (OverLimit.isLocked()) {
+      OverLimit.notifyBlocked("write");
+      return;
+    }
+    const privilege =
+      target && target.mget && (target.mget(_a.privilege) || target.mget(_a.permission));
+    require("libs/permission-denied").sayWeakPrivilege(
+      LOCALE.PERMISSION_ACTION_UPLOAD, privilege, _K.permission.write,
     );
-  }
-
-  _showUploadDeniedToast(message) {
-    const render = (wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) {
-        Butler.say(message);
-        return;
-      }
-      if (
-        this._uploadDeniedToast &&
-        (!this._uploadDeniedToast.isDestroyed || !this._uploadDeniedToast.isDestroyed())
-      ) {
-        this._uploadDeniedToast.suppress();
-      }
-      wrapper.append(
-        Skeletons.Box.X({
-          className: `${this.fig.group}__drop-denied-toast`,
-          kids: [
-            Skeletons.Note({
-              className: `${this.fig.group}__drop-denied-toast-icon`,
-              content: "!",
-            }),
-            Skeletons.Note({
-              className: `${this.fig.group}__drop-denied-toast-text`,
-              content: message,
-            }),
-          ],
-        }),
-      );
-      this._uploadDeniedToast = wrapper.children.last();
-      this._uploadDeniedToast.selfDestroy({ timeout: Visitor.timeout(2200) });
-    };
-
-    if (this.tooltipsWrapper) return render(this.tooltipsWrapper);
-    this.ensurePart("wrapper-tooltips").then(render).catch(() => {
-      Butler.say(message);
-    });
   }
 
   /**
@@ -384,7 +355,7 @@ class __window_manager extends mfsInteract {
     }
 
     if (!this._canUploadToTarget(target)) {
-      this._rejectUploadTarget();
+      this._rejectUploadTarget(target);
       return;
     }
     if (!roots.length) {
@@ -1804,6 +1775,9 @@ class __window_manager extends mfsInteract {
     const overlay = overlayOpt == null ? "scrim" : overlayOpt;
     return new Promise(function (resolve, reject) {
       Kind.waitFor(kind).then((a) => {
+        // Read BEFORE w.feed(), which may replace a dialog already in the host
+        // and so start its teardown. See where this is stamped below.
+        const seq = String((~~(w && w.el && w.el.dataset.overlaySeq)) + 1);
         const s = w.feed({ ...rest, kind });
         // The host is only SIZED by its [data-state="open"] rule (wm/skin:
         // position:absolute, inset:0, 100%x100%). Without the attribute it is an
@@ -1833,6 +1807,22 @@ class __window_manager extends mfsInteract {
           // keeps its [data-state="open"] `background: transparent;
           // backdrop-filter: none` — sized and centring, but not painting.
           w.el.dataset.overlay = overlay;
+          // Stamp WHO owns that backdrop, so the clear below can tell.
+          //
+          // Raising a second confirm while a first one is still up settles the
+          // first: `w.feed()` above replaces the dialog, and the outgoing one's
+          // onBeforeDestroy rejects its promise (window/confirm ask()). That
+          // rejection is delivered as a MICROTASK, i.e. after this synchronous
+          // block has already stamped the new dialog's backdrop — so the
+          // outgoing settle would clear a value it no longer owns and leave the
+          // incoming card standing on a bare host.
+          //
+          // Live symptom, reported on the Admin Console upsell: its topbar
+          // button is not covered by this host on desktop, so it can be clicked
+          // again with the card already up — and the second click dissolved the
+          // backdrop while the card stayed. A counter is enough to tell the two
+          // apart; the value cannot, since both calls write "blur".
+          w.el.dataset.overlaySeq = seq;
         }
         // Clear the backdrop when the prompt settles, whichever way it goes.
         //
@@ -1842,11 +1832,17 @@ class __window_manager extends mfsInteract {
         // NEXT card, which never asked for it. data-state is cleared for us
         // when the wrapper empties; data-overlay is not.
         //
+        // ONLY IF THIS CALL STILL OWNS THE HOST — see the stamp above. A
+        // dialog that has already been replaced clears nothing.
+        //
         // Two-arg then(), not .then().catch(): a .catch() placed after would
         // also swallow anything resolve() itself throws, and turn a caller's
         // bug into a silent rejection of this promise.
         const settle = (fn) => (v) => {
-          if (w && w.el) w.el.dataset.overlay = "";
+          if (w && w.el && w.el.dataset.overlaySeq === seq) {
+            w.el.dataset.overlay = "";
+            delete w.el.dataset.overlaySeq;
+          }
           return fn(v);
         };
         s.ask().then(settle(resolve), settle(reject));

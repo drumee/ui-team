@@ -207,7 +207,7 @@ export function typeFilter(ui, pfx) {
     LOCALE.ALL || "All",
     LOCALE.DOCS || "Docs",
     "PDF",
-    LOCALE.IMAGES || "Images",
+    LOCALE.MEDIA || "Media",
     LOCALE.OTHER || "Other",
   ];
   return Skeletons.Box.X({

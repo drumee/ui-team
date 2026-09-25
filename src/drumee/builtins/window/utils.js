@@ -6,11 +6,8 @@ const Rectangle = require("rectangle-node");
 const { TimelineMax, Expo, TweenMax } = require("@drumee/ui-core/vendor");
 const EDITABLES = require('../player/document/editable');
 const {
-  GROUP_ORDER,
-  GROUP_LABEL,
-  groupOf,
   bucketByGroup,
-  isGrouped,
+  sectionsFor,
 } = require("./skeleton/toolkit/file-group");
 
 // Filetypes that open as a CONTAINER window rather than a file viewer — the
@@ -613,7 +610,7 @@ class __window_mfs extends DrumeeMFS {
     );
   }
 
-  _doGroupPartition(listPart, scrollEl) {
+  _doGroupPartition(listPart, scrollEl, sections) {
     const collection = listPart.collection;
     const rankOf = new Map();
     const groupOfEl = new Map();
@@ -624,7 +621,7 @@ class __window_mfs extends DrumeeMFS {
         if (!view || !view.el || !view.model) return;
         const index = collection.indexOf(view.model);
         if (index >= 0) rankOf.set(view.el, index);
-        groupOfEl.set(view.el, groupOf(view.model.toJSON()));
+        groupOfEl.set(view.el, sections.groupOf(view.model.toJSON()));
         if (view.el.dataset?.filetype && scrollEl.contains(view.el)) {
           items.add(view.el);
         }
@@ -652,7 +649,11 @@ class __window_mfs extends DrumeeMFS {
       const value = rankOf.get(el);
       return value == null ? Number.MAX_SAFE_INTEGER : value;
     };
-    const byGroup = bucketByGroup(items, (item) => groupOfEl.get(item));
+    const byGroup = bucketByGroup(
+      items,
+      (item) => groupOfEl.get(item),
+      sections,
+    );
 
     const existing = new Map();
     for (const child of [...scrollEl.children]) {
@@ -660,7 +661,7 @@ class __window_mfs extends DrumeeMFS {
       existing.set(child.dataset.group, child);
     }
 
-    for (const key of GROUP_ORDER) {
+    for (const key of sections.order) {
       const groupedItems = byGroup.get(key).sort((a, b) => rank(a) - rank(b));
       let wrap = existing.get(key);
       if (!groupedItems.length) {
@@ -678,7 +679,7 @@ class __window_mfs extends DrumeeMFS {
         title.className = "group-section-title";
         wrap.prepend(title);
       }
-      title.textContent = LOCALE[GROUP_LABEL[key]];
+      title.textContent = LOCALE[sections.label[key]];
       groupedItems.forEach((item) => wrap.appendChild(item));
       scrollEl.appendChild(wrap);
     }
@@ -687,6 +688,17 @@ class __window_mfs extends DrumeeMFS {
     // Remove them only after the move so a mode transition cannot discard a view.
     for (const child of [...scrollEl.children]) {
       if (isSectionElement(child) && !child.classList.contains("group-section")) {
+        child.remove();
+      }
+    }
+    // Same for a section left over from the OTHER set (Group view ↔ Media
+    // tab): its tiles have just moved out, and only a bare title would remain.
+    for (const child of [...scrollEl.children]) {
+      if (
+        child.classList.contains("group-section") &&
+        !sections.order.includes(child.dataset.group) &&
+        !child.querySelector(":scope > [data-filetype]")
+      ) {
         child.remove();
       }
     }
@@ -706,8 +718,10 @@ class __window_mfs extends DrumeeMFS {
     const scrollEl = listPart.el.querySelector(".smart-container");
     if (!scrollEl) return false;
 
-    if (isGrouped(this)) {
-      return this._doGroupPartition(listPart, scrollEl);
+    // Group view, or the Media tab's Images / Videos / Audio split.
+    const sections = sectionsFor(this);
+    if (sections) {
+      return this._doGroupPartition(listPart, scrollEl, sections);
     }
 
     // A mode transition normally rebuilds the list. If an observer from the
@@ -835,12 +849,21 @@ class __window_mfs extends DrumeeMFS {
   acknowledge(msg = LOCALE.ACK_COPY_LINK) {
     var c = require("@drumee/ui-core/letc/preset/ack")(this, msg);
     c.className = `${c.className} ${this.fig.group}-topbar__copy-link-ack`;
-    this.append(c);
-    const l = this.children.last();
+    const host = this._acknowledgeHost();
+    host.append(c);
+    const l = host.children.last();
     var f = () => {
       return l.suppress();
     };
     return setTimeout(f, Visitor.timeout());
+  }
+
+  /**
+   * Where `acknowledge` mounts its toast. The window itself by default; a
+   * window whose own children must not be re-rendered overrides it.
+   */
+  _acknowledgeHost() {
+    return this;
   }
 
   /**
@@ -1051,7 +1074,7 @@ class __window_mfs extends DrumeeMFS {
     // naming the dead workspace, and _snapshotWorkspace persisting it for the
     // next page load to reopen.
     if (sameHub && args.filetype === _a.hub) {
-      this.goodbye();
+      this.goodbye(this._goodbyeArgs());
       return;
     }
 
@@ -1061,9 +1084,24 @@ class __window_mfs extends DrumeeMFS {
     // `new RegExp("^" + filepath)` mis-parsed any name with regex syntax in it.
     const path = this._ownPath();
     if (sameHub && path && path !== "/" && this._pathIsUnder(path, filepath)) {
-      this.goodbye();
+      this.goodbye(this._goodbyeArgs());
       return;
     }
+  }
+
+  /**
+   * How this window leaves when the node it shows is removed under it.
+   *
+   * A popup shrinks towards its trigger (ui-core goodbye: 0.5s scale to 0.2),
+   * which reads as "that window closed". A HEADLESS pane fills the canvas and
+   * has no trigger, so the same tween shrank the whole workspace into the
+   * top-left corner for half a second — the "flash" seen when deleting the
+   * open workspace, right before the replacement faded in. A pane goes at
+   * once, the way a workspace switch already drops the outgoing pane
+   * (headlessLayer.feed). undefined keeps goodbye()'s own defaults.
+   */
+  _goodbyeArgs() {
+    return this.mget(_a.headless) ? { now: true } : undefined;
   }
 
   /**

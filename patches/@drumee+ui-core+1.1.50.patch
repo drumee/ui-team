@@ -344,7 +344,7 @@ index 838406c..dacf105 100644
     * 
     */
 diff --git a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
-index 13edb44..e8df4bc 100644
+index 13edb44..fa378f5 100644
 --- a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 +++ b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
 @@ -16,7 +16,23 @@ class __user_profile extends LetcBox {
@@ -421,7 +421,72 @@ index 13edb44..e8df4bc 100644
      return `
        <img class="${this.fig.family}__icon ${this.fig.family}__picture picture" data-flow="x" src="${src}">
      `
-@@ -168,8 +212,20 @@ class __user_profile extends LetcBox {
+@@ -116,30 +160,43 @@ class __user_profile extends LetcBox {
+    * 
+    */
+   initiales() {
+-    let firstname, lastname;
+-    try {
+-      firstname = this.mget(_a.firstname)[0] || '?';
+-    } catch (error) {
+-      firstname = '';
+-    }
+-    try {
+-      lastname = this.mget(_a.lastname)[0] || firstname[0] || "";
+-    } catch (error1) {
+-      lastname = '';
+-    }
++    // Never invent a letter. The previous form read `mget(firstname)[0] || '?'`,
++    // so an EMPTY-STRING firstname (not a missing one — `''[0]` is undefined and
++    // does not throw) became '?', and the lastname line then copied that '?'
++    // through its `|| firstname[0]` fallback: a person whose name parts are both
++    // '' rendered the literal "??" in their avatar. Worse, "??" is two characters
++    // long, so it also defeated the two escape hatches below it — the whole-name
++    // fallback (guarded on a zero-length result) and the empty-initials path in
++    // _show() that draws the generic avatar. Callers legitimately pass '' when
++    // they normalise a missing part (`mget(_a.firstname) || ''`), and some rows
++    // genuinely have no parts at all: hub_get_members_by_type overwrites
++    // firstname/lastname from the REQUESTING user's contact book, where a contact
++    // created from an email invitation has both NULL — which is why the same
++    // member could show initials on one participant's screen and "??" on
++    // another's, with the name beside it still correct.
++    const words = (v) => `${v == null ? '' : v}`.trim().split(/[\s,]+/).filter(Boolean);
++    const letter = (v) => (v ? v[0] : '');
+ 
+-    if ((firstname.length + lastname.length) === 0) {
+-      let a, b;
+-      try {
+-        [a, b] = this.mget(_a.surname).split(/ /);
+-        firstname = a[0];
+-        lastname = b[0];
+-      } catch (error2) {
+-        firstname = '';
+-      }
++    let fw = words(this.mget(_a.firstname));
++    const lw = words(this.mget(_a.lastname));
++
++    if (!fw.length && !lw.length) {
++      // No name parts at all. Every caller that holds only a whole name puts it
++      // in one of these — `surname` (contacts, member services), `fullname` (a
++      // members roster, an attendee card), `username` (a conference display
++      // name). Read it here so those surfaces derive the SAME initials, and the
++      // same colorFromName() colour, as the ones that do pass the parts.
++      fw = words(this.mget(_a.surname) || this.mget(_a.fullname)
++        || this.mget(_a.username) || this.mget('display'));
+     }
+ 
+-    return firstname + lastname;
++    // Several callers hand a WHOLE name in as `firstname` (it is the only field
++    // some of their sources fill). Take the second word as the last initial
++    // instead of repeating the first letter — "Vy Luong" is "VL" here, matching
++    // what the surfaces that pass real parts show for the same person.
++    // Genuinely nothing to show returns '', so _show() falls through to the
++    // generic avatar template rather than printing punctuation at the user.
++    return letter(fw[0]) + (letter(lw[0]) || letter(fw[1]));
+   }
+ 
+   /**
+@@ -168,8 +225,20 @@ class __user_profile extends LetcBox {
     * 
     */
    loadImage() {
@@ -443,7 +508,7 @@ index 13edb44..e8df4bc 100644
        this.el.dataset.default = 1;
        this._show('i');
        return;
-@@ -186,7 +242,7 @@ class __user_profile extends LetcBox {
+@@ -186,7 +255,7 @@ class __user_profile extends LetcBox {
      };
  
      const imageType = this.mget(_a.type) || _a.vignette
@@ -452,7 +517,7 @@ index 13edb44..e8df4bc 100644
    }
  
    /**
-@@ -194,7 +250,7 @@ class __user_profile extends LetcBox {
+@@ -194,7 +263,7 @@ class __user_profile extends LetcBox {
     * @param {*} e
      */
    _onError(e) {

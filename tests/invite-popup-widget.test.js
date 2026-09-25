@@ -1,0 +1,445 @@
+// The invite popup controller against stub LetcBox / services. The widget and
+// the tree model are real; the skeletons, skin and network are not.
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const path = require("node:path");
+const Module = require("node:module");
+
+const DIR = path.join(__dirname, "..", "src/drumee/builtins/widget/invite-popup");
+const ADMIN = 31;
+let orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+
+const STUBS = {
+  "./skin": {},
+  "./skeleton": Object.assign(() => ({}), {
+    ROLES: [{ id: "view", bit: 3 }, { id: "edit", bit: 15 }, { id: "admin", bit: 31 }],
+    DEFAULT_ROLE_IDS: ["edit"],
+    computePrivilege: (ids) => ({ view: 3, edit: 15, admin: 31 })[ids[0]] || 15,
+    summarizeRoles: (ids) => ids[0],
+    workspaceGlyph: () => "",
+    linkPanelKids: () => [],
+    orgCardKids: () => [],
+    wsCardKids: () => [],
+  }),
+  "./skeleton/tree": { rows: (ui, tree, st) => [{ rows: true, st }] },
+  "libs/contact-lookup": { lookupContacts: async () => [], suggestionRows: () => [] },
+  "libs/billing": { isSeatLimitReply: () => false, showSeatLimitReached() {} },
+  "libs/org-overview": {
+    orgOverview: async () => orgAnswer,
+    inOrganization: () => !!orgAnswer.organisation,
+  },
+  "media/grid/template/folder": () => "",
+  "@drumee/ui-essentials": { filesize: (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${n} B`) },
+};
+const load = Module._load;
+Module._load = function (r, p, m) {
+  return Object.prototype.hasOwnProperty.call(STUBS, r) ? STUBS[r] : load.call(this, r, p, m);
+};
+
+global.SERVICE = { desk: { home: "desk.home" }, hub: { invite: "hub.invite" } };
+global._a = { hub: "hub", commit: "commit", service: "service" };
+global._e = { close: "close", destroy: "destroy" };
+global.LOCALE = new Proxy({}, { get: (t, k) => k });
+global.Visitor = { id: "me", profile: () => ({ email: "me@x.com" }) };
+global.Wm = { alert() {} };
+global._ = { isFunction: (f) => typeof f === "function", isArray: Array.isArray };
+// A document that keeps its listeners, so the outside-click tests can dispatch.
+const listeners = [];
+global.document = {
+  addEventListener(type, fn, capture) { listeners.push({ type, fn, capture: !!capture }); },
+  removeEventListener(type, fn, capture) {
+    const i = listeners.findIndex((l) => l.type === type && l.fn === fn && l.capture === !!capture);
+    if (i >= 0) listeners.splice(i, 1);
+  },
+};
+// Capture listeners first, then bubble — the order a real document runs them
+// for a target below it. `path` stands in for composedPath().
+//
+// `stoppedBelow`: an element on the path stops propagation in its own handler,
+// as every ACTIVE ui-core view does in __handleClick (letc.js `el.onclick`) —
+// the wrapper-modal behind the popup, the topbar, the rail. Document capture
+// listeners still run (they fire before the target); bubble listeners do not.
+const dispatch = (type, path, { stoppedBelow = false } = {}) => {
+  const e = { type, target: path[0], composedPath: () => path };
+  for (const l of listeners.slice()) if (l.type === type && l.capture) l.fn(e);
+  if (stoppedBelow) return;
+  for (const l of listeners.slice()) if (l.type === type && !l.capture) l.fn(e);
+};
+
+const part = () => ({
+  el: { dataset: {}, querySelector: () => null, querySelectorAll: () => [] },
+  feed(x) { this.fed = x; },
+  clear() {},
+  set() {},
+});
+global.LetcBox = class {
+  constructor(opt = {}) {
+    this._opt = opt;
+    this.el = { dataset: {}, addEventListener() {}, removeEventListener() {}, contains: () => false };
+    this.fig = { family: "invite-popup" };
+  }
+  initialize() {}
+  declareHandlers() {}
+  mget(k) { return this._opt[k]; }
+  // Counts WHOLE-widget re-feeds: each one rebuilds every part (chips included).
+  feed() { this.wholeFeeds = (this.wholeFeeds || 0) + 1; }
+  triggerHandlers(a) { (this.triggered = this.triggered || []).push(a); }
+  warn() {}
+};
+
+const Popup = require(DIR);
+const home = [
+  { hub_id: "h1", filename: "Design", area: "private", privilege: ADMIN },
+  { hub_id: "h2", filename: "Sales", area: "private", privilege: ADMIN },
+  { hub_id: "h3", filename: "Nope", area: "private", privilege: 3 },
+];
+const cmd = (service, dataset = {}) => ({
+  mget: (k) => (k === "service" ? service : undefined),
+  el: { dataset },
+});
+
+function make(opt = {}) {
+  const p = new Popup(opt);
+  p.initialize(opt);
+  p.fetchService = async () => home;
+  p.posted = [];
+  p.postService = async (svc, args) => { p.posted.push([svc, args]); return { results: [] }; };
+  for (const pn of ["org", "ws-card", "tree", "all-check", "send-btn", "email-error", "workspace-error", "link-panel", "tabs"])
+    p.onPartReady(part(), pn);
+  return p;
+}
+
+test("development build: an org without departments gets mock ones", async () => {
+  global.__BUILD__ = "development";
+  try {
+    const p = make();
+    await p._loadData();
+    assert.deepEqual(p._tree.departments.map((d) => d.id), ["mock-1"]);
+    assert.deepEqual(p._tree.departments[0].workspaces.map((w) => w.hub_id), ["h1", "h2"]);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+test("production build: no mock departments", async () => {
+  global.__BUILD__ = "production";
+  try {
+    const p = make();
+    await p._loadData();
+    assert.equal(p._tree.departments.length, 0);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+// ── Workspace scope (sidebar Invite inside a workspace) ─────────────────
+const wsOpt = { scope: "workspace", hub_id: "h2", hub_name: "Sales", hub_area: "private" };
+
+test("workspace scope: that workspace is the selection; no desk.home read", async () => {
+  const p = make(wsOpt);
+  const calls = [];
+  p.fetchService = async (a) => { calls.push(a.service || a); return home; };
+  p.postService = async (svc, args) => {
+    p.posted.push([svc, args]);
+    return svc === "hub.show_privilege" ? { filesize: "3500000000" } : { results: [] };
+  };
+  global.SERVICE.hub.show_privilege = "hub.show_privilege";
+  await p._loadData();
+  assert.equal(p._scope, "workspace");
+  assert.deepEqual([...p._checked], ["h2"]);
+  assert.ok(!calls.includes("desk.home"), "no workspace list to fetch");
+  assert.equal(p._ws.name, "Sales");
+  assert.equal(p._ws.sizeText, "3.5 GB");
+  assert.ok(Array.isArray(p._wsCardBox.fed), "card re-fed with the size");
+});
+
+test("workspace scope: member count from the org overview when the caller may see it", async () => {
+  orgAnswer = { organisation: { name: "Acme" }, can_browse: 1, departments: [], workspaces: [{ hub_id: "h2", members: 24 }] };
+  try {
+    const p = make(wsOpt);
+    await p._loadData();
+    assert.equal(p._ws.members, 24);
+  } finally {
+    orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+  }
+});
+
+test("workspace scope: Send invites into that one workspace", async () => {
+  const p = make(wsOpt);
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._refreshSendState();
+  assert.equal(p._sendBtn.el.dataset.state, 1, "no workspace to pick first");
+  p._closePopup = () => {};
+  p.posted = [];
+  await p._sendInvitation();
+  assert.deepEqual(p.posted.filter(([s]) => s === "hub.invite").map(([, a]) => a.hub_id), ["h2"]);
+});
+
+test("workspace scope needs a real workspace: the personal home falls back to org scope", () => {
+  const p = make({ ...wsOpt, hub_id: "me" });
+  assert.equal(p._scope, "org");
+});
+
+// ── Click outside closes ─────────────────────────────────────────────────
+function opened() {
+  listeners.length = 0; // a failed test must not leak its listeners into the next
+  const p = make();
+  p.onDomRefresh();
+  p.closed = 0;
+  p._closePopup = () => { p.closed++; };
+  return p;
+}
+const outside = () => [{ id: "desk" }];
+const inside = (p) => [{ id: "row" }, p.el];
+
+test("a click outside the popup closes it", () => {
+  const p = opened();
+  dispatch("mousedown", outside());
+  dispatch("click", outside());
+  assert.equal(p.closed, 1);
+  p.onBeforeDestroy();
+});
+
+// ROOT CAUSE of "must click many times": the backdrop is the wrapper-modal, an
+// active ui-core view whose __handleClick stops propagation, so a bubble-phase
+// document listener never heard a single click. Only a second click inside
+// ui-core's 300ms double-click window (which returns BEFORE stopPropagation)
+// leaked through.
+test("one click on a ui-core view outside (which stops propagation) closes it", () => {
+  const p = opened();
+  dispatch("mousedown", outside());
+  dispatch("click", outside(), { stoppedBelow: true });
+  assert.equal(p.closed, 1);
+  p.onBeforeDestroy();
+});
+
+test("while a guided tour owns the backdrop, an outside click is left to its guard", () => {
+  for (const stamp of ["rewardOverlay", "guidedOverlay"]) {
+    const p = opened();
+    p._wrapperEl = { dataset: { [stamp]: "bare" } };
+    dispatch("mousedown", outside());
+    dispatch("click", outside());
+    assert.equal(p.closed, 0, stamp);
+    p.onBeforeDestroy();
+  }
+});
+
+test("a click inside the popup does not close it — even on a node the click re-rendered away", () => {
+  const p = opened();
+  // A chip × / checkbox re-feeds its row before the click reaches document, so
+  // the target is detached: el.contains() says no, the event path still says yes.
+  dispatch("mousedown", inside(p));
+  dispatch("click", inside(p));
+  assert.equal(p.closed, 0);
+  p.onBeforeDestroy();
+});
+
+test("a drag that starts inside and ends outside does not close it", () => {
+  const p = opened();
+  dispatch("mousedown", inside(p));
+  dispatch("click", outside());
+  assert.equal(p.closed, 0);
+  p.onBeforeDestroy();
+});
+
+test("the click that opened the popup does not close it", () => {
+  // Its mousedown happened before the popup mounted, so only the click is seen.
+  const p = opened();
+  dispatch("click", outside());
+  assert.equal(p.closed, 0);
+  p.onBeforeDestroy();
+});
+
+test("destroy removes the outside-click listeners", () => {
+  const p = opened();
+  p.onBeforeDestroy();
+  dispatch("mousedown", outside());
+  dispatch("click", outside());
+  assert.equal(p.closed, 0);
+  assert.equal(listeners.length, 0);
+});
+
+test("loads a flat tree from desk.home when there is no organisation", async () => {
+  const p = make();
+  await p._loadData();
+  assert.deepEqual(p._tree.ungrouped.map((w) => w.hub_id), ["h1", "h2"]);
+  assert.equal(p._org, null);
+  assert.ok(p._treeBox.fed[0].rows, "tree part was fed");
+});
+
+test("kebab seed pre-checks that workspace and expands its department", async () => {
+  orgAnswer = {
+    organisation: { name: "Acme" }, can_browse: 1,
+    departments: [{ id: 7, name: "D" }], workspaces: [{ hub_id: "h2", department_id: 7 }],
+  };
+  try {
+    const p = make({ hub_id: "h2", hub_name: "Sales" });
+    await p._loadData();
+    assert.deepEqual([...p._checked], ["h2"]);
+    assert.deepEqual([...p._expanded], ["7"]);
+    assert.equal(p._org.name, "Acme");
+  } finally {
+    orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+  }
+});
+
+test("org answer fills the org slot without re-feeding the popup", async () => {
+  orgAnswer = { organisation: { name: "Acme" }, can_browse: 0, departments: [], workspaces: [] };
+  try {
+    const p = make();
+    p._invitees = [{ email: "a@b.co" }];
+    await p._loadData();
+    assert.equal(p.wholeFeeds || 0, 0, "a whole re-feed rebuilds the email row and drops chips");
+    assert.equal(p._orgBox.el.dataset.state, 1);
+    assert.ok(Array.isArray(p._orgBox.fed));
+  } finally {
+    orgAnswer = { organisation: null, can_browse: 0, departments: [], workspaces: [] };
+  }
+});
+
+// desk.home is paginated at 45 (desk _fetchWorkspacePages); a workspace on
+// page 2 must still be offered — and pre-checked from its kebab.
+test("reads every desk.home page and pre-checks a page-2 seed", async () => {
+  const page1 = Array.from({ length: 45 }, (_, i) => ({ hub_id: `p${i}`, filename: `W${i}`, area: "private", privilege: ADMIN }));
+  const page2 = [{ hub_id: "late", filename: "Late", area: "private", privilege: ADMIN }];
+  const p = make({ hub_id: "late", hub_name: "Late" });
+  const pages = [];
+  p.fetchService = async (svc, args) => {
+    const page = (svc && svc.page) || (args && args.page);
+    pages.push(page);
+    return page === 1 ? page1 : page === 2 ? page2 : [];
+  };
+  await p._loadData();
+  assert.deepEqual(pages, [1, 2]);
+  assert.equal(p._tree.ungrouped.length, 46);
+  assert.deepEqual([...p._checked], ["late"]);
+});
+
+test("a single-object desk.home answer still lists that workspace", async () => {
+  const p = make();
+  p.fetchService = async () => home[0];
+  await p._loadData();
+  assert.deepEqual(p._tree.ungrouped.map((w) => w.hub_id), ["h1"]);
+});
+
+test("toggle-ws and toggle-all update selection and the All stamp", async () => {
+  const p = make();
+  await p._loadData();
+  p.onUiEvent(cmd("toggle-ws", { hub_id: "h1" }));
+  assert.deepEqual([...p._checked], ["h1"]);
+  assert.equal(p._allCheck.el.dataset.state, "mixed");
+  p.onUiEvent(cmd("toggle-all"));
+  assert.deepEqual([...p._checked].sort(), ["h1", "h2"]);
+  assert.equal(p._allCheck.el.dataset.state, 1);
+});
+
+test("no invitable workspace: All is hidden and Send stays off", async () => {
+  const p = make();
+  p.fetchService = async () => [];
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._refreshSendState();
+  assert.equal(p._allCheck.el.dataset.state, "hidden");
+  assert.equal(p._sendBtn.el.dataset.state, 0);
+});
+
+test("send is enabled only with an invitee AND a checked workspace", async () => {
+  const p = make();
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._refreshSendState();
+  assert.equal(p._sendBtn.el.dataset.state, 0);
+  p._checked = new Set(["h1"]);
+  p._refreshSendState();
+  assert.equal(p._sendBtn.el.dataset.state, 1);
+});
+
+test("send posts one hub.invite per checked workspace with that row's role", async () => {
+  const p = make();
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._checked = new Set(["h1", "h2"]);
+  p._roles.set("h2", "admin");
+  p._closePopup = () => {};
+  await p._sendInvitation();
+  assert.deepEqual(p.posted.map(([s, a]) => [s, a.hub_id, a.permission, a.invitees]), [
+    ["hub.invite", "h1", 15, ["a@b.co"]],
+    ["hub.invite", "h2", 31, ["a@b.co"]],
+  ]);
+  assert.equal(p.triggered[0].service, "invitation-sent");
+});
+
+test("no checked workspace: workspace error, nothing posted", async () => {
+  const p = make();
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  await p._sendInvitation();
+  assert.equal(p.posted.length, 0);
+  assert.equal(p._workspaceError.el.dataset.state, 1);
+});
+
+// ── Get link (mock, development builds) ──────────────────────────────────
+test("development build: Get link mints a mock link for the checked workspaces", async () => {
+  global.__BUILD__ = "development";
+  try {
+    const p = make();
+    await p._loadData();
+    p._checked = new Set(["h1"]);
+    p.onUiEvent(cmd("get-link"));
+    assert.match(p._link.url, /^https?:\/\/[^/]+\/s\/[a-z]+-[a-z]+-\d{2}$/);
+    assert.equal(p.posted.length, 0, "a mock never calls the server");
+    assert.ok(Array.isArray(p._linkPanel.fed), "link panel re-fed with the url row");
+    const first = p._link.url;
+    p.onUiEvent(cmd("get-link"));
+    assert.notEqual(p._link.url, undefined);
+    assert.equal(typeof p._link.url, "string");
+    p.onUiEvent(cmd("revoke-link"));
+    assert.equal(p._link.url, null);
+    assert.ok(first);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+test("development build: Get link with no workspace checked asks for one", async () => {
+  global.__BUILD__ = "development";
+  try {
+    const p = make();
+    await p._loadData();
+    p.onUiEvent(cmd("get-link"));
+    assert.equal(p._link.url, null);
+    assert.equal(p._workspaceError.el.dataset.state, 1);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+test("production build: Get link stays a no-op", async () => {
+  global.__BUILD__ = "production";
+  try {
+    const p = make();
+    await p._loadData();
+    p._checked = new Set(["h1"]);
+    p.onUiEvent(cmd("get-link"));
+    assert.equal(p._link.url, null);
+  } finally {
+    delete global.__BUILD__;
+  }
+});
+
+test("public link tab is local state only: no server call", async () => {
+  const p = make();
+  await p._loadData();
+  p.onUiEvent(cmd("switch-tab", { tab: "link" }));
+  assert.equal(p.el.dataset.tab, "link");
+  p.onUiEvent(cmd("toggle-expiry"));
+  p.onUiEvent(cmd("pick-expiry", { preset: "24h" }));
+  assert.deepEqual([p._link.expiry, p._link.preset], [1, "24h"]);
+  p.onUiEvent(cmd("get-link"));
+  assert.equal(p.posted.length, 0);
+  p._setLink("https://x/s/1");
+  assert.equal(p._link.url, "https://x/s/1");
+  p.onUiEvent(cmd("revoke-link"));
+  assert.equal(p._link.url, null);
+});

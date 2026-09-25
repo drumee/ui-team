@@ -52,6 +52,11 @@
     align-items: stretch;
     gap: var(--spacer-2);
     min-width: 0;
+
+    // Stacked one per line, the separating dots would only lead each line.
+    & > * + *::before {
+      content: none;
+    }
   }
 
   .trash-item__date {
@@ -142,7 +147,24 @@
 
   &__meta {
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    // Lets __location shrink below its content so the path ellipsizes.
+    min-width: 0;
+
+    // "Deleted by me • date • size • location": a dot between the parts,
+    // drawn by the part itself so an absent one (no size, no location) takes
+    // its separator with it.
+    & > * + *::before {
+      content: "\2022";
+      margin-right: 8px;
+      color: var(--neutral-500);
+    }
+  }
+
+  // "Deleted by" and the name are two notes; without a gap they read as one
+  // word ("Deleted by:me").
+  &__deleted {
+    gap: 4px;
   }
 
   &__modifier {
@@ -151,9 +173,36 @@
   }
 
   &__deleted-by,
-  &__date {
+  &__date,
+  &__size {
     @include drumee.typo($color: var(--neutral-500), $size: 12px, $line: 18px);
     white-space: nowrap;
+  }
+
+  // Takes what is left of the meta line and gives way first: the path is the
+  // longest and least essential part, so it is the one that ellipsizes (the
+  // full path is on the element's title).
+  &__location {
+    align-items: center;
+    gap: var(--spacer-2);
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__location-ico {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    fill: var(--neutral-500);
+    color: var(--neutral-500);
+  }
+
+  &__location-path {
+    @include drumee.typo($color: var(--neutral-500), $size: 12px, $line: 18px);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* ── Actions: badge + buttons ────────────────────────────── */
@@ -229,7 +278,9 @@
       &-info {
         position: absolute;
         display: flex;
-        align-items: start;
+        // One line of text since the drag half of the hint went away: centre it
+        // on the (i) instead of top-aligning it, which left the text riding high.
+        align-items: center;
         gap: 8px;
         width: 250px;
         left: -160px;
@@ -248,7 +299,6 @@
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    margin-top: 1px;
     fill: var(--white);
     color: var(--white);
   }

@@ -1,14 +1,19 @@
 const mfsInteract = require("../interact");
+const { EVENT: SPLIT_BODY_EVENT } = require("libs/split-body-signal");
 const {
   VIEW_STATES,
-  isGrouped,
+  isSectioned,
   setGrouped,
   clearGrouped,
   groupViewState,
   nextGroupViewState,
 } = require("../skeleton/toolkit/file-group");
 
-const { overMeetingCap } = require("libs/billing");
+const {
+  overMeetingCap,
+  isSeatLimitReply,
+  showSeatLimitReached,
+} = require("libs/billing");
 const readCache = require("libs/read-cache");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
@@ -795,7 +800,7 @@ class __window_folder extends mfsInteract {
     // renamed tile in its old group until the next mode switch. Partitioning
     // alone re-reads the models and never installs a comparator, so the saved
     // ranks stay intact.
-    if (isGrouped(this) && this._partitionFoldersAndFiles && this.iconsList) {
+    if (isSectioned(this) && this._partitionFoldersAndFiles && this.iconsList) {
       this._partitionFoldersAndFiles(this.iconsList);
     }
     this._scheduleAlphabeticalGridSort();
@@ -1893,17 +1898,7 @@ class __window_folder extends mfsInteract {
       (cmd && cmd.getParentByKind?.(KIND.menu.topic)) ||
       (this.getPart && this.getPart("new-menu"));
     if (!menu) return;
-    const group = menu.el?.querySelector(
-      ".window-button__dropdown-menu__item--create-group",
-    );
-    if (group) group.dataset.submenu = _a.closed;
     if (menu.changeState) menu.changeState(0);
-  }
-
-  toggleNewCreateMenu(cmd) {
-    if (!cmd || !cmd.el) return;
-    cmd.el.dataset.submenu =
-      cmd.el.dataset.submenu === _a.open ? _a.closed : _a.open;
   }
 
   onUiEvent(cmd, args = {}) {
@@ -1945,9 +1940,6 @@ class __window_folder extends mfsInteract {
 
       case "tab-bar-page":
         return this._showTabCarouselPage(cmd);
-
-      case "toggle-new-create-menu":
-        return this.toggleNewCreateMenu(cmd);
 
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
@@ -2122,7 +2114,11 @@ class __window_folder extends mfsInteract {
           // to every member. Gating it would make the rail's Access a dead
           // control for a view-only member of their own team workspace.
           if (this.canUpload && !this.canUpload()) {
-            if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+            if (window.Butler && Butler.say) {
+              Butler.say(require("libs/permission-denied").weakPrivilegeMessage(
+                LOCALE.PERMISSION_ACTION_SHARE, this.mget(_a.privilege), _K.permission.write,
+              ));
+            }
             return;
           }
           // Contextual tour, raised BEFORE openManageAccess because that call
@@ -3106,6 +3102,21 @@ class __window_folder extends mfsInteract {
       const part = this.getPart && this.getPart("meeting-panel");
       if (!part || !part.el) return;
       this._schedPaintedDay = Dayjs().format("YYYY-MM-DD");
+      // The skin fades the grid in (`[data-painted="1"] > *`), and feed()
+      // recreates those children, so every refresh replayed the fade — the
+      // whole calendar blinking after a meeting was saved or removed, and a
+      // second time when a fetch changed the range just painted. Fade only
+      // for the reveal and for new content (another view or range); a
+      // repaint of what is on screen just appears. Stamped BEFORE the feed so
+      // the new children never pick the animation up.
+      const st = require("./skeleton/meeting-schedule").schedState(this);
+      const { stime, etime } = this._meetingRange();
+      const day = st.view === "daily" ? st.anchor.format("YYYY-MM-DD") : "";
+      const key = `${st.view}:${day}:${stime}:${etime}`;
+      const arriving =
+        key !== this._schedFadeKey || part.el.dataset.painted !== "1";
+      this._schedFadeKey = key;
+      part.el.dataset.schedFade = arriving ? "1" : "0";
       part.feed(require("./skeleton/meeting-schedule")(this).kids);
     };
     // Nothing known yet for this window: start from the last answer the
@@ -5897,7 +5908,29 @@ class __window_folder extends mfsInteract {
       this._entranceRaf = 0;
       if (this.isDestroyed && this.isDestroyed()) return;
       if (el.dataset) el.dataset.viewEntering = "1";
+      this._announceSplitBodyShown();
     });
+  }
+
+  /**
+   * Tell the desk this workspace's split body is on screen — once per pane.
+   *
+   * Here, in _playViewEntrance's frame, because it is the one path BOTH ways
+   * of showing the split body go through: its first paint (onPartReady
+   * "folder-view", which on the default Files tab never calls switchView) and
+   * every later tab switch. Inside the frame, so it has actually been drawn.
+   *
+   * A reload's screen restore waits on this (libs/split-body-signal, desk
+   * _restoreScreen) so the saved screen lands over a painted workspace, not
+   * before it. The flag is what a restore that starts late reads instead.
+   *
+   * Headless panes only: a floating folder window's split body is not the
+   * desk's.
+   */
+  _announceSplitBodyShown() {
+    if (this._splitBodyShown || !this.mget(_a.headless)) return;
+    this._splitBodyShown = 1;
+    RADIO_BROADCAST.trigger(SPLIT_BODY_EVENT, this);
   }
 
   getFolderActionTarget() {
@@ -6085,7 +6118,51 @@ class __window_folder extends mfsInteract {
       });
   }
 
+  /**
+   * May this viewer delete the workspace this window is in?
+   *
+   * ADMIN AND OWNER ONLY (Lexis, 2026-09-16). Deleting is not a write-tier
+   * action: it destroys the whole workspace for every member, so it belongs
+   * with managing members rather than with editing files. `canAdmin()` is the
+   * admin bit, which admin (0b0011111) and owner (0b0111111) both carry and
+   * edit (0b0001111) does not.
+   *
+   * Reading the WINDOW's privilege is correct even three subfolders deep:
+   * user_permission() resolves a non-hub node from the member's hub-wide grant
+   * (`resource_id='*'`) before any per-node row, so the value is the viewer's
+   * workspace role wherever the pane has browsed.
+   *
+   * Fails OPEN when the method is missing or throws — the same rule the panel's
+   * own row filter follows (skeleton/settings-action-panel allowedActions), so
+   * an unreadable privilege can never lock an owner out of their workspace.
+   * A privilege that reads as 0 is not unreadable; that is a refusal.
+   */
+  _mayDeleteWorkspace() {
+    try {
+      if (typeof this.canAdmin !== "function") return true;
+      return !!this.canAdmin();
+    } catch (e) {
+      return true;
+    }
+  }
+
   confirmFolderDelete() {
+    // ADMIN-ONLY, CHECKED HERE TOO. The panel already omits the row for anyone
+    // below admin, but that is a render-time decision and this is the action:
+    // `folder-delete` is a plain service string, so a stale skeleton or any
+    // future surface that raises it must meet the same rule. Cheap, and it
+    // keeps the rule readable next to what it guards.
+    if (!this._mayDeleteWorkspace()) {
+      if (this.warn) {
+        this.warn(
+          "[workspace-delete] refused: viewer lacks the admin bit",
+          { hub_id: this.mget(_a.hub_id), privilege: this.mget(_a.privilege) },
+        );
+      }
+      this.closeFolderSettings();
+      return Wm.alert(LOCALE.FORBIDEN_DELETE);
+    }
+
     // WHICH WORKSPACE, not which tile. That is the whole correction here.
     //
     // This used to resolve a media VIEW and refuse when it could not find one,
@@ -6649,6 +6726,10 @@ class __window_folder extends mfsInteract {
         if (res && (res.error || res.error_code)) {
           return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
         }
+        // Refused for want of seats: no `results`, which the check below read
+        // as sent. Nothing was granted, so no member refresh and no toast —
+        // the seat card instead (this window is not in the wrapper-modal).
+        if (isSeatLimitReply(res)) return showSeatLimitReached();
         const r = (res && res.results && res.results[0]) || {};
         if (r.status === "failed") {
           return Wm.alert(r.reason || LOCALE.TRY_AGAIN);

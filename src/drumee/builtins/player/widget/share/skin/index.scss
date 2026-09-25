@@ -113,3 +113,119 @@
     font-size: 16px;
   }
 }
+
+// Loading card — ../loading.js. Between a click on Share and the secure-share
+// panel sliding in.
+//
+// The app's waiting-screen template (router/butler/skin/goodbye.scss, and the
+// plugins loading screen): lockup top-left, message centred, the boot screen's
+// 5px bar. Scaled to a card and centred on the PLAYER, which is its containing
+// block (window roots are absolutely positioned).
+//
+// Light in both themes, as that template is: it matches the sign-in card,
+// which has no dark variant. Hence the same literals rather than tokens.
+.player-share-loading {
+  position: absolute;
+  inset: 0;
+  // Above the player's own content (the document editor's iframe included),
+  // inside the player's stacking context.
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // A light veil so the card reads as belonging to this window, and so the
+  // content behind cannot be clicked again mid-load.
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: inherit;
+  cursor: progress;
+
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+
+  &[data-state="open"] {
+    opacity: 1;
+  }
+
+  &[data-state="closing"] {
+    opacity: 0;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-in;
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    // 360 in a 340px-minimum player would overflow; the gutter keeps 16px
+    // either side at the smallest size.
+    width: min(360px, calc(100% - 32px));
+    box-sizing: border-box;
+    padding: 20px 24px 24px;
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 12px;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    font-family: var(--font-main);
+
+    transform: scale(0.96);
+    transition: transform 0.18s ease-out;
+  }
+
+  &[data-state="open"] &__card {
+    transform: scale(1);
+  }
+
+  // Top-left: the card centres its children, so the lockup opts out. Sized by
+  // height alone, so its 5.03:1 ratio is kept.
+  &__logo {
+    align-self: flex-start;
+    display: flex;
+
+    img {
+      display: block;
+      width: auto;
+      height: 24px;
+    }
+  }
+
+  &__message {
+    width: 100%;
+    margin: 0;
+    text-align: center;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #534ab7;
+  }
+
+  // The track is the element's own background; `overflow: hidden` rounds the
+  // fill's leading edge (goodbye.scss).
+  &__progress {
+    width: 100%;
+    height: 5px;
+    border-radius: 100px;
+    background-color: #d8d6f3;
+    overflow: hidden;
+  }
+
+  // Driven by loading.js progress(). 0.25s matches FILL_MS in ./index.js, so
+  // the bar is seen full before the card fades.
+  &__progress-fill {
+    width: 0;
+    height: 100%;
+    background-color: #433cc5;
+    transition: width 0.25s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    &__card,
+    &__progress-fill {
+      transition: none;
+    }
+
+    &__card {
+      transform: none;
+    }
+  }
+}

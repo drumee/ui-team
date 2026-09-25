@@ -994,8 +994,20 @@ class __media_interact extends media_core {
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
 
-      case _e.download:
+      case _e.download: {
+        // Casual Docs / Sheets files are stored as JSON (.udoc / .usheet);
+        // hand the user a real .docx / .xlsx instead of the raw payload
+        // (builtins/editor/export). Any conversion failure falls back to the
+        // plain download so the click is never dead.
+        const { isCasualFile, downloadAsOffice } = require("builtins/editor/export");
+        if (isCasualFile(this)) {
+          return downloadAsOffice(this).catch((e) => {
+            this.warn("media: office export failed, raw download", e);
+            return this.download();
+          });
+        }
         return this.download();
+      }
 
       case 'open-in-window': {
         // Force-open a workspace (hub) as a window_folder, regardless of its
@@ -1010,8 +1022,12 @@ class __media_interact extends media_core {
         this.delete();
         return;
 
+      // The contextmenu "Move to trash" row (items.js `trash`). A single file
+      // or folder used to go straight to the bin; `confirm` asks first. The
+      // "Leave workspace" row posts the same service, but hubs never land in
+      // the bucket this flag gates — they keep their own dialogs.
       case _e.remove:
-        this.delete()
+        this.delete({ confirm: 1 });
         return;
 
       case "load-script":
@@ -1118,19 +1134,25 @@ class __media_interact extends media_core {
         // Without it this line would fire again — and a tour the user escaped
         // is not marked seen, so it would be raised, deferred, re-entered and
         // raised again, forever.
+        //
+        // The panel's own header row draws the same subject from the same fields
+        // (window/secure-share/skeleton/subject.js), so they are built once and
+        // handed to both.
+        const _subject = _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file");
+        const _subjectData = {
+          name: this.mget(_a.filename),
+          filetype: _ft,
+          // _fileExt() is the canonical read — `ext` is an SQL alias and
+          // `extension` the field, and only one of them is present.
+          ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
+          filesize: this.mget(_a.filesize),
+          ctime: this.mget(_a.ctime),
+          mtime: this.mget(_a.mtime),
+          area: this.mget(_a.area),
+        };
         const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
-          subject: _ft === _a.hub ? "workspace" : (_ft === _a.folder ? "folder" : "file"),
-          subject_data: {
-            name: this.mget(_a.filename),
-            filetype: _ft,
-            // _fileExt() is the canonical read — `ext` is an SQL alias and
-            // `extension` the field, and only one of them is present.
-            ext: _.isFunction(this._fileExt) ? this._fileExt() : this.mget(_a.ext),
-            filesize: this.mget(_a.filesize),
-            ctime: this.mget(_a.ctime),
-            mtime: this.mget(_a.mtime),
-            area: this.mget(_a.area),
-          },
+          subject: _subject,
+          subject_data: _subjectData,
         });
         // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
         // tour teaches the secure-share panel, and the panel was opening while
@@ -1171,6 +1193,12 @@ class __media_interact extends media_core {
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
+        item.subject = _subject;
+        item.subject_data = _subjectData;
+        // A player's Share row: the panel slides in and out
+        // (window/secure-share `_floating`). Other floating opens keep the
+        // window's own appearance.
+        if (args.floating) item.floating = 1;
         const launchFloating = () => Wm.launch(item, { explicit: 1, singleton: 1 });
         // Opt-in, and only players pass it (player/widget/share): they are
         // windows stacked above the host folder window, so the drawer below
@@ -1203,6 +1231,8 @@ class __media_interact extends media_core {
             nid      : item.nid,
             hub_id   : item.hub_id   || this.mget(_a.hub_id),
             filetype : item.filetype || this.mget(_a.filetype),
+            subject      : _subject,
+            subject_data : _subjectData,
             uiHandler: [host],
           });
         })).catch(() => once(launchFloating));
@@ -1272,9 +1302,14 @@ class __media_interact extends media_core {
         break;
 
       case _e.paste:
-        if (!this.isGranted(_K.permission.write)) return;
         let media = Visitor.get("clipboard");
         if (!media) return;
+        if (!this.isGranted(_K.permission.write)) {
+          require("libs/permission-denied").sayWeakPrivilege(
+            LOCALE.PERMISSION_ACTION_COPY, this.mget(_a.privilege), _K.permission.write,
+          );
+          return;
+        }
         this.moveIn(media, 1);
         break;
 
@@ -1410,6 +1445,11 @@ class __media_interact extends media_core {
     const hub_name = this.isHub
       ? this.mget(_a.filename) || this.mget(_a.name) || ""
       : "";
+    // Tints the folder glyph the popup draws over its pre-filled workspace
+    // field. Paired with hub_name for the same reason it is: only a hub knows
+    // its own area, and a tint borrowed from a parent would be a lie about
+    // which workspace the row names.
+    const hub_area = this.isHub ? this.mget(_a.area) || "" : "";
     // Free: solo — no invites (silent). Org seat cap does not apply to hub.invite.
     const { isFreeSoloPlan, showFreeSoloLimit } = require("libs/billing");
     if (isFreeSoloPlan()) return showFreeSoloLimit();
@@ -1418,6 +1458,7 @@ class __media_interact extends media_core {
         kind: "invite_popup",
         hub_id,
         hub_name,
+        hub_area,
         uiHandler: [this],
       });
     });

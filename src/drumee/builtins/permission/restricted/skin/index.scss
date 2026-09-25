@@ -1,5 +1,11 @@
 @use "mixins/drumee";
 
+// Side gutter of the panel's content. Figma 84:30632 draws 12px; Lexis
+// (09-24) found that tight at 512px, so it is 4px wider — the smallest step
+// that reads as air without moving anything else in the frame. Header,
+// sections and the workspace card all take it from here so they stay aligned.
+$gutter: 16px;
+
 // Workspace-members panel, restyled after the folder Settings panel
 // (window-folder__settings-action-panel), the same base its Manage-Access
 // sibling was moved onto (see permission/share/skin): a 360px light surface, a
@@ -71,7 +77,9 @@
     }
   }
 
-  &__ui[data-mode="column"][data-position="1"] > &__main {
+  // Once: _render stamps data-settled on every feed after the reveal, because
+  // feed() recreates __main and a new element would replay the fade.
+  &__ui[data-mode="column"][data-position="1"]:not([data-settled="1"]) > &__main {
     @include drumee.skeleton-content-in;
   }
 
@@ -89,10 +97,19 @@
     box-sizing: border-box;
     position: relative;
     overflow: hidden;
-    background: var(--normal-bg-90);
+    // Figma fills the panel Grey/white (#FFFFFF). --normal-bg-elevated is the
+    // repo's white-card token — the one the folder skin's own cards use — so
+    // this tracks dark mode instead of pinning a literal. It was
+    // --normal-bg-90 (#f2f2f7), a grey that read as a different material from
+    // the white file card beside it.
+    background: var(--normal-bg-elevated, #fff);
   }
 
   // ── Header (pinned, with divider) ─────────────────────────────
+  // Figma 85:36439 has NO divider and no second line here: the panel is one
+  // 12px-padded column and the heading is simply its first item. The header
+  // stays a pinned row only because this panel scrolls and the static frame
+  // does not — the close button has to stay reachable.
   &__header {
     display: flex;
     flex-direction: row;
@@ -100,10 +117,8 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    min-height: 65px;
-    padding: 16px 24px 17px;
+    padding: 12px $gutter 0;
     box-sizing: border-box;
-    border-bottom: 1px solid var(--border-default);
   }
 
   &__header-text {
@@ -162,8 +177,8 @@
     flex: 0 0 auto;
 
     @include drumee.typo(
-      $size: 18px,
-      $line: 24px,
+      $size: 15px,
+      $line: 20px,
       $color: var(--normal-fg-10)
     );
     font-weight: 600;
@@ -261,8 +276,8 @@
     overflow: hidden;
 
     @include drumee.typo(
-      $size: 13px,
-      $line: 18px,
+      $size: 12px,
+      $line: 16px,
       $color: var(--normal-fg)
     );
     font-weight: 600;
@@ -285,8 +300,8 @@
 
   &__subtitle {
     @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
+      $size: 11px,
+      $line: 16px,
       $weight: 400,
       $color: var(--neutral-600)
     );
@@ -302,8 +317,11 @@
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
+    // 12px between sections and 12px top and bottom — Figma 84:30632 is one
+    // auto-layout column with padding 12 and itemSpacing 12. The sections carry
+    // the 12px side gutter themselves (see below).
     gap: 24px;
-    padding: 24px 0;
+    padding: 12px 0 16px;
     box-sizing: border-box;
     overflow-y: auto;
 
@@ -318,17 +336,17 @@
 
   &__close {
     flex-shrink: 0;
-    margin-left: 12px;
-    width: 32px;
-    height: 32px;
+    margin-left: 8px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
 
     svg {
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
       color: var(--normal-fg-10);
     }
 
@@ -346,55 +364,89 @@
   // row: the role popover is an absolutely positioned descendant that has to
   // escape its row's box.
   &__invite-section,
-  &__members-section {
+  &__invitations-section,
+  &__members-section,
+  &__leave-section {
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: 0 24px;
+    padding: 0 $gutter;
     box-sizing: border-box;
+  }
+
+  // Figma: itemSpacing 12 — heading, hint and rows all 12px apart, each row
+  // carrying its own 8px above and below (see __invitation-row).
+  &__invitations-section {
+    gap: 8px;
   }
 
   &__invite-section {
-    gap: 12px;
+    gap: 8px;
   }
 
   &__members-section {
-    gap: 16px;
+    gap: 10px;
     overflow: visible;
   }
 
-  // Base panel's __settings-action-section-title. $weight goes THROUGH the
-  // mixin — which drops it (see __title) — deliberately: the base's own rule
-  // drops it the same way, so both panels inherit the same weight from their
-  // context. Declaring 600 outright here would render this panel bolder than
-  // the one it is matching.
-  &__section-title {
-    @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
-      $weight: 600,
-      $color: var(--normal-fg-10)
-    );
-  }
-
-  // ── Invite row ────────────────────────────────────────────────
-  &__invite-input-row {
+  // The rows' own column (skeleton membersList), re-fed alone on each search
+  // keystroke. Same 10px rhythm the rows had as direct children of the
+  // section, and overflow visible for the role popover, like the section.
+  &__members-list {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    position: relative;
-    z-index: 1200;
+    flex-direction: column;
+    gap: 10px;
     width: 100%;
-    min-height: 46px;
-    padding: 12px;
-    box-sizing: border-box;
-    border-radius: 4px;
-    background: #ffffff;
     overflow: visible;
   }
 
-  &__invite-entry {
+  // Members search row: the search field, then the role filter pill.
+  //
+  // Positioned and raised like __invite-input-row: every member row below
+  // carries an inline `z-index: 1000 - index`, so without this the filter's
+  // open menu would drop under the first rows.
+  &__member-search {
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    position: relative;
+    z-index: 1100;
+    overflow: visible;
+  }
+
+  // The field itself: a filled pill rather than the invite field's underline,
+  // so the two inputs don't read as the same kind of control.
+  &__member-search-field {
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 6px;
+    min-width: 0;
+    min-height: 32px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+  }
+
+  // Same height as the search field beside it.
+  &__role-filter &__role-select {
+    min-height: 32px;
+  }
+
+  &__member-search-ico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--tertiary-grey-80, #65656c);
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+  }
+
+  &__member-search-entry {
     flex: 1 1 auto;
     min-width: 0;
 
@@ -404,9 +456,266 @@
       border: 0;
       background: transparent;
       outline: none;
+      @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--normal-fg-10));
+
+      &::placeholder {
+        color: #aeaeb2;
+      }
+    }
+  }
+
+  // Base panel's __settings-action-section-title. $weight goes THROUGH the
+  // mixin — which drops it (see __title) — deliberately: the base's own rule
+  // drops it the same way, so both panels inherit the same weight from their
+  // context. Declaring 600 outright here would render this panel bolder than
+  // the one it is matching.
+  // Figma 85:36439 heads every section with Buttons/Large Button — Geist
+  // SemiBold 18/1.2em, the SAME ramp as the panel title. They were 12px, the
+  // folder Settings panel's small caps-ish label, which read as fine print
+  // beside a 512px panel and made the three sections look like one list with
+  // dividers instead of three.
+  //
+  // 🚨 $weight 500, with font-weight declared: drumee.typo has no 600 branch
+  // and emits NOTHING for an unknown weight — not even font-family — so
+  // passing 600 there drops the heading to the browser default serif. Same
+  // trap the panel title's own note records.
+  &__section-title {
+    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
+    font-weight: 600;
+  }
+
+  // ── Workspace card ────────────────────────────────────────────
+  // Figma 85:36439 (#1082:81233): a bordered row at the top of the body — the
+  // area-tinted folder shape, the name, and the two figures under it.
+  &__ws-card {
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    gap: 8px;
+    margin: 0 $gutter;
+    min-width: 0;
+    padding: 6px 12px;
+  }
+
+  // Same recipe as __title-icon, at the card's 40px. folderArt emits a
+  // `.folder-shape` authored at 105x86 with an absolutely positioned `.badge`,
+  // so it needs an explicit box AND a positioned ancestor or the badge anchors
+  // to whatever it finds further up.
+  // 🚨 THE WHOLE __title-icon RECIPE, AT 40px. The first version set only a
+  // 40x40 box and let `.folder-shape` fill it, and the art spilled out of the
+  // card and over the section heading below: folderArt's markup is authored at
+  // 105x86 and carries an absolutely positioned `.badge`, so without sizing
+  // BOTH the wrapper (.media-grid__folder-art) and the shape — and without
+  // pinning the badge — it paints at its intrinsic size wherever it finds a
+  // positioned ancestor. Copied rather than shared because __title-icon's own
+  // note says the same: the switcher geometry is written out per place.
+  &__ws-card-icon {
+    align-items: center;
+    display: flex !important;
+    flex: 0 0 auto;
+    height: 32px;
+    justify-content: center;
+    min-width: 32px;
+    overflow: visible;
+    position: relative;
+    width: 32px;
+
+    .media-grid__folder-art {
+      align-items: center;
+      display: flex;
+      height: 26px;
+      justify-content: center;
+      position: relative;
+      width: 32px;
+    }
+
+    .folder-shape {
+      fill: #885eff;
+      height: 26px;
+      width: 32px;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public { fill: var(--area-public); }
+      &.share,
+      &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+
+    // Same emblem treatment as __title-icon, scaled up — including the
+    // gradient stops, which carry no colour of their own and paint black
+    // without this.
+    .badge {
+      bottom: -3px;
+      color: var(--grid-color-folder-badge);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+      height: 16px !important;
+      left: -3px;
+      position: absolute;
+      width: 16px !important;
+
+      [class^="gradient-start-"] { stop-color: var(--primary-purple-40); }
+      [class^="gradient-end-"] { stop-color: var(--primary-purple-50); }
+      stop.gradient-start-private { stop-color: var(--orange-400); }
+      stop.gradient-end-private { stop-color: var(--orange-600); }
+      stop.gradient-start-share,
+      stop.gradient-end-share { stop-color: var(--area-share, #ffa8dc); }
+    }
+
+    .media-context-menu__folder-trigger {
+      display: none !important;
+    }
+  }
+
+  &__ws-card-text {
+    flex: 1 1 auto;
+    gap: 4px;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  &__ws-card-name {
+    @include drumee.typo($size: 14px, $line: 1.2em, $weight: 500, $color: var(--normal-fg-10));
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__ws-card-stats {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__ws-stat {
+    align-items: center;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  // The number carries the brand colour and the unit does not — Figma prints
+  // "3.5" in Primary/40 beside a Grey/80 "GB", and the member count the same
+  // way beside its glyph.
+  &__ws-stat-value {
+    @include drumee.typo($size: 11px, $line: 1.2em, $weight: 500, $color: var(--primary-40));
+    font-weight: 600;
+  }
+
+  &__ws-stat-unit {
+    @include drumee.typo($size: 11px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
+  }
+
+  // Figma: Phosphor Users at 16px.
+  &__ws-stat-ico {
+    color: var(--tertiary-grey-80, #65656c);
+    flex-shrink: 0;
+    height: 14px;
+    width: 14px;
+
+    svg {
+      height: 14px;
+      width: 14px;
+    }
+  }
+
+  // ── Invite row ────────────────────────────────────────────────
+  // 🚨 AN UNDERLINE, NOT A BOX. Figma draws the address field as a single
+  // bottom rule in Grey/70 over the panel's own surface
+  // (strokeWeight "0px 0px 1px", padding 8px 0 4px). It was a filled white
+  // rounded box, which was invisible once the panel surface itself became
+  // white — a white box on white, announced only by its shadowless corners.
+  //
+  // The rule belongs to the FIELD, not to this row: the role pill sits beside
+  // it and must not be underlined too.
+  &__invite-input-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    position: relative;
+    z-index: 1200;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  // The chips and the text field share one box, so the row reads as a single
+  // input that happens to hold several people. It WRAPS: a workspace invite
+  // can carry half a dozen addresses and a single non-wrapping line would push
+  // the role dropdown off the panel.
+  //
+  // `flex-wrap` is declared here and `display: flex` is NOT: this is a Box.X,
+  // so the framework sets the display and direction (repo rule), but it has no
+  // opinion about wrapping.
+  &__invite-field {
+    align-items: center;
+    border-bottom: 1px solid var(--tertiary-grey-70);
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    padding: 6px 0 3px;
+  }
+
+  &__invite-chip {
+    align-items: center;
+    background: rgba(89, 80, 255, 0.1);
+    border-radius: 4px;
+    gap: 4px;
+    max-width: 100%;
+    padding: 2px 4px 2px 8px;
+  }
+
+  &__invite-chip-text {
+    @include drumee.typo($size: 11px, $line: 15px, $weight: 400, $color: var(--primary-40));
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__invite-chip-remove {
+    color: var(--primary-40);
+    cursor: pointer;
+    flex-shrink: 0;
+    height: 12px;
+    width: 12px;
+
+    svg {
+      height: 12px;
+      width: 12px;
+    }
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
+  &__invite-entry {
+    flex: 1 1 auto;
+    // Narrow enough that one chip plus the caret still fits on a line, but
+    // wide enough to type a whole address into before it wraps.
+    min-width: 120px;
+
+    input {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      outline: none;
       @include drumee.typo(
-        $size: 12px,
-        $line: 17px,
+        $size: 11px,
+        $line: 15px,
         $weight: 400,
         $color: #0b0a21
       );
@@ -438,13 +747,13 @@
   }
 
   &__invite-suggestion {
-    padding: 8px 12px;
+    padding: 6px 10px;
     cursor: pointer;
     align-items: center;
     gap: 8px;
     @include drumee.typo(
-      $size: 12px,
-      $line: 17px,
+      $size: 11px,
+      $line: 15px,
       $weight: 400,
       $color: var(--normal-fg-10)
     );
@@ -505,8 +814,8 @@
   // is a problem with the address.
   &__invite-error-message {
     @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
+      $size: 11px,
+      $line: 14px,
       $weight: 500,
       $color: var(--red-500)
     );
@@ -517,38 +826,46 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    min-height: 36px;
-    padding: 8px 24px;
+    // On the invite row beside the role pill (skeleton inviteSection), so it
+    // takes that pill's geometry — 28px tall, radius 12 — and sizes to its
+    // label instead of spanning the section.
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 3px 14px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: 12px;
+    white-space: nowrap;
     background: var(--primary-50);
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    // $weight 500 + font-weight 600: typo() emits nothing, not even the font
+    // family, for 600 — the button text fell back to the browser serif.
     @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
-      $weight: 600,
+      $size: 12px,
+      $line: 1.2em,
+      $weight: 500,
       $color: var(--white)
     );
+    font-weight: 600;
 
-    // In flight (index.js sets data-pending on the clicked element and deletes
-    // it in its finally, so this covers both success and failure).
+    // In flight (index.js _setInviteSending, and the skeleton from the same
+    // state, so a re-render mid-send keeps it; cleared in the send's finally,
+    // so this covers both success and failure).
     // pointer-events:none is the actual disable; the spinner is the signal.
     &[data-pending="1"] {
       cursor: progress;
       pointer-events: none;
       background: #5b54d1;
-      gap: 8px;
+      gap: 6px;
 
       // Ring spinner, same convention as window/upload-progress and
       // widget/chat-export. It renders as a flex sibling of the Note's
       // .note-content, so the label stays put and the pair centers together.
       &::before {
         content: "";
-        width: 14px;
-        height: 14px;
+        width: 10px;
+        height: 10px;
         flex-shrink: 0;
         border: 2px solid rgba(255, 255, 255, 0.35);
         border-top-color: var(--white);
@@ -556,6 +873,92 @@
         animation: permission-restricted__send-button-spin 0.7s linear infinite;
       }
     }
+  }
+
+  // ── Leave workspace ──────────────────────────────────────────
+  // Last thing in the panel, under the Permissions Matrix. A rule above it
+  // rather than a gap alone: this is not another way to manage members, it is
+  // the viewer acting on their own membership, and the line is what says so.
+  //
+  // The rule is drawn as padding-top on the section so the body's own 24px gap
+  // stays above it — the section's `padding: 0 24px` comes from the shared rule
+  // with the other two, and this block sits AFTER that rule in the file, so the
+  // longhand below wins on source order without an !important.
+  &__leave-section {
+    gap: 8px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-default);
+  }
+
+  // What is lost, said before the button rather than only inside the confirm
+  // card — the button alone would just read as "careful".
+  &__leave-warning {
+    @include drumee.typo(
+      $size: 11px,
+      $line: 16px,
+      $weight: 400,
+      $color: var(--normal-fg-20)
+    );
+  }
+
+  // Same 48px full-width geometry and radius as __send-button above, so the
+  // panel has one button shape.
+  //
+  // COLOUR per Lexis 09-24 (lw1.jpg): a grey surface with the label and a
+  // sign-out glyph in red, centred — a quiet exit rather than a solid red
+  // alarm. The confirm card it opens is still the red one. Both tokens are
+  // theme-aware (--normal-bg-90 is set per theme, --red-500 is global), so
+  // there is no dark-mode branch to keep in step.
+  &__leave-button {
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background: var(--normal-bg-90, #f2f2f7);
+    color: var(--red-500, #ff2350);
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--red-500, #ff2350) 8%, var(--normal-bg-90, #f2f2f7));
+    }
+
+    // In flight: index.js stamps data-pending on the element while
+    // desk.leave_hub is out and deletes it in its finally, so this covers both
+    // outcomes. pointer-events is the actual disable — a second POST would be
+    // answered for a workspace the account has already left.
+    &[data-pending="1"] {
+      cursor: progress;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+  }
+
+  // Phosphor SignOut (sidebar_signout, the glyph the account menu's Sign out
+  // uses), tinted by the button's colour through currentColor.
+  &__leave-icon {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  }
+
+  // $weight 500 + font-weight 600 for the typo() 600 trap.
+  // Sized to its text, so the row's justify-content centres the glyph and the
+  // label together as one group.
+  &__leave-label {
+    flex: 0 1 auto;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 500, $color: currentColor);
+    font-weight: 600;
   }
 
   // ── Role pill + its popover ───────────────────────────────────
@@ -605,37 +1008,52 @@
     }
   }
 
+  // Figma "Overlay+Border": rgba(0,0,0,.05), radius 12, label and caret 4px
+  // apart. It HUGS its label in Figma; min-width is the frame's width for
+  // "Admin", so English matches it exactly and a longer translation grows
+  // instead of being cut off.
+  //   member row — 80 x 25, padding 4/8/4/12
+  //   invite row — 88 x 32, padding 4/12/4/16 (see __invite-input-row below)
   &__role-select {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex: 0 0 88px;
-    width: 88px;
-    min-height: 22px;
-    padding: 4px 4px 4px 8px;
+    flex: 0 0 auto;
+    gap: 4px;
+    min-width: 72px;
+    padding: 3px 6px 3px 10px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: 12px;
     background: var(--overlay-bg-05);
-    color: var(--normal-fg-20);
+    color: var(--normal-fg-10);
     cursor: pointer;
   }
 
+  &__invite-input-row &__role-select {
+    min-width: 80px;
+    min-height: 28px;
+    padding: 3px 10px 3px 12px;
+  }
+
+  // Figma: Geist SemiBold 14, line 1.2em, #0b0a21. $weight 500 + font-weight
+  // 600 for the typo() 600 trap.
   &__role-label {
     min-width: 0;
     @include drumee.typo(
-      $size: 10px,
-      $line: 14px,
-      $weight: 400,
-      $color: var(--normal-fg-20)
+      $size: 12px,
+      $line: 1.2em,
+      $weight: 500,
+      $color: var(--normal-fg-10)
     );
+    font-weight: 600;
     @include drumee.overflow-text;
   }
 
   // Read-only role for the self row: the server rejects self-mutation, so the
   // dropdown and the remove button give way to plain text.
   &__role-readonly {
-    flex: 0 0 88px;
-    padding: 4px 8px;
+    flex: 0 0 80px;
+    padding: 3px 6px;
     cursor: default;
     background: transparent;
   }
@@ -723,12 +1141,128 @@
     }
   }
 
+  // ── Pending invitations ───────────────────────────────────────
+  // The section's own sub-line ("Invited members will appear here until they
+  // respond"). Grey/80 at Body/Small Body, sitting under the heading.
+  // Body/Small Body (14/1.4em) on Grey/80 — #65656c is exactly
+  // --tertiary-grey-80. Figma sets it 12px under the heading — the section's
+  // own gap, no pull-up.
+  &__section-hint {
+    @include drumee.typo($size: 12px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80));
+  }
+
+  // Deliberately the same geometry as __member-row — the two lists are the two
+  // halves of who is in this workspace and must read as one column, not two
+  // designs. No hover tint: an invitation row has nothing to click yet.
+  // Figma: each row is 56px — the 48px avatar with 8px above and below.
+  &__invitation-row {
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 4px 0;
+    width: 100%;
+  }
+
+  &__invitation-info {
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__invitation-text {
+    justify-content: center;
+    min-width: 0;
+  }
+
+  // Figma: Buttons/Small Button 14/20 SemiBold, Primary/100 — the same name
+  // style as a member row. typo() takes 500 and the weight is set on its own:
+  // the mixin emits nothing (not even font-family) for 600.
+  &__invitation-name {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--normal-fg-10));
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Figma: Body/Mini Body 12 Regular, Grey/80 (#65656c = --tertiary-grey-80).
+  &__invitation-sub {
+    @include drumee.typo($size: 11px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
+    min-width: 0;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Status pill. Figma: Pending = Overlay/Orange + Signal/Warning + Clock;
+  // Declined ("Rejected" there) = Overlay/red + Signal/Error + XCircle.
+  // data-status drives both, so one rule pair covers the two states and a
+  // third could be added without touching the skeleton.
+  &__invitation-badge {
+    align-items: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+    gap: 4px;
+    // Figma Overlay+Border: 4px 12px 4px 8px.
+    padding: 2px 8px 2px 6px;
+
+    // Figma's own pairs, to the value: Overlay/Orange rgba(232,161,59,.15)
+    // over Signal/Warning #E8A13B, and Overlay/red rgba(255,106,101,.15) over
+    // Signal/Error #D74E49. --signal-error already IS #d74e49; there is no
+    // --signal-warning token in revamp.scss, so that one is written out with
+    // the Figma value rather than borrowed from --orange-*, which is a
+    // different, redder amber.
+    &[data-status="pending"] {
+      background: rgba(232, 161, 59, 0.15);
+      color: #e8a13b;
+    }
+
+    &[data-status="declined"] {
+      background: rgba(255, 106, 101, 0.15);
+      color: var(--signal-error);
+    }
+  }
+
+  // Figma: the Clock / XCircle glyph is 17px wide. Its colour comes from the
+  // badge through currentColor — the sprite strips the source fills.
+  &__invitation-badge-ico {
+    flex-shrink: 0;
+    height: 14px;
+    width: 14px;
+
+    svg {
+      height: 14px;
+      width: 14px;
+      fill: currentColor;
+    }
+  }
+
+  // Colour is INHERITED from the badge, which is what makes one data-status
+  // rule tint the glyph and the word together.
+  // Figma: Buttons/Small Button 14 SemiBold, line 1.2em.
+  &__invitation-badge-text {
+    @include drumee.typo($size: 12px, $line: 1.2em, $weight: 500);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   // ── Member rows ───────────────────────────────────────────────
   &__member-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     position: relative;
     overflow: visible;
@@ -751,7 +1285,7 @@
     &::before {
       content: "";
       position: absolute;
-      inset: -8px -12px;
+      inset: -4px -8px;
       border-radius: 8px;
       z-index: -1;
       pointer-events: none;
@@ -776,25 +1310,50 @@
   &__member-info {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 12px;
+    gap: 10px;
   }
 
+  // Figma: role pill and trash 12px apart.
   &__member-actions {
     flex: 0 0 auto;
-    gap: 4px;
+    gap: 8px;
     overflow: visible;
   }
 
+  // Figma: 48x48, a rounded SQUARE (12px), not a disc. ui-core rounds the
+  // photo itself (.user-profile__main is 50%), so that layer is squared too —
+  // otherwise a circle would sit inside the rounded square.
   &__avatar {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
     overflow: hidden;
+    position: relative;
     background: #e8e8ed;
+
+    .user-profile__main {
+      border-radius: 9px;
+    }
+
+    // Presence dot. ui-core pins it at left 24 / top 3 for its own 40px
+    // avatar, which on this 48px square lands on the top edge. Figma puts a
+    // 10px dot in the bottom-right corner, ringed off the photo. Only the
+    // position and size move; the colour stays ui-core's presence token, the
+    // green every other avatar in the app shows.
+    &[data-online="1"]::before,
+    &[data-online="2"]::before {
+      top: auto;
+      left: auto;
+      right: 1px;
+      bottom: 1px;
+      width: 8px;
+      height: 8px;
+      box-shadow: 0 0 0 2px var(--white, #fff);
+    }
 
     // Fallback initials when UserProfile has no photo. Depth beats ui-core's
     // .user-profile__initiales rule.
@@ -803,14 +1362,29 @@
     }
   }
 
+  &__member-text {
+    justify-content: center;
+    min-width: 0;
+  }
+
+  // Figma: Buttons/Small Button 14/20 SemiBold, Primary/100. typo() takes 500
+  // and the weight is set on its own — see __invitation-name.
   &__member-name {
     min-width: 0;
     @include drumee.typo(
-      $size: 12px,
+      $size: 13px,
       $line: 18px,
-      $weight: 600,
+      $weight: 500,
       $color: #0b0a21
     );
+    font-weight: 600;
+    @include drumee.overflow-text;
+  }
+
+  // Figma: Body/Mini Body 12 Regular, Grey/80.
+  &__member-email {
+    min-width: 0;
+    @include drumee.typo($size: 11px, $line: 1.4em, $weight: 400, $color: var(--tertiary-grey-80, #65656c));
     @include drumee.overflow-text;
   }
 
@@ -838,17 +1412,18 @@
     }
   }
 
+  // Figma: Phosphor Trash at 24px in Signal/Error.
   &__member-remove {
-    width: 21px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     color: #d74e49;
     cursor: pointer;
     border-radius: 50%;
     transition: background-color 120ms ease, color 120ms ease;
 
     svg {
-      width: 13.33px;
-      height: 15px;
+      width: 18px;
+      height: 18px;
     }
 
     // Tinted from the icon's OWN red (#d74e49 = 215 78 73), not the neutral row
@@ -864,8 +1439,8 @@
 
   &__members-empty {
     @include drumee.typo(
-      $size: 12px,
-      $line: 18px,
+      $size: 11px,
+      $line: 16px,
       $weight: 400,
       $color: var(--normal-fg-20)
     );
@@ -895,7 +1470,8 @@ html[data-theme="dark"] {
       background: var(--normal-bg-elevated);
     }
 
-    &__invite-entry input {
+    &__invite-entry input,
+    &__member-search-entry input {
       color: var(--normal-fg-10);
 
       &::placeholder {
@@ -930,6 +1506,10 @@ html[data-theme="dark"] {
 
     &__member-row:hover::before {
       background-color: var(--hover-bg-40);
+    }
+
+    &__member-email {
+      color: var(--normal-fg-50);
     }
 
     // Stronger tint and a lighter glyph: the same red at 0.14 disappears into

@@ -30,7 +30,10 @@ const __classname = function(_ui_, trigger, k){
     rotateRight: 'desktop_rotate',
     separator: 'separator',
     settings:'editbox_cog',
-    // `trash` is the class the shared skin paints --red-500.
+    // `trash` is the class the shared skin paints --red-500. `leave-workspace`
+    // is the same row in its non-owner form and takes the same red: losing
+    // access to a workspace is the consequence the colour is there to warn about.
+    leaveWorkspace:'leave-workspace',
     trash:'trash',
     unlock:'unlock',
     upload:'upload',

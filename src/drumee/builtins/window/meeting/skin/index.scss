@@ -103,31 +103,6 @@
     align-items: center;
   }
 
-  .message-close-x {
-    position: absolute;
-    top: var(--spacer-4);
-    right: var(--spacer-4);
-    width: 28px;
-    height: 28px;
-    padding: 6px;
-    border-radius: 50%;
-    cursor: pointer;
-    color: #84848c;
-    background: var(--normal-bg-80);
-    box-sizing: border-box;
-    z-index: 2;
-
-    svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    &:hover {
-      background-color: var(--normal-bg-70);
-      color: #0b0a21;
-    }
-  }
-
   .message-avatar {
     width: 96px;
     height: 96px;
@@ -150,6 +125,114 @@
     max-width: 320px;
     padding: 0 var(--spacer-5);
   }
+
+  // Allow-guidance under the denial text: the SAME skeleton the device picker
+  // feeds (webrtc/skeleton/media-blocked), re-laid-out for this full-bleed
+  // overlay instead of the 340px popup — left-aligned in a readable column,
+  // fed here without its heading or Retry button. The popup's own rules live
+  // under `__devices-list` in webrtc/skin/command.scss and do not reach here,
+  // so the step numbering is restated rather than inherited.
+  .media-blocked {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+    max-width: 360px;
+    box-sizing: border-box;
+    padding: var(--spacer-3) var(--spacer-5) 0;
+    text-align: left;
+
+    .media-blocked-section {
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 500;
+      color: #0b0a21;
+      margin-top: var(--spacer-3);
+      justify-content: flex-start;
+      text-align: left;
+    }
+
+    .media-blocked-steps {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+      counter-reset: media-blocked-step;
+    }
+
+    .media-blocked-step {
+      position: relative;
+      counter-increment: media-blocked-step;
+      padding-left: 16px;
+      font-size: 13px;
+      line-height: 18px;
+      color: #84848c;
+      text-align: left;
+      justify-content: flex-start;
+      white-space: normal;
+
+      &::before {
+        content: counter(media-blocked-step) ".";
+        position: absolute;
+        left: 2px;
+        top: 0;
+      }
+    }
+
+    .media-blocked-os {
+      font-size: 13px;
+      line-height: 18px;
+      color: #84848c;
+      text-align: left;
+      justify-content: flex-start;
+      white-space: normal;
+    }
+  }
+
+  // Retry — re-runs the join once the device has been allowed, so the user
+  // continues into this meeting instead of leaving and re-entering it.
+  .message-retry {
+    margin-top: var(--spacer-5);
+    padding: var(--spacer-3) var(--spacer-6);
+    border-radius: var(--corner-radius-2);
+    background: var(--primary-40, #5950ff);
+    color: #fff;
+    font-size: 14px;
+    line-height: 20px;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 120ms ease;
+
+    &:hover {
+      background: var(--primary-50, #433cc5);
+    }
+
+    // Working: the label gives way to a spinner and the button stops taking
+    // clicks, so a slow permission read or re-join cannot be double-fired.
+    // (ui-core's own spinner ships no CSS in this app, so it is drawn here.)
+    &[data-loading="1"] {
+      position: relative;
+      pointer-events: none;
+      // Keeps the button's width while the label is out of sight.
+      color: transparent;
+    
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 14px;
+        height: 14px;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        animation: window-meeting-load-spin 0.8s linear infinite;
+      }
+    }
+  }
 }
 // Control lock — the in-topbar controls are shown but inert during two phases
 // where operating camera/mic/screen/hand/chat/people/fullscreen is meaningless:
@@ -169,7 +252,15 @@
 
 // Escape hatch: Leave stays fully interactive during both locked phases. Same
 // specificity as the rule above but ordered after it, so it wins.
+//
+// The split pill is listed alongside the button because a failed startup never
+// clears data-starting-up (onLocalUserJoined never runs), so in the denied
+// state a HOST could use Leave but not the caret beside it — and with the
+// close X now gone from the denial overlay, this control IS the way out.
 .window-meeting__ui[data-starting-up="1"] .window-meeting__leave-btn,
+.window-meeting__ui[data-starting-up="1"] .window-meeting__leave-split,
+.window-meeting__ui[data-denied="1"] .window-meeting__leave-btn,
+.window-meeting__ui[data-denied="1"] .window-meeting__leave-split,
 .window-meeting__shell[data-preparing="1"] .window-meeting__leave-btn {
   pointer-events: auto;
   opacity: 1;

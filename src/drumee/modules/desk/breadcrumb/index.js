@@ -4,6 +4,22 @@
  * whenever the active window navigates, and renders the path.
  * ==================================================================== */
 const { getPath } = require("libs/path-request");
+const { createSectionHold } = require("./section-hold");
+
+// Shared by every instance: the topbar re-feed destroys this widget and mounts
+// a new one, and a section label has to outlive that (see ./section-hold).
+// window.Desk, never a bare `Desk`: the topbar can render before it is set.
+const sectionHold = createSectionHold({
+  screenUp: () =>
+    window.Desk && _.isFunction(window.Desk._currentScreenService)
+      ? window.Desk._currentScreenService()
+      : null,
+});
+// The section is being left on purpose. Desk.closeMainPanels raises this before
+// the exit's own path paint, so that paint is not held back. A module-level
+// listener, not an instance one, so it also lands while the widget is between
+// a topbar re-feed's destroy and remount.
+RADIO_BROADCAST.on("breadcrumb:leave-section", () => sectionHold.leave());
 
 const PROPERTIES = [
   _a.area,
@@ -82,6 +98,10 @@ class __desk_breadcrumb extends LetcBox {
   _buildContent(data, opt = {}) {
     const section = !!opt.section;
     this._setSectionMode(section, opt.hideAddress);
+    // A label starts a hold; anything else painted here (a path, a workspace
+    // context from the switcher, a cleared track) ends it.
+    if (section && !_.isEmpty(data)) sectionHold.enter(data, opt);
+    else sectionHold.leave();
     if (_.isEmpty(data)) {
       this._data = [];
       // Forget what is on screen, or the guard below would skip the repaint
@@ -240,6 +260,10 @@ class __desk_breadcrumb extends LetcBox {
    */
   onDomRefresh() {
     this.feed(require("./skeleton")(this))
+    // Remounted by a topbar re-feed while a section screen is up: put the label
+    // back, not the path under it (./section-hold).
+    const held = sectionHold.holds() && sectionHold.current();
+    if (held) return this._buildContent(held.data, held.opt);
     this._restoreCurrentPath()
   }
 
@@ -270,13 +294,15 @@ class __desk_breadcrumb extends LetcBox {
    * the bar. The pane's model tracks in-place subfolder navigation
    * (window/core refreshContent msets it), so this restores a deep path too.
    *
-   * A section screen (Settings / Get help / Plan…) covering the desk is the one
-   * case this gets wrong: a re-feed while one is open repaints the workspace
-   * path under it rather than the section label. Deliberate — the label is not
-   * recoverable from Wm, the screens are full-page and carry their own title,
-   * and leaving one already rebuilds this path (Desk._leaveSectionScreen).
+   * A section screen (Settings / Get help / Plan…) covering the desk is NOT
+   * handled here: the label is not recoverable from Wm. onDomRefresh puts a
+   * held label back instead of calling this (./section-hold), and calling this
+   * directly means "leave the section" — it releases the hold.
    */
   _restoreCurrentPath() {
+    // Asking for the path by name is an exit: the bell's second press calls
+    // this to put the path back over "Notifications".
+    sectionHold.leave();
     // window.Wm, never a bare `Wm`: the topbar can render BEFORE
     // window/manager.js assigns the global, where a bare identifier throws
     // ReferenceError — the same note the desk's own topbar helpers carry.
@@ -333,6 +359,9 @@ class __desk_breadcrumb extends LetcBox {
       // _resolveMissingTitle uses on this call.
       if (this.isDestroyed && this.isDestroyed()) return;
       if (_.isEmpty(data)) return;
+      // A section label is up and not being left: this answer is an echo of
+      // the workspace load behind it (a reload's restore), not a navigation.
+      if (sectionHold.holds()) return;
       this._buildContent(data)
     };
     getPath(this, { nid, hub_id }, paint).then(paint)

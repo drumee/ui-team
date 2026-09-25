@@ -72,6 +72,25 @@ export function roleByValue(value) {
 export { roleItems };
 
 /**
+ * One glyph per role, keyed on roleItems' `value`. Chat and Edit are the ones
+ * the secure-share panels already show for those access levels
+ * (window/secure-share/skeleton/main.js); View and Admin come from the same
+ * apps-* set, which is also where the role pill's own caret is from.
+ *
+ * Here beside roleItems rather than in either consumer: the permission panel's
+ * role pill (permission/restricted) and the invite popup's role menu both draw
+ * these, and a role should wear the same glyph in both. A separate map, not an
+ * `ico` field on roleItems, so permissionItems' rows — which render roleItems
+ * directly — do not grow icons nobody asked for.
+ */
+export const ROLE_ICONS = {
+  view: "apps-eye",
+  chat: "apps-chat",
+  edit: "apps-pencil-simple",
+  admin: "apps-lock-shield",
+};
+
+/**
  * Hover description shown beside the hovered option. Content/positioning is
  * consumed by the framework `tooltips` prop (letc.js __addTooltips) — the
  * skin positions `.role-option-tooltip` to the side of the option row.

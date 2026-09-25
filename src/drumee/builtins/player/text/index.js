@@ -34,6 +34,13 @@ class __player_text extends __player {
   async initialize(opt = {}) {
     this.size = _K.docViewer;
     super.initialize(opt);
+    // player/interact.js has just replaced this.size with the shared default
+    // (95% of the viewport height), and display() keeps whatever size it finds
+    // here. Open text windows shorter: 75% of the viewport, chrome included.
+    if (!Visitor.isMobile()) {
+      const height = Math.round(window.innerHeight * 0.75);
+      this.size = { width: this.size.width, height: height - (this.topbarHeight || 42) };
+    }
     require('../skin');
     require('./skin');
     if (opt.maiden) { // Maiden note
@@ -262,8 +269,7 @@ class __player_text extends __player {
       case 'direct-rename':
         return renameInline(this);
 
-      // Share: only an external workspace can share a file out; from an
-      // internal one the user is shown what to do instead.
+      // Share opens the secure-share panel, in every area (widget/share).
       case 'secure-share':
         return share.click(this, cmd);
 

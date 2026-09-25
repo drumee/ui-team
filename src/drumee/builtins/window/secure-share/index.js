@@ -2,6 +2,39 @@
 const { copyToClipboard } = require('@drumee/ui-essentials');
 const mfsInteract = require('../interact');
 
+// The close slide honours reduced motion too; the open keyframes do in the skin.
+function reducedMotion() {
+  try {
+    return typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Is this access event one of the opens the notification is about? The feed row
+// is one (token, recipient_email) group of secure_share_access_event, so the
+// same pair picks its visits back out. A signed-in open without an email gate
+// has no recipient_email on the feed row (list_access_events fills it from the
+// account afterwards), so that one is matched on the account instead.
+function matchesAccessFocus(row, focus) {
+  if (!row || !focus || !focus.token_id) return false;
+  if (`${row.token_id}` !== `${focus.token_id}`) return false;
+  if (focus.email) {
+    return String(row.recipient_email || '').toLowerCase() === String(focus.email).toLowerCase();
+  }
+  return !!focus.actor_id && `${row.actor_id}` === `${focus.actor_id}`;
+}
+
+// Scroll `container` just enough to show `el` (a descendant), and nothing else.
+function scrollWithin(container, el) {
+  const c = container.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  if (r.top < c.top) container.scrollTop -= c.top - r.top;
+  else if (r.bottom > c.bottom) container.scrollTop += Math.min(r.bottom - c.bottom, r.top - c.top);
+}
+
 class __window_secure_share extends mfsInteract {
 
   static initClass() {
@@ -26,6 +59,12 @@ class __window_secure_share extends mfsInteract {
     // must NOT behave like a floating window — skip all self-positioning/chrome.
     // A column is embedded too, for the same reason.
     this._embedded = !!(opt && opt.embedded) || this._column;
+    // Opened from a player's Share row (player/widget/share, media/interact.js
+    // `args.floating`): the floating dock slides in from the right and out
+    // again on close, like the embedded drawer. Stamped on the element for the
+    // skin, after super.initialize for the same reason as data-mode above.
+    this._floating = !this._embedded && !!this.mget("floating");
+    if (this._floating) this.el.dataset.floating = "1";
     if (!this._embedded) {
       // Standalone fallback — Figma "Permission Panel (Slide in from right)": a
       // fixed 450px right dock. The window base inflates this.size.width to
@@ -51,6 +90,9 @@ class __window_secure_share extends mfsInteract {
     this._emailChips      = [];
     this._grantLevel      = null;
     this._pendingRequest  = null;
+    // Set only when a share-open notification opened this panel (activity item
+    // `share_open`): whose opens to mark in the access list. See focusAccessEvent.
+    this._accessFocus     = this.mget('access_focus') || null;
     this.declareHandlers();
     this.bindEvent(_a.live);
   }
@@ -185,8 +227,8 @@ class __window_secure_share extends mfsInteract {
       // scale are restated at 1 to CANCEL those defaults; without them the
       // panel would slide and shrink at once.
       //
-      // Only when embedded. The standalone window is a floating window and the
-      // shrink is right for it.
+      // Only when embedded, or floating from a player — that dock slid in from
+      // the right too. Any other standalone window keeps the shrink.
       // Delegates rather than `break`s: only `default:` reaches
       // super.onUiEvent, so breaking out of the switch here would leave the
       // floating window's close button doing nothing at all.
@@ -198,7 +240,7 @@ class __window_secure_share extends mfsInteract {
         if (this._column) {
           return this.triggerHandlers({ service: "close-secure-share-view" });
         }
-        if (this._embedded) {
+        if (this._embedded || this._floating) {
           // `timeout` is NOT optional here, and 0 would not do.
           //
           // goodbye's own `timeout: 2` lives in a PARAMETER DEFAULT, so it
@@ -211,7 +253,7 @@ class __window_secure_share extends mfsInteract {
           // `o.timeout || Visitor.timeout()` would send it straight back to
           // 2000.
           return this.goodbye(
-            { duration: 0.28, timeout: 2 },
+            { duration: reducedMotion() ? 0.01 : 0.28, timeout: 2 },
             { xPercent: 100, opacity: 1, scale: 1 },
           );
         }
@@ -635,6 +677,12 @@ class __window_secure_share extends mfsInteract {
     const nid    = this.mget(_a.nid);
     const hub_id = this.mget(_a.hub_id);
     const events_skl = require('./skeleton/access-events');
+    // Spinner on the FIRST load only, while the table is still empty. Later
+    // reloads (a share.track_event push, a revoke) keep the rows on screen
+    // until the new ones replace them, rather than flashing a spinner.
+    const container = this._accessEvents.el;
+    const firstLoad = !this._accessEventsLoaded;
+    if (firstLoad && container) container.dataset.loading = '1';
     let list = [];
     try {
       const rows = await this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id });
@@ -642,7 +690,12 @@ class __window_secure_share extends mfsInteract {
     } catch (e) {
       list = [];
     }
-    this._accessEvents.feed(events_skl(this, list));
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._accessEventsLoaded = true;
+    if (container) delete container.dataset.loading;
+    const focus = this._accessFocus;
+    this._accessEvents.feed(events_skl(this, list, focus ? (r) => matchesAccessFocus(r, focus) : null));
+    if (focus) this._revealAccessFocus(list.some((r) => matchesAccessFocus(r, focus)));
     // Reflect the access count in the toggle header (e.g. "View access list (12)"),
     // mirroring the Shared-links label. Count = rows shown = total access events.
     // Empty/error → plain label (no "(0)"), like Shared-links.
@@ -651,6 +704,55 @@ class __window_secure_share extends mfsInteract {
         ? `${LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST} (${list.length})`
         : LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST;
     }
+  }
+
+  /**
+   * Point the access list at one opener — a share-open notification was clicked
+   * ("{who} opened {item}"). Called on a panel that is already on screen for the
+   * node; a freshly launched one reads the same object from `access_focus`.
+   *
+   * @param {Object} focus  { token_id, email, actor_id } from the notification row
+   */
+  focusAccessEvent(focus) {
+    if (!focus) return;
+    this._accessFocus = focus;
+    this._accessFocusShown = false;
+    if (this._accessEvents) {
+      // Collapsed by the user earlier: the notification is about this table.
+      this._accessEvents.el.dataset.mode = _a.open;
+      this._loadAccessEvents();
+    }
+  }
+
+  /**
+   * Bring the focused rows into view, ONCE per focus: later reloads (a
+   * share.track_event push) keep the fill, but must not yank the scroll back.
+   * No row matched — an anonymous open of a public link, which the access-event
+   * SP leaves out, or an event since removed — marks the section instead, so the
+   * click still lands somewhere visible.
+   *
+   * Scrolls only this panel's own containers, never through scrollIntoView,
+   * which would also scroll the workspace behind it.
+   */
+  _revealAccessFocus(matched) {
+    if (this._accessFocusShown) return;
+    this._accessFocusShown = true;
+    const box = this._accessEvents && this._accessEvents.el;
+    if (!box) return;
+    const pfx = this.fig.family;
+    const section = box.closest(`.${pfx}__events-section`);
+    if (section) {
+      if (matched) delete section.dataset.focus;
+      else section.dataset.focus = '1';
+    }
+    // The rows exist once feed returns, but are laid out a frame later.
+    requestAnimationFrame(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const row = matched ? box.querySelector('[data-focus="1"]') : null;
+      if (row) scrollWithin(box, row);
+      const outer = this.el && this.el.querySelector(`.${pfx}__scroll`);
+      if (outer && section) scrollWithin(outer, section);
+    });
   }
 
   async _createShare() {

@@ -72,7 +72,16 @@ module.exports = function (ui) {
         }),
       );
     }
-    return Skeletons.Box.Y({ className: `${pfx}__day-body`, kids });
+    return Skeletons.Box.Y({
+      className: `${pfx}__day-body`,
+      // The cell scrolls, but at rest its scrollbar is transparent (see
+      // quiet-scroll) — so a busy day looked exactly like a truncated one and
+      // read as "I cannot get to the rest of these". CSS cannot ask whether a
+      // box overflows; the skeleton already knows, because it is the same
+      // comparison the "+N" is built from. Stamped here, inked in the skin.
+      attrOpt: { "data-overflow": more > 0 ? "1" : "0" },
+      kids,
+    });
   };
 
   const dayCell = (d) => {

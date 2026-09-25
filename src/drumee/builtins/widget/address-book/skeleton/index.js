@@ -107,6 +107,15 @@ module.exports = function (ui) {
         name: "invite-modal",
         partHandler: ui,
       }),
+      // Destructive-action confirmation gets its own wrapper rather than
+      // sharing "invite-modal": feeding one wrapper clears whatever it held,
+      // and the two dialogs must be able to coexist without one wiping the
+      // other's state.
+      Skeletons.Wrapper.Y({
+        className: `${fig}__modal-wrapper`,
+        name: "confirm-modal",
+        partHandler: ui,
+      }),
       Skeletons.FileSelector({
         sys_pn: "ab-fileselector",
         accept: ".csv,.vcf,.vcard",

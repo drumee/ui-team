@@ -16,6 +16,10 @@ const MIC_SILENCE_MS = 6000;
 // then periodically. They go to the service log via conference.update.
 const DIAG_FIRST_MS = 10000;
 const DIAG_PERIOD_MS = 30000;
+// A peer's client broadcasts its connection stats about every 10 s
+// (lib-jitsi-meet pcStatsInterval). Three missed rounds means its call is gone.
+const PEER_LIVE_MS = 30000;
+const PEER_WATCH_MS = 10000;
 // localTracks slot for the tab/system audio captured alongside a screen share.
 // Deliberately NOT `audio` (that slot is the microphone) and NOT `desktop` (that
 // is the screen VIDEO track). unload() iterates localTracks, so parking it here
@@ -130,6 +134,12 @@ class __webrtc_room extends __room {
     this.idleStreams = [];
     this._kicked = {};
     this._guests = new Map();
+    // Last time each peer's client reported stats, peers we keep watching
+    // after their Drumee socket dropped, and peers whose tile was torn down on
+    // such a drop while they stayed in the call. Keyed by participant id.
+    this._peerSeenAt = {};
+    this._droppedPeerWatch = {};
+    this._socketDroppedPeers = new Set();
     // Start fetching the conference widget chunks the moment ANY room window
     // exists (dialing, ringing, opening a meeting) so they're already loaded
     // by the time prepareConference needs them — instead of five serialized
@@ -291,12 +301,22 @@ class __webrtc_room extends __room {
    * 
    */
   setLocalUserInfo() {
-    let { username } = this.mget(_a.user) || {};
+    let { username, firstname, lastname } = this.mget(_a.user) || {};
     if (!Visitor.isGuest()) {
       username = Visitor.fullname();
     }
+    // JitsiConference.setDisplayName() silently drops a falsy name — no <nick>
+    // goes into our presence, and every peer's tile is left with no display
+    // name to fall back on while it waits for our userAttributes. Visitor
+    // .fullname() reads the profile JSON only (it answers the email when the
+    // parts are empty there, and undefined when even that is missing), so fall
+    // back through the name parts, which also read Visitor's top-level
+    // attributes, before giving up.
+    username = `${username || ""}`.trim()
+      || `${firstname || Visitor.firstname() || ""} ${lastname || Visitor.lastname() || ""}`.trim()
+      || `${Visitor.get(_a.email) || ""}`.trim();
     this.mset({ username })
-    this.room.setDisplayName(username);
+    if (username) this.room.setDisplayName(username);
   }
 
   /**
@@ -349,6 +369,46 @@ class __webrtc_room extends __room {
         this.onAudioInputStateChange
       );
       this.room.off(JEVENTS.conference.TALK_WHILE_MUTED, this.onTalkWhileMuted);
+    }
+  }
+
+  /**
+   * Throw away what a FAILED startup left behind, so the next attempt starts
+   * from a clean slate. Called before a retry (window/meeting
+   * _retryJoinMeeting), never on the happy path.
+   *
+   * prepareConference opens the XMPP connection IN PARALLEL with getUserMedia,
+   * so a media failure aborts the join in onConnectionSuccess only AFTER the
+   * connection is already up. That leaves two things set, and each one alone
+   * is enough to make a second attempt hang on "waiting for permission":
+   *
+   *   - this.connection — bindConferenceRoom returns early on it ("a
+   *     connection already exists") and resolves WITHOUT calling
+   *     onConnectionSuccess, so initJitsiConference never runs, no conference
+   *     is created, and CONFERENCE_JOINED never fires.
+   *   - this._startupMediaFailed — still 1, so even if onConnectionSuccess did
+   *     run it would return before creating the conference.
+   */
+  resetStartupState() {
+    this._startupMediaFailed = 0;
+    this._startupTracks = null;
+    // Only the PRE-JOIN connection is thrown away. If a conference exists the
+    // startup got further than this reset is meant to undo, and tearing it
+    // down here would drop a live meeting.
+    if (this.room) return;
+    try {
+      // Drops every listener this room installed on the old connection.
+      this.disconnect();
+    } catch (e) {
+      this.warn("could not unbind the stale connection", e);
+    }
+    if (this.connection) {
+      try {
+        this.connection.disconnect();
+      } catch (e) {
+        this.warn("could not close the stale connection", e);
+      }
+      this.connection = null;
     }
   }
 
@@ -552,7 +612,9 @@ class __webrtc_room extends __room {
             // Classified cause, not the raw DOMException: "(NotAllowedError:
             // Permission denied)" told the user nothing about what to do. The
             // raw error is still in the warn() above for support.
-            Wm.alert(this.mediaErrorMessage(error));
+            // Via mediaAlert: this fires for a device switch and a blocked
+            // toggle too, both of which can happen with a picker open.
+            this.mediaAlert(this.mediaErrorMessage(error));
           }
           reject(error);
         });
@@ -1287,18 +1349,17 @@ class __webrtc_room extends __room {
     // Let remote-user widgets attach without waiting for ENDPOINT_STATS_RECEIVED.
     this.trigger("TRACK_ADDED", track);
 
-    /** Wait a while to ensure HELLO message has arrived */
-    setTimeout(() => {
-      if (this.isDestroyed() || !this.room) return;
-      if (!this._guests.get(participant_id)) {
-        this.warn(`Participant ${participant_id} is not expected. Should kick out`);
-        if (this.mget(_a.role) == "host") {
-          this.room.kickParticipant(participant_id, LOCALE.WEAK_PRIVILEGE);
-          this._kicked[participant_id] = participant_id;
-          this.room.off(JEVENTS.conference.TRACK_ADDED, this.onStreamReceived);
-        }
-      }
-    }, 5000);
+    // A peer is vouched for by its HELLO broadcast or by the attendee lookup.
+    // Give both time to land before treating it as an intruder.
+    this._lookupAttendee(participant_id);
+    setTimeout(() => this._verifyParticipant(participant_id, 1), 5000);
+  }
+
+  /**
+   * Ask the server who this Jitsi participant is. A match puts them in
+   * _guests, which is what stops the host from kicking them.
+   */
+  _lookupAttendee(participant_id) {
     let args = {
       participant_id,
       hub_id: this.mget(_a.hub_id),
@@ -1307,14 +1368,41 @@ class __webrtc_room extends __room {
       socket_id: Visitor.get(_a.socket_id),
       deviceId: Visitor.deviceId(),
     };
-
-    this.postService(
+    return this.postService(
       SERVICE.conference.attendee, args).then((attendee = {}) => {
         const { room_id, participant_id } = attendee;
         if (participant_id && room_id == this.mget(_a.room_id)) {
           this._guests.set(participant_id, attendee);
         }
       });
+  }
+
+  /**
+   * Kick a participant nobody vouched for. Host only.
+   *
+   * An empty attendee lookup is not proof of an intruder. When a peer's Drumee
+   * websocket drops, the push router frees its yp.conference row while its
+   * Jitsi session stays live, and a host who leaves and rejoins starts with an
+   * empty _guests. Both together used to get a legitimate member kicked with
+   * WEAK_PRIVILEGE. So ask the server once more before kicking.
+   *
+   * Only the kicked participant is ignored afterwards (onStreamReceived checks
+   * _kicked). The TRACK_ADDED listener used to be removed here, which left the
+   * host deaf and blind to everybody who joined after any kick.
+   */
+  _verifyParticipant(participant_id, retries = 0) {
+    if (this.isDestroyed() || !this.room) return;
+    if (this._guests.get(participant_id)) return;
+    if (this.mget(_a.role) != "host") return;
+    if (!this.room.getParticipantById(participant_id)) return;
+    if (retries > 0) {
+      this._lookupAttendee(participant_id);
+      setTimeout(() => this._verifyParticipant(participant_id, retries - 1), 5000);
+      return;
+    }
+    this.warn(`Participant ${participant_id} is not expected. Kicking out`);
+    this.room.kickParticipant(participant_id, LOCALE.WEAK_PRIVILEGE);
+    this._kicked[participant_id] = participant_id;
   }
 
   /**
@@ -1406,11 +1494,24 @@ class __webrtc_room extends __room {
       mic = this.__ctrlAudio.getState();
     }
     let { firstname, lastname, username, uid } = this.mget(_a.user) || {};
+    // Publish a name field only when it holds something. `Visitor.firstname()`
+    // and `Visitor.lastname()` both end in `|| ''`, so an account with no name
+    // parts used to broadcast firstname:"" / lastname:"" — two empty strings
+    // that every peer copied straight onto their tile for us, leaving their
+    // profile widget with nothing to build initials from. Omitted keys let the
+    // receiving tile keep the display name it already resolved.
+    const named = (v) => {
+      const s = v == null ? "" : `${v}`.trim();
+      return s || undefined;
+    };
     let userAttributes = {
-      username,
+      // The display name is the one identity field every peer is guaranteed to
+      // see (it rides the MUC nick), so back it with the same chain the local
+      // tile uses rather than letting it go out empty.
+      username: named(username) || named(Visitor.fullname()),
       uid: uid || Visitor.id,
-      firstname: firstname || Visitor.firstname(),
-      lastname: lastname || Visitor.lastname(),
+      firstname: named(firstname) || named(Visitor.firstname()),
+      lastname: named(lastname) || named(Visitor.lastname()),
       quota: this.get(_a.quota),
       id: this.room.myUserId(),
       socket_id: Visitor.get(_a.socket_id),
@@ -1436,14 +1537,108 @@ class __webrtc_room extends __room {
         this.stateMessage("waiting");
       }
     }
-    let event = "HELLO";
-    let payload = {
-      id: this.room.myUserId(),
-      room_id: this.mget(_a.room_id),
-    };
     await this.sendRoomSignaling(SERVICE.conference.update);
-    await this.sendRoomSignaling(SERVICE.conference.broadcast, { event, payload });
+    await this.sendHello();
+  }
 
+  /**
+   * Tell the room who we are. The host only keeps a Jitsi participant it can
+   * vouch for (see _verifyParticipant), and HELLO is one of the two ways it
+   * learns that.
+   */
+  sendHello() {
+    return this.sendRoomSignaling(SERVICE.conference.broadcast, {
+      event: "HELLO",
+      payload: {
+        id: this.room.myUserId(),
+        room_id: this.mget(_a.room_id),
+      },
+    });
+  }
+
+  /**
+   * Re-announce ourselves when somebody joins. HELLO used to be sent once, at
+   * our own join, so a host who left and came back had never received it. If
+   * our yp.conference row had been freed by a websocket drop in the meantime,
+   * the attendee lookup came back empty too and the host kicked us.
+   * Debounced: joining a room of N people fires N USER_JOINED events.
+   */
+  _scheduleHello() {
+    clearTimeout(this._helloTimer);
+    this._helloTimer = setTimeout(() => {
+      if (this.isDestroyed() || !this.room || !this.room.isJoined()) return;
+      this.sendHello();
+    }, 500);
+  }
+
+  /**
+   * The Drumee websocket came back after a drop (room/index handleReconnect).
+   * While it was down the server freed our yp.conference row and told the
+   * peers we had left, although our Jitsi session never stopped. Say HELLO so
+   * they keep, or rebuild, our tile and a host does not kick us.
+   */
+  onSignalingReconnected() {
+    if (this.isDestroyed() || !this.room || !this.room.isJoined()) return;
+    this.sendHello();
+  }
+
+  /**
+   * True while a peer is still in the Jitsi conference and its client keeps
+   * reporting stats. That is what tells a Drumee socket blip, where the call
+   * itself is fine, from a client that is really gone.
+   */
+  _peerStillLive(participant_id) {
+    if (!this.room || !this.room.getParticipantById(participant_id)) return false;
+    const seen = this._peerSeenAt[participant_id];
+    return !!seen && Date.now() - seen < PEER_LIVE_MS;
+  }
+
+  /**
+   * Keep a peer whose Drumee socket dropped for as long as its call is alive,
+   * and run `drop` once it goes quiet. A HELLO from the peer (its socket came
+   * back) or a Jitsi USER_LEFT ends the watch.
+   */
+  _watchDroppedPeer(participant_id, drop) {
+    this._stopWatchingPeer(participant_id);
+    this._droppedPeerWatch[participant_id] = setInterval(() => {
+      if (this.isDestroyed() || !this.room) {
+        this._stopWatchingPeer(participant_id);
+        return;
+      }
+      if (this._peerStillLive(participant_id)) return;
+      this._stopWatchingPeer(participant_id);
+      drop();
+    }, PEER_WATCH_MS);
+  }
+
+  _stopWatchingPeer(participant_id) {
+    const timer = this._droppedPeerWatch[participant_id];
+    if (timer) clearInterval(timer);
+    delete this._droppedPeerWatch[participant_id];
+  }
+
+  /**
+   * A peer said HELLO. If its tile was torn down on a socket drop while it
+   * stayed in the call, build the tile again. The new tile picks up the
+   * participant's live tracks by itself (remote/user onDomRefresh), so the
+   * peer's audio comes back without anyone having to rejoin.
+   */
+  _onPeerHello(participant_id) {
+    this._stopWatchingPeer(participant_id);
+    if (!this._socketDroppedPeers.has(participant_id)) return;
+    this._socketDroppedPeers.delete(participant_id);
+    if (this._kicked[participant_id] || !this.room) return;
+    const endpoint = this.endpoints[participant_id];
+    if (endpoint && !endpoint.isDestroyed()) return;
+    const participant = this.room.getParticipantById(participant_id);
+    if (!participant) return;
+    delete this.endpoints[participant_id];
+    Promise.resolve(this.onRemoteUserJoined(participant_id, participant)).then(() => {
+      if (this.isDestroyed()) return;
+      if (typeof this.onPeerRestored === "function") {
+        this.onPeerRestored(participant_id);
+      }
+    });
   }
 
   /**
@@ -1556,13 +1751,14 @@ class __webrtc_room extends __room {
    * Identity a peer has already published in its `userAttributes` presence
    * property, for seeding a tile at CREATION time.
    *
-   * USER_JOINED fires before lib-jitsi-meet processes the presence child nodes
-   * (ChatRoom.onPresence runs processNode only after MUC_MEMBER_JOINED), so for
-   * a peer whose attributes were already in the presence we saw — i.e. everyone
-   * who was in the room before us — the property is readable right here, and
-   * PARTICIPANT_PROPERTY_CHANGED is still to come. For a peer that joins after
-   * us the property is genuinely not set yet and this returns {}; the later
-   * property event fills it in (onPropertyChanged).
+   * Usually {}. ChatRoom.onPresence emits MUC_MEMBER_JOINED (-> USER_JOINED)
+   * BEFORE it walks the presence child nodes that install the jitsi_participant_*
+   * properties, in the same stanza — so at tile-creation time the property is
+   * normally still unset even for a peer who published it long ago, and it is
+   * PARTICIPANT_PROPERTY_CHANGED, a few statements later, that actually carries
+   * the identity. Kept because it costs nothing and does fire for a presence we
+   * re-read later; the tile no longer depends on it (see __remote_user's
+   * _applyIdentity / its re-read on mount).
    *
    * Seeding matters because the tile's avatar is a KIND.profile widget keyed on
    * `uid`, and Visitor.avatar() falls back to the LOCAL user's id when it gets
@@ -1594,7 +1790,13 @@ class __webrtc_room extends __room {
     for (const k of [
       _a.uid, _a.firstname, _a.lastname, _a.username, "avatar_mtime", "muted", "mic",
     ]) {
-      if (data[k] != null) out[k] = data[k];
+      if (data[k] == null) continue;
+      // An empty name part is not an answer. A peer whose profile carries no
+      // firstname/lastname publishes '' for them, and copying that over the
+      // display-name-derived value the tile already had is what left the avatar
+      // with nothing to build initials from.
+      if (typeof data[k] === "string" && !data[k].trim()) continue;
+      out[k] = data[k];
     }
     return out;
   }
@@ -1637,6 +1839,7 @@ class __webrtc_room extends __room {
     endpoint = this.__participants.children.last();
     endpoint.once("audio:ready", () => { this.stateMessage() });
     this.endpoints[id] = endpoint;
+    this._scheduleHello();
     this.responsive();
     if (this.__peerContainer && !this.__peerContainer.isEmpty()) {
       this.__peerContainer.clear();
@@ -1769,6 +1972,9 @@ class __webrtc_room extends __room {
    * In case where the event were lost, catch up from stat
    */
   onStatsReceived(p) {
+    if (p && typeof p.getId === "function") {
+      this._peerSeenAt[p.getId()] = Date.now();
+    }
     if (this.presentation && !this.presentation.isDestroyed()) return;
     for (let t of p.getTracks()) {
       if (t.getVideoType() != _a.desktop) continue;
@@ -1793,6 +1999,9 @@ class __webrtc_room extends __room {
    */
   onUserLeft(id) {
     let endpoint = this.endpoints[id];
+    this._stopWatchingPeer(id);
+    this._socketDroppedPeers.delete(id);
+    delete this._peerSeenAt[id];
     this.trigger("user-left", { id });
     const name = this._partyNames && this._partyNames[id];
     if (this._partyNames) delete this._partyNames[id];
@@ -1922,6 +2131,9 @@ class __webrtc_room extends __room {
    *
    */
   async changeLocalVideo(state) {
+    // Same up-front check as the mic: turning the camera OFF never touches
+    // getUserMedia, so the block would otherwise cost a click to surface.
+    if (await this._blockedOnToggle(_a.video)) return;
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
       // Camera + screen run simultaneously: the camera is a SECOND video track
@@ -1948,10 +2160,15 @@ class __webrtc_room extends __room {
           await this.applyBackgroundEffect();
         }
       } catch (e) {
-        this.isVideo = false;
         this.toggleAvatarVideo(1, 0);
-        if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
+        // Reverting the button is not enough — say why it snapped back, and
+        // mark the control when the camera is blocked (see
+        // room/index _onMediaToggleFailed, which also clears isVideo/state).
+        this._onMediaToggleFailed(_a.video, e);
+        return;
       }
+      // Got a camera: clear any blocked flag this control was carrying.
+      this._setMediaDeniedUi(_a.video, false);
     } else {
       this.isVideo = false;
       this.toggleAvatarVideo(1, 0);
@@ -1963,6 +2180,11 @@ class __webrtc_room extends __room {
    *
    */
   async changeLocalAudio(state) {
+    // Before anything else: a blocked mic has to be caught here, not by
+    // failing to acquire later. The mute branch below never attempts capture,
+    // so turning a blocked mic OFF would succeed silently and cost a click
+    // before anything said why (room/index _blockedOnToggle).
+    if (await this._blockedOnToggle(_a.audio)) return;
     let t = this.getLocalTrack(_a.audio);
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
@@ -1970,16 +2192,25 @@ class __webrtc_room extends __room {
       // implicit "default" — otherwise toggling mute/unmute after picking a
       // specific microphone silently reverts capture to the default device.
       const micId = await this._preferredMicId();
-      if (!t) {
-        await this.createLocalTracks(_a.audio, micId, { muted: false });
-      } else if (t.isActive() && !t.isEnded()) {
-        await t.unmute();
-      } else {
-        // Dead track (device pulled, stream ended): unmute() would only flip
-        // a flag on a track that no longer captures. Start over.
-        await t.dispose();
-        await this.createLocalTracks(_a.audio, micId, { muted: false });
+      try {
+        if (!t) {
+          await this.createLocalTracks(_a.audio, micId, { muted: false });
+        } else if (t.isActive() && !t.isEnded()) {
+          await t.unmute();
+        } else {
+          // Dead track (device pulled, stream ended): unmute() would only flip
+          // a flag on a track that no longer captures. Start over.
+          await t.dispose();
+          await this.createLocalTracks(_a.audio, micId, { muted: false });
+        }
+      } catch (e) {
+        // Was an UNHANDLED rejection: onUiEvent calls this without awaiting,
+        // so a blocked mic failed in silence behind a button that stayed lit.
+        this._onMediaToggleFailed(_a.audio, e);
+        return;
       }
+      // Got a mic: clear any blocked flag this control was carrying.
+      this._setMediaDeniedUi(_a.audio, false);
       this.postAudioDiagnostics("unmute");
     } else {
       t && (await t.mute());
@@ -2192,6 +2423,7 @@ class __webrtc_room extends __room {
       case "HELLO":
         if (data && data.id) {
           this._guests.set(data.id, data);
+          this._onPeerHello(data.id);
         }
         break;
 

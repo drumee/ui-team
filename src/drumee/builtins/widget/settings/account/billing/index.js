@@ -23,6 +23,13 @@ const TAB_CHECKOUT = 2;
 // account, this is the single place that changes.
 const PROMO_YEARLY_SEEN_KEY = "drumee.promo.yearly.shown-on";
 
+// How long the subdomain field stays quiet before its availability is checked.
+// Long enough that an ordinary typist produces one request per word rather
+// than one per letter; short enough that the verdict is there before the hand
+// reaches Proceed to Checkout. payment.validate_org_ident is a DB-only read
+// (one proc + one count query), so this costs nothing Stripe-shaped.
+const ORG_IDENT_DEBOUNCE_MS = 450;
+
 const formatCurrency = (amount) => {
   return `$${amount.toFixed(2)}`;
 };
@@ -97,6 +104,7 @@ class settings_billing extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     clearTimeout(this._motionTimer);
+    clearTimeout(this._orgIdentTimer);
     this._stopPromoCountdown();
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
@@ -185,14 +193,14 @@ class settings_billing extends LetcBox {
     this._isCanceling = !!(sub && sub.status === "canceled" && this._periodEnd > now);
     this._hasPaidSub = !!(sub && sub.subscription_id);
     this._isPromoTrial = false;
-    // Live subscription = nothing left to buy self-serve. The tier ladder is
-    // free < team < (business | sovereign = sales-led), so a Team subscriber
-    // has no higher self-serve tier to reach and no reason to re-buy the one
-    // they hold. "Live" includes the PENDING-CANCEL window: it mirrors as
-    // 'canceled' but Stripe still holds an active subscription carrying
-    // cancel_at_period_end, so buying now would run two paid subscriptions at
-    // once. That caller resumes (the banner offers it); only once the paid
-    // period lapses may they buy again.
+    // Live subscription = a purchase from here is a REPLACEMENT, not a new
+    // buy. This no longer closes the Checkout tab (it never should have -- see
+    // _checkoutTabAllowed); it routes the plan cards and the Pay button into
+    // the replace-confirm instead, so the old subscription is always ended as
+    // the new one starts. "Live" includes the PENDING-CANCEL window: it
+    // mirrors as 'canceled' but Stripe still holds an active subscription
+    // carrying cancel_at_period_end, so a plain second purchase would run two
+    // paid subscriptions at once. Resuming is offered in the banner.
     // past_due is live as well: Stripe retries that invoice for weeks before
     // giving up, so the caller still holds a subscription and must not be sent
     // to checkout to buy a second one. Counting it here routes them to the
@@ -219,25 +227,41 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * May the Checkout tab be entered at all? False once a subscription is
-   * live: the server refuses such a checkout (ALREADY_SUBSCRIBED), and
-   * without this the tab walked the user through a purchase flow that could
-   * only dead-end -- or, before the server guard, charge them twice.
+   * May the Checkout tab be entered? Yes whenever this deployment sells plans
+   * and this caller is allowed to buy at all. **A live subscription no longer
+   * closes it.**
+   *
+   * It used to, and the reasoning was sound as far as it went: a live
+   * subscriber has no higher self-serve tier to reach, and `payment.checkout`
+   * refuses them outright. But the flag that says so (`_hasActiveSub`) is
+   * filled by `_loadSubscription()`, so the tab could only be taken away
+   * AFTER it had been shown -- which is what a person experiences as "I
+   * opened Billing and the Checkout tab disappeared on me" (Lexis,
+   * 2026-09-16, an org on Business monthly). A tab that moves under the user
+   * is its own defect, and no amount of making it move FASTER fixes it.
+   *
+   * So the tier gate moves off the tab and onto the button that actually
+   * spends money: `_proceedToCheckout` routes a live subscriber into the plan
+   * REPLACEMENT warning the plan cards have always used, which is the one
+   * path the server admits (`supersede`).
+   *
+   * 🔒 NOTHING IS LOOSENED. `payment.checkout` still refuses a live
+   * subscriber that arrives without `supersede`; the buyer still reads and
+   * accepts "your current plan will be canceled immediately, remaining time
+   * is not carried over" before any charge; the webhook still cancels the
+   * replaced subscription as the new one is paid, so the two never bill in
+   * parallel. Buying the exact plan+cycle already held is still refused. What
+   * changed is only WHERE the user is told -- on the button, with an
+   * explanation, instead of by a tab silently vanishing.
+   *
+   * The two shortcuts this method used to carry (an accepted `supersede`, and
+   * a LAUNCH30 trial with no Stripe row) both returned `_mayCheckout()` as
+   * well, so they are folded into the single answer rather than deleted.
+   *
    * @returns {boolean}
    */
   _checkoutTabAllowed() {
-    // A replacement in progress is the one case where a live subscriber may
-    // reach checkout: they accepted the warning, and the server admits them on
-    // the supersede flag.
-    if (this.state && this.state.checkout && this.state.checkout.supersede) {
-      return this._mayCheckout();
-    }
-    // LAUNCH30 trial has no Stripe subscription. Checkout must stay open so
-    // the user can convert with an MKT outreach partner code (trial + % off).
-    if (this._isPromoTrial && !this._hasPaidSub) {
-      return this._mayCheckout();
-    }
-    return this._mayCheckout() && !this._hasActiveSub;
+    return this._mayCheckout();
   }
 
   /**
@@ -356,10 +380,14 @@ class settings_billing extends LetcBox {
 
   /**
    * A checkout deep link opens the tab before the subscription is known (see
-   * _applyDeepLink). Once it has loaded, honour the same guard the tab bar uses:
-   * an account that cannot check out (already subscribed / upgrades off) falls
-   * back to the plans view on the chosen cycle instead of dead-ending. Runs at
-   * most once.
+   * _applyDeepLink). Once it has loaded, honour the same guard the tab bar
+   * uses: an account that may not buy here at all (upgrades off for this
+   * deployment, or not the org owner) falls back to the plans view on the
+   * chosen cycle instead of dead-ending. Runs at most once.
+   *
+   * Holding a subscription is NOT such a case any more -- that caller may
+   * enter checkout and switch plan, and _proceedToCheckout asks them to
+   * confirm the replacement first.
    */
   _settleDeepLinkTab() {
     if (!this._deepLinkCheckout || this._deepLinkSettled) return;
@@ -697,7 +725,16 @@ class settings_billing extends LetcBox {
     let title;
     let message;
     let confirm_type = "danger";
-    if (samePlan && period === currentPeriod) return; // already exactly this
+    // Already exactly this plan+cycle: there is nothing to replace. Say so
+    // rather than returning silently -- this used to be unreachable (the card
+    // for the plan you hold is disabled), but the Checkout tab now opens to a
+    // live subscriber with their CURRENT plan preselected, and a Pay button
+    // that quietly does nothing is exactly the kind of dead end this whole
+    // change exists to remove. Same wording the server's own refusal gets.
+    if (samePlan && period === currentPeriod) {
+      if (Wm && Wm.alert) Wm.alert(LOCALE.ALREADY_SUBSCRIBED);
+      return;
+    }
     // A cycle change is charged like any other plan change: at checkout, now.
     // It used to be deferred — the new cycle idled on a Stripe trial until the
     // paid period lapsed — which took no money on the day and so had its own
@@ -1035,6 +1072,20 @@ class settings_billing extends LetcBox {
         break;
       case `${this.fig.family}__checkout-org-ident-input`:
         this.__orgIdentInput = child;
+        // Check whatever the field is SHOWING, including the auto-suggested
+        // subdomain nobody typed — that one is derived from the username and
+        // is just as able to be taken. Deduped on the value in
+        // _checkOrgIdent, so the re-renders this page does on its own never
+        // re-ask the same question.
+        this._scheduleOrgIdentCheck(
+          this.state?.checkout?.orgIdent != null
+            ? this.state.checkout.orgIdent
+            : this._defaultOrgIdent(),
+        );
+        break;
+
+      case `${this.fig.family}__checkout-org-ident-msg`:
+        this.__orgIdentMsg = child;
         break;
       case `${this.fig.family}__checkout-promo-code-input`:
         this.__promoCodeInput = child;
@@ -1623,6 +1674,117 @@ class settings_billing extends LetcBox {
       .replace(/-+$/g, "");
   }
 
+  /**
+   * Keep an org bootstrap field's typed value in state.
+   *
+   * The `watch` option on those entries fires on input/change/paste/cut, so
+   * this catches a mouse paste as well as typing — the keyup path the seats
+   * field uses would miss it. Deliberately does NOT re-render: the value is
+   * only read back when something ELSE rebuilds the tab, and re-rendering per
+   * keystroke would take the caret out of the field.
+   *
+   * @param {string} key - "orgName" or "orgIdent"
+   * @param {Object} args - the watch payload ({ value })
+   */
+  _onOrgFieldTyped(key, args = {}) {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    const value = String(args.value != null ? args.value : "");
+    checkout[key] = value;
+    if (key === "orgIdent") this._scheduleOrgIdentCheck(value);
+  }
+
+  /**
+   * Ask, a short pause after the typing stops, whether this subdomain is free.
+   *
+   * Emptying the field clears the verdict rather than asking about "" — the
+   * server would answer IDENT_INVALID, which is not a useful thing to say
+   * about a field the shopper is in the middle of retyping.
+   *
+   * @param {string} raw - the field's current text
+   */
+  _scheduleOrgIdentCheck(raw) {
+    clearTimeout(this._orgIdentTimer);
+    const ident = String(raw || "").trim().toLowerCase();
+    if (!ident) {
+      this._orgIdentChecked = "";
+      this._setOrgIdentMsg("", false);
+      return;
+    }
+    this._orgIdentTimer = setTimeout(
+      () => this._checkOrgIdent(ident),
+      ORG_IDENT_DEBOUNCE_MS,
+    );
+  }
+
+  /**
+   * Run payment.validate_org_ident and show the verdict under the field.
+   *
+   * The same call Proceed to Checkout makes, so the two can never disagree;
+   * this only moves the answer to where it is useful. `_orgIdentChecked` both
+   * de-duplicates (a re-render, or retyping the same value, asks nothing) and
+   * settles races: it holds the ident whose answer is still wanted, so a slow
+   * reply for an abandoned value is dropped instead of labelling the field
+   * the shopper has since changed.
+   *
+   * @param {string} ident - normalised subdomain label
+   */
+  async _checkOrgIdent(ident) {
+    if (this.isDestroyed() || ident === this._orgIdentChecked) return;
+    this._orgIdentChecked = ident;
+    const v = await this.postService(SERVICE.payment.validate_org_ident, {
+      hub_id: Visitor.id,
+      ident,
+    }).catch(() => null);
+    if (this.isDestroyed() || this._orgIdentChecked !== ident) return;
+    if (!v) {
+      // A failed round trip says nothing about the subdomain. Stay silent and
+      // let the check on Pay be the one that blocks — claiming "taken" here
+      // over a dropped connection would send the shopper renaming their org
+      // for no reason. Forget it, so the next keystroke asks again.
+      this._orgIdentChecked = "";
+      this._setOrgIdentMsg("", false);
+      return;
+    }
+    const ok = v.status === "OK";
+    this._setOrgIdentMsg(
+      ok
+        ? (LOCALE.ORG_IDENT_AVAILABLE || "")
+        : this._orgIdentError(v.status),
+      ok,
+    );
+  }
+
+  /**
+   * Record the subdomain verdict and repaint it.
+   * @param {string} msg - message to show, "" for none
+   * @param {boolean} ok - true when the subdomain is available
+   */
+  _setOrgIdentMsg(msg, ok) {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    const text = msg || "";
+    if (checkout.orgIdentMsg === text && checkout.orgIdentOk === !!ok) return;
+    checkout.orgIdentMsg = text;
+    checkout.orgIdentOk = !!ok;
+    this._paintOrgIdentMsg();
+  }
+
+  /**
+   * Feed the verdict into its slot — the ONE surface that changes, so the
+   * inputs beside it keep their caret and their text.
+   */
+  _paintOrgIdentMsg() {
+    const part = this.__orgIdentMsg;
+    if (!part || !part.el || !part.el.isConnected) return;
+    const { orgIdentMsgNote } = require("./skeleton/checkout");
+    if (typeof part.softClear === "function") part.softClear();
+    const note = orgIdentMsgNote(this);
+    // Keep the collapse flag in step with what is actually in the slot — see
+    // the skeleton: a Box with no kids still holds ui-core's `blank` widget,
+    // so only this attribute can tell the skin the slot has nothing to show.
+    part.el.dataset.empty = note ? 0 : 1;
+    if (note) part.feed(note);
+  }
+
   // Map an org-ident validation status to its user-facing message.
   /**
    * Open the user's mail client addressed to sales.
@@ -1872,13 +2034,31 @@ class settings_billing extends LetcBox {
     // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
     // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
     const payload = { hub_id: Visitor.id, entity_type, plan, period };
-    // Set by _confirmReplacePlan after the caller accepted losing their current
-    // plan. Without it the server refuses a live subscriber, which is the guard
-    // against an accidental second subscription.
-    if (checkout.supersede) {
-      const sub = this._subscription || {};
-      const curPlan = String(sub.plan || "");
-      const curPeriod = /^year/.test(String(sub.period || "")) ? "year" : "month";
+    // THE TIER GATE LIVES HERE, not on the Checkout tab.
+    //
+    // The tab is open to everyone who may buy and never withdraws itself (see
+    // _checkoutTabAllowed -- a tab that vanishes under the user is its own
+    // defect). So this is the point where a caller who already holds a
+    // subscription has to be told, and it is the better point: they are told
+    // what will happen and asked, instead of watching a tab disappear.
+    //
+    // `liveMirror` is deliberately `_hasPaidSub && _hasActiveSub`, which is
+    // exactly the condition payment.checkout refuses on
+    // (`current?.subscription_id && live`). _hasActiveSub ALONE is not it: a
+    // LAUNCH30 trial sets that flag with no Stripe row behind it, and such a
+    // caller is an ordinary first purchase that must not be sent through a
+    // replacement warning for a subscription they do not have.
+    const sub = this._subscription || {};
+    const held = {
+      plan: String(sub.plan || ""),
+      period: /^year/.test(String(sub.period || "")) ? "year" : "month",
+    };
+    const liveMirror = !!(this._hasPaidSub && this._hasActiveSub);
+    // `supersede` is set by _confirmReplacePlan once the caller has accepted
+    // losing their current plan. Without it the server refuses a live
+    // subscriber, and that refusal is the guard against an accidental second
+    // subscription -- so it is never set here, only carried.
+    if (liveMirror || checkout.supersede) {
       // The checkout tab lets the caller flip plan and cycle after the popup,
       // so the intent is derived HERE, from what is actually being bought:
       //  - the exact subscription they already hold → nothing to buy (without
@@ -1886,10 +2066,19 @@ class settings_billing extends LetcBox {
       //    and mint a duplicate);
       //  - anything else (other plan, or the same plan on the other cycle) →
       //    immediate replacement, charged at checkout.
-      if (plan === curPlan && period === curPeriod) {
+      if (plan === held.plan && period === held.period) {
         if (Wm && Wm.alert) Wm.alert(LOCALE.ALREADY_SUBSCRIBED);
         return;
       }
+      // Not confirmed yet: hand over to the SAME warning the plan cards use.
+      // It spells out that the current plan is canceled immediately and that
+      // remaining time is not carried over, and on accept it sets `supersede`
+      // and comes back into checkout -- so the buyer presses Pay again having
+      // read what they are agreeing to. Doing it here rather than after a
+      // round trip also spares them the server's USE_SUBSCRIPTION_UPDATE
+      // bounce, which drops them back on the Monthly tab first; that handler
+      // stays as the backstop for a stale client (it re-reads the mirror).
+      if (!checkout.supersede) return this._confirmReplacePlan(plan, period);
       payload.supersede = 1;
     }
     // TEAM bootstrap: the payer is still on the default domain — the org
@@ -1915,9 +2104,21 @@ class settings_billing extends LetcBox {
         ident,
       }).catch(() => null);
       if (!v || v.status !== "OK") {
-        if (Wm && Wm.alert) Wm.alert(this._orgIdentError(v && v.status));
+        const reason = this._orgIdentError(v && v.status);
+        // Leave a real verdict ON the field, not only in an alert the shopper
+        // has to dismiss before they can see which field it was about. A
+        // failed round trip (`v` null) gets the alert only — pinning "something
+        // went wrong" under the subdomain would blame the field for the
+        // network.
+        if (v) {
+          this._orgIdentChecked = ident;
+          this._setOrgIdentMsg(reason, false);
+        }
+        if (Wm && Wm.alert) Wm.alert(reason);
         return;
       }
+      this._orgIdentChecked = ident;
+      this._setOrgIdentMsg(LOCALE.ORG_IDENT_AVAILABLE || "", true);
       payload.ident = v.ident;
       payload.org_name = org_name;
     }
@@ -2386,9 +2587,11 @@ class settings_billing extends LetcBox {
         this._updateRightPanelContent()
         break;
       case "checkout":
-        // The tab is not rendered while a subscription is live, but a stale
-        // render or a queued click can still land here -- refuse rather than
-        // walking into a checkout the server will reject.
+        // The pill is not rendered to a caller who may not buy here at all,
+        // but a stale render or a queued click can still land here -- refuse
+        // rather than walking into a checkout the server will reject. A live
+        // SUBSCRIBER is admitted: the tab is theirs too, and the replacement
+        // confirm happens on the Pay button (_proceedToCheckout).
         if (!this._checkoutTabAllowed()) return false;
         if (this.state.currentTab !== TAB_CHECKOUT) {
           this.state.currentTab = TAB_CHECKOUT;
@@ -2434,6 +2637,16 @@ class settings_billing extends LetcBox {
 
       case "select-bundle":
         return this._handleSelectBundle(cmd, args);
+
+      // The org bootstrap fields mirror themselves into state as they are
+      // edited — see orgFieldValue() in skeleton/checkout for why they have to.
+      case "org-name-typed":
+        this._onOrgFieldTyped("orgName", args);
+        return false;
+
+      case "org-ident-typed":
+        this._onOrgFieldTyped("orgIdent", args);
+        return false;
 
       case "input-seats":
         if (/^(Backspace|)$/.test(cmd.status)) {

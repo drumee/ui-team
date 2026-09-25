@@ -30,7 +30,11 @@ const __fmtDuration = function(secs) {
   return `${secs}s`;
 };
 
-const __skl_secure_share_access_events = function(_ui_, rows) {
+// `isFocus` (optional) picks the rows a share-open notification points at: the
+// panel was opened by clicking "{who} opened {item}", and those rows carry
+// data-focus for the skin's soft fill (window/secure-share `focusAccessEvent`).
+// Absent — every other way the panel opens — no row is marked.
+const __skl_secure_share_access_events = function(_ui_, rows, isFocus) {
   const pfx = _ui_.fig.family;
 
   const header = Skeletons.Box.X({
@@ -69,6 +73,7 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
 
     return Skeletons.Box.X({
       className : `${pfx}__events-row`,
+      ...(isFocus && isFocus(r) ? { dataset: { focus: '1' } } : {}),
       kids      : [
         Skeletons.Box.X({
           className : `${pfx}__events-cell col-email`,

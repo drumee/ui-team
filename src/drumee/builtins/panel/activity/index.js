@@ -16,6 +16,8 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 // the feed, the badge and the tab counts are untouched by design.
 const { loadMuteState } = require('./mute');
 require('./skin');
+const { trackDeskCanvas } = require('libs/desk-canvas');
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 
 class __panel_activity extends LetcBox {
   constructor(...args) {
@@ -38,6 +40,7 @@ class __panel_activity extends LetcBox {
     this.activityState = 0;
     opt.state = 0;
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
 
     window.ActivityHandler = this;
@@ -119,6 +122,27 @@ class __panel_activity extends LetcBox {
     // The card lives in the window layer, not inside this panel, so it would
     // outlive the panel — along with its pending dismiss timer.
     killChatToast(this);
+    if (this._untrackCanvas) this._untrackCanvas();
+  }
+
+  /**
+   * Cover the workspace at ≤ 1024px (see libs/desk-canvas). This panel is
+   * mounted once with the desk and opened through setState, so tracking is
+   * (re)tried on every open as well as on render, in case the desk was not
+   * in the DOM yet the first time.
+   */
+  _trackCanvas() {
+    if (this._untrackCanvas) return;
+    this._untrackCanvas = trackDeskCanvas(this.el);
+  }
+
+  /**
+   * The desk opens this panel with setState(1) directly, not through a
+   * service, so this is the one place every open passes.
+   */
+  setState(state, ...rest) {
+    if (~~state === 1) this._trackCanvas();
+    return super.setState(state, ...rest);
   }
 
   /**
@@ -138,6 +162,7 @@ class __panel_activity extends LetcBox {
    */
   onDomRefresh() {
     this.setState(0);
+    this._trackCanvas();
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
@@ -165,6 +190,12 @@ class __panel_activity extends LetcBox {
       // them into item models — the one place the whole page is visible in
       // order, which is what day grouping needs.
       child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
+      // The first page is down (rows or none): the feed has painted. A
+      // reload's screen restore waits on this (libs/items-ready).
+      child.once(_e.eod, () => markItemsReady(this));
+      // A failed first page fires `error`, never `eod` (ui-core list
+      // onServerComplain) — and a failed load is still a finished one.
+      child.once(_e.error, () => markItemsReady(this));
     }
     if (super.onPartReady) super.onPartReady(child, pn);
   }
@@ -319,7 +350,14 @@ class __panel_activity extends LetcBox {
         return '';
 
       case 'close-activity-panel':
-        this._hide()
+        // Through the desk when it is there: the same close the bell's second
+        // press takes, which also puts the breadcrumb back on the workspace
+        // path and turns the bell off. _hide() as well, for the data-anim it
+        // stamps and for a panel mounted without a desk.
+        this._hide();
+        if (typeof Desk !== 'undefined' && Desk && typeof Desk._closeUtilityPanel === 'function') {
+          Desk._closeUtilityPanel('toggle-activity');
+        }
         return '';
 
       case 'delete-entity':
@@ -422,6 +460,12 @@ class __panel_activity extends LetcBox {
           this._liftArOverlay(p);
         });
       }
+
+      case 'accept-invite':
+        return this._answerWorkspaceInvite('accept', args);
+
+      case 'decline-invite':
+        return this._answerWorkspaceInvite('decline', args);
 
       case 'ar-select-level': {
         // Multi-select: toggle this level in the grant set (the sender can grant
@@ -627,6 +671,115 @@ class __panel_activity extends LetcBox {
    * refresh the list so the handled request drops off. Caller must be the share
    * creator (enforced server-side).
    */
+  /**
+   * Answer a workspace invitation from its notification row.
+   *
+   * ACCEPT IS WHAT MAKES SOMEBODY A MEMBER now — hub.invite only mints the
+   * invitation — so this is not a convenience shortcut for something that has
+   * already happened. Declining is the other half, and it is the answer that
+   * previously had no way to be given at all.
+   *
+   * 🚨 THE PAYLOAD IS THE TOKEN AND NOTHING ELSE, deliberately. That is the
+   * exact shape modules/welcome has been calling hub.accept_invite with since
+   * the link flow shipped, and it is the proven one; both services are
+   * `src: anonymous` and resolve the workspace from the token themselves.
+   * Adding hub_id would make this the only call site that sends it, on a
+   * hub-scoped ACL, for no gain.
+   *
+   * WHY THE PANEL AND NOT THE ROW. The row is destroyed by the refresh this
+   * triggers, so anything it owned mid-flight would go with it; and the
+   * navigation after an accept belongs to whoever owns the desk's panels, which
+   * is this.
+   *
+   * @param {String} action 'accept' | 'decline'
+   * @param {Object} args   forwarded by the row: invite_token, hub_id, hub_name
+   */
+  async _answerWorkspaceInvite(action, args = {}) {
+    const token = args.invite_token;
+    // No token means the row is not answerable — an older invitation, or the
+    // receipt written when an admin added somebody directly. The buttons are
+    // not drawn in that case (see the item skeleton), so this is the belt to
+    // that braces: never post an answer with nothing to answer.
+    if (!token) return;
+    // Re-entrancy guard. Both answers are irreversible-ish and the row stays on
+    // screen until the refresh lands, so a double press would send two.
+    if (this._answeringInvite) return;
+    this._answeringInvite = 1;
+
+    let res;
+    try {
+      res = await this.postService(
+        action === 'accept' ? 'hub.accept_invite' : 'hub.decline_invite',
+        { token },
+      );
+    } catch (e) {
+      this.warn('[panel_activity] invite answer failed', e);
+      this._answeringInvite = 0;
+      this.refreshActivity(0);
+      return;
+    }
+    this._answeringInvite = 0;
+
+    // A rejected POST resolves undefined — doRequest hands a non-200 to
+    // onServerComplain, which only warns — so a falsy answer is a failure and
+    // must not be reported as a completed one.
+    const status = (res && res.status) || (res ? '' : 'invalid');
+
+    if (status === 'SEAT_LIMIT_REACHED') {
+      // The org is full. Same surface the member form raises for the same
+      // condition, and it is privilege-aware — only an org owner is shown the
+      // upgrade card, everyone else simply gets nothing rather than a dead end.
+      try {
+        const { canShowSeatLimitPopup } = require('libs/billing');
+        if (canShowSeatLimitPopup() && typeof Wm !== 'undefined' && Wm.openQuotaExceeded) {
+          Wm.openQuotaExceeded({ limit: 'seat' });
+        }
+      } catch (e) { /* the refresh below still runs */ }
+      this.refreshActivity(0);
+      return;
+    }
+
+    if (status && status !== 'declined') {
+      // invalid | expired | already_used | hub_not_found | not_authenticated |
+      // OVER_LIMIT. All of them mean the same thing to the person pressing the
+      // button: this invitation cannot be answered any more. One message, and
+      // it is a key that is genuinely translated in all six locale files.
+      if (typeof Wm !== 'undefined' && Wm.alert) Wm.alert(LOCALE.INVITE_LINK_INVALID);
+      // Refreshed even on failure: the server dismisses the notification when
+      // an invitation is answered, so a row reporting 'already_used' is a stale
+      // one and the refresh is what clears it.
+      this.refreshActivity(0);
+      return;
+    }
+
+    this.refreshActivity(0);
+
+    if (action !== 'accept') return;
+
+    // JOINED — take them into the workspace, which is what the invitation was
+    // for. `already_member: 1` comes back when they already had at least the
+    // access the invitation offered; that is still a successful answer and
+    // still lands on the workspace.
+    const hub_id = (res && res.hub_id) || args.hub_id;
+    if (!hub_id) return;
+    // The sidebar is built from a cached workspace list that predates this
+    // membership, so it has to be told before the switch — the desk rebuilds
+    // the switcher on this broadcast.
+    if (typeof RADIO_BROADCAST !== 'undefined') {
+      RADIO_BROADCAST.trigger('workspace:refresh');
+    }
+    if (typeof Wm !== 'undefined' && _.isFunction(Wm.loadWorkspace)) {
+      // nid ZERO, not omitted: loadWorkspace documents that a caller which
+      // knows only the hub must reach its media.attributes fetch with an
+      // explicit zero. Leaving it undefined skips that fetch and opens nothing.
+      Wm.loadWorkspace({ hub_id, nid: 0 });
+    }
+    // Close the panel, the way join-meeting does after it navigates — it
+    // overlays the workspace that was just opened.
+    this.activityState = 0;
+    this.setState(0);
+  }
+
   async _respondAccessRequest(action) {
     const req = this._arRequest || {};
     if (!req.request_id) return this._closeArOverlay();

@@ -1,8 +1,8 @@
 /**
  * Rows of the "+ New" menu.
  *
- * The topbar's dropdown (toolkit/index.js newMenu) shows the two IMPORT rows
- * and nests these four CREATE rows in a flyout off "+ Add new".
+ * The topbar's dropdown (toolkit/index.js newMenu) lists these four CREATE
+ * rows between its two IMPORT rows (From device ... Migrate from Google Drive).
  *
  * Kept in their own module rather than inlined so a second surface rendering
  * the create list cannot diverge from this one: Note was hidden from the list
@@ -60,23 +60,17 @@ export function menuRow(ui, { service, ico, content, area, name, className }) {
  * only the presentation differs between the two surfaces.
  *
  * @param {Object} ui
- * @param {Object} [opt]
- * @param {Boolean} [opt.submenu] add the flyout-item class. The topbar nests
- *   these under "+ Add new" and indents them to read as nested; the hero's
- *   menu is not nested, so it asks for them plain.
  * @returns {Array}
  */
-export function createRows(ui, opt = {}) {
-  const cnDropdown = `${ui.fig.group}-button__dropdown-menu`;
-  const cnItem = `${cnDropdown}__item`;
-  const nested = opt.submenu ? ` ${cnDropdown}__submenu-item` : "";
+export function createRows(ui) {
+  const cnItem = `${ui.fig.group}-button__dropdown-menu__item`;
   return [
     menuRow(ui, {
       service: "add-folder",
       ico: "addmenu-folder",
       content: LOCALE.FOLDER,
       area: ui.mget(_a.area) || _a.personal,
-      className: `${cnItem}--add-folder${nested}`,
+      className: `${cnItem}--add-folder`,
     }),
     // Note is temporarily hidden from the create list (2026-08). The add-note
     // handler (window/core.js) and editor_markdown stay wired — uncomment this
@@ -85,28 +79,46 @@ export function createRows(ui, opt = {}) {
     //   service: "add-note",
     //   ico: "addmenu-note",
     //   content: LOCALE.NOTE,
-    //   className: `${cnItem}--add-note${nested}`,
+    //   className: `${cnItem}--add-note`,
     // }),
     menuRow(ui, {
       service: "new-document",
       name: "document.docx",
       ico: "addmenu-document",
       content: LOCALE.DOCUMENT,
-      className: `${cnItem}--document${nested}`,
+      className: `${cnItem}--document`,
+    }),
+    // Casual Docs (native .docx editor, editor_docs) — sits next to the
+    // ONLYOFFICE "Document" with the SAME label and glyph; only the icon
+    // colour (Casual blue, see skin/mixins/drumee.scss) tells them apart.
+    // Handled by window/core.js `add-doc` → Wm.launch(editor_docs).
+    menuRow(ui, {
+      service: "add-doc",
+      ico: "addmenu-document",
+      content: LOCALE.DOCUMENT,
+      className: `${cnItem}--doc${nested}`,
     }),
     menuRow(ui, {
       service: "new-document",
       name: "spreadsheet.xlsx",
       ico: "addmenu-spreadsheet",
       content: LOCALE.SPREADSHEET,
-      className: `${cnItem}--spreadsheet${nested}`,
+      className: `${cnItem}--spreadsheet`,
+    }),
+    // Casual Sheets — same label and glyph as the ONLYOFFICE "Spreadsheet",
+    // Casual teal icon colour.
+    menuRow(ui, {
+      service: "add-sheet",
+      ico: "addmenu-spreadsheet",
+      content: LOCALE.SPREADSHEET,
+      className: `${cnItem}--sheet${nested}`,
     }),
     menuRow(ui, {
       service: "new-document",
       name: "presentation.pptx",
       ico: "addmenu-presentation",
       content: LOCALE.PRESENTATION,
-      className: `${cnItem}--presentation${nested}`,
+      className: `${cnItem}--presentation`,
     }),
   ];
 }

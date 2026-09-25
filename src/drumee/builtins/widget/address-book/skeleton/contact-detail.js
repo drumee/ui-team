@@ -136,7 +136,9 @@ module.exports = function (ui, contact) {
     actions = Skeletons.Box.X({
       className: `${fig}__detail-actions`,
       kids: [
-        iconTextBtn(fig, "danger", "cross", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId }, ui),
+        // Same "delete-contact" action, but `confirmKind` swaps the dialog
+        // copy from "Delete contact?" to "Cancel this invitation?".
+        iconTextBtn(fig, "danger", "cross", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId, confirmKind: "cancel-invite" }, ui),
       ],
     });
   } else {

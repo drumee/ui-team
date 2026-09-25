@@ -6,6 +6,17 @@
 // could rename a column-like action and see it silently not persist).
 //   "download" -> download bit (view ✗, chat ✓)
 //   "write"    -> write bit    (view ✗, chat ✗, edit ✓)
+//   "admin"    -> admin bit    (view ✗, chat ✗, edit ✗, admin ✓, owner ✓)
+//
+// DELETE IS THE ONE ROW THAT IS NOT A WRITE-TIER ACTION. Every other row acts
+// on the node the window is showing; `folder-delete` runs confirmFolderDelete,
+// which destroys the whole WORKSPACE (hub.delete_hub, or media.trash on a
+// personal workspace's root folder) however deep the pane has browsed. Lexis
+// reported an Edit member being offered it on 2026-09-16 — the write bit is
+// exactly what Edit holds, so the first pass at this panel (61b00507, which
+// closed view and chat) left Edit inside. Only Admin and Owner may delete a
+// workspace, so the row asks for the admin bit, which both of them carry
+// (admin 0b0011111, owner 0b0111111 — see skeleton/toolkit/permission.js).
 const actions = [
   { service: _e.download, label: LOCALE.DOWNLOAD, ico: "file-download", need: "download" },
   { service: "folder-rename", label: LOCALE.RENAME, ico: "apps-pencil-simple", need: "write" },
@@ -16,22 +27,31 @@ const actions = [
     label: LOCALE.DELETE,
     ico: "trash-action",
     destructive: 1,
-    need: "write",
+    need: "admin",
   },
 ];
 
 /**
  * Filter the action rows to what this viewer may actually perform.
- * canUpload() / canDownload() are the window's own tests (the same ones
- * syncNewCtrlVisibility and the context menus use). If either is missing the
- * row is KEPT — fail-open, so an unreadable privilege can never strip actions
- * from a member who has them.
+ * canDownload() / canUpload() / canAdmin() are the window's own tests (the same
+ * ones syncNewCtrlVisibility and the context menus use). If the method is
+ * missing the row is KEPT — fail-open, so an unreadable privilege can never
+ * strip actions from a member who has them.
+ *
+ * The window's privilege is the viewer's WORKSPACE role even inside a
+ * subfolder, which is what makes canAdmin() the right test for a row that acts
+ * on the workspace: user_permission() answers a non-hub node from the member's
+ * hub-wide grant (`resource_id='*'`) before it ever looks at a per-node row, so
+ * browsing into a folder cannot raise or lower the answer.
  */
 function allowedActions(ui) {
   const may = (need) => {
     try {
       if (need === "download") {
         return typeof ui.canDownload !== "function" ? true : !!ui.canDownload();
+      }
+      if (need === "admin") {
+        return typeof ui.canAdmin !== "function" ? true : !!ui.canAdmin();
       }
       return typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
     } catch (e) {

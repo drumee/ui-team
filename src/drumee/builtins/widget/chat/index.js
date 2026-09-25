@@ -1,5 +1,22 @@
-const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
+const { colorFromName, copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
+const nodeIconHtml = require("./node-icon");
 require("./skin");
+
+/**
+ * True for a chat whose conversation belongs to a HUB rather than to the
+ * visitor: `workspace` (the workspace team chat) and `folder` (a DMZ share,
+ * where the folder is an access boundary). Everything else — bigchat, a P2P /
+ * direct room — is the visitor's own chat and carries no hub membership.
+ *
+ * Kept as one predicate on purpose. The scope list grew a second value when
+ * chat moved to workspace scope (37ab4fcc); the call sites that were updated
+ * one at a time then silently disagreed — that is what made the @-mention
+ * dropdown fall back to personal contacts in a workspace chat.
+ *
+ * `_a` is a runtime global, so this must stay a function body (evaluated on
+ * call), not a top-level constant.
+ */
+const isHubScopedChat = (scope) => scope === _a.folder || scope === "workspace";
 
 const cleanMentionText = (value) =>
   value == null ? "" : String(value).trim();
@@ -35,6 +52,19 @@ const mentionMemberSearchText = (member = {}) =>
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+
+// Two letters for the avatar fallback: first + last name, else the two words
+// of the display name, else the first letter of whatever labels the person.
+const mentionMemberInitials = (member = {}) => {
+  const first = cleanMentionText(member.firstname);
+  const last = cleanMentionText(member.lastname);
+  let initials = `${first[0] || ""}${last[0] || ""}`;
+  if (!initials) {
+    const parts = mentionMemberLabel(member).split(/\s+/).filter(Boolean);
+    initials = `${(parts[0] || "")[0] || ""}${(parts[1] || "")[0] || ""}`;
+  }
+  return initials.toUpperCase() || "?";
+};
 
 const mentionMemberDebugRow = (member = {}) => ({
   id: cleanMentionText(member.id),
@@ -125,12 +155,13 @@ class __widget_chat extends LetcBox {
       // conversation for the whole workspace (Figma 43:23955 makes Chat a
       // workspace rail item), so it leaves this empty and reads the hub.
       //
-      // `postNid` is where a post's staged uploads LAND. Both scopes set it:
-      // the conversation being workspace-wide does not change the fact that a
-      // file dropped into it belongs in the folder you are standing in.
+      // `postNid` is the folder a post is SCOPED to (channel.post stores it
+      // as _scope_nid and names the folder on the push). Both scopes set it.
+      // It does not decide where attachments live: those always stay in the
+      // message's sbox, never in the folder's Files tab.
       const scope = this.mget("scope");
       this.scopedNid = scope === _a.folder ? nid : "";
-      this.postNid = scope === _a.folder || scope === "workspace" ? nid : "";
+      this.postNid = isHubScopedChat(scope) ? nid : "";
       // Optional initial file scope: lets a second chat instance mount already
       // scoped to a file thread (the full Chat-tab side panel) so its first
       // list load is the thread itself — no General-then-thread flash.
@@ -633,7 +664,6 @@ class __widget_chat extends LetcBox {
         respawn: "media_paste",
         area: args.area,
         src: args.src,
-        from_device: 1,
         home_id,
         nid,
         hub_id,
@@ -645,10 +675,10 @@ class __widget_chat extends LetcBox {
 
   _getUploadDestination() {
     // Every attachment uploads into the hub's hidden chat staging
-    // (/__chat__/__upload__/) — never straight into the scoped folder.
-    // A file must not show up in the folder's Files tab before the
-    // message is sent; channel.post promotes staged device uploads
-    // (folder_attachment) into the folder at send time.
+    // (/__chat__/__upload__/) — never into the scoped folder. A chat
+    // attachment belongs to the message only: channel.post copies it into
+    // the message's sbox and purges the staging copy, so it never shows up
+    // in the folder's Files tab, before or after send.
     const home = this.mget(_a.home) || {};
     return {
       nid: home.chat_upload_id,
@@ -674,24 +704,6 @@ class __widget_chat extends LetcBox {
       if (permission != null) return permission;
     }
     return 0;
-  }
-
-  // Device uploads are promoted into the folder a post WRITES to (postNid),
-  // not the folder it READS from (scopedNid). The workspace team chat reads
-  // the whole hub, so scopedNid is empty there by design (see initialize) —
-  // gating on it left every file uploaded through workspace chat in the
-  // hidden /__chat__/ sbox. Such a file has no folder placement: its thread
-  // (keyed on the sbox copy) never appears in the folder's thread rail, and
-  // "Show in folder" reveals nothing. postNid is set on both folder and
-  // workspace scopes, so the write check below is the only real gate.
-  canPromoteDeviceAttachmentsToFolder() {
-    if (!this.getPostNid()) return false;
-    return !!(_K.permission.write & this._scopePrivilege());
-  }
-
-  getPromotableDeviceAttachmentIds(list) {
-    if (!list || !this.canPromoteDeviceAttachmentsToFolder()) return [];
-    return list.getDeviceAttachmentIds ? list.getDeviceAttachmentIds() || [] : [];
   }
 
   /**
@@ -730,6 +742,28 @@ class __widget_chat extends LetcBox {
    */
   onPartReady(child, pn, section) {
     switch (pn) {
+      case "desk-picker-skeleton":
+        this._deskPickerSkeleton = child;
+        break;
+      case "desk-picker-list":
+        // Placeholder rows give way to the real rows once the first page
+        // lands, the listing ends empty, or the request fails.
+        for (const ev of [_e.data, _e.eod, _e.error]) {
+          child.on(ev, () => this._hideDeskPickerSkeleton());
+        }
+        // The user's own desk root lists their hubs as child nodes. A hub is
+        // another workspace, so it is never offered here: only this
+        // workspace's folders and files are.
+        if (!child._deskPickerFilterInstalled) {
+          child._deskPickerFilterInstalled = 1;
+          const original = child.prepareData.bind(child);
+          child.prepareData = function (data) {
+            return (original(data) || []).filter(
+              (it) => it && it.filetype !== _a.hub,
+            );
+          };
+        }
+        break;
       case "attachment-list":
         this.attachmentList = child;
         this.checkPendingContent();
@@ -1037,8 +1071,11 @@ class __widget_chat extends LetcBox {
       case "attach-from-desk":
         return this._openDeskPicker();
 
-      case "pick-desk-file":
-        return this._pickDeskFile(cmd);
+      case "pick-desk-node":
+        return this._pickDeskNode(cmd);
+
+      case "desk-picker-back":
+        return this._deskPickerBack();
 
       case "close-desk-picker":
         return this._closeDeskPicker();
@@ -1304,7 +1341,6 @@ class __widget_chat extends LetcBox {
       phase: _a.upload,
       filetype: _a.pseudo,
       isAttachment: 1,
-      from_device: 1,
       origin: _a.chat,
       uiHandler: [this],
       file: file,
@@ -1314,10 +1350,11 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   *
-   * @param {*} e
-   * @param {*} token
-   * @returns
+   * "From workspace" picker. Opens on the chat's own workspace and walks down
+   * its folders with media.show_node_by; only a file can be picked. Other
+   * workspaces are never offered: an attachment comes from where the
+   * conversation lives. `_deskPickerTrail` is the navigation stack — its
+   * first entry is that root, its last the folder being listed.
    */
   async _openDeskPicker() {
     const picker = await this.ensurePart("wrapper-desk-picker");
@@ -1325,51 +1362,115 @@ class __widget_chat extends LetcBox {
       picker.clear();
       return;
     }
-    let home;
-    try {
-      home = await this.fetchService(SERVICE.media.home, {
-        hub_id: Visitor.id,
-      });
-    } catch (e) {
-      this.warn("[chat] _openDeskPicker: failed to fetch home", e);
-      return;
+    const root = await this._deskPickerRoot();
+    if (!root || picker.isDestroyed()) return;
+    this._deskPickerTrail = [root];
+    this._renderDeskPicker(picker);
+  }
+
+  /**
+   * Where the picker starts. A DMZ share's chat starts at the shared folder
+   * (its access boundary). On the user's own desk a workspace IS a folder
+   * (the sidebar's Personal workspaces are home-root folders), so the chat's
+   * post scope names it. A team hub's workspace is the hub: its home root,
+   * whatever folder the chat was opened from. A direct chat starts at the
+   * user's own desk root.
+   */
+  async _deskPickerRoot() {
+    const hub_id = this.hubId;
+    const area = this.mget(_a.area);
+    const scoped = this.getScopedNid();
+    if (scoped) return { hub_id, nid: scoped, area };
+    const isPersonalHub = !!Visitor.id && `${hub_id}` === `${Visitor.id}`;
+    const personalNid = isPersonalHub ? this.getPostNid() : "";
+    if (personalNid) {
+      return { hub_id, nid: personalNid, area: area || _a.personal };
     }
-    if (!home || !home.home_id) return;
+    let home = this.mget(_a.home);
+    if (!home || !home.home_id) {
+      try {
+        home = await this.fetchService(SERVICE.media.home, { hub_id });
+      } catch (e) {
+        this.warn("[chat] _deskPickerRoot: failed to fetch home", e);
+        return null;
+      }
+    }
+    if (!home || !home.home_id) return null;
+    return { hub_id: home.hub_id || hub_id, nid: home.home_id, area: area || home.area };
+  }
+
+  _renderDeskPicker(picker) {
+    if (!picker || picker.isDestroyed()) return;
     const fig = this.fig.family;
+    const trail = this._deskPickerTrail || [];
+    const current = trail[trail.length - 1];
+    if (!current) return;
+    const atRoot = trail.length <= 1;
+    const api = {
+      service: SERVICE.media.show_node_by,
+      hub_id: current.hub_id,
+      nid: current.nid,
+      page: 1,
+    };
+    const header = [];
+    if (!atRoot) {
+      header.push(
+        Skeletons.Note({
+          className: `${fig}__desk-picker-back`,
+          content: LOCALE.BACK,
+          service: "desk-picker-back",
+          uiHandler: [this],
+        }),
+      );
+    }
+    header.push(
+      Skeletons.Note({
+        className: `${fig}__desk-picker-title`,
+        content: atRoot ? LOCALE.FROM_WORKSPACE : current.filename,
+      }),
+    );
+    picker.clear();
     picker.feed(
       Skeletons.Box.Y({
         className: `${fig}__desk-picker-panel`,
         kids: [
           Skeletons.Box.X({
             className: `${fig}__desk-picker-header`,
-            kids: [
-              Skeletons.Note({
-                className: `${fig}__desk-picker-title`,
-                content: LOCALE.FROM_WORKSPACE,
+            kids: header,
+          }),
+          // Placeholder rows in the geometry of the real rows, shown until the
+          // first page lands (onPartReady "desk-picker-list" hides them).
+          Skeletons.Box.Y({
+            className: `${fig}__desk-picker-skeleton`,
+            sys_pn: "desk-picker-skeleton",
+            partHandler: this,
+            kids: [1, 2, 3, 4].map(() =>
+              Skeletons.Box.X({
+                className: `${fig}__desk-picker-skeleton-row`,
+                kids: [
+                  Skeletons.Box.X({
+                    className: `${fig}__desk-picker-skeleton-tile`,
+                  }),
+                  Skeletons.Box.X({
+                    className: `${fig}__desk-picker-skeleton-name`,
+                  }),
+                ],
               }),
-            ],
+            ),
           }),
           Skeletons.List.Smart({
             className: `${fig}__desk-picker-list`,
-            api: {
-              service: SERVICE.media.show_node_by,
-              hub_id: home.hub_id || Visitor.id,
-              nid: home.home_id,
-              page: 1,
-            },
-            itemsOpt: {
-              kind: KIND.note,
-              service: "pick-desk-file",
-              uiHandler: [this],
-            },
-            itemsMap: { filename: "content" },
-            evArgs: Skeletons.Note(
+            sys_pn: "desk-picker-list",
+            partHandler: this,
+            api,
+            // List.Smart merges the function's result into each item before
+            // the row is built, so every row is a full skeleton of its own.
+            itemsOpt: (list, item) => this._deskPickerRow(item, current),
+            placeholder: Skeletons.Note(
               LOCALE.NO_FILES_YET || LOCALE.NO_DISCUSSIONS_YET,
-              "no-content",
+              `${fig}__desk-picker-empty`,
             ),
             vendorOpt: Preset.List.Orange_e,
-            spinner: true,
-            spinnerWait: 300,
           }),
           Skeletons.Note({
             className: `${fig}__desk-picker-cancel`,
@@ -1379,6 +1480,86 @@ class __widget_chat extends LetcBox {
           }),
         ],
       }),
+    );
+  }
+
+  _deskPickerRowType(item = {}) {
+    return item.filetype === _a.folder ? _a.folder : "file";
+  }
+
+  /**
+   * One picker row, laid out like an @-mention row: the node's desk icon
+   * (folder art in the area colour, an image's own thumbnail, otherwise the
+   * file type glyph) and its full name — a file keeps its extension, as
+   * "photo.png". A folder carries no area of its own, so it takes the
+   * colour of the workspace being browsed.
+   */
+  _deskPickerRow(item = {}, current) {
+    const fig = this.fig.family;
+    const type = this._deskPickerRowType(item);
+    const area = item.area || (current && current.area) || _a.personal;
+    const name =
+      type === "file" && item.ext ? `${item.filename}.${item.ext}` : item.filename;
+    const kids = [
+      Skeletons.Element({
+        className: `${fig}__desk-picker-icon ${area}`,
+        content: nodeIconHtml(item, {
+          area,
+          prefix: "desk-picker-icon-",
+          thumbnail: true,
+        }),
+      }),
+      Skeletons.Note({
+        className: `${fig}__desk-picker-name`,
+        content: name,
+      }),
+    ];
+    return Skeletons.Box.X({
+      className: `${fig}__desk-picker-item ${fig}__desk-picker-item--${type}`,
+      service: "pick-desk-node",
+      uiHandler: [this],
+      kids,
+    });
+  }
+
+  _hideDeskPickerSkeleton() {
+    const sk = this._deskPickerSkeleton;
+    if (sk && !sk.isDestroyed()) sk.el.dataset.state = "done";
+  }
+
+  /**
+   * A row of the picker was clicked: descend into a folder, attach a file.
+   */
+  _pickDeskNode(cmd) {
+    const o = cmd.model.toJSON();
+    const trail = this._deskPickerTrail || [];
+    const current = trail[trail.length - 1];
+    if (o.filetype === _a.folder) {
+      return this._enterDeskFolder({
+        hub_id: o.hub_id || (current && current.hub_id) || this.hubId,
+        nid: o.nid,
+        filename: o.filename,
+        area: o.area || (current && current.area) || _a.personal,
+      });
+    }
+    return this._pickDeskFile(cmd);
+  }
+
+  _enterDeskFolder(step) {
+    if (!step.hub_id || !step.nid) return;
+    if (!this._deskPickerTrail) this._deskPickerTrail = [];
+    this._deskPickerTrail.push(step);
+    return this.ensurePart("wrapper-desk-picker").then((picker) =>
+      this._renderDeskPicker(picker),
+    );
+  }
+
+  _deskPickerBack() {
+    // The first entry is the chat's workspace root; there is no level above it.
+    if (!this._deskPickerTrail || this._deskPickerTrail.length <= 1) return;
+    this._deskPickerTrail.pop();
+    return this.ensurePart("wrapper-desk-picker").then((picker) =>
+      this._renderDeskPicker(picker),
     );
   }
 
@@ -1453,6 +1634,7 @@ class __widget_chat extends LetcBox {
   }
 
   _closeDeskPicker() {
+    this._deskPickerTrail = [];
     this.ensurePart("wrapper-desk-picker").then((picker) => {
       if (picker && !picker.isDestroyed()) picker.clear();
     });
@@ -1692,10 +1874,6 @@ class __widget_chat extends LetcBox {
 
   /**
    * One uploaded file has landed in the chat staging folder — show it.
-   *
-   * `from_device: 1` is what marks it for promotion at send time (channel.post
-   * moves staged device uploads into the folder the post writes to), so it has
-   * to survive onto the descriptor here exactly as the old upload path set it.
    */
   _onStagedFile(node, destination) {
     if (!node || node.nid == null) return;
@@ -1715,7 +1893,6 @@ class __widget_chat extends LetcBox {
         hub_id: destination.hub_id || this.hubId,
         kind: "media_grid",
         isAttachment: 1,
-        from_device: 1,
         origin: _a.chat,
         // `phase` is an INSTRUCTION to syncData(), not a statement about the
         // past: `_a.copied` makes the card fire SERVICE.media.copy — a second,
@@ -1874,8 +2051,8 @@ class __widget_chat extends LetcBox {
 
   // Follow the host window into another folder.
   //
-  // Under workspace scope this only re-points where a post's uploads land —
-  // the conversation is the same one and must NOT be reloaded, or every step
+  // Under workspace scope this only re-points the folder a post is scoped
+  // to — the conversation is the same one and must NOT be reloaded, or every step
   // into a subfolder would tear the message list down and rebuild it identical.
   // A folder-scoped surface (DMZ share) still switches conversations here.
   setScopedFolderNid(folderNid) {
@@ -1985,113 +2162,6 @@ class __widget_chat extends LetcBox {
         }
       })
       .catch(() => {});
-  }
-
-  // Server stores the attachment field as a JSON string; normalise to array.
-  parseAttachmentField(raw) {
-    if (_.isArray(raw)) return raw;
-    if (!raw) return [];
-    if (_.isString(raw)) {
-      try {
-        return JSON.parse(raw);
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  }
-
-  _messageData(data = {}) {
-    if (_.isArray(data)) return data[0] || {};
-    return data || {};
-  }
-
-  _attachmentIds(data = {}, fallback = {}) {
-    const messageData = this._messageData(data);
-    const dataAttachment = this.parseAttachmentField(messageData.attachment);
-    const fallbackAttachment = this.parseAttachmentField(fallback.attachment);
-    const attachment = _.isEmpty(dataAttachment)
-      ? fallbackAttachment
-      : dataAttachment;
-    return attachment
-      .map((item) => {
-        if (item && typeof item === "object") return item.nid || item.id;
-        return item;
-      })
-      .filter((id) => id != null && id !== "");
-  }
-
-  _hasAttachmentPayload(data = {}, fallback = {}) {
-    const messageData = this._messageData(data);
-    return (
-      messageData.is_attachment ||
-      !_.isEmpty(this._attachmentIds(messageData, fallback))
-    );
-  }
-
-  // Does this message land in the folder currently on screen? Keyed on the
-  // WRITE destination, not the read scope: the workspace chat reads every
-  // folder's messages, but only an attachment landing in the folder the user
-  // is looking at should make its file grid reload.
-  _matchesScopedFolder(data = {}) {
-    const nid = this.getPostNid();
-    if (!nid) return false;
-    const messageData = this._messageData(data);
-    const messageNid =
-      messageData.nid || messageData.parent_id || messageData.pid;
-    return `${messageNid}` === `${nid}`;
-  }
-
-  _syncScopedFolderContent(data = {}, fallback = {}) {
-    const scope = this.mget("scope");
-    if (scope !== _a.folder && scope !== "workspace") return;
-    const messageData = this._messageData(data);
-    const hasFolderAttachmentFallback =
-      fallback && Object.prototype.hasOwnProperty.call(fallback, "folder_attachment");
-    const attachmentIds = hasFolderAttachmentFallback
-      ? this._attachmentIds({ attachment: fallback.folder_attachment })
-      : this._attachmentIds(messageData);
-    if (hasFolderAttachmentFallback && _.isEmpty(attachmentIds)) return;
-    const payload = {
-      ...messageData,
-      attachment: attachmentIds,
-      nid: messageData.nid || fallback.nid,
-      is_attachment: messageData.is_attachment || !_.isEmpty(attachmentIds),
-    };
-    if (!this._hasAttachmentPayload(payload, fallback)) return;
-    if (!this._matchesScopedFolder(payload)) return;
-
-    const folderWindow =
-      this.getParentByKind && this.getParentByKind("window_folder");
-    if (
-      !folderWindow ||
-      (folderWindow.isDestroyed && folderWindow.isDestroyed())
-    )
-      return;
-    const scopedNid = `${this.getPostNid()}`;
-    if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid)
-      return;
-
-    clearTimeout(this._folderContentSyncTimer);
-    this._folderContentSyncTimer = setTimeout(() => {
-      if (folderWindow.isDestroyed && folderWindow.isDestroyed()) return;
-      if (this.getPostNid && `${this.getPostNid()}` !== scopedNid) return;
-      if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid)
-        return;
-      if (
-        !_.isEmpty(attachmentIds) &&
-        _.isFunction(folderWindow.getItemsByAttr)
-      ) {
-        const allRendered = attachmentIds.every((id) => {
-          return (
-            !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, id)) ||
-            !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, `${id}`))
-          );
-        });
-        if (allRendered) return;
-      }
-      if (_.isFunction(folderWindow.loadContent)) folderWindow.loadContent();
-    }, 700);
   }
 
   // The server sends the synthetic file.thread root card to other recipients
@@ -2214,7 +2284,8 @@ class __widget_chat extends LetcBox {
         [_e.commit]: 1,
         [_e.reply]: 1,
         "attach-from-desk": 1,
-        "pick-desk-file": 1,
+        "pick-desk-node": 1,
+        "desk-picker-back": 1,
         "remove-upload": 1,
         "mention-select": 1,
         "delete-for-me": 1,
@@ -2466,11 +2537,6 @@ class __widget_chat extends LetcBox {
             attachment: attachments,
             hub_id: this.hubId,
           };
-          const ftFolderAttachment =
-            this.getPromotableDeviceAttachmentIds(list);
-          if (!_.isEmpty(ftFolderAttachment)) {
-            api.folder_attachment = ftFolderAttachment;
-          }
           break;
         }
         api = {
@@ -2479,14 +2545,11 @@ class __widget_chat extends LetcBox {
           attachment: attachments,
           hub_id: this.hubId,
         };
+        // nid scopes the post to the folder (server keeps it as _scope_nid
+        // and names the folder on the push); attachments themselves never
+        // leave the message's sbox.
         if (this.getPostNid()) {
           api.nid = this.getPostNid();
-          // Staged device uploads the server should move into the folder
-          // at send time (everything else stays link-only in the sbox).
-          const folderAttachment = this.getPromotableDeviceAttachmentIds(list);
-          if (!_.isEmpty(folderAttachment)) {
-            api.folder_attachment = folderAttachment;
-          }
         }
         break;
 
@@ -2637,6 +2700,17 @@ class __widget_chat extends LetcBox {
     delete tmp._scopeKey;
     delete api._restoreText;
     delete api._scopeKey;
+    // Optimistic cards: the staged nodes are already rendered in the composer
+    // strip, so the bubble can show them at once. Rendered-row only — `api`
+    // is what goes to the server and stays a list of nids.
+    if (
+      !_.isEmpty(api.attachment) &&
+      this.attachmentList &&
+      !this.attachmentList.isDestroyed() &&
+      _.isFunction(this.attachmentList.getAttachmentNodes)
+    ) {
+      tmp.attachment_preview = this.attachmentList.getAttachmentNodes();
+    }
     if (this.__list) {
       this.__list.append(tmp);
       this.__list.scrollToBottom();
@@ -2649,11 +2723,10 @@ class __widget_chat extends LetcBox {
     this.postService(api)
       .then((data) => {
         this._sendingNids = null;
-        // SCOPE_GONE (chat-scope-cross-hub-move phase 3): the folder/file this
-        // message targeted no longer exists — server wrote 0 rows and purged
-        // any staged uploads. Must run BEFORE clearAttachment/checkPendingContent
-        // and BEFORE _syncScopedFolderContent/handleReceivedMsg below, since none
-        // of those apply to a post the server refused. Order matters (red-team F8).
+        // SCOPE_GONE: the folder/file this message targeted no longer exists —
+        // server wrote 0 rows and purged any staged uploads. Must run BEFORE
+        // clearAttachment/checkPendingContent and BEFORE handleReceivedMsg
+        // below, since none of those apply to a post the server refused.
         if (data && data.status === "SCOPE_GONE") {
           // Server purges staged uploads on SCOPE_GONE (Phase 2 contract) — the
           // local attachment tray must follow, or it shows stale pending files
@@ -2674,7 +2747,6 @@ class __widget_chat extends LetcBox {
           this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
           return;
         }
-        this._syncScopedFolderContent(data, api);
         this._notifyFileThreadCreated(data);
         // First file-thread send returns the freshly-created thread id. The
         // server suppresses our own WS echo, so adopt it from the POST response
@@ -3131,8 +3203,14 @@ class __widget_chat extends LetcBox {
     // Apply their read cursor across the whole list so their avatar lands only
     // on their last-read message (Messenger-style), without a stale duplicate
     // remaining on an earlier message.
+    // The cursor is the NEWEST ctime in the batch: opening a chat broadcasts
+    // the whole page newest-first, so its last row is the oldest one.
     const reader = options && options.sender && options.sender.uid;
-    const refCtime = data.length ? data[data.length - 1].ctime : null;
+    let refCtime = null;
+    for (const d of data) {
+      const ct = d && d.ctime != null ? Number(d.ctime) : NaN;
+      if (!isNaN(ct) && (refCtime == null || ct > refCtime)) refCtime = ct;
+    }
     if (reader && refCtime != null) {
       this.applyReadReceipt(reader, refCtime);
     }
@@ -3142,6 +3220,8 @@ class __widget_chat extends LetcBox {
    * Apply a reader's read cursor across all visible message rows, then re-render
    * every reader-avatar strip. Two passes because last-read placement depends on
    * the next row's _seen_, so all rows must be updated before any are rendered.
+   * The cursor only moves forward, like the server's _seen_: an older cursor
+   * (e.g. the reader paging back through history) never un-reads a row.
    * @param {String} readerUid
    * @param {Number} refCtime the reader has read every message with ctime <= this
    */
@@ -3149,11 +3229,11 @@ class __widget_chat extends LetcBox {
     if (!readerUid || readerUid === Visitor.id) return;
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
     const items = this.__list.getItemsByKind(this.itemKind()) || [];
-    // Pass 1: update each row's _seen_ for this reader from the cursor.
+    // Pass 1: mark every row up to the cursor as read by this reader.
     for (const item of items) {
-      if (item && _.isFunction(item.updateReaderSeen)) {
+      if (item && _.isFunction(item.markReaderSeen)) {
         const ct = item.mget(_a.ctime);
-        item.updateReaderSeen(readerUid, ct != null && ct <= refCtime);
+        if (ct != null && ct <= refCtime) item.markReaderSeen(readerUid);
       }
     }
     // Pass 2: re-render — last-read placement reads the next row's _seen_, so
@@ -3271,9 +3351,6 @@ class __widget_chat extends LetcBox {
         var privateMach = isPrivate && this.peerId === data.peer_id;
         var ticketMach =
           area === _a.ticket && data.ticket_id === this.mget("ticket_id");
-        if (hubMatch) {
-          this._syncScopedFolderContent(data);
-        }
         if ((hubMatch && inScope) || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
         }
@@ -3724,6 +3801,34 @@ class __widget_chat extends LetcBox {
   /**
    * Normalize media-service response envelopes before rows are rendered.
    */
+  /**
+   * Avatar of one contact row: the photo shows only once it has loaded; a
+   * person without one gets their initials on a colour derived from them
+   * (chat-item _loadAvatar draws the bubble avatar the same way).
+   */
+  _loadMentionAvatar(row) {
+    const holder = row.querySelector(".mention-item__avatar");
+    const img = holder && holder.querySelector("img");
+    if (!holder || !img) return;
+    const showInitials = () => {
+      img.style.display = "none";
+      if (holder.querySelector(".mention-item__avatar-initials")) return;
+      const span = document.createElement("span");
+      span.className = "mention-item__avatar-initials";
+      span.textContent = holder.dataset.initials || "?";
+      span.style.backgroundColor = colorFromName(holder.dataset.initials || "??");
+      holder.appendChild(span);
+    };
+    img.style.display = "none";
+    img.onerror = showInitials;
+    img.onload = () => {
+      img.style.display = "";
+    };
+    const id = row.dataset.drumate_id;
+    if (!id) return showInitials();
+    img.src = Visitor.avatar(id, _a.vignette);
+  }
+
   _mentionRows(data) {
     if (!data) return [];
     if (Array.isArray(data)) return data;
@@ -4020,7 +4125,6 @@ class __widget_chat extends LetcBox {
     this._mentionRequestSeq = requestSeq;
 
     const hubId = this.hubId;
-    const mediaGridPreview = require("builtins/media/grid/template/preview");
 
     let filesPromise = Promise.resolve(null);
     let contactsPromise = Promise.resolve(null);
@@ -4096,10 +4200,22 @@ class __widget_chat extends LetcBox {
     }
 
     if (mentionType === "contact") {
-      // Folder-chat scope: mention workspace members (people who can see
-      // this folder), not the visitor's personal chat rooms. Falls back to
-      // contact_rooms when not in folder scope (bigchat / direct chat).
-      if (this.mget("scope") === _a.folder && folderHubId) {
+      // Who can be @-mentioned is decided by the HUB the conversation lives
+      // in, not by the surface that mounted the widget:
+      //
+      // - A team hub (any surface: folder window, Chat tab, DMZ share, a
+      //   workspace room in the chat inbox) → the WORKSPACE MEMBERS, the
+      //   people who can read this conversation. The inbox's workspace rooms
+      //   carry no `scope`, so keying this on the scope string sent them to
+      //   the address book instead.
+      // - The user's own hub with a peer (a direct chat) → the address book,
+      //   as it has always been.
+      // - The user's own hub with no peer (a personal workspace folder) → no
+      //   one: a personal workspace has no members (the server answers [] for
+      //   it, hub._members_by_type) and its files are not shared with anyone.
+      const isPersonalHub = !!Visitor.id && `${folderHubId}` === `${Visitor.id}`;
+      const isDirectChat = isPersonalHub && !!this.peerId;
+      if (folderHubId && !isPersonalHub) {
         const payload = {
           service: SERVICE.hub.get_members_by_type,
           hub_id: folderHubId,
@@ -4118,6 +4234,12 @@ class __widget_chat extends LetcBox {
           console.warn("[mention] hub members fetch failed", e);
           return null;
         });
+      } else if (!isDirectChat) {
+        console.log("[mention-members] personal workspace: no one to mention", {
+          chatHubId: this.hubId,
+          scope: this.mget("scope"),
+        });
+        contactsPromise = Promise.resolve([]);
       } else {
         const payload = {
           service: SERVICE.chat.contact_rooms,
@@ -4172,6 +4294,17 @@ class __widget_chat extends LetcBox {
 
         files = files.filter((f) => f.filetype !== _a.hub);
 
+        // One row per person. contact_rooms answers one row per CONTACT
+        // record, and a person can be in the address book twice (imported and
+        // accepted, or under two emails) — the dropdown then named them twice.
+        const seenPeople = new Set();
+        contacts = contacts.filter((c) => {
+          const key = `${c.drumate_id || c.entity_id || c.id || ""}`;
+          if (!key) return true;
+          if (seenPeople.has(key)) return false;
+          seenPeople.add(key);
+          return true;
+        });
         const contactsBeforeLabelFilter = contacts;
         contacts = contacts.filter((c) => mentionMemberLabel(c).length > 0);
         console.log("[mention-members] after label filter", {
@@ -4211,51 +4344,21 @@ class __widget_chat extends LetcBox {
         let html = "";
 
         if (files.length) {
-          const isImgCapable = (file) => {
-            if (/^-/.test(file.capability || "")) return 0;
-            if ((file.ext || "").toLowerCase() === "svg") return 1;
-            if ((file.ext || "").toLowerCase() === _a.pdf) return 0;
-            if (/text/.test(file.mimetype || "")) return 0;
-            if (/shell|script|text/.test(file.filetype || "")) return 0;
-            return /^r/.test(file.capability || "") ? 1 : 0;
-          };
-          const previewUrl = (file) =>
-            file.url ||
-            file.vignette ||
-            file.thumbnail ||
-            file.src ||
-            file.preview ||
-            "";
-          const renderFileIcon = (file) => {
-            const url = previewUrl(file);
-            const model = {
-              ...file,
-              _id: file._id || file.id || file.nid,
-              area: file.area || this.mget(_a.area),
-              role:
-                file.filetype === _a.folder ? "mention" : file.role || "desk",
-              imgCapable: url ? isImgCapable(file) : 0,
-              url,
-              widgetId: _.uniqueId("mention-preview-"),
-              isAttachment: 1,
-            };
-            switch (model.filetype) {
-              case _a.folder:
-                return require("builtins/media/grid/template/folder")(model);
-              case _a.audio:
-                return require("builtins/media/grid/template/filetype/audio.txt")
-                  .default;
-              case _a.note:
-              case "markdown":
-                return require("builtins/media/grid/template/filetype/note.txt")
-                  .default;
-              default:
-                return mediaGridPreview(model);
-            }
-          };
+          // Same tile as the From workspace picker: an image row shows the
+          // file's own vignette, every other file its type glyph.
+          const renderFileIcon = (file) =>
+            nodeIconHtml(file, {
+              area: this.mget(_a.area),
+              prefix: "mention-preview-",
+              thumbnail: true,
+            });
           html += `<div class="mention-section-header">${LOCALE.MENTION_FILES}</div>`;
           files.slice(0, 6).forEach((f) => {
-            const label = f.mention_path || f.filename;
+            // Display only: the row names the file with its extension, as the
+            // From workspace picker does. The inserted mention text is unchanged.
+            const base = f.mention_path || f.filename;
+            const label =
+              f.ext && f.filetype !== _a.folder ? `${base}.${f.ext}` : base;
             // File row: type icon + name + a single-select radio cue on the right
             // (filled on the active/hovered row). Click still mentions immediately.
             html += `<div class="mention-item mention-item--file" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
@@ -4280,10 +4383,13 @@ class __widget_chat extends LetcBox {
               cleanMentionText(c.surname) ||
               fullname;
             const lastname = cleanMentionText(c.lastname);
-            const avatarUrl = Visitor.avatar(drumate_id, _a.vignette);
+            const initials = mentionMemberInitials(c);
 
+            // The photo is wired after the HTML lands (see below): hidden
+            // until it loads, initials on a name colour when there is none —
+            // the same fallback the chat bubble's avatar uses.
             html += `<div class="mention-item mention-item--contact" data-drumate_id="${drumate_id}" data-firstname="${_.escape(firstname)}" data-lastname="${_.escape(lastname)}" data-fullname="${_.escape(fullname)}" data-type="contact" data-service="mention-select">
-            <div class="mention-item__avatar"><img class="mention-item__avatar-img" src="${avatarUrl}"></div>
+            <div class="mention-item__avatar" data-initials="${_.escape(initials)}"><img class="mention-item__avatar-img" alt=""></div>
             <div class="mention-item__name">${_.escape(fullname)}</div>
           </div>`;
           });
@@ -4297,6 +4403,9 @@ class __widget_chat extends LetcBox {
         }
 
         dropdown.el.innerHTML = html;
+        dropdown.el
+          .querySelectorAll(".mention-item--contact")
+          .forEach((row) => this._loadMentionAvatar(row));
         dropdown.el.dataset.state = _a.open;
         this._setMentionActiveIndex(0);
         console.log("[mention] dropdown OPENED", {
