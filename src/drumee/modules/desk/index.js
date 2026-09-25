@@ -39,6 +39,7 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
 const { groupWorkspaces } = require("libs/workspace-groups");
+const { restoreScreen, pollFor } = require("libs/screen-restore");
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
@@ -1598,6 +1599,93 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * How each restorable screen is put back after a reload — see
+   * _restoreScreen and libs/screen-restore.
+   *
+   *  slot     the part the screen mounts into
+   *  kind     the widget kind to wait for in it
+   *  selfPart the part IS the widget (Activity is a permanent part, not a
+   *           child fed into a slot)
+   *  isReal   tells the widget from the lazy placeholder, when it has no
+   *           whenItemsReady to tell by
+   *  ready    resolves once its first load painted; null = ready on mount
+   *  refresh  run once if ready never came
+   *
+   * Keyed like _RESTORABLE_SCREENS, which still decides what is SAVED.
+   */
+  static get _SCREEN_RESTORE() {
+    const alive = (w) => !(w.isDestroyed && w.isDestroyed());
+    // A screen that has not armed libs/items-ready yet (the admin console, a
+    // plugin) counts as ready on mount; the day it arms, this uses it.
+    const itemsReady = (w) => (_.isFunction(w.whenItemsReady) ? w.whenItemsReady() : true);
+    const restartPart = (pn) => (w) => {
+      const p = w.getPart && w.getPart(pn);
+      if (p && _.isFunction(p.restart) && alive(p)) p.restart();
+    };
+    const armed = (w) => _.isFunction(w.whenItemsReady);
+    const main = "settings-main-slot";
+    return {
+      "toggle-activity": {
+        slot: "activity-panel",
+        kind: "panel_activity",
+        selfPart: true,
+        isReal: armed,
+        ready: itemsReady,
+        refresh: (w) => {
+          w.refreshFeed();
+          w.refreshActivity();
+        },
+      },
+      "toggle-calendar": {
+        slot: main,
+        kind: "calendar_main",
+        isReal: armed,
+        ready: itemsReady,
+        refresh: (w) =>
+          w._loadItems().then(() => {
+            if (alive(w)) w._render();
+          }),
+      },
+      "toggle-inbox": {
+        slot: INBOX_SLOT,
+        kind: "chat_p2p",
+        isReal: armed,
+        ready: itemsReady,
+        refresh: restartPart("contact-list"),
+      },
+      "toggle-contacts": {
+        slot: "chat-panel",
+        kind: "address_book",
+        isReal: armed,
+        ready: itemsReady,
+        refresh: (w) =>
+          w._loadContacts().then(() => {
+            if (alive(w)) w._refreshList();
+          }),
+      },
+      "toggle-trash": {
+        slot: "trash-panel",
+        kind: "panel_trash",
+        isReal: armed,
+        ready: itemsReady,
+        refresh: restartPart(_a.list),
+      },
+      // `apps apps-main apps__item apps__ui` is the plugin root's own class
+      // list; `apps-main` is what the lazy placeholder does not carry.
+      "toggle-apps": {
+        slot: main,
+        kind: "apps_main",
+        isReal: (w) => armed(w) || !!(w.el && w.el.classList && w.el.classList.contains("apps-main")),
+        ready: itemsReady,
+        refresh: null,
+      },
+      "toggle-settings": { slot: main, kind: "settings_main", ready: null, refresh: null },
+      "toggle-help": { slot: main, kind: "help_main", ready: null, refresh: null },
+      "upgrade-plan": { slot: main, kind: "settings_billing", ready: null, refresh: null },
+    };
+  }
+
+  /**
    * Which sidebar screen is currently on top? Reads the live slot state
    * (not just _pendingKinds — keep-alive slots stay mounted when closed
    * with data-anim="out", and destroy-on-close children may already be
@@ -2029,12 +2117,53 @@ class desk_module extends LetcBox {
     }
   }
 
-  async _restoreSidebarService(service) {
-    if (!service || !desk_module._RESTORABLE_SCREENS[service]) return;
-    const sidebarPn = desk_module._RESTORABLE_SCREENS[service];
+  /**
+   * Put the last screen back after a reload — AFTER the workspace's split body
+   * is on screen, and not done until the screen's items have painted.
+   *
+   * The order and the guards live in libs/screen-restore (unit-tested); this
+   * is only the wiring into the desk. It replaced _restoreSidebarService,
+   * which replayed the screen 300ms after the pane MOUNTED — not when it
+   * painted — and never looked at whether the screen's rows ever came.
+   *
+   * @param {String} service a key of _RESTORABLE_SCREENS
+   * @returns {Promise<String>} what happened (libs/screen-restore)
+   */
+  _restoreScreen(service) {
+    const entry = desk_module._SCREEN_RESTORE[service] || null;
+    return restoreScreen({
+      service,
+      entry,
+      host: {
+        // window.Wm, never a bare `Wm`: see _restoreCurrentPath's note.
+        whenSplitBodyShown: (ms) =>
+          window.Wm && _.isFunction(window.Wm.whenSplitBodyShown)
+            ? window.Wm.whenSplitBodyShown(ms)
+            : Promise.resolve(false),
+        navSeq: () => this._navSeq || 0,
+        currentScreen: () => this._currentScreenService(),
+        open: (s) => this._openRestoredScreen(s),
+        awaitWidget: (e, ms) => this._awaitScreenWidget(e, ms),
+        lightRow: (s) => this._lightRestoredRow(s),
+        warn: (...args) => this.warn && this.warn(...args),
+      },
+    });
+  }
 
+  /**
+   * Open a saved screen the way its own control does, so every side effect of
+   * a real press comes with it (breadcrumb, rail, modal dismissal, the admin
+   * console's plugin load).
+   *
+   * Activity is the exception: its live service is a true TOGGLE, and the
+   * notifications panel predates togglePanel, so it is opened by hand, open-only.
+   * The toggles that do go through onUiEvent (Trash, Contacts) cannot close
+   * anything here: libs/screen-restore refuses to open when any screen is up.
+   *
+   * @param {String} service
+   */
+  async _openRestoredScreen(service) {
     if (service === "toggle-activity") {
-      // Open-only: the live toggle would close the panel if state is already 1.
       this._dismissWmModal();
       this._parkLiveCall();
       const p = await this.ensurePart("activity-panel");
@@ -2044,17 +2173,55 @@ class desk_module extends LetcBox {
         this.closeOtherSidebarPanels("activity-panel");
         if (typeof p.refreshFeed === "function") p.refreshFeed();
       }
-    } else {
-      // `intent` matters for ONE of these services: "upgrade-plan" now opens
-      // the billing page on checkout when it can tell which plan is meant, and
-      // a RESTORE is not a click — it puts back the screen the reader was
-      // looking at before the reload, which was the plans view. Any declared
-      // intent other than 'upgrade' means "just open the page"; the other
-      // restorable services ignore the key entirely.
-      await this.onUiEvent({ mget: () => null }, { service, intent: "restore" });
+      return;
     }
+    // `intent` matters for ONE of these services: "upgrade-plan" opens the
+    // billing page on checkout when it can tell which plan is meant, and a
+    // RESTORE is not a click — it puts back the plans view the reader was on.
+    await this.onUiEvent({ mget: () => null }, { service, intent: "restore" });
+  }
 
-    this.ensurePart(sidebarPn)
+  /**
+   * The restored screen's REAL widget, once it is mounted.
+   *
+   * togglePanel settles when a kind is FED, not drawn, and these kinds are lazy
+   * import() chunks that paint a placeholder first — so the slot is polled for
+   * a live child of the right kind that entry.isReal accepts.
+   *
+   * @param {Object} entry a _SCREEN_RESTORE row
+   * @param {Number} timeout
+   * @returns {Promise<View|null>}
+   */
+  _awaitScreenWidget(entry, timeout) {
+    const live = (v) => v && !(v.isDestroyed && v.isDestroyed()) && v.el;
+    const find = () => {
+      const part = this.getPart && this.getPart(entry.slot);
+      if (!live(part)) return null;
+      const candidates = entry.selfPart
+        ? [part]
+        : part.children && part.children.toArray
+          ? part.children.toArray()
+          : [];
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        const c = candidates[i];
+        if (!live(c) || c.mget(_a.kind) !== entry.kind) continue;
+        if (entry.isReal && !entry.isReal(c)) continue;
+        return c;
+      }
+      return null;
+    };
+    return pollFor(find, { timeout, interval: 100 });
+  }
+
+  /**
+   * Light the restored screen's sidebar row — the same broadcast a press of
+   * the row makes.
+   * @param {String} service
+   */
+  _lightRestoredRow(service) {
+    const pn = desk_module._RESTORABLE_SCREENS[service];
+    if (!pn) return;
+    this.ensurePart(pn)
       .then((p) => {
         if (p) RADIO_BROADCAST.trigger("sidebar-radio", p);
       })
@@ -2099,11 +2266,6 @@ class desk_module extends LetcBox {
       const wm = await this._waitForWm();
       if (!wm || (this.isDestroyed && this.isDestroyed())) return;
 
-      // Let mount-time renders (breadcrumb loadHome, wm skeleton) settle
-      // before feeding panels / windows, so nothing re-clears afterwards.
-      await new Promise((r) => setTimeout(r, 300));
-      if (this.isDestroyed && this.isDestroyed()) return;
-
       if (deepLink) {
         // Cold boot often reaches loadDefault before window.Wm exists, so
         // desk.route() skipped Wm.route(). Re-dispatch now that Wm is ready.
@@ -2132,12 +2294,14 @@ class desk_module extends LetcBox {
         // Restorable state that names a SCREEN but no workspace (the user was
         // on Contacts / Settings / a floating window last time). The new shell
         // has no "no workspace" state to fall back to behind that screen, so
-        // seed one underneath it. Runs BEFORE _restoreSidebarService so the
+        // seed one underneath it. Runs BEFORE _restoreScreen so the
         // remembered screen still ends up on top.
         await this._openDefaultWorkspace();
       }
       if (saved.service) {
-        await this._restoreSidebarService(saved.service);
+        // Waits for the pane's split body itself (libs/split-body-signal) —
+        // the fixed 300ms settle that used to sit above is gone.
+        await this._restoreScreen(saved.service);
       }
     } finally {
       // Hold the flag a beat longer than the feed so late mount-time
@@ -9762,7 +9926,7 @@ class desk_module extends LetcBox {
     // after would tear down the popup that row had just opened.
     //
     // Off the CLICKED VIEW, not off `service`: a synthetic dispatch
-    // (_deskServiceShim, _restoreSidebarService) carries the same service
+    // (_deskServiceShim, _restoreScreen) carries the same service
     // strings without anyone having touched the rail, and those must not count
     // as a navigation gesture.
     if (cmd && _.isFunction(cmd.mget) && cmd.mget("railRow")) {
@@ -10506,7 +10670,7 @@ class desk_module extends LetcBox {
         //
         // TWO CALLERS REACH THIS SERVICE WITHOUT MEANING BUY, and both say so
         // by declaring some other intent: settings_main's "Manage subscription"
-        // card ('manage'), and _restoreSidebarService replaying the screen after
+        // card ('manage'), and _restoreScreen replaying the screen after
         // a reload ('restore'). Testing for "declared something else" rather
         // than for either name keeps the next such caller from having to be
         // remembered here.
