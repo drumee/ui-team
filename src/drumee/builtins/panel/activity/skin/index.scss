@@ -638,6 +638,27 @@
   &__ui[data-has-priority="1"] &__empty {
     display: none;
   }
+
+  // ── Responsive: fill the workspace on tablet (≤ 1024px) ──────────
+  // Covers the desk workspace (__right-side) — the box chat-p2p fills from
+  // settings-main-slot — instead of a 512px card against the right edge.
+  // Stays position:fixed (its __panel-inner anchor is zero-width, so
+  // inset/100% sizing would collapse it); the --desk-canvas-inset-* insets
+  // are measured in JS (libs/desk-canvas), and the fallbacks are the desktop
+  // canvas with the 64px mini rail. Position and size ONLY — the
+  // [data-state] pair above keeps driving the slide. Phones keep the centred
+  // card (&__ui[data-device="mobile"]); the :not() keeps the regimes apart.
+  @media (max-width: 1024px) {
+    &__ui:not([data-device="mobile"]) {
+      top: var(--desk-canvas-inset-top, var(--desk-canvas-top, 54px));
+      right: var(--desk-canvas-inset-right, var(--desk-gutter, 8px));
+      bottom: var(--desk-canvas-inset-bottom, var(--desk-gutter, 8px));
+      left: var(--desk-canvas-inset-left, 80px);
+      width: auto;
+      max-width: none;
+      height: auto;
+    }
+  }
 }
 
 // ── Dark mode overrides ─────────────────────────────────────────

@@ -2,6 +2,7 @@
 const mfsInteract = require('../../window/utils');
 const { filesize } = require('@drumee/ui-essentials');
 require('./skin');
+const { trackDeskCanvas } = require('libs/desk-canvas');
 const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
@@ -64,6 +65,7 @@ class __panel_trash extends mfsInteract {
    */
   onDestroy() {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
+    if (this._untrackCanvas) this._untrackCanvas();
     Wm.off(WS_EVENT, this.handleWsEvent);
   }
 
@@ -167,6 +169,9 @@ class __panel_trash extends mfsInteract {
 
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    // Cover the workspace at ≤ 1024px (see libs/desk-canvas).
+    if (this._untrackCanvas) this._untrackCanvas();
+    this._untrackCanvas = trackDeskCanvas(this.el);
     // rAF so the "out" → "in" flip lands in a separate frame and the
     // CSS transform transition actually engages.
     requestAnimationFrame(() => {
