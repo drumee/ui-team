@@ -77,7 +77,9 @@ $gutter: 16px;
     }
   }
 
-  &__ui[data-mode="column"][data-position="1"] > &__main {
+  // Once: _render stamps data-settled on every feed after the reveal, because
+  // feed() recreates __main and a new element would replay the fade.
+  &__ui[data-mode="column"][data-position="1"]:not([data-settled="1"]) > &__main {
     @include drumee.skeleton-content-in;
   }
 

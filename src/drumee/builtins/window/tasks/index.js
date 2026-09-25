@@ -9377,6 +9377,12 @@ class __tasks_panel extends LetcBox {
     // board/list back to the top — feed() rebuilds fresh nodes at scroll 0.
     const savedScroll = this._captureViewScroll();
 
+    // Replay neither the board's first-paint fade nor the calendar's, which
+    // belong to the board first appearing and to a view switch — see
+    // _stampRepaintFades.
+    this._stampRepaintFades(this._paintedView !== this.getView());
+    this._paintedView = this.getView();
+
     this.feed(require("./skeleton")(this));
     this._markPainted();
     // The board has drawn: the folder window's Task entrance keys on this
@@ -9561,10 +9567,41 @@ class __tasks_panel extends LetcBox {
       // No host in the tree (skeleton restructured) — fall back to a full
       // render rather than silently leaving a stale view on screen.
       if (!node) return this._render();
+      // A new range (dropScroll) is new content and fades in; the same range
+      // repainted after an Update or a peer's edit does not.
+      this._stampRepaintFades(
+        !!opt.dropScroll || this._paintedView !== this.getView(),
+      );
+      this._paintedView = this.getView();
       host.feed(node.kids);
       // Retries per frame until the rebuilt columns can take the offsets.
       this._restoreViewScroll(savedScroll);
     });
+  }
+
+  /**
+   * Keep a repaint from replaying the fades meant for an arrival.
+   *
+   * feed() recreates what it feeds, and a newly created element runs its CSS
+   * animation again. Two of them are opacity 0 -> 1 fades:
+   *   - the root's first-paint fade (skin, `&__ui[data-painted="1"] >
+   *     .tasks-panel__root`), on EVERY full render — so opening a workspace
+   *     (two renders), a notification that lands on a task, or an Update
+   *     blinked the whole board to transparent and back (reported by Lexis);
+   *   - the calendar's fade, on every view-body repaint in the Calendar view.
+   * Same class of bug the overlays already gate with `data-entered`.
+   *
+   * Stamped BEFORE the feed so the new elements never pick the animation up.
+   *
+   * @param {Boolean} arriving  a view switch or a new calendar range — new
+   *   content, which keeps the calendar's fade
+   */
+  _stampRepaintFades(arriving) {
+    const ds = this.el && this.el.dataset;
+    if (!ds) return;
+    // The board has faded in already: from now on it simply is.
+    if (ds.painted === "1") ds.settled = "1";
+    ds.calFade = arriving ? "1" : "0";
   }
 
   /**

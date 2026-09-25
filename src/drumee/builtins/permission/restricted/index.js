@@ -297,6 +297,13 @@ class __permission_restricted extends DrumeeMFS {
       && active.closest
       && active.closest(`.${this.fig.family}__member-search-entry`)
     );
+    // The matrix has already faded in once: this feed must not fade it in
+    // again. feed() rebuilds __main, and a freshly created element replays its
+    // CSS animation, so every refresh — members landing, the storage chip, the
+    // invitations, each member push — blinked the whole panel to transparent
+    // and back (reported by Lexis on opening Access). Set BEFORE the feed so
+    // the new __main never picks the animation up (see the skin).
+    if (this.el?.dataset?.position === "1") this.el.dataset.settled = "1";
     this.feed(require("./skeleton")(this));
     if (draft) {
       this.ensurePart("invite-email").then((p) => fillEntry(p, draft));

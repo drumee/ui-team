@@ -279,7 +279,10 @@ $theme-colors: (
     }
   }
 
-  &__ui[data-painted="1"] > .tasks-panel__root {
+  // Once, on the first paint. Every later _render recreates the root, and a new
+  // element would replay the fade — the whole board blinking on each Update,
+  // workspace open or notification. _stampRepaintFades sets data-settled.
+  &__ui[data-painted="1"]:not([data-settled="1"]) > .tasks-panel__root {
     @include drumee.skeleton-content-in;
   }
 
@@ -5287,6 +5290,13 @@ $theme-colors: (
     // Personal Calendar's --cal-cell-min is the same 160px for the same
     // reason. Change one, change the other.
     --tcal-cell-min: 160px;
+  }
+
+  // The fade above is for a view switch or a new range. The same range
+  // repainted (an Update, a peer's edit) recreates the grid too, and must not
+  // blink it — _stampRepaintFades sets data-cal-fade.
+  &__ui[data-cal-fade="0"] &__calendar {
+    animation: none;
   }
 
   &__cal-weekdays {
