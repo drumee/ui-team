@@ -7,7 +7,7 @@
  * session detail into durable per-user state, which is what this module owns.
  *
  * Trigger sites hold NO state. They call `fire('folder')` and nothing else;
- * every gate — kill switch, mobile, seen-set, single-flight — is decided here,
+ * every gate — kill switch, account age, mobile, seen-set, single-flight — is decided here,
  * so a surface that is rebuilt from scratch (the desk topbar is re-fed whole by
  * _updateAddmenu / _onOverLimitChanged) cannot lose or duplicate a trigger.
  *
@@ -111,6 +111,40 @@ function enabled() {
       Platform.get &&
       ~~Platform.get("contextual_tours")
     );
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Contextual tours are for NEW accounts only.
+ *
+ * "New" is account age, not the seen-set: an existing user who never met the
+ * old monolithic tour has no `tutorials_seen` and no `tutorial_done`, so the
+ * seen-set alone reads them as brand new and every tour fires at someone who
+ * has used the product for months. The cutoff (platform.tours_new_user_since,
+ * unix seconds, from myDrumee.json) is compared with the account's creation
+ * time (entity.ctime, via get_user in the boot payload), which needs no
+ * backfill of the seen-map for every existing row.
+ *
+ * No cutoff (0/absent) = every account is eligible, which is the behaviour
+ * before this gate existed. A cutoff with an unreadable ctime fails CLOSED,
+ * for the same reason a degraded settings payload does: a missed tour is
+ * cheaper than an interruption.
+ *
+ * Explicit requests (`?tutorial=`, Get help -> Product Tour) never reach this
+ * gate, so an old account can still replay any tour on purpose.
+ */
+function isNewUser() {
+  try {
+    const since =
+      typeof Platform !== "undefined" && Platform.get
+        ? ~~Platform.get("tours_new_user_since")
+        : 0;
+    if (!since) return true;
+    const ctime = typeof Visitor !== "undefined" && Visitor.get ? Number(Visitor.get("ctime")) : NaN;
+    if (!Number.isFinite(ctime) || ctime <= 0) return false;
+    return ctime >= since;
   } catch (e) {
     return false;
   }
@@ -328,6 +362,7 @@ function isSeen(tourId, host) {
  */
 function offerable(tourId, host) {
   if (!enabled()) return false;
+  if (!isNewUser()) return false;
   if (isMobile()) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
   if (isSeen(tourId, host)) return false;
@@ -526,6 +561,7 @@ module.exports = {
   MIRROR_PREFIX,
   mirrorKey,
   enabled,
+  isNewUser,
   serverState,
   isSeen,
   offerable,
