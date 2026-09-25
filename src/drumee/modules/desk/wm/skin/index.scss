@@ -233,20 +233,6 @@
     }
   }
 
-  // Wm's tooltips wrapper hosts the "you can't upload here" toast
-  // (window/manager.js _showUploadDeniedToast) and nothing else. Holding it
-  // stamps data-state="open", so the global `[data-state="open"]` lift
-  // (skin/lib/utils.scss, 50000 !important) put it one BELOW the layer holding
-  // the focused window (50001, see &__layer) — i.e. under the workspace pane
-  // in the ordinary case, where the toast was created, timed out, and was
-  // never seen. Same fix as &.upload-progress-layer: clear the focus lift.
-  // Toast is top-right, the upload floater bottom-right, so they never meet.
-  &__wrapper-tooltips {
-    &[data-state="open"] {
-      z-index: var(--z-index-upload-progress, 50002) !important;
-    }
-  }
-
   &__wrapper-modal {
     &[data-state="open"] {
       position: absolute;

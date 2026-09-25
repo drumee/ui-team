@@ -296,56 +296,18 @@ class __window_manager extends mfsInteract {
     // Say the right thing: while over-limit the refusal has nothing to do
     // with the dropper's privilege, and "insufficient privilege" sends the
     // user asking an admin for rights nobody can grant.
+    // Both answer with the app's popup (Butler), like every other refusal —
+    // not a corner toast.
     const OverLimit = require("libs/over-limit");
     if (OverLimit.isLocked()) {
-      this._showUploadDeniedToast(OverLimit.blockedMessage("write"));
+      OverLimit.notifyBlocked("write");
       return;
     }
     const privilege =
       target && target.mget && (target.mget(_a.privilege) || target.mget(_a.permission));
-    this._showUploadDeniedToast(
-      require("libs/permission-denied").weakPrivilegeMessage(
-        LOCALE.PERMISSION_ACTION_UPLOAD, privilege, _K.permission.write,
-      ),
+    require("libs/permission-denied").sayWeakPrivilege(
+      LOCALE.PERMISSION_ACTION_UPLOAD, privilege, _K.permission.write,
     );
-  }
-
-  _showUploadDeniedToast(message) {
-    const render = (wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) {
-        Butler.say(message);
-        return;
-      }
-      if (
-        this._uploadDeniedToast &&
-        (!this._uploadDeniedToast.isDestroyed || !this._uploadDeniedToast.isDestroyed())
-      ) {
-        this._uploadDeniedToast.suppress();
-      }
-      wrapper.append(
-        Skeletons.Box.X({
-          className: `${this.fig.group}__drop-denied-toast`,
-          kids: [
-            Skeletons.Note({
-              className: `${this.fig.group}__drop-denied-toast-icon`,
-              content: "!",
-            }),
-            Skeletons.Note({
-              className: `${this.fig.group}__drop-denied-toast-text`,
-              content: message,
-            }),
-          ],
-        }),
-      );
-      this._uploadDeniedToast = wrapper.children.last();
-      // Two sentences now (action + level + who to ask) — 2.2s was not enough to read them.
-      this._uploadDeniedToast.selfDestroy({ timeout: Visitor.timeout(5000) });
-    };
-
-    if (this.tooltipsWrapper) return render(this.tooltipsWrapper);
-    this.ensurePart("wrapper-tooltips").then(render).catch(() => {
-      Butler.say(message);
-    });
   }
 
   /**
