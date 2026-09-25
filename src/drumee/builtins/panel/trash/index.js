@@ -165,6 +165,9 @@ class __panel_trash extends mfsInteract {
           });
           this._refreshStorageUsed();
         });
+        // A failed first page fires `error`, never `eod` (ui-core list
+        // onServerComplain) — and a failed load is still a finished one.
+        child.once(_e.error, () => markItemsReady(this));
         break;
       case 'storage-info':
         this._refreshStorageUsed();

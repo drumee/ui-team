@@ -608,6 +608,9 @@ class __chat_p2p extends LetcBox {
           if (!landing) return this._lowerSkeletons();
           this.openChat(landing);
         });
+        // A failed first page fires `error`, never `eod` (ui-core list
+        // onServerComplain) — and a failed load is still a finished one.
+        child.once(_e.error, () => markItemsReady(this));
         break;
 
       case "compose-popup":

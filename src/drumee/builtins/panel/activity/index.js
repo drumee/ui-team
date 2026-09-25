@@ -193,6 +193,9 @@ class __panel_activity extends LetcBox {
       // The first page is down (rows or none): the feed has painted. A
       // reload's screen restore waits on this (libs/items-ready).
       child.once(_e.eod, () => markItemsReady(this));
+      // A failed first page fires `error`, never `eod` (ui-core list
+      // onServerComplain) — and a failed load is still a finished one.
+      child.once(_e.error, () => markItemsReady(this));
     }
     if (super.onPartReady) super.onPartReady(child, pn);
   }
