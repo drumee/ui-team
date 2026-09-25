@@ -1416,13 +1416,22 @@
   // (selected contact). The back button returns to the list. Above 1024px
   // the attribute is inert and both panes show side-by-side.
   @media (max-width: 1024px) {
-    // Full-bleed, viewport-anchored (stays position:fixed from the base
-    // rule). Sized in viewport units rather than 100% so it never depends
-    // on the desk's right panel-container width (a 0-width slide anchor).
-    // The translateX slide animation still parks it off the right edge.
+    // Cover the desk workspace (__right-side) — the same box chat-p2p fills
+    // from settings-main-slot — so the rail stays visible beside it and the
+    // top bar above it, whatever width the rail has. The --ab-canvas-* insets
+    // are measured in JS (libs/desk-canvas); the fallbacks are the
+    // desktop canvas with the 64px mini rail, for the frame before the first
+    // measurement. Stays position:fixed from the base rule (its __panel-inner
+    // anchor is zero-width), so the translateX slide still parks it off the
+    // right edge.
     &__ui {
-      width: 100vw;
-      max-width: 100vw;
+      top: var(--desk-canvas-inset-top, var(--desk-canvas-top, 54px));
+      right: var(--desk-canvas-inset-right, var(--desk-gutter, 8px));
+      bottom: var(--desk-canvas-inset-bottom, var(--desk-gutter, 8px));
+      left: var(--desk-canvas-inset-left, 80px);
+      width: auto;
+      max-width: none;
+      height: auto;
     }
 
     &__sidebar {
@@ -1460,32 +1469,10 @@
     }
   }
 
-  // The 48px mobile topbar (drumee logo / add / menu) only renders at the
-  // mobile breakpoint (Visitor.isMobile() ≤ 800px) and paints above the
-  // panel. Offset the panel below it so the sidebar header isn't hidden;
-  // at tablet widths there's no mobile topbar, so the panel stays at top:0.
-  @media (max-width: 800px) {
-    &__ui {
-      top: 48px;
-      height: calc(100vh - 48px);
-      height: calc(100dvh - 48px);
-    }
-  }
-
-  // Tablet (801–1024px): the desk nav sidebar is a persistent 231px column
-  // (it only collapses to an off-canvas drawer at ≤800px). A full-width
-  // 100vw panel starts at x=0, so its contact list is painted behind that
-  // column. Anchor the panel to the right of the sidebar instead. Placed
-  // after the ≤1024 block so it overrides the 100vw there for this range.
+  // Tablet (801–1024px): the panel is much wider than the 300px the items
+  // were sized for, so scale up the contact-list rows and the detail
+  // content to fill it.
   @media (min-width: 801px) and (max-width: 1024px) {
-    &__ui {
-      left: 231px;
-      width: auto;
-      max-width: none;
-    }
-
-    // The panel is much wider than the 300px the items were sized for, so
-    // scale up the contact-list rows and the detail content to fill it.
 
     // ── Sidebar (contact list) ──
     &__contact-item {

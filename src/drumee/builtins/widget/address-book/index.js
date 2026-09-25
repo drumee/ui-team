@@ -1,3 +1,5 @@
+const { trackDeskCanvas } = require("libs/desk-canvas");
+
 const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) ||
   null;
@@ -74,6 +76,7 @@ class __address_book extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
+    if (this._untrackCanvas) this._untrackCanvas();
   }
 
   /**
@@ -91,6 +94,9 @@ class __address_book extends LetcBox {
 
   async onDomRefresh() {
     this.feed(require("./skeleton")(this));
+    // Cover the workspace at ≤ 1024px (see libs/desk-canvas).
+    if (this._untrackCanvas) this._untrackCanvas();
+    this._untrackCanvas = trackDeskCanvas(this.el);
     await Promise.all([
       this._loadContacts(),
       this._loadInvitations(),
@@ -1254,6 +1260,11 @@ class __address_book extends LetcBox {
   _refreshDetail() {
     return this.ensurePart("ab-detail").then((part) => {
       const sel = this.getSelectedContact();
+      // Nothing selected any more (accept/refuse/delete/status change clear
+      // it): on mobile/tablet the detail pane would be left showing the empty
+      // placeholder, so fall back to the list — same as chat-p2p's
+      // _clearConversation. Inert ≥ 1024px.
+      if (!sel && this.el) this.el.dataset.mview = "sidebar";
       part.feed(
         sel
           ? require("./skeleton/contact-detail")(this, sel)
