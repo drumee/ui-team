@@ -9873,6 +9873,11 @@ class desk_module extends LetcBox {
     // loadHome closes these same slots too, and an icon left lit over a screen
     // Home just closed is the same disagreement arriving by a different door.
     this._clusterUnlight();
+    // Every deliberate way out of a section screen comes through here (the
+    // rail, a workspace switch, a sidebar folder, search) — so the breadcrumb's
+    // section hold is released HERE, before the caller's path paint, which would
+    // otherwise be refused as a late echo (breadcrumb/section-hold).
+    RADIO_BROADCAST.trigger("breadcrumb:leave-section");
     const slots = ["settings-main-slot", "trash-panel", "chat-panel"];
     return Promise.all(
       slots.map((pn) => {
