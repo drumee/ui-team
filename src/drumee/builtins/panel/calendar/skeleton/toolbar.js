@@ -1,13 +1,13 @@
 // View toolbar: ‹ Today › + range label on the left; view dropdown, All/Task/
 // Meet filter and "+ New" on the right. Figma 43:31159.
 //
-// The range label is a control, not a caption: clicking it opens a month jump
-// list for the cursor's year (year stepped from the list's own header). It
-// carries NO caret of its own — the label IS the affordance (Lexis, 2026-09-08);
-// the open state is shown by the wash __range keeps while data-open="1". The
-// view and New pickers still show theirs, so the caret stays in the skin for
-// them. Dropdown mechanics are shared with the view and New menus.
-const { VIEWS, FILTERS, rangeLabel, day } = require("./helpers");
+// The range label is a control, not a caption: clicking it opens the mini
+// calendar. It carries NO caret of its own — the label IS the affordance
+// (Lexis, 2026-09-08); the open state is shown by the wash __range keeps while
+// data-open="1". The view and New pickers still show theirs, so the caret stays
+// in the skin for them. Dropdown mechanics are shared with the view and New
+// menus.
+const { VIEWS, FILTERS, rangeLabel, day, ymd } = require("./helpers");
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -44,59 +44,100 @@ module.exports = function (ui) {
     ],
   });
 
-  // ── range label + month jump ───────────────────────────────────────────────
+  // ── range label + mini calendar ────────────────────────────────────────────
   const cursor = day(ui.getCursor()) || Dayjs();
-  const cursorMonth = cursor.month();
-  const cursorYear = cursor.year();
+
+  // The mini calendar behind the label — the SAME control the workspace Meet
+  // tab's schedule opens from its own range pill
+  // (window/folder/skeleton/meeting-schedule.js → pickerCal): ‹ month year ›,
+  // a weekday row, six weeks of pickable days.
+  //
+  // It was a year stepper over a 12-month grid, which could not pick a DAY at
+  // all: on the day view, the one control that names the range on screen could
+  // not move that range by a day, and the two calendars answered the same click
+  // with two different popups.
+  //
+  // The month the grid shows is its own state (`getPickerCursor`), not the
+  // calendar's cursor — browsing to next March must not move the grid behind
+  // the popup until a day is actually picked.
+  const pickerCursor = day(ui.getPickerCursor()) || cursor;
+  const gridStart = pickerCursor.startOf("month").startOf("week");
+  const todayKey = ymd(Dayjs());
+  // What the popup marks as "the range you are looking at": the whole week band
+  // in week view, the single day otherwise. Same rule as the Meet tab's.
+  const weekBand = view === "week";
+  const selStart = weekBand ? cursor.startOf("week") : cursor.startOf("day");
+  const selEnd = weekBand
+    ? cursor.startOf("week").add(6, "day").endOf("day")
+    : cursor.endOf("day");
+
+  const pickerHead = Skeletons.Box.X({
+    className: `${pfx}__range-head`,
+    kids: [
+      Skeletons.Button.Svg({
+        className: `${pfx}__range-nav`,
+        ico: "caret-left",
+        bubble: 0,
+        service: "cal-picker-step",
+        uiHandler: [ui],
+        calStep: -1,
+        attrOpt: { "aria-label": LOCALE.PREVIOUS },
+      }),
+      Skeletons.Note({
+        className: `${pfx}__range-month-label`,
+        content: pickerCursor.format("MMMM YYYY"),
+      }),
+      Skeletons.Button.Svg({
+        className: `${pfx}__range-nav`,
+        ico: "caret-right",
+        bubble: 0,
+        service: "cal-picker-step",
+        uiHandler: [ui],
+        calStep: 1,
+        attrOpt: { "aria-label": LOCALE.NEXT },
+      }),
+    ],
+  });
+
+  const pickerDows = Skeletons.Box.X({
+    className: `${pfx}__range-dows`,
+    kids: Array.from({ length: 7 }, (_, i) =>
+      Skeletons.Note({
+        className: `${pfx}__range-dow`,
+        content: gridStart.add(i, "day").format("dd"),
+      }),
+    ),
+  });
+
+  const pickerWeeks = Array.from({ length: 6 }, (_, w) =>
+    Skeletons.Box.X({
+      className: `${pfx}__range-week`,
+      kids: Array.from({ length: 7 }, (_, i) => {
+        const d = gridStart.add(w * 7 + i, "day");
+        const ds = ymd(d);
+        const selected = !d.isBefore(selStart) && !d.isAfter(selEnd);
+        return Skeletons.Note({
+          className: `${pfx}__range-day`,
+          content: String(d.date()),
+          bubble: 0,
+          service: "cal-pick-day",
+          uiHandler: [ui],
+          calDay: ds,
+          attrOpt: {
+            "data-in": d.month() === pickerCursor.month() ? "1" : "0",
+            "data-sel": selected ? "1" : "0",
+            "data-today": ds === todayKey ? "1" : "0",
+          },
+        });
+      }),
+    }),
+  );
 
   const rangeMenu = ui.isRangeMenuOpen()
     ? Skeletons.Box.Y({
         className: `${pfx}__menu ${pfx}__range-menu`,
         attrOpt: { "data-anchor": "range" },
-        kids: [
-          // Year stepper. Stays open across a step so the user can browse.
-          Skeletons.Box.X({
-            className: `${pfx}__range-year`,
-            kids: [
-              Skeletons.Button.Svg({
-                className: `${pfx}__nav-arrow`,
-                ico: "caret-left",
-                bubble: 0,
-                service: "cal-set-year",
-                uiHandler: [ui],
-                calYear: -1,
-                attrOpt: { "aria-label": LOCALE.PREVIOUS },
-              }),
-              Skeletons.Note({
-                className: `${pfx}__range-year-label`,
-                content: String(cursorYear),
-              }),
-              Skeletons.Button.Svg({
-                className: `${pfx}__nav-arrow`,
-                ico: "caret-right",
-                bubble: 0,
-                service: "cal-set-year",
-                uiHandler: [ui],
-                calYear: 1,
-                attrOpt: { "aria-label": LOCALE.NEXT },
-              }),
-            ],
-          }),
-          Skeletons.Box.X({
-            className: `${pfx}__range-months`,
-            kids: Array.from({ length: 12 }, (_, m) =>
-              Skeletons.Note({
-                className: `${pfx}__range-month`,
-                content: Dayjs().month(m).format("MMM"),
-                attrOpt: { "data-active": m === cursorMonth ? "1" : "0" },
-                bubble: 0,
-                service: "cal-set-month",
-                uiHandler: [ui],
-                calMonth: m,
-              }),
-            ),
-          }),
-        ],
+        kids: [pickerHead, pickerDows, ...pickerWeeks],
       })
     : null;
 

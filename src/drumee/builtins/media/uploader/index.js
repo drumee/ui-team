@@ -2,6 +2,7 @@ const { filesize, arcLength } = require("@drumee/ui-essentials")
 
 const __spinner = '-\|/';
 const { uploadFile } = require("@drumee/ui-essentials")
+const { chunkedUpload, isChunkable } = require("media/chunked");
 
 class __media_uploader extends LetcBox {
   constructor(...args) {
@@ -385,7 +386,9 @@ class __media_uploader extends LetcBox {
     this._bytesPending = this._bytesPending + file.size;
     let xhr;
     try {
-      xhr = this.uploadFile(file, opt);
+      // Big files go chunked (parallel + resumable); the handle mimics an XHR
+      // so the bookkeeping below and the popup hooks stay the same.
+      xhr = isChunkable(file) ? chunkedUpload(this, file, opt) : this.uploadFile(file, opt);
       xhr.file = file;
       this._watchForPopup(xhr, file);
       this.xhr.push(xhr)

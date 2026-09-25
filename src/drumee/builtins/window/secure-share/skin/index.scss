@@ -1044,6 +1044,12 @@
     cursor: pointer;
   }
 
+  // No row to point at (an anonymous open of a public link): the whole list is
+  // marked instead, with the same fill as a focused row.
+  &__events-section[data-focus="1"] {
+    background: var(--primary-10);
+  }
+
   &__events-toggle-label {
     @include drumee.typo($size: 11px, $line: 16px, $weight: 600, $color: var(--tertiary-text-color));
     text-transform: uppercase;
@@ -1110,6 +1116,16 @@
     align-items: center;
     justify-content: space-between;
     min-height: 16px;
+
+    // The opens a share-open notification points at (index.js
+    // focusAccessEvent). Same soft fill as a notification-revealed grid cell
+    // (media/grid skin, data-ui-highlight); the spread shadow pads it without
+    // moving the row, and the table's 16px row gap leaves room for it.
+    &[data-focus="1"] {
+      background: var(--primary-10);
+      box-shadow: 0 0 0 6px var(--primary-10);
+      border-radius: 2px;
+    }
   }
 
   &__events-cell {
@@ -1508,6 +1524,13 @@
 // ── Post-decision confirmation modal (Figma 64 / 65 / 66) ───────────────────
 .window-secure-share-access-result {
   &__panel {
+    // `drumee.typo` only emits `font-family` for a whitelist of $weight values,
+    // and 600 is not one of them — so every 600 rule below inherited instead.
+    // This card is lifted out to <body> (_liftArOverlay), whose font-family is
+    // the browser default, so those rules rendered in Times New Roman next to
+    // their Armin Grotesk siblings. Set the family once here and let the whole
+    // card inherit it.
+    font-family: var(--font-main);
     // Theme-aware surface (see approve-access __panel above): was hardcoded
     // --white so the result modal showed a white card in dark mode. --normal-bg-100
     // is #fff in light (unchanged) and #0b0a21 in dark; the __info box uses the
@@ -1600,6 +1623,8 @@
     align-self: stretch;
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--primary-50, #433cc5);
@@ -1612,6 +1637,8 @@
     align-self: stretch;
     cursor: pointer;
     text-align: center;
+    // The label is a CHILD of this flex box, so `text-align` never reached it.
+    justify-content: center;
     padding: 11px;
     border-radius: 8px;
     background: var(--normal-bg-80);

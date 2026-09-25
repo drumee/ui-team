@@ -939,7 +939,11 @@ class __window_core extends __utils {
       .then((data) => {
         aw.spinner(0);
         if (!data || !data.nid) {
-          Wm.alert(LOCALE.ERROR_NETWORK);
+          // A refusal already said why (onServerComplain → permission-denied);
+          // "network error" on top of it would contradict it.
+          if (!require("libs/permission-denied").saidRecently()) {
+            Wm.alert(LOCALE.ERROR_NETWORK);
+          }
           return;
         }
         // The new file opens in its editor right away: in a busy folder the
@@ -1009,7 +1013,13 @@ class __window_core extends __utils {
         // message — a 500 or a dead connection must NOT be reported as a
         // permission problem (the inverse mistake, see webrtc/room/index.js).
         const status = e && (e.status || e.error_code);
-        Wm.alert(status == 403 ? LOCALE.WEAK_PRIVILEGE : LOCALE.ERROR_NETWORK);
+        Wm.alert(
+          status == 403
+            ? require("libs/permission-denied").weakPrivilegeMessage(
+              LOCALE.PERMISSION_ACTION_CREATE_DOCUMENT, aw.mget(_a.privilege), _K.permission.write,
+            )
+            : LOCALE.ERROR_NETWORK,
+        );
         if (this.onServerError) this.onServerError(e);
       });
   }
@@ -1393,6 +1403,9 @@ class __window_core extends __utils {
       });
       return;
     }
+    // A 403 on something the member did on purpose was silent: doRequest
+    // swallows it here and the caller sees `undefined`. Say why instead.
+    require("libs/permission-denied").notifyServerDenied(this, xhr);
   }
 
   /**

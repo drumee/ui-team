@@ -22,9 +22,12 @@ const {
   passesFilter,
   viewRange,
   rowStart,
+  fromEpoch,
   day,
   ymd,
+  DAY_START_HOUR,
 } = require("./skeleton/helpers");
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
@@ -36,6 +39,7 @@ class __calendar_main extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
 
     // Month, unless the entry point NAMED a view: the Daily Reminder card's
@@ -96,6 +100,10 @@ class __calendar_main extends LetcBox {
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
       this._render();
+      // First window painted — events, the empty grid, or "Try again" after a
+      // failed calendar.list (_loadItems resolves either way). A reload's
+      // screen restore waits on this (libs/items-ready).
+      markItemsReady(this);
     });
   }
 
@@ -207,6 +215,16 @@ class __calendar_main extends LetcBox {
 
   isRangeMenuOpen() {
     return !!this._rangeMenuOpen;
+  }
+
+  /**
+   * The month the range popup's mini calendar is SHOWING, which is not the
+   * calendar's cursor: browsing to next March inside the popup must leave the
+   * grid behind it where it is until a day is actually picked. Null until the
+   * user steps it — the popup then opens on the cursor's own month.
+   */
+  getPickerCursor() {
+    return this._pickerCursor || null;
   }
 
   /** Is the calendar empty because nothing is scheduled, or because the read failed? */
@@ -341,7 +359,66 @@ class __calendar_main extends LetcBox {
   }
 
   _render() {
+    // Which range the next paint draws. The scroll rules below key on it: the
+    // same range re-fed is a repaint, a different one is a new screen.
+    const key = `${this._view}:${this._cursor}`;
+    const grid = this._gridEl();
+    const keep = grid && key === this._gridKey ? grid.scrollTop : null;
+    this._gridKey = key;
     this.feed(require("./skeleton")(this));
+    // The children are not laid out inside feed(), so the scroller has no
+    // height to set scrollTop against until the frame settles.
+    _.defer(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._placeHoursScroll(keep);
+    });
+  }
+
+  /** The screen's scroller — the grid root, whatever view drew it. */
+  _gridEl() {
+    return (this.el && this.el.querySelector(`.${this.fig.family}__grid`)) || null;
+  }
+
+  /**
+   * The hour canvas draws all 24 hours (skeleton/hours.js — the frame the
+   * workspace Meet tab's schedule uses), so an unscrolled week/day grid opens
+   * on empty night hours. Two different jobs, and conflating them is how a
+   * grid either fights the user or strands them at midnight:
+   *
+   *   range CHANGED (view switch, next/prev, a day picked) → land on the
+   *     earliest timed item in view with one row of context above it, or on the
+   *     working hours when nothing is scheduled. Same rule, and the same
+   *     default hour, as window/folder/index.js _scrollScheduleIntoView.
+   *   range the SAME, page merely re-fed (a live push, a filter repaint, a
+   *     modal opening) → put the user back where they were. _render rebuilds
+   *     the whole page, so without this every push threw the grid to midnight.
+   *
+   * Month doesn't scroll by hour and is left alone in the first case.
+   */
+  _placeHoursScroll(keep) {
+    const grid = this._gridEl();
+    if (!grid) return;
+    if (keep != null) {
+      grid.scrollTop = keep;
+      return;
+    }
+    if (grid.getAttribute("data-view") === "month") return;
+
+    const hours = this.getVisibleItems()
+      .filter((row) => row.kind === "meeting" && row.stime)
+      .map((row) => fromEpoch(row.stime))
+      .filter(Boolean)
+      .map((d) => d.hour());
+    const hour = hours.length ? Math.min(...hours) : DAY_START_HOUR;
+
+    // Measured, not assumed: the row height is a token (--cal-hour-height) and
+    // the responsive block is free to change it.
+    const rule = grid.querySelector(`.${this.fig.family}__hour-rule`);
+    const rowH = (rule && rule.getBoundingClientRect().height) || 0;
+    if (!rowH) return;
+    // One row of context above the first item, clamped to the top. The header
+    // is sticky but in flow, so its height cancels out of the arithmetic.
+    grid.scrollTop = Math.max(0, (hour - 1) * rowH);
   }
 
   /**
@@ -532,17 +609,41 @@ class __calendar_main extends LetcBox {
     this._render();
   }
 
-  _openMeetingForm() {
+  /**
+   * @param {Object} opt  `{ at: { day, hour, min } }` when the user clicked an
+   *                      empty half-hour band on the week/day canvas — the form
+   *                      then opens on that slot rather than the 11 AM default,
+   *                      which is what the Meet tab's `sched-new-at` does.
+   */
+  _openMeetingForm(opt = {}) {
     this._closeMenus();
-    const base = day(this._pendingDay) || day(this._cursor) || Dayjs();
+    const at = opt.at || null;
+    const base = day(at && at.day) || day(this._pendingDay) || day(this._cursor) || Dayjs();
+    // The form's draft speaks the 12-hour clock its selects are built from.
+    const clock = (h, m) => ({
+      hour: h % 12 === 0 ? 12 : h % 12,
+      minute: String(m).padStart(2, "0"),
+      meridiem: h < 12 ? "AM" : "PM",
+    });
+    const startMin = at ? at.hour * 60 + (at.min || 0) : 0;
+    const startAt = at ? clock(at.hour, at.min || 0) : { hour: 11, minute: "00", meridiem: "AM" };
+    // An hour long, CLAMPED to the end of the day rather than wrapped past
+    // midnight. The draft carries a single date, and _writeMeeting reads an end
+    // that is not after the start as "no end" and books thirty minutes — so a
+    // wrapped 00:00 would quietly store something the form never showed. The
+    // last band of the day therefore offers 23:00 → 23:59, which is what it is.
+    const endMin = at ? Math.min(startMin + 60, 23 * 60 + 59) : 0;
+    const endAt = at
+      ? clock(Math.floor(endMin / 60), endMin % 60)
+      : { hour: 12, minute: "00", meridiem: "PM" };
     this._form = {
       kind: "meeting",
       mode: "create",
       draft: {
         title: "",
         date: ymd(base),
-        start: { hour: 11, minute: "00", meridiem: "AM" },
-        end: { hour: 12, minute: "00", meridiem: "PM" },
+        start: startAt,
+        end: endAt,
         require_email: false,
         restrict: false,
         recipients: [],
@@ -851,20 +952,48 @@ class __calendar_main extends LetcBox {
    * half-editable in a preview card here.
    */
   _openItem(cmd) {
-    // An occurrence is not its own record; editing one instance of a series is
-    // a separate feature, so it opens nothing rather than the whole series.
-    if (Number(cmd.mget("itemOccurrence"))) return;
     const id = cmd.mget("itemId");
     const kind = cmd.mget("itemKind");
+    // A generated occurrence is not its own record — it carries the SERIES'
+    // id, so the lookup below lands on the series either way.
+    //
+    // It used to `return` here, and that made a whole class of chip a DEAD
+    // CLICK: expandRecurrence leaves only the instance that falls on the
+    // series' own start date unflagged, so a recurring meeting is made
+    // entirely of occurrences in every month except the one it started in.
+    // Nothing on screen said so — the chip looked exactly like any other.
+    // Taking the user to the series is what the chip promises ("a chip takes
+    // you to the item"); refusing to EDIT one instance from here is a
+    // narrower rule, and it is kept below, where the editable modal is.
+    const occurrence = !!Number(cmd.mget("itemOccurrence"));
     const row = this._items.find(
       (r) => `${r.id}` === `${id}` && r.kind === kind,
     );
-    if (!row) return;
+    if (!row) {
+      // The window was reloaded (or filtered) between paint and click. Said
+      // out loud because a silent return here is indistinguishable from a
+      // chip that is simply not wired up.
+      this.warn("calendar: clicked item is no longer in the loaded window", {
+        id,
+        kind,
+      });
+      return;
+    }
     if (row.scope === "personal" && row.can_write && row.kind === "task") {
+      // Editing ONE instance of a series is a separate feature: opening the
+      // editable modal on the series from an occurrence would let a user
+      // rewrite every instance while believing they were changing this one.
+      if (occurrence) {
+        this.warn("calendar: an occurrence of a recurring item is not editable", id);
+        return;
+      }
       this._openTaskForm(row);
       return;
     }
-    return this._openInWorkspace(row);
+    // The occurrence's OWN start, so the workspace's Meeting tab anchors on
+    // the date the user clicked rather than on the series origin.
+    const stime = Number(cmd.mget("itemStime")) || 0;
+    return this._openInWorkspace(row, { stime });
   }
 
   /**
@@ -890,10 +1019,30 @@ class __calendar_main extends LetcBox {
    * A personal task is handled by the caller; a personal meeting keeps today's
    * behaviour of opening nothing.
    */
-  _openInWorkspace(row) {
-    if (!row || row.scope === "personal") return;
-    if (!row.hub_id) return;
-    if (!window.Wm || !_.isFunction(Wm.openNotificationLocation)) return;
+  _openInWorkspace(row, opt = {}) {
+    if (!row) return;
+    // Every refusal below is a click that does NOTHING, on a chip that looks
+    // identical to one that works. Each one says why, because "the calendar's
+    // chips are not clickable" is the report they all arrive as, and the three
+    // causes need three different fixes.
+    if (row.scope === "personal") {
+      this.warn(
+        "calendar: personal items have no workspace to open — the personal hub is not a dockable pane",
+        { id: row.id, kind: row.kind },
+      );
+      return;
+    }
+    if (!row.hub_id) {
+      // calendar.list states hub_id as REQUIRED (skeleton/helpers.js). A row
+      // without one came from a server that predates that contract, or from a
+      // workspace fan-out that could not resolve the hub.
+      this.warn("calendar: row carries no hub_id — cannot open it in its workspace", row);
+      return;
+    }
+    if (!window.Wm || !_.isFunction(Wm.openNotificationLocation)) {
+      this.warn("calendar: Wm.openNotificationLocation is unavailable");
+      return;
+    }
 
     const args = {
       hub_id: row.hub_id,
@@ -918,7 +1067,12 @@ class __calendar_main extends LetcBox {
       // Saves the window a lookup: it anchors its schedule on this so the
       // meeting is inside the range room.list is asked for. 0 for an all-day
       // row, which openMeetingDeepLink falls back from.
-      args.open_meeting_stime = row.stime || 0;
+      //
+      // The CLICKED occurrence's start wins over the series origin: anchoring
+      // on the origin would open the Meeting tab on a month the user never
+      // asked for (and, for a series that started long ago, on one that no
+      // longer holds the meeting at all).
+      args.open_meeting_stime = Number(opt.stime) || row.stime || 0;
     } else {
       // The folder the task was filed in, so the pane lands where the task
       // lives and a task created from the board afterwards is filed there too.
@@ -956,31 +1110,31 @@ class __calendar_main extends LetcBox {
         this._rangeMenuOpen = !this._rangeMenuOpen;
         this._viewMenuOpen = false;
         this._newMenuOpen = false;
+        // Each open starts on the month the calendar is actually showing —
+        // otherwise the popup reopens wherever the user last browsed to and
+        // stopped, which is not where the grid behind it is.
+        this._pickerCursor = null;
         return this._renderToolbar();
 
-      // Jump the cursor to a month of the year it is already in, keeping the
-      // day-of-month so week/day views land somewhere meaningful rather than
-      // snapping to the 1st. Clamped by Dayjs itself (Jan 31 → Feb 28).
-      case "cal-set-month": {
-        const m = Number(cmd.mget("calMonth"));
-        if (Number.isInteger(m) && m >= 0 && m <= 11) {
-          const anchor = day(this._cursor) || Dayjs();
-          this._cursor = ymd(anchor.month(m));
-        }
-        this._closeMenus();
-        // The fetch window moves with the cursor, so this is a refetch.
-        return this._reload();
+      // ‹ › either side of the popup's month. Moves the POPUP only, so this is
+      // a toolbar repaint and not a refetch — the grid behind it has not moved.
+      // Stays open: stepping is how the user browses to the month they want.
+      case "cal-picker-step": {
+        const delta = Number(cmd.mget("calStep"));
+        if (delta !== 1 && delta !== -1) return;
+        const shown = day(this._pickerCursor) || day(this._cursor) || Dayjs();
+        this._pickerCursor = ymd(shown.add(delta, "month"));
+        return this._renderToolbar();
       }
 
-      // Year step either side of the month list.
-      case "cal-set-year": {
-        const delta = Number(cmd.mget("calYear"));
-        if (delta === 1 || delta === -1) {
-          const anchor = day(this._cursor) || Dayjs();
-          this._cursor = ymd(anchor.add(delta, "year"));
-        }
-        // Stays open: stepping the year is how the user browses to the month
-        // they want, so closing after each step would make it unusable.
+      // A day picked in the popup. Anchors the calendar on it in whatever view
+      // is current — the day view lands on that day, week on its week, month on
+      // its month — which is what the Meet tab's `sched-pick-day` does.
+      case "cal-pick-day": {
+        const picked = day(cmd.mget("calDay"));
+        if (picked) this._cursor = ymd(picked);
+        this._closeMenus();
+        // The fetch window moves with the cursor, so this is a refetch.
         return this._reload();
       }
 
@@ -1014,6 +1168,21 @@ class __calendar_main extends LetcBox {
       case "cal-day-add":
         this._pendingDay = cmd.mget("calDay");
         return this._openTaskForm(null);
+
+      // An hour band on the week/day canvas → schedule a meeting across that
+      // hour, which is what the Meet tab's cells do. A task cannot be created
+      // here: `due_date` is a calendar DATE with no time (see skeleton/
+      // hours.js), so an hour clicked on the ruler has nothing to bind to —
+      // the day header still opens the task form for the whole day.
+      case "cal-slot-add": {
+        const hour = Number(cmd.mget("calHour"));
+        return this._openMeetingForm({
+          at: {
+            day: cmd.mget("calDay"),
+            hour: Number.isFinite(hour) ? hour : DAY_START_HOUR,
+          },
+        });
+      }
 
       case "cal-day-more": {
         const target = cmd.mget("calDay");

@@ -3,6 +3,14 @@ const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
 const readCache = require("libs/read-cache");
 const { resolveZone } = require("./drop-zones");
+const { rowOf, ownedPatch, applyLabelOps, longestList, peerPatch } = require("./live-sync");
+const {
+  snapshotTask,
+  planDetailCommit,
+  advanceBase,
+  settlePendingFiles,
+} = require("./detail-commit");
+const { restoreScroll } = require("./scroll-restore");
 const {
   markerRe,
   contentTokenRe,
@@ -77,6 +85,16 @@ const ROW_BUSY_SERVICES = [
 // resolveZone produces for a drop there, so picking and dropping in that row
 // land identically and both attach to THAT comment rather than a new one.
 const ROW_SCOPE = /^comment-row:(.+)$/;
+
+// Default width of an image dropped or pasted into an editor (resizable up via
+// the handle afterwards). Matches __inline-img-pending's CSS width.
+const INLINE_IMG_W = 220;
+
+// The width an inline image lands at: the default, capped at the image's
+// natural width so a small one isn't upscaled. 0 when the width is unknown.
+function inlineImageWidth(naturalWidth) {
+  return naturalWidth ? Math.min(INLINE_IMG_W, naturalWidth) : 0;
+}
 
 // 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
 // the skin derives the column tint from the accent (--col-accent) and pill
@@ -182,6 +200,14 @@ class __tasks_panel extends LetcBox {
     // Upload destination — must be a real folder/home node, not the hub_id.
     // The folder window passes `actual_home_id || nid` when launching us.
     this._destNid = this.mget(_a.actual_home_id) || this.mget(_a.nid) || 0;
+    // Where attachments actually land — see _attachmentNid(). NOT _destNid:
+    // an attachment belongs to the task, not to the folder body.
+    this._attachNid = null;
+    this._attachNidJob = null;
+    // Set once the server has ANSWERED without a task folder (pre-patch
+    // schema). A stable fact, unlike a failed request, so it is cached — else
+    // every upload would re-ask media.home for it.
+    this._noTaskFolder = 0;
     // The board is WORKSPACE-level: it lists every task in the workspace no
     // matter which folder each was created in (Figma 43:23955 — Task is a
     // workspace rail item, not a per-folder tab), and there is one set of
@@ -234,6 +260,7 @@ class __tasks_panel extends LetcBox {
     this._closingTimer = null;
     this._detailId = null;
     this._detailDraft = null;
+    this._detailBase = null;
     // Set when a CHILD is opened from its parent's panel: closing the child
     // then returns to the parent instead of dismissing the whole thing. There
     // is only one detail panel, so without this a child replaced the parent and
@@ -269,10 +296,15 @@ class __tasks_panel extends LetcBox {
     // sort state.
     this._view = "board";
     this._sort = null; // { key, dir } — null = natural (status, rank) order
-    // Calendar view: month|week granularity + the anchor date (YYYY-MM-DD) of
-    // the displayed period. null cursor = today.
+    // Calendar view: month|week|day granularity + the anchor date
+    // (YYYY-MM-DD) of the displayed period. null cursor = today. The two
+    // dropdowns (view menu, range mini-calendar) and the month that mini
+    // calendar is SHOWING, which is not the cursor until a day is picked.
     this._calMode = "month";
     this._calCursor = null;
+    this._calViewMenuOpen = false;
+    this._calPickerOpen = false;
+    this._calPickerCursor = null;
     // Gantt view: weeks|months axis granularity + the multi-select set (task
     // ids) backing the checkboxes / "Delete selected".
     this._ganttMode = "weeks";
@@ -334,6 +366,7 @@ class __tasks_panel extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    this._unbindCalMenuDismiss();
     // Parts that never mounted leave their waiter behind (their promise simply
     // never settles, exactly as ensurePart's would) — drop them with the panel.
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
@@ -393,6 +426,15 @@ class __tasks_panel extends LetcBox {
       this.el.removeEventListener("mouseleave", this._pointerExit);
       this._pointerExit = null;
     }
+    // Inline-image placeholders hold an object URL each while they upload.
+    // They live in the editor's DOM rather than on a draft, so the loop below
+    // cannot see them — a panel closed mid-upload would leak one per image.
+    for (const url of this._inlinePreviews || []) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (_) {}
+    }
+    this._inlinePreviews = null;
     // Release pending-file image-preview blob URLs — the two task forms and
     // the three comment drafts, which carry their own queued files.
     for (const draft of [
@@ -488,10 +530,11 @@ class __tasks_panel extends LetcBox {
     this._scopeIsRoot = isRoot ? 1 : 0;
     if (destNid != null && `${destNid}` !== `${this._destNid}`) {
       this._destNid = destNid;
-      // _folderFilenames caches the DESTINATION folder's names, for the
-      // a → a(1) collision preview on an attachment. It is the one piece of
-      // per-folder state the board keeps, so it has to follow the move even
-      // though nothing else here does.
+      // _destNid is now only the FALLBACK upload destination (see
+      // _attachmentNid) — attachments normally go to the hub-level task
+      // folder, which navigation does not move. The cached filenames still
+      // follow it, because on an unpatched server the fallback is live and
+      // the a → a(1) collision preview reads the folder the user is in.
       this._folderFilenames = null;
     }
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
@@ -743,7 +786,16 @@ class __tasks_panel extends LetcBox {
           this.constructor.TASK_MUTATIONS.includes(`${name}`)
           && !this._mayWriteTasks()
         ) {
-          if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+          if (typeof Butler !== "undefined" && Butler.say) {
+            // The panel holds no privilege of its own (see _mayWriteTasks);
+            // read it from the workspace window it is mounted for.
+            const PD = require("libs/permission-denied");
+            Butler.say(PD.weakPrivilegeMessage(
+              LOCALE.PERMISSION_ACTION_EDIT_TASKS,
+              PD.workspacePrivilege(this.mget(_a.hub_id)),
+              _K.permission.write,
+            ));
+          }
           // postService resolves UNDEFINED when a call does not complete, and
           // every caller here already tolerates that — so refusing this way
           // reproduces a shape they handle rather than adding a rejection path.
@@ -751,6 +803,17 @@ class __tasks_panel extends LetcBox {
         }
       } catch (e) {
         /* never let the guard break a legitimate call */
+      }
+      // Lets task._broadcast skip only THIS socket, so the user's other tabs
+      // hear the change. Mutations only; reads stay cacheable and unchanged.
+      const a0 = args[0];
+      if (
+        a0 && typeof a0 === "object" &&
+        this.constructor.TASK_MUTATIONS.includes(`${a0.service}`) &&
+        a0.socket_id == null
+      ) {
+        const sid = typeof Visitor !== "undefined" && Visitor.get && Visitor.get(_a.socket_id);
+        if (sid) args[0] = { ...a0, socket_id: sid };
       }
       return original(...args);
     };
@@ -1833,7 +1896,7 @@ class __tasks_panel extends LetcBox {
         return this._commitDetail().catch((err) => {
           console.error("[tasks_panel] commit-detail failed:", err);
           this._setSubmitting(".tasks-panel__detail-submit", false);
-          this._render();
+          this._renderOverlays();
           // Say so: a commit that fails silently is indistinguishable from a
           // dead button, which makes it needlessly hard to diagnose.
           Wm.alert(LOCALE.ERROR_NETWORK);
@@ -1886,13 +1949,56 @@ class __tasks_panel extends LetcBox {
       case "viewbar-page":
         return this._showViewbarPage(trigger);
 
-      case "set-cal-mode": {
-        const m = trigger.mget("calMode") === "week" ? "week" : "month";
-        if (m !== this._calMode) {
+      // ── Calendar toolbar ────────────────────────────────────────────────
+      // Every case below repaints through _repaintCalendar (view body + the
+      // controls row) or _repaintCalControls (the row alone), never _render():
+      // none of them touch the viewbar tabs, the filter bar or the overlays,
+      // and a full render rebuilds the whole panel to move a month.
+      case "cal-toggle-view-menu":
+        this._calViewMenuOpen = !this._calViewMenuOpen;
+        this._calPickerOpen = false;
+        return this._repaintCalControls();
+
+      case "cal-set-view": {
+        const m = trigger.mget("calMode");
+        this._closeCalMenus();
+        if ((m === "month" || m === "week" || m === "day") && m !== this._calMode) {
           this._calMode = m;
-          this._render();
+          return this._repaintCalendar();
         }
-        return;
+        return this._repaintCalControls();
+      }
+
+      case "cal-toggle-picker":
+        this._calPickerOpen = !this._calPickerOpen;
+        this._calViewMenuOpen = false;
+        // Each open starts on the month the grid is showing, not wherever the
+        // user last browsed the popup to and stopped.
+        this._calPickerCursor = null;
+        return this._repaintCalControls();
+
+      // ‹ › inside the popup: moves the POPUP's month only — the grid behind
+      // it has not moved, so this is the row alone. Stays open to browse.
+      case "cal-picker-step": {
+        const delta = Number(trigger.mget("calStep"));
+        if (delta !== 1 && delta !== -1) return;
+        try {
+          const base = Dayjs(this._calPickerCursor || this._calCursor || undefined);
+          this._calPickerCursor = base.add(delta, "month").format("YYYY-MM-DD");
+        } catch (_) {
+          this._calPickerCursor = null;
+        }
+        return this._repaintCalControls();
+      }
+
+      // A day picked in the popup anchors the calendar on it in the current
+      // view — the day view lands on that day, week on its week, month on its
+      // month — as the other two calendars do.
+      case "cal-pick-day": {
+        const day = trigger.mget("calDay");
+        this._closeCalMenus();
+        if (day) this._calCursor = day;
+        return this._repaintCalendar();
       }
 
       case "cal-prev":
@@ -1902,21 +2008,21 @@ class __tasks_panel extends LetcBox {
         return this._calShift(1);
 
       case "cal-today":
-        if (this._calCursor !== null) {
-          this._calCursor = null;
-          this._render();
-        }
-        return;
+        this._closeCalMenus();
+        this._calCursor = null;
+        return this._repaintCalendar();
 
       case "cal-day-more": {
-        // "+N more" on a packed month cell → jump to that day's week view.
+        // "+N" on a busy month cell → that DAY, where every task is a full
+        // card. It used to open the week, which is the Personal Calendar's
+        // "+N" going somewhere different from this one's.
         const day = trigger.mget("calDay");
+        this._closeCalMenus();
         if (day) {
           this._calCursor = day;
-          this._calMode = "week";
-          this._render();
+          this._calMode = "day";
         }
-        return;
+        return this._repaintCalendar();
       }
 
       case "cal-add": {
@@ -1942,7 +2048,13 @@ class __tasks_panel extends LetcBox {
         this._createSubtaskDraft = null;
         this._folderFilenames = null;
         this._resetFileSearch();
-        return this._render();
+        // The create modal opening and nothing else — the overlays path, the
+        // same one "add-task" takes (it used to rebuild the whole panel).
+        if (this._calViewMenuOpen || this._calPickerOpen) {
+          this._closeCalMenus();
+          this._repaintCalControls();
+        }
+        return this._renderOverlays();
       }
 
       case "set-gantt-mode": {
@@ -2605,18 +2717,6 @@ class __tasks_panel extends LetcBox {
       return;
     }
     switch (service) {
-      case SERVICE.task.update_assignee:
-        // Assignees changed — the workspace member list may have changed with
-        // them (hub.delete_contributor unassigns the member it removes and
-        // announces it on this service), so re-read it too or the pickers keep
-        // offering somebody who is no longer here.
-        this._queueWsRefresh({
-          tasks: 1,
-          activity: 1,
-          members: 1,
-          history: 1,
-        });
-        return;
       case SERVICE.task.delete:
         // Warn BEFORE the reload: once _loadTasks lands, the row this user is
         // editing is gone and there is nothing left to match the id against.
@@ -2626,25 +2726,25 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
+      case SERVICE.task.update_assignee:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
+      case SERVICE.task.link_file:
+      case SERVICE.task.unlink_file:
         // One peer changed one task — patch that one row instead of reloading
         // the workspace. See _applyPeerTaskChange for why this is the whole
         // idle-lag bug. Falls back to the full refresh whenever the surgical
         // path cannot be proved correct.
-        if (this._applyPeerTaskChange(data)) return;
-        this._queueWsRefresh({ tasks: 1, activity: 1, history: 1 });
-        return;
-      case SERVICE.task.link_file:
-      case SERVICE.task.unlink_file:
-        if (this._detailId) {
-          this._refreshAttachments(this._detailId).then(() =>
-            this._queueWsRefresh({ history: 1 }),
-          );
-        } else if (this.getView() === "summary") {
-          // Health view's activity feed surfaces file links even with no detail open.
-          this._queueWsRefresh({ activity: 1 });
-        }
+        if (this._applyPeerTaskChange(service, data)) return;
+        // Unresolvable (e.g. hub.delete_contributor's unassign announcement on
+        // update_assignee, which names a member, not a task): reload. Members
+        // too, since that one means somebody left the workspace.
+        this._queueWsRefresh({
+          tasks: 1,
+          activity: 1,
+          history: 1,
+          members: service === SERVICE.task.update_assignee ? 1 : 0,
+        });
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
@@ -2844,60 +2944,49 @@ class __tasks_panel extends LetcBox {
    * Returns true when it handled the change. Every case it cannot PROVE is
    * correct returns false and takes the old full-refresh route:
    *
-   *  - no `id` on the payload — nothing to merge against
+   *  - no resolvable patch — `peerPatch` could not turn the payload into a
+   *    row patch (no cached row to patch against, or a payload shape it does
+   *    not recognise, e.g. hub.delete_contributor's unassign announcement)
    *  - panel hidden — _queueWsRefresh already defers correctly, and re-entering
    *    here would repaint a board nobody can see
-   *  - a task detail is open — the modal and its history read state this does
-   *    not repaint
-   *  - the Health view is up — it renders the activity feed, which only
-   *    `_loadActivity()` refreshes
    *
+   * @param {String} service the WS service name (options.service from onWsMessage)
    * @param {Object} data the WS payload for the changed task
    * @returns {Boolean} true if applied surgically
    */
-  _applyPeerTaskChange(data) {
-    // BOTH SHAPES, exactly as the local edit path unwraps them
-    // (`_mergeTask(Array.isArray(updated) ? updated[0] : updated)`). The
-    // broadcast carries whatever `CALL task_create` / `task_update` returned,
-    // and a single-row result collapses to a bare object on some paths and
-    // stays wrapped on others. Reading `.id` off an unwrapped array yields
-    // undefined, which would silently send every event back to the full
-    // refresh — the fix would look applied and do nothing.
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row || !row.id) return false;
+  _applyPeerTaskChange(service, data) {
     if (this._isPanelHidden()) return false;
-    if (this._detailId) return false;
-    if (this.getView() === "summary") return false;
+    const current =
+      data && data.task_id ? this._tasks.find((t) => t.id === data.task_id) : null;
+    const patch = peerPatch(service, data, current);
+    if (!patch) return false;
 
-    // Merge FIRST and unconditionally — it is a array splice, it cannot fail,
-    // and the cache must be right even when the repaint below is skipped or
-    // deferred. Everything that reads task state (getState, the column count
-    // badges, the filters) is correct from this line on.
-    this._mergeTask(row);
+    // Merge FIRST and unconditionally — the cache must be right even when the
+    // repaint below is skipped or deferred.
+    this._mergeTask(patch);
+    if (patch.parent_task_id) this._syncSubtaskBadges(patch.parent_task_id);
+    const touchedOpen = this._detailId && this._detailId === patch.id;
 
-    // COALESCED ON A FRAME, not fired per event. The old path was throttled by
-    // WS_REFRESH_WINDOW (400ms); handling events individually removed that, and
-    // a burst from a busy team would repaint once per message. rAF gives back a
-    // ceiling of one repaint per frame no matter how many peers are typing, and
-    // the merges in between are free.
     if (!this._peerPaintRaf && typeof requestAnimationFrame === "function") {
       this._peerPaintRaf = requestAnimationFrame(() => {
         this._peerPaintRaf = 0;
         if (this.isDestroyed && this.isDestroyed()) return;
-        // NOT WHILE A CARD IS IN THE AIR. _refreshViewBody re-feeds the view
-        // host, which destroys the very element the pointer is dragging — the
-        // card would vanish mid-gesture and the drop land nowhere. The old
-        // full-render path had the same hole; it is closed here rather than
-        // carried over. The drop runs _loadTasks()/_syncColumn itself, so the
-        // board is reconciled the moment the gesture ends.
+        // Not while a card is in the air — see the note this replaced.
         if (this._dragTaskId || this._dragColKey) return;
-        // Re-check: a detail may have been opened during the frame.
-        if (this._detailId || this._isPanelHidden()) return;
-        // The narrow repaint: feeds only the view host, and snapshots/restores
-        // every scroller by selector — so a colleague's edit no longer throws
-        // the reader back to the top of the column they were reading.
-        this._refreshViewBody();
+        if (this._isPanelHidden()) return;
+        // The view host sits UNDER the overlay, so feeding it leaves an open
+        // detail (and its half-typed draft) untouched.
+        this._repaintBoard({ activity: this.getView() === "summary" });
       });
+    }
+    // The open task itself changed under the user: refresh the read-only
+    // sections that show server state (history, attachments). The draft is
+    // NOT overwritten — the user's unsaved edits win until they press Update.
+    if (touchedOpen) {
+      this._refreshOpenTaskHistory();
+      if (service === "task.link_file" || service === "task.unlink_file") {
+        this._refreshAttachments(patch.id).then(() => this._refreshAttachmentsList());
+      }
     }
     return true;
   }
@@ -2926,7 +3015,11 @@ class __tasks_panel extends LetcBox {
           console.error("[tasks_panel] ws refresh hook failed:", err);
         }
       }
-      this._render();
+      // Columns and members feed the chrome (column headers, pickers, filter
+      // chips), so those still take the full render. A task/activity-only
+      // refresh repaints the view body alone.
+      if (p.columns || p.members) this._render();
+      else this._repaintBoard({ activityLoaded: p.activity });
       if (p.history) this._refreshOpenTaskHistory();
     });
   }
@@ -2991,6 +3084,7 @@ class __tasks_panel extends LetcBox {
   _closeDetailSilently(done) {
     this._detailId = null;
     this._detailDraft = null;
+    this._detailBase = null;
     // Section fetches belong to the task that was open; a flag left standing
     // would greet the next task with a skeleton it never clears.
     this._loading = {};
@@ -3617,9 +3711,48 @@ class __tasks_panel extends LetcBox {
       this._createDefaults
     ) {
       this._createDefaults[name] = value;
+      if (name === "title" && value.trim()) this._clearTitleMissing("create");
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
+      if (name === "title" && value.trim()) this._clearTitleMissing("detail");
     }
+  }
+
+  _titleScope(scope) {
+    const isCreate = scope === "create";
+    return {
+      draft: isCreate ? this._createDefaults : this._detailDraft,
+      root:
+        this.el &&
+        this.el.querySelector(
+          `.${this.fig.family}__${isCreate ? "create-modal" : "detail-panel"}`,
+        ),
+    };
+  }
+
+  /**
+   * Mark the title as required: red outline + message under the field, caret
+   * back in the box. In place rather than via _render() — a re-feed rebuilds
+   * the description editor and drops whatever else is half-typed. The flag
+   * also rides on the draft so a later re-render (peer WS push) keeps it.
+   */
+  _flagTitleMissing(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (draft) draft._titleMissing = true;
+    if (!root) return;
+    const field = root.querySelector(`.${this.fig.family}__title-field`);
+    if (field) field.classList.add("is-missing");
+    const input = root.querySelector('[name="title"]');
+    if (input && typeof input.focus === "function") input.focus();
+  }
+
+  _clearTitleMissing(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (!draft || !draft._titleMissing) return;
+    draft._titleMissing = false;
+    const field =
+      root && root.querySelector(`.${this.fig.family}__title-field`);
+    if (field) field.classList.remove("is-missing");
   }
 
   async _commitTask() {
@@ -3632,7 +3765,7 @@ class __tasks_panel extends LetcBox {
     // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
-    if (!title) return this._render();
+    if (!title) return this._flagTitleMissing("create");
 
     this._setSubmitting(".tasks-panel__create-submit", true);
 
@@ -3670,11 +3803,11 @@ class __tasks_panel extends LetcBox {
           ? draft.mention_uids
           : [],
       });
-      const row = Array.isArray(raw) ? raw[0] : raw;
-      if (row && row.id) {
+      const row = rowOf(raw);
+      if (row) {
         // For each pending entry: search-picked files already have `nid`;
         // newly-picked uploads carry a File object and need to be sent to the
-        // folder body now. Either way, the resolved nid is link_file'd to
+        // task folder now. Either way, the resolved nid is link_file'd to
         // the new task.
         const linkPending = async (pf) => {
           let nid = pf.nid;
@@ -3684,36 +3817,52 @@ class __tasks_panel extends LetcBox {
               nid = result.nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
-              return;
+              return null;
             }
           }
-          if (!nid) return;
-          await this.postService({
+          if (!nid) return null;
+          return this.postService({
             service: SERVICE.task.link_file,
             hub_id: this._hubId,
             task_id: row.id,
             file_nid: nid,
           }).catch(() => null);
         };
-        await Promise.all([
-          ...labels.map((labelId) =>
+        const labelResults = await Promise.all(
+          labels.map((labelId) =>
             this.postService({
               service: SERVICE.task.link_label,
               hub_id: this._hubId,
               task_id: row.id,
               label_id: labelId,
-            }).catch(() => null),
+            })
+              .then((r) => ({ op: "link", label_id: labelId, ok: Array.isArray(r) }))
+              .catch(() => ({ op: "link", label_id: labelId, ok: false })),
           ),
-          ...pendingFiles.map(linkPending),
-        ]);
+        );
+        const fileLists = await Promise.all(pendingFiles.map(linkPending));
         // Children last, and NOT inside the Promise.all above: they are
         // ordered (the loop is sequential so they land as entered), and unlike
         // a label or a file link a failure here leaves a task the user meant to
         // have children without them — worth saying so rather than swallowing.
         // The parent exists either way, so this can never fail the create.
-        const subtasksFailed = queuedSubtasks.length
+        const { failed: subtasksFailed, rows: childRows } = queuedSubtasks.length
           ? await this._createQueuedSubtasks(row.id, queuedSubtasks)
-          : 0;
+          : { failed: 0, rows: [] };
+
+        // Patch the cache from what the server answered — no workspace reload.
+        // The create row predates the label/file links, so those are applied
+        // from their own answers.
+        const patch = {
+          ...row,
+          label_ids: applyLabelOps([], labelResults),
+        };
+        const files = longestList(fileLists);
+        if (files) patch.linked_files = files;
+        this._mergeTask(patch);
+        childRows.forEach((c) => this._mergeTask(c));
+        if (childRows.length) this._syncSubtaskBadges(row.id);
+
         // Tear down the form only after a successful create — postService
         // resolves undefined (or an error payload with no id) on failure, so
         // the teardown must live INSIDE this success branch or a failed
@@ -3723,10 +3872,7 @@ class __tasks_panel extends LetcBox {
         this._createSubtaskDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
-        await this._loadTasks();
-        // After the reload, so the board already shows the children that DID
-        // make it and the alert reads as a partial result rather than a total
-        // failure.
+        this._repaintBoard();
         if (subtasksFailed) Wm.alert(LOCALE.ERROR_NETWORK);
       } else {
         Wm.alert(LOCALE.ERROR_NETWORK);
@@ -3740,13 +3886,9 @@ class __tasks_panel extends LetcBox {
       // true, which permanently disables commit-task / commit-detail.
       this._setSubmitting(".tasks-panel__create-submit", false);
     }
-    // This render runs on BOTH outcomes, so it cannot animate unconditionally:
-    // a failed create deliberately leaves the modal open with the draft intact
-    // (see the note in the success branch above) and must simply repaint it.
-    // `_creating` is the record of which happened — only the success branch
-    // clears it.
-    if (this._creating) return this._render();
-    return this._dismissOverlay("create-backdrop", () => this._render());
+    // Failed: the modal stays open with its draft — repaint just the overlay.
+    if (this._creating) return this._renderOverlays();
+    return this._dismissOverlay("create-backdrop", () => this._renderOverlays());
   }
 
   async _removeTask(trigger) {
@@ -3784,6 +3926,7 @@ class __tasks_panel extends LetcBox {
       if (gone.has(this._detailId)) {
         this._detailId = null;
         this._detailDraft = null;
+        this._detailBase = null;
         this._subtaskDraft = null;
         // The panel it would return to may be one of the rows just pruned.
         this._detailReturnTo = null;
@@ -3862,123 +4005,58 @@ class __tasks_panel extends LetcBox {
     const draft = this._detailDraft;
     const task = this._tasks.find((t) => t.id === id);
     if (!task) return;
+    // planDetailCommit drops an empty title and saves everything else, so a
+    // cleared title used to quietly snap back to the old one. Refuse instead.
+    if (!String(draft.title || "").trim()) return this._flagTitleMissing("detail");
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
 
+    // Three-way merge (see detail-commit.js): send only what the user changed
+    // since the card opened, on top of the cache as it is NOW — peer pushes
+    // patch it in place while the card is open. Diffing the draft against
+    // the cache alone wrote a colleague's change made meanwhile back over it.
+    // A card with no base degrades to that old diff.
+    const fresh = snapshotTask(task, {
+      assignees: this.getKnownAssignees(task),
+      noStatus: this.getDefaultStatus(),
+    });
+    const base = this._detailBase || fresh;
+    const plan = planDetailCommit(base, draft, fresh);
+
     const calls = [];
+    // Each call resolves a descriptor instead of rejecting: postService
+    // resolves undefined (or an error payload) on failure.
+    const rowCall = (service, args, extra = () => ({})) =>
+      this.postService({ service, hub_id: this._hubId, id, ...args })
+        .catch(() => undefined)
+        .then((r) => ({ kind: "row", service, row: rowOf(r), ...extra(r) }));
+    const labelCall = (service, op, lid, okOf) =>
+      this.postService({ service, hub_id: this._hubId, task_id: id, label_id: lid })
+        .catch(() => undefined)
+        .then((r) => ({ kind: "label", op, label_id: lid, ok: okOf(r) }));
 
-    // task.update — covers title, description, priority, due_date.
-    const upd = {};
-    const draftTitle = String(draft.title || "").trim();
-    const taskTitle = String(task.title || "").trim();
-    if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
-    // Both are marker form (the editor serializes chips to markers).
-    if ((draft.description || "") !== (task.description || "")) {
-      upd.description = draft.description || "";
-      // Notify only members tagged in this edit who weren't tagged before.
-      const before = Array.isArray(draft._mentioned_before)
-        ? draft._mentioned_before
-        : [];
-      const now = Array.isArray(draft.mention_uids) ? draft.mention_uids : [];
-      upd.mention_uids = now.filter((u) => !before.includes(u));
-    }
-    if ((draft.priority || "medium") !== (task.priority || "medium"))
-      upd.priority = draft.priority;
-    // Reporter. Compared against the same created_by fallback the draft was
-    // seeded with, so merely opening and saving a pre-reporter task does NOT
-    // count as a reassignment (which would otherwise log a bogus 'reporter'
-    // entry in the activity feed on every Update).
-    const taskReporter = task.reporter_uid || task.created_by || "";
-    if ((draft.reporter_uid || "") !== taskReporter && draft.reporter_uid) {
-      upd.reporter_uid = draft.reporter_uid;
-    }
-    const draftDue = (draft.due_date || "").trim();
-    const taskDue = task.due_date || "";
-    const dueChanged = draftDue !== taskDue;
-    // start_date only when the Duration toggle is on; OFF ("") clears it.
-    const draftStart = draft.duration_on ? (draft.start_date || "").trim() : "";
-    const taskStart = task.start_date || "";
-    const startChanged = draftStart !== taskStart;
-    if (Object.keys(upd).length || dueChanged || startChanged) {
-      // task_update SP overwrites due_date / start_date unconditionally —
-      // always send the current values or another-field update would null them.
-      upd.due_date = draftDue || null;
-      upd.start_date = draftStart || null;
+    // task_update overwrites due_date / start_date unconditionally, so
+    // plan.update always carries both (see planDetailCommit).
+    if (plan.update) calls.push(rowCall(SERVICE.task.update, plan.update));
+    if (plan.status) {
       calls.push(
-        this.postService({
-          service: SERVICE.task.update,
-          hub_id: this._hubId,
-          id,
-          ...upd,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update failed:", err),
-        ),
+        rowCall(SERVICE.task.update_status, { status: plan.status }, (r) => ({
+          // The response may carry the auto-completed parent row.
+          parent: rowOf(r && r.parent),
+        })),
       );
     }
-
-    const noStatus = this.getDefaultStatus();
-    if ((draft.status || noStatus) !== (task.status || noStatus)) {
+    // The full new set: the peer's current assignees plus/minus mine.
+    if (plan.assignees) {
+      calls.push(rowCall(SERVICE.task.update_assignee, { assignee_uids: plan.assignees }));
+    }
+    for (const lid of plan.link) {
+      calls.push(labelCall(SERVICE.task.link_label, "link", lid, Array.isArray));
+    }
+    for (const lid of plan.unlink) {
       calls.push(
-        this.postService({
-          service: SERVICE.task.update_status,
-          hub_id: this._hubId,
-          id,
-          status: draft.status,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update_status failed:", err),
-        ),
+        labelCall(SERVICE.task.unlink_label, "unlink", lid, (r) => !!(r && r.task_id)),
       );
-    }
-
-    // Multi-assignee: send the full new set only when it differs (order-
-    // independent) from the task's current assignees.
-    const draftAssignees = Array.isArray(draft.assignees) ? draft.assignees : [];
-    const taskAssignees = Array.isArray(task.assignee_uids)
-      ? task.assignee_uids
-      : task.assignee_uid
-        ? [task.assignee_uid]
-        : [];
-    const sameAssignees =
-      draftAssignees.length === taskAssignees.length &&
-      [...draftAssignees].sort().join(",") === [...taskAssignees].sort().join(",");
-    if (!sameAssignees) {
-      calls.push(
-        this.postService({
-          service: SERVICE.task.update_assignee,
-          hub_id: this._hubId,
-          id,
-          assignee_uids: draftAssignees,
-        }).catch((err) =>
-          console.error("[tasks_panel] task.update_assignee failed:", err),
-        ),
-      );
-    }
-
-    const original = new Set(task.label_ids || []);
-    const next = new Set(draft.labels || []);
-    for (const lid of next) {
-      if (!original.has(lid)) {
-        calls.push(
-          this.postService({
-            service: SERVICE.task.link_label,
-            hub_id: this._hubId,
-            task_id: id,
-            label_id: lid,
-          }).catch(() => null),
-        );
-      }
-    }
-    for (const lid of original) {
-      if (!next.has(lid)) {
-        calls.push(
-          this.postService({
-            service: SERVICE.task.unlink_label,
-            hub_id: this._hubId,
-            task_id: id,
-            label_id: lid,
-          }).catch(() => null),
-        );
-      }
     }
 
     // Pending attachments — same flow as _commitTask: search-picked entries
@@ -3993,49 +4071,119 @@ class __tasks_panel extends LetcBox {
           let nid = pf.nid;
           if (!nid && pf.file) {
             try {
-              const result = await this._uploadPendingFile(pf, pendingFiles);
-              nid = result.nid;
+              nid = (await this._uploadPendingFile(pf, pendingFiles)).nid;
             } catch (err) {
               console.error("[tasks_panel] pending file upload failed:", err);
-              return;
+              return { kind: "file", pf, nid: null, list: null };
             }
           }
-          if (!nid) return;
-          await this.postService({
+          if (!nid) return { kind: "file", pf, nid: null, list: null };
+          const list = await this.postService({
             service: SERVICE.task.link_file,
             hub_id: this._hubId,
             task_id: id,
             file_nid: nid,
           }).catch(() => null);
+          return { kind: "file", pf, nid, list: Array.isArray(list) ? list : null };
         })(),
       );
     }
 
-    if (calls.length) await Promise.all(calls);
+    const results = calls.length ? await Promise.all(calls) : [];
 
-    await this._loadTasks();
-    // Update on a child returns to the parent, exactly as its X does — leaving
-    // Update to dump the user back on the board while Cancel walked up one
-    // level would be the same "it closed everything" surprise, just on the
-    // happier path. Read before the reset clears it.
-    const back = this._detailReturnTo;
-    this._detailId = null;
-    this._detailDraft = null;
-    this._detailReturnTo = null;
-    this._pickerOpen = null;
-    this._resetFileSearch();
+    // Merge what landed, and only the fields each call owns — see OWNED in
+    // live-sync.js for why a whole row would be wrong here.
+    for (const r of results) {
+      if (r.kind !== "row" || !r.row) continue;
+      this._mergeTask(ownedPatch(r.service, r.row));
+      if (r.parent) {
+        this._mergeTask(r.parent);
+        this._syncSubtaskBadges(r.parent.id);
+      }
+    }
+    // Apply to the row as it is NOW, not the `task` read before the awaits:
+    // peer pushes patch the cache in place mid-flight (and _mergeTask swaps
+    // the row object), so the old snapshot would drop a colleague's label or
+    // file that landed meanwhile.
+    const current = () => this._tasks.find((t) => t.id === id) || task;
+    const labelOps = results.filter((r) => r.kind === "label");
+    if (labelOps.length) {
+      this._mergeTask({ id, label_ids: applyLabelOps(current().label_ids, labelOps) });
+    }
+    const fileResults = results.filter((r) => r.kind === "file");
+    const files = longestList(fileResults.map((r) => r.list));
+    if (files) {
+      // Our answers can predate a peer's link: keep any file the cache has
+      // that they don't list.
+      const have = Array.isArray(current().linked_files) ? current().linked_files : [];
+      const ours = new Set(files.map((f) => String(f.file_nid)));
+      this._mergeTask({
+        id,
+        linked_files: [...files, ...have.filter((f) => !ours.has(String(f.file_nid)))],
+      });
+    }
+
+    const failed = results.some(
+      (r) => (r.kind === "row" && !r.row) ||
+        (r.kind === "label" && !r.ok) ||
+        (r.kind === "file" && !r.list),
+    );
     this._setSubmitting(".tasks-panel__detail-submit", false);
+    this._repaintBoard();
+
+    // The user may have moved on while the calls were in flight — opened a
+    // child row, closed the card, or a peer deleted the task. The cache is
+    // already right (merged above); but a new base or a close applied to
+    // whatever card is open NOW would corrupt its merge or shut it under the
+    // user, so stop here.
+    if (this._detailId !== id || this._detailDraft !== draft) {
+      // A deleted task is already announced; "network error" would mislead.
+      if (failed && this._tasks.some((t) => t.id === id)) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+      }
+      return;
+    }
+
+    if (failed) {
+      // Move the base past whatever did land, so pressing Update again
+      // re-sends only the rest instead of logging the same change twice.
+      const landed = (svc) =>
+        results.some((r) => r.kind === "row" && r.service === svc && r.row);
+      this._detailBase = advanceBase(base, draft, {
+        update: landed("task.update"),
+        status: landed("task.update_status"),
+        assignees: landed("task.update_assignee"),
+        labels: labelOps,
+      });
+      // The landed update already notified this edit's new tags; a retry
+      // must not notify them again.
+      if (landed("task.update")) {
+        draft._mentioned_before = (draft.mention_uids || []).slice();
+      }
+      // Linked files leave the pending list; one that uploaded but failed to
+      // link keeps its nid, so the retry links it instead of uploading a
+      // second copy ("a(1).png") into the task folder.
+      draft.pending_files = settlePendingFiles(
+        draft.pending_files,
+        fileResults.map((r) => ({ pf: r.pf, nid: r.nid, linked: !!r.list })),
+      );
+      this._refreshPendingList("detail");
+      // Keep the card open with the draft, so nothing the user typed is lost
+      // and pressing Update again retries. The cache already holds whatever
+      // DID land, so a retry only re-sends what still differs.
+      if (files) this._refreshAttachments(id).then(() => this._refreshAttachmentsList());
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+
+    // Update on a child returns to the parent, exactly as its X does.
+    const back = this._detailReturnTo;
     if (back && this._tasks.some((t) => t.id === back)) {
-      // Navigation, not a dismissal — the parent lands in this same element,
-      // so there is nothing to animate away. _openDetail renders on its own.
+      this._closeDetailSilently();
       return this._openDetail(back);
     }
-    // A saved task is a dismissal like any other, so it leaves the same way
-    // the X does. The render behind it is a FULL one (the task list changed
-    // and the board has to repaint), and it is deferred with everything else:
-    // the card is covering the board while it fades, so nothing of the stale
-    // paint is visible during those few frames.
-    this._dismissOverlay("detail-backdrop", () => this._render());
+    // A saved task leaves the way the X does; only the overlay parts re-feed.
+    this._closeDetailSilently(() => this._renderOverlays());
   }
 
   // Render the detail panel immediately on click; refresh attachments async
@@ -4082,6 +4230,16 @@ class __tasks_panel extends LetcBox {
           // these (upload missing nids, then link_file) on Update.
           pending_files: [],
         }
+      : null;
+    // What the card opened with — the "base" of _commitDetail's three-way
+    // merge. Built the same way as the draft's fields (same assignee filter,
+    // same status fallback), from a separate call so no array is shared with
+    // the draft the user is editing.
+    this._detailBase = task
+      ? snapshotTask(task, {
+          assignees: this.getKnownAssignees(task),
+          noStatus: this.getDefaultStatus(),
+        })
       : null;
     // A half-typed subtask belongs to the task it was opened on — carrying it
     // across to another task would create a child under the wrong parent.
@@ -4406,16 +4564,87 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
-  // Step the calendar cursor by ±1 month or ±1 week (per the active mode).
+  // Step the calendar cursor by ±1 day, week or month (per the active mode).
   _calShift(dir) {
     try {
       const base = this._calCursor ? Dayjs(this._calCursor) : Dayjs();
-      const unit = this._calMode === "week" ? "week" : "month";
+      const unit =
+        this._calMode === "day" ? "day" : this._calMode === "week" ? "week" : "month";
       this._calCursor = base.add(dir, unit).format("YYYY-MM-DD");
     } catch (_) {
       this._calCursor = null;
     }
-    this._render();
+    this._closeCalMenus();
+    this._repaintCalendar();
+  }
+
+  _closeCalMenus() {
+    this._calViewMenuOpen = false;
+    this._calPickerOpen = false;
+    this._unbindCalMenuDismiss();
+  }
+
+  /**
+   * The calendar's range, view or cursor moved: repaint the view body and the
+   * controls row (its label names the range). Nothing else on the panel reads
+   * calendar state, so _render() — every node on the panel — was paying to move
+   * a month. See tasks-panel-render-paths.
+   */
+  _repaintCalendar() {
+    // A different range (or view) is new content, so it opens at the top. The
+    // month's offset used to carry over: scroll to the last week, follow a
+    // "+N" into its day, and the Day view opened scrolled past that day's
+    // first tasks — or ‹ › landed mid-grid on the next month. A repaint of the
+    // SAME range (a task edit, a filter) still goes through the plain
+    // _refreshViewBody and keeps its place; this is the rule the Personal
+    // Calendar keys on too (_placeHoursScroll).
+    this._refreshViewBody({ dropScroll: ".tasks-panel__calendar" });
+    this._repaintCalControls();
+  }
+
+  /** Repaint ONLY the calendar's controls row (a dropdown opened or closed). */
+  _repaintCalControls() {
+    this._syncCalMenuDismiss();
+    if (this.getView() !== "calendar") return;
+    this._withPart("cal-controls").then((row) => {
+      if (!row || (this.isDestroyed && this.isDestroyed())) return;
+      row.feed(require("./skeleton/calendar").controlsKids(this));
+    });
+  }
+
+  // ── outside-click dismissal for the calendar dropdowns ──────────────────
+  // Capture phase on `document`, guarded by the WHOLE controls row — the
+  // Personal Calendar's _bindMenuDismiss, for the same reason it gives: closing
+  // repaints the row before the click reaches its target, so a guard narrower
+  // than the row would destroy ‹ › or the other dropdown mid-click. Every
+  // control in the row closes the menus in its own handler anyway.
+  _syncCalMenuDismiss() {
+    if (this._calViewMenuOpen || this._calPickerOpen) this._bindCalMenuDismiss();
+    else this._unbindCalMenuDismiss();
+  }
+
+  _bindCalMenuDismiss() {
+    if (this._calMenuDismiss) return;
+    const row = `.${this.fig.family}__tcal-bar`;
+    this._calMenuDismiss = (ev) => {
+      const t = ev && ev.target;
+      if (!t || !t.closest) return;
+      // THIS panel's row. Two workspace windows can each have a Task tab open,
+      // and a bare closest() would let a click on the other window's calendar
+      // bar count as "inside" and leave this panel's menu hanging open.
+      const bar = t.closest(row);
+      if (bar && this.el && this.el.contains(bar)) return;
+      if (this.isDestroyed && this.isDestroyed()) return this._unbindCalMenuDismiss();
+      this._closeCalMenus();
+      this._repaintCalControls();
+    };
+    document.addEventListener("click", this._calMenuDismiss, true);
+  }
+
+  _unbindCalMenuDismiss() {
+    if (!this._calMenuDismiss) return;
+    document.removeEventListener("click", this._calMenuDismiss, true);
+    this._calMenuDismiss = null;
   }
 
   async _loadComments(taskId) {
@@ -5248,8 +5477,16 @@ class __tasks_panel extends LetcBox {
    * a retained node would either leak or silently miss after a re-feed.
    */
   _rememberDropScope(zone) {
+    // `desc` is excluded for exactly the reason detail/create are: it is a task
+    // surface, recoverable from the pointer, so remembering it would let a
+    // stale hover write into a description with no overlay ever shown.
+    const task =
+      zone &&
+      (zone.scope === "detail" ||
+        zone.scope === "create" ||
+        zone.scope === "desc");
     this._lastDropScope =
-      zone && zone.scope !== "detail" && zone.scope !== "create"
+      zone && !task
         ? { scope: zone.scope, key: zone.key, commentId: zone.commentId }
         : null;
   }
@@ -5712,10 +5949,16 @@ class __tasks_panel extends LetcBox {
     });
     if (!zone) return null;
     // A zone only accepts while the surface that owns it is actually open.
-    if (zone.scope === "detail" && !this._detailDraft) return null;
-    if (zone.scope === "create" && !this._createDefaults) return null;
+    //
+    // A `desc` zone is the same surface as its form's attachment zone, one row
+    // up — the detail panel's description and its __attachments both live or
+    // die with _detailDraft — so it answers to the same guard rather than a
+    // second one that could drift from it.
+    const surface = zone.scope === "desc" ? zone.descScope : zone.scope;
+    if (surface === "detail" && !this._detailDraft) return null;
+    if (surface === "create" && !this._createDefaults) return null;
     if (
-      (zone.scope === "comment" || zone.scope === "comment-reply") &&
+      (surface === "comment" || surface === "comment-reply") &&
       !this._detailId
     ) {
       return null;
@@ -5728,11 +5971,17 @@ class __tasks_panel extends LetcBox {
   }
 
   // Whichever task form is open. NOT a drop decision: it answers "is a task
-  // surface open at all", never "where does this land". Its only real consumer
-  // is canAttachExisting's claim breadth.
+  // surface open at all", never "where does this land". canAttachExisting reads
+  // it for claim breadth, and _positionlessScope hands it to
+  // attachExistingNodes ("Link to task tracker", desk drops), which resolves the
+  // draft through _scopeKey — so it must carry `key` like a resolveZone result.
   _formUploadScope() {
-    if (this._creating && this._createDefaults) return { scope: "create" };
-    if (this._detailId && this._detailDraft) return { scope: "detail" };
+    if (this._creating && this._createDefaults) {
+      return { scope: "create", key: "create" };
+    }
+    if (this._detailId && this._detailDraft) {
+      return { scope: "detail", key: "detail" };
+    }
     return null;
   }
 
@@ -5927,7 +6176,17 @@ class __tasks_panel extends LetcBox {
     // Only the one under the cursor may claim it.
     if (!this._dropPointEl(at)) return null;
     const zone = this._activeUploadScope(at);
-    if (zone) return zone;
+    // A desc zone is a DROP target, not a paste target.
+    //
+    // Pasting INTO a description is the editor's own path: the caret is in a
+    // contenteditable, so _onPasteAttach never runs (_isTextEntry) and
+    // _onEditorPaste inlines at the caret. This branch is the opposite case —
+    // the caret is somewhere else entirely and only the POINTER happens to be
+    // over the editor. Claiming it here would drop an image into a body the
+    // user is not typing in, from a keystroke that gave no hint it would go
+    // there. Falls through to the composer default below, exactly as it did
+    // before this zone existed.
+    if (zone && zone.scope !== "desc") return zone;
     // Inside the panel but over no zone — including over another author's
     // comment, which resolveZone refuses rather than passing through. The
     // composer is where a paste belongs by default; its draft is allocated on
@@ -6048,7 +6307,43 @@ class __tasks_panel extends LetcBox {
     }
     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
     if (!files.length) return;
+    // WHERE in the description the file landed. The event is the only thing
+    // that knows, and the upload that follows is async — by the time it
+    // resolves the drag is long over and there is no pointer left to ask. Same
+    // reason _onEditorPaste clones the caret range before awaiting.
+    if (scope.scope === "desc") {
+      scope.range = this._caretRangeFromPoint(e.clientX, e.clientY);
+    }
     return this._attachFilesToZone(scope, files);
+  }
+
+  /**
+   * A collapsed range at a viewport point, or null.
+   *
+   * Two vendor spellings and no agreement between them: Chromium and WebKit
+   * expose caretRangeFromPoint, Gecko caretPositionFromPoint. Neither is
+   * guaranteed, and null is a perfectly good answer — _insertPastedImage
+   * appends to the editor when it has no usable range, which is what a drop
+   * onto the editor's padding should do anyway.
+   */
+  _caretRangeFromPoint(x, y) {
+    if (typeof document === "undefined" || x == null || y == null) return null;
+    try {
+      if (document.caretRangeFromPoint) {
+        return document.caretRangeFromPoint(x, y);
+      }
+      if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(x, y);
+        if (!pos || !pos.offsetNode) return null;
+        const range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.collapse(true);
+        return range;
+      }
+    } catch (_) {
+      /* a detached or cross-document node — fall through to appending */
+    }
+    return null;
   }
 
   /**
@@ -6061,6 +6356,10 @@ class __tasks_panel extends LetcBox {
    */
   async _attachFilesToZone(zone, files) {
     if (!zone || !files || !files.length) return;
+    // A description takes an image INTO the body and everything else beside it.
+    if (zone.scope === "desc") {
+      return this._dropOnDescEditor(zone, files);
+    }
     // A comment row has no submit, so arriving IS the commit.
     if (zone.scope === "comment-row") {
       return this._dropOnCommentRow(zone.commentId, files);
@@ -6069,6 +6368,67 @@ class __tasks_panel extends LetcBox {
     if (!draft) return;
     await this._stashPendingFiles(draft, files);
     this._refreshPendingList(this._scopeKey(zone));
+  }
+
+  /**
+   * A drop on a task description.
+   *
+   * Splits the files the way _onEditorPaste splits a paste, and for the same
+   * reason: the body's marker grammar holds mentions, links and inline images,
+   * and nothing else. An image goes IN, at the point it was dropped. A PDF, a
+   * video or a spreadsheet has no marker it could become, so it attaches to the
+   * task instead — which is where that editor's own paperclip already puts it,
+   * and where a pasted video already goes.
+   *
+   * Sequential, not Promise.all: _insertPastedImage moves the range past the
+   * node it just inserted, so three images dropped together land in the order
+   * they were dropped rather than in whatever order their uploads finish.
+   */
+  async _dropOnDescEditor(zone, files) {
+    const editorEl = zone.el;
+    const scope = zone.descScope;
+    if (!editorEl || !scope) return;
+    const images = [];
+    const rest = [];
+    for (const f of files) (this._isDroppableImage(f) ? images : rest).push(f);
+    // Attachments first. Queuing them is synchronous and touches only the
+    // draft, so the strip is already showing them while the first image is
+    // still uploading — rather than both landing at once, several seconds in.
+    if (rest.length) {
+      await this._attachFilesToZone({ scope, key: scope }, rest);
+    }
+    // Every placeholder goes in FIRST, in one synchronous pass, so a drop of
+    // three images shows three spinners at once and in the order they were
+    // dropped. Settling them inside the same loop would mean the second
+    // placeholder only appeared once the first upload had finished — the
+    // spinner would then be describing the wait it was added to explain away.
+    const placed = images.map((file) => ({
+      file,
+      ph: this._beginInlineImage(file, scope, editorEl, zone.range),
+    }));
+    for (const { file, ph } of placed) {
+      // The panel can be closed, or the task switched, mid-upload.
+      if (!editorEl.isConnected) return;
+      await this._settleInlineImage(ph, file, scope, editorEl);
+    }
+  }
+
+  /**
+   * Is this dropped file an image, for the purposes of going inline?
+   *
+   * By MIME type first, exactly as the paste path tests a clipboard item. The
+   * extension is the fallback for a file the OS handed over with no type at
+   * all — a drag out of an archive, off a network share, or from an app that
+   * simply does not set one. A file that DOES declare a type is taken at its
+   * word, so a mislabelled .png attaches rather than rendering as a broken
+   * inline image.
+   */
+  _isDroppableImage(file) {
+    if (!file) return false;
+    if (/^image\//.test(file.type || "")) return true;
+    if (file.type) return false;
+    const { extension } = this._splitFilename(file.name || "");
+    return this._isImageExt(extension);
   }
 
   // Queues File objects onto a draft's pending list (picker + drag-drop),
@@ -6144,11 +6504,62 @@ class __tasks_panel extends LetcBox {
     return { filename: safe.slice(0, dot), extension: safe.slice(dot + 1) };
   }
 
-  // Fetches the folder body's current filenames into a lowercase Set, used
-  // by _resolveAvailableName. Cleared whenever the create modal reopens
+  /**
+   * The folder task attachments are uploaded into.
+   *
+   * NOT `_destNid` — the folder the user happens to be standing in. An
+   * attachment belongs to the task, not to the workspace body, so uploading it
+   * there listed it in that folder's Files tab beside the real documents. It
+   * goes to the hub's hidden task folder instead (`/__chat__/__task__`,
+   * `mfs_home.task_upload_id`): same hub, same member permissions, and already
+   * excluded from every listing, search, export and manifest by the
+   * `^/__chat__` rule the chat staging folder relies on.
+   *
+   * Existing files LINKED to a task (the picker, a drag out of the folder) are
+   * untouched — they stay where they are and keep showing in Files.
+   *
+   * Falls back to `_destNid` when the server has no `task_upload_id` (schema
+   * not patched yet), so attaching keeps working — the file just stays visible,
+   * exactly as before.
+   */
+  async _attachmentNid() {
+    if (this._attachNid) return this._attachNid;
+    if (this._noTaskFolder) return this._destNid;
+    const job =
+      this._attachNidJob ||
+      (this._attachNidJob = (async () => {
+        try {
+          const home = await this.fetchService({
+            service: SERVICE.media.home,
+            hub_id: this._hubId,
+          });
+          const nid = home && home.task_upload_id;
+          if (nid) this._attachNid = nid;
+          else if (home) this._noTaskFolder = 1;
+        } catch (err) {
+          // Leave BOTH caches unset so the next attach retries: a request that
+          // failed says nothing about whether the folder exists, and pinning
+          // the panel to the fallback over one bad request would be wrong.
+          this.warn && this.warn("task attachment folder lookup failed", err);
+        } finally {
+          this._attachNidJob = null;
+        }
+        return this._attachNid || null;
+      })());
+    return (await job) || this._destNid;
+  }
+
+  // Fetches the attachment folder's current filenames into a lowercase Set,
+  // used by _resolveAvailableName. Cleared whenever the create modal reopens
   // (see "add-task" handler) so we re-fetch after each session. Resolves NULL
   // when the listing could not be read — "unknown", which callers must not
   // read as "the folder is empty".
+  //
+  // Only the first page is read, so a workspace with many attachments can miss
+  // an older same-named one. That is a display nicety, not a correctness
+  // problem: mfs_create_node rejects the duplicate and the server resolves the
+  // name itself, and the card is repainted from task_get_linked_files — the
+  // stored name — once the link is written.
   async _ensureFolderFilenames() {
     if (this._folderFilenames) return this._folderFilenames;
     // One fetch, shared by every concurrent caller. The cache used to be
@@ -6161,13 +6572,17 @@ class __tasks_panel extends LetcBox {
     // The four `_folderFilenames = null` resets don't cancel a fetch already in
     // flight, so a job that outlives a scope change must not install names read
     // from the folder we have since left.
-    const forNid = this._destNid;
+    // Resolved INSIDE the job: an await out here would run before
+    // _folderFilenamesJob is assigned, and two concurrent callers would each
+    // start their own listing — the single flight this guard exists for.
     this._folderFilenamesJob = (async () => {
+      let forNid = null;
       try {
+        forNid = await this._attachmentNid();
         const rows = await this.fetchService({
           service: SERVICE.media.show_node_by,
           hub_id: this._hubId,
-          nid: this._destNid,
+          nid: forNid,
           type: "all",
           page: 1,
           order: _K.order.descending,
@@ -6180,7 +6595,11 @@ class __tasks_panel extends LetcBox {
           const full = ext ? `${base}.${ext}` : base;
           if (full) names.add(full.toLowerCase());
         }
-        if (this._destNid === forNid) this._folderFilenames = names;
+        // Read straight off the cache rather than calling _attachmentNid()
+        // again: it is the same value, and re-asking would cost a second
+        // media.home round trip on a server that has no task folder.
+        if ((this._attachNid || this._destNid) === forNid)
+          this._folderFilenames = names;
       } catch (err) {
         // Leave the cache UNSET so the next attach retries. Callers then see
         // null and de-duplicate against the in-flight entries alone, rather
@@ -6313,41 +6732,96 @@ class __tasks_panel extends LetcBox {
   // entry's provisional name becomes that resolved one.
   async _uploadPendingFile(pf, siblings) {
     await this._finalizePendingName(pf, siblings);
-    return new Promise((resolve, reject) => {
-      this._pendingUploadScope = "_commit";
-      const params = { hub_id: this._hubId, nid: this._destNid };
-      const fullName = pf.extension
-        ? `${pf.filename}.${pf.extension}`
-        : pf.filename;
-      if (fullName && fullName !== pf.file?.name) {
-        params.filename = encodeURI(fullName);
+    const fullName = pf.extension
+      ? `${pf.filename}.${pf.extension}`
+      : pf.filename;
+    const extra =
+      fullName && fullName !== pf.file?.name
+        ? { filename: encodeURI(fullName) }
+        : {};
+    return this._uploadAttachment(pf.file, "_commit", extra);
+  }
+
+  /**
+   * One attachment upload into the task folder, with a single retry into the
+   * folder body if that folder refuses the write.
+   *
+   * The retry is for a member granted a SUBFOLDER rather than the workspace:
+   * `user_permission` resolves the task folder off the hub root, so such a
+   * member can write where they were granted and not into /__chat__/__task__.
+   * Losing their attachment would be worse than showing it in the Files tab —
+   * which is exactly what they had before this change. The downgrade is NOT
+   * cached: a transient failure must not disable the task folder for the rest
+   * of the panel's life.
+   *
+   * media.store reports a denied destination through `exception.server`, which
+   * is an HTTP 500 — indistinguishable from any other server fault, so the
+   * retry fires for those too. That is deliberate. The one case it costs
+   * anything is a 500 raised AFTER the node was written, which leaves a stray
+   * file; the code this replaces left an equally stray file in the workspace
+   * body on that same fault, and failed the attach on top of it.
+   */
+  async _uploadAttachment(file, scope, extra = {}) {
+    const attachNid = await this._attachmentNid();
+    try {
+      return await this._uploadOnce(file, scope, attachNid, extra);
+    } catch (err) {
+      const fallback = this._destNid;
+      if (!err || !err.retryElsewhere || !fallback || fallback === attachNid) {
+        throw err;
       }
+      this.warn &&
+        this.warn("task folder upload refused, using the folder body", err);
+      return this._uploadOnce(file, scope, fallback, extra);
+    }
+  }
+
+  /**
+   * Promise-wrapped uploadFile. Tags scope so the global onUploadResponse
+   * skips this xhr (we resolve via the xhr readystate listener).
+   *
+   * A rejection carries `retryElsewhere` when the destination could be to
+   * blame AND nothing is known to have been written: an upload that never
+   * started, a non-2xx, or a 2xx that names no node (media.store answered
+   * without creating one). The single exception is a 2xx whose body would not
+   * parse — something WAS stored there, so retrying would file the same
+   * attachment twice.
+   */
+  _uploadOnce(file, scope, nid, extra = {}) {
+    return new Promise((resolve, reject) => {
+      const fail = (err, retryElsewhere) => {
+        this._pendingUploadScope = null;
+        if (err && retryElsewhere) err.retryElsewhere = 1;
+        reject(err);
+      };
+      this._pendingUploadScope = scope;
+      const params = { hub_id: this._hubId, nid, ...extra };
       let xhr;
       try {
-        xhr = this.uploadFile(pf.file, params);
+        xhr = this.uploadFile(file, params);
       } catch (e) {
-        this._pendingUploadScope = null;
-        return reject(e);
+        return fail(e, 1);
       }
-      if (!xhr) {
-        this._pendingUploadScope = null;
-        return reject(new Error("upload failed to start"));
-      }
+      if (!xhr) return fail(new Error("upload failed to start"), 1);
       xhr.addEventListener("readystatechange", () => {
         if (xhr.readyState !== 4) return;
         this._pendingUploadScope = null;
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const { data } = JSON.parse(xhr.responseText);
-            const nid = data?.nid || data?.id;
-            if (!nid) return reject(new Error("no nid in upload response"));
-            resolve({ nid, data });
-          } catch (err) {
-            reject(err);
-          }
-        } else {
-          reject(new Error(`upload http ${xhr.status}`));
+        if (xhr.status < 200 || xhr.status >= 300) {
+          return fail(new Error(`upload http ${xhr.status}`), 1);
         }
+        let data;
+        try {
+          ({ data } = JSON.parse(xhr.responseText));
+        } catch (err) {
+          return fail(err);
+        }
+        const fileNid = data?.nid || data?.id;
+        // A 2xx that names no node means media.store answered without creating
+        // one — nothing was written, so this is safe to retry elsewhere.
+        if (!fileNid) {
+          return fail(new Error("no nid in upload response"), 1);
+        }
+        resolve({ nid: fileNid, data, hub: data?.hub_id || this._hubId });
       });
     });
   }
@@ -6929,12 +7403,27 @@ class __tasks_panel extends LetcBox {
   // Every one of those paths applies the same editing guard, so a drop can
   // never land on the task while a comment owns the surface.
   attachExistingNodes(files, resolved) {
-    const scope =
+    let scope =
       resolved ||
       this._lastDropScope ||
       this._pointerScope() ||
       this._positionlessScope();
     if (!scope) return false;
+    // A workspace node dragged onto a DESCRIPTION attaches; it does not inline.
+    // Inlining uploads a File and this route has none — it carries a node that
+    // already exists — so the zone is normalised to the form behind it.
+    //
+    // Not cosmetic: without this, _draftForScope below is asked for a
+    // "desc:detail" draft, _draftForKey does not know that key, and the drop
+    // returns false having done nothing — while canAttachExisting() has
+    // already told the folder window not to insert the file into its own body.
+    // The file would land nowhere at all.
+    //
+    // The affordance still lights the description the pointer is actually
+    // over, which is one row above where the file lands.
+    if (scope.scope === "desc") {
+      scope = { scope: scope.descScope, key: scope.descScope };
+    }
     // A comment row has no submit, so the drop IS the commit — _stageRowItems
     // applies the same dedupes and the same cross-hub placeholder path this
     // function does for the staged scopes.
@@ -7817,16 +8306,15 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  async _insertPastedImage(file, scope, editorEl, range) {
-    let res;
-    try {
-      res = await this._uploadInlineImage(file);
-    } catch (err) {
-      console.error("[tasks_panel] inline image upload failed:", err);
-      return;
-    }
-    if (!editorEl.isConnected) return;
-    const node = this._makeInlineImage(res.nid, res.hub, null, true);
+  /**
+   * Put a node at a caret range, or at the end of the editor.
+   *
+   * Extracted from _insertPastedImage so a placeholder and the image that
+   * replaces it land by the same rule — and so the range ADVANCES past what it
+   * just inserted, which is what lets several images dropped together keep the
+   * order they were dropped in.
+   */
+  _insertInlineNode(node, editorEl, range) {
     if (range && editorEl.contains(range.startContainer)) {
       range.deleteContents();
       range.insertNode(node);
@@ -7838,58 +8326,215 @@ class __tasks_panel extends LetcBox {
     } else {
       editorEl.appendChild(node);
     }
-    // Pasted images default to a small size (still resizable up via the handle).
-    // Cap at the image's natural width so a small image isn't upscaled, then
-    // re-sync so the width is stored in the draft marker.
-    const DEFAULT_W = 220;
+    return node;
+  }
+
+  /**
+   * Show that an image is on its way, at the point it was dropped or pasted.
+   *
+   * SYNCHRONOUS, and that is the whole point: the upload behind it takes
+   * seconds, and until now nothing at all appeared during them — an image
+   * dropped on a description read as a drop that had been ignored.
+   *
+   * NOTHING HERE CAN REACH THE SAVED BODY, by three separate properties, because
+   * _onDescInput serializes the editor on every keystroke and a placeholder is
+   * not something the marker grammar can express:
+   *
+   *   - the class is __inline-img-pending, and _serializeEditor tests
+   *     `classList.contains(__inline-img)` — a WHOLE-TOKEN match, so this is
+   *     not one, and no image marker is emitted for it;
+   *   - every child is an element, so the serializer's fallback (walk into
+   *     anything it does not recognise and keep the text) finds no text nodes
+   *     and emits the empty string;
+   *   - the retry and discard glyphs are CSS ::after content, which is
+   *     generated content — never in childNodes, never in textContent.
+   *
+   * So a failed placeholder can sit in the editor indefinitely, and a save
+   * while it is there stores the description exactly as if it were not.
+   */
+  _beginInlineImage(file, scope, editorEl, range) {
+    const pfx = this.fig.family;
+    const ph = document.createElement("span");
+    ph.className = `${pfx}__inline-img-pending`;
+    ph.setAttribute("contenteditable", "false");
+    ph.dataset.status = "uploading";
+    // The file is already in the browser, so the real picture can be shown
+    // while it uploads — the same trick _attachLocalPreview plays for a queued
+    // attachment, and the reason this reads as "this image, arriving" rather
+    // than as an anonymous spinner.
+    let url = null;
+    try {
+      url = URL.createObjectURL(file);
+    } catch (_) {
+      /* an engine that refuses is fine — the spinner alone still says enough */
+    }
+    if (url) {
+      (this._inlinePreviews = this._inlinePreviews || new Set()).add(url);
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "";
+      img.setAttribute("draggable", "false");
+      // Take the committed image's width the moment the preview decodes, so
+      // the box keeps ONE size from drop to final image — the CSS 220px alone
+      // would upscale a small image here and shrink it again on the swap.
+      img.addEventListener(
+        "load",
+        () => {
+          const w = inlineImageWidth(img.naturalWidth);
+          if (w) ph.style.width = `${w}px`;
+        },
+        { once: true },
+      );
+      ph.appendChild(img);
+      ph.__previewUrl = url;
+    }
+    for (const part of ["spinner", "retry", "discard"]) {
+      const s = document.createElement("span");
+      s.className = `${pfx}__inline-img-${part}`;
+      ph.appendChild(s);
+    }
+    return this._insertInlineNode(ph, editorEl, range);
+  }
+
+  // Drop a placeholder's object URL. Safe to call twice.
+  _releaseInlinePreview(ph) {
+    const url = ph && ph.__previewUrl;
+    if (!url) return;
+    ph.__previewUrl = null;
+    if (this._inlinePreviews) this._inlinePreviews.delete(url);
+    try {
+      URL.revokeObjectURL(url);
+    } catch (_) {}
+  }
+
+  /**
+   * Upload the file behind a placeholder and put the real image in its place.
+   *
+   * On failure the placeholder STAYS, in its error state, offering a retry —
+   * the alternative is an image that silently never arrives, which is what
+   * this path did before (it logged to the console and returned).
+   *
+   * The placeholder can also be gone by the time the upload lands:
+   * _renderEditorContent rebuilds the editor body from the draft's markers on
+   * every render, and a placeholder is deliberately not a marker. That is not
+   * an error — the image is simply appended, which is exactly what this method
+   * did in that situation before there were placeholders at all.
+   */
+  async _settleInlineImage(ph, file, scope, editorEl) {
+    if (ph && ph.isConnected) ph.dataset.status = "uploading";
+    let res;
+    try {
+      res = await this._uploadInlineImage(file);
+    } catch (err) {
+      console.error("[tasks_panel] inline image upload failed:", err);
+      if (ph && ph.isConnected) {
+        ph.dataset.status = "error";
+        this._wireInlineImageRecovery(ph, file, scope, editorEl);
+      } else if (typeof Butler !== "undefined" && Butler.say) {
+        // No placeholder left to carry the failure, so say it out loud rather
+        // than let the image vanish without a word.
+        Butler.say(LOCALE.ERROR_NETWORK);
+      }
+      return;
+    }
+    if (!editorEl.isConnected) {
+      this._releaseInlinePreview(ph);
+      return;
+    }
+    // The swap must not change the box. The committed wrapper used to be built
+    // with NO width and pointed straight at the served URL, so between the swap
+    // and that download it went from 220px to zero-high, then to the image's
+    // full natural size (inline-block shrink-to-fit around a width:100% img),
+    // and only on its load back down to 220px. Instead: the width is known
+    // already — the local preview decoded long ago — and the <img> keeps
+    // showing that same local preview until the served copy has loaded.
+    const preview = ph && ph.querySelector && ph.querySelector("img");
+    const nat = preview && preview.naturalWidth;
+    const width = inlineImageWidth(nat);
+    const node = this._makeInlineImage(res.nid, res.hub, width, true);
     const img = node.querySelector && node.querySelector("img");
-    const applySmall = () => {
-      if (!node.isConnected) return;
-      const nat = img && img.naturalWidth ? img.naturalWidth : DEFAULT_W;
-      node.style.width = `${Math.min(DEFAULT_W, nat)}px`;
-      this._onDescInput(scope, editorEl);
-    };
-    if (img && img.complete && img.naturalWidth) applySmall();
-    else if (img) img.addEventListener("load", applySmall, { once: true });
-    else node.style.width = `${DEFAULT_W}px`;
-    // Sync the draft from the mutated editor (initial; width sync follows onload).
+    if (img && nat && ph.__previewUrl) {
+      const served = img.src;
+      img.src = ph.__previewUrl;
+      const loader = new Image();
+      const done = () => {
+        if (img.isConnected) img.src = served;
+        this._releaseInlinePreview(ph);
+      };
+      loader.onload = done;
+      loader.onerror = done;
+      loader.src = served;
+    } else {
+      this._releaseInlinePreview(ph);
+    }
+    if (ph && ph.isConnected) {
+      ph.replaceWith(node);
+    } else {
+      // Wiped by a render while it was uploading — fall back to the end of the
+      // editor, the same place a stale range has always put it.
+      this._insertInlineNode(node, editorEl, null);
+    }
+    if (!width) {
+      // No preview to measure (an engine that refused the object URL): size it
+      // once the served image arrives, capped so a small one isn't upscaled.
+      const applySmall = () => {
+        if (!node.isConnected) return;
+        node.style.width = `${inlineImageWidth(img && img.naturalWidth) || INLINE_IMG_W}px`;
+        this._onDescInput(scope, editorEl);
+      };
+      if (img && img.complete && img.naturalWidth) applySmall();
+      else if (img) img.addEventListener("load", applySmall, { once: true });
+      else node.style.width = `${INLINE_IMG_W}px`;
+    }
+    // Sync the draft (with its width marker) from the mutated editor.
     this._onDescInput(scope, editorEl);
   }
 
-  // Promise-wrapped upload for a raw clipboard image File. Tags scope so the
-  // global onUploadResponse skips it (resolved here via the readystate listener).
-  _uploadInlineImage(file) {
-    return new Promise((resolve, reject) => {
-      this._pendingUploadScope = "_inline";
-      const params = { hub_id: this._hubId, nid: this._destNid };
-      let xhr;
-      try {
-        xhr = this.uploadFile(file, params);
-      } catch (e) {
-        this._pendingUploadScope = null;
-        return reject(e);
+  /**
+   * Wire a failed placeholder's two controls.
+   *
+   * Native listeners on the node itself, not services: this is raw DOM that
+   * skeleton feed() never rebuilds, so there is no re-render to survive and
+   * nothing for onUiEvent to route. They are attached once — a retry that
+   * fails again comes back through here and would otherwise stack a second
+   * listener on every attempt.
+   */
+  _wireInlineImageRecovery(ph, file, scope, editorEl) {
+    if (ph.__wired) return;
+    ph.__wired = 1;
+    const pfx = this.fig.family;
+    ph.addEventListener("click", (e) => {
+      const hit = e.target && e.target.closest && e.target.closest("span");
+      if (!hit) return;
+      if (hit.classList.contains(`${pfx}__inline-img-discard`)) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._releaseInlinePreview(ph);
+        ph.remove();
+        // The placeholder was never in the draft, so nothing needs saving —
+        // but the editor may now be empty, and _onDescInput is what notices
+        // (it strips the stray <br> that defeats the :empty placeholder).
+        this._onDescInput(scope, editorEl);
+        return;
       }
-      if (!xhr) {
-        this._pendingUploadScope = null;
-        return reject(new Error("upload failed to start"));
+      if (hit.classList.contains(`${pfx}__inline-img-retry`)) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._settleInlineImage(ph, file, scope, editorEl);
       }
-      xhr.addEventListener("readystatechange", () => {
-        if (xhr.readyState !== 4) return;
-        this._pendingUploadScope = null;
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const { data } = JSON.parse(xhr.responseText);
-            const nid = data?.nid || data?.id;
-            if (!nid) return reject(new Error("no nid in upload response"));
-            resolve({ nid, hub: data?.hub_id || this._hubId });
-          } catch (err) {
-            reject(err);
-          }
-        } else {
-          reject(new Error(`upload http ${xhr.status}`));
-        }
-      });
     });
+  }
+
+  async _insertPastedImage(file, scope, editorEl, range) {
+    const ph = this._beginInlineImage(file, scope, editorEl, range);
+    return this._settleInlineImage(ph, file, scope, editorEl);
+  }
+
+  // A raw clipboard image File pasted into a description. Same destination as
+  // every other attachment (the hidden task folder) — an image pasted into a
+  // task is no more part of the folder body than a file attached to it.
+  _uploadInlineImage(file) {
+    return this._uploadAttachment(file, "_inline");
   }
 
   _onDescInput(scope, editorEl) {
@@ -8732,6 +9377,12 @@ class __tasks_panel extends LetcBox {
     // board/list back to the top — feed() rebuilds fresh nodes at scroll 0.
     const savedScroll = this._captureViewScroll();
 
+    // Replay neither the board's first-paint fade nor the calendar's, which
+    // belong to the board first appearing and to a view switch — see
+    // _stampRepaintFades.
+    this._stampRepaintFades(this._paintedView !== this.getView());
+    this._paintedView = this.getView();
+
     this.feed(require("./skeleton")(this));
     this._markPainted();
     // The board has drawn: the folder window's Task entrance keys on this
@@ -8744,14 +9395,13 @@ class __tasks_panel extends LetcBox {
     // (sync + next frame as a safety net for late-mount children).
     this._prepopulateInputs();
     this._renderCommentBodies();
-    // Restore synchronously to avoid a visible jump, then again next frame in
-    // case the rebuilt content only reaches full scrollHeight after layout.
+    // Restores now, and keeps retrying until the rebuilt content is tall
+    // enough to take the offset (see _restoreViewScroll).
     this._restoreViewScroll(savedScroll);
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(() => {
         this._prepopulateInputs();
         this._renderCommentBodies();
-        this._restoreViewScroll(savedScroll);
       });
     }
 
@@ -8895,9 +9545,19 @@ class __tasks_panel extends LetcBox {
    * is built, instead of a second copy of the view/board dispatch that would
    * drift. Only the host's subtree is actually mounted.
    */
-  _refreshViewBody() {
+  /**
+   * @param {Object} [opt]
+   * @param {String} [opt.dropScroll]  a scroller selector whose offset must NOT
+   *   carry over — the view is showing something new there, not the same thing
+   *   repainted. The calendar passes its own root when the range or the view
+   *   moves (see _repaintCalendar).
+   */
+  _refreshViewBody(opt = {}) {
     if (!this.el) return;
-    const savedScroll = this._captureViewScroll();
+    let savedScroll = this._captureViewScroll();
+    if (opt.dropScroll) {
+      savedScroll = savedScroll.filter((s) => s.selector !== opt.dropScroll);
+    }
     this._withPart("view-host").then((host) => {
       if (!host || !this.el) return;
       const root = require("./skeleton")(this);
@@ -8907,11 +9567,63 @@ class __tasks_panel extends LetcBox {
       // No host in the tree (skeleton restructured) — fall back to a full
       // render rather than silently leaving a stale view on screen.
       if (!node) return this._render();
+      // A new range (dropScroll) is new content and fades in; the same range
+      // repainted after an Update or a peer's edit does not.
+      this._stampRepaintFades(
+        !!opt.dropScroll || this._paintedView !== this.getView(),
+      );
+      this._paintedView = this.getView();
       host.feed(node.kids);
+      // Retries per frame until the rebuilt columns can take the offsets.
       this._restoreViewScroll(savedScroll);
-      if (typeof requestAnimationFrame === "function") {
-        requestAnimationFrame(() => this._restoreViewScroll(savedScroll));
-      }
+    });
+  }
+
+  /**
+   * Keep a repaint from replaying the fades meant for an arrival.
+   *
+   * feed() recreates what it feeds, and a newly created element runs its CSS
+   * animation again. Two of them are opacity 0 -> 1 fades:
+   *   - the root's first-paint fade (skin, `&__ui[data-painted="1"] >
+   *     .tasks-panel__root`), on EVERY full render — so opening a workspace
+   *     (two renders), a notification that lands on a task, or an Update
+   *     blinked the whole board to transparent and back (reported by Lexis);
+   *   - the calendar's fade, on every view-body repaint in the Calendar view.
+   * Same class of bug the overlays already gate with `data-entered`.
+   *
+   * Stamped BEFORE the feed so the new elements never pick the animation up.
+   *
+   * @param {Boolean} arriving  a view switch or a new calendar range — new
+   *   content, which keeps the calendar's fade
+   */
+  _stampRepaintFades(arriving) {
+    const ds = this.el && this.el.dataset;
+    if (!ds) return;
+    // The board has faded in already: from now on it simply is.
+    if (ds.painted === "1") ds.settled = "1";
+    ds.calFade = arriving ? "1" : "0";
+  }
+
+  /**
+   * Repaint after the task rows changed but the chrome did not — a create, an
+   * Update, or a peer's edit. Feeds only the view host (and the open task's
+   * subtask rows); the viewbar, filter bar and overlays are left alone.
+   *
+   * The Health view draws the activity feed, which the rows do not carry, so
+   * that view reloads it first. The read cache follows the rows by hand now
+   * that _loadTasks no longer runs after a write. A caller that has just
+   * loaded the activity feed itself passes `activityLoaded` so it is not
+   * fetched twice.
+   */
+  _repaintBoard({ activity = 0, activityLoaded = 0 } = {}) {
+    readCache.set(this._cacheKey("tasks"), this._tasks);
+    const needActivity =
+      !activityLoaded && (activity || this.getView() === "summary");
+    const load = needActivity ? this._loadActivity() : Promise.resolve();
+    return load.then(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._refreshViewBody();
+      if (this._detailId) this._refreshSubtaskSection();
     });
   }
 
@@ -8973,17 +9685,45 @@ class __tasks_panel extends LetcBox {
     return saved;
   }
 
-  // Reapply offsets captured by _captureViewScroll. Best-effort: a container
-  // that no longer exists (view switched, column deleted) is simply skipped.
+  // Reapply offsets captured by _captureViewScroll, retrying once per frame
+  // until each one sticks. A rebuilt column's cards reach full height a few
+  // frames after feed(); restoring only then-and-next-frame hit a column still
+  // scrollHeight == clientHeight, which clamped the offset to 0 and threw the
+  // user back to the first card after every create / Update (stage probe,
+  // 2026-09-23). A container that no longer exists (view switched, column
+  // deleted) simply never matches and times out.
+  //
+  // A newer restore supersedes an older one, and any user input cancels the
+  // retry so it never fights a scroll the user started.
   _restoreViewScroll(saved) {
     if (!this.el || !saved || !saved.length) return;
-    for (const { selector, top, left } of saved) {
-      const node = this.el.querySelector(selector);
-      if (!node) continue;
-      if (top) node.scrollTop = top;
-      if (left) node.scrollLeft = left;
+    this._installScrollRestoreCancel();
+    const gen = (this._scrollRestoreGen = (this._scrollRestoreGen || 0) + 1);
+    restoreScroll(saved, {
+      find: (sel) => (this.el ? this.el.querySelector(sel) : null),
+      raf:
+        typeof requestAnimationFrame === "function"
+          ? (fn) => requestAnimationFrame(fn)
+          : null,
+      now: () => Date.now(),
+      isCancelled: () =>
+        gen !== this._scrollRestoreGen ||
+        !!(this.isDestroyed && this.isDestroyed()),
+    });
+  }
+
+  // The user taking over (wheel, touch, click, key) ends a pending restore.
+  _installScrollRestoreCancel() {
+    if (this._scrollRestoreCancelBound || !this.el) return;
+    this._scrollRestoreCancelBound = 1;
+    const cancel = () => {
+      this._scrollRestoreGen = (this._scrollRestoreGen || 0) + 1;
+    };
+    for (const ev of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+      this.el.addEventListener(ev, cancel, { capture: true, passive: true });
     }
   }
+
 
   // ── Skeleton accessors ─────────────────────────────────────────
   /**
@@ -9605,10 +10345,11 @@ class __tasks_panel extends LetcBox {
    *
    * Never throws: the parent is already created by the time this runs, so a
    * child that fails must not roll the create back or take the modal down with
-   * it. Returns how many failed, for the caller to report.
+   * it. Returns how many failed and the rows that were created.
    */
   async _createQueuedSubtasks(parentId, queued) {
     let failed = 0;
+    const rows = [];
     for (const sub of queued) {
       try {
         const created = await this.postService({
@@ -9623,15 +10364,16 @@ class __tasks_panel extends LetcBox {
           status: sub.status || undefined,
           due_date: sub.due_date || null,
         });
-        const row = Array.isArray(created) ? created[0] : created;
+        const row = rowOf(created);
         // postService resolves falsy on failure rather than rejecting.
-        if (!row || !row.id) failed += 1;
+        if (row) rows.push(row);
+        else failed += 1;
       } catch (err) {
         console.error("[tasks_panel] queued subtask create failed:", err);
         failed += 1;
       }
     }
-    return failed;
+    return { failed, rows };
   }
 
   /**
@@ -9949,6 +10691,15 @@ class __tasks_panel extends LetcBox {
   }
   getCalCursor() {
     return this._calCursor;
+  }
+  isCalViewMenuOpen() {
+    return !!this._calViewMenuOpen;
+  }
+  isCalPickerOpen() {
+    return !!this._calPickerOpen;
+  }
+  getCalPickerCursor() {
+    return this._calPickerCursor || null;
   }
   getGanttMode() {
     return this._ganttMode || "weeks";

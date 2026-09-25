@@ -31,7 +31,7 @@ const FILTERS = [
   () => LOCALE.ALL,
   () => LOCALE.DOCS,
   () => LOCALE.PDF,
-  () => LOCALE.IMAGES,
+  () => LOCALE.MEDIA,
   () => LOCALE.OTHER,
 ];
 

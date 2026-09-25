@@ -85,8 +85,10 @@ const FILTERS = [
   { key: "meeting", label: "CAL_FILTER_MEETING" },
 ];
 
-// Hour rows the week/day grids draw. Kept narrow deliberately: an all-24 ruler
-// is mostly empty scroll, and the grid scrolls to the first item anyway.
+// The week/day grids draw all 24 hours (skeleton/hours.js), the same frame the
+// workspace Meet tab's schedule uses, so these no longer bound the ruler.
+// DAY_START_HOUR is now the hour the widget scrolls an EMPTY day onto — the
+// working-hours default, matching window/folder/index.js's own DEFAULT_HOUR.
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 21;
 

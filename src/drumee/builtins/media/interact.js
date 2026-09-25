@@ -1010,8 +1010,12 @@ class __media_interact extends media_core {
         this.delete();
         return;
 
+      // The contextmenu "Move to trash" row (items.js `trash`). A single file
+      // or folder used to go straight to the bin; `confirm` asks first. The
+      // "Leave workspace" row posts the same service, but hubs never land in
+      // the bucket this flag gates — they keep their own dialogs.
       case _e.remove:
-        this.delete()
+        this.delete({ confirm: 1 });
         return;
 
       case "load-script":
@@ -1286,9 +1290,14 @@ class __media_interact extends media_core {
         break;
 
       case _e.paste:
-        if (!this.isGranted(_K.permission.write)) return;
         let media = Visitor.get("clipboard");
         if (!media) return;
+        if (!this.isGranted(_K.permission.write)) {
+          require("libs/permission-denied").sayWeakPrivilege(
+            LOCALE.PERMISSION_ACTION_COPY, this.mget(_a.privilege), _K.permission.write,
+          );
+          return;
+        }
         this.moveIn(media, 1);
         break;
 
@@ -1424,6 +1433,11 @@ class __media_interact extends media_core {
     const hub_name = this.isHub
       ? this.mget(_a.filename) || this.mget(_a.name) || ""
       : "";
+    // Tints the folder glyph the popup draws over its pre-filled workspace
+    // field. Paired with hub_name for the same reason it is: only a hub knows
+    // its own area, and a tint borrowed from a parent would be a lie about
+    // which workspace the row names.
+    const hub_area = this.isHub ? this.mget(_a.area) || "" : "";
     // Free: solo — no invites (silent). Org seat cap does not apply to hub.invite.
     const { isFreeSoloPlan, showFreeSoloLimit } = require("libs/billing");
     if (isFreeSoloPlan()) return showFreeSoloLimit();
@@ -1432,6 +1446,7 @@ class __media_interact extends media_core {
         kind: "invite_popup",
         hub_id,
         hub_name,
+        hub_area,
         uiHandler: [this],
       });
     });

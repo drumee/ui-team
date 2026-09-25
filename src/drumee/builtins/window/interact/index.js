@@ -4,7 +4,7 @@ const { copyToClipboard, timestamp } = require("@drumee/ui-essentials")
 const { TimelineMax } = require("@drumee/ui-core/vendor");
 
 const windowCore = require("../core");
-const { isGrouped } = require("../skeleton/toolkit/file-group");
+const { isSectioned } = require("../skeleton/toolkit/file-group");
 class __window_interact extends windowCore {
   constructor(...args) {
     super(...args);
@@ -894,10 +894,11 @@ class __window_interact extends windowCore {
       this.captured.left = primary;
       if (paired) this.captured.right = paired;
     }
-    // Group view never re-arms the flanking tiles below, so nothing may be
-    // kept shifted: `keep` skips the release AND `_shifted` is reset, leaving
-    // those two tiles pushed aside until the delayed clearShift a second later.
-    const grouped = isGrouped(this);
+    // Group view (and the Media tab's sections) never re-arm the flanking
+    // tiles below, so nothing may be kept shifted: `keep` skips the release
+    // AND `_shifted` is reset, leaving those two tiles pushed aside until the
+    // delayed clearShift a second later.
+    const grouped = isSectioned(this);
     this._releaseShifted(
       grouped ? [] : [this.captured.left, this.captured.right],
     );
@@ -1003,7 +1004,11 @@ class __window_interact extends windowCore {
         priv = this.mget(_a.privilege) || this.mget(_a.permission);
       }
       if (!(_K.permission.write & priv)) {
-        this.warning(LOCALE.WEAK_PRIVILEGE);
+        this.warning(
+          require("libs/permission-denied").weakPrivilegeMessage(
+            LOCALE.PERMISSION_ACTION_UPLOAD, priv,
+          ),
+        );
         return null;
       }
       item.phase = _a.upload;
@@ -1350,6 +1355,23 @@ class __window_interact extends windowCore {
    */
   pasteMedia(prepend) {
     if (_.isEmpty(Wm.clipboard.files)) {
+      return;
+    }
+    // Refuse before drawing anything: the tiles below are added optimistically
+    // and each posts its own media.copy / media.move, which a view/chat member
+    // is refused — leaving ghost tiles until reload. Only a KNOWN privilege
+    // without the write bit refuses; with none recorded the server decides.
+    // (Wm carries the open workspace's hub_id AND privilege, so its own
+    // pasteMedia is judged against the same workspace it pastes into.)
+    const priv = this.mget(_a.privilege) || this.mget(_a.permission);
+    if (priv != null && !(_K.permission.write & priv)) {
+      require("libs/permission-denied").sayWeakPrivilege(
+        Wm.clipboard.command === _e.copy
+          ? LOCALE.PERMISSION_ACTION_COPY
+          : LOCALE.PERMISSION_ACTION_MOVE,
+        priv,
+        _K.permission.write,
+      );
       return;
     }
     const list = [];

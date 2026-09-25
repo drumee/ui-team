@@ -140,6 +140,15 @@ const ___window_manager = function (ui) {
         className: `${ui.fig.family}__file-created-layer`,
       }),
 
+      // "Link copied" toast (acknowledge → _acknowledgeHost). Not positioned,
+      // so the toast still places itself against wm-container, exactly where
+      // it sat when it was appended to the Wm.
+      Skeletons.Box.Y({
+        sys_pn: "ack-layer",
+        className: `${ui.fig.family}__ack-layer`,
+        sortWithCollection: false,
+      }),
+
       Skeletons.Wrapper.Y({
         className: `${ui.fig.family}__wrapper-tooltips ${ui.fig.group}__wrapper-tooltips`,
         name: "tooltips",

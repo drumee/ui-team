@@ -2,12 +2,15 @@
 const mfsInteract = require('../../window/utils');
 const { filesize } = require('@drumee/ui-essentials');
 require('./skin');
+const { trackDeskCanvas } = require('libs/desk-canvas');
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
     opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
     this.isTrash = 1;
     this.getCurrentApi = this.getCurrentApi.bind(this);
@@ -64,6 +67,7 @@ class __panel_trash extends mfsInteract {
    */
   onDestroy() {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
+    if (this._untrackCanvas) this._untrackCanvas();
     Wm.off(WS_EVENT, this.handleWsEvent);
   }
 
@@ -94,6 +98,16 @@ class __panel_trash extends mfsInteract {
 
   _wsRefresh() {
     if (!this.el || this.isDestroyed()) return;
+    // Parked by the desk (keep-alive slot, see desk _isKeepAliveSlot) or
+    // slid out by an outside click: don't pay for mfs_show_bin — a heavy SP
+    // that walks every hub the user can write to — on each burst of echoes
+    // for a list nobody is looking at. Note it; onPanelShown reloads once.
+    // Read off data-anim rather than an onPanelHidden flag because the
+    // outside-click path hides the panel without calling that hook.
+    if (this.el.dataset.anim !== "in") {
+      this._staleWhileParked = true;
+      return;
+    }
     // Don't reload the list under the user mid-decision on Empty Trash. This
     // used to look for children in the `overlay` part, which was where the
     // panel-scoped confirm lived; that prompt is now the global confirm dialog
@@ -113,12 +127,41 @@ class __panel_trash extends mfsInteract {
     // their DOM nodes); refresh the count once the reload settles.
     const list = this.getPart && this.getPart(_a.list);
     if (list && typeof list.restart === 'function') {
-      list.once(_e.eod, () => this._updateItemsCount());
+      // restart() fires _e.eod SYNCHRONOUSLY first (ui-core "flush old
+      // listeners") and only then resets + refetches. A listener bound before
+      // it was consumed by that flush and counted the just-reset collection:
+      // "0 items", data-empty=1 (status bar + Empty Trash hidden) while the
+      // list itself showed the items. Bind after, so it hears the reload's own
+      // end of data. The generation drops a listener left by an earlier reload
+      // that the next restart's flush would otherwise fire on an empty list.
+      const gen = (this._reloadGen = (this._reloadGen || 0) + 1);
+      // The count is only known at end of data. A bin larger than one page
+      // (pagelength 45) gets no eod until the user scrolls to the end, so the
+      // previous number would stand, now wrong. Blank it the way a first
+      // mount starts (skeleton/topbar content: '') until eod fills it in.
+      this.ensurePart('items-count').then((p) => p.set({ content: '' })).catch(() => { });
       list.restart();
+      list.once(_e.eod, () => {
+        if (gen === this._reloadGen) this._updateItemsCount();
+      });
     } else {
       // List not mounted yet (first render / mid-teardown) — fall back.
       this.feed(require('./skeleton')(this));
     }
+  }
+
+  /**
+   * Revealed again by the desk (_showPanel, keep-alive re-show). If bin
+   * content changed while parked — "delete 30 files, then open the Trash" —
+   * reload now rather than after the debounce, so the reopened panel does
+   * not sit on the old list for another 600ms. Nothing changed: no request,
+   * the reveal stays instant.
+   */
+  onPanelShown() {
+    if (!this._staleWhileParked) return;
+    this._staleWhileParked = false;
+    this._wsRefresh();
+    if (this._wsRefresh.flush) this._wsRefresh.flush();
   }
 
   _refreshStorageUsed() {
@@ -153,11 +196,17 @@ class __panel_trash extends mfsInteract {
             ? child.collection.filter(m => m.get(_a.kind) !== 'placeholder' && m.get(_a.nid)).length
             : 0;
           this.el.dataset.empty = count ? 0 : 1;
+          // Rows or the empty state are on screen. A reload's screen restore
+          // waits on this (libs/items-ready).
+          markItemsReady(this);
           this.ensurePart('items-count').then((p) => {
             p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
           });
           this._refreshStorageUsed();
         });
+        // A failed first page fires `error`, never `eod` (ui-core list
+        // onServerComplain) — and a failed load is still a finished one.
+        child.once(_e.error, () => markItemsReady(this));
         break;
       case 'storage-info':
         this._refreshStorageUsed();
@@ -167,10 +216,18 @@ class __panel_trash extends mfsInteract {
 
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    // Cover the workspace at ≤ 1024px (see libs/desk-canvas).
+    if (this._untrackCanvas) this._untrackCanvas();
+    this._untrackCanvas = trackDeskCanvas(this.el);
     // rAF so the "out" → "in" flip lands in a separate frame and the
     // CSS transform transition actually engages.
     requestAnimationFrame(() => {
-      if (this.el) this.el.dataset.anim = "in";
+      if (!this.el) return;
+      this.el.dataset.anim = "in";
+      // An echo that landed before this frame (a background tab holds rAF
+      // back) was parked by _wsRefresh, and desk _showPanel will not call
+      // onPanelShown for a panel it never saw as "out" — replay it here.
+      if (this._staleWhileParked) this.onPanelShown();
     });
     // off() first so a re-render never stacks duplicate subscriptions.
     RADIO_CLICK.off(_e.click, this._onOutsideClick);

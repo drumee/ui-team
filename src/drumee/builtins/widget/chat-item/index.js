@@ -396,6 +396,28 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
+   * True when every stored attachment entry names a node the optimistic
+   * preview already renders (same nid and hub_id).
+   */
+  _previewMatchesAttachment() {
+    const preview = this._attachmentPreview();
+    if (!preview) return false;
+    let stored = this.mget("attachment");
+    if (_.isString(stored)) {
+      try {
+        stored = JSON.parse(stored);
+      } catch (e) {
+        return false;
+      }
+    }
+    if (!_.isArray(stored) || stored.length !== preview.length) return false;
+    const shown = new Set(preview.map((n) => `${n.hub_id}:${n.nid}`));
+    return stored.every(
+      (e) => e && _.isObject(e) && shown.has(`${e.hub_id}:${e.nid}`),
+    );
+  }
+
+  /**
    * Remove the placeholder rows and disarm their ceiling.
    *
    * Safe to call more than once — both triggers (a card landing, the ceiling
@@ -427,6 +449,12 @@ class ___widget_chatItem extends LetcBox {
    * bubble) rather than to a permanent lie.
    */
   _armAttachmentSkeletonCeiling() {
+    // Cards were fed from the composer's staged nodes during the build; the
+    // wrapper is in the DOM now, so the placeholder can go at once.
+    if (this._previewFed) {
+      this._clearAttachmentSkeleton();
+      return;
+    }
     if (this._attachmentSkeletonTimer) return;
     this._attachmentSkeletonTimer = setTimeout(() => {
       this._attachmentSkeletonTimer = null;
@@ -459,6 +487,19 @@ class ___widget_chatItem extends LetcBox {
           this._clearAttachmentSkeleton();
           this.triggerHandlers({ service: "attachment-grown" });
         };
+        // A just-sent message draws its cards from the staged nodes right
+        // away; the list's own fetch is disabled until the echo (see
+        // getAttachments / _onDataChanged).
+        if (this._showsPreview() && _.isFunction(child.feed)) {
+          child.feed(this._attachmentPreview());
+          // feed() adds through the collection, not through the fetch path
+          // that calls onAddKid. This part-ready fires while the wrapper is
+          // still being built, before it hangs off this.el, so the
+          // placeholder cannot be found yet — flag it for the ceiling call
+          // that runs right after the append.
+          this._previewFed = true;
+          this.triggerHandlers({ service: "attachment-grown" });
+        }
         break;
     }
   }
@@ -494,7 +535,21 @@ class ___widget_chatItem extends LetcBox {
     // thing that re-reads message_id — and clears _end_of_data, without which
     // the sealed list would refuse to fetch at all.
     if (changed.message_id && this.__list && _.isFunction(this.__list.restart)) {
-      this.__list.restart();
+      // Cards drawn from the staged nodes stay valid when the server kept
+      // those very nodes (a move inside one hub keeps nid and hub_id); only a
+      // message whose attachments were re-created elsewhere (personal desk →
+      // sbox hub) needs the fetch. Skipping it also spares the flicker of
+      // replacing cards that already show the right files.
+      if (!this._previewMatchesAttachment()) {
+        if (this._attachmentPreview() && _.isFunction(this.__list.start)) {
+          // Cards are on screen; start(0) re-reads the descriptor and fetches
+          // without resetting first, so the preview cards stand until the
+          // stored rows replace them in one set() instead of a blank gap.
+          this.__list.start(0);
+        } else {
+          this.__list.restart();
+        }
+      }
     }
     // Re-render reaction chips whenever metadata changes (reactions live inside it).
     if (changed[_a.metadata] !== undefined) {
@@ -1794,7 +1849,27 @@ class ___widget_chatItem extends LetcBox {
    *
    * @returns
    */
+  /**
+   * Staged node rows the composer handed to this optimistic bubble, or null.
+   */
+  _attachmentPreview() {
+    const preview = this.mget("attachment_preview");
+    return _.isArray(preview) && preview.length ? preview : null;
+  }
+
+  /**
+   * True while the bubble is drawn from the composer's staged nodes and the
+   * server has not answered yet: no message id to fetch by, and nothing to
+   * gain from fetching — the cards are already on screen.
+   */
+  _showsPreview() {
+    return !this.mget("message_id") && !!this._attachmentPreview();
+  }
+
   getAttachments() {
+    // No service → the list neither fetches nor seals itself (_eod). The
+    // real descriptor is re-read by restart() once the echo brings the id.
+    if (this._showsPreview()) return {};
     let { hubId, peerId } = this.mget(_a.uiHandler);
     if (this.mget("message_type") === _a.ticket && this.mget("hub_id")) {
       hubId = this.mget("hub_id");
@@ -1965,24 +2040,19 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
-   * Add/remove a reader uid in this message's local _seen_ map without
-   * re-rendering — used by the parent chat widget to apply a read cursor
-   * across the whole list before re-rendering all rows in one pass.
+   * Add a reader uid to this message's local _seen_ map without re-rendering —
+   * used by the parent chat widget to apply a read cursor across the whole
+   * list before re-rendering all rows in one pass. Add-only: a read receipt is
+   * never withdrawn, matching the server's accumulating _seen_.
    * @param {String} uid
-   * @param {Boolean} seen whether uid has read this message
    */
-  updateReaderSeen(uid, seen) {
+  markReaderSeen(uid) {
     if (!uid) return;
     const md = this._metadataObject();
     md._seen_ = md._seen_ || {};
-    const has = md._seen_[uid] != null;
-    if (seen && !has) {
-      md._seen_[uid] = Math.floor(Date.now() / 1000);
-      this.mset(_a.metadata, JSON.stringify(md));
-    } else if (!seen && has) {
-      delete md._seen_[uid];
-      this.mset(_a.metadata, JSON.stringify(md));
-    }
+    if (md._seen_[uid] != null) return;
+    md._seen_[uid] = Math.floor(Date.now() / 1000);
+    this.mset(_a.metadata, JSON.stringify(md));
   }
 
   /**

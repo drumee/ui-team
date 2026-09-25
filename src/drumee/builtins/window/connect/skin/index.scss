@@ -270,11 +270,47 @@
       color 0.15s ease,
       transform 0.1s ease;
 
+    // Anchors the blocked-permission badge below.
+    position: relative;
+
     svg {
       width: 32px;
       height: 32px;
       flex-shrink: 0;
       fill: currentColor;
+    }
+
+    // Blocked-permission badge — see the twin in webrtc/skin/meeting-shell.scss
+    // for why it is a badge and why it must not take pointer events.
+    .media-denied-badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      display: flex;
+      width: 22px;
+      height: 22px;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      border-radius: 50%;
+      background: var(--default-bg, #fff);
+      color: var(--eorange, #fa8540);
+
+      svg {
+        width: 18px;
+        height: 18px;
+        fill: currentcolor;
+      }
+    }
+
+    // Blocked: inert toggle, glyph dimmed but the badge kept at full strength.
+    // See the twin in webrtc/skin/meeting-shell.scss.
+    &[data-denied="1"] {
+      cursor: not-allowed;
+
+      > svg {
+        opacity: 0.45;
+      }
     }
 
     &:hover {
@@ -292,6 +328,20 @@
 
       &:hover {
         background: rgba(255, 106, 101, 0.24);
+      }
+    }
+
+    // Blocked by the browser or the operating system → amber, not the muted
+    // red, and after that rule at equal specificity so it wins. Same
+    // distinction the meeting pill makes (webrtc/skin/meeting-shell.scss); the
+    // glyph itself is already apps-warning (room _setMediaDeniedUi).
+    &[data-action="mic"][data-denied="1"],
+    &[data-action="camera"][data-denied="1"] {
+      background: rgba(250, 133, 64, 0.18);
+      color: var(--eorange, #fa8540);
+
+      &:hover {
+        background: rgba(250, 133, 64, 0.26);
       }
     }
 

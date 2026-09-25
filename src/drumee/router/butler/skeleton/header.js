@@ -3,7 +3,7 @@
  * the left, an X close on the right. Shared by the butler confirm + message
  * dialogs so they match the window/confirm look.
  * @param {Object} ui
- * @param {String} [closeSignal]  signal fired by the X (defaults to _e.close)
+ * @param {String} [closeSignal]  service the X sends to Butler.onUiEvent (defaults to _e.close)
  * @param {Object} [opt]
  * @param {Boolean} [opt.closable=true]  false drops the X, for a dialog whose
  *        button is meant to be the only way out — an X that merely repeats the
@@ -32,7 +32,13 @@ module.exports = function (ui, closeSignal, opt = {}) {
     kids.push(
       Skeletons.Box.X({
         className: `${fig}__close`,
-        signal: closeSignal || _e.close,
+        // `service`, not `signal`: a signal is delivered as
+        // ui.triggerMethod(name) — i.e. an `onClose`/`onCancel` METHOD that
+        // Butler does not have — so the X did nothing on a notice, and on a
+        // confirm fired the `cancel` event without ever closing the dialog.
+        // As a service it lands in Butler.onUiEvent exactly like the
+        // Close/Cancel button beside it (close, one-shot callback, sleep).
+        service: closeSignal || _e.close,
         uiHandler: [ui],
         bubble: 0,
         kidsOpt: { active: 0 },

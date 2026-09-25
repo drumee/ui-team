@@ -974,6 +974,45 @@ html {
   }
 }
 
+// …AND A MODAL RAISED FROM THE ADMIN CONSOLE STAYS OVER THE CONSOLE.
+//
+// The dissolve above is what lets a WM modal clear the section slot (1500) at
+// all — and it releases every window layer to the root with it, the headless
+// layer holding `window-folder__split-body` included, at 50000 (the global
+// `[data-state="open"]` lift) or 50001 (the focus lift, wm/skin). Both are far
+// above the slot. So the Admin Console's own "Invite members" CTA
+// (`apps-main__seats-banner-cta` → apps_main _openInvitePopup, which feeds
+// invite_popup straight into Wm.__wrapperModal) opened the popup over the
+// WORKSPACE PANE, with the console the user had just clicked from buried
+// beneath it. The popup's transparent backdrop made that plain to see.
+//
+// Pinned back to the layers' resting 1300 / 1301 — the same values, for the
+// same reason, as the tour case directly above. While a section screen is up
+// the whole window manager normally sits UNDER its slot, so this restores
+// exactly the no-modal picture and puts the modal (100000) on top of it: the
+// popup lands on apps-main__content, as the console's own CTA intends.
+//
+// Keyed on apps_main being IN the slot. It is not in KEEP_ALIVE_MAIN_KINDS
+// (index.js), so present means showing; `:not([data-anim="out"])` is there in
+// case that ever changes. A direct child, which is how the slot itself styles
+// its screens (`> [data-anim="out"]` in __settings-main-slot). Gated behind
+// `[data-wm-modal="open"]`, so the :has() is only ever evaluated while a modal
+// is up. Upload floater and meeting toast excluded, as in the tour case.
+//
+// Specificity (0,7,0), nested (0,8,0): clears the focus lift (0,4,0) and the
+// global lift (0,1,0), both !important.
+.desk-module[data-wm-modal="open"]:has(
+    .desk-module__settings-main-slot > [data-kind="apps_main"]:not([data-anim="out"])
+  ) {
+  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
+    z-index: 1300 !important;
+
+    &:has(> [data-state="1"]) {
+      z-index: 1301 !important;
+    }
+  }
+}
+
 // The utility TOOLTIPS over a wrapper-modal — the third dissolver, and the only
 // part of the bar that needs anything here.
 //
@@ -1008,6 +1047,50 @@ html {
   ) {
   .desk-module__topbar {
     z-index: var(--z-index-upload-progress, 50002);
+  }
+}
+
+// …AND ABOVE THE MODAL ITSELF ON DESKTOP, because the premise the 50002 above
+// rests on is not true of every modal.
+//
+// That value was chosen so the bar would clear the opaque folder window at
+// 50001 and stop there, on the stated grounds that "the modal's own
+// dialog__wrapper is TRANSPARENT and inset: 0, so painting under it costs the
+// tooltip nothing visually". It is transparent only while the modal asked for
+// no backdrop. Any confirm that takes one — which is every confirm that does
+// not opt out, the Admin Console upsell now included — paints the host at
+// --z-index-modal (100000), and a bubble at 50002 goes UNDER it. Reported from
+// drumee.in: hover any top-right utility icon with the upsell open and the
+// tooltip is there but its text is washed out by the backdrop.
+//
+// 100001 is the value the switcher lift below already uses for "above the
+// modal", so this borrows it rather than inventing a second one. When both
+// rules apply they now agree, which is why the source-order tie the switcher's
+// comment describes stops mattering rather than being broken.
+//
+// DESKTOP ONLY, and that is the whole safety argument. Lifting the bar over a
+// modal is exactly what the note above warns against — "its controls would
+// invite clicks on things the modal is meant to block" — and that warning has
+// teeth only where the host actually covers the bar. Above 1024px it never
+// does: it is `position: absolute; inset: 0` inside .window-manager, which
+// begins below the topbar, so the bar is already fully clickable at 50002 and
+// this changes paint order and nothing else. At <= 1024px the host IS pinned
+// over the whole viewport (desk/wm/skin wrapper-modal-mobile-centre), the bar
+// included — so there the old value stands and the warning keeps its teeth.
+// Hover cannot normally even be acquired through a covering host, but a
+// pointer left resting on the button as the modal opens keeps `:hover`
+// latched, and that is the case this media query refuses to hand the bar over
+// the dialog for.
+//
+// Specificity is (0,7,0), unchanged from the rule it shadows; it wins on
+// source order inside its media query.
+@media (min-width: 1025px) {
+  .desk-module:not([data-window-tour="1"])[data-wm-modal="open"]:has(
+      .desk-module__topbar .desk-module-topbar__utility-btn:hover
+    ) {
+    .desk-module__topbar {
+      z-index: 100001;
+    }
   }
 }
 

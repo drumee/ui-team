@@ -154,6 +154,14 @@ const __button = function (ui, trigger, k) {
 
     lock: button({ content: LOCALE.PROHIBIT_CHANGE, service: _e.lock }),
 
+    // The `trash` row's other face, on a WORKSPACE the viewer cannot delete.
+    // SAME SERVICE on purpose: `_e.remove` is what reaches
+    // Wm.removeMediaSelection, whose bucketFor already routes a hub without the
+    // admin bit to confirmLeaveHub (desk.leave_hub). Nothing new happens — the
+    // row finally SAYS what has always happened. Which of the two keys a menu
+    // renders is decided in one place, media/core.js _workspaceExitKey.
+    leaveWorkspace: button({ content: LOCALE.LEAVE_WORKSPACE, service: _e.remove }),
+
     makeACopy: button({ content: LOCALE.MAKE_A_COPY, service: _a.duplicate }),
 
     manageAccess: button({ content: LOCALE.SHARE, service: 'manage-access' }),

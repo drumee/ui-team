@@ -165,9 +165,8 @@
       // an explicit width and fixed, centred placement, so after dismissing the
       // menu it stays on screen as an empty 320px panel over the file grid.
       //
-      // Key the hide on the MENU ROOT, which _onClosed does reset to 0. That is
-      // the same signal the folder's create-submenu rule already trusts, so
-      // both agree on one source of truth for "this menu is closed".
+      // Key the hide on the MENU ROOT, which _onClosed does reset to 0 — the
+      // one source of truth for "this menu is closed".
       .window-button__dropdown-menu__wrapper:not([data-state="1"])
         .menu-topic-items__wrapper {
         display: none;
@@ -297,5 +296,80 @@
   .window-button__dropdown-menu__item--presentation svg {
     fill: #ffa8dc;
     color: #ffa8dc;
+  }
+}
+
+// =====================================================================
+// Shared by the desk topbar's workspace switcher (22px rows, 27px header)
+// and the invite popup's workspace picker, which is built to match it.
+// It lived in modules/desk/skin/topbar.scss until the second consumer
+// arrived; it is here so the area tints and the badge sizing cannot
+// drift between the two lists.
+// =====================================================================
+// The workspace folder glyph, at whatever box size the caller needs.
+//
+// Recipe from desk/workspace-item — the one place that renders this icon
+// correctly. It is NOT a plain <svg> to stretch: media/grid/template/folder
+// emits a `.folder-shape` path whose AREA CLASS supplies the fill (the colour
+// is the fill, not a currentColor tint), an absolutely positioned `.badge`, and
+// a context-menu trigger. Every line below is load-bearing:
+//   - scaling the container alone drew an unfilled, clipped fragment;
+//   - an unsized `.badge` is an <svg> with no width/height, so it falls back to
+//     its INTRINSIC size and swallows the row — a failure this codebase has
+//     shipped before;
+//   - the trigger is a hover affordance for the file grid and has no business
+//     in a menu row.
+//
+// A mixin rather than a second copy: the switcher draws this glyph at two sizes
+// now (22px rows, 27px header), and the previous copy silently dropped the
+// badge and trigger rules — which is exactly the drift this prevents.
+//
+// $size is the square box; $art-h is the folder art's height inside it (the
+// source art is wider than it is tall, so it is not square).
+@mixin ws-folder-icon($size, $art-h) {
+  width: $size;
+  height: $size;
+  align-items: center;
+  display: flex !important;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: visible;
+  position: relative;
+
+  .media-grid__folder-art {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    width: $size;
+    height: $art-h;
+  }
+
+  .folder-shape {
+    width: $size;
+    height: $art-h;
+    fill: #885eff;
+
+    &.personal,
+    &.inner-folder { fill: var(--area-personal); }
+    &.public       { fill: var(--area-public); }
+    &.share,
+    &.dmz          { fill: var(--area-share); }
+    &.private      { fill: var(--area-private); }
+  }
+
+  .badge {
+    position: absolute;
+    bottom: -3px;
+    left: -3px;
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--grid-color-folder-badge);
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+  }
+
+  .media-context-menu__folder-trigger {
+    display: none !important;
   }
 }
