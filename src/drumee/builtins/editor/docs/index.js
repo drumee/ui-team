@@ -764,24 +764,31 @@ class __editor_docs extends __player {
     const current = () => seq === this._switchSeq;
     this._switchingTab = 1;
     try {
-      // ONE thing has to happen before the swap: keeping the bytes of the tab
-      // being left. That is a local export (milliseconds), not a save — a
-      // save fired after the swap would export whatever the editor shows
-      // mid-swap, which is still the OLD tab, and write it over the new one.
-      await capped(this.stashActiveTab(), 2500);
-      if (!current()) return;
+      // NOTHING is awaited before the swap. The editor of the tab being left
+      // stays mounted (docs_state keeps one per visited tab), so its bytes
+      // can be taken AFTER the new tab is on screen — waiting for that export
+      // first is what left a click feeling slow.
+      const leaving = this._activeTab;
+      const leavingRef = this._doc && this._doc.currentRef ? this._doc.currentRef() : null;
 
-      // Open the tab NOW. Everything else is network: waiting for it before
-      // showing the tab is what made a switch take many seconds ("click
-      // chuyển tab rất lâu mới ăn"). The model already holds the bytes, so a
-      // save that lands a second later loses nothing.
       this._activeTab = id;
       this._loadingTab = id;
       this.renderTabs();
       const showing = this._doc && this._doc.showTab ? this._doc.showTab(id) : null;
-      // Background: write the list (names, order, which tab is active) with
-      // the bytes from the model. Not awaited, and never able to hang the UI.
-      capped(this.persistTabs(), 8000);
+
+      // Background: take the bytes of the tab just left, keep them in the
+      // model, and write the file. Never awaited, never able to hang the UI.
+      capped(
+        (async () => {
+          const b64 =
+            this._doc && this._doc.exportFrom ? await this._doc.exportFrom(leavingRef) : null;
+          if (b64) {
+            this._tabs = this.getTabs().map((t) => (t.id === leaving ? { ...t, docx: b64 } : t));
+          }
+          await this.persistTabs();
+        })(),
+        10000
+      );
       await capped(showing, 15000);
     } catch (e) {
       this.warn("__editor_docs: tab switch failed", e);

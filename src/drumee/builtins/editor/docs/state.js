@@ -775,6 +775,31 @@ class __docs_state extends DrumeeMFS {
     if (this._room && want !== this._room) this.showTab(active);
   }
 
+  /** The editor handle of the tab currently on screen. */
+  currentRef() {
+    return (this._ref && this._ref.current) || null;
+  }
+
+  /**
+   * Export a specific editor — the one a tab was left on, which keeps running
+   * after the switch, so its bytes can be taken once the new tab is already
+   * up rather than before it opens.
+   *
+   * @param {Object} ref
+   * @returns {Promise<String|null>} base64
+   */
+  async exportFrom(ref) {
+    try {
+      if (ref && typeof ref.exportDocx === "function") {
+        const buf = await ref.exportDocx();
+        if (buf) return abToBase64(buf);
+      }
+    } catch (e) {
+      this.warn("docs_state: exportFrom failed", e);
+    }
+    return null;
+  }
+
   /**
    * @returns {Promise<String|null>} base64 of what is on screen right now —
    * used to keep the tab being left before another is loaded.
