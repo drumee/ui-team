@@ -569,16 +569,23 @@
   // phone (≤ 800px + mobile UA, see Visitor.device()) also matches this
   // media query.
   //
-  // Depends on the desk skin giving .panel-container.left a real box at
-  // this breakpoint — by default it is width:0, and so is the
-  // __panel-inner wrapper this panel sits in.
+  // Covers the desk workspace (__right-side) — the box chat-p2p fills from
+  // settings-main-slot. It must stay position:fixed: this used to switch to
+  // `position:absolute; inset:0` against the LEFT panel-container, but since
+  // trash moved to the right container (4ee4277b) its containing block is a
+  // `position:absolute; width:0` __panel-inner, so the panel collapsed to 0px
+  // wide below 1024px. The --desk-canvas-inset-* insets are measured in JS
+  // (libs/desk-canvas); the fallbacks are the desktop canvas with the 64px
+  // mini rail, for the frame before the first measurement.
   @media (max-width: 1024px) {
     &__ui:not([data-device="mobile"]) {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
+      top: var(--desk-canvas-inset-top, var(--desk-canvas-top, 54px));
+      right: var(--desk-canvas-inset-right, var(--desk-gutter, 8px));
+      bottom: var(--desk-canvas-inset-bottom, var(--desk-gutter, 8px));
+      left: var(--desk-canvas-inset-left, 80px);
+      width: auto;
+      max-width: none;
+      height: auto;
     }
   }
 }
