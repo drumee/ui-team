@@ -2135,9 +2135,12 @@ class desk_module extends LetcBox {
    * @param {String} service a key of _RESTORABLE_SCREENS
    * @param {Function} [onOpened] called once the screen is open —
    *   _restoreDeskState stops waiting there
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.paneComing] false when the workspace step opened
+   *   nothing — no split body is coming, so do not wait for one
    * @returns {Promise<String>} what happened (libs/screen-restore)
    */
-  _restoreScreen(service, onOpened) {
+  _restoreScreen(service, onOpened, opt = {}) {
     const entry = desk_module._SCREEN_RESTORE[service] || null;
     return restoreScreen({
       service,
@@ -2145,9 +2148,11 @@ class desk_module extends LetcBox {
       host: {
         // window.Wm, never a bare `Wm`: see _restoreCurrentPath's note.
         whenSplitBodyShown: (ms) =>
-          window.Wm && _.isFunction(window.Wm.whenSplitBodyShown)
-            ? window.Wm.whenSplitBodyShown(ms)
-            : Promise.resolve(false),
+          opt.paneComing === false
+            ? Promise.resolve("no-pane")
+            : window.Wm && _.isFunction(window.Wm.whenSplitBodyShown)
+              ? window.Wm.whenSplitBodyShown(ms)
+              : Promise.resolve(false),
         navSeq: () => this._navSeq || 0,
         currentScreen: () => this._currentScreenService(),
         open: (s) => this._openRestoredScreen(s),
@@ -2293,19 +2298,20 @@ class desk_module extends LetcBox {
       if (saved.windows && saved.windows.length) {
         await this._restoreFloatingWindows(saved.windows);
       }
+      let paneComing;
       if (saved.workspace) {
         // `false` means it could not be restored — gone, or the pane never
         // mounted. Falling through to the default is the whole point of
         // verifying: this used to leave the desk on no workspace at all.
         const restored = await this._restoreWorkspace(saved.workspace);
-        if (!restored) await this._openDefaultWorkspace();
+        paneComing = restored || !!(await this._openDefaultWorkspace());
       } else {
         // Restorable state that names a SCREEN but no workspace (the user was
         // on Contacts / Settings / a floating window last time). The new shell
         // has no "no workspace" state to fall back to behind that screen, so
         // seed one underneath it. Runs BEFORE _restoreScreen so the
         // remembered screen still ends up on top.
-        await this._openDefaultWorkspace();
+        paneComing = !!(await this._openDefaultWorkspace());
       }
       if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
@@ -2315,7 +2321,7 @@ class desk_module extends LetcBox {
         // libs/screen-restore never rejects, and resolves on every exit path,
         // including the ones that stop before an open.
         await new Promise((resolve) => {
-          this._restoreScreen(saved.service, resolve).then(resolve);
+          this._restoreScreen(saved.service, resolve, { paneComing }).then(resolve);
         });
       }
     } finally {

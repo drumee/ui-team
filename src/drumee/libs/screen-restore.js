@@ -15,6 +15,12 @@
  * pane MOUNTED, which is not when it paints: the screen could land before the
  * workspace under it, and the pane then drew over or beside it.
  *
+ * host.whenSplitBodyShown(ms) resolves one of three things: `true` (the split
+ * body is on screen), `false` (it timed out — warns, then opens anyway rather
+ * than silently drop the screen), or `"no-pane"` (no workspace pane is coming
+ * at all — e.g. a brand-new account with nothing to open — so there is
+ * nothing to wait for and it opens at once, with no warning).
+ *
  * THE USER WINS. Two signals, because neither covers every gesture:
  * `navSeq` moves on rail/switcher gestures and on full-canvas screens, but not
  * on the slide-outs (Trash, Contacts); `currentScreen` sees those. Before the
@@ -106,9 +112,10 @@ async function restoreScreen({ service, entry, host, timeouts = TIMEOUTS }) {
 
     const seq0 = host.navSeq();
     const shown = await host.whenSplitBodyShown(timeouts.splitBody);
-    if (!shown) {
+    if (shown === false) {
       // Open anyway: leaving the user on a bare workspace, with the screen they
-      // were on silently dropped, is the worse outcome.
+      // were on silently dropped, is the worse outcome. "no-pane" means there
+      // was never a pane to wait for, so that case skips this warning.
       try {
         host.warn(`[restore] split body not shown after ${timeouts.splitBody}ms; opening ${service} anyway`);
       } catch (e) {
@@ -181,7 +188,10 @@ async function restoreScreen({ service, entry, host, timeouts = TIMEOUTS }) {
       }
     }
 
-    if (moved()) return "user-navigated";
+    // A non-user re-open of the SAME screen during the item wait (a card's own
+    // timer firing the same toggle) also bumps navSeq. That is not the user
+    // going elsewhere, and our screen is still the one on top — light it.
+    if (moved() && host.currentScreen() !== service) return "user-navigated";
     host.lightRow(service);
     return status;
   }

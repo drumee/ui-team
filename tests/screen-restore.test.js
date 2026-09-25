@@ -268,3 +268,25 @@ test("a throwing onOpened is contained", async () => {
   }));
   assert.equal(await run(host), "ready");
 });
+
+test("no pane coming: opens at once, without the split-body warning", async () => {
+  const host = fakeHost(() => ({
+    whenSplitBodyShown: async () => "no-pane",
+  }));
+  assert.equal(await run(host), "ready");
+  assert.ok(host.calls.includes("open:toggle-trash"));
+  assert.ok(!host.calls.includes("warn"));
+});
+
+test("our screen re-opened by another caller during the item wait still lights its row", async () => {
+  const host = fakeHost(() => ({}));
+  const e = entry({
+    ready: async () => {
+      host.state.seq += 1;
+      host.state.screen = "toggle-trash";
+      return true;
+    },
+  });
+  assert.equal(await run(host, e), "ready");
+  assert.ok(host.calls.includes("light:toggle-trash"));
+});
