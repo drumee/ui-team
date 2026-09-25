@@ -479,7 +479,7 @@
   "EXTERNAL": "Externo",
   "PERSONAL": "Personal",
   "RESTRICTED": "Restringido",
-  "RESTORE_HINT": "Restaurar a la ubicación original. Arrastra para elegir un destino diferente si es necesario.",
+  "RESTORE_HINT": "Restaurar a la ubicación original.",
   "ACTIVE_NOW": "En línea",
   "NOTHING_IN_TRASH": "Nada en la papelera",
   "TRASH_EMPTY_HINT": "Tu espacio de trabajo está perfectamente limpio. Los archivos eliminados aparecerán aquí durante 30 días.",
@@ -3051,5 +3051,7 @@
   "PERMISSION_ACTION_MANAGE_MEMBERS": "gestionar miembros",
   "PERMISSION_ACTION_RENAME_WORKSPACE": "cambiar el nombre de este espacio",
   "PERMISSION_ACTION_DELETE_WORKSPACE": "eliminar este espacio",
-  "PERMISSION_ACTION_MANAGE_SHARE": "gestionar enlaces para compartir"
+  "PERMISSION_ACTION_MANAGE_SHARE": "gestionar enlaces para compartir",
+  "X_ITEMS": "{0} elementos",
+  "ONE_ITEM": "1 elemento"
 }

@@ -1633,7 +1633,7 @@
   "X_DAYS_LEFT": "{0} days left",
   "DELETED_BY": "Deleted by",
   "RESTORE": "Restore",
-  "RESTORE_HINT": "Restore to original location. Drag to choose a different destination if needed.",
+  "RESTORE_HINT": "Restore to original location.",
   "SUB_FOLDER_HINT": "Create subfolder to organize your data on tree-based structure",
   "NEW_FILE": "New file",
   "NEW_WORKSPACE": "New Workspace",
@@ -3261,5 +3261,7 @@
   "PERMISSION_ACTION_MANAGE_MEMBERS": "manage members",
   "PERMISSION_ACTION_RENAME_WORKSPACE": "rename this workspace",
   "PERMISSION_ACTION_DELETE_WORKSPACE": "delete this workspace",
-  "PERMISSION_ACTION_MANAGE_SHARE": "manage share links"
+  "PERMISSION_ACTION_MANAGE_SHARE": "manage share links",
+  "X_ITEMS": "{0} items",
+  "ONE_ITEM": "1 item"
 }

@@ -1312,7 +1312,7 @@
   "X_DAYS_LEFT": "还剩 {0} 天",
   "DELETED_BY": "已删除",
   "RESTORE": "恢复",
-  "RESTORE_HINT": "恢复到原始位置。拖动以选择不同的目标位置。",
+  "RESTORE_HINT": "恢复到原始位置。",
   "SUB_FOLDER_HINT": "创建子文件夹，以树状结构组织数据。",
   "NEW_FILE": "新文件",
   "NEW_WORKSPACE": "新工作区",
@@ -3050,5 +3050,7 @@
   "PERMISSION_ACTION_MANAGE_MEMBERS": "管理成员",
   "PERMISSION_ACTION_RENAME_WORKSPACE": "重命名此工作区",
   "PERMISSION_ACTION_DELETE_WORKSPACE": "删除此工作区",
-  "PERMISSION_ACTION_MANAGE_SHARE": "管理共享链接"
+  "PERMISSION_ACTION_MANAGE_SHARE": "管理共享链接",
+  "X_ITEMS": "{0} 项",
+  "ONE_ITEM": "1 项"
 }

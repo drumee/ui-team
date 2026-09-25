@@ -143,6 +143,8 @@
   &__meta {
     align-items: center;
     gap: 12px;
+    // Lets __location shrink below its content so the path ellipsizes.
+    min-width: 0;
   }
 
   &__modifier {
@@ -151,9 +153,36 @@
   }
 
   &__deleted-by,
-  &__date {
+  &__date,
+  &__size {
     @include drumee.typo($color: var(--neutral-500), $size: 12px, $line: 18px);
     white-space: nowrap;
+  }
+
+  // Takes what is left of the meta line and gives way first: the path is the
+  // longest and least essential part, so it is the one that ellipsizes (the
+  // full path is on the element's title).
+  &__location {
+    align-items: center;
+    gap: var(--spacer-2);
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__location-ico {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    fill: var(--neutral-500);
+    color: var(--neutral-500);
+  }
+
+  &__location-path {
+    @include drumee.typo($color: var(--neutral-500), $size: 12px, $line: 18px);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* ── Actions: badge + buttons ────────────────────────────── */

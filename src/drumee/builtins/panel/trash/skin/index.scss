@@ -10,7 +10,10 @@
     // leaves __body horizontally scrollable. Fixed is viewport-relative and
     // never does.
     position: fixed;
-    width: 500px;
+    // 720, was 500: each row's meta line now carries size and location as
+    // well as deleted-by and date. At ≤ 1024px the panel covers the canvas
+    // instead (rule at the bottom of this file), so this only applies above.
+    width: 720px;
     // Sits INSIDE the padded canvas (43:23955), not over the whole viewport.
     // It used to be height:100vh at top:0/right:0, which covered the top bar
     // and ran past both gutters. --desk-* are published by the desk root; the

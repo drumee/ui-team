@@ -1312,7 +1312,7 @@
   "X_DAYS_LEFT": "នៅសល់ {0} ថ្ងៃទៀត",
   "DELETED_BY": "លុបដោយ",
   "RESTORE": "ស្ដារឡើងវិញ",
-  "RESTORE_HINT": "ស្ដារទៅទីតាំងដើម។ អូសសម្រាប់ជ្រើសរើសទីតាំងផ្សេងប្រសិនបើចាំបាច់។",
+  "RESTORE_HINT": "ស្ដារទៅទីតាំងដើម។",
   "SUB_FOLDER_HINT": "បង្កើតថតឯកសាររងដើម្បីរៀបចំទិន្នន័យរបស់អ្នកលើរចនាសម្ព័ន្ធដែលមានមូលដ្ឋានលើដើមឈើ",
   "NEW_FILE": "ឯកសារថ្មី",
   "NEW_WORKSPACE": "កន្លែងធ្វើការថ្មី",
@@ -3050,5 +3050,7 @@
   "PERMISSION_ACTION_MANAGE_MEMBERS": "គ្រប់គ្រងសមាជិក",
   "PERMISSION_ACTION_RENAME_WORKSPACE": "ប្ដូរឈ្មោះកន្លែងធ្វើការនេះ",
   "PERMISSION_ACTION_DELETE_WORKSPACE": "លុបកន្លែងធ្វើការនេះ",
-  "PERMISSION_ACTION_MANAGE_SHARE": "គ្រប់គ្រងតំណចែករំលែក"
+  "PERMISSION_ACTION_MANAGE_SHARE": "គ្រប់គ្រងតំណចែករំលែក",
+  "X_ITEMS": "{0} ធាតុ",
+  "ONE_ITEM": "1 ធាតុ"
 }

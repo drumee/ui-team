@@ -1314,7 +1314,7 @@
   "X_DAYS_LEFT": "Il reste {0} jours",
   "DELETED_BY": "Supprimé par",
   "RESTORE": "Restaurer",
-  "RESTORE_HINT": "Restaurer à l'emplacement d'origine. Faites glisser pour choisir une destination différente si nécessaire.",
+  "RESTORE_HINT": "Restaurer à l'emplacement d'origine.",
   "SUB_FOLDER_HINT": "Créez un sous-dossier pour organiser vos données selon une structure arborescente.",
   "NEW_FILE": "Nouveau fichier",
   "NEW_WORKSPACE": "Nouvel espace de travail",
@@ -3262,5 +3262,7 @@
   "PERMISSION_ACTION_MANAGE_MEMBERS": "gérer les membres",
   "PERMISSION_ACTION_RENAME_WORKSPACE": "renommer cet espace de travail",
   "PERMISSION_ACTION_DELETE_WORKSPACE": "supprimer cet espace de travail",
-  "PERMISSION_ACTION_MANAGE_SHARE": "gérer les liens de partage"
+  "PERMISSION_ACTION_MANAGE_SHARE": "gérer les liens de partage",
+  "X_ITEMS": "{0} éléments",
+  "ONE_ITEM": "1 élément"
 }
