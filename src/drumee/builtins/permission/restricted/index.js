@@ -189,7 +189,7 @@ class __permission_restricted extends DrumeeMFS {
   _repaintMembersList() {
     const list = this.getPart?.("members-list");
     if (!list || !_.isFunction(list.feed)) return this._render();
-    list.feed(require("./skeleton").membersList(this));
+    this._feedKeepingAvatars(list, require("./skeleton").membersList(this));
   }
 
   /**
@@ -304,7 +304,7 @@ class __permission_restricted extends DrumeeMFS {
     // and back (reported by Lexis on opening Access). Set BEFORE the feed so
     // the new __main never picks the animation up (see the skin).
     if (this.el?.dataset?.position === "1") this.el.dataset.settled = "1";
-    this.feed(require("./skeleton")(this));
+    this._feedKeepingAvatars(this, require("./skeleton")(this));
     if (draft) {
       this.ensurePart("invite-email").then((p) => fillEntry(p, draft));
     } else if (searching) {
@@ -315,6 +315,45 @@ class __permission_restricted extends DrumeeMFS {
         const end = input.value.length;
         input.setSelectionRange?.(end, end);
       });
+    }
+  }
+
+  /**
+   * feed() `target` without the avatars going blank.
+   *
+   * Every row is rebuilt by a feed, and ui-core's UserProfile starts each new
+   * avatar EMPTY: it draws its image box, then loads the photo through
+   * `new Image()` and puts it in only on `onload` — asynchronous even when the
+   * photo is cached. So each repaint (members landing, the storage chip, the
+   * invitations, a member push, a search keystroke) showed every avatar as a
+   * bare grey tile for a moment: the avatars blinking on opening Access
+   * (reported by Lexis after the panel fade was fixed).
+   *
+   * The photos already on screen are carried into the new avatars straight
+   * after the feed — the same URL, so the browser draws it at once. The
+   * widget's own `onload` then swaps in an identical <img>. An avatar with no
+   * photo on screen (initials, or still loading) is left to UserProfile.
+   *
+   * @param {View} target  this panel or one of its parts
+   * @param {*} content    what to feed it
+   */
+  _feedKeepingAvatars(target, content) {
+    const cls = `${this.fig.family}__avatar`;
+    const avatars = () => target?.el?.querySelectorAll?.(`.${cls}[data-uid]`) || [];
+    const shown = new Map();
+    for (const av of avatars()) {
+      const img = av.querySelector("img");
+      // No uid (an invitee who has no account yet): nothing to key it on.
+      if (!av.dataset.uid) continue;
+      if (img && img.complete && img.naturalWidth > 0) shown.set(av.dataset.uid, img);
+    }
+    target.feed(content);
+    if (!shown.size) return;
+    for (const av of avatars()) {
+      const img = shown.get(av.dataset.uid);
+      const box = av.querySelector(".user-profile__main");
+      if (!img || !box || box.querySelector("img, .user-profile__initiales")) continue;
+      box.appendChild(img.cloneNode());
     }
   }
 

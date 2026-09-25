@@ -144,6 +144,8 @@ function memberAvatar(pfx, member) {
     className: `${pfx}__avatar`,
     auto_color: 0,
     id: member.id,
+    // Keys the photo carried across repaints (index.js _feedKeepingAvatars).
+    dataset: { uid: member.id },
     firstname: member.firstname,
     lastname: member.lastname,
     fullname: member.fullname,
@@ -322,6 +324,7 @@ function invitationRows(list, pfx) {
               className: `${pfx}__avatar`,
               auto_color: 0,
               id: row.invitee_uid || "",
+              dataset: { uid: row.invitee_uid || "" },
               firstname: row.invitee_firstname,
               lastname: row.invitee_lastname,
               fullname: name,
