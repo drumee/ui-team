@@ -3429,6 +3429,48 @@ class __window_manager extends push {
   }
 
   /**
+   * Ask before trashing ONE file or folder — the contextmenu "Move to trash"
+   * row. Same `window_confirm` shape as confirmBulkTrash, but it names the
+   * item instead of counting, since there is exactly one.
+   *
+   * Resolves false on every way out that is not an explicit confirm, for the
+   * same reason confirmBulkTrash does.
+   *
+   * @param {*} media the tile about to be trashed
+   * @returns {Promise<Boolean>}
+   */
+  confirmTrash(media) {
+    let name = media.mget(_a.filename) || "";
+    const ext = media.mget(_a.ext);
+    if (ext && !media.isFolder && !name.endsWith(`.${ext}`)) {
+      name = `${name}.${ext}`;
+    }
+    return new Promise((resolve) => {
+      this.ensurePart("wrapper-modal")
+        .then(async (p) => {
+          await Kind.waitFor("window_confirm");
+          p.feed({
+            kind: "window_confirm",
+            maxsize: 2,
+            title: LOCALE.MOVE_TO_TRASH,
+            message: (LOCALE.MSG_TRASH_ITEM
+              || "Move <b>{0}</b> to trash?").format(name),
+            confirm: LOCALE.MOVE_TO_TRASH,
+          })
+            .ask()
+            .then(() => {
+              p.clear();
+              resolve(true);
+            })
+            .catch(() => {
+              resolve(false);
+            });
+        })
+        .catch(() => resolve(false));
+    });
+  }
+
+  /**
    * Read one live media item into the plain row libs/media-selection classifies.
    *
    * Every impure part of the old inline split is concentrated here: the model
@@ -3497,6 +3539,45 @@ class __window_manager extends push {
   }
 
   /**
+   * The in-place exit a confirmed trash plays on its tile: a quick shrink and
+   * fade where the tile stands (_trashNow `animate: "fade"`).
+   *
+   * Web Animations rather than a skin class, so it needs no CSS of its own and
+   * cannot be undone by a grid re-render rewriting the class list. It animates
+   * the standalone `scale` property, not `transform`, so it composes with the
+   * GSAP `x` a drop-slot shift may have left on the tile instead of erasing it. `fill:
+   * forwards` holds the faded frame until _trashNow hides the tile — without
+   * it the tile would snap back for a frame first. `cancel()` drops the held
+   * frame, which is how a refused trash brings the tile back whole.
+   *
+   * Reduced motion, or no Element.animate: resolves at once, and the tile
+   * simply leaves.
+   *
+   * @param {HTMLElement} el
+   * @returns {{done: Promise, cancel: Function}}
+   */
+  _fadeOutTile(el) {
+    const reduced = window.matchMedia
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced || !_.isFunction(el.animate)) {
+      return { done: Promise.resolve(), cancel() { } };
+    }
+    const anim = el.animate(
+      [
+        { opacity: 1, scale: "1" },
+        { opacity: 0, scale: "0.8" },
+      ],
+      { duration: 200, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" }
+    );
+    return {
+      done: anim.finished.catch(() => { }),
+      cancel() {
+        anim.cancel();
+      },
+    };
+  }
+
+  /**
    * Trash one tile the moment the user asks, not 1.4s later.
    *
    * The tile used to stay on screen, fully clickable, while a CLONE flew to
@@ -3512,23 +3593,52 @@ class __window_manager extends push {
    * already on its way out is skipped, so pressing Delete twice sends one
    * request.
    *
+   * `animate: "fade"` is the one exception: after the user has just confirmed
+   * in a dialog, the tile shrinks and fades where it stands (_fadeOutTile),
+   * then leaves the grid and the grid closes up. The request still goes out
+   * at once, at the start of the fade.
+   *
    * @param {*} r media tile
+   * @param {Object} opts `{ animate: "fade" }` plays _fadeOutTile before the
+   *   tile leaves
    */
-  _trashNow(r) {
+  _trashNow(r, opts = {}) {
     if (!r || r._trashPending) return;
     r._trashPending = 1;
     const el = r.el;
     const display = el ? el.style.display : "";
-    if (el) el.style.display = "none";
+    const pointer = el ? el.style.pointerEvents : "";
+    const syncGrid = () => {
+      const parent = r.logicalParent;
+      if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
+    };
+    let fade = null;
+    if (opts.animate === "fade" && el) {
+      // Out of reach at once — the tile is on its way out, so a click during
+      // the fade must not open it.
+      el.style.pointerEvents = "none";
+      fade = this._fadeOutTile(el);
+      fade.done.then(() => {
+        if (!r._trashPending) return; // refused mid-fade: restore() owns it
+        el.style.display = "none";
+        syncGrid();
+      });
+    } else if (el) {
+      el.style.display = "none";
+    }
     const request = r.putIntoTrash(1);
-    const parent = r.logicalParent;
-    if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
+    if (!fade) syncGrid();
     // Seeding tiles are suppressed inside putIntoTrash and return nothing.
     if (!request || !_.isFunction(request.then)) return;
     const restore = () => {
       r._trashPending = 0;
       if (r.isDestroyed && r.isDestroyed()) return;
       if (el) el.style.display = display;
+      if (fade) {
+        fade.cancel();
+        if (el) el.style.pointerEvents = pointer;
+        syncGrid();
+      }
     };
     request
       .then((data) => {
@@ -3540,7 +3650,7 @@ class __window_manager extends push {
   /**
    *
    */
-  async removeMediaSelection(media) {
+  async removeMediaSelection(media, opts = {}) {
     const buckets = this.getMediaSelection(media);
     let { own_hubs, other_hubs, hubs_inside, allowed, rejected, locked } =
       buckets;
@@ -3559,9 +3669,19 @@ class __window_manager extends push {
     // to make deleting five files five questions. A single deliberate trash is
     // untouched — see needsBulkConfirm for why both halves of its test matter.
     const { needsBulkConfirm, actionableCount } = require("libs/media-selection");
+    const trashOpts = {};
     if (needsBulkConfirm(buckets)) {
       const ok = await this.confirmBulkTrash(actionableCount(buckets));
       if (!ok) return;
+    } else if (opts.confirm && allowed.length) {
+      // A deliberate single trash from the contextmenu row. No bulk dialog,
+      // so `allowed` holds exactly this one item and nothing else would ask —
+      // hubs and hub-bearing folders are in their own buckets with their own
+      // dialogs, and asking twice there would be noise.
+      const ok = await this.confirmTrash(allowed[0]);
+      if (!ok) return;
+      // Confirmed in the dialog — the tile fades out in place.
+      trashOpts.animate = "fade";
     }
 
     for (let r of rejected) {
@@ -3569,7 +3689,7 @@ class __window_manager extends push {
     }
 
     for (let r of allowed) {
-      this._trashNow(r);
+      this._trashNow(r, trashOpts);
     }
 
     for (let r of own_hubs) {

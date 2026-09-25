@@ -1471,6 +1471,7 @@
   "DUPLICATE": "Duplicate",
   "MOVE_TO_TRASH": "Move to trash",
   "MSG_TRASH_SELECTION": "Move {0} selected items to trash?",
+  "MSG_TRASH_ITEM": "Move <b>{0}</b> to trash?",
   "GET_INFO": "Get info",
   "PROHIBIT_CHANGE": "Prohibit any change",
   "MUSIC_PLAYER": "Music player",
