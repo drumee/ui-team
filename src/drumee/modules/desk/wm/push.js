@@ -729,9 +729,14 @@ class __push_manager extends winman {
           // workspace is already on screen. The per-key dedup below cannot:
           // reminderWorker sends the meeting node's nid while conference_join
           // returns the room id, so the same meeting arrives under two
-          // different keys. Empty for room.scheduled, which carries no hub_id
-          // — harmless, that one is never the "now" flavour.
-          attrOpt: { "data-variant": variant, "data-hub": String(data.hub_id || "") },
+          // different keys. Always empty for an invitation: room.scheduled
+          // now carries hub_id (for View Calendar), but an invitation is not
+          // the meeting starting, so it must never make conference.start
+          // stand down — that dedup is between the two "now" cards only.
+          attrOpt: {
+            "data-variant": variant,
+            "data-hub": variant === "invite" ? "" : String(data.hub_id || ""),
+          },
           // Centring is `top:50%` + a -50% translate (see meeting-toast.scss),
           // so nudging `top` keeps the transform and the card centred.
           styleOpt: offset ? { top: `calc(50% + ${offset}px)` } : undefined,
@@ -778,6 +783,16 @@ class __push_manager extends winman {
                   ? Skeletons.Note({
                       className: "desk-meeting-toast__join",
                       content: LOCALE.JOIN_MEETING,
+                    })
+                  : null,
+                // An invitation offers the meeting itself instead: the Meet
+                // tab's calendar with this meeting's card open. Only when the
+                // push says WHERE — a server that predates hub_id on
+                // room.scheduled gets no button rather than a dead one.
+                variant === "invite" && this._canOpenMeetingInCalendar(data)
+                  ? Skeletons.Note({
+                      className: "desk-meeting-toast__calendar",
+                      content: LOCALE.MEETING_VIEW_CALENDAR,
                     })
                   : null,
               ].filter(Boolean),
@@ -834,6 +849,12 @@ class __push_manager extends winman {
               kill();
               return;
             }
+            if (t.closest(".desk-meeting-toast__calendar")) {
+              e.stopPropagation();
+              kill();
+              this._openMeetingInCalendar(data);
+              return;
+            }
             // ✕ and Dismiss both just close the card.
             if (
               t.closest(".desk-meeting-toast__close, .desk-meeting-toast__dismiss")
@@ -849,6 +870,50 @@ class __push_manager extends winman {
       setTimeout(kill, MEETING_TOAST_MS);
     } catch (e) {
       this.warn && this.warn("meeting toast failed", e);
+    }
+  }
+
+  /**
+   * Does this meeting push say enough to open the meeting in its calendar?
+   * `nid` is a node id inside ONE hub's database, so it is useless without
+   * the hub it belongs to.
+   */
+  _canOpenMeetingInCalendar(data = {}) {
+    return !!(data && data.hub_id && data.nid);
+  }
+
+  /**
+   * The invitation card's "View Calendar": the workspace's Meet tab, on its
+   * calendar, with this meeting's card open.
+   *
+   * The same call the Personal Calendar makes for a meeting chip, so both
+   * land identically: openNotificationLocation docks the workspace (or reuses
+   * the pane already docked), leaves any section screen, lights the rail, and
+   * hands the meeting to openMeetingDeepLink — which anchors the calendar on
+   * the meeting's week and refuses out loud if it no longer exists.
+   *
+   * 🚨 Never a Wm.launch / addWindow with activeTab "meeting": at LAUNCH time
+   * window_folder reads that as "start the call". This route never puts
+   * activeTab in the model, which is why it is the only safe one.
+   */
+  _openMeetingInCalendar(data = {}) {
+    try {
+      if (!this._canOpenMeetingInCalendar(data)) return;
+      if (typeof this.openNotificationLocation !== "function") return;
+      const pid = data.pid != null && `${data.pid}` !== "0" ? data.pid : 0;
+      return this.openNotificationLocation({
+        hub_id: data.hub_id,
+        // The folder the meeting is filed in (0 = the workspace root, where
+        // room.book files meetings by default) — the same folder the
+        // meeting_notice row in the notification panel opens.
+        nid: pid,
+        filetype: _a.folder,
+        pid: 0,
+        open_meeting_nid: data.nid,
+        open_meeting_stime: Number(data.stime) || 0,
+      });
+    } catch (e) {
+      this.warn && this.warn("meeting toast: open in calendar failed", e);
     }
   }
 

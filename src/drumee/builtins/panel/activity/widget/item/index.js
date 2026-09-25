@@ -14,6 +14,8 @@
 // activeTab / open_task_id / highlight all keep their meaning, so nothing about
 // how these rows are built had to change. "#/desk/wm/open/" itself is untouched
 // and still serves mail, chat, share and compact deep links.
+const { isMeetingRollup, meetingDeepLink } = require('./meeting-link');
+
 function parseJson(value, fallback) {
   if (!value) return fallback;
   if (_.isObject(value)) return value;
@@ -584,7 +586,17 @@ class __activity_item extends LetcBox {
         // calls showFolderTab() on the pane after it mounts, which renders the
         // schedule. Verified live: the calendar opens and no call window is
         // created. Do NOT copy this onto a Wm.launch/addWindow call.
-        location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&activeTab=${_a.meeting}&ts=${ts}`;
+        //
+        // open_meeting_nid additionally opens THIS meeting's card on that
+        // calendar (openMeetingDeepLink, the Personal Calendar's call). Not for
+        // a cancellation: its node is hard-deleted, so the card would only be
+        // refused with "That meeting no longer exists" — that row keeps landing
+        // on the calendar alone. activeTab stays on the link as the fallback
+        // for a row without the meeting's id.
+        const mMeeting = this.mget('meeting_kind') !== 'cancelled' && this.mget('meeting_nid');
+        location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&activeTab=${_a.meeting}`
+          + meetingDeepLink(mMeeting, this.mget('meeting_stime'))
+          + `&ts=${ts}`;
       }
       this.triggerHandlers({ service: 'read-activity', hub_id: mHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
@@ -629,6 +641,25 @@ class __activity_item extends LetcBox {
       // shape the panel shows by DEFAULT, so until this label was added the
       // ordinary "<somebody> uploaded <file>" notification was a dead click.
       case _a.mfs:
+        if (isMeetingRollup(this.model.toJSON())) {
+          // "<Meeting-name> on <time>" — a scheduled meeting, not a file.
+          // Revealing its `schedule` node in the Files grid showed nothing
+          // useful, so it opens like the meeting_notice row above: the Meet
+          // tab's calendar with this meeting's card open. meeting_nid is
+          // stamped by the server (_stampMeetingRollups, matched on title);
+          // without it the row still lands on the calendar.
+          //
+          // The rollup's target is the folder the meeting was filed in; a
+          // workspace target is its root (0). The calendar is hub-wide either
+          // way — this only decides which folder the pane shows behind it.
+          const rFolder = (target_filetype === _a.folder && `${target_nid}` !== '0') ? target_nid : 0;
+          location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${rFolder}&filetype=folder&pid=0&activeTab=${_a.meeting}`
+            + meetingDeepLink(this.mget('meeting_nid'), this.mget('meeting_stime'))
+            + `&ts=${ts}`;
+          this.triggerHandlers({ service: 'read-activity', hub_id, nid: target_nid, item_type, changelog_id });
+          this.triggerHandlers({ service: 'close-activity-panel' });
+          return;
+        }
         // highlight=1 → reveal the file in its folder (scroll + select + flash)
         // instead of opening it in a player. Scoped to notification clicks.
         location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;

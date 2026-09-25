@@ -1,3 +1,5 @@
+const { isMeetingRollup } = require('../meeting-link');
+
 function escapeHtml(value = "") {
   return _.escape(String(value));
 }
@@ -711,12 +713,10 @@ function getActivityMeta(ui, data) {
         // A scheduled meeting is a media node too (room.book creates a
         // `schedule` node), so notification_center_next rolls it up as an
         // upload — which is why an invitation used to read "<organizer>
-        // uploaded <Meeting-name>" and sat in the Files tab. Only a SINGLE-item
-        // rollup can be trusted here: the rollup groups per folder and takes
-        // MAX(item_filetype), so a folder holding both a meeting and a file
-        // would otherwise be relabelled a meeting. cnt > 1 keeps its old
-        // upload wording, exactly as before.
-        if (itemFiletype === 'schedule' && cnt <= 1) {
+        // uploaded <Meeting-name>" and sat in the Files tab. See
+        // isMeetingRollup for why only a single-item rollup qualifies; cnt > 1
+        // keeps its old upload wording, exactly as before.
+        if (isMeetingRollup(data)) {
           const meetingLabel = data.item_filename || name;
           const when = meetingTime(data.meeting_stime);
           return {

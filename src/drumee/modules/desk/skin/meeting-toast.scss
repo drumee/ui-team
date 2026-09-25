@@ -224,7 +224,8 @@
   }
 
   &__dismiss,
-  &__join {
+  &__join,
+  &__calendar {
     flex: 1 1 0;
     min-width: 0;
     box-sizing: border-box;
@@ -248,7 +249,10 @@
     }
   }
 
-  &__join {
+  // The invitation's "View Calendar" is its primary action, as Join is the
+  // live card's — same fill.
+  &__join,
+  &__calendar {
     background: var(--primary-purple-50, #433cc5);
     color: #ffffff;
 
