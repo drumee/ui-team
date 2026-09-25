@@ -75,7 +75,7 @@ module.exports = function (ui) {
       // The line is ellipsized when the path is long; the full one on hover.
       attribute: { title: location },
       kids: [
-        Skeletons.Image.Svg({ ico: 'folder', className: `${pfx}__location-ico` }),
+        Skeletons.Image.Svg({ ico: 'app-folder', className: `${pfx}__location-ico` }),
         Skeletons.Note({
           className: `${pfx}__location-path`,
           content: location,
