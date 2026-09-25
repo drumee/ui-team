@@ -24,7 +24,8 @@
  * later), and waiting for it to report would cancel good restores.
  *
  * NEVER THROWS, NEVER HANGS: every wait has a timeout and every host call
- * that can fail is contained, because this runs inside boot.
+ * that can fail is contained (including a sync throw from entry.ready),
+ * because this runs inside boot.
  *
  * Pure: tests/screen-restore.test.js drives it with a fake host.
  */
@@ -94,64 +95,97 @@ function pollFor(find, { timeout, interval = 100 }) {
  * @param {Object|null} o.entry  its registry row (desk _SCREEN_RESTORE)
  * @param {Object} o.host  see the module comment
  * @param {Object} [o.timeouts=TIMEOUTS]
- * @returns {Promise<String>} what happened — for logs and tests
+ * @returns {Promise<String>} what happened — one of: "no-entry", "user-navigated", "open-failed", "no-widget", "ready", "refreshed", "not-ready", "error"
  */
 async function restoreScreen({ service, entry, host, timeouts = TIMEOUTS }) {
-  if (!entry) return "no-entry";
+  async function run() {
+    if (!entry) return "no-entry";
 
-  const seq0 = host.navSeq();
-  const shown = await host.whenSplitBodyShown(timeouts.splitBody);
-  if (!shown) {
-    // Open anyway: leaving the user on a bare workspace, with the screen they
-    // were on silently dropped, is the worse outcome.
-    host.warn(`[restore] split body not shown after ${timeouts.splitBody}ms; opening ${service} anyway`);
-  }
-  if (host.navSeq() !== seq0 || host.currentScreen()) return "user-navigated";
-
-  try {
-    await host.open(service);
-  } catch (e) {
-    host.warn(`[restore] could not open ${service}`, e);
-    return "open-failed";
-  }
-  // The open itself goes through togglePanel -> _navigated for a full-canvas
-  // screen, so the baseline is taken AFTER it.
-  const seq1 = host.navSeq();
-  const moved = () => {
-    if (host.navSeq() !== seq1) return true;
-    const up = host.currentScreen();
-    return !!up && up !== service;
-  };
-
-  const widget = await host.awaitWidget(entry, timeouts.widget);
-  if (!widget) {
-    host.warn(`[restore] ${entry.kind} did not mount within ${timeouts.widget}ms`);
-    return "no-widget";
-  }
-  if (moved()) return "user-navigated";
-
-  let status = "ready";
-  if (entry.ready) {
-    const result = await withTimeout(entry.ready(widget), timeouts.items);
-    if (result === TIMED_OUT || result === FAILED) {
-      if (moved()) return "user-navigated";
-      if (entry.refresh) {
-        status = "refreshed";
-        try {
-          entry.refresh(widget);
-        } catch (e) {
-          host.warn(`[restore] refreshing ${entry.kind} failed`, e);
-        }
-      } else {
-        status = "not-ready";
-        host.warn(`[restore] ${entry.kind} items not ready after ${timeouts.items}ms`);
+    const seq0 = host.navSeq();
+    const shown = await host.whenSplitBodyShown(timeouts.splitBody);
+    if (!shown) {
+      // Open anyway: leaving the user on a bare workspace, with the screen they
+      // were on silently dropped, is the worse outcome.
+      try {
+        host.warn(`[restore] split body not shown after ${timeouts.splitBody}ms; opening ${service} anyway`);
+      } catch (e) {
+        // guard warn itself
       }
     }
+    if (host.navSeq() !== seq0 || host.currentScreen()) return "user-navigated";
+
+    try {
+      await host.open(service);
+    } catch (e) {
+      try {
+        host.warn(`[restore] could not open ${service}`, e);
+      } catch (e2) {
+        // guard warn itself
+      }
+      return "open-failed";
+    }
+    // The open itself goes through togglePanel -> _navigated for a full-canvas
+    // screen, so the baseline is taken AFTER it.
+    const seq1 = host.navSeq();
+    const moved = () => {
+      if (host.navSeq() !== seq1) return true;
+      const up = host.currentScreen();
+      return !!up && up !== service;
+    };
+
+    const widget = await host.awaitWidget(entry, timeouts.widget);
+    if (!widget) {
+      try {
+        host.warn(`[restore] ${entry.kind} did not mount within ${timeouts.widget}ms`);
+      } catch (e) {
+        // guard warn itself
+      }
+      return "no-widget";
+    }
+    if (moved()) return "user-navigated";
+
+    let status = "ready";
+    if (entry.ready) {
+      const result = await withTimeout(Promise.resolve().then(() => entry.ready(widget)), timeouts.items);
+      if (result === TIMED_OUT || result === FAILED) {
+        if (moved()) return "user-navigated";
+        if (entry.refresh) {
+          status = "refreshed";
+          try {
+            entry.refresh(widget);
+          } catch (e) {
+            try {
+              host.warn(`[restore] refreshing ${entry.kind} failed`, e);
+            } catch (e2) {
+              // guard warn itself
+            }
+          }
+        } else {
+          status = "not-ready";
+          try {
+            host.warn(`[restore] ${entry.kind} items not ready after ${timeouts.items}ms`);
+          } catch (e) {
+            // guard warn itself
+          }
+        }
+      }
+    }
+
+    if (moved()) return "user-navigated";
+    host.lightRow(service);
+    return status;
   }
 
-  if (moved()) return "user-navigated";
-  host.lightRow(service);
-  return status;
+  try {
+    return await run();
+  } catch (e) {
+    try {
+      host.warn("[restore] failed", e);
+    } catch (e2) {
+      // guard warn itself
+    }
+    return "error";
+  }
 }
 
 module.exports = { restoreScreen, pollFor, withTimeout, TIMED_OUT, FAILED, TIMEOUTS };

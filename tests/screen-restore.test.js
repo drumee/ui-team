@@ -221,3 +221,17 @@ test("withTimeout passes values through, and marks timeouts and failures", async
   assert.equal(await withTimeout(never(), 10), TIMED_OUT);
   assert.equal(await withTimeout(Promise.reject(new Error("x")), 50), FAILED);
 });
+
+test("a synchronously throwing ready counts as not ready -> one refresh", async () => {
+  let refreshed = 0;
+  const host = fakeHost(() => ({}));
+  const e = entry({ ready: () => { throw new Error("sync"); }, refresh: () => (refreshed += 1) });
+  assert.equal(await run(host, e), "refreshed");
+  assert.equal(refreshed, 1);
+});
+
+test("a throwing host is contained", async () => {
+  const host = fakeHost(() => ({ currentScreen: () => { throw new Error("boom"); } }));
+  assert.equal(await run(host), "error");
+  assert.ok(host.calls.includes("warn"));
+});
