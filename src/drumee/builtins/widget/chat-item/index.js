@@ -2040,24 +2040,19 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
-   * Add/remove a reader uid in this message's local _seen_ map without
-   * re-rendering — used by the parent chat widget to apply a read cursor
-   * across the whole list before re-rendering all rows in one pass.
+   * Add a reader uid to this message's local _seen_ map without re-rendering —
+   * used by the parent chat widget to apply a read cursor across the whole
+   * list before re-rendering all rows in one pass. Add-only: a read receipt is
+   * never withdrawn, matching the server's accumulating _seen_.
    * @param {String} uid
-   * @param {Boolean} seen whether uid has read this message
    */
-  updateReaderSeen(uid, seen) {
+  markReaderSeen(uid) {
     if (!uid) return;
     const md = this._metadataObject();
     md._seen_ = md._seen_ || {};
-    const has = md._seen_[uid] != null;
-    if (seen && !has) {
-      md._seen_[uid] = Math.floor(Date.now() / 1000);
-      this.mset(_a.metadata, JSON.stringify(md));
-    } else if (!seen && has) {
-      delete md._seen_[uid];
-      this.mset(_a.metadata, JSON.stringify(md));
-    }
+    if (md._seen_[uid] != null) return;
+    md._seen_[uid] = Math.floor(Date.now() / 1000);
+    this.mset(_a.metadata, JSON.stringify(md));
   }
 
   /**
