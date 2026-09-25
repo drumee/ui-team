@@ -1357,6 +1357,23 @@ class __window_interact extends windowCore {
     if (_.isEmpty(Wm.clipboard.files)) {
       return;
     }
+    // Refuse before drawing anything: the tiles below are added optimistically
+    // and each posts its own media.copy / media.move, which a view/chat member
+    // is refused — leaving ghost tiles until reload. Only a KNOWN privilege
+    // without the write bit refuses; with none recorded the server decides.
+    // (Wm carries the open workspace's hub_id AND privilege, so its own
+    // pasteMedia is judged against the same workspace it pastes into.)
+    const priv = this.mget(_a.privilege) || this.mget(_a.permission);
+    if (priv != null && !(_K.permission.write & priv)) {
+      require("libs/permission-denied").sayWeakPrivilege(
+        Wm.clipboard.command === _e.copy
+          ? LOCALE.PERMISSION_ACTION_COPY
+          : LOCALE.PERMISSION_ACTION_MOVE,
+        priv,
+        _K.permission.write,
+      );
+      return;
+    }
     const list = [];
     return (() => {
       const result = [];

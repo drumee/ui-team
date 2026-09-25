@@ -3252,5 +3252,14 @@
   "PERMISSION_ACTION_INVITE": "inviter des membres",
   "PERMISSION_ACTION_EDIT_TASKS": "modifier les tâches",
   "PERMISSION_ACTION_SHARE": "créer des liens de partage",
-  "PERMISSION_ACTION_MOVE": "déplacer des éléments ici"
+  "PERMISSION_ACTION_MOVE": "déplacer des éléments ici",
+  "PERMISSION_ACTION_COPY": "copier des éléments ici",
+  "PERMISSION_ACTION_DELETE": "supprimer des éléments",
+  "PERMISSION_ACTION_RENAME": "renommer des éléments",
+  "PERMISSION_ACTION_CREATE_FOLDER": "créer des dossiers",
+  "PERMISSION_ACTION_SAVE": "enregistrer les modifications",
+  "PERMISSION_ACTION_MANAGE_MEMBERS": "gérer les membres",
+  "PERMISSION_ACTION_RENAME_WORKSPACE": "renommer cet espace de travail",
+  "PERMISSION_ACTION_DELETE_WORKSPACE": "supprimer cet espace de travail",
+  "PERMISSION_ACTION_MANAGE_SHARE": "gérer les liens de partage"
 }

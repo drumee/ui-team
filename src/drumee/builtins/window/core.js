@@ -939,7 +939,11 @@ class __window_core extends __utils {
       .then((data) => {
         aw.spinner(0);
         if (!data || !data.nid) {
-          Wm.alert(LOCALE.ERROR_NETWORK);
+          // A refusal already said why (onServerComplain → permission-denied);
+          // "network error" on top of it would contradict it.
+          if (!require("libs/permission-denied").saidRecently()) {
+            Wm.alert(LOCALE.ERROR_NETWORK);
+          }
           return;
         }
         // The new file opens in its editor right away: in a busy folder the
@@ -1390,6 +1394,9 @@ class __window_core extends __utils {
       });
       return;
     }
+    // A 403 on something the member did on purpose was silent: doRequest
+    // swallows it here and the caller sees `undefined`. Say why instead.
+    require("libs/permission-denied").notifyServerDenied(this, xhr);
   }
 
   /**

@@ -34,7 +34,7 @@ String.prototype.format = function (...args) {
   return args.reduce((s, a, i) => s.replace(new RegExp(`\\{${i}\\}`, "g"), a), `${this}`);
 };
 global.LOCALE = en;
-global._a = { privilege: "privilege" };
+global._a = { privilege: "privilege", hub_id: "hub_id", destination: "destination" };
 global._K = { permission: { admin: 0b0010000, write: 0b0001000, download: 0b0000100 } };
 
 // toolkit/permission is ESM-shaped (webpack only); stand in the same
@@ -90,4 +90,113 @@ test("workspacePrivilege reads the workspace window, 0 when unknown", () => {
   assert.equal(PD.workspacePrivilege("other"), 0);
   delete global.Wm;
   assert.equal(PD.workspacePrivilege(), 0);
+});
+
+// --- server 403 → popup (onServerComplain hook) --------------------------
+const NEW_KEYS = [
+  "PERMISSION_ACTION_COPY", "PERMISSION_ACTION_DELETE", "PERMISSION_ACTION_RENAME",
+  "PERMISSION_ACTION_CREATE_FOLDER", "PERMISSION_ACTION_SAVE", "PERMISSION_ACTION_MANAGE_MEMBERS",
+  "PERMISSION_ACTION_RENAME_WORKSPACE", "PERMISSION_ACTION_DELETE_WORKSPACE", "PERMISSION_ACTION_MANAGE_SHARE",
+];
+for (const lang of LANGS) {
+  test(`${lang}.json carries every server-refusal action key`, () => {
+    const t = require(path.join(ROOT, "locale", `${lang}.json`));
+    for (const k of NEW_KEYS) {
+      assert.equal(typeof t[k], "string", `${lang}: missing ${k}`);
+      assert.ok(t[k].trim(), `${lang}: empty ${k}`);
+    }
+  });
+}
+
+function withButler(fn) {
+  const said = [];
+  global.Butler = { say: (m) => said.push(m) };
+  try { fn(said); } finally { delete global.Butler; }
+}
+const SVC = "https://team-5202.drumee.in/-/svc/";
+const view = (o = {}) => ({ mget: (k) => o[k] });
+// Each case needs a fresh throttle window.
+function freshModule() {
+  delete require.cache[require.resolve(path.join(ROOT, "src/drumee/libs/permission-denied.js"))];
+  return require(path.join(ROOT, "src/drumee/libs/permission-denied.js"));
+}
+
+test("a refused POST on a user action says what and why", () => {
+  const P = freshModule();
+  withButler((said) => {
+    const handled = P.notifyServerDenied(view({ privilege: 3 }), { status: 403, url: `${SVC}media.copy` });
+    assert.equal(handled, true);
+    assert.equal(said.length, 1);
+    assert.match(said[0], /^You can’t copy items here because your current permission level is View\./);
+    assert.ok(P.saidRecently());
+  });
+});
+
+test("editor namespace varies: any *.new_doc is 'create documents'", () => {
+  const P = freshModule();
+  withButler((said) => {
+    P.notifyServerDenied(view({ privilege: 7 }), { status: 403, url: `${SVC}euroffice.new_doc` });
+    assert.match(said[0], /create documents .* is Chat\./);
+  });
+});
+
+test("GETs, other statuses, and services off the allowlist stay silent", () => {
+  const P = freshModule();
+  withButler((said) => {
+    assert.equal(P.notifyServerDenied(view({ privilege: 3 }), { status: 403, url: `${SVC}media.copy?nid=1` }), false);
+    assert.equal(P.notifyServerDenied(view({ privilege: 3 }), { status: 401, url: `${SVC}media.copy` }), false);
+    assert.equal(P.notifyServerDenied(view({ privilege: 3 }), { status: 500, url: `${SVC}media.copy` }), false);
+    // quiet calls the UI makes on its own
+    for (const s of ["secure_share.list", "secure_share.access_list", "secure_share.mark_open_seen",
+      "channel.enter", "hub.get_statistics", "media.get_lock"]) {
+      assert.equal(P.notifyServerDenied(view({ privilege: 3 }), { status: 403, url: `${SVC}${s}` }), false, s);
+    }
+    // a 200 carrying `error`, a network TypeError, nothing at all
+    assert.equal(P.notifyServerDenied(view(), { error: "limit_exceeded" }), false);
+    assert.equal(P.notifyServerDenied(view(), new TypeError("Failed to fetch")), false);
+    assert.equal(P.notifyServerDenied(view(), undefined), false);
+    assert.equal(said.length, 0);
+    assert.equal(P.saidRecently(), false);
+  });
+});
+
+test("a multi-file refusal is said once", () => {
+  const P = freshModule();
+  withButler((said) => {
+    for (let i = 0; i < 5; i++) {
+      assert.equal(P.notifyServerDenied(view({ privilege: 3 }), { status: 403, url: `${SVC}media.move` }), true);
+    }
+    assert.equal(said.length, 1);
+  });
+});
+
+test("an admin refused an owner-only action is not told to ask an admin", () => {
+  const P = freshModule();
+  withButler((said) => {
+    P.notifyServerDenied(view({ privilege: 31 }), { status: 403, url: `${SVC}hub.delete_hub` });
+    assert.equal(said[0], en.WEAK_PRIVILEGE);
+  });
+});
+
+test("the level comes from the workspace the request aimed at", () => {
+  const P = freshModule();
+  global.Wm = { _findWorkspaceWindow: (id) => (id === "dest" ? { mget: () => 7 } : null) };
+  try {
+    withButler((said) => {
+      // tile carries the SOURCE privilege (15); the paste targets `dest` (7)
+      P.notifyServerDenied(view({ privilege: 15, hub_id: "src", destination: { hub_id: "dest" } }),
+        { status: 403, url: `${SVC}media.copy` });
+      assert.match(said[0], /is Chat\./);
+    });
+  } finally { delete global.Wm; }
+});
+
+test("sayWeakPrivilege falls back to Wm.alert without Butler", () => {
+  const P = freshModule();
+  const alerts = [];
+  global.Wm = { alert: (m) => alerts.push(m) };
+  try {
+    P.sayWeakPrivilege(en.PERMISSION_ACTION_COPY, 3, 8);
+    assert.match(alerts[0], /copy items here .* is View\./);
+  } finally { delete global.Wm; }
 });

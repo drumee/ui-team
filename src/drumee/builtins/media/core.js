@@ -2706,6 +2706,9 @@ class __media_core extends DrumeeMFS {
    */
   onServerComplain(res) {
     this.warn("onServerComplain[2109]", res)
+    // A tile posts its own copy / move / trash / rename, so its 403 lands here
+    // rather than on the window. Same popup as window core's.
+    if (require("libs/permission-denied").notifyServerDenied(this, res)) return;
     if (res.error == "limit_exceeded") {
       // Was Wm.alert(LOCALE.QUOTA_EXCEEDED): a bare "Your quota has been
       // exceeded" with an OK button and nowhere to go. The card names the

@@ -6594,9 +6594,7 @@ class desk_module extends LetcBox {
   _sayWeakPrivilege(action, needed) {
     try {
       const PD = require("libs/permission-denied");
-      const msg = PD.weakPrivilegeMessage(action, PD.workspacePrivilege(), needed);
-      if (typeof Butler !== "undefined" && Butler.say) Butler.say(msg);
-      else if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(msg);
+      PD.sayWeakPrivilege(action, PD.workspacePrivilege(), needed);
     } catch (e) {
       /* a toast must never break the caller's own path */
     }

@@ -3251,5 +3251,14 @@
   "PERMISSION_ACTION_INVITE": "invite members",
   "PERMISSION_ACTION_EDIT_TASKS": "edit tasks",
   "PERMISSION_ACTION_SHARE": "create share links",
-  "PERMISSION_ACTION_MOVE": "move items here"
+  "PERMISSION_ACTION_MOVE": "move items here",
+  "PERMISSION_ACTION_COPY": "copy items here",
+  "PERMISSION_ACTION_DELETE": "delete items",
+  "PERMISSION_ACTION_RENAME": "rename items",
+  "PERMISSION_ACTION_CREATE_FOLDER": "create folders",
+  "PERMISSION_ACTION_SAVE": "save changes",
+  "PERMISSION_ACTION_MANAGE_MEMBERS": "manage members",
+  "PERMISSION_ACTION_RENAME_WORKSPACE": "rename this workspace",
+  "PERMISSION_ACTION_DELETE_WORKSPACE": "delete this workspace",
+  "PERMISSION_ACTION_MANAGE_SHARE": "manage share links"
 }

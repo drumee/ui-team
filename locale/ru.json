@@ -3046,5 +3046,14 @@
   "PERMISSION_ACTION_INVITE": "приглашать участников",
   "PERMISSION_ACTION_EDIT_TASKS": "редактировать задачи",
   "PERMISSION_ACTION_SHARE": "создавать ссылки для общего доступа",
-  "PERMISSION_ACTION_MOVE": "перемещать элементы сюда"
+  "PERMISSION_ACTION_MOVE": "перемещать элементы сюда",
+  "PERMISSION_ACTION_COPY": "копировать элементы сюда",
+  "PERMISSION_ACTION_DELETE": "удалять элементы",
+  "PERMISSION_ACTION_RENAME": "переименовывать элементы",
+  "PERMISSION_ACTION_CREATE_FOLDER": "создавать папки",
+  "PERMISSION_ACTION_SAVE": "сохранять изменения",
+  "PERMISSION_ACTION_MANAGE_MEMBERS": "управлять участниками",
+  "PERMISSION_ACTION_RENAME_WORKSPACE": "переименовать это пространство",
+  "PERMISSION_ACTION_DELETE_WORKSPACE": "удалить это пространство",
+  "PERMISSION_ACTION_MANAGE_SHARE": "управлять ссылками для общего доступа"
 }

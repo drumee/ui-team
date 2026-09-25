@@ -3040,5 +3040,14 @@
   "PERMISSION_ACTION_INVITE": "អញ្ជើញសមាជិក",
   "PERMISSION_ACTION_EDIT_TASKS": "កែសម្រួលកិច្ចការ",
   "PERMISSION_ACTION_SHARE": "បង្កើតតំណចែករំលែក",
-  "PERMISSION_ACTION_MOVE": "ផ្លាស់ទីធាតុមកទីនេះ"
+  "PERMISSION_ACTION_MOVE": "ផ្លាស់ទីធាតុមកទីនេះ",
+  "PERMISSION_ACTION_COPY": "ចម្លងធាតុមកទីនេះ",
+  "PERMISSION_ACTION_DELETE": "លុបធាតុ",
+  "PERMISSION_ACTION_RENAME": "ប្ដូរឈ្មោះធាតុ",
+  "PERMISSION_ACTION_CREATE_FOLDER": "បង្កើតថត",
+  "PERMISSION_ACTION_SAVE": "រក្សាទុកការផ្លាស់ប្ដូរ",
+  "PERMISSION_ACTION_MANAGE_MEMBERS": "គ្រប់គ្រងសមាជិក",
+  "PERMISSION_ACTION_RENAME_WORKSPACE": "ប្ដូរឈ្មោះកន្លែងធ្វើការនេះ",
+  "PERMISSION_ACTION_DELETE_WORKSPACE": "លុបកន្លែងធ្វើការនេះ",
+  "PERMISSION_ACTION_MANAGE_SHARE": "គ្រប់គ្រងតំណចែករំលែក"
 }

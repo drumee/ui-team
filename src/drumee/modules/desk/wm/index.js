@@ -2970,7 +2970,11 @@ class __window_manager extends push {
               .catch(async (e) => {
                 await animation;
                 this.warn(`delete_hub failed for ${hub_id}`, e);
-                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                // A 403 was already explained by onServerComplain (libs/permission-denied);
+                // "failed" would replace it with a vaguer sentence.
+                if (!require("libs/permission-denied").saidRecently()) {
+                  Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                }
                 this.reload();
                 resolve({ error: e });
               });
@@ -3109,7 +3113,11 @@ class __window_manager extends push {
               .catch(async (e) => {
                 await animation;
                 this.warn(`media.trash failed for personal workspace ${nid}`, e);
-                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                // A 403 was already explained by onServerComplain (libs/permission-denied);
+                // "failed" would replace it with a vaguer sentence.
+                if (!require("libs/permission-denied").saidRecently()) {
+                  Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                }
                 this.reload();
                 resolve({ error: e });
               });
@@ -3210,7 +3218,11 @@ class __window_manager extends push {
                 // and say why instead of leaving a silently missing tile.
                 await animation;
                 this.warn("delete_hub failed — restoring listing", e);
-                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                // A 403 was already explained by onServerComplain (libs/permission-denied);
+                // "failed" would replace it with a vaguer sentence.
+                if (!require("libs/permission-denied").saidRecently()) {
+                  Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                }
                 this.reload();
                 resolve({ error: e });
               });

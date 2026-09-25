@@ -1286,9 +1286,14 @@ class __media_interact extends media_core {
         break;
 
       case _e.paste:
-        if (!this.isGranted(_K.permission.write)) return;
         let media = Visitor.get("clipboard");
         if (!media) return;
+        if (!this.isGranted(_K.permission.write)) {
+          require("libs/permission-denied").sayWeakPrivilege(
+            LOCALE.PERMISSION_ACTION_COPY, this.mget(_a.privilege), _K.permission.write,
+          );
+          return;
+        }
         this.moveIn(media, 1);
         break;
 
