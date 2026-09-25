@@ -3203,8 +3203,14 @@ class __widget_chat extends LetcBox {
     // Apply their read cursor across the whole list so their avatar lands only
     // on their last-read message (Messenger-style), without a stale duplicate
     // remaining on an earlier message.
+    // The cursor is the NEWEST ctime in the batch: opening a chat broadcasts
+    // the whole page newest-first, so its last row is the oldest one.
     const reader = options && options.sender && options.sender.uid;
-    const refCtime = data.length ? data[data.length - 1].ctime : null;
+    let refCtime = null;
+    for (const d of data) {
+      const ct = d && d.ctime != null ? Number(d.ctime) : NaN;
+      if (!isNaN(ct) && (refCtime == null || ct > refCtime)) refCtime = ct;
+    }
     if (reader && refCtime != null) {
       this.applyReadReceipt(reader, refCtime);
     }
@@ -3214,6 +3220,8 @@ class __widget_chat extends LetcBox {
    * Apply a reader's read cursor across all visible message rows, then re-render
    * every reader-avatar strip. Two passes because last-read placement depends on
    * the next row's _seen_, so all rows must be updated before any are rendered.
+   * The cursor only moves forward, like the server's _seen_: an older cursor
+   * (e.g. the reader paging back through history) never un-reads a row.
    * @param {String} readerUid
    * @param {Number} refCtime the reader has read every message with ctime <= this
    */
@@ -3221,11 +3229,11 @@ class __widget_chat extends LetcBox {
     if (!readerUid || readerUid === Visitor.id) return;
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
     const items = this.__list.getItemsByKind(this.itemKind()) || [];
-    // Pass 1: update each row's _seen_ for this reader from the cursor.
+    // Pass 1: mark every row up to the cursor as read by this reader.
     for (const item of items) {
-      if (item && _.isFunction(item.updateReaderSeen)) {
+      if (item && _.isFunction(item.markReaderSeen)) {
         const ct = item.mget(_a.ctime);
-        item.updateReaderSeen(readerUid, ct != null && ct <= refCtime);
+        if (ct != null && ct <= refCtime) item.markReaderSeen(readerUid);
       }
     }
     // Pass 2: re-render — last-read placement reads the next row's _seen_, so
