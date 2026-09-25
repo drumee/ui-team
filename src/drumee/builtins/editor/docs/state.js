@@ -596,10 +596,6 @@ class __docs_state extends DrumeeMFS {
         },
         onCollabState: (state) => {
           this._collabState = state;
-          // The new room is up: the editor has painted, so the cover can go.
-          if (state && /connected|live|synced/i.test(String(state.status || ""))) {
-            this._veil(false);
-          }
           if (state && state.status === "connected" && !this._raisedOnce) {
             this._raisedOnce = 1;
             this._nudgeResize();
@@ -671,15 +667,27 @@ class __docs_state extends DrumeeMFS {
   _veil(on) {
     const el = this.editor && this.editor.el;
     if (!el) return;
-    clearTimeout(this._veilTimer);
+    clearInterval(this._veilPoll);
     if (!on) {
       delete el.dataset.tabSwitching;
       return;
     }
     el.dataset.tabSwitching = "1";
-    this._veilTimer = setTimeout(() => {
-      if (this.editor && this.editor.el) delete this.editor.el.dataset.tabSwitching;
-    }, 6000);
+    // Lifted when the PAGE IS BACK, not when the session reports itself
+    // connected: on a re-render the collab state still carries the previous
+    // room's "connected" and lifted the cover while the editor was still
+    // being torn down — the flash was visible again. Capped at 6s so a room
+    // that never comes up cannot leave the document hidden.
+    const started = Date.now();
+    this._veilPoll = setInterval(() => {
+      const gone = this._destroyed || !this.editor || !this.editor.el;
+      const pages = !gone && this.editor.el.querySelector(".paged-editor__pages");
+      const ready = pages && pages.getBoundingClientRect().height > 40;
+      if (gone || ready || Date.now() - started > 6000) {
+        clearInterval(this._veilPoll);
+        if (!gone) delete this.editor.el.dataset.tabSwitching;
+      }
+    }, 120);
   }
 
   /**
