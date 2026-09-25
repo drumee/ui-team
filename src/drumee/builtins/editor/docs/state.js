@@ -563,20 +563,77 @@ class __docs_state extends DrumeeMFS {
       return "saved";
     };
 
-    this._ref = createRef();
     window.__casualDocsRef = () => this._ref && this._ref.current;
     window.__collabState = () => this._collabState;
 
     this._pinCasualTheme();
     if (editor && editor.el) editor.el.classList.add("editor-docs--collab");
-    this._root = createRoot(this._reactHost());
-    // Rendered through a closure so a TAB SWITCH can re-render with another
-    // room (docs/tabs.js roomId) instead of tearing the editor down.
+
+    // ONE EDITOR PER TAB, kept alive and hidden.
+    //
+    // Re-rendering a single editor with another `docId` tore the whole
+    // editor down and reconnected its session on every switch: a second and
+    // a half of blank page, every time. A tab already visited keeps its own
+    // mounted editor here, so going back to it is a style change — instant,
+    // with the caret, scroll position and session intact. Only the first
+    // visit to a tab pays for a mount, and at most MAX_LIVE_TABS of them are
+    // kept (the least recently used is dropped) so a long document with many
+    // tabs cannot pile up sessions.
+    const MAX_LIVE_TABS = 3;
+    this._panes = new Map();
+    this._paneOrder = [];
+
+    const paneFor = (room) => {
+      let pane = this._panes.get(room);
+      if (pane) return pane;
+      const host = document.createElement("div");
+      host.className = "docs-state__react-host";
+      this.el.insertBefore(host, this.el.firstChild);
+      pane = { host, root: createRoot(host), ref: createRef(), rendered: false };
+      this._panes.set(room, pane);
+      return pane;
+    };
+
+    const prunePanes = () => {
+      while (this._paneOrder.length > MAX_LIVE_TABS) {
+        const room = this._paneOrder.shift();
+        if (room === this._room) continue;
+        const pane = this._panes.get(room);
+        if (!pane) continue;
+        this._panes.delete(room);
+        try {
+          pane.root.unmount();
+          pane.host.remove();
+        } catch (e) {
+          /** already gone */
+        }
+      }
+    };
+
     const renderCollab = (room) => {
+      const previous = this._room;
+      if (previous && previous !== room) {
+        const old = this._panes.get(previous);
+        if (old) old.host.style.display = "none";
+      }
       this._room = room;
-      this._root.render(
+      this._paneOrder = this._paneOrder.filter((r) => r !== room).concat([room]);
+      const pane = paneFor(room);
+      pane.host.style.display = "";
+      // Everything that exports or saves reads the ACTIVE tab's editor.
+      this._ref = pane.ref;
+      if (pane.rendered) {
+        // Already mounted: nothing to load, nothing to cover.
+        this._veil(false);
+        this._nudgeResize();
+        prunePanes();
+        return;
+      }
+      pane.rendered = true;
+      prunePanes();
+      pane.root.render(
       createElement(CasualEditor, {
-        ref: this._ref,
+        ref: pane.ref,
         fileSource,
         docId: room,
         backendUrl: ws,
@@ -587,14 +644,21 @@ class __docs_state extends DrumeeMFS {
         // File → Save / Ctrl+S inside Casual: with no onSave prop the shell
         // DOWNLOADS a .docx; route it to Drumee's save (autosave flush).
         onSave: () => {
+          if (room !== this._room) return;
           if (editor && typeof editor.saveContent === "function") editor.saveContent();
         },
         showRuler: true,
+        // Hidden tabs keep running, so every callback belongs to ONE room and
+        // is ignored unless that room is the one on screen — otherwise a
+        // background tab's autosave would drive the header's status label and
+        // its peers would show in the presence cluster.
         onAutosaveState: (state) => {
+          if (room !== this._room) return;
           this._autosave = state;
           if (editor && editor.setSaveStatus) editor.setSaveStatus(mapStatus(state));
         },
         onCollabState: (state) => {
+          if (room !== this._room) return;
           this._collabState = state;
           if (state && state.status === "connected" && !this._raisedOnce) {
             this._raisedOnce = 1;
@@ -634,10 +698,11 @@ class __docs_state extends DrumeeMFS {
     if (!tab) return;
     if (this._collab) {
       const room = docTabs.roomId(this._collab.nid, tabs, tabId);
-      // Cover the body while the editor is re-created for the other room:
-      // React tears the old one down before the new one paints, and that gap
-      // read as a white flash on every switch ("nó vẫn nháy nháy").
-      this._veil(true);
+      // A tab visited before has its editor still mounted: showing it is a
+      // style change, so no cover. Only a first visit mounts — and that gap
+      // is what used to read as a white flash.
+      const known = this._panes && this._panes.get(room);
+      if (!known || !known.rendered) this._veil(true);
       if (this._renderCollab) this._renderCollab(room);
       return;
     }
@@ -833,10 +898,24 @@ class __docs_state extends DrumeeMFS {
         this._helpObs = null;
       }
       clearTimeout(this._helpTimer);
+      clearInterval(this._veilPoll);
       if (this._root) this._root.unmount();
       if (this._host) {
         this._host.remove();
         this._host = null;
+      }
+      // Every tab kept alive in the background gets torn down with the window
+      // — each one holds a live co-editing session.
+      if (this._panes) {
+        for (const pane of this._panes.values()) {
+          try {
+            pane.root.unmount();
+            pane.host.remove();
+          } catch (e) {
+            /** already gone */
+          }
+        }
+        this._panes.clear();
       }
     } catch (e) {
       /** already gone */
