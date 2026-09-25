@@ -296,10 +296,15 @@ class __tasks_panel extends LetcBox {
     // sort state.
     this._view = "board";
     this._sort = null; // { key, dir } — null = natural (status, rank) order
-    // Calendar view: month|week granularity + the anchor date (YYYY-MM-DD) of
-    // the displayed period. null cursor = today.
+    // Calendar view: month|week|day granularity + the anchor date
+    // (YYYY-MM-DD) of the displayed period. null cursor = today. The two
+    // dropdowns (view menu, range mini-calendar) and the month that mini
+    // calendar is SHOWING, which is not the cursor until a day is picked.
     this._calMode = "month";
     this._calCursor = null;
+    this._calViewMenuOpen = false;
+    this._calPickerOpen = false;
+    this._calPickerCursor = null;
     // Gantt view: weeks|months axis granularity + the multi-select set (task
     // ids) backing the checkboxes / "Delete selected".
     this._ganttMode = "weeks";
@@ -361,6 +366,7 @@ class __tasks_panel extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    this._unbindCalMenuDismiss();
     // Parts that never mounted leave their waiter behind (their promise simply
     // never settles, exactly as ensurePart's would) — drop them with the panel.
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
@@ -1943,13 +1949,56 @@ class __tasks_panel extends LetcBox {
       case "viewbar-page":
         return this._showViewbarPage(trigger);
 
-      case "set-cal-mode": {
-        const m = trigger.mget("calMode") === "week" ? "week" : "month";
-        if (m !== this._calMode) {
+      // ── Calendar toolbar ────────────────────────────────────────────────
+      // Every case below repaints through _repaintCalendar (view body + the
+      // controls row) or _repaintCalControls (the row alone), never _render():
+      // none of them touch the viewbar tabs, the filter bar or the overlays,
+      // and a full render rebuilds the whole panel to move a month.
+      case "cal-toggle-view-menu":
+        this._calViewMenuOpen = !this._calViewMenuOpen;
+        this._calPickerOpen = false;
+        return this._repaintCalControls();
+
+      case "cal-set-view": {
+        const m = trigger.mget("calMode");
+        this._closeCalMenus();
+        if ((m === "month" || m === "week" || m === "day") && m !== this._calMode) {
           this._calMode = m;
-          this._render();
+          return this._repaintCalendar();
         }
-        return;
+        return this._repaintCalControls();
+      }
+
+      case "cal-toggle-picker":
+        this._calPickerOpen = !this._calPickerOpen;
+        this._calViewMenuOpen = false;
+        // Each open starts on the month the grid is showing, not wherever the
+        // user last browsed the popup to and stopped.
+        this._calPickerCursor = null;
+        return this._repaintCalControls();
+
+      // ‹ › inside the popup: moves the POPUP's month only — the grid behind
+      // it has not moved, so this is the row alone. Stays open to browse.
+      case "cal-picker-step": {
+        const delta = Number(trigger.mget("calStep"));
+        if (delta !== 1 && delta !== -1) return;
+        try {
+          const base = Dayjs(this._calPickerCursor || this._calCursor || undefined);
+          this._calPickerCursor = base.add(delta, "month").format("YYYY-MM-DD");
+        } catch (_) {
+          this._calPickerCursor = null;
+        }
+        return this._repaintCalControls();
+      }
+
+      // A day picked in the popup anchors the calendar on it in the current
+      // view — the day view lands on that day, week on its week, month on its
+      // month — as the other two calendars do.
+      case "cal-pick-day": {
+        const day = trigger.mget("calDay");
+        this._closeCalMenus();
+        if (day) this._calCursor = day;
+        return this._repaintCalendar();
       }
 
       case "cal-prev":
@@ -1959,21 +2008,21 @@ class __tasks_panel extends LetcBox {
         return this._calShift(1);
 
       case "cal-today":
-        if (this._calCursor !== null) {
-          this._calCursor = null;
-          this._render();
-        }
-        return;
+        this._closeCalMenus();
+        this._calCursor = null;
+        return this._repaintCalendar();
 
       case "cal-day-more": {
-        // "+N more" on a packed month cell → jump to that day's week view.
+        // "+N" on a busy month cell → that DAY, where every task is a full
+        // card. It used to open the week, which is the Personal Calendar's
+        // "+N" going somewhere different from this one's.
         const day = trigger.mget("calDay");
+        this._closeCalMenus();
         if (day) {
           this._calCursor = day;
-          this._calMode = "week";
-          this._render();
+          this._calMode = "day";
         }
-        return;
+        return this._repaintCalendar();
       }
 
       case "cal-add": {
@@ -1999,7 +2048,13 @@ class __tasks_panel extends LetcBox {
         this._createSubtaskDraft = null;
         this._folderFilenames = null;
         this._resetFileSearch();
-        return this._render();
+        // The create modal opening and nothing else — the overlays path, the
+        // same one "add-task" takes (it used to rebuild the whole panel).
+        if (this._calViewMenuOpen || this._calPickerOpen) {
+          this._closeCalMenus();
+          this._repaintCalControls();
+        }
+        return this._renderOverlays();
       }
 
       case "set-gantt-mode": {
@@ -4509,16 +4564,87 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
-  // Step the calendar cursor by ±1 month or ±1 week (per the active mode).
+  // Step the calendar cursor by ±1 day, week or month (per the active mode).
   _calShift(dir) {
     try {
       const base = this._calCursor ? Dayjs(this._calCursor) : Dayjs();
-      const unit = this._calMode === "week" ? "week" : "month";
+      const unit =
+        this._calMode === "day" ? "day" : this._calMode === "week" ? "week" : "month";
       this._calCursor = base.add(dir, unit).format("YYYY-MM-DD");
     } catch (_) {
       this._calCursor = null;
     }
-    this._render();
+    this._closeCalMenus();
+    this._repaintCalendar();
+  }
+
+  _closeCalMenus() {
+    this._calViewMenuOpen = false;
+    this._calPickerOpen = false;
+    this._unbindCalMenuDismiss();
+  }
+
+  /**
+   * The calendar's range, view or cursor moved: repaint the view body and the
+   * controls row (its label names the range). Nothing else on the panel reads
+   * calendar state, so _render() — every node on the panel — was paying to move
+   * a month. See tasks-panel-render-paths.
+   */
+  _repaintCalendar() {
+    // A different range (or view) is new content, so it opens at the top. The
+    // month's offset used to carry over: scroll to the last week, follow a
+    // "+N" into its day, and the Day view opened scrolled past that day's
+    // first tasks — or ‹ › landed mid-grid on the next month. A repaint of the
+    // SAME range (a task edit, a filter) still goes through the plain
+    // _refreshViewBody and keeps its place; this is the rule the Personal
+    // Calendar keys on too (_placeHoursScroll).
+    this._refreshViewBody({ dropScroll: ".tasks-panel__calendar" });
+    this._repaintCalControls();
+  }
+
+  /** Repaint ONLY the calendar's controls row (a dropdown opened or closed). */
+  _repaintCalControls() {
+    this._syncCalMenuDismiss();
+    if (this.getView() !== "calendar") return;
+    this._withPart("cal-controls").then((row) => {
+      if (!row || (this.isDestroyed && this.isDestroyed())) return;
+      row.feed(require("./skeleton/calendar").controlsKids(this));
+    });
+  }
+
+  // ── outside-click dismissal for the calendar dropdowns ──────────────────
+  // Capture phase on `document`, guarded by the WHOLE controls row — the
+  // Personal Calendar's _bindMenuDismiss, for the same reason it gives: closing
+  // repaints the row before the click reaches its target, so a guard narrower
+  // than the row would destroy ‹ › or the other dropdown mid-click. Every
+  // control in the row closes the menus in its own handler anyway.
+  _syncCalMenuDismiss() {
+    if (this._calViewMenuOpen || this._calPickerOpen) this._bindCalMenuDismiss();
+    else this._unbindCalMenuDismiss();
+  }
+
+  _bindCalMenuDismiss() {
+    if (this._calMenuDismiss) return;
+    const row = `.${this.fig.family}__tcal-bar`;
+    this._calMenuDismiss = (ev) => {
+      const t = ev && ev.target;
+      if (!t || !t.closest) return;
+      // THIS panel's row. Two workspace windows can each have a Task tab open,
+      // and a bare closest() would let a click on the other window's calendar
+      // bar count as "inside" and leave this panel's menu hanging open.
+      const bar = t.closest(row);
+      if (bar && this.el && this.el.contains(bar)) return;
+      if (this.isDestroyed && this.isDestroyed()) return this._unbindCalMenuDismiss();
+      this._closeCalMenus();
+      this._repaintCalControls();
+    };
+    document.addEventListener("click", this._calMenuDismiss, true);
+  }
+
+  _unbindCalMenuDismiss() {
+    if (!this._calMenuDismiss) return;
+    document.removeEventListener("click", this._calMenuDismiss, true);
+    this._calMenuDismiss = null;
   }
 
   async _loadComments(taskId) {
@@ -9413,9 +9539,19 @@ class __tasks_panel extends LetcBox {
    * is built, instead of a second copy of the view/board dispatch that would
    * drift. Only the host's subtree is actually mounted.
    */
-  _refreshViewBody() {
+  /**
+   * @param {Object} [opt]
+   * @param {String} [opt.dropScroll]  a scroller selector whose offset must NOT
+   *   carry over — the view is showing something new there, not the same thing
+   *   repainted. The calendar passes its own root when the range or the view
+   *   moves (see _repaintCalendar).
+   */
+  _refreshViewBody(opt = {}) {
     if (!this.el) return;
-    const savedScroll = this._captureViewScroll();
+    let savedScroll = this._captureViewScroll();
+    if (opt.dropScroll) {
+      savedScroll = savedScroll.filter((s) => s.selector !== opt.dropScroll);
+    }
     this._withPart("view-host").then((host) => {
       if (!host || !this.el) return;
       const root = require("./skeleton")(this);
@@ -10518,6 +10654,15 @@ class __tasks_panel extends LetcBox {
   }
   getCalCursor() {
     return this._calCursor;
+  }
+  isCalViewMenuOpen() {
+    return !!this._calViewMenuOpen;
+  }
+  isCalPickerOpen() {
+    return !!this._calPickerOpen;
+  }
+  getCalPickerCursor() {
+    return this._calPickerCursor || null;
   }
   getGanttMode() {
     return this._ganttMode || "weeks";

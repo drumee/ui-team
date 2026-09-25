@@ -4954,7 +4954,9 @@ $theme-colors: (
   }
 
   // ── Calendar view ──────────────────────── (Figma 2042-20730 / 2045-132117)
-  // Viewbar controls: Weekly/Monthly toggle + ‹ period › navigator.
+  // __cal-controls / __cal-toggle / __cal-switch below are GANTT's viewbar
+  // controls now (skeleton/gantt.js reuses these classes for its Weeks/Months
+  // switch). The calendar's own toolbar is __tcal-* further down.
   &__cal-controls {
     align-items: center;
     gap: 12px;
@@ -5011,36 +5013,259 @@ $theme-colors: (
     left: 22px;
   }
 
-  &__cal-nav {
+  // ── Calendar toolbar: ‹ Today ›, range + mini calendar, view dropdown ────
+  // The Personal Calendar's toolbar (panel/calendar/skin/index.scss → __nav,
+  // __range, __view-button, __menu, __range-menu) and the Meet tab's picker,
+  // shape for shape. One adaptation, on purpose: it sits in a 30px viewbar next
+  // to the filter pill rather than on a page, so the text is 14px (not 16px)
+  // and the view button takes 5px of vertical padding (not 8px) — the same row
+  // height as __viewbar-filter, so opening the Calendar view does not make the
+  // bar jump. The __cal-controls / __cal-switch rules above are Gantt's now.
+  // Wraps, centred, when the viewbar gives it less room than it needs. On a
+  // phone the controls get a ~366px row of their own (the ≤700px container
+  // block below), and ‹ Today › + "Friday, September 25, 2026" + the view
+  // button is ~450px: unwrapped, the view button ran off the panel's right
+  // edge. !important for the same reason as __viewbar-dots — the framework's
+  // Box.X flex rule is 0,2,0 and sets the row to nowrap.
+  &__tcal-bar {
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 71px;
-    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    justify-content: center;
+    flex-wrap: wrap !important;
+    gap: 8px;
+    row-gap: 8px;
+    min-width: 0;
+    max-width: 100%;
   }
 
-  &__cal-nav-arrow {
-    flex: 0 0 20px;
+  &__tcal-nav {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__tcal-arrow {
     width: 20px;
     height: 20px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
     cursor: pointer;
+    color: var(--normal-fg-20);
+    transition: background 0.12s ease, color 0.12s ease;
 
+    // The wrapper's size is half of it; the sprite <svg> needs its own box.
     svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg);
     }
   }
 
-  &__cal-nav-label {
+  &__tcal-today {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 0 4px;
     white-space: nowrap;
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
+    transition: background 0.12s ease;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  // Each dropdown owns its own positioning context.
+  &__tcal-anchor {
+    position: relative;
+  }
+
+  &__tcal-range {
+    align-items: center;
+    padding: 4px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+
+    &:hover,
+    &[data-open="1"] {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__tcal-range-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__tcal-view-button {
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--normal-bg-90);
+    color: var(--normal-fg);
+
+    &:hover,
+    &[data-open="1"] {
+      background: var(--normal-bg-80);
+    }
+  }
+
+  &__tcal-view-ico,
+  &__tcal-view-caret {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: currentColor;
+  }
+
+  &__tcal-view-caret {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.15s ease-out;
+  }
+
+  &__tcal-view-button[data-open="1"] &__tcal-view-caret {
+    transform: rotate(180deg);
+  }
+
+  &__tcal-view-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    font-weight: 400;
+  }
+
+  // Shared dropdown shell. The controls sit at the RIGHT of the viewbar, so
+  // both open right-aligned: left-anchored, the 264px picker ran off the
+  // window's right edge from a label that is itself near that edge.
+  &__tcal-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 40;
+    padding: 8px;
+    gap: 4px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__tcal-view-menu {
+    min-width: 150px;
+  }
+
+  &__tcal-menu-item {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    align-items: center;
+    min-height: 34px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--radio-on-bg);
+    }
+
+    &[data-active="1"] {
+      background: var(--radio-on-bg);
+      font-weight: 600;
+      color: var(--primary-40);
+    }
+  }
+
+  // The mini calendar — the Meet tab's picker and the Personal Calendar's
+  // range popup, metric for metric. Two classes so it wins over __tcal-menu's
+  // padding and gap regardless of source order.
+  &__tcal-menu#{&}__tcal-picker {
+    width: 264px;
+    padding: 12px;
+    gap: 0;
+  }
+
+  &__tcal-picker-head {
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  &__tcal-picker-month {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__tcal-picker-nav {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--normal-fg);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__tcal-picker-dows,
+  &__tcal-picker-week {
+    flex-wrap: nowrap !important;
+  }
+
+  &__tcal-picker-dow {
+    flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
+    padding: 2px 0;
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg-50));
+    font-weight: 600;
+  }
+
+  &__tcal-picker-day {
+    flex: 1 1 0;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    font-variant-numeric: tabular-nums;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    &[data-in="0"] {
+      color: var(--border-strong);
+    }
+
+    &[data-sel="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
+      font-weight: 600;
+    }
+
+    &[data-today="1"] {
+      font-weight: 700;
+    }
   }
 
   // Grid container. container-type makes the calendar respond to the WINDOW
@@ -5055,6 +5280,12 @@ $theme-colors: (
     container-type: inline-size;
     container-name: cal;
     animation: tasks-cal-fade 0.16s ease;
+    // A month row's floor. skeleton/calendar.js MONTH_FIT = 3 is measured
+    // against it: 160 − 24 padding − 26 head − 6 gap leaves 104px, i.e. three
+    // 26px chips on 4px gaps (86px) with the pinned "+N" under them. The
+    // Personal Calendar's --cal-cell-min is the same 160px for the same
+    // reason. Change one, change the other.
+    --tcal-cell-min: 160px;
   }
 
   &__cal-weekdays {
@@ -5062,42 +5293,48 @@ $theme-colors: (
     padding: 0 0 12px;
   }
 
+  // Centred over its column, as the Personal Calendar and the Meet tab draw
+  // it (this one alone right-aligned its labels). Note is a flex row, so the
+  // centring is justify-content on the wrapper, not text-align.
   &__cal-weekday {
     flex: 1 1 0;
     min-width: 0;
-    padding-right: 12px;
+    padding: 0 12px;
     box-sizing: border-box;
-    text-align: right;
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 400,
-      $line: 20px,
-      $color: var(--normal-fg-30, #65656c)
-    );
+    justify-content: center;
+    text-align: center;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
+    font-weight: 400;
   }
 
   // Single-line gridlines: the grid/rows carry a 1px gap over a border-coloured
   // background, so adjacent cells never double up their borders.
+  // `1 0 auto`: never shrink below its rows. With `1 1 auto` a short window
+  // squeezed the grid, and its overflow:hidden (there for the rounded
+  // corners) CLIPPED the last weeks of the month instead of letting
+  // __calendar scroll to them.
   &__cal-grid {
-    flex: 1 1 auto;
+    flex: 1 0 auto;
     align-items: stretch;
     gap: 1px;
-    background: var(--border-default, rgba(0, 0, 0, 0.06));
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    border: 1px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
     border-radius: 8px;
     overflow: hidden;
   }
 
-  // Each week shares the grid height in month mode; one tall row in week mode.
+  // Each week shares the grid height in month mode; one tall row in week and
+  // day mode. The floor is the token MONTH_FIT is measured against.
   &__cal-week-row {
     flex: 1 1 0;
     align-items: stretch;
     gap: 1px;
-    min-height: 116px;
-    background: var(--border-default, rgba(0, 0, 0, 0.06));
+    min-height: var(--tcal-cell-min);
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
   }
 
-  &__calendar[data-mode="week"] &__cal-week-row {
+  &__calendar[data-mode="week"] &__cal-week-row,
+  &__calendar[data-mode="day"] &__cal-week-row {
     flex: 1 1 auto;
     height: 100%;
     min-height: 0;
@@ -5119,20 +5356,61 @@ $theme-colors: (
     &:hover {
       background: var(--hover-bg-40, rgba(0, 0, 0, 0.02));
     }
-    // Today: light-grey wash on the cell + a filled accent on the number.
-    &[data-today="1"] {
-      background: var(--normal-bg-80, rgba(0, 0, 0, 0.05));
-    }
-    &[data-outside="1"] {
-      background: var(--normal-bg-95, #fafafa);
-    }
+  }
+
+  // Today, in the MONTH grid: the Personal Calendar's brand wash on the cell.
+  // It was a grey wash plus a filled pill on the number — a third "today" cue
+  // alongside the other two calendars' — and the grey read as a disabled cell.
+  // Week and day mark today in the column header instead (below).
+  &__calendar[data-mode="month"] &__cal-day[data-today="1"] {
+    background: var(--radio-on-bg);
+  }
+
+  // ── week / day column header: num over name ────────────────────────────
+  // The Personal Calendar's __hours-head-cell and the Meet tab's
+  // __meeting-sched-day. Today is the NUMBER in brand ink.
+  // A row: the date on the left, the day's hover "+" on the right — week and
+  // day cells carry no head of their own.
+  &__cal-headday {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 12px;
+    box-sizing: border-box;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  &__cal-headday-date {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__cal-headday:hover &__cal-day-add {
+    opacity: 1;
+  }
+
+  &__cal-headday-num {
+    @include drumee.typo($size: 18px, $line: 24px, $color: var(--normal-fg));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__cal-headday-name {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
+    font-weight: 400;
+  }
+
+  &__cal-headday[data-today="1"] &__cal-headday-num {
+    color: var(--primary-40);
   }
 
   // Keep these at the `.tasks-panel` top level, NOT nested in `&__cal-day` —
   // nested, `&__cal-day-add` doubles into `.tasks-panel__cal-day__cal-day-add`
   // (a non-existent class), so the "+" never reveals and outside days never dim.
+  // Lead/trail days dim their LABEL only, as the Meet tab's month does; the
+  // ground stays the same white as every other cell.
   &__cal-day[data-outside="1"] &__cal-day-num {
-    opacity: 0.4;
+    color: var(--border-strong);
   }
   &__cal-day:hover &__cal-day-add {
     opacity: 1;
@@ -5145,62 +5423,60 @@ $theme-colors: (
     gap: 8px;
   }
 
-  // Hover-revealed "add task on this day" affordance (top-left of the cell).
-  // Bare "+" glyph, no background — a brand-purple plus that darkens on hover.
+  // Hover-revealed "add task on this day" affordance (top-left of the cell) —
+  // the Personal Calendar's quick-add: a 26px box with a 22px glyph and a wash
+  // on hover. It was a bare 17px brand "+" that scaled itself on hover, which
+  // made the same control look and move differently in two tabs.
   &__cal-day-add {
     flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
     justify-content: center;
     align-items: center;
+    border-radius: 4px;
     cursor: pointer;
     opacity: 0;
-    color: var(--col-primary-40, #5950ff);
-    transition: opacity 0.12s, transform 0.12s, color 0.12s;
+    transition: opacity 0.12s ease-out;
 
     &:hover {
-      transform: scale(1.15);
-      color: var(--col-primary-50, #433cc5);
+      background: var(--overlay-bg-05);
     }
   }
 
-  // "+" text glyph — inherits the button colour.
   &__cal-day-add-ico {
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1;
-    color: currentColor;
+    @include drumee.typo($size: 22px, $line: 22px, $color: var(--normal-fg-20));
     user-select: none;
   }
 
+  // A plain label, as in the other two month grids. nowrap: the first cell of
+  // a month reads "Sep 1", and beside the 26px "+" a narrow cell broke it onto
+  // two lines and pushed the chips down a row.
   &__cal-day-num {
-    display: flex;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    box-sizing: border-box;
-    justify-content: flex-end;
-    align-items: center;
-    border-radius: 10px;
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 400,
-      $line: 20px,
-      $color: var(--normal-fg-30, #65656c)
-    );
+    margin-left: auto;
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg-20));
+    font-weight: 400;
   }
 
-  // Today's number gets a filled brand pill (the universal "today" cue).
-  &__cal-day[data-today="1"] &__cal-day-num {
-    justify-content: center;
-    color: #fff;
-    font-weight: 600;
-    background: var(--col-primary-40, #5950ff);
-  }
-
+  // The cell's scroll container: every task renders, and a busy day is read
+  // by scrolling here or by following the "+N" into the Day view.
+  //
+  // Scrollbar set here, not left to .drumee-box's global 5px orange bar. It
+  // is transparent at rest, and inked when the skeleton stamps the cell as
+  // overflowing — otherwise a cell with more below the fold looks exactly
+  // like one that simply ends.
   &__cal-day-body {
     flex: 1 1 auto;
     min-height: 0;
-    gap: 6px;
+    gap: 4px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+
+    &:hover,
+    &[data-overflow="1"] {
+      scrollbar-color: var(--border-strong) transparent;
+    }
   }
 
   // Task card (mirrors the board card: dot, title, desc, file chips, status).
@@ -5264,13 +5540,19 @@ $theme-colors: (
     }
   }
 
-  // Compact month chip: status-tinted single line (dot + title).
+  // Compact month chip: status-tinted single line (dot + title). Its geometry
+  // is the Personal Calendar's compact chip — 26px tall, 8px dot, 600 title —
+  // so a task reads the same size in both month grids. The status tint is this
+  // board's own and stays: it is the only place a month cell says where a task
+  // stands, and the Personal Calendar has no columns to colour by.
   &__cal-chip {
     position: relative;
     flex: 0 0 auto;
     align-items: center;
-    gap: 6px;
-    padding: 3px 8px;
+    gap: 8px;
+    min-height: 26px;
+    padding: 5px 8px;
+    box-sizing: border-box;
     border-radius: 6px;
     cursor: pointer;
     transform-origin: left center;
@@ -5320,9 +5602,9 @@ $theme-colors: (
   }
 
   &__cal-chip-dot {
-    flex: 0 0 6px;
-    width: 6px;
-    height: 6px;
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
   }
 
@@ -5330,27 +5612,35 @@ $theme-colors: (
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
-      $line: 16px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg));
+    font-weight: 600;
   }
 
+  // "+N" — pinned to the foot of the scrolling cell so the one way to the rest
+  // of a busy day can never scroll out of reach itself. The Personal
+  // Calendar's footer: 11px brand, painted on the cell's own ground so chips
+  // scroll UNDER it, never through it.
   &__cal-day-more {
+    flex: 0 0 auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: -4px;
+    padding: 4px 0 0 4px;
     cursor: pointer;
-    padding: 1px 6px;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--normal-fg-30, #65656c)
-    );
+    background: var(--normal-bg-elevated, #fff);
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
+    font-weight: 600;
+  }
 
-    &:hover {
-      color: var(--col-primary-40, #5950ff);
-    }
+  // On today's cell the footer takes the cell's wash, or it reads as a white
+  // band across the tint. Layered over the opaque ground rather than painted
+  // alone: --radio-on-bg is translucent, and by itself the chip it sits on
+  // showed THROUGH the "+N" instead of scrolling under it.
+  &__calendar[data-mode="month"] &__cal-day[data-today="1"] &__cal-day-more {
+    background:
+      linear-gradient(var(--radio-on-bg), var(--radio-on-bg)),
+      var(--normal-bg-elevated, #fff);
   }
 
   &__cal-card-dot {
@@ -8039,15 +8329,12 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     padding: 8px;
     gap: 4px;
   }
-  .tasks-panel__cal-week-row {
-    min-height: 96px;
-  }
   // Week-mode full cards drop their description to stay legible when narrow.
   .tasks-panel__cal-card-desc {
     display: none;
   }
   .tasks-panel__cal-weekday {
-    padding-right: 8px;
+    padding: 0 8px;
     font-size: 12px;
   }
 }
@@ -8055,9 +8342,6 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
 @container cal (max-width: 560px) {
   .tasks-panel__cal-day {
     padding: 6px;
-  }
-  .tasks-panel__cal-week-row {
-    min-height: 76px;
   }
   // Week-mode cards collapse to the essentials on very narrow windows.
   .tasks-panel__cal-card {
