@@ -3505,28 +3505,24 @@ class __window_manager extends push {
    * with content that is ~2.5s during which a click still opened the folder
    * being deleted, and the Trash heard nothing until the end of it.
    *
-   * Now: the clone is taken first (animateMediaToTrash reads the tile's
-   * position synchronously), then the tile is taken out of the grid and the
-   * request goes out at once, alongside the flight — the order the workspace
-   * paths (confirmRemoveHub) already use. The success path is unchanged: the
-   * reply suppresses the tile. A refused trash (403 popup, network) resolves
-   * undefined, so the tile is put back where it was. A tile already on its way
-   * out is skipped, so pressing Delete twice sends one request.
+   * Now the tile is taken out of the grid and the request goes out at once.
+   * There is no flight any more (see animateMediaToTrash). The success path is
+   * unchanged: the reply suppresses the tile. A refused trash (403 popup,
+   * network) resolves undefined, so the tile is put back where it was. A tile
+   * already on its way out is skipped, so pressing Delete twice sends one
+   * request.
    *
    * @param {*} r media tile
    */
   _trashNow(r) {
     if (!r || r._trashPending) return;
     r._trashPending = 1;
-    const animation = this.animateMediaToTrash(r).catch(() => { });
     const el = r.el;
     const display = el ? el.style.display : "";
     if (el) el.style.display = "none";
     const request = r.putIntoTrash(1);
-    animation.then(() => {
-      const parent = r.logicalParent;
-      if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
-    });
+    const parent = r.logicalParent;
+    if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
     // Seeding tiles are suppressed inside putIntoTrash and return nothing.
     if (!request || !_.isFunction(request.then)) return;
     const restore = () => {
@@ -3594,48 +3590,17 @@ class __window_manager extends push {
   }
 
   /**
+   * NO ANIMATION ANY MORE — deleting just deletes (Lexis/Duy, 2026-09-25).
    *
+   * This used to fly a clone of the tile to the sidebar bin (a 1.4s tween)
+   * and pulse the bin icon, and every trash / delete-workspace / leave path
+   * waited for that flight before the tile left. It now settles at once, so
+   * each caller runs its "after the flight" step (suppress, local echo,
+   * syncGeometry) straight away. Kept as a resolved promise rather than
+   * removed so the six callers keep their exact then/catch order.
    */
-  animateMediaToTrash(media) {
-    return new Promise((resolve, reject) => {
-      const helper = media.$el.clone();
-      helper.removeAttr("class");
-      helper.addClass(`deleting ${media.fig.family}__helper-wrapper`);
-      const pos = media.$el.offset();
-      helper.css({
-        position: _a.absolute,
-        left: pos.left,
-        top: pos.top - media.$el.height(),
-        zIndex: 200002, // Must be hight than modal popup
-      });
-      let trash = this.getTrashBin();
-      if (!trash) {
-        return reject();
-      }
-      let trashbin = trash.$el;
-      this.$el.append(helper);
-      const f = () => {
-        // GSAP3: vendor exports gsap (default+named) but not the TimelineMax shim,
-        // so build the timeline directly. Unwrap the jQuery target to a DOM node
-        // (mirrors the shim's getTarget) and use the v3 .to(target, {duration,...}) signature.
-        const node = trashbin.get ? trashbin.get(0) : trashbin;
-        const tl = gsap.timeline();
-        tl.to(node, { duration: 0.3, scale: 1.2 }).to(node, { duration: 0.3, scale: 1 });
-        trashbin.parent().children(".temp-anim").remove();
-        helper.remove();
-        resolve();
-      };
-
-      const dest_x = trashbin.offset().left;
-      const dest_y = trashbin.offset().top;
-      TweenLite.to(helper, 1.4, {
-        left: dest_x,
-        top: dest_y,
-        scale: 0,
-        alpha: 0,
-        onComplete: f,
-      });
-    });
+  animateMediaToTrash() {
+    return Promise.resolve();
   }
 
   /**

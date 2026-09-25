@@ -9,7 +9,12 @@ module.exports = function (ui) {
     ? Number(ui.mget('days_remaining'))
     : 30;
 
-  const deletionDate = mtime ? Dayjs.unix(mtime).format(Visitor.timeformat()) : Dayjs().format(Visitor.timeformat());
+  // When the item was trashed (mfs_show_bin trashed_time). mtime is the upload
+  // time, kept only as the fallback for a server still on the SP without that
+  // column (or a legacy row stamped 0).
+  const trashedTime = Number(ui.mget('trashed_time')) || 0;
+  const when = trashedTime || mtime;
+  const deletionDate = when ? Dayjs.unix(when).format(Visitor.timeformat()) : Dayjs().format(Visitor.timeformat());
 
   return Skeletons.Box.X({
     className: `${pfx}__row`,
