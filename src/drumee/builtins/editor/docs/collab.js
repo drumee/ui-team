@@ -69,7 +69,9 @@ const docTabs = require("./tabs");
 function tabsContent(editor, tabId, b64) {
   const tabs = (editor && editor.getTabs && editor.getTabs()) || [];
   if (!tabs.length) return { docx: b64 };
-  const target = tabId || (editor.activeTabId && editor.activeTabId()) || tabs[0].id;
+  // Same rule as open(): a room with no tab id belongs to the primary tab.
+  const primary = docTabs.primaryTab(tabs);
+  const target = tabId || (primary && primary.id) || tabs[0].id;
   const merged = tabs.map((t) => (t.id === target ? { ...t, docx: b64 } : t));
   if (editor.setTabs) editor.setTabs(merged, editor.activeTabId ? editor.activeTabId() : target);
   return docTabs.writeTabs(merged, editor.activeTabId ? editor.activeTabId() : target);
@@ -164,9 +166,12 @@ function makeFileSource(editor, ctx) {
         if (editor && editor.setTabs && !(editor.getTabs && editor.getTabs().length)) {
           editor.setTabs(model.tabs, tabId || model.active);
         }
+        // No tab id in the room name means the PRIMARY tab (the one that owns
+        // the file's original room), never "whichever is active" — after a
+        // reorder those are different tabs and the wrong text was served.
         const want = tabId
           ? model.tabs.find((t) => t.id === tabId)
-          : model.tabs.find((t) => t.id === model.active) || model.tabs[0];
+          : docTabs.primaryTab(model.tabs);
         const b64 = (want && want.docx) || (tabId ? null : j && j.docx);
         if (b64) bytes = base64ToAb(b64);
       } catch (e) {

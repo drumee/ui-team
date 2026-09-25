@@ -36,12 +36,23 @@ function readTabs(json, blank) {
     const active = list.some((t) => t.id === j.active) ? j.active : list[0].id;
     return { tabs: list.map((t) => ({ ...t })), active };
   }
-  // A file written before tabs existed: its single document becomes tab 1.
+  // A file written before tabs existed: its single document becomes tab 1,
+  // and it is the PRIMARY one — the tab that owns the file's original
+  // co-editing room (see roomId).
   const id = newTabId();
   return {
-    tabs: [{ id, name: defaultName(0), docx: j.docx || blank || null }],
+    tabs: [{ id, name: defaultName(0), docx: j.docx || blank || null, primary: 1 }],
     active: id,
   };
+}
+
+/**
+ * The tab that owns the file's original room — the first one ever created.
+ * Identified by a flag rather than by position, because tabs can be
+ * reordered and the rooms must not move with them.
+ */
+function primaryTab(tabs) {
+  return tabs.find((t) => t.primary) || tabs[0] || null;
 }
 
 /**
@@ -52,7 +63,12 @@ function readTabs(json, blank) {
  * @param {String} active
  */
 function writeTabs(tabs, active) {
-  const list = tabs.map((t) => ({ id: t.id, name: t.name, docx: t.docx || null }));
+  const list = tabs.map((t) => ({
+    id: t.id,
+    name: t.name,
+    docx: t.docx || null,
+    primary: t.primary ? 1 : undefined,
+  }));
   const cur = list.find((t) => t.id === active) || list[0];
   return { docx: cur ? cur.docx : null, tabs: list, active: cur ? cur.id : null };
 }
@@ -63,12 +79,18 @@ function defaultName(index) {
 }
 
 /**
- * Room for a tab. The FIRST tab keeps the plain node id: files created before
- * tabs existed already have a room under that name, and their history lives
- * there.
+ * Room for a tab.
+ *
+ * The PRIMARY tab keeps the plain node id: files created before tabs existed
+ * already have a room under that name and their history lives there. Which
+ * tab that is follows the `primary` flag, NOT the position — tying it to the
+ * first row made a drag-and-drop reorder swap two tabs' rooms, and with them
+ * their contents.
  */
 function roomId(nid, tabs, tabId) {
-  if (!tabs.length || tabs[0].id === tabId) return nid;
+  if (!tabs.length) return nid;
+  const primary = primaryTab(tabs);
+  if (primary && primary.id === tabId) return nid;
   return `${nid}~${tabId}`;
 }
 
@@ -79,4 +101,12 @@ function splitRoom(room) {
   return { nid: room.slice(0, i), tabId: room.slice(i + 1) };
 }
 
-module.exports = { newTabId, readTabs, writeTabs, defaultName, roomId, splitRoom };
+module.exports = {
+  newTabId,
+  readTabs,
+  writeTabs,
+  defaultName,
+  roomId,
+  splitRoom,
+  primaryTab,
+};
