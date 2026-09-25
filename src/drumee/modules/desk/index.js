@@ -2176,6 +2176,19 @@ class desk_module extends LetcBox {
    *
    * @param {String} service
    */
+  /**
+   * Retitle the address chip for the Notifications panel. The bell press and
+   * the reload restore both open that panel by hand (it predates togglePanel),
+   * so the label lives here once rather than in each of them — the restore's
+   * copy of the open once left it out.
+   */
+  _announceActivityCrumb() {
+    RADIO_BROADCAST.trigger("breadcrumb:context", {
+      filename: LOCALE.NOTIFICATIONS,
+      ico: "top-bell",
+    });
+  }
+
   async _openRestoredScreen(service) {
     if (service === "toggle-activity") {
       this._dismissWmModal();
@@ -2186,6 +2199,9 @@ class desk_module extends LetcBox {
         p.setState(1);
         this.closeOtherSidebarPanels("activity-panel");
         if (typeof p.refreshFeed === "function") p.refreshFeed();
+        // The one thing the hand-opened panel used to miss: without it the
+        // chip kept the workspace path over an open Notifications panel.
+        this._announceActivityCrumb();
       }
       return;
     }
@@ -10239,10 +10255,7 @@ class desk_module extends LetcBox {
             // this desk toggle (setState directly), not the panel's own open
             // handler, so the refresh must be triggered here.
             if (typeof p.refreshFeed === "function") p.refreshFeed();
-            RADIO_BROADCAST.trigger("breadcrumb:context", {
-              filename: LOCALE.NOTIFICATIONS,
-              ico: "top-bell",
-            });
+            this._announceActivityCrumb();
           } else {
             // AND PUT THE PATH BACK, which only this case has to do by hand.
             //
