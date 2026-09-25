@@ -3044,6 +3044,7 @@
   "NEW_CODE_RESENT": "Un nouveau code a été envoyé à votre adresse e-mail",
   "FROM_WORKSPACE": "Depuis l'espace de travail",
   "MSG_TRASH_SELECTION": "Mettre les {0} éléments sélectionnés à la corbeille ?",
+  "MSG_TRASH_ITEM": "Mettre <b>{0}</b> à la corbeille ?",
   "PASSKEYS_AUTHENTICATION": "Authentification par clés d'accès",
   "PASSKEYS_DESC": "Recevoir les codes par SMS",
   "IP_GEO": "IP/GÉO",

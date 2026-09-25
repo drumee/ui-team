@@ -1855,14 +1855,14 @@ class __media_core extends DrumeeMFS {
   }
 
   /**
-   * 
-   * @param {*} single_node 
-   * @param {*} trashbin 
-   * @returns 
+   *
+   * @param {Object} opts `{ confirm: 1 }` asks before trashing a single item
+   *   (see Wm.removeMediaSelection)
+   * @returns
    */
-  delete() {
+  delete(opts = {}) {
     if (window.Wm && _.isFunction(Wm.removeMediaSelection)) {
-      return Wm.removeMediaSelection(this);
+      return Wm.removeMediaSelection(this, opts);
     }
     this.triggerHandlers({
       service: "remove-selection", media: this

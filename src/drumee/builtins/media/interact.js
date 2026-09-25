@@ -1010,8 +1010,12 @@ class __media_interact extends media_core {
         this.delete();
         return;
 
+      // The contextmenu "Move to trash" row (items.js `trash`). A single file
+      // or folder used to go straight to the bin; `confirm` asks first. The
+      // "Leave workspace" row posts the same service, but hubs never land in
+      // the bucket this flag gates — they keep their own dialogs.
       case _e.remove:
-        this.delete()
+        this.delete({ confirm: 1 });
         return;
 
       case "load-script":
