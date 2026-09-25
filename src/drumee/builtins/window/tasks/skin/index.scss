@@ -1857,7 +1857,6 @@ $theme-colors: (
   // Required title: message is always in the tree, shown only while the
   // field carries `is-missing` (toggled in place by _flagTitleMissing).
   &__title-missing {
-    display: none;
     font-weight: 500; // typo() drops $weight
     @include drumee.typo(
       $size: 13px,
@@ -1867,11 +1866,13 @@ $theme-colors: (
     );
   }
 
-  &__title-field.is-missing {
-    .tasks-panel__title-missing {
-      display: flex;
-    }
+  // !important: ui-core's `.widget[data-flow]` rules give every Note
+  // display:flex at higher specificity, so a plain display:none never hid it.
+  &__title-field:not(.is-missing) .tasks-panel__title-missing {
+    display: none !important;
+  }
 
+  &__title-field.is-missing {
     // Each mirrors its own focus ring: the create box is borderless with a
     // 2px ring, the detail title has a 1px border plus a soft halo.
     .tasks-panel__create-input textarea {
