@@ -75,6 +75,9 @@ function mapMember(row) {
  */
 function roleDropdown(pfx, role, service, extra = {}) {
   const ui = extra.uiHandler;
+  // `items` lets the members filter reuse this pill with its own list ("All
+  // roles" + the four roles); every other caller gets the role catalogue.
+  const items = extra.items || roleOptions;
   const memberId = extra.dataset?.member_id;
   const radioGroup = memberId
     ? `restricted-role-${service}-${memberId}`
@@ -96,9 +99,9 @@ function roleDropdown(pfx, role, service, extra = {}) {
   const { sys_pn, ...menu } = dropdownMenuButton(ui, {
     className: "window-button",
     trigger,
-    menuItems: roleOptions.map((opt) => ({
+    menuItems: items.map((opt) => ({
       service,
-      ico: ROLE_ICONS[opt.value],
+      ico: opt.ico || ROLE_ICONS[opt.value],
       content: opt.label,
       radio: radioGroup,
       name: opt.label,
@@ -109,6 +112,7 @@ function roleDropdown(pfx, role, service, extra = {}) {
         ...(memberId ? { member_id: memberId } : {}),
         privilege: opt.privilege,
         role_label: opt.label,
+        role_value: opt.value,
       },
       state: opt.label === role.label ? 1 : 0,
     })),
@@ -118,7 +122,7 @@ function roleDropdown(pfx, role, service, extra = {}) {
     ...menu,
     // The panel's own class beside the shared one — its skin anchors the menu
     // to the pill and styles the selected row off it.
-    className: `${menu.className} ${pfx}__role-dropdown`,
+    className: `${menu.className} ${pfx}__role-dropdown${extra.className ? ` ${extra.className}` : ""}`,
     // Kept from the menu this replaces: dropdownMenuButton's `none` would
     // close on any click, where the invite row closes it explicitly.
     persistence: _a.once,
@@ -358,6 +362,111 @@ function invitationRows(list, pfx) {
         }),
       ],
     });
+  });
+}
+
+/** Does `member` match the search query? Name, email and role word, all
+ *  case-folded, so "admin" finds the admins as well as a person called that. */
+function memberMatches(member, query, role) {
+  if (role && role !== "all" && (!member.role || member.role.value !== role)) {
+    return false;
+  }
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return true;
+  return [member.name, member.fullname, member.email, member.role && member.role.label]
+    .some((v) => String(v || "").toLowerCase().includes(q));
+}
+
+/**
+ * The members search field.
+ *
+ * NO SERVICE ON THE ENTRY. Filtering is driven by a delegated `input`
+ * listener on the widget root (index.js _installMemberSearch), which re-feeds
+ * only the `members-list` part — a full re-feed per keystroke would rebuild
+ * this very field under the caret. The value is drawn from `ui._memberQuery`
+ * so a full re-render (a member push) keeps what was typed.
+ */
+function memberSearch(ui, pfx) {
+  return Skeletons.Box.X({
+    className: `${pfx}__member-search`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__member-search-field`,
+        kids: [
+          Skeletons.Image.Svg({
+            active: 0,
+            className: `${pfx}__member-search-ico`,
+            ico: "magnifying-glass",
+          }),
+          Skeletons.Entry({
+            className: `${pfx}__member-search-entry`,
+            sys_pn: "member-search",
+            value: ui._memberQuery || "",
+            placeholder: LOCALE.SEARCH_MEMBER || LOCALE.SEARCH,
+            require: "any",
+            bubble: 0,
+          }),
+        ],
+      }),
+      // Role filter: the panel's own role pill with "All roles" on top. No
+      // hover descriptions — they explain what a role GRANTS, which is noise
+      // when the menu is only choosing which rows to show.
+      roleDropdown(pfx, roleFilterItem(ui._memberRole), "filter-member-role", {
+        uiHandler: ui,
+        items: roleFilterItems(),
+        className: `${pfx}__role-filter`,
+      }),
+    ],
+  });
+}
+
+/** The filter menu's rows: "All roles", then the roles weakest to strongest. */
+function roleFilterItems() {
+  return [
+    { value: "all", label: LOCALE.ALL_ROLES || "All roles", ico: "ph-users" },
+    ...roleOptions.map(({ value, label, privilege }) => ({ value, label, privilege })),
+  ];
+}
+
+/** The filter item for a role value, "All roles" when unset or unknown. */
+function roleFilterItem(value) {
+  const items = roleFilterItems();
+  return items.find((i) => i.value === value) || items[0];
+}
+
+/**
+ * The member rows, filtered by the search query. Its own part so a keystroke
+ * can re-feed the rows alone (index.js _filterMembers).
+ *
+ * @param {Object} ui
+ * @param {String} [pfx]
+ * @param {Array} [members] mapped rows; recomputed from `ui._members` when absent
+ * @param {Boolean} [isAdmin]
+ */
+function membersList(ui, pfx = ui.fig.family, members, isAdmin) {
+  if (!members) {
+    members = (ui._members || [])
+      .filter((row) => row.entity_id || row.drumate_id || row.id)
+      .map(mapMember);
+    isAdmin = viewerIsAdmin(members);
+  }
+  const query = ui._memberQuery || "";
+  const role = ui._memberRole || "all";
+  const shown = members.filter((m) => memberMatches(m, query, role));
+  // A query that matches nobody says so, rather than falling into memberRows'
+  // "No member has access yet." — that would read as the workspace being empty.
+  const kids = members.length && !shown.length
+    ? [
+      Skeletons.Note({
+        className: `${pfx}__members-empty`,
+        content: LOCALE.NO_RESULTS || "No results",
+      }),
+    ]
+    : memberRows(shown, ui, pfx, isAdmin);
+  return Skeletons.Box.Y({
+    className: `${pfx}__members-list`,
+    sys_pn: "members-list",
+    kids,
   });
 }
 
@@ -722,6 +831,18 @@ function workspaceCard(ui, pfx, memberCount) {
             roleDropdown(pfx, inviteRole, "select-invite-role", {
               uiHandler: ui,
             }),
+            // On the row, after the role: field → role → Invite reads as one
+            // sentence. The short "Invite" label, since the 360px dock leaves
+            // it a pill's width, not the old full-width button's.
+            Skeletons.Note({
+              className: `${pfx}__send-button`,
+              sys_pn: "invite-send",
+              content: LOCALE.INVITE || LOCALE.SEND_INVITATION,
+              service: "send-invitation",
+              uiHandler: [ui],
+              // Busy while hub.invite is in flight — see _setInviteSending.
+              dataset: ui._inviteSending ? { pending: "1" } : undefined,
+            }),
           ],
         }),
         // Address-book matches for the typed string — fed by
@@ -757,15 +878,6 @@ function workspaceCard(ui, pfx, memberCount) {
               content: notice ? notice.text : "",
             }),
           ],
-        }),
-        Skeletons.Note({
-          className: `${pfx}__send-button`,
-          sys_pn: "invite-send",
-          content: LOCALE.SEND_INVITATION,
-          service: "send-invitation",
-          uiHandler: [ui],
-          // Busy while hub.invite is in flight — see _setInviteSending.
-          dataset: ui._inviteSending ? { pending: "1" } : undefined,
         }),
       ],
     })
@@ -811,9 +923,13 @@ function workspaceCard(ui, pfx, memberCount) {
         // beside a section called Pending Invitations. The count matters here
         // for the same reason it does above: the two lists are now the two
         // halves of who is in this workspace, and both say how many.
+        //
+        // The TOTAL, not the filtered count: the search below narrows what is
+        // shown, it does not change how many members the workspace has.
         content: `${LOCALE.MEMBERS} (${members.length})`,
       }),
-      ...memberRows(members, ui, pfx, isAdmin),
+      memberSearch(ui, pfx),
+      membersList(ui, pfx, members, isAdmin),
     ],
   });
 
@@ -889,3 +1005,6 @@ function workspaceCard(ui, pfx, memberCount) {
     kids: [header, body],
   });
 };
+
+module.exports.membersList = membersList;
+module.exports.roleFilterItem = roleFilterItem;
