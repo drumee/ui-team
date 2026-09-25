@@ -3102,6 +3102,21 @@ class __window_folder extends mfsInteract {
       const part = this.getPart && this.getPart("meeting-panel");
       if (!part || !part.el) return;
       this._schedPaintedDay = Dayjs().format("YYYY-MM-DD");
+      // The skin fades the grid in (`[data-painted="1"] > *`), and feed()
+      // recreates those children, so every refresh replayed the fade — the
+      // whole calendar blinking after a meeting was saved or removed, and a
+      // second time when a fetch changed the range just painted. Fade only
+      // for the reveal and for new content (another view or range); a
+      // repaint of what is on screen just appears. Stamped BEFORE the feed so
+      // the new children never pick the animation up.
+      const st = require("./skeleton/meeting-schedule").schedState(this);
+      const { stime, etime } = this._meetingRange();
+      const day = st.view === "daily" ? st.anchor.format("YYYY-MM-DD") : "";
+      const key = `${st.view}:${day}:${stime}:${etime}`;
+      const arriving =
+        key !== this._schedFadeKey || part.el.dataset.painted !== "1";
+      this._schedFadeKey = key;
+      part.el.dataset.schedFade = arriving ? "1" : "0";
       part.feed(require("./skeleton/meeting-schedule")(this).kids);
     };
     // Nothing known yet for this window: start from the last answer the

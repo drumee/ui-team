@@ -2713,7 +2713,9 @@
     }
   }
 
-  &__meeting-schedule[data-painted="1"] > * {
+  // Not on a repaint of the same range: _refreshSchedule stamps
+  // data-sched-fade="0" there, since feed() recreates these children.
+  &__meeting-schedule[data-painted="1"]:not([data-sched-fade="0"]) > * {
     @include drumee.skeleton-content-in;
   }
 
