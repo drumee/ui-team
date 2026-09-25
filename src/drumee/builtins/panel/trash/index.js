@@ -214,7 +214,12 @@ class __panel_trash extends mfsInteract {
     // rAF so the "out" → "in" flip lands in a separate frame and the
     // CSS transform transition actually engages.
     requestAnimationFrame(() => {
-      if (this.el) this.el.dataset.anim = "in";
+      if (!this.el) return;
+      this.el.dataset.anim = "in";
+      // An echo that landed before this frame (a background tab holds rAF
+      // back) was parked by _wsRefresh, and desk _showPanel will not call
+      // onPanelShown for a panel it never saw as "out" — replay it here.
+      if (this._staleWhileParked) this.onPanelShown();
     });
     // off() first so a re-render never stacks duplicate subscriptions.
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
