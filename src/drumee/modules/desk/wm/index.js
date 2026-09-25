@@ -867,6 +867,22 @@ class __window_manager extends push {
   }
 
   /**
+   * Resolves true once the workspace pane's split body is on screen, false at
+   * the timeout. See libs/split-body-signal; the desk's reload restore waits
+   * on it before putting the last screen back.
+   *
+   * @param {Number} [timeout=8000]
+   * @returns {Promise<Boolean>}
+   */
+  whenSplitBodyShown(timeout = 8000) {
+    return require("libs/split-body-signal").whenSplitBodyShown({
+      getPane: () => this.headlessPane(),
+      bus: RADIO_BROADCAST,
+      timeout,
+    });
+  }
+
+  /**
    * THE TAB A WORKSPACE SWITCH MUST HAND OVER — Chat, Task, Meet or Access, or
    * null.
    *

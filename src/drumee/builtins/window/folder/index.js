@@ -1,4 +1,5 @@
 const mfsInteract = require("../interact");
+const { EVENT: SPLIT_BODY_EVENT } = require("libs/split-body-signal");
 const {
   VIEW_STATES,
   isSectioned,
@@ -5888,7 +5889,29 @@ class __window_folder extends mfsInteract {
       this._entranceRaf = 0;
       if (this.isDestroyed && this.isDestroyed()) return;
       if (el.dataset) el.dataset.viewEntering = "1";
+      this._announceSplitBodyShown();
     });
+  }
+
+  /**
+   * Tell the desk this workspace's split body is on screen — once per pane.
+   *
+   * Here, in _playViewEntrance's frame, because it is the one path BOTH ways
+   * of showing the split body go through: its first paint (onPartReady
+   * "folder-view", which on the default Files tab never calls switchView) and
+   * every later tab switch. Inside the frame, so it has actually been drawn.
+   *
+   * A reload's screen restore waits on this (libs/split-body-signal, desk
+   * _restoreScreen) so the saved screen lands over a painted workspace, not
+   * before it. The flag is what a restore that starts late reads instead.
+   *
+   * Headless panes only: a floating folder window's split body is not the
+   * desk's.
+   */
+  _announceSplitBodyShown() {
+    if (this._splitBodyShown || !this.mget(_a.headless)) return;
+    this._splitBodyShown = 1;
+    RADIO_BROADCAST.trigger(SPLIT_BODY_EVENT, this);
   }
 
   getFolderActionTarget() {
