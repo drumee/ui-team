@@ -3,12 +3,14 @@ const mfsInteract = require('../../window/utils');
 const { filesize } = require('@drumee/ui-essentials');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
     opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
     this.isTrash = 1;
     this.getCurrentApi = this.getCurrentApi.bind(this);
@@ -194,11 +196,17 @@ class __panel_trash extends mfsInteract {
             ? child.collection.filter(m => m.get(_a.kind) !== 'placeholder' && m.get(_a.nid)).length
             : 0;
           this.el.dataset.empty = count ? 0 : 1;
+          // Rows or the empty state are on screen. A reload's screen restore
+          // waits on this (libs/items-ready).
+          markItemsReady(this);
           this.ensurePart('items-count').then((p) => {
             p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
           });
           this._refreshStorageUsed();
         });
+        // A failed first page fires `error`, never `eod` (ui-core list
+        // onServerComplain) — and a failed load is still a finished one.
+        child.once(_e.error, () => markItemsReady(this));
         break;
       case 'storage-info':
         this._refreshStorageUsed();

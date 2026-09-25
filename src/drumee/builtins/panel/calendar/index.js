@@ -27,6 +27,7 @@ const {
   ymd,
   DAY_START_HOUR,
 } = require("./skeleton/helpers");
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
@@ -38,6 +39,7 @@ class __calendar_main extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
 
     // Month, unless the entry point NAMED a view: the Daily Reminder card's
@@ -98,6 +100,10 @@ class __calendar_main extends LetcBox {
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
       this._render();
+      // First window painted — events, the empty grid, or "Try again" after a
+      // failed calendar.list (_loadItems resolves either way). A reload's
+      // screen restore waits on this (libs/items-ready).
+      markItemsReady(this);
     });
   }
 

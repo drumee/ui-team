@@ -6,6 +6,7 @@ const {
   findMeetingRow,
   meetingStatusOf,
 } = require("libs/chat-preview");
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 
 class __chat_p2p extends LetcBox {
   constructor(...args) {
@@ -47,6 +48,7 @@ class __chat_p2p extends LetcBox {
     // together (see _raiseSkeletons).
     opt.dataset = { ...opt.dataset, anim: "in", mview: "sidebar", loading: 1 };
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
     this._radioId = `peer-${this.mget(_a.widgetId)}`;
     this._filter = _a.contact;
@@ -570,6 +572,10 @@ class __chat_p2p extends LetcBox {
           // they come down together when the conversation paints. See
           // _raiseSkeletons.
           this._applyFilter();
+          // The conversation list is painted (rows or none). A reload's screen
+          // restore waits on this (libs/items-ready); it does not wait for the
+          // first conversation to open.
+          markItemsReady(this);
           // Deliberately NOT awaited: resolving the support account is a
           // network call, and putting it in front of the landing below would
           // mean a slow or hanging lookup leaves the inbox with nothing open.
@@ -602,6 +608,9 @@ class __chat_p2p extends LetcBox {
           if (!landing) return this._lowerSkeletons();
           this.openChat(landing);
         });
+        // A failed first page fires `error`, never `eod` (ui-core list
+        // onServerComplain) — and a failed load is still a finished one.
+        child.once(_e.error, () => markItemsReady(this));
         break;
 
       case "compose-popup":
