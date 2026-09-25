@@ -673,6 +673,9 @@ class __editor_docs extends __player {
     // document are part of the document, and a rail that must be found in a
     // menu first reads as "the feature is missing". An explicit close by the
     // user is remembered for as long as the window is open.
+    // The co-editing mount joins the file's original room before the list is
+    // known; once it is, move to the room of the tab the file was left on.
+    if (this._doc && this._doc.ensureRoomForActive) this._doc.ensureRoomForActive();
     if (this._tabs.length && !this._tabsClosedByUser && !this._tabsOpen) {
       this.toggleTabs(true);
       return;

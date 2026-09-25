@@ -596,6 +596,10 @@ class __docs_state extends DrumeeMFS {
         },
         onCollabState: (state) => {
           this._collabState = state;
+          // The new room is up: the editor has painted, so the cover can go.
+          if (state && /connected|live|synced/i.test(String(state.status || ""))) {
+            this._veil(false);
+          }
           if (state && state.status === "connected" && !this._raisedOnce) {
             this._raisedOnce = 1;
             this._nudgeResize();
@@ -634,6 +638,10 @@ class __docs_state extends DrumeeMFS {
     if (!tab) return;
     if (this._collab) {
       const room = docTabs.roomId(this._collab.nid, tabs, tabId);
+      // Cover the body while the editor is re-created for the other room:
+      // React tears the old one down before the new one paints, and that gap
+      // read as a white flash on every switch ("nó vẫn nháy nháy").
+      this._veil(true);
       if (this._renderCollab) this._renderCollab(room);
       return;
     }
@@ -651,6 +659,47 @@ class __docs_state extends DrumeeMFS {
     if (this._root) this._root.unmount();
     this._mounted = 0;
     this.mount(bytes);
+  }
+
+  /**
+   * Show / hide the cover that hides the editor's remount during a tab
+   * switch. Always lifted by a timer as well: a room that never reports
+   * itself connected must not leave the document behind a curtain.
+   *
+   * @param {Boolean} on
+   */
+  _veil(on) {
+    const el = this.editor && this.editor.el;
+    if (!el) return;
+    clearTimeout(this._veilTimer);
+    if (!on) {
+      delete el.dataset.tabSwitching;
+      return;
+    }
+    el.dataset.tabSwitching = "1";
+    this._veilTimer = setTimeout(() => {
+      if (this.editor && this.editor.el) delete this.editor.el.dataset.tabSwitching;
+    }, 6000);
+  }
+
+  /**
+   * Join the room of the tab the file was last left on.
+   *
+   * The co-editing mount always starts in the file's ORIGINAL room (the
+   * primary tab) because that is the only name known before the tab list has
+   * been read. When the saved active tab is a different one, the rail lit
+   * that tab while the editor still showed the primary tab's text. Runs once,
+   * as soon as the list arrives.
+   */
+  ensureRoomForActive() {
+    if (!this._collab || this._roomSynced) return;
+    const editor = this.editor;
+    const tabs = (editor && editor.getTabs && editor.getTabs()) || [];
+    const active = editor && editor.activeTabId && editor.activeTabId();
+    if (!tabs.length || !active) return;
+    this._roomSynced = 1;
+    const want = docTabs.roomId(this._collab.nid, tabs, active);
+    if (this._room && want !== this._room) this.showTab(active);
   }
 
   /**

@@ -40,6 +40,29 @@
     align-items: stretch;
   }
 
+  // While a tab switch re-creates the editor for the other room, cover the
+  // body with the page's own ground and a thin progress bar. Without it the
+  // teardown showed through as a white flash on every switch.
+  &[data-tab-switching="1"] &__body::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    background: #f1f3f4;
+  }
+
+  &[data-tab-switching="1"] &__body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 30%;
+    height: 3px;
+    z-index: 4;
+    background: var(--primary-500, #4f46e5);
+    animation: editor-loading-indeterminate 1.4s ease-in-out infinite;
+  }
+
   &__tabs-slot {
     width: 0;
     flex: 0 0 0;
