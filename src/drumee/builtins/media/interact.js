@@ -994,8 +994,20 @@ class __media_interact extends media_core {
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
 
-      case _e.download:
+      case _e.download: {
+        // Casual Docs / Sheets files are stored as JSON (.udoc / .usheet);
+        // hand the user a real .docx / .xlsx instead of the raw payload
+        // (builtins/editor/export). Any conversion failure falls back to the
+        // plain download so the click is never dead.
+        const { isCasualFile, downloadAsOffice } = require("builtins/editor/export");
+        if (isCasualFile(this)) {
+          return downloadAsOffice(this).catch((e) => {
+            this.warn("media: office export failed, raw download", e);
+            return this.download();
+          });
+        }
         return this.download();
+      }
 
       case 'open-in-window': {
         // Force-open a workspace (hub) as a window_folder, regardless of its

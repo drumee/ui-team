@@ -88,12 +88,30 @@ export function createRows(ui) {
       content: LOCALE.DOCUMENT,
       className: `${cnItem}--document`,
     }),
+    // Casual Docs (native .docx editor, editor_docs) — sits next to the
+    // ONLYOFFICE "Document" with the SAME label and glyph; only the icon
+    // colour (Casual blue, see skin/mixins/drumee.scss) tells them apart.
+    // Handled by window/core.js `add-doc` → Wm.launch(editor_docs).
+    menuRow(ui, {
+      service: "add-doc",
+      ico: "addmenu-document",
+      content: LOCALE.DOCUMENT,
+      className: `${cnItem}--doc${nested}`,
+    }),
     menuRow(ui, {
       service: "new-document",
       name: "spreadsheet.xlsx",
       ico: "addmenu-spreadsheet",
       content: LOCALE.SPREADSHEET,
       className: `${cnItem}--spreadsheet`,
+    }),
+    // Casual Sheets — same label and glyph as the ONLYOFFICE "Spreadsheet",
+    // Casual teal icon colour.
+    menuRow(ui, {
+      service: "add-sheet",
+      ico: "addmenu-spreadsheet",
+      content: LOCALE.SPREADSHEET,
+      className: `${cnItem}--sheet${nested}`,
     }),
     menuRow(ui, {
       service: "new-document",
