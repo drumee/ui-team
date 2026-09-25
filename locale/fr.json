@@ -1590,6 +1590,7 @@
   "ORG_IDENT_REQUIRED": "Saisissez le nom et le sous-domaine de votre organisation pour continuer.",
   "ORG_IDENT_INVALID": "Ce sous-domaine n'est pas valide — utilisez uniquement des minuscules, des chiffres et des tirets.",
   "ORG_IDENT_TAKEN": "Ce sous-domaine est déjà pris. Veuillez en choisir un autre.",
+  "ORG_IDENT_AVAILABLE": "Ce sous-domaine est disponible.",
   "ORG_ALREADY_IN_DOMAIN": "Votre compte appartient déjà à une organisation.",
   "ORG_PROVISIONED": "L'espace de votre organisation est prêt — rechargement vers votre nouvelle adresse…",
   "ROLE_VIEW": "Lecture",
