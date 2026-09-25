@@ -27,6 +27,9 @@
  * that can fail is contained (including a sync throw from entry.ready),
  * because this runs inside boot.
  *
+ * host.onOpened() — optional — is called once the screen has been opened, so
+ * a caller can stop waiting there while the item wait carries on.
+ *
  * Pure: tests/screen-restore.test.js drives it with a fake host.
  */
 const TIMEOUTS = { splitBody: 8000, widget: 5000, items: 6000 };
@@ -123,6 +126,13 @@ async function restoreScreen({ service, entry, host, timeouts = TIMEOUTS }) {
         // guard warn itself
       }
       return "open-failed";
+    }
+    if (host.onOpened) {
+      try {
+        host.onOpened();
+      } catch (e) {
+        // the caller's hook, never the restore's problem
+      }
     }
     // The open itself goes through togglePanel -> _navigated for a full-canvas
     // screen, so the baseline is taken AFTER it.

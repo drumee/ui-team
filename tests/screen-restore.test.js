@@ -235,3 +235,36 @@ test("a throwing host is contained", async () => {
   assert.equal(await run(host), "error");
   assert.ok(host.calls.includes("warn"));
 });
+
+test("onOpened fires once, after open and before the widget wait", async () => {
+  const host = fakeHost((h, state, calls) => ({
+    onOpened: () => calls.push("opened"),
+  }));
+  assert.equal(await run(host), "ready");
+  const open = host.calls.indexOf("open:toggle-trash");
+  const opened = host.calls.indexOf("opened");
+  const widget = host.calls.indexOf("widget");
+  assert.ok(open >= 0 && opened > open && widget > opened);
+});
+
+test("onOpened is not called when the restore stops before opening", async () => {
+  let count = 0;
+  const host = fakeHost((h, state) => ({
+    whenSplitBodyShown: async () => {
+      state.seq += 1;
+      return true;
+    },
+    onOpened: () => (count += 1),
+  }));
+  assert.equal(await run(host), "user-navigated");
+  assert.equal(count, 0);
+});
+
+test("a throwing onOpened is contained", async () => {
+  const host = fakeHost(() => ({
+    onOpened: () => {
+      throw new Error("onOpened blew up");
+    },
+  }));
+  assert.equal(await run(host), "ready");
+});

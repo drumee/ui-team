@@ -1641,10 +1641,14 @@ class desk_module extends LetcBox {
         kind: "calendar_main",
         isReal: armed,
         ready: itemsReady,
+        // restoreScreen only guards a SYNC throw from refresh; catch here so a
+        // rejection from this chain never surfaces as an unhandled rejection.
         refresh: (w) =>
-          w._loadItems().then(() => {
-            if (alive(w)) w._render();
-          }),
+          w._loadItems()
+            .then(() => {
+              if (alive(w)) w._render();
+            })
+            .catch(() => {}),
       },
       "toggle-inbox": {
         slot: INBOX_SLOT,
@@ -1659,9 +1663,11 @@ class desk_module extends LetcBox {
         isReal: armed,
         ready: itemsReady,
         refresh: (w) =>
-          w._loadContacts().then(() => {
-            if (alive(w)) w._refreshList();
-          }),
+          w._loadContacts()
+            .then(() => {
+              if (alive(w)) w._refreshList();
+            })
+            .catch(() => {}),
       },
       "toggle-trash": {
         slot: "trash-panel",
@@ -2127,9 +2133,11 @@ class desk_module extends LetcBox {
    * painted — and never looked at whether the screen's rows ever came.
    *
    * @param {String} service a key of _RESTORABLE_SCREENS
+   * @param {Function} [onOpened] called once the screen is open —
+   *   _restoreDeskState stops waiting there
    * @returns {Promise<String>} what happened (libs/screen-restore)
    */
-  _restoreScreen(service) {
+  _restoreScreen(service, onOpened) {
     const entry = desk_module._SCREEN_RESTORE[service] || null;
     return restoreScreen({
       service,
@@ -2143,6 +2151,7 @@ class desk_module extends LetcBox {
         navSeq: () => this._navSeq || 0,
         currentScreen: () => this._currentScreenService(),
         open: (s) => this._openRestoredScreen(s),
+        onOpened: onOpened || null,
         awaitWidget: (e, ms) => this._awaitScreenWidget(e, ms),
         lightRow: (s) => this._lightRestoredRow(s),
         warn: (...args) => this.warn && this.warn(...args),
@@ -2298,10 +2307,16 @@ class desk_module extends LetcBox {
         // remembered screen still ends up on top.
         await this._openDefaultWorkspace();
       }
-      if (saved.service) {
-        // Waits for the pane's split body itself (libs/split-body-signal) —
-        // the fixed 300ms settle that used to sit above is gone.
-        await this._restoreScreen(saved.service);
+      if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
+        // Wait for the OPEN only. The restore flag below exists to keep a
+        // late loadHome from wiping the screen being opened; the wait for the
+        // screen's items (up to 6s more) needs no such guard, and holding the
+        // flag through it blocked Home and the home-grid settle for as long.
+        // libs/screen-restore never rejects, and resolves on every exit path,
+        // including the ones that stop before an open.
+        await new Promise((resolve) => {
+          this._restoreScreen(saved.service, resolve).then(resolve);
+        });
       }
     } finally {
       // Hold the flag a beat longer than the feed so late mount-time
