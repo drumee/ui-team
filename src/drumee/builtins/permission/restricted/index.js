@@ -17,6 +17,18 @@ const WS_EVENT = "ws:event";
  * and renders the rows, where it used to hand the job to a List.Smart of
  * `settings_member` widgets whose row shape is a different design.
  */
+// Structural equality for server row lists (same proc, same key order), used
+// to skip a full re-render when a refetch changed nothing. A false "changed"
+// only costs the render this used to do every time.
+function _sameRows(a, b) {
+  if (a === b) return true;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch (e) {
+    return false;
+  }
+}
+
 class __permission_restricted extends DrumeeMFS {
   /**
    * @param {Object} opt
@@ -399,9 +411,20 @@ class __permission_restricted extends DrumeeMFS {
       this.warn("Failed to load workspace members", e);
     }
     if (seq !== this._membersSeq) return;
-    if (!failed) this._members = Array.isArray(rows) ? rows : [];
+    // Every Access revisit refetches (access-column.js) and every member push
+    // lands here; most answers are identical to what is on screen. _render()
+    // re-feeds the WHOLE panel (matrix, avatars, invite form), so repaint only
+    // when the rows actually changed — or on the first answer, which is what
+    // replaces the empty matrix.
+    const wasLoaded = this._membersLoaded;
+    let changed = !wasLoaded;
+    if (!failed) {
+      const next = Array.isArray(rows) ? rows : [];
+      if (!changed) changed = !_sameRows(this._members, next);
+      this._members = next;
+    }
     this._membersLoaded = true;
-    this._render();
+    if (changed) this._render();
     this._reveal();
     // AFTER the render, because that is what publishes `_isAdmin` — the gate
     // _loadInvitations checks. Not awaited: the matrix is already on screen and
@@ -504,8 +527,13 @@ class __permission_restricted extends DrumeeMFS {
     }
     if (seq !== this._invitationsSeq) return;
     if (!_.isArray(rows)) return;
+    // Same gate as the member read: an unchanged answer (every revisit, every
+    // push) must not re-feed the whole panel. null → [] still paints, because
+    // that is what makes the empty section appear.
+    const changed =
+      this._invitations === null || !_sameRows(this._invitations, rows);
     this._invitations = rows;
-    this._render();
+    if (changed) this._render();
   }
 
   /**

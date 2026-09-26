@@ -603,9 +603,14 @@ html {
     // the backdrops removes the class of bug, this instance included. A
     // dropdown asks for no backdrop and has no business raising the screen over
     // the top bar either way.
-    &:has(.settings-main__overlay[data-state="open"]),
-    &:has(.calendar-main__modal-wrapper[data-state="open"]),
-    &:has(.chat-p2p__overlay-wrapper[data-mode="open"]) {
+    //
+    // Only the VISIBLE screen's backdrop counts. Several section screens can
+    // be parked in this slot at once now (index.js _switchMainSlot); a modal
+    // left open in a parked Settings must not lift the Calendar shown over it
+    // above the sidebar.
+    &:has(> :not([data-anim="out"]) .settings-main__overlay[data-state="open"]),
+    &:has(> :not([data-anim="out"]) .calendar-main__modal-wrapper[data-state="open"]),
+    &:has(> :not([data-anim="out"]) .chat-p2p__overlay-wrapper[data-mode="open"]) {
       z-index: 20001;
     }
   }

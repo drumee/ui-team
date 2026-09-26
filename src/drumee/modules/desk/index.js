@@ -8942,6 +8942,93 @@ class desk_module extends LetcBox {
     return KEEP_ALIVE_MAIN_KINDS.has(kind);
   }
 
+  /**
+   * Is `c` a keep-alive section screen currently parked (hidden) in the slot?
+   * Never the lazy-loader placeholder — see _slotKeepsChild.
+   */
+  _isParkedKeeper(c) {
+    if (!c || (c.isDestroyed && c.isDestroyed()) || !c.el) return false;
+    if (c.isLazyClass) return false;
+    if (c.el.dataset.anim !== "out") return false;
+    const kind = (c.mget && c.mget(_a.kind)) || c.el.dataset.kind;
+    return KEEP_ALIVE_MAIN_KINDS.has(kind);
+  }
+
+  /**
+   * Empty slot `pn` — except, in settings-main-slot, the keep-alive screens
+   * parked there. A plain p.clear() here used to throw away a parked Calendar
+   * or Settings just because a non-kept screen (Billing, Admin Console, the
+   * org view, the Inbox) was closed on top of it.
+   */
+  _clearSlotKeepingParked(pn, p) {
+    if (!p) return;
+    if (pn !== INBOX_SLOT) return p.clear();
+    const drop = p.children.toArray().filter((c) => !this._isParkedKeeper(c));
+    if (drop.length === p.children.length) return p.clear();
+    drop.forEach((c) => {
+      try {
+        c.selfDestroy({ now: 1 });
+      } catch (e) { }
+    });
+  }
+
+  /**
+   * Open `kind` in settings-main-slot WITHOUT destroying the section screens
+   * already parked there.
+   *
+   * The slot used to hold ONE child: opening Settings over a parked Calendar
+   * cleared it, so Calendar → Settings → Calendar rebuilt both screens and
+   * re-ran every mount load (Settings alone fires four requests). Now each
+   * KEEP_ALIVE_MAIN_KINDS screen parks in the slot (data-anim="out", which the
+   * skin hides) and the visible screen is always `children.last()` — the
+   * invariant every other reader of this slot (topChild, _slotKeepsChild,
+   * _hidePanel, _showPanel…) already relies on. At most one parked screen per
+   * kind, so the slot never holds more than those three plus the visible one.
+   *
+   * Returns false (caller falls back to the plain mount) when the slot is
+   * empty — nothing to preserve.
+   */
+  _switchMainSlot(p, kind, opt = {}) {
+    if (!p || p.isEmpty()) return false;
+    const pn = INBOX_SLOT;
+    const kindOf = (c) =>
+      (c && c.mget && c.mget(_a.kind)) || (c && c.el && c.el.dataset.kind);
+    // 1. Take the current screen off the top: park a keep-alive one, drop the
+    //    rest (including a lazy placeholder, which must never be parked).
+    if (this._slotKeepsChild(pn, p)) this._hidePanel(p);
+    this._clearSlotKeepingParked(pn, p);
+    // 2. A parked screen of this kind: a plain open brings it back as it was
+    //    left; an open WITH options describes a different screen, so the
+    //    parked one goes and a fresh mount reads them (same rule as the
+    //    single-screen keep-alive in togglePanel).
+    const parked = p.children.toArray().filter((c) => kindOf(c) === kind);
+    if (parked.length && _.isEmpty(opt)) {
+      const target = parked[parked.length - 1];
+      const last = p.children.last();
+      // Marionette's own swap: children container AND DOM, no re-render.
+      if (last && last !== target) p.swapChildViews(target, last);
+      this.closeOtherSidebarPanels(pn);
+      this._pendingKinds[pn] = kind;
+      this._showPanel(p);
+      return true;
+    }
+    parked.forEach((c) => {
+      try {
+        c.selfDestroy({ now: 1 });
+      } catch (e) { }
+    });
+    // 3. Mount the new screen ON TOP of whatever stays parked.
+    this.closeOtherSidebarPanels(pn);
+    this._parkLiveCall();
+    if (p.isEmpty()) {
+      this._loadKind(p, kind, pn, opt);
+      return true;
+    }
+    p.append({ kind, uiHandler: [this], ...opt });
+    this._pendingKinds[pn] = kind;
+    return true;
+  }
+
   _hidePanel(p) {
     if (!p || p.isEmpty()) return;
     const child = p.children.last();
@@ -9328,7 +9415,7 @@ class desk_module extends LetcBox {
       if (this._closeTimers[pn]) {
         clearTimeout(this._closeTimers[pn]);
         delete this._closeTimers[pn];
-        p.clear();
+        this._clearSlotKeepingParked(pn, p);
         this._pendingKinds[pn] = null;
       }
 
@@ -9364,6 +9451,9 @@ class desk_module extends LetcBox {
       if (sameKindMounted && !keepAlive) {
         const parked = p.children.last();
         if (parked && parked.el && parked.el.dataset.anim === "out") {
+          // Section screens: drop THIS parked one only — p.clear() would also
+          // throw away the other screens parked beside it (_switchMainSlot).
+          if (pn === INBOX_SLOT && this._switchMainSlot(p, kind, opt)) return;
           p.clear();
           this._pendingKinds[pn] = null;
           this.closeOtherSidebarPanels(pn);
@@ -9380,10 +9470,13 @@ class desk_module extends LetcBox {
         this._closeTimers[pn] = setTimeout(() => {
           delete this._closeTimers[pn];
           this._pendingKinds[pn] = null;
-          p.clear();
+          this._clearSlotKeepingParked(pn, p);
         }, 250);
         return;
       }
+
+      // Section screens PARK BESIDE EACH OTHER — see _switchMainSlot.
+      if (pn === INBOX_SLOT && this._switchMainSlot(p, kind, opt)) return;
 
       if (!p.isEmpty()) {
         p.clear();
@@ -9946,7 +10039,7 @@ class desk_module extends LetcBox {
             this._hidePanel(p);
           } else {
             this._pendingKinds[pn] = null;
-            p.clear();
+            this._clearSlotKeepingParked(pn, p);
           }
         });
       });
@@ -9992,7 +10085,7 @@ class desk_module extends LetcBox {
             this._hidePanel(p);
           } else {
             this._pendingKinds[pn] = null;
-            p.clear();
+            this._clearSlotKeepingParked(pn, p);
           }
         });
       }),
