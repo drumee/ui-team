@@ -226,5 +226,13 @@
     "md:style": "cd src/drumee && sass -I ./skin --no-source-map --update builtins/editor/markdow/skin/viewer.scss builtins/editor/markdow/template/style.css.txt",
     "setup": "node node_modules/@drumee/ui-dev-tools/env/write-env.js --type=app --output devel --base-dir=$(pwd)",
     "postinstall": "patch-package && node scripts/postinstall-casual.js"
+  },
+  "overrides": {
+    "echarts": {
+      "tslib": "^2.8.1"
+    },
+    "zrender": {
+      "tslib": "^2.8.1"
+    }
   }
 }

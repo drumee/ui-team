@@ -1,6 +1,11 @@
 @use "mixins/drumee";
 @use "../../skin/spinner";
 
+// Drawn at 85%, like the real create-workspace dialog it teaches
+// (media/form/skin, `$card-scale`) — the same number in both files, so the
+// drawing and the dialog the user then gets stay the same size.
+$card-scale: 0.85;
+
 // The Create-new-workspace dialog, as the `workspace` tour draws it.
 // Figma 176:40762 (component 85:42209): 460px card, 32px insets, 24px radius,
 // 1px hairline over a heavy ambient shadow.
@@ -25,6 +30,7 @@
   }
 
   &__wsd-dialog {
+    zoom: $card-scale;
     width: 460px;
     box-sizing: border-box;
     padding: 32px;

@@ -1,4 +1,13 @@
+@use "sass:math";
 @use "mixins/drumee";
+
+// The dialog is drawn at 85% of the design's size: `zoom` on __main shrinks
+// everything inside it — type, spacing, rows, icons — by one factor, and the
+// __ui frame is sized to the scaled content (the frame itself is not zoomed;
+// it is what the modal host centres). The workspace tour's drawing of this
+// dialog (desk/tutorial/workspace/skin, `$card-scale`) uses the same number —
+// kept in step by hand, not shared, for the reason given further down.
+$card-scale: 0.85;
 
 // Entrance / exit for the create-workspace dialog.
 //
@@ -70,7 +79,7 @@
     // the tour's: the tour draws inside a desktop-shaped mock canvas, while
     // this opens over a real viewport that can be 390px wide. The mobile
     // scrim at the bottom of this file is the other half of that.
-    width: 460px;
+    width: math.round(460px * $card-scale);
     max-width: calc(100vw - 32px);
     box-sizing: border-box;
     border-radius: 24px;
@@ -87,6 +96,7 @@
     box-sizing: border-box;
     gap: 24px;
     padding: 32px;
+    zoom: $card-scale;
   }
 
   /* ── Header ──────────────────────────────────────────────── */

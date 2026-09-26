@@ -498,6 +498,9 @@ class __window_tutorial extends LetcBox {
     return this.ensurePart('dialog').then((p) => {
       p.feed(require('builtins/window/folder/skeleton/create-folder-dialog')(this, {
         prefix: 'window-folder__create-folder',
+        // This host is not the window, so the glyph's area is read off the
+        // window the folder will be created in.
+        area: ws.mget(_a.area),
       }));
       // Focus the field the way the window does: ensurePart resolves when the
       // EntryBox mounts, before its inner <input> exists.
