@@ -807,7 +807,7 @@ class __chat_p2p extends LetcBox {
         // itself, not a one-element array — a user in a single workspace
         // would otherwise get an empty Workspace-chat tab.
         if (!_.isArray(rows)) rows = rows ? [rows] : [];
-        return rows.map((r) => {
+        return rows.filter((r) => this._isChatWorkspace(r)).map((r) => {
           if (!r || r.entity_id || !r.group_name) return r;
           // area/kind come from the desk's workspace index, not from the
           // chat payload — group_chat_rooms returns neither, so without
@@ -833,6 +833,32 @@ class __chat_p2p extends LetcBox {
     if (child.collection) {
       child.collection.comparator = (item) => -item.get(_a.ctime);
     }
+  }
+
+  /**
+   * Is this group_chat_rooms row a workspace the Workspace-chat tab should
+   * list? Contact rows (and anything that is not a hub row) always pass.
+   *
+   * group_chat_rooms returns EVERY hub node in the user's database — the
+   * personal hub, the DMZ "wicket", system hubs, workspaces since deleted or
+   * frozen — with no area and no status. Their rows had no entry in the
+   * desk's workspace index, so the icon fell back to the folder shape's
+   * default purple (#885eff): the "personal folder/workspace" rows that
+   * should not be in a workspace chat list at all. The desk's index is the
+   * app's own definition of "a workspace" (active hubs in share / private /
+   * restricted / public, see desk _fetchWorkspaces) — the same list the
+   * workspace switcher shows — so a hub row it does not hold is dropped.
+   *
+   * No index (not loaded, or its fetch failed): keep everything — an
+   * over-full list beats an empty tab.
+   */
+  _isChatWorkspace(r) {
+    if (!r || r.entity_id || !r.group_name) return true;
+    if (typeof Desk === "undefined" || !Desk) return true;
+    const all = Desk._workspaces;
+    if (!_.isArray(all) || !all.length) return true;
+    const meta = this._workspaceMeta(r.id);
+    return !!(meta && meta.filetype === _a.hub);
   }
 
   /**

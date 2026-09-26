@@ -54,7 +54,12 @@ const radio = () => ({ on() {}, off() {}, trigger() {} });
 global.RADIO_BROADCAST = radio();
 global.RADIO_CLICK = radio();
 global.Desk = {
-  _workspaces: [{ hub_id: "WS1", area: "share", kind: "k" }],
+  _workspaces: [
+    { hub_id: "WS1", area: "share", kind: "k", filetype: "hub" },
+    { hub_id: "WS2", area: "private", kind: "k", filetype: "hub" },
+    // a home-root "personal workspace" folder — keyed on the personal hub
+    { hub_id: "ME", area: "personal", filetype: "folder" },
+  ],
   wsFetches: 0,
   async _fetchWorkspaces() { this.wsFetches++; return this._workspaces; },
 };
@@ -542,4 +547,41 @@ test("a single picture shows no counter", async () => {
   assert.equal(box.fed.hasPrev, false);
   assert.equal(box.fed.hasNext, false);
   delete global.document;
+});
+
+test("Workspace chat lists only the desk's workspaces — no personal / dead / system hubs", async () => {
+  const f = await landedOnDirect();
+  await f.ui._setRoomScope("workspace");
+  await settle();
+  f.ws.load([
+    { id: "WS1", group_name: "Team", ctime: 5 },
+    { id: "ME", group_name: "My hub", ctime: 4 },        // the personal hub itself
+    { id: "WICKET", group_name: "wicket", ctime: 3 },   // DMZ / deleted / system: not in the index
+    { id: "WS2", group_name: "Ops", ctime: 2 },
+  ]);
+  await settle();
+  assert.deepEqual(f.ws.rows.map((r) => r.mget("entity_id")), ["WS1", "WS2"]);
+  assert.deepEqual(f.ws.rows.map((r) => r.mget("area")), ["share", "private"]);
+});
+
+test("with no workspace index loaded, nothing is dropped", async () => {
+  const saved = Desk._workspaces;
+  Desk._workspaces = [];
+  try {
+    const f = await landedOnDirect();
+    await f.ui._setRoomScope("workspace");
+    await settle();
+    f.ws.load([{ id: "X1", group_name: "A", ctime: 2 }, { id: "X2", group_name: "B", ctime: 1 }]);
+    await settle();
+    assert.equal(f.ws.rows.length, 2);
+  } finally {
+    Desk._workspaces = saved;
+  }
+});
+
+test("contact rows are never filtered by the workspace rule", async () => {
+  const f = mount();
+  f.direct.load([{ entity_id: "P1", drumate_id: "P1", flag: "contact", ctime: 3 }, { entity_id: "ZZ", flag: "contact", ctime: 1 }]);
+  await settle();
+  assert.equal(f.direct.rows.length, 2);
 });
