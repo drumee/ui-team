@@ -436,8 +436,12 @@ function getActivityMeta(ui, data) {
     case 'contact': {
       // status === 'informed' marks the post-accept handshake half.
       const status = data.status || data.contact_status;
+      // `invite_accepted` is the raw yp.contact_activity row the accepter's
+      // side logs (contact.js); it carries no status, so without it the row
+      // read "<X> wants to connect".
       const accepted = status === 'informed'
         || data.event === 'contact.accept_informed'
+        || data.event === 'invite_accepted'
         || data.event_subtype === 'accepted';
       return {
         before: accepted
