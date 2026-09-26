@@ -850,16 +850,25 @@ html {
 // Specificity is unchanged: `:where()` still contributes ZERO, so the most
 // specific `:has()` argument is `.window-upload-progress` (0,1,0) as before and
 // the selector stays at (0,7,0).
-.desk-module:not([data-window-tour="1"]):has(
-    .window-upload-progress,
-    :where(.window-connect)
-  ):has(
-    .desk-module__topbar .menu-topic[data-state="1"],
-    .desk-module__topbar .desk-module-topbar__utility-btn:hover
-  ) {
-  .desk-module__topbar {
-    z-index: var(--z-index-upload-progress, 50002);
-  }
+//
+// NO ROOT `:has()` ANY MORE (2026-09-26). Both conditions used `.desk-module`
+// itself as the `:has()` subject, so every data-state flip and every hover
+// change ANYWHERE in the app re-evaluated the application root — i.e. every
+// tab/workspace switch paid for it. They now read the flags the desk already
+// stamps on the root from JS instead:
+//   upload / call present  → [data-desk-upload] / [data-desk-call]
+//                            (wm/index.js _installDeskStateMirrors)
+//   a topbar dropdown open → [data-desk-topmenu]
+//                            (desk/index.js _installWsMenuMirror)
+//   a utility button hover → `:has()` on `.desk-module__topbar`, a handful of
+//                            nodes, instead of the root.
+// Specificity held at (0,7,0) with repeated attribute/class selectors, the
+// idiom used elsewhere in this file — see the note above for why it matters.
+.desk-module:not([data-window-tour="1"]):is([data-desk-upload], [data-desk-call])[data-desk-topmenu][data-desk-topmenu][data-desk-topmenu]
+  .desk-module__topbar,
+.desk-module:not([data-window-tour="1"]):is([data-desk-upload], [data-desk-call])
+  .desk-module__topbar.desk-module__topbar:has(.desk-module-topbar__utility-btn:hover) {
+  z-index: var(--z-index-upload-progress, 50002);
 }
 
 // While a window-connect (call popup) is open, the call must float above the

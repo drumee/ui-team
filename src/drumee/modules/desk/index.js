@@ -4900,7 +4900,11 @@ class desk_module extends LetcBox {
     if (!wasOpen) this._railHighlight(landsOn || "files");
     this._setWorkspaceLabel(row.filename || row.name);
     this._setWorkspaceGlyph(row);
-    return this._renderWorkspaceMenu(this._wsListPart);
+    // In place: flip `data-current` and re-feed the header only. Re-feeding
+    // the whole list here rebuilt every switcher row on every switch — the
+    // exact cost _syncWorkspaceHighlight exists to avoid (the rows themselves
+    // did not change; only which one is current did).
+    return this._syncWorkspaceHighlight();
   }
 
   /**
@@ -6864,6 +6868,38 @@ class desk_module extends LetcBox {
     // upload rows apply at all. Re-feed the topbar only when the answer actually
     // flips, so ordinary folder-to-folder navigation inside one workspace costs
     // nothing. Same re-feed mechanism _onOverLimitChanged already uses.
+    //
+    // UNKNOWN IS NOT "YES". Mid-switch, _curWorkspace already names the new
+    // hub but its pane is not findable yet (the outgoing pane's `closed`
+    // broadcast and the incoming pane's own, from its initialize, both land in
+    // that gap). The fail-open checks answered true/true there, so a member
+    // without write/admin rights paid a full top-bar rebuild to "yes" and a
+    // second one back to "no" on every switch — each rebuild remounting the
+    // breadcrumb (a get_path ahead of show_node_by), the switcher and every
+    // menu. Wait for the pane instead and decide once.
+    const ws = (window.Wm && window.Wm._curWorkspace) || null;
+    if (
+      ws &&
+      ws.hub_id &&
+      _.isFunction(window.Wm._findWorkspaceWindow) &&
+      !window.Wm._findWorkspaceWindow(ws.hub_id)
+    ) {
+      if (
+        this._addmenuWaitHub !== ws.hub_id &&
+        _.isFunction(window.Wm._awaitWorkspaceWindow)
+      ) {
+        const hub = (this._addmenuWaitHub = ws.hub_id);
+        window.Wm._awaitWorkspaceWindow(hub).then((win) => {
+          if (this._addmenuWaitHub !== hub) return;
+          this._addmenuWaitHub = null;
+          // Never mounted (the open failed): keep the current rows rather
+          // than re-arm a wait that would poll forever.
+          if (!win || (this.isDestroyed && this.isDestroyed())) return;
+          this._updateAddmenu();
+        });
+      }
+      return;
+    }
     const may = this._curWorkspaceCanWrite();
     const manage = this._curWorkspaceCanManage();
     if (this._addmenuMayWrite === may && this._addmenuMayManage === manage) return;
@@ -11734,6 +11770,33 @@ class desk_module extends LetcBox {
     ]) {
       Kind.waitFor(k);
     }
+    // Screens and panes a switch reaches first — the top bar's Calendar /
+    // Help / org view and the workspace pane's chat and task board. Each was a
+    // plain import() paid on its FIRST click (chunk fetch + parse, and a
+    // runtime <style> injection that restyles the document) behind a
+    // placeholder. One per idle slot, so warming them never competes with
+    // whatever the user is actually doing.
+    const idle = (fn) =>
+      typeof window.requestIdleCallback === "function"
+        ? window.requestIdleCallback(fn, { timeout: 4000 })
+        : setTimeout(fn, 300);
+    const warm = [
+      "widget_chat",
+      "tasks_panel",
+      "calendar_main",
+      "help_main",
+      "desk_org_view",
+    ];
+    const next = () => {
+      const k = warm.shift();
+      if (!k) return;
+      try {
+        const p = Kind.waitFor(k);
+        if (p && typeof p.catch === "function") p.catch(() => { });
+      } catch (e) { }
+      idle(next);
+    };
+    idle(next);
   }
 }
 

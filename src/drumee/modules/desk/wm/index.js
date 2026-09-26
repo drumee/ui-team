@@ -8,6 +8,7 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+const readCache = require("libs/read-cache");
 // Reader for the compact "#/desk/wm/o/<nid>/<hub_id>/<filetype>" deep link. The
 // long "open" form is unchanged and still resolved by the same openers.
 const {
@@ -1182,31 +1183,86 @@ class __window_manager extends push {
       home_id: nid,
     });
 
+    // The chat's media.home, started NOW rather than after the pane mounts —
+    // it was the second serial round trip before the chat could ask for its
+    // messages. widget_chat joins this request via libs/hub-home.
+    try {
+      require("libs/hub-home").warm(this, hub_id);
+    } catch (e) { }
+
+    // PAINT FROM THE LAST ANSWER, THEN REVALIDATE (libs/read-cache). The pane
+    // used to mount only after media.attributes returned, so every switch held
+    // the old workspace on screen for one full round trip before the new one
+    // even started its own loads (show_node_by, chat, tasks). A workspace
+    // switched back to now mounts at once from this session's last answer;
+    // the fresh one reconciles below.
+    const rootOf = (a) => a && (a.actual_home_id || a.home_id || a.nid);
+    const attrsKey = `wm:attrs:${hub_id}:${this._rootNid(nid)}`;
+    const cachedAttrs = readCache.peek(attrsKey);
+    const mountedFrom = rootOf(cachedAttrs) ? { ...cachedAttrs } : null;
+    if (mountedFrom) {
+      try {
+        workspace.model && workspace.model.set(mountedFrom);
+      } catch (e) { }
+      apply({ ...mountedFrom });
+    }
+
     // Data provided by the trigger may not be reliable enough. Get fresh one.
     // _rootNid, not the raw nid: a caller that knows only the hub leaves nid unset,
     // and fetchService would put the literal string "undefined" on the query.
     this.fetchService(SERVICE.media.attributes, { hub_id, nid: this._rootNid(nid) })
       .then((attrs) => {
-        const resolved =
-          attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+        const resolved = rootOf(attrs);
         if (!resolved) {
+          readCache.invalidate(attrsKey);
           this.warn("loadWorkspace: cannot resolve workspace root", {
             hub_id,
             attrs,
           });
+          if (mountedFrom) {
+            // Mounted from a remembered answer the server now refuses (the
+            // workspace was deleted, or access revoked, since). Take the pane
+            // down exactly as if it had never mounted.
+            if (gen === this._wsGeneration && this.headlessLayer) {
+              const pane = this.headlessPane();
+              if (pane && !pane.isDestroyed()) pane.goodbye ? pane.goodbye() : pane.destroy();
+            }
+          }
           // The pane never mounted but _curWorkspace was already set above —
           // release it so re-clicking the sidebar item can retry the mount
           // instead of hitting the same-workspace early-return.
           this._releaseWorkspaceContext(hub_id, nid);
           return;
         }
+        readCache.set(attrsKey, { ...attrs });
         try {
           workspace.model && workspace.model.set(attrs);
         } catch (e) { }
-        apply(attrs);
+        if (!mountedFrom) return apply(attrs);
+        if (gen !== this._wsGeneration) return;
+        // The root moved (rare): the pane is showing the wrong node — remount.
+        if (`${rootOf(mountedFrom)}` !== `${resolved}`) return apply(attrs);
+        // Same root: reconcile in place. Privilege is the one field whose
+        // change rebuilds chrome, and the pane already has the live-update
+        // path for it (an admin changing our role elsewhere).
+        this.mset(attrs);
+        const pane = this.headlessPane();
+        if (!pane || pane.isDestroyed()) return;
+        if (
+          attrs.privilege != null &&
+          _.isFunction(pane._applyLivePrivilege)
+        ) {
+          pane._applyLivePrivilege({
+            privilege: attrs.privilege,
+            hub_id: pane.mget(_a.hub_id),
+          });
+        }
       })
       .catch((e) => {
         this.warn("loadWorkspace: get_attributes failed", e);
+        // Already on screen from the remembered answer: a network blip is no
+        // reason to take it down.
+        if (mountedFrom) return;
         this._releaseWorkspaceContext(hub_id, nid);
       });
   }

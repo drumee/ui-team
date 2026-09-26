@@ -1,7 +1,12 @@
 const { resolve } = require("path");
 const drumee_path = 'src/drumee/';
 
-module.exports = function (basedir) {
+module.exports = function (basedir, mode) {
+  // CSS source maps only outside production. style-loader writes each map into
+  // its <style> tag as a base64 comment, so with maps on, every one of the
+  // ~670 skin modules shipped its full source map inside the production JS and
+  // the browser parsed it at every injection (webpack.js already passes mode).
+  const cssMaps = mode !== 'production';
   a = {
     rules: [{
       test: /\.(sa|sc|c)ss$/,
@@ -12,17 +17,17 @@ module.exports = function (basedir) {
         {
           loader: 'css-loader',
           options: {
-            sourceMap: true,
+            sourceMap: cssMaps,
             importLoaders: 1
           },
         }, {
           loader: 'sass-loader',
           options: {
-            sourceMap: true,
+            sourceMap: cssMaps,
             //api: "modern",
             sassOptions: {
-              sourceMap: true,
-              sourceMapEmbed: true,
+              sourceMap: cssMaps,
+              sourceMapEmbed: cssMaps,
               // Sass prepends a BOM to compressed output containing non-ASCII;
               // style-loader injects it glued to the first selector, which kills
               // the :root{--font-*} block. Never emit @charset/BOM.

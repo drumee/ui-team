@@ -12,6 +12,8 @@ const STUBS = {
   "@drumee/ui-essentials": {},
   "./node-icon": () => "",
   "./skin": {},
+  // webpack alias — the real module, so media.home still goes through it.
+  "libs/hub-home": require(path.join(__dirname, "..", "src/drumee/libs/hub-home.js")),
 };
 const load = Module._load;
 Module._load = function (request, parent, isMain) {

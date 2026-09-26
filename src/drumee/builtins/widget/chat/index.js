@@ -1087,13 +1087,14 @@ class __widget_chat extends LetcBox {
     // explicit prefetch is trusted — `home` alone is a looser prop other
     // callers pass in other shapes.
     const prefetched = this.mget("prefetched_home");
+    // Otherwise through libs/hub-home: Wm.loadWorkspace starts this very
+    // request in parallel with media.attributes, so on a workspace switch it
+    // is usually already in flight (or answered) by the time the pane mounts
+    // this widget — and a workspace switched back to has it remembered.
     const homeReq =
       prefetched && typeof prefetched === "object"
         ? Promise.resolve(prefetched)
-        : this.fetchService({
-            service: SERVICE.media.home,
-            hub_id: this.hubId,
-          });
+        : require("libs/hub-home").get(this, this.hubId);
     homeReq.then((data) => {
       // media.home can come back empty for a viewer with no chat home (e.g. a
       // secure-share recipient who is not a hub member) — guard so reading

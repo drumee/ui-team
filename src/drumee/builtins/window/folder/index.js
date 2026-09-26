@@ -4251,7 +4251,24 @@ class __window_folder extends mfsInteract {
     // endpoint. All it decides is whether the schedule button reads "Start"
     // or "Join meeting" — realtime sentinels keep it correct either way, so
     // it can wait a tick and let the grid request go first.
-    _.defer(() => this._refreshMeetingActiveState());
+    //
+    // Idle, not just deferred: a `_.defer` still lands inside the switch's
+    // burst, next to show_node_by, the chat's own channel.messages and the
+    // task loads — this is a second channel.messages on the same endpoint.
+    // Pulled forward the moment the Meet tab is shown (showFolderTab), which is
+    // where the button it decides lives.
+    const run = () => {
+      if (this._meetingScanDone) return;
+      this._meetingScanDone = 1;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._refreshMeetingActiveState();
+    };
+    this._runMeetingScan = run;
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      setTimeout(run, 1200);
+    }
   }
 
   // Best-effort initial scan: fetch this room's recent messages (newest first)
@@ -5291,6 +5308,11 @@ class __window_folder extends mfsInteract {
           this._threadRailItems = items;
           this._threadRailFolder = folderNid;
           this._threadRailGeneration = generation;
+          // Every Chat-tab press lands here, and the rail is usually already
+          // showing exactly these rows: a feed() would destroy and rebuild
+          // every thread row (~4 views each) for nothing. Signed per rail
+          // instance, so a remounted rail always paints.
+          if (this._sameThreadRailPaint(rail, items, scopedNid)) return;
           rail.feed(
             require("./skeleton/thread-menu")(this, {
               items,
@@ -5339,6 +5361,7 @@ class __window_folder extends mfsInteract {
     const rail = this._threadRailPart;
     if (!rail || !rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
     if (!_.isArray(this._threadRailItems)) return;
+    if (this._sameThreadRailPaint(rail, this._threadRailItems, scopedNid || "")) return;
     rail.feed(
       require("./skeleton/thread-menu")(this, {
         items: this._threadRailItems,
@@ -5346,6 +5369,16 @@ class __window_folder extends mfsInteract {
         variant: "rail",
       }),
     );
+  }
+
+  // True when `rail` already shows exactly (items, scopedNid) — the caller can
+  // skip its feed. Otherwise records the new signature and answers false.
+  _sameThreadRailPaint(rail, items, scopedNid) {
+    const sig = readCache.signature({ items, scopedNid: scopedNid || "" });
+    const hasRows = !!(rail.children && rail.children.length);
+    if (hasRows && rail._threadRailSig === sig) return true;
+    rail._threadRailSig = sig;
+    return false;
   }
 
   _closeThreadMenu() {
@@ -5693,9 +5726,16 @@ class __window_folder extends mfsInteract {
         board._restoreViewScroll(saved.task);
       }
     };
-    restore();
+    // Next frame ONLY. Restoring synchronously here forced the whole newly
+    // revealed pane (a display:none subtree has no style or layout — for the
+    // file grid, thousands of elements) to restyle and lay out INSIDE the
+    // click handler, on top of the frame that has to do it anyway. rAF runs
+    // before that frame paints, so the offset is still in place on first
+    // paint — nothing flashes at the top — and the layout is paid once.
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(restore);
+    } else {
+      restore();
     }
   }
 
@@ -5704,8 +5744,19 @@ class __window_folder extends mfsInteract {
       this.syncNewCtrlVisibility();
       return;
     }
+    // Note the outgoing panel's scroll offset FIRST, before this method writes
+    // anything (tab-bar state, chat layout, visibility stamps). Read here the
+    // layout is still clean from the last frame, so it costs nothing; read
+    // after those writes — where it used to be, inside switchView — it forced
+    // a synchronous style+layout flush of the window on every rail click.
+    this._stashPanelScroll();
     const prevTab = this.activeTab;
     this.activeTab = tab;
+    // The Start / Join button is on the Meet tab: its idle-deferred scan
+    // (_initMeetingPresence) must not be waited on once it is on screen.
+    if (tab === "meeting" && _.isFunction(this._runMeetingScan)) {
+      this._runMeetingScan();
+    }
     // The desk's switcher header lights its link chip while the secure-share
     // view is up (it is a toggle for it). Announced here, where every way in
     // and out ends — the opener, the panel's ✕, a rail press — so the chip
@@ -5768,8 +5819,8 @@ class __window_folder extends mfsInteract {
       // display:none drops a scroller's position, so the panels going out of
       // view are noted before the stamp and the ones coming in are put back
       // after it — a user who scrolled deep into a folder and glanced at the
-      // board should land where they were.
-      this._stashPanelScroll();
+      // board should land where they were. (Noted at the top of
+      // showFolderTab, before any write — see there.)
       // Where the column is switching FROM, for the skin's Team Chat <->
       // Who has access switch animation (skin/index.scss). Empty on first show.
       view.el.dataset.fromView = prevTab || "";
