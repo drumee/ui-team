@@ -70,3 +70,10 @@
     }
   }
 }
+
+// Live (after the migrate tour's Done): the real window is the backdrop now.
+// `tutorial-main__layout` paints the canvas the mock was drawn on; with the
+// mock gone that canvas would hide the very folder the import lands in.
+.window-tutorial__ui[data-live="1"] .tutorial-main__layout {
+  background: transparent;
+}
