@@ -68,7 +68,7 @@ test("popup owns a share-to-SA controller on its destination", () => {
 test("sa verify refused → popup reads the error from the controller", async () => {
   routes = { "google_drive.sa_check": { ok: 0, error: "SA_NOT_OWNER" } };
   const p = make();
-  await p.onUiEvent({ mget: () => undefined }, { service: "gdrive-sa-verify" });
+  await p.onUiEvent({ mget: () => undefined }, { service: "gdrive-sa-verify", __inputStatus: "commit" });
   assert.equal(p.getSaError(), "SA_NOT_OWNER");
   assert.equal(p.isSaChecking(), false);
   assert.deepEqual(calls[0], { name: "google_drive.sa_check", args: { hub_id: "me", folder: "LINK" } });
@@ -110,7 +110,7 @@ test("reopening onto a running job reconnects through the controller", async () 
 test("reopening the share screen clears a previous link error", async () => {
   routes = { "google_drive.sa_check": { ok: 0, error: "SA_NOT_OWNER" } };
   const p = make();
-  await p.onUiEvent({ mget: () => undefined }, { service: "gdrive-sa-verify" });
+  await p.onUiEvent({ mget: () => undefined }, { service: "gdrive-sa-verify", __inputStatus: "commit" });
   p.onUiEvent({ mget: () => undefined }, { service: "gdrive-sa-open" });
   assert.equal(p.getSaError(), null);
   assert.equal(p.getState(), "sa");
@@ -121,6 +121,15 @@ test("Escape in the link field sends nothing", async () => {
   routes = { "google_drive.sa_check": { ok: 0, error: "SA_NOT_OWNER" } };
   const p = make();
   await p.onUiEvent({ mget: () => "gdrive-sa-verify" }, { __inputStatus: "cancel" });
+  assert.equal(calls.filter((c) => c.name === "google_drive.sa_check").length, 0);
+  assert.equal(p.getSaError(), null);
+  p.onBeforeDestroy();
+});
+
+test("clicking into the link field sends nothing and shows no error", async () => {
+  routes = { "google_drive.sa_check": { ok: 0, error: "SA_NOT_OWNER" } };
+  const p = make();
+  await p.onUiEvent({ mget: () => "gdrive-sa-verify" }, { type: "click" });
   assert.equal(calls.filter((c) => c.name === "google_drive.sa_check").length, 0);
   assert.equal(p.getSaError(), null);
   p.onBeforeDestroy();

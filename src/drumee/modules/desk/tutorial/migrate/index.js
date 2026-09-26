@@ -397,9 +397,13 @@ class __tutorial_migrate extends LetcBox {
       case 'mg-live-copy':
         return this._liveCopy(trigger);
       case 'mg-live-verify':
-        // The field raises its service on Escape too (ui-core Entry,
-        // __inputStatus 'cancel'). Only a commit — Enter — means "check it".
-        if (args.__inputStatus && args.__inputStatus !== _a.commit) return;
+        // ONLY a commit (Enter) means "check it". The field raises this same
+        // service on Escape (__inputStatus 'cancel') and — because ui-core
+        // puts el.onclick on every active widget — on the click that focuses
+        // it, with no __inputStatus at all. Verifying on that click showed the
+        // bad-link error and re-rendered the card, destroying the field under
+        // the cursor so nothing could be pasted.
+        if (args.__inputStatus !== _a.commit) return;
         return this._sa.verify(this._readLiveLink());
       case 'mg-live-start':
         return this._sa.start(this._readLiveLink());

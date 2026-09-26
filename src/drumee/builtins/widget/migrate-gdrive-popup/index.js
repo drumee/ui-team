@@ -1027,9 +1027,11 @@ class __migrate_gdrive_popup extends LetcBox {
         return;
       }
       case 'gdrive-sa-verify':
-        // The link field raises this on Escape too (ui-core Entry,
-        // __inputStatus 'cancel'); only a commit — Enter — means "check it".
-        if (args.__inputStatus && args.__inputStatus !== _a.commit) return;
+        // ONLY a commit (Enter) means "check it". The link field raises this
+        // same service on Escape (__inputStatus 'cancel') and on the click
+        // that focuses it (ui-core's el.onclick, no __inputStatus); verifying
+        // there shows the bad-link error and re-renders away the field.
+        if (args.__inputStatus !== _a.commit) return;
         return this._saVerify();
       case 'gdrive-sa-start':
         return this._saStart();

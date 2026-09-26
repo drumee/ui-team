@@ -122,7 +122,7 @@ test("live controls drive the controller with the field's value", async () => {
   s.parts = { "mg-live-link": { getValue: () => " https://drive/x " } };
   await s.goLive(dest);
   const r = made[made.length - 1];
-  s.onUiEvent(trig, { service: "mg-live-verify" });
+  s.onUiEvent(trig, { service: "mg-live-verify", __inputStatus: "commit" });
   s.onUiEvent(trig, { service: "mg-live-start" });
   s.onUiEvent(trig, { service: "mg-live-again" });
   assert.deepEqual(r.calls.slice(1), [
@@ -167,4 +167,18 @@ test("closing the dialog acks a finished result before leaving", async () => {
   const r = made[made.length - 1];
   assert.ok(r.calls.some((c) => c[0] === "ack"));
   assert.deepEqual(h.events, ["window-tutorial:close-live"]);
+});
+
+// ui-core puts el.onclick = __handleClick on every active widget, the Entry
+// included, so a click to FOCUS the field raises the Entry's own service with
+// the click event as args (no __inputStatus). Verifying there showed the
+// bad-link error, re-rendered, and destroyed the field under the cursor.
+test("clicking into the link field does not verify", async () => {
+  const { s } = step({ live_capable: 1 });
+  s.parts = { "mg-live-link": { getValue: () => "" } };
+  await s.goLive(dest);
+  const r = made[made.length - 1];
+  const field = { mget: (k) => (k === "service" ? "mg-live-verify" : undefined) };
+  s.onUiEvent(field, { type: "click" });
+  assert.equal(r.calls.filter((c) => c[0] === "verify").length, 0);
 });
