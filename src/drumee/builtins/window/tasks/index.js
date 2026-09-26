@@ -299,8 +299,11 @@ class __tasks_panel extends LetcBox {
     // priority/status hold arrays (OR within), due/files are single-select,
     // keyword is a title substring.
     this._filters = { keyword: "", priority: [], status: [], due: null, files: null };
-    // Accordion open-state for the List filter popup (dimension key -> bool).
-    this._filterExpanded = {};
+    // Filter popover navigation: null = the root page (search + one row per
+    // dimension), else the dimension whose values are showing. And the member
+    // search typed on the Assignee page (lower-cased).
+    this._filterPage = null;
+    this._filterMemberQuery = "";
     // Active sub-view (board | calendar | list | summary) and the List view's
     // sort state.
     this._view = "board";
@@ -470,7 +473,92 @@ class __tasks_panel extends LetcBox {
   // Toggle the member-filter dropdown (rendered top-right of the board).
   toggleFilter() {
     this._pickerOpen = this._pickerOpen === "filter" ? null : "filter";
+    // Every open starts on the root page with no member query.
+    this._filterPage = null;
+    this._filterMemberQuery = "";
     this._render();
+  }
+
+  // Open the popover straight on one dimension's page (an applied-filter chip).
+  _openFilterPage(dim) {
+    this._pickerOpen = "filter";
+    // The keyword chip opens the root page — the search box lives there.
+    this._filterPage = dim && dim !== "keyword" ? dim : null;
+    this._filterMemberQuery = "";
+    this._render();
+  }
+
+  getFilterPage() {
+    return this._filterPage || null;
+  }
+
+  getFilterMemberQuery() {
+    return this._filterMemberQuery || "";
+  }
+
+  // Reset one dimension (a chip's ×, or "Clear" on that dimension's page).
+  _clearFilterDim(dim) {
+    const f = this._filters;
+    switch (dim) {
+      case "assignee":
+        this._filterUids = [];
+        break;
+      case "keyword":
+        f.keyword = "";
+        break;
+      case "priority":
+      case "status":
+        f[dim] = [];
+        break;
+      case "due":
+      case "files":
+        f[dim] = null;
+        break;
+      default:
+        return;
+    }
+    this._notifyFilterState();
+    this._render();
+  }
+
+  /**
+   * Narrow the Assignee page's member rows to the query, in place — typing must
+   * not repaint (it would rebuild the very input being typed in; see the
+   * filter-keyword case). The skeleton applies the same rule from
+   * getFilterMemberQuery(), so a repaint keeps what is hidden.
+   */
+  _filterMemberRows() {
+    if (!this.el) return;
+    const q = this._filterMemberQuery;
+    let shown = 0;
+    this.el
+      .querySelectorAll(".tasks-panel__filter-body .tasks-panel__filter-row[data-name]")
+      .forEach((row) => {
+        const hide = !!q && !row.dataset.name.includes(q);
+        row.dataset.hidden = hide ? "1" : "0";
+        if (!hide) shown++;
+      });
+    const empty = this.el.querySelector(".tasks-panel__filter-body .tasks-panel__filter-empty");
+    if (empty) empty.dataset.visible = shown ? "0" : "1";
+  }
+
+  /**
+   * Put the popover under the Filter button. The viewbar wraps at narrow
+   * widths, so its height — and the button's place — is not something the skin
+   * can know; measured after every paint instead. Right-aligned to the button,
+   * clamped inside the panel.
+   */
+  _positionFilterPicker() {
+    if (!this.el || this._pickerOpen !== "filter") return;
+    const picker = this.el.querySelector(".tasks-panel__filter-picker");
+    const btn = this.el.querySelector(".tasks-panel__viewbar-filter");
+    const host = picker && picker.offsetParent;
+    if (!picker || !btn || !host) return;
+    const h = host.getBoundingClientRect();
+    const b = btn.getBoundingClientRect();
+    if (!b.width && !b.height) return;
+    picker.style.top = `${Math.max(8, b.bottom - h.top + 6)}px`;
+    picker.style.right = `${Math.max(8, h.right - b.right)}px`;
   }
 
   isFilterActive() {
@@ -510,10 +598,6 @@ class __tasks_panel extends LetcBox {
 
   getFilters() {
     return this._filters;
-  }
-
-  isFilterCatOpen(dim) {
-    return !!(this._filterExpanded && this._filterExpanded[dim]);
   }
 
   // Let the host window reflect the active filter on its tab-bar button.
@@ -1644,19 +1728,25 @@ class __tasks_panel extends LetcBox {
         return this._render();
       }
 
-      case "filter-cat": {
-        // Accordion expand/collapse of a filter dimension — toggle in
-        // place (no re-render), so opening a section doesn't rebuild the list.
-        const dim = trigger.mget("filterDim");
-        if (!dim) return;
-        this._filterExpanded[dim] = !this._filterExpanded[dim];
-        const cat =
-          this.el &&
-          this.el.querySelector(
-            `.tasks-panel__filter-cat[data-dim="${dim}"]`,
-          );
-        if (cat) cat.dataset.open = this._filterExpanded[dim] ? "1" : "0";
-        return;
+      case "filter-page": {
+        // Popover navigation: a dimension row opens its page, "‹ Back" (no
+        // dimension) returns to the root. A patch swaps only the popover body.
+        this._filterPage = trigger.mget("filterDim") || null;
+        this._filterMemberQuery = "";
+        return this._render();
+      }
+
+      case "filter-open-page":
+        return this._openFilterPage(trigger.mget("filterDim"));
+
+      case "filter-dim-clear":
+        return this._clearFilterDim(trigger.mget("filterDim"));
+
+      case "filter-member-search": {
+        this._filterMemberQuery = String((args && args.value) || "")
+          .trim()
+          .toLowerCase();
+        return this._filterMemberRows();
       }
 
       case "filter-set": {
@@ -1697,6 +1787,7 @@ class __tasks_panel extends LetcBox {
           this._filterKwTimer = null;
           this._notifyFilterState();
           this._syncFilterAffordances();
+          this._refreshFilterChips();
           this._refreshViewBody();
         }, 200);
         return;
@@ -9062,6 +9153,10 @@ class __tasks_panel extends LetcBox {
         '.tasks-panel__filter-picker [name="filter_keyword"]',
         (this._filters || {}).keyword,
       );
+      // Only the typed query is kept (lower-cased), so seed only an empty box:
+      // rewriting a live one would flatten what the user is typing.
+      const ms = this.el.querySelector('.tasks-panel__filter-picker [name="filter_member_search"]');
+      if (ms && !ms.value && this._filterMemberQuery) ms.value = this._filterMemberQuery;
     }
     if (this._creating && this._createDefaults) {
       setVal(
@@ -9470,6 +9565,7 @@ class __tasks_panel extends LetcBox {
     // runs on its own. A switch made from code (a Project Health link) would
     // otherwise leave the chosen tab off-screen.
     if (viewChanged) this._scrollActiveViewTabIntoView();
+    this._positionFilterPicker();
     this._markPainted();
     // The board has drawn: the folder window's Task entrance keys on this
     // (window/folder/skin, data-view="task"), so it slides in WITH its columns.
@@ -9913,12 +10009,26 @@ class __tasks_panel extends LetcBox {
     const active = this.isFilterActive() ? "1" : "0";
     const btn = this.el.querySelector(".tasks-panel__viewbar-filter");
     if (btn) btn.dataset.active = active;
-    const clear = this.el.querySelector(".tasks-panel__filter-clear");
-    if (clear) clear.dataset.active = active;
-    const head = this.el.querySelector(
-      '.tasks-panel__filter-cat[data-dim="keyword"] .tasks-panel__filter-cat-head',
+    // The keyword box lives on the root page, whose head carries "Clear all".
+    const clear = this.el.querySelector(
+      ".tasks-panel__filter-head:not(.tasks-panel__filter-head--page) .tasks-panel__filter-clear",
     );
-    if (head) head.dataset.active = this.isFilterDimActive("keyword") ? "1" : "0";
+    if (clear) clear.dataset.active = active;
+  }
+
+  /**
+   * Repaint the applied-filter chips alone — for the keyword path, which must
+   * not run a full render while its input has focus. Patched, so unchanged
+   * chips keep their elements.
+   */
+  _refreshFilterChips() {
+    const part = this._mountedPart("filter-chips");
+    if (!part) return;
+    const root = require("./skeleton")(this);
+    const node = (root.kids || []).find((k) => k && k.sys_pn === "filter-chips");
+    if (!node) return;
+    this._patchKids(part, node.kids || []);
+    if (part.el) part.el.dataset.empty = node.attrOpt["data-empty"];
   }
 
   // Snapshot the scroll offsets of the current view's scrollable containers,

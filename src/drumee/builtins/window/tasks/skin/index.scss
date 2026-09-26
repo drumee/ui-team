@@ -339,29 +339,44 @@ $theme-colors: (
     background: transparent;
   }
 
+  // ── Filter popover (index.js toggleFilter / filter-page) ─────────────
+  // One level on screen at a time: a fixed head (title + "Clear all", or
+  // "‹ Dimension" + "Clear") over ONE scrolling body. It replaced an accordion
+  // whose open sections each scrolled inside the popup's own scroll. top/right
+  // are written by _positionFilterPicker (under the Filter button, which moves
+  // when the viewbar wraps); the values here are only the first-paint guess.
   &__filter-picker {
     position: absolute;
-    top: 12px;
+    top: 56px;
     right: 12px;
     z-index: 30;
-    width: 218px;
-    padding: 8px;
-    gap: 4px;
-    max-height: 320px;
-    overflow-y: auto;
+    width: min(280px, calc(100cqw - 16px));
+    max-height: min(440px, 70vh);
+    overflow: hidden;
     align-items: stretch;
-    border-radius: 8px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    border-radius: 12px;
     background: var(--normal-bg-elevated, #fff);
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    // No entrance animation: the panel re-renders on each pick, and replaying
-    // the pop-in on every selection read as a glitch.
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+    transform-origin: top right;
+    // Plays on OPEN only: a repaint patches the popover, so a pick keeps the
+    // element and nothing replays (what made the old pop-in read as a glitch).
+    animation: tasks-panel-pop-in 0.16s cubic-bezier(0.2, 0, 0, 1);
 
-    // Figma row: 28px tall, name/avatar left, checkbox right, no active tint.
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+
+    // Row: 32px, content left, checkbox right, no active tint.
     .tasks-panel__member-row {
+      flex: 0 0 auto;
       justify-content: space-between;
+      align-items: center;
       gap: 8px;
-      padding: 6px 6px;
-      border-radius: 6px;
+      min-height: 32px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
 
       &[data-active="1"] {
         background: transparent;
@@ -372,9 +387,17 @@ $theme-colors: (
     }
   }
 
-  // Small heading at the top of the filter popup.
+  &__filter-head {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 12px 6px 14px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
   &__filter-title {
-    padding: 2px 6px 4px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     @include drumee.typo(
@@ -383,31 +406,153 @@ $theme-colors: (
       $line: 16px,
       $color: var(--normal-fg-40, #84848c)
     );
+    font-weight: 600;
   }
 
-  // Hairline between "All members" and the member list.
-  &__filter-divider {
-    height: 1px;
-    margin: 2px 6px;
-    background: var(--border-default, rgba(0, 0, 0, 0.08));
+  // "‹ Priority" — back to the root page.
+  &__filter-back {
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin-left: -6px;
+    padding: 4px 8px 4px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
   }
 
-  // Left group inside a filter row: avatar + name.
+  &__filter-back-chev {
+    @include drumee.typo(
+      $size: 20px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+    pointer-events: none;
+  }
+
+  &__filter-back-label {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  &__filter-clear {
+    flex: 0 0 auto;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+    font-weight: 600;
+
+    // Hidden rather than unmounted while nothing is set, so the flag can be
+    // flipped in place (_syncFilterAffordances) without rebuilding the popover
+    // — which would destroy the keyword input the user is typing in.
+    &[data-active="0"] {
+      display: none !important;
+    }
+  }
+
+  // The popover's only scroller. A page change rebuilds it (data-page is in
+  // its attributes), so the slide plays on navigation: in from the right for a
+  // dimension, from the left going back to the root.
+  &__filter-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    align-items: stretch;
+    gap: 2px;
+    padding: 8px;
+    // Overrides the global .drumee-box bar (see every-box scrollbar note).
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-default, rgba(0, 0, 0, 0.18)) transparent;
+    animation: tasks-filter-page-in 0.16s cubic-bezier(0.2, 0, 0, 1);
+
+    &[data-page="root"] {
+      animation-name: tasks-filter-page-back;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  @keyframes tasks-filter-page-in {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes tasks-filter-page-back {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  // Left group inside a value row: avatar/dot + name.
   &__filter-row-main {
     align-items: center;
     gap: 8px;
     min-width: 0;
 
     .tasks-panel__member-name {
+      min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       @include drumee.typo(
         $size: 14px,
         $weight: 400,
         $line: 20px,
-        $color: var(--normal-fg-30, #65656c)
+        $color: var(--normal-fg-20, #3a3a44)
       );
+
+      .note-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  // Rows the member search hid (index.js _filterMemberRows). !important: a
+  // Box's data-flow rule sets display:flex at the same specificity.
+  &__filter-row[data-hidden="1"] {
+    display: none !important;
+  }
+
+  &__filter-empty {
+    padding: 12px 8px;
+    justify-content: center;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &[data-visible="0"] {
+      display: none !important;
     }
   }
 
@@ -446,42 +591,12 @@ $theme-colors: (
     opacity: 1;
   }
 
-  // ── Multi-dimension filter popup, shared by every view (Figma 2099-50501) ──
-  &__filter-picker--list {
-    width: 244px;
-  }
-
-  &__filter-head {
-    align-items: center;
-    justify-content: space-between;
-    padding: 2px 6px 4px;
-  }
-
-  &__filter-clear {
-    cursor: pointer;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--col-primary-40, #5950ff)
-    );
-
-    // Hidden rather than unmounted while no filter is set, so the flag can be
-    // flipped in place (see _syncFilterAffordances) without rebuilding the
-    // popup — which would destroy the keyword input the user is typing in.
-    &[data-active="0"] {
-      display: none;
-    }
-  }
-
-  // Accordion category (row + collapsible value body).
-  &__filter-cat {
-    align-items: stretch;
-  }
-
+  // Root-page row: icon, name, current value, chevron.
   &__filter-cat-head {
+    flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    min-height: 36px;
     padding: 6px 8px;
     border-radius: 8px;
     cursor: pointer;
@@ -490,6 +605,11 @@ $theme-colors: (
     &:hover {
       background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
     }
+
+    // The whole row is the target; its parts must not swallow the click.
+    & > * {
+      pointer-events: none;
+    }
   }
 
   &__filter-cat-ico {
@@ -497,6 +617,11 @@ $theme-colors: (
     width: 16px;
     height: 16px;
     color: var(--normal-fg-30, #65656c);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   &__filter-cat-label {
@@ -510,54 +635,55 @@ $theme-colors: (
     );
   }
 
-  // Chevron rotates down when the section is open.
+  // What the dimension is set to — "High, Urgent". Empty when off.
+  &__filter-cat-value {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 50%;
+    overflow: hidden;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   &__filter-cat-chev {
     flex: 0 0 auto;
     color: var(--normal-fg-40, #84848c);
-    transition: transform 0.15s, color 0.12s;
-    transform: rotate(0deg);
-  }
-  &__filter-cat[data-open="1"] &__filter-cat-chev {
-    transform: rotate(90deg);
+    @include drumee.typo($size: 16px, $weight: 400, $line: 16px);
   }
 
-  // A category holding an active value tints brand — the parent rows have no
-  // checkbox, so this is what tells you which dimensions are filtering while
-  // every category is collapsed. `data-active` comes from isFilterDimActive().
-  // font-weight is set explicitly: drumee.typo()'s $weight is a no-op.
+  // A dimension holding a value tints brand. font-weight explicitly:
+  // drumee.typo()'s $weight is a no-op.
   &__filter-cat-head[data-active="1"] &__filter-cat-label {
     font-weight: 600;
-    color: var(--col-primary-40, #5950ff);
   }
-  &__filter-cat-head[data-active="1"] &__filter-cat-ico,
-  &__filter-cat-head[data-active="1"] &__filter-cat-chev {
+  &__filter-cat-head[data-active="1"] &__filter-cat-ico {
     color: var(--col-primary-40, #5950ff);
   }
 
-  // Collapsed by default; max-height (not display) so it works regardless of
-  // the Box.Y flex display the engine sets.
-  &__filter-cat-body {
-    max-height: 0;
-    overflow: hidden;
-    gap: 2px;
-    padding-left: 6px;
-  }
-  &__filter-cat[data-open="1"] &__filter-cat-body {
-    max-height: 320px;
-    overflow-y: auto;
-    padding-top: 2px;
-    padding-bottom: 4px;
-  }
-
-  // Keyword search input inside the Task category.
+  // Task search (root page) / member search (Assignee page).
   &__filter-search {
+    flex: 0 0 auto;
+    margin-bottom: 6px;
+
     input {
       width: 100%;
       box-sizing: border-box;
+      height: 34px;
       padding: 6px 10px;
       border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
-      border-radius: 6px;
+      border-radius: 8px;
       outline: none;
+      background: var(--normal-bg-elevated, #fff);
       @include drumee.typo(
         $size: 13px,
         $weight: 400,
@@ -577,6 +703,109 @@ $theme-colors: (
     width: 10px;
     height: 10px;
     border-radius: 50%;
+  }
+
+  // ── Applied-filter chips (under the viewbar) ─────────────────────────
+  // One per active dimension. Hidden when nothing filters — !important
+  // because a Box's data-flow rule sets display at the same specificity.
+  &__filter-chips {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    background: var(--normal-bg-elevated, #fff);
+
+    &[data-empty="1"] {
+      display: none !important;
+    }
+  }
+
+  &__filter-chip {
+    align-items: center;
+    gap: 4px;
+    height: 26px;
+    max-width: 320px;
+    min-width: 0;
+    padding: 0 3px 0 10px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+    cursor: pointer;
+    transition: border-color 0.12s;
+
+    &:hover {
+      border-color: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__filter-chip-label {
+    flex: 0 0 auto;
+    pointer-events: none;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__filter-chip-value {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    pointer-events: none;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+    font-weight: 600;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // × — sprite icons never size themselves: pin the wrapper AND the svg.
+  &__filter-chip-remove {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    padding: 5px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    color: var(--col-primary-40, #5950ff);
+    cursor: pointer;
+
+    svg {
+      width: 10px;
+      height: 10px;
+    }
+
+    &:hover {
+      background: var(--overlay-brand, rgba(89, 80, 255, 0.18));
+    }
+  }
+
+  &__filter-chips-clear {
+    padding: 0 6px;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+    font-weight: 600;
+
+    &:hover {
+      color: var(--col-primary-40, #5950ff);
+    }
   }
 
   &__main {

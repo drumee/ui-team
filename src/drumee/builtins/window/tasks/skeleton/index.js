@@ -104,6 +104,11 @@ const {
   mayCreateTask,
   subtaskBadge,
   formatDue: formatDueDate,
+  FILTER_DIMS,
+  FILTER_DUE,
+  FILTER_FILES,
+  filterDimLabel,
+  filterLabels,
 } = require("./helpers");
 
 const make = function (ui) {
@@ -1837,28 +1842,29 @@ const make = function (ui) {
       ],
     });
 
-  // ── Multi-dimension filter (Figma 2099-50501) ─────────────────
-  // Accordion of filter categories; tapping a row expands its value picker
-  // inline. Categories AND together, values within a category OR together.
-  // Every dimension applies on every view (board / calendar / gantt / list /
-  // project health) — Assignee reuses the shared member filter.
+  // ── Multi-dimension filter ───────────────────────────────────
+  // ONE popover, ONE level on screen at a time. The root page is the task
+  // search plus a row per dimension, each showing what it is set to; tapping a
+  // row swaps the popover to that dimension's values under a "‹ Priority"
+  // header. It replaced an accordion that expanded every category INSIDE a
+  // 320px scrolling popup: each open section scrolled on its own inside the
+  // popup's scroll (a panel within a panel), opening Assignee left room for
+  // about one member, and nothing outside the popup said what was filtered.
+  // The applied-filter chips under the viewbar (filterChips) cover that last
+  // part. Categories AND together, values within a category OR together; every
+  // dimension applies on every view.
   const filters = ui.getFilters();
-  const filterCats = [
-    { dim: "keyword", ico: "tags", label: LOCALE.TASK },
-    { dim: "priority", ico: "apps-warning", label: LOCALE.PRIORITY },
-    { dim: "status", ico: "checked-circle", label: LOCALE.STATUS },
-    { dim: "due", ico: "calendar", label: LOCALE.DUE_DATE },
-    { dim: "files", ico: "app-attachment", label: LOCALE.LINKED_FILES },
-    { dim: "assignee", ico: "two-users", label: LOCALE.ASSIGNEE },
-  ];
+  const filterPage = ui.getFilterPage();
 
-  // A value row inside a category body: left content + a check box. Toggles a
-  // value via filter-set (assignee rows use filter-member instead).
+  // A value row: left content + a check box. Toggles a value via filter-set
+  // (assignee rows use filter-member instead).
   const filterValueRow = (opt) =>
     Skeletons.Box.X({
       className: `${pfx}__member-row ${pfx}__filter-row`,
-      dataset: { active: opt.active ? 1 : 0 },
-      attrOpt: { "data-active": opt.active ? "1" : "0" },
+      attrOpt: {
+        "data-active": opt.active ? "1" : "0",
+        ...(opt.attr || {}),
+      },
       bubble: 0,
       service: opt.service || "filter-set",
       uiHandler: [ui],
@@ -1876,23 +1882,13 @@ const make = function (ui) {
   const nameNote = (content) =>
     Skeletons.Note({ className: `${pfx}__member-name`, content });
 
-  const catBody = (dim) => {
+  // Values of one dimension — the body of its page.
+  const pageRows = (dim) => {
     switch (dim) {
-      case "keyword":
-        return [
-          Skeletons.Entry({
-            className: `${pfx}__filter-search`,
-            name: "filter_keyword",
-            value: filters.keyword || "",
-            placeholder: LOCALE.SEARCH_TASK,
-            watch: "filter-keyword",
-            uiHandler: [ui],
-          }),
-        ];
       case "priority":
         return (ui.getPriorities() || []).map((p) =>
           filterValueRow({
-            dim: "priority",
+            dim,
             val: p.key,
             active: (filters.priority || []).includes(p.key),
             leftKids: [dot(p.color), nameNote(LOCALE[p.label] || p.key)],
@@ -1901,131 +1897,235 @@ const make = function (ui) {
       case "status":
         return (ui.getColumns() || []).map((c) =>
           filterValueRow({
-            dim: "status",
+            dim,
             val: c.key,
             active: (filters.status || []).includes(c.key),
             leftKids: [dot(c.color), nameNote(c.name || LOCALE[c.label] || c.key)],
           }),
         );
       case "due":
-        return [
-          ["overdue", LOCALE.OVERDUE],
-          ["today", LOCALE.TODAY],
-          ["week", LOCALE.THIS_WEEK],
-          ["month", LOCALE.THIS_MONTH],
-          ["none", LOCALE.NO_DATE],
-        ].map(([val, label]) =>
-          filterValueRow({
-            dim: "due",
-            val,
-            active: filters.due === val,
-            leftKids: [nameNote(label)],
-          }),
+        return FILTER_DUE.map(([val, key]) =>
+          filterValueRow({ dim, val, active: filters.due === val, leftKids: [nameNote(LOCALE[key])] }),
         );
       case "files":
-        return [
-          ["has", LOCALE.WITH_FILES],
-          ["none", LOCALE.WITHOUT_FILES],
-        ].map(([val, label]) =>
-          filterValueRow({
-            dim: "files",
-            val,
-            active: filters.files === val,
-            leftKids: [nameNote(label)],
-          }),
+        return FILTER_FILES.map(([val, key]) =>
+          filterValueRow({ dim, val, active: filters.files === val, leftKids: [nameNote(LOCALE[key])] }),
         );
-      case "assignee":
-        return [
-          filterValueRow({
+      case "assignee": {
+        // Narrowed in place by the search box above the list (index.js
+        // _filterMemberRows), off `data-name`; `data-hidden` is also set here
+        // so a repaint keeps the rows the query already hid.
+        const q = ui.getFilterMemberQuery();
+        const hidden = (name) => (q && !name.toLowerCase().includes(q) ? "1" : "0");
+        const rows = members.map((m) => {
+          const uid = String(m.id || m.uid);
+          const name = fullName(m);
+          return filterValueRow({
             service: "filter-member",
-            memberUid: "",
-            active: !filterActive,
-            leftKids: [nameNote(LOCALE.ALL_MEMBERS)],
-          }),
-          ...members.map((m) => {
-            const uid = String(m.id || m.uid);
-            return filterValueRow({
-              service: "filter-member",
-              memberUid: uid,
-              active: filterUids.includes(uid),
-              leftKids: [
-                Skeletons.UserProfile({
-                  className: `${pfx}__member-avatar`,
-                  id: uid,
-                  firstname: m.firstname,
-                  lastname: m.lastname,
-                  auto_color: 1,
-                  live_status: 0,
-                }),
-                nameNote(fullName(m)),
-              ],
-            });
+            memberUid: uid,
+            active: filterUids.includes(uid),
+            attr: { "data-name": name.toLowerCase(), "data-hidden": hidden(name) },
+            leftKids: [
+              Skeletons.UserProfile({
+                className: `${pfx}__member-avatar`,
+                id: uid,
+                firstname: m.firstname,
+                lastname: m.lastname,
+                auto_color: 1,
+                live_status: 0,
+              }),
+              nameNote(name),
+            ],
+          });
+        });
+        const shown = rows.filter((r) => r.attrOpt["data-hidden"] === "0").length;
+        return [
+          ...rows,
+          Skeletons.Note({
+            className: `${pfx}__filter-empty`,
+            content: LOCALE.NO_RESULTS,
+            attrOpt: { "data-visible": shown ? "0" : "1" },
           }),
         ];
+      }
       default:
         return [];
     }
   };
 
-  const filterCategory = (c) =>
-    Skeletons.Box.Y({
-      className: `${pfx}__filter-cat`,
-      dataset: { dim: c.dim, open: ui.isFilterCatOpen(c.dim) ? 1 : 0 },
-      attrOpt: {
-        "data-dim": c.dim,
-        "data-open": ui.isFilterCatOpen(c.dim) ? "1" : "0",
-      },
+  // Root page row: icon, name, what it is set to, chevron.
+  const dimRow = (d) => {
+    const on = ui.isFilterDimActive(d.dim);
+    return Skeletons.Box.X({
+      className: `${pfx}__filter-cat-head`,
+      bubble: 0,
+      service: "filter-page",
+      uiHandler: [ui],
+      filterDim: d.dim,
+      attrOpt: { "data-active": on ? "1" : "0", "data-dim": d.dim },
       kids: [
-        Skeletons.Box.X({
-          className: `${pfx}__filter-cat-head`,
-          bubble: 0,
-          service: "filter-cat",
-          uiHandler: [ui],
-          filterDim: c.dim,
-          attrOpt: { "data-active": ui.isFilterDimActive(c.dim) ? "1" : "0" },
-          kids: [
-            Skeletons.Image.Svg({ ico: c.ico, className: `${pfx}__filter-cat-ico` }),
-            Skeletons.Note({ className: `${pfx}__filter-cat-label`, content: c.label }),
-            // No checkbox on the parent row — a category isn't itself selectable;
-            // only its value rows are. The head keeps data-active for styling.
-            Skeletons.Note({ className: `${pfx}__filter-cat-chev`, content: "›" }),
-          ],
+        Skeletons.Image.Svg({ ico: d.ico, className: `${pfx}__filter-cat-ico` }),
+        Skeletons.Note({ className: `${pfx}__filter-cat-label`, content: LOCALE[d.label] }),
+        Skeletons.Note({
+          className: `${pfx}__filter-cat-value`,
+          content: on ? filterLabels(ui, d.dim).join(", ") : "",
         }),
-        Skeletons.Box.Y({
-          className: `${pfx}__filter-cat-body`,
-          kids: catBody(c.dim),
+        Skeletons.Note({ className: `${pfx}__filter-cat-chev`, content: "›" }),
+      ],
+    });
+  };
+
+  const rootHead = () =>
+    Skeletons.Box.X({
+      className: `${pfx}__filter-head`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__filter-title`, content: LOCALE.FILTER }),
+        // Always mounted, shown/hidden by `data-active` (skin): _syncFilterAffordances
+        // flips it in place, so typing a keyword reveals "Clear" without a repaint.
+        Skeletons.Note({
+          className: `${pfx}__filter-clear`,
+          content: LOCALE.CLEAR_ALL,
+          attrOpt: { "data-active": ui.isFilterActive() ? "1" : "0" },
+          bubble: 0,
+          service: "filter-clear",
+          uiHandler: [ui],
         }),
       ],
     });
 
-  // A THUNK, not a value. This popup is only in the tree while it is open, but
-  // as a plain const it was assembled on every single render regardless — and
-  // its member category builds a row (avatar + name) per workspace member, so
-  // a 100-member workspace paid ~600 discarded skeleton nodes on every repaint
-  // of a board whose filter was shut.
-  const filterDropdown = () => Skeletons.Box.Y({
-    className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
-    kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__filter-head`,
+  const pageHead = (dim) =>
+    Skeletons.Box.X({
+      className: `${pfx}__filter-head ${pfx}__filter-head--page`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__filter-back`,
+          bubble: 0,
+          service: "filter-page",
+          uiHandler: [ui],
+          filterDim: null,
+          // No tooltip: "‹ Priority" already says what it does, and the shared
+          // __tip opens UPWARD — anchored to the popover (this box is not
+          // positioned) it rose above the popover, under the viewbar, and the
+          // popover's overflow:hidden cut it off.
+          kids: [
+            Skeletons.Note({ className: `${pfx}__filter-back-chev`, content: "‹" }),
+            Skeletons.Note({ className: `${pfx}__filter-back-label`, content: filterDimLabel(dim) }),
+          ],
+        }),
+        // Resets THIS dimension only; "Clear all" lives on the root page.
+        Skeletons.Note({
+          className: `${pfx}__filter-clear`,
+          content: LOCALE.CLEAR,
+          attrOpt: { "data-active": ui.isFilterDimActive(dim) ? "1" : "0" },
+          bubble: 0,
+          service: "filter-dim-clear",
+          filterDim: dim,
+          uiHandler: [ui],
+        }),
+      ],
+    });
+
+  // A THUNK: this popover is only in the tree while it is open, and the
+  // assignee page builds a row per member — no reason to pay for it otherwise.
+  const filterDropdown = () =>
+    Skeletons.Box.Y({
+      className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
+      sys_pn: "filter-picker",
+      partHandler: ui,
+      kids: [
+        filterPage ? pageHead(filterPage) : rootHead(),
+        // The one scroller. `data-page` makes a page change rebuild this box, so
+        // its slide-in plays on navigation and never on a value pick.
+        Skeletons.Box.Y({
+          className: `${pfx}__filter-body`,
+          attrOpt: { "data-page": filterPage || "root" },
+          kids: filterPage
+            ? [
+                filterPage === "assignee"
+                  ? Skeletons.Entry({
+                      className: `${pfx}__filter-search ${pfx}__filter-search--members`,
+                      name: "filter_member_search",
+                      value: ui.getFilterMemberQuery(),
+                      placeholder: LOCALE.SEARCH_MEMBER,
+                      watch: "filter-member-search",
+                      uiHandler: [ui],
+                    })
+                  : null,
+                ...pageRows(filterPage),
+              ].filter(Boolean)
+            : [
+                Skeletons.Entry({
+                  className: `${pfx}__filter-search`,
+                  name: "filter_keyword",
+                  value: filters.keyword || "",
+                  placeholder: LOCALE.SEARCH_TASK,
+                  watch: "filter-keyword",
+                  uiHandler: [ui],
+                }),
+                ...FILTER_DIMS.map(dimRow),
+              ],
+        }),
+      ],
+    });
+
+  // ── Applied-filter chips ─────────────────────────────────────
+  // What is filtering, readable without opening anything: one chip per active
+  // dimension ("Priority: High, Urgent"). The chip opens the popover on that
+  // dimension's page; its × clears just that dimension. Always mounted (hidden
+  // by data-empty) so the keyword path can refresh it in place.
+  const filterChips = () => {
+    const chip = (dim, label) => {
+      const values = filterLabels(ui, dim);
+      if (!values.length) return null;
+      return Skeletons.Box.X({
+        className: `${pfx}__filter-chip`,
+        attrOpt: { "data-dim": dim },
+        bubble: 0,
+        service: "filter-open-page",
+        uiHandler: [ui],
+        filterDim: dim,
         kids: [
-          Skeletons.Note({ className: `${pfx}__filter-title`, content: LOCALE.FILTER }),
-          // Always mounted, shown/hidden by `data-active` (skin) rather than by
-          // presence: _syncFilterAffordances flips the flag in place, so typing
-          // a keyword reveals "Clear" without re-rendering the popup.
+          label
+            ? Skeletons.Note({ className: `${pfx}__filter-chip-label`, content: `${label}:` })
+            : null,
           Skeletons.Note({
-            className: `${pfx}__filter-clear`,
-            content: LOCALE.CLEAR,
-            attrOpt: { "data-active": ui.isFilterActive() ? "1" : "0" },
+            className: `${pfx}__filter-chip-value`,
+            content: dim === "keyword" ? `“${values[0]}”` : values.join(", "),
+          }),
+          Skeletons.Button.Svg({
+            className: `${pfx}__filter-chip-remove`,
+            ico: "cross",
             bubble: 0,
-            service: "filter-clear",
+            service: "filter-dim-clear",
             uiHandler: [ui],
+            filterDim: dim,
           }),
         ].filter(Boolean),
-      }),
-      ...filterCats.map(filterCategory),
-    ],
-  });
+      });
+    };
+    const chips = [
+      chip("keyword", ""),
+      ...FILTER_DIMS.map((d) => chip(d.dim, LOCALE[d.label])),
+    ].filter(Boolean);
+    if (chips.length > 1) {
+      chips.push(
+        Skeletons.Note({
+          className: `${pfx}__filter-chips-clear`,
+          content: LOCALE.CLEAR_ALL,
+          bubble: 0,
+          service: "filter-clear",
+          uiHandler: [ui],
+        }),
+      );
+    }
+    return Skeletons.Box.X({
+      className: `${pfx}__filter-chips`,
+      sys_pn: "filter-chips",
+      partHandler: ui,
+      attrOpt: { "data-empty": chips.length ? "0" : "1" },
+      kids: chips,
+    });
+  };
 
   // Sub-views over the same folder-scoped task set. Board is rendered inline
   // (its columns + DnD); List/Summary are separate modules fed the same data.
@@ -2203,6 +2303,7 @@ const make = function (ui) {
     className: `${pfx}__root`,
     kids: [
       subHeader,
+      filterChips(),
       // The view body sits in a NAMED host so a filter keystroke can re-feed
       // just this subtree (_refreshViewBody) instead of the whole panel. A full
       // _render() rebuilds the focused filter input, and ui-core seeds <input>
