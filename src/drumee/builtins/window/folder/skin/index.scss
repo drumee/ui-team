@@ -1473,6 +1473,11 @@
     // forever and outranks inline styles, so anything positioning this element
     // in JS afterwards would be silently overridden.
     animation: window-folder-dialog-in 0.18s ease-out backwards;
+
+    // Drawn at 85% like the create-workspace dialog (media/form/skin,
+    // `$card-scale`): `zoom` shrinks everything in the card by one factor, so
+    // the 460px design renders at 391px. Kept equal to that file by hand.
+    zoom: 0.85;
   }
 
   // Set by whoever closes the dialog, which then defers the teardown so the
@@ -1506,8 +1511,49 @@
     padding: 24px 24px 25px;
   }
 
+  &__create-folder-header {
+    gap: 12px;
+  }
+
+  // The folder being made, ahead of the title — media/grid/template/folder,
+  // sized and tinted the way the import dialog's destination card does it
+  // (migrate-gdrive-popup/skin `__dest-ico`): the art carries no size or area
+  // fill of its own outside the grid.
+  &__create-folder-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 34px;
+      height: 28px;
+    }
+
+    .folder-shape {
+      width: 34px;
+      height: 28px;
+      fill: var(--area-personal);
+
+      &.public { fill: var(--area-public); }
+      &.share,
+      &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+  }
+
   &__create-folder-heading {
     gap: 4px;
+    // Takes the room between the glyph and the close cross, which space-between
+    // would otherwise hand out evenly among three items.
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__create-folder-title,
