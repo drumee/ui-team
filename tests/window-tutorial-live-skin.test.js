@@ -12,9 +12,19 @@ const css = sass
   })
   .css.replace(/\s+/g, " ");
 
-// The step is fed into tutorial-main__content, which paints --normal-bg for
-// the mock. Live, that canvas would hide the folder the import lands in.
-test("live: the content canvas is see-through, like the layout", () => {
-  assert.match(css, /\.window-tutorial__ui\[data-live="1"\] \.tutorial-main__content[^{]*\{ background: transparent; \}/);
-  assert.match(css, /\.window-tutorial__ui\[data-live="1"\] \.tutorial-main__layout[^{]*\{ background: transparent; \}/);
+// After Done the live dialog sits on the tour's own drawn Files screen, as it
+// did during the walkthrough — the tour canvas stays, nothing is see-through.
+test("live: the tour canvas is kept (no see-through override)", () => {
+  assert.doesNotMatch(css, /\[data-live="1"\] \.tutorial-main__(content|layout)/);
+});
+
+// No backdrop behind the live dialog: the tour screen is shown at full
+// strength, exactly as on the walkthrough's dialog screens.
+const mig = sass
+  .compile(path.join(SRC, "modules/desk/tutorial/migrate/skin/index.scss"), {
+    loadPaths: [SRC, path.join(SRC, "skin")],
+  })
+  .css.replace(/\s+/g, " ");
+test("live: no backdrop dim on the stage", () => {
+  assert.doesNotMatch(mig, /\.tutorial-migrate__stage--live \{[^}]*background/);
 });

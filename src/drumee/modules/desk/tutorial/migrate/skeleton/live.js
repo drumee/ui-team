@@ -7,6 +7,12 @@
  * through this exact card a moment ago, so it must not turn into a different
  * one — which is why this is not the popup.
  *
+ * ON THE TOUR'S OWN SCREEN. The drawn Files pane stays under the card, as on
+ * the walkthrough's dialog screens, and nothing dims it: the user is still in
+ * the tour, now doing the thing. The pane is drawn inert (no services) — its
+ * buttons were the walkthrough's controls, not this dialog's. Closing the card
+ * closes the tour (mg-live-close → host).
+ *
  * Renders a snapshot of libs/gdrive-sa-import and nothing else; every
  * decision about state lives there.
  *
@@ -19,6 +25,7 @@
  * @param {Object} [opt]
  * @param {String} [opt.link] what the field held, so a re-render keeps it
  */
+const { filesPane } = require('../../skeleton/toolkit/files');
 const { destCard } = require('./dialog');
 const { errorText, progressOf, summaryOf } = require('libs/gdrive-sa-import');
 
@@ -193,7 +200,7 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__stage ${pfx}__stage--live`,
-    kids: [Skeletons.Box.Y({
+    kids: [filesPane(ui, {}), Skeletons.Box.Y({
       className: `${pfx}__overlay`,
       kids: [Skeletons.Box.Y({
         className: `${pfx}__backdrop`,

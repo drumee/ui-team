@@ -10,6 +10,7 @@ const STUBS = {
   "media/grid/template/folder": (o) => `<svg class="folder ${o.area} ${o.filetype}"></svg>`,
   "libs/gdrive-sa-import": require(path.join(SRC, "libs/gdrive-sa-import.js")),
   "@drumee/ui-essentials": { filesize: (n) => `${n}B` },
+  "../../skeleton/toolkit/files": { filesPane: (ui, opt) => ({ type: "pane", paneOpt: opt }) },
 };
 const load = Module._load;
 Module._load = function (r, p, m) {
@@ -129,5 +130,15 @@ test("never a data-state attribute (globally hidden values)", () => {
       assert.ok(!(n.attrOpt && "data-state" in n.attrOpt), `${state}: data-state attr`);
       assert.ok(!(n.dataset && "state" in n.dataset), `${state}: dataset.state`);
     }
+  }
+});
+
+test("live keeps the tour's Files screen under the dialog, inert", () => {
+  for (const state of ["idle", "in-progress", "done"]) {
+    const t = live(ui, snap({ state, job: { job_id: 1, status: state } }), dest, {});
+    const pane = t.kids[0];
+    assert.equal(pane.type, "pane", `${state}: no tour screen under the dialog`);
+    assert.deepEqual(pane.paneOpt, {}, `${state}: the drawn pane must not act`);
+    assert.ok(has(t.kids[1], "overlay"), `${state}: dialog overlay after the pane`);
   }
 });

@@ -207,12 +207,6 @@
   }
 
   // ── live (after Done — see ../skeleton/live.js) ────────────────────────────
-  // The real window is underneath now, not a drawing of it: the stage only
-  // dims it, so the card reads as a dialog over the user's own folder.
-  &__stage--live {
-    background: var(--overlay-bg);
-  }
-
   &__live-input {
     width: 100%;
 
