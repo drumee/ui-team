@@ -97,6 +97,260 @@ function trackFileLog(log, job) {
   return next;
 }
 
+/**
+ * One share-to-SA run, for one destination.
+ *
+ * NO VIEW. The caller renders `snapshot()` from `onChange`; everything here
+ * is the protocol. `service` is any widget with fetchService/postService —
+ * the calls go out as that widget, exactly as they did from the popup.
+ *
+ * `onChange` fires after every transition, and after a poll only when the
+ * job's signature moved: re-feeding identical content every 2s replaced the
+ * Cancel button for nothing and ate clicks (the popup learned that first).
+ *
+ * `timers` is injectable for tests; production uses the globals.
+ */
+function createSaImport(opt = {}) {
+  const { service, hub_id, nid } = opt;
+  const direct = opt.direct ? 1 : 0;
+  const onChange = opt.onChange || (() => {});
+  const onFinished = opt.onFinished || (() => {});
+  const timers = opt.timers || {
+    setInterval: (fn, ms) => setInterval(fn, ms),
+    clearInterval: (id) => clearInterval(id),
+  };
+  // The account asking — get_state / sa_check / get_status / cancel / ack are
+  // keyed on the user, not on the destination hub.
+  const me = () => opt.account_id || (typeof Visitor !== 'undefined' ? Visitor.id : undefined);
+
+  const blank = (state, saEmail = null) => ({
+    state, saEmail, folder: null, error: null, job: null, fileLog: [], cancelRequested: 0,
+  });
+
+  let s = blank('loading');
+  let poll = null;
+  let lastSig = null;
+  let finishedFor = null;
+  let starting = false;
+  let disposed = false;
+
+  function snapshot() {
+    return {
+      ...s,
+      folder: s.folder && { ...s.folder },
+      job: s.job && { ...s.job },
+      fileLog: s.fileLog.map((e) => ({ ...e })),
+    };
+  }
+  function emit() {
+    if (!disposed) onChange(snapshot());
+  }
+  function set(patch) {
+    Object.assign(s, patch);
+    emit();
+  }
+  function stopPoll() {
+    if (poll) {
+      timers.clearInterval(poll);
+      poll = null;
+    }
+  }
+
+  async function tick() {
+    if (disposed || !s.job) return;
+    const job_id = s.job.job_id;
+    let r;
+    try {
+      r = await service.fetchService('google_drive.get_status', { hub_id: me(), job_id });
+    } catch (e) {
+      return;
+    }
+    // A reset or a newer attach while the request was out: this answer is
+    // about a job nobody is watching any more.
+    if (disposed || !r || !s.job || s.job.job_id !== job_id) return;
+    const sig = [r.status, r.processed_files, r.total_files, r.errors_count,
+      r.current_filename, r.bytes_done, r.bytes_in_flight].join('|');
+    const changed = sig !== lastSig;
+    lastSig = sig;
+    s.job = { job_id, ...r };
+    s.fileLog = trackFileLog(s.fileLog, r);
+    if (FINISHED.includes(r.status)) {
+      stopPoll();
+      s.state = r.status;
+      s.cancelRequested = 0;
+      emit();
+      if (finishedFor !== job_id) {
+        finishedFor = job_id;
+        onFinished(snapshot().job);
+      }
+      return;
+    }
+    s.state = 'in-progress';
+    if (changed) emit();
+  }
+
+  /** Watch a job, whoever started it. */
+  function attach(job_id, job) {
+    if (disposed || !job_id) return;
+    stopPoll();
+    lastSig = null;
+    s.job = { status: 'queued', ...(job || {}), job_id };
+    s.state = 'in-progress';
+    s.fileLog = [];
+    s.cancelRequested = 0;
+    s.error = null;
+    emit();
+    tick();
+    poll = timers.setInterval(tick, POLL_INTERVAL_MS);
+  }
+
+  async function load() {
+    set({ state: 'loading' });
+    let res;
+    try {
+      res = await service.fetchService('google_drive.get_state', { hub_id: me() });
+    } catch (e) {
+      res = null;
+    }
+    if (disposed) return snapshot();
+    s.saEmail = (res && res.sa_email) || null;
+    const job = res && res.job;
+    if (job && RUNNING.includes(job.status)) {
+      attach(job.job_id, job);
+      return snapshot();
+    }
+    if (!res || !res.sa) {
+      set({ state: 'unavailable' });
+      return snapshot();
+    }
+    set({ state: 'idle', error: null });
+    return snapshot();
+  }
+
+  /**
+   * For a caller that already read get_state itself (the popup, which needs
+   * the OAuth fields too). Silent: that caller renders on its own.
+   */
+  function seed(patch = {}) {
+    if ('saEmail' in patch) s.saEmail = patch.saEmail || null;
+    if (s.state === 'loading') s.state = 'idle';
+  }
+
+  async function doVerify(link) {
+    const folder = String(link || '').trim();
+    // An empty field is answered here, not sent: a press of Import now with
+    // nothing pasted must say why nothing happened.
+    if (!folder) {
+      set({ state: 'idle', folder: null, error: 'SA_BAD_LINK' });
+      return null;
+    }
+    set({ state: 'checking', folder: null, error: null });
+    let res;
+    try {
+      res = await service.fetchService('google_drive.sa_check', { hub_id: me(), folder });
+    } catch (e) {
+      res = null;
+    }
+    if (disposed) return null;
+    if (res && res.ok && res.folder_id) {
+      set({
+        state: 'verified',
+        folder: { folder_id: res.folder_id, name: res.name, is_folder: !!res.is_folder, raw: folder },
+      });
+      return { ...s.folder };
+    }
+    set({ state: 'idle', error: (res && res.error) || 'SA_NOT_SHARED' });
+    return null;
+  }
+
+  async function verify(link) {
+    if (disposed || starting || s.state === 'checking' || s.state === 'in-progress') return null;
+    return doVerify(link);
+  }
+
+  /**
+   * Verify when needed, then enqueue. `link` is what the field holds now; a
+   * link different from the verified one is verified again, an empty one
+   * falls back to the verified folder (the field is rebuilt on re-render).
+   */
+  async function start(link) {
+    if (disposed || starting || s.state === 'checking' || s.state === 'in-progress') return null;
+    starting = true;
+    try {
+      const raw = link == null ? '' : String(link).trim();
+      if (!s.folder || (raw && raw !== s.folder.raw)) {
+        const ok = await doVerify(raw);
+        if (!ok || disposed) return null;
+      }
+      set({ state: 'starting', error: null });
+      let res;
+      try {
+        res = await service.postService('google_drive.start_migration', {
+          hub_id,
+          nid,
+          direct_into: direct,
+          auth_kind: 'sa',
+          sa_folder: s.folder.raw || s.folder.folder_id,
+          conflict_policy: 'skip',
+        });
+      } catch (e) {
+        if (!disposed) {
+          set({ state: 'verified', error: (e && (e.reason || e.error || e.message)) || 'SA_NOT_SHARED' });
+        }
+        return null;
+      }
+      if (disposed) return null;
+      if (!res || !res.job_id) {
+        set({ state: 'verified', error: 'START_FAILED' });
+        return null;
+      }
+      attach(res.job_id);
+      return res.job_id;
+    } finally {
+      starting = false;
+    }
+  }
+
+  async function cancel() {
+    if (disposed || s.state !== 'in-progress' || !s.job || s.cancelRequested) return;
+    set({ cancelRequested: 1 });
+    try {
+      await service.postService('google_drive.cancel', { hub_id: me(), job_id: s.job.job_id });
+    } catch (e) {
+      if (!disposed) set({ cancelRequested: 0 });
+    }
+  }
+
+  /** Tell the server this result has been seen, so it is not replayed. */
+  function ack() {
+    if (!s.job || !FINISHED.includes(s.state)) return Promise.resolve();
+    try {
+      return Promise.resolve(
+        service.postService('google_drive.ack_result', { hub_id: me(), job_id: s.job.job_id }),
+      ).catch(() => {});
+    } catch (e) {
+      return Promise.resolve();
+    }
+  }
+
+  /** Back to an empty form. Never acks — the caller decides that. */
+  function reset() {
+    if (disposed) return;
+    stopPoll();
+    lastSig = null;
+    finishedFor = null;
+    s = blank('idle', s.saEmail);
+    emit();
+  }
+
+  function dispose() {
+    disposed = true;
+    stopPoll();
+  }
+
+  return { load, seed, verify, start, attach, cancel, ack, reset, dispose, snapshot };
+}
+
 module.exports = {
   POLL_INTERVAL_MS,
   RUNNING,
@@ -105,4 +359,5 @@ module.exports = {
   progressOf,
   summaryOf,
   trackFileLog,
+  createSaImport,
 };
