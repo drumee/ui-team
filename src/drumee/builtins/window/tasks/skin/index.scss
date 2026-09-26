@@ -851,6 +851,40 @@ $theme-colors: (
     }
   }
 
+  // ── Card / row motion on a repaint (index.js _flipRepaint, _removeTask) ──
+  // A repaint now PATCHES the board — unchanged cards keep their element — so
+  // these only ever play on the card that actually arrived or left:
+  //   data-enter    a card the repaint created (a create, a filter bringing it
+  //                 back). Cleared on animationend.
+  //   data-pending  its delete is in flight: dimmed and inert, restored if the
+  //                 server refuses.
+  //   data-leaving  the delete was confirmed; fades out for TASK_EXIT_MS (0.14s,
+  //                 keep in step) before the row is pruned.
+  &__task-card,
+  &__list-row {
+    &[data-enter="1"] {
+      animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    &[data-pending="1"] {
+      opacity: 0.5;
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+    }
+
+    &[data-leaving="1"] {
+      animation: tasks-panel-pop-out 0.14s cubic-bezier(0.4, 0, 1, 1) forwards;
+      pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &[data-enter="1"],
+      &[data-leaving="1"] {
+        animation: none;
+      }
+    }
+  }
+
   // Title + description grouped tightly (Figma EL-6d1b5341: gap 4px).
   &__task-head {
     align-items: stretch;

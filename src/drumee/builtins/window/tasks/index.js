@@ -11,6 +11,7 @@ const {
   settlePendingFiles,
 } = require("./detail-commit");
 const { restoreScroll } = require("./scroll-restore");
+const { stamp, reconcile } = require("./reconcile");
 const {
   markerRe,
   contentTokenRe,
@@ -28,6 +29,14 @@ const {
 // "click close → delay → popup finally disappears" this panel was already
 // bitten by once. See _dismissOverlay.
 const OVERLAY_EXIT_MS = 140;
+
+// A deleted card's fade-out before its row is pruned. MUST MATCH the 0.14s the
+// skin gives `[data-leaving="1"]` on __task-card / __list-row.
+const TASK_EXIT_MS = 140;
+
+// Upper bound on a repaint's card glide / fade-in (0.2s / 0.18s) before its
+// inline styles are cleared regardless — see _flipRepaint.
+const FLIP_SETTLE_MS = 320;
 
 // Mention-editor scopes where a bare Enter posts, and the method it calls. The
 // description editors (create / detail) are deliberately absent: they have no
@@ -1244,7 +1253,7 @@ class __tasks_panel extends LetcBox {
     // Fall back to a full render if we can't locate the DOM nodes (defensive).
     if (!card || !targetBody) {
       task.status = status;
-      this._render();
+      this._render({ full: true });
     } else {
       const sourceBody = card.closest(".tasks-panel__column-body");
       card.classList.remove("is-dragging");
@@ -1290,7 +1299,7 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] update_status (drag) failed:", err);
       task.status = originalStatus;
       await this._loadTasks();
-      this._render();
+      this._render({ full: true });
     }
   }
 
@@ -1445,6 +1454,8 @@ class __tasks_panel extends LetcBox {
     if (count === 0 && !empty) {
       empty = document.createElement("div");
       empty.className = "tasks-panel__column-empty";
+      // Hand-made, outside Marionette — _dedupeEmptyHints keys on this.
+      empty.dataset.raw = "1";
       empty.textContent = LOCALE.DROP_TASKS_HERE || "";
       colBody.appendChild(empty);
     } else if (count > 0 && empty) {
@@ -2621,7 +2632,7 @@ class __tasks_panel extends LetcBox {
         if (body.scrollTop + body.clientHeight < body.scrollHeight - 240) return;
         if (!this._cardWindow) this._cardWindow = {};
         this._cardWindow[key] = have + CARD_WINDOW_STEP;
-        this._refreshViewBody();
+        this._refreshViewBody({ enter: false });
       },
       true,
     );
@@ -3898,6 +3909,11 @@ class __tasks_panel extends LetcBox {
     // done/total, and the badge is rebuilt from the local rows.
     const doomed = this._tasks.find((t) => t.id === id);
     const parentOfDoomed = (doomed && doomed.parent_task_id) || null;
+    // Answer the click at once: the card dims while the delete is in flight,
+    // instead of sitting there untouched for the round-trip and then snapping
+    // out. Undone below if the server refuses.
+    this._markTaskEls(id, "pending", true);
+    let closedDetail = false;
     try {
       const resp = await this.postService({
         service: SERVICE.task.delete,
@@ -3910,9 +3926,13 @@ class __tasks_panel extends LetcBox {
         // NOTE `affected` now counts the task PLUS any cascaded subtasks, so it
         // is legitimately > 1; the `resp.id !== id` arm is what carries the
         // check for a parent with children.
+        this._markTaskEls(id, "pending", false);
         Wm.alert(LOCALE.ERROR_NETWORK);
         return;
       }
+      // Play the card's exit before the rows go, so it fades out in place and
+      // THEN its neighbours slide up into the gap (_flipRepaint).
+      await this._playTaskExit(resp.subtask_ids ? [id, ...resp.subtask_ids] : [id]);
       // Deleting a parent cascades to its subtasks server-side, so drop them
       // locally too — otherwise the children linger as orphans until the next
       // list reload, counted by Project Health and reachable from nowhere.
@@ -3924,6 +3944,7 @@ class __tasks_panel extends LetcBox {
       // an empty child list until the next full reload.
       if (parentOfDoomed) this._syncSubtaskBadges(parentOfDoomed);
       if (gone.has(this._detailId)) {
+        closedDetail = true;
         this._detailId = null;
         this._detailDraft = null;
         this._detailBase = null;
@@ -3933,6 +3954,7 @@ class __tasks_panel extends LetcBox {
       }
     } catch (err) {
       console.error("[tasks_panel] task.delete failed:", err);
+      this._markTaskEls(id, "pending", false);
     }
     // Deleting a child from the OPEN parent's panel (the child row's ✕) refreshes
     // only the board behind the modal and the child list. A full _render() here
@@ -3944,7 +3966,44 @@ class __tasks_panel extends LetcBox {
       this._refreshViewBody();
       return this._refreshSubtaskSection();
     }
-    this._render();
+    // Only the rows changed — the viewbar, filter popup and overlays did not —
+    // so repaint the view body alone. It patches: the deleted card goes, every
+    // other card keeps its element and glides into place. The one exception is
+    // a delete that took the OPEN task with it: its panel has to come down too.
+    if (closedDetail) this._renderOverlays();
+    this._refreshViewBody();
+  }
+
+  /**
+   * Toggle a transient flag on every card / list row drawn for a task.
+   * @param {String}  id
+   * @param {String}  flag   "pending" (delete in flight) | "leaving" (exit)
+   * @param {Boolean} on
+   */
+  _markTaskEls(id, flag, on) {
+    if (!this.el || id == null) return [];
+    const els = Array.from(
+      this.el.querySelectorAll(
+        `.tasks-panel__task-card[data-tid="${id}"], .tasks-panel__list-row[data-tid="${id}"]`,
+      ),
+    );
+    els.forEach((el) => {
+      if (on) el.dataset[flag] = "1";
+      else delete el.dataset[flag];
+    });
+    return els;
+  }
+
+  /**
+   * Fade the given tasks' cards out, resolving once the exit has played (or at
+   * once, when there is nothing on screen to animate / motion is reduced).
+   * @param {Array} ids
+   * @returns {Promise}
+   */
+  _playTaskExit(ids) {
+    const els = [].concat(...ids.map((i) => this._markTaskEls(i, "leaving", true)));
+    if (!els.length || this._prefersReducedMotion()) return Promise.resolve();
+    return new Promise((resolve) => setTimeout(resolve, TASK_EXIT_MS));
   }
 
   // List-view checkbox — toggle a task between a done and a not-done column.
@@ -3966,7 +4025,7 @@ class __tasks_panel extends LetcBox {
     if (!target || target.key === originalStatus) return;
     const next = target.key;
     task.status = next;
-    this._render();
+    this._refreshViewBody();
     try {
       const updated = await this.postService({
         service: SERVICE.task.update_status,
@@ -3983,18 +4042,18 @@ class __tasks_panel extends LetcBox {
         if (row.parent) {
           this._mergeTask(row.parent);
           this._syncSubtaskBadges(row.parent.id);
-          this._render();
+          this._refreshViewBody();
         }
       } else {
         // Failed silently (postService never rejects): revert the
         // optimistic flip instead of leaving unsaved state on screen.
         task.status = originalStatus;
-        this._render();
+        this._refreshViewBody();
       }
     } catch (err) {
       console.error("[tasks_panel] toggle-complete failed:", err);
       task.status = originalStatus;
-      this._render();
+      this._refreshViewBody();
     }
   }
 
@@ -9361,8 +9420,14 @@ class __tasks_panel extends LetcBox {
     this._restoreFocus(focus);
   }
 
-  _render() {
-    // This feed replaces the overlay wrappers outright, so any overlay that is
+  /**
+   * @param {Object}  [opt]
+   * @param {Boolean} [opt.full]  rebuild every node through feed() instead of
+   *   patching. For the recovery paths that run because the DOM no longer
+   *   matches what the panel thinks it drew (a drag that lost its card).
+   */
+  _render({ full = false } = {}) {
+    // This render may replace the overlay wrappers outright, so any overlay
     // mid-exit goes with it. Drop the queued teardown: it would otherwise fire
     // a moment from now and re-feed wrappers this render has already settled.
     this._cancelPendingExit();
@@ -9380,10 +9445,31 @@ class __tasks_panel extends LetcBox {
     // Replay neither the board's first-paint fade nor the calendar's, which
     // belong to the board first appearing and to a view switch — see
     // _stampRepaintFades.
-    this._stampRepaintFades(this._paintedView !== this.getView());
+    const viewChanged = this._paintedView !== this.getView();
+    this._stampRepaintFades(viewChanged);
     this._paintedView = this.getView();
 
-    this.feed(require("./skeleton")(this));
+    // PATCHED, not re-fed: _patchKids keeps every mounted node whose skeleton
+    // did not change (reconcile.js). A plain feed() destroyed and rebuilt the
+    // whole panel — every card, every avatar (which then reloads its picture:
+    // blank for a frame, then the photo), every scroller — for any change at
+    // all. That rebuild was the flicker on create / delete / filter.
+    //
+    // The scroll restore runs INSIDE the repaint so _flipRepaint measures the
+    // cards where they will actually sit.
+    const skl = require("./skeleton")(this);
+    this._flipRepaint(() => {
+      if (full) this.feed(this._stamped(skl));
+      else this._patchKids(this, [skl]);
+      // Restores now, and keeps retrying until the rebuilt content is tall
+      // enough to take the offset (see _restoreViewScroll).
+      this._restoreViewScroll(savedScroll);
+    });
+    // The compact tab strip is now KEPT across a view switch, so the mount
+    // hook that paged it to the active tab (_wireViewbarCarousel) no longer
+    // runs on its own. A switch made from code (a Project Health link) would
+    // otherwise leave the chosen tab off-screen.
+    if (viewChanged) this._scrollActiveViewTabIntoView();
     this._markPainted();
     // The board has drawn: the folder window's Task entrance keys on this
     // (window/folder/skin, data-view="task"), so it slides in WITH its columns.
@@ -9395,9 +9481,6 @@ class __tasks_panel extends LetcBox {
     // (sync + next frame as a safety net for late-mount children).
     this._prepopulateInputs();
     this._renderCommentBodies();
-    // Restores now, and keeps retrying until the rebuilt content is tall
-    // enough to take the offset (see _restoreViewScroll).
-    this._restoreViewScroll(savedScroll);
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(() => {
         this._prepopulateInputs();
@@ -9573,9 +9656,199 @@ class __tasks_panel extends LetcBox {
         !!opt.dropScroll || this._paintedView !== this.getView(),
       );
       this._paintedView = this.getView();
-      host.feed(node.kids);
-      // Retries per frame until the rebuilt columns can take the offsets.
-      this._restoreViewScroll(savedScroll);
+      this._flipRepaint(
+        () => {
+          // A new calendar range (dropScroll) is all-new content and keeps its
+          // arrival fade, which needs fresh elements — so it is rebuilt. Every
+          // other repaint patches: only the cards that changed are rebuilt.
+          if (opt.dropScroll) host.feed(this._stamped(node.kids));
+          else this._patchKids(host, node.kids);
+          // Retries per frame until the rebuilt columns can take the offsets.
+          this._restoreViewScroll(savedScroll);
+        },
+        { enter: opt.enter !== false },
+      );
+    });
+  }
+
+  // Stamp nodes that are about to be FED (not patched), so the next patch can
+  // still recognise what this rebuild mounted.
+  _stamped(kids) {
+    (Array.isArray(kids) ? kids : [kids]).forEach((k) => k && k.kind && stamp(k));
+    return kids;
+  }
+
+  /**
+   * Bring a mounted part's children in line with `kids`, rebuilding only the
+   * nodes whose skeleton changed (reconcile.js). Falls back to a plain feed()
+   * when the part cannot be patched or the patch throws half-way — a full
+   * rebuild is always a correct answer, just a slower one.
+   * @param {Object} part  mounted LetcBox
+   * @param {Array}  kids  skeleton nodes, as for feed()
+   */
+  _patchKids(part, kids) {
+    const list = (Array.isArray(kids) ? kids : [kids]).filter(
+      (k) => k && k.kind,
+    );
+    list.forEach(stamp);
+    let ok = false;
+    try {
+      ok = reconcile(part, list);
+    } catch (err) {
+      console.warn("[tasks_panel] patch failed, rebuilding:", err);
+    }
+    if (!ok) part.feed(list);
+    this._dedupeEmptyHints();
+    this._syncDescEditors();
+  }
+
+  /**
+   * Put each mounted mention editor back in step with its draft.
+   *
+   * The editors are contenteditable shells whose text is NOT in the skeleton —
+   * _initDescEditor fills them from the draft when they mount. A full feed()
+   * remounted them on every render, so a draft cleared in code (a comment just
+   * posted) always came back empty. A patch keeps an unchanged shell, text and
+   * all, so it has to be re-applied here. A no-op while typing: the input
+   * handler writes the draft synchronously, so the two already agree.
+   *
+   * An editor holding an inline image still uploading is left alone — its
+   * placeholder is not in the draft yet, and re-rendering would drop it.
+   */
+  _syncDescEditors() {
+    if (!this.el) return;
+    this.el.querySelectorAll("[data-desc-scope]").forEach((el) => {
+      if (el.querySelector(`.${this.fig.family}__inline-img-pending`)) return;
+      const target = this._mentionTarget(el.getAttribute("data-desc-scope"));
+      if (!target) return;
+      const want = target.get();
+      if (this._serializeEditor(el) !== want) this._renderEditorContent(el, want);
+    });
+  }
+
+  /**
+   * The drag path (_syncColumn) adds and removes the empty-column hint by hand,
+   * outside Marionette. A patch that keeps or rebuilds the skeleton's own hint
+   * can then leave two in one column, or a hint beside cards. Drop the
+   * hand-made ones wherever the column already has something to show.
+   */
+  _dedupeEmptyHints() {
+    if (!this.el) return;
+    this.el
+      .querySelectorAll('.tasks-panel__column-empty[data-raw="1"]')
+      .forEach((raw) => {
+        const body = raw.parentNode;
+        if (!body) return;
+        const other = Array.from(body.children).some(
+          (c) =>
+            c !== raw &&
+            (c.classList.contains("tasks-panel__task-card") ||
+              c.classList.contains("tasks-panel__column-empty")),
+        );
+        if (other) raw.remove();
+      });
+  }
+
+  /**
+   * Run a repaint and animate what it did to the task cards and list rows:
+   * survivors glide from their old box to their new one (FLIP), newcomers
+   * fade in. Without it a create / delete / filter snapped every card below
+   * the change to its new slot in one frame.
+   *
+   * Survivors are only recognisable because the repaint PATCHES — a kept card
+   * is the same element before and after. A wholesale swap (switching views)
+   * keeps nothing, and then nothing animates in either: a whole board fading
+   * in on a tab press would read as a slow load, not a transition.
+   *
+   * All reads, then all writes, and only what sits inside its scroller's
+   * viewport — the same economics as _animateMove.
+   *
+   * @param {Function} mutate   the synchronous repaint
+   * @param {Object}   [opt]
+   * @param {Boolean}  [opt.enter=true]  fade newcomers in (off for the card
+   *   window growing under the user's scroll)
+   */
+  _flipRepaint(mutate, { enter = true } = {}) {
+    const SEL = ".tasks-panel__task-card, .tasks-panel__list-row";
+    if (
+      !this.el ||
+      typeof requestAnimationFrame !== "function" ||
+      // A modal covers the board: nothing behind it is worth measuring.
+      this._creating ||
+      this._detailId ||
+      this._prefersReducedMotion()
+    ) {
+      return mutate();
+    }
+    const first = new Map();
+    this.el.querySelectorAll(SEL).forEach((c) => {
+      first.set(c, c.getBoundingClientRect());
+    });
+    mutate();
+    if (!first.size || !this.el) return;
+
+    const vpCache = new Map();
+    const inView = (c, r) => {
+      const p = c.parentElement;
+      if (!p) return false;
+      let v = vpCache.get(p);
+      if (!v) vpCache.set(p, (v = p.getBoundingClientRect()));
+      return (
+        r.bottom >= v.top && r.top <= v.bottom && r.right >= v.left && r.left <= v.right
+      );
+    };
+    const moves = [];
+    const entered = [];
+    let survived = 0;
+    this.el.querySelectorAll(SEL).forEach((c) => {
+      const f = first.get(c);
+      if (f) survived++;
+      const l = c.getBoundingClientRect();
+      if ((!l.width && !l.height) || !inView(c, l)) return;
+      if (!f) return entered.push(c);
+      const dx = f.left - l.left;
+      const dy = f.top - l.top;
+      if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) moves.push({ c, dx, dy });
+    });
+    if (!survived) return;
+
+    moves.forEach(({ c, dx, dy }) => {
+      // A newer repaint owns the card from here; an older glide's cleanup
+      // must not strip the transition off this one.
+      c._flipGen = (c._flipGen || 0) + 1;
+      c.style.transition = "none";
+      c.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+    // Each cleanup also runs on a timer: the end event never fires for a card
+    // that left the DOM or stopped rendering (content-visibility) mid-way, and
+    // a stranded inline `transition` would cost the card its hover effects.
+    const settle = (c, ev, fn) => {
+      let timer = 0;
+      const done = (e) => {
+        if (e && e.target !== c) return;
+        clearTimeout(timer);
+        c.removeEventListener(ev, done);
+        fn();
+      };
+      c.addEventListener(ev, done);
+      timer = setTimeout(done, FLIP_SETTLE_MS);
+    };
+    if (enter) {
+      entered.forEach((c) => {
+        c.dataset.enter = "1";
+        settle(c, "animationend", () => delete c.dataset.enter);
+      });
+    }
+    if (!moves.length) return;
+    requestAnimationFrame(() => {
+      moves.forEach(({ c }) => {
+        const gen = c._flipGen;
+        c.style.transition = "transform 0.2s cubic-bezier(0.2, 0, 0, 1)";
+        c.style.transform = "";
+        settle(c, "transitionend", () => {
+          if (c._flipGen === gen) c.style.transition = "";
+        });
+      });
     });
   }
 
