@@ -5780,6 +5780,14 @@ class __window_folder extends mfsInteract {
         case _a.chat:
           // Rail + side-panel layout is set up by _enterChatTabLayout (called
           // from showFolderTab); the chat panel itself is already mounted.
+          //
+          // Opening Team Chat is reading it — the one tab switch that marks
+          // the conversation read (widget_chat read_on_interaction). Measured
+          // a frame later, once the data-view stamp has laid it out.
+          requestAnimationFrame(() => {
+            const chat = this.getPart && this.getPart("folder-chat");
+            if (chat && _.isFunction(chat.readIfInView)) chat.readIfInView();
+          });
           return;
         case "files":
           return;

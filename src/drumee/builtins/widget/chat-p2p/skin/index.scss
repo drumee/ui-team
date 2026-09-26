@@ -270,6 +270,17 @@
     gap: 8px;
     cursor: pointer;
     user-select: none;
+    // A bigger hit area than the 20px-high switch, without moving anything:
+    // the padding is taken back by an equal negative margin.
+    padding: 8px;
+    margin: -8px;
+    border-radius: 8px;
+
+    // The kids are inert (skeleton); keep them out of hit-testing too, so the
+    // whole pill is one target.
+    > * {
+      pointer-events: none;
+    }
   }
 
   &__unread-label {
@@ -589,6 +600,14 @@
       justify-content: center;
       @include drumee.typo($size: 13px, $color: var(--normal-fg-50));
     }
+  }
+
+  // One list per scope tab, both mounted (see _selectScope). The root's
+  // data-scope says which shows. !important: the list's own box rules set
+  // display through data-flow and would otherwise win.
+  &__ui:not([data-scope="workspace"]) &__contact-list--workspace,
+  &__ui[data-scope="workspace"] &__contact-list--direct {
+    display: none !important;
   }
 
   &__all-read-empty {

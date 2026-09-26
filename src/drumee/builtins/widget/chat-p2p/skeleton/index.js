@@ -84,9 +84,14 @@ module.exports = function (ui) {
         className: `${fig}__unread-label`,
         content: LOCALE.UNREADS,
       }),
+      // `active: 0` on the track AND the thumb: kidsOpt reaches direct kids
+      // only, and a clickable thumb swallowed every click that landed on it —
+      // which is most clicks aimed at a switch — so the toggle only answered
+      // on its label and the track's edges.
       Skeletons.Box.X({
         className: `${fig}__toggle-track`,
-        kids: [Skeletons.Box.X({ className: `${fig}__toggle-thumb` })],
+        active: 0,
+        kids: [Skeletons.Box.X({ className: `${fig}__toggle-thumb`, active: 0 })],
       }),
     ],
   });
@@ -117,15 +122,16 @@ module.exports = function (ui) {
     _.isFunction(Desk.isSupportContact) &&
     Desk.isSupportContact();
 
-  // Direct Chat / Workspace chat (Figma 43:32209). Unlike the old
-  // All / Unread / Support row these are not a client-side show/hide over one
-  // list — they are two different QUERIES (chat.chat_rooms with flag=contact
-  // vs chat.share_rooms / group_chat_rooms), so picking one restarts the list.
-  // See getCurrentApi + _setRoomScope in ../index.js.
+  // Direct Chat / Workspace chat (Figma 43:32209). Two different QUERIES
+  // (chat.chat_rooms with flag=contact vs chat.share_rooms /
+  // group_chat_rooms), so each tab has its own list below; picking a tab
+  // shows its list and parks the other's conversation (_selectScope in
+  // ../index.js). `scope-tab-*` lets a scope chosen in code set the tabs.
   const scope = ui._roomScope || "direct";
   const scopeTab = ({ label, key, service, countPn }) =>
     Skeletons.Box.X({
       className: `${fig}__filter-btn`,
+      sys_pn: `scope-tab-${key}`,
       radio: filterRadio,
       state: key === scope ? 1 : 0,
       service,
@@ -179,20 +185,41 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 
-  const contactList = Skeletons.List.Smart({
-    className: `${fig}__contact-list`,
-    sys_pn: "contact-list",
-    spinner: true,
-    spinnerWait: 300,
-    vendorOpt: Preset.List.Orange_e,
-    placeholder: Skeletons.Note(LOCALE.NO_CONTACT, "no-contact"),
-    itemsOpt: {
-      kind: "chat_contact_item",
-      service: "load-conversation",
-      radio: ui._radioId,
-      uiHandler: [ui],
-    },
-    api: ui.getCurrentApi,
+  // One list per source, both kept mounted; the root's data-scope shows one
+  // (skin). Each is bound to its OWN api — see getDirectApi in ../index.js.
+  // Separate radio channels, so selecting a row in one list does not clear
+  // the other tab's selection.
+  const roomList = ({ pn, mod, api, radio }) =>
+    Skeletons.List.Smart({
+      className: `${fig}__contact-list ${fig}__contact-list--${mod}`,
+      sys_pn: pn,
+      spinner: true,
+      spinnerWait: 300,
+      vendorOpt: Preset.List.Orange_e,
+      placeholder: Skeletons.Note(LOCALE.NO_CONTACT, "no-contact"),
+      itemsOpt: {
+        kind: "chat_contact_item",
+        service: "load-conversation",
+        radio,
+        uiHandler: [ui],
+      },
+      api,
+    });
+
+  const contactList = roomList({
+    pn: "contact-list",
+    mod: "direct",
+    api: ui.getDirectApi,
+    radio: ui._radioId,
+  });
+
+  // Starts with an empty api and is restarted on the tab's first visit
+  // (getWorkspaceApi / _loadWorkspaceList): its query is the costly one.
+  const workspaceList = roomList({
+    pn: "contact-list-ws",
+    mod: "workspace",
+    api: ui.getWorkspaceApi,
+    radio: `${ui._radioId}-ws`,
   });
 
   const allReadEmpty = Skeletons.Note({
@@ -234,7 +261,7 @@ module.exports = function (ui) {
 
   const sidebar = Skeletons.Box.Y({
     className: `${fig}__sidebar`,
-    kids: [sidebarHeader, filters, searchBar, contactList, allReadEmpty],
+    kids: [sidebarHeader, filters, searchBar, contactList, workspaceList, allReadEmpty],
   });
 
   // ── Right panel: chat area ───────────────────────────────────────

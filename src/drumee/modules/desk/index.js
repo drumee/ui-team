@@ -6182,6 +6182,26 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Leave the full-canvas section screen for the workspace underneath it —
+   * the Inbox's own X. Same exit the rail takes (_leaveSectionScreen), plus
+   * relighting the rail row the screen put out on the way in.
+   */
+  closeSectionScreen() {
+    const w = _.isFunction(this._railWorkspace) ? this._railWorkspace() : null;
+    this._leaveSectionScreen(w);
+    // With no workspace window _leaveSectionScreen cannot rebuild the path,
+    // and the bar would keep reading "Inbox" over whatever is underneath.
+    if (!w) {
+      const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+      if (crumb && _.isFunction(crumb._restoreCurrentPath)) crumb._restoreCurrentPath();
+    }
+    // Opening the screen put the rail out (_railUnlight); relight the tab the
+    // workspace is on underneath, which _railTab / _railHighlight stamped.
+    const tab = (this.el && this.el.dataset.mtab) || "files";
+    this._railHighlight(tab);
+  }
+
+  /**
    * Rail navigation is about to show workspace content — get whatever SECTION
    * SCREEN is in front of the workspace out of the way, and put the breadcrumb
    * back on the workspace it is navigating in.

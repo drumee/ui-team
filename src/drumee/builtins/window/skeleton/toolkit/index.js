@@ -847,6 +847,9 @@ export function chatPanel(ui) {
     send_icon: "raw-send-chat",
     attach_icon: "chat-link-simple",
     sys_pn: "folder-chat",
+    // Read only when actually read — its Chat tab on screen, or a click /
+    // keystroke in it — never by being mounted beside the file grid.
+    read_on_interaction: 1,
   };
 
   // Two scopes, and the difference is who is reading.
