@@ -327,6 +327,8 @@
   "Q_DELETE_ALL_FILES": "<p>是否要删除</p><p>回收站中的所有文件？</p>",
   "Q_FORGOT_PASSWORD": "丢失了密码?",
   "Q_RESTORE_TO_HOME": "原文件夹已不存在。要恢复到主文件夹吗？",
+  "Q_RESTORE_TO_WORKSPACE": "原文件夹已不存在。要恢复到其工作区的根目录吗？",
+  "RESTORE_FAILED": "无法恢复此项目，请重试。",
   "REMOVE": "删除",
   "RENAME": "重命名",
   "REPLACE": "更换",

@@ -212,6 +212,8 @@
   "WE_HAVE_SENT_CODE": "Nos enviaremos un código a su dirección {0} para que pueda definir una nueva contraseña.",
   "Q_FORGOT_PASSWORD": "¿Has olvidado tu contraseña?",
   "Q_RESTORE_TO_HOME": "La carpeta original ya no existe. ¿Restaurar en la carpeta principal?",
+  "Q_RESTORE_TO_WORKSPACE": "La carpeta original ya no existe. ¿Restaurar en la raíz de su espacio de trabajo?",
+  "RESTORE_FAILED": "No se pudo restaurar este elemento. Inténtalo de nuevo.",
   "NEW_PASSWORD": "Nueva contraseña",
   "RESET_PASSWORD": "Restablecer contraseña",
   "UNKNOWN_ERROR": "Error desconocido",
