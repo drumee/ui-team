@@ -718,6 +718,36 @@ class __window_folder extends mfsInteract {
     return true;
   }
 
+  /**
+   * Where a Google Drive import started from this window lands.
+   *
+   * The directory the user is LOOKING AT, by the breadcrumb's current-node
+   * rule (refreshBreadcrumbsUI): the model nid follows in-window navigation,
+   * and a hub/workspace ROOT window's active directory is its actual_home_id.
+   * The title tracks navigation the same way, so the name comes from it.
+   *
+   * Two callers: this window's own "+ New → Migrate from Google Drive", and
+   * the migrate tour's live dialog (builtins/window/tutorial, _goLive), which
+   * must land an import in exactly the place that row would.
+   *
+   * @returns {{hub_id, nid, name, area, filetype}}
+   */
+  gdriveDestination() {
+    let nid = this.mget(_a.nid);
+    if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+      nid = this.mget(_a.actual_home_id);
+    }
+    return {
+      hub_id: this.mget(_a.hub_id) || Visitor.id,
+      nid: nid || Visitor.get(_a.home_id),
+      name: this.mget(_a.hub_name) || this.mget(_a.filename) || "",
+      area: this.mget(_a.area) || undefined,
+      // A hub ROOT is a workspace and gets its area badge; anything the user
+      // has navigated into is a plain folder.
+      filetype: nid === this.mget(_a.actual_home_id) ? _a.hub : _a.folder,
+    };
+  }
+
 
 
   onBeforeDestroy(opt) {
@@ -1968,25 +1998,15 @@ class __window_folder extends mfsInteract {
         // exist. singleton + wm_unique_id (per the multi-folder-windows fix)
         // prevents a duplicate popup on re-click.
         //
-        // Destination = the directory the user is LOOKING AT, mirroring the
-        // breadcrumb's current-node rule (refreshBreadcrumbsUI): the model nid
-        // follows in-window navigation, and a hub/workspace ROOT window's
-        // active directory is its actual_home_id. The previous order —
-        // actual_home_id first — sent every import to the workspace root even
-        // when the user had navigated into a sub-folder and clicked "+ New"
-        // right there. `direct: 1` tells the importer to land the content in
-        // this folder itself, not in a GoogleDriveMigration wrapper: the user
-        // picked the destination by standing in it.
+        // Destination = the directory the user is LOOKING AT; see
+        // gdriveDestination. The previous order — actual_home_id first — sent
+        // every import to the workspace root even when the user had navigated
+        // into a sub-folder and clicked "+ New" right there. `direct: 1` tells
+        // the importer to land the content in this folder itself, not in a
+        // GoogleDriveMigration wrapper: the user picked the destination by
+        // standing in it.
         this.closeNewMenu(cmd);
-        let destNid = this.mget(_a.nid);
-        if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
-          destNid = this.mget(_a.actual_home_id);
-        }
-        // The window title tracks navigation the same way the nid does
-        // (refreshBreadcrumbsUI msets hub_name to the current node's name).
-        const destName = this.mget(_a.hub_name) || this.mget(_a.filename) || "";
-        const destHub = this.mget(_a.hub_id) || Visitor.id;
-        const destNidFinal = destNid || Visitor.get(_a.home_id);
+        const dest = this.gdriveDestination();
         // Warmed NOW even when the launch waits for the tour, so the dialog is
         // rendered from memory the instant the tour comes down rather than
         // starting a chunk fetch at the moment it is finally wanted.
@@ -1999,18 +2019,13 @@ class __window_folder extends mfsInteract {
           return ready.then(() => Wm.launch(
             {
               kind: "migrate_gdrive_popup",
-              hub_id: destHub,
-              nid: destNidFinal,
-              destinationName: destName || undefined,
+              hub_id: dest.hub_id,
+              nid: dest.nid,
+              destinationName: dest.name || undefined,
               // What the destination LOOKS like, so the popup's card draws
-              // this folder's own shape rather than a generic one. Read off
-              // the same window the name and the nid come from — a hub ROOT
-              // window is a workspace and gets its area badge, anything the
-              // user has navigated into is a plain folder.
-              destArea: this.mget(_a.area) || undefined,
-              destFiletype: destNid === this.mget(_a.actual_home_id)
-                ? _a.hub
-                : _a.folder,
+              // this folder's own shape rather than a generic one.
+              destArea: dest.area,
+              destFiletype: dest.filetype,
               direct: 1,
               // Destination-scoped id (same scheme as window_folder-<hub>-<nid>).
               // A plain shared id made singleton raise() a popup opened from
@@ -2019,7 +2034,7 @@ class __window_folder extends mfsInteract {
               // import into the wrong place. Per-destination ids keep the
               // no-duplicate guarantee per folder while giving each launch
               // context its own popup.
-              wm_unique_id: `migrate_gdrive_popup-${destHub}-${destNidFinal}`,
+              wm_unique_id: `migrate_gdrive_popup-${dest.hub_id}-${dest.nid}`,
             },
             { explicit: 1, singleton: 1 },
           ));
