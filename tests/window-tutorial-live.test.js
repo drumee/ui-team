@@ -178,3 +178,13 @@ test("a tour already leaving opens no popup and goes live on nothing", async () 
   h.onUiEvent(trig, { service: "window-tutorial:fallback-popup" });
   assert.deepEqual(ws.events, [], "popup launched after the user left");
 });
+
+test("every step payload carries the window's import destination", () => {
+  const { h } = make();
+  assert.ok(h._widgets.every((w) => w.import_dest && w.import_dest.name === "Docs"));
+});
+
+test("no destination answer → no import_dest, the step keeps its example", () => {
+  const { h } = make({ ws: { gdriveDestination: undefined } });
+  assert.ok(h._widgets.every((w) => w.import_dest == null));
+});

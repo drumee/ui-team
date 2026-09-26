@@ -39,10 +39,11 @@ const folderArt = require("media/grid/template/folder");
  * from the thing it is a drawing of. The step's skin loads that file for the
  * same reason (see ../index.js).
  *
- * The workspace it names is the tour's own fixture, like the address and the
- * link above it — an example, not the user's real destination, which the tour
- * has no way to know. Given no destination it draws the tour's fixture; the
- * live dialog (./live.js) passes the real one.
+ * The workspace it names is the REAL destination whenever the tour knows it:
+ * the in-window host passes the window's own (`import_dest`, the same answer
+ * the live import uses), so the card the user is taught names the place their
+ * files will land. Only the desk-level run, drawn over no window, falls back
+ * to the example — like the address and the link, which stay examples.
  */
 function destCard(dest = {}) {
   const filetype = dest.filetype || _a.hub;
@@ -81,6 +82,8 @@ function destCard(dest = {}) {
 /**
  * @param {Object} ui
  * @param {Object} [opt]
+ * @param {Object} [opt.dest] the real destination {name, area, filetype};
+ *   without it the card shows the tour's example
  * @param {Boolean} [opt.copied] the address has been copied — Copy goes green
  * @param {Boolean} [opt.linked] a link has been pasted — Verify goes solid
  * @param {Boolean} [opt.enter] this screen is where the card arrives, so play
@@ -89,7 +92,7 @@ function destCard(dest = {}) {
  */
 module.exports = function (ui, opt = {}) {
   const pfx = ui.fig.family;
-  const { copied = false, linked = false, enter = false } = opt;
+  const { copied = false, linked = false, enter = false, dest } = opt;
 
   return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__backdrop`,
@@ -112,7 +115,7 @@ module.exports = function (ui, opt = {}) {
             ],
           }),
 
-          destCard(),
+          destCard(dest),
 
           Skeletons.Box.Y({ active: 0,
             className: `${pfx}__step`,

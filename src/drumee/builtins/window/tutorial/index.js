@@ -62,9 +62,31 @@ class __window_tutorial extends LetcBox {
     // `live_capable` — only this host has a real window underneath, so only
     // here may a step turn its drawing into the real thing at the end (the
     // migrate step's import dialog; see _goLive). The desk host never sets it.
+    //
+    // `import_dest` — where an import from this window lands, so the migrate
+    // step's dialog names the user's own workspace on the screens that teach
+    // it, and the card they are taught is the card they then get (_goLive
+    // hands the step the same answer).
+    const importDest = this._importDest();
     this._widgets = buildStepWidgets(this, this._tour, { canCreate: false })
-      .map((w) => ({ ...w, live_capable: 1 }));
+      .map((w) => ({ ...w, live_capable: 1, ...(importDest ? { import_dest: importDest } : {}) }));
     this._stepIndex = this._entryStep();
+  }
+
+  /**
+   * Where an import started from the target window lands, or null.
+   * Asked of the window (window_folder.gdriveDestination) — the one place
+   * that rule lives.
+   */
+  _importDest() {
+    const ws = this.mget('target_window');
+    if (!ws || !_.isFunction(ws.gdriveDestination)) return null;
+    try {
+      const d = ws.gdriveDestination();
+      return d && d.hub_id ? d : null;
+    } catch (e) {
+      return null;
+    }
   }
 
   /**
