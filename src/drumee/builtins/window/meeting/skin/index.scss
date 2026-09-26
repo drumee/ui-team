@@ -370,3 +370,136 @@
     color: #0b0a21;
   }
 }
+
+// ── Screen share: participant strip (Figma "Meeting — Avatar on Share",
+// 775:152829) ─────────────────────────────────────────────────────────────
+//
+// window_meeting._layoutShareStrip stamps `data-share-strip` on the window
+// root while a screen is shared:
+//   column — side panel closed: the shared screen, then a 264px column of
+//            tiles on the right (Figma "hide right panel").
+//   row    — side panel open beside the stage, or a narrow window: a 163px
+//            row of tiles under the shared screen (Figma "have right panel").
+// Four equal slots either way; with more than four people the last slot is a
+// "+N" tile (the manager's ::after, text from data-more) and the rest are
+// data-strip-hidden. The spotlighted tile gets slot one via inline `order`.
+//
+// MEETING ONLY, and not while parked. window/connect keeps its own float, and
+// a parked call keeps the single floating thumbnail — which IS the Figma
+// "minimize" frame — so both fall through to the meeting-shell float rules.
+// Those rules pin geometry with !important at 0,3,0, hence the !important and
+// the longer selectors here.
+.window-meeting__ui[data-share-strip]:not([data-call-tile="1"]) {
+  // Only the shared screen and the strip take part in the layout. The body's
+  // other children are overlays (message / peer / timer wrappers, the empty
+  // command bar, the device-picker overlay) and some sit in the flow while
+  // closed; there, with the body's 12px gap, they would push the strip in from
+  // the window's edge.
+  .window-meeting__body
+    > :not(.window-meeting__endpoints):not(.window-meeting__float-tiles) {
+    position: absolute !important;
+  }
+
+  .window-meeting__float-tiles {
+    position: relative !important;
+    inset: auto !important;
+    flex: 0 0 264px;
+    width: 264px;
+    height: auto;
+    max-height: none;
+    aspect-ratio: auto;
+    align-self: stretch;
+    min-height: 0;
+    pointer-events: auto;
+    z-index: auto;
+
+    .participants-manager__ui {
+      display: flex !important;
+      flex-direction: column;
+      gap: 10px;
+      // The base skin pads the manager 4px top/bottom; the strip must line up
+      // with the shared screen's edges.
+      padding: 0 !important;
+      background: transparent !important;
+      box-shadow: none;
+      border-radius: 0;
+      overflow: hidden;
+
+      > [data-kind="webrtc_local_user"],
+      > [data-kind="webrtc_remote_user"] {
+        position: relative !important;
+        inset: auto !important;
+        flex: 0 0 calc((100% - 30px) / 4);
+        width: 100% !important;
+        height: auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        border-radius: 16px;
+        overflow: hidden;
+        // Every tile is visible now; the single-thumbnail z stacking is moot.
+        z-index: auto !important;
+        // So the camera-off avatar below sizes off the tile, not the viewport.
+        container-type: size;
+
+        &[data-strip-hidden="1"] {
+          display: none !important;
+        }
+
+        // Figma: 120px avatar in a 226px tile, 78px in a 163px one.
+        .user-profile__ui {
+          width: min(53cqh, 120px) !important;
+          height: min(53cqh, 120px) !important;
+        }
+      }
+
+      // "+N" — the people who did not get a slot. Opens the Participants list
+      // (click handled on the manager in window_meeting._watchShareStrip).
+      &[data-more]:not([data-more=""])::after {
+        content: attr(data-more);
+        order: 999;
+        flex: 0 0 calc((100% - 30px) / 4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        background: rgba(20, 17, 35, 0.72);
+        color: #fff;
+        font-family: var(--font-main);
+        font-size: 24px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+// Column: the stage and the strip side by side.
+.window-meeting__ui[data-share-strip="column"]:not([data-call-tile="1"]) {
+  .window-meeting__body {
+    flex-direction: row !important;
+  }
+
+  .window-meeting__endpoints {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+// Row: the strip under the stage.
+.window-meeting__ui[data-share-strip="row"]:not([data-call-tile="1"]) {
+  .window-meeting__float-tiles {
+    flex: 0 0 163px;
+    width: 100%;
+    height: 163px;
+
+    .participants-manager__ui {
+      flex-direction: row;
+
+      > [data-kind="webrtc_local_user"],
+      > [data-kind="webrtc_remote_user"] {
+        width: auto !important;
+        height: 100% !important;
+      }
+    }
+  }
+}
