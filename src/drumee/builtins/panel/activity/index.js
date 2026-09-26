@@ -1738,10 +1738,23 @@ class __panel_activity extends LetcBox {
               (meeting.by && !`${meeting.by}`.includes('@') && meeting.by) ||
               [opt.firstname, opt.lastname].filter(Boolean).join(' ') ||
               meeting.by || ''
-            opt.message = LOCALE.X_JOINED_MEETING_X.format(senderName, meeting.filename)
+            // "started", not "joined": this card is only ever posted by the
+            // person who opened the room.
+            opt.message = senderName
+              ? LOCALE.X_STARTED_A_MEETING.format(senderName)
+              : LOCALE.MEETING_STARTED
             const { hub_id, nid } = meeting;
-            if (hub_id) {
-              url = `${url}/meeting/?nid=${hub_id}&ts=${now}`
+            // Land on the card, NOT in the call. The old `/meeting/?nid=` link
+            // routes to open-node + start_meeting, i.e. it JOINS the room — and
+            // an OS notification can be clicked hours later (or reached again
+            // with Back), when the meeting is over: the clicker then sat alone
+            // in an empty room and, as its first joiner, "started a meeting"
+            // for the whole workspace. The card shows whether the meeting is
+            // still live and carries its own Join button.
+            if (hub_id && nid) {
+              url = `${url}/open/?hub_id=${hub_id}&nid=${nid}&filetype=folder&activeTab=${_a.chat}&message_id=${message_id}&ts=${now}`
+            } else if (hub_id) {
+              url = `${url}/channel/?hub_id=${hub_id}&ts=${now}`
             }
           } catch (e) {
             this.warn("Failed to parse", meeting)
