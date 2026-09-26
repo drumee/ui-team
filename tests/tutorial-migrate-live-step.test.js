@@ -36,7 +36,7 @@ Module._load = function (r, p, m) {
 };
 
 global._ = { isFunction: (f) => typeof f === "function", delay: () => {} };
-global._a = { service: "service" };
+global._a = { service: "service", commit: "commit" };
 global.LetcBox = class {
   constructor(m = {}) { this._m = { ...m }; this.raised = []; }
   initialize() {}
@@ -147,4 +147,24 @@ test("destroy disposes, never cancels", async () => {
   const r = made[made.length - 1];
   assert.ok(r.calls.some((c) => c[0] === "dispose"));
   assert.ok(!r.calls.some((c) => c[0] === "cancel"));
+});
+
+test("Escape in the link field does not verify; Enter (commit) does", async () => {
+  const { s } = step({ live_capable: 1 });
+  s.parts = { "mg-live-link": { getValue: () => "L" } };
+  await s.goLive(dest);
+  const r = made[made.length - 1];
+  s.onUiEvent(trig, { service: "mg-live-verify", __inputStatus: "cancel" });
+  assert.equal(r.calls.filter((c) => c[0] === "verify").length, 0);
+  s.onUiEvent(trig, { service: "mg-live-verify", __inputStatus: "commit" });
+  assert.equal(r.calls.filter((c) => c[0] === "verify").length, 1);
+});
+
+test("closing the dialog acks a finished result before leaving", async () => {
+  const { s, h } = step({ live_capable: 1 });
+  await s.goLive(dest);
+  s.onUiEvent(trig, { service: "mg-live-close" });
+  const r = made[made.length - 1];
+  assert.ok(r.calls.some((c) => c[0] === "ack"));
+  assert.deepEqual(h.events, ["window-tutorial:close-live"]);
 });

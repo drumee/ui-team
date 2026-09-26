@@ -208,3 +208,19 @@ test("seed fills the address without announcing; snapshot is a copy", async () =
   s.fileLog.push({ name: "z" });
   assert.equal(run.snapshot().fileLog.length, 0);
 });
+
+test("a late answer from an older poll cannot undo a finished job", async () => {
+  const pending = [];
+  const { run, timers } = make({
+    "google_drive.get_status": () => new Promise((res) => pending.push(res)),
+  });
+  run.attach(5);                      // tick #1 in flight
+  const t2 = timers.fns[0]();         // tick #2 in flight (slow server)
+  pending[1]({ status: "done", processed_files: 2, total_files: 2 });
+  await t2; await flush();
+  assert.equal(run.snapshot().state, "done");
+  pending[0]({ status: "running", processed_files: 1, total_files: 2 });
+  await flush();
+  assert.equal(run.snapshot().state, "done");
+  assert.equal(timers.active(), 0);
+});

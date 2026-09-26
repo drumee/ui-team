@@ -168,3 +168,13 @@ test("escape while typing in the live dialog keeps it; otherwise ends", async ()
   assert.equal(hk.def.run(), true);
   assert.equal(h.destroyedSoftly, 1);
 });
+
+test("a tour already leaving opens no popup and goes live on nothing", async () => {
+  const { h, ws, stepW } = make();
+  h.onUiEvent(trig, { service: "window-tutorial:go-live" });
+  h.onUiEvent(trig, { service: "window-tutorial:close-live" });
+  await flush();
+  assert.equal(stepW.lived, null, "went live under a closing tour");
+  h.onUiEvent(trig, { service: "window-tutorial:fallback-popup" });
+  assert.deepEqual(ws.events, [], "popup launched after the user left");
+});

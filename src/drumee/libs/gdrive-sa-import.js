@@ -168,6 +168,10 @@ function createSaImport(opt = {}) {
     // A reset or a newer attach while the request was out: this answer is
     // about a job nobody is watching any more.
     if (disposed || !r || !s.job || s.job.job_id !== job_id) return;
+    // Two ticks can overlap on a slow server. Once one of them has seen the
+    // job finish, an older answer saying "running" must not bring it back —
+    // polling has stopped, so nothing would ever correct it.
+    if (FINISHED.includes(s.state)) return;
     const sig = [r.status, r.processed_files, r.total_files, r.errors_count,
       r.current_filename, r.bytes_done, r.bytes_in_flight].join('|');
     const changed = sig !== lastSig;

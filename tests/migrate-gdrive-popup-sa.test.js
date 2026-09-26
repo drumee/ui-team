@@ -28,7 +28,7 @@ global.window = { addEventListener() {}, removeEventListener() {}, location: { o
 global.Visitor = { id: "me", get: () => "home" };
 global.LOCALE = {};
 global._ = { isFunction: (f) => typeof f === "function" };
-global._a = { home_id: "home_id", personal: "personal", hub: "hub" };
+global._a = { home_id: "home_id", personal: "personal", hub: "hub", commit: "commit" };
 global.LetcBox = class {
   constructor(m = {}) { this._m = { ...m }; }
   initialize() {}
@@ -114,5 +114,14 @@ test("reopening the share screen clears a previous link error", async () => {
   p.onUiEvent({ mget: () => undefined }, { service: "gdrive-sa-open" });
   assert.equal(p.getSaError(), null);
   assert.equal(p.getState(), "sa");
+  p.onBeforeDestroy();
+});
+
+test("Escape in the link field sends nothing", async () => {
+  routes = { "google_drive.sa_check": { ok: 0, error: "SA_NOT_OWNER" } };
+  const p = make();
+  await p.onUiEvent({ mget: () => "gdrive-sa-verify" }, { __inputStatus: "cancel" });
+  assert.equal(calls.filter((c) => c.name === "google_drive.sa_check").length, 0);
+  assert.equal(p.getSaError(), null);
   p.onBeforeDestroy();
 });

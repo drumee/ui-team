@@ -652,6 +652,8 @@ class __window_tutorial extends LetcBox {
     return this.ensurePart('spotlight')
       .then((s) => s && s.clear && s.clear())
       .then(() => {
+        // Closed (Escape) while the spotlight was coming down.
+        if (this._exiting) return;
         if (step && _.isFunction(step.goLive)) step.goLive(dest);
         else this._endTour();
       });
@@ -724,6 +726,9 @@ class __window_tutorial extends LetcBox {
       // OAuth. Queued by the folder window against this tour's release
       // (Tours.whenDone), so it opens as the tour comes down.
       case 'window-tutorial:fallback-popup':
+        // The user already closed the tour while it was still loading: they
+        // have answered, and a popup appearing afterwards would be a surprise.
+        if (this._exiting) break;
         this._actOnWindow('launch-gdrive-migration');
         this._endTour();
         break;

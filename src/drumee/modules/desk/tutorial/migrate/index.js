@@ -392,11 +392,14 @@ class __tutorial_migrate extends LetcBox {
     this.el.addEventListener('pointerup', this._cancelDelegate, true);
   }
 
-  _onLiveEvent(service, trigger) {
+  _onLiveEvent(service, trigger, args = {}) {
     switch (service) {
       case 'mg-live-copy':
         return this._liveCopy(trigger);
       case 'mg-live-verify':
+        // The field raises its service on Escape too (ui-core Entry,
+        // __inputStatus 'cancel'). Only a commit — Enter — means "check it".
+        if (args.__inputStatus && args.__inputStatus !== _a.commit) return;
         return this._sa.verify(this._readLiveLink());
       case 'mg-live-start':
         return this._sa.start(this._readLiveLink());
@@ -405,6 +408,9 @@ class __tutorial_migrate extends LetcBox {
         this._live.link = '';
         return this._sa.reset();
       case 'mg-live-close':
+        // A result the user has now seen: say so, or the popup replays it on
+        // its next open. A no-op unless the job has finished.
+        this._sa.ack();
         return this._toHost('window-tutorial:close-live');
       default:
         // The drawing's services mean nothing any more.
@@ -427,7 +433,7 @@ class __tutorial_migrate extends LetcBox {
     const service = args.service || trigger.mget(_a.service);
     // After Done the card is the real import, and the drawing's controls are
     // gone with the drawing — see goLive.
-    if (this._live) return this._onLiveEvent(service, trigger);
+    if (this._live) return this._onLiveEvent(service, trigger, args);
     switch (service) {
       // Screen 1's two hero buttons. They are the only controls that screen
       // has — the frame carries no callout — and each goes where its real
