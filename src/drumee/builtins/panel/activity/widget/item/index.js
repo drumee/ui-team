@@ -277,6 +277,10 @@ class __activity_item extends LetcBox {
         // would dismiss a changelog id that does not exist, so the row would
         // reappear on the next reload.
         : opt.event === 'meeting_notice' ? 'contact_invite'
+        // Every other yp.contact_activity row (invite_accepted, invite_received,
+        // invite_refused, …) for the same reason: as 'mfs' a read dismissed a
+        // changelog id that does not exist and came back unread on reload.
+        : opt.event_type === 'contact' ? 'contact_invite'
         : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
     this.mset({ category, sender, autho_id, item_type, item_key })
