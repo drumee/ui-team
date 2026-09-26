@@ -318,6 +318,8 @@ class __panel_activity extends LetcBox {
       this.ensurePart(`tab-count-${bucket}`).then((p) => {
         if (!p || !p.el) return;
         p.el.innerText = total > 99 ? '99+' : String(total);
+        // The real number, so _decrementTabCount can step down from past 99.
+        p.el.dataset.count = String(total);
         // Hidden rather than showing a 0 — the design has no zero state.
         p.el.dataset.empty = total ? '0' : '1';
       });
@@ -920,6 +922,33 @@ class __panel_activity extends LetcBox {
       p.el.innerText = next === 0 ? '' : display;
       p.el.dataset.count = display;
     });
+  }
+
+  /**
+   * Step the tab badges down for one row the user just read or trashed: the
+   * row's own tab and All. Until this existed only the bell moved, so a Chat
+   * badge of 2 still read 2 after both rows were opened.
+   *
+   * Local on purpose — a text write on two existing badges, no request and no
+   * re-render. Re-fetching activity.unread_counts per click would run
+   * notification_center_next (a loop over every hub) on each read. The next
+   * regular refresh still replaces these numbers with the server's.
+   */
+  _decrementTabCount(bucket) {
+    const buckets = [DEFAULT_BUCKET];
+    if (bucket && bucket !== DEFAULT_BUCKET && TAB_BUCKETS.indexOf(bucket) !== -1) {
+      buckets.push(bucket);
+    }
+    for (const b of buckets) {
+      this.ensurePart(`tab-count-${b}`).then((p) => {
+        if (!p || !p.el) return;
+        const cur = parseInt(p.el.dataset.count || p.el.innerText || '0', 10) || 0;
+        const next = Math.max(0, cur - 1);
+        p.el.innerText = next > 99 ? '99+' : String(next);
+        p.el.dataset.count = String(next);
+        p.el.dataset.empty = next ? '0' : '1';
+      });
+    }
   }
 
   /**
@@ -1958,7 +1987,10 @@ class __panel_activity extends LetcBox {
     // is absent on live rollups and on client-built rows, which are unread by
     // construction, so an absent flag counts as unread.
     const wasUnread = !(cmd && cmd.mget && parseInt(cmd.mget('is_read'), 10) === 1);
-    if (wasUnread) this._decrementBadge(1);
+    if (wasUnread) {
+      this._decrementBadge(1);
+      this._decrementTabCount(cmd && cmd.mget && cmd.mget('bucket'));
+    }
 
     if (itemType === 'access_request') {
       // Pending secure-share request: no server-side dismiss endpoint (resolved via
