@@ -1,11 +1,12 @@
 const skeleton = require('./skeleton');
+const liveSkeleton = require('./skeleton/live');
 // How long the dialog's exit is given before the next screen replaces it.
 // Matches the 0.16s in ./skin.
 const CLOSE_MS = 160;
 const { isLastScreen, entryScreen } = require('../tours');
 
 /**
- * The `migrate` tour — importing from Google Drive, five screens.
+ * The `migrate` tour — importing from Google Drive, four screens.
  *
  * Three Files-pane screens, then the import dialog at three points in the form:
  *
@@ -57,6 +58,10 @@ const { isLastScreen, entryScreen } = require('../tours');
  * `direction: 'west'` puts the card to the RIGHT of what it points at, which is
  * where the frames put it for the dialog and where the upload screen wants it.
  * Screen 2 reaches 'east' — see it.
+ *
+ * AFTER DONE, IN A WINDOW, THE CARD GOES LIVE (goLive, ./skeleton/live.js):
+ * the same dialog becomes the real share-to-SA import — the popup is no longer
+ * opened at the end of the tour.
  */
 const SCREENS = [
   {
@@ -301,40 +306,128 @@ class __tutorial_migrate extends LetcBox {
   }
 
   /**
-   * Hand the user the REAL import dialog as the tour lets go.
+   * Become the real import, over the window the tour was about.
    *
-   * Every screen up to here has been a drawing. Ending on one leaves the user
-   * looking at a picture of a form they were just taught to fill in, with the
-   * actual one still three clicks away in a menu the tour spent its first
-   * screen showing them. So Done opens it.
+   * Called by the host once it has decided this may happen (over-limit, write
+   * permission, a destination). From here the step renders the controller's
+   * snapshot and nothing of the mock.
    *
-   * ORDER MATTERS, and it is why this runs BEFORE `next-step` rather than
-   * after. The folder window's own `launch-gdrive-migration` defers through
-   * Tours.whenDone("migrate", ...), which only queues while the tour is still
-   * claimed — raised after the hand-back, it would find the tour already gone
-   * and open the popup underneath one still fading out. Raised here, the launch
-   * is queued against this tour's own release and runs the moment it is down.
-   *
-   * ONLY WHEN THIS SCREEN REALLY ENDS THE TOUR. The same button reads "Next"
-   * when migrate is a step inside `full`, where it hands over to the tour after
-   * it and opening a dialog would interrupt the run. `isLastScreen` is the same
-   * test that decides the wording, so the two can never disagree.
-   *
-   * Raised at the host, like the create and upload rows: the step does not know
-   * which window it is drawn over, and the popup's destination is read off that
-   * window. With no host window — the desk-level `full` run — `_actOnWindow`
-   * declines and the tour simply ends, which is what it did before.
+   * @param {Object} dest {hub_id, nid, name, area, filetype}
    */
-  _openTheRealThing() {
-    if (!isLastScreen(this, this._screenIndex, SCREENS.length)) return;
-    this.triggerHandlers({
-      service: 'window-tutorial:act',
-      action: 'launch-gdrive-migration',
+  goLive(dest) {
+    if (this._live) return;
+    this._live = { dest, link: '' };
+    const { createSaImport } = require('libs/gdrive-sa-import');
+    this._sa = createSaImport({
+      service: this,
+      hub_id: dest.hub_id,
+      nid: dest.nid,
+      direct: 1,
+      onChange: (snap) => this._renderLive(snap),
+      onFinished: () => this._toHost('window-tutorial:refresh-target'),
     });
+    this._installLiveCancel();
+    return this._sa.load();
+  }
+
+  /**
+   * Talk to the host WITHOUT triggerHandlers.
+   *
+   * Everything that calls this runs after a network round trip (get_state,
+   * a poll). triggerHandlers is ui-core's click dispatcher and silently drops
+   * the event while `window.pointerDragged` is set — which a resize raises and
+   * only a pointerup/keyup clears — so an async raise can vanish.
+   */
+  _toHost(service, args = {}) {
+    const h = this.mget('uiHandler');
+    const host = Array.isArray(h) ? h[0] : h;
+    if (host && _.isFunction(host.onUiEvent)) host.onUiEvent(this, { service, ...args });
+  }
+
+  _renderLive(snap) {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // No key for share-to-SA on this server: the popup can still fall back to
+    // OAuth, this card cannot.
+    if (snap.state === 'unavailable') return this._toHost('window-tutorial:fallback-popup');
+    this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link }));
+  }
+
+  /** What the link field holds now, remembered so a re-render keeps it. */
+  _readLiveLink() {
+    const entry = this.getPart && this.getPart('mg-live-link');
+    let v = entry && _.isFunction(entry.getValue) ? entry.getValue() : null;
+    if (v == null && this.el) {
+      const input = this.el.querySelector(`.${this.fig.family}__live-input input`);
+      v = input ? input.value : '';
+    }
+    this._live.link = String(v || '').trim();
+    return this._live.link;
+  }
+
+  _liveCopy(trigger) {
+    const email = (this._sa.snapshot() || {}).saEmail || '';
+    try { navigator.clipboard.writeText(email); } catch (e) { /* http context */ }
+    const el = trigger && trigger.el;
+    if (!el || !el.dataset) return;
+    el.dataset.done = '1';
+    clearTimeout(this._copyTimer);
+    this._copyTimer = setTimeout(() => {
+      if (el.isConnected) el.dataset.done = '0';
+    }, 1800);
+  }
+
+  /**
+   * Cancel on pointerup, not click: the 2s re-feed can replace the button
+   * between mousedown and mouseup, and a click needs both on one element.
+   */
+  _installLiveCancel() {
+    if (this._cancelDelegate || !this.el) return;
+    this._cancelDelegate = (e) => {
+      const btn = e.target && e.target.closest
+        && e.target.closest(`.${this.fig.family}__live-cancel`);
+      if (!btn || (btn.dataset && btn.dataset.disabled)) return;
+      e.stopPropagation();
+      if (this._sa) this._sa.cancel();
+    };
+    this.el.addEventListener('pointerup', this._cancelDelegate, true);
+  }
+
+  _onLiveEvent(service, trigger) {
+    switch (service) {
+      case 'mg-live-copy':
+        return this._liveCopy(trigger);
+      case 'mg-live-verify':
+        return this._sa.verify(this._readLiveLink());
+      case 'mg-live-start':
+        return this._sa.start(this._readLiveLink());
+      case 'mg-live-again':
+        this._sa.ack();
+        this._live.link = '';
+        return this._sa.reset();
+      case 'mg-live-close':
+        return this._toHost('window-tutorial:close-live');
+      default:
+        // The drawing's services mean nothing any more.
+        return;
+    }
+  }
+
+  onBeforeDestroy() {
+    // Stops watching; the job itself carries on server-side, and the popup's
+    // "show a finished result once" reports it next time.
+    if (this._sa) this._sa.dispose();
+    clearTimeout(this._copyTimer);
+    if (this._cancelDelegate && this.el) {
+      this.el.removeEventListener('pointerup', this._cancelDelegate, true);
+    }
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
+    // After Done the card is the real import, and the drawing's controls are
+    // gone with the drawing — see goLive.
+    if (this._live) return this._onLiveEvent(service, trigger);
     switch (service) {
       // Screen 1's two hero buttons. They are the only controls that screen
       // has — the frame carries no callout — and each goes where its real
@@ -389,11 +482,16 @@ class __tutorial_migrate extends LetcBox {
         });
 
       case 'next-step':
-        // Only the last screen hands the tour back to tutorial_main, and it
-        // NAMES the service. The step widget carries no `service` of its own
-        // any more — see _buildWidgets in ../index.js.
+        // Only the last screen hands the tour back, and it NAMES the service.
         if (this._screenIndex >= SCREENS.length - 1) {
-          this._openTheRealThing();
+          // In a window, Done turns this card into the real import instead of
+          // handing the user a popup copy of it (the host decides whether it
+          // may — see builtins/window/tutorial, _goLive). On the desk host,
+          // and inside `full`, there is no window to import into, so the tour
+          // simply goes on or ends as it always did.
+          if (this.mget('live_capable') && isLastScreen(this, this._screenIndex, SCREENS.length)) {
+            return this.triggerHandlers({ service: 'window-tutorial:go-live' });
+          }
           return this.triggerHandlers({ service: 'next-step' });
         }
         return this._transition(this._screenIndex + 1);
