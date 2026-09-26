@@ -97,6 +97,34 @@ class __media_interact extends media_core {
     this._dragStop = this._dragStop.bind(this);
   }
 
+  // ── Lazy tile geometry ─────────────────────────────────────────────────────
+  //
+  // `bbox` is read ONLY by drag-and-drop (seek_insertion, overlap tests,
+  // Wm.capture) and marquee selection. It used to be measured eagerly: once per
+  // tile on mount — `$el.draggable()` (a class write) then `$el.offset()` (a
+  // read), i.e. one forced style+layout flush PER TILE, back to back — and again
+  // for every tile on every scroll event of the list. On a large workspace that
+  // was the bulk of the main-thread cost of opening/switching to a folder.
+  //
+  // Now mount and scroll only mark the box stale; the first read re-measures.
+  // Readers that walk many tiles call `refreshStaleBounds()` first so every
+  // stale tile is measured in ONE read pass (one layout), before any write.
+  get bbox() {
+    if (this._bboxDirty) {
+      this._bboxDirty = 0;
+      this.initBounds();
+    }
+    return this._bbox;
+  }
+
+  set bbox(v) {
+    this._bbox = v;
+  }
+
+  invalidateBounds() {
+    this._bboxDirty = 1;
+  }
+
   /**
    *
    * @param {*} reason
@@ -191,6 +219,9 @@ class __media_interact extends media_core {
       return;
     }
     window.pointerDragged = true;
+    // Measure every stale sibling in one read pass BEFORE the drag starts
+    // writing (drag stamp, helper, insertion shifts) — see `get bbox`.
+    __media_interact.refreshStaleBounds(this.parent && this.parent.children);
     this.el.dataset.drag = _a.on;
     this.initBounds();
     this.initHelper(ui);
@@ -333,8 +364,13 @@ class __media_interact extends media_core {
     //
     // Production trace 2026-09-15: initBounds sat behind 134 forced recalcs
     // costing 6,838ms, second only to GSAP.
+    //
+    // Scrolling only marks the box stale now — it is re-measured when a drag or
+    // a marquee selection actually needs it (see `get bbox`).
     if (!this._onParentScroll) {
-      this._onParentScroll = () => this.initBounds();
+      this._onParentScroll = () => {
+        this._bboxDirty = 1;
+      };
     }
     this.parent.off(_e.scroll, this._onParentScroll);
     this.parent.on(_e.scroll, this._onParentScroll);
@@ -511,7 +547,9 @@ class __media_interact extends media_core {
     };
     const k = () => {
       this.$el.draggable(opt);
-      this.initBounds();
+      // No measurement here: reading $el.offset() right after draggable()'s
+      // class write forced one layout per tile at mount. See `get bbox`.
+      this._bboxDirty = 1;
     };
     this.waitElement(this.el, k);
 
@@ -2140,6 +2178,25 @@ class __media_interact extends media_core {
     });
   }
 }
+/**
+ * Re-measure every stale tile in `views` in one read-only pass, so a caller
+ * about to walk their `bbox`es (and write in between) pays a single layout.
+ * Accepts a Backbone/Marionette children container or an array.
+ */
+__media_interact.refreshStaleBounds = function (views) {
+  if (!views) return;
+  const each = (c) => {
+    if (c && c._bboxDirty && typeof c.initBounds === "function") {
+      c._bboxDirty = 0;
+      try {
+        c.initBounds();
+      } catch (e) { }
+    }
+  };
+  if (Array.isArray(views)) views.forEach(each);
+  else if (typeof views.each === "function") views.each(each);
+};
+
 __media_interact.initClass();
 
 module.exports = __media_interact;

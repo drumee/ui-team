@@ -493,9 +493,12 @@ class __window_interact extends windowCore {
       if (!this.acceptMedia) {
         return;
       }
+      // Mark stale rather than measure: tiles re-measure lazily when a drag
+      // or marquee needs them (media/interact.js `get bbox`).
       this.__list.children.each((c) => {
         try {
-          c.initBounds();
+          if (_.isFunction(c.invalidateBounds)) c.invalidateBounds();
+          else c.initBounds();
         } catch (e) { }
       });
     };
@@ -535,12 +538,23 @@ class __window_interact extends windowCore {
     // work intermittently. Clear the transforms first, then measure.
     _.defer(() => {
       if (!this.__list || this.__list.isDestroyed()) return;
-      this.__list.children.each((c) => {
+      // snapToRest kills the slide instantly; a tween still running here
+      // would leave part of the offset in the measurement.
+      //
+      // Writes first for EVERY tile, then invalidate: interleaving
+      // snapToRest (a transform write) with initBounds (an offset read) per
+      // tile forced one layout per tile. Lazy tiles re-measure on the next
+      // drag/marquee read (media/interact.js `get bbox`).
+      const kids = this.__list.children.toArray();
+      kids.forEach((c) => {
         try {
-          // snapToRest kills the slide instantly; a tween still running here
-          // would leave part of the offset in the measurement below.
           if (_.isFunction(c.snapToRest)) c.snapToRest();
-          if (_.isFunction(c.initBounds)) c.initBounds();
+        } catch (e) { }
+      });
+      kids.forEach((c) => {
+        try {
+          if (_.isFunction(c.invalidateBounds)) c.invalidateBounds();
+          else if (_.isFunction(c.initBounds)) c.initBounds();
         } catch (e) { }
       });
     });

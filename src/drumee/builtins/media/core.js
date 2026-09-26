@@ -128,10 +128,12 @@ class __media_core extends DrumeeMFS {
    */
   onBeforeDestroy() {
     // this.unbindEvent(_a.live);
-    RADIO_BROADCAST.off(
-      "notification:details",
-      this.updateNotificationCount.bind(this)
-    );
+    // Same reference as bindActivityHandlerEvent's `on` — a fresh .bind()
+    // here matched nothing, so every hub tile ever rendered stayed subscribed.
+    if (this._onNotificationDetails) {
+      RADIO_BROADCAST.off("notification:details", this._onNotificationDetails);
+      this._onNotificationDetails = null;
+    }
     //RADIO_BROADCAST.off("moved:away", this._onPeerMovedAway.bind(this));
     if (this._setIconType) {
       return RADIO_MEDIA.off(SET_ICON_TYPE, this._setIconType);
@@ -524,10 +526,11 @@ class __media_core extends DrumeeMFS {
    *
    */
   bindActivityHandlerEvent() {
-    RADIO_BROADCAST.on(
-      "notification:details",
-      this.updateNotificationCount.bind(this)
-    );
+    if (this._onNotificationDetails) {
+      RADIO_BROADCAST.off("notification:details", this._onNotificationDetails);
+    }
+    this._onNotificationDetails = this.updateNotificationCount.bind(this);
+    RADIO_BROADCAST.on("notification:details", this._onNotificationDetails);
   }
 
   /**

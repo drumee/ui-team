@@ -73,17 +73,33 @@ class __window_core extends __utils {
 
     if (t != null) {
       if (t.fifo) {
-        t.fifo.on("upload:end", this.newContent);
+        // Kept so the destroy hook below removes the SAME reference (newContent
+        // is re-bound in a subclass constructor, after this initialize runs).
+        this._fifoUploadEnd = this.newContent;
+        t.fifo.on("upload:end", this._fifoUploadEnd);
       }
       t.once(_e.trash, () => {
         this.goodbye();
       });
     }
     this.declareHandlers();
-    window.addEventListener("beforeunload", (e) => {
+    // Stored and removed on destroy. The anonymous listener this used to add
+    // was never removed, so `window` kept every window ever opened reachable —
+    // each workspace switch leaked the whole outgoing pane (file tiles, chat,
+    // task board, detached DOM) — and on unload it re-ran onBeforeDestroy on
+    // windows that were already dead. The `destroy` event (not onDestroy) so a
+    // subclass overriding onDestroy without super cannot skip it.
+    this._onUnload = () => {
       try {
         this.onBeforeDestroy();
       } catch (error) { }
+    };
+    window.addEventListener("beforeunload", this._onUnload);
+    this.once("destroy", () => {
+      window.removeEventListener("beforeunload", this._onUnload);
+      if (t && t.fifo && _.isFunction(t.fifo.off) && this._fifoUploadEnd) {
+        t.fifo.off("upload:end", this._fifoUploadEnd);
+      }
     });
     this.contextmenuSkeleton = require("builtins/contextmenu/skeleton");
     this._raised = 0;
