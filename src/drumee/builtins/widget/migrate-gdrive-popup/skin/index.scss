@@ -1,4 +1,21 @@
+@use "sass:math";
 @use "mixins/drumee";
+
+// ONE SCALE FOR BOTH IMPORT CARDS — this popup and the migrate tour's dialog
+// that teaches it (modules/desk/tutorial/migrate, which loads this skin for
+// its destination card already). Everything inside the card — type, spacing,
+// fields, buttons, icons — was drawn at the mock's 513px size; `zoom` shrinks
+// all of it by one factor instead of retuning ~120 values, and the two cards
+// can never drift apart. Standardized `zoom` (Chromium 128+, Firefox 126+,
+// Safari) reports getBoundingClientRect in on-screen pixels, which is what
+// the tour's spotlight measures its callout against.
+$card-scale: 0.85;
+$card-width: math.round(513px * $card-scale);
+
+.migrate-gdrive-popup__container,
+.tutorial-migrate__dialog {
+  zoom: $card-scale;
+}
 
 // Opacity-only entry for the mobile card. The desktop keyframes animate
 // transform, and a retained transform (`both`) would trap the scrim below.
@@ -128,7 +145,10 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     //
     // Declared in the same place as before, so the mobile mixin further down —
     // which re-declares width — still wins.
-    width: min(513px, calc(100vw - 32px));
+    // The card is the fixed-position frame, so it is NOT zoomed (a zoomed
+    // fixed box would re-resolve its 50% centring); its width is sized to the
+    // scaled content instead.
+    width: min(#{$card-width}, calc(100vw - 32px));
     // 513 INCLUDING the hairline. On content-box the border made the card 515
     // and the mock's 513 was never reachable.
     box-sizing: border-box;

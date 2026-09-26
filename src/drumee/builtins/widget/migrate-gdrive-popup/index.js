@@ -51,7 +51,6 @@ class __migrate_gdrive_popup extends LetcBox {
     this._state = 'checking';
     this._jobId = null;
     this._jobSnap = null;
-    this._poll = null;
     // Last result the user already dismissed (profile.gdrive_seen_job from the
     // server) — so a migration that finished while the popup was closed is
     // shown exactly once.
@@ -79,9 +78,6 @@ class __migrate_gdrive_popup extends LetcBox {
     // Whole-folder import via share-to-SA (drive-sa.json present on server).
     this._saAvail = 0;
     this._saEmail = null;
-    this._saFolder = null;                     // { folder_id, name } after sa_check
-    this._saError = null;                      // last sa_check error code
-    this._saChecking = 0;
     this._treeCache = {};                      // folderId → { items, next_page_token, error? }
     this._expanded = new Set();
     this._checkedFolders = new Set();
@@ -89,6 +85,18 @@ class __migrate_gdrive_popup extends LetcBox {
     this._loading = new Set();
     this._onPostMessage = this._onPostMessage.bind(this);
     this._onStorage = this._onStorage.bind(this);
+    // The share-to-SA protocol lives in libs/gdrive-sa-import, shared with the
+    // migrate tour's live dialog so the two cannot drift. This popup keeps its
+    // own OAuth / Picker / tree paths and only hands their job ids over, so
+    // polling exists once.
+    this._sa = require('libs/gdrive-sa-import').createSaImport({
+      service: this,
+      hub_id: this._hub_id,
+      nid: this._nid,
+      direct: this._direct,
+      onChange: (snap) => this._onSaChange(snap),
+      onFinished: () => this._refreshDestination(),
+    });
     window.addEventListener('message', this._onPostMessage, false);
     // Google's consent screen sets Cross-Origin-Opener-Policy, which severs
     // the OAuth popup's window.opener — so the callback page can't reliably
@@ -111,7 +119,7 @@ class __migrate_gdrive_popup extends LetcBox {
     window.removeEventListener('message', this._onPostMessage, false);
     window.removeEventListener('storage', this._onStorage, false);
     if (this._bc) { try { this._bc.close(); } catch (e) {} this._bc = null; }
-    this._stopPolling();
+    if (this._sa) this._sa.dispose();
     this._disposePicker();
     clearTimeout(this._saCopyTimer);
   }
@@ -175,16 +183,13 @@ class __migrate_gdrive_popup extends LetcBox {
     this._pickerAvail = (res && res.picker) ? 1 : 0;
     this._saAvail = (res && res.sa) ? 1 : 0;
     this._saEmail = (res && res.sa_email) || null;
+    this._sa.seed({ saEmail: this._saEmail });
     const job = res && res.job;
     this._hasPriorJob = !!job;
 
     // 1) A migration is still running in the worker → reconnect + resume poll.
     if (job && (job.status === 'queued' || job.status === 'running')) {
-      this._jobId = job.job_id;
-      this._jobSnap = job;
-      this._state = 'in-progress';
-      this._render();
-      this._startPolling();
+      this._sa.attach(job.job_id, job);
       return;
     }
 
@@ -219,6 +224,23 @@ class __migrate_gdrive_popup extends LetcBox {
     // works on every browser, so it's now the only import path. (Falls back to
     // the legacy connect/ready screen only if the server has no SA key.)
     this._state = this._saAvail ? 'sa' : ((res && res.ok) ? 'ready' : 'not-connected');
+    this._render();
+  }
+
+  /**
+   * The controller moved. A job it is watching decides this popup's state;
+   * everything else (checking a link, an error) is drawn from the snapshot by
+   * the getters, inside whatever screen is up.
+   */
+  _onSaChange(snap) {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (snap.job && ['in-progress', 'done', 'failed', 'cancelled'].includes(snap.state)) {
+      this._jobId = snap.job.job_id;
+      this._jobSnap = snap.job;
+      this._state = snap.state;
+      this._cancelRequested = snap.cancelRequested;
+      if (snap.state === 'in-progress') this._installCancelDelegate();
+    }
     this._render();
   }
 
@@ -468,11 +490,7 @@ class __migrate_gdrive_popup extends LetcBox {
   _onMigrationStarted(d) {
     if (!d || !d.job_id) return;
     if (this._state === 'in-progress' && String(this._jobId) === String(d.job_id)) return;
-    this._jobId = d.job_id;
-    this._jobSnap = { job_id: d.job_id, status: 'queued' };
-    this._state = 'in-progress';
-    this._render();
-    this._startPolling();
+    this._sa.attach(d.job_id);
   }
 
   async _loadFolder(folderId) {
@@ -572,11 +590,7 @@ class __migrate_gdrive_popup extends LetcBox {
       Wm.alert(LOCALE.TRY_AGAIN || 'Try again');
       return;
     }
-    this._jobId = res.job_id;
-    this._fileLog = [];
-    this._state = 'in-progress';
-    this._render();
-    this._startPolling();
+    this._sa.attach(res.job_id);
     // Tell other open popups (same browser, e.g. another tab sitting on the
     // "ready" screen) that a migration just started, so they switch to live
     // progress instead of still offering "Start migration".
@@ -601,71 +615,7 @@ class __migrate_gdrive_popup extends LetcBox {
     this.el.addEventListener('pointerup', this._cancelDelegate, true);
   }
 
-  _startPolling() {
-    this._stopPolling();
-    this._installCancelDelegate();
-    const tick = async () => {
-      if (!this._jobId) return;
-      try {
-        const r = await this.fetchService('google_drive.get_status', {
-          hub_id: Visitor.id,
-          job_id: this._jobId,
-        });
-        if (!r) return;
-        const sig = [r.status, r.processed_files, r.total_files,
-          r.errors_count, r.current_filename,
-          r.bytes_done, r.bytes_in_flight].join('|');
-        const changed = sig !== this._lastPollSig;
-        this._lastPollSig = sig;
-        this._jobSnap = r;
-        this._trackFileLog(r);
-        if (['done', 'failed', 'cancelled'].includes(r.status)) {
-          this._stopPolling();
-          this._state = r.status;
-          this._cancelRequested = 0;
-          // The files exist now, so show them where the user already is —
-          // without waiting for a click on "Open in Drumee". A cancelled or
-          // failed run can still have imported part of the set, so those
-          // refresh too; there is nothing to gain from leaving a stale grid.
-          this._refreshDestination();
-        }
-        // Re-feeding identical content every 2s replaced the Cancel button
-        // element for nothing, eating clicks. Only paint real changes.
-        if (changed) this._render();
-      } catch (e) {
-        this.warn('[migrate-gdrive] get_status failed', e);
-      }
-    };
-    tick();
-    this._poll = setInterval(tick, POLL_INTERVAL_MS);
-  }
-
-  _stopPolling() {
-    if (this._poll) { clearInterval(this._poll); this._poll = null; }
-  }
-
-  /**
-   * Rolling per-file list for the in-progress screen (Figma 1640:83630).
-   * The worker only reports `current_filename` (flushed every few files), so
-   * we reconstruct a log client-side: when the name changes, the previous
-   * entry flips to "done" and the new one shows "uploading".
-   */
-  _trackFileLog(snap) {
-    if (!this._fileLog) this._fileLog = [];
-    const cur = snap && snap.current_filename;
-    const last = this._fileLog[this._fileLog.length - 1];
-    if (cur && (!last || last.name !== cur)) {
-      if (last && last.status === 'uploading') last.status = 'done';
-      this._fileLog.push({ name: cur, status: 'uploading' });
-      if (this._fileLog.length > 12) this._fileLog.shift();
-    }
-    if (snap && ['done', 'cancelled', 'failed'].includes(snap.status)) {
-      const tail = this._fileLog[this._fileLog.length - 1];
-      if (tail && tail.status === 'uploading') tail.status = 'done';
-    }
-  }
-
-  getFileLog() { return this._fileLog || []; }
+  getFileLog() { return this._sa.snapshot().fileLog; }
 
   /**
    * Footer summary for the Choose-folders step (Figma 1639:52297):
@@ -689,11 +639,8 @@ class __migrate_gdrive_popup extends LetcBox {
 
   isSaAvailable() { return !!this._saAvail; }
   getSaEmail() { return this._saEmail; }
-  getSaFolder() { return this._saFolder; }
   getConnectedEmail() { return this._connectedEmail; }
   isConnected() { return !!this._connected; }
-  getSaError() { return this._saError; }
-  isSaChecking() { return !!this._saChecking; }
 
   _readSaInput() {
     const el = this._getPartEl('sa-folder-row');
@@ -701,87 +648,29 @@ class __migrate_gdrive_popup extends LetcBox {
     return input ? String(input.value || '').trim() : '';
   }
 
-  /** Validate the pasted folder link with the server (share + ownership). */
-  async _saVerify() {
-    const folder = this._readSaInput();
-    if (!folder) return null;
-    this._saChecking = 1;
-    this._saError = null;
-    this._saFolder = null;
-    this._render();
-    let res;
-    try {
-      res = await this.fetchService('google_drive.sa_check', { hub_id: Visitor.id, folder });
-    } catch (e) {
-      res = null;
-    }
-    this._saChecking = 0;
-    if (res && res.ok && res.folder_id) {
-      this._saFolder = { folder_id: res.folder_id, name: res.name, is_folder: !!res.is_folder, raw: folder };
-      this._saError = null;
-    } else {
-      this._saError = (res && res.error) || 'SA_NOT_SHARED';
-    }
-    this._render();
-    return this._saFolder;
+  getSaFolder() { return this._sa.snapshot().folder; }
+  getSaError() { return this._sa.snapshot().error; }
+  isSaChecking() { return this._sa.snapshot().state === 'checking'; }
+
+  /** Validate the pasted folder link (share + ownership). */
+  _saVerify() {
+    return this._sa.verify(this._readSaInput());
   }
 
-  /** Verify (if not yet) then enqueue the SA whole-folder migration. */
+  /** Verify if needed, then enqueue the whole-folder import. */
   async _saStart() {
-    if (this._starting) return;
-    if (!this._saFolder) {
-      const ok = await this._saVerify();
-      if (!ok) return;
-    }
-    this._starting = 1;
-    let res;
+    const jobId = await this._sa.start(this._readSaInput());
+    if (!jobId) return;
     try {
-      res = await this.postService('google_drive.start_migration', {
-        hub_id: this._hub_id,
-        nid: this._nid,
-        direct_into: this._direct,
-        auth_kind: 'sa',
-        sa_folder: this._saFolder.raw || this._saFolder.folder_id,
-        conflict_policy: 'skip',
-      });
-    } catch (e) {
-      this.warn('[migrate-gdrive] sa start failed', e);
-      this._saError = (e && (e.reason || e.error || e.message)) || 'SA_NOT_SHARED';
-      this._starting = 0;
-      this._render();
-      return;
-    }
-    this._starting = 0;
-    if (!res || !res.job_id) {
-      Wm.alert(LOCALE.TRY_AGAIN || 'Try again');
-      return;
-    }
-    this._jobId = res.job_id;
-    this._fileLog = [];
-    this._state = 'in-progress';
-    this._render();
-    this._startPolling();
-    try {
-      if (this._bc) this._bc.postMessage({ type: 'gdrive-migration-started', job_id: res.job_id });
+      if (this._bc) this._bc.postMessage({ type: 'gdrive-migration-started', job_id: jobId });
     } catch (e) { /* noop */ }
   }
 
   async _cancelJob() {
-    if (!this._jobId || this._cancelRequested) return;
-    // Immediate feedback: the button flips to "Cancelling…" on the next
-    // render (and every 2s poll re-render keeps it), so the click visibly
-    // took even though the worker needs a moment to notice the flag.
-    this._cancelRequested = 1;
-    this._render();
-    try {
-      await this.postService('google_drive.cancel', {
-        hub_id: Visitor.id, job_id: this._jobId,
-      });
-    } catch (e) {
-      this.warn('[migrate-gdrive] cancel failed', e);
-      this._cancelRequested = 0;
-      this._render();
-    }
+    // Immediate feedback: the controller announces cancelRequested at once,
+    // so the button flips to "Cancelling…" on the next render even though
+    // the worker needs a moment to notice the flag.
+    return this._sa.cancel();
   }
 
   async _skipForNow() {
@@ -937,13 +826,11 @@ class __migrate_gdrive_popup extends LetcBox {
     // Picker flow: the previous pick set was just imported — start the next
     // round with an empty staging list instead of silently re-importing it.
     this._pickerDocs = [];
-    this._fileLog = [];
-    // SA flow likewise: drop the verified-folder state so "Migrate again"
-    // doesn't show a stale folder name from the previous run.
-    this._saFolder = null;
-    this._saError = null;
     // SA-only: "Migrate again" returns to the share-to-SA screen, not the
     // removed Picker/ready screen.
+    // The verified folder, error, job and file log go too — "Migrate again"
+    // must not show a stale folder from the previous run.
+    this._sa.reset();
     this._state = this._saAvail ? 'sa' : 'ready';
     this._render();
   }
@@ -966,6 +853,7 @@ class __migrate_gdrive_popup extends LetcBox {
         await this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId });
       } catch (e) { /* best-effort ack */ }
     }
+    this._sa.reset();
     this._jobId = null;
     this._jobSnap = null;
     this._seenJobId = null;
@@ -1104,7 +992,8 @@ class __migrate_gdrive_popup extends LetcBox {
       }
       // ── whole-folder import (share-to-SA) ──
       case 'gdrive-sa-open':
-        this._saError = null;
+        // A fresh form: no error or verified folder left from a last visit.
+        this._sa.reset();
         this._state = 'sa';
         this._render();
         return;
@@ -1138,6 +1027,11 @@ class __migrate_gdrive_popup extends LetcBox {
         return;
       }
       case 'gdrive-sa-verify':
+        // ONLY a commit (Enter) means "check it". The link field raises this
+        // same service on Escape (__inputStatus 'cancel') and on the click
+        // that focuses it (ui-core's el.onclick, no __inputStatus); verifying
+        // there shows the bad-link error and re-renders away the field.
+        if (args.__inputStatus !== _a.commit) return;
         return this._saVerify();
       case 'gdrive-sa-start':
         return this._saStart();

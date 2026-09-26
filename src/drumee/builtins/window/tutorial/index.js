@@ -59,8 +59,34 @@ class __window_tutorial extends LetcBox {
     // `canCreate: false` — no run of any tour creates anything in here. The
     // workspace tour's live tail is dropped, so its screen count and its
     // progress badge both shrink to the mock-only six.
-    this._widgets = buildStepWidgets(this, this._tour, { canCreate: false });
+    // `live_capable` — only this host has a real window underneath, so only
+    // here may a step turn its drawing into the real thing at the end (the
+    // migrate step's import dialog; see _goLive). The desk host never sets it.
+    //
+    // `import_dest` — where an import from this window lands, so the migrate
+    // step's dialog names the user's own workspace on the screens that teach
+    // it, and the card they are taught is the card they then get (_goLive
+    // hands the step the same answer).
+    const importDest = this._importDest();
+    this._widgets = buildStepWidgets(this, this._tour, { canCreate: false })
+      .map((w) => ({ ...w, live_capable: 1, ...(importDest ? { import_dest: importDest } : {}) }));
     this._stepIndex = this._entryStep();
+  }
+
+  /**
+   * Where an import started from the target window lands, or null.
+   * Asked of the window (window_folder.gdriveDestination) — the one place
+   * that rule lives.
+   */
+  _importDest() {
+    const ws = this.mget('target_window');
+    if (!ws || !_.isFunction(ws.gdriveDestination)) return null;
+    try {
+      const d = ws.gdriveDestination();
+      return d && d.hub_id ? d : null;
+    } catch (e) {
+      return null;
+    }
   }
 
   /**
@@ -331,10 +357,19 @@ class __window_tutorial extends LetcBox {
       match: (e) => e.key === 'Escape' && !e.defaultPrevented,
       run: () => {
         if (this.isDestroyed && this.isDestroyed()) return false;
+        // The live dialog has a real field; Escape there must not throw away
+        // a pasted link. Everywhere else it still leaves.
+        if (this._live && this._typing()) return false;
         this._endTour();
         return true;
       },
     });
+  }
+
+  _typing() {
+    const a = typeof document !== 'undefined' && document.activeElement;
+    return !!(a && this.el && _.isFunction(this.el.contains) && this.el.contains(a)
+      && /^(INPUT|TEXTAREA)$/.test(a.tagName));
   }
 
   /**
@@ -389,11 +424,9 @@ class __window_tutorial extends LetcBox {
    * the mount-time markSeen, and the desk releases single-flight from this
    * widget's destroy, so every ending settles the guard the same way.
    *
-   * A step that wants something to happen on the way out arranges it BEFORE
-   * handing back — the migrate tour's last Done queues the real import dialog
-   * against this release (see _openTheRealThing in desk/tutorial/migrate). This
-   * method stays the plain exit the three endings share; it is not the place to
-   * ask which one it was.
+   * The migrate tour no longer arranges anything on the way out: its Done
+   * turns the dialog live (_goLive) and the host stays up until the dialog's
+   * own Close or Escape reaches here.
    *
    * softDestroy runs a 0.5s fade and raises `destroy` on its completion, so the
    * folder window is revealed underneath rather than snapping back.
@@ -565,7 +598,10 @@ class __window_tutorial extends LetcBox {
     const original = ws.newContent.bind(ws);
     ws.newContent = (...a) => {
       const out = original(...a);
-      this._markDone();
+      // Live, the files arriving ARE the import the dialog is showing — ending
+      // the tour here would close it mid-run. Record only.
+      if (this._live) this._recordDone();
+      else this._markDone();
       return out;
     };
   }
@@ -580,10 +616,85 @@ class __window_tutorial extends LetcBox {
   _markDone() {
     if (this._done) return;
     this._done = true;
+    this._recordDone();
+    this._endTour();
+  }
+
+  /**
+   * Record the tour as completed, without taking it down. Once per run, and
+   * never for a preview. Split from _markDone for the live dialog: going live
+   * IS completing the tour, but the host has to stay up to carry the import.
+   */
+  _recordDone() {
+    if (this._recorded) return;
+    this._recorded = true;
     if (this._tour.flag && !this.mget('preview')) {
       Tours.markSeen(this._tour.flag, this);
     }
-    this._endTour();
+  }
+
+  /**
+   * Turn the step on screen into the real thing — the migrate tour's import
+   * dialog, after Done.
+   *
+   * The same gates the product applies before it offers an import, in the
+   * same words, so the tour cannot hand someone a form that can only fail:
+   *
+   *   over the plan   migration only ADDS bytes; refused with over-limit's
+   *                   own notice.
+   *   no write right  a view/chat member cannot import here; the wording the
+   *                   desk's + New uses (PERMISSION_ACTION_IMPORT).
+   *   no destination  the window is gone.
+   *
+   * Any refusal simply ends the tour, which is what Done did before. On
+   * success the spotlight comes down (callout and dim), the host stays up
+   * and keeps the tour lock, and the step takes over.
+   */
+  _goLive() {
+    if (this._live || this._exiting) return;
+    this._recordDone();
+    const ws = this.mget('target_window');
+    if (!ws || (ws.isDestroyed && ws.isDestroyed())) return this._endTour();
+    const OL = require('libs/over-limit');
+    if (OL.isLocked()) {
+      OL.notifyBlocked('write');
+      return this._endTour();
+    }
+    if (_.isFunction(ws.canUpload) && !ws.canUpload()) {
+      require('libs/permission-denied').sayWeakPrivilege(
+        LOCALE.PERMISSION_ACTION_IMPORT, ws.mget(_a.privilege), _K.permission.write,
+      );
+      return this._endTour();
+    }
+    const dest = _.isFunction(ws.gdriveDestination) ? ws.gdriveDestination() : null;
+    if (!dest || !dest.hub_id) return this._endTour();
+    this._live = true;
+    if (this.el && this.el.dataset) this.el.dataset.live = '1';
+    const step = this._currentStep();
+    return this.ensurePart('spotlight')
+      .then((s) => s && s.clear && s.clear())
+      .then(() => {
+        // Closed (Escape) while the spotlight was coming down.
+        if (this._exiting) return;
+        if (step && _.isFunction(step.goLive)) step.goLive(dest);
+        else this._endTour();
+      });
+  }
+
+  _currentStep() {
+    const part = this.getPart && this.getPart(_a.content);
+    return part && part.children && part.children.last();
+  }
+
+  /** The live import finished: show its files in the window it landed in. */
+  _refreshTarget() {
+    const ws = this.mget('target_window');
+    if (!ws || (ws.isDestroyed && ws.isDestroyed()) || !_.isFunction(ws.refreshContent)) return;
+    try {
+      ws.refreshContent({});
+    } catch (e) {
+      this.warn && this.warn('[window-tutorial] destination refresh failed', e);
+    }
   }
 
   onBeforeDestroy() {
@@ -614,9 +725,6 @@ class __window_tutorial extends LetcBox {
       // here instead of bubbling to the folder window as an unknown service.
       case 'workspace-created':
         break;
-      // A step asking for a REAL action on the window underneath. The migrate
-      // tour's + New rows and its Upload button raise this; the step names the
-      // service and never learns which window it lands on.
       // The hosted dialog's own controls.
       case 'create-folder-submit':
         this._submitCreateFolder(trigger);
@@ -625,6 +733,30 @@ class __window_tutorial extends LetcBox {
         this._closeCreateFolder();
         break;
 
+      // The migrate step's Done, in a window: become the real import.
+      case 'window-tutorial:go-live':
+        this._goLive();
+        break;
+      // The live dialog's × and Close. The server job, if any, carries on.
+      case 'window-tutorial:close-live':
+        this._endTour();
+        break;
+      case 'window-tutorial:refresh-target':
+        this._refreshTarget();
+        break;
+      // No share-to-SA key on this server: the popup can still fall back to
+      // OAuth. Queued by the folder window against this tour's release
+      // (Tours.whenDone), so it opens as the tour comes down.
+      case 'window-tutorial:fallback-popup':
+        // The user already closed the tour while it was still loading: they
+        // have answered, and a popup appearing afterwards would be a surprise.
+        if (this._exiting) break;
+        this._actOnWindow('launch-gdrive-migration');
+        this._endTour();
+        break;
+      // A step asking for a REAL action on the window underneath. The migrate
+      // tour's + New rows and its Upload button raise this; the step names the
+      // service and never learns which window it lands on.
       case 'window-tutorial:act':
         this._actOnWindow(args.action, args.cmd);
         break;
