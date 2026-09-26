@@ -2063,8 +2063,12 @@ class __panel_activity extends LetcBox {
       const activityId = changelogId
         || (cmd && cmd.mget && (cmd.mget(_a.id) || cmd.mget('id') || cmd.mget('last_id') || cmd.mget('key_id')));
       if (activityId) {
+        // READ goes through read_contact_event (dismissed_at only). It used to
+        // be dismiss_contact_event, which also stamps hidden_at — removal, the
+        // meaning mobile relies on — so a notification the user merely opened
+        // vanished from the list on the next reload.
         const svc = read
-          ? ((SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event')
+          ? ((SERVICE.activity && SERVICE.activity.read_contact_event) || 'activity.read_contact_event')
           : ((SERVICE.activity && SERVICE.activity.delete_contact_event) || 'activity.delete_contact_event');
         this.verbose('[activity] → POST', { svc, activity_id: activityId, mode });
         try {
