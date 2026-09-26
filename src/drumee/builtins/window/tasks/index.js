@@ -12,6 +12,8 @@ const {
 } = require("./detail-commit");
 const { restoreScroll } = require("./scroll-restore");
 const { stamp, reconcile } = require("./reconcile");
+const listInline = require("./list-inline");
+const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
   contentTokenRe,
@@ -403,6 +405,9 @@ class __tasks_panel extends LetcBox {
       cancelAnimationFrame(this._peerPaintRaf);
     }
     this._peerPaintRaf = 0;
+    // List inline editing: the document listeners and the peer-edit toast.
+    this._uninstallListEdit();
+    killTaskToast(this);
     if (this._visObserver) {
       this._visObserver.disconnect();
       this._visObserver = null;
@@ -656,6 +661,7 @@ class __tasks_panel extends LetcBox {
     this._installPasteAttach();
     this._installFileSearchFocus();
     this._installCardWindow();
+    this._installListEdit();
     this._installAssigneeSearch();
     this._installSubtaskDateWatch();
     this._watchVisibility();
@@ -1569,6 +1575,10 @@ class __tasks_panel extends LetcBox {
     // After the service has been resolved (the walk above is what turns a click
     // on a Note into its ancestor's service), before any case can act on it.
     if (this._refuseWhileRowBusy(service, trigger)) return;
+    // List view inline editing (list-inline.js).
+    if (listInline.LIST_SERVICES.has(service)) {
+      return this._onListUiEvent(service, trigger, args);
+    }
     switch (service) {
       case "task-input-changed":
         return this._onTaskInputChanged(args, trigger);
@@ -2039,6 +2049,8 @@ class __tasks_panel extends LetcBox {
           // guard a genuine defence-in-depth rather than the real check.
           if (!isTaskViewAllowed(v)) return this._showTaskViewUpsell();
           this._view = v;
+          // An inline list editor belongs to the list; it does not follow.
+          this._listEdit = null;
           // Deferred: paint the loading veil THIS frame so the click gets
           // instant feedback (Project Health links / viewbar tabs felt dead
           // while the synchronous full re-feed built the new view).
@@ -2837,7 +2849,7 @@ class __tasks_panel extends LetcBox {
         // the workspace. See _applyPeerTaskChange for why this is the whole
         // idle-lag bug. Falls back to the full refresh whenever the surgical
         // path cannot be proved correct.
-        if (this._applyPeerTaskChange(service, data)) return;
+        if (this._applyPeerTaskChange(service, data, options)) return;
         // Unresolvable (e.g. hub.delete_contributor's unassign announcement on
         // update_assignee, which names a member, not a task): reload. Members
         // too, since that one means somebody left the workspace.
@@ -3056,16 +3068,22 @@ class __tasks_panel extends LetcBox {
    * @param {Object} data the WS payload for the changed task
    * @returns {Boolean} true if applied surgically
    */
-  _applyPeerTaskChange(service, data) {
+  _applyPeerTaskChange(service, data, options = {}) {
     if (this._isPanelHidden()) return false;
     const current =
       data && data.task_id ? this._tasks.find((t) => t.id === data.task_id) : null;
     const patch = peerPatch(service, data, current);
     if (!patch) return false;
+    // The row as it was, for the List view's "Updated by" toast wording.
+    const cached = this._tasks.find((t) => t.id === patch.id);
+    const prev = cached ? { ...cached } : null;
 
     // Merge FIRST and unconditionally — the cache must be right even when the
     // repaint below is skipped or deferred.
     this._mergeTask(patch);
+    // Compared against the MERGED row: it is normalised (assignee_uids arrive
+    // as a comma string on the wire).
+    if (prev) this._toastPeerListEdit(service, prev, this._tasks.find((t) => t.id === patch.id), options);
     if (patch.parent_task_id) this._syncSubtaskBadges(patch.parent_task_id);
     const touchedOpen = this._detailId && this._detailId === patch.id;
 
@@ -9566,6 +9584,7 @@ class __tasks_panel extends LetcBox {
     // otherwise leave the chosen tab off-screen.
     if (viewChanged) this._scrollActiveViewTabIntoView();
     this._positionFilterPicker();
+    if (this._listEdit) this._afterListPaint();
     this._markPainted();
     // The board has drawn: the folder window's Task entrance keys on this
     // (window/folder/skin, data-view="task"), so it slides in WITH its columns.
@@ -9761,6 +9780,8 @@ class __tasks_panel extends LetcBox {
           else this._patchKids(host, node.kids);
           // Retries per frame until the rebuilt columns can take the offsets.
           this._restoreViewScroll(savedScroll);
+          // The list's floating editor follows its cell (list-inline.js).
+          if (this._listEdit) this._afterListPaint();
         },
         { enter: opt.enter !== false },
       );
@@ -11175,6 +11196,13 @@ class __tasks_panel extends LetcBox {
   getReactPickerFor() {
     return this._reactPickerFor;
   }
+}
+
+// List view inline editing lives in its own module; mixed in here so the
+// skeleton and onUiEvent reach it as ordinary panel methods.
+{
+  const { LIST_SERVICES, ...methods } = listInline;
+  Object.assign(__tasks_panel.prototype, methods);
 }
 
 module.exports = __tasks_panel;
