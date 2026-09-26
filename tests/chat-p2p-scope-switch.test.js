@@ -441,3 +441,105 @@ test("Inbox conversations attach from the device only", async () => {
   await settle();
   assert.equal(mounted.find((w) => w.opt.type === "share").opt.no_workspace_attach, 1);
 });
+
+// ── In-Inbox image / video viewer ────────────────────────────────────
+STUBS["./skeleton/lightbox"] = (ui, m) => ({ kind: "lightbox", ...m });
+
+function withLightbox(f) {
+  const keys = {};
+  global.document = {
+    addEventListener: (ev, fn) => { keys[ev] = fn; },
+    removeEventListener: (ev) => { delete keys[ev]; },
+  };
+  const box = { fed: null, feed(x) { this.fed = x; }, clear() { this.fed = null; } };
+  f.ui._parts["wrapper-lightbox"] = box;
+  return { box, key: (k) => keys.keydown && keys.keydown({ key: k, stopPropagation() {}, preventDefault() {} }) };
+}
+function mediaTile(filetype) {
+  let downloads = 0;
+  return {
+    mget: (k) => ({ filetype, filename: "pic" })[k],
+    fullname: () => "pic.png",
+    actualNode: (fmt) => ({ url: `/file/${fmt}/N1/H1` }),
+    download: () => { downloads++; },
+    downloads: () => downloads,
+  };
+}
+
+test("previewMedia shows the picture inside the Inbox; Escape and the X close it", async () => {
+  const f = await landedOnDirect();
+  const { box, key } = withLightbox(f);
+  f.ui.previewMedia(mediaTile("image"));
+  await settle();
+  assert.deepEqual(
+    { type: box.fed.type, name: box.fed.name, slide: box.fed.slide, orig: box.fed.orig },
+    { type: "image", name: "pic.png", slide: "/file/slide/N1/H1", orig: "/file/orig/N1/H1" },
+  );
+  key("Escape");
+  assert.equal(box.fed, null);
+  f.ui.previewMedia(mediaTile("video"));
+  await settle();
+  assert.equal(box.fed.type, "video");
+  f.ui.onUiEvent({ get: () => "lightbox-close" }, {});
+  assert.equal(box.fed, null);
+  delete global.document;
+});
+
+test("the viewer's Download downloads that file; switching tab closes the viewer", async () => {
+  const f = await landedOnDirect();
+  const { box } = withLightbox(f);
+  const tile = mediaTile("image");
+  f.ui.previewMedia(tile);
+  await settle();
+  f.ui.onUiEvent({ get: () => "lightbox-download" }, {});
+  assert.equal(tile.downloads(), 1);
+  await f.ui._setRoomScope("workspace");
+  await settle();
+  assert.equal(box.fed, null);
+  delete global.document;
+});
+
+test("the viewer steps through the conversation's pictures and stops at the ends", async () => {
+  const f = await landedOnDirect();
+  const { box, key } = withLightbox(f);
+  const tiles = ["image", "video", "image"].map((t, i) => {
+    const m = mediaTile(t);
+    const name = `f${i}`;
+    m.fullname = () => name;
+    return m;
+  });
+  const row = (list) => ({ __list: { children: { forEach: (fn) => list.forEach(fn) } } });
+  const chat = { __list: { children: { forEach: (fn) => [row([tiles[0]]), row([tiles[1], tiles[2]])].forEach(fn) } } };
+  tiles.forEach((t) => { t.getParentByKind = (k) => (k === "widget_chat" ? chat : null); });
+
+  f.ui.previewMedia(tiles[1]);
+  await settle();
+  assert.equal(box.fed.name, "f1");
+  assert.equal(box.fed.position, "2 / 3");
+  assert.equal(box.fed.hasPrev, true);
+  assert.equal(box.fed.hasNext, true);
+  key("ArrowRight");
+  await settle();
+  assert.equal(box.fed.name, "f2");
+  assert.equal(box.fed.hasNext, false);
+  key("ArrowRight");
+  await settle();
+  assert.equal(box.fed.name, "f2", "no wrap past the last");
+  f.ui.onUiEvent({ get: () => "lightbox-prev" }, {});
+  f.ui.onUiEvent({ get: () => "lightbox-prev" }, {});
+  await settle();
+  assert.equal(box.fed.name, "f0");
+  assert.equal(box.fed.hasPrev, false);
+  delete global.document;
+});
+
+test("a single picture shows no counter", async () => {
+  const f = await landedOnDirect();
+  const { box } = withLightbox(f);
+  f.ui.previewMedia(mediaTile("image"));
+  await settle();
+  assert.equal(box.fed.position, "");
+  assert.equal(box.fed.hasPrev, false);
+  assert.equal(box.fed.hasNext, false);
+  delete global.document;
+});

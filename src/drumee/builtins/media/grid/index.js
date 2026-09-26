@@ -10,6 +10,13 @@ const Rectangle = require('rectangle-node');
 // skin/index.scss.
 const SLOT_SHIFT = 24;
 
+// Bubbled by an inline chat image once it has loaded (see _wireInlineMedia);
+// widget_chat listens for it. Keep in sync with widget/chat.
+const INLINE_MEDIA_GROWN = 'drumee:inline-media-grown';
+// Bubbled whenever a tile becomes (or stops being) inline media, so the chat
+// message can lay its attachments out (widget/chat-item _stampInlineLayout).
+const INLINE_MEDIA_READY = 'drumee:inline-media-ready';
+
 class __media_grid extends DrumeeMediaInteract {
   constructor(...args) {
     super(...args);
@@ -45,6 +52,9 @@ class __media_grid extends DrumeeMediaInteract {
       height: 120
     }
     this.initContainer()
+    if (opt.inlineMedia) {
+      this.on("content-ready", () => this._wireInlineMedia());
+    }
     switch (opt.mode) {
       case _a.vignette:
         return this.innerContent = require('./template/vignette')
@@ -397,6 +407,80 @@ class __media_grid extends DrumeeMediaInteract {
     // the old behaviour exactly.
     this._shiftX = 0;
     if (this._transformTouched) TweenLite.set(this.$el, { x: 0 });
+  }
+
+  /**
+   * An inline chat image / video (grid/template, inlineMedia) just rendered.
+   *
+   * - Image: `slide` does not exist yet for a fresh upload — fall back to the
+   *   original once, then to the plain file card.
+   * - Video: the native controls own their pointer events. Without stopping
+   *   them here, pressing play or scrubbing would ALSO open the viewer (the
+   *   tile's own onclick) or start dragging the tile (its drag handle is the
+   *   container the video sits in). A codec the browser cannot play falls back
+   *   to the file card, which opens the full player.
+   */
+  _wireInlineMedia() {
+    const root = this.content && this.content.el;
+    if (!root) return;
+    const frame = root.querySelector('.media-grid__inline');
+    const img = root.querySelector('.media-grid__inline-img');
+    if (img) {
+      // Placeholder tint + minimum box until the picture is in (skin).
+      if (img.complete && img.naturalWidth) {
+        if (frame) frame.dataset.loaded = '1';
+      } else {
+        img.addEventListener('load', () => {
+          if (frame) frame.dataset.loaded = '1';
+        });
+      }
+      // The picture arrives AFTER the card (and after the chat's own
+      // "attachment-grown" re-pin), and it is far taller than the 44px card
+      // it replaced — so say so, or a new image message ends up half below
+      // the fold. A DOM event, since this tile's handler is Wm, not the chat:
+      // widget_chat re-pins on it (only while the reader is at the bottom).
+      img.addEventListener('load', () => {
+        img.dispatchEvent(new CustomEvent(INLINE_MEDIA_GROWN, { bubbles: true }));
+      });
+      img.addEventListener('error', () => {
+        const orig = img.dataset.orig;
+        if (orig && !img.dataset.fellBack) {
+          img.dataset.fellBack = '1';
+          img.src = orig;
+          return;
+        }
+        this._inlineMediaFailed();
+      });
+    }
+    const video = root.querySelector('.media-grid__inline-video');
+    if (video) {
+      // mousedown is what jQuery UI's drag starts from (touch-punch turns a
+      // touch into one), click / dblclick are the tile's open. NOT pointerdown:
+      // ui-core's document listener for it is what closes open menus on an
+      // outside press, and a video must not keep a menu stuck open.
+      const own = (e) => e.stopPropagation();
+      ['mousedown', 'click', 'dblclick'].forEach(
+        (ev) => video.addEventListener(ev, own)
+      );
+      video.addEventListener('error', () => this._inlineMediaFailed());
+      if (frame) frame.dataset.loaded = '1';
+    }
+    root.dispatchEvent(new CustomEvent(INLINE_MEDIA_READY, { bubbles: true }));
+  }
+
+  /**
+   * Neither rendition can be shown inline: draw the ordinary attachment card,
+   * whose click opens the file in its viewer.
+   */
+  _inlineMediaFailed() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!this.mget('inlineMedia')) return;
+    this.mset('inlineMedia', 0);
+    const root = this.content && this.content.el;
+    if (root) {
+      root.innerHTML = this.innerContent(this);
+      root.dispatchEvent(new CustomEvent(INLINE_MEDIA_READY, { bubbles: true }));
+    }
   }
 
   /**

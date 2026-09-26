@@ -18,6 +18,7 @@ class __chat_p2p extends LetcBox {
     this.openChat = this.openChat.bind(this);
     this.openPeer = this.openPeer.bind(this);
     this._onDocClick = this._onDocClick.bind(this);
+    this._onLightboxKey = this._onLightboxKey.bind(this);
   }
 
   initialize(opt = {}) {
@@ -131,6 +132,7 @@ class __chat_p2p extends LetcBox {
     }
     this.unbindEvent(_a.live);
     document.removeEventListener("mousedown", this._onDocClick);
+    document.removeEventListener("keydown", this._onLightboxKey, true);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off(_e.peerData, this._onPeerData);
   }
@@ -292,6 +294,7 @@ class __chat_p2p extends LetcBox {
   async _selectScope(next, opt = {}) {
     const { land = false } = opt;
     if (this._scopeKey() === next) return;
+    if (this._lightboxMedia) this._closeLightbox();
     this._roomScope = next;
     // Support narrows the direct list, so it shares that list.
     this._activeFilter = next === "support" ? "support" : "all";
@@ -913,6 +916,41 @@ class __chat_p2p extends LetcBox {
       case "sidebar":
         break;
 
+      case "lightbox-img": {
+        // `slide` is not generated yet for a fresh upload: fall back to the
+        // original once.
+        const img = child.el && (child.el.tagName === "IMG" ? child.el : child.el.querySelector("img"));
+        if (img) {
+          img.addEventListener("error", () => {
+            const orig = img.dataset.orig || (child.el.dataset && child.el.dataset.orig);
+            if (orig && !img.dataset.fellBack) {
+              img.dataset.fellBack = "1";
+              img.src = orig;
+            }
+          });
+        }
+        break;
+      }
+
+      case "lightbox-video": {
+        // A codec the browser cannot play: say so, and leave Download.
+        const video = child.el && (child.el.tagName === "VIDEO" ? child.el : child.el.querySelector("video"));
+        if (video) {
+          video.addEventListener("error", () => {
+            this.ensurePart("lightbox-stage").then((stage) => {
+              if (!stage || !this._lightboxMedia) return;
+              stage.feed(
+                Skeletons.Note({
+                  className: `${this.fig.family}__lightbox-error`,
+                  content: LOCALE.UNABLE_TO_GENERATE_PREVIEW,
+                }),
+              );
+            });
+          });
+        }
+        break;
+      }
+
       case "compose-popup":
         this._composePopup = child;
         document.addEventListener("mousedown", this._onDocClick);
@@ -952,6 +990,123 @@ class __chat_p2p extends LetcBox {
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
     }
+  }
+
+  /**
+   * Show a chat image / video inside the Inbox.
+   *
+   * Called by the desk window manager (Wm.openContent) for a tile that lives
+   * in this screen: the regular viewer is launched into the window-manager
+   * layers, which this full-canvas screen covers, so it opened invisibly
+   * behind the Inbox — and every further click stacked another one there.
+   *
+   * @param {View} media  the media_grid tile that was clicked
+   */
+  previewMedia(media) {
+    if (!media || !_.isFunction(media.actualNode)) return;
+    // Every picture / video of this conversation, oldest first, so the
+    // viewer can step through them (arrows, ← →) the way the full viewer
+    // steps through a folder.
+    this._gallery = this._galleryFor(media);
+    this._galleryIndex = Math.max(0, this._gallery.indexOf(media));
+    this._renderLightbox();
+  }
+
+  /**
+   * The conversation's inline pictures / videos, in reading order, or just
+   * `media` when it is not one of them (a reply quote's thumbnail).
+   */
+  _galleryFor(media) {
+    const out = [];
+    const chat = _.isFunction(media.getParentByKind)
+      ? media.getParentByKind("widget_chat")
+      : null;
+    const rows = chat && chat.__list && chat.__list.children;
+    if (rows && _.isFunction(rows.forEach)) {
+      rows.forEach((row) => {
+        const tiles = row && row.__list && row.__list.children;
+        if (!tiles || !_.isFunction(tiles.forEach)) return;
+        tiles.forEach((t) => {
+          if (!t || !_.isFunction(t.mget) || !_.isFunction(t.actualNode)) return;
+          if (t.isDestroyed && t.isDestroyed()) return;
+          const ft = t.mget(_a.filetype);
+          if (ft === _a.image || ft === _a.video) out.push(t);
+        });
+      });
+    }
+    return out.includes(media) ? out : [media];
+  }
+
+  _renderLightbox() {
+    const gallery = this._gallery || [];
+    const media = gallery[this._galleryIndex];
+    if (!media || (media.isDestroyed && media.isDestroyed())) {
+      return this._closeLightbox();
+    }
+    const type = media.mget(_a.filetype);
+    const name = _.isFunction(media.fullname)
+      ? media.fullname()
+      : media.mget(_a.filename) || "";
+    const slide = media.actualNode(_a.slide).url;
+    const orig = media.actualNode(_a.orig).url;
+    const count = gallery.length;
+    const index = this._galleryIndex;
+    this._lightboxMedia = media;
+    this.ensurePart("wrapper-lightbox").then((w) => {
+      if (!w || (this.isDestroyed && this.isDestroyed())) return;
+      if (this._lightboxMedia !== media) return;
+      // One viewer at a time: opening another replaces it.
+      w.feed(
+        require("./skeleton/lightbox")(this, {
+          type,
+          name,
+          slide,
+          orig,
+          position: count > 1 ? `${index + 1} / ${count}` : "",
+          hasPrev: index > 0,
+          hasNext: index < count - 1,
+        }),
+      );
+      document.removeEventListener("keydown", this._onLightboxKey, true);
+      document.addEventListener("keydown", this._onLightboxKey, true);
+    });
+  }
+
+  /**
+   * Step the viewer to the previous (-1) / next (+1) picture. Stops at the
+   * ends rather than wrapping: the conversation has a first and a last.
+   */
+  _stepLightbox(delta) {
+    const gallery = this._gallery || [];
+    const next = this._galleryIndex + delta;
+    if (next < 0 || next >= gallery.length) return;
+    this._galleryIndex = next;
+    this._renderLightbox();
+  }
+
+  _closeLightbox() {
+    this._lightboxMedia = null;
+    this._gallery = null;
+    document.removeEventListener("keydown", this._onLightboxKey, true);
+    const w = this.getPart && this.getPart("wrapper-lightbox");
+    if (w && _.isFunction(w.clear)) w.clear();
+  }
+
+  /**
+   * Escape closes the viewer — and only the viewer: taken in the capture
+   * phase so the conversation's own Escape handling (reply, edit) does not
+   * also act on the same key.
+   */
+  _onLightboxKey(e) {
+    if (!e || !this._lightboxMedia) return;
+    const step = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (e.key !== "Escape" && !step) return;
+    // A video's own controls take the arrows (seek) while they have focus.
+    if (step && e.target && e.target.tagName === "VIDEO") return;
+    e.stopPropagation();
+    e.preventDefault();
+    if (step) return this._stepLightbox(step);
+    this._closeLightbox();
   }
 
   _toggleComposePopup(force) {
@@ -1787,6 +1942,23 @@ class __chat_p2p extends LetcBox {
             });
           });
         });
+        return;
+      }
+
+      case "lightbox-close":
+        return this._closeLightbox();
+
+      case "lightbox-prev":
+        return this._stepLightbox(-1);
+
+      case "lightbox-next":
+        return this._stepLightbox(1);
+
+      case "lightbox-download": {
+        const media = this._lightboxMedia;
+        if (media && !(media.isDestroyed && media.isDestroyed()) && _.isFunction(media.download)) {
+          media.download();
+        }
         return;
       }
 

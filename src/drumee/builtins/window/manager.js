@@ -1451,6 +1451,19 @@ class __window_manager extends mfsInteract {
           return;
         }
 
+        // One viewer per picture: clicking an image whose viewer is already
+        // ON SCREEN (or minimised to the dock) raises it instead of cascading
+        // a second copy. Only a visible one counts — a viewer docked into a
+        // folder's Files column is hidden while that folder shows another tab
+        // (window/frame.js), and raising it would be a click that shows
+        // nothing, so that case opens a fresh viewer exactly as before.
+        if (fType === _a.image && this._imageViewerShown(media)) {
+          if (this.checkAlreadyOpened(media)) {
+            if (_.isFunction(media.wait)) media.wait(0);
+            return;
+          }
+        }
+
         if (fType == _a.audio) {
           let w = this.getItemByKind("audio_player");
           if (w) {
@@ -1500,6 +1513,20 @@ class __window_manager extends mfsInteract {
    * @param {*} media
    * @returns
    */
+  /**
+   * An image viewer for this file is open AND visible (or parked in the dock,
+   * which checkAlreadyOpened wakes).
+   */
+  _imageViewerShown(media) {
+    const pool = this.getWindowsPool();
+    if (!pool || !pool.children) return false;
+    const w = pool.children.find((r) => r.mget(_a.nid) == media.mget(_a.nid));
+    if (!w || (w.isDestroyed && w.isDestroyed()) || !w.el) return false;
+    if (w.mget(_a.kind) === "window_folder") return false;
+    if (w.mget(_a.minimize)) return true;
+    return w.el.getClientRects().length > 0;
+  }
+
   checkAlreadyOpened(media) {
     let w = this.getWindowsPool().children.find(
       (r) => r.mget(_a.nid) == media.mget(_a.nid),

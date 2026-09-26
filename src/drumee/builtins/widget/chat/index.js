@@ -222,6 +222,9 @@ class __widget_chat extends LetcBox {
     // their teammates' read receipts then showed. See _isInReadingView.
     this._readOnInteraction = !!this.mget("read_on_interaction");
     this._onReadGesture = this._onReadGesture.bind(this);
+    // An inline image in a message (media_grid inlineMedia) finished loading
+    // and grew its row: re-pin to the bottom like any attachment growth.
+    this._onInlineMediaGrown = () => this._restickBottomAfterGrowth();
 
     // Sync own posts to sibling chat widgets on the same channel in this client
     // (the server doesn't WS-echo your own posts, so e.g. the team chat would
@@ -256,6 +259,10 @@ class __widget_chat extends LetcBox {
     if (this._readGestureBound && this.el) {
       this.el.removeEventListener("pointerdown", this._onReadGesture, true);
       this._readGestureBound = false;
+    }
+    if (this._inlineGrowthBound && this.el) {
+      this.el.removeEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
+      this._inlineGrowthBound = false;
     }
     clearTimeout(this._folderContentSyncTimer);
     clearTimeout(this._initStickTimer);
@@ -1110,6 +1117,10 @@ class __widget_chat extends LetcBox {
       this._bindMentionKeyboard();
       this._bindClipboardPaste();
       this._bindReadGesture();
+      if (!this._inlineGrowthBound && this.el) {
+        this.el.addEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
+        this._inlineGrowthBound = true;
+      }
       this._installMediaDroppable();
     });
   }

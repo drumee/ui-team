@@ -866,6 +866,170 @@
     }
   }
 
+  // ── In-Inbox image / video viewer (skeleton/lightbox) ─────────────
+  // Covers the whole Inbox (both columns) above the forward overlay. The
+  // Wrapper is hidden while empty, so nothing here applies until it opens.
+  &__lightbox {
+    background: rgba(0, 0, 0, 0.88);
+    inset: 0;
+    position: absolute;
+    z-index: 60001;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__lightbox-main {
+    animation: chat-p2p-lightbox-in 0.16s ease-out both;
+    height: 100%;
+    width: 100%;
+  }
+
+  // [prev] [picture] [next] — the stage takes what the buttons leave.
+  &__lightbox-body {
+    align-items: center;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  &__lightbox-step {
+    align-items: center;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    flex: 0 0 auto;
+    height: 44px;
+    justify-content: center;
+    margin: 0 12px;
+    width: 44px;
+
+    svg {
+      height: 22px;
+      width: 22px;
+    }
+
+    &:not(.idle) {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &:not(.idle):hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    &.idle {
+      cursor: default;
+    }
+  }
+
+  &__lightbox-position {
+    flex: 0 0 auto;
+    margin-right: 8px;
+
+    .note-content {
+      @include drumee.typo($size: 13px, $line: 20px, $color: rgba(255, 255, 255, 0.72));
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__lightbox-bar {
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 8px;
+    height: 56px;
+    padding: 0 16px;
+  }
+
+  &__lightbox-name {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    .note-content {
+      @include drumee.typo($size: 14px, $line: 20px, $color: #fff);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__lightbox-btn {
+    align-items: center;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    flex: 0 0 auto;
+    height: 36px;
+    justify-content: center;
+    position: relative;
+    width: 36px;
+
+    svg {
+      height: 20px;
+      width: 20px;
+    }
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+
+  &__lightbox-tip {
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px;
+    pointer-events: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    white-space: nowrap;
+  }
+
+  &__lightbox-stage {
+    align-items: center;
+    align-self: stretch;
+    cursor: zoom-out;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 0;
+    min-width: 0;
+    padding: 0 0 24px;
+  }
+
+  &__lightbox-img,
+  &__lightbox-video {
+    animation: chat-p2p-lightbox-media-in 0.2s ease-out both;
+    border-radius: 6px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    cursor: default;
+    display: block;
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__lightbox-main,
+    &__lightbox-img,
+    &__lightbox-video {
+      animation: none;
+    }
+  }
+
+  // Narrow screens: the arrows shrink so the picture keeps the width.
+  @media (max-width: 640px) {
+    &__lightbox-step {
+      height: 36px;
+      margin: 0 4px;
+      width: 36px;
+    }
+  }
+
+  &__lightbox-error .note-content {
+    @include drumee.typo($size: 13px, $color: rgba(255, 255, 255, 0.8));
+  }
+
   &__overlay-wrapper[data-mode="open"] {
     height: 100%;
     position: absolute;
@@ -975,5 +1139,25 @@ html[data-theme="dark"] .chat-p2p {
     &::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.24) !important;
     }
+  }
+}
+
+@keyframes chat-p2p-lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes chat-p2p-lightbox-media-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

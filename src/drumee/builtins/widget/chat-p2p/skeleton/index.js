@@ -302,9 +302,16 @@ module.exports = function (ui) {
     ],
   });
 
+  // In-Inbox image / video viewer (./lightbox, chat_p2p.previewMedia).
+  // Empty — and therefore hidden — until an attachment is opened.
+  const lightbox = Skeletons.Wrapper.Y({
+    className: `${fig}__lightbox`,
+    name: "lightbox",
+  });
+
   return Skeletons.Box.X({
     className: `${fig}__main`,
     debug: __filename,
-    kids: [sidebar, chatArea, overlayWrapper],
+    kids: [sidebar, chatArea, overlayWrapper, lightbox],
   });
 };

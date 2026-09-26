@@ -1795,6 +1795,26 @@ class __window_manager extends push {
   }
 
   openContent(media, args) {
+    // AN IMAGE / VIDEO OPENED FROM THE INBOX is shown by the Inbox itself.
+    //
+    // The Inbox (chat_p2p) is a full-canvas screen in the desk's
+    // settings-main-slot, stacked ABOVE every window-manager layer — which is
+    // where the viewer below launches. So a click on a picture in an Inbox
+    // conversation opened its viewer invisibly behind the Inbox, and each
+    // further click stacked another one there; leaving the Inbox then revealed
+    // the pile ("duplicated images" in the workspace chat). chat_p2p draws its
+    // own viewer instead (previewMedia).
+    const fType = media && media.mget ? media.mget(_a.filetype) : null;
+    if (fType === _a.image || fType === _a.video) {
+      const inbox = _.isFunction(media.getParentByKind)
+        ? media.getParentByKind("chat_p2p")
+        : null;
+      if (inbox && _.isFunction(inbox.previewMedia)) {
+        if (_.isFunction(media.wait)) media.wait(0);
+        inbox.previewMedia(media);
+        return false;
+      }
+    }
     // Sheets open IN-APP (the editor_sheet desk window) — no tab redirect.
     if (
       media &&

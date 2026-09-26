@@ -617,6 +617,20 @@ class __media_interact extends media_core {
       this.trigger("content-ready");
       return;
     }
+    // A chat message's image / video shown as itself (inlineMedia, see
+    // grid/template): it loads its own large rendition, so it has no use for
+    // the vignette either — render now rather than wait on a fetch whose
+    // failure paths leave the card empty.
+    if (
+      this.mget("inlineMedia") &&
+      this.mget("isAttachment") &&
+      (filetype === _a.image || filetype === _a.video)
+    ) {
+      this.content.el.innerHTML = this.innerContent(this);
+      this._setupInteract();
+      this.trigger("content-ready");
+      return;
+    }
     switch (filetype) {
       case _a.video:
       case _a.image:

@@ -43,7 +43,7 @@ function chat() {
   const w = Object.create(Chat.prototype);
   const model = { area: "privateRoom" };
   Object.assign(w, {
-    el: { dataset: {}, style: {} },
+    el: { dataset: {}, style: {}, addEventListener() {}, removeEventListener() {} },
     hubId: "ME",
     peerId: "P1",
     mget: (k) => model[k],
@@ -284,4 +284,24 @@ test("_isInReadingView: only the Chat tab, on screen, visible page, not covered"
   w.el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 0, height: 0 });
   assert.equal(w._isInReadingView(), false, "parked / hidden pane");
   delete global.document;
+});
+
+test("an inline image finishing its load re-pins the chat to the bottom", async () => {
+  const { w } = chat();
+  const listeners = {};
+  w.el.addEventListener = (ev, fn) => { listeners[ev] = fn; };
+  w.el.removeEventListener = (ev) => { delete listeners[ev]; };
+  let repins = 0;
+  w.__list.scrollToBottom = () => { repins++; };
+  w.isDestroyed = () => false;
+  w._onInlineMediaGrown = () => w._restickBottomAfterGrowth();
+  w.el.addEventListener("drumee:inline-media-grown", w._onInlineMediaGrown);
+  w._pinnedToBottom = true;
+  listeners["drumee:inline-media-grown"]();
+  await new Promise((r) => setTimeout(r, 80));
+  assert.equal(repins, 1);
+  w._pinnedToBottom = false; // reading history: leave the position alone
+  listeners["drumee:inline-media-grown"]();
+  await new Promise((r) => setTimeout(r, 80));
+  assert.equal(repins, 1);
 });

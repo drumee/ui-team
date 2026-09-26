@@ -255,6 +255,10 @@ class ___widget_chatItem extends LetcBox {
                 itemsOpt: {
                   kind: "media_grid",
                   isAttachment: 1,
+                  // Images and videos render IN the message (a picture, a
+                  // playable video) instead of as a 44px file card. Opt-in
+                  // here, so every other media_grid is untouched.
+                  inlineMedia: 1,
                   origin: _a.chat,
                   uiHandler: Wm,
                   logicalParent: Wm,
@@ -266,6 +270,14 @@ class ___widget_chatItem extends LetcBox {
           }),
         );
         this._armAttachmentSkeletonCeiling();
+        // Tiles that turn into inline pictures / videos announce it (media
+        // grid INLINE_MEDIA_READY) — lay the message out around them.
+        if (!this._inlineLayoutBound && this.el) {
+          this._inlineLayoutBound = true;
+          this.el.addEventListener("drumee:inline-media-ready", () =>
+            this._stampInlineLayout(),
+          );
+        }
       }
 
       if (showBubble) {
@@ -327,6 +339,8 @@ class ___widget_chatItem extends LetcBox {
           if (bubble && card && card.parentNode !== bubble) {
             bubble.appendChild(card);
           }
+          // Tiles may have rendered before the card moved into the bubble.
+          this._stampInlineLayout();
           // "Show in folder" → reveal the file in the folder window's Files tab.
           // Capture phase so it beats the card's open-on-click + Wm anchor click.
           if (!this._revealBound) {
@@ -367,6 +381,40 @@ class ___widget_chatItem extends LetcBox {
         this._renderReactions();
       });
     }, 0);
+  }
+
+  /**
+   * Lay a message out around its inline pictures / videos (media_grid
+   * inlineMedia). Two stamps, both read by skin/attachment.scss:
+   *
+   *  - bubble `data-media-only="1"`: no text, no reply quote, and EVERY
+   *    attachment is inline media — the picture is the message, so the
+   *    coloured bubble frame (padding, fill, shadow) goes.
+   *  - attachment wrapper `data-album="1"`: two or more pictures, all images —
+   *    tiled as a grid of square thumbnails instead of a tall stack.
+   *
+   * Recomputed whenever a tile reports in, since they render one by one; a
+   * tile that fell back to the file card reports too, and undoes both.
+   */
+  _stampInlineLayout() {
+    const fig = this.fig.family;
+    const el = this.el;
+    if (!el) return;
+    const bubble = el.querySelector(`.${fig}__conversation-content`);
+    const wrapper = el.querySelector(`.${fig}__attachment-wrapper`);
+    const list = el.querySelector(`.${fig}__attachment-wrapper-list`);
+    if (!wrapper || !list) return;
+    const tiles = list.querySelectorAll(".media-grid__content");
+    const inline = list.querySelectorAll(".media-grid__content.inline-media");
+    const images = list.querySelectorAll(".media-grid__content.inline-media.image");
+    const allInline = tiles.length > 0 && inline.length === tiles.length;
+    const hasText = !_.isEmpty((this.mget("message") || "").trim());
+    const hasQuote = !!(bubble && bubble.querySelector(`.${fig}-reply__main`));
+    wrapper.dataset.album =
+      allInline && images.length > 1 && images.length === tiles.length ? "1" : "0";
+    if (bubble) {
+      bubble.dataset.mediaOnly = allInline && !hasText && !hasQuote ? "1" : "0";
+    }
   }
 
   /**
