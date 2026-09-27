@@ -40,6 +40,8 @@ module.exports = function (ui) {
   return Skeletons.Box.Y({
     className: `${pfx}__topbar`,
     debug: __filename,
-    kids: [header, statusBar],
+    // The filter row stays OUT of the status bar: data-empty=1 hides that bar,
+    // and an empty "Expiring soon" result must still offer the way back.
+    kids: [header, require("./filters")(ui), statusBar],
   });
 };
