@@ -24,8 +24,11 @@ const { ymd, day, rowStart } = require("./helpers");
 // rescue it — the last child of a hidden-overflow stack is the first thing lost.
 //
 // MONTH_FIT is how many compact chips stand in a cell at rest, and it only
-// labels the "+N". Measured in the shipped geometry: a 160px row leaves a 107px
-// body, three chips (26px + 4px gaps = 86px) plus the pinned footer. Nothing is
+// labels the "+N". Measured against the row FLOOR (--cal-cell-min: 118px in the
+// skin): 16px of padding, a 20px date line and a 2px gap leave 80px — three
+// 19px chips on 2px gaps (61px) plus the pinned footer. Rows grow with the
+// grid above that floor, as the Meet tab's do, so in a tall window the label
+// can run ahead of what is actually below the fold. Nothing is
 // hidden now, so the number reads as "this day runs past the fold" — and the
 // footer is sticky, so the one affordance that leads to the whole day cannot
 // itself scroll out of reach.
@@ -88,8 +91,11 @@ module.exports = function (ui) {
     const key = ymd(d);
     const inMonth = d.month() === anchorMonth;
     const list = byDay[key] || [];
-    // Day 1 shows the month abbreviation ("Jun 1"), per Figma.
-    const numText = d.date() === 1 ? d.format("MMM D") : String(d.date());
+    // Two digits, top-left, as the Meet tab's month cell draws it ("07").
+    // It used to read "7" on the right and "Sep 1" on the first of a month;
+    // the month boundary is carried by the dimmed outside-month dates instead,
+    // which is the Meet tab's cue.
+    const numText = d.format("DD");
 
     return Skeletons.Box.Y({
       className: `${pfx}__day`,
@@ -101,6 +107,12 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__day-head`,
           kids: [
+            // The date on the left (the Meet tab's place for it), the
+            // hover-revealed quick-add on the right.
+            Skeletons.Note({
+              className: `${pfx}__day-num`,
+              content: numText,
+            }),
             // Quick-add on the cell. A text glyph rather than the `plus`
             // sprite: the sprite symbol cannot be recoloured across the <use>
             // boundary and renders invisible (same reason as the board
@@ -121,10 +133,6 @@ module.exports = function (ui) {
                 }),
               ],
             }),
-            Skeletons.Note({
-              className: `${pfx}__day-num`,
-              content: numText,
-            }),
           ],
         }),
         dayBody(list, key),
@@ -136,9 +144,11 @@ module.exports = function (ui) {
   const weekdays = Skeletons.Box.X({
     className: `${pfx}__weekdays`,
     kids: Array.from({ length: 7 }, (_, i) =>
+      // Full day names, left-aligned in a bordered header row — the Meet tab's
+      // month header ("Monday"), not the centred "Mon" this grid used.
       Skeletons.Note({
         className: `${pfx}__weekday`,
-        content: weekStart.add(i, "day").format("ddd"),
+        content: weekStart.add(i, "day").format("dddd"),
       }),
     ),
   });

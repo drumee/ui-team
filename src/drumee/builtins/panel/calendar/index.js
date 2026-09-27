@@ -609,41 +609,17 @@ class __calendar_main extends LetcBox {
     this._render();
   }
 
-  /**
-   * @param {Object} opt  `{ at: { day, hour, min } }` when the user clicked an
-   *                      empty half-hour band on the week/day canvas — the form
-   *                      then opens on that slot rather than the 11 AM default,
-   *                      which is what the Meet tab's `sched-new-at` does.
-   */
-  _openMeetingForm(opt = {}) {
+  _openMeetingForm() {
     this._closeMenus();
-    const at = opt.at || null;
-    const base = day(at && at.day) || day(this._pendingDay) || day(this._cursor) || Dayjs();
-    // The form's draft speaks the 12-hour clock its selects are built from.
-    const clock = (h, m) => ({
-      hour: h % 12 === 0 ? 12 : h % 12,
-      minute: String(m).padStart(2, "0"),
-      meridiem: h < 12 ? "AM" : "PM",
-    });
-    const startMin = at ? at.hour * 60 + (at.min || 0) : 0;
-    const startAt = at ? clock(at.hour, at.min || 0) : { hour: 11, minute: "00", meridiem: "AM" };
-    // An hour long, CLAMPED to the end of the day rather than wrapped past
-    // midnight. The draft carries a single date, and _writeMeeting reads an end
-    // that is not after the start as "no end" and books thirty minutes — so a
-    // wrapped 00:00 would quietly store something the form never showed. The
-    // last band of the day therefore offers 23:00 → 23:59, which is what it is.
-    const endMin = at ? Math.min(startMin + 60, 23 * 60 + 59) : 0;
-    const endAt = at
-      ? clock(Math.floor(endMin / 60), endMin % 60)
-      : { hour: 12, minute: "00", meridiem: "PM" };
+    const base = day(this._pendingDay) || day(this._cursor) || Dayjs();
     this._form = {
       kind: "meeting",
       mode: "create",
       draft: {
         title: "",
         date: ymd(base),
-        start: startAt,
-        end: endAt,
+        start: { hour: 11, minute: "00", meridiem: "AM" },
+        end: { hour: 12, minute: "00", meridiem: "PM" },
         require_email: false,
         restrict: false,
         recipients: [],
@@ -1094,11 +1070,6 @@ class __calendar_main extends LetcBox {
         return this._step(-1);
       case "cal-next":
         return this._step(1);
-      case "cal-today":
-        this._cursor = ymd(Dayjs());
-        this._closeMenus();
-        return this._reload();
-
       // Menu open/close is toolbar-only state — never repaint the grid for it.
       case "cal-toggle-view-menu":
         this._viewMenuOpen = !this._viewMenuOpen;
@@ -1169,20 +1140,17 @@ class __calendar_main extends LetcBox {
         this._pendingDay = cmd.mget("calDay");
         return this._openTaskForm(null);
 
-      // An hour band on the week/day canvas → schedule a meeting across that
-      // hour, which is what the Meet tab's cells do. A task cannot be created
-      // here: `due_date` is a calendar DATE with no time (see skeleton/
-      // hours.js), so an hour clicked on the ruler has nothing to bind to —
-      // the day header still opens the task form for the whole day.
-      case "cal-slot-add": {
-        const hour = Number(cmd.mget("calHour"));
-        return this._openMeetingForm({
-          at: {
-            day: cmd.mget("calDay"),
-            hour: Number.isFinite(hour) ? hour : DAY_START_HOUR,
-          },
-        });
-      }
+      // A square on the week/day canvas → the create-TASK popup, due that
+      // day. It used to open the meeting form at that hour, which is what the
+      // Meet tab's cells do — but this calendar is where a user plans their
+      // own day, and a task is the thing they add most. The hour clicked is
+      // deliberately not used: a task's due_date is a calendar DATE with no
+      // time (see skeleton/hours.js), so the task lands in that day's all-day
+      // strip, which is where every task on this canvas lives. A meeting is
+      // still one click away in "+ New".
+      case "cal-slot-add":
+        this._pendingDay = cmd.mget("calDay");
+        return this._openTaskForm(null);
 
       case "cal-day-more": {
         const target = cmd.mget("calDay");

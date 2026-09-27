@@ -154,8 +154,9 @@ module.exports = function (ui, days, view) {
       });
     });
 
-    // The hour row IS the click target: clicking the band between 1 and 2
-    // schedules 1–2, which is how the Meet tab's cells read.
+    // The hour row IS the click target — like a Meet tab cell — and opens
+    // the create-TASK popup due that day (index.js "cal-slot-add"; the hour
+    // itself is not used, since a task has no time).
     //
     // The service sits on the row itself and the row has NO kids. That is the
     // point, not an accident — ui-core binds a click to every widget left at
@@ -209,7 +210,8 @@ module.exports = function (ui, days, view) {
             }),
             Skeletons.Note({
               className: `${pfx}__hours-head-name`,
-              content: d.format(view === "day" ? "dddd" : "ddd"),
+              // "Monday", in week view too — the Meet tab's weekly header.
+              content: d.format("dddd"),
             }),
           ],
         }),

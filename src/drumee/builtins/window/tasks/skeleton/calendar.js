@@ -7,11 +7,11 @@
 // ── One calendar language across three surfaces ──────────────────────────────
 // This, the Personal Calendar (panel/calendar) and the Meet tab's schedule
 // (window/folder/skeleton/meeting-schedule.js) are the three calendars a user
-// moves between, and they had grown three different sets of controls. This one
-// now uses the other two's: ‹ Today ›, a range label that opens a mini
-// calendar, and a Month / Week / Day dropdown — same order, same locale keys
-// (CAL_VIEW_*), same label formats (panel/calendar/skeleton/helpers.js
-// rangeLabel), same month-cell overflow model.
+// moves between, and the Meet tab's is the reference the other two follow: the
+// [ ‹ range › ] pill whose label opens a mini calendar, a Month / Week / Day
+// dropdown, the same locale keys (CAL_VIEW_*) and range wording, and the same
+// month cell — full day names over it, the date top-left as "07", today in
+// brand ink, one-line 19px cards.
 //
 // What deliberately stays its own: there is no hour canvas here. A task's
 // due_date is a calendar DATE with no time, so an hour grid would be 24 empty
@@ -31,7 +31,7 @@ const VIEWS = [
 
 // How many compact chips stand in a month cell at rest. It only LABELS the
 // "+N" — every task renders and the cell scrolls — so it has to agree with the
-// cell geometry in the skin (--tcal-cell-min, the 26px chip, the 4px gap), the
+// cell geometry in the skin (--tcal-cell-min, the 19px chip, the 2px gap), the
 // same coupling the Personal Calendar documents for its own MONTH_FIT.
 const MONTH_FIT = 3;
 
@@ -51,21 +51,21 @@ const anchorOf = (value) => {
   }
 };
 
-// "September, 2026" / "September 21 – 27, 2026" / "Thursday, September 25,
-// 2026" — the Personal Calendar's rangeLabel, verbatim, so one range never
-// reads two ways in two tabs.
+// "September 2026" / "September 20-26, 2026" / "Sep 28 - Oct 04, 2026" /
+// "September 25, 2026" — the Meet tab's rangeLabel (and, since, the Personal
+// Calendar's), so one range never reads two ways in two tabs.
 function rangeLabel(mode, anchor) {
   if (!anchor) return "";
-  if (mode === "day") return anchor.format("dddd, MMMM D, YYYY");
+  if (mode === "day") return anchor.format("MMMM DD, YYYY");
   if (mode === "week") {
     const s = anchor.startOf("week");
-    const e = anchor.endOf("week");
+    const e = s.add(6, "day");
     if (s.month() === e.month()) {
-      return `${s.format("MMMM D")} – ${e.format("D")}, ${e.format("YYYY")}`;
+      return `${s.format("MMMM DD")}-${e.format("DD")}, ${e.format("YYYY")}`;
     }
-    return `${s.format("MMM D")} – ${e.format("MMM D")}, ${e.format("YYYY")}`;
+    return `${s.format("MMM DD")} - ${e.format("MMM DD")}, ${e.format("YYYY")}`;
   }
-  return anchor.format("MMMM, YYYY");
+  return anchor.format("MMMM YYYY");
 }
 
 module.exports = function (ui) {
@@ -320,8 +320,10 @@ module.exports = function (ui) {
     const k = ymd(d);
     const inMonth = mode !== "month" || d.month() === anchorMonth;
     const list = byDay[k] || [];
-    // Day 1 of a month shows the month abbreviation ("Jun 1"), per Figma.
-    const numText = d.date() === 1 ? d.format("MMM D") : String(d.date());
+    // Two digits, top-left, as the Meet tab's month cell draws it ("07"). The
+    // month boundary is carried by the dimmed outside-month dates, not by a
+    // "Jun 1" abbreviation on the first.
+    const numText = d.format("DD");
     return Skeletons.Box.Y({
       className: `${pfx}__cal-day`,
       // attrOpt, not dataset: these are the attributes the skin's today and
@@ -336,12 +338,14 @@ module.exports = function (ui) {
         mode === "month"
           ? Skeletons.Box.X({
               className: `${pfx}__cal-day-head`,
+              // The date where the Meet tab puts it (left), the hover "+"
+              // on the right.
               kids: [
-                addBtn(k),
                 Skeletons.Note({
                   className: `${pfx}__cal-day-num`,
                   content: numText,
                 }),
+                addBtn(k),
               ],
             })
           : null,
@@ -351,8 +355,8 @@ module.exports = function (ui) {
   };
 
   // ── Column header ───────────────────────────────────────────
-  // Month: the weekday names, centred over each column, as both other month
-  // grids draw them.
+  // Month: full weekday names, left-aligned, in a ruled header row — the Meet
+  // tab's month header. Its week/day header names the day in full too.
   //
   // Week / day: the date itself, num over name — the Personal Calendar's and
   // the Meet tab's week/day header — with today marked by inking the NUMBER.
@@ -371,7 +375,7 @@ module.exports = function (ui) {
       mode === "month"
         ? Skeletons.Note({
             className: `${pfx}__cal-weekday`,
-            content: d.format("ddd"),
+            content: d.format("dddd"),
           })
         : Skeletons.Box.X({
             className: `${pfx}__cal-headday`,
@@ -386,7 +390,7 @@ module.exports = function (ui) {
                   }),
                   Skeletons.Note({
                     className: `${pfx}__cal-headday-name`,
-                    content: d.format(mode === "day" ? "dddd" : "ddd"),
+                    content: d.format("dddd"),
                   }),
                 ],
               }),
@@ -433,8 +437,8 @@ module.exports = function (ui) {
 };
 
 // ── Viewbar controls (Calendar view only) ─────────────────────────────────────
-// ‹ Today ›, the range label with its mini calendar, and the Month / Week / Day
-// dropdown — the Personal Calendar's toolbar, in that order, with its metrics.
+// The [ ‹ range › ] pill with its mini calendar, then the Month / Week / Day
+// dropdown — the Meet tab's schedule toolbar, in that order, with its metrics.
 //
 // It replaced a Weekly ◯ Monthly pill switch and an arrow-left/right navigator
 // whose LABEL secretly jumped to today. The switch could not grow a third view,
@@ -450,36 +454,6 @@ function controlsKids(ui) {
   const pfx = ui.fig.family;
   const mode = calMode(ui);
   const anchor = anchorOf(ui.getCalCursor()) || Dayjs();
-
-  // ── ‹ Today › ──────────────────────────────────────────────────────────
-  const nav = Skeletons.Box.X({
-    className: `${pfx}__tcal-nav`,
-    kids: [
-      Skeletons.Button.Svg({
-        className: `${pfx}__tcal-arrow`,
-        ico: "caret-left",
-        bubble: 0,
-        service: "cal-prev",
-        uiHandler: [ui],
-        attrOpt: { "aria-label": LOCALE.PREVIOUS },
-      }),
-      Skeletons.Note({
-        className: `${pfx}__tcal-today`,
-        content: LOCALE.TODAY,
-        bubble: 0,
-        service: "cal-today",
-        uiHandler: [ui],
-      }),
-      Skeletons.Button.Svg({
-        className: `${pfx}__tcal-arrow`,
-        ico: "caret-right",
-        bubble: 0,
-        service: "cal-next",
-        uiHandler: [ui],
-        attrOpt: { "aria-label": LOCALE.NEXT },
-      }),
-    ],
-  });
 
   // ── range label + mini calendar ────────────────────────────────────────
   // The popup browses on its own month (getCalPickerCursor) so stepping it
@@ -562,22 +536,47 @@ function controlsKids(ui) {
     });
   }
 
+  // [ ‹ label › ] — the Meet tab's pill, arrows either side of the label,
+  // and no "Today": the Meet tab hides its own until the design brings it
+  // back, and the mini calendar marks today in bold. The popup is a sibling of
+  // the pill, so it anchors under the whole pill.
   const range = Skeletons.Box.Y({
     className: `${pfx}__tcal-anchor`,
     kids: [
       Skeletons.Box.X({
-        className: `${pfx}__tcal-range`,
-        attrOpt: { "data-open": pickerOpen ? "1" : "0" },
-        bubble: 0,
-        service: "cal-toggle-picker",
-        uiHandler: [ui],
-        // A kid left at the default `active` takes the click before
-        // triggerHandlers runs, and the label would open nothing.
-        kidsOpt: { active: 0 },
+        className: `${pfx}__tcal-nav`,
         kids: [
-          Skeletons.Note({
-            className: `${pfx}__tcal-range-label`,
-            content: rangeLabel(mode, anchor),
+          Skeletons.Button.Svg({
+            className: `${pfx}__tcal-arrow`,
+            ico: "caret-left",
+            bubble: 0,
+            service: "cal-prev",
+            uiHandler: [ui],
+            attrOpt: { "aria-label": LOCALE.PREVIOUS },
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__tcal-range`,
+            attrOpt: { "data-open": pickerOpen ? "1" : "0" },
+            bubble: 0,
+            service: "cal-toggle-picker",
+            uiHandler: [ui],
+            // A kid left at the default `active` takes the click before
+            // triggerHandlers runs, and the label would open nothing.
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__tcal-range-label`,
+                content: rangeLabel(mode, anchor),
+              }),
+            ],
+          }),
+          Skeletons.Button.Svg({
+            className: `${pfx}__tcal-arrow`,
+            ico: "caret-right",
+            bubble: 0,
+            service: "cal-next",
+            uiHandler: [ui],
+            attrOpt: { "aria-label": LOCALE.NEXT },
           }),
         ],
       }),
@@ -632,7 +631,7 @@ function controlsKids(ui) {
     ].filter(Boolean),
   });
 
-  return [nav, range, view];
+  return [range, view];
 }
 
 module.exports.controls = function (ui) {

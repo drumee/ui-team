@@ -1,48 +1,20 @@
-// View toolbar: ‹ Today › + range label on the left; view dropdown, All/Task/
-// Meet filter and "+ New" on the right. Figma 43:31159.
+// View toolbar: the [ ‹ range › ] pill on the left; view dropdown, All/Task/
+// Meet filter and "+ New" on the right.
 //
-// The range label is a control, not a caption: clicking it opens the mini
-// calendar. It carries NO caret of its own — the label IS the affordance
-// (Lexis, 2026-09-08); the open state is shown by the wash __range keeps while
-// data-open="1". The view and New pickers still show theirs, so the caret stays
-// in the skin for them. Dropdown mechanics are shared with the view and New
-// menus.
+// The left half is the workspace Meet tab's schedule toolbar
+// (window/folder/skeleton/meeting-schedule.js → toolbarKids): one grey pill
+// holding the arrows with the range label BETWEEN them, and the label opens
+// the mini calendar. There is no "Today" button — the Meet tab hides its own
+// until the design brings it back, and the mini calendar marks today in bold,
+// one click away. The label carries NO caret; the open state is the wash it
+// keeps while data-open="1". Dropdown mechanics are shared with the view and
+// New menus.
 const { VIEWS, FILTERS, rangeLabel, day, ymd } = require("./helpers");
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const view = ui.getView();
   const filter = ui.getActiveFilter();
-
-  // ── ‹ Today › ──────────────────────────────────────────────────────────────
-  const nav = Skeletons.Box.X({
-    className: `${pfx}__nav`,
-    kids: [
-      Skeletons.Button.Svg({
-        className: `${pfx}__nav-arrow`,
-        ico: "caret-left",
-        bubble: 0,
-        service: "cal-prev",
-        uiHandler: [ui],
-        attrOpt: { "aria-label": LOCALE.PREVIOUS },
-      }),
-      Skeletons.Note({
-        className: `${pfx}__nav-today`,
-        content: LOCALE.TODAY,
-        bubble: 0,
-        service: "cal-today",
-        uiHandler: [ui],
-      }),
-      Skeletons.Button.Svg({
-        className: `${pfx}__nav-arrow`,
-        ico: "caret-right",
-        bubble: 0,
-        service: "cal-next",
-        uiHandler: [ui],
-        attrOpt: { "aria-label": LOCALE.NEXT },
-      }),
-    ],
-  });
 
   // ── range label + mini calendar ────────────────────────────────────────────
   const cursor = day(ui.getCursor()) || Dayjs();
@@ -141,9 +113,20 @@ module.exports = function (ui) {
       })
     : null;
 
-  const label = Skeletons.Box.Y({
-    className: `${pfx}__range-picker`,
+  // [ ‹ label › ] — the Meet tab's pill. The popup is a sibling of the pill,
+  // inside __range-picker (position: relative), so it anchors under the whole
+  // pill and does not move with the label's text.
+  const nav = Skeletons.Box.X({
+    className: `${pfx}__nav`,
     kids: [
+      Skeletons.Button.Svg({
+        className: `${pfx}__nav-arrow`,
+        ico: "caret-left",
+        bubble: 0,
+        service: "cal-prev",
+        uiHandler: [ui],
+        attrOpt: { "aria-label": LOCALE.PREVIOUS },
+      }),
       Skeletons.Box.X({
         className: `${pfx}__range`,
         attrOpt: { "data-open": ui.isRangeMenuOpen() ? "1" : "0" },
@@ -162,8 +145,20 @@ module.exports = function (ui) {
           }),
         ],
       }),
-      rangeMenu,
-    ].filter(Boolean),
+      Skeletons.Button.Svg({
+        className: `${pfx}__nav-arrow`,
+        ico: "caret-right",
+        bubble: 0,
+        service: "cal-next",
+        uiHandler: [ui],
+        attrOpt: { "aria-label": LOCALE.NEXT },
+      }),
+    ],
+  });
+
+  const label = Skeletons.Box.Y({
+    className: `${pfx}__range-picker`,
+    kids: [nav, rangeMenu].filter(Boolean),
   });
 
   // ── view dropdown ──────────────────────────────────────────────────────────
@@ -298,7 +293,7 @@ module.exports = function (ui) {
   return [
     Skeletons.Box.X({
       className: `${pfx}__toolbar-left`,
-      kids: [nav, label],
+      kids: [label],
     }),
     Skeletons.Box.X({
       className: `${pfx}__toolbar-right`,

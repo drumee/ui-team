@@ -2109,11 +2109,6 @@ class __tasks_panel extends LetcBox {
       case "cal-next":
         return this._calShift(1);
 
-      case "cal-today":
-        this._closeCalMenus();
-        this._calCursor = null;
-        return this._repaintCalendar();
-
       case "cal-day-more": {
         // "+N" on a busy month cell → that DAY, where every task is a full
         // card. It used to open the week, which is the Personal Calendar's
