@@ -1631,6 +1631,7 @@
   "INVITE_ADD_ROLE": "+ Ajouter un espace de travail et un rôle",
   "SEND_INVITATION": "Envoyer l'invitation",
   "INVITE_PARTIAL_FAILED": "{0} invitation(s) envoyée(s), {1} échec(s)",
+  "INVITE_MAIL_FAILED": "L'invitation pour {0} est enregistrée, mais l'e-mail n'a pas pu partir. Vous pouvez la renvoyer depuis les invitations en attente.",
   "INVITED_YOU_TO_WORKSPACE": "vous a invité dans l'espace de travail",
   "SENT_A_MESSAGE": "a envoyé un message",
   "UPLOADED_ACTION": "a téléversé ",
