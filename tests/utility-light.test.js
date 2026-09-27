@@ -74,3 +74,32 @@ test("a throwing getPart does not escape", () => {
   };
   assert.equal(lightUtilityButton("toggle-activity", host), false);
 });
+
+// The user can press a cluster icon while the restore is still mounting its
+// screen; the restore must not take that press back.
+const lit = (over = {}) => view({ state: 1, ...over });
+function pressHarness(parts, { busy = false } = {}) {
+  const h = harness(parts);
+  h.host.isLit = (v) => v.state === 1;
+  h.host.isBusy = () => busy;
+  return h;
+}
+
+test("another icon already lit (user pressed it): no broadcast", () => {
+  const { sent, host } = pressHarness({ "utility-trash": view(), "utility-contacts": lit() });
+  assert.equal(lightUtilityButton("toggle-trash", host), false);
+  assert.deepEqual(sent, []);
+});
+
+test("cluster busy loading a pressed icon: no broadcast", () => {
+  const { sent, host } = pressHarness({ "utility-calendar": view() }, { busy: true });
+  assert.equal(lightUtilityButton("toggle-calendar", host), false);
+  assert.deepEqual(sent, []);
+});
+
+test("its own icon already lit still broadcasts", () => {
+  const btn = lit();
+  const { sent, host } = pressHarness({ "utility-inbox": btn });
+  assert.equal(lightUtilityButton("toggle-inbox", host), true);
+  assert.deepEqual(sent, [["topbar-utility-radio", btn]]);
+});

@@ -2175,6 +2175,12 @@ class desk_module extends LetcBox {
           lightUtilityButton(s, {
             getPart: (pn) => (_.isFunction(this.getPart) ? this.getPart(pn) : null),
             broadcast: (channel, view) => RADIO_BROADCAST.trigger(channel, view),
+            // A press made while this screen mounted wins — see utility-light.
+            isLit: (v) => ~~v.mget(_a.state) === 1,
+            isBusy: () => {
+              const c = _.isFunction(this.getPart) ? this.getPart("utility-cluster") : null;
+              return !!(c && c.el && c.el.dataset.busy === "1");
+            },
           }),
         warn: (...args) => this.warn && this.warn(...args),
       },
