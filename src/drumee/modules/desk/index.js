@@ -455,6 +455,20 @@ class desk_module extends LetcBox {
     const service = (options && options.service) || "";
     if (!service) return;
 
+    // hub.invite answers as soon as the invitations are written and sends the
+    // emails afterwards; this is the server saying one of those emails did
+    // not leave. The invitation itself exists (Pending invites lists it), so
+    // the person can be invited again from there.
+    if (service === "hub.invite_mail_failed") {
+      const d = data || {};
+      const emails = Array.isArray(d.emails) ? d.emails : [];
+      if (!emails.length) return;
+      const tpl = LOCALE.INVITE_MAIL_FAILED
+        || "The invitation to {0} was saved, but the email could not be sent. You can send it again from Pending invites.";
+      Wm.alert(tpl.format(emails.join(", ")));
+      return;
+    }
+
     // Adds, removes and renames all change what this menu should show.
     // `hub.invite_received` is an ADD from the other direction — someone put
     // the user in a workspace — and the sidebar full-refreshes on it too.
