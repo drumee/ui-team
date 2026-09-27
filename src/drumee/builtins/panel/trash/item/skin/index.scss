@@ -58,6 +58,17 @@
     height: 28px;
     color: var(--primary-purple-40);
 
+    // By file type (item/file-icon.js). text/pdf/note/sheet/slides are the
+    // Figma file grid's colours; the rest keep the folder's brand purple.
+    &--folder,
+    &--media,
+    &--other { color: var(--primary-purple-40); }
+    &--text { color: var(--primary-purple-30); }
+    &--pdf { color: var(--secondary-blue-50); }
+    &--note { color: var(--warning); }
+    &--sheet { color: var(--success); }
+    &--slides { color: var(--link-share); }
+
     svg {
       width: 28px;
       height: 28px;
@@ -136,13 +147,10 @@
     background-color: rgba(89, 80, 255, 0.1);
   }
 
-  // Restore replaces the badge while the pointer is on the row.
+  // Restore joins the badge while the pointer is on the row; the days left
+  // stay in view.
   &__row:hover &__restore {
     display: flex;
-  }
-
-  &__row:hover &__days-badge {
-    display: none;
   }
 
   &__delete {

@@ -1,4 +1,5 @@
 const { trashedAt, dayLabel } = require("../group");
+const { fileIcon } = require("../file-icon");
 
 // A trash row as drawn in Figma 43:34212 ("notification card feed"):
 //   [day label — only on a group's first row, see ../group]
@@ -9,7 +10,12 @@ module.exports = function (ui) {
   const filename = ui.mget(_a.filename) || "";
   const ext = ui.mget(_a.ext) ? `.${ui.mget(_a.ext)}` : "";
   const filetype = ui.mget(_a.filetype) || "";
-  const isFolder = filetype === _a.folder || filetype === _a.hub;
+  const icon = fileIcon({
+    filetype,
+    ext: ui.mget(_a.ext),
+    mimetype: ui.mget(_a.mimetype),
+    dataType: ui.mget("dataType"),
+  });
   // modifier_name is what mfs_show_bin returns; `modifier` is the older field.
   const who = ui.mget("modifier_name") || ui.mget(_a.modifier) || "me";
   const daysLeft = Number.isFinite(Number(ui.mget("days_remaining")))
@@ -43,8 +49,8 @@ module.exports = function (ui) {
             className: `${pfx}__tile`,
             kids: [
               Skeletons.Image.Svg({
-                ico: isFolder ? "ph-folder" : "ph-file-text",
-                className: `${pfx}__tile-ico`,
+                ico: icon.ico,
+                className: `${pfx}__tile-ico ${pfx}__tile-ico--${icon.tone}`,
               }),
             ],
           }),

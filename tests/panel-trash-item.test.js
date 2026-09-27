@@ -25,10 +25,13 @@ global.Dayjs = dayjs;
 global._ = { escape: (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") };
 global._a = {
   filename: "filename", ext: "ext", filetype: "filetype", modifier: "modifier",
-  mtime: "mtime", folder: "folder", hub: "hub",
+  mtime: "mtime", folder: "folder", hub: "hub", mimetype: "mimetype",
+  image: "image", video: "video", audio: "audio", note: "note", document: "document",
+  web: "web", script: "script", stylesheet: "stylesheet",
 };
 
 const G = require(path.join(DIR, "group"));
+const { fileIcon } = require(path.join(DIR, "file-icon"));
 const skeleton = require(path.join(DIR, "skeleton"));
 
 const P = "trash-item";
@@ -91,7 +94,37 @@ test("the group label carries the row's day (shown only on a group's first row)"
   const t = skeleton(item({ filename: "a", filetype: "document", ext: "pdf", trashed_time: at(0) }));
   assert.equal(find(t, "group").content, en.TODAY);
   assert.equal(find(t, "name").content, "a.pdf");
-  assert.equal(find(t, "tile-ico").ico, "ph-file-text");
+  assert.equal(find(t, "tile-ico").ico, "ph-file-pdf");
+  assert.ok(has(find(t, "tile-ico"), "tile-ico--pdf"));
+});
+
+test("every file type gets its icon and tone (Figma file grid for the five it draws)", () => {
+  const cases = [
+    [{ filetype: "folder" }, "ph-folder", "folder"],
+    [{ filetype: "hub" }, "ph-folder", "folder"],
+    [{ filetype: "document", ext: "docx" }, "ph-file-text", "text"],
+    [{ filetype: "document", ext: "TXT" }, "ph-file-text", "text"],
+    [{ filetype: "document", ext: "pdf" }, "ph-file-pdf", "pdf"],
+    [{ filetype: "document", ext: "xlsx" }, "ph-table", "sheet"],
+    [{ filetype: "other", ext: "csv" }, "ph-table", "sheet"],
+    [{ filetype: "document", ext: "pptx" }, "ph-presentation", "slides"],
+    [{ filetype: "note" }, "ph-note-pencil", "note"],
+    [{ filetype: "web", dataType: "drumee.note" }, "ph-note-pencil", "note"],
+    [{ filetype: "image", ext: "png" }, "ph-image", "media"],
+    [{ filetype: "video", ext: "mp4" }, "ph-file-video", "media"],
+    [{ filetype: "video", mimetype: "audio" }, "ph-file-audio", "media"],
+    [{ filetype: "audio", ext: "mp3" }, "ph-file-audio", "media"],
+    [{ filetype: "zip", ext: "zip" }, "ph-file-zip", "other"],
+    [{ filetype: "other", ext: "tar" }, "ph-file-zip", "other"],
+    [{ filetype: "script", ext: "js" }, "ph-file-code", "other"],
+    [{ filetype: "document", ext: "json" }, "ph-file-code", "other"],
+    [{ filetype: "markdown", ext: "md" }, "ph-file-md", "text"],
+    [{ filetype: "other", ext: "bin" }, "ph-file", "other"],
+    [{}, "ph-file", "other"],
+  ];
+  for (const [m, ico, tone] of cases) {
+    assert.deepEqual(fileIcon(m), { ico, tone }, JSON.stringify(m));
+  }
 });
 
 test("names are escaped before they reach the markup", () => {
@@ -120,10 +153,21 @@ test("the day label shows only on a group's first row", () => {
   assert.ok(declares('.trash-item__ui[data-group=start] .trash-item__group', "display: block"));
 });
 
-test("Restore replaces the badge on hover", () => {
+test("hover adds Restore and keeps the days-left badge", () => {
   assert.ok(declares(".trash-item__restore", "display: none"));
   assert.ok(declares(".trash-item__row:hover .trash-item__restore", "display: flex"));
-  assert.ok(declares(".trash-item__row:hover .trash-item__days-badge", "display: none"));
+  assert.doesNotMatch(css, /:hover[^{]*days-badge[^{]*\{[^}]*display: none/);
+});
+
+test("icon tones use the design's colour tokens", () => {
+  const tones = {
+    folder: "--primary-purple-40", text: "--primary-purple-30", pdf: "--secondary-blue-50",
+    note: "--warning", sheet: "--success", slides: "--link-share",
+    media: "--primary-purple-40", other: "--primary-purple-40",
+  };
+  for (const [tone, token] of Object.entries(tones)) {
+    assert.ok(declares(`.trash-item__tile-ico--${tone}`, `color: var(${token})`), tone);
+  }
 });
 
 test("a touch screen, which never hovers, still gets Restore", () => {
@@ -168,4 +212,13 @@ test("never --primary-100: revamp.scss declares it twice and the lilac one wins"
     assert.doesNotMatch(src, /var\(--primary-100\)/, f);
   }
   assert.ok(declares(".trash-item__name", "color: var(--primary-purple-100)"));
+});
+
+test("every icon the map can return is in the sprite", () => {
+  const fs = require("node:fs");
+  const sprite = fs.readFileSync(path.join(__dirname, "..", "icons/sprites/normalized.sprite.svg"), "utf8");
+  const src = fs.readFileSync(path.join(DIR, "file-icon.js"), "utf8");
+  const icons = [...new Set([...src.matchAll(/ico: "(ph-[a-z-]+)"/g)].map((m) => m[1]))];
+  assert.ok(icons.length >= 13);
+  for (const i of icons) assert.ok(sprite.includes(`id="--icon-${i}"`), i);
 });

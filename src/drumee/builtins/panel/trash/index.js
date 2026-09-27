@@ -238,6 +238,12 @@ class __panel_trash extends mfsInteract {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.list:
+        // Day groups (item/group): re-mark every row once the list has drawn
+        // a page, or dropped a row, so one label heads each day however the
+        // rows got there. Fires after the rows' own dom:refresh stamps.
+        child.on('render:children remove:child', () => {
+          if (child.children) markGroupStarts(child.children.toArray());
+        });
         child.once(_e.eod, async () => {
           const count = child.collection
             ? child.collection.filter(m => m.get(_a.kind) !== 'placeholder' && m.get(_a.nid)).length

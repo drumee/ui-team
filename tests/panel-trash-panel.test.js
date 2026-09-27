@@ -145,6 +145,23 @@ test("after a row leaves, the day groups are re-marked on what remains", async (
   assert.equal(`${p.el.dataset.empty}`, "0");
 });
 
+test("the list re-marks day groups after every render and removal", () => {
+  const p = panel();
+  const handlers = {};
+  const rows = [{ model: {}, el: { dataset: {} } }];
+  const list = {
+    on: (evts, fn) => evts.split(" ").forEach((e) => (handlers[e] = fn)),
+    once: () => { },
+    children: { toArray: () => rows },
+  };
+  p.onPartReady(list, "list");
+  assert.ok(handlers["render:children"] && handlers["remove:child"]);
+  STUBS.marked.length = 0;
+  handlers["render:children"]();
+  handlers["remove:child"]();
+  assert.deepEqual(STUBS.marked, [rows, rows]);
+});
+
 test("the panel is the design's 512px card", () => {
   assert.ok(declares(".panel-trash__ui", "width: 512px"));
 });
