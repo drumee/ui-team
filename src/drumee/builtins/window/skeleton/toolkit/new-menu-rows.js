@@ -54,31 +54,44 @@ export function menuRow(ui, { service, ico, content, area, name, className }) {
 }
 
 /**
- * Endpoints where the Casual editors are NOT offered as a create option.
+ * The only platforms that offer the Casual editors as a create option: the
+ * stage box, every dev endpoint it hosts, and a local build.
  *
- * The .udoc / .usheet editors are still a proof of concept, so the endpoints
- * that carry real user data must not invite people to start documents in a
- * format we may still change. Opening an existing .udoc / .usheet keeps
- * working everywhere — only the two create rows disappear.
+ * The .udoc / .usheet editors are a proof of concept, so no deployment
+ * carrying real user data invites people to start a document in a format that
+ * can still change — neither production's root nor the preview endpoint beside
+ * it. Opening an existing .udoc / .usheet keeps working everywhere; only the
+ * two create rows disappear.
  */
-const CASUAL_HIDDEN_ENDPOINTS = ["preview"];
+const CASUAL_DEV_DOMAINS = ["drumee.in", "localhost"];
 
 /**
  * Whether this deployment may offer the Casual editors in the create list.
  *
- * `bootstrap()` (window.bootstrap, see drumee/api.js) reads the endpoint name
- * off the bootstrap page's `data-instance`: "main" on a stage or production
- * root, the endpoint's own name elsewhere. Unknown deployments keep the rows —
- * the dev endpoints this POC is built for are the ones that need them.
+ * Matched on the PLATFORM domain the page server was configured with
+ * ("drumee.in", "app.drumee.com"), not on anything closer to hand:
+ *
+ *  - the endpoint name cannot tell these apart — stage's root and
+ *    production's root are BOTH called "main", and a dev endpoint carries a
+ *    person's name, so there is no pattern to match;
+ *  - the address bar cannot either — a workspace opens on its own subdomain
+ *    (team-3238.app.drumee.com), so the host varies inside one deployment.
+ *
+ * `bootstrap()` here is the env the page server renders into the bootstrap
+ * page, not the api.js fallback of the same name: a global `const` shadows the
+ * `window` property, so every bundled module reading a bare `bootstrap` gets
+ * the server's values. A deployment that cannot be identified hides the rows —
+ * the dev boxes this POC is built for are the known ones.
  *
  * @returns {Boolean}
  */
 function offersCasualEditors() {
   try {
     const env = (typeof bootstrap === "function" && bootstrap()) || {};
-    return !CASUAL_HIDDEN_ENDPOINTS.includes(String(env.endpointName || ""));
+    const domain = String(env.main_domain || "").toLowerCase();
+    return CASUAL_DEV_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`));
   } catch (e) {
-    return true;
+    return false;
   }
 }
 
