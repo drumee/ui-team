@@ -4,12 +4,16 @@ const { filesize } = require('@drumee/ui-essentials');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { DEFAULT_FILTER, normalizeFilter, showBinApi } = require("./filters");
 const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
-    opt.dataset = { ...opt.dataset, anim: "out" };
+    opt.dataset = { ...opt.dataset, anim: "out", filter: DEFAULT_FILTER };
     super.initialize(opt);
+    // Latest / Earliest / Expiring soon (skeleton/filters). Kept for the life
+    // of the panel instance, so a keep-alive re-show reopens on the same one.
+    this._filter = DEFAULT_FILTER;
     armItemsReady(this);
     this.declareHandlers();
     this.isTrash = 1;
@@ -286,11 +290,26 @@ class __panel_trash extends mfsInteract {
    * @returns 
    */
   getCurrentApi() {
-    return {
-      service: SERVICE.media.show_bin,
-      page: 1,
-      hub_id: Visitor.id,
-    };
+    return showBinApi(this._filter, Visitor.id);
+  }
+
+  /**
+   * Switch the bin order / filter. Re-feeds the panel like `refresh` does
+   * rather than restart()ing the list: the empty state is built with the
+   * filter in hand (Expiring soon has its own wording), and restart() would
+   * put the old placeholder back.
+   */
+  _setFilter(value) {
+    const filter = normalizeFilter(value);
+    if (filter === this._filter) return;
+    this._filter = filter;
+    if (this.el) this.el.dataset.filter = filter;
+    // The feed below fetches with the new sort; an echo reload still queued
+    // (or held for later) would fetch the same list a second time.
+    if (this._wsRefresh.cancel) this._wsRefresh.cancel();
+    this._pendingWsRefresh = false;
+    this._staleWhileParked = false;
+    this.feed(require('./skeleton')(this));
   }
 
   _updateItemsCount() {
@@ -541,6 +560,8 @@ class __panel_trash extends mfsInteract {
         return this.deleteFilePermanently(args.media || cmd);
       case 'restore-to-desk':
         return this._restoreFile(args.media || cmd);
+      case 'trash-filter':
+        return this._setFilter(cmd.mget(_a.name));
       case 'refresh':
         this.feed(require('./skeleton')(this));
         return;

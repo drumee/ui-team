@@ -119,11 +119,56 @@
     .panel-trash__footer {
       display: none;
     }
+
+    // Latest / Earliest are the whole bin, so empty there means empty. An
+    // empty Expiring soon only means nothing expires yet: keep the chips so
+    // the user can switch back.
+    &:not([data-filter="expiring"]) .panel-trash__filters {
+      display: none;
+    }
   }
 
   /* ── Topbar wrapper (header + status bar) ───────────────── */
   &__topbar {
     flex-shrink: 0;
+  }
+
+  /* ── Filters: Latest / Earliest / Expiring soon ─────────── */
+  &__filters {
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 24px 0;
+  }
+
+  &__filter {
+    @include drumee.typo($color: var(--normal-fg-50),
+      $size: 10px,
+      $weight: 600,
+      $line: 1);
+    font-family: var(--font-mono, var(--font-medium));
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-muted);
+    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+
+    &:hover {
+      color: var(--normal-fg-30);
+      border-color: var(--border-default);
+    }
+  }
+
+  // The panel root carries data-filter; light the matching chip.
+  &__ui[data-filter="latest"] .panel-trash__filter--latest,
+  &__ui[data-filter="earliest"] .panel-trash__filter--earliest,
+  &__ui[data-filter="expiring"] .panel-trash__filter--expiring {
+    color: var(--active-border);
+    border-color: var(--active-border);
+    // Same brand tint as the empty-state card.
+    background-color: rgba(89, 80, 255, 0.1);
   }
 
   /* ── Header row: icon + title + close ───────────────────── */
