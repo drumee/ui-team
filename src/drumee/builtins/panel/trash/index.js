@@ -4,12 +4,21 @@ const { filesize } = require('@drumee/ui-essentials');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { DEFAULT_FILTER, normalizeFilter, showBinApi } = require("./filters");
+const { markDayGroups } = require("./item/group");
 const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
     opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
+    // Latest / Earliest / Expiring soon (skeleton/filters). Kept for the life
+    // of the panel instance, so a keep-alive re-show reopens on the same one.
+    // Stamped on el directly: the desk feeds this panel as { kind }, and an
+    // opt.dataset edit made here never reaches data-* on that path, which left
+    // no chip lit until the user switched filters.
+    this._filter = DEFAULT_FILTER;
+    this.el.dataset.filter = DEFAULT_FILTER;
     armItemsReady(this);
     this.declareHandlers();
     this.isTrash = 1;
@@ -28,6 +37,8 @@ class __panel_trash extends mfsInteract {
     // trickle ~half a second apart as the server processes each file, so a
     // multi-file delete triggers a single reload instead of one per echo.
     this._wsRefresh = _.debounce(this._wsRefresh.bind(this), 600);
+    // Rows ask for this as each one reaches the screen; one pass per burst.
+    this.regroupSoon = _.debounce(this._regroup.bind(this), 0);
     // nid -> time of restores this panel issued itself. The server broadcasts
     // media.restore / media.restore_into back to the actor's own socket too,
     // and that echo used to restart() the whole list right after the row had
@@ -173,11 +184,6 @@ class __panel_trash extends mfsInteract {
       // end of data. The generation drops a listener left by an earlier reload
       // that the next restart's flush would otherwise fire on an empty list.
       const gen = (this._reloadGen = (this._reloadGen || 0) + 1);
-      // The count is only known at end of data. A bin larger than one page
-      // (pagelength 45) gets no eod until the user scrolls to the end, so the
-      // previous number would stand, now wrong. Blank it the way a first
-      // mount starts (skeleton/topbar content: '') until eod fills it in.
-      this.ensurePart('items-count').then((p) => p.set({ content: '' })).catch(() => { });
       // restart() resets the collection, which drops the scroll to the top.
       // Put it back once the reload lands so the user keeps their place.
       const top = list.__container ? list.__container.scrollTop : 0;
@@ -234,6 +240,10 @@ class __panel_trash extends mfsInteract {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.list:
+        // Day groups (item/group): re-mark every row once the list has drawn
+        // a page, or dropped a row, so one label heads each day however the
+        // rows got there. Fires after the rows' own dom:refresh stamps.
+        child.on('render:children remove:child', () => this.regroupSoon());
         child.once(_e.eod, async () => {
           const count = child.collection
             ? child.collection.filter(m => m.get(_a.kind) !== 'placeholder' && m.get(_a.nid)).length
@@ -242,9 +252,6 @@ class __panel_trash extends mfsInteract {
           // Rows or the empty state are on screen. A reload's screen restore
           // waits on this (libs/items-ready).
           markItemsReady(this);
-          this.ensurePart('items-count').then((p) => {
-            p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
-          });
           this._refreshStorageUsed();
         });
         // A failed first page fires `error`, never `eod` (ui-core list
@@ -286,11 +293,39 @@ class __panel_trash extends mfsInteract {
    * @returns 
    */
   getCurrentApi() {
-    return {
-      service: SERVICE.media.show_bin,
-      page: 1,
-      hub_id: Visitor.id,
-    };
+    return showBinApi(this._filter, Visitor.id);
+  }
+
+  /**
+   * Switch the bin order / filter. Re-feeds the panel like `refresh` does
+   * rather than restart()ing the list: the empty state is built with the
+   * filter in hand (Expiring soon has its own wording), and restart() would
+   * put the old placeholder back.
+   */
+  _setFilter(value) {
+    const filter = normalizeFilter(value);
+    if (filter === this._filter) return;
+    this._filter = filter;
+    if (this.el) this.el.dataset.filter = filter;
+    // The feed below fetches with the new sort; an echo reload still queued
+    // (or held for later) would fetch the same list a second time.
+    if (this._wsRefresh.cancel) this._wsRefresh.cancel();
+    this._pendingWsRefresh = false;
+    this._staleWhileParked = false;
+    // data-empty belongs to the list being replaced. Left at 1 (an empty
+    // Expiring soon), it would hide the chip row the user just clicked until
+    // the new list's end of data — or for good if that load fails.
+    if (this.el) this.el.dataset.empty = 0;
+    this.feed(require('./skeleton')(this));
+  }
+
+  /**
+   * One day label per day (item/group). Walks the list's rendered rows in
+   * on-screen order.
+   */
+  _regroup() {
+    const list = this.getPart && this.getPart(_a.list);
+    if (list && list.el) markDayGroups(list.el);
   }
 
   _updateItemsCount() {
@@ -307,9 +342,9 @@ class __panel_trash extends mfsInteract {
         listPart.__placeholder = listPart.children.last();
       }
       this.el.dataset.empty = count ? 0 : 1;
-      return this.ensurePart('items-count').then((p) => {
-        p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
-      });
+      // A removed row may have been the first of its day; re-mark the rest so
+      // the day label moves to the next row (item/group).
+      this._regroup();
     }).catch(() => { });
   }
 
@@ -541,6 +576,8 @@ class __panel_trash extends mfsInteract {
         return this.deleteFilePermanently(args.media || cmd);
       case 'restore-to-desk':
         return this._restoreFile(args.media || cmd);
+      case 'trash-filter':
+        return this._setFilter(cmd.mget(_a.name));
       case 'refresh':
         this.feed(require('./skeleton')(this));
         return;
