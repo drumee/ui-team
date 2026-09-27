@@ -610,6 +610,72 @@
     display: none !important;
   }
 
+  // ── Contacts under the Direct search results (see _syncPeople) ─────
+  // data-people: "0" hidden, "1" under the local matches, "only" on its own.
+  // !important for the same reason as the scope rule above: box rules set
+  // display through data-flow.
+  &__people {
+    display: none !important;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 12px 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+
+    .smart-container {
+      height: 100%;
+    }
+
+    .no-contact {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      @include drumee.typo($size: 13px, $color: var(--normal-fg-50));
+    }
+  }
+
+  &__people-title {
+    flex: 0 0 auto;
+    padding: 12px 4px 8px;
+    @include drumee.typo($size: 12px, $color: var(--normal-fg-50));
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__people-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__ui:not([data-scope="workspace"])[data-people="1"] &__people,
+  &__ui:not([data-scope="workspace"])[data-people="only"] &__people {
+    display: flex !important;
+  }
+
+  // Both showing: the local matches take what they need (capped), Contacts
+  // gets the rest. The list's container is 100% tall by default, which would
+  // keep the full column height for a handful of visible rows.
+  &__ui:not([data-scope="workspace"])[data-people="1"] &__contact-list--direct {
+    flex: 0 1 auto;
+    max-height: 45%;
+
+    .smart-container {
+      height: auto;
+      max-height: 100%;
+    }
+  }
+
+  // No local match: the Direct list would only show its empty space.
+  &__ui:not([data-scope="workspace"])[data-people="only"] &__contact-list--direct {
+    display: none !important;
+  }
+
+  // Only its own title keeps the top border meaningful.
+  &__ui[data-people="only"] &__people {
+    border-top: 0;
+  }
+
   &__all-read-empty {
     display: none !important;
     align-items: center;

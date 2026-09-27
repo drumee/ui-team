@@ -15,6 +15,7 @@ class __chat_p2p extends LetcBox {
     this.getDirectApi = this.getDirectApi.bind(this);
     this.getWorkspaceApi = this.getWorkspaceApi.bind(this);
     this.getContactsApi = this.getContactsApi.bind(this);
+    this.getPeopleApi = this.getPeopleApi.bind(this);
     this.openChat = this.openChat.bind(this);
     this.openPeer = this.openPeer.bind(this);
     this._onDocClick = this._onDocClick.bind(this);
@@ -124,6 +125,8 @@ class __chat_p2p extends LetcBox {
   onBeforeDestroy() {
     clearTimeout(this._searchDebounce);
     clearTimeout(this._composeSearchDebounce);
+    clearTimeout(this._peopleDebounce);
+    clearTimeout(this._peopleSyncTimer);
     clearTimeout(this._settleTimer);
     clearTimeout(this._skeletonFallback);
     if (this._paintWatcher) {
@@ -233,6 +236,27 @@ class __chat_p2p extends LetcBox {
     return {
       service: SERVICE.chat.share_rooms,
       hub_id: Visitor.get(_a.id),
+    };
+  }
+
+  /**
+   * The "Contacts" section under the Direct search results.
+   *
+   * Same query as the Direct list, plus the typed term: chat_rooms returns
+   * every contact and same-domain colleague — messaged or not — and filters
+   * every page by `key` on the server (a prefix match on first/last name).
+   * No term, no service: the list's fetch is then a no-op, so it costs
+   * nothing until someone searches.
+   */
+  getPeopleApi() {
+    const key = (this._peopleQuery || "").trim();
+    if (!key) return {};
+    return {
+      service: SERVICE.chat.chat_rooms,
+      flag: _a.contact,
+      option: _a.active,
+      hub_id: Visitor.get(_a.id),
+      [_a.key]: key,
     };
   }
 
@@ -359,6 +383,7 @@ class __chat_p2p extends LetcBox {
   _showList(key) {
     if (this.el) this.el.dataset.scope = key;
     this._contactList = this._lists[key] || null;
+    this._syncPeople();
   }
 
   /**
@@ -831,7 +856,10 @@ class __chat_p2p extends LetcBox {
       };
     }
     if (child.collection) {
-      child.collection.comparator = (item) => -item.get(_a.ctime);
+      // A never-messaged contact has no ctime: `-undefined` is NaN, and a NaN
+      // comparator puts those rows in an arbitrary order. 0 mirrors the
+      // server's `ORDER BY IFNULL(ctime,0) DESC`.
+      child.collection.comparator = (item) => -(Number(item.get(_a.ctime)) || 0);
     }
   }
 
@@ -976,6 +1004,17 @@ class __chat_p2p extends LetcBox {
         }
         break;
       }
+
+      case "people-list":
+        this._peopleList = child;
+        if (child.collection) {
+          child.collection.comparator = (item) => -(Number(item.get(_a.ctime)) || 0);
+          // Rows land page by page; re-hide duplicates and re-decide what
+          // shows once each batch is in.
+          child.collection.on("update reset", () => this._schedulePeopleSync());
+        }
+        child.on(_e.eod, () => this._schedulePeopleSync());
+        break;
 
       case "compose-popup":
         this._composePopup = child;
@@ -1895,8 +1934,14 @@ class __chat_p2p extends LetcBox {
         // an order of magnitude less work.
         clearTimeout(this._searchDebounce);
         this._searchDebounce = setTimeout(() => this._applyFilter(), 120);
+        // The server half is slower to settle: each restart is a round trip.
+        clearTimeout(this._peopleDebounce);
+        this._peopleDebounce = setTimeout(() => this._searchPeople(), 250);
         break;
       }
+
+      case "people-pick":
+        return this._pickPerson(trigger);
 
       // Unreads is now a header toggle rather than a tab, so it layers on top
       // of whichever scope is showing instead of replacing it.
@@ -2364,6 +2409,112 @@ class __chat_p2p extends LetcBox {
         unreadMode && visible === 0 && list.children.length > 0;
       this._allReadEmpty.el.dataset.state = showAllRead ? 1 : 0;
     }
+    // Which Direct rows are visible just changed, and the Contacts section
+    // hides exactly those.
+    this._syncPeople();
+  }
+
+  /**
+   * Point the Contacts section at the current search term. Separate from
+   * _applyFilter (120ms, local) because this is a server round trip per
+   * restart — see the 250ms debounce in "inbox-search-typed".
+   */
+  _searchPeople() {
+    clearTimeout(this._peopleDebounce);
+    const next = this._searchTerm || "";
+    if (next === (this._peopleQuery || "")) return this._syncPeople();
+    this._peopleQuery = next;
+    const list = this._peopleList;
+    if (list && _.isFunction(list.restart)) list.restart();
+    this._syncPeople();
+  }
+
+  _schedulePeopleSync() {
+    clearTimeout(this._peopleSyncTimer);
+    this._peopleSyncTimer = setTimeout(() => this._syncPeople(), 0);
+  }
+
+  /**
+   * Decide what the sidebar shows while a Direct search is typed, via the
+   * root's data-people (skin):
+   *   "0"    no search, another tab, or nothing beyond the local matches
+   *   "1"    local matches, then the Contacts section under them
+   *   "only" no local match — the Contacts section alone (it carries the
+   *          "No contact found" placeholder and the spinner)
+   *
+   * A person already visible in the Direct list is hidden from Contacts, so
+   * nobody is listed twice. Keyed on entity_id; the placeholder Note has none
+   * and is left alone.
+   */
+  _syncPeople() {
+    if (!this.el) return;
+    const term = this._peopleQuery || "";
+    if (!term || this._listKey() !== "direct") {
+      if (this.el.dataset.people !== "0") this.el.dataset.people = "0";
+      return;
+    }
+    const shown = new Set();
+    const direct = this._lists && this._lists.direct;
+    if (direct && direct.children) {
+      direct.children.forEach((c) => {
+        const id = c.mget && c.mget(_a.entity_id);
+        if (id && c.el && c.el.style.display !== "none") shown.add(id);
+      });
+    }
+    let people = 0;
+    const list = this._peopleList;
+    if (list && list.children) {
+      list.children.forEach((c) => {
+        const id = c.mget && c.mget(_a.entity_id);
+        if (!id || !c.el) return;
+        const dup = shown.has(id);
+        const want = dup ? "none" : "";
+        if (c.el.style.display !== want) c.el.style.display = want;
+        if (!dup) people += 1;
+      });
+    }
+    const mode = shown.size ? (people ? "1" : "0") : "only";
+    if (this.el.dataset.people !== mode) this.el.dataset.people = mode;
+  }
+
+  /**
+   * Open a conversation with someone picked from the Contacts section.
+   *
+   * Through openPeer, not openChat: the row lives in the Contacts list, and
+   * openPeer is what gives the conversation a row in the Direct list (or
+   * reuses the one already loaded). Nothing is written server-side until the
+   * first message — chat.post creates the thread.
+   *
+   * The search is cleared first so the new row, prepended and selected by
+   * openPeer, is actually on screen.
+   */
+  _pickPerson(row) {
+    if (!row || !row.mget) return;
+    const entity_id = row.mget(_a.entity_id);
+    if (!entity_id) return;
+    const meta = row.toLETC ? row.toLETC() : { ...row.model.toJSON() };
+    // toLETC serialises the whole view, not just the row's data: the Contacts
+    // list's itemsOpt wiring, the rendered kids, and the style/data models.
+    // openPeer spreads meta over the Direct list's own itemsOpt, so any of
+    // these would ride onto the new row — "people-pick" instead of
+    // "load-conversation", a duplicated widgetId, a copied inline style.
+    [
+      "kids", "kind", "service", "uiHandler", "partHandler", "radio",
+      "widgetId", "sys_pn", "className", "styleOpt", "styleMobile",
+      "styleIcon", "dataOpt", "attrOpt", "dataset", "state", "rank",
+    ].forEach((k) => delete meta[k]);
+    this._clearSearch();
+    return this.openPeer(entity_id, meta);
+  }
+
+  _clearSearch() {
+    const entry = this.getPart && this.getPart("list-search");
+    const input = entry && entry.el && entry.el.querySelector("input");
+    if (input) input.value = "";
+    clearTimeout(this._searchDebounce);
+    this._searchTerm = "";
+    this._applyFilter();
+    this._searchPeople();
   }
 
   _resetContactItemCount(data) {

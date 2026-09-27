@@ -213,6 +213,37 @@ module.exports = function (ui) {
     radio: ui._radioId,
   });
 
+  // "Contacts" under the Direct results while a search is typed. The list
+  // above only holds the pages already fetched (20 rows, newest message
+  // first), so anyone you have never messaged sorts past them and a local
+  // filter cannot reach them. This one asks the server with the term — see
+  // getPeopleApi / _syncPeople in ../index.js. Shown through the root's
+  // data-people (skin).
+  const peopleSection = Skeletons.Box.Y({
+    className: `${fig}__people`,
+    kids: [
+      Skeletons.Note({
+        className: `${fig}__people-title`,
+        content: LOCALE.CONTACTS,
+      }),
+      Skeletons.List.Smart({
+        className: `${fig}__people-list`,
+        sys_pn: "people-list",
+        partHandler: ui,
+        spinner: true,
+        spinnerWait: 300,
+        vendorOpt: Preset.List.Orange_e,
+        placeholder: Skeletons.Note(LOCALE.NO_CONTACT_FOUND, "no-contact"),
+        itemsOpt: {
+          kind: "chat_contact_item",
+          service: "people-pick",
+          uiHandler: [ui],
+        },
+        api: ui.getPeopleApi,
+      }),
+    ],
+  });
+
   // Starts with an empty api and is restarted on the tab's first visit
   // (getWorkspaceApi / _loadWorkspaceList): its query is the costly one.
   const workspaceList = roomList({
@@ -261,7 +292,7 @@ module.exports = function (ui) {
 
   const sidebar = Skeletons.Box.Y({
     className: `${fig}__sidebar`,
-    kids: [sidebarHeader, filters, searchBar, contactList, workspaceList, allReadEmpty],
+    kids: [sidebarHeader, filters, searchBar, contactList, peopleSection, workspaceList, allReadEmpty],
   });
 
   // ── Right panel: chat area ───────────────────────────────────────
