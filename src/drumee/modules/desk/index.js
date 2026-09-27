@@ -184,6 +184,7 @@ class desk_module extends LetcBox {
     this.setModuleState = this.setModuleState.bind(this);
     this.lazyClasses = this.lazyClasses.bind(this);
     this._updateActivityBadge = this._updateActivityBadge.bind(this);
+    this._writeRailCounts = this._writeRailCounts.bind(this);
   }
 
   static initClass() {
@@ -222,6 +223,10 @@ class desk_module extends LetcBox {
     this._onWindowTutorial = this._onWindowTutorial.bind(this);
     RADIO_BROADCAST.on("window-tutorial:mount", this._onWindowTutorial);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
+    // Rail Chat / Task / Meet pills: new counts, or another workspace in front.
+    RADIO_BROADCAST.on("workspace-unread", this._writeRailCounts, this);
+    RADIO_BROADCAST.on("workspace:focus", this._writeRailCounts, this);
+    RADIO_BROADCAST.on("chat:read", this._writeRailCounts, this);
     // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
     // capture listener only exists while a desk is alive — both of its targets
     // (the topbar file search and a chat window's message search) are desk-only,
@@ -837,6 +842,9 @@ class desk_module extends LetcBox {
       );
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
+    RADIO_BROADCAST.off("workspace-unread", this._writeRailCounts, this);
+    RADIO_BROADCAST.off("workspace:focus", this._writeRailCounts, this);
+    RADIO_BROADCAST.off("chat:read", this._writeRailCounts, this);
     RADIO_BROADCAST.off("breadcrumb:content", this._updateAddmenu);
     RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceListChanged);
     if (this._folderTabsBound && window.Wm && Wm.$el) {
@@ -5280,6 +5288,37 @@ class desk_module extends LetcBox {
   _updateActivityBadge(args = {}) {
     if (args.unread_count == null) return;
     this._writeActivityCount(args.unread_count);
+  }
+
+  /**
+   * The rail's Chat / Task / Meet pills — what is unread IN THE OPEN
+   * WORKSPACE: team-chat messages, task notifications (assigned to me,
+   * mentions / replies on my tasks, moves into a column I watch) and meeting
+   * invitations. Counted by panel_activity from the rows it already fetched
+   * (panel/activity/hub-counts.js) and broadcast as `workspace-unread`; the
+   * last value is also kept on window.ActivityHandler, so a workspace switch
+   * (workspace:focus / chat:read) repaints without a request.
+   *
+   * getPart, not ensurePart — the desktop rail and the phone bar are
+   * per-device, and ensurePart never resolves for a part that will not mount
+   * here (same idiom as _readActivityCount).
+   */
+  _writeRailCounts() {
+    const all = (window.ActivityHandler && window.ActivityHandler._hubCounts) || {};
+    const ws = typeof Wm !== "undefined" && Wm ? Wm._curWorkspace : null;
+    const c = (ws && ws.hub_id != null && all[ws.hub_id]) || {};
+    const rows = { chat: c.chat, task: c.task, meet: c.meeting };
+    if (!_.isFunction(this.getPart)) return;
+    for (const key of Object.keys(rows)) {
+      const n = parseInt(rows[key], 10) || 0;
+      const content = n > 99 ? "99+" : String(n);
+      for (const pn of [`rail-badge-${key}`, `mrail-badge-${key}`]) {
+        const p = this.getPart(pn);
+        if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) continue;
+        p.el.innerText = n === 0 ? "" : content;
+        p.el.dataset.count = content;
+      }
+    }
   }
 
   /**

@@ -15,6 +15,7 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 // refreshed from every mute_set — never per message. Suppresses the CARD only:
 // the feed, the badge and the tab counts are untouched by design.
 const { loadMuteState } = require('./mute');
+const { hubCounts } = require('./hub-counts');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
@@ -30,6 +31,8 @@ class __panel_activity extends LetcBox {
     this.getCurrentApi = this.getCurrentApi.bind(this);
     this._notify = this._notify.bind(this);
     this._hide = this._hide.bind(this);
+    this._onWorkspaceChatRead = this._onWorkspaceChatRead.bind(this);
+    this._onRefreshRequest = this._onRefreshRequest.bind(this);
   }
 
   /**
@@ -118,6 +121,9 @@ class __panel_activity extends LetcBox {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
+    RADIO_BROADCAST.off('workspace-chat-read', this._onWorkspaceChatRead);
+    RADIO_BROADCAST.off('activity:refresh', this._onRefreshRequest);
+    if (this._refreshRequestTimer) clearTimeout(this._refreshRequestTimer);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     // The card lives in the window layer, not inside this panel, so it would
     // outlive the panel — along with its pending dismiss timer.
@@ -165,6 +171,11 @@ class __panel_activity extends LetcBox {
     this._trackCanvas();
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
+    // off-before-on, same reason as the outside-click handler below.
+    RADIO_BROADCAST.off('workspace-chat-read', this._onWorkspaceChatRead);
+    RADIO_BROADCAST.on('workspace-chat-read', this._onWorkspaceChatRead);
+    RADIO_BROADCAST.off('activity:refresh', this._onRefreshRequest);
+    RADIO_BROADCAST.on('activity:refresh', this._onRefreshRequest);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     // off-before-on: onDomRefresh can run again on re-feed; without this the
     // outside-click handler stacks up duplicate registrations.
@@ -1456,6 +1467,87 @@ class __panel_activity extends LetcBox {
     });
   }
 
+  /**
+   * Per-workspace unread counts for the desk rail (see ./hub-counts), computed
+   * from the rows refreshActivity already holds — no request of its own.
+   * Kept on the panel too, so a listener that mounts later can read the last
+   * value off window.ActivityHandler instead of waiting for the next refresh.
+   */
+  _publishHubCounts() {
+    try {
+      this._hubCounts = hubCounts(this._mergedRows);
+      RADIO_BROADCAST.trigger('workspace-unread', this._hubCounts);
+    } catch (e) {
+      this.warn('[panel_activity] hub counts failed', e);
+    }
+  }
+
+  /**
+   * A workspace team chat was just read in this client (widget_chat
+   * markConversationRead). Its teamchat rollups are gone on the server, but
+   * this socket never hears its own channel.acknowledge, so drop them here —
+   * the Chat pill clears at once instead of on the next refresh.
+   * @param {Object} args { hub_id }
+   */
+  _onWorkspaceChatRead(args = {}) {
+    const hub = args && args.hub_id != null ? String(args.hub_id) : null;
+    if (!hub || !_.isArray(this._mergedRows)) return;
+    const before = this._mergedRows.length;
+    this._mergedRows = this._mergedRows.filter(
+      (r) => !(r && r.category === 'teamchat' && String(r.hub_id) === hub),
+    );
+    if (this._mergedRows.length !== before) this._publishHubCounts();
+  }
+
+  /**
+   * Somebody outside the panel knows a notification just arrived that the
+   * panel's own WS cases do not cover (room.scheduled is consumed by
+   * wm/push.js for its toast). Coalesced like the chat path: one refresh per
+   * burst, since a booking pushes once per invitee socket.
+   */
+  _onRefreshRequest() {
+    if (this._refreshRequestTimer) return;
+    this._refreshRequestTimer = setTimeout(() => {
+      this._refreshRequestTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this.refreshActivity();
+    }, 1000);
+  }
+
+  /**
+   * A row was read or trashed in the panel: take it out of the rail counts
+   * straight away (the bell and tab badges are decremented the same way).
+   * Keyed on the row's item_type, never on a bare id: a changelog id and a
+   * contact_activity id live in different tables and can be equal.
+   *   contact_invite — task / meeting rows, by contact_activity id
+   *   teamchat       — the rollup of one workspace folder, by hub + nid
+   */
+  _forgetHubRow(cmd, args = {}, itemType, activityId) {
+    if (!_.isArray(this._mergedRows)) return;
+    const get = (k) => (args[k] != null ? args[k] : (cmd && cmd.mget ? cmd.mget(k) : null));
+    let keep;
+    if (itemType === 'contact_invite') {
+      const ids = new Set(
+        [activityId, get('key_id'), get('id'), get('last_id')]
+          .filter((v) => v != null && v !== '')
+          .map(String),
+      );
+      if (!ids.size) return;
+      keep = (r) => !(r && r.category === 'contact_invite' && ids.has(String(r.key_id)));
+    } else if (itemType === 'teamchat') {
+      const hub = get('hub_id');
+      if (hub == null) return;
+      const nid = String(get('nid') || '');
+      keep = (r) => !(r && r.category === 'teamchat'
+        && String(r.hub_id) === String(hub) && String(r.nid || '') === nid);
+    } else {
+      return;
+    }
+    const before = this._mergedRows.length;
+    this._mergedRows = this._mergedRows.filter(keep);
+    if (this._mergedRows.length !== before) this._publishHubCounts();
+  }
+
   async refreshActivity(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
@@ -1603,6 +1695,8 @@ class __panel_activity extends LetcBox {
 
     // Kept so switching tabs can re-filter the pinned section without refetching.
     this._mergedRows = merged;
+    // Same rows, per workspace, for the desk rail's Chat / Task / Meet pills.
+    this._publishHubCounts();
     // The bell comes from activity.unread_counts' `all` (see _renderTabCounts),
     // so it can never disagree with the tab badges. `merged` is only the
     // FALLBACK for when that request fails: it holds access requests, task
@@ -2261,6 +2355,7 @@ class __panel_activity extends LetcBox {
     if (wasUnread) {
       this._decrementBadge(1);
       this._decrementTabCount(cmd && cmd.mget && cmd.mget('bucket'));
+      this._forgetHubRow(cmd, args, itemType, changelogId);
     }
 
     if (itemType === 'access_request') {

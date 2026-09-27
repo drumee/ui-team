@@ -177,6 +177,10 @@ class __push_manager extends winman {
       // The persistent notification-sidebar entry is handled separately by
       // panel/activity (meeting_notice rows + the conference.start branch).
       case "room.scheduled":
+        // This push never reaches WS_EVENT (it returns here), so the panel
+        // did not refresh on an invitation: its meeting_notice row, the bell
+        // and the rail's Meet pill all waited for the next unrelated refresh.
+        RADIO_BROADCAST.trigger("activity:refresh");
         return this._showMeetingToast(data);
 
       // A scheduled meeting's start time has arrived (reminderWorker →

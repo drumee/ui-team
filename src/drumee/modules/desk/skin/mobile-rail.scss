@@ -69,6 +69,35 @@
     transition: background-color 0.12s ease;
   }
 
+  // Unread pill on the tile's corner — the desktop rail's red pill
+  // (sidebar.scss __badge), hidden at zero.
+  &__mrail-tile {
+    position: relative;
+  }
+
+  &__mrail-badge {
+    position: absolute;
+    top: -4px;
+    right: -2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: #e53935;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+    box-sizing: border-box;
+    pointer-events: none;
+
+    &[data-count="0"],
+    &:empty {
+      display: none !important;
+    }
+  }
+
   &__mrail-glyph {
     width: 24px;
     height: 24px;

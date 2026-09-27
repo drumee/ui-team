@@ -785,6 +785,16 @@ export function chatHeaderBar(ui, opt = {}) {
       className: `${grp}__chat-header-title`,
       content: getChatLabel(ui),
     }),
+    // Unread count of the workspace team chat, next to its title. Filled by
+    // the folder window (_paintChatUnread) from the same per-workspace counts
+    // as the rail's Chat pill; blank and hidden at zero.
+    Skeletons.Note({
+      className: `${grp}__chat-header-unread`,
+      sys_pn: "chat-header-unread",
+      partHandler: ui,
+      content: "",
+      dataset: { count: 0 },
+    }),
     actions,
   ];
 }

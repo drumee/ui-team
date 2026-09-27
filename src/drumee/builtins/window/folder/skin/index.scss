@@ -4718,6 +4718,43 @@ html[data-theme="dark"] {
     color: var(--normal-fg-10, #0b0a21);
   }
 
+  // Team-chat unread count beside the title (_paintChatUnread). Same red pill
+  // as the rail's badge (desk sidebar __badge), hidden at zero. While it shows,
+  // the title stops filling the row so the pill sits right after the text;
+  // margin-right:auto keeps the actions on the far right.
+  .window__chat-header-unread {
+    flex: 0 0 auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-right: auto;
+    border-radius: 9px;
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    box-sizing: border-box;
+
+    &[data-count="0"],
+    &:empty {
+      display: none !important;
+    }
+  }
+
+  .window__chat-header:has(.window__chat-header-unread:not([data-count="0"]):not(:empty))
+    .window__chat-header-title {
+    flex: 0 1 auto;
+  }
+
+  // The card itself stands out while its conversation has unread messages —
+  // the Files side column is a glance, so it must be visible from there.
+  .window__chat-panel[data-unread="1"] {
+    border-color: var(--primary-40, #5950ff);
+    box-shadow: 0 0 0 1px var(--primary-40, #5950ff);
+  }
+
   .window__chat-header-actions {
     flex: 0 0 auto;
     align-items: center;

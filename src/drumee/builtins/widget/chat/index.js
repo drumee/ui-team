@@ -525,6 +525,69 @@ class __widget_chat extends LetcBox {
     this._lastReadAt = now;
     this._readDebt = false;
     this.postService(postData);
+    this._clearUnreadRows();
+    this._announceChatRead();
+  }
+
+  /**
+   * Tell the desk this workspace's team chat was just read here, so the rail's
+   * Chat pill clears now (panel_activity drops the hub's teamchat rollups).
+   * This socket never hears its own channel.acknowledge. Hub channels only —
+   * a DM has no rail pill.
+   */
+  _announceChatRead() {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    if (area !== _a.share || this.hubId == null) return;
+    if (typeof RADIO_BROADCAST === "undefined") return;
+    RADIO_BROADCAST.trigger("workspace-chat-read", { hub_id: this.hubId });
+  }
+
+  /**
+   * Is this message unread for me? Someone else's, and my uid is not in its
+   * `_seen_` map (the same test notification_center_next uses).
+   */
+  _isUnreadMessage(data) {
+    if (!data || !data.author_id || data.author_id === Visitor.id) return false;
+    let md = data.metadata;
+    if (typeof md === "string") {
+      try {
+        md = JSON.parse(md);
+      } catch (e) {
+        md = null;
+      }
+    }
+    const seen = md && md._seen_;
+    return !(seen && seen[Visitor.id] != null);
+  }
+
+  /**
+   * Light the rows a team chat still owes a read (data-unread="1", styled in
+   * chat-item's skin) — so a conversation glanced at in the Files side column
+   * shows what is new, like any chat app, until the user reads it. Team chats
+   * only (read_on_interaction); every other chat acks on arrival.
+   * @param {Object} [only] light this one message instead of scanning
+   */
+  _markUnreadRows(only) {
+    if (!this._readOnInteraction || !this.__list || !this.__list.children) return;
+    const light = (child) => {
+      if (!child || !child.el || !child.model) return;
+      if (this._isUnreadMessage(child.model.toJSON())) child.el.dataset.unread = "1";
+    };
+    if (only) {
+      const hit = this.__list.getItemsByAttr
+        ? this.__list.getItemsByAttr("message_id", only.message_id)[0]
+        : null;
+      return light(hit);
+    }
+    this.__list.children.each(light);
+  }
+
+  _clearUnreadRows() {
+    if (!this._readOnInteraction || !this.el) return;
+    if (!_.isFunction(this.el.querySelectorAll)) return;
+    this.el.querySelectorAll('.widget-chatItem[data-unread="1"]').forEach((el) => {
+      delete el.dataset.unread;
+    });
   }
 
   /**
@@ -946,7 +1009,12 @@ class __widget_chat extends LetcBox {
           // straight away only when this IS the chat they opened.
           if (this._readOnInteraction) {
             this._readDebt = true;
-            requestAnimationFrame(() => this.readIfInView());
+            // What is still unread is lit only when the chat is NOT what the
+            // user is reading (measured a frame later, like readIfInView).
+            requestAnimationFrame(() => {
+              if (!this._isInReadingView()) this._markUnreadRows();
+              this.readIfInView();
+            });
           }
           // Track whether the user is parked at the bottom. Content growth
           // (an attachment card loading inside an existing row) does NOT fire a
@@ -1232,6 +1300,14 @@ class __widget_chat extends LetcBox {
         return this.onInputChange(args);
 
       case "input-focus":
+        // A team chat's composer takes focus WITHOUT the user asking: the
+        // Files-tab side column mounts it with autofocus, and the browser
+        // re-focuses it (focusin again) whenever the window comes back to the
+        // front. Acking on that marked the whole conversation read while the
+        // user was looking at their files. A real click in the composer is a
+        // pointerdown, which _onReadGesture already pays; what is left for
+        // focus is the case where the chat is actually on screen.
+        if (this._readOnInteraction) return this.readIfInView();
         return this.markConversationRead();
 
       case "mention-filter":
@@ -2735,6 +2811,11 @@ class __widget_chat extends LetcBox {
       }
     }
 
+    // Replying is reading. The server already marks what came before as seen
+    // for the author (channel_post_message); pay the read here too so the
+    // unread rows and the rail pill clear, also for an Enter with no click.
+    // Before the post: the optimistic row it appends has no message_id yet.
+    if (this._readOnInteraction) this._onReadGesture();
     this.echoId = _.uniqueId();
     // Capture the composer text + scope BEFORE clearMessageBlock (postMessageAPI
     // :~2093) wipes the live editor. SCOPE_GONE needs the exact text back to
@@ -3518,7 +3599,10 @@ class __widget_chat extends LetcBox {
         // they click in it or open its Chat tab.
         if (this._readOnInteraction && !this._isInReadingView()) {
           if ((hubMatch && inScope) || privateMach || ticketMach) {
-            if (Visitor.id !== data.author_id) this._readDebt = true;
+            if (Visitor.id !== data.author_id) {
+              this._readDebt = true;
+              this._markUnreadRows(data);
+            }
           }
           return;
         }
@@ -3561,7 +3645,13 @@ class __widget_chat extends LetcBox {
                 postData.ticket_id = data.ticket_id;
               }
             }
-            this.postService(postData);
+            // Read on arrival (the chat is on screen): once the server has it,
+            // clear the rail pill too — the panel's own refresh may have run
+            // before the ack landed.
+            Promise.resolve(this.postService(postData)).then(
+              () => this._announceChatRead(),
+              () => {},
+            );
           }
         }
         break;

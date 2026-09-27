@@ -540,6 +540,9 @@ class __window_folder extends mfsInteract {
     }
     setGrouped(this, true);
     this.setViewMode(_a.icon, false);
+    // Team-chat unread count for the chat card header (see _paintChatUnread).
+    this._onWorkspaceUnread = () => this._paintChatUnread();
+    RADIO_BROADCAST.on("workspace-unread", this._onWorkspaceUnread);
     // `data-visible` is derived from privilege. Keep it in sync even when a
     // caller updates the model outside the explicit navigation/live-role paths.
     this.listenTo(
@@ -752,6 +755,7 @@ class __window_folder extends mfsInteract {
 
   onBeforeDestroy(opt) {
     clearGrouped(this);
+    RADIO_BROADCAST.off("workspace-unread", this._onWorkspaceUnread);
     if (this._folderGridSortTimer) {
       clearTimeout(this._folderGridSortTimer);
       this._folderGridSortTimer = null;
@@ -781,6 +785,37 @@ class __window_folder extends mfsInteract {
       Wm.$el.trigger("workspace:close", this);
     }
     if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
+  }
+
+  /**
+   * Show how many team-chat messages of this workspace are unread: the count
+   * beside "Team Chat" and a raised card (data-unread on the chat panel), so a
+   * conversation sitting in the Files side column is visibly waiting — until
+   * it is read (widget_chat markConversationRead → workspace-chat-read).
+   *
+   * Source: panel_activity's per-workspace counts (hub-counts.js), the same
+   * numbers the rail's Chat pill shows, so the two cannot disagree. Workspace
+   * team chat only — a window opened from a share (token) reads a folder
+   * conversation that the workspace count does not describe.
+   */
+  _paintChatUnread() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const pill = this.__chatUnread;
+    const shared = !!this.mget(_a.token);
+    const hub = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const all = (window.ActivityHandler && window.ActivityHandler._hubCounts) || {};
+    const c = (!shared && hub != null && all[hub]) || {};
+    const n = parseInt(c.chat, 10) || 0;
+    const content = n > 99 ? "99+" : String(n);
+    if (pill && pill.el && !(pill.isDestroyed && pill.isDestroyed())) {
+      pill.el.innerText = n === 0 ? "" : content;
+      pill.el.dataset.count = content;
+    }
+    const panel = this.getPart && this.getPart("chat-panel");
+    if (panel && panel.el) {
+      if (n > 0) panel.el.dataset.unread = "1";
+      else delete panel.el.dataset.unread;
+    }
   }
 
   // Apply filename — or hub_name for an empty-filename root — to the title.
@@ -1406,6 +1441,12 @@ class __window_folder extends mfsInteract {
     if (pn === "zoom-presets") {
       this.__zoomPresets = child;
       this._syncSnapPresets();
+    }
+    if (pn === "chat-header-unread") {
+      // Re-fed with the header on every scope switch (chatHeaderBar), so it
+      // is repainted from the last counts each time it mounts.
+      this.__chatUnread = child;
+      this._paintChatUnread();
     }
     if (pn === "folder-view") {
       this.__folderView = child;

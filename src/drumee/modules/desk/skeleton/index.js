@@ -262,7 +262,7 @@ const _build_mobile_rail = (ui) => {
   // lookup uses getPart and skips a missing part on purpose, because the
   // desktop rail and this bar are per-device and ensurePart never resolves for
   // a part that will not mount here. Rename → grep desk/index.js first.
-  const item = ({ ico, label, service, pn }) =>
+  const item = ({ ico, label, service, pn, badge }) =>
     Skeletons.Box.Y({
       className: `${fig}__mrail-item`,
       service,
@@ -278,7 +278,17 @@ const _build_mobile_rail = (ui) => {
           kidsOpt: { active: 0 },
           kids: [
             Skeletons.Image.Svg({ ico, className: `${fig}__mrail-glyph` }),
-          ],
+            // Same unread pill as the desktop rail (desk _writeRailCounts).
+            badge
+              ? Skeletons.Note({
+                  className: `${fig}__mrail-badge`,
+                  sys_pn: badge,
+                  partHandler: ui,
+                  content: "",
+                  dataset: { count: 0 },
+                })
+              : null,
+          ].filter(Boolean),
         }),
         Skeletons.Note({ className: `${fig}__mrail-label`, content: label }),
       ],
@@ -290,9 +300,9 @@ const _build_mobile_rail = (ui) => {
     partHandler: ui,
     kids: [
       item({ ico: "rail-files", label: LOCALE.FILES, service: "rail-files", pn: "mrail-files" }),
-      item({ ico: "rail-chat", label: LOCALE.CHAT, service: "rail-chat", pn: "mrail-chat" }),
-      item({ ico: "rail-task", label: LOCALE.TASK, service: "rail-task", pn: "mrail-task" }),
-      item({ ico: "rail-meet", label: LOCALE.MEET, service: "rail-meet", pn: "mrail-meet" }),
+      item({ ico: "rail-chat", label: LOCALE.CHAT, service: "rail-chat", pn: "mrail-chat", badge: "mrail-badge-chat" }),
+      item({ ico: "rail-task", label: LOCALE.TASK, service: "rail-task", pn: "mrail-task", badge: "mrail-badge-task" }),
+      item({ ico: "rail-meet", label: LOCALE.MEET, service: "rail-meet", pn: "mrail-meet", badge: "mrail-badge-meet" }),
       item({ ico: "rail-access", label: LOCALE.ACCESS, service: "rail-access", pn: "mrail-access" }),
     ],
   });
