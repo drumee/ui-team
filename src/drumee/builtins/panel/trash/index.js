@@ -5,7 +5,7 @@ require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { DEFAULT_FILTER, normalizeFilter, showBinApi } = require("./filters");
-const { markGroupStarts } = require("./item/group");
+const { markDayGroups } = require("./item/group");
 const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
@@ -37,6 +37,8 @@ class __panel_trash extends mfsInteract {
     // trickle ~half a second apart as the server processes each file, so a
     // multi-file delete triggers a single reload instead of one per echo.
     this._wsRefresh = _.debounce(this._wsRefresh.bind(this), 600);
+    // Rows ask for this as each one reaches the screen; one pass per burst.
+    this.regroupSoon = _.debounce(this._regroup.bind(this), 0);
     // nid -> time of restores this panel issued itself. The server broadcasts
     // media.restore / media.restore_into back to the actor's own socket too,
     // and that echo used to restart() the whole list right after the row had
@@ -241,9 +243,7 @@ class __panel_trash extends mfsInteract {
         // Day groups (item/group): re-mark every row once the list has drawn
         // a page, or dropped a row, so one label heads each day however the
         // rows got there. Fires after the rows' own dom:refresh stamps.
-        child.on('render:children remove:child', () => {
-          if (child.children) markGroupStarts(child.children.toArray());
-        });
+        child.on('render:children remove:child', () => this.regroupSoon());
         child.once(_e.eod, async () => {
           const count = child.collection
             ? child.collection.filter(m => m.get(_a.kind) !== 'placeholder' && m.get(_a.nid)).length
@@ -319,6 +319,15 @@ class __panel_trash extends mfsInteract {
     this.feed(require('./skeleton')(this));
   }
 
+  /**
+   * One day label per day (item/group). Walks the list's rendered rows in
+   * on-screen order.
+   */
+  _regroup() {
+    const list = this.getPart && this.getPart(_a.list);
+    if (list && list.el) markDayGroups(list.el);
+  }
+
   _updateItemsCount() {
     return this.ensurePart(_a.list).then((listPart) => {
       const count = listPart.collection
@@ -335,7 +344,7 @@ class __panel_trash extends mfsInteract {
       this.el.dataset.empty = count ? 0 : 1;
       // A removed row may have been the first of its day; re-mark the rest so
       // the day label moves to the next row (item/group).
-      if (listPart.children) markGroupStarts(listPart.children.toArray());
+      this._regroup();
     }).catch(() => { });
   }
 

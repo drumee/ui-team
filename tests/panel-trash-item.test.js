@@ -62,11 +62,17 @@ test("the deletion time is trashed_time, upload time only for legacy rows", () =
   assert.equal(G.trashedAt({ get: (k) => ({ trashed_time: 7 })[k] }), 7);
 });
 
-test("a group starts wherever the day changes from the row above", () => {
-  const view = (t) => ({ model: { trashed_time: t }, el: { dataset: {} } });
-  const views = [view(at(0, 10)), view(at(0, 9)), view(at(3)), view(at(3, 8)), view(at(5))];
-  G.markGroupStarts(views);
-  assert.deepEqual(views.map((v) => v.el.dataset.group), ["start", "", "start", "", "start"]);
+test("a group starts wherever the day changes from the row above, in on-screen order", () => {
+  const row = (t) => ({ dataset: { day: G.dayKey(t) } });
+  const els = [row(at(0, 10)), row(at(0, 9)), row(at(0, 8)), row(at(0, 7)), row(at(1)), row(at(3)), row(at(3, 8))];
+  let asked;
+  G.markDayGroups({ querySelectorAll: (sel) => { asked = sel; return els; } });
+  assert.equal(asked, "[data-day]");
+  assert.deepEqual(els.map((e) => e.dataset.group), ["start", "", "", "", "start", "start", ""]);
+});
+
+test("marking tolerates no list element yet", () => {
+  assert.doesNotThrow(() => G.markDayGroups(null));
 });
 
 test("row: icon tile, name, deleted-by and date, badge, restore, delete", () => {
@@ -181,27 +187,27 @@ test("design colours come from the theme tokens", () => {
   assert.ok(declares(".trash-item__tile", "background-color: rgba(89, 80, 255, 0.1)"));
 });
 
-test("the row widget stamps data-group against the row above (first row always starts)", () => {
+test("a row records its own day and asks the panel to regroup; it never decides the group", () => {
   const Module = require("node:module");
   const load = Module._load;
   Module._load = function (r, p, m) { return r === "./skin" ? {} : load.call(this, r, p, m); };
   global.LetcBox = class { feed() { } };
   const Item = require(path.join(DIR, "index.js"));
   Module._load = load;
-  const models = [at(0, 10), at(0, 9), at(2)].map((t) => ({ get: (k) => ({ trashed_time: t })[k] }));
-  // Backbone semantics: at(-1) is the LAST model.
-  const collection = { indexOf: (m) => models.indexOf(m), at: (i) => models[i < 0 ? models.length + i : i] };
-  const stamp = (m) => {
-    const w = Object.create(Item.prototype);
-    Object.assign(w, { fig: { family: P }, mget: () => undefined, el: { dataset: {} } });
-    w.model = Object.assign(m, { collection });
-    w.onDomRefresh();
-    return w.el.dataset.group;
-  };
-  assert.deepEqual(models.map(stamp), ["start", "", "start"]);
-  // A one-row list: at(-1) would be the row itself, which must not un-start it.
-  models.splice(1);
-  assert.equal(stamp(models[0]), "start");
+  let asked = 0;
+  const parent = { regroupSoon: () => { asked++; } };
+  const w = Object.create(Item.prototype);
+  const t = at(0, 10);
+  Object.assign(w, {
+    fig: { family: P },
+    mget: (k) => (k === "logicalParent" ? parent : undefined),
+    el: { dataset: {} },
+    model: { get: (k) => ({ trashed_time: t })[k] },
+  });
+  w.onDomRefresh();
+  assert.equal(w.el.dataset.day, G.dayKey(t));
+  assert.equal(w.el.dataset.group, undefined);
+  assert.equal(asked, 1);
   delete global.LetcBox;
 });
 

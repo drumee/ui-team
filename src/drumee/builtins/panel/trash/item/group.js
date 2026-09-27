@@ -2,6 +2,13 @@
 // arrive sorted by deletion time, so a group starts wherever a row's day
 // differs from the row above. Every row carries its own label; the skin shows
 // it only on rows stamped data-group="start".
+//
+// One owner: each row only records its day (data-day, item/index.js); the
+// panel walks the rendered rows in on-screen order and decides the starts.
+// Rows used to decide for themselves from the collection, and a row's
+// dom:refresh can land after the panel's pass (a list rendered before the
+// panel is attached) — on stage every row ended up "start", so every row
+// showed its label.
 
 // A model, a plain row object, or anything with get().
 function field(m, k) {
@@ -26,15 +33,16 @@ function dayLabel(ts, now = Dayjs()) {
   return d.format(d.year() === now.year() ? "MMM D" : "MMM D, YYYY");
 }
 
-// views: rendered rows in list order, each with .model and .el.
-function markGroupStarts(views) {
+// root: the list element. Rows are found in DOM order, which is the order
+// the user sees, whatever order the views were created or refreshed in.
+function markDayGroups(root) {
+  if (!root || typeof root.querySelectorAll !== "function") return;
   let prev = null;
-  for (const v of views || []) {
-    if (!v || !v.el) continue;
-    const key = dayKey(trashedAt(v.model));
-    v.el.dataset.group = key !== prev ? "start" : "";
+  for (const el of root.querySelectorAll("[data-day]")) {
+    const key = el.dataset.day;
+    el.dataset.group = key !== prev ? "start" : "";
     prev = key;
   }
 }
 
-module.exports = { trashedAt, dayKey, dayLabel, markGroupStarts };
+module.exports = { trashedAt, dayKey, dayLabel, markDayGroups };

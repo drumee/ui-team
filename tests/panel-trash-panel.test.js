@@ -29,7 +29,7 @@ const STUBS = {
   "./skin": {},
   "libs/desk-canvas": { trackDeskCanvas: () => () => { } },
   "libs/items-ready": { armItemsReady: (w) => w, markItemsReady: () => { } },
-  "./item/group": { markGroupStarts: (views) => { STUBS.marked.push(views); } },
+  "./item/group": { markDayGroups: (root) => { STUBS.marked.push(root); } },
   marked: [],
   "./skeleton": (ui) => ({ skeleton: true, filter: ui._filter }),
 };
@@ -39,7 +39,7 @@ Module._load = function (r, p, m) {
 };
 
 const debounce = (fn) => {
-  const d = (...a) => fn(...a);
+  const d = (...a) => { d.calls = (d.calls || 0) + 1; return fn(...a); };
   d.cancelled = 0;
   d.cancel = () => { d.cancelled++; };
   d.flush = () => { };
@@ -137,29 +137,31 @@ const declares = (selector, decl) =>
 
 test("after a row leaves, the day groups are re-marked on what remains", async () => {
   const p = panel();
-  const rows = [{ model: {}, el: { dataset: {} } }];
-  p.parts.list = { collection: { filter: () => rows, length: 1 }, children: { toArray: () => rows } };
+  const listEl = { tag: "list" };
+  p.parts.list = { el: listEl, collection: { filter: () => [{}], length: 1 } };
+  p.getPart = (n) => p.parts[n];
   STUBS.marked.length = 0;
   await p._updateItemsCount();
-  assert.deepEqual(STUBS.marked, [rows]);
+  assert.deepEqual(STUBS.marked, [listEl]);
   assert.equal(`${p.el.dataset.empty}`, "0");
 });
 
-test("the list re-marks day groups after every render and removal", () => {
+test("regroup walks the list element; rows and list events ask for it", () => {
   const p = panel();
+  const listEl = { tag: "list" };
   const handlers = {};
-  const rows = [{ model: {}, el: { dataset: {} } }];
   const list = {
+    el: listEl,
     on: (evts, fn) => evts.split(" ").forEach((e) => (handlers[e] = fn)),
     once: () => { },
-    children: { toArray: () => rows },
   };
+  p.getPart = () => list;
   p.onPartReady(list, "list");
-  assert.ok(handlers["render:children"] && handlers["remove:child"]);
   STUBS.marked.length = 0;
   handlers["render:children"]();
   handlers["remove:child"]();
-  assert.deepEqual(STUBS.marked, [rows, rows]);
+  p.regroupSoon();
+  assert.deepEqual(STUBS.marked, [listEl, listEl, listEl]);
 });
 
 test("the panel is the design's 512px card", () => {
