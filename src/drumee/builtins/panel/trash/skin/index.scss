@@ -119,13 +119,6 @@
     .panel-trash__footer {
       display: none;
     }
-
-    // Latest / Earliest are the whole bin, so empty there means empty. An
-    // empty Expiring soon only means nothing expires yet: keep the chips so
-    // the user can switch back.
-    &:not([data-filter="expiring"]) .panel-trash__filters {
-      display: none;
-    }
   }
 
   /* ── Topbar wrapper (header + status bar) ───────────────── */
@@ -133,42 +126,143 @@
     flex-shrink: 0;
   }
 
-  /* ── Filters: Latest / Earliest / Expiring soon ─────────── */
-  &__filters {
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 24px 0;
+  /* ── Filter dropdown (header, left of the close button) ─── */
+  // Lives in the header, which data-empty never hides, so an empty Expiring
+  // soon still offers the way back. Shell copied from the desk account menu
+  // (desk/skin/topbar.scss __account-wrapper): right-anchored, since the
+  // button sits at the panel's right edge and a left-anchored list would run
+  // past it and be clipped.
+  &__header-actions {
+    align-items: center;
+    gap: 12px;
   }
 
-  &__filter {
-    @include drumee.typo($color: var(--normal-fg-50),
-      $size: 10px,
-      $weight: 600,
-      $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    cursor: pointer;
-    padding: 6px 12px;
-    border-radius: 999px;
+  &__filter-menu {
+    position: relative;
+    flex: 0 0 auto;
+    overflow: visible;
+
+    .menu-topic,
+    .menu-topic__ui,
+    .menu-trigger {
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items__wrapper {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      left: auto;
+      width: max-content;
+      min-width: 200px;
+      z-index: 10;
+    }
+
+    .menu-topic-items,
+    .menu-items {
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 6px;
+      width: max-content;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    // Out of the flow while shut, or the list takes space under the header.
+    .menu-topic-items__wrapper[data-state="closed"],
+    .menu-topic-items__wrapper[data-state="0"],
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      display: none;
+    }
+  }
+
+  &__filter-trigger {
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 8px 0 10px;
+    border-radius: 6px;
     border: 1px solid var(--border-muted);
-    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+    cursor: pointer;
+    transition: border-color 0.15s;
 
     &:hover {
-      color: var(--normal-fg-30);
       border-color: var(--border-default);
     }
   }
 
-  // The panel root carries data-filter; light the matching chip.
+  &__filter-label {
+    @include drumee.typo($color: var(--normal-fg-20),
+      $size: 12px,
+      $weight: 500,
+      $line: 1);
+    white-space: nowrap;
+  }
+
+  &__filter-caret {
+    width: 12px;
+    height: 12px;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__filter {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+  }
+
+  &__filter-name {
+    @include drumee.typo($color: inherit,
+      $size: 13px,
+      $weight: 500,
+      $line: 1.2);
+    white-space: nowrap;
+  }
+
+  &__filter-check {
+    width: 14px;
+    height: 14px;
+    visibility: hidden;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // The panel root carries data-filter; light and tick the matching row.
   &__ui[data-filter="latest"] .panel-trash__filter--latest,
   &__ui[data-filter="earliest"] .panel-trash__filter--earliest,
   &__ui[data-filter="expiring"] .panel-trash__filter--expiring {
     color: var(--active-border);
-    border-color: var(--active-border);
-    // Same brand tint as the empty-state card.
-    background-color: rgba(89, 80, 255, 0.1);
+
+    .panel-trash__filter-check {
+      visibility: visible;
+    }
   }
 
   /* ── Header row: icon + title + close ───────────────────── */

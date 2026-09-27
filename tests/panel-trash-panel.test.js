@@ -124,14 +124,22 @@ const css = sass
   .compile(path.join(DIR, "skin/index.scss"), { loadPaths: [SRC, path.join(SRC, "skin")] })
   .css.replace(/\s+/g, " ");
 
-test("an empty bin hides the chips, an empty Expiring soon keeps them", () => {
-  assert.match(css,
-    /\.panel-trash__ui\[data-empty="1"\]:not\(\[data-filter=expiring\]\) \.panel-trash__filters \{ display: none; \}/);
+test("an empty bin never hides the filter dropdown", () => {
+  assert.doesNotMatch(css, /data-empty[^{]*(filter-menu|filter-trigger|__filters)/);
 });
 
-test("the chip matching data-filter is lit", () => {
+// Every rule as { selectors: [...], body }, so a selector is found whether
+// sass emitted it alone or grouped with others.
+const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+  .map(([, sel, body]) => ({ selectors: sel.split(",").map((x) => x.trim()), body }));
+const declares = (selector, decl) =>
+  rules.some((r) => r.selectors.includes(selector) && r.body.includes(decl));
+
+test("the row matching data-filter is lit and ticked", () => {
   for (const f of ["latest", "earliest", "expiring"]) {
-    assert.match(css, new RegExp(
-      `\\.panel-trash__ui\\[data-filter=${f}\\] \\.panel-trash__filter--${f}[^{]*\\{[^}]*border-color: var\\(--active-border\\)`));
+    const row = `.panel-trash__ui[data-filter=${f}] .panel-trash__filter--${f}`;
+    assert.ok(declares(row, "color: var(--active-border)"), `${f} row not lit`);
+    assert.ok(declares(`${row} .panel-trash__filter-check`, "visibility: visible"), `${f} row not ticked`);
   }
+  assert.ok(declares(".panel-trash__filter-check", "visibility: hidden"));
 });

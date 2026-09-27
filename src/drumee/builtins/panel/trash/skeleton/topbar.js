@@ -11,11 +11,18 @@ module.exports = function (ui) {
           Skeletons.Note({ className: `${pfx}__header-title`, content: LOCALE.TRASH }),
         ],
       }),
-      Skeletons.Image.Svg({
-        ico: 'cross',
-        className: `${pfx}__header-icon`,
-        service: "toggle-trash",
-        uiHandler: [Desk]
+      // Filter dropdown, then the close button.
+      Skeletons.Box.X({
+        className: `${pfx}__header-actions`,
+        kids: [
+          require("./filters")(ui),
+          Skeletons.Image.Svg({
+            ico: 'cross',
+            className: `${pfx}__header-icon`,
+            service: "toggle-trash",
+            uiHandler: [Desk]
+          }),
+        ],
       }),
     ],
   });
@@ -40,8 +47,6 @@ module.exports = function (ui) {
   return Skeletons.Box.Y({
     className: `${pfx}__topbar`,
     debug: __filename,
-    // The filter row stays OUT of the status bar: data-empty=1 hides that bar,
-    // and an empty "Expiring soon" result must still offer the way back.
-    kids: [header, require("./filters")(ui), statusBar],
+    kids: [header, statusBar],
   });
 };
