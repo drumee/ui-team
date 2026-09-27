@@ -24,8 +24,15 @@
   // Every row carries its day; only a group's first row shows it
   // (item/group.js stamps data-group="start").
   &__group {
-    display: none;
     @include drumee.typo($color: var(--tertiary-grey-80), $size: 12px, $weight: 400, $line: 1.4);
+  }
+
+  // The hide is scoped to the row, not set on &__group alone: every Note root
+  // matches ui-styles/container.css `.drumee-widget[data-flow=y] { display:
+  // flex }` (0,2,0), which beat a bare `.trash-item__group { display: none }`
+  // (0,1,0) — on stage every row showed its day label. This is (0,3,0).
+  &__ui:not([data-group="start"]) &__group {
+    display: none;
   }
 
   &__ui[data-group="start"] &__group {

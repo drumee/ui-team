@@ -155,8 +155,11 @@ const declares = (selector, decl) =>
   rules.some((r) => r.selectors.includes(selector) && r.body.includes(decl));
 
 test("the day label shows only on a group's first row", () => {
-  assert.ok(declares(".trash-item__group", "display: none"));
   assert.ok(declares('.trash-item__ui[data-group=start] .trash-item__group', "display: block"));
+  // The hide must outrank ui-styles/container.css `.drumee-widget[data-flow=y]
+  // { display: flex }` (0,2,0), which every Note root matches. A bare
+  // `.trash-item__group` (0,1,0) lost to it on stage: every row showed its day.
+  assert.ok(declares('.trash-item__ui:not([data-group=start]) .trash-item__group', "display: none"));
 });
 
 test("hover adds Restore and keeps the days-left badge", () => {
