@@ -609,6 +609,12 @@
     gap: 8px;
   }
 
+  // Bookmarked rows pinned on top: same cards, same separation.
+  &__saved {
+    width: 100%;
+    gap: 8px;
+  }
+
   &__list {
     flex: none;
     overflow-y: visible;
@@ -636,6 +642,10 @@
   }
 
   &__ui[data-has-priority="1"] &__empty {
+    display: none;
+  }
+
+  &__ui[data-has-saved="1"] &__empty {
     display: none;
   }
 

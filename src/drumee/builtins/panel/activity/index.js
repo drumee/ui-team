@@ -190,6 +190,8 @@ class __panel_activity extends LetcBox {
       // them into item models — the one place the whole page is visible in
       // order, which is what day grouping needs.
       child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
+      // Same page of raw rows: the saved ones among them are pinned on top.
+      child.on(_e.data, (rows) => this._collectPinned(child, rows));
       // The first page is down (rows or none): the feed has painted. A
       // reload's screen restore waits on this (libs/items-ready).
       child.once(_e.eod, () => markItemsReady(this));
@@ -269,6 +271,10 @@ class __panel_activity extends LetcBox {
     // Mentions / Shares tabs; the server defaults it to 'all', which is what the
     // old All tab sent anyway — so dropping it changes nothing.
     if (this._filter && this._filter !== DEFAULT_BUCKET) api.bucket = this._filter;
+    // Page 1 of a (re)started feed: fetch the pinned rows for the same view in
+    // parallel, so they land together with the first page (_collectPinned).
+    const list = this.__list;
+    if (!list || (list._curPage || 1) <= 1) this._startPinned();
     return api;
   }
 
@@ -368,8 +374,15 @@ class __panel_activity extends LetcBox {
 
       // The TRASH BUTTON. Permanent since 2026-08-28: the row is removed and
       // stays removed across reloads.
-      case 'dismiss-activity':
-        return this._dismissActivity(cmd, args, 'delete');
+      case 'dismiss-activity': {
+        // Deleting a pinned (saved) row also unsaves it, or it would stay
+        // pinned on top after the user removed it. Key read BEFORE the delete:
+        // the row's view is destroyed once it succeeds.
+        const saved = this._savedItemOf(cmd);
+        const done = this._dismissActivity(cmd, args, 'delete');
+        if (saved) this._forgetSaved(saved.key, saved.item);
+        return done;
+      }
 
       // Opening a row's body. Records that the user has read it and leaves the
       // row in the list, without the unread tint. This is what a body click
@@ -882,7 +895,11 @@ class __panel_activity extends LetcBox {
           : ((SERVICE.activity && SERVICE.activity.bookmark_remove) || 'activity.bookmark_remove'),
         // ACL `scope:hub` needs a hub for the permission check; the store
         // itself is the caller's own drumate DB. Same hub get_feed uses.
-        { bookmark_key: bookmarkKey, hub_id: Visitor.id },
+        // `row` lets the server keep a snapshot so the row stays pinned on top
+        // whatever feed page it sits on; it is only sent when saving.
+        favorited && args.row
+          ? { bookmark_key: bookmarkKey, hub_id: Visitor.id, row: args.row }
+          : { bookmark_key: bookmarkKey, hub_id: Visitor.id },
       );
     } catch (e) {
       this.warn('toggle-favorite failed', e);
@@ -898,6 +915,216 @@ class __panel_activity extends LetcBox {
     // Keep the model in step so a re-render of this row before the next fetch
     // draws the saved state rather than the stale one.
     if (item && item.mset) item.mset('is_saved', favorited);
+    if (favorited) this._pinFromRow(item, bookmarkKey);
+    else this._unpinKey(bookmarkKey);
+  }
+
+  // ── Bookmarked rows pinned on top ────────────────────────────────
+  //
+  // A saved row is shown in the `saved` part above the feed, newest first, and
+  // its copy in the feed is hidden (item data-twin) until it is unsaved, when
+  // the copy reappears in place. Rows come from two sources:
+  //  * the live feed row, whenever get_feed returned it -- true text and true
+  //    read state, so it always wins;
+  //  * the server snapshot (activity.bookmark_rows) for a saved row whose page
+  //    is not loaded. Its read state is unknown, so it is served read, and it
+  //    is not used under Unread ON, which lists only what is still unread.
+  // get_feed itself is untouched: the feed pages, their pagination and the
+  // mobile client see exactly what they saw before.
+
+  _startPinned() {
+    this._pinCycle = (this._pinCycle || 0) + 1;
+    this._pinnedRows = new Map();
+    this._pinnedReady = false;
+    this._pinnedQueue = [];
+    const bucket = (this._filter && this._filter !== DEFAULT_BUCKET) ? this._filter : null;
+    this._pinnedFetch = this._unreadsOnly ? Promise.resolve([]) : this._fetchPinned(bucket);
+  }
+
+  async _fetchPinned(bucket) {
+    try {
+      const res = await this.postService(
+        (SERVICE.activity && SERVICE.activity.bookmark_rows) || 'activity.bookmark_rows',
+        bucket ? { hub_id: Visitor.id, bucket } : { hub_id: Visitor.id },
+      );
+      return _.isArray(res) ? res : (_.isArray(res && res.data) ? res.data : []);
+    } catch (e) {
+      this.warn('[panel_activity] bookmark_rows failed', e);
+      return [];
+    }
+  }
+
+  /**
+   * Feed `data` hook (see onPartReady). Page 1 builds the pinned set once the
+   * snapshots are in; later pages only add saved rows not pinned yet.
+   * 🚨 try/catch is load-bearing, as in _stampDayHeaders: an exception here is
+   * swallowed by ui-core and would leave the feed blank.
+   */
+  _collectPinned(list, rows) {
+    try {
+      if (!_.isArray(rows)) return;
+      const live = rows.filter((r) => r && r.bookmark_key && parseInt(r.is_saved, 10) === 1);
+      if (!list || (list._curPage || 1) <= 1) {
+        const cycle = this._pinCycle;
+        (this._pinnedFetch || Promise.resolve([])).then((snapshots) => {
+          if (cycle !== this._pinCycle) return;
+          const map = new Map();
+          for (const r of snapshots || []) {
+            if (r && r.bookmark_key) map.set(r.bookmark_key, r);
+          }
+          for (const r of [...live, ...(this._pinnedQueue || [])]) map.set(r.bookmark_key, { ...r });
+          this._pinnedQueue = [];
+          this._pinnedRows = map;
+          this._pinnedReady = true;
+          this._renderPinned();
+        });
+        return;
+      }
+      for (const r of live) {
+        if (this._pinnedRows && this._pinnedRows.has(r.bookmark_key)) continue;
+        if (!this._pinnedReady) {
+          this._pinnedQueue.push(r);
+          continue;
+        }
+        this._insertPinned({ ...r });
+      }
+    } catch (e) {
+      this.warn('[panel_activity] pinned rows failed', e);
+    }
+  }
+
+  _pinnedTime(row) {
+    return Number((row && (row.timestamp || row.ctime)) || 0);
+  }
+
+  _sortedPinned() {
+    return [...(this._pinnedRows || new Map()).values()]
+      .sort((a, b) => this._pinnedTime(b) - this._pinnedTime(a));
+  }
+
+  _pinnedModel(row) {
+    const m = {
+      ...row,
+      is_saved: 1,
+      pinned_view: 1,
+      kind: 'activity_item',
+      uiHandler: this,
+      logicalParent: this,
+    };
+    // Day captions belong to the chronological feed, not to the pinned block.
+    delete m.day_header;
+    return m;
+  }
+
+  _renderPinned() {
+    const rows = this._sortedPinned();
+    // The feed restarts on every tab switch and on live updates while the
+    // panel is open; re-feeding an unchanged block would only replay its
+    // rows' fade-in.
+    const signature = rows.map((r) => `${r.bookmark_key}:${r.is_read ? 1 : 0}:${this._pinnedTime(r)}`).join('|');
+    if (signature === this._pinnedSignature) return;
+    this._pinnedSignature = signature;
+    const models = rows.map((r) => this._pinnedModel(r));
+    this.ensurePart('saved').then((p) => {
+      if (p && !p.isDestroyed()) p.feed(models);
+      this._markHasSaved();
+    });
+  }
+
+  // Hides the feed's "no notifications" line while pinned rows are showing
+  // (skin: __ui[data-has-saved="1"]), like data-has-priority does.
+  _markHasSaved() {
+    if (!this.el || !this.el.dataset) return;
+    this.el.dataset.hasSaved = (this._pinnedRows && this._pinnedRows.size) ? '1' : '0';
+  }
+
+  _insertPinned(row) {
+    if (!row || !row.bookmark_key) return;
+    this._pinnedRows = this._pinnedRows || new Map();
+    this._pinnedRows.set(row.bookmark_key, row);
+    const index = this._sortedPinned().findIndex((r) => r.bookmark_key === row.bookmark_key);
+    this._pinnedSignature = null;
+    this.ensurePart('saved').then((p) => {
+      if (p && !p.isDestroyed()) p.append(this._pinnedModel(row), index);
+      this._markHasSaved();
+    });
+  }
+
+  // Every rendered row (pinned block and feed) carrying this bookmark key.
+  _viewsWithKey(key) {
+    const out = [];
+    if (!key) return out;
+    for (const part of [this.__saved, this.__list]) {
+      if (!part || part.isDestroyed() || !part.children) continue;
+      part.children.each((v) => {
+        if (v && !v.isDestroyed() && v.mget && v.mget('bookmark_key') === key) out.push(v);
+      });
+    }
+    return out;
+  }
+
+  _pinFromRow(item, key) {
+    if (!item || !key) return;
+    if (!item.mget('pinned_view') && item.el) item.el.dataset.twin = '1';
+    const base = item._rawRow || {};
+    const row = {
+      ...base,
+      bookmark_key: key,
+      is_saved: 1,
+      is_read: item.mget('is_read'),
+      bucket: item.mget('bucket') || base.bucket,
+    };
+    if (!this._pinnedReady) {
+      this._pinnedQueue = this._pinnedQueue || [];
+      this._pinnedQueue.push(row);
+      return;
+    }
+    if (this._pinnedRows && this._pinnedRows.has(key)) return;
+    this._insertPinned(row);
+  }
+
+  _unpinKey(key) {
+    if (!key) return;
+    if (this._pinnedRows) this._pinnedRows.delete(key);
+    this._pinnedSignature = null;
+    this._markHasSaved();
+    if (this._pinnedQueue) this._pinnedQueue = this._pinnedQueue.filter((r) => r.bookmark_key !== key);
+    for (const v of this._viewsWithKey(key)) {
+      if (v.mget('pinned_view')) {
+        v.goodbye({ duration: 0.2, timeout: 50, now: 1 });
+        continue;
+      }
+      // The feed copy comes back where it always was, unsaved.
+      v.mset('is_saved', 0);
+      if (v.el) {
+        delete v.el.dataset.twin;
+        const btn = v.el.querySelector('.activity-item__bookmark');
+        if (btn) btn.dataset.state = '0';
+      }
+    }
+  }
+
+  // { key, item } when `cmd` is a saved row, else null.
+  _savedItemOf(cmd) {
+    const item = this._findActivityItem(cmd);
+    if (!item || !item.mget || parseInt(item.mget('is_saved'), 10) !== 1) return null;
+    const key = item.mget('bookmark_key');
+    return key ? { key, item } : null;
+  }
+
+  // A saved row was deleted: unsave it and drop every other view of it. The
+  // deleted view itself is left to _dismissActivity, which removes it.
+  _forgetSaved(key, except) {
+    if (this._pinnedRows) this._pinnedRows.delete(key);
+    this._pinnedSignature = null;
+    this._markHasSaved();
+    for (const v of this._viewsWithKey(key)) {
+      if (v !== except) v.goodbye({ duration: 0.2, timeout: 50, now: 1 });
+    }
+    this.postService(
+      (SERVICE.activity && SERVICE.activity.bookmark_remove) || 'activity.bookmark_remove',
+      { bookmark_key: key, hub_id: Visitor.id },
+    ).catch((e) => this.warn('[activity] bookmark_remove after delete failed', e));
   }
 
   _dismissFromOpen(cmd, args = {}) {
@@ -942,6 +1169,18 @@ class __panel_activity extends LetcBox {
       if (row) row.dataset.unread = '0';
     } catch (e) {
       this.warn('[activity] could not mark row read', e);
+    }
+    // A pinned row and its hidden feed copy are the same notification: read
+    // one, and the other must not come back unread when it is unsaved.
+    if (!this._markingTwins && cmd.mget && parseInt(cmd.mget('is_saved'), 10) === 1) {
+      this._markingTwins = 1;
+      try {
+        for (const v of this._viewsWithKey(cmd.mget('bookmark_key'))) {
+          if (v !== cmd) this._markRowRead(v);
+        }
+      } finally {
+        this._markingTwins = 0;
+      }
     }
   }
 

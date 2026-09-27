@@ -10,6 +10,18 @@
 //  * Overlay/brand is rgba(89, 80, 255, .1) — the 10% brand wash used by both
 //    the file-type chip and the folder-name chip.
 .activity-item {
+  // The feed copy of a row that is pinned on top (bookmarked). The card goes;
+  // a day caption it carries stays, so the rest of that day still sits under
+  // its heading. Without a caption the whole item goes, or its empty box would
+  // still take a gap in the list.
+  &[data-twin="1"] &__row {
+    display: none;
+  }
+
+  &[data-twin="1"]:not(:has(.activity-item__day)) {
+    display: none;
+  }
+
   &__group {
     width: 100%;
     // In Figma the day caption and the cards are siblings in one 8px-gap

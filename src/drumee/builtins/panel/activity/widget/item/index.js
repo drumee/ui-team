@@ -16,6 +16,33 @@
 // and still serves mail, chat, share and compact deep links.
 const { isMeetingRollup, meetingDeepLink } = require('./meeting-link');
 
+// What bookmark_add stores as a saved row's snapshot: the row as the server
+// sent it, minus what the list and the panel attach to the model (views and
+// handlers, which cannot be serialised) and minus per-render/per-state fields
+// the server recomputes when it serves the snapshot back (bookmark_rows).
+const SNAPSHOT_SKIP = new Set([
+  'kind', 'uiHandler', 'logicalParent', 'partHandler', 'widgetId',
+  'day_header', 'is_saved', 'is_read', 'pinned_view', 'pinned_source', 'bookmark_key',
+]);
+function snapshotRow(attrs) {
+  const out = {};
+  for (const k of Object.keys(attrs || {})) {
+    if (SNAPSHOT_SKIP.has(k)) continue;
+    const v = attrs[k];
+    if (_.isFunction(v)) continue;
+    // Only plain data: a Backbone view or model here would be circular.
+    if (v && typeof v === 'object' && !Array.isArray(v)
+      && Object.getPrototypeOf(v) !== Object.prototype) continue;
+    out[k] = v;
+  }
+  try {
+    JSON.stringify(out);
+  } catch (e) {
+    return null;
+  }
+  return out;
+}
+
 function parseJson(value, fallback) {
   if (!value) return fallback;
   if (_.isObject(value)) return value;
@@ -192,6 +219,10 @@ class __activity_item extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    // Taken before anything below reshapes the model: bookmarking sends this
+    // so the server can pin the row, and the server only keeps it if it still
+    // hashes to the row's bookmark_key.
+    this._rawRow = snapshotRow(this.model.toJSON());
     if (opt.event === 'media.workspace_move' || opt.event === 'media.copy') {
       const source = parseJson(opt.src, {});
       const destination = parseJson(opt.dest, {});
@@ -317,6 +348,11 @@ class __activity_item extends LetcBox {
     // whole panel (repro: Shares → All activity closed it). The panel now
     // closes only via the explicit close button / sidebar toggle.
     this.feed(require('./skeleton')(this));
+    // A saved row is shown pinned on top by the panel, so its copy in the feed
+    // stays out of sight until it is unsaved (panel _pinFromRow / _unpinKey).
+    if (parseInt(this.mget('is_saved'), 10) === 1 && !this.mget('pinned_view')) {
+      this.el.dataset.twin = '1';
+    }
   }
 
   /**
@@ -360,6 +396,7 @@ class __activity_item extends LetcBox {
             // comes back on every refresh, which is what makes the saved state
             // survive closing the panel or switching tabs.
             bookmark_key: this.mget('bookmark_key'),
+            row: this._rawRow,
             button: cmd,
           });
         }
