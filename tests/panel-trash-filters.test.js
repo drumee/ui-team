@@ -97,16 +97,20 @@ test("one menu row per filter, wired to trash-filter on the panel", () => {
 });
 
 test("header: title, then Empty trash, the filter dropdown and close", () => {
-  const top = require(path.join(DIR, "skeleton/topbar"))(ui());
+  const u = ui();
+  const top = require(path.join(DIR, "skeleton/topbar"))(u);
   const header = walk(top).find((n) => has(n, "header"));
   assert.equal(walk(header).find((n) => has(n, "header-title")).content, en.TRASH);
   const actions = walk(header).find((n) => has(n, "header-actions"));
   assert.equal(actions.kids.length, 3);
   const [purge, menu, close] = actions.kids;
+  // A real button: the toolkit's Button.Label, not a styled Box.
+  assert.equal(purge.type, "Button.Label");
   assert.ok(has(purge, "empty-trash"));
   assert.equal(purge.service, "empty-bin");
-  assert.ok(walk(purge).some((n) => n.content === en.PURGE));
-  assert.ok(walk(purge).some((n) => n.ico === "ph-trash"));
+  assert.equal(purge.label, en.PURGE);
+  assert.equal(purge.ico, "ph-trash");
+  assert.deepEqual([].concat(purge.uiHandler), [u]);
   assert.ok(has(menu, "filter-menu"));
   assert.equal(close.service, "toggle-trash");
 });

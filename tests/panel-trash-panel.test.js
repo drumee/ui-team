@@ -182,10 +182,14 @@ test("the row matching data-filter is lit and ticked", () => {
   assert.ok(declares(".panel-trash__filter-check", "visibility: hidden"));
 });
 
-test("Empty trash answers the pointer like the row bin, without moving the header", () => {
-  const h = ".panel-trash__empty-trash:hover";
-  assert.ok(declares(h, "background-color: rgba(255, 106, 101, 0.15)"));
-  assert.ok(declares(h, "box-shadow: 0 0 0 6px rgba(255, 106, 101, 0.15)"));
-  assert.ok(declares(`${h} .panel-trash__empty-trash-label`, "color: var(--signal-error)"));
-  assert.ok(!declares(h, "opacity"));
+test("Empty trash is drawn as a button, twin of the filter trigger", () => {
+  const b = ".panel-trash__empty-trash";
+  for (const d of ["height: 28px", "border-radius: 6px", "border: 1px solid var(--border-muted)", "cursor: pointer"]) {
+    assert.ok(declares(b, d), d);
+  }
+  // Button.Label draws icon then label; the design reads label then bin.
+  assert.ok(declares(b, "flex-direction: row-reverse !important"));
+  assert.ok(declares(`${b}:hover`, "background-color: rgba(255, 106, 101, 0.15)"));
+  assert.ok(declares(`${b}:hover`, "border-color: var(--signal-error)"));
+  assert.ok(declares(`${b}:focus-visible`, "outline: 2px solid var(--primary-purple-40)"));
 });

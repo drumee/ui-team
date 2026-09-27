@@ -4,15 +4,14 @@
 module.exports = function (ui) {
   const pfx = ui.fig.family;
 
-  const emptyTrash = Skeletons.Box.X({
+  // The toolkit's own button (icon + label); the skin draws it as the filter
+  // trigger's twin and puts the label before the bin, as in the design.
+  const emptyTrash = Skeletons.Button.Label({
     className: `${pfx}__empty-trash`,
+    ico: 'ph-trash',
+    label: LOCALE.PURGE,
     service: 'empty-bin',
     uiHandler: ui,
-    // Inert kids: a live child would take the click meant for this box.
-    kids: [
-      Skeletons.Note({ active: 0, className: `${pfx}__empty-trash-label`, content: LOCALE.PURGE }),
-      Skeletons.Image.Svg({ active: 0, ico: 'ph-trash', className: `${pfx}__empty-trash-ico` }),
-    ],
   });
 
   const header = Skeletons.Box.X({

@@ -137,39 +137,54 @@
     gap: 16px;
   }
 
+  // A Button.Label drawn as the filter trigger's twin (same height, border and
+  // radius), so the header reads as two buttons and a close.
   &__empty-trash {
+    display: inline-flex;
+    // Button.Label lays out icon then label; the design reads label then bin.
+    flex-direction: row-reverse !important;
     align-items: center;
-    gap: 8px;
-    cursor: pointer;
+    gap: 6px;
+    height: 28px;
+    box-sizing: border-box;
+    padding: 0 8px 0 10px;
+    border: 1px solid var(--border-muted);
     border-radius: 6px;
-    transition: background-color 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
 
-    // Same red wash as the row bin's hover (item/skin __delete), drawn with a
-    // spread shadow so the header doesn't move.
+    .inner,
+    .note-content,
+    .drumee-text {
+      @include drumee.typo($color: var(--primary-purple-100), $size: 12px, $weight: 500, $line: 1);
+      white-space: nowrap;
+    }
+
+    .svg-wrapper,
+    .drumee-svg,
+    svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--signal-error);
+      fill: currentColor;
+    }
+
+    // The row bin's red wash (item/skin __delete), with a red edge.
     &:hover {
       background-color: rgba(255, 106, 101, 0.15);
-      box-shadow: 0 0 0 6px rgba(255, 106, 101, 0.15);
+      border-color: var(--signal-error);
 
-      .panel-trash__empty-trash-label {
+      .inner,
+      .note-content,
+      .drumee-text {
         color: var(--signal-error);
       }
     }
-  }
 
-  &__empty-trash-label {
-    @include drumee.typo($color: var(--primary-purple-100), $size: 14px, $weight: 400, $line: 1.2);
-    white-space: nowrap;
-  }
-
-  &__empty-trash-ico {
-    width: 20px;
-    height: 20px;
-    color: var(--signal-error);
-
-    svg {
-      width: 20px;
-      height: 20px;
-      fill: currentColor;
+    &:focus-visible {
+      outline: 2px solid var(--primary-purple-40);
+      outline-offset: 2px;
     }
   }
 
