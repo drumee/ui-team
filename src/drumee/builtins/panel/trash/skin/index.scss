@@ -141,10 +141,18 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    transition: opacity 0.15s;
+    border-radius: 6px;
+    transition: background-color 0.15s, box-shadow 0.15s;
 
+    // Same red wash as the row bin's hover (item/skin __delete), drawn with a
+    // spread shadow so the header doesn't move.
     &:hover {
-      opacity: 0.8;
+      background-color: rgba(255, 106, 101, 0.15);
+      box-shadow: 0 0 0 6px rgba(255, 106, 101, 0.15);
+
+      .panel-trash__empty-trash-label {
+        color: var(--signal-error);
+      }
     }
   }
 

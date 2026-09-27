@@ -181,3 +181,11 @@ test("the row matching data-filter is lit and ticked", () => {
   }
   assert.ok(declares(".panel-trash__filter-check", "visibility: hidden"));
 });
+
+test("Empty trash answers the pointer like the row bin, without moving the header", () => {
+  const h = ".panel-trash__empty-trash:hover";
+  assert.ok(declares(h, "background-color: rgba(255, 106, 101, 0.15)"));
+  assert.ok(declares(h, "box-shadow: 0 0 0 6px rgba(255, 106, 101, 0.15)"));
+  assert.ok(declares(`${h} .panel-trash__empty-trash-label`, "color: var(--signal-error)"));
+  assert.ok(!declares(h, "opacity"));
+});
