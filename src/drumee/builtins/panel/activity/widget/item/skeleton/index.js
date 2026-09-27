@@ -1062,7 +1062,11 @@ module.exports = function (ui) {
           ico: 'notification_favorite',
           service: 'toggle-favorite',
           uiHandler: ui,
-          state: parseInt(data.is_saved, 10) === 1 ? 1 : 0,
+          // dataset, NOT `state`: a `state` prop attaches ui-core's toggle
+          // behavior, which flips data-state on click on top of the row's own
+          // flip in _dispatchService — two flips, no change, and the request
+          // sent was the opposite of what was pressed.
+          dataset: { state: parseInt(data.is_saved, 10) === 1 ? '1' : '0' },
         })
         : null,
       Skeletons.Button.Svg({
