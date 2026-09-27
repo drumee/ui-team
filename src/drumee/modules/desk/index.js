@@ -40,6 +40,7 @@ const DESK_BILLING_LOADER_DELAY = 220;
 const folderIcon = require("media/grid/template/folder");
 const { groupWorkspaces } = require("libs/workspace-groups");
 const { restoreScreen, pollFor } = require("libs/screen-restore");
+const { lightUtilityButton } = require("libs/utility-light");
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
@@ -2167,6 +2168,14 @@ class desk_module extends LetcBox {
         onOpened: onOpened || null,
         awaitWidget: (e, ms) => this._awaitScreenWidget(e, ms),
         lightRow: (s) => this._lightRestoredRow(s),
+        // The topbar icon of the restored screen (utility cluster). The open
+        // was a synthetic onUiEvent, so the radio never lit it — see
+        // libs/utility-light.
+        lightIcon: (s) =>
+          lightUtilityButton(s, {
+            getPart: (pn) => (_.isFunction(this.getPart) ? this.getPart(pn) : null),
+            broadcast: (channel, view) => RADIO_BROADCAST.trigger(channel, view),
+          }),
         warn: (...args) => this.warn && this.warn(...args),
       },
     });
