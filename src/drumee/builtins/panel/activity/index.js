@@ -1038,16 +1038,16 @@ class __panel_activity extends LetcBox {
     this.el.dataset.hasSaved = (this._pinnedRows && this._pinnedRows.size) ? '1' : '0';
   }
 
+  // Re-feeds the block rather than inserting at an index: ui-core's
+  // Box.append(c, index) splices the WRAPPING ARRAY into the collection (an
+  // empty "constructor" view) and cleanSet()s the whole part anyway. The block
+  // only ever holds the saved rows, so a full feed stays cheap.
   _insertPinned(row) {
     if (!row || !row.bookmark_key) return;
     this._pinnedRows = this._pinnedRows || new Map();
     this._pinnedRows.set(row.bookmark_key, row);
-    const index = this._sortedPinned().findIndex((r) => r.bookmark_key === row.bookmark_key);
     this._pinnedSignature = null;
-    this.ensurePart('saved').then((p) => {
-      if (p && !p.isDestroyed()) p.append(this._pinnedModel(row), index);
-      this._markHasSaved();
-    });
+    this._renderPinned();
   }
 
   // Every rendered row (pinned block and feed) carrying this bookmark key.
