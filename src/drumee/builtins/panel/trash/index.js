@@ -9,11 +9,15 @@ const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
-    opt.dataset = { ...opt.dataset, anim: "out", filter: DEFAULT_FILTER };
+    opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
     // Latest / Earliest / Expiring soon (skeleton/filters). Kept for the life
     // of the panel instance, so a keep-alive re-show reopens on the same one.
+    // Stamped on el directly: the desk feeds this panel as { kind }, and an
+    // opt.dataset edit made here never reaches data-* on that path, which left
+    // no chip lit until the user switched filters.
     this._filter = DEFAULT_FILTER;
+    this.el.dataset.filter = DEFAULT_FILTER;
     armItemsReady(this);
     this.declareHandlers();
     this.isTrash = 1;
@@ -309,6 +313,10 @@ class __panel_trash extends mfsInteract {
     if (this._wsRefresh.cancel) this._wsRefresh.cancel();
     this._pendingWsRefresh = false;
     this._staleWhileParked = false;
+    // data-empty belongs to the list being replaced. Left at 1 (an empty
+    // Expiring soon), it would hide the chip row the user just clicked until
+    // the new list's end of data — or for good if that load fails.
+    if (this.el) this.el.dataset.empty = 0;
     this.feed(require('./skeleton')(this));
   }
 

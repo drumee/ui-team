@@ -11,8 +11,10 @@ const sass = require("sass");
 const SRC = path.join(__dirname, "..", "src/drumee");
 const DIR = path.join(SRC, "builtins/panel/trash");
 
+// Like the real mount: the desk feeds { kind } and ui-core stamps data-* from
+// the model, so opt.dataset edits made in initialize() never reach the element.
 class StubBase {
-  initialize(opt) { this.opt = opt; this.el = { dataset: { ...opt.dataset } }; this.fed = []; }
+  initialize(opt) { this.opt = opt; this.el = { dataset: {} }; this.fed = []; }
   declareHandlers() { }
   mset() { }
   feed(x) { this.fed.push(x); }
@@ -72,7 +74,6 @@ test("opens on Latest deleted, stamped on the root", () => {
   const p = panel();
   assert.equal(p._filter, "latest");
   assert.equal(p.el.dataset.filter, "latest");
-  assert.equal(p.el.dataset.anim, "out");
 });
 
 test("the bin request carries the current filter as sort", () => {
@@ -101,6 +102,14 @@ test("switching drops a queued or held echo reload (no second, stale fetch)", ()
   assert.equal(p._wsRefresh.cancelled, 1);
   assert.equal(p._pendingWsRefresh, false);
   assert.equal(p._staleWhileParked, false);
+});
+
+test("leaving an empty Expiring soon keeps the chip row until the new list lands", () => {
+  const p = panel();
+  p.onUiEvent(chip("expiring"));
+  p.el.dataset.empty = 1;
+  p.onUiEvent(chip("latest"));
+  assert.notEqual(`${p.el.dataset.empty}`, "1");
 });
 
 test("the active chip, or an unknown value, changes nothing", () => {
