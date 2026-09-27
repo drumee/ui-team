@@ -842,30 +842,62 @@ class __panel_activity extends LetcBox {
     });
   }
 
+  /**
+   * Save / unsave one notification row.
+   *
+   * Goes through activity.bookmark_add / bookmark_remove, keyed by the
+   * `bookmark_key` activity.get_feed stamps on every row together with
+   * `is_saved`. This used to post channel.bookmark_add with a message_id
+   * guessed from key_id / id: that store is for chat messages and nothing
+   * reads it back into the feed, so the button lit up, persisted nothing
+   * useful, and was blank again on the next render.
+   *
+   * The row's button has already flipped (optimistic). The answer is checked
+   * rather than trusted: a rejected POST resolves undefined (doRequest hands a
+   * non-200 to onServerComplain, which only warns), so anything but the key
+   * echoed back with the requested state puts the button back.
+   */
   async _toggleFavorite(cmd, args = {}) {
     const item = this._findActivityItem(cmd);
-    const messageId = args.message_id
-      || (item && item.mget && (item.mget('message_id') || item.mget(_a.id) || item.mget('id')));
-    const hubId = args.hub_id
-      || (item && item.mget && item.mget('hub_id'))
-      || Visitor.id;
+    const bookmarkKey = args.bookmark_key || (item && item.mget && item.mget('bookmark_key'));
     const favorited = args.favorited ? 1 : 0;
-    this.verbose('[activity] toggle-favorite', { favorited, messageId, hubId, item_key: args.item_key });
-    if (!messageId) {
-      console.warn('[activity] toggle-favorite skipped — no message_id on row');
+    const button = args.button;
+    this.verbose('[activity] toggle-favorite', { favorited, bookmarkKey, item_key: args.item_key });
+    const setButton = (saved) => {
+      if (!button || !button.el) return;
+      button.el.dataset.state = saved ? '1' : '0';
+      if (button.mset) button.mset(_a.state, saved ? 1 : 0);
+    };
+    if (!bookmarkKey) {
+      this.warn('[activity] toggle-favorite skipped — no bookmark_key on row');
+      setButton(!favorited);
       return;
     }
+    if (item) item._bookmarkPending = 1;
+    let res;
     try {
-      if (favorited) {
-        await this.postService(SERVICE.channel.bookmark_add, { message_id: messageId, hub_id: hubId });
-      } else {
-        // ACL `scope:hub` requires hub_id for the permission check even
-        // though the proc itself ignores it (uniqueness is uid+message_id).
-        await this.postService(SERVICE.channel.bookmark_remove, { message_id: messageId, hub_id: hubId });
-      }
+      res = await this.postService(
+        favorited
+          ? ((SERVICE.activity && SERVICE.activity.bookmark_add) || 'activity.bookmark_add')
+          : ((SERVICE.activity && SERVICE.activity.bookmark_remove) || 'activity.bookmark_remove'),
+        // ACL `scope:hub` needs a hub for the permission check; the store
+        // itself is the caller's own drumate DB. Same hub get_feed uses.
+        { bookmark_key: bookmarkKey, hub_id: Visitor.id },
+      );
     } catch (e) {
       this.warn('toggle-favorite failed', e);
     }
+    if (item) item._bookmarkPending = 0;
+    const ok = res && res.bookmark_key === bookmarkKey
+      && parseInt(res.is_saved, 10) === favorited;
+    if (!ok) {
+      this.warn('[activity] toggle-favorite not saved', res);
+      setButton(!favorited);
+      return;
+    }
+    // Keep the model in step so a re-render of this row before the next fetch
+    // draws the saved state rather than the stale one.
+    if (item && item.mset) item.mset('is_saved', favorited);
   }
 
   _dismissFromOpen(cmd, args = {}) {

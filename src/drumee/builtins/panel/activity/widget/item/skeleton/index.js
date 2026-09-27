@@ -1051,19 +1051,27 @@ module.exports = function (ui) {
       }),
     ]
     : [
-      Skeletons.Button.Svg({
-        className: `${pfx}__bookmark`,
-        ico: 'notification_favorite',
-        service: 'toggle-favorite',
-        uiHandler: ui,
-      }),
+      // Only rows activity.get_feed decorated can be saved: the button needs
+      // the server's `bookmark_key`, and `is_saved` is what draws it lit again
+      // after the panel re-renders. A row without the key (the pinned pending
+      // access request, built from activity.list) gets no button rather than
+      // one that lights up and saves nothing.
+      data.bookmark_key
+        ? Skeletons.Button.Svg({
+          className: `${pfx}__bookmark`,
+          ico: 'notification_favorite',
+          service: 'toggle-favorite',
+          uiHandler: ui,
+          state: parseInt(data.is_saved, 10) === 1 ? 1 : 0,
+        })
+        : null,
       Skeletons.Button.Svg({
         className: `${pfx}__trash`,
         ico: 'notification_trash',
         service: 'dismiss-activity',
         uiHandler: ui,
       }),
-    ];
+    ].filter(Boolean);
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,
     kids: actionKids,

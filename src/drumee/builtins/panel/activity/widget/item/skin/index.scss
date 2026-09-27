@@ -368,6 +368,13 @@ html[data-theme="dark"] {
 
     &__bookmark {
       color: var(--normal-fg-50);
+
+      // This selector outranks the light rule's [data-state="1"], so without
+      // restating it a saved row looked unsaved in dark mode.
+      &:hover,
+      &[data-state="1"] {
+        color: #fa8540;
+      }
     }
 
     // Accept keeps its brand fill in both themes, like the badge fills above.

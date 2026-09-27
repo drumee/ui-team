@@ -341,6 +341,10 @@ class __activity_item extends LetcBox {
     switch (service) {
       case 'toggle-favorite':
         if (!cmd || !cmd.el) return;
+        // One request at a time per row: a second press while the first is in
+        // flight could land out of order and leave the store opposite to the
+        // button.
+        if (this._bookmarkPending) return;
         const next = cmd.el.dataset.state === '1' ? '0' : '1';
         cmd.el.dataset.state = next;
         if (cmd.mset) cmd.mset(_a.state, parseInt(next));
@@ -352,12 +356,11 @@ class __activity_item extends LetcBox {
             service: 'toggle-favorite',
             favorited: next === '1' ? 1 : 0,
             item_key: this.mget('item_key'),
-            message_id: this.mget('message_id')
-              || this.mget('key_id')
-              || this.mget(_a.id)
-              || this.mget('id')
-              || this.mget(_a.drumate_id),
-            hub_id: this.mget(_a.hub_id),
+            // Server-computed identity from activity.get_feed; the same key
+            // comes back on every refresh, which is what makes the saved state
+            // survive closing the panel or switching tabs.
+            bookmark_key: this.mget('bookmark_key'),
+            button: cmd,
           });
         }
         return;
