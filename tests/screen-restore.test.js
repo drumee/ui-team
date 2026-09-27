@@ -39,6 +39,7 @@ function fakeHost(over = {}) {
       return { name: "widget" };
     },
     lightRow: (service) => calls.push(`light:${service}`),
+    lightIcon: (service) => calls.push(`icon:${service}`),
     warn: () => calls.push("warn"),
   };
   return Object.assign(host, over(host, state, calls) || {});
@@ -62,7 +63,13 @@ test("the spec's timeouts", () => {
 test("happy path runs in order and lights the row", async () => {
   const host = fakeHost(() => ({}));
   assert.equal(await run(host), "ready");
-  assert.deepEqual(host.calls, ["split", "open:toggle-trash", "widget", "light:toggle-trash"]);
+  assert.deepEqual(host.calls, [
+    "split",
+    "open:toggle-trash",
+    "widget",
+    "icon:toggle-trash",
+    "light:toggle-trash",
+  ]);
 });
 
 test("no registry entry: nothing happens", async () => {
@@ -289,4 +296,56 @@ test("our screen re-opened by another caller during the item wait still lights i
   });
   assert.equal(await run(host, e), "ready");
   assert.ok(host.calls.includes("light:toggle-trash"));
+});
+
+test("icon lights at mount, before the item wait", async () => {
+  let release;
+  const host = fakeHost(() => ({}));
+  const e = entry({ ready: () => new Promise((r) => (release = r)) });
+  const p = run(host, e);
+  await new Promise((r) => setTimeout(r, 5));
+  assert.ok(host.calls.includes("icon:toggle-trash"));
+  assert.ok(!host.calls.includes("light:toggle-trash"));
+  release(true);
+  assert.equal(await p, "ready");
+});
+
+test("items never ready: icon still lit", async () => {
+  const host = fakeHost(() => ({}));
+  assert.equal(await run(host, entry({ ready: never })), "not-ready");
+  assert.ok(host.calls.includes("icon:toggle-trash"));
+});
+
+test("user-navigated during widget wait: no icon", async () => {
+  const host = fakeHost((h, state, calls) => ({
+    awaitWidget: async () => {
+      calls.push("widget");
+      state.seq += 1;
+      return { name: "widget" };
+    },
+  }));
+  assert.equal(await run(host), "user-navigated");
+  assert.ok(!host.calls.some((c) => c.startsWith("icon")));
+});
+
+test("no widget: no icon", async () => {
+  const host = fakeHost(() => ({ awaitWidget: async () => null }));
+  assert.equal(await run(host), "no-widget");
+  assert.ok(!host.calls.some((c) => c.startsWith("icon")));
+});
+
+test("a throwing lightIcon does not break the restore", async () => {
+  const host = fakeHost(() => ({
+    lightIcon: () => {
+      throw new Error("boom");
+    },
+  }));
+  assert.equal(await run(host), "ready");
+  assert.ok(host.calls.includes("light:toggle-trash"));
+});
+
+test("a host without lightIcon still restores", async () => {
+  const host = fakeHost(() => ({}));
+  delete host.lightIcon;
+  assert.equal(await run(host), "ready");
 });
